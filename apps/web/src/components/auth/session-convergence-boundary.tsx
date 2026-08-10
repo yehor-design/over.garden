@@ -38,6 +38,10 @@ import {
   pauseOwnerOfflineActivity,
   type OwnerOfflineActivityPauseHandle,
 } from "@/lib/offline/owner-session-lifecycle";
+import {
+  deactivatePhysicalOwnerVault,
+  fetchAuthenticatedOwnerVaultBinding,
+} from "@/lib/offline/owner-vault";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
 import { BlockedSessionAccountMethods } from "./blocked-session-account-methods";
@@ -664,9 +668,8 @@ export function SessionConvergenceBoundary({
       }
 
       const freshSessionResult = await readAuthoritativeSession();
-      const freshPreparedSession = await prepareCurrentSessionSignOut(
-        freshSessionResult,
-      );
+      const freshPreparedSession =
+        await prepareCurrentSessionSignOut(freshSessionResult);
       if (freshPreparedSession === null) {
         return { status: "already_signed_out" as const };
       }
@@ -691,17 +694,14 @@ export function SessionConvergenceBoundary({
       fallbackExitInFlight = true;
       const attempt = ++fallbackExitAttempt;
       setFallbackExitState("pending");
-      void requireSettledWithin(
-        async () => {
-          const target = await prepareActionTimeFallbackSession();
-          if (target.status === "already_signed_out") return target;
-          return signOutCurrentSessionOnce(target.prepared, {
-            getSession: () => readAuthoritativeSession(),
-            signOut: (options) => authClient.signOut(options),
-          });
-        },
-        FALLBACK_SIGN_OUT_TIMEOUT_MS,
-      ).then(
+      void requireSettledWithin(async () => {
+        const target = await prepareActionTimeFallbackSession();
+        if (target.status === "already_signed_out") return target;
+        return signOutCurrentSessionOnce(target.prepared, {
+          getSession: () => readAuthoritativeSession(),
+          signOut: (options) => authClient.signOut(options),
+        });
+      }, FALLBACK_SIGN_OUT_TIMEOUT_MS).then(
         (result) => {
           if (disposed || attempt !== fallbackExitAttempt) return;
           fallbackExitInFlight = false;
@@ -711,7 +711,10 @@ export function SessionConvergenceBoundary({
           }
           if (result.status === "committed") {
             const tabId = tabLease?.tabId ?? fallbackUnregisteredTabId;
-            publishCommittedSessionInvalidation(createSignOutOperationId(), tabId);
+            publishCommittedSessionInvalidation(
+              createSignOutOperationId(),
+              tabId,
+            );
             beginSignedOutTransition();
             return;
           }
@@ -1446,10 +1449,36 @@ async function hydrateBoundedOwnerOfflineActivitySession(
   ownerUserId: string,
   sessionGeneration: string,
 ) {
-  return requireSettledWithin(
-    () => hydrateOwnerOfflineActivitySession(ownerUserId, sessionGeneration),
+  const ownerVaultBinding = await requireSettledWithin(
+    () => fetchAuthenticatedOwnerVaultBinding(sessionGeneration),
     AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
-  );
+  ).catch(() => null);
+  const controller = new AbortController();
+  try {
+    return await requireSettledWithin(
+      () =>
+        ownerVaultBinding
+          ? hydrateOwnerOfflineActivitySession(
+              ownerUserId,
+              sessionGeneration,
+              ownerVaultBinding,
+              { signal: controller.signal },
+            )
+          : hydrateOwnerOfflineActivitySession(
+              ownerUserId,
+              sessionGeneration,
+              undefined,
+              { signal: controller.signal },
+            ),
+      AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
+    );
+  } catch {
+    controller.abort();
+    await deactivatePhysicalOwnerVault(ownerUserId).catch(() => undefined);
+    return "ready" as const;
+  } finally {
+    controller.abort();
+  }
 }
 
 function requireSettledWithin<T>(

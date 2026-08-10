@@ -21,6 +21,22 @@ import {
   OwnerComposerDurabilityUnconfirmedError,
 } from "./owner-composer-durability";
 import { readOwnerComposerEvidenceRevision } from "./owner-composer-participants";
+import {
+  eraseCurrentDeviceOwnerVault,
+  migrateLegacyOwnerVault,
+  type OwnerVaultErasureResult,
+} from "./owner-vault-migration";
+import {
+  activateLegacyOwnerDatabaseForTesting,
+  activatePhysicalOwnerVault,
+  deactivatePhysicalOwnerVault,
+  OWNER_VAULT_OPERATION_DEADLINE_MS,
+  OwnerVaultDb,
+  readActiveOwnerVaultLifetimeSignal,
+  resolveOwnerOfflineDatabase,
+  withOwnerVaultWriterLease,
+  type OwnerOfflineDatabase,
+} from "./owner-vault";
 import type {
   OfflineComposerDurabilityRecord,
   OfflineDraftRecord,
@@ -152,7 +168,7 @@ export function inspectOwnerWork(
   ownerUserId: string,
   options: OwnerWorkInspectionOptions = {},
 ): Promise<OwnerWorkInspectionV2> {
-  const database = offlineDb;
+  const database = resolveOwnerOfflineDatabase(ownerUserId);
   if (!database) {
     return Promise.resolve(unavailableOwnerWork("storage_unavailable"));
   }
@@ -574,7 +590,10 @@ class InspectionParticipantSetUnstableError extends Error {}
 export async function hydrateOwnerOfflineActivitySession(
   ownerUserId: string,
   sessionGeneration: string,
+  ownerVaultBinding?: string,
+  options: { signal?: AbortSignal } = {},
 ): Promise<OwnerActivitySessionHydrationResult> {
+  throwIfOwnerVaultHydrationCancelled(options.signal);
   const owner = requireOwnerUserId(ownerUserId);
   const generation = requireSessionGeneration(sessionGeneration);
   const localGeneration = readLocalOwnerActivitySessionGeneration(owner);
@@ -582,21 +601,130 @@ export async function hydrateOwnerOfflineActivitySession(
     return "document_session_changed";
   }
 
-  const database = offlineDb;
+  let database: OwnerOfflineDatabase | undefined;
+  if (ownerVaultBinding) {
+    let migrationTarget: OwnerVaultDb | null = null;
+    try {
+      let migration:
+        | Awaited<ReturnType<typeof migrateLegacyOwnerVault>>
+        | undefined;
+      if (offlineDb) {
+        const legacySource = offlineDb;
+        // Do not install the target in the ordinary owner resolver until copy
+        // plus independent reopen/read-back has succeeded.
+        migrationTarget = new OwnerVaultDb(ownerVaultBinding);
+        await migrationTarget.open();
+        throwIfOwnerVaultHydrationCancelled(options.signal);
+        const migrationController = new AbortController();
+        const abortMigration = () => migrationController.abort();
+        options.signal?.addEventListener("abort", abortMigration, {
+          once: true,
+        });
+        if (options.signal?.aborted) abortMigration();
+        const migrationDeadline = globalThis.setTimeout(
+          () => migrationController.abort(),
+          OWNER_VAULT_OPERATION_DEADLINE_MS,
+        );
+        migration = await migrateLegacyOwnerVault(
+          {
+            ownerUserId: owner,
+            binding: ownerVaultBinding,
+            source: legacySource,
+            target: migrationTarget,
+          },
+          { signal: migrationController.signal },
+        ).finally(() => {
+          globalThis.clearTimeout(migrationDeadline);
+          options.signal?.removeEventListener("abort", abortMigration);
+        });
+        migrationTarget.close();
+        migrationTarget = null;
+        throwIfOwnerVaultHydrationCancelled(options.signal);
+        if (migration.status !== "activated") {
+          await deactivatePhysicalOwnerVault(owner);
+          setLocalOwnerActivitySessionGeneration(owner, generation);
+          return "ready";
+        }
+      }
+      const physical = await activatePhysicalOwnerVault(
+        owner,
+        ownerVaultBinding,
+      );
+      throwIfOwnerVaultHydrationCancelled(options.signal);
+      if (offlineDb && migration) {
+        const legacySource = offlineDb;
+        if (
+          !migration.sourceCleanupConfirmed &&
+          process.env.NODE_ENV !== "test"
+        ) {
+          const lifetimeSignal = readActiveOwnerVaultLifetimeSignal(
+            owner,
+            ownerVaultBinding,
+          );
+          if (!lifetimeSignal) throw new Error("Owner vault lifetime missing.");
+          const cancelScheduledCleanup = () =>
+            globalThis.clearTimeout(cleanupTimer);
+          const cleanupTimer = globalThis.setTimeout(() => {
+            lifetimeSignal.removeEventListener("abort", cancelScheduledCleanup);
+            if (lifetimeSignal.aborted) return;
+            const cleanupController = new AbortController();
+            const abortCleanup = () => cleanupController.abort();
+            lifetimeSignal.addEventListener("abort", abortCleanup, {
+              once: true,
+            });
+            const cleanupDeadline = globalThis.setTimeout(
+              () => cleanupController.abort(),
+              OWNER_VAULT_OPERATION_DEADLINE_MS,
+            );
+            void migrateLegacyOwnerVault(
+              {
+                ownerUserId: owner,
+                binding: ownerVaultBinding,
+                source: legacySource,
+                target: physical,
+              },
+              {
+                cleanupMode: "background",
+                signal: cleanupController.signal,
+              },
+            )
+              .catch(() => undefined)
+              .finally(() => {
+                globalThis.clearTimeout(cleanupDeadline);
+                lifetimeSignal.removeEventListener("abort", abortCleanup);
+              });
+          }, 1_000);
+          lifetimeSignal.addEventListener("abort", cancelScheduledCleanup, {
+            once: true,
+          });
+        }
+      }
+      database = physical;
+    } catch {
+      migrationTarget?.close();
+      await deactivatePhysicalOwnerVault(owner);
+      setLocalOwnerActivitySessionGeneration(owner, generation);
+      return "ready";
+    }
+  } else if (process.env.NODE_ENV === "test" && offlineDb) {
+    activateLegacyOwnerDatabaseForTesting(owner, offlineDb);
+    database = offlineDb;
+  } else {
+    await deactivatePhysicalOwnerVault(owner);
+  }
   if (!database) {
     setLocalOwnerActivitySessionGeneration(owner, generation);
     return "ready";
   }
 
-  const result = await database.transaction(
-    "rw",
-    database.ownerActivity,
-    async () => {
+  throwIfOwnerVaultHydrationCancelled(options.signal);
+  const result = await withOwnerVaultWriterLease(owner, (activeDatabase) =>
+    activeDatabase.transaction("rw", activeDatabase.ownerActivity, async () => {
       const stored = normalizeStoredOwnerActivity(
-        await database.ownerActivity.get(owner),
+        await activeDatabase.ownerActivity.get(owner),
       );
       if (!stored || stored.sessionGeneration !== generation) {
-        await database.ownerActivity.put(
+        await activeDatabase.ownerActivity.put(
           createActiveOwnerActivity(owner, generation),
         );
         return "ready" as const;
@@ -614,7 +742,7 @@ export async function hydrateOwnerOfflineActivitySession(
         .filter((operation) => operation.expiresAt > Date.now())
         .map((operation) => ({ ...operation }));
       if (activeOperations.length !== stored.operations.length) {
-        await database.ownerActivity.put({
+        await activeDatabase.ownerActivity.put({
           ...stored,
           operations: activeOperations,
           updatedAt: Date.now(),
@@ -624,9 +752,13 @@ export async function hydrateOwnerOfflineActivitySession(
       return activeOperations.length > 0
         ? ("blocked" as const)
         : ("ready" as const);
-    },
+    }),
   );
 
+  if (options.signal?.aborted) {
+    await deactivatePhysicalOwnerVault(owner);
+    return "ready";
+  }
   setLocalOwnerActivitySessionGeneration(owner, generation);
   return result;
 }
@@ -637,34 +769,46 @@ export async function finalizeOwnerOfflineActivityForSignedOut(
 ): Promise<"fenced" | "generation_changed"> {
   const owner = requireOwnerUserId(ownerUserId);
   const generation = requireSessionGeneration(sessionGeneration);
-  const database = offlineDb;
+  const database = resolveOwnerOfflineDatabase(owner);
   if (!database) return "fenced";
 
-  return database.transaction("rw", database.ownerActivity, async () => {
-    const activity = normalizeStoredOwnerActivity(
-      await database.ownerActivity.get(owner),
+  try {
+    return await withOwnerVaultWriterLease(owner, (activeDatabase) =>
+      activeDatabase.transaction(
+        "rw",
+        activeDatabase.ownerActivity,
+        async () => {
+          const activity = normalizeStoredOwnerActivity(
+            await activeDatabase.ownerActivity.get(owner),
+          );
+          if (activity && activity.sessionGeneration !== generation) {
+            // A newer authoritative document already installed generation B.
+            // Never overwrite it with A's fence, but A is still safely unable
+            // to write and may complete its hard navigation.
+            return "generation_changed" as const;
+          }
+          if (
+            activity?.lifecycle === "signed_out_fence" &&
+            activity.sessionGeneration === generation
+          ) {
+            return "fenced" as const;
+          }
+          await activeDatabase.ownerActivity.put({
+            ...(activity ?? createActiveOwnerActivity(owner, generation)),
+            lifecycle: "signed_out_fence",
+            operations: [],
+            updatedAt: Date.now(),
+            expiresAt: Number.MAX_SAFE_INTEGER,
+          });
+          return "fenced" as const;
+        },
+      ),
     );
-    if (activity && activity.sessionGeneration !== generation) {
-      // A newer authoritative document already installed generation B. Never
-      // overwrite it with A's fence, but A is still safely unable to write and
-      // may complete its hard navigation.
-      return "generation_changed" as const;
+  } finally {
+    if (database instanceof OwnerVaultDb) {
+      await deactivatePhysicalOwnerVault(owner);
     }
-    if (
-      activity?.lifecycle === "signed_out_fence" &&
-      activity.sessionGeneration === generation
-    ) {
-      return "fenced" as const;
-    }
-    await database.ownerActivity.put({
-      ...(activity ?? createActiveOwnerActivity(owner, generation)),
-      lifecycle: "signed_out_fence",
-      operations: [],
-      updatedAt: Date.now(),
-      expiresAt: Number.MAX_SAFE_INTEGER,
-    });
-    return "fenced" as const;
-  });
+  }
 }
 
 export async function finalizeOwnerOfflineActivityForSessionChange(
@@ -673,25 +817,37 @@ export async function finalizeOwnerOfflineActivityForSessionChange(
 ): Promise<"fenced" | "generation_changed"> {
   const owner = requireOwnerUserId(ownerUserId);
   const generation = requireSessionGeneration(sessionGeneration);
-  const database = offlineDb;
+  const database = resolveOwnerOfflineDatabase(owner);
   if (!database) return "fenced";
 
-  return database.transaction("rw", database.ownerActivity, async () => {
-    const activity = normalizeStoredOwnerActivity(
-      await database.ownerActivity.get(owner),
+  try {
+    return await withOwnerVaultWriterLease(owner, (activeDatabase) =>
+      activeDatabase.transaction(
+        "rw",
+        activeDatabase.ownerActivity,
+        async () => {
+          const activity = normalizeStoredOwnerActivity(
+            await activeDatabase.ownerActivity.get(owner),
+          );
+          if (activity && activity.sessionGeneration !== generation) {
+            return "generation_changed" as const;
+          }
+          await activeDatabase.ownerActivity.put({
+            ...(activity ?? createActiveOwnerActivity(owner, generation)),
+            lifecycle: "signed_out_fence",
+            operations: [],
+            updatedAt: Date.now(),
+            expiresAt: Number.MAX_SAFE_INTEGER,
+          });
+          return "fenced" as const;
+        },
+      ),
     );
-    if (activity && activity.sessionGeneration !== generation) {
-      return "generation_changed" as const;
+  } finally {
+    if (database instanceof OwnerVaultDb) {
+      await deactivatePhysicalOwnerVault(owner);
     }
-    await database.ownerActivity.put({
-      ...(activity ?? createActiveOwnerActivity(owner, generation)),
-      lifecycle: "signed_out_fence",
-      operations: [],
-      updatedAt: Date.now(),
-      expiresAt: Number.MAX_SAFE_INTEGER,
-    });
-    return "fenced" as const;
-  });
+  }
 }
 
 export async function pauseOwnerOfflineActivity(
@@ -710,38 +866,45 @@ export async function pauseOwnerOfflineActivity(
   }
 
   const pausedAt = Date.now();
-  const database = offlineDb;
+  const database = resolveOwnerOfflineDatabase(owner);
   pauseOwnerOfflineActivityLocally(owner, operationId);
 
   try {
     if (database) {
-      await database.transaction("rw", database.ownerActivity, async () => {
-        const storedActivity = normalizeStoredOwnerActivity(
-          await database.ownerActivity.get(owner),
-        );
-        const activity =
-          storedActivity ?? createActiveOwnerActivity(owner, sessionGeneration);
-        if (
-          activity.sessionGeneration !== sessionGeneration ||
-          activity.lifecycle !== "active"
-        ) {
-          throw new OwnerOfflineActivityPausedError();
-        }
-        const operations = activeOwnerOperations(activity).filter(
-          (operation) => operation.operationId !== operationId,
-        );
-        operations.push({
-          operationId,
-          phase: "preparing",
-          expiresAt: pausedAt + OWNER_ACTIVITY_PAUSE_TTL_MS,
-        });
-        await database.ownerActivity.put({
-          ...activity,
-          operations,
-          updatedAt: pausedAt,
-          expiresAt: ownerActivityExpiry(operations),
-        });
-      });
+      await withOwnerVaultWriterLease(owner, (activeDatabase) =>
+        activeDatabase.transaction(
+          "rw",
+          activeDatabase.ownerActivity,
+          async () => {
+            const storedActivity = normalizeStoredOwnerActivity(
+              await activeDatabase.ownerActivity.get(owner),
+            );
+            const activity =
+              storedActivity ??
+              createActiveOwnerActivity(owner, sessionGeneration);
+            if (
+              activity.sessionGeneration !== sessionGeneration ||
+              activity.lifecycle !== "active"
+            ) {
+              throw new OwnerOfflineActivityPausedError();
+            }
+            const operations = activeOwnerOperations(activity).filter(
+              (operation) => operation.operationId !== operationId,
+            );
+            operations.push({
+              operationId,
+              phase: "preparing",
+              expiresAt: pausedAt + OWNER_ACTIVITY_PAUSE_TTL_MS,
+            });
+            await activeDatabase.ownerActivity.put({
+              ...activity,
+              operations,
+              updatedAt: pausedAt,
+              expiresAt: ownerActivityExpiry(operations),
+            });
+          },
+        ),
+      );
     }
   } catch (error) {
     resumeOwnerOfflineActivityLocally(owner, operationId);
@@ -758,41 +921,48 @@ export async function pauseOwnerOfflineActivity(
     mutation: "remove" | "renew" | "promote",
   ) => {
     if (!database) return;
-    await database.transaction("rw", database.ownerActivity, async () => {
-      const activity = normalizeStoredOwnerActivity(
-        await database.ownerActivity.get(owner),
-      );
-      if (!activity || activity.sessionGeneration !== sessionGeneration) {
-        throw new OwnerOfflineActivityPausedError();
-      }
-      if (activity.lifecycle === "signed_out_fence") return;
+    await withOwnerVaultWriterLease(owner, (activeDatabase) =>
+      activeDatabase.transaction(
+        "rw",
+        activeDatabase.ownerActivity,
+        async () => {
+          const activity = normalizeStoredOwnerActivity(
+            await activeDatabase.ownerActivity.get(owner),
+          );
+          if (!activity || activity.sessionGeneration !== sessionGeneration) {
+            throw new OwnerOfflineActivityPausedError();
+          }
+          if (activity.lifecycle === "signed_out_fence") return;
 
-      const operations = activeOwnerOperations(activity);
-      if (mutation === "promote" || mutation === "renew") {
-        const ownedOperation = operations.find(
-          (operation) => operation.operationId === operationId,
-        );
-        if (!ownedOperation) throw new OwnerOfflineActivityPausedError();
-        if (mutation === "promote") {
-          ownedOperation.phase = "commit_pending";
-          ownedOperation.expiresAt =
-            Date.now() + COMMIT_PENDING_RECOVERY_GRACE_MS;
-        } else if (ownedOperation.phase === "preparing") {
-          ownedOperation.expiresAt = Date.now() + OWNER_ACTIVITY_PAUSE_TTL_MS;
-        }
-      } else {
-        const filtered = operations.filter(
-          (operation) => operation.operationId !== operationId,
-        );
-        operations.splice(0, operations.length, ...filtered);
-      }
-      await database.ownerActivity.put({
-        ...activity,
-        operations,
-        updatedAt: Date.now(),
-        expiresAt: ownerActivityExpiry(operations),
-      });
-    });
+          const operations = activeOwnerOperations(activity);
+          if (mutation === "promote" || mutation === "renew") {
+            const ownedOperation = operations.find(
+              (operation) => operation.operationId === operationId,
+            );
+            if (!ownedOperation) throw new OwnerOfflineActivityPausedError();
+            if (mutation === "promote") {
+              ownedOperation.phase = "commit_pending";
+              ownedOperation.expiresAt =
+                Date.now() + COMMIT_PENDING_RECOVERY_GRACE_MS;
+            } else if (ownedOperation.phase === "preparing") {
+              ownedOperation.expiresAt =
+                Date.now() + OWNER_ACTIVITY_PAUSE_TTL_MS;
+            }
+          } else {
+            const filtered = operations.filter(
+              (operation) => operation.operationId !== operationId,
+            );
+            operations.splice(0, operations.length, ...filtered);
+          }
+          await activeDatabase.ownerActivity.put({
+            ...activity,
+            operations,
+            updatedAt: Date.now(),
+            expiresAt: ownerActivityExpiry(operations),
+          });
+        },
+      ),
+    );
   };
 
   return {
@@ -891,60 +1061,65 @@ export async function purgeUnsyncedOwnerData(
   const owner = requireOwnerUserId(ownerUserId);
   const sessionGeneration = requireSessionGeneration(scope.sessionGeneration);
   const operationId = requireOperationId(scope.operationId);
-  const database = offlineDb;
+  const database = resolveOwnerOfflineDatabase(owner);
   if (!database) {
     revokeOwnerPreviewObjectUrls(owner);
     return { draftCount: 0, mutationCount: 0, totalCount: 0 };
   }
 
-  const result = await database.transaction(
-    "rw",
-    [
-      database.drafts,
-      database.draftSummaries,
-      database.composerDurability,
-      database.mutations,
-      database.mutationSummaries,
-      database.ownerActivity,
-    ],
-    async () => {
-      await assertOwnedActivityScope(database, owner, {
-        operationId,
-        sessionGeneration,
-      });
-      const draftCount = await database.drafts
-        .where("ownerUserId")
-        .equals(owner)
-        .delete();
-      await database.draftSummaries.where("ownerUserId").equals(owner).delete();
-      await database.composerDurability
-        .where("ownerUserId")
-        .equals(owner)
-        .delete();
-      let mutationCount = 0;
-
-      for (const status of UNSYNCED_MUTATION_STATUSES) {
-        mutationCount += await database.mutations
-          .where("[ownerUserId+status]")
-          .equals([owner, status])
+  const result = await withOwnerVaultWriterLease(owner, (activeDatabase) =>
+    activeDatabase.transaction(
+      "rw",
+      [
+        activeDatabase.drafts,
+        activeDatabase.draftSummaries,
+        activeDatabase.composerDurability,
+        activeDatabase.mutations,
+        activeDatabase.mutationSummaries,
+        activeDatabase.ownerActivity,
+      ],
+      async () => {
+        await assertOwnedActivityScope(activeDatabase, owner, {
+          operationId,
+          sessionGeneration,
+        });
+        const draftCount = await activeDatabase.drafts
+          .where("ownerUserId")
+          .equals(owner)
           .delete();
-      }
-      await database.mutationSummaries
-        .where("ownerUserId")
-        .equals(owner)
-        .and((summary) =>
-          UNSYNCED_MUTATION_STATUSES.includes(
-            summary.status as UnsyncedMutationStatus,
-          ),
-        )
-        .delete();
+        await activeDatabase.draftSummaries
+          .where("ownerUserId")
+          .equals(owner)
+          .delete();
+        await activeDatabase.composerDurability
+          .where("ownerUserId")
+          .equals(owner)
+          .delete();
+        let mutationCount = 0;
 
-      return {
-        draftCount,
-        mutationCount,
-        totalCount: draftCount + mutationCount,
-      };
-    },
+        for (const status of UNSYNCED_MUTATION_STATUSES) {
+          mutationCount += await activeDatabase.mutations
+            .where("[ownerUserId+status]")
+            .equals([owner, status])
+            .delete();
+        }
+        await activeDatabase.mutationSummaries
+          .where("ownerUserId")
+          .equals(owner)
+          .and((summary) =>
+            UNSYNCED_MUTATION_STATUSES.includes(
+              summary.status as UnsyncedMutationStatus,
+            ),
+          )
+          .delete();
+
+        return {
+          draftCount,
+          mutationCount,
+          totalCount: draftCount + mutationCount,
+        };
+      },
+    ),
   );
 
   revokeOwnerPreviewObjectUrls(owner);
@@ -1008,6 +1183,50 @@ export async function purgeErasedOwnerOfflineStore(
   revokeOwnerPreviewObjectUrls(owner);
   publishOfflineDraftsChanged();
   publishOfflineQueueChanged();
+  const remainingLegacyRows = await Promise.all([
+    database.drafts.where("ownerUserId").equals(owner).count(),
+    database.draftSummaries.where("ownerUserId").equals(owner).count(),
+    database.composerDurability.where("ownerUserId").equals(owner).count(),
+    database.mutations.where("ownerUserId").equals(owner).count(),
+    database.mutationSummaries.where("ownerUserId").equals(owner).count(),
+    database.ownerActivity.where("ownerUserId").equals(owner).count(),
+  ]);
+  if (remainingLegacyRows.some((count) => count !== 0)) {
+    throw new Error(
+      "Owner vault erasure could not confirm device-local absence.",
+    );
+  }
+  return result;
+}
+
+export async function eraseCurrentDeviceOwnerOfflineStore(
+  ownerUserId: string,
+  binding: string,
+): Promise<OwnerVaultErasureResult> {
+  const owner = requireOwnerUserId(ownerUserId);
+  if (!offlineDb) {
+    return { status: "erasure_unconfirmed", durationMs: 0 };
+  }
+  const controller = new AbortController();
+  let deadline: ReturnType<typeof globalThis.setTimeout> | undefined;
+  const timedOut = new Promise<OwnerVaultErasureResult>((resolve) => {
+    deadline = globalThis.setTimeout(() => {
+      controller.abort();
+      resolve({
+        status: "erasure_unconfirmed",
+        durationMs: OWNER_VAULT_OPERATION_DEADLINE_MS,
+      });
+    }, OWNER_VAULT_OPERATION_DEADLINE_MS);
+  });
+  const operation = eraseCurrentDeviceOwnerVault(
+    { ownerUserId: owner, binding, legacy: offlineDb },
+    { signal: controller.signal },
+  );
+  const result = await Promise.race([operation, timedOut]);
+  if (deadline !== undefined) globalThis.clearTimeout(deadline);
+  revokeOwnerPreviewObjectUrls(owner);
+  publishOfflineDraftsChanged();
+  publishOfflineQueueChanged();
   return result;
 }
 
@@ -1032,7 +1251,9 @@ export function registerOwnerPreviewObjectUrl(
 
 async function assertOwnerActivityAllowedForSync(ownerUserId: string) {
   try {
-    await assertOwnerOfflineActivityAllowed(ownerUserId);
+    await withOwnerVaultWriterLease(ownerUserId, () =>
+      assertOwnerOfflineActivityAllowed(ownerUserId),
+    );
   } catch (error) {
     if (error instanceof OwnerOfflineActivityPausedError) throw error;
 
@@ -1081,7 +1302,7 @@ function createActiveOwnerActivity(
 }
 
 async function assertOwnedActivityScope(
-  database: NonNullable<typeof offlineDb>,
+  database: OwnerOfflineDatabase,
   ownerUserId: string,
   scope: OwnerOfflinePurgeScope,
 ) {
@@ -1218,4 +1439,12 @@ function requireOwnerUserId(ownerUserId: string) {
   const normalized = ownerUserId.trim();
   if (!normalized) throw new Error("Offline data requires an owner user id.");
   return normalized;
+}
+
+function throwIfOwnerVaultHydrationCancelled(
+  signal: AbortSignal | undefined,
+): void {
+  if (signal?.aborted) {
+    throw new DOMException("Owner vault hydration cancelled.", "AbortError");
+  }
 }

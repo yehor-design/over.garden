@@ -352,6 +352,20 @@
       ]
     },
     {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/owner-vault-migration.ts#eraseCurrentDeviceOwnerVault:browser_storage:eraseCurrentDeviceOwnerVault",
+      "branchConditionClass": "always",
+      "branchId": "branch:1abcfde6d0ab574a23f2:always",
+      "consumerEdgeId": "edge:1abcfde6d0ab574a23f2:1:ac46b9443bce5dbc20ab",
+      "effectBoundaryId": "effect:c1b63669ff7ff0f9e291:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#eraseCurrentDeviceOwnerVault:browser_storage:eraseCurrentDeviceOwnerVault",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:1abcfde6d0ab574a23f2",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
       "branchConditionClass": "always",
       "branchId": "branch:1af84486aa45f8e7730a:always",
@@ -719,20 +733,6 @@
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:298fa0c8195313734b28",
-      "predecessorEdgeIds": []
-    },
-    {
-      "admissionBoundaryId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#purgeUnsyncedOwnerData:browser_storage:purgeUnsyncedOwnerData",
-      "branchConditionClass": "always",
-      "branchId": "branch:2cf26730e4df9629417b:always",
-      "consumerEdgeId": "edge:2cf26730e4df9629417b:1:b87ab961aad796ddb6ab",
-      "effectBoundaryId": "effect:1ae6bb26b651c5cf8779:browser-storage-transaction-1",
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#purgeUnsyncedOwnerData:browser_storage:purgeUnsyncedOwnerData",
-      "evidencePaths": [
-        "src/lib/offline/owner-session-lifecycle.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:2cf26730e4df9629417b",
       "predecessorEdgeIds": []
     },
     {
@@ -3802,6 +3802,21 @@
       ]
     },
     {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#eraseCurrentDeviceOwnerOfflineStore:browser_storage:eraseCurrentDeviceOwnerOfflineStore",
+      "branchConditionClass": "always",
+      "branchId": "branch:5c6456bba8f455cbddab:always",
+      "consumerEdgeId": "edge:5c6456bba8f455cbddab:1:ac46b9443bce5dbc20ab",
+      "effectBoundaryId": "effect:c1b63669ff7ff0f9e291:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#eraseCurrentDeviceOwnerOfflineStore:browser_storage:eraseCurrentDeviceOwnerOfflineStore",
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:5c6456bba8f455cbddab",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/garden/pilot-learning/interviews/actions.ts#createFounderInterviewLearningAction",
       "branchConditionClass": "always",
       "branchId": "branch:5dc652a9bb9643b5883e:always",
@@ -3902,7 +3917,39 @@
       "admissionBoundaryId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#hydrateOwnerOfflineActivitySession:browser_storage:hydrateOwnerOfflineActivitySession",
       "branchConditionClass": "always",
       "branchId": "branch:639e794c17e3e868b97e:always",
-      "consumerEdgeId": "edge:639e794c17e3e868b97e:1:d0c17587fac881ab583f",
+      "consumerEdgeId": "edge:639e794c17e3e868b97e:1:c3dc6f024450e94221ac",
+      "effectBoundaryId": "effect:9e24a49e01724e6c9952:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#hydrateOwnerOfflineActivitySession:browser_storage:hydrateOwnerOfflineActivitySession",
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:639e794c17e3e868b97e",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#hydrateOwnerOfflineActivitySession:browser_storage:hydrateOwnerOfflineActivitySession",
+      "branchConditionClass": "always",
+      "branchId": "branch:639e794c17e3e868b97e:always",
+      "consumerEdgeId": "edge:639e794c17e3e868b97e:2:ac46b9443bce5dbc20ab",
+      "effectBoundaryId": "effect:c1b63669ff7ff0f9e291:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#hydrateOwnerOfflineActivitySession:browser_storage:hydrateOwnerOfflineActivitySession",
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:639e794c17e3e868b97e",
+      "predecessorEdgeIds": [
+        "edge:639e794c17e3e868b97e:1:c3dc6f024450e94221ac"
+      ]
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#hydrateOwnerOfflineActivitySession:browser_storage:hydrateOwnerOfflineActivitySession",
+      "branchConditionClass": "always",
+      "branchId": "branch:639e794c17e3e868b97e:always",
+      "consumerEdgeId": "edge:639e794c17e3e868b97e:3:d0c17587fac881ab583f",
       "effectBoundaryId": "effect:535693f487f47271c3b4:browser-storage-transaction-1",
       "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#hydrateOwnerOfflineActivitySession:browser_storage:hydrateOwnerOfflineActivitySession",
       "evidencePaths": [
@@ -3910,7 +3957,9 @@
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:639e794c17e3e868b97e",
-      "predecessorEdgeIds": []
+      "predecessorEdgeIds": [
+        "edge:639e794c17e3e868b97e:2:ac46b9443bce5dbc20ab"
+      ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
@@ -6540,6 +6589,36 @@
       "pipelineId": "pipeline:9f00e17af2fcc3a50739",
       "predecessorEdgeIds": [
         "edge:9f00e17af2fcc3a50739:2:88ef40df713114ebd7e8"
+      ]
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/owner-vault-migration.ts#migrateLegacyOwnerVault:browser_storage:migrateLegacyOwnerVault",
+      "branchConditionClass": "always",
+      "branchId": "branch:a0c1e631b9cc2c6d5dbc:always",
+      "consumerEdgeId": "edge:a0c1e631b9cc2c6d5dbc:1:c3dc6f024450e94221ac",
+      "effectBoundaryId": "effect:9e24a49e01724e6c9952:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#migrateLegacyOwnerVault:browser_storage:migrateLegacyOwnerVault",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:a0c1e631b9cc2c6d5dbc",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/owner-vault-migration.ts#migrateLegacyOwnerVault:browser_storage:migrateLegacyOwnerVault",
+      "branchConditionClass": "always",
+      "branchId": "branch:a0c1e631b9cc2c6d5dbc:always",
+      "consumerEdgeId": "edge:a0c1e631b9cc2c6d5dbc:2:ac46b9443bce5dbc20ab",
+      "effectBoundaryId": "effect:c1b63669ff7ff0f9e291:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#migrateLegacyOwnerVault:browser_storage:migrateLegacyOwnerVault",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:a0c1e631b9cc2c6d5dbc",
+      "predecessorEdgeIds": [
+        "edge:a0c1e631b9cc2c6d5dbc:1:c3dc6f024450e94221ac"
       ]
     },
     {
@@ -11189,20 +11268,6 @@
     {
       "atomicity": "browser_storage_transaction",
       "commitLabel": "browser-storage-transaction-1",
-      "effectBoundaryId": "effect:1ae6bb26b651c5cf8779:browser-storage-transaction-1",
-      "effectFamilies": [
-        "browser_storage"
-      ],
-      "evidencePaths": [
-        "src/lib/offline/owner-session-lifecycle.ts"
-      ],
-      "idempotencyOwner": "src/lib/offline/owner-session-lifecycle.ts#purgeUnsyncedOwnerData",
-      "ownerPath": "src/lib/offline/owner-session-lifecycle.ts",
-      "ownerSymbol": "purgeUnsyncedOwnerData"
-    },
-    {
-      "atomicity": "browser_storage_transaction",
-      "commitLabel": "browser-storage-transaction-1",
       "effectBoundaryId": "effect:1d585d2cb8e3631b9102:browser-storage-transaction-1",
       "effectFamilies": [
         "browser_storage"
@@ -12747,6 +12812,20 @@
     {
       "atomicity": "browser_storage_transaction",
       "commitLabel": "browser-storage-transaction-1",
+      "effectBoundaryId": "effect:9e24a49e01724e6c9952:browser-storage-transaction-1",
+      "effectFamilies": [
+        "browser_storage"
+      ],
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "idempotencyOwner": "src/lib/offline/owner-vault-migration.ts#copyMissingRows",
+      "ownerPath": "src/lib/offline/owner-vault-migration.ts",
+      "ownerSymbol": "copyMissingRows"
+    },
+    {
+      "atomicity": "browser_storage_transaction",
+      "commitLabel": "browser-storage-transaction-1",
       "effectBoundaryId": "effect:9e4d5c46133977acb050:browser-storage-transaction-1",
       "effectFamilies": [
         "browser_storage"
@@ -13118,6 +13197,20 @@
       "idempotencyOwner": "src/lib/offline/queue.ts#enqueueOfflineMutation",
       "ownerPath": "src/lib/offline/queue.ts",
       "ownerSymbol": "enqueueOfflineMutation"
+    },
+    {
+      "atomicity": "browser_storage_transaction",
+      "commitLabel": "browser-storage-transaction-1",
+      "effectBoundaryId": "effect:c1b63669ff7ff0f9e291:browser-storage-transaction-1",
+      "effectFamilies": [
+        "browser_storage"
+      ],
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "idempotencyOwner": "src/lib/offline/owner-vault-migration.ts#deleteExactOwnerSnapshotRows",
+      "ownerPath": "src/lib/offline/owner-vault-migration.ts",
+      "ownerSymbol": "deleteExactOwnerSnapshotRows"
     },
     {
       "atomicity": "database_transaction",
@@ -15581,6 +15674,21 @@
     {
       "authority": "authenticated_user",
       "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#fingerprintOwnerVaultPayload:browser_storage:fingerprintOwnerVaultPayload",
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "symbol": "fingerprintOwnerVaultPayload",
+      "transport": "offline_replay",
+      "variant": "browser_storage:fingerprintOwnerVaultPayload"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
       "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#isExactOwnerComposerDurabilityReceipt:browser_storage:isExactOwnerComposerDurabilityReceipt",
       "evidencePaths": [
         "src/lib/offline/owner-composer-durability.ts"
@@ -15746,6 +15854,21 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
+      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#eraseCurrentDeviceOwnerOfflineStore:browser_storage:eraseCurrentDeviceOwnerOfflineStore",
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "capability_runtime_ove_286",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "symbol": "eraseCurrentDeviceOwnerOfflineStore",
+      "transport": "offline_replay",
+      "variant": "browser_storage:eraseCurrentDeviceOwnerOfflineStore"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
       "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#finalizeOwnerOfflineActivityForSessionChange:browser_storage:finalizeOwnerOfflineActivityForSessionChange",
       "evidencePaths": [
         "src/lib/offline/owner-session-lifecycle.ts"
@@ -15850,14 +15973,14 @@
     },
     {
       "authority": "authenticated_user",
-      "classification": "effectful",
+      "classification": "read_only",
       "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#purgeUnsyncedOwnerData:browser_storage:purgeUnsyncedOwnerData",
       "evidencePaths": [
         "src/lib/offline/owner-session-lifecycle.ts"
       ],
-      "exclusionReason": null,
-      "executionOwner": "capability_runtime_ove_286",
-      "generationRequirement": "required_before_first_effect",
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
       "path": "src/lib/offline/owner-session-lifecycle.ts",
       "symbol": "purgeUnsyncedOwnerData",
       "transport": "offline_replay",
@@ -15892,6 +16015,291 @@
       "symbol": "runOwnerSyncAttempt",
       "transport": "offline_replay",
       "variant": "browser_storage:runOwnerSyncAttempt"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#eraseCurrentDeviceOwnerVault:browser_storage:eraseCurrentDeviceOwnerVault",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "high_risk_ove_290",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "symbol": "eraseCurrentDeviceOwnerVault",
+      "transport": "offline_replay",
+      "variant": "browser_storage:eraseCurrentDeviceOwnerVault"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#migrateLegacyOwnerVault:browser_storage:migrateLegacyOwnerVault",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "high_risk_ove_290",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "symbol": "migrateLegacyOwnerVault",
+      "transport": "offline_replay",
+      "variant": "browser_storage:migrateLegacyOwnerVault"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#readOwnerVaultControlReceipt:browser_storage:readOwnerVaultControlReceipt",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "symbol": "readOwnerVaultControlReceipt",
+      "transport": "offline_replay",
+      "variant": "browser_storage:readOwnerVaultControlReceipt"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#abandonOwnerVaultExclusiveFence:browser_storage:abandonOwnerVaultExclusiveFence",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "abandonOwnerVaultExclusiveFence",
+      "transport": "offline_replay",
+      "variant": "browser_storage:abandonOwnerVaultExclusiveFence"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#acquireOwnerVaultExclusiveFence:browser_storage:acquireOwnerVaultExclusiveFence",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "acquireOwnerVaultExclusiveFence",
+      "transport": "offline_replay",
+      "variant": "browser_storage:acquireOwnerVaultExclusiveFence"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#activateLegacyOwnerDatabaseForTesting:browser_storage:activateLegacyOwnerDatabaseForTesting",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "activateLegacyOwnerDatabaseForTesting",
+      "transport": "offline_replay",
+      "variant": "browser_storage:activateLegacyOwnerDatabaseForTesting"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#activatePhysicalOwnerVault:browser_storage:activatePhysicalOwnerVault",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "activatePhysicalOwnerVault",
+      "transport": "offline_replay",
+      "variant": "browser_storage:activatePhysicalOwnerVault"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#deactivatePhysicalOwnerVault:browser_storage:deactivatePhysicalOwnerVault",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "deactivatePhysicalOwnerVault",
+      "transport": "offline_replay",
+      "variant": "browser_storage:deactivatePhysicalOwnerVault"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#deleteResolvedPhysicalOwnerVault:browser_storage:deleteResolvedPhysicalOwnerVault",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "deleteResolvedPhysicalOwnerVault",
+      "transport": "offline_replay",
+      "variant": "browser_storage:deleteResolvedPhysicalOwnerVault"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#fetchAuthenticatedOwnerVaultBinding:browser_storage:fetchAuthenticatedOwnerVaultBinding",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "fetchAuthenticatedOwnerVaultBinding",
+      "transport": "offline_replay",
+      "variant": "browser_storage:fetchAuthenticatedOwnerVaultBinding"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#finalizeOwnerVaultExclusiveFence:browser_storage:finalizeOwnerVaultExclusiveFence",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "finalizeOwnerVaultExclusiveFence",
+      "transport": "offline_replay",
+      "variant": "browser_storage:finalizeOwnerVaultExclusiveFence"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#hasOwnerVaultBinding:browser_storage:hasOwnerVaultBinding",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "hasOwnerVaultBinding",
+      "transport": "offline_replay",
+      "variant": "browser_storage:hasOwnerVaultBinding"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#offlineOwnerVaultDatabaseName:browser_storage:offlineOwnerVaultDatabaseName",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "offlineOwnerVaultDatabaseName",
+      "transport": "offline_replay",
+      "variant": "browser_storage:offlineOwnerVaultDatabaseName"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#readActiveOwnerVaultBinding:browser_storage:readActiveOwnerVaultBinding",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "readActiveOwnerVaultBinding",
+      "transport": "offline_replay",
+      "variant": "browser_storage:readActiveOwnerVaultBinding"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#readActiveOwnerVaultLifetimeSignal:browser_storage:readActiveOwnerVaultLifetimeSignal",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "readActiveOwnerVaultLifetimeSignal",
+      "transport": "offline_replay",
+      "variant": "browser_storage:readActiveOwnerVaultLifetimeSignal"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#requireOwnerOfflineDatabase:browser_storage:requireOwnerOfflineDatabase",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "requireOwnerOfflineDatabase",
+      "transport": "offline_replay",
+      "variant": "browser_storage:requireOwnerOfflineDatabase"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#resolveOwnerOfflineDatabase:browser_storage:resolveOwnerOfflineDatabase",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "resolveOwnerOfflineDatabase",
+      "transport": "offline_replay",
+      "variant": "browser_storage:resolveOwnerOfflineDatabase"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#waitForOwnerVaultWritersToSettle:browser_storage:waitForOwnerVaultWritersToSettle",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "waitForOwnerVaultWritersToSettle",
+      "transport": "offline_replay",
+      "variant": "browser_storage:waitForOwnerVaultWritersToSettle"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#withOwnerVaultWriterLease:browser_storage:withOwnerVaultWriterLease",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "withOwnerVaultWriterLease",
+      "transport": "offline_replay",
+      "variant": "browser_storage:withOwnerVaultWriterLease"
     },
     {
       "authority": "authenticated_user",
@@ -16930,6 +17338,21 @@
       "symbol": "POST",
       "transport": "route_handler",
       "variant": "POST:visual_fixture"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/offline/owner-vault-binding/route.ts#GET",
+      "evidencePaths": [
+        "src/app/api/offline/owner-vault-binding/route.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/offline/owner-vault-binding/route.ts",
+      "symbol": "GET",
+      "transport": "route_handler",
+      "variant": "GET"
     },
     {
       "authority": "guest",
@@ -19828,6 +20251,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:0bcc99d9125ceda98451",
+      "symbol": "readActiveOwnerVaultLifetimeSignal"
+    },
+    {
+      "evidencePaths": [
         "src/app/admin/communities/[slug]/actions.ts"
       ],
       "nodeKind": "server_action",
@@ -20734,6 +21169,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:1465906412c9a87575b9",
+      "symbol": "OwnerVaultControlState"
+    },
+    {
+      "evidencePaths": [
         "src/lib/meta-marketing/client.ts",
         "src/lib/meta-marketing/events.ts"
       ],
@@ -20803,6 +21250,18 @@
       "semanticVariant": "from:@/server/catalog-repository",
       "sourceNodeId": "source:14f8a8ee496ad93f48e0",
       "symbol": "findSelectableCatalogItem"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:1501c25551083b11c017",
+      "symbol": "activatePhysicalOwnerVault"
     },
     {
       "evidencePaths": [
@@ -20974,6 +21433,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser-storage-transaction-1",
+      "sourceNodeId": "source:16a87e57128f5e9be35d",
+      "symbol": "deleteExactOwnerSnapshotRows"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
         "src/lib/offline/drafts.ts"
       ],
@@ -21078,6 +21548,18 @@
       "semanticVariant": "from:@/lib/storage",
       "sourceNodeId": "source:174f55c5e528ab61fbf4",
       "symbol": "deleteQuarantineObject"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:17663a30d18f344d0807",
+      "symbol": "deactivatePhysicalOwnerVault"
     },
     {
       "evidencePaths": [
@@ -21407,6 +21889,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:withOwnerVaultWriterLease",
+      "sourceNodeId": "source:19e816e3010ebcc0afde",
+      "symbol": "withOwnerVaultWriterLease"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/page.tsx",
         "src/components/living-object-passport/living-object-passport.tsx"
       ],
@@ -21715,6 +22208,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:deactivatePhysicalOwnerVault",
+      "sourceNodeId": "source:1ca4c0edb308af9d1934",
+      "symbol": "deactivatePhysicalOwnerVault"
+    },
+    {
+      "evidencePaths": [
         "src/components/auth/session-convergence-boundary.tsx",
         "src/lib/auth/sign-out-contract.ts"
       ],
@@ -21928,6 +22432,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:eraseCurrentDeviceOwnerVault",
+      "sourceNodeId": "source:1ec9ce8bb4b1bfdda633",
+      "symbol": "eraseCurrentDeviceOwnerVault"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/page.tsx",
         "src/lib/localization/localization-visual-fixture.ts"
       ],
@@ -21937,6 +22452,18 @@
       "semanticVariant": "from:@/lib/localization/localization-visual-fixture",
       "sourceNodeId": "source:1edf161b144e565d9a48",
       "symbol": "isInterfaceSafeFlushFailureVisualFixtureValue"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:1f017b0958f28fa3a1a4",
+      "symbol": "withOwnerVaultWriterLease"
     },
     {
       "evidencePaths": [
@@ -22294,6 +22821,18 @@
       "semanticVariant": "from:@/server/profile-interaction-repository",
       "sourceNodeId": "source:21b25767190429d561f6",
       "symbol": "unfollowProfile"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:21c1db7fc66f872fb955",
+      "symbol": "OwnerVaultControlRecord"
     },
     {
       "evidencePaths": [
@@ -24714,6 +25253,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:36a36d85d383687cff49",
+      "symbol": "OwnerComposerDurabilityUnconfirmedError"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/garden-auth-panel.tsx",
         "src/lib/trust-surface-copy.ts"
       ],
@@ -24964,18 +25515,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/offline/drafts.ts",
-        "src/lib/offline/queue.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/lib/offline/drafts.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:./queue",
-      "sourceNodeId": "source:394e9e3a071765680c85",
-      "symbol": "offlineDb"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/account-methods-panel.tsx",
         "src/lib/trust-surface-copy.ts"
       ],
@@ -24985,6 +25524,18 @@
       "semanticVariant": "from:@/lib/trust-surface-copy",
       "sourceNodeId": "source:39794e22f01f24a439b7",
       "symbol": "getTrustSurfaceCopy"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:397eef945b390fb1cf0b",
+      "symbol": "abandonOwnerVaultExclusiveFence"
     },
     {
       "evidencePaths": [
@@ -25746,6 +26297,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:3fb82bb55165ca75b8b3",
+      "symbol": "OwnerOfflineDatabase"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
         "src/db/schema.ts"
       ],
@@ -25901,6 +26464,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:408957b3be4eee0ea119",
+      "symbol": "OfflineMutation"
+    },
+    {
+      "evidencePaths": [
         "src/server/journal-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -25991,6 +26566,18 @@
       "semanticVariant": "from:@/lib/operator-curation-copy",
       "sourceNodeId": "source:41a3044a14eca9c71229",
       "symbol": "getOperatorCurationCopy"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:41be650fd8381329ff9b",
+      "symbol": "OfflineDraftRecord"
     },
     {
       "evidencePaths": [
@@ -26298,6 +26885,29 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:43934ee3cf2cda0d32b7",
+      "symbol": "finalizeOwnerVaultExclusiveFence"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/offline/owner-vault-binding/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/offline/owner-vault-binding/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "GET",
+      "sourceNodeId": "source:43a3ebeb0e37161b7fe0",
+      "symbol": "GET"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/profile/page.tsx",
         "src/lib/trust-surface-copy.ts"
       ],
@@ -26343,6 +26953,18 @@
       "semanticVariant": "from:@/server/catalog-source/fuzzy-duplicate-qa-job-repository",
       "sourceNodeId": "source:442340f6bd1a9b2bc405",
       "symbol": "enqueueCatalogFuzzyDuplicateQaRefresh"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:443b5b290ceb72dad7f8",
+      "symbol": "OfflineDraftSummary"
     },
     {
       "evidencePaths": [
@@ -26535,6 +27157,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/erasure/erasure-local-cleanup.tsx",
+        "src/app/erasure/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/erasure/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./erasure-local-cleanup",
+      "sourceNodeId": "source:45596b4f4f1a317ccb82",
+      "symbol": "ErasureLocalCleanup"
+    },
+    {
+      "evidencePaths": [
         "src/lib/offline/queue.ts"
       ],
       "nodeKind": "effect_owner",
@@ -26698,6 +27332,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault-migration",
+      "sourceNodeId": "source:468621ca8ed6fa345de6",
+      "symbol": "OwnerVaultErasureResult"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/engagement-repository.ts"
       ],
@@ -26730,6 +27376,29 @@
       "semanticVariant": "canonical-row:buildLineagePlantObjectByIdQuery",
       "sourceNodeId": "source:46b02d1ddeafaf6e9258",
       "symbol": "readCreateLineageInvitationResult"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:waitForOwnerVaultWritersToSettle",
+      "sourceNodeId": "source:46eeaf790ce98a3fa28d",
+      "symbol": "waitForOwnerVaultWritersToSettle"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:46f649476c02c2b1a60a",
+      "symbol": "OwnerOfflineDatabase"
     },
     {
       "evidencePaths": [
@@ -27216,6 +27885,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:resolveOwnerOfflineDatabase",
+      "sourceNodeId": "source:4c2a69bf9af37cbc9da4",
+      "symbol": "resolveOwnerOfflineDatabase"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/claim-handoff.tsx"
       ],
       "nodeKind": "same_origin_call",
@@ -27638,6 +28318,18 @@
       "semanticVariant": "from:@/server/auth-session",
       "sourceNodeId": "source:4f717138bc198641a7fd",
       "symbol": "getSessionId"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:4f75303a726611091b2a",
+      "symbol": "requireOwnerOfflineDatabase"
     },
     {
       "evidencePaths": [
@@ -28270,6 +28962,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:deleteResolvedPhysicalOwnerVault",
+      "sourceNodeId": "source:559b8753af7d9884d252",
+      "symbol": "deleteResolvedPhysicalOwnerVault"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/mentions/typeahead/route.ts"
       ],
       "nodeKind": "route_handler",
@@ -28860,6 +29563,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:requireOwnerOfflineDatabase",
+      "sourceNodeId": "source:5a9a25a32ddfacb46e3d",
+      "symbol": "requireOwnerOfflineDatabase"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/variety-seed-proof-repository.ts"
       ],
@@ -29027,6 +29741,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:migrateLegacyOwnerVault",
+      "sourceNodeId": "source:5ce1959cbe35d1c2c94b",
+      "symbol": "migrateLegacyOwnerVault"
+    },
+    {
+      "evidencePaths": [
         "src/app/admin/communities/[slug]/actions.ts",
         "src/lib/visual-fixtures/community-scenarios.ts"
       ],
@@ -29036,6 +29761,18 @@
       "semanticVariant": "from:@/lib/visual-fixtures/community-scenarios",
       "sourceNodeId": "source:5cf1bc85c18c6b565352",
       "symbol": "resolveVisualCommunityScenario"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:5d1b064f76f0e077abf1",
+      "symbol": "OwnerVaultDb"
     },
     {
       "evidencePaths": [
@@ -29118,6 +29855,18 @@
       "semanticVariant": "from:@/lib/garden/pilot-invite",
       "sourceNodeId": "source:5e2ea56221ec9df2c32d",
       "symbol": "CLOSED_PILOT_COHORT"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:5e59bf3f2ea491c98aff",
+      "symbol": "activateLegacyOwnerDatabaseForTesting"
     },
     {
       "evidencePaths": [
@@ -29286,6 +30035,17 @@
       "semanticVariant": "from:../../garden-auth-panel",
       "sourceNodeId": "source:5ffe76c6919583884136",
       "symbol": "GardenAuthPanel"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:finalizeOwnerVaultExclusiveFence",
+      "sourceNodeId": "source:600c40a17ff61326de66",
+      "symbol": "finalizeOwnerVaultExclusiveFence"
     },
     {
       "evidencePaths": [
@@ -29526,6 +30286,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:6236cbb11e253b0483fe",
+      "symbol": "resolveOwnerOfflineDatabase"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/auth/[...all]/route.ts"
       ],
       "nodeKind": "callback",
@@ -29581,6 +30353,17 @@
       "semanticVariant": "from:@/server/auth-session",
       "sourceNodeId": "source:62846e41e7e977fc3b7d",
       "symbol": "getCurrentSession"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:readActiveOwnerVaultLifetimeSignal",
+      "sourceNodeId": "source:6299d64949d709914023",
+      "symbol": "readActiveOwnerVaultLifetimeSignal"
     },
     {
       "evidencePaths": [
@@ -29709,6 +30492,17 @@
       "semanticVariant": "from:@/server/catalog-source/candidate-review-repository",
       "sourceNodeId": "source:638d1d2f1716d4ae9e30",
       "symbol": "CatalogSourceCandidateReviewStatus"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:offlineOwnerVaultDatabaseName",
+      "sourceNodeId": "source:639d3454b646ccfa2128",
+      "symbol": "offlineOwnerVaultDatabaseName"
     },
     {
       "evidencePaths": [
@@ -30930,6 +31724,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:6def0ed948d21c8ee570",
+      "symbol": "OwnerVaultRowCounts"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/engagement/follows/route.ts",
         "src/server/auth-session.ts"
       ],
@@ -30974,6 +31780,18 @@
       "semanticVariant": "database_transaction_at_3428",
       "sourceNodeId": "source:6e131e5f1b7c9b49c4f3",
       "symbol": "executeApprovedErasureRequest"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:6e1c34ed27930873c141",
+      "symbol": "withOwnerVaultWriterLease"
     },
     {
       "evidencePaths": [
@@ -31034,6 +31852,18 @@
       "semanticVariant": "from:@/lib/garden-workspace-copy",
       "sourceNodeId": "source:6e9bf1e3865d226e5015",
       "symbol": "getGardenWorkspaceCopy"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:6ed813e38e9b6a8a9a90",
+      "symbol": "withOwnerVaultWriterLease"
     },
     {
       "evidencePaths": [
@@ -32174,6 +33004,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:fetchAuthenticatedOwnerVaultBinding",
+      "sourceNodeId": "source:7999c974858bb760f920",
+      "symbol": "fetchAuthenticatedOwnerVaultBinding"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/engagement/follows/route.ts",
         "src/server/visual-fixtures/social-actor.ts"
       ],
@@ -32469,6 +33310,17 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:7cc19b100325e4959764",
       "symbol": "PlantObject"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:fingerprintOwnerVaultPayload",
+      "sourceNodeId": "source:7cce09dddc2041fc69ba",
+      "symbol": "fingerprintOwnerVaultPayload"
     },
     {
       "evidencePaths": [
@@ -32974,6 +33826,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:816158381bc31a51ae37",
+      "symbol": "hasOwnerVaultBinding"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/actions.ts",
         "src/app/garden/objects/[objectId]/location-privacy-control.tsx",
         "src/app/garden/objects/[objectId]/page.tsx"
@@ -33303,6 +34167,18 @@
       "semanticVariant": "createPlantObjectJournalEntryAction:guest_auth_intent",
       "sourceNodeId": "source:8445a43a89f02b9cbe1d",
       "symbol": "createPlantObjectJournalEntryAction"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:844abead8222db002916",
+      "symbol": "OWNER_VAULT_OPERATION_DEADLINE_MS"
     },
     {
       "evidencePaths": [
@@ -33637,6 +34513,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/offline/owner-vault",
+      "sourceNodeId": "source:86f137ba00408717702b",
+      "symbol": "fetchAuthenticatedOwnerVaultBinding"
+    },
+    {
+      "evidencePaths": [
         "src/lib/env.ts",
         "src/server/media/lifecycle-revoke.ts"
       ],
@@ -33898,6 +34786,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:88bc3f9fc25c6f089dec",
+      "symbol": "OfflineMutationSummary"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/actions.ts",
         "src/server/mvp-learning/attribution-after-response.ts"
       ],
@@ -34153,6 +35053,18 @@
       "semanticVariant": "from:@/db",
       "sourceNodeId": "source:8ab96f2890a6c2c673ef",
       "symbol": "db"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:8ad242f36b8181c51b60",
+      "symbol": "resolveOwnerOfflineDatabase"
     },
     {
       "evidencePaths": [
@@ -34636,6 +35548,18 @@
       "semanticVariant": "from:@/components/site-shell/site-shell-context-rail",
       "sourceNodeId": "source:8e2beaf526d5140dd2b3",
       "symbol": "SiteShellContextRailRegistration"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:8e57016ff8c366d49262",
+      "symbol": "OfflineComposerDurabilityRecord"
     },
     {
       "evidencePaths": [
@@ -35906,6 +36830,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:9861b9c034dccbbd0148",
+      "symbol": "requireOwnerOfflineDatabase"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/bookmarks/page.tsx",
         "src/lib/public-localization.ts"
       ],
@@ -35984,6 +36920,17 @@
       "semanticVariant": "from:@/server/launch-corpus/public-surface",
       "sourceNodeId": "source:995bcb84ab3dd0265382",
       "symbol": "publicLaunchSurfacePredicates"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:hasOwnerVaultBinding",
+      "sourceNodeId": "source:995ec5b981a44452003d",
+      "symbol": "hasOwnerVaultBinding"
     },
     {
       "evidencePaths": [
@@ -36067,6 +37014,18 @@
       "semanticVariant": "database-transaction-1",
       "sourceNodeId": "source:99d1ab8f2cde9f195a99",
       "symbol": "contributePublicJournalToCommunity"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:99d1f1d580da8c4f46c0",
+      "symbol": "OwnerVaultDb"
     },
     {
       "evidencePaths": [
@@ -36741,6 +37700,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:a02e4fdfafbb5f55fe40",
+      "symbol": "OfflineOwnerActivity"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/owner-profile-repository.ts"
       ],
@@ -37238,6 +38209,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:acquireOwnerVaultExclusiveFence",
+      "sourceNodeId": "source:a41e938dacdc2e75cd49",
+      "symbol": "acquireOwnerVaultExclusiveFence"
+    },
+    {
+      "evidencePaths": [
         "src/components/auth/session-convergence-boundary.tsx",
         "src/components/site-shell/interface-locale-change-boundary.tsx"
       ],
@@ -37436,6 +38418,17 @@
       "semanticVariant": "from:@/server/request-scope",
       "sourceNodeId": "source:a5d1ade805b34e3f2be1",
       "symbol": "RequestScope"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:activatePhysicalOwnerVault",
+      "sourceNodeId": "source:a602b135ddf01baca368",
+      "symbol": "activatePhysicalOwnerVault"
     },
     {
       "evidencePaths": [
@@ -37877,6 +38870,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/offline/owner-vault-binding/route.ts",
+        "src/server/offline-owner-vault-binding.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/offline/owner-vault-binding/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/offline-owner-vault-binding",
+      "sourceNodeId": "source:a907551bf64254ae2168",
+      "symbol": "createOfflineOwnerVaultBindingReceipt"
+    },
+    {
+      "evidencePaths": [
         "src/components/auth/auth-intent-trigger.tsx",
         "src/lib/auth/auth-intent-contract.ts"
       ],
@@ -38265,6 +39270,17 @@
       "semanticVariant": "canonical-row:buildMarkErasureRequestHandledQuery",
       "sourceNodeId": "source:abfe367020883853440a",
       "symbol": "markErasureRequestHandled"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:eraseCurrentDeviceOwnerOfflineStore",
+      "sourceNodeId": "source:ac04b7019adf77e4feda",
+      "symbol": "eraseCurrentDeviceOwnerOfflineStore"
     },
     {
       "evidencePaths": [
@@ -38893,6 +39909,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:b1f606ebee33ed4c3c62",
+      "symbol": "OfflineDraftSummary"
+    },
+    {
+      "evidencePaths": [
         "src/lib/offline/owner-composer-durability.ts"
       ],
       "nodeKind": "offline_producer",
@@ -39310,6 +40338,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:activateLegacyOwnerDatabaseForTesting",
+      "sourceNodeId": "source:b55fa24c8cd71a3187a1",
+      "symbol": "activateLegacyOwnerDatabaseForTesting"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/catalog-repository.ts"
       ],
@@ -39574,6 +40613,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:b740785bf7468afbe0ba",
+      "symbol": "OWNER_VAULT_OPERATION_DEADLINE_MS"
+    },
+    {
+      "evidencePaths": [
         "src/server/catalog-repository.ts",
         "src/server/journal-repository.ts",
         "src/server/journal-topic-repository.ts",
@@ -39796,6 +40847,18 @@
       "semanticVariant": "from:@/lib/offline/queue",
       "sourceNodeId": "source:b89d711d3744dd7b62b5",
       "symbol": "OfflineJournalEntryPayload"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:b8b8f85859551bc04d76",
+      "symbol": "resolveOwnerOfflineDatabase"
     },
     {
       "evidencePaths": [
@@ -40025,6 +41088,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/offline/owner-vault-binding/route.ts",
+        "src/server/auth-session.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/offline/owner-vault-binding/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/auth-session",
+      "sourceNodeId": "source:bae12bbab8e75c3eb502",
+      "symbol": "getCurrentSession"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
         "src/lib/garden/entry-contracts.ts"
       ],
@@ -40082,6 +41157,18 @@
       "semanticVariant": "from:@/server/catalog-curation-repository",
       "sourceNodeId": "source:bb3d633ea383d9cc06d1",
       "symbol": "enqueueCatalogMatchSuggestionsRefresh"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/offline/owner-vault",
+      "sourceNodeId": "source:bb4ae7d0868521c0b730",
+      "symbol": "deactivatePhysicalOwnerVault"
     },
     {
       "evidencePaths": [
@@ -40450,6 +41537,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser-storage-transaction-1",
+      "sourceNodeId": "source:be999eb67e9d4a0a0021",
+      "symbol": "copyMissingRows"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/actions.ts",
         "src/lib/garden/save-progress-moment.ts"
       ],
@@ -40687,6 +41785,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:c0e2581fb154b49d1602",
+      "symbol": "OwnerOfflineDatabase"
+    },
+    {
+      "evidencePaths": [
         "src/lib/auth.ts",
         "src/lib/auth/retired-shared-identity.ts"
       ],
@@ -40875,6 +41985,18 @@
       "semanticVariant": "from:@/lib/interface-localization",
       "sourceNodeId": "source:c21b3838f4aeaf9e0d52",
       "symbol": "InterfaceLocale"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:c21df36fcba8010d31d5",
+      "symbol": "waitForOwnerVaultWritersToSettle"
     },
     {
       "evidencePaths": [
@@ -41504,6 +42626,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:c6d63a537d6ac1db39d5",
+      "symbol": "OfflineMutation"
+    },
+    {
+      "evidencePaths": [
         "src/app/admin/communities/[slug]/page.tsx",
         "src/server/interface-localization.ts"
       ],
@@ -41892,6 +43026,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:readActiveOwnerVaultBinding",
+      "sourceNodeId": "source:ca645547e983c4f6243d",
+      "symbol": "readActiveOwnerVaultBinding"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/auth/[...all]/route.ts"
       ],
       "nodeKind": "callback",
@@ -41936,6 +43081,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:cad4b2e28c8ef7b78350",
       "symbol": "JournalTopicTrustState"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:cad95cdc38b9b679d4d1",
+      "symbol": "OwnerVaultControlDb"
     },
     {
       "evidencePaths": [
@@ -42031,6 +43188,18 @@
       "semanticVariant": "from:@/server/media/media-repository",
       "sourceNodeId": "source:cbd41e654f5ffa546b2b",
       "symbol": "claimMediaAssetForProcessing"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault-migration",
+      "sourceNodeId": "source:cbeb5eb222d0f90e09f9",
+      "symbol": "eraseCurrentDeviceOwnerVault"
     },
     {
       "evidencePaths": [
@@ -42273,6 +43442,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:ce9ec8141cfaf2f65690",
+      "symbol": "OfflineDraftRecord"
+    },
+    {
+      "evidencePaths": [
         "src/server/profile-interaction-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -42456,17 +43637,6 @@
       "semanticVariant": "from:@/components/site-shell/interface-locale-change-boundary",
       "sourceNodeId": "source:d12a83a9e6d787636a5f",
       "symbol": "useInterfaceLocaleChangeFormState"
-    },
-    {
-      "evidencePaths": [
-        "src/lib/offline/owner-session-lifecycle.ts"
-      ],
-      "nodeKind": "effect_owner",
-      "path": "src/lib/offline/owner-session-lifecycle.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "browser-storage-transaction-1",
-      "sourceNodeId": "source:d16ea8ab261b20a184ce",
-      "symbol": "purgeUnsyncedOwnerData"
     },
     {
       "evidencePaths": [
@@ -42948,6 +44118,18 @@
       "semanticVariant": "canonical-row",
       "sourceNodeId": "source:d538cb3e76174520977d",
       "symbol": "updateUserPublicHandle"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault-migration",
+      "sourceNodeId": "source:d53c89a55cc2f97e529c",
+      "symbol": "migrateLegacyOwnerVault"
     },
     {
       "evidencePaths": [
@@ -44399,6 +45581,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:abandonOwnerVaultExclusiveFence",
+      "sourceNodeId": "source:e27ce8179d70394cde3b",
+      "symbol": "abandonOwnerVaultExclusiveFence"
+    },
+    {
+      "evidencePaths": [
         "src/app/admin/communities/[slug]/actions.ts",
         "src/lib/public-localization.ts"
       ],
@@ -44478,6 +45671,18 @@
       "semanticVariant": "auth_client.resetPassword",
       "sourceNodeId": "source:e2dd6548c0fcb5dc0f53",
       "symbol": "resetPassword"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:e3550dabdc8bebab5e5f",
+      "symbol": "acquireOwnerVaultExclusiveFence"
     },
     {
       "evidencePaths": [
@@ -44883,6 +46088,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:e7ac082138816424d619",
+      "symbol": "OwnerOfflineDatabase"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/lib/offline/drafts.ts"
       ],
@@ -45120,6 +46337,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:e973403abf21e04c06f4",
+      "symbol": "fingerprintOwnerVaultPayload"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/erasure-request-repository.ts"
       ],
@@ -45153,6 +46382,18 @@
       "semanticVariant": "from:@/server/auth-session",
       "sourceNodeId": "source:e99911213cf381de8486",
       "symbol": "requireCurrentRequestScope"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:e9b06249d9b09e216ff4",
+      "symbol": "OfflineComposerDurabilityRecord"
     },
     {
       "evidencePaths": [
@@ -45301,6 +46542,18 @@
       "semanticVariant": "database-transaction-1",
       "sourceNodeId": "source:eb4b435e357bb4395dd6",
       "symbol": "createFirstPlantEntry"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-vault",
+      "sourceNodeId": "source:eb5d4a3bf46a33a4b4cb",
+      "symbol": "deleteResolvedPhysicalOwnerVault"
     },
     {
       "evidencePaths": [
@@ -45996,6 +47249,17 @@
       "semanticVariant": "from:./actions",
       "sourceNodeId": "source:f02b258648c741a2dac0",
       "symbol": "createFounderInterviewLearningAction"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault-migration.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault-migration.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:readOwnerVaultControlReceipt",
+      "sourceNodeId": "source:f047d1d58d62421c5f5f",
+      "symbol": "readOwnerVaultControlReceipt"
     },
     {
       "evidencePaths": [
@@ -47020,6 +48284,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:f9c8a3a60ee53fbabc93",
+      "symbol": "OfflineOwnerActivity"
+    },
+    {
+      "evidencePaths": [
         "src/lib/offline/queue.ts"
       ],
       "nodeKind": "offline_producer",
@@ -47552,6 +48828,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:fe2b340015c0f0b4bce6",
       "symbol": "LocationVisibility"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:fe2d8237d362eeed4a87",
+      "symbol": "OfflineMutationSummary"
     },
     {
       "evidencePaths": [

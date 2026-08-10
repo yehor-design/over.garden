@@ -10,21 +10,27 @@ documents, mention selections, photo intents, Blob data, and media references.
 `apps/web/src/lib/offline/queue.ts` owns the payload-free summary projections
 and the internal composer-durability metadata. `apps/web/src/lib/offline/drafts.ts`
 owns the bounded draft-summary reader and the exact composer write/read-back
-protocol. The workspace owns presentation only; composers and sync continue to
-read canonical records through their existing owner-scoped paths.
+protocol. `apps/web/src/lib/offline/owner-vault.ts` owns the authenticated
+physical owner resolver and writer fence. The workspace owns presentation only;
+composers and sync continue to read canonical records through owner-scoped paths
+inside the currently active physical vault.
 
 ## Stored projections
 
-Dexie schema version 5 adds `draftSummaries` and `mutationSummaries`. Each
-canonical write, status update, or deletion updates its summary in the same
-IndexedDB transaction. The version upgrade derives a summary locally from each
-existing canonical row and writes only the fields below.
+The historical shared Dexie schema version 5 added `draftSummaries` and
+`mutationSummaries`. Each canonical write, status update, or deletion updates
+its summary in the same IndexedDB transaction. The legacy version upgrade
+derives a summary locally from each existing canonical row and writes only the
+fields below.
 
-Dexie schema version 6 adds `composerDurability`. Version 6 does not infer
-durability for existing drafts: a legacy draft without an exact receipt makes a
-later owner-work inspection unavailable with `flush_unconfirmed`. This is
-intentional; absence of evidence is never translated into an empty or safe
-inventory.
+Legacy Dexie schema version 6 added `composerDurability`. OVE-288 preserves the
+same six-table logical schema inside each opaque owner-only physical vault. On
+first authoritative bootstrap it copies and independently fingerprints exact
+owner rows from only the known shared legacy database before activation; see
+`docs/OFFLINE_OWNER_VAULT.md`. Version 6 does not infer durability for existing
+drafts: a legacy draft without an exact receipt makes a later owner-work
+inspection unavailable with `flush_unconfirmed`. This is intentional; absence
+of evidence is never translated into an empty or safe inventory.
 
 | Projection                     | Allowed fields                                                                                                                                                          | Prohibited fields                                                                                          |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -96,6 +102,11 @@ warning, retry, analytics event, payload log, sync-first choice, or purge path.
 
 ## Read and lifecycle rules
 
+- Ordinary production reads and writes resolve only the physical vault activated
+  by the current authoritative session plus same-generation server binding.
+  They never enumerate databases or fall back to the shared legacy database.
+- Current-version write transactions take a binding-scoped writer lease. An
+  exclusive migration/erasure fence rejects new writers until it settles.
 - Workspace readers receive at most 24 rows plus one sentinel per request, with
   an explicit page number capped at 100. They never query `drafts` or
   `mutations` for list rendering.
@@ -110,11 +121,14 @@ warning, retry, analytics event, payload log, sync-first choice, or purge path.
 - Local change, focus, and connection events are debounced for 100 milliseconds.
   While a read is in flight, any event storm schedules at most one follow-up
   read; there is no polling or unbounded retry.
+- Ordinary sign-out retains the owner vault. Only the separate explicit
+  current-device erasure control can delete it, and only a two-surface absence
+  read-back may report confirmation.
 
 ## Verification
 
-Focused offline and workspace tests prove payload exclusion, the 24-row bound,
-migration/write pairing, exact composer commit plus independent read-back,
+Focused offline and workspace tests prove physical A/B isolation, payload
+exclusion, the 24-row bound, migration/write pairing, exact composer commit plus independent read-back,
 stale-receipt invalidation, complete-or-unavailable inspection, traversal-bound
 contact, explicit cancellation, late-result rejection, deletion and owner-purge
 pairing, event coalescing, unmount fencing, and immediate cross-owner in-memory

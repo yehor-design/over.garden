@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import Link from "next/link";
+import { createElement, type ReactNode } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   composerFlush: vi.fn(),
   composerResume: vi.fn(),
   hydrate: vi.fn(),
+  fetchOwnerVaultBinding: vi.fn(),
+  deactivateOwnerVault: vi.fn(),
   pause: vi.fn(),
   abort: vi.fn(),
   drain: vi.fn(),
@@ -39,6 +43,11 @@ const mocks = vi.hoisted(() => ({
   intervalCallbacks: [] as Array<() => void>,
   windowListeners: new Map<string, (event: Event) => void>(),
   documentListeners: new Map<string, (event: Event) => void>(),
+}));
+
+vi.mock("next/link", () => ({
+  default: ({ children, href }: { children: ReactNode; href: string }) =>
+    createElement("a", { href }, children),
 }));
 
 vi.mock("react-dom", () => ({ flushSync: mocks.flushSync }));
@@ -121,6 +130,10 @@ vi.mock("@/lib/offline/owner-session-lifecycle", () => ({
     mocks.finalizeSessionChangeStandalone,
   hydrateOwnerOfflineActivitySession: mocks.hydrate,
   pauseOwnerOfflineActivity: mocks.pause,
+}));
+vi.mock("@/lib/offline/owner-vault", () => ({
+  fetchAuthenticatedOwnerVaultBinding: mocks.fetchOwnerVaultBinding,
+  deactivatePhysicalOwnerVault: mocks.deactivateOwnerVault,
 }));
 
 import {
@@ -206,6 +219,8 @@ describe("session convergence boundary", () => {
       promoteToCommitFence: mocks.promote,
     });
     mocks.hydrate.mockResolvedValue("ready");
+    mocks.fetchOwnerVaultBinding.mockResolvedValue(null);
+    mocks.deactivateOwnerVault.mockResolvedValue(undefined);
     mocks.drain.mockResolvedValue(undefined);
     mocks.resume.mockResolvedValue(undefined);
     mocks.finalize.mockResolvedValue("fenced");
@@ -250,6 +265,79 @@ describe("session convergence boundary", () => {
       fetchOptions: { cache: "no-store" },
     });
     expect(mocks.replace).not.toHaveBeenCalled();
+    await unmount(renderer);
+  });
+
+  it("hydrates the physical vault only with the binding tied to the fresh session generation", async () => {
+    const ownerBinding = "B".repeat(43);
+    mocks.fetchOwnerVaultBinding.mockResolvedValueOnce(ownerBinding);
+
+    const renderer = await renderBoundary();
+
+    expect(mocks.fetchOwnerVaultBinding).toHaveBeenCalledWith(
+      "opaque-binding-for-session-a",
+    );
+    expect(mocks.hydrate).toHaveBeenCalledWith(
+      "session-a",
+      "opaque-binding-for-session-a",
+      ownerBinding,
+      { signal: expect.any(AbortSignal) },
+    );
+    await unmount(renderer);
+  });
+
+  it("keeps server-backed private UI usable when the offline binding is unavailable", async () => {
+    mocks.fetchOwnerVaultBinding.mockRejectedValueOnce(
+      new Error("binding endpoint unavailable"),
+    );
+
+    const renderer = await renderBoundary();
+
+    expect(mocks.hydrate).toHaveBeenCalledWith(
+      "session-a",
+      "opaque-binding-for-session-a",
+      undefined,
+      { signal: expect.any(AbortSignal) },
+    );
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(1);
+    expect(mocks.replace).not.toHaveBeenCalled();
+    await unmount(renderer);
+  });
+
+  it("degrades a stalled owner-vault open without wedging safe exits or accepting its late completion", async () => {
+    vi.useFakeTimers();
+    mocks.fetchOwnerVaultBinding.mockResolvedValueOnce("B".repeat(43));
+    const stalledHydration = deferred<"ready">();
+    mocks.hydrate.mockReturnValueOnce(stalledHydration.promise);
+    const renderer = await renderBoundary(
+      <>
+        <button type="button">Sign out safely</button>
+        <Link href="/bg">Public navigation</Link>
+      </>,
+    );
+
+    expect(
+      renderer.root.findAllByProps({ children: "Sign out safely" }),
+    ).toHaveLength(0);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_SESSION_READ_TIMEOUT_MS);
+    });
+
+    expect(mocks.deactivateOwnerVault).toHaveBeenCalledWith("session-a");
+    expect(
+      renderer.root.findByProps({ children: "Sign out safely" }).props.disabled,
+    ).not.toBe(true);
+    expect(
+      renderer.root.findByProps({ children: "Public navigation" }).props.href,
+    ).toBe("/bg");
+
+    await act(async () => {
+      stalledHydration.resolve("ready");
+      await Promise.resolve();
+    });
+    expect(mocks.deactivateOwnerVault).toHaveBeenCalledOnce();
     await unmount(renderer);
   });
 
@@ -421,7 +509,9 @@ describe("session convergence boundary", () => {
       reload.props.onClick();
       await Promise.resolve();
     });
-    await vi.waitFor(() => expect(mocks.finalizeHardReload).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(mocks.finalizeHardReload).toHaveBeenCalledOnce(),
+    );
     await vi.waitFor(() => expect(mocks.reload).toHaveBeenCalledOnce());
     expect(mocks.finalizeHardReload.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.reload.mock.invocationCallOrder[0]!,
@@ -456,7 +546,9 @@ describe("session convergence boundary", () => {
       await Promise.resolve();
     });
 
-    await vi.waitFor(() => expect(mocks.finalizeHardReload).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(mocks.finalizeHardReload).toHaveBeenCalledOnce(),
+    );
     expect(mocks.reload).not.toHaveBeenCalled();
     expectPrivateSignOutDialogAbsent(renderer);
     expect(
@@ -1187,6 +1279,8 @@ describe("session convergence boundary", () => {
     expect(mocks.hydrate).toHaveBeenCalledWith(
       "session-a",
       "opaque-binding-for-session-a",
+      undefined,
+      { signal: expect.any(AbortSignal) },
     );
     expect(
       renderer.root.findAllByProps({ children: "Private surface" }),
@@ -1213,7 +1307,9 @@ describe("session convergence boundary", () => {
       await Promise.resolve();
     });
 
-    await vi.waitFor(() => expect(mocks.canonicalSignOut).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(mocks.canonicalSignOut).toHaveBeenCalledOnce(),
+    );
     expect(mocks.canonicalSignOut).toHaveBeenCalledWith(
       {
         version: 1,
@@ -1334,7 +1430,9 @@ describe("session convergence boundary", () => {
       await Promise.resolve();
     });
 
-    await vi.waitFor(() => expect(mocks.canonicalSignOut).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(mocks.canonicalSignOut).toHaveBeenCalledOnce(),
+    );
     expect(mocks.canonicalSignOut).toHaveBeenCalledWith(
       {
         version: 1,
@@ -1376,9 +1474,13 @@ describe("session convergence boundary", () => {
 
     await vi.waitFor(() =>
       expect(
-        renderer.root.findAllByProps({ role: "status" }).some((node) =>
-          textContent(node.props.children).includes("не можа да бъде потвърдено"),
-        ),
+        renderer.root
+          .findAllByProps({ role: "status" })
+          .some((node) =>
+            textContent(node.props.children).includes(
+              "не можа да бъде потвърдено",
+            ),
+          ),
       ).toBe(true),
     );
     expect(mocks.publishCommitted).not.toHaveBeenCalled();

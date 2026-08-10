@@ -315,6 +315,15 @@ describe("offline journal drafts", () => {
     );
   });
 
+  it("fails unavailable owner-vault summaries closed instead of returning a false empty page", async () => {
+    await expect(
+      listOfflineDraftSummaries(MENTION_TARGET_USER_ID),
+    ).rejects.toMatchObject({ name: "OwnerVaultUnavailableError" });
+    await expect(
+      listOfflineMutationSummaries(MENTION_TARGET_USER_ID),
+    ).rejects.toMatchObject({ name: "OwnerVaultUnavailableError" });
+  });
+
   it("persists voice-transcribed text as ordinary draft body text only", async () => {
     const payload: FirstEntryDraftPayload = {
       clientMutationId: "voice-draft-entry-id",

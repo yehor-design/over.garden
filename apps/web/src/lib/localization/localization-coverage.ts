@@ -901,6 +901,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
     ...routes(
       [
         "src/app/%5F%5Fvisual-fixtures/intent/[scenarioId]/route.ts",
+        "src/app/%5F%5Fvisual-fixtures/owner-vault/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/session-recheck/page.tsx",
         "src/app/skeleton/page.tsx",
@@ -1209,6 +1210,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/api/meta/conversions/route.ts",
         "src/app/api/notifications/preferences/route.ts",
         "src/app/api/notifications/receipts/route.ts",
+        "src/app/api/offline/owner-vault-binding/route.ts",
         "src/app/api/public/objects/suggestions/route.ts",
         "src/app/api/skeleton/journal/route.ts",
       ],
@@ -1328,6 +1330,21 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
         ["jsx-text", "Test profiles"],
         ["jsx-text", "EXIF-free generated raster set"],
         ["jsx-text", "Media aspect gallery"],
+      ],
+    ),
+    ...allowExactLiterals(
+      "src/app/%5F%5Fvisual-fixtures/owner-vault/owner-vault-visual-fixture.tsx",
+      "internal-fixture",
+      INTERNAL_FIXTURE_RATIONALE,
+      [
+        ["jsx-text", "OVE-288 owner vault fixture"],
+        ["jsx-text", "Owner A rows"],
+        ["jsx-text", "Owner B rows"],
+        ["jsx-text", "Reset fixture"],
+        ["jsx-text", "Seed isolated owners"],
+        ["jsx-text", "Retain owner A across sign-out"],
+        ["jsx-text", "Deny offline binding"],
+        ["jsx-text", "Server-backed private action"],
       ],
     ),
     ...allowExactLiterals(
