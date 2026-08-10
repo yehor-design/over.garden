@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-07-30 (OVE-236 mainline and production closeout evidence; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-10 (OVE-285 authenticated-mutation decision receipt; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -21,6 +21,24 @@ issues OVE-213 through OVE-244 in `Todo` under
 [SDD Slice 19 - MVP Readiness Remediation And Launch Proof](https://linear.app/overgarden/project/sdd-slice-19-mvp-readiness-remediation-and-launch-proof-724bdf2ae236);
 the newest issue update in that set was `2026-07-25T22:18:33.986Z`. Identifier
 order alone is not execution order.
+
+On 2026-08-10, OVE-285 was individually re-audited against repository baseline
+`5c403444cddc2e195690808de08304d14fe41fd3`, the terminal OVE-296 receipt, and
+the authenticated Linear DAG. Its report-only v3 registry closes 592 production
+source files into 2,439 resolved source nodes, 295 logical entrypoints, 183 true
+effect boundaries, and 655 consumer edges with zero unresolved entries. The
+registry, source-evidence, and receipt digests are respectively
+`c917ed87bfb7b84f54435ff99e5cf768a3c41427cb8e7f5b58e6978387181406`,
+`b627003b927dc53e84bdd58870f5df6faee627e6843e55795cdfd47874bb4817`, and
+`c725f3b6dd0fe18c3dbae09c56a714573f56e1d6fff32d83f4549c9cf14ebdd7`.
+The binding decision is
+`docs/architecture/AUTHENTICATED_MUTATION_ADMISSION.md`; no runtime behavior,
+provider state, production data, or deployment configuration is changed. The
+authenticated strict chain is OVE-296 -> OVE-285 -> OVE-293 -> OVE-288 ->
+OVE-290 -> OVE-286 -> OVE-287 -> OVE-291 -> OVE-289 -> OVE-294 -> OVE-295 ->
+OVE-292 -> OVE-284 -> OVE-186. OVE-297 and OVE-298 remain separate DAG leaves,
+not members of that strict chain. Terminal issue status and relations still
+require authenticated Linear read-back before selecting OVE-293.
 
 On 2026-07-28, OVE-242 was re-audited and materially rewritten against current
 `main` (`dd3b7a6906d5dbf215627d7b6a1de6348befcd16`), passed final validation,
