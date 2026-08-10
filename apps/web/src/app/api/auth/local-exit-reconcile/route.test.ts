@@ -8,7 +8,7 @@ import {
 
 const signOut = vi.hoisted(() => vi.fn());
 const authHandler = vi.hoisted(() => vi.fn());
-const warn = vi.hoisted(() => vi.fn());
+const info = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth", () => ({
   auth: { handler: authHandler, api: { signOut } },
@@ -21,8 +21,8 @@ describe("local-exit reconciliation route", () => {
     vi.resetModules();
     signOut.mockReset();
     authHandler.mockReset();
-    warn.mockReset();
-    vi.spyOn(console, "warn").mockImplementation(warn);
+    info.mockReset();
+    vi.spyOn(console, "info").mockImplementation(info);
   });
 
   it("re-enters Better Auth through the canonical HTTP boundary for the exact-session delete", async () => {
@@ -43,7 +43,7 @@ describe("local-exit reconciliation route", () => {
     );
     expect(await canonicalRequest.json()).toEqual({});
     expect(signOut).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledWith(
+    expect(info).toHaveBeenCalledWith(
       "[auth] local-exit reconciliation outcome: revoked_confirmed",
     );
   });
@@ -68,6 +68,20 @@ describe("local-exit reconciliation route", () => {
       "overgarden.session_token=signed-a",
     );
     expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("admits the empty body stream exposed by the server request adapter", async () => {
+    authHandler.mockResolvedValue(
+      betterAuthResponse(200, { success: true }, expiredSessionCookie()),
+    );
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      reconcileRequest({ body: new Blob([]) }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(authHandler).toHaveBeenCalledOnce();
   });
 
   it("still emits the library expiry when exact-session adapter deletion fails", async () => {
@@ -108,7 +122,7 @@ describe("local-exit reconciliation route", () => {
     expect(response.headers.get("set-cookie")).toBeNull();
     expect(authHandler).toHaveBeenCalledOnce();
     expect(signOut).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledWith(
+    expect(info).toHaveBeenCalledWith(
       "[auth] local-exit reconciliation outcome: stale_operation",
     );
   });
@@ -118,6 +132,7 @@ describe("local-exit reconciliation route", () => {
     reconcileRequest({ fetchSite: "cross-site" }),
     reconcileRequest({ binding: "malformed" }),
     reconcileRequest({ body: "{}" }),
+    reconcileRequest({ body: "{}", contentLength: "0" }),
   ])(
     "returns the same empty response with zero auth effect for denied input",
     async (request) => {
@@ -140,7 +155,8 @@ function reconcileRequest(
     fetchSite?: string;
     binding?: string;
     cookie?: string;
-    body?: string;
+    body?: BodyInit;
+    contentLength?: string;
   } = {},
 ) {
   return new Request("https://over.garden/api/auth/local-exit-reconcile", {
@@ -150,7 +166,12 @@ function reconcileRequest(
       "sec-fetch-site": overrides.fetchSite ?? "same-origin",
       [CURRENT_SESSION_BINDING_HEADER]: overrides.binding ?? BINDING_A,
       cookie: overrides.cookie ?? "overgarden.session_token=signed-a",
-      ...(overrides.body ? { "content-type": "application/json" } : {}),
+      ...(overrides.contentLength
+        ? { "content-length": overrides.contentLength }
+        : {}),
+      ...(typeof overrides.body === "string" && overrides.body.length > 0
+        ? { "content-type": "application/json" }
+        : {}),
     },
     body: overrides.body,
   });

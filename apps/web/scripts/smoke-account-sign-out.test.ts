@@ -13,6 +13,7 @@ import {
   assertTwoClientRevocationInvariant,
   compareImmutableContinuitySnapshots,
   CURRENT_SESSION_BINDING_HEADER,
+  LOCAL_EXIT_RECONCILIATION_PATH,
   PROTECTED_MUTATION_PATH,
   resolveDeploymentEvidence,
   SESSION_CONFIRMATION_PATH,
@@ -77,6 +78,7 @@ function safeReport(): AccountSignOutEvidenceReport {
     },
     revocationBoundary: {
       canonicalSameOriginPost: true,
+      localReconciliationSameOriginPost: true,
       bindingRequired: true,
       staleBindingRejected: true,
       getMethodRejected: true,
@@ -97,14 +99,20 @@ function safeReport(): AccountSignOutEvidenceReport {
 }
 
 describe("OVE-204 account sign-out smoke", () => {
-  it("uses only the canonical same-origin Better Auth POST boundary", () => {
+  it("proves both the local-exit companion and canonical same-origin POST boundaries", () => {
     expect(SIGN_OUT_PATH).toBe("/api/auth/sign-out");
+    expect(LOCAL_EXIT_RECONCILIATION_PATH).toBe(
+      "/api/auth/local-exit-reconcile",
+    );
     expect(SESSION_CONFIRMATION_PATH).toContain("disableCookieCache=true");
     expect(PROTECTED_MUTATION_PATH).toBe("/api/garden/entries");
     expect(CURRENT_SESSION_BINDING_HEADER).toBe(
       "x-overgarden-current-session-binding",
     );
     expect(source).toContain("fetch(`${baseUrl}${SIGN_OUT_PATH}`");
+    expect(source).toContain(
+      "`${baseUrl}${LOCAL_EXIT_RECONCILIATION_PATH}`",
+    );
     expect(source).toMatch(
       /fetch\(`\$\{baseUrl\}\$\{SIGN_OUT_PATH\}`,[\s\S]*?method: "POST"/,
     );

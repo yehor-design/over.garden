@@ -23,6 +23,8 @@ const EVIDENCE_SAFETY =
   "bounded_counts_and_booleans_no_identifiers_or_private_content";
 
 export const SIGN_OUT_PATH = "/api/auth/sign-out";
+export const LOCAL_EXIT_RECONCILIATION_PATH =
+  "/api/auth/local-exit-reconcile";
 export const SESSION_CONFIRMATION_PATH =
   "/api/auth/get-session?disableCookieCache=true";
 export const PROTECTED_MUTATION_PATH = "/api/garden/entries";
@@ -76,6 +78,7 @@ const ALLOWED_EVIDENCE_KEYS = new Set([
   "identityDuplicates",
   "revocationBoundary",
   "canonicalSameOriginPost",
+  "localReconciliationSameOriginPost",
   "bindingRequired",
   "staleBindingRejected",
   "getMethodRejected",
@@ -218,6 +221,7 @@ export interface AccountSignOutEvidenceReport {
   };
   revocationBoundary: {
     canonicalSameOriginPost: true;
+    localReconciliationSameOriginPost: true;
     bindingRequired: true;
     staleBindingRejected: true;
     getMethodRejected: true;
@@ -344,7 +348,11 @@ export async function runAccountSignOutSmoke(
       secondIdentity,
     );
     const revokedCookieHeader = firstClient.header();
-    await postCanonicalSignOut(baseUrl, firstClient, firstIdentity.sessionId);
+    await postLocalExitReconciliation(
+      baseUrl,
+      firstClient,
+      firstIdentity.sessionId,
+    );
     await assertAuthoritativelySignedOut(baseUrl, firstClient);
 
     const afterRevocationAccessIds = await readAccessRowIds(database, userId);
@@ -394,6 +402,33 @@ export async function runAccountSignOutSmoke(
     assert(
       privateGardenReadbackPreserved,
       "other client private garden readback",
+    );
+
+    await signIn(baseUrl, firstClient, state.email, password);
+    const canonicalProofIdentity = await readAuthenticatedIdentity(
+      baseUrl,
+      firstClient,
+    );
+    assertEqual(
+      canonicalProofIdentity.userId,
+      userId,
+      "canonical proof identity continuity",
+    );
+    await postCanonicalSignOut(
+      baseUrl,
+      firstClient,
+      canonicalProofIdentity.sessionId,
+    );
+    await assertAuthoritativelySignedOut(baseUrl, firstClient);
+    assertEqual(
+      await countAccessRow(database, canonicalProofIdentity.sessionId),
+      0,
+      "canonical proof access revocation",
+    );
+    assertEqual(
+      await countAccessRow(database, secondIdentity.sessionId),
+      1,
+      "other client preservation after canonical proof",
     );
 
     await signIn(baseUrl, firstClient, state.email, password);
@@ -469,6 +504,7 @@ export async function runAccountSignOutSmoke(
       },
       revocationBoundary: {
         canonicalSameOriginPost: true,
+        localReconciliationSameOriginPost: true,
         bindingRequired: true,
         staleBindingRejected: true,
         getMethodRejected: true,
@@ -785,6 +821,31 @@ async function postCanonicalSignOut(
     isRecord(body) && body.success === true,
     "canonical sign-out success response",
   );
+}
+
+async function postLocalExitReconciliation(
+  baseUrl: string,
+  client: CookieJar,
+  sessionId: string,
+) {
+  const response = await fetch(
+    `${baseUrl}${LOCAL_EXIT_RECONCILIATION_PATH}`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        [CURRENT_SESSION_BINDING_HEADER]:
+          deriveCurrentSessionBinding(sessionId),
+        Origin: baseUrl,
+        "Sec-Fetch-Site": "same-origin",
+        Cookie: client.header(),
+      },
+      redirect: "manual",
+    },
+  );
+  client.addFromResponse(response);
+  assertEqual(response.status, 204, "local-exit reconciliation response");
+  assertEqual(await response.text(), "", "local-exit reconciliation body");
 }
 
 async function assertMethodAndOriginProtection(
