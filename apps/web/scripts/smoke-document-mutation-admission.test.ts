@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   runDocumentMutationAdmissionSmoke,
+  runDocumentMutationAdmissionSmokeCli,
   type DocumentMutationEffectCounts,
 } from "./smoke-document-mutation-admission";
 
@@ -14,6 +15,33 @@ const sessions = {
 };
 
 describe("document mutation admission production smoke", () => {
+  it("starts as a standalone CLI without importing the Next server-only sentinel", async () => {
+    await expect(
+      runDocumentMutationAdmissionSmokeCli({
+        argv: [
+          "--environment",
+          "production",
+          "--mode",
+          "reject-only",
+          "--base-url",
+          "https://example.com",
+          "--expected-sha",
+          commit,
+          "--r2-ttl-readback",
+          "required",
+          "--redacted",
+        ],
+        env: {
+          OVE290_SESSION_A1_COOKIE: sessions.ownerA1Cookie,
+          OVE290_SESSION_A2_COOKIE: sessions.ownerA2Cookie,
+          OVE290_SESSION_B_COOKIE: sessions.ownerBCookie,
+          OVE290_DOCUMENT_A1_GENERATION:
+            sessions.ownerA1DocumentGeneration,
+        },
+      }),
+    ).rejects.toThrow("OVE-290 base URL must be an immutable Vercel origin.");
+  });
+
   it("proves exact classes, closed TTL, and identical zero-effect counts", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const fetchImpl = vi.fn(

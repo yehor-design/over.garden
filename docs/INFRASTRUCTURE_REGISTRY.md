@@ -181,6 +181,7 @@ OVE-290 document-generation media contract:
 - `DOCUMENT_MUTATION_ADMISSION_ENABLED` is absent by default and therefore enforcement is enabled. Setting it to the exact value `false` or `0` is the bounded rollback; it is not a permanent relaxed configuration.
 - `/api/document-mutation-admission/readback` exposes only protocol, enforcement class, deployment SHA, and the non-secret TTL source/effective/maximum tuple with `no-store`. It never exposes environment inventory, credentials, cookies, generations, keys, or capability URLs.
 - Production closeout runs `scripts/smoke-document-mutation-admission.ts` in `reject-only` mode against the immutable exact-SHA deployment. Private A1/A2/B session cookies and the A1 document generation are supplied only through process environment, discarded after the run, and never printed or committed. The smoke performs read-only pre/post database counts and no successful product mutation.
+- On 2026-08-10, Git-backed deployment `dpl_Di1Mwcbtms8mQjjNxgZL9fr2WcwR` reached `READY` at `over-garden-fwg7ddk6a-yehors-projects-01221e2b.vercel.app` and served feature SHA `da38a2c2b5901426353e8d0a55a91a79b584863f` through the canonical aliases. Immutable and canonical read-back both reported enforcement enabled and the default `900`-second TTL. The exact-SHA reject-only smoke proved owner-change, same-owner session-refresh, and malformed-protocol rejection with zero journal-entry and mutation-receipt effects before and after; all three synthetic sessions were revoked and confirmed guest afterward.
 
 ### Quarantine Bucket
 
