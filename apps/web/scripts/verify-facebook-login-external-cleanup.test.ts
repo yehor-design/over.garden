@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { Pool } from "pg";
 import { describe, expect, it, vi } from "vitest";
 
@@ -552,6 +554,35 @@ describe("OVE-297 fail-closed command and immutable artifact boundary", () => {
         JSON.stringify({ ...APPROVAL, status: "pending" }),
       ),
     ).toThrow("must be explicitly approved");
+  });
+
+  it("keeps the tracked production plan machine-readable and approval-bound", () => {
+    const artifact = readFileSync(
+      new URL(
+        "../../../docs/runbooks/OVE_297_FACEBOOK_LOGIN_EXTERNAL_CLEANUP_PLAN.md",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(
+      parseFacebookCleanupPlanArtifact(artifact, "a".repeat(40)),
+    ).toMatchObject({
+      environment: "production",
+      implementationSha: "a".repeat(40),
+      counts: {
+        facebookAccounts: 0,
+        facebookOnly: 0,
+        facebookWithCredential: 0,
+        facebookWithGoogle: 0,
+        duplicateFacebookOwners: 0,
+      },
+      inventoryClass: "zero_inventory_proved",
+      targetDigest:
+        "af3ca37f644cf8069cfe8f1a61833cd0a8f25adbba1e3585cb1eda8964f4b24a",
+      metaAdsExclusionDigest:
+        "87df70286de1f9e20184495c35bb10cc34dda4bf616b7ca690689625c8c0daba",
+    });
   });
 
   it("emits no nested identity, token, callback, secret, or database error detail", () => {
