@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-08-10 (OVE-285 authenticated-mutation decision receipt; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-10 (OVE-293 owner-work inspection and composer durability execution; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -39,6 +39,28 @@ OVE-290 -> OVE-286 -> OVE-287 -> OVE-291 -> OVE-289 -> OVE-294 -> OVE-295 ->
 OVE-292 -> OVE-284 -> OVE-186. OVE-297 and OVE-298 remain separate DAG leaves,
 not members of that strict chain. Terminal issue status and relations still
 require authenticated Linear read-back before selecting OVE-293.
+
+On 2026-08-10, OVE-293 was selected only after authenticated OVE-285 terminal
+read-back and was individually re-audited against clean repository baseline
+`05af6cd53c1c43f5d3754577a590f791f99ae869`. Its v6 device-local durability
+protocol binds every mounted production composer write to an exact
+owner/draft/participant/generation transaction and independent read-back;
+ordinary unproved writes invalidate stale evidence. `OwnerWorkInspectionV2`
+now reports either an exhaustive, payload-free exact-owner inventory or one
+explicit unavailable reason with no counts or destructive authority. Abort,
+participant/generation drift, schema failure, Blob failure, hard-bound contact,
+and the 5,000-millisecond deadline all fail closed. Sign-out launches inspection
+as invisible background evidence, never awaits it, never offers a purge or
+sync-first choice, and always retains work. The required OVE-285 downstream
+registry regeneration closes 593 production files into 2,476 source nodes and
+303 entrypoints with zero source-policy, registry, semantic, or unresolved
+findings; its registry/source/receipt digests are respectively
+`c49e5e22e4c1f1cba678fbae18e829bbdc0c793a4af746d4c0aba1de67a2da92`,
+`3f5620a5d7fb7a31836ce53a253054b81fbfa0d45e62e351c6cb8cf863a43f4a`, and
+`868e076ae689950edd9b0d3dbe5191ec61ffcd4d07abcd7e0399806ad65ffd34`.
+Exact implementation containment, READY deployment identity, terminal
+relations, and saved-description digest remain authenticated closeout/read-back
+requirements before selecting OVE-288.
 
 On 2026-07-28, OVE-242 was re-audited and materially rewritten against current
 `main` (`dd3b7a6906d5dbf215627d7b6a1de6348befcd16`), passed final validation,

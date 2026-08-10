@@ -56,11 +56,9 @@ import {
 import {
   abortOwnerSyncAttempts,
   finalizeOwnerOfflineActivityForSessionChange,
+  inspectOwnerWork,
   pauseOwnerOfflineActivity,
-  purgeUnsyncedOwnerData,
-  summarizeUnsyncedOwnerData,
   type OwnerOfflineActivityPauseHandle,
-  type UnsyncedOwnerDataSummary,
 } from "@/lib/offline/owner-session-lifecycle";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
@@ -69,20 +67,12 @@ type SignOutPhase =
   | "idle"
   | "awaiting-confirmation"
   | "checking"
-  | "waiting-for-choice"
   | "signing-out"
   | "error";
-type SignOutErrorKind =
-  | "local-check"
-  | "purge"
-  | "server-active"
-  | "server-unconfirmed"
-  | "server-after-purge-active"
-  | "server-after-purge-unconfirmed";
+type SignOutErrorKind = "local-check" | "server-active" | "server-unconfirmed";
 
 interface SignOutState {
   phase: SignOutPhase;
-  summary?: UnsyncedOwnerDataSummary;
   errorKind?: SignOutErrorKind;
 }
 
@@ -332,137 +322,110 @@ export function SignOutProvider({
     return true;
   }, [hideAuthenticatedTree, stopOperationHeartbeat]);
 
-  const performCanonicalSignOut = useCallback(
-    async (afterApprovedPurge: boolean) => {
-      setState({ phase: "signing-out" });
-      const preparedCurrentSession = preparedCurrentSessionRef.current;
-      if (!preparedCurrentSession) {
-        if (!afterApprovedPurge) await resumePreparedActivity();
-        setState({ phase: "error", errorKind: "server-unconfirmed" });
-        operationLockedRef.current = false;
-        return;
-      }
-      const pauseHandle = pauseHandleRef.current;
-      if (!pauseHandle) {
-        setState({ phase: "error", errorKind: "local-check" });
-        operationLockedRef.current = false;
-        return;
-      }
-      // Mark this document irreversible before awaiting IndexedDB so unmount
-      // cannot race a successful promotion with ordinary resume cleanup.
-      canonicalRequestMayHaveCommittedRef.current = true;
-      try {
-        // This durable commit_pending fence must land before the canonical
-        // auth request itself is dispatched.
-        await pauseHandle.promoteToCommitFence();
-      } catch {
-        if (!afterApprovedPurge) {
-          canonicalRequestMayHaveCommittedRef.current = false;
-          await resumePreparedActivity();
-        }
-        setState({
-          phase: "error",
-          errorKind: afterApprovedPurge
-            ? "server-after-purge-unconfirmed"
-            : "local-check",
-        });
-        operationLockedRef.current = false;
-        return;
-      }
-      const result = await signOutCurrentSessionOnce(
-        preparedCurrentSession,
-        authClient,
-      ).catch(
-        () =>
-          ({
-            status: "failed",
-            reason: "session_confirmation_unavailable",
-          }) as const,
-      );
-
-      if (result.status === "committed") {
-        await finalizeConfirmedSignOut();
-        return;
-      }
-
-      if (result.reason === "session_changed") {
-        await hardReloadChangedSession();
-        return;
-      }
-
-      if (result.reason === "session_still_active" && !afterApprovedPurge) {
-        canonicalRequestMayHaveCommittedRef.current = false;
-        await resumePreparedActivity();
-      }
-
-      setState({
-        phase: "error",
-        errorKind:
-          result.reason === "session_still_active"
-            ? afterApprovedPurge
-              ? "server-after-purge-active"
-              : "server-active"
-            : afterApprovedPurge
-              ? "server-after-purge-unconfirmed"
-              : "server-unconfirmed",
-      });
+  const performCanonicalSignOut = useCallback(async () => {
+    setState({ phase: "signing-out" });
+    const preparedCurrentSession = preparedCurrentSessionRef.current;
+    if (!preparedCurrentSession) {
+      await resumePreparedActivity();
+      setState({ phase: "error", errorKind: "server-unconfirmed" });
       operationLockedRef.current = false;
-    },
-    [
-      finalizeConfirmedSignOut,
-      hardReloadChangedSession,
-      resumePreparedActivity,
-    ],
-  );
+      return;
+    }
+    const pauseHandle = pauseHandleRef.current;
+    if (!pauseHandle) {
+      setState({ phase: "error", errorKind: "local-check" });
+      operationLockedRef.current = false;
+      return;
+    }
+    // Mark this document irreversible before awaiting IndexedDB so unmount
+    // cannot race a successful promotion with ordinary resume cleanup.
+    canonicalRequestMayHaveCommittedRef.current = true;
+    try {
+      // This durable commit_pending fence must land before the canonical
+      // auth request itself is dispatched.
+      await pauseHandle.promoteToCommitFence();
+    } catch {
+      canonicalRequestMayHaveCommittedRef.current = false;
+      await resumePreparedActivity();
+      setState({ phase: "error", errorKind: "local-check" });
+      operationLockedRef.current = false;
+      return;
+    }
+    const result = await signOutCurrentSessionOnce(
+      preparedCurrentSession,
+      authClient,
+    ).catch(
+      () =>
+        ({
+          status: "failed",
+          reason: "session_confirmation_unavailable",
+        }) as const,
+    );
 
-  const reconcileUnknownCanonicalAttempt = useCallback(
-    async (afterApprovedPurge: boolean) => {
-      const preparedCurrentSession = preparedCurrentSessionRef.current;
-      if (!preparedCurrentSession) {
-        setState({
-          phase: "error",
-          errorKind: afterApprovedPurge
-            ? "server-after-purge-unconfirmed"
-            : "server-unconfirmed",
-        });
-        operationLockedRef.current = false;
-        return;
-      }
+    if (result.status === "committed") {
+      await finalizeConfirmedSignOut();
+      return;
+    }
 
-      setState({ phase: "signing-out" });
-      const confirmation = await confirmPreparedCurrentSession(
-        preparedCurrentSession,
-        authClient,
-      );
-      if (confirmation.status === "signed_out") {
-        await finalizeConfirmedSignOut();
-        return;
-      }
-      if (confirmation.status === "changed") {
-        await hardReloadChangedSession();
-        return;
-      }
-      if (confirmation.status === "matches") {
-        // The same A session is authoritative, so a retry can safely reuse the
-        // exact prepared binding and durable operation.
-        await performCanonicalSignOut(afterApprovedPurge);
-        return;
-      }
+    if (result.reason === "session_changed") {
+      await hardReloadChangedSession();
+      return;
+    }
 
-      setState({
-        phase: "error",
-        errorKind: afterApprovedPurge
-          ? "server-after-purge-unconfirmed"
+    if (result.reason === "session_still_active") {
+      canonicalRequestMayHaveCommittedRef.current = false;
+      await resumePreparedActivity();
+    }
+
+    setState({
+      phase: "error",
+      errorKind:
+        result.reason === "session_still_active"
+          ? "server-active"
           : "server-unconfirmed",
-      });
+    });
+    operationLockedRef.current = false;
+  }, [
+    finalizeConfirmedSignOut,
+    hardReloadChangedSession,
+    resumePreparedActivity,
+  ]);
+
+  const reconcileUnknownCanonicalAttempt = useCallback(async () => {
+    const preparedCurrentSession = preparedCurrentSessionRef.current;
+    if (!preparedCurrentSession) {
+      setState({ phase: "error", errorKind: "server-unconfirmed" });
       operationLockedRef.current = false;
-    },
-    [
-      finalizeConfirmedSignOut,
-      hardReloadChangedSession,
-      performCanonicalSignOut,
-    ],
-  );
+      return;
+    }
+
+    setState({ phase: "signing-out" });
+    const confirmation = await confirmPreparedCurrentSession(
+      preparedCurrentSession,
+      authClient,
+    );
+    if (confirmation.status === "signed_out") {
+      await finalizeConfirmedSignOut();
+      return;
+    }
+    if (confirmation.status === "changed") {
+      await hardReloadChangedSession();
+      return;
+    }
+    if (confirmation.status === "matches") {
+      // The same A session is authoritative, so a retry can safely reuse the
+      // exact prepared binding and durable operation.
+      await performCanonicalSignOut();
+      return;
+    }
+
+    setState({ phase: "error", errorKind: "server-unconfirmed" });
+    operationLockedRef.current = false;
+  }, [
+    finalizeConfirmedSignOut,
+    hardReloadChangedSession,
+    performCanonicalSignOut,
+  ]);
 
   const hardReloadUnknownCanonicalAttempt = useCallback(() => {
     stopOperationHeartbeat();
@@ -526,18 +489,11 @@ export function SignOutProvider({
       await pauseHandle.waitForSyncDrain();
       await awaitRemotePreparation(operationId, tabId);
       startOperationHeartbeat(operationId, tabId);
-      const summary = await summarizeUnsyncedOwnerData(
-        ownerUserId,
-        pauseHandle,
-      );
-
-      if (summary.hasUnsyncedData) {
-        setState({ phase: "waiting-for-choice", summary });
-        operationLockedRef.current = false;
-        return;
-      }
-
-      await performCanonicalSignOut(false);
+      // Inspection is deliberately evidence-only. It receives no disposition
+      // authority, is never awaited, and may settle after navigation without
+      // changing the confirmed retain-and-exit path.
+      startBestEffort(() => inspectOwnerWork(ownerUserId));
+      await performCanonicalSignOut();
     } catch {
       await resumePreparedActivity();
       setState({ phase: "error", errorKind: "local-check" });
@@ -569,184 +525,16 @@ export function SignOutProvider({
     await beginConfirmedSignOut();
   }, [beginConfirmedSignOut]);
 
-  const staySignedIn = useCallback(async () => {
-    if (operationLockedRef.current) return;
-    operationLockedRef.current = true;
-    const resumed = await resumePreparedActivity();
-    operationLockedRef.current = false;
-    if (!resumed) {
-      setState({ phase: "error", errorKind: "local-check" });
-      return;
-    }
-    ownerUserIdRef.current = null;
-    setState({ phase: "idle" });
-  }, [resumePreparedActivity]);
-
-  const syncFirst = useCallback(async () => {
-    if (operationLockedRef.current) return;
-    operationLockedRef.current = true;
-    const resumed = await resumePreparedActivity();
-    operationLockedRef.current = false;
-    if (!resumed) {
-      setState({ phase: "error", errorKind: "local-check" });
-      return;
-    }
-    ownerUserIdRef.current = null;
-    setState({ phase: "idle" });
-    window.location.assign("/garden#drafts");
-  }, [resumePreparedActivity]);
-
-  const discardAndSignOut = useCallback(async () => {
-    if (operationLockedRef.current) return;
-    const ownerUserId = ownerUserIdRef.current;
-    if (!ownerUserId) {
-      await beginConfirmedSignOut();
-      return;
-    }
-
-    operationLockedRef.current = true;
-    setState({ phase: "signing-out" });
-
-    const preparedCurrentSession = preparedCurrentSessionRef.current;
-    if (!preparedCurrentSession) {
-      const resumed = await resumePreparedActivity();
-      setState({
-        phase: "error",
-        errorKind: resumed ? "server-unconfirmed" : "local-check",
-      });
-      operationLockedRef.current = false;
-      return;
-    }
-
-    const operationId = convergenceOperationIdRef.current;
-    const tabId =
-      tabLeaseRef.current?.tabId ?? getCurrentAuthenticatedSessionTabId();
-    if (!operationId || !tabId) {
-      const resumed = await resumePreparedActivity();
-      setState({
-        phase: "error",
-        errorKind: resumed ? "server-unconfirmed" : "local-check",
-      });
-      operationLockedRef.current = false;
-      return;
-    }
-
-    try {
-      // A background tab may have safely released a stale preparation. Renew
-      // the full cross-tab quorum immediately before any destructive action.
-      await awaitRemotePreparation(operationId, tabId);
-      const pauseHandle = pauseHandleRef.current;
-      if (!pauseHandle) {
-        throw new Error("Sign-out owner activity scope is unavailable.");
-      }
-      const refreshedSummary = await summarizeUnsyncedOwnerData(
-        ownerUserId,
-        pauseHandle,
-      );
-      if (
-        refreshedSummary.hasUnsyncedData &&
-        !summariesMatch(refreshedSummary, state.summary)
-      ) {
-        setState({ phase: "waiting-for-choice", summary: refreshedSummary });
-        operationLockedRef.current = false;
-        return;
-      }
-    } catch {
-      await resumePreparedActivity();
-      setState({ phase: "error", errorKind: "local-check" });
-      operationLockedRef.current = false;
-      return;
-    }
-
-    const beforePurge = await confirmPreparedCurrentSession(
-      preparedCurrentSession,
-      authClient,
-    );
-    if (beforePurge.status === "signed_out") {
-      // Skip destructive local work, but let the canonical helper perform its
-      // idempotent cookie clear for a stale/no-row Better Auth cookie.
-      await performCanonicalSignOut(false);
-      return;
-    }
-    if (beforePurge.status !== "matches") {
-      if (beforePurge.status === "changed") {
-        await hardReloadChangedSession();
-        return;
-      }
-      const resumed = await resumePreparedActivity();
-      setState({
-        phase: "error",
-        errorKind: !resumed ? "local-check" : "server-unconfirmed",
-      });
-      operationLockedRef.current = false;
-      return;
-    }
-
-    try {
-      const pauseHandle = pauseHandleRef.current;
-      if (!pauseHandle) {
-        throw new Error("Sign-out owner activity scope is unavailable.");
-      }
-      await purgeUnsyncedOwnerData(ownerUserId, pauseHandle);
-    } catch {
-      await resumePreparedActivity();
-      setState({ phase: "error", errorKind: "purge" });
-      operationLockedRef.current = false;
-      return;
-    }
-
-    const afterPurge = await confirmPreparedCurrentSession(
-      preparedCurrentSession,
-      authClient,
-    );
-    if (afterPurge.status === "signed_out") {
-      await performCanonicalSignOut(true);
-      return;
-    }
-    if (afterPurge.status !== "matches") {
-      if (afterPurge.status === "changed") {
-        await hardReloadChangedSession();
-        return;
-      }
-      setState({
-        phase: "error",
-        errorKind: "server-after-purge-unconfirmed",
-      });
-      operationLockedRef.current = false;
-      return;
-    }
-
-    await performCanonicalSignOut(true);
-  }, [
-    awaitRemotePreparation,
-    hardReloadChangedSession,
-    performCanonicalSignOut,
-    beginConfirmedSignOut,
-    resumePreparedActivity,
-    state.summary,
-  ]);
-
   const retryAfterError = useCallback(async () => {
     if (operationLockedRef.current) return;
 
-    if (
-      state.errorKind === "server-unconfirmed" ||
-      state.errorKind === "server-after-purge-unconfirmed"
-    ) {
+    if (state.errorKind === "server-unconfirmed") {
       operationLockedRef.current = true;
-      await reconcileUnknownCanonicalAttempt(
-        state.errorKind === "server-after-purge-unconfirmed",
-      );
+      await reconcileUnknownCanonicalAttempt();
       return;
     }
 
-    if (isAfterPurgeServerError(state.errorKind)) {
-      operationLockedRef.current = true;
-      await performCanonicalSignOut(true);
-      return;
-    }
-
-    if (isBeforePurgeServerError(state.errorKind)) {
+    if (state.errorKind === "server-active") {
       await beginConfirmedSignOut();
       return;
     }
@@ -754,7 +542,6 @@ export function SignOutProvider({
     const resumed = await resumePreparedActivity();
     if (resumed) await beginConfirmedSignOut();
   }, [
-    performCanonicalSignOut,
     beginConfirmedSignOut,
     reconcileUnknownCanonicalAttempt,
     resumePreparedActivity,
@@ -765,39 +552,8 @@ export function SignOutProvider({
     if (operationLockedRef.current) return;
     operationLockedRef.current = true;
 
-    if (
-      state.errorKind === "server-unconfirmed" ||
-      state.errorKind === "server-after-purge-unconfirmed"
-    ) {
+    if (state.errorKind === "server-unconfirmed") {
       hardReloadUnknownCanonicalAttempt();
-      return;
-    }
-
-    if (isAfterPurgeServerError(state.errorKind)) {
-      const pauseHandle = pauseHandleRef.current;
-      try {
-        if (pauseHandle) await pauseHandle.finalizeForHardReload();
-      } catch {
-        operationLockedRef.current = false;
-        return;
-      }
-      pauseHandleRef.current = null;
-      composerPreparationRef.current = null;
-      acknowledgementBarrierRef.current = null;
-      stopOperationHeartbeat();
-      if (preparationPublishedRef.current) {
-        const operationId = convergenceOperationIdRef.current;
-        const tabId =
-          tabLeaseRef.current?.tabId ?? getCurrentAuthenticatedSessionTabId();
-        if (operationId && tabId) {
-          publishSignOutPreparationCancelled(operationId, tabId);
-        }
-        preparationPublishedRef.current = false;
-      }
-      convergenceOperationIdRef.current = null;
-      preparedCurrentSessionRef.current = null;
-      canonicalRequestMayHaveCommittedRef.current = false;
-      window.location.replace(window.location.href);
       return;
     }
 
@@ -810,7 +566,6 @@ export function SignOutProvider({
     hardReloadUnknownCanonicalAttempt,
     resumePreparedActivity,
     state.errorKind,
-    stopOperationHeartbeat,
   ]);
 
   useEffect(() => {
@@ -882,8 +637,7 @@ export function SignOutProvider({
     () => ({ copy, phase: state.phase, requestSignOut }),
     [copy, requestSignOut, state.phase],
   );
-  const dialogOpen =
-    state.phase === "waiting-for-choice" || state.phase === "error";
+  const dialogOpen = state.phase === "error";
   const confirmationOpen = state.phase === "awaiting-confirmation";
 
   return (
@@ -942,7 +696,6 @@ export function SignOutProvider({
         open={dialogOpen}
         onOpenChange={(open) => {
           if (open) return;
-          if (state.phase === "waiting-for-choice") void staySignedIn();
           if (state.phase === "error" && !isHardReloadError(state.errorKind)) {
             void dismissError();
           }
@@ -953,54 +706,7 @@ export function SignOutProvider({
           showCloseButton={false}
           className="mx-auto max-h-dvh w-full max-w-xl overflow-y-auto rounded-t-2xl p-0"
         >
-          {state.phase === "waiting-for-choice" && state.summary ? (
-            <>
-              <SheetHeader className="gap-2 border-b border-border p-5 sm:p-6">
-                <SheetTitle className="text-xl">{copy.dialogTitle}</SheetTitle>
-                <SheetDescription className="leading-6">
-                  {copy.dialogDescription}
-                </SheetDescription>
-              </SheetHeader>
-              <div className="grid gap-3 px-5 py-4 sm:px-6">
-                <ul className="grid gap-1 text-sm text-foreground">
-                  <li>
-                    {formatCount(copy.draftsCount, state.summary.draftCount)}
-                  </li>
-                  <li>
-                    {formatCount(
-                      copy.mutationsCount,
-                      state.summary.mutationCount,
-                    )}
-                  </li>
-                  <li>
-                    {formatCount(copy.mediaCount, state.summary.mediaCount)}
-                  </li>
-                </ul>
-                <p className="text-xs leading-5 text-muted-foreground">
-                  {copy.acceptedMutationCaveat}
-                </p>
-              </div>
-              <SheetFooter className="gap-2 border-t border-border p-5 sm:p-6">
-                <Button type="button" onClick={() => void staySignedIn()}>
-                  {copy.staySignedIn}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => void syncFirst()}
-                >
-                  {copy.syncFirst}
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => void discardAndSignOut()}
-                >
-                  {copy.discardAndSignOut}
-                </Button>
-              </SheetFooter>
-            </>
-          ) : state.phase === "error" && state.errorKind ? (
+          {state.phase === "error" && state.errorKind ? (
             <>
               <SheetHeader className="gap-2 border-b border-border p-5 sm:p-6">
                 <SheetTitle className="text-xl">{copy.errorTitle}</SheetTitle>
@@ -1058,64 +764,19 @@ function readOwnerUserId(result: unknown): string | null {
   return ownerUserId;
 }
 
-function formatCount(template: string, count: number) {
-  return template.replace("{count}", String(count));
-}
-
-function summariesMatch(
-  current: UnsyncedOwnerDataSummary,
-  previous: UnsyncedOwnerDataSummary | undefined,
-) {
-  if (!previous) return false;
-  return (
-    current.hasUnsyncedData === previous.hasUnsyncedData &&
-    current.totalCount === previous.totalCount &&
-    current.draftCount === previous.draftCount &&
-    current.mutationCount === previous.mutationCount &&
-    current.mediaCount === previous.mediaCount &&
-    current.statusCounts.queued === previous.statusCounts.queued &&
-    current.statusCounts.syncing === previous.statusCounts.syncing &&
-    current.statusCounts.failed === previous.statusCounts.failed
-  );
-}
-
 function errorMessage(copy: SignOutCopy, kind: SignOutErrorKind) {
   if (kind === "local-check") return copy.localCheckError;
-  if (kind === "purge") return copy.purgeError;
   if (kind === "server-active") return copy.signOutActiveError;
-  if (kind === "server-unconfirmed") return copy.signOutUnconfirmedError;
-  if (kind === "server-after-purge-active") {
-    return copy.signOutAfterPurgeActiveError;
-  }
-  return copy.signOutAfterPurgeUnconfirmedError;
+  return copy.signOutUnconfirmedError;
 }
 
 function errorDismissLabel(copy: SignOutCopy, kind: SignOutErrorKind) {
-  if (kind === "server-after-purge-active") {
-    return copy.reloadAndStaySignedIn;
-  }
-  if (
-    kind === "server-unconfirmed" ||
-    kind === "server-after-purge-unconfirmed"
-  ) {
-    return copy.reloadAndRecheck;
-  }
+  if (kind === "server-unconfirmed") return copy.reloadAndRecheck;
   return copy.dismissError;
 }
 
-function isBeforePurgeServerError(kind: SignOutErrorKind | undefined) {
-  return kind === "server-active" || kind === "server-unconfirmed";
-}
-
-function isAfterPurgeServerError(kind: SignOutErrorKind | undefined) {
-  return (
-    kind === "server-after-purge-active" ||
-    kind === "server-after-purge-unconfirmed"
-  );
-}
-
 function isHardReloadError(kind: SignOutErrorKind | undefined) {
-  return isAfterPurgeServerError(kind) || kind === "server-unconfirmed";
+  return kind === "server-unconfirmed";
 }
 
 function startBestEffort(task: () => Promise<unknown>) {

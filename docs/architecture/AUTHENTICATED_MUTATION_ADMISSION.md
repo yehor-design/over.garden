@@ -26,20 +26,20 @@ The checked artifact is
 `contracts/auth/authenticated-mutation-registry.v3.json`, schema
 `overgarden.authenticated-mutation-registry.v3`.
 
-| Field | Checked value |
-| --- | ---: |
-| Production source files | 592 |
-| Source nodes | 2,439 |
-| Logical entrypoints | 295 |
-| Effect boundaries | 183 |
-| Consumer edges | 655 |
-| Excluded entrypoints | 120 |
-| Retired-provider entrypoints | 1 |
-| Unresolved nodes or entrypoints | 0 |
-| Registry digest | `c917ed87bfb7b84f54435ff99e5cf768a3c41427cb8e7f5b58e6978387181406` |
-| Source-evidence digest | `b627003b927dc53e84bdd58870f5df6faee627e6843e55795cdfd47874bb4817` |
-| Receipt digest | `c725f3b6dd0fe18c3dbae09c56a714573f56e1d6fff32d83f4549c9cf14ebdd7` |
-| Artifact file SHA-256 | `fbe7b1715846ee6d8b254abf5cd2ede5b5224a5570ae707e1f9e74ee755be615` |
+| Field                           |                                                      Checked value |
+| ------------------------------- | -----------------------------------------------------------------: |
+| Production source files         |                                                                593 |
+| Source nodes                    |                                                              2,476 |
+| Logical entrypoints             |                                                                303 |
+| Effect boundaries               |                                                                183 |
+| Consumer edges                  |                                                                655 |
+| Excluded entrypoints            |                                                                128 |
+| Retired-provider entrypoints    |                                                                  1 |
+| Unresolved nodes or entrypoints |                                                                  0 |
+| Registry digest                 | `c49e5e22e4c1f1cba678fbae18e829bbdc0c793a4af746d4c0aba1de67a2da92` |
+| Source-evidence digest          | `3f5620a5d7fb7a31836ce53a253054b81fbfa0d45e62e351c6cb8cf863a43f4a` |
+| Receipt digest                  | `868e076ae689950edd9b0d3dbe5191ec61ffcd4d07abcd7e0399806ad65ffd34` |
+| Artifact file SHA-256           | `d5daa0f0c94bae4186a7f9dee2505f11e515190b275fb44920e7d669b26d216a` |
 
 The independently pinned Better Auth semantic adapter produced:
 
@@ -49,7 +49,10 @@ The independently pinned Better Auth semantic adapter produced:
 
 The receipt binds the exact baseline, TypeScript and Better Auth toolchain,
 OVE-296 prerequisite receipt, normalized production-source evidence, and
-canonical registry bytes. A change to any bound input changes the receipt.
+canonical registry bytes. A change to any bound input changes the receipt. The
+values above are the deterministic OVE-293 downstream regeneration; the
+original OVE-285 terminal receipt remains preserved in its Linear closeout and
+the execution roadmap.
 
 ## Closed source policy
 
@@ -128,8 +131,9 @@ owner:
 - `owned_by_ove_295`: 5 explicit-linking paths;
 - `remaining_ove_291`: 128 remaining effectful paths.
 
-The remaining 121 non-effectful paths are `excluded_with_reason`. Owner sets are
-disjoint by construction and validation.
+The remaining 129 non-effectful paths are `excluded_with_reason` (128 ordinary
+exclusions plus the one retired-provider entrypoint). Owner sets are disjoint by
+construction and validation.
 
 ## Determinism and bounded execution
 

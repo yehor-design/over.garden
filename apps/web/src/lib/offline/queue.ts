@@ -8,6 +8,11 @@ import type {
   JournalEntryTarget,
 } from "@/lib/garden/entry-contracts";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
+import type {
+  OWNER_COMPOSER_DURABILITY_PROTOCOL,
+  OFFLINE_VAULT_GENERATION,
+  OwnerComposerDurabilityDisposition,
+} from "./owner-composer-durability";
 
 export type OfflineMutationStatus = "queued" | "syncing" | "synced" | "failed";
 export type OfflineMutationKind = "journal_entry" | "photo_upload";
@@ -135,6 +140,23 @@ export interface OfflineDraftRecord<TPayload = unknown> {
 }
 
 /**
+ * Payload-free commit metadata. The compound owner/draft key is an internal
+ * storage boundary and is never copied into an inspection receipt.
+ */
+export interface OfflineComposerDurabilityRecord {
+  ownerUserId: string;
+  draftId: string;
+  protocol: typeof OWNER_COMPOSER_DURABILITY_PROTOCOL;
+  participantNonce: string;
+  generation: number;
+  disposition: OwnerComposerDurabilityDisposition;
+  storedByteLength: number;
+  storedDigest: string;
+  vaultGeneration: typeof OFFLINE_VAULT_GENERATION;
+  updatedAt: number;
+}
+
+/**
  * A deliberately payload-free device-local projection for the garden workspace.
  * It is not a recovery record: composers and sync always read the canonical
  * draft/mutation tables. Keeping this narrow record in a separate table means
@@ -183,6 +205,7 @@ class OverGardenOfflineDb extends Dexie {
   drafts!: Table<OfflineDraftRecord, [string, string]>;
   mutationSummaries!: Table<OfflineMutationSummary, [string, string]>;
   draftSummaries!: Table<OfflineDraftSummary, [string, string]>;
+  composerDurability!: Table<OfflineComposerDurabilityRecord, [string, string]>;
   ownerActivity!: Table<OfflineOwnerActivity, string>;
 
   constructor() {
@@ -247,6 +270,18 @@ class OverGardenOfflineDb extends Dexie {
             ),
         ]);
       });
+    this.version(6).stores({
+      mutations:
+        "id, ownerUserId, &[ownerUserId+idempotencyKey], [ownerUserId+status], createdAt, updatedAt",
+      drafts:
+        "[ownerUserId+id], ownerUserId, [ownerUserId+kind], createdAt, updatedAt",
+      mutationSummaries:
+        "[ownerUserId+id], ownerUserId, [ownerUserId+status+createdAt], [ownerUserId+workspaceVisible+updatedAt], [ownerUserId+updatedAt]",
+      draftSummaries:
+        "[ownerUserId+id], ownerUserId, [ownerUserId+kind+updatedAt], [ownerUserId+updatedAt]",
+      composerDurability: "[ownerUserId+draftId], ownerUserId, updatedAt",
+      ownerActivity: "ownerUserId, expiresAt",
+    });
   }
 }
 

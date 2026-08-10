@@ -13,6 +13,19 @@ import {
   type OfflineMutationStatus,
 } from "./queue";
 import { publishOfflineDraftsChanged } from "./drafts";
+import {
+  deletedOwnerComposerFingerprint,
+  fingerprintOwnerComposerPayload,
+  OWNER_COMPOSER_DURABILITY_PROTOCOL,
+  OFFLINE_VAULT_GENERATION,
+  OwnerComposerDurabilityUnconfirmedError,
+} from "./owner-composer-durability";
+import { readOwnerComposerEvidenceRevision } from "./owner-composer-participants";
+import type {
+  OfflineComposerDurabilityRecord,
+  OfflineDraftRecord,
+  OfflineMutation,
+} from "./queue";
 
 export { OwnerOfflineActivityPausedError } from "./queue";
 
@@ -26,13 +39,63 @@ const UNSYNCED_MUTATION_STATUSES = [
 
 type UnsyncedMutationStatus = (typeof UNSYNCED_MUTATION_STATUSES)[number];
 
-export interface UnsyncedOwnerDataSummary {
-  hasUnsyncedData: boolean;
-  totalCount: number;
-  draftCount: number;
-  mutationCount: number;
-  mediaCount: number;
-  statusCounts: Record<UnsyncedMutationStatus, number>;
+export type OwnerWorkInspectionUnavailableReason =
+  | "storage_unavailable"
+  | "storage_read_failed"
+  | "inventory_bounded"
+  | "corrupt_record"
+  | "blob_unavailable"
+  | "flush_unconfirmed"
+  | "participant_set_unstable"
+  | "deadline_exceeded";
+
+export interface OwnerWorkComposerReceipt {
+  protocol: typeof OWNER_COMPOSER_DURABILITY_PROTOCOL;
+  generation: number;
+  disposition: "stored" | "deleted";
+  storedByteLength: number;
+  storedDigest: string;
+  vaultGeneration: typeof OFFLINE_VAULT_GENERATION;
+}
+
+export type OwnerWorkInspectionV2 =
+  | {
+      status: "complete";
+      inventoryComplete: true;
+      inspectionRevision: string;
+      vaultGeneration: typeof OFFLINE_VAULT_GENERATION;
+      counts: {
+        drafts: number;
+        queued: number;
+        syncing: number;
+        failed: number;
+        media: number;
+        privacyBlocked: number;
+      };
+      composerReceipts: OwnerWorkComposerReceipt[];
+    }
+  | {
+      status: "unavailable";
+      inventoryComplete: false;
+      reason: OwnerWorkInspectionUnavailableReason;
+    };
+
+export interface OwnerWorkInspectionSnapshot {
+  drafts: unknown[];
+  mutations: unknown[];
+  composerDurability: unknown[];
+  vaultGeneration: string;
+  inventoryBoundContact?: boolean;
+}
+
+export interface OwnerWorkInspectionSource {
+  readOwnerSnapshot(ownerUserId: string): Promise<OwnerWorkInspectionSnapshot>;
+  readComposerEvidenceRevision(ownerUserId: string): number;
+}
+
+export interface OwnerWorkInspectionOptions {
+  deadlineMs?: number;
+  signal?: AbortSignal;
 }
 
 export interface PurgedUnsyncedOwnerData {
@@ -76,63 +139,437 @@ interface ActiveOwnerSyncAttempt {
 const activeOwnerSyncAttempts = new Map<string, Set<ActiveOwnerSyncAttempt>>();
 const ownerPreviewObjectUrls = new Map<string, Set<string>>();
 
-const EMPTY_STATUS_COUNTS: Record<UnsyncedMutationStatus, number> = {
-  queued: 0,
-  syncing: 0,
-  failed: 0,
-};
+const OWNER_WORK_INSPECTION_DEADLINE_MS = 5_000;
+const MAX_OWNER_WORK_INVENTORY_NODES = 10_000;
+const MAX_OWNER_WORK_INVENTORY_ROWS = 10_000;
 
-export async function summarizeUnsyncedOwnerData(
+/**
+ * Production entrypoint. The canonical IndexedDB tables are read in one
+ * transaction; analysis and Blob fingerprinting happen after the transaction
+ * so no async byte read can leave an IndexedDB transaction half-open.
+ */
+export function inspectOwnerWork(
   ownerUserId: string,
-  scope?: OwnerOfflinePurgeScope,
-): Promise<UnsyncedOwnerDataSummary> {
-  const owner = requireOwnerUserId(ownerUserId);
+  options: OwnerWorkInspectionOptions = {},
+): Promise<OwnerWorkInspectionV2> {
   const database = offlineDb;
-  if (!database) return emptyUnsyncedOwnerDataSummary();
-
-  return database.transaction(
-    "r",
-    database.drafts,
-    database.mutations,
-    database.ownerActivity,
-    async () => {
-      if (scope) {
-        await assertOwnedActivityScope(database, owner, scope);
-      }
-      const [drafts, mutations] = await Promise.all([
-        database.drafts.where("ownerUserId").equals(owner).toArray(),
-        database.mutations.where("ownerUserId").equals(owner).toArray(),
-      ]);
-      const unsyncedMutations = mutations.filter((mutation) =>
-        UNSYNCED_MUTATION_STATUSES.includes(
-          mutation.status as UnsyncedMutationStatus,
-        ),
-      );
-      const statusCounts = unsyncedMutations.reduce(
-        (counts, mutation) => {
-          counts[mutation.status as UnsyncedMutationStatus] += 1;
-          return counts;
-        },
-        { ...EMPTY_STATUS_COUNTS },
-      );
-      const draftCount = drafts.length;
-      const mutationCount = unsyncedMutations.length;
-      const mediaCount = countNestedBlobs([
-        ...drafts.map((draft) => draft.payload),
-        ...unsyncedMutations.map((mutation) => mutation.payload),
-      ]);
-
+  if (!database) {
+    return Promise.resolve(unavailableOwnerWork("storage_unavailable"));
+  }
+  const source: OwnerWorkInspectionSource = {
+    readComposerEvidenceRevision: readOwnerComposerEvidenceRevision,
+    readOwnerSnapshot: async (owner) => {
+      const [drafts, mutations, composerDurability] =
+        await database.transaction(
+          "r",
+          database.drafts,
+          database.mutations,
+          database.composerDurability,
+          () =>
+            Promise.all([
+              database.drafts
+                .where("ownerUserId")
+                .equals(owner)
+                .limit(MAX_OWNER_WORK_INVENTORY_ROWS)
+                .toArray(),
+              database.mutations
+                .where("ownerUserId")
+                .equals(owner)
+                .limit(MAX_OWNER_WORK_INVENTORY_ROWS)
+                .toArray(),
+              database.composerDurability
+                .where("ownerUserId")
+                .equals(owner)
+                .limit(MAX_OWNER_WORK_INVENTORY_ROWS)
+                .toArray(),
+            ]),
+        );
       return {
-        hasUnsyncedData: draftCount + mutationCount > 0,
-        totalCount: draftCount + mutationCount,
-        draftCount,
-        mutationCount,
-        mediaCount,
-        statusCounts,
+        drafts,
+        mutations,
+        composerDurability,
+        vaultGeneration: OFFLINE_VAULT_GENERATION,
+        inventoryBoundContact:
+          drafts.length >= MAX_OWNER_WORK_INVENTORY_ROWS ||
+          mutations.length >= MAX_OWNER_WORK_INVENTORY_ROWS ||
+          composerDurability.length >= MAX_OWNER_WORK_INVENTORY_ROWS,
       };
     },
-  );
+  };
+  return inspectOwnerWorkFromSource(ownerUserId, source, options);
 }
+
+/**
+ * Contract seam for deterministic storage, deadline, and race proofs. Product
+ * callers use `inspectOwnerWork`; this function exposes no UI/runtime toggle.
+ */
+export async function inspectOwnerWorkFromSource(
+  ownerUserId: string,
+  source: OwnerWorkInspectionSource | null,
+  options: OwnerWorkInspectionOptions = {},
+): Promise<OwnerWorkInspectionV2> {
+  const owner = requireOwnerUserId(ownerUserId);
+  if (!source) return unavailableOwnerWork("storage_unavailable");
+  if (options.signal?.aborted) {
+    return unavailableOwnerWork("participant_set_unstable");
+  }
+  const deadlineMs = Math.max(
+    1,
+    Math.min(
+      OWNER_WORK_INSPECTION_DEADLINE_MS,
+      Math.floor(options.deadlineMs ?? OWNER_WORK_INSPECTION_DEADLINE_MS),
+    ),
+  );
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<OwnerWorkInspectionV2>((resolve) => {
+    timeout = setTimeout(
+      () => resolve(unavailableOwnerWork("deadline_exceeded")),
+      deadlineMs,
+    );
+  });
+  let abortListener: (() => void) | undefined;
+  const cancellation = options.signal
+    ? new Promise<OwnerWorkInspectionV2>((resolve) => {
+        const settleCancelled = () =>
+          resolve(unavailableOwnerWork("participant_set_unstable"));
+        abortListener = settleCancelled;
+        options.signal?.addEventListener("abort", settleCancelled, {
+          once: true,
+        });
+        // Close the narrow race between the initial check and listener
+        // registration. AbortSignal does not replay an already-fired event.
+        if (options.signal?.aborted) settleCancelled();
+      })
+    : undefined;
+  const inspection = inspectOwnerWorkSourceOperation(
+    owner,
+    source,
+    options.signal,
+  ).catch((error) => unavailableOwnerWork(mapInspectionFailure(error)));
+
+  try {
+    return await Promise.race(
+      cancellation
+        ? [inspection, deadline, cancellation]
+        : [inspection, deadline],
+    );
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
+    if (abortListener) {
+      options.signal?.removeEventListener("abort", abortListener);
+    }
+  }
+}
+
+async function inspectOwnerWorkSourceOperation(
+  ownerUserId: string,
+  source: OwnerWorkInspectionSource,
+  signal?: AbortSignal,
+): Promise<OwnerWorkInspectionV2> {
+  const initialRevision = source.readComposerEvidenceRevision(ownerUserId);
+  assertInspectionCurrent(ownerUserId, initialRevision, source, signal);
+  const snapshot = await source.readOwnerSnapshot(ownerUserId);
+  assertInspectionCurrent(ownerUserId, initialRevision, source, signal);
+  const result = await analyzeOwnerWorkSnapshot(ownerUserId, snapshot, () =>
+    assertInspectionCurrent(ownerUserId, initialRevision, source, signal),
+  );
+  assertInspectionCurrent(ownerUserId, initialRevision, source, signal);
+  return result;
+}
+
+async function analyzeOwnerWorkSnapshot(
+  ownerUserId: string,
+  snapshot: OwnerWorkInspectionSnapshot,
+  assertCurrent: () => void,
+): Promise<OwnerWorkInspectionV2> {
+  if (
+    !snapshot ||
+    !Array.isArray(snapshot.drafts) ||
+    !Array.isArray(snapshot.mutations) ||
+    !Array.isArray(snapshot.composerDurability) ||
+    (snapshot.inventoryBoundContact !== undefined &&
+      typeof snapshot.inventoryBoundContact !== "boolean") ||
+    snapshot.vaultGeneration !== OFFLINE_VAULT_GENERATION
+  ) {
+    throw new OwnerComposerDurabilityUnconfirmedError("corrupt_record");
+  }
+  if (
+    snapshot.inventoryBoundContact ||
+    snapshot.drafts.length +
+      snapshot.mutations.length +
+      snapshot.composerDurability.length >=
+      MAX_OWNER_WORK_INVENTORY_ROWS
+  ) {
+    throw new OwnerComposerDurabilityUnconfirmedError("inventory_bounded");
+  }
+
+  const drafts = snapshot.drafts.map((record) =>
+    requireInspectionDraft(record, ownerUserId),
+  );
+  const mutations = snapshot.mutations.map((record) =>
+    requireInspectionMutation(record, ownerUserId),
+  );
+  const durabilityRecords = snapshot.composerDurability.map((record) =>
+    requireInspectionDurabilityRecord(record, ownerUserId),
+  );
+  const receiptByDraftId = new Map<string, OfflineComposerDurabilityRecord>();
+  for (const receipt of durabilityRecords) {
+    if (receiptByDraftId.has(receipt.draftId)) {
+      throw new OwnerComposerDurabilityUnconfirmedError("corrupt_record");
+    }
+    receiptByDraftId.set(receipt.draftId, receipt);
+  }
+  const draftById = new Map(drafts.map((draft) => [draft.id, draft]));
+  if (draftById.size !== drafts.length) {
+    throw new OwnerComposerDurabilityUnconfirmedError("corrupt_record");
+  }
+
+  const statusCounts = { queued: 0, syncing: 0, failed: 0 };
+  let privacyBlocked = 0;
+  const payloads: unknown[] = drafts.map((draft) => draft.payload);
+  for (const mutation of mutations) {
+    if (mutation.status === "synced") {
+      // Accepted payloads are not owner work anymore and remain deliberately
+      // outside content/Blob enumeration. Count the privacy fence, not content.
+      privacyBlocked += 1;
+      continue;
+    }
+    statusCounts[mutation.status] += 1;
+    payloads.push(mutation.payload);
+  }
+  const media = countOwnerWorkMedia(payloads);
+
+  for (const draft of drafts) {
+    const receipt = receiptByDraftId.get(draft.id);
+    if (!receipt || receipt.disposition !== "stored") {
+      throw new OwnerComposerDurabilityUnconfirmedError("flush_unconfirmed");
+    }
+    const fingerprint = await fingerprintOwnerComposerPayload(draft.payload);
+    assertCurrent();
+    if (
+      fingerprint.storedByteLength !== receipt.storedByteLength ||
+      fingerprint.storedDigest !== receipt.storedDigest
+    ) {
+      throw new OwnerComposerDurabilityUnconfirmedError("flush_unconfirmed");
+    }
+  }
+
+  const deletedFingerprint = await deletedOwnerComposerFingerprint();
+  assertCurrent();
+  for (const receipt of durabilityRecords) {
+    const draft = draftById.get(receipt.draftId);
+    if (receipt.disposition === "stored" && !draft) {
+      throw new OwnerComposerDurabilityUnconfirmedError("flush_unconfirmed");
+    }
+    if (
+      receipt.disposition === "deleted" &&
+      (draft ||
+        receipt.storedByteLength !== deletedFingerprint.storedByteLength ||
+        receipt.storedDigest !== deletedFingerprint.storedDigest)
+    ) {
+      throw new OwnerComposerDurabilityUnconfirmedError("flush_unconfirmed");
+    }
+  }
+
+  assertCurrent();
+  return {
+    status: "complete",
+    inventoryComplete: true,
+    inspectionRevision: createOwnerWorkInspectionRevision(),
+    vaultGeneration: OFFLINE_VAULT_GENERATION,
+    counts: {
+      drafts: drafts.length,
+      queued: statusCounts.queued,
+      syncing: statusCounts.syncing,
+      failed: statusCounts.failed,
+      media,
+      privacyBlocked,
+    },
+    composerReceipts: [...durabilityRecords]
+      .sort((left, right) => left.draftId.localeCompare(right.draftId))
+      .map((receipt) => ({
+        protocol: receipt.protocol,
+        generation: receipt.generation,
+        disposition: receipt.disposition,
+        storedByteLength: receipt.storedByteLength,
+        storedDigest: receipt.storedDigest,
+        vaultGeneration: receipt.vaultGeneration,
+      })),
+  };
+}
+
+function requireInspectionDraft(
+  value: unknown,
+  ownerUserId: string,
+): OfflineDraftRecord {
+  if (!isRecord(value)) inspectionCorrupt();
+  const record = value as Partial<OfflineDraftRecord>;
+  if (
+    record.ownerUserId !== ownerUserId ||
+    typeof record.id !== "string" ||
+    record.id.length === 0 ||
+    record.id.length > 256 ||
+    !["first_entry", "follow_up_entry", "space_entry"].includes(
+      String(record.kind),
+    ) ||
+    !("payload" in record) ||
+    !Number.isFinite(record.createdAt) ||
+    !Number.isFinite(record.updatedAt)
+  ) {
+    inspectionCorrupt();
+  }
+  return record as OfflineDraftRecord;
+}
+
+function requireInspectionMutation(
+  value: unknown,
+  ownerUserId: string,
+): OfflineMutation {
+  if (!isRecord(value)) inspectionCorrupt();
+  const record = value as Partial<OfflineMutation>;
+  if (
+    record.ownerUserId !== ownerUserId ||
+    typeof record.id !== "string" ||
+    record.id.length === 0 ||
+    record.id.length > 256 ||
+    !["journal_entry", "photo_upload"].includes(String(record.kind)) ||
+    !["queued", "syncing", "failed", "synced"].includes(
+      String(record.status),
+    ) ||
+    !("payload" in record) ||
+    typeof record.idempotencyKey !== "string" ||
+    !Number.isFinite(record.createdAt) ||
+    !Number.isFinite(record.updatedAt)
+  ) {
+    inspectionCorrupt();
+  }
+  return record as OfflineMutation;
+}
+
+function requireInspectionDurabilityRecord(
+  value: unknown,
+  ownerUserId: string,
+): OfflineComposerDurabilityRecord {
+  if (!isRecord(value)) inspectionCorrupt();
+  const record = value as Partial<OfflineComposerDurabilityRecord>;
+  if (
+    record.ownerUserId !== ownerUserId ||
+    typeof record.draftId !== "string" ||
+    record.draftId.length === 0 ||
+    record.draftId.length > 256 ||
+    record.protocol !== OWNER_COMPOSER_DURABILITY_PROTOCOL ||
+    typeof record.participantNonce !== "string" ||
+    record.participantNonce.length < 16 ||
+    record.participantNonce.length > 128 ||
+    !/^[A-Za-z0-9_-]+$/.test(record.participantNonce) ||
+    !Number.isSafeInteger(record.generation) ||
+    (record.generation ?? 0) < 1 ||
+    (record.disposition !== "stored" && record.disposition !== "deleted") ||
+    !Number.isSafeInteger(record.storedByteLength) ||
+    (record.storedByteLength ?? -1) < 0 ||
+    typeof record.storedDigest !== "string" ||
+    !/^[a-f0-9]{64}$/.test(record.storedDigest) ||
+    record.vaultGeneration !== OFFLINE_VAULT_GENERATION ||
+    !Number.isFinite(record.updatedAt)
+  ) {
+    inspectionCorrupt();
+  }
+  return record as OfflineComposerDurabilityRecord;
+}
+
+function countOwnerWorkMedia(roots: unknown[]): number {
+  if (typeof Blob === "undefined") {
+    throw new OwnerComposerDurabilityUnconfirmedError("blob_unavailable");
+  }
+  const seen = new WeakSet<object>();
+  const pending: unknown[] = [...roots];
+  let visited = 0;
+  let media = 0;
+  while (pending.length > 0) {
+    const value = pending.pop();
+    if (typeof value !== "object" || value === null || seen.has(value)) {
+      continue;
+    }
+    seen.add(value);
+    visited += 1;
+    if (visited >= MAX_OWNER_WORK_INVENTORY_NODES) {
+      throw new OwnerComposerDurabilityUnconfirmedError("inventory_bounded");
+    }
+    if (value instanceof Blob) {
+      media += 1;
+      continue;
+    }
+    if (Array.isArray(value)) {
+      pending.push(...value);
+      continue;
+    }
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new OwnerComposerDurabilityUnconfirmedError("corrupt_record");
+    }
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    for (const descriptor of Object.values(descriptors)) {
+      if (!("value" in descriptor)) {
+        throw new OwnerComposerDurabilityUnconfirmedError("corrupt_record");
+      }
+      pending.push(descriptor.value);
+    }
+  }
+  return media;
+}
+
+function assertInspectionCurrent(
+  ownerUserId: string,
+  expectedRevision: number,
+  source: OwnerWorkInspectionSource,
+  signal?: AbortSignal,
+) {
+  if (
+    signal?.aborted ||
+    source.readComposerEvidenceRevision(ownerUserId) !== expectedRevision
+  ) {
+    throw new InspectionParticipantSetUnstableError();
+  }
+}
+
+function mapInspectionFailure(
+  error: unknown,
+): OwnerWorkInspectionUnavailableReason {
+  if (error instanceof InspectionParticipantSetUnstableError) {
+    return "participant_set_unstable";
+  }
+  if (error instanceof OwnerComposerDurabilityUnconfirmedError) {
+    if (error.reason === "storage_unavailable") return "storage_unavailable";
+    if (error.reason === "inventory_bounded") return "inventory_bounded";
+    if (error.reason === "corrupt_record") return "corrupt_record";
+    if (error.reason === "blob_unavailable") return "blob_unavailable";
+    return "flush_unconfirmed";
+  }
+  return "storage_read_failed";
+}
+
+function unavailableOwnerWork(
+  reason: OwnerWorkInspectionUnavailableReason,
+): OwnerWorkInspectionV2 {
+  return { status: "unavailable", inventoryComplete: false, reason };
+}
+
+function createOwnerWorkInspectionRevision() {
+  if (typeof crypto === "undefined" || !crypto.randomUUID) {
+    throw new OwnerComposerDurabilityUnconfirmedError("storage_unavailable");
+  }
+  return crypto.randomUUID();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function inspectionCorrupt(): never {
+  throw new OwnerComposerDurabilityUnconfirmedError("corrupt_record");
+}
+
+class InspectionParticipantSetUnstableError extends Error {}
 
 export async function hydrateOwnerOfflineActivitySession(
   ownerUserId: string,
@@ -462,11 +899,14 @@ export async function purgeUnsyncedOwnerData(
 
   const result = await database.transaction(
     "rw",
-    database.drafts,
-    database.draftSummaries,
-    database.mutations,
-    database.mutationSummaries,
-    database.ownerActivity,
+    [
+      database.drafts,
+      database.draftSummaries,
+      database.composerDurability,
+      database.mutations,
+      database.mutationSummaries,
+      database.ownerActivity,
+    ],
     async () => {
       await assertOwnedActivityScope(database, owner, {
         operationId,
@@ -477,6 +917,10 @@ export async function purgeUnsyncedOwnerData(
         .equals(owner)
         .delete();
       await database.draftSummaries.where("ownerUserId").equals(owner).delete();
+      await database.composerDurability
+        .where("ownerUserId")
+        .equals(owner)
+        .delete();
       let mutationCount = 0;
 
       for (const status of UNSYNCED_MUTATION_STATUSES) {
@@ -526,17 +970,24 @@ export async function purgeErasedOwnerOfflineStore(
 
   const result = await database.transaction(
     "rw",
-    database.drafts,
-    database.draftSummaries,
-    database.mutations,
-    database.mutationSummaries,
-    database.ownerActivity,
+    [
+      database.drafts,
+      database.draftSummaries,
+      database.composerDurability,
+      database.mutations,
+      database.mutationSummaries,
+      database.ownerActivity,
+    ],
     async () => {
       const draftCount = await database.drafts
         .where("ownerUserId")
         .equals(owner)
         .delete();
       await database.draftSummaries.where("ownerUserId").equals(owner).delete();
+      await database.composerDurability
+        .where("ownerUserId")
+        .equals(owner)
+        .delete();
       const mutationCount = await database.mutations
         .where("ownerUserId")
         .equals(owner)
@@ -597,49 +1048,6 @@ async function waitForOwnerSyncDrain(ownerUserId: string): Promise<void> {
     if (!attempts || attempts.size === 0) return;
     await Promise.allSettled([...attempts].map((attempt) => attempt.done));
   }
-}
-
-function emptyUnsyncedOwnerDataSummary(): UnsyncedOwnerDataSummary {
-  return {
-    hasUnsyncedData: false,
-    totalCount: 0,
-    draftCount: 0,
-    mutationCount: 0,
-    mediaCount: 0,
-    statusCounts: { ...EMPTY_STATUS_COUNTS },
-  };
-}
-
-const MAX_MEDIA_INVENTORY_NODES = 10_000;
-
-function countNestedBlobs(root: unknown): number {
-  if (typeof Blob === "undefined") return 0;
-
-  const seen = new WeakSet<object>();
-  const pending: unknown[] = [root];
-  let count = 0;
-  let visited = 0;
-
-  while (pending.length > 0 && visited < MAX_MEDIA_INVENTORY_NODES) {
-    const value = pending.pop();
-    if (typeof value !== "object" || value === null || seen.has(value)) {
-      continue;
-    }
-    seen.add(value);
-    visited += 1;
-
-    if (value instanceof Blob) {
-      count += 1;
-      continue;
-    }
-    if (Array.isArray(value)) {
-      pending.push(...value);
-      continue;
-    }
-    pending.push(...Object.values(value));
-  }
-
-  return count;
 }
 
 function revokeOwnerPreviewObjectUrls(ownerUserId: string) {

@@ -70,6 +70,7 @@ describe("offline journal entry sync", () => {
     await offlineDb?.mutationSummaries.clear();
     await offlineDb?.drafts.clear();
     await offlineDb?.draftSummaries.clear();
+    await offlineDb?.composerDurability.clear();
     await offlineDb?.ownerActivity.clear();
     await hydrateOwnerOfflineActivitySession(
       OWNER_A,

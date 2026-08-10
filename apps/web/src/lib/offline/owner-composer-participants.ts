@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  createOwnerComposerParticipantNonce,
+  isExactOwnerComposerDurabilityReceipt,
+  OwnerComposerDurabilityUnconfirmedError,
+  requireOwnerComposerDurabilityExpectation,
+  type OwnerComposerDurabilityExpectation,
+  type OwnerComposerDurabilityReceipt,
+} from "./owner-composer-durability";
+
 /**
  * A prepared composer stays frozen until its owner-state transition explicitly
  * resumes it. A committed transition intentionally keeps the handle active
@@ -35,8 +44,7 @@ export interface AllOwnerComposerTransitionPreparationHandle {
   cancel(): Promise<void>;
 }
 
-export interface StartedAllOwnerComposerTransitionPreparation
-  extends AllOwnerComposerTransitionPreparationHandle {
+export interface StartedAllOwnerComposerTransitionPreparation extends AllOwnerComposerTransitionPreparationHandle {
   /** The initial durable flush started after the synchronous fence acquisition. */
   ready: Promise<void>;
 }
@@ -48,6 +56,11 @@ export interface OwnerComposerOfflineActivityScope {
 
 export interface OwnerComposerPersistenceWriteContext {
   offlineActivityScope?: OwnerComposerOfflineActivityScope;
+  durability?: OwnerComposerDurabilityExpectation;
+}
+
+export interface OwnerComposerDurabilityWriteContext extends OwnerComposerPersistenceWriteContext {
+  durability: OwnerComposerDurabilityExpectation;
 }
 
 export interface OwnerComposerPersistenceController<TSnapshot> {
@@ -74,7 +87,7 @@ interface OwnerComposerControllerOptions<TSnapshot> {
   persist(
     snapshot: TSnapshot,
     context: OwnerComposerPersistenceWriteContext,
-  ): Promise<void>;
+  ): Promise<void | OwnerComposerDurabilityReceipt>;
   /**
    * Autosave/page-suspension writes stop after another durable handoff (submit,
    * queue, or cancel) takes ownership. Owner-transition preparation always
@@ -82,6 +95,21 @@ interface OwnerComposerControllerOptions<TSnapshot> {
    * no-op.
    */
   shouldPersistAutomatically?(): boolean;
+  durabilityParticipantNonce?: string;
+  durabilityDraftId?: string;
+  requireDurabilityReceipt?: boolean;
+}
+
+export interface DurableOwnerComposerControllerOptions<TSnapshot> {
+  ownerUserId: string;
+  draftId: string;
+  persist(
+    snapshot: TSnapshot,
+    context: OwnerComposerDurabilityWriteContext,
+  ): Promise<OwnerComposerDurabilityReceipt>;
+  shouldPersistAutomatically?(): boolean;
+  /** Deterministic injection for contract tests; production callers omit it. */
+  participantNonce?: string;
 }
 
 interface SnapshotGeneration<TSnapshot> {
@@ -101,6 +129,13 @@ const offlineActivityScopesByPreparationToken = new Map<
   symbol,
   OwnerComposerOfflineActivityScope
 >();
+const ownerComposerEvidenceRevision = new Map<string, number>();
+
+export function readOwnerComposerEvidenceRevision(ownerUserId: string): number {
+  return (
+    ownerComposerEvidenceRevision.get(requireOwnerUserId(ownerUserId)) ?? 0
+  );
+}
 
 /**
  * Freeze every composer for this owner and durably flush its latest complete
@@ -357,6 +392,20 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
   const freezeTokens = new Set<symbol>();
   const inheritedSealedFreezeTokens = new Set<symbol>();
   const frozenListeners = new Set<(frozen: boolean) => void>();
+  const durabilityParticipantNonce = options.durabilityParticipantNonce
+    ? requireOwnerComposerDurabilityExpectation({
+        ownerUserId: owner,
+        draftId: options.durabilityDraftId ?? "missing",
+        participantNonce: options.durabilityParticipantNonce,
+        generation: 1,
+      }).participantNonce
+    : undefined;
+  if (
+    options.requireDurabilityReceipt &&
+    (!durabilityParticipantNonce || !options.durabilityDraftId?.trim())
+  ) {
+    throw new OwnerComposerDurabilityUnconfirmedError("corrupt_record");
+  }
 
   const notifyFrozen = () => {
     const frozen = freezeTokens.size > 0;
@@ -375,10 +424,27 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
         latest.generation !== persistedGeneration
       ) {
         const target = latest;
-        await options.persist(target.snapshot, {
+        const durability = durabilityParticipantNonce
+          ? {
+              ownerUserId: owner,
+              draftId: options.durabilityDraftId!,
+              participantNonce: durabilityParticipantNonce,
+              generation: target.generation,
+            }
+          : undefined;
+        const receipt = await options.persist(target.snapshot, {
           offlineActivityScope,
+          durability,
         });
+        if (
+          options.requireDurabilityReceipt &&
+          (!durability ||
+            !isExactOwnerComposerDurabilityReceipt(receipt, durability))
+        ) {
+          throw new OwnerComposerDurabilityUnconfirmedError();
+        }
         persistedGeneration = target.generation;
+        advanceOwnerComposerEvidenceRevision(owner);
       }
     };
 
@@ -432,6 +498,7 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
   ownerParticipants.add(participant);
   participantsByOwner.set(owner, ownerParticipants);
   allOwnerParticipantRevision += 1;
+  advanceOwnerComposerEvidenceRevision(owner);
 
   const persistBeforeSuspension = () => {
     if (
@@ -475,6 +542,7 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
       }
       generation += 1;
       latest = { generation, snapshot };
+      advanceOwnerComposerEvidenceRevision(owner);
       return generation;
     },
     persistLatest() {
@@ -514,10 +582,46 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
       frozenListeners.clear();
       if (ownerParticipants.delete(participant)) {
         allOwnerParticipantRevision += 1;
+        advanceOwnerComposerEvidenceRevision(owner);
       }
       if (ownerParticipants.size === 0) participantsByOwner.delete(owner);
     },
   };
+}
+
+/**
+ * Production composer factory: callback completion is insufficient. The base
+ * serializer advances only after the returned receipt matches this mounted
+ * participant and the exact latest generation.
+ */
+export function createDurableOwnerComposerPersistenceController<TSnapshot>(
+  options: DurableOwnerComposerControllerOptions<TSnapshot>,
+): OwnerComposerPersistenceController<TSnapshot> {
+  const participantNonce =
+    options.participantNonce ?? createOwnerComposerParticipantNonce();
+  return createOwnerComposerPersistenceController({
+    ownerUserId: options.ownerUserId,
+    shouldPersistAutomatically: options.shouldPersistAutomatically,
+    durabilityParticipantNonce: participantNonce,
+    durabilityDraftId: options.draftId,
+    requireDurabilityReceipt: true,
+    persist: (snapshot, context) => {
+      if (!context.durability) {
+        throw new OwnerComposerDurabilityUnconfirmedError("corrupt_record");
+      }
+      return options.persist(snapshot, {
+        ...context,
+        durability: context.durability,
+      });
+    },
+  });
+}
+
+function advanceOwnerComposerEvidenceRevision(ownerUserId: string) {
+  ownerComposerEvidenceRevision.set(
+    ownerUserId,
+    (ownerComposerEvidenceRevision.get(ownerUserId) ?? 0) + 1,
+  );
 }
 
 function requireOwnerUserId(ownerUserId: string) {

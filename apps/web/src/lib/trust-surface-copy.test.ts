@@ -43,12 +43,13 @@ describe("trust-sensitive interface copy", () => {
     expect(getTrustSurfaceCopy("uk").signOut.action).toBe(
       "Вийти з облікового запису",
     );
-    expect(getTrustSurfaceCopy("bg").signOut.syncFirst).toBe(
-      "Първо синхронизиране",
-    );
-    expect(getTrustSurfaceCopy("ru").signOut.discardAndSignOut).toBe(
-      "Удалить локальные изменения и выйти",
-    );
+    for (const locale of LOCALES) {
+      const signOutCopy = getTrustSurfaceCopy(locale).signOut;
+      expect("syncFirst" in signOutCopy).toBe(false);
+      expect("discardAndSignOut" in signOutCopy).toBe(false);
+      expect("purgeError" in signOutCopy).toBe(false);
+      expect("signOutAfterPurgeActiveError" in signOutCopy).toBe(false);
+    }
     expect(getTrustSurfaceCopy("uk").signOut.signOutUnconfirmedError).toContain(
       "стан сеансу",
     );

@@ -12,7 +12,6 @@ const mocks = vi.hoisted(() => ({
     | "idle"
     | "awaiting-confirmation"
     | "checking"
-    | "waiting-for-choice"
     | "signing-out"
     | "error",
 }));
@@ -64,7 +63,7 @@ describe("shared sign-out control", () => {
     expect(html).not.toContain(" disabled=");
   });
 
-  it("keeps the offline guard ordered and the unsynced dialog bounded", async () => {
+  it("keeps durability ordered while inspection stays invisible and non-blocking", async () => {
     const source = await readSource("sign-out-provider.tsx");
     const pause = source.indexOf(
       "const pauseHandle = await pauseOwnerOfflineActivity(ownerUserId",
@@ -73,23 +72,25 @@ describe("shared sign-out control", () => {
       "await awaitRemotePreparation(operationId, tabId)",
     );
     const drain = source.indexOf("await pauseHandle.waitForSyncDrain()");
-    const summary = source.indexOf(
-      "const summary = await summarizeUnsyncedOwnerData",
+    const inspection = source.indexOf(
+      "startBestEffort(() => inspectOwnerWork(ownerUserId))",
     );
-    const purge = source.indexOf("await purgeUnsyncedOwnerData");
-    const canonical = source.lastIndexOf("performCanonicalSignOut(true)");
+    const canonical = source.indexOf(
+      "await performCanonicalSignOut();",
+      inspection,
+    );
 
     expect(pause).toBeGreaterThan(-1);
     expect(pause).toBeLessThan(drain);
     expect(drain).toBeLessThan(preparation);
-    expect(preparation).toBeLessThan(summary);
-    expect(summary).toBeLessThan(purge);
-    expect(purge).toBeLessThan(canonical);
-    expect(source.match(/copy\.staySignedIn/g)).toHaveLength(1);
-    expect(source.match(/copy\.syncFirst/g)).toHaveLength(1);
-    expect(source.match(/copy\.discardAndSignOut/g)).toHaveLength(1);
-    expect(source.match(/copy\.reloadAndStaySignedIn/g)).toHaveLength(1);
-    expect(source).toContain('window.location.assign("/garden#drafts")');
+    expect(preparation).toBeLessThan(inspection);
+    expect(inspection).toBeLessThan(canonical);
+    expect(source).not.toContain("await inspectOwnerWork");
+    expect(source).not.toContain("summarizeUnsyncedOwnerData");
+    expect(source).not.toContain("purgeUnsyncedOwnerData");
+    expect(source).not.toMatch(
+      /copy\.(staySignedIn|syncFirst|discardAndSignOut|dialogTitle)/,
+    );
     expect(source).toContain("pauseHandle.finalizeForSignedOut()");
     expect(source).toContain("window.location.replace(window.location.href)");
     expect(source).not.toMatch(

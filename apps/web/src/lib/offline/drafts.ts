@@ -15,13 +15,26 @@ import {
   readLocalOwnerActivitySessionGeneration,
   type OfflineOwnerActivity,
   type OfflineDraftKind,
+  type OfflineComposerDurabilityRecord,
   type OfflineDraftRecord,
   type OfflineDraftSummary,
   type OfflineJournalCoverPayload,
   type OfflineSummaryPage,
   type OfflinePhotoIntent,
 } from "./queue";
+import {
+  deletedOwnerComposerFingerprint,
+  fingerprintOwnerComposerPayload,
+  OWNER_COMPOSER_DURABILITY_PROTOCOL,
+  OFFLINE_VAULT_GENERATION,
+  OwnerComposerDurabilityUnconfirmedError,
+  requireOwnerComposerDurabilityExpectation,
+  type OwnerComposerDurabilityExpectation,
+  type OwnerComposerDurabilityReceipt,
+  type OwnerComposerPayloadFingerprint,
+} from "./owner-composer-durability";
 import type {
+  OwnerComposerDurabilityWriteContext,
   OwnerComposerOfflineActivityScope,
   OwnerComposerPersistenceWriteContext,
 } from "./owner-composer-participants";
@@ -107,22 +120,56 @@ export function followUpEntryDraftId(objectId: string) {
   return `follow-up-entry:${objectId}`;
 }
 
+export function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
+  input: Pick<
+    OfflineDraftRecord<TPayload>,
+    "ownerUserId" | "id" | "kind" | "payload"
+  >,
+  options: OwnerComposerDurabilityWriteContext,
+): Promise<OwnerComposerDurabilityReceipt>;
+export function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
+  input: Pick<
+    OfflineDraftRecord<TPayload>,
+    "ownerUserId" | "id" | "kind" | "payload"
+  >,
+  options?: OwnerComposerDraftWriteOptions,
+): Promise<OfflineDraftRecord<TPayload> | undefined>;
 export async function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
   input: Pick<
     OfflineDraftRecord<TPayload>,
     "ownerUserId" | "id" | "kind" | "payload"
   >,
   options: OwnerComposerDraftWriteOptions = {},
-): Promise<OfflineDraftRecord<TPayload> | undefined> {
+): Promise<
+  OfflineDraftRecord<TPayload> | OwnerComposerDurabilityReceipt | undefined
+> {
   const database = offlineDb;
-  if (!database) return undefined;
+  const durability = options.durability
+    ? requireOwnerComposerDurabilityExpectation(options.durability)
+    : undefined;
+  if (!database) {
+    if (durability) {
+      throw new OwnerComposerDurabilityUnconfirmedError("storage_unavailable");
+    }
+    return undefined;
+  }
 
   const now = Date.now();
   const ownerUserId = requireOwnerUserId(input.ownerUserId);
+  if (
+    durability &&
+    (durability.ownerUserId !== ownerUserId || durability.draftId !== input.id)
+  ) {
+    throw new OwnerComposerDurabilityUnconfirmedError("corrupt_record");
+  }
+  const fingerprint = durability
+    ? await fingerprintOwnerComposerPayload(input.payload)
+    : undefined;
   const record = await database.transaction(
     "rw",
     database.drafts,
     database.draftSummaries,
+    database.composerDurability,
     database.ownerActivity,
     async () => {
       await assertOfflineDraftWriteAllowed(
@@ -141,10 +188,35 @@ export async function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
 
       await database.drafts.put(next);
       await database.draftSummaries.put(offlineDraftSummary(next));
+      if (durability && fingerprint) {
+        await database.composerDurability.put(
+          composerDurabilityRecord({
+            ownerUserId,
+            draftId: input.id,
+            expectation: durability,
+            disposition: "stored",
+            fingerprint,
+            updatedAt: now,
+          }),
+        );
+      } else {
+        // A write without exact generation evidence invalidates any older
+        // receipt in the same transaction.
+        await database.composerDurability.delete([ownerUserId, input.id]);
+      }
       return next;
     },
   );
   publishOfflineDraftsChanged();
+  if (durability && fingerprint) {
+    return verifyStoredComposerDurability(
+      database,
+      ownerUserId,
+      input.id,
+      durability,
+      fingerprint,
+    );
+  }
   return record;
 }
 
@@ -214,26 +286,220 @@ export async function listOfflineDraftSummaries(
   };
 }
 
+export function deleteOfflineDraft(
+  ownerUserId: string,
+  id: string,
+  options: OwnerComposerDurabilityWriteContext,
+): Promise<OwnerComposerDurabilityReceipt>;
+export function deleteOfflineDraft(
+  ownerUserId: string,
+  id: string,
+  options?: OwnerComposerDraftWriteOptions,
+): Promise<void>;
 export async function deleteOfflineDraft(
   ownerUserId: string,
   id: string,
   options: OwnerComposerDraftWriteOptions = {},
-): Promise<void> {
+): Promise<void | OwnerComposerDurabilityReceipt> {
   const database = offlineDb;
-  if (!database) return;
+  const durability = options.durability
+    ? requireOwnerComposerDurabilityExpectation(options.durability)
+    : undefined;
+  if (!database) {
+    if (durability) {
+      throw new OwnerComposerDurabilityUnconfirmedError("storage_unavailable");
+    }
+    return;
+  }
   const owner = requireOwnerUserId(ownerUserId);
+  if (
+    durability &&
+    (durability.ownerUserId !== owner || durability.draftId !== id)
+  ) {
+    throw new OwnerComposerDurabilityUnconfirmedError("corrupt_record");
+  }
+  const fingerprint = durability
+    ? await deletedOwnerComposerFingerprint()
+    : undefined;
+  const now = Date.now();
   await database.transaction(
     "rw",
     database.drafts,
     database.draftSummaries,
+    database.composerDurability,
     database.ownerActivity,
     async () => {
       await assertOfflineDraftWriteAllowed(owner, options.offlineActivityScope);
       await database.drafts.delete([owner, id]);
       await database.draftSummaries.delete([owner, id]);
+      if (durability && fingerprint) {
+        await database.composerDurability.put(
+          composerDurabilityRecord({
+            ownerUserId: owner,
+            draftId: id,
+            expectation: durability,
+            disposition: "deleted",
+            fingerprint,
+            updatedAt: now,
+          }),
+        );
+      } else {
+        await database.composerDurability.delete([owner, id]);
+      }
     },
   );
   publishOfflineDraftsChanged();
+  if (durability && fingerprint) {
+    return verifyDeletedComposerDurability(
+      database,
+      owner,
+      id,
+      durability,
+      fingerprint,
+    );
+  }
+}
+
+function composerDurabilityRecord(input: {
+  ownerUserId: string;
+  draftId: string;
+  expectation: OwnerComposerDurabilityExpectation;
+  disposition: OfflineComposerDurabilityRecord["disposition"];
+  fingerprint: OwnerComposerPayloadFingerprint;
+  updatedAt: number;
+}): OfflineComposerDurabilityRecord {
+  return {
+    ownerUserId: input.ownerUserId,
+    draftId: input.draftId,
+    protocol: OWNER_COMPOSER_DURABILITY_PROTOCOL,
+    participantNonce: input.expectation.participantNonce,
+    generation: input.expectation.generation,
+    disposition: input.disposition,
+    storedByteLength: input.fingerprint.storedByteLength,
+    storedDigest: input.fingerprint.storedDigest,
+    vaultGeneration: OFFLINE_VAULT_GENERATION,
+    updatedAt: input.updatedAt,
+  };
+}
+
+async function verifyStoredComposerDurability(
+  database: NonNullable<typeof offlineDb>,
+  ownerUserId: string,
+  draftId: string,
+  expectation: OwnerComposerDurabilityExpectation,
+  expectedFingerprint: OwnerComposerPayloadFingerprint,
+): Promise<OwnerComposerDurabilityReceipt> {
+  const [storedDraft, storedDurability] = await database.transaction(
+    "r",
+    database.drafts,
+    database.composerDurability,
+    () =>
+      Promise.all([
+        database.drafts.get([ownerUserId, draftId]),
+        database.composerDurability.get([ownerUserId, draftId]),
+      ]),
+  );
+  if (
+    !storedDraft ||
+    storedDraft.ownerUserId !== ownerUserId ||
+    storedDraft.id !== draftId ||
+    !matchesComposerDurabilityRecord(
+      storedDurability,
+      ownerUserId,
+      draftId,
+      expectation,
+      "stored",
+      expectedFingerprint,
+    )
+  ) {
+    throw new OwnerComposerDurabilityUnconfirmedError();
+  }
+  const readbackFingerprint = await fingerprintOwnerComposerPayload(
+    storedDraft.payload,
+  );
+  if (!fingerprintsMatch(readbackFingerprint, expectedFingerprint)) {
+    throw new OwnerComposerDurabilityUnconfirmedError();
+  }
+  return receiptFromDurabilityRecord(storedDurability);
+}
+
+async function verifyDeletedComposerDurability(
+  database: NonNullable<typeof offlineDb>,
+  ownerUserId: string,
+  draftId: string,
+  expectation: OwnerComposerDurabilityExpectation,
+  expectedFingerprint: OwnerComposerPayloadFingerprint,
+): Promise<OwnerComposerDurabilityReceipt> {
+  const [storedDraft, storedDurability] = await database.transaction(
+    "r",
+    database.drafts,
+    database.composerDurability,
+    () =>
+      Promise.all([
+        database.drafts.get([ownerUserId, draftId]),
+        database.composerDurability.get([ownerUserId, draftId]),
+      ]),
+  );
+  if (
+    storedDraft !== undefined ||
+    !matchesComposerDurabilityRecord(
+      storedDurability,
+      ownerUserId,
+      draftId,
+      expectation,
+      "deleted",
+      expectedFingerprint,
+    )
+  ) {
+    throw new OwnerComposerDurabilityUnconfirmedError();
+  }
+  return receiptFromDurabilityRecord(storedDurability);
+}
+
+function matchesComposerDurabilityRecord(
+  record: OfflineComposerDurabilityRecord | undefined,
+  ownerUserId: string,
+  draftId: string,
+  expectation: OwnerComposerDurabilityExpectation,
+  disposition: OfflineComposerDurabilityRecord["disposition"],
+  fingerprint: OwnerComposerPayloadFingerprint,
+): record is OfflineComposerDurabilityRecord {
+  return (
+    record?.ownerUserId === ownerUserId &&
+    record.draftId === draftId &&
+    record.protocol === OWNER_COMPOSER_DURABILITY_PROTOCOL &&
+    record.participantNonce === expectation.participantNonce &&
+    record.generation === expectation.generation &&
+    record.disposition === disposition &&
+    record.storedByteLength === fingerprint.storedByteLength &&
+    record.storedDigest === fingerprint.storedDigest &&
+    record.vaultGeneration === OFFLINE_VAULT_GENERATION
+  );
+}
+
+function receiptFromDurabilityRecord(
+  record: OfflineComposerDurabilityRecord,
+): OwnerComposerDurabilityReceipt {
+  return {
+    status: "confirmed",
+    protocol: record.protocol,
+    participantNonce: record.participantNonce,
+    generation: record.generation,
+    disposition: record.disposition,
+    storedByteLength: record.storedByteLength,
+    storedDigest: record.storedDigest,
+    vaultGeneration: record.vaultGeneration,
+  };
+}
+
+function fingerprintsMatch(
+  left: OwnerComposerPayloadFingerprint,
+  right: OwnerComposerPayloadFingerprint,
+) {
+  return (
+    left.storedByteLength === right.storedByteLength &&
+    left.storedDigest === right.storedDigest
+  );
 }
 
 export function hasPersistableFirstEntryDraft(

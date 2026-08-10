@@ -11,8 +11,7 @@ const mocks = vi.hoisted(() => ({
   composerResume: vi.fn(),
   pause: vi.fn(),
   abort: vi.fn(),
-  summarize: vi.fn(),
-  purge: vi.fn(),
+  inspect: vi.fn(),
   publishPreparation: vi.fn(),
   publishCancellation: vi.fn(),
   publishCommitted: vi.fn(),
@@ -119,30 +118,13 @@ vi.mock("@/lib/offline/owner-composer-participants", () => ({
 vi.mock("@/lib/offline/owner-session-lifecycle", () => ({
   abortOwnerSyncAttempts: mocks.abort,
   finalizeOwnerOfflineActivityForSessionChange: mocks.finalizeForSessionChange,
+  inspectOwnerWork: mocks.inspect,
   pauseOwnerOfflineActivity: mocks.pause,
-  purgeUnsyncedOwnerData: mocks.purge,
-  summarizeUnsyncedOwnerData: mocks.summarize,
 }));
 
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { SignOutProvider, useSignOut } from "./sign-out-provider";
 
-const ZERO_SUMMARY = {
-  hasUnsyncedData: false,
-  totalCount: 0,
-  draftCount: 0,
-  mutationCount: 0,
-  mediaCount: 0,
-  statusCounts: { queued: 0, syncing: 0, failed: 0 },
-};
-const UNSYNCED_SUMMARY = {
-  hasUnsyncedData: true,
-  totalCount: 2,
-  draftCount: 1,
-  mutationCount: 1,
-  mediaCount: 1,
-  statusCounts: { queued: 1, syncing: 0, failed: 0 },
-};
 const PAUSE_SCOPE = {
   operationId: "op-provider-test-1234",
   sessionGeneration: "bounded-test-binding-value-123456789012",
@@ -203,11 +185,10 @@ describe("sign-out provider state machine", () => {
     mocks.finalizeForSessionChange.mockResolvedValue("fenced");
     mocks.finalizeForSignedOut.mockResolvedValue("fenced");
     mocks.finalizeForHardReload.mockResolvedValue(undefined);
-    mocks.summarize.mockResolvedValue(ZERO_SUMMARY);
-    mocks.purge.mockResolvedValue({
-      draftCount: 0,
-      mutationCount: 0,
-      totalCount: 0,
+    mocks.inspect.mockResolvedValue({
+      status: "unavailable",
+      inventoryComplete: false,
+      reason: "storage_unavailable",
     });
     mocks.canonicalSignOut.mockResolvedValue({
       status: "committed",
@@ -245,9 +226,9 @@ describe("sign-out provider state machine", () => {
         finalizeForHardReload: mocks.finalizeForHardReload,
       };
     });
-    mocks.summarize.mockImplementation(async () => {
-      order.push("summary");
-      return ZERO_SUMMARY;
+    mocks.inspect.mockImplementation(() => {
+      order.push("inspection");
+      return new Promise(() => undefined);
     });
     mocks.createBarrier.mockImplementation(() => {
       order.push("barrier");
@@ -282,10 +263,7 @@ describe("sign-out provider state machine", () => {
       "tab-provider-test-1234",
       "round-provider-test-1234",
     );
-    expect(mocks.summarize).toHaveBeenCalledWith(
-      "owner-scope-only",
-      expect.objectContaining(PAUSE_SCOPE),
-    );
+    expect(mocks.inspect).toHaveBeenCalledWith("owner-scope-only");
     expect(mocks.composerBindScope).toHaveBeenCalledWith(
       expect.objectContaining(PAUSE_SCOPE),
     );
@@ -300,7 +278,7 @@ describe("sign-out provider state machine", () => {
       "flush",
       "renew",
       "publish",
-      "summary",
+      "inspection",
       "promote",
       "canonical",
       "finalize",
@@ -356,107 +334,42 @@ describe("sign-out provider state machine", () => {
     expect(mocks.canonicalSignOut).toHaveBeenCalledOnce();
   });
 
-  it("renders exactly three informed choices for unsynced work", async () => {
-    mocks.summarize.mockResolvedValue(UNSYNCED_SUMMARY);
-    const renderer = await renderProvider("uk");
+  it.each([
+    [
+      "uk",
+      () =>
+        Promise.resolve({
+          status: "unavailable",
+          inventoryComplete: false,
+          reason: "storage_read_failed",
+        }),
+      "/",
+    ],
+    [
+      "bg",
+      () => Promise.reject(new Error("bounded inspection failure")),
+      "/bg",
+    ],
+    ["ru", () => new Promise(() => undefined), "/ru"],
+  ] as const)(
+    "keeps inspection invisible and non-blocking in %s",
+    async (locale, inspect, destination) => {
+      mocks.inspect.mockImplementation(inspect);
+      const renderer = await renderProvider(locale);
 
-    await click(renderer, "trigger");
+      await click(renderer, "trigger");
 
-    expect(actionLabels(renderer)).toEqual([
-      "Залишитися в обліковому записі",
-      "Спочатку синхронізувати",
-      "Видалити локальні зміни й вийти",
-    ]);
-    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
-  });
-
-  it("publishes a payload-free locale fence for every non-idle sign-out phase", async () => {
-    mocks.summarize.mockResolvedValue(UNSYNCED_SUMMARY);
-    const renderer = await renderProvider("uk");
-
-    expect(mocks.localeFormState).toHaveBeenLastCalledWith({
-      id: "sign-out-lifecycle",
-      dirty: false,
-      pending: false,
-    });
-    await click(renderer, "trigger");
-    expect(mocks.localeFormState).toHaveBeenLastCalledWith({
-      id: "sign-out-lifecycle",
-      dirty: false,
-      pending: true,
-    });
-
-    await click(renderer, "Залишитися в обліковому записі");
-    expect(mocks.localeFormState).toHaveBeenLastCalledWith({
-      id: "sign-out-lifecycle",
-      dirty: false,
-      pending: false,
-    });
-    await act(async () => renderer.unmount());
-  });
-
-  it("resumes safely for Stay and for Sync first without signing out", async () => {
-    mocks.summarize.mockResolvedValue(UNSYNCED_SUMMARY);
-    const stayRenderer = await renderProvider("uk");
-    await click(stayRenderer, "trigger");
-    await click(stayRenderer, "Залишитися в обліковому записі");
-    expect(mocks.resume).toHaveBeenCalledOnce();
-    expect(mocks.publishCancellation).toHaveBeenCalledOnce();
-    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
-
-    vi.clearAllMocks();
-    resetSuccessfulFlow(UNSYNCED_SUMMARY);
-    const syncRenderer = await renderProvider("uk");
-    await click(syncRenderer, "trigger");
-    await click(syncRenderer, "Спочатку синхронізувати");
-    expect(mocks.resume).toHaveBeenCalledOnce();
-    expect(mocks.publishCancellation).toHaveBeenCalledOnce();
-    expect(mocks.locationAssign).toHaveBeenCalledWith("/garden#drafts");
-    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
-  });
-
-  it("keeps every tab and composer frozen when durable pause cleanup fails", async () => {
-    mocks.summarize.mockResolvedValue(UNSYNCED_SUMMARY);
-    mocks.resume.mockRejectedValue(new Error("IndexedDB cleanup failed"));
-    const renderer = await renderProvider("uk");
-    await click(renderer, "trigger");
-
-    await click(renderer, "Залишитися в обліковому записі");
-
-    expect(mocks.composerResume).not.toHaveBeenCalled();
-    expect(mocks.publishCancellation).not.toHaveBeenCalled();
-    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
-    expect(button(renderer, "Спробувати ще раз")).toBeDefined();
-  });
-
-  it("purges before canonical sign-out and never signs out after purge failure", async () => {
-    const order: string[] = [];
-    mocks.summarize.mockResolvedValue(UNSYNCED_SUMMARY);
-    mocks.purge.mockImplementation(async () => void order.push("purge"));
-    mocks.canonicalSignOut.mockImplementation(async () => {
-      order.push("canonical");
-      return { status: "committed", reconciliation: "canonical_response" };
-    });
-    const successRenderer = await renderProvider("uk");
-    await click(successRenderer, "trigger");
-    await click(successRenderer, "Видалити локальні зміни й вийти");
-    expect(order).toEqual(["purge", "canonical"]);
-    expect(mocks.purge).toHaveBeenCalledWith(
-      "owner-scope-only",
-      expect.objectContaining(PAUSE_SCOPE),
-    );
-
-    vi.clearAllMocks();
-    resetSuccessfulFlow(UNSYNCED_SUMMARY);
-    mocks.purge.mockRejectedValue(new Error("bounded test failure"));
-    const failureRenderer = await renderProvider("uk");
-    await click(failureRenderer, "trigger");
-    await click(failureRenderer, "Видалити локальні зміни й вийти");
-    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
-    expect(mocks.resume).toHaveBeenCalledOnce();
-    expect(mocks.publishCancellation).toHaveBeenCalledOnce();
-    expect(mocks.locationReplace).not.toHaveBeenCalled();
-  });
+      expect(mocks.inspect).toHaveBeenCalledWith("owner-scope-only");
+      expect(mocks.canonicalSignOut).toHaveBeenCalledOnce();
+      expect(mocks.locationReplace).toHaveBeenCalledWith(destination);
+      expect(actionLabels(renderer)).not.toEqual(
+        expect.arrayContaining([
+          "Спочатку синхронізувати",
+          "Видалити локальні зміни й вийти",
+        ]),
+      );
+    },
+  );
 
   it("keeps canonical failure retryable and redirects only after confirmation", async () => {
     mocks.canonicalSignOut
@@ -552,158 +465,6 @@ describe("sign-out provider state machine", () => {
     expect(mocks.resume).not.toHaveBeenCalled();
     expect(mocks.composerResume).not.toHaveBeenCalled();
     expect(mocks.publishCancellation).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    [
-      "uk",
-      "Видалити локальні зміни й вийти",
-      "Перезавантажити й залишитися в обліковому записі",
-      "Перезавантажити й перевірити сеанс",
-    ],
-    [
-      "bg",
-      "Изтриване на локалните промени и изход",
-      "Презареждане и оставане в профила",
-      "Презареждане и проверка на сесията",
-    ],
-    [
-      "ru",
-      "Удалить локальные изменения и выйти",
-      "Перезагрузить и остаться в аккаунте",
-      "Перезагрузить и проверить сеанс",
-    ],
-  ] as const)(
-    "offers post-purge Stay in %s only when the server confirms the session remains active",
-    async (locale, discardLabel, stayLabel, recheckLabel) => {
-      mocks.summarize.mockResolvedValue(UNSYNCED_SUMMARY);
-      mocks.canonicalSignOut.mockResolvedValue({
-        status: "failed",
-        reason: "session_still_active",
-      });
-      const renderer = await renderProvider(locale);
-      await click(renderer, "trigger");
-      await click(renderer, discardLabel);
-
-      expect(button(renderer, stayLabel)).toBeDefined();
-      expect(actionLabels(renderer)).not.toContain(recheckLabel);
-      await click(renderer, stayLabel);
-
-      expect(mocks.finalizeForHardReload).toHaveBeenCalledOnce();
-      expect(mocks.resume).not.toHaveBeenCalled();
-      expect(mocks.publishCancellation).toHaveBeenCalledOnce();
-      expect(mocks.locationReplace).toHaveBeenCalledWith(
-        "https://over.garden/garden/profile",
-      );
-    },
-  );
-
-  it.each([
-    [
-      "uk",
-      "Видалити локальні зміни й вийти",
-      "Перезавантажити й перевірити сеанс",
-      "Перезавантажити й залишитися в обліковому записі",
-    ],
-    [
-      "bg",
-      "Изтриване на локалните промени и изход",
-      "Презареждане и проверка на сесията",
-      "Презареждане и оставане в профила",
-    ],
-    [
-      "ru",
-      "Удалить локальные изменения и выйти",
-      "Перезагрузить и проверить сеанс",
-      "Перезагрузить и остаться в аккаунте",
-    ],
-  ] as const)(
-    "offers truthful post-purge session recheck in %s when server state is unconfirmed",
-    async (locale, discardLabel, recheckLabel, stayLabel) => {
-      mocks.summarize.mockResolvedValue(UNSYNCED_SUMMARY);
-      mocks.canonicalSignOut.mockResolvedValue({
-        status: "failed",
-        reason: "session_confirmation_unavailable",
-      });
-      const renderer = await renderProvider(locale);
-
-      await click(renderer, "trigger");
-      await click(renderer, discardLabel);
-
-      expect(mocks.purge).toHaveBeenCalledOnce();
-      expect(button(renderer, recheckLabel)).toBeDefined();
-      expect(actionLabels(renderer)).not.toContain(stayLabel);
-      expect(mocks.locationReplace).not.toHaveBeenCalled();
-    },
-  );
-
-  it("never purges A when the prepared session changed to B before discard", async () => {
-    mocks.summarize.mockResolvedValue(UNSYNCED_SUMMARY);
-    mocks.confirmPrepared.mockResolvedValue({ status: "changed" });
-    const renderer = await renderProvider("uk");
-    await click(renderer, "trigger");
-
-    await click(renderer, "Видалити локальні зміни й вийти");
-
-    expect(mocks.confirmPrepared).toHaveBeenCalledOnce();
-    expect(mocks.purge).not.toHaveBeenCalled();
-    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
-    expect(mocks.finalizeForSessionChange).toHaveBeenCalledOnce();
-    expect(mocks.resume).not.toHaveBeenCalled();
-    expect(mocks.composerResume).not.toHaveBeenCalled();
-    expect(mocks.publishCancellation).not.toHaveBeenCalled();
-    expect(mocks.publishCommitted).toHaveBeenCalledOnce();
-    expect(mocks.locationReplace).toHaveBeenCalledWith(
-      "https://over.garden/garden/profile",
-    );
-  });
-
-  it("never signs out B when the prepared session changes immediately after A is purged", async () => {
-    mocks.summarize.mockResolvedValue(UNSYNCED_SUMMARY);
-    mocks.confirmPrepared
-      .mockResolvedValueOnce({ status: "matches" })
-      .mockResolvedValueOnce({ status: "changed" });
-    const renderer = await renderProvider("uk");
-    await click(renderer, "trigger");
-
-    await click(renderer, "Видалити локальні зміни й вийти");
-
-    expect(mocks.purge).toHaveBeenCalledOnce();
-    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
-    expect(mocks.finalizeForSessionChange).toHaveBeenCalledOnce();
-    expect(mocks.resume).not.toHaveBeenCalled();
-    expect(mocks.composerResume).not.toHaveBeenCalled();
-    expect(mocks.publishCancellation).not.toHaveBeenCalled();
-    expect(mocks.publishCommitted).toHaveBeenCalledOnce();
-    expect(mocks.locationReplace).toHaveBeenCalledWith(
-      "https://over.garden/garden/profile",
-    );
-  });
-
-  it("awaits the newest composer flush before Sync first navigates", async () => {
-    mocks.summarize.mockResolvedValue(UNSYNCED_SUMMARY);
-    let releaseComposer: (() => void) | undefined;
-    mocks.composerResume.mockReturnValue(
-      new Promise<void>((resolve) => {
-        releaseComposer = resolve;
-      }),
-    );
-    const renderer = await renderProvider("uk");
-    await click(renderer, "trigger");
-    const sync = button(renderer, "Спочатку синхронізувати");
-
-    let pending: Promise<void> | undefined;
-    await act(async () => {
-      pending = sync.props.onClick();
-      await Promise.resolve();
-    });
-    expect(mocks.locationAssign).not.toHaveBeenCalled();
-
-    releaseComposer?.();
-    await act(async () => {
-      await pending;
-    });
-    expect(mocks.locationAssign).toHaveBeenCalledWith("/garden#drafts");
   });
 
   it("never sends the canonical request when the commit fence cannot be promoted", async () => {
@@ -897,8 +658,7 @@ function button(renderer: ReactTestRenderer, label: string) {
 function actionLabels(renderer: ReactTestRenderer) {
   return renderer.root
     .findAllByType("button")
-    .map((candidate) => textContent(candidate.props.children))
-    .filter((label) => label !== "trigger:waiting-for-choice");
+    .map((candidate) => textContent(candidate.props.children));
 }
 
 function textContent(value: unknown): string {
@@ -911,58 +671,4 @@ function textContent(value: unknown): string {
     );
   }
   return "";
-}
-
-function resetSuccessfulFlow(summary = ZERO_SUMMARY) {
-  mocks.getSession.mockResolvedValue({
-    data: { user: { id: "owner-scope-only" } },
-    error: null,
-  });
-  mocks.pause.mockResolvedValue({
-    ...PAUSE_SCOPE,
-    waitForSyncDrain: mocks.waitForSyncDrain,
-    renewPreparationLease: mocks.renewPreparationLease,
-    promoteToCommitFence: mocks.promoteToCommitFence,
-    resume: mocks.resume,
-    finalizeForSessionChange: mocks.finalizeForSessionChange,
-    finalizeForSignedOut: mocks.finalizeForSignedOut,
-    finalizeForHardReload: mocks.finalizeForHardReload,
-  });
-  mocks.prepareComposer.mockResolvedValue({
-    isActive: () => true,
-    bindOfflineActivityScope: mocks.composerBindScope,
-    flushLatest: mocks.composerFlush,
-    resume: mocks.composerResume,
-  });
-  mocks.acquireLease.mockReturnValue({
-    tabId: "tab-provider-test-1234",
-    release: mocks.releaseLease,
-  });
-  mocks.getTabId.mockReturnValue("tab-provider-test-1234");
-  mocks.createRoundId.mockReturnValue("round-provider-test-1234");
-  mocks.createBarrier.mockReturnValue({
-    expectedTabCount: 0,
-    wait: mocks.barrierWait,
-    cancel: mocks.barrierCancel,
-  });
-  mocks.barrierWait.mockResolvedValue(undefined);
-  mocks.confirmPrepared.mockResolvedValue({ status: "matches" });
-  mocks.waitForSyncDrain.mockResolvedValue(undefined);
-  mocks.composerFlush.mockResolvedValue(undefined);
-  mocks.renewPreparationLease.mockResolvedValue(undefined);
-  mocks.promoteToCommitFence.mockResolvedValue(undefined);
-  mocks.resume.mockResolvedValue(undefined);
-  mocks.finalizeForSessionChange.mockResolvedValue("fenced");
-  mocks.finalizeForSignedOut.mockResolvedValue("fenced");
-  mocks.finalizeForHardReload.mockResolvedValue(undefined);
-  mocks.summarize.mockResolvedValue(summary);
-  mocks.purge.mockResolvedValue({
-    draftCount: 0,
-    mutationCount: 0,
-    totalCount: 0,
-  });
-  mocks.canonicalSignOut.mockResolvedValue({
-    status: "committed",
-    reconciliation: "canonical_response",
-  });
 }

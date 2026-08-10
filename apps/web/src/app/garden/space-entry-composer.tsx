@@ -42,9 +42,9 @@ import {
   submitOnlineJournalEntryPayload,
 } from "@/lib/offline/journal-entry-sync";
 import {
-  createOwnerComposerPersistenceController,
+  createDurableOwnerComposerPersistenceController,
   type OwnerComposerPersistenceController,
-  type OwnerComposerPersistenceWriteContext,
+  type OwnerComposerDurabilityWriteContext,
 } from "@/lib/offline/owner-composer-participants";
 import {
   enqueueOfflineMutation,
@@ -124,12 +124,11 @@ export function SpaceEntryComposer({
     if (!enableOfflinePersistence) return;
 
     const controller =
-      createOwnerComposerPersistenceController<SpaceComposerPersistenceSnapshot>(
+      createDurableOwnerComposerPersistenceController<SpaceComposerPersistenceSnapshot>(
         {
           ownerUserId,
-          persist: async (snapshot, context) => {
-            await persistSpaceComposerSnapshot(snapshot, context);
-          },
+          draftId,
+          persist: persistSpaceComposerSnapshot,
           shouldPersistAutomatically: () => !draftPersistencePausedRef.current,
         },
       );
@@ -140,7 +139,7 @@ export function SpaceEntryComposer({
       }
       controller.dispose();
     };
-  }, [enableOfflinePersistence, ownerUserId]);
+  }, [draftId, enableOfflinePersistence, ownerUserId]);
 
   useEffect(() => {
     const onOnline = () => setIsOnline(true);
@@ -508,7 +507,7 @@ interface SpaceComposerPersistenceSnapshot {
 
 async function persistSpaceComposerSnapshot(
   snapshot: SpaceComposerPersistenceSnapshot,
-  context: OwnerComposerPersistenceWriteContext,
+  context: OwnerComposerDurabilityWriteContext,
 ) {
   if (!snapshot.hydrated) {
     throw new Error("The space draft is not hydrated yet.");
@@ -517,7 +516,7 @@ async function persistSpaceComposerSnapshot(
   if (
     hasPersistableSpaceEntryDraft(snapshot.payload, snapshot.defaultEntryDate)
   ) {
-    await upsertOfflineDraft(
+    return upsertOfflineDraft(
       {
         ownerUserId: snapshot.ownerUserId,
         id: snapshot.draftId,
@@ -526,8 +525,7 @@ async function persistSpaceComposerSnapshot(
       },
       context,
     );
-    return;
   }
 
-  await deleteOfflineDraft(snapshot.ownerUserId, snapshot.draftId, context);
+  return deleteOfflineDraft(snapshot.ownerUserId, snapshot.draftId, context);
 }
