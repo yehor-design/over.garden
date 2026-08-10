@@ -15,14 +15,39 @@ const RESPONSE_HEADERS = {
 export async function POST(request: Request): Promise<Response> {
   if (!isAdmittedLocalExitRequest(request)) return emptyResponse();
 
-  const result = await executeCurrentSessionExit(request.headers, (context) =>
-    auth.api.signOut(context),
+  let canonicalHttpAttemptStarted = false;
+  const result = await executeCurrentSessionExit(
+    request.headers,
+    (context) => {
+      if (!canonicalHttpAttemptStarted) {
+        canonicalHttpAttemptStarted = true;
+        return auth.handler(
+          createCanonicalSignOutRequest(request, context.headers),
+        );
+      }
+      return auth.api.signOut(context);
+    },
   );
   const headers = new Headers(RESPONSE_HEADERS);
   for (const cookie of readSetCookieHeaders(result.response.headers)) {
     headers.append("set-cookie", cookie);
   }
   return new Response(null, { status: 204, headers });
+}
+
+function createCanonicalSignOutRequest(
+  request: Request,
+  headers: Headers,
+) {
+  const canonicalHeaders = new Headers(headers);
+  canonicalHeaders.delete("content-length");
+  canonicalHeaders.set("content-type", "application/json");
+
+  return new Request(new URL("/api/auth/sign-out", request.url), {
+    method: "POST",
+    headers: canonicalHeaders,
+    body: "{}",
+  });
 }
 
 function isAdmittedLocalExitRequest(request: Request) {
