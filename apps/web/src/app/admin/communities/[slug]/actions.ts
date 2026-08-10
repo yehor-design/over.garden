@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 
 import { localizedPath, PUBLIC_LOCALES } from "@/lib/public-localization";
 import { resolveVisualCommunityScenario } from "@/lib/visual-fixtures/community-scenarios";
-import { requireCurrentRequestScope } from "@/server/auth-session";
 import {
   moderateCommunityContribution,
   moderateCommunityDiscussion,
@@ -13,6 +12,10 @@ import {
   resolveCommunityReport,
   setCommunityParticipation,
 } from "@/server/community-repository";
+import {
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import { scopedToUser } from "@/server/request-scope";
 import { resolveVisualCommunityMutationActor } from "@/server/visual-fixtures/community-actor";
 
@@ -28,7 +31,20 @@ const MODERATION_REASONS = new Set([
 ]);
 
 export async function moderateCommunityContributionAction(formData: FormData) {
-  const scope = await moderationScope(formData);
+  const visualActor = resolveVisualCommunityMutationActor(formData);
+  const admission =
+    visualActor?.scenario.actorRole === "moderator"
+      ? null
+      : await admitDocumentMutation({
+          transport: documentMutationGenerationFromFormData(formData),
+        });
+  if (admission?.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope =
+    visualActor?.scenario.actorRole === "moderator"
+      ? scopedToUser(visualActor.actorId)
+      : admission!.scope;
   const slug = communitySlug(formData);
   let status: string;
   try {
@@ -49,7 +65,20 @@ export async function moderateCommunityContributionAction(formData: FormData) {
 }
 
 export async function moderateCommunityDiscussionAction(formData: FormData) {
-  const scope = await moderationScope(formData);
+  const visualActor = resolveVisualCommunityMutationActor(formData);
+  const admission =
+    visualActor?.scenario.actorRole === "moderator"
+      ? null
+      : await admitDocumentMutation({
+          transport: documentMutationGenerationFromFormData(formData),
+        });
+  if (admission?.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope =
+    visualActor?.scenario.actorRole === "moderator"
+      ? scopedToUser(visualActor.actorId)
+      : admission!.scope;
   const slug = communitySlug(formData);
   let status: string;
   try {
@@ -68,7 +97,20 @@ export async function moderateCommunityDiscussionAction(formData: FormData) {
 }
 
 export async function moderateCommunityMembershipAction(formData: FormData) {
-  const scope = await moderationScope(formData);
+  const visualActor = resolveVisualCommunityMutationActor(formData);
+  const admission =
+    visualActor?.scenario.actorRole === "moderator"
+      ? null
+      : await admitDocumentMutation({
+          transport: documentMutationGenerationFromFormData(formData),
+        });
+  if (admission?.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope =
+    visualActor?.scenario.actorRole === "moderator"
+      ? scopedToUser(visualActor.actorId)
+      : admission!.scope;
   const slug = communitySlug(formData);
   let status: string;
   try {
@@ -89,7 +131,20 @@ export async function moderateCommunityMembershipAction(formData: FormData) {
 }
 
 export async function resolveCommunityReportAction(formData: FormData) {
-  const scope = await moderationScope(formData);
+  const visualActor = resolveVisualCommunityMutationActor(formData);
+  const admission =
+    visualActor?.scenario.actorRole === "moderator"
+      ? null
+      : await admitDocumentMutation({
+          transport: documentMutationGenerationFromFormData(formData),
+        });
+  if (admission?.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope =
+    visualActor?.scenario.actorRole === "moderator"
+      ? scopedToUser(visualActor.actorId)
+      : admission!.scope;
   const slug = communitySlug(formData);
   let status: string;
   try {
@@ -110,7 +165,20 @@ export async function resolveCommunityReportAction(formData: FormData) {
 }
 
 export async function setCommunityParticipationAction(formData: FormData) {
-  const scope = await moderationScope(formData);
+  const visualActor = resolveVisualCommunityMutationActor(formData);
+  const admission =
+    visualActor?.scenario.actorRole === "moderator"
+      ? null
+      : await admitDocumentMutation({
+          transport: documentMutationGenerationFromFormData(formData),
+        });
+  if (admission?.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope =
+    visualActor?.scenario.actorRole === "moderator"
+      ? scopedToUser(visualActor.actorId)
+      : admission!.scope;
   const slug = communitySlug(formData);
   let status: string;
   try {
@@ -145,13 +213,6 @@ function finish(formData: FormData, slug: string, status: string): never {
     query.set("visualCommunity", scenario.id);
   }
   redirect(`/admin/communities/${slug}?${query.toString()}#moderation-queue`);
-}
-
-async function moderationScope(formData: FormData) {
-  const visualActor = resolveVisualCommunityMutationActor(formData);
-  return visualActor?.scenario.actorRole === "moderator"
-    ? scopedToUser(visualActor.actorId)
-    : requireCurrentRequestScope();
 }
 
 function communitySlug(formData: FormData) {

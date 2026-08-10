@@ -3,6 +3,7 @@ import {
   resolveR2UploadUrlTtlConfiguration,
 } from "@/lib/storage";
 import { DOCUMENT_MUTATION_GENERATION_PROTOCOL } from "@/lib/auth/document-mutation-generation-contract";
+import { buildAuthenticatedMutationDeploymentReceipt } from "@/server/authenticated-mutation-deployment-receipt";
 import { isDocumentMutationAdmissionEnabled } from "@/server/document-mutation-admission-config";
 
 export const runtime = "nodejs";
@@ -23,6 +24,7 @@ export function GET() {
           effectiveSeconds: ttl.effectiveSeconds,
           maximumSeconds: MAX_R2_PRESIGN_TTL_SECONDS,
         },
+        authenticatedMutation: buildAuthenticatedMutationDeploymentReceipt(),
       },
       { headers: { "Cache-Control": "public, no-store" } },
     );

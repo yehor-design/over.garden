@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import {
   DEFAULT_PILOT_INTERVIEW_COHORT,
@@ -136,7 +137,7 @@ export default async function FounderInterviewCapturePage({
             </p>
           </div>
 
-          <form
+          <DocumentMutationActionForm
             action={createFounderInterviewLearningAction}
             className="grid gap-4 border-t border-border pt-4"
           >
@@ -243,7 +244,7 @@ export default async function FounderInterviewCapturePage({
             >
               {copy.interviews.save}
             </button>
-          </form>
+          </DocumentMutationActionForm>
         </section>
       ) : (
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">

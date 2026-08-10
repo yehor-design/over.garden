@@ -11,20 +11,34 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import { resolveVisualCommunityScenario } from "@/lib/visual-fixtures/community-scenarios";
-import { requireCurrentRequestScope } from "@/server/auth-session";
 import {
   blockCommunityContributionAuthor,
   contributePublicJournalToCommunity,
   reportCommunityContribution,
   setCommunityMembership,
 } from "@/server/community-repository";
+import {
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import { scopedToUser } from "@/server/request-scope";
 import { resolveVisualCommunityMutationActor } from "@/server/visual-fixtures/community-actor";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
 
 export async function setCommunityMembershipAction(formData: FormData) {
-  const scope = await communityActionScope(formData);
+  const visualActor = resolveVisualCommunityMutationActor(formData);
+  const admission = visualActor
+    ? null
+    : await admitDocumentMutation({
+        transport: documentMutationGenerationFromFormData(formData),
+      });
+  if (admission?.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = visualActor
+    ? scopedToUser(visualActor.actorId)
+    : admission!.scope;
   const slug = communitySlug(formData);
   const state =
     String(formData.get("membershipState")) === "left" ? "left" : "active";
@@ -39,7 +53,18 @@ export async function setCommunityMembershipAction(formData: FormData) {
 }
 
 export async function contributeJournalToCommunityAction(formData: FormData) {
-  const scope = await communityActionScope(formData);
+  const visualActor = resolveVisualCommunityMutationActor(formData);
+  const admission = visualActor
+    ? null
+    : await admitDocumentMutation({
+        transport: documentMutationGenerationFromFormData(formData),
+      });
+  if (admission?.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = visualActor
+    ? scopedToUser(visualActor.actorId)
+    : admission!.scope;
   const slug = communitySlug(formData);
   let status: string;
   try {
@@ -55,7 +80,18 @@ export async function contributeJournalToCommunityAction(formData: FormData) {
 }
 
 export async function reportCommunityContributionAction(formData: FormData) {
-  const scope = await communityActionScope(formData);
+  const visualActor = resolveVisualCommunityMutationActor(formData);
+  const admission = visualActor
+    ? null
+    : await admitDocumentMutation({
+        transport: documentMutationGenerationFromFormData(formData),
+      });
+  if (admission?.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = visualActor
+    ? scopedToUser(visualActor.actorId)
+    : admission!.scope;
   const slug = communitySlug(formData);
   let status: string;
   try {
@@ -74,7 +110,18 @@ export async function reportCommunityContributionAction(formData: FormData) {
 export async function blockCommunityContributionAuthorAction(
   formData: FormData,
 ) {
-  const scope = await communityActionScope(formData);
+  const visualActor = resolveVisualCommunityMutationActor(formData);
+  const admission = visualActor
+    ? null
+    : await admitDocumentMutation({
+        transport: documentMutationGenerationFromFormData(formData),
+      });
+  if (admission?.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = visualActor
+    ? scopedToUser(visualActor.actorId)
+    : admission!.scope;
   const slug = communitySlug(formData);
   let status: string;
   try {
@@ -108,13 +155,6 @@ function finish(
     query.set("visualCommunity", scenario.id);
   }
   redirect(`${path}?${query.toString()}#${anchor}`);
-}
-
-async function communityActionScope(formData: FormData) {
-  const visualActor = resolveVisualCommunityMutationActor(formData);
-  return visualActor
-    ? scopedToUser(visualActor.actorId)
-    : requireCurrentRequestScope();
 }
 
 function communityReportReason(formData: FormData) {

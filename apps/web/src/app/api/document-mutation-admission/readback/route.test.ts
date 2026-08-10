@@ -7,7 +7,7 @@ describe("GET /api/document-mutation-admission/readback", () => {
     vi.unstubAllEnvs();
   });
 
-  it("returns only the non-secret protocol, deployment, and closed TTL receipt", async () => {
+  it("returns only the non-secret protocol, deployment, TTL, and artifact receipts", async () => {
     vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "synthetic-deployment-sha");
     vi.stubEnv("R2_UPLOAD_URL_TTL_SECONDS", "900");
 
@@ -23,6 +23,26 @@ describe("GET /api/document-mutation-admission/readback", () => {
         source: "environment",
         effectiveSeconds: 900,
         maximumSeconds: 900,
+      },
+      authenticatedMutation: {
+        schemaVersion:
+          "overgarden.authenticated-mutation-deployment-receipt.v1",
+        registry: {
+          digest: expect.stringMatching(/^[a-f0-9]{64}$/),
+          sourceReceiptDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+          entrypointCount: expect.any(Number),
+          consumerEdgeCount: expect.any(Number),
+        },
+        enforcement: {
+          receiptDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+          ove291EntrypointCount: expect.any(Number),
+          ove291ConsumerEdgeCount: expect.any(Number),
+        },
+        explicitGoogleLink: {
+          ownershipDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+          entrypointCount: 5,
+          consumerEdgeCount: 15,
+        },
       },
     });
   });

@@ -24,7 +24,10 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { useOptionalDocumentMutationGeneration } from "@/components/auth/document-mutation-recovery";
+import {
+  createDocumentMutationRequestHeaders,
+  useOptionalDocumentMutationGeneration,
+} from "@/components/auth/document-mutation-recovery";
 import {
   JournalCoverControls,
   journalCoverSelectionToOfflinePayload,
@@ -560,9 +563,19 @@ export function FirstEntryComposer({
           `/api/garden/mentions/typeahead?q=${encodeURIComponent(
             activeMentionToken.query,
           )}`,
-          { signal: controller.signal },
+          {
+            headers: createDocumentMutationRequestHeaders(
+              documentMutation?.transport,
+            ),
+            signal: controller.signal,
+          },
         );
 
+        if (await documentMutation?.handleResponse(response)) {
+          setMentionSuggestions([]);
+          setMentionStatus("failed");
+          return;
+        }
         if (!response.ok) throw new Error("Mention suggestions unavailable.");
 
         const body = (await response.json()) as unknown;
@@ -582,7 +595,7 @@ export function FirstEntryComposer({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [activeMentionToken]);
+  }, [activeMentionToken, documentMutation]);
 
   const photoHelp = localizedPhotoHelp(copy, {
     fileName: photoFile?.name ?? storedPhotoIntent?.fileName ?? null,

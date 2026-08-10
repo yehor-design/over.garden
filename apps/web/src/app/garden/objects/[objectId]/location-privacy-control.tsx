@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import type { LocationVisibility } from "@/db/schema";
 import { getLocalizedCoarseRegionOptions } from "@/lib/garden/regions";
@@ -13,7 +14,7 @@ interface LocationPrivacyControlProps {
   objectId: string;
   currentLocationVisibility: LocationVisibility | string;
   currentCoarseRegionCode: string | null;
-  action: (formData: FormData) => void | Promise<void>;
+  action: (formData: FormData) => Promise<unknown>;
 }
 
 export function LocationPrivacyControl({
@@ -41,7 +42,10 @@ export function LocationPrivacyControl({
   return (
     <section className="grid min-w-0 gap-3 rounded-lg border border-border p-4">
       <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
-      <form action={action} className="grid min-w-0 gap-3 sm:grid-cols-3">
+      <DocumentMutationActionForm
+        action={action}
+        className="grid min-w-0 gap-3 sm:grid-cols-3"
+      >
         <input type="hidden" name="objectId" value={objectId} />
         <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
           {copy.location}
@@ -84,7 +88,7 @@ export function LocationPrivacyControl({
         >
           {copy.save}
         </button>
-      </form>
+      </DocumentMutationActionForm>
     </section>
   );
 }

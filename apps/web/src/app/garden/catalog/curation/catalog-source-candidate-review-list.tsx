@@ -8,6 +8,7 @@ import {
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import { buildGardenCatalogTrustMetadata } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
@@ -27,9 +28,9 @@ interface CatalogSourceCandidateReviewListProps {
   candidates: CatalogSourceCandidateReviewItem[];
   summary?: CatalogSourceCandidateReviewSummary;
   activeStatus?: CatalogSourceCandidateReviewStatus | null;
-  promoteAction: (formData: FormData) => void | Promise<void>;
-  holdAction: (formData: FormData) => void | Promise<void>;
-  rejectAction: (formData: FormData) => void | Promise<void>;
+  promoteAction: (formData: FormData) => Promise<unknown>;
+  holdAction: (formData: FormData) => Promise<unknown>;
+  rejectAction: (formData: FormData) => Promise<unknown>;
 }
 
 const STATUS_GROUPS: CatalogSourceCandidateReviewStatus[] = [
@@ -185,9 +186,9 @@ function CatalogSourceCandidateCard({
 }: {
   locale: InterfaceLocale;
   candidate: CatalogSourceCandidateReviewItem;
-  promoteAction: (formData: FormData) => void | Promise<void>;
-  holdAction: (formData: FormData) => void | Promise<void>;
-  rejectAction: (formData: FormData) => void | Promise<void>;
+  promoteAction: (formData: FormData) => Promise<unknown>;
+  holdAction: (formData: FormData) => Promise<unknown>;
+  rejectAction: (formData: FormData) => Promise<unknown>;
 }) {
   const copy = getOperatorCurationCopy(locale);
   const trust = buildGardenCatalogTrustMetadata(locale, {
@@ -232,7 +233,7 @@ function CatalogSourceCandidateCard({
 
         <div className="flex flex-wrap gap-2">
           {candidate.actions.canPromote ? (
-            <form action={promoteAction}>
+            <DocumentMutationActionForm action={promoteAction}>
               <input
                 type="hidden"
                 name="sourceRecordId"
@@ -242,10 +243,10 @@ function CatalogSourceCandidateCard({
                 <CheckCircle2 className="size-4" />
                 {copy.sourceReview.promote}
               </button>
-            </form>
+            </DocumentMutationActionForm>
           ) : null}
           {candidate.actions.canHold ? (
-            <form action={holdAction}>
+            <DocumentMutationActionForm action={holdAction}>
               <input
                 type="hidden"
                 name="sourceRecordId"
@@ -260,10 +261,10 @@ function CatalogSourceCandidateCard({
                 <CirclePause className="size-4" />
                 {copy.sourceReview.hold}
               </button>
-            </form>
+            </DocumentMutationActionForm>
           ) : null}
           {candidate.actions.canReject ? (
-            <form action={rejectAction}>
+            <DocumentMutationActionForm action={rejectAction}>
               <input
                 type="hidden"
                 name="sourceRecordId"
@@ -278,7 +279,7 @@ function CatalogSourceCandidateCard({
                 <XCircle className="size-4" />
                 {copy.sourceReview.reject}
               </button>
-            </form>
+            </DocumentMutationActionForm>
           ) : null}
         </div>
       </div>

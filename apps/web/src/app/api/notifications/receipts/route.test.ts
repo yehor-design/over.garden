@@ -7,12 +7,19 @@ const mocks = vi.hoisted(() => ({
   setNotificationReceipt: vi.fn(),
   revalidatePath: vi.fn(),
   resolveVisualSocialMutationActor: vi.fn(),
+  admitDocumentMutation: vi.fn(),
+  documentMutationAdmissionResponse: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
   getSessionId: mocks.getSessionId,
+}));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationAdmissionResponse: mocks.documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest: vi.fn(() => null),
 }));
 vi.mock("@/server/request-scope", () => ({
   scopedToUser: vi.fn((userId: string, sessionId: string) => ({
@@ -42,6 +49,23 @@ describe("notification receipt return paths", () => {
       session: { id: scope.sessionId },
     });
     mocks.getSessionId.mockReturnValue(scope.sessionId);
+    mocks.admitDocumentMutation.mockImplementation(async () => {
+      const session = await mocks.getCurrentSession();
+      if (!session?.user?.id) {
+        return {
+          status: "rejected",
+          transportResult: "AUTHENTICATION_REQUIRED",
+          statusCode: 401,
+        };
+      }
+      return { status: "admitted", scope };
+    });
+    mocks.documentMutationAdmissionResponse.mockImplementation((admission) =>
+      Response.json(
+        { code: admission.transportResult },
+        { status: admission.statusCode },
+      ),
+    );
     mocks.resolveVisualSocialMutationActor.mockReturnValue(null);
   });
 

@@ -4,14 +4,18 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 import { auth } from "@/lib/auth";
+import type { DocumentMutationActionStateV1 } from "@/lib/auth/document-mutation-generation-transport";
 import { getCurrentSession } from "@/server/auth-session";
+import { admitDocumentMutation } from "@/server/document-mutation-admission";
 
 export type AccountMethodPasswordActionResult =
   | { status: "success" }
-  | { status: "error" };
+  | { status: "error" }
+  | DocumentMutationActionStateV1;
 
 export async function setCurrentAccountPassword(
   newPassword: string,
+  documentMutationGeneration: string | null,
 ): Promise<AccountMethodPasswordActionResult> {
   if (
     typeof newPassword !== "string" ||
@@ -21,8 +25,18 @@ export async function setCurrentAccountPassword(
     return { status: "error" };
   }
 
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGeneration,
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+
   const session = await getCurrentSession();
-  if (!session?.user.emailVerified) {
+  if (
+    !session?.user.emailVerified ||
+    session.user.id !== admission.scope.userId
+  ) {
     return { status: "error" };
   }
 

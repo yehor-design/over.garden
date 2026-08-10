@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   requireCurrentRequestScope: vi.fn(),
+  admitDocumentMutation: vi.fn(),
   assertFounderInterviewMutationAccess: vi.fn(),
   createFounderInterviewLearning: vi.fn(),
   revalidatePath: vi.fn(),
@@ -13,6 +14,10 @@ vi.mock("next/cache", () => ({
 
 vi.mock("@/server/auth-session", () => ({
   requireCurrentRequestScope: mocks.requireCurrentRequestScope,
+}));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationGenerationFromFormData: vi.fn(() => null),
 }));
 
 vi.mock("@/server/founder-interview-access", () => ({
@@ -31,6 +36,10 @@ describe("founder interview operator actions", () => {
       userId: "00000000-0000-4000-8000-000000000999",
       sessionId: "non-operator-session",
     });
+    mocks.admitDocumentMutation.mockImplementation(async () => ({
+      status: "admitted",
+      scope: await mocks.requireCurrentRequestScope(),
+    }));
     mocks.assertFounderInterviewMutationAccess.mockResolvedValue({
       mode: "sealed_owner_credential_only",
       role: "owner",

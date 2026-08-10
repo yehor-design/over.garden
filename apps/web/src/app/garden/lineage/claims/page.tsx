@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
@@ -212,7 +213,7 @@ function LineageClaimCard({
 
       {writeEnabled ? (
         <div className="flex flex-wrap gap-3 border-t border-border pt-3">
-          <form action={confirmLineageClaimAction}>
+          <DocumentMutationActionForm action={confirmLineageClaimAction}>
             <input type="hidden" name="edgeId" value={claim.id} />
             <button
               type="submit"
@@ -220,8 +221,8 @@ function LineageClaimCard({
             >
               {copy.claims.confirm}
             </button>
-          </form>
-          <form action={declineLineageClaimAction}>
+          </DocumentMutationActionForm>
+          <DocumentMutationActionForm action={declineLineageClaimAction}>
             <input type="hidden" name="edgeId" value={claim.id} />
             <button
               type="submit"
@@ -232,7 +233,7 @@ function LineageClaimCard({
             >
               {copy.claims.decline}
             </button>
-          </form>
+          </DocumentMutationActionForm>
         </div>
       ) : (
         <p className="rounded-md border border-border p-3 text-xs text-muted-foreground">

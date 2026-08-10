@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   requireCurrentRequestScope: vi.fn(),
+  admitDocumentMutation: vi.fn(),
   moderateCommunityContribution: vi.fn(),
   moderateCommunityDiscussion: vi.fn(),
   moderateCommunityMembership: vi.fn(),
@@ -15,6 +16,10 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/server/auth-session", () => ({
   requireCurrentRequestScope: mocks.requireCurrentRequestScope,
+}));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationGenerationFromFormData: vi.fn(() => null),
 }));
 vi.mock("@/server/community-repository", () => ({
   moderateCommunityContribution: mocks.moderateCommunityContribution,
@@ -34,6 +39,10 @@ describe("community moderator actions", () => {
     vi.clearAllMocks();
     mocks.redirect.mockImplementation(() => undefined);
     mocks.requireCurrentRequestScope.mockResolvedValue(scope);
+    mocks.admitDocumentMutation.mockImplementation(async () => ({
+      status: "admitted",
+      scope: await mocks.requireCurrentRequestScope(),
+    }));
     for (const operation of [
       mocks.moderateCommunityContribution,
       mocks.moderateCommunityDiscussion,

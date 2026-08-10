@@ -3,6 +3,10 @@
 import { useRef, useState, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import {
+  createDocumentMutationRequestHeaders,
+  useOptionalDocumentMutationGeneration,
+} from "@/components/auth/document-mutation-recovery";
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import {
   AlertDialog,
@@ -20,6 +24,7 @@ import {
 } from "@/lib/auth/social-oauth";
 import { authClient } from "@/lib/auth-client";
 import { runBrowserAuthMutation } from "@/lib/auth/browser-auth-mutation-coordinator";
+import { isDocumentMutationAdmissionTransportResult } from "@/lib/auth/document-mutation-generation-transport";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   formatTrustTemplate,
@@ -73,6 +78,7 @@ export function AccountMethodsPanel({
   onMethodsChanged,
 }: AccountMethodsPanelProps) {
   const router = useRouter();
+  const documentMutation = useOptionalDocumentMutationGeneration();
   const copy = getTrustSurfaceCopy(locale).authPanel.methods;
   const [message, setMessage] = useState(initialMessage ?? "");
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
@@ -140,15 +146,25 @@ export function AccountMethodsPanel({
       const mutation = await runBrowserAuthMutation({
         kind: "account_mutation",
         operation: () =>
-          authClient.unlinkAccount({
-            providerId: provider,
-          }),
+          authClient.unlinkAccount(
+            {
+              providerId: provider,
+            },
+            {
+              headers: createDocumentMutationRequestHeaders(
+                documentMutation?.transport,
+              ),
+            },
+          ),
       });
       if (mutation.status === "stale_operation") {
         return formatTrustTemplate(copy.unlinkError, { provider: label });
       }
       const { error } = mutation.value;
       if (!error) return null;
+      if (isDocumentMutationAdmissionTransportResult(error.code)) {
+        documentMutation?.handleTransportResult(error.code);
+      }
 
       return (
         getLocalizedAuthClientErrorMessage(locale, error) ??
@@ -233,7 +249,17 @@ export function AccountMethodsPanel({
 
     try {
       const result: AccountMethodPasswordActionResult =
-        await setCurrentAccountPassword(disconnectPassword);
+        await setCurrentAccountPassword(
+          disconnectPassword,
+          documentMutation?.transport ?? null,
+        );
+      if ("documentMutationAdmission" in result) {
+        documentMutation?.handleTransportResult(
+          result.documentMutationAdmission,
+        );
+        setDisconnectMessage(copy.passwordError);
+        return;
+      }
       if (result.status !== "success") {
         setDisconnectMessage(copy.passwordError);
         return;
@@ -272,7 +298,17 @@ export function AccountMethodsPanel({
 
     try {
       const result: AccountMethodPasswordActionResult =
-        await setCurrentAccountPassword(password);
+        await setCurrentAccountPassword(
+          password,
+          documentMutation?.transport ?? null,
+        );
+      if ("documentMutationAdmission" in result) {
+        documentMutation?.handleTransportResult(
+          result.documentMutationAdmission,
+        );
+        setMessage(copy.passwordError);
+        return;
+      }
       if (result.status !== "success") {
         setMessage(copy.passwordError);
         return;

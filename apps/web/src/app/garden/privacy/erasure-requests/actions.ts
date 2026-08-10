@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireCurrentRequestScope } from "@/server/auth-session";
+import {
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import { executeApprovedErasureRequest } from "@/server/erasure-execution";
 import {
   assertErasureExecutionAccess,
@@ -17,7 +20,13 @@ import {
 const ERASURE_REQUESTS_PATH = "/garden/privacy/erasure-requests";
 
 export async function markErasureRequestReviewingAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertErasureRequestMutationAccess(scope);
 
   await markErasureRequestReviewing({
@@ -29,7 +38,13 @@ export async function markErasureRequestReviewingAction(formData: FormData) {
 }
 
 export async function markErasureRequestHandledAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertErasureRequestMutationAccess(scope);
   const handledStatus = String(formData.get("handledStatus") ?? "");
 
@@ -49,7 +64,13 @@ export async function markErasureRequestHandledAction(formData: FormData) {
 }
 
 export async function executeApprovedErasureRequestAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertErasureExecutionAccess(scope);
 
   await executeApprovedErasureRequest(scope, {
@@ -65,7 +86,13 @@ export async function executeApprovedErasureRequestAction(formData: FormData) {
 export async function markErasureRequestDryRunReviewedAction(
   formData: FormData,
 ) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertErasureRequestMutationAccess(scope);
 
   await markErasureRequestDryRunReviewed(scope, {

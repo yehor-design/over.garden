@@ -211,7 +211,7 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
     {
       path: "src/app/api/auth/[...all]/route.ts",
       sha256:
-        "7e1160516e8c9ee2324b66513de07815abfd64b8ed75cc27983bda0a6f0c1f3e",
+        "2b06d071d6a73dffdfb31099e6898c6f611929a36eaa79ee5698903392a449a5",
     },
     {
       path: "src/lib/auth/google-oauth.ts",

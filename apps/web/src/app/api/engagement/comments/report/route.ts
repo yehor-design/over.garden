@@ -1,7 +1,11 @@
 import { revalidatePath } from "next/cache";
 
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
+import {
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import { reportEngagementComment } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
@@ -17,22 +21,27 @@ export async function POST(request: Request) {
   const target = parseEngagementCommentTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
   const commentId = String(formData.get("commentId") ?? "");
-  const session = await getCurrentSession();
   const visualActor = resolveVisualSocialMutationActor(formData, ["journal"]);
-  const userId = visualActor?.actorId ?? session?.user?.id;
-
-  if (!userId) {
-    return redirectToEngagementAuth(
-      request,
-      target,
-      returnTo,
-      "report",
-      createAuthIntentControlRef("report", commentId),
-    );
+  const admission = visualActor
+    ? null
+    : await admitDocumentMutation({
+        transport: documentMutationGenerationFromRequest(request),
+      });
+  if (admission?.status === "rejected") {
+    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+      return redirectToEngagementAuth(
+        request,
+        target,
+        returnTo,
+        "report",
+        createAuthIntentControlRef("report", commentId),
+      );
+    }
+    return documentMutationAdmissionResponse(admission);
   }
 
   await reportEngagementComment(
-    scopedToUser(userId, visualActor ? null : getSessionId(session)),
+    visualActor ? scopedToUser(visualActor.actorId) : admission!.scope,
     {
       commentId,
       reason: String(formData.get("reason") ?? "other"),

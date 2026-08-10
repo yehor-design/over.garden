@@ -1,7 +1,11 @@
 import { revalidatePath } from "next/cache";
 
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
+import {
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import { isPreciseLocationTextError } from "@/lib/privacy/precise-location-text";
 import { addEngagementComment } from "@/server/engagement-repository";
 import { isInteractionAdmissionError } from "@/server/interaction-admission";
@@ -18,30 +22,35 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const target = parseEngagementCommentTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
-  const session = await getCurrentSession();
   const visualActor = resolveVisualSocialMutationActor(formData, ["journal"]);
-  const userId = visualActor?.actorId ?? session?.user?.id;
   const parentCommentId =
     typeof formData.get("parentCommentId") === "string"
       ? String(formData.get("parentCommentId"))
       : null;
 
-  if (!userId) {
-    return redirectToEngagementAuth(
-      request,
-      target,
-      returnTo,
-      "comment",
-      parentCommentId
-        ? createAuthIntentControlRef("reply", parentCommentId)
-        : undefined,
-    );
+  const admission = visualActor
+    ? null
+    : await admitDocumentMutation({
+        transport: documentMutationGenerationFromRequest(request),
+      });
+  if (admission?.status === "rejected") {
+    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+      return redirectToEngagementAuth(
+        request,
+        target,
+        returnTo,
+        "comment",
+        parentCommentId
+          ? createAuthIntentControlRef("reply", parentCommentId)
+          : undefined,
+      );
+    }
+    return documentMutationAdmissionResponse(admission);
   }
 
-  const scope = scopedToUser(
-    userId,
-    visualActor ? null : getSessionId(session),
-  );
+  const scope = visualActor
+    ? scopedToUser(visualActor.actorId)
+    : admission!.scope;
   try {
     await addEngagementComment(scope, {
       target,

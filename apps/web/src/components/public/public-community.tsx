@@ -17,6 +17,7 @@ import {
 } from "@/app/[locale]/communities/[slug]/actions";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import {
   SubjectAwareHtmlImage,
   SubjectAwareMediaImage,
@@ -517,7 +518,7 @@ function CommunityMembershipAction({
     );
   }
   return (
-    <form action={setCommunityMembershipAction}>
+    <DocumentMutationActionForm action={setCommunityMembershipAction}>
       <CommunityActionFields
         locale={locale}
         slug={community.slug}
@@ -543,7 +544,7 @@ function CommunityMembershipAction({
         <UsersRound aria-hidden="true" />
         {active ? copy.leave : copy.follow}
       </button>
-    </form>
+    </DocumentMutationActionForm>
   );
 }
 
@@ -571,7 +572,7 @@ function CommunityContributionForm({
         </p>
       </div>
       {community.viewer.eligibleJournals.length > 0 ? (
-        <form
+        <DocumentMutationActionForm
           action={contributeJournalToCommunityAction}
           className="grid gap-3 sm:flex sm:items-end"
         >
@@ -595,7 +596,7 @@ function CommunityContributionForm({
             </select>
           </label>
           <button className={buttonVariants()}>{copy.contribute}</button>
-        </form>
+        </DocumentMutationActionForm>
       ) : (
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-muted-foreground">
@@ -802,7 +803,7 @@ function CommunitySafetyActions({
           >
             {copy.report}
           </summary>
-          <form
+          <DocumentMutationActionForm
             action={reportCommunityContributionAction}
             className="absolute left-0 z-20 mt-1 grid w-72 gap-3 rounded-md border border-border bg-popover p-3 shadow-md"
           >
@@ -828,10 +829,12 @@ function CommunitySafetyActions({
             <button className={buttonVariants({ size: "sm" })}>
               {copy.sendReport}
             </button>
-          </form>
+          </DocumentMutationActionForm>
         </details>
       )}
-      <form action={blockCommunityContributionAuthorAction}>
+      <DocumentMutationActionForm
+        action={blockCommunityContributionAuthorAction}
+      >
         <CommunityActionFields
           locale={locale}
           slug={community.slug}
@@ -850,7 +853,7 @@ function CommunitySafetyActions({
         >
           {copy.block}
         </button>
-      </form>
+      </DocumentMutationActionForm>
     </>
   );
 }

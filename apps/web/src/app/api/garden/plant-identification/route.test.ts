@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   readPlantIdentificationReceipt: vi.fn(),
   settlePlantIdentificationCandidates: vi.fn(),
   settlePlantIdentificationFailure: vi.fn(),
+  admitDocumentMutation: vi.fn(),
+  documentMutationAdmissionResponse: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -25,6 +27,11 @@ vi.mock("@/server/auth-session", () => ({
 }));
 vi.mock("@/server/auth-intent-http", () => ({
   authIntentRequiredResponse: mocks.authIntentRequiredResponse,
+}));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationAdmissionResponse: mocks.documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest: vi.fn(() => null),
 }));
 vi.mock("@/server/pilot-write-access", () => ({
   PilotWriteAccessError: mocks.PilotWriteAccessError,
@@ -59,7 +66,8 @@ vi.mock("@/server/plant-identification-repository", () => ({
   createOrReadPlantIdentificationRequest:
     mocks.createOrReadPlantIdentificationRequest,
   readPlantIdentificationReceipt: mocks.readPlantIdentificationReceipt,
-  settlePlantIdentificationCandidates: mocks.settlePlantIdentificationCandidates,
+  settlePlantIdentificationCandidates:
+    mocks.settlePlantIdentificationCandidates,
   settlePlantIdentificationFailure: mocks.settlePlantIdentificationFailure,
 }));
 
@@ -76,6 +84,16 @@ describe("POST /api/garden/plant-identification", () => {
       userId: ownerId,
       sessionId: "session-1",
     });
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: { userId: ownerId, sessionId: "session-1" },
+    });
+    mocks.documentMutationAdmissionResponse.mockImplementation((admission) =>
+      Response.json(
+        { code: admission.transportResult },
+        { status: admission.statusCode },
+      ),
+    );
     mocks.authIntentRequiredResponse.mockReturnValue(
       Response.json({ error: "opaque-identification-intent" }, { status: 401 }),
     );
@@ -92,7 +110,9 @@ describe("POST /api/garden/plant-identification", () => {
       derivative_key: "derivatives/opaque.webp",
       revoked_at: null,
     });
-    mocks.getPublicDerivativeObjectBuffer.mockResolvedValue(Buffer.from("safe"));
+    mocks.getPublicDerivativeObjectBuffer.mockResolvedValue(
+      Buffer.from("safe"),
+    );
     mocks.reencodePlantNetImage.mockResolvedValue({
       bytes: Buffer.from("normalized"),
       sha256: "a".repeat(64),
@@ -133,9 +153,11 @@ describe("POST /api/garden/plant-identification", () => {
   });
 
   it("returns an opaque authentication intent before reading a private photo selection", async () => {
-    mocks.requireWriteEligibleRequestScope.mockRejectedValue(
-      new mocks.AuthenticationRequiredError("Authentication required."),
-    );
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      transportResult: "AUTHENTICATION_REQUIRED",
+      statusCode: 401,
+    });
     const { POST } = await import("./route");
     const response = await POST(
       identificationRequest({

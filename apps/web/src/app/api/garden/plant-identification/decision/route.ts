@@ -1,7 +1,11 @@
 import { revalidatePath } from "next/cache";
 
-import { AuthenticationRequiredError } from "@/server/auth-session";
 import { authIntentRequiredResponse } from "@/server/auth-intent-http";
+import {
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import { resolvePlantObjectCatalog } from "@/server/journal-repository";
 import {
   readPlantIdentificationReceipt,
@@ -9,28 +13,24 @@ import {
   recordPlantIdentificationDecision,
   recordPlantIdentificationDecisionInTransaction,
 } from "@/server/plant-identification-repository";
-import {
-  PilotWriteAccessError,
-  requireWriteEligibleRequestScope,
-} from "@/server/pilot-write-access";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  let scope: Awaited<ReturnType<typeof requireWriteEligibleRequestScope>>;
-  try {
-    scope = await requireWriteEligibleRequestScope();
-  } catch (error) {
-    if (error instanceof PilotWriteAccessError) {
-      return Response.json({ error: "forbidden" }, { status: 403 });
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
+    if (admission.transportResult !== "AUTHENTICATION_REQUIRED") {
+      return documentMutationAdmissionResponse(admission);
     }
-    if (!(error instanceof AuthenticationRequiredError)) throw error;
     return authIntentRequiredResponse(request, {
       action: "save",
       fallbackReturnTo: "/garden",
       message: "Sign in to confirm this plant identity.",
     });
   }
+  const scope = admission.scope;
 
   const input = parseDecision(await request.json().catch(() => null));
   if (!input)

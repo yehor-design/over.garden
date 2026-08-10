@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ExternalLink, FileText, Save, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import { buildGardenCatalogTrustMetadata } from "@/lib/garden-workspace-copy";
 import { publicVarietyPath } from "@/lib/garden/public-paths";
@@ -33,7 +34,7 @@ interface VarietySeedProofCurationRow {
 interface VarietySeedProofEditorProps {
   locale: InterfaceLocale;
   seedProofs: VarietySeedProofCurationRow[];
-  upsertAction: (formData: FormData) => void | Promise<void>;
+  upsertAction: (formData: FormData) => Promise<unknown>;
 }
 
 type CatalogStatus = "idle" | "loading" | "ready" | "failed";
@@ -148,7 +149,10 @@ export function VarietySeedProofEditor({
           {copy.seedProof.newProof}
         </div>
 
-        <form action={upsertAction} className="grid gap-3">
+        <DocumentMutationActionForm
+          action={upsertAction}
+          className="grid gap-3"
+        >
           <input
             type="hidden"
             name="catalogItemId"
@@ -198,7 +202,7 @@ export function VarietySeedProofEditor({
             <Save className="size-4" />
             {copy.seedProof.save}
           </button>
-        </form>
+        </DocumentMutationActionForm>
       </article>
 
       {seedProofs.length > 0 ? (
@@ -225,7 +229,7 @@ function ExistingSeedProofForm({
 }: {
   locale: InterfaceLocale;
   seedProof: VarietySeedProofCurationRow;
-  upsertAction: (formData: FormData) => void | Promise<void>;
+  upsertAction: (formData: FormData) => Promise<unknown>;
 }) {
   const copy = getOperatorCurationCopy(locale);
   return (
@@ -271,7 +275,7 @@ function ExistingSeedProofForm({
         </Link>
       </div>
 
-      <form action={upsertAction} className="grid gap-3">
+      <DocumentMutationActionForm action={upsertAction} className="grid gap-3">
         <input
           type="hidden"
           name="catalogItemId"
@@ -285,7 +289,7 @@ function ExistingSeedProofForm({
           <Save className="size-4" />
           {copy.seedProof.update}
         </button>
-      </form>
+      </DocumentMutationActionForm>
     </article>
   );
 }

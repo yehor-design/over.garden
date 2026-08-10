@@ -8,6 +8,9 @@ const authSignOut = vi.fn();
 const after = vi.hoisted(() => vi.fn());
 const drainAuthEmailOutbox = vi.hoisted(() => vi.fn());
 const bridgeLegacyEmailVerificationRequest = vi.hoisted(() => vi.fn());
+const admitDocumentMutation = vi.hoisted(() => vi.fn());
+const documentMutationAdmissionResponse = vi.hoisted(() => vi.fn());
+const documentMutationGenerationFromRequest = vi.hoisted(() => vi.fn());
 
 vi.mock("next/server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/server")>();
@@ -41,6 +44,11 @@ vi.mock("@/server/auth/auth-email-outbox-consumer", () => ({
 vi.mock("@/server/auth/legacy-email-verification-bridge", () => ({
   bridgeLegacyEmailVerificationRequest,
 }));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+}));
 
 describe("password-reset API boundary", () => {
   beforeEach(() => {
@@ -53,6 +61,9 @@ describe("password-reset API boundary", () => {
     after.mockReset();
     drainAuthEmailOutbox.mockReset();
     bridgeLegacyEmailVerificationRequest.mockReset();
+    admitDocumentMutation.mockReset();
+    documentMutationAdmissionResponse.mockReset();
+    documentMutationGenerationFromRequest.mockReset();
     isTrustedPasswordResetOrigin.mockReturnValue(true);
     parsePasswordResetRequest.mockReturnValue({
       email: "gardener@example.test",
@@ -62,6 +73,20 @@ describe("password-reset API boundary", () => {
     );
     bridgeLegacyEmailVerificationRequest.mockImplementation(
       async (request: Request) => request,
+    );
+    admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: { userId: "user-a", sessionId: "session-a" },
+    });
+    documentMutationAdmissionResponse.mockImplementation((admission) =>
+      Response.json(
+        { code: admission.transportResult },
+        { status: admission.statusCode },
+      ),
+    );
+    documentMutationGenerationFromRequest.mockImplementation(
+      (request: Request) =>
+        request.headers.get("x-overgarden-document-generation"),
     );
   });
 
@@ -147,6 +172,96 @@ describe("password-reset API boundary", () => {
       }),
     );
     expect(await delegated.text()).toBe("ok");
+    expect(handlerPost).toHaveBeenCalledOnce();
+    expect(admitDocumentMutation).not.toHaveBeenCalled();
+  });
+
+  it("owns only the exact Better Auth account/session mutation allowlist", async () => {
+    const { isAuthenticatedAccountMutationRequest } = await import("./route");
+    const guarded = [
+      "change-email",
+      "change-password",
+      "delete-user",
+      "revoke-other-sessions",
+      "revoke-session",
+      "revoke-sessions",
+      "set-password",
+      "unlink-account",
+      "update-session",
+      "update-user",
+    ];
+    for (const path of guarded) {
+      expect(
+        isAuthenticatedAccountMutationRequest(
+          new Request(`https://over.garden/api/auth/${path}`, {
+            method: "POST",
+          }),
+        ),
+        path,
+      ).toBe(true);
+    }
+
+    for (const path of [
+      "link-social",
+      "sign-in/email",
+      "sign-up/email",
+      "sign-out",
+      "request-password-reset",
+      "callback/google",
+      "unlink-account/extra",
+    ]) {
+      expect(
+        isAuthenticatedAccountMutationRequest(
+          new Request(`https://over.garden/api/auth/${path}`, {
+            method: "POST",
+          }),
+        ),
+        path,
+      ).toBe(false);
+    }
+  });
+
+  it("rejects an account mutation before Better Auth observes the request", async () => {
+    admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      transportResult: "DOCUMENT_OWNER_CHANGED",
+      statusCode: 409,
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      new Request("https://over.garden/api/auth/unlink-account", {
+        method: "POST",
+        headers: {
+          "x-overgarden-document-generation": "opaque-generation-a",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ code: "DOCUMENT_OWNER_CHANGED" });
+    expect(documentMutationGenerationFromRequest).toHaveBeenCalledOnce();
+    expect(admitDocumentMutation).toHaveBeenCalledWith({
+      transport: "opaque-generation-a",
+    });
+    expect(handlerPost).not.toHaveBeenCalled();
+  });
+
+  it("delegates an admitted account mutation exactly once", async () => {
+    handlerPost.mockResolvedValueOnce(new Response("updated"));
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      new Request("https://over.garden/api/auth/update-user", {
+        method: "POST",
+        headers: {
+          "x-overgarden-document-generation": "opaque-generation-a",
+        },
+      }),
+    );
+
+    expect(await response.text()).toBe("updated");
+    expect(admitDocumentMutation).toHaveBeenCalledOnce();
     expect(handlerPost).toHaveBeenCalledOnce();
   });
 

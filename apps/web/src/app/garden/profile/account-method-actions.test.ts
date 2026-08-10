@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   headers: vi.fn(),
   revalidatePath: vi.fn(),
   setPassword: vi.fn(),
+  admitDocumentMutation: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -23,6 +24,9 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
 }));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+}));
 
 import { setCurrentAccountPassword } from "./account-method-actions";
 
@@ -30,8 +34,18 @@ describe("setCurrentAccountPassword", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.headers.mockResolvedValue(new Headers());
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: {
+        userId: "00000000-0000-4000-8000-000000000777",
+        sessionId: "session-1",
+      },
+    });
     mocks.getCurrentSession.mockResolvedValue({
-      user: { emailVerified: true },
+      user: {
+        id: "00000000-0000-4000-8000-000000000777",
+        emailVerified: true,
+      },
     });
   });
 
@@ -39,7 +53,7 @@ describe("setCurrentAccountPassword", () => {
     mocks.setPassword.mockResolvedValue({ status: true });
 
     await expect(
-      setCurrentAccountPassword("correct-horse-battery-staple"),
+      setCurrentAccountPassword("correct-horse-battery-staple", "generation"),
     ).resolves.toEqual({ status: "success" });
     expect(mocks.setPassword).toHaveBeenCalledWith({
       body: { newPassword: "correct-horse-battery-staple" },
@@ -50,21 +64,41 @@ describe("setCurrentAccountPassword", () => {
 
   it("rejects unverified, invalid, and failed requests without exposing an auth error", async () => {
     mocks.getCurrentSession.mockResolvedValueOnce({
-      user: { emailVerified: false },
+      user: {
+        id: "00000000-0000-4000-8000-000000000777",
+        emailVerified: false,
+      },
     });
-    await expect(setCurrentAccountPassword("valid-password")).resolves.toEqual({
-      status: "error",
-    });
+    await expect(
+      setCurrentAccountPassword("valid-password", "generation"),
+    ).resolves.toEqual({ status: "error" });
     expect(mocks.setPassword).not.toHaveBeenCalled();
 
-    await expect(setCurrentAccountPassword("short")).resolves.toEqual({
+    await expect(
+      setCurrentAccountPassword("short", "generation"),
+    ).resolves.toEqual({
       status: "error",
     });
 
     mocks.setPassword.mockRejectedValueOnce(new Error("PASSWORD_ALREADY_SET"));
-    await expect(setCurrentAccountPassword("valid-password")).resolves.toEqual({
-      status: "error",
-    });
+    await expect(
+      setCurrentAccountPassword("valid-password", "generation"),
+    ).resolves.toEqual({ status: "error" });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("returns the admission transport result without touching Better Auth", async () => {
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      transportResult: "DOCUMENT_OWNER_CHANGED",
+    });
+
+    await expect(
+      setCurrentAccountPassword("valid-password", "stale-generation"),
+    ).resolves.toEqual({
+      documentMutationAdmission: "DOCUMENT_OWNER_CHANGED",
+    });
+    expect(mocks.getCurrentSession).not.toHaveBeenCalled();
+    expect(mocks.setPassword).not.toHaveBeenCalled();
   });
 });

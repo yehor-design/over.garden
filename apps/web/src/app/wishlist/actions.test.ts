@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   redirect: vi.fn(),
   resolveVisualSocialMutationActor: vi.fn(),
+  admitDocumentMutation: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -22,11 +23,15 @@ vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
   getSessionId: mocks.getSessionId,
 }));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationGenerationFromFormData: vi.fn(() => null),
+}));
 
 vi.mock("@/server/request-scope", () => ({
   scopedToUser: vi.fn((userId: string, sessionId: string) => ({
     userId,
-    sessionId,
+    sessionId: sessionId ?? null,
   })),
 }));
 
@@ -48,6 +53,22 @@ describe("wishlist actions", () => {
     mocks.getCurrentSession.mockResolvedValue({
       user: { id: "00000000-0000-4000-8000-000000000001" },
       session: { id: "session-1" },
+    });
+    mocks.admitDocumentMutation.mockImplementation(async () => {
+      const session = await mocks.getCurrentSession();
+      if (!session?.user?.id) {
+        return {
+          status: "rejected",
+          transportResult: "AUTHENTICATION_REQUIRED",
+        };
+      }
+      return {
+        status: "admitted",
+        scope: {
+          userId: session.user.id,
+          sessionId: mocks.getSessionId(session),
+        },
+      };
     });
     mocks.addCatalogPublicSlugToWishlist.mockResolvedValue({
       item: {

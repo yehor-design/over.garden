@@ -1,10 +1,20 @@
-import { requireCurrentRequestScope } from "@/server/auth-session";
+import {
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import { searchJournalMentionSuggestions } from "@/server/journal-mention-repository";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
+    return documentMutationAdmissionResponse(admission);
+  }
+  const scope = admission.scope;
   const url = new URL(request.url);
   const query = url.searchParams.get("q") ?? "";
   const suggestions = await searchJournalMentionSuggestions(scope, query);

@@ -582,7 +582,7 @@ function ProvenanceSection({
       {writeEnabled ? (
         <div className="grid min-w-0 gap-4 xl:grid-cols-3">
           {provenancePanel.sourceObjectOptions.length > 0 ? (
-            <form
+            <DocumentMutationActionForm
               action={createProvenanceEdgeAction}
               className="grid min-w-0 gap-3 rounded-md border border-border p-3"
             >
@@ -613,14 +613,14 @@ function ProvenanceSection({
               >
                 {provenanceCopy.recordObjectSource}
               </button>
-            </form>
+            </DocumentMutationActionForm>
           ) : (
             <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
               {provenanceCopy.noSourceObject}
             </p>
           )}
 
-          <form
+          <DocumentMutationActionForm
             action={createProvenanceEdgeAction}
             className="grid min-w-0 gap-3 rounded-md border border-border p-3"
           >
@@ -675,9 +675,9 @@ function ProvenanceSection({
             >
               {provenanceCopy.recordPrivateSource}
             </button>
-          </form>
+          </DocumentMutationActionForm>
 
-          <form
+          <DocumentMutationActionForm
             action={createLineageInvitationAction}
             className="grid min-w-0 gap-3 rounded-md border border-border p-3"
           >
@@ -706,7 +706,7 @@ function ProvenanceSection({
             >
               {provenanceCopy.createInvite}
             </button>
-          </form>
+          </DocumentMutationActionForm>
         </div>
       ) : (
         <ClosedPilotWriteCallout context="follow-up" locale={locale} />

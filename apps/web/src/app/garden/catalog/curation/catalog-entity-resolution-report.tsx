@@ -18,7 +18,7 @@ import { FuzzyDuplicateRefreshForm } from "./fuzzy-duplicate-refresh-form";
 interface CatalogEntityResolutionReportProps {
   locale: InterfaceLocale;
   report: CatalogEntityResolutionQaReport;
-  refreshAction: () => Promise<void>;
+  refreshAction: (formData: FormData) => Promise<unknown>;
 }
 
 export function CatalogEntityResolutionReport({

@@ -10,7 +10,10 @@ import {
   PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { requireCurrentRequestScope } from "@/server/auth-session";
+import {
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import { parsePublicHandleSyntax } from "@/server/identity-policy";
 import {
   blockProfile,
@@ -20,8 +23,14 @@ import {
   type ProfileInteractionResult,
 } from "@/server/profile-interaction-repository";
 
-export async function followProfileAction(formData: FormData): Promise<void> {
-  const scope = await requireCurrentRequestScope();
+export async function followProfileAction(formData: FormData) {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const handle = normalizedHandle(formData);
   const result = handle
     ? await followProfile(scope, handle)
@@ -29,8 +38,14 @@ export async function followProfileAction(formData: FormData): Promise<void> {
   finishProfileAction(formData, handle, result, "profile-follow");
 }
 
-export async function unfollowProfileAction(formData: FormData): Promise<void> {
-  const scope = await requireCurrentRequestScope();
+export async function unfollowProfileAction(formData: FormData) {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const handle = normalizedHandle(formData);
   const result = handle
     ? await unfollowProfile(scope, handle)
@@ -38,8 +53,14 @@ export async function unfollowProfileAction(formData: FormData): Promise<void> {
   finishProfileAction(formData, handle, result, "profile-follow");
 }
 
-export async function reportProfileAction(formData: FormData): Promise<void> {
-  const scope = await requireCurrentRequestScope();
+export async function reportProfileAction(formData: FormData) {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const handle = normalizedHandle(formData);
   const result = handle
     ? await reportProfile(scope, handle, String(formData.get("reason") ?? ""))
@@ -47,8 +68,14 @@ export async function reportProfileAction(formData: FormData): Promise<void> {
   finishProfileAction(formData, handle, result, "profile-report");
 }
 
-export async function blockProfileAction(formData: FormData): Promise<void> {
-  const scope = await requireCurrentRequestScope();
+export async function blockProfileAction(formData: FormData) {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const handle = normalizedHandle(formData);
   const result = handle
     ? await blockProfile(scope, handle)

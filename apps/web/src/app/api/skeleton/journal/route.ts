@@ -10,12 +10,14 @@ import {
   createJournalEntry,
   listMyRecentJournalEntries,
 } from "@/server/journal-repository";
+import {
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
-import {
-  PilotWriteAccessError,
-  requireWriteEligibleRequestScope,
-} from "@/server/pilot-write-access";
+import { PilotWriteAccessError } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
 
 export const runtime = "nodejs";
@@ -46,12 +48,13 @@ export async function POST(request: Request) {
     return notFoundResponse();
   }
 
-  let scope: Awaited<ReturnType<typeof requireWriteEligibleRequestScope>>;
-  try {
-    scope = await requireWriteEligibleRequestScope();
-  } catch (error) {
-    return errorResponse(error);
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
+    return documentMutationAdmissionResponse(admission);
   }
+  const scope = admission.scope;
 
   const input = await parseInput(request);
   if (!input) return invalidPayloadResponse();
@@ -66,10 +69,7 @@ export async function POST(request: Request) {
       await convergePublicProjectionsNow([entry.id]).catch(() => undefined);
     }
 
-    return Response.json(
-      { entry },
-      { headers: NO_STORE_HEADERS },
-    );
+    return Response.json({ entry }, { headers: NO_STORE_HEADERS });
   } catch (error) {
     return errorResponse(error);
   }
@@ -81,7 +81,9 @@ interface SkeletonJournalInput {
   clientMutationId: string;
 }
 
-async function parseInput(request: Request): Promise<SkeletonJournalInput | null> {
+async function parseInput(
+  request: Request,
+): Promise<SkeletonJournalInput | null> {
   const contentType = request.headers
     .get("content-type")
     ?.split(";", 1)[0]

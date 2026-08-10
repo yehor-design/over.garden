@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import {
   ERASURE_REQUEST_INTAKE_VERSION,
@@ -130,7 +131,10 @@ export default async function ErasureRequestPage() {
                 {copy.openRequest}
               </p>
             ) : (
-              <form action={submitErasureRequestAction} className="grid gap-4">
+              <DocumentMutationActionForm
+                action={submitErasureRequestAction}
+                className="grid gap-4"
+              >
                 <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
                   <input
                     type="checkbox"
@@ -146,7 +150,7 @@ export default async function ErasureRequestPage() {
                 >
                   {copy.submit}
                 </button>
-              </form>
+              </DocumentMutationActionForm>
             )}
           </section>
           <ErasureLocalCleanup locale={locale} />
