@@ -36,7 +36,7 @@ function safeReport(): AccountSignOutEvidenceReport {
     users: 1,
     publicProfiles: 1,
     currentClaims: 1,
-    linkedAccounts: 3,
+    linkedAccounts: 2,
     syntheticRoles: 0,
     ownerRoleRows: 1,
     gardenRows: 3,
@@ -54,7 +54,7 @@ function safeReport(): AccountSignOutEvidenceReport {
     serverAggregateBefore: aggregate,
     serverAggregateAfter: aggregate,
     providerNeutrality: {
-      structuralLinkClasses: 3,
+      structuralLinkClasses: 2,
       structuralLinksPreserved: true,
       realSocialOAuthExecuted: false,
     },

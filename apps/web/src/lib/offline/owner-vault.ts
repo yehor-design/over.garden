@@ -432,6 +432,21 @@ export async function deactivatePhysicalOwnerVault(
   if (active.database instanceof OwnerVaultDb) active.database.close();
 }
 
+/**
+ * Retain-only local exit boundary. Removing document-local capabilities,
+ * aborting their lifetimes, and closing Dexie are synchronous operations; no
+ * IndexedDB read, write, drain, or deletion is required before private UI exit.
+ */
+export function sealActiveOwnerVaultsForLocalExit(): number {
+  const activeVaults = [...activeOwnerVaults.values()];
+  activeOwnerVaults.clear();
+  for (const active of activeVaults) {
+    active.lifetime.abort();
+    if (active.database instanceof OwnerVaultDb) active.database.close();
+  }
+  return activeVaults.length;
+}
+
 export async function deleteResolvedPhysicalOwnerVault(
   ownerUserId: string,
   binding: string,

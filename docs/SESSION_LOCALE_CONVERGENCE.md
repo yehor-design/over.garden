@@ -1,6 +1,6 @@
 # Session and locale convergence
 
-Status: OVE-214 canonical locale protocol; OVE-286 route-scoped session convergence
+Status: OVE-214 canonical locale protocol; OVE-286 route-scoped session convergence; OVE-287 immediate retain-only exit
 
 This document owns the bounded recovery contract for an authenticated session
 gate and a Bulgaria `bg`/`ru` interface transition. It is deliberately a
@@ -23,13 +23,13 @@ wait.
 
 ## Canonical owners
 
-| Owner                                           | Responsibility                                                                                                                 |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `interfaceLocaleChangeCoordinator`              | One locale operation, participant registry, synchronous commit gate, cancellation, and retryable release.                      |
-| `owner-composer-participants`                   | Acquires each mounted composer fence synchronously, flushes the latest generation, then resumes or cancels exactly that fence. |
-| `SessionConvergenceBoundary`                    | Bounded authoritative session read and owner-local hydration/recheck epoch.                                                    |
-| `language-switcher`                             | Inline pending/recovery status, explicit cancellation, guarded preference rollback, and document handoff cleanup.              |
-| `owner-session-lifecycle` / `sign-out-provider` | Existing owner activity and sign-out commit fence; neither is replaced by this protocol.                                       |
+| Owner                                                     | Responsibility                                                                                                                 |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `interfaceLocaleChangeCoordinator`                        | One locale operation, participant registry, synchronous commit gate, cancellation, and retryable release.                      |
+| `owner-composer-participants`                             | Acquires each mounted composer fence synchronously, flushes the latest generation, then resumes or cancels exactly that fence. |
+| `SessionConvergenceBoundary`                              | Bounded authoritative session read and owner-local hydration/recheck epoch.                                                    |
+| `language-switcher`                                       | Inline pending/recovery status, explicit cancellation, guarded preference rollback, and document handoff cleanup.              |
+| `sign-out-provider` / `browser-auth-mutation-coordinator` | Immediate retain-only local exit plus serialized sign-in, link, unlink, and exact-session reconciliation.                      |
 
 ## Deadline and state contract
 
@@ -151,4 +151,63 @@ cd apps/web
 pnpm exec playwright test tests/session-convergence.spec.ts
 pnpm smoke:session-convergence
 BASE_URL="$OVE286_IMMUTABLE_URL" pnpm smoke:session-convergence
+```
+
+## OVE-287 immediate retain-only exit
+
+After the single confirmation, sign-out no longer waits for a session read,
+IndexedDB inspection, sync drain, peer acknowledgement, network response,
+cookie expiry, or adapter deletion. The initiating document synchronously
+commits the `local_exit` v2 variant under the existing
+`overgarden:session-invalidation:v1` key, seals every active owner-vault handle,
+publishes the payload-free `local_exit_committed` signal, removes the private
+React tree, and exposes the localized public-safe surface. Local owner rows are
+retained without inspection, upload, sync, publication, or deletion.
+
+The marker value is exactly a schema version, bounded kind, and opaque random
+generation. The v1 generic terminal marker remains compatible. A v2 local-exit
+generation is compare-cleared only after a response of any status from the
+reconciliation attempt that captured it, or after a serialized product auth
+operation proves that it established a new authoritative session. A transport
+failure leaves the marker present and schedules no timer, polling, or retry.
+The next document bootstrap renders no private region, makes exactly one fresh
+attempt, and otherwise stays on the public-safe surface. If durable marker
+storage is unavailable, the current document remains public-safe until a
+response is observed instead of replacing itself and risking a private repaint.
+
+`POST /api/auth/local-exit-reconcile` is bodyless, same-origin, private,
+no-store, and accepts only the immutable bounded session binding emitted for
+the admitted document. A byte-exact same-session request makes one best-effort
+adapter deletion and receives Better Auth's library-derived session-cookie
+expiry even if adapter deletion fails. A missing, malformed, or stale A binding
+with a B cookie has the same public `204` body but zero session deletion and
+zero `Set-Cookie` effect. HTTP response, browser-cookie expiry, and proved
+server revocation remain separate receipt facts.
+
+`browser-auth-mutation-coordinator.ts` is the single browser ordering owner.
+Web Locks serialize product session establishment, Google link/unlink, and
+session exit across tabs; a promise-tail fallback preserves in-document order.
+An account-A completion that crosses a local-exit generation settles as
+`stale_operation`. A successful new session compare-clears only its captured
+generation, and a delayed generation-A response can never clear generation B.
+
+The local/isolated-preview-only account-sign-out fixture contains synthetic
+owner work and returns 404 when the visual-fixture environment is disabled.
+Its permanent browser matrix proves `uk`/`bg`/`ru`, storage and network denial,
+one-attempt bootstrap, cross-origin return, exact generation races, serialized
+new-session recovery, retained IndexedDB bytes, peer tabs, BFCache, responsive
+public exits, and at most 100 ms confirmed private-tree removal.
+
+```bash
+cd apps/web
+pnpm exec vitest run \
+  src/components/auth/sign-out-provider.test.tsx \
+  src/components/auth/session-convergence-boundary.test.tsx \
+  src/lib/auth/session-invalidation-marker.test.ts \
+  src/lib/auth/browser-auth-mutation-coordinator.test.ts \
+  src/lib/auth/sign-out-contract.test.ts \
+  src/lib/auth/sign-out-hardening.test.ts \
+  src/lib/offline/owner-vault.test.ts \
+  src/app/api/auth
+pnpm exec playwright test tests/account-sign-out.spec.ts
 ```

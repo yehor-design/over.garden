@@ -18,20 +18,11 @@ export function SignOutControl({
   onBeforeRequest?: () => void;
 }) {
   const { copy, phase, requestSignOut } = useSignOut();
-  const pending = phase === "checking" || phase === "signing-out";
-  const label =
-    phase === "checking"
-      ? copy.checking
-      : phase === "signing-out"
-        ? copy.signingOut
-        : copy.action;
 
   return (
     <Button
       type="button"
       variant={presentation === "menu" ? "ghost" : "outline"}
-      disabled={pending}
-      aria-busy={pending || undefined}
       data-sign-out-control={presentation}
       data-sign-out-phase={phase}
       className={cn(
@@ -42,11 +33,11 @@ export function SignOutControl({
       )}
       onClick={() => {
         onBeforeRequest?.();
-        void requestSignOut();
+        requestSignOut();
       }}
     >
       <LogOut data-icon="inline-start" aria-hidden="true" />
-      <span>{label}</span>
+      <span>{copy.action}</span>
     </Button>
   );
 }

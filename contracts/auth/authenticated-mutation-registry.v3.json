@@ -16274,6 +16274,21 @@
     {
       "authority": "authenticated_user",
       "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#sealActiveOwnerVaultsForLocalExit:browser_storage:sealActiveOwnerVaultsForLocalExit",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "sealActiveOwnerVaultsForLocalExit",
+      "transport": "offline_replay",
+      "variant": "browser_storage:sealActiveOwnerVaultsForLocalExit"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
       "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#waitForOwnerVaultWritersToSettle:browser_storage:waitForOwnerVaultWritersToSettle",
       "evidencePaths": [
         "src/lib/offline/owner-vault.ts"
@@ -16660,6 +16675,21 @@
       "symbol": "PUT",
       "transport": "route_handler",
       "variant": "PUT"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "excluded_distinct_authority",
+      "entrypointId": "route_handler:src/app/api/auth/local-exit-reconcile/route.ts#POST",
+      "evidencePaths": [
+        "src/app/api/auth/local-exit-reconcile/route.ts"
+      ],
+      "exclusionReason": "current_session_exit_is_owned_by_ove_287",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/auth/local-exit-reconcile/route.ts",
+      "symbol": "POST",
+      "transport": "route_handler",
+      "variant": "POST"
     },
     {
       "authority": "bearer_cron",
@@ -18674,6 +18704,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/auth/session-invalidation-marker.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/session-invalidation-marker",
+      "sourceNodeId": "source:003602ace4a067ebc3fc",
+      "symbol": "commitLocalExitInvalidationMarker"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/engagement/comments/route.ts",
         "src/server/auth-intent-control.ts"
       ],
@@ -18706,6 +18748,18 @@
       "semanticVariant": "from:@/lib/pilot/segments",
       "sourceNodeId": "source:0079decbfcabb91f4de2",
       "symbol": "PilotSegment"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/auth/local-exit-reconcile/route.ts",
+        "src/lib/auth/current-session-binding.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/auth/local-exit-reconcile/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/current-session-binding",
+      "sourceNodeId": "source:008e323c1207efb5afc2",
+      "symbol": "hasCurrentSessionBinding"
     },
     {
       "evidencePaths": [
@@ -18999,6 +19053,17 @@
       "resolutionState": "resolved",
       "semanticVariant": "link_social_post_id_token",
       "sourceNodeId": "source:02e5ed4504d16a676749",
+      "symbol": "POST"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/auth/local-exit-reconcile/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/auth/local-exit-reconcile/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "POST",
+      "sourceNodeId": "source:02e94b904c86c060e5eb",
       "symbol": "POST"
     },
     {
@@ -19462,6 +19527,18 @@
       "semanticVariant": "from:@/lib/privacy/disclosures",
       "sourceNodeId": "source:05fba482bd13f9cf4a71",
       "symbol": "ERASURE_REQUEST_INTAKE_VERSION"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/local-exit-public-safe-surface.tsx",
+        "src/components/auth/session-convergence-boundary.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./local-exit-public-safe-surface",
+      "sourceNodeId": "source:06015aef5af1192d18e0",
+      "symbol": "LocalExitPublicSafeSurface"
     },
     {
       "evidencePaths": [
@@ -20616,6 +20693,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:10c4c7a36046a1735541",
       "symbol": "Database"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/offline/owner-vault",
+      "sourceNodeId": "source:10d0c53fe7c83d5765e0",
+      "symbol": "sealActiveOwnerVaultsForLocalExit"
     },
     {
       "evidencePaths": [
@@ -24931,6 +25020,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/auth/local-exit-reconcile/route.ts",
+        "src/lib/auth/sign-out-hardening.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/auth/local-exit-reconcile/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/sign-out-hardening",
+      "sourceNodeId": "source:32bf217dc7c94b6b3455",
+      "symbol": "CURRENT_SESSION_BINDING_HEADER"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/profile/actions.ts",
         "src/app/garden/profile/owner-profile-editor.tsx"
       ],
@@ -25228,6 +25329,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/auth/local-exit-reconcile/route.ts",
+        "src/lib/auth/sign-out-hardening.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/auth/local-exit-reconcile/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/sign-out-hardening",
+      "sourceNodeId": "source:364864a8050c07532b0d",
+      "symbol": "readSetCookieHeaders"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/first-entry-composer.tsx",
         "src/lib/garden/catalog-object-kind.ts"
       ],
@@ -25453,6 +25566,17 @@
       "semanticVariant": "action:createFounderInterviewLearningAction",
       "sourceNodeId": "source:387a462c5557e12652bf",
       "symbol": "createFounderInterviewLearningAction"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:sealActiveOwnerVaultsForLocalExit",
+      "sourceNodeId": "source:388b7c73315d3f3c07e7",
+      "symbol": "sealActiveOwnerVaultsForLocalExit"
     },
     {
       "evidencePaths": [
@@ -27990,6 +28114,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/auth/session-invalidation-marker.ts",
+        "src/lib/auth/sign-out-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/auth/sign-out-contract.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./session-invalidation-marker",
+      "sourceNodeId": "source:4cff1cf386e583e2f7f3",
+      "symbol": "SessionInvalidationMarkerRead"
+    },
+    {
+      "evidencePaths": [
         "src/lib/offline/owner-composer-participants.ts"
       ],
       "nodeKind": "offline_producer",
@@ -29990,6 +30126,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/auth/local-exit-reconcile/route.ts",
+        "src/lib/auth.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/auth/local-exit-reconcile/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth",
+      "sourceNodeId": "source:5f424a31071f827a7227",
+      "symbol": "auth"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/first-entry-composer.tsx",
         "src/app/garden/journal-mention-typeahead.tsx"
       ],
@@ -31407,6 +31555,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/garden-auth-panel.tsx",
+        "src/lib/auth/browser-auth-mutation-coordinator.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/garden-auth-panel.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/browser-auth-mutation-coordinator",
+      "sourceNodeId": "source:6b7d970a3fade9580066",
+      "symbol": "runBrowserAuthMutation"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/privacy/erasure-requests/page.tsx",
         "src/lib/trust-surface-copy.ts"
       ],
@@ -31498,6 +31658,18 @@
       "semanticVariant": "from:@/lib/garden/regions",
       "sourceNodeId": "source:6bdb63d5ba783241e75d",
       "symbol": "normalizeCoarseRegionCode"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/garden-auth-panel.tsx",
+        "src/lib/auth/sign-out-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/garden-auth-panel.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/sign-out-contract",
+      "sourceNodeId": "source:6c008a57aaf25d614cf7",
+      "symbol": "AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS"
     },
     {
       "evidencePaths": [
@@ -32235,6 +32407,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/auth/browser-auth-mutation-coordinator.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/browser-auth-mutation-coordinator",
+      "sourceNodeId": "source:71bac4545ff877e9bb34",
+      "symbol": "runBrowserAuthMutation"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/page.tsx",
         "src/app/wishlist/actions.ts"
       ],
@@ -32766,6 +32950,18 @@
       "semanticVariant": "from:@/db",
       "sourceNodeId": "source:76f5797819e10a403565",
       "symbol": "db"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/auth/browser-auth-mutation-coordinator.ts",
+        "src/lib/auth/sign-out-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/auth/sign-out-contract.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./browser-auth-mutation-coordinator",
+      "sourceNodeId": "source:774c68e34bea60f7459f",
+      "symbol": "runBrowserAuthMutation"
     },
     {
       "evidencePaths": [
@@ -34028,6 +34224,18 @@
       "semanticVariant": "from:@/server/auth/legacy-email-verification-bridge",
       "sourceNodeId": "source:8218c8b3947d5efc96ee",
       "symbol": "bridgeLegacyEmailVerificationRequest"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/auth/local-exit-reconcile/route.ts",
+        "src/lib/auth/sign-out-hardening.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/auth/local-exit-reconcile/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/sign-out-hardening",
+      "sourceNodeId": "source:82209a2ed222f8434eef",
+      "symbol": "executeCurrentSessionExit"
     },
     {
       "evidencePaths": [
@@ -44116,6 +44324,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/garden-auth-panel.tsx",
+        "src/lib/auth/sign-out-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/garden-auth-panel.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/sign-out-contract",
+      "sourceNodeId": "source:d4a7556afc186cf0ad2c",
+      "symbol": "classifySessionConfirmation"
+    },
+    {
+      "evidencePaths": [
         "src/server/lineage-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -44909,6 +45129,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/auth/sign-out-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/sign-out-contract",
+      "sourceNodeId": "source:db93ca537dc9b54c7242",
+      "symbol": "reconcileLocalExitSession"
+    },
+    {
+      "evidencePaths": [
         "src/lib/offline/offline-media-quota.ts"
       ],
       "nodeKind": "offline_producer",
@@ -45275,6 +45507,18 @@
       "semanticVariant": "from:@/server/erasure-request-repository",
       "sourceNodeId": "source:df18bcd4701140a0d265",
       "symbol": "submitErasureRequest"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/account-methods-panel.tsx",
+        "src/lib/auth/browser-auth-mutation-coordinator.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/account-methods-panel.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/browser-auth-mutation-coordinator",
+      "sourceNodeId": "source:df44f794498caf5085cc",
+      "symbol": "runBrowserAuthMutation"
     },
     {
       "evidencePaths": [
@@ -47197,6 +47441,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:ef4c5e0236351a928455",
       "symbol": "EngagementLikeState"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/auth/[...all]/route.ts",
+        "src/lib/auth/sign-out-hardening.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/auth/[...all]/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/sign-out-hardening",
+      "sourceNodeId": "source:ef5c879337bb852cc61d",
+      "symbol": "executeCurrentSessionExit"
     },
     {
       "evidencePaths": [

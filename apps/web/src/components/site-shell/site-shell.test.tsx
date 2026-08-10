@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   pathname: "/",
   localeControlFallback: null as React.ReactNode,
   sessionRecheckMode: null as string | null,
+  currentSessionBinding: null as string | null,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -16,17 +17,21 @@ vi.mock("@/components/auth/session-convergence-boundary", () => ({
     children,
     localeControlFallback,
     recheckMode,
+    currentSessionBinding,
   }: {
     children: React.ReactNode;
     localeControlFallback?: React.ReactNode;
     recheckMode: string;
+    currentSessionBinding: string | null;
   }) => {
     mocks.localeControlFallback = localeControlFallback ?? null;
     mocks.sessionRecheckMode = recheckMode;
+    mocks.currentSessionBinding = currentSessionBinding;
     return (
       <div
         data-session-convergence-boundary="true"
         data-session-recheck-mode={recheckMode}
+        data-current-session-binding={currentSessionBinding ?? "missing"}
       >
         {children}
       </div>
@@ -52,6 +57,7 @@ describe("production site shell", () => {
     mocks.pathname = "/";
     mocks.localeControlFallback = null;
     mocks.sessionRecheckMode = null;
+    mocks.currentSessionBinding = null;
   });
 
   it("renders the guest desktop and mobile information architecture", async () => {
@@ -103,6 +109,7 @@ describe("production site shell", () => {
         market="bulgaria"
         isAuthenticated={true}
         documentMutationGeneration="opaque-generation"
+        currentSessionBinding="opaque-current-session-binding"
       >
         <article>Лично съдържание</article>
       </SiteShell>,
@@ -139,6 +146,10 @@ describe("production site shell", () => {
       'data-document-mutation-generation="opaque-generation"',
     );
     expect(html).toContain('data-session-recheck-mode="compatibility_fenced"');
+    expect(html).toContain(
+      'data-current-session-binding="opaque-current-session-binding"',
+    );
+    expect(mocks.currentSessionBinding).toBe("opaque-current-session-binding");
   });
 
   it("passes non-fencing mode only to the exact OVE-290-closed editor", async () => {
@@ -306,7 +317,7 @@ describe("production site shell", () => {
     );
     expect(
       source.match(
-        /<SessionConvergenceBoundary\s+locale=\{locale\}\s+localeControlFallback=\{sessionConvergenceLocaleControl\}\s+recheckMode=\{sessionRecheckMode\}\s*>[\s\S]*?<DocumentMutationGenerationProvider[\s\S]*?<SignOutProvider locale=\{locale\}>[\s\S]*?<\/SignOutProvider>[\s\S]*?<\/DocumentMutationGenerationProvider>[\s\S]*?<\/SessionConvergenceBoundary>/g,
+        /<SessionConvergenceBoundary\s+locale=\{locale\}\s+localeControlFallback=\{sessionConvergenceLocaleControl\}\s+currentSessionBinding=\{currentSessionBinding\}\s+recheckMode=\{sessionRecheckMode\}\s*>[\s\S]*?<DocumentMutationGenerationProvider[\s\S]*?<SignOutProvider\s+locale=\{locale\}\s+currentSessionBinding=\{currentSessionBinding\}\s*>[\s\S]*?<\/SignOutProvider>[\s\S]*?<\/DocumentMutationGenerationProvider>[\s\S]*?<\/SessionConvergenceBoundary>/g,
       ),
     ).toHaveLength(2);
     expect(source).not.toMatch(

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const authMocks = vi.hoisted(() => ({
   signOut: vi.fn(),
@@ -15,14 +15,21 @@ import {
   confirmPreparedCurrentSession,
   CURRENT_SESSION_BINDING_HEADER,
   deriveCurrentSessionBinding,
+  LOCAL_EXIT_RECONCILIATION_PATH,
   localizedPublicRoot,
   prepareCurrentSessionSignOut,
+  reconcileLocalExitSession,
   signOutCurrentSessionOnce,
   type CurrentSessionConfirmationClient,
   type CurrentSessionSignOutClient,
   type CurrentSessionSignOutRequestOptions,
   type PreparedCurrentSessionSignOut,
 } from "./sign-out-contract";
+import {
+  clearSessionInvalidationMarkerIfCurrent,
+  commitLocalExitInvalidationMarker,
+  readSessionInvalidationMarker,
+} from "./session-invalidation-marker";
 
 const SESSION_A_ID = "session-a";
 const SESSION_A_BINDING = "-lelLb8IGQIYUpcwo-mdtpRsbCkiD7bgVR4hWYsLBds";
@@ -48,12 +55,86 @@ describe("current-session sign-out contract", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it.each([
     ["uk", "/"],
     ["bg", "/bg"],
     ["ru", "/ru"],
   ] as const)("uses the localized public root for %s", (locale, path) => {
     expect(localizedPublicRoot(locale)).toBe(path);
+  });
+
+  it("runs one bodyless keepalive reconciliation and compare-clears on any response", async () => {
+    installMarkerBrowser();
+    const marker = commitLocalExitInvalidationMarker().marker;
+    const fetcher = vi.fn<typeof fetch>(async () =>
+      Promise.resolve(new Response(null, { status: 503 })),
+    );
+
+    await expect(
+      reconcileLocalExitSession(SESSION_A_BINDING, marker, fetcher),
+    ).resolves.toBe("response_observed");
+
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(fetcher).toHaveBeenCalledWith(LOCAL_EXIT_RECONCILIATION_PATH, {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      keepalive: true,
+      headers: {
+        [CURRENT_SESSION_BINDING_HEADER]: SESSION_A_BINDING,
+      },
+    });
+    expect(fetcher.mock.calls[0]?.[1]).not.toHaveProperty("body");
+    expect(readSessionInvalidationMarker().status).toBe("absent");
+  });
+
+  it("retains the exact local-exit generation after transport failure", async () => {
+    installMarkerBrowser();
+    const marker = commitLocalExitInvalidationMarker().marker;
+    const fetcher = vi.fn(async () => {
+      throw new Error("transport unavailable");
+    });
+
+    await expect(
+      reconcileLocalExitSession(SESSION_A_BINDING, marker, fetcher),
+    ).resolves.toBe("transport_unavailable");
+    expect(readSessionInvalidationMarker().kind).toBe("local_exit");
+  });
+
+  it("never lets a delayed generation-A response clear generation B", async () => {
+    installMarkerBrowser();
+    const markerA = commitLocalExitInvalidationMarker().marker;
+    const response = deferred<Response>();
+    const reconciliation = reconcileLocalExitSession(
+      SESSION_A_BINDING,
+      markerA,
+      () => response.promise,
+    );
+    await Promise.resolve();
+
+    expect(clearSessionInvalidationMarkerIfCurrent(markerA)).toBe("cleared");
+    const markerB = commitLocalExitInvalidationMarker().marker;
+    response.resolve(new Response(null, { status: 204 }));
+
+    await expect(reconciliation).resolves.toBe("response_observed");
+    expect(markerB.kind).toBe("local_exit");
+    expect(readSessionInvalidationMarker().kind).toBe("local_exit");
+  });
+
+  it("does not dispatch reconciliation for a missing or forged binding", async () => {
+    installMarkerBrowser();
+    const marker = commitLocalExitInvalidationMarker().marker;
+    const fetcher = vi.fn(async () => new Response(null, { status: 204 }));
+
+    await expect(
+      reconcileLocalExitSession("forged", marker, fetcher),
+    ).resolves.toBe("not_applicable");
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(readSessionInvalidationMarker().kind).toBe("local_exit");
   });
 
   it("prepares only an opaque SHA-256 base64url binding from the fresh session", async () => {
@@ -404,3 +485,38 @@ describe("current-session sign-out contract", () => {
     ).toBe("signed_out");
   });
 });
+
+function installMarkerBrowser() {
+  vi.stubGlobal("window", { localStorage: new TestStorage() });
+  vi.stubGlobal("navigator", {});
+}
+
+class TestStorage implements Storage {
+  private readonly values = new Map<string, string>();
+  get length() {
+    return this.values.size;
+  }
+  clear() {
+    this.values.clear();
+  }
+  getItem(key: string) {
+    return this.values.get(key) ?? null;
+  }
+  key(index: number) {
+    return [...this.values.keys()][index] ?? null;
+  }
+  removeItem(key: string) {
+    this.values.delete(key);
+  }
+  setItem(key: string, value: string) {
+    this.values.set(key, value);
+  }
+}
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}

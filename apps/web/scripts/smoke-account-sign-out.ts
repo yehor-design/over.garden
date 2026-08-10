@@ -1317,7 +1317,11 @@ function assertExpectedSyntheticAggregate(aggregate: ServerAggregate) {
   assertEqual(aggregate.users, 1, "synthetic user count");
   assertEqual(aggregate.publicProfiles, 1, "synthetic profile count");
   assertEqual(aggregate.currentClaims, 1, "synthetic current claim count");
-  assertEqual(aggregate.linkedAccounts, 3, "synthetic linked account count");
+  assertEqual(
+    aggregate.linkedAccounts,
+    LINKED_PROVIDER_IDS.length,
+    "synthetic linked account count",
+  );
   assertEqual(aggregate.syntheticRoles, 0, "synthetic role count");
   assertEqual(aggregate.ownerRoleRows, 1, "global owner role count");
   assertEqual(aggregate.gardenRows, 3, "synthetic private garden row count");

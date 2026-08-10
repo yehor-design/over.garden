@@ -4,6 +4,7 @@ const equalizePasswordResetAdmission = vi.fn();
 const isTrustedPasswordResetOrigin = vi.fn();
 const parsePasswordResetRequest = vi.fn();
 const handlerPost = vi.fn();
+const authSignOut = vi.fn();
 const after = vi.hoisted(() => vi.fn());
 const drainAuthEmailOutbox = vi.hoisted(() => vi.fn());
 const bridgeLegacyEmailVerificationRequest = vi.hoisted(() => vi.fn());
@@ -22,7 +23,7 @@ vi.mock("better-auth/next-js", () => ({
     DELETE: vi.fn(),
   }),
 }));
-vi.mock("@/lib/auth", () => ({ auth: {} }));
+vi.mock("@/lib/auth", () => ({ auth: { api: { signOut: authSignOut } } }));
 vi.mock("@/server/auth/auth-email-outbox", () => ({
   equalizePasswordResetAdmission,
   isTrustedPasswordResetOrigin,
@@ -48,6 +49,7 @@ describe("password-reset API boundary", () => {
     isTrustedPasswordResetOrigin.mockReset();
     parsePasswordResetRequest.mockReset();
     handlerPost.mockReset();
+    authSignOut.mockReset();
     after.mockReset();
     drainAuthEmailOutbox.mockReset();
     bridgeLegacyEmailVerificationRequest.mockReset();
@@ -146,5 +148,64 @@ describe("password-reset API boundary", () => {
     );
     expect(await delegated.text()).toBe("ok");
     expect(handlerPost).toHaveBeenCalledOnce();
+  });
+
+  it("uses the canonical library expiry even when exact-session deletion fails", async () => {
+    const { SIGN_OUT_ADAPTER_FAILURE_CODE } =
+      await import("@/lib/auth/sign-out-hardening");
+    authSignOut.mockResolvedValueOnce(
+      Response.json(
+        { success: true },
+        {
+          headers: {
+            "set-cookie":
+              "overgarden.session_token=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax",
+          },
+        },
+      ),
+    );
+    handlerPost.mockResolvedValue(
+      Response.json({ code: SIGN_OUT_ADAPTER_FAILURE_CODE }, { status: 500 }),
+    );
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      new Request("https://over.garden/api/auth/sign-out", {
+        method: "POST",
+        headers: {
+          cookie: "overgarden.session_token=signed-a",
+          "x-overgarden-current-session-binding": "A".repeat(43),
+        },
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
+    expect(handlerPost).toHaveBeenCalledOnce();
+    expect(authSignOut).toHaveBeenCalledOnce();
+  });
+
+  it("keeps stale account-A canonical sign-out from mutating account B's cookie", async () => {
+    const { SIGN_OUT_BINDING_FAILURE_CODE } =
+      await import("@/lib/auth/sign-out-hardening");
+    handlerPost.mockResolvedValue(
+      Response.json({ code: SIGN_OUT_BINDING_FAILURE_CODE }, { status: 409 }),
+    );
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      new Request("https://over.garden/api/auth/sign-out", {
+        method: "POST",
+        headers: {
+          cookie: "overgarden.session_token=signed-b",
+          "x-overgarden-current-session-binding": "A".repeat(43),
+        },
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(handlerPost).toHaveBeenCalledOnce();
+    expect(authSignOut).not.toHaveBeenCalled();
   });
 });

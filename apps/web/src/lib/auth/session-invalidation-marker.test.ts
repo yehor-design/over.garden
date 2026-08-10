@@ -37,6 +37,32 @@ describe("session invalidation marker", () => {
     expect(marker.readSessionInvalidationMarker().status).toBe("absent");
   });
 
+  it("commits a local-exit terminal variant in the same store and compare-clears only that generation", async () => {
+    const storage = new TestStorage();
+    installWindow(storage);
+    const marker = await loadMarker();
+
+    const committed = marker.commitLocalExitInvalidationMarker();
+    expect(committed.status).toBe("persisted");
+    expect(committed.marker).toMatchObject({
+      status: "present",
+      persistence: "persistent",
+      kind: "local_exit",
+    });
+    expect(
+      storage.getItem(marker.SESSION_INVALIDATION_MARKER_STORAGE_KEY),
+    ).toMatch(/^\{"v":2,"k":"local_exit","g":"[A-Za-z0-9_-]{22}"\}$/);
+
+    const newer = '{"v":2,"k":"local_exit","g":"BBBBBBBBBBBBBBBBBBBBBB"}';
+    storage.setItem(marker.SESSION_INVALIDATION_MARKER_STORAGE_KEY, newer);
+    expect(
+      marker.clearSessionInvalidationMarkerIfCurrent(committed.marker),
+    ).toBe("changed");
+    expect(
+      storage.getItem(marker.SESSION_INVALIDATION_MARKER_STORAGE_KEY),
+    ).toBe(newer);
+  });
+
   it("keeps a volatile terminal generation when storage is denied", async () => {
     installWindow(new ThrowingStorage());
     const marker = await loadMarker();
@@ -58,7 +84,7 @@ describe("session invalidation marker", () => {
     installWindow(storage);
     const marker = await loadMarker();
 
-    for (const raw of ["not-json", '{"v":2,"g":"opaque"}']) {
+    for (const raw of ["not-json", '{"v":3,"g":"opaque"}']) {
       storage.setItem(marker.SESSION_INVALIDATION_MARKER_STORAGE_KEY, raw);
       const snapshot = marker.readSessionInvalidationMarker();
       expect(snapshot).toMatchObject({

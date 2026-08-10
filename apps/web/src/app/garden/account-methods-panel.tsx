@@ -19,6 +19,7 @@ import {
   type SocialProviderId,
 } from "@/lib/auth/social-oauth";
 import { authClient } from "@/lib/auth-client";
+import { runBrowserAuthMutation } from "@/lib/auth/browser-auth-mutation-coordinator";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   formatTrustTemplate,
@@ -136,9 +137,17 @@ export function AccountMethodsPanel({
     label: string,
   ) {
     try {
-      const { error } = await authClient.unlinkAccount({
-        providerId: provider,
+      const mutation = await runBrowserAuthMutation({
+        kind: "account_mutation",
+        operation: () =>
+          authClient.unlinkAccount({
+            providerId: provider,
+          }),
       });
+      if (mutation.status === "stale_operation") {
+        return formatTrustTemplate(copy.unlinkError, { provider: label });
+      }
+      const { error } = mutation.value;
       if (!error) return null;
 
       return (
@@ -156,12 +165,18 @@ export function AccountMethodsPanel({
 
     try {
       const callbackURL = currentOAuthCallbackPath();
-      const { data, error } = await authClient.linkSocial({
-        provider,
-        callbackURL,
-        errorCallbackURL: callbackURL,
-        disableRedirect: true,
+      const mutation = await runBrowserAuthMutation({
+        kind: "account_mutation",
+        operation: () =>
+          authClient.linkSocial({
+            provider,
+            callbackURL,
+            errorCallbackURL: callbackURL,
+            disableRedirect: true,
+          }),
       });
+      if (mutation.status === "stale_operation") return;
+      const { data, error } = mutation.value;
       if (error || !navigateToOAuthAuthorization(provider, data?.url)) {
         setMessage(
           getLocalizedAuthClientErrorMessage(locale, error) ??

@@ -117,6 +117,13 @@ bounded hydration is cancelled, any late handle is deactivated, and public
 navigation, server-backed authenticated UI, and safe session exit remain
 available while offline capability is unavailable.
 
+OVE-287 makes ordinary sign-out a synchronous retain-only boundary. Before the
+private tree is removed, `sealActiveOwnerVaultsForLocalExit` clears the active
+handle map, aborts every captured lifetime, and closes each Dexie handle. It
+does not read, count, drain, migrate, upload, publish, or delete a row. A later
+authoritative same-owner session may activate the same physical vault; another
+owner still resolves only its own opaque database.
+
 ## Explicit current-device erasure
 
 The signed-in `/erasure` page has two separate actions:
@@ -163,6 +170,7 @@ pnpm exec vitest run \
 pnpm exec vitest run src/lib/offline/owner-vault-migration.test.ts
 pnpm test:owner-vault-performance
 pnpm exec playwright test tests/owner-vault-isolation.spec.ts
+pnpm exec playwright test tests/account-sign-out.spec.ts
 ```
 
 The tests cover stable same-owner binding, session-generation rejection,

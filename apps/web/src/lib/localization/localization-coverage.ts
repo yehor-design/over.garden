@@ -901,6 +901,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
     ...routes(
       [
         "src/app/%5F%5Fvisual-fixtures/intent/[scenarioId]/route.ts",
+        "src/app/%5F%5Fvisual-fixtures/account-sign-out/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/owner-vault/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/session-recheck/page.tsx",
@@ -1185,6 +1186,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
       [
         "src/app/api/%5F%5Fvisual-fixtures/journal-creation/route.ts",
         "src/app/api/auth/[...all]/route.ts",
+        "src/app/api/auth/local-exit-reconcile/route.ts",
         "src/app/api/cron/auth-email-outbox/route.ts",
         "src/app/api/cron/learning-attribution/route.ts",
         "src/app/api/cron/media-lifecycle/route.ts",
@@ -1332,6 +1334,15 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
         ["jsx-text", "Test profiles"],
         ["jsx-text", "EXIF-free generated raster set"],
         ["jsx-text", "Media aspect gallery"],
+      ],
+    ),
+    ...allowExactLiterals(
+      "src/app/%5F%5Fvisual-fixtures/account-sign-out/account-sign-out-visual-fixture.tsx",
+      "internal-fixture",
+      INTERNAL_FIXTURE_RATIONALE,
+      [
+        ["jsx-text", "OVE-287 synthetic private account"],
+        ["jsx-text", "One synthetic retained owner draft is active."],
       ],
     ),
     ...allowExactLiterals(

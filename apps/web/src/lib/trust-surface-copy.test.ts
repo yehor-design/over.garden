@@ -49,13 +49,20 @@ describe("trust-sensitive interface copy", () => {
       expect("discardAndSignOut" in signOutCopy).toBe(false);
       expect("purgeError" in signOutCopy).toBe(false);
       expect("signOutAfterPurgeActiveError" in signOutCopy).toBe(false);
+      expect("signingOut" in signOutCopy).toBe(false);
+      expect("signOutActiveError" in signOutCopy).toBe(false);
+      expect("signOutUnconfirmedError" in signOutCopy).toBe(false);
+      expect("dismissError" in signOutCopy).toBe(false);
     }
-    expect(getTrustSurfaceCopy("uk").signOut.signOutUnconfirmedError).toContain(
-      "стан сеансу",
+    expect(getTrustSurfaceCopy("uk").signOut.confirmationDescription).toContain(
+      "збережено",
     );
-    expect(
-      getTrustSurfaceCopy("uk").signOut.signOutUnconfirmedError,
-    ).not.toContain("залишаєтеся в обліковому записі");
+    expect(getTrustSurfaceCopy("bg").signOut.confirmationDescription).toContain(
+      "запазени",
+    );
+    expect(getTrustSurfaceCopy("ru").signOut.confirmationDescription).toContain(
+      "сохранены",
+    );
   });
 
   it("keeps catalog and provider literals unchanged inside localized guidance", () => {

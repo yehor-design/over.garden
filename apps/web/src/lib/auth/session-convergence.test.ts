@@ -7,6 +7,7 @@ import {
   createSignOutOperationId,
   parseSessionConvergencePayload,
   publishCommittedSessionInvalidation,
+  publishLocalExitCommitted,
   publishSignOutPreparation,
   publishSignOutPreparationCancelled,
   publishSignOutPreparationFailed,
@@ -39,6 +40,7 @@ describe("session convergence signals", () => {
       publishSignOutPreparationFailed(operationId, tabId, preparationRoundId),
       publishSignOutPreparationCancelled(operationId, tabId),
       publishCommittedSessionInvalidation(operationId, tabId),
+      publishLocalExitCommitted(operationId, tabId),
     ];
 
     expect(listener).not.toHaveBeenCalled();
@@ -49,6 +51,7 @@ describe("session convergence signals", () => {
       SESSION_CONVERGENCE_SIGNALS.failed,
       SESSION_CONVERGENCE_SIGNALS.cancellation,
       SESSION_CONVERGENCE_SIGNALS.committed,
+      SESSION_CONVERGENCE_SIGNALS.localExitCommitted,
     ]);
     expect(JSON.stringify(payloads)).not.toMatch(
       /user.?id|session.?id|account.?id|email|cookie|token/i,
@@ -155,6 +158,22 @@ describe("session convergence signals", () => {
     expect(harness.markerAtBroadcast).toHaveLength(1);
     expect(harness.markerAtBroadcast[0]).toMatch(
       /^\{"v":1,"g":"[A-Za-z0-9_-]{22}"\}$/,
+    );
+  });
+
+  it("publishes a payload-free local-exit signal without rewriting its marker", () => {
+    const harness = installBrowserHarness();
+
+    const result = publishLocalExitCommitted(
+      "op-local-exit-tab-1234",
+      "tab-local-exit-tab-1234",
+    );
+
+    expect(result.signal).toBe(SESSION_CONVERGENCE_SIGNALS.localExitCommitted);
+    expect(result.preparationRoundId).toBeNull();
+    expect(harness.markerAtBroadcast).toEqual([null]);
+    expect(JSON.stringify(result)).not.toMatch(
+      /user.?id|session.?id|account.?id|email|cookie|token/i,
     );
   });
 

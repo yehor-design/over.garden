@@ -2,36 +2,16 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getSession: vi.fn(),
-  canonicalSignOut: vi.fn(),
-  confirmPrepared: vi.fn(),
-  prepareComposer: vi.fn(),
-  composerBindScope: vi.fn(),
-  composerFlush: vi.fn(),
-  composerResume: vi.fn(),
-  pause: vi.fn(),
-  abort: vi.fn(),
-  inspect: vi.fn(),
-  publishPreparation: vi.fn(),
-  publishCancellation: vi.fn(),
-  publishCommitted: vi.fn(),
-  waitForSyncDrain: vi.fn(),
-  renewPreparationLease: vi.fn(),
-  promoteToCommitFence: vi.fn(),
-  resume: vi.fn(),
-  finalizeForSessionChange: vi.fn(),
-  finalizeForSignedOut: vi.fn(),
-  finalizeForHardReload: vi.fn(),
+  commitLocalExit: vi.fn(),
+  sealVaults: vi.fn(),
+  publishLocalExit: vi.fn(),
+  dispatchReconciliation: vi.fn(),
+  reconcileLocalExit: vi.fn(),
   acquireLease: vi.fn(),
   releaseLease: vi.fn(),
   getTabId: vi.fn(),
-  createBarrier: vi.fn(),
-  createRoundId: vi.fn(),
-  barrierWait: vi.fn(),
-  barrierCancel: vi.fn(),
+  createOperationId: vi.fn(),
   locationReplace: vi.fn(),
-  locationAssign: vi.fn(),
-  locationReload: vi.fn(),
   flushSync: vi.fn((callback: () => void) => callback()),
   localeFormState: vi.fn(),
 }));
@@ -66,531 +46,107 @@ vi.mock("@/components/ui/alert-dialog", () => ({
   ),
   AlertDialogTitle: (props: React.ComponentProps<"h2">) => <h2 {...props} />,
 }));
-vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetContent: ({
-    children,
-    ...props
-  }: {
-    children: React.ReactNode;
-    side?: string;
-    showCloseButton?: boolean;
-  }) => {
-    delete props.side;
-    delete props.showCloseButton;
-    return <div {...props}>{children}</div>;
-  },
-  SheetDescription: (props: React.ComponentProps<"div">) => <div {...props} />,
-  SheetFooter: (props: React.ComponentProps<"div">) => <div {...props} />,
-  SheetHeader: (props: React.ComponentProps<"div">) => <div {...props} />,
-  SheetTitle: (props: React.ComponentProps<"h2">) => <h2 {...props} />,
-}));
-vi.mock("@/lib/auth-client", () => ({
-  authClient: { getSession: mocks.getSession },
-}));
 vi.mock("@/lib/auth/sign-out-contract", () => ({
-  AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS: {
-    query: { disableCookieCache: true },
-    fetchOptions: { cache: "no-store" },
-  },
+  dispatchLocalExitReconciliation: mocks.dispatchReconciliation,
+  reconcileLocalExitSession: mocks.reconcileLocalExit,
   localizedPublicRoot: (locale: string) =>
     locale === "uk" ? "/" : `/${locale}`,
-  prepareCurrentSessionSignOut: async (result: { data?: unknown }) =>
-    result.data === null
-      ? null
-      : { version: 1, binding: "bounded-test-binding-value-123456789012" },
-  confirmPreparedCurrentSession: mocks.confirmPrepared,
-  signOutCurrentSessionOnce: mocks.canonicalSignOut,
+}));
+vi.mock("@/lib/auth/session-invalidation-marker", () => ({
+  commitLocalExitInvalidationMarker: mocks.commitLocalExit,
 }));
 vi.mock("@/lib/auth/session-convergence", () => ({
   acquireAuthenticatedSessionTabLease: mocks.acquireLease,
   getCurrentAuthenticatedSessionTabId: mocks.getTabId,
-  createPreparationAcknowledgementBarrier: mocks.createBarrier,
-  createPreparationRoundId: mocks.createRoundId,
-  createSignOutOperationId: () => "op-provider-test-1234",
-  publishSignOutPreparation: mocks.publishPreparation,
-  publishSignOutPreparationCancelled: mocks.publishCancellation,
-  publishCommittedSessionInvalidation: mocks.publishCommitted,
+  createSignOutOperationId: mocks.createOperationId,
+  publishLocalExitCommitted: mocks.publishLocalExit,
 }));
-vi.mock("@/lib/offline/owner-composer-participants", () => ({
-  prepareOwnerComposerParticipants: mocks.prepareComposer,
-}));
-vi.mock("@/lib/offline/owner-session-lifecycle", () => ({
-  abortOwnerSyncAttempts: mocks.abort,
-  finalizeOwnerOfflineActivityForSessionChange: mocks.finalizeForSessionChange,
-  inspectOwnerWork: mocks.inspect,
-  pauseOwnerOfflineActivity: mocks.pause,
+vi.mock("@/lib/offline/owner-vault", () => ({
+  sealActiveOwnerVaultsForLocalExit: mocks.sealVaults,
 }));
 
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { SignOutProvider, useSignOut } from "./sign-out-provider";
 
-const PAUSE_SCOPE = {
-  operationId: "op-provider-test-1234",
-  sessionGeneration: "bounded-test-binding-value-123456789012",
-};
+const MARKER = Object.freeze({
+  status: "present" as const,
+  persistence: "persistent" as const,
+  kind: "local_exit" as const,
+});
+const BINDING = "A".repeat(43);
 
-describe("sign-out provider state machine", () => {
+describe("immediate retain-only sign-out", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     vi.stubGlobal("window", {
       location: {
-        href: "https://over.garden/garden/profile",
         replace: mocks.locationReplace,
-        assign: mocks.locationAssign,
-        reload: mocks.locationReload,
       },
-      setInterval: vi.fn(() => 17),
-      clearInterval: vi.fn(),
     });
-    mocks.getSession.mockResolvedValue({
-      data: { user: { id: "owner-scope-only" } },
-      error: null,
+    mocks.commitLocalExit.mockReturnValue({
+      status: "persisted",
+      marker: MARKER,
     });
-    mocks.pause.mockResolvedValue({
-      ...PAUSE_SCOPE,
-      waitForSyncDrain: mocks.waitForSyncDrain,
-      renewPreparationLease: mocks.renewPreparationLease,
-      promoteToCommitFence: mocks.promoteToCommitFence,
-      resume: mocks.resume,
-      finalizeForSessionChange: mocks.finalizeForSessionChange,
-      finalizeForSignedOut: mocks.finalizeForSignedOut,
-      finalizeForHardReload: mocks.finalizeForHardReload,
-    });
-    mocks.prepareComposer.mockResolvedValue({
-      isActive: () => true,
-      bindOfflineActivityScope: mocks.composerBindScope,
-      flushLatest: mocks.composerFlush,
-      resume: mocks.composerResume,
-    });
+    mocks.sealVaults.mockReturnValue(1);
     mocks.acquireLease.mockReturnValue({
       tabId: "tab-provider-test-1234",
       release: mocks.releaseLease,
     });
     mocks.getTabId.mockReturnValue("tab-provider-test-1234");
-    mocks.createRoundId.mockReturnValue("round-provider-test-1234");
-    mocks.createBarrier.mockReturnValue({
-      expectedTabCount: 0,
-      wait: mocks.barrierWait,
-      cancel: mocks.barrierCancel,
-    });
-    mocks.barrierWait.mockResolvedValue(undefined);
-    mocks.confirmPrepared.mockResolvedValue({ status: "matches" });
-    mocks.waitForSyncDrain.mockResolvedValue(undefined);
-    mocks.composerFlush.mockResolvedValue(undefined);
-    mocks.renewPreparationLease.mockResolvedValue(undefined);
-    mocks.promoteToCommitFence.mockResolvedValue(undefined);
-    mocks.resume.mockResolvedValue(undefined);
-    mocks.finalizeForSessionChange.mockResolvedValue("fenced");
-    mocks.finalizeForSignedOut.mockResolvedValue("fenced");
-    mocks.finalizeForHardReload.mockResolvedValue(undefined);
-    mocks.inspect.mockResolvedValue({
-      status: "unavailable",
-      inventoryComplete: false,
-      reason: "storage_unavailable",
-    });
-    mocks.canonicalSignOut.mockResolvedValue({
-      status: "committed",
-      reconciliation: "canonical_response",
-    });
+    mocks.createOperationId.mockReturnValue("op-provider-test-1234");
+    mocks.dispatchReconciliation.mockReturnValue("dispatched");
+    mocks.reconcileLocalExit.mockResolvedValue("response_observed");
   });
 
-  it("runs the no-data path once in pause-to-confirm order", async () => {
-    const order: string[] = [];
-    mocks.prepareComposer.mockImplementation(async () => {
-      order.push("composer");
-      return {
-        isActive: () => true,
-        bindOfflineActivityScope: (scope: unknown) => {
-          order.push("bind");
-          mocks.composerBindScope(scope);
-        },
-        flushLatest: async () => void order.push("flush"),
-        resume: mocks.composerResume,
-      };
-    });
-    mocks.pause.mockImplementation(async () => {
-      order.push("pause");
-      return {
-        ...PAUSE_SCOPE,
-        waitForSyncDrain: async () => void order.push("drain"),
-        renewPreparationLease: async () => void order.push("renew"),
-        promoteToCommitFence: async () => void order.push("promote"),
-        resume: mocks.resume,
-        finalizeForSessionChange: mocks.finalizeForSessionChange,
-        finalizeForSignedOut: async () => {
-          order.push("finalize");
-          return "fenced" as const;
-        },
-        finalizeForHardReload: mocks.finalizeForHardReload,
-      };
-    });
-    mocks.inspect.mockImplementation(() => {
-      order.push("inspection");
-      return new Promise(() => undefined);
-    });
-    mocks.createBarrier.mockImplementation(() => {
-      order.push("barrier");
-      return {
-        expectedTabCount: 0,
-        wait: () => {
-          order.push("wait");
-          return Promise.resolve();
-        },
-        cancel: mocks.barrierCancel,
-      };
-    });
-    mocks.publishPreparation.mockImplementation(() => order.push("publish"));
-    mocks.canonicalSignOut.mockImplementation(async () => {
-      order.push("canonical");
-      return { status: "committed", reconciliation: "canonical_response" };
-    });
-    mocks.publishCommitted.mockImplementation(() => order.push("broadcast"));
-    mocks.locationReplace.mockImplementation(() => order.push("replace"));
-    const renderer = await renderProvider("uk");
-
-    await click(renderer, "trigger");
-
-    expect(mocks.getSession).toHaveBeenCalledOnce();
-    expect(mocks.createBarrier).toHaveBeenCalledWith(
-      PAUSE_SCOPE.operationId,
-      "tab-provider-test-1234",
-      "round-provider-test-1234",
-    );
-    expect(mocks.publishPreparation).toHaveBeenCalledWith(
-      PAUSE_SCOPE.operationId,
-      "tab-provider-test-1234",
-      "round-provider-test-1234",
-    );
-    expect(mocks.inspect).toHaveBeenCalledWith("owner-scope-only");
-    expect(mocks.composerBindScope).toHaveBeenCalledWith(
-      expect.objectContaining(PAUSE_SCOPE),
-    );
-    expect(mocks.canonicalSignOut).toHaveBeenCalledOnce();
-    expect(order).toEqual([
-      "composer",
-      "pause",
-      "bind",
-      "drain",
-      "barrier",
-      "wait",
-      "flush",
-      "renew",
-      "publish",
-      "inspection",
-      "promote",
-      "canonical",
-      "finalize",
-      "broadcast",
-      "replace",
-    ]);
-    expect(mocks.locationReplace).toHaveBeenCalledWith("/");
-  });
-
-  it("does not mutate before confirmation and lets cancel restore idle", async () => {
+  it("does nothing before confirmation and Cancel returns to idle", async () => {
     const renderer = await renderProvider("uk");
 
     await click(renderer, "trigger", { confirm: false });
-
     expect(button(renderer, "Вийти")).toBeDefined();
-    expect(mocks.getSession).not.toHaveBeenCalled();
-    expect(mocks.pause).not.toHaveBeenCalled();
-    expect(mocks.publishPreparation).not.toHaveBeenCalled();
-    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
+    expect(mocks.commitLocalExit).not.toHaveBeenCalled();
+    expect(mocks.sealVaults).not.toHaveBeenCalled();
+    expect(mocks.dispatchReconciliation).not.toHaveBeenCalled();
 
     await click(renderer, "Залишитися в обліковому записі");
-
     expect(button(renderer, "trigger")).toBeDefined();
-    expect(mocks.getSession).not.toHaveBeenCalled();
-    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
-  });
-
-  it("locks double confirmation while owner resolution is in flight", async () => {
-    let resolveSession: ((value: unknown) => void) | undefined;
-    mocks.getSession.mockReturnValue(
-      new Promise((resolve) => {
-        resolveSession = resolve;
-      }),
-    );
-    const renderer = await renderProvider("uk");
-    const trigger = button(renderer, "trigger");
-
-    await act(async () => {
-      await trigger.props.onClick();
-    });
-    const confirmation = renderer.root
-      .findAllByType("button")
-      .find((candidate) => candidate.props["data-sign-out-confirm-action"]);
-    if (!confirmation) throw new Error("Missing sign-out confirmation action");
-    await act(async () => {
-      const first = confirmation.props.onClick();
-      const second = confirmation.props.onClick();
-      expect(mocks.getSession).toHaveBeenCalledOnce();
-      resolveSession?.({ data: { user: { id: "owner-scope-only" } } });
-      await Promise.all([first, second]);
-    });
-
-    expect(mocks.canonicalSignOut).toHaveBeenCalledOnce();
-  });
-
-  it.each([
-    [
-      "uk",
-      () =>
-        Promise.resolve({
-          status: "unavailable",
-          inventoryComplete: false,
-          reason: "storage_read_failed",
-        }),
-      "/",
-    ],
-    [
-      "bg",
-      () => Promise.reject(new Error("bounded inspection failure")),
-      "/bg",
-    ],
-    ["ru", () => new Promise(() => undefined), "/ru"],
-  ] as const)(
-    "keeps inspection invisible and non-blocking in %s",
-    async (locale, inspect, destination) => {
-      mocks.inspect.mockImplementation(inspect);
-      const renderer = await renderProvider(locale);
-
-      await click(renderer, "trigger");
-
-      expect(mocks.inspect).toHaveBeenCalledWith("owner-scope-only");
-      expect(mocks.canonicalSignOut).toHaveBeenCalledOnce();
-      expect(mocks.locationReplace).toHaveBeenCalledWith(destination);
-      expect(actionLabels(renderer)).not.toEqual(
-        expect.arrayContaining([
-          "Спочатку синхронізувати",
-          "Видалити локальні зміни й вийти",
-        ]),
-      );
-    },
-  );
-
-  it("keeps canonical failure retryable and redirects only after confirmation", async () => {
-    mocks.canonicalSignOut
-      .mockResolvedValueOnce({
-        status: "failed",
-        reason: "session_still_active",
-      })
-      .mockResolvedValueOnce({
-        status: "committed",
-        reconciliation: "canonical_response",
-      });
-    const renderer = await renderProvider("uk");
-
-    await click(renderer, "trigger");
     expect(mocks.locationReplace).not.toHaveBeenCalled();
-    expect(button(renderer, "Спробувати ще раз")).toBeDefined();
-
-    await click(renderer, "Спробувати ще раз");
-    expect(mocks.canonicalSignOut).toHaveBeenCalledTimes(2);
-    expect(mocks.finalizeForSignedOut).toHaveBeenCalledOnce();
-    expect(mocks.locationReplace).toHaveBeenCalledWith("/");
   });
 
-  it("does not claim the user remains signed in when confirmation is unavailable", async () => {
-    mocks.canonicalSignOut.mockResolvedValue({
-      status: "failed",
-      reason: "session_confirmation_unavailable",
+  it("commits marker, seals retained vaults, broadcasts and unmounts before navigation or reconciliation", async () => {
+    const order: string[] = [];
+    mocks.commitLocalExit.mockImplementation(() => {
+      order.push("marker");
+      return { status: "persisted", marker: MARKER };
+    });
+    mocks.sealVaults.mockImplementation(() => void order.push("seal"));
+    mocks.publishLocalExit.mockImplementation(() => void order.push("publish"));
+    mocks.flushSync.mockImplementation((callback: () => void) => {
+      order.push("flush");
+      callback();
+    });
+    mocks.locationReplace.mockImplementation(() => void order.push("replace"));
+    mocks.dispatchReconciliation.mockImplementation(() => {
+      order.push("reconcile");
+      return "dispatched";
     });
     const renderer = await renderProvider("uk");
 
     await click(renderer, "trigger");
 
-    expect(
-      renderer.root.findAll(
-        (node) =>
-          node.type === "div" &&
-          node.props.role === "alert" &&
-          textContent(node.props.children).includes("стан сеансу"),
-      ),
-    ).toHaveLength(1);
-    expect(
-      button(renderer, "Перезавантажити й перевірити сеанс"),
-    ).toBeDefined();
-    expect(mocks.locationReplace).not.toHaveBeenCalled();
-
-    await click(renderer, "Перезавантажити й перевірити сеанс");
-    expect(mocks.resume).not.toHaveBeenCalled();
-    expect(mocks.publishCancellation).not.toHaveBeenCalled();
-    expect(mocks.publishCommitted).toHaveBeenCalledOnce();
-    expect(mocks.locationReplace).toHaveBeenCalledWith(
-      "https://over.garden/garden/profile",
-    );
-  });
-
-  it("reconciles an unknown POST against the same prepared session without creating a second operation", async () => {
-    mocks.canonicalSignOut
-      .mockResolvedValueOnce({
-        status: "failed",
-        reason: "session_confirmation_unavailable",
-      })
-      .mockResolvedValueOnce({
-        status: "committed",
-        reconciliation: "canonical_response",
-      });
-    const renderer = await renderProvider("uk");
-
-    await click(renderer, "trigger");
-    await click(renderer, "Спробувати ще раз");
-
-    expect(mocks.confirmPrepared).toHaveBeenCalledOnce();
-    expect(mocks.prepareComposer).toHaveBeenCalledOnce();
-    expect(mocks.pause).toHaveBeenCalledOnce();
-    expect(mocks.resume).not.toHaveBeenCalled();
-    expect(mocks.publishCancellation).not.toHaveBeenCalled();
-    expect(mocks.canonicalSignOut).toHaveBeenCalledTimes(2);
-    expect(mocks.finalizeForSignedOut).toHaveBeenCalledOnce();
-    expect(mocks.locationReplace).toHaveBeenCalledWith("/");
-  });
-
-  it("does not resume or cancel commit-pending work when an unknown POST document unmounts", async () => {
-    mocks.canonicalSignOut.mockResolvedValue({
-      status: "failed",
-      reason: "session_confirmation_unavailable",
-    });
-    const renderer = await renderProvider("uk");
-    await click(renderer, "trigger");
-
-    await act(async () => {
-      renderer.unmount();
-      await Promise.resolve();
-    });
-
-    expect(mocks.resume).not.toHaveBeenCalled();
-    expect(mocks.composerResume).not.toHaveBeenCalled();
-    expect(mocks.publishCancellation).not.toHaveBeenCalled();
-  });
-
-  it("never sends the canonical request when the commit fence cannot be promoted", async () => {
-    mocks.promoteToCommitFence.mockRejectedValue(
-      new Error("commit fence unavailable"),
-    );
-    const renderer = await renderProvider("uk");
-
-    await click(renderer, "trigger");
-
-    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
-    expect(mocks.resume).toHaveBeenCalledOnce();
-    expect(mocks.publishCancellation).toHaveBeenCalledOnce();
-    expect(mocks.locationReplace).not.toHaveBeenCalled();
-    expect(button(renderer, "Спробувати ще раз")).toBeDefined();
-  });
-
-  it("never resumes an operation when unmount overlaps commit-fence promotion", async () => {
-    let releasePromotion: (() => void) | undefined;
-    mocks.promoteToCommitFence.mockReturnValue(
-      new Promise<void>((resolve) => {
-        releasePromotion = resolve;
-      }),
-    );
-    const renderer = await renderProvider("uk");
-    await click(renderer, "trigger", { confirm: false });
-    const confirmation = renderer.root
-      .findAllByType("button")
-      .find((candidate) => candidate.props["data-sign-out-confirm-action"]);
-    if (!confirmation) throw new Error("Missing sign-out confirmation action");
-    let pending: Promise<void> | undefined;
-
-    await act(async () => {
-      pending = confirmation.props.onClick();
-      await vi.waitFor(() =>
-        expect(mocks.promoteToCommitFence).toHaveBeenCalledOnce(),
-      );
-    });
-    await act(async () => {
-      renderer.unmount();
-      await Promise.resolve();
-    });
-
-    expect(mocks.resume).not.toHaveBeenCalled();
-    expect(mocks.composerResume).not.toHaveBeenCalled();
-    expect(mocks.publishCancellation).not.toHaveBeenCalled();
-
-    releasePromotion?.();
-    await act(async () => {
-      await pending;
-    });
-    expect(mocks.canonicalSignOut).toHaveBeenCalledOnce();
-    expect(mocks.finalizeForSignedOut).toHaveBeenCalledOnce();
-    expect(mocks.resume).not.toHaveBeenCalled();
-  });
-
-  it("privacy-gates and navigates after confirmed sign-out even when IndexedDB finalization rejects", async () => {
-    mocks.finalizeForSignedOut.mockRejectedValue(
-      new Error("IndexedDB finalization failed"),
-    );
-    const renderer = await renderProvider("uk");
-
-    await click(renderer, "trigger");
-
-    expect(mocks.canonicalSignOut).toHaveBeenCalledOnce();
-    expect(mocks.finalizeForSignedOut).toHaveBeenCalledOnce();
-    expect(mocks.publishCommitted).toHaveBeenCalledOnce();
-    expect(mocks.locationReplace).toHaveBeenCalledWith("/");
-    expect(mocks.flushSync.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.locationReplace.mock.invocationCallOrder[0]!,
-    );
-    expect(
-      renderer.root.findAllByProps({
-        "data-session-convergence-gate": "authoritative-transition",
-      }),
-    ).toHaveLength(1);
+    expect(order).toEqual([
+      "marker",
+      "seal",
+      "publish",
+      "flush",
+      "replace",
+      "reconcile",
+    ]);
     expect(renderer.root.findAllByType(Probe)).toHaveLength(0);
-  });
-
-  it("fences session A and invalidates peers when canonical preflight observes session B", async () => {
-    mocks.canonicalSignOut.mockResolvedValue({
-      status: "failed",
-      reason: "session_changed",
-    });
-    const renderer = await renderProvider("uk");
-
-    await click(renderer, "trigger");
-
-    expect(mocks.finalizeForSessionChange).toHaveBeenCalledOnce();
-    expect(mocks.resume).not.toHaveBeenCalled();
-    expect(mocks.composerResume).not.toHaveBeenCalled();
-    expect(mocks.publishCancellation).not.toHaveBeenCalled();
-    expect(mocks.publishCommitted).toHaveBeenCalledOnce();
-    expect(mocks.locationReplace).toHaveBeenCalledWith(
-      "https://over.garden/garden/profile",
-    );
-  });
-
-  it("privacy-gates and reloads session B even when session A fence finalization rejects", async () => {
-    mocks.canonicalSignOut.mockResolvedValue({
-      status: "failed",
-      reason: "session_changed",
-    });
-    mocks.finalizeForSessionChange.mockRejectedValue(
-      new Error("IndexedDB unavailable"),
-    );
-    const renderer = await renderProvider("uk");
-
-    await click(renderer, "trigger");
-
-    expect(mocks.finalizeForSessionChange).toHaveBeenCalledOnce();
-    expect(mocks.resume).not.toHaveBeenCalled();
-    expect(mocks.publishCancellation).not.toHaveBeenCalled();
-    expect(mocks.publishCommitted).toHaveBeenCalledOnce();
-    expect(mocks.locationReplace).toHaveBeenCalledWith(
-      "https://over.garden/garden/profile",
-    );
-    expect(mocks.flushSync.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.locationReplace.mock.invocationCallOrder[0]!,
-    );
     expect(
-      renderer.root.findAllByProps({
-        "data-session-convergence-gate": "authoritative-transition",
-      }),
+      renderer.root.findAllByProps({ "data-local-exit-public-safe": "true" }),
     ).toHaveLength(1);
-    expect(renderer.root.findAllByType(Probe)).toHaveLength(0);
+    expect(mocks.dispatchReconciliation).toHaveBeenCalledWith(BINDING, MARKER);
   });
 
   it.each([
@@ -598,29 +154,105 @@ describe("sign-out provider state machine", () => {
     ["bg", "/bg"],
     ["ru", "/ru"],
   ] as const)(
-    "hard-replaces the confirmed %s session at %s",
+    "hard-replaces %s at the localized public root",
     async (locale, root) => {
       const renderer = await renderProvider(locale);
       await click(renderer, "trigger");
       expect(mocks.locationReplace).toHaveBeenCalledWith(root);
     },
   );
+
+  it("exits locally with no cookie or network dependency when the document binding is unavailable", async () => {
+    const renderer = await renderProvider("uk", null);
+
+    await click(renderer, "trigger");
+
+    expect(mocks.commitLocalExit).toHaveBeenCalledOnce();
+    expect(mocks.sealVaults).toHaveBeenCalledOnce();
+    expect(mocks.locationReplace).toHaveBeenCalledWith("/");
+    expect(mocks.dispatchReconciliation).toHaveBeenCalledWith(null, MARKER);
+  });
+
+  it("keeps a volatile-only exit in the public-safe document until a response is observed", async () => {
+    const reconciliation = deferred<"response_observed">();
+    mocks.commitLocalExit.mockReturnValue({
+      status: "volatile_only",
+      marker: MARKER,
+    });
+    mocks.reconcileLocalExit.mockReturnValue(reconciliation.promise);
+    const renderer = await renderProvider("bg");
+
+    await click(renderer, "trigger");
+
+    expect(mocks.locationReplace).not.toHaveBeenCalled();
+    expect(mocks.dispatchReconciliation).not.toHaveBeenCalled();
+    expect(mocks.reconcileLocalExit).toHaveBeenCalledWith(BINDING, MARKER);
+    expect(
+      renderer.root.findAllByProps({ "data-local-exit-public-safe": "true" }),
+    ).toHaveLength(1);
+
+    await act(async () => {
+      reconciliation.resolve("response_observed");
+      await Promise.resolve();
+    });
+    expect(mocks.locationReplace).toHaveBeenCalledWith("/bg");
+  });
+
+  it("locks duplicate confirmation synchronously", async () => {
+    const renderer = await renderProvider("uk");
+    await click(renderer, "trigger", { confirm: false });
+    const confirmation = renderer.root
+      .findAllByType("button")
+      .find((candidate) => candidate.props["data-sign-out-confirm-action"]);
+    if (!confirmation) throw new Error("Missing sign-out confirmation action");
+
+    await act(async () => {
+      confirmation.props.onClick();
+      confirmation.props.onClick();
+    });
+
+    expect(mocks.commitLocalExit).toHaveBeenCalledOnce();
+    expect(mocks.locationReplace).toHaveBeenCalledOnce();
+    expect(mocks.dispatchReconciliation).toHaveBeenCalledOnce();
+  });
+
+  it("removes the private tree within the 100 millisecond local budget even when reconciliation never settles", async () => {
+    mocks.dispatchReconciliation.mockImplementation(() => "dispatched");
+    const renderer = await renderProvider("uk");
+    const startedAt = performance.now();
+
+    await click(renderer, "trigger");
+
+    expect(performance.now() - startedAt).toBeLessThanOrEqual(100);
+    expect(renderer.root.findAllByType(Probe)).toHaveLength(0);
+    expect(
+      renderer.root.findAll(
+        (node) => node.props.role === "status" || node.props.role === "alert",
+      ),
+    ).toHaveLength(0);
+  });
 });
 
 function Probe() {
   const { phase, requestSignOut } = useSignOut();
   return (
-    <button type="button" onClick={() => requestSignOut()}>
+    <button type="button" onClick={requestSignOut}>
       {phase === "idle" ? "trigger" : `trigger:${phase}`}
     </button>
   );
 }
 
-async function renderProvider(locale: InterfaceLocale) {
+async function renderProvider(
+  locale: InterfaceLocale,
+  currentSessionBinding: string | null = BINDING,
+) {
   let renderer: ReactTestRenderer | undefined;
   await act(async () => {
     renderer = create(
-      <SignOutProvider locale={locale}>
+      <SignOutProvider
+        locale={locale}
+        currentSessionBinding={currentSessionBinding}
+      >
         <Probe />
       </SignOutProvider>,
     );
@@ -635,7 +267,7 @@ async function click(
 ) {
   const target = button(renderer, label);
   await act(async () => {
-    await target.props.onClick();
+    target.props.onClick();
   });
   if (label !== "trigger" || !confirm) return;
   const confirmation = renderer.root
@@ -643,7 +275,7 @@ async function click(
     .find((candidate) => candidate.props["data-sign-out-confirm-action"]);
   if (!confirmation) throw new Error("Missing sign-out confirmation action");
   await act(async () => {
-    await confirmation.props.onClick();
+    confirmation.props.onClick();
   });
 }
 
@@ -653,12 +285,6 @@ function button(renderer: ReactTestRenderer, label: string) {
     .find((candidate) => textContent(candidate.props.children) === label);
   if (!target) throw new Error(`Missing test button: ${label}`);
   return target;
-}
-
-function actionLabels(renderer: ReactTestRenderer) {
-  return renderer.root
-    .findAllByType("button")
-    .map((candidate) => textContent(candidate.props.children));
 }
 
 function textContent(value: unknown): string {
@@ -671,4 +297,12 @@ function textContent(value: unknown): string {
     );
   }
   return "";
+}
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
 }
