@@ -262,7 +262,9 @@ function observedShapeDigest(
   );
 }
 
-async function readSnapshot(client: PoolClient): Promise<RetirementSnapshot> {
+export async function readSnapshot(
+  client: PoolClient,
+): Promise<RetirementSnapshot> {
   const relation = await client.query<{ table_exists: boolean }>({
     text: "select to_regclass('public.pilot_interview_learnings') is not null as table_exists",
   });
@@ -279,54 +281,55 @@ async function readSnapshot(client: PoolClient): Promise<RetirementSnapshot> {
     };
   }
 
-  const [rows, columns, constraints, incomingForeignKeys, viewDependencies] =
-    await Promise.all([
-      client.query<{ row_count: string }>({
-        text: "select count(*)::text as row_count from public.pilot_interview_learnings",
-      }),
-      client.query<ColumnShapeRow>({
-        text: `
-          select
-            attribute.attname as column_name,
-            format_type(attribute.atttypid, attribute.atttypmod) as formatted_type,
-            attribute.attnotnull as not_null,
-            pg_get_expr(default_value.adbin, default_value.adrelid) as default_expression
-          from pg_attribute attribute
-          left join pg_attrdef default_value
-            on default_value.adrelid = attribute.attrelid
-           and default_value.adnum = attribute.attnum
-          where attribute.attrelid = 'public.pilot_interview_learnings'::regclass
-            and attribute.attnum > 0
-            and not attribute.attisdropped
-          order by attribute.attnum
-        `,
-      }),
-      client.query<{ constraint_count: string }>({
-        text: `
-          select count(*)::text as constraint_count
-          from pg_constraint
-          where conrelid = 'public.pilot_interview_learnings'::regclass
-        `,
-      }),
-      client.query<{ incoming_foreign_key_count: string }>({
-        text: `
-          select count(*)::text as incoming_foreign_key_count
-          from pg_constraint
-          where contype = 'f'
-            and confrelid = 'public.pilot_interview_learnings'::regclass
-        `,
-      }),
-      client.query<{ view_dependency_count: string }>({
-        text: `
-          select count(distinct dependent_class.oid)::text as view_dependency_count
-          from pg_depend dependency
-          join pg_rewrite rewrite on rewrite.oid = dependency.objid
-          join pg_class dependent_class on dependent_class.oid = rewrite.ev_class
-          where dependency.refobjid = 'public.pilot_interview_learnings'::regclass
-            and dependent_class.relkind in ('v', 'm')
-        `,
-      }),
-    ]);
+  const rows = await client.query<{ row_count: string }>({
+    text: "select count(*)::text as row_count from public.pilot_interview_learnings",
+  });
+  const columns = await client.query<ColumnShapeRow>({
+    text: `
+      select
+        attribute.attname as column_name,
+        format_type(attribute.atttypid, attribute.atttypmod) as formatted_type,
+        attribute.attnotnull as not_null,
+        pg_get_expr(default_value.adbin, default_value.adrelid) as default_expression
+      from pg_attribute attribute
+      left join pg_attrdef default_value
+        on default_value.adrelid = attribute.attrelid
+       and default_value.adnum = attribute.attnum
+      where attribute.attrelid = 'public.pilot_interview_learnings'::regclass
+        and attribute.attnum > 0
+        and not attribute.attisdropped
+      order by attribute.attnum
+    `,
+  });
+  const constraints = await client.query<{ constraint_count: string }>({
+    text: `
+      select count(*)::text as constraint_count
+      from pg_constraint
+      where conrelid = 'public.pilot_interview_learnings'::regclass
+    `,
+  });
+  const incomingForeignKeys = await client.query<{
+    incoming_foreign_key_count: string;
+  }>({
+    text: `
+      select count(*)::text as incoming_foreign_key_count
+      from pg_constraint
+      where contype = 'f'
+        and confrelid = 'public.pilot_interview_learnings'::regclass
+    `,
+  });
+  const viewDependencies = await client.query<{
+    view_dependency_count: string;
+  }>({
+    text: `
+      select count(distinct dependent_class.oid)::text as view_dependency_count
+      from pg_depend dependency
+      join pg_rewrite rewrite on rewrite.oid = dependency.objid
+      join pg_class dependent_class on dependent_class.oid = rewrite.ev_class
+      where dependency.refobjid = 'public.pilot_interview_learnings'::regclass
+        and dependent_class.relkind in ('v', 'm')
+    `,
+  });
 
   const constraintCount = Number(constraints.rows[0]?.constraint_count ?? -1);
   return {
