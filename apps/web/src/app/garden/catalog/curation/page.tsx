@@ -81,7 +81,10 @@ export default async function CatalogCurationPage({
 
   if (!userId) {
     return (
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
+      <main
+        data-operator-access-state="sign-in-required"
+        className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8"
+      >
         <header className="flex flex-col gap-3 border-b border-border pb-5">
           <Link href="/garden" className="text-sm text-muted-foreground">
             {copy.page.gardenJournal}
@@ -102,7 +105,10 @@ export default async function CatalogCurationPage({
     access = await assertCatalogCuratorAccess(scope);
   } catch {
     return (
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
+      <main
+        data-operator-access-state="denied"
+        className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8"
+      >
         <header className="flex flex-col gap-3 border-b border-border pb-5">
           <Link
             href="/garden"
@@ -163,10 +169,6 @@ export default async function CatalogCurationPage({
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border px-2 py-1">
               {copy.page.pending}: {candidates.length}
-            </span>
-            <span className="rounded-md border border-border px-2 py-1">
-              {copy.page.pilotSignals}:{" "}
-              {candidates.filter((candidate) => candidate.pilotOrigin).length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               {copy.page.seedProofs}: {seedProofs.length}

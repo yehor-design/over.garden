@@ -14,7 +14,10 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getOperatorCopy(await getRequestInterfaceLocale());
-  return { title: copy.admin.title, robots: { index: false, follow: false } };
+  return {
+    title: copy.moderation.metadataTitle,
+    robots: { index: false, follow: false },
+  };
 }
 
 export default async function CommentModerationPage() {
@@ -29,16 +32,21 @@ export default async function CommentModerationPage() {
   const access = await resolveAdminCapabilityAccess(scope, "operator:mutate");
   if (access.status !== "allowed" || !scope) {
     return (
-      <main className="mx-auto max-w-4xl p-6">{copy.common.accessDenied}</main>
+      <main
+        data-operator-access-state="denied"
+        className="mx-auto max-w-4xl p-6"
+      >
+        {copy.common.accessDenied}
+      </main>
     );
   }
   const queue = await listEngagementCommentModerationQueue(scope);
   return (
     <main className="mx-auto grid max-w-4xl gap-5 p-6">
       <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold">{copy.admin.controlPlane}</h1>
+        <h1 className="text-2xl font-semibold">{copy.moderation.title}</h1>
         <p className="text-sm text-muted-foreground">
-          {copy.admin.boundary.excludedValue}
+          {copy.moderation.description}
         </p>
       </header>
       {queue.length ? (
@@ -78,9 +86,7 @@ export default async function CommentModerationPage() {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          {copy.common.accessDenied}
-        </p>
+        <p className="text-sm text-muted-foreground">{copy.moderation.empty}</p>
       )}
     </main>
   );

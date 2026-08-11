@@ -25,6 +25,7 @@ import {
   DEFAULT_PUBLIC_LOCALE,
   stripLocalePrefix,
 } from "@/lib/public-localization";
+import { isRetiredControlPlanePath } from "@/lib/retired-control-plane-routes";
 import {
   matchPublicObjectPassportPath,
   renderGonePublicObjectPassportHtml,
@@ -74,7 +75,7 @@ type InternalNamespacePath = {
   representation: "canonical" | "encoded";
 };
 
-function getInternalNamespaceHardNotFoundResponse() {
+function getHardNotFoundResponse() {
   return new NextResponse(null, {
     status: 404,
     headers: {
@@ -415,7 +416,7 @@ export async function proxy(request: NextRequest) {
     (internalNamespacePath.representation === "encoded" ||
       isProductionInternalNamespaceRequest())
   ) {
-    return getInternalNamespaceHardNotFoundResponse();
+    return getHardNotFoundResponse();
   }
 
   if (
@@ -424,14 +425,18 @@ export async function proxy(request: NextRequest) {
       !isWalkingSkeletonRequestHostAllowed(request.nextUrl.hostname) ||
       !isWalkingSkeletonRequestHostAllowed(request.headers.get("host")))
   ) {
-    return getInternalNamespaceHardNotFoundResponse();
+    return getHardNotFoundResponse();
   }
 
   if (
     internalNamespacePath?.namespace === "visual-fixtures" &&
     !tryResolveVisualFixtureEnvironment(process.env)
   ) {
-    return getInternalNamespaceHardNotFoundResponse();
+    return getHardNotFoundResponse();
+  }
+
+  if (isRetiredControlPlanePath(request.nextUrl.pathname)) {
+    return getHardNotFoundResponse();
   }
 
   const canonicalHostResponse = getCanonicalHostResponse(request);
@@ -633,7 +638,7 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // App HTML/RSC/API responses are pilot evidence and may be personalized.
+  // App HTML/RSC/API responses may contain personalized product data.
   // Keep them out of intermediary caches even if DNS is proxied later.
   return withAppRouteContract(response, request, localization);
 }

@@ -42,11 +42,6 @@ const selfServeSignals: MvpLearningCohortSignals = {
   sameSessionRevisitFollowUps: 4,
 };
 
-const closedPilotSignals: MvpLearningCohortSignals = {
-  ...selfServeSignals,
-  cohort: "real_closed_pilot",
-};
-
 const deferredH6: MvpLearningOrganicAcquisition = {
   status: "not_instrumented",
   decisionReady: false,
@@ -61,7 +56,6 @@ describe("MVP learning report decision gate (OVE-229)", () => {
     expect(
       evaluateMvpLearningDecisionGate({
         selfServe: selfServeSignals,
-        closedPilot: closedPilotSignals,
         unclassifiedEventCount: 0,
         unclassifiedActiveGardenerCount: 0,
         attributionOutbox: emptyOutbox,
@@ -74,7 +68,6 @@ describe("MVP learning report decision gate (OVE-229)", () => {
     expect(
       evaluateMvpLearningDecisionGate({
         selfServe: selfServeSignals,
-        closedPilot: closedPilotSignals,
         unclassifiedEventCount: 1,
         unclassifiedActiveGardenerCount: 0,
         attributionOutbox: emptyOutbox,

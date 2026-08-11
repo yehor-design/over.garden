@@ -153,7 +153,6 @@ async function main() {
     .select("id")
     .where("email", "=", email)
     .executeTakeFirstOrThrow();
-  await grantWriteAccess(db, user.id);
   await seedApprovedAliasFixtures(db, user.id);
   runCatalogTypeaheadReindex();
 
@@ -532,18 +531,6 @@ function curatorAliasProjection(input: {
     created_at: input.now,
     updated_at: input.now,
   };
-}
-
-async function grantWriteAccess(database: DB, userId: string) {
-  await database
-    .insertInto("pilot_invite_grants")
-    .values({
-      user_id: userId,
-      cohort: "founder_rehearsal",
-      segment: "casual_micro_grower",
-    })
-    .onConflict((oc) => oc.column("user_id").doNothing())
-    .execute();
 }
 
 async function cleanupFixtureState(database: DB) {

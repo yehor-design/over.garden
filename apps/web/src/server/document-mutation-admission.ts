@@ -17,7 +17,6 @@ import {
   getSessionId,
 } from "@/server/auth-session";
 import { isDocumentMutationAdmissionEnabled } from "@/server/document-mutation-admission-config";
-import { attachWriteEligibilityHint } from "@/server/pilot-write-access";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
 
 export {
@@ -38,7 +37,6 @@ export type DocumentMutationAdmissionInternalResult =
 
 export interface DocumentMutationAdmissionDeps {
   readAuthoritativeSession: () => Promise<unknown>;
-  attachWriteEligibilityHint: (scope: RequestScope) => Promise<RequestScope>;
   authSecrets?: AuthSecretConfiguration;
   featureEnabled?: boolean;
 }
@@ -70,7 +68,6 @@ export interface AdmitDocumentMutationInput {
 
 const DEFAULT_DEPS: DocumentMutationAdmissionDeps = {
   readAuthoritativeSession: getAuthoritativeCurrentSession,
-  attachWriteEligibilityHint,
 };
 
 export async function admitDocumentMutation(
@@ -129,14 +126,7 @@ export async function admitDocumentMutation(
     const envelope = parseDocumentMutationGeneration(input.transport);
     if (!envelope) return rejectedAdmission("INVALID_OR_TAMPERED");
 
-    let scope: RequestScope;
-    try {
-      scope = await deps.attachWriteEligibilityHint(
-        scopedToUser(userId, sessionId),
-      );
-    } catch {
-      return unavailableAdmission();
-    }
+    const scope = scopedToUser(userId, sessionId);
     if (!isOpen()) return unavailableAdmission();
 
     return {
@@ -215,14 +205,7 @@ async function admitScopedRollbackRequest(input: {
   sessionId: string;
   nowSeconds: number;
 }): Promise<DocumentMutationAdmission> {
-  let scope: RequestScope;
-  try {
-    scope = await input.deps.attachWriteEligibilityHint(
-      scopedToUser(input.userId, input.sessionId),
-    );
-  } catch {
-    return unavailableAdmission();
-  }
+  const scope = scopedToUser(input.userId, input.sessionId);
   if (!input.isOpen()) return unavailableAdmission();
   return {
     status: "admitted",

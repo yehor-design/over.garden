@@ -5,8 +5,6 @@
 create table if not exists learning_attribution_outbox (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null unique references "user"(id) on delete cascade,
-  cohort text,
-  segment text,
   state text not null default 'pending'
     check (state in ('pending', 'processing', 'attributed', 'failed', 'dead', 'cancelled')),
   -- A write can arrive after a prior consumer has finished. Keep a monotonic
@@ -22,27 +20,6 @@ create table if not exists learning_attribution_outbox (
   last_error_class text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint learning_attribution_outbox_hint_pair_check check (
-    (cohort is null and segment is null)
-    or (
-      cohort in ('closed_pilot', 'founder_rehearsal')
-      and segment in (
-        'casual_micro_grower',
-        'casual_gen_z',
-        'casual_practical_beginner',
-        'casual_urban_balcony',
-        'casual_food_self_reliance',
-        'power_burned_out_it',
-        'power_collector',
-        'power_experienced',
-        'power_homestead',
-        'supply_expert_creator',
-        'supply_local_seller',
-        'channel_ally',
-        'unknown_segment'
-      )
-    )
-  ),
   constraint learning_attribution_outbox_processing_lease_check check (
     (state = 'processing' and locked_at is not null and locked_by is not null)
     or (state <> 'processing' and locked_at is null and locked_by is null)
@@ -59,7 +36,7 @@ create table if not exists learning_attribution_outbox (
   ),
   constraint learning_attribution_outbox_error_class_check check (
     last_error_class is null
-    or last_error_class in ('transient', 'invalid_hint', 'missing_user', 'max_attempts')
+    or last_error_class in ('transient', 'missing_user', 'max_attempts')
   )
 );
 

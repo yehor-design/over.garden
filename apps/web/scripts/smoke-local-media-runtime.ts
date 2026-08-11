@@ -21,9 +21,7 @@ import sharp from "sharp";
 
 import type { Database } from "../src/db/schema";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
-import { FOUNDER_REHEARSAL_COHORT } from "../src/lib/garden/pilot-invite";
 import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
-import { DEFAULT_PILOT_SEGMENT } from "../src/lib/pilot/segments";
 import { VISUAL_FIXTURE_MANIFEST } from "../src/lib/visual-fixtures/manifest";
 
 type Phase = "seed" | "verify" | "cleanup";
@@ -521,16 +519,6 @@ async function createLocalProofAccount(
     .executeTakeFirstOrThrow();
   assertEqual(account.emailVerified, true, "local account verification state");
 
-  await requiredDb()
-    .insertInto("pilot_invite_grants")
-    .values({
-      user_id: account.id,
-      cohort: FOUNDER_REHEARSAL_COHORT,
-      segment: DEFAULT_PILOT_SEGMENT,
-    })
-    .onConflict((oc) => oc.column("user_id").doNothing())
-    .execute();
-
   return account.id;
 }
 
@@ -752,10 +740,6 @@ async function deleteSyntheticUserRows(
       await trx
         .deleteFrom("spaces")
         .where("owner_user_id", "=", userId)
-        .execute();
-      await trx
-        .deleteFrom("pilot_invite_grants")
-        .where("user_id", "=", userId)
         .execute();
       await trx.deleteFrom("session").where("userId", "=", userId).execute();
       await trx.deleteFrom("account").where("userId", "=", userId).execute();

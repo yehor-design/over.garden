@@ -3,33 +3,25 @@ import { describe, expect, it } from "vitest";
 import {
   ACTOR_CLASSES,
   AUTOMATED_BOT_ACTOR_CLASS,
-  actorClassFromPilotCohort,
   EDITORIAL_SEED_ACTOR_CLASS,
   isActorClass,
   isDecisionEligibleActorClass,
   isExcludedLearningActorClass,
   normalizeActorClass,
-  REAL_CLOSED_PILOT_ACTOR_CLASS,
   REAL_SELF_SERVE_ACTOR_CLASS,
   SELF_SERVE_ACTOR_CLASS,
 } from "./actor-class";
 
 describe("actor class (OVE-200)", () => {
-  it("defaults missing cohort attribution to real_self_serve", () => {
-    expect(actorClassFromPilotCohort(null)).toBe(REAL_SELF_SERVE_ACTOR_CLASS);
-    expect(actorClassFromPilotCohort(undefined)).toBe(
-      REAL_SELF_SERVE_ACTOR_CLASS,
-    );
+  it("keeps self-serve as the only real-user learning class", () => {
     expect(SELF_SERVE_ACTOR_CLASS).toBe(REAL_SELF_SERVE_ACTOR_CLASS);
-  });
-
-  it("maps pilot cohorts without inventing synthetic classes", () => {
-    expect(actorClassFromPilotCohort("closed_pilot")).toBe(
-      REAL_CLOSED_PILOT_ACTOR_CLASS,
-    );
-    expect(actorClassFromPilotCohort("founder_rehearsal")).toBe(
-      "founder_rehearsal",
-    );
+    expect(ACTOR_CLASSES).toEqual([
+      "real_self_serve",
+      "production_smoke",
+      "visual_fixture",
+      "editorial_seed",
+      "automated_bot",
+    ]);
   });
 
   it("accepts only the bounded OVE-200 enum set", () => {
@@ -45,9 +37,7 @@ describe("actor class (OVE-200)", () => {
 
   it("normalizes legacy aliases without inventing unclassified as real", () => {
     expect(normalizeActorClass("self_serve")).toBe(REAL_SELF_SERVE_ACTOR_CLASS);
-    expect(normalizeActorClass("closed_pilot")).toBe(
-      REAL_CLOSED_PILOT_ACTOR_CLASS,
-    );
+    expect(normalizeActorClass("closed_pilot")).toBeNull();
     expect(normalizeActorClass("editorial")).toBe(EDITORIAL_SEED_ACTOR_CLASS);
     expect(normalizeActorClass(null)).toBeNull();
     expect(normalizeActorClass("mystery")).toBeNull();

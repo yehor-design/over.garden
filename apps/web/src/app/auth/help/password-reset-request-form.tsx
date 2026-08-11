@@ -6,9 +6,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import {
-  pilotPasswordResetRedirectUrl,
-  PILOT_AUTH_RESET_PASSWORD_PATH,
-} from "@/lib/auth/pilot-auth-recovery";
+  AUTH_RESET_PASSWORD_PATH,
+  passwordResetRedirectUrl,
+} from "@/lib/auth/auth-recovery";
 import { authClient } from "@/lib/auth-client";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
@@ -43,7 +43,7 @@ export function PasswordResetRequestForm({
     try {
       const { error } = await authClient.requestPasswordReset({
         email: trimmedEmail,
-        redirectTo: passwordResetRedirectUrl(),
+        redirectTo: currentPasswordResetRedirectUrl(),
       });
 
       if (error) {
@@ -102,8 +102,8 @@ export function PasswordResetRequestForm({
   );
 }
 
-function passwordResetRedirectUrl(): string {
-  if (typeof window === "undefined") return PILOT_AUTH_RESET_PASSWORD_PATH;
+function currentPasswordResetRedirectUrl(): string {
+  if (typeof window === "undefined") return AUTH_RESET_PASSWORD_PATH;
 
-  return pilotPasswordResetRedirectUrl(window.location.origin);
+  return passwordResetRedirectUrl(window.location.origin);
 }

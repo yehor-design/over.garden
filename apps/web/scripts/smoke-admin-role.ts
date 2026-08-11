@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { config as loadEnv } from "dotenv";
 import { Kysely, PostgresDialect, sql } from "kysely";
+import { chromium } from "playwright";
 import { Pool } from "pg";
 
 import {
@@ -22,21 +23,34 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ADMIN_SURFACE_EXPECTATIONS = [
   {
-    path: "/garden/pilot-smoke",
-    normalForbiddenMarker: "Readiness status",
+    path: "/admin/communities",
+    normalForbiddenMarker: "Open reports",
+    normalAccessState: "unavailable",
   },
   {
-    path: "/garden/pilot-health",
-    normalForbiddenMarker: "provisional pilot signals",
+    path: "/admin/moderation/comments",
+    normalForbiddenMarker: "Comment moderation",
+    normalAccessState: "denied",
   },
   {
     path: "/garden/catalog/curation",
     normalForbiddenMarker: "Source candidates",
+    normalAccessState: "denied",
   },
   {
     path: "/garden/privacy/erasure-requests",
     normalForbiddenMarker: "Requests:",
+    normalAccessState: "denied",
   },
+] as const;
+const RETIRED_UI_ROUTES = [
+  "/admin",
+  "/admin/users",
+  "/garden/pilot-health",
+  "/garden/pilot-smoke",
+  "/garden/pilot-learning/interviews",
+  "/garden/pilot-learning/decision",
+  "/join",
 ] as const;
 const FORBIDDEN_ADMIN_MARKERS = [
   "ownerUserId",
@@ -72,6 +86,14 @@ class CookieJar {
       .map(([name, value]) => `${name}=${value}`)
       .join("; ");
   }
+
+  browserCookies(baseUrl: string) {
+    return [...this.cookies.entries()].map(([name, value]) => ({
+      name,
+      value,
+      url: baseUrl,
+    }));
+  }
 }
 
 async function main() {
@@ -96,79 +118,53 @@ async function main() {
     await linkFakeSocialAccount(db, socialLinkedUserId);
     await assertSecondOwnerInsertRejected(db, socialLinkedUserId);
 
-    const signedOutText = visiblePageText(
-      await textRequest(baseUrl, new CookieJar(), "/admin"),
+    const normalBrowserEvidence = await readHydratedUserEvidence(
+      baseUrl,
+      normalJar,
     );
-    const normalText = visiblePageText(
-      await textRequest(baseUrl, normalJar, "/admin"),
+    const socialLinkedBrowserEvidence = await readHydratedUserEvidence(
+      baseUrl,
+      socialLinkedJar,
     );
-    const socialLinkedText = visiblePageText(
-      await textRequest(baseUrl, socialLinkedJar, "/admin"),
+    for (const surface of ADMIN_SURFACE_EXPECTATIONS) {
+      assertNotIncludes(
+        normalBrowserEvidence.accountMenuHtml,
+        `href="${surface.path}"`,
+        `Normal signed-in user saw owner menu link ${surface.path}.`,
+      );
+      assertNotIncludes(
+        socialLinkedBrowserEvidence.accountMenuHtml,
+        `href="${surface.path}"`,
+        `Social-linked signed-in user saw owner menu link ${surface.path}.`,
+      );
+    }
+    assertNoForbiddenAdminEvidence(
+      visiblePageText(normalBrowserEvidence.accountMenuHtml),
     );
-
-    assertIncludes(
-      signedOutText,
-      "Garden workspace",
-      "Signed-out /admin did not render the auth boundary.",
-    );
-    assertIncludes(
-      normalText,
-      "Access denied.",
-      "Normal signed-in user was not denied from /admin.",
-    );
-    assertNotIncludes(
-      normalText,
-      "Pilot smoke",
-      "Normal signed-in user saw admin dashboard links.",
-    );
-    assertIncludes(
-      socialLinkedText,
-      "Access denied.",
-      "Social-linked signed-in user was not denied from /admin.",
-    );
-    assertNotIncludes(
-      socialLinkedText,
-      "Pilot smoke",
-      "Social-linked signed-in user saw admin dashboard links.",
-    );
-    assertNoForbiddenAdminEvidence(normalText);
-    assertNoForbiddenAdminEvidence(socialLinkedText);
-
-    const normalUsersText = visiblePageText(
-      await textRequest(baseUrl, normalJar, "/admin/users"),
-    );
-    const socialLinkedUsersText = visiblePageText(
-      await textRequest(baseUrl, socialLinkedJar, "/admin/users"),
+    assertNoForbiddenAdminEvidence(
+      visiblePageText(socialLinkedBrowserEvidence.accountMenuHtml),
     );
 
-    assertIncludes(
-      normalUsersText,
-      "Access denied.",
-      "Normal signed-in user was not denied from /admin/users.",
-    );
-    assertIncludes(
-      socialLinkedUsersText,
-      "Access denied.",
-      "Social-linked signed-in user was not denied from /admin/users.",
-    );
+    for (const path of RETIRED_UI_ROUTES) {
+      if ((await pageStatus(baseUrl, normalJar, path)) !== 404) {
+        throw new Error(`Retired UI route still resolves at ${path}.`);
+      }
+    }
 
     for (const surface of ADMIN_SURFACE_EXPECTATIONS) {
-      const normalSurfaceText = visiblePageText(
-        await textRequest(baseUrl, normalJar, surface.path),
+      const normalSurfaceText =
+        normalBrowserEvidence.surfaceText.get(surface.path) ?? "";
+      const socialLinkedSurfaceText =
+        socialLinkedBrowserEvidence.surfaceText.get(surface.path) ?? "";
+      assertEqual(
+        normalBrowserEvidence.surfaceAccessState.get(surface.path),
+        surface.normalAccessState,
+        `Normal signed-in user reached an unexpected access state at ${surface.path}.`,
       );
-      const socialLinkedSurfaceText = visiblePageText(
-        await textRequest(baseUrl, socialLinkedJar, surface.path),
-      );
-
-      assertIncludes(
-        normalSurfaceText,
-        "Access denied.",
-        `Normal signed-in user was not denied from ${surface.path}.`,
-      );
-      assertIncludes(
-        socialLinkedSurfaceText,
-        "Access denied.",
-        `Social-linked signed-in user was not denied from ${surface.path}.`,
+      assertEqual(
+        socialLinkedBrowserEvidence.surfaceAccessState.get(surface.path),
+        surface.normalAccessState,
+        `Social-linked signed-in user reached an unexpected access state at ${surface.path}.`,
       );
       assertNotIncludes(
         normalSurfaceText,
@@ -191,9 +187,10 @@ async function main() {
           sealedOwnerRoleOnly: true,
           ...sealedOwnerEvidence,
           secondOwnerDatabaseGuardRejected: true,
-          signedOutDeniedToDashboard: true,
+          retiredUiRoutesAbsent: RETIRED_UI_ROUTES.length,
           normalUserDenied: true,
           socialLinkedUserDenied: true,
+          sessionConvergenceProof: "browser_hydrated",
           ownerSessionUiProof: "manual_password_login_required",
           linkedOperatorSurfacesChecked: ADMIN_SURFACE_EXPECTATIONS.map(
             (surface) => surface.path,
@@ -209,6 +206,62 @@ async function main() {
     await cleanupSmokeUser(db, socialLinkedEmail);
     await db.destroy();
   }
+}
+
+async function readHydratedUserEvidence(baseUrl: string, jar: CookieJar) {
+  const browser = await chromium.launch({ headless: true });
+
+  try {
+    const context = await browser.newContext();
+    await context.addCookies(jar.browserCookies(baseUrl));
+    const page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+
+    await navigatePastSessionConvergence(page, baseUrl, "/garden");
+    await page
+      .locator('[data-site-shell-account-menu-trigger="true"]')
+      .click();
+    const accountMenu = page.locator('[data-slot="sheet-content"]');
+    await accountMenu.waitFor({ state: "visible" });
+    const accountMenuHtml = await accountMenu.innerHTML();
+
+    const surfaceText = new Map<string, string>();
+    const surfaceAccessState = new Map<string, string | null>();
+    for (const surface of ADMIN_SURFACE_EXPECTATIONS) {
+      await navigatePastSessionConvergence(page, baseUrl, surface.path);
+      surfaceText.set(surface.path, await page.locator("body").innerText());
+      surfaceAccessState.set(
+        surface.path,
+        await page
+          .locator("[data-operator-access-state]")
+          .getAttribute("data-operator-access-state"),
+      );
+    }
+
+    await context.close();
+    return { accountMenuHtml, surfaceAccessState, surfaceText };
+  } finally {
+    await browser.close();
+  }
+}
+
+async function navigatePastSessionConvergence(
+  page: import("playwright").Page,
+  baseUrl: string,
+  path: string,
+) {
+  const response = await page.goto(`${baseUrl}${path}`, {
+    waitUntil: "domcontentloaded",
+  });
+  if (!response?.ok()) {
+    throw new Error(`Browser page request failed at ${path}.`);
+  }
+
+  const gate = page.locator("[data-session-convergence-gate]");
+  if ((await gate.count()) > 0) {
+    await gate.waitFor({ state: "detached", timeout: 15_000 });
+  }
+  await page.locator("main").waitFor({ state: "visible" });
 }
 
 function createDatabase() {
@@ -391,7 +444,7 @@ async function authRequest(
   }
 }
 
-async function textRequest(baseUrl: string, jar: CookieJar, path: string) {
+async function pageStatus(baseUrl: string, jar: CookieJar, path: string) {
   const response = await fetch(`${baseUrl}${path}`, {
     headers: {
       Accept: "text/html",
@@ -400,12 +453,7 @@ async function textRequest(baseUrl: string, jar: CookieJar, path: string) {
     redirect: "manual",
   });
   jar.addFromResponse(response);
-
-  if (!response.ok) {
-    throw new Error(`Page request failed at ${path}: ${response.status}.`);
-  }
-
-  return response.text();
+  return response.status;
 }
 
 function parseOptions(argv: string[]) {
@@ -430,9 +478,13 @@ function normalizeBaseUrl(value: string) {
   return url.toString().replace(/\/$/, "");
 }
 
-function assertIncludes(value: string, expected: string, message: string) {
-  if (!value.includes(expected)) {
-    throw new Error(`${message} Snippet: ${redactedSnippet(value)}`);
+function assertEqual(
+  value: string | null | undefined,
+  expected: string,
+  message: string,
+) {
+  if (value !== expected) {
+    throw new Error(`${message} State: ${value ?? "missing"}.`);
   }
 }
 

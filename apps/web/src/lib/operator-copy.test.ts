@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
-  formatOperatorCount,
   formatOperatorDate,
   formatOperatorTemplate,
   getOperatorCopy,
@@ -22,8 +21,8 @@ describe("operator copy", () => {
     }
   });
 
-  it("localizes representative admin, moderation, and diagnostic copy", () => {
-    expect(getOperatorCopy("uk").admin.controlPlane).toBe("Панель керування");
+  it("localizes representative moderation and diagnostic copy", () => {
+    expect(getOperatorCopy("uk").moderation.title).toBe("Модерація коментарів");
     expect(getOperatorCopy("bg").community.openReports).toBe(
       "Отворени сигнали",
     );
@@ -48,13 +47,6 @@ describe("operator copy", () => {
     expect(formatOperatorDate("bg", "2026-07-16T10:00:00.000Z")).toMatch(
       /2026/,
     );
-    expect(
-      formatOperatorCount(
-        "uk",
-        5,
-        getOperatorCopy("uk").adminUsers.assignmentCount,
-      ),
-    ).toBe("5 призначень");
   });
 });
 

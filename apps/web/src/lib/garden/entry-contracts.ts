@@ -3,16 +3,8 @@ import type { CatalogKind, PlantObjectKind } from "@/db/schema";
 import type { CatalogTrustState } from "@/lib/garden/catalog-trust";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 
-export type ActivationSource =
-  | "homepage"
-  | "public_variety"
-  | "direct_garden"
-  | "invited_cohort";
-export type ActivationSurfaceKind =
-  | "homepage"
-  | "variety"
-  | "garden"
-  | "invite";
+export type ActivationSource = "homepage" | "public_variety" | "direct_garden";
+export type ActivationSurfaceKind = "homepage" | "variety" | "garden";
 
 export type JournalEntryTarget =
   | "first_plant_entry"

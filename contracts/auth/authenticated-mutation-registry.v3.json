@@ -1860,8 +1860,8 @@
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:17:790167dd99c192ace88a",
-      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:17:77cf888dc06e9a01e7fa",
+      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
         "src/app/api/skeleton/journal/route.ts",
@@ -1877,8 +1877,8 @@
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:18:77cf888dc06e9a01e7fa",
-      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:18:790167dd99c192ace88a",
+      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
         "src/app/api/skeleton/journal/route.ts",
@@ -1887,7 +1887,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:17:790167dd99c192ace88a"
+        "edge:3aadc02fe0be8c73e31a:17:77cf888dc06e9a01e7fa"
       ]
     },
     {
@@ -1904,7 +1904,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:18:77cf888dc06e9a01e7fa"
+        "edge:3aadc02fe0be8c73e31a:18:790167dd99c192ace88a"
       ]
     },
     {
@@ -4971,7 +4971,7 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:7e6165a571f644e8c94f",
       "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:8:77cf888dc06e9a01e7fa"
+        "edge:7e6165a571f644e8c94f:8:790167dd99c192ace88a"
       ]
     },
     {
@@ -4988,7 +4988,7 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:7e6165a571f644e8c94f",
       "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:8:77cf888dc06e9a01e7fa"
+        "edge:7e6165a571f644e8c94f:8:790167dd99c192ace88a"
       ]
     },
     {
@@ -5095,8 +5095,8 @@
       "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "branchConditionClass": "always",
       "branchId": "branch:7e6165a571f644e8c94f:always",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:7:790167dd99c192ace88a",
-      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:7:77cf888dc06e9a01e7fa",
+      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
       "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "evidencePaths": [
         "src/app/garden/actions.ts",
@@ -5112,8 +5112,8 @@
       "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "branchConditionClass": "always",
       "branchId": "branch:7e6165a571f644e8c94f:always",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:8:77cf888dc06e9a01e7fa",
-      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:8:790167dd99c192ace88a",
+      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
       "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "evidencePaths": [
         "src/app/garden/actions.ts",
@@ -5122,7 +5122,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:7e6165a571f644e8c94f",
       "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:7:790167dd99c192ace88a"
+        "edge:7e6165a571f644e8c94f:7:77cf888dc06e9a01e7fa"
       ]
     },
     {
@@ -5139,7 +5139,7 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:7e6165a571f644e8c94f",
       "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:8:77cf888dc06e9a01e7fa"
+        "edge:7e6165a571f644e8c94f:8:790167dd99c192ace88a"
       ]
     },
     {
@@ -6728,8 +6728,8 @@
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:16:790167dd99c192ace88a",
-      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:16:77cf888dc06e9a01e7fa",
+      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
         "src/app/garden/objects/[objectId]/actions.ts",
@@ -6745,8 +6745,8 @@
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:17:77cf888dc06e9a01e7fa",
-      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:17:790167dd99c192ace88a",
+      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
         "src/app/garden/objects/[objectId]/actions.ts",
@@ -6755,7 +6755,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:16:790167dd99c192ace88a"
+        "edge:a0e26d5a3a55edb77721:16:77cf888dc06e9a01e7fa"
       ]
     },
     {
@@ -6772,7 +6772,7 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:17:77cf888dc06e9a01e7fa"
+        "edge:a0e26d5a3a55edb77721:17:790167dd99c192ace88a"
       ]
     },
     {
@@ -6789,7 +6789,7 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:17:77cf888dc06e9a01e7fa"
+        "edge:a0e26d5a3a55edb77721:17:790167dd99c192ace88a"
       ]
     },
     {
@@ -6821,7 +6821,7 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:17:77cf888dc06e9a01e7fa"
+        "edge:a0e26d5a3a55edb77721:17:790167dd99c192ace88a"
       ]
     },
     {
@@ -7246,8 +7246,8 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a96d9fef83e993dca970:always",
-      "consumerEdgeId": "edge:a96d9fef83e993dca970:6:790167dd99c192ace88a",
-      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
+      "consumerEdgeId": "edge:a96d9fef83e993dca970:6:77cf888dc06e9a01e7fa",
+      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
       "entrypointId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "evidencePaths": [
         "src/app/api/garden/entries/[entryId]/route.ts",
@@ -7263,8 +7263,8 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a96d9fef83e993dca970:always",
-      "consumerEdgeId": "edge:a96d9fef83e993dca970:7:77cf888dc06e9a01e7fa",
-      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
+      "consumerEdgeId": "edge:a96d9fef83e993dca970:7:790167dd99c192ace88a",
+      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
       "entrypointId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "evidencePaths": [
         "src/app/api/garden/entries/[entryId]/route.ts",
@@ -7273,7 +7273,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a96d9fef83e993dca970",
       "predecessorEdgeIds": [
-        "edge:a96d9fef83e993dca970:6:790167dd99c192ace88a"
+        "edge:a96d9fef83e993dca970:6:77cf888dc06e9a01e7fa"
       ]
     },
     {
@@ -7290,7 +7290,7 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:a96d9fef83e993dca970",
       "predecessorEdgeIds": [
-        "edge:a96d9fef83e993dca970:7:77cf888dc06e9a01e7fa"
+        "edge:a96d9fef83e993dca970:7:790167dd99c192ace88a"
       ]
     },
     {
@@ -7307,7 +7307,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a96d9fef83e993dca970",
       "predecessorEdgeIds": [
-        "edge:a96d9fef83e993dca970:7:77cf888dc06e9a01e7fa"
+        "edge:a96d9fef83e993dca970:7:790167dd99c192ace88a"
       ]
     },
     {
@@ -8118,8 +8118,8 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:bfa6d07f7cc571bf0678:always",
-      "consumerEdgeId": "edge:bfa6d07f7cc571bf0678:6:790167dd99c192ace88a",
-      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
+      "consumerEdgeId": "edge:bfa6d07f7cc571bf0678:6:77cf888dc06e9a01e7fa",
+      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
       "entrypointId": "same_origin_fetch:src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx#save:PATCH:/api/garden/entries/:dynamic",
       "evidencePaths": [
         "src/app/api/garden/entries/[entryId]/route.ts",
@@ -8136,8 +8136,8 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:bfa6d07f7cc571bf0678:always",
-      "consumerEdgeId": "edge:bfa6d07f7cc571bf0678:7:77cf888dc06e9a01e7fa",
-      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
+      "consumerEdgeId": "edge:bfa6d07f7cc571bf0678:7:790167dd99c192ace88a",
+      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
       "entrypointId": "same_origin_fetch:src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx#save:PATCH:/api/garden/entries/:dynamic",
       "evidencePaths": [
         "src/app/api/garden/entries/[entryId]/route.ts",
@@ -8147,7 +8147,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:bfa6d07f7cc571bf0678",
       "predecessorEdgeIds": [
-        "edge:bfa6d07f7cc571bf0678:6:790167dd99c192ace88a"
+        "edge:bfa6d07f7cc571bf0678:6:77cf888dc06e9a01e7fa"
       ]
     },
     {
@@ -8165,7 +8165,7 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:bfa6d07f7cc571bf0678",
       "predecessorEdgeIds": [
-        "edge:bfa6d07f7cc571bf0678:7:77cf888dc06e9a01e7fa"
+        "edge:bfa6d07f7cc571bf0678:7:790167dd99c192ace88a"
       ]
     },
     {
@@ -8183,7 +8183,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:bfa6d07f7cc571bf0678",
       "predecessorEdgeIds": [
-        "edge:bfa6d07f7cc571bf0678:7:77cf888dc06e9a01e7fa"
+        "edge:bfa6d07f7cc571bf0678:7:790167dd99c192ace88a"
       ]
     },
     {
@@ -11313,8 +11313,7 @@
       ],
       "evidencePaths": [
         "src/server/learning-actor-attribution.ts",
-        "src/server/mvp-learning/attribution-outbox.ts",
-        "src/server/pilot-invite-repository.ts"
+        "src/server/mvp-learning/attribution-outbox.ts"
       ],
       "idempotencyOwner": "src/server/mvp-learning/attribution-outbox.ts#drainLearningAttributionOutbox",
       "ownerPath": "src/server/mvp-learning/attribution-outbox.ts",
@@ -15125,22 +15124,6 @@
     },
     {
       "authority": "authenticated_user",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "native_form:src/app/join/page.tsx#JoinPage:action:claimPilotInviteAction",
-      "evidencePaths": [
-        "src/app/join/actions.ts",
-        "src/app/join/page.tsx"
-      ],
-      "exclusionReason": "guest_pilot_invite_handoff_has_no_authenticated_document",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/join/page.tsx",
-      "symbol": "JoinPage",
-      "transport": "native_form",
-      "variant": "action:claimPilotInviteAction"
-    },
-    {
-      "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "native_form:src/app/lineage/objects/[objectId]/page.tsx#LineageInteractionPanel:action:askLineageQuestionAction",
       "evidencePaths": [
@@ -18788,21 +18771,6 @@
     },
     {
       "authority": "authenticated_user",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "server_action:src/app/join/actions.ts#claimPilotInviteAction",
-      "evidencePaths": [
-        "src/app/join/actions.ts"
-      ],
-      "exclusionReason": "guest_pilot_invite_handoff_has_no_authenticated_document",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/join/actions.ts",
-      "symbol": "claimPilotInviteAction",
-      "transport": "server_action",
-      "variant": "claimPilotInviteAction"
-    },
-    {
-      "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "server_action:src/app/lineage/objects/[objectId]/actions.ts#askLineageQuestionAction:authority:authenticated_user",
       "evidencePaths": [
@@ -18976,18 +18944,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/pilot/segments.ts",
-        "src/server/learning-actor-attribution.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/learning-actor-attribution.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/segments",
-      "sourceNodeId": "source:0079decbfcabb91f4de2",
-      "symbol": "PilotSegment"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/auth/local-exit-reconcile/route.ts",
         "src/lib/auth/current-session-binding.ts"
       ],
@@ -19126,18 +19082,6 @@
       "semanticVariant": "from:@/server/public-variety-metadata",
       "sourceNodeId": "source:01b4881939a52d901ed7",
       "symbol": "buildPublicVarietyJsonLd"
-    },
-    {
-      "evidencePaths": [
-        "src/app/join/actions.ts",
-        "src/app/join/page.tsx"
-      ],
-      "nodeKind": "typed_action_prop",
-      "path": "src/app/join/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:claimPilotInviteAction",
-      "sourceNodeId": "source:01bc3100903461fd7852",
-      "symbol": "claimPilotInviteAction"
     },
     {
       "evidencePaths": [
@@ -19623,18 +19567,6 @@
       "semanticVariant": "action:action->moderateCommunityMembershipAction",
       "sourceNodeId": "source:05485e0548b990aef6cb",
       "symbol": "ModerationForm"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/garden-auth-panel.tsx",
-        "src/lib/auth/pilot-auth-recovery.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/garden-auth-panel.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/auth/pilot-auth-recovery",
-      "sourceNodeId": "source:05508b7d4ffb37980276",
-      "symbol": "PILOT_AUTH_HELP_PATH"
     },
     {
       "evidencePaths": [
@@ -20229,18 +20161,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/auth/reset-password/reset-password-form.tsx",
-        "src/lib/auth/pilot-auth-recovery.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/auth/reset-password/reset-password-form.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/auth/pilot-auth-recovery",
-      "sourceNodeId": "source:0a374c2a9c0812d8777e",
-      "symbol": "PILOT_AUTH_HELP_PATH"
-    },
-    {
-      "evidencePaths": [
         "src/server/search/public-journal-document-id.ts",
         "src/server/search/public-journal-eligibility.ts"
       ],
@@ -20380,6 +20300,17 @@
       "semanticVariant": "canonical-row:buildProfileInteractionTargetQuery",
       "sourceNodeId": "source:0b95416542ebb355e06c",
       "symbol": "resolveInteractionTarget"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-curation-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/catalog-curation-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_5629",
+      "sourceNodeId": "source:0b971bf13145899b7f82",
+      "symbol": "enqueueCatalogMatchSuggestionsRefresh"
     },
     {
       "evidencePaths": [
@@ -20627,18 +20558,6 @@
       "semanticVariant": "from:@/server/identity-policy",
       "sourceNodeId": "source:0d86b1d6330d42df7cee",
       "symbol": "IDENTITY_POLICY_VERSION"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/page.tsx",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:0d99faa75a3ac8280ef2",
-      "symbol": "resolvePilotWriteAccess"
     },
     {
       "evidencePaths": [
@@ -22221,18 +22140,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/mvp-learning/attribution-outbox.ts",
-        "src/server/pilot-invite-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/mvp-learning/attribution-outbox.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-invite-repository",
-      "sourceNodeId": "source:1a3855464c064660b2f3",
-      "symbol": "buildGrantPilotWriteAccessQuery"
-    },
-    {
-      "evidencePaths": [
         "src/lib/offline/journal-entry-sync.ts"
       ],
       "nodeKind": "offline_producer",
@@ -23038,6 +22945,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/mvp-learning/attribution-outbox.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/mvp-learning/attribution-outbox.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_4709",
+      "sourceNodeId": "source:218f6e2f1ca13e8a2e2d",
+      "symbol": "drainLearningAttributionOutbox"
+    },
+    {
+      "evidencePaths": [
         "src/server/catalog-source/candidate-review-repository.ts",
         "src/server/request-scope.ts"
       ],
@@ -23723,18 +23641,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/auth/help/password-reset-request-form.tsx",
-        "src/lib/auth/pilot-auth-recovery.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/auth/help/password-reset-request-form.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/auth/pilot-auth-recovery",
-      "sourceNodeId": "source:2608cb6e0a374eb67175",
-      "symbol": "pilotPasswordResetRedirectUrl"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
         "src/server/document-mutation-admission.ts"
       ],
@@ -24162,18 +24068,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/join/page.tsx",
-        "src/lib/garden/pilot-invite.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/join/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/pilot-invite",
-      "sourceNodeId": "source:28ac6626445ab4b67ba6",
-      "symbol": "verifyPilotInviteToken"
-    },
-    {
-      "evidencePaths": [
         "src/server/engagement-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -24182,18 +24076,6 @@
       "semanticVariant": "canonical-row:buildActionableEngagementCommentQuery",
       "sourceNodeId": "source:28bf8e02315c6529c8e3",
       "symbol": "reportEngagementComment"
-    },
-    {
-      "evidencePaths": [
-        "src/lib/pilot/segments.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/mvp-learning/attribution-outbox.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/segments",
-      "sourceNodeId": "source:28c68453efbbf168efdd",
-      "symbol": "PilotSegment"
     },
     {
       "evidencePaths": [
@@ -24336,17 +24218,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/catalog-curation-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/catalog-curation-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_12522",
-      "sourceNodeId": "source:2a0b3b1eadc8e5048623",
-      "symbol": "rejectCatalogCurationCandidate"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/catalog/curation/catalog-entity-resolution-report.tsx",
         "src/server/catalog-source/entity-resolution-qa-repository.ts"
       ],
@@ -24368,18 +24239,6 @@
       "semanticVariant": "from:./owner-composer-durability",
       "sourceNodeId": "source:2a3767bff0591f06ef83",
       "symbol": "isExactOwnerComposerDurabilityReceipt"
-    },
-    {
-      "evidencePaths": [
-        "src/app/join/actions.ts",
-        "src/app/join/page.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/join/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:./actions",
-      "sourceNodeId": "source:2a440b8d8a06410ee087",
-      "symbol": "claimPilotInviteAction"
     },
     {
       "evidencePaths": [
@@ -25551,6 +25410,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/auth/reset-password/reset-password-form.tsx",
+        "src/lib/auth/auth-recovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/auth/reset-password/reset-password-form.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/auth-recovery",
+      "sourceNodeId": "source:33fb71eec70a7c53bbcf",
+      "symbol": "AUTH_HELP_PATH"
+    },
+    {
+      "evidencePaths": [
         "src/components/auth/document-mutation-recovery.tsx",
         "src/lib/interface-localization.ts"
       ],
@@ -25738,18 +25609,6 @@
       "semanticVariant": "from:@/lib/trust-surface-copy",
       "sourceNodeId": "source:36b3f5a715885370e6e5",
       "symbol": "formatTrustTemplate"
-    },
-    {
-      "evidencePaths": [
-        "src/app/join/page.tsx",
-        "src/server/interface-localization.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/join/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/interface-localization",
-      "sourceNodeId": "source:36bbd21b5427924117ee",
-      "symbol": "getRequestInterfaceLocale"
     },
     {
       "evidencePaths": [
@@ -26059,18 +25918,6 @@
       "semanticVariant": "from:@/components/ui/button",
       "sourceNodeId": "source:3a6020228ab0d8f79cb7",
       "symbol": "buttonVariants"
-    },
-    {
-      "evidencePaths": [
-        "src/lib/garden/actor-class.ts",
-        "src/server/learning-actor-attribution.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/learning-actor-attribution.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/actor-class",
-      "sourceNodeId": "source:3a81cce885642a15bdb0",
-      "symbol": "actorClassFromPilotCohort"
     },
     {
       "evidencePaths": [
@@ -26438,6 +26285,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/auth/help/password-reset-request-form.tsx",
+        "src/lib/auth/auth-recovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/auth/help/password-reset-request-form.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/auth-recovery",
+      "sourceNodeId": "source:3c5dc836ab5382297e93",
+      "symbol": "passwordResetRedirectUrl"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/wishlist-repository.ts"
       ],
@@ -26661,18 +26520,6 @@
       "semanticVariant": "from:@/server/visual-fixtures/social-actor",
       "sourceNodeId": "source:3e9022988360b2bc376c",
       "symbol": "resolveVisualSocialMutationActor"
-    },
-    {
-      "evidencePaths": [
-        "src/server/mvp-learning/attribution-outbox.ts",
-        "src/server/pilot-invite-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/mvp-learning/attribution-outbox.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-invite-repository",
-      "sourceNodeId": "source:3e9cb48345f1556b275c",
-      "symbol": "buildGetPilotInviteGrantQuery"
     },
     {
       "evidencePaths": [
@@ -28138,18 +27985,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/join/page.tsx",
-        "src/components/ui/button.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/join/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/components/ui/button",
-      "sourceNodeId": "source:4982f0724f3a1323373a",
-      "symbol": "buttonVariants"
-    },
-    {
-      "evidencePaths": [
         "src/lib/garden/catalog-trust.ts",
         "src/server/catalog-repository.ts"
       ],
@@ -28312,6 +28147,17 @@
       "semanticVariant": "from:@/server/lineage-repository",
       "sourceNodeId": "source:4b2450cb31866cfae978",
       "symbol": "resolveLineageClaim"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-curation-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/catalog-curation-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_8283",
+      "sourceNodeId": "source:4b485d2a6d2b7a414502",
+      "symbol": "rejectCatalogMatchSuggestion"
     },
     {
       "evidencePaths": [
@@ -28736,18 +28582,6 @@
       "semanticVariant": "from:./actions",
       "sourceNodeId": "source:4ea28d1c575528508ad9",
       "symbol": "unblockProfileAction"
-    },
-    {
-      "evidencePaths": [
-        "src/app/join/page.tsx",
-        "src/lib/trust-surface-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/join/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/trust-surface-copy",
-      "sourceNodeId": "source:4ea9bb377babc5996f44",
-      "symbol": "TrustSurfaceCopy"
     },
     {
       "evidencePaths": [
@@ -29200,18 +29034,6 @@
       "semanticVariant": "from:@/server/request-scope",
       "sourceNodeId": "source:52e79064a21efe1b825b",
       "symbol": "RequestScope"
-    },
-    {
-      "evidencePaths": [
-        "src/app/join/actions.ts",
-        "src/app/join/page.tsx"
-      ],
-      "nodeKind": "native_form",
-      "path": "src/app/join/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:claimPilotInviteAction",
-      "sourceNodeId": "source:52f7400e77a68409b821",
-      "symbol": "JoinPage"
     },
     {
       "evidencePaths": [
@@ -29771,18 +29593,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/garden/pilot-invite.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/mvp-learning/attribution-outbox.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/pilot-invite",
-      "sourceNodeId": "source:57ec0258aeabb34a0d94",
-      "symbol": "PilotInviteCohort"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/auth/[...all]/route.ts"
       ],
       "nodeKind": "callback",
@@ -30161,8 +29971,7 @@
     {
       "evidencePaths": [
         "src/server/learning-actor-attribution.ts",
-        "src/server/mvp-learning/attribution-outbox.ts",
-        "src/server/pilot-invite-repository.ts"
+        "src/server/mvp-learning/attribution-outbox.ts"
       ],
       "nodeKind": "effect_owner",
       "path": "src/server/mvp-learning/attribution-outbox.ts",
@@ -30334,18 +30143,6 @@
       "semanticVariant": "from:@/server/public-surface-indexing-policy",
       "sourceNodeId": "source:5e046841b9162ebca488",
       "symbol": "evaluatePublicSurfaceIndexability"
-    },
-    {
-      "evidencePaths": [
-        "src/lib/garden/pilot-invite.ts",
-        "src/server/catalog-curation-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/catalog-curation-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/pilot-invite",
-      "sourceNodeId": "source:5e2ea56221ec9df2c32d",
-      "symbol": "CLOSED_PILOT_COHORT"
     },
     {
       "evidencePaths": [
@@ -30834,18 +30631,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/garden/pilot-invite.ts",
-        "src/server/pilot-invite-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/pilot-invite-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/pilot-invite",
-      "sourceNodeId": "source:62ad754b8c036607a7a0",
-      "symbol": "DEFAULT_PILOT_INVITE_COHORT"
-    },
-    {
-      "evidencePaths": [
         "src/server/engagement-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -31217,18 +31002,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:65ca1ef8dd3f3f35f8e6",
       "symbol": "CatalogItemStatus"
-    },
-    {
-      "evidencePaths": [
-        "src/lib/pilot/segments.ts",
-        "src/server/pilot-invite-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/pilot-invite-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/segments",
-      "sourceNodeId": "source:65cd34dd93bff43d521c",
-      "symbol": "PilotSegment"
     },
     {
       "evidencePaths": [
@@ -33320,18 +33093,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/join/actions.ts",
-        "src/lib/garden/public-paths.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/join/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/public-paths",
-      "sourceNodeId": "source:7865264ac23f38377bf0",
-      "symbol": "gardenFirstEntryInvitePath"
-    },
-    {
-      "evidencePaths": [
         "src/lib/media/launch-media-quality.ts",
         "src/server/media/media-repository.ts"
       ],
@@ -33458,18 +33219,6 @@
       "semanticVariant": "approveCatalogMatchSuggestionAction",
       "sourceNodeId": "source:794d745d58ff93d2a39a",
       "symbol": "approveCatalogMatchSuggestionAction"
-    },
-    {
-      "evidencePaths": [
-        "src/lib/garden/pilot-invite.ts",
-        "src/server/learning-actor-attribution.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/learning-actor-attribution.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/pilot-invite",
-      "sourceNodeId": "source:797ab1e40c0961dee305",
-      "symbol": "PilotInviteCohort"
     },
     {
       "evidencePaths": [
@@ -34795,18 +34544,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/objects/[objectId]/page.tsx",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/objects/[objectId]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:84f6a49f1379df7d8a30",
-      "symbol": "resolvePilotWriteAccess"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/engagement/likes/route.ts",
         "src/server/interaction-admission.ts"
       ],
@@ -34898,17 +34635,6 @@
       "semanticVariant": "from:@/server/media/lifecycle-revoke",
       "sourceNodeId": "source:85baae5e23213ff7fa6c",
       "symbol": "revokeMediaObjectBytes"
-    },
-    {
-      "evidencePaths": [
-        "src/server/mvp-learning/attribution-outbox.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/mvp-learning/attribution-outbox.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_5544",
-      "sourceNodeId": "source:85e17fccbf83de8e2291",
-      "symbol": "drainLearningAttributionOutbox"
     },
     {
       "evidencePaths": [
@@ -36021,18 +35747,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/auth/reset-password/reset-password-form.tsx",
-        "src/lib/auth/pilot-auth-recovery.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/auth/reset-password/reset-password-form.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/auth/pilot-auth-recovery",
-      "sourceNodeId": "source:8e0fe86ffe50bd527411",
-      "symbol": "passwordResetSuccessPath"
-    },
-    {
-      "evidencePaths": [
         "src/components/public/public-journal-directory.tsx",
         "src/components/site-shell/site-shell-context-rail.tsx"
       ],
@@ -36407,17 +36121,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:90dc150f3c095a543d32",
       "symbol": "JsonValue"
-    },
-    {
-      "evidencePaths": [
-        "src/server/catalog-curation-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/catalog-curation-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_11041",
-      "sourceNodeId": "source:90dda48503ec2d9b7e37",
-      "symbol": "mergeCatalogCurationCandidate"
     },
     {
       "evidencePaths": [
@@ -37852,18 +37555,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/auth/help/password-reset-request-form.tsx",
-        "src/lib/auth/pilot-auth-recovery.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/auth/help/password-reset-request-form.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/auth/pilot-auth-recovery",
-      "sourceNodeId": "source:9d0939a6f2f2e541f603",
-      "symbol": "PILOT_AUTH_RESET_PASSWORD_PATH"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/profile/page.tsx",
         "src/lib/garden/public-paths.ts"
       ],
@@ -38172,17 +37863,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/catalog-curation-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/catalog-curation-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_5856",
-      "sourceNodeId": "source:a02d712f3b236ba361cd",
-      "symbol": "enqueueCatalogMatchSuggestionsRefresh"
-    },
-    {
-      "evidencePaths": [
         "src/lib/offline/owner-vault-migration.ts",
         "src/lib/offline/queue.ts"
       ],
@@ -38237,17 +37917,6 @@
       "semanticVariant": "POST",
       "sourceNodeId": "source:a04e4ccbfe0e77d77b40",
       "symbol": "POST"
-    },
-    {
-      "evidencePaths": [
-        "src/server/catalog-curation-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/catalog-curation-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_6401",
-      "sourceNodeId": "source:a068fb971d82c849d967",
-      "symbol": "approveCatalogMatchSuggestion"
     },
     {
       "evidencePaths": [
@@ -38511,18 +38180,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/lineage/claims/page.tsx",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/lineage/claims/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:a27468eac38aee76aeb8",
-      "symbol": "resolvePilotWriteAccess"
-    },
-    {
-      "evidencePaths": [
         "src/lib/garden/journal-document.ts",
         "src/server/journal-document-persistence.ts"
       ],
@@ -38580,18 +38237,6 @@
       "semanticVariant": "from:../../shared",
       "sourceNodeId": "source:a32301cf0a03cb52d825",
       "symbol": "parseEngagementReturnTo"
-    },
-    {
-      "evidencePaths": [
-        "src/lib/pilot/segments.ts",
-        "src/server/pilot-invite-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/pilot-invite-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/segments",
-      "sourceNodeId": "source:a329f50eda0ece72aa89",
-      "symbol": "DEFAULT_PILOT_SEGMENT"
     },
     {
       "evidencePaths": [
@@ -38711,6 +38356,17 @@
       "semanticVariant": "from:@/server/analytics-events",
       "sourceNodeId": "source:a3d66ec60d9acc4cdfbd",
       "symbol": "recordAnalyticsEventSafely"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-curation-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/catalog-curation-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_9253",
+      "sourceNodeId": "source:a3fc1d29cb3b57b143f3",
+      "symbol": "confirmCatalogCurationCandidate"
     },
     {
       "evidencePaths": [
@@ -38937,18 +38593,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/lineage/objects/[objectId]/page.tsx",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/lineage/objects/[objectId]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:a60e5b1f283e7288fbc5",
-      "symbol": "resolvePilotWriteAccess"
-    },
-    {
-      "evidencePaths": [
         "src/lib/offline/journal-entry-sync.ts",
         "src/lib/offline/queue.ts"
       ],
@@ -39064,17 +38708,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:a731a9a20b9b524fb6a9",
       "symbol": "CatalogMatchType"
-    },
-    {
-      "evidencePaths": [
-        "src/server/catalog-curation-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/catalog-curation-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_8510",
-      "sourceNodeId": "source:a73c7bc5988d7e88ca4d",
-      "symbol": "rejectCatalogMatchSuggestion"
     },
     {
       "evidencePaths": [
@@ -39455,18 +39088,6 @@
       "semanticVariant": "from:../../journal-mention-typeahead",
       "sourceNodeId": "source:a975237c8b4c064fb501",
       "symbol": "applyMentionSuggestion"
-    },
-    {
-      "evidencePaths": [
-        "src/app/join/page.tsx",
-        "src/lib/public-localization.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/join/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/public-localization",
-      "sourceNodeId": "source:a9794058eeace6e9db42",
-      "symbol": "localizedPath"
     },
     {
       "evidencePaths": [
@@ -40510,6 +40131,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/catalog-curation-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/catalog-curation-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_10814",
+      "sourceNodeId": "source:b226e98b027b194b20b8",
+      "symbol": "mergeCatalogCurationCandidate"
+    },
+    {
+      "evidencePaths": [
         "src/server/profile-interaction-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -40602,18 +40234,6 @@
       "semanticVariant": "from:./catalog-entity-resolution-report",
       "sourceNodeId": "source:b2ce5cdfbf3a3b1fdd9b",
       "symbol": "CatalogEntityResolutionReport"
-    },
-    {
-      "evidencePaths": [
-        "src/lib/garden/actor-class.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/mvp-learning/attribution-outbox.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/actor-class",
-      "sourceNodeId": "source:b2f4c72b9806abff7fcb",
-      "symbol": "actorClassFromPilotCohort"
     },
     {
       "evidencePaths": [
@@ -40998,18 +40618,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/garden/pilot-invite.ts",
-        "src/server/pilot-invite-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/pilot-invite-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/pilot-invite",
-      "sourceNodeId": "source:b5a33ab8d481b6618dc1",
-      "symbol": "CLOSED_PILOT_COHORT"
-    },
-    {
-      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/catalog-curation-repository.ts"
       ],
@@ -41091,18 +40699,6 @@
       "semanticVariant": "from:@/lib/trust-surface-copy",
       "sourceNodeId": "source:b6186a17d5e103d40a8e",
       "symbol": "getLocalizedAuthClientErrorMessage"
-    },
-    {
-      "evidencePaths": [
-        "src/db/schema.ts",
-        "src/server/pilot-invite-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/pilot-invite-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/db/schema",
-      "sourceNodeId": "source:b61d862b8a4f277cedb4",
-      "symbol": "Database"
     },
     {
       "evidencePaths": [
@@ -41663,17 +41259,6 @@
       "semanticVariant": "PATCH:authenticated_user",
       "sourceNodeId": "source:ba2c3ac7d413af469428",
       "symbol": "PATCH"
-    },
-    {
-      "evidencePaths": [
-        "src/app/join/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/join/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "claimPilotInviteAction",
-      "sourceNodeId": "source:ba5d791ef3c29a4164e4",
-      "symbol": "claimPilotInviteAction"
     },
     {
       "evidencePaths": [
@@ -43046,15 +42631,14 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/skeleton/journal/route.ts",
-        "src/server/pilot-write-access.ts"
+        "src/server/catalog-curation-repository.ts"
       ],
-      "nodeKind": "import",
-      "path": "src/app/api/skeleton/journal/route.ts",
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/catalog-curation-repository.ts",
       "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:c61cbff7ccbb9357ff09",
-      "symbol": "PilotWriteAccessError"
+      "semanticVariant": "database_transaction_at_12295",
+      "sourceNodeId": "source:c629e35a313e62047fa4",
+      "symbol": "rejectCatalogCurationCandidate"
     },
     {
       "evidencePaths": [
@@ -43923,6 +43507,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/auth/reset-password/reset-password-form.tsx",
+        "src/lib/auth/auth-recovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/auth/reset-password/reset-password-form.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/auth-recovery",
+      "sourceNodeId": "source:ce26c1f522f48c352620",
+      "symbol": "passwordResetSuccessPath"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/analytics-events.ts"
       ],
@@ -44202,18 +43798,6 @@
       "semanticVariant": "from:./loading",
       "sourceNodeId": "source:d194eaf1cdc498ec6dce",
       "symbol": "GardenLoadingView"
-    },
-    {
-      "evidencePaths": [
-        "src/lib/garden/pilot-invite.ts",
-        "src/server/pilot-invite-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/pilot-invite-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/pilot-invite",
-      "sourceNodeId": "source:d1a8d95e102c9baac670",
-      "symbol": "PilotInviteCohort"
     },
     {
       "evidencePaths": [
@@ -44780,18 +44364,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/join/actions.ts",
-        "src/lib/garden/pilot-invite.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/join/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/pilot-invite",
-      "sourceNodeId": "source:d5cc21351d4d22db40b5",
-      "symbol": "verifyPilotInviteToken"
-    },
-    {
-      "evidencePaths": [
         "src/lib/offline/owner-composer-participants.ts",
         "src/lib/offline/owner-session-lifecycle.ts"
       ],
@@ -45108,18 +44680,6 @@
       "semanticVariant": "from:@/server/media/public-media-eligibility",
       "sourceNodeId": "source:d8ccb093b384280aa690",
       "symbol": "publicMediaEligibilityPredicate"
-    },
-    {
-      "evidencePaths": [
-        "src/app/join/actions.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/join/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:d8d0f335436eb79aa710",
-      "symbol": "setPilotInviteCookie"
     },
     {
       "evidencePaths": [
@@ -45619,18 +45179,6 @@
       "semanticVariant": "database_transaction_at_21393",
       "sourceNodeId": "source:dce92739df8af7fb3334",
       "symbol": "moderateCommunityContribution"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/closed-pilot-write-callout.tsx",
-        "src/app/garden/page.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:./closed-pilot-write-callout",
-      "sourceNodeId": "source:dd1aacdd2fdb43b68cd8",
-      "symbol": "ClosedPilotWriteCallout"
     },
     {
       "evidencePaths": [
@@ -46382,18 +45930,6 @@
     },
     {
       "evidencePaths": [
-        "src/db/index.ts",
-        "src/server/pilot-invite-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/pilot-invite-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/db",
-      "sourceNodeId": "source:e37c8de3e062a42007c3",
-      "symbol": "db"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/plant-identification/route.ts",
         "src/server/plant-identification-repository.ts"
       ],
@@ -46497,6 +46033,17 @@
       "semanticVariant": "auth_client.signOut",
       "sourceNodeId": "source:e4711b94413931288554",
       "symbol": "requestFallbackExit"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-curation-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/catalog-curation-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_6174",
+      "sourceNodeId": "source:e47e9dc5c5efb28bd606",
+      "symbol": "approveCatalogMatchSuggestion"
     },
     {
       "evidencePaths": [
@@ -46797,18 +46344,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/garden/pilot-invite.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/mvp-learning/attribution-outbox.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/pilot-invite",
-      "sourceNodeId": "source:e7bdc26be95569846d14",
-      "symbol": "isPilotInviteCohort"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/meta/conversions/route.ts",
         "src/server/meta-marketing/conversions-api.ts"
       ],
@@ -46983,6 +46518,18 @@
       "semanticVariant": "from:@/components/auth/auth-intent-focus",
       "sourceNodeId": "source:e88f0c48116cd91b87f3",
       "symbol": "AuthIntentFocus"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/garden/actor-class.ts",
+        "src/server/mvp-learning/attribution-outbox.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/mvp-learning/attribution-outbox.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/actor-class",
+      "sourceNodeId": "source:e8bf3514bbecd02d95ea",
+      "symbol": "REAL_SELF_SERVE_ACTOR_CLASS"
     },
     {
       "evidencePaths": [
@@ -47675,6 +47222,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/garden-auth-panel.tsx",
+        "src/lib/auth/auth-recovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/garden-auth-panel.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/auth-recovery",
+      "sourceNodeId": "source:eea4242206e453b9844c",
+      "symbol": "AUTH_HELP_PATH"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/journal-repository.ts"
       ],
@@ -47743,18 +47302,6 @@
       "semanticVariant": "canonical-row:buildAttachProcessedMediaAssetToEntryQuery",
       "sourceNodeId": "source:eef12ceca21b08b1e543",
       "symbol": "attachProcessedMediaAssetToEntry"
-    },
-    {
-      "evidencePaths": [
-        "src/server/learning-actor-attribution.ts",
-        "src/server/pilot-invite-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/learning-actor-attribution.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-invite-repository",
-      "sourceNodeId": "source:ef0c2ef9a748e020986b",
-      "symbol": "getPilotInviteGrant"
     },
     {
       "evidencePaths": [
@@ -47886,17 +47433,6 @@
       "semanticVariant": "from:@/components/ui/button",
       "sourceNodeId": "source:ef9ec01ca865ce24f490",
       "symbol": "buttonVariants"
-    },
-    {
-      "evidencePaths": [
-        "src/server/catalog-curation-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/catalog-curation-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_9480",
-      "sourceNodeId": "source:efbb4f7c5244b357b9b7",
-      "symbol": "confirmCatalogCurationCandidate"
     },
     {
       "evidencePaths": [
@@ -48470,6 +48006,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/auth/help/password-reset-request-form.tsx",
+        "src/lib/auth/auth-recovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/auth/help/password-reset-request-form.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/auth-recovery",
+      "sourceNodeId": "source:f592b93ae7f20e3dd90f",
+      "symbol": "AUTH_RESET_PASSWORD_PATH"
+    },
+    {
+      "evidencePaths": [
         "src/lib/offline/drafts.ts",
         "src/lib/offline/owner-composer-durability.ts"
       ],
@@ -48696,18 +48244,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/pilot/segments.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/mvp-learning/attribution-outbox.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/segments",
-      "sourceNodeId": "source:f7a138024efa2433562d",
-      "symbol": "isPilotSegment"
-    },
-    {
-      "evidencePaths": [
         "src/components/auth/blocked-session-account-method-actions.ts",
         "src/server/auth-session.ts"
       ],
@@ -48834,18 +48370,6 @@
       "semanticVariant": "authenticated_unlink_account",
       "sourceNodeId": "source:f8487a2a686a08c7b90a",
       "symbol": "POST"
-    },
-    {
-      "evidencePaths": [
-        "src/app/join/page.tsx",
-        "src/lib/trust-surface-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/join/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/trust-surface-copy",
-      "sourceNodeId": "source:f8492c2f49407a5ee8f5",
-      "symbol": "getTrustSurfaceCopy"
     },
     {
       "evidencePaths": [
@@ -49406,18 +48930,6 @@
       "semanticVariant": "from:@/server/lineage-repository",
       "sourceNodeId": "source:fc2cf87b866994233902",
       "symbol": "normalizeRequiredText"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/closed-pilot-write-callout.tsx",
-        "src/app/garden/objects/[objectId]/page.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/objects/[objectId]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:../../closed-pilot-write-callout",
-      "sourceNodeId": "source:fc30aa8faa28882b406f",
-      "symbol": "ClosedPilotWriteCallout"
     },
     {
       "evidencePaths": [

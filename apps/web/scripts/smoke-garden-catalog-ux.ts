@@ -2,19 +2,9 @@ import { randomUUID } from "node:crypto";
 import process from "node:process";
 
 import { config as loadEnv } from "dotenv";
-import { Kysely, PostgresDialect } from "kysely";
-import { Pool } from "pg";
 
-import {
-  resolveDatabaseConnection,
-  resolveDatabaseSslConfig,
-  resolvePgConnectionString,
-} from "../src/db/connection";
-import type { Database } from "../src/db/types";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import { defaultObjectKindForCatalogSelection } from "../src/lib/garden/catalog-object-kind";
-import { FOUNDER_REHEARSAL_COHORT } from "../src/lib/garden/pilot-invite";
-import { DEFAULT_PILOT_SEGMENT } from "../src/lib/pilot/segments";
 
 loadEnv({ path: ".env.local", override: false });
 
@@ -393,7 +383,6 @@ async function main() {
     email,
     password: TEST_PASSWORD,
   });
-  await grantSmokeWriteAccess(email);
 
   const gardenHtml = await textRequest(baseUrl, jar, "/garden");
   assertIncludes(
@@ -575,52 +564,6 @@ function normalizeBaseUrl(value: string) {
   url.search = "";
   url.hash = "";
   return url.toString().replace(/\/$/, "");
-}
-
-async function grantSmokeWriteAccess(email: string) {
-  const resolution = resolveDatabaseConnection(process.env);
-  const connectionString = resolvePgConnectionString(process.env, resolution);
-
-  if (!connectionString) {
-    throw new Error(
-      "Missing supported database connection env for smoke write access.",
-    );
-  }
-
-  const pool = new Pool({
-    connectionString,
-    max: 1,
-    ssl: resolveDatabaseSslConfig(process.env, resolution),
-  });
-  const db = new Kysely<Database>({
-    dialect: new PostgresDialect({ pool }),
-  });
-
-  try {
-    const user = await db
-      .selectFrom("user")
-      .select("id")
-      .where("email", "=", email)
-      .executeTakeFirst();
-
-    if (!user) {
-      throw new Error(
-        "Smoke auth user was not persisted before write access setup.",
-      );
-    }
-
-    await db
-      .insertInto("pilot_invite_grants")
-      .values({
-        user_id: user.id,
-        cohort: FOUNDER_REHEARSAL_COHORT,
-        segment: DEFAULT_PILOT_SEGMENT,
-      })
-      .onConflict((oc) => oc.column("user_id").doNothing())
-      .execute();
-  } finally {
-    await db.destroy();
-  }
 }
 
 async function authRequest(

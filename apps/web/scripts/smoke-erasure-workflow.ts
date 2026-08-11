@@ -763,18 +763,6 @@ async function seedSmokeRows() {
     .execute();
 
   await db
-    .insertInto("pilot_invite_grants")
-    .values({
-      user_id: REQUESTER_USER_ID,
-      cohort: "founder_rehearsal",
-      segment: "unknown_segment",
-      granted_at: now,
-      created_at: now,
-      updated_at: now,
-    })
-    .execute();
-
-  await db
     .insertInto("erasure_requests")
     .values({
       id: REQUEST_ID,
@@ -782,7 +770,7 @@ async function seedSmokeRows() {
       request_scope: "account_data_erasure",
       status: "reviewing",
       submitted_at: now,
-      intake_disclosure_version: "erasure-request-pilot-v3",
+      intake_disclosure_version: "erasure-request-mvp-v1",
       created_at: now,
       updated_at: now,
     })
@@ -889,10 +877,6 @@ async function cleanupSmokeRows() {
         ]),
       ]),
     )
-    .execute();
-  await db
-    .deleteFrom("pilot_invite_grants")
-    .where("user_id", "in", [REQUESTER_USER_ID, ERASED_SUBJECT_USER_ID])
     .execute();
   await db
     .deleteFrom("erasure_requests")

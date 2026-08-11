@@ -5,18 +5,12 @@ import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
 import {
-  actorClassFromPilotCohort,
   isActorClass,
   isLearningActorAttributionSource,
   REAL_SELF_SERVE_ACTOR_CLASS,
   type ActorClass,
   type LearningActorAttributionSource,
 } from "@/lib/garden/actor-class";
-import {
-  getPilotInviteGrant,
-} from "@/server/pilot-invite-repository";
-import type { PilotInviteCohort } from "@/lib/garden/pilot-invite";
-import type { PilotSegment } from "@/lib/pilot/segments";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -26,11 +20,6 @@ export interface LearningActorAttributionRow {
   source: LearningActorAttributionSource;
   classifiedAt: Date;
 }
-
-type PilotGrantLike = {
-  cohort: PilotInviteCohort;
-  segment: PilotSegment;
-} | null;
 
 type NewLearningActorAttribution = Insertable<
   Database["learning_actor_attributions"]
@@ -123,14 +112,14 @@ export async function upsertLearningActorAttribution(
 
 /**
  * Resolve durable actor class for analytics and decision eligibility.
- * Order: durable row → pilot grant → self_serve default (never invent smoke/bot).
+ * Order: explicit producer override → durable row → self-serve default.
+ * Synthetic actors are accepted only through an explicit producer override.
  */
 export async function resolveDurableActorClass(
   userId: string,
   options: {
     executor?: QueryExecutor;
     producerOverride?: ActorClass;
-    getGrant?: (userId: string) => Promise<PilotGrantLike>;
     persistDefault?: boolean;
   } = {},
 ): Promise<ActorClass> {
@@ -153,21 +142,6 @@ export async function resolveDurableActorClass(
 
   const durable = await getLearningActorAttribution(userId, executor);
   if (durable) return durable.actorClass;
-
-  const getGrant = options.getGrant ?? getPilotInviteGrant;
-  const grant = await getGrant(userId);
-  if (grant) {
-    const actorClass = actorClassFromPilotCohort(grant.cohort);
-    await upsertLearningActorAttribution(
-      {
-        userId,
-        actorClass,
-        source: "pilot_grant",
-      },
-      executor,
-    );
-    return actorClass;
-  }
 
   if (options.persistDefault !== false) {
     await upsertLearningActorAttribution(

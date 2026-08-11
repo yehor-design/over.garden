@@ -1,7 +1,7 @@
 # Localization Coverage Baseline
 
-Status: preserved baseline through OVE-171; OVE-205 corrective extension shipped and binding
-Date: 2026-07-22
+Status: preserved historical baseline; current route/copy inventory reconciled by OVE-314
+Date: 2026-08-11
 
 ## Purpose
 
@@ -64,14 +64,12 @@ locale plumbing exists but visible authored copy still has verified gaps.
   moves the four remaining followed-feed, notification, bookmark, and wishlist
   metadata titles onto the existing `social-surface-copy.ts` contract without
   rebuilding those surfaces.
-- OVE-170 adds `operator-copy.ts`, `operator-pilot-copy.ts`,
-  `operator-smoke-copy.ts`, `operator-erasure-copy.ts`, and
-  `operator-curation-copy.ts` as exact-parity `uk`/`bg`/`ru` contracts for
-  admin, community moderation, catalog curation, pilot health/learning/smoke,
-  erasure operations, and diagnostics. Every unprefixed operator route consumes
-  the OVE-164 selected request locale while existing authorization,
-  repositories, actions, audits, source provenance, erasure semantics, and
-  diagnostic contracts remain unchanged.
+- OVE-170 historically localized the then-current operator control plane.
+  OVE-314 deletes the obsolete admin landing/user-status and pilot
+  health/learning/smoke routes plus their dedicated copy modules. Surviving
+  community/comment moderation, catalog curation, and erasure operations retain
+  exact `uk`/`bg`/`ru` copy. `operator-menu-copy.ts` owns the four sealed-owner
+  links inside the ordinary avatar menu.
 - OVE-171 adds the `ove171-v1` deterministic completion gate. Baseline hash
   `c3207b180d9e202a45b74fd769ff4613339898cadec10475136936477c15e594`
   registers all 92 current route modules, 66 rendered routes, 22 existing copy
@@ -146,15 +144,18 @@ historical baseline, not the target size or sufficiency of the OVE-205 gate.
 | Owner garden workspace and first-object creation                                                                        | Existing exact-parity workspace/draft/offline/media copy and canonical mutations remain regression inputs                                                                                                                                  | Corrective delta | OVE-205 shipped current-state coordination; OVE-202/206/207 own structured editor, reorder, inline-photo, and cover extensions |
 | Owner living-object continuity and follow-up                                                                            | `owner-object-copy.ts`, localized owner route/actions, follow-up composer, privacy/catalog/provenance controls, progress/value moments, source chrome, lifecycle consequences, and locale-aware public continuations across `uk`/`bg`/`ru` | Preserve         | OVE-171 regression gate only                                                                                                   |
 | Owner lineage claims, invitation handoff, and questions                                                                 | `owner-lineage-copy.ts`, localized route metadata/dates/states/actions, secure handoff copy, and exact intent/security regression tests across `uk`/`bg`/`ru`                                                                              | Preserve         | OVE-171 regression gate only                                                                                                   |
-| Admin, curation, pilot, erasure-operator, and health UI                                                                 | Exact-parity operator copy and unchanged authorization/source/evidence boundaries remain regression inputs                                                                                                                                 | Corrective delta | OVE-205 shipped one-control ownership on authorized and denied/operator lifecycle states                                       |
+| Owner avatar menu; community/comment moderation; curation; erasure operator UI                                          | `operator-menu-copy.ts` plus surviving operator copy modules and sealed-owner route tests                                                                                                                                                  | Preserve         | OVE-314 removed obsolete admin/pilot routes and requires exact four-link owner projection                                      |
 | Whole-product route/state coverage gate                                                                                 | OVE-171 page/route registry, copy scan, report, and browser proof remain a historical regression baseline                                                                                                                                  | Corrective delta | OVE-205 shipped the fail-closed route/state/lifecycle/raw-renderer gate                                                        |
 
 ## Operator Route And Literal-Value Registry
 
-The OVE-171 gate retains route/state coverage for `/admin`, `/admin/users`,
-`/admin/communities`, `/admin/communities/:slug`,
-`/garden/catalog/curation`, `/garden/pilot-health`, `/garden/pilot-smoke`,
-`/garden/privacy/erasure-requests`, and `/health`.
+The current gate retains route/state coverage for `/admin/communities`,
+`/admin/communities/:slug`, `/admin/moderation/comments`,
+`/garden/catalog/curation`, `/garden/privacy/erasure-requests`, and `/health`.
+It separately proves exact `404` for `/admin`, `/admin/users`,
+`/garden/pilot-health`, `/garden/pilot-smoke`,
+`/garden/pilot-learning/interviews`, `/garden/pilot-learning/decision`, and
+`/join` in all three interface locales and for every session class.
 
 The following values are deliberate literal exclusions, not untranslated UI:
 

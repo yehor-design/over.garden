@@ -61,8 +61,11 @@ not create a second Ukraine language choice.
 
 Signed-in, authentication, garden, account, and operator routes remain
 canonical and unprefixed, including `/garden`, `/garden/objects/:id`,
-`/garden/profile`, and `/admin`. The market and locale of those routes are
-request state, never query-string state.
+`/garden/profile`, `/admin/communities`, `/admin/moderation/comments`,
+`/garden/catalog/curation`, and `/garden/privacy/erasure-requests`. The market
+and locale of those routes are request state, never query-string state. The
+retired `/admin` landing and `/admin/users` page are exact `404`, not locale
+entry points.
 
 ## Language-Control Ownership
 

@@ -40,7 +40,6 @@ export async function collectErasureDryRunCounts(
     authUserPresent,
     authSessions,
     authAccounts,
-    pilotInviteGrantPresent,
     publicIdentityProfiles,
     currentHandleClaims,
     retiredHandleClaims,
@@ -90,7 +89,6 @@ export async function collectErasureDryRunCounts(
     countAuthUserPresent(executor, requesterUserId),
     countAuthSessions(executor, requesterUserId),
     countAuthAccounts(executor, requesterUserId),
-    countPilotInviteGrantPresent(executor, requesterUserId),
     countPublicIdentityProfiles(executor, requesterUserId),
     countHandleClaims(executor, requesterUserId, "current"),
     countHandleClaims(executor, requesterUserId, "retired"),
@@ -161,7 +159,6 @@ export async function collectErasureDryRunCounts(
     authUserPresent,
     authSessions,
     authAccounts,
-    pilotInviteGrantPresent,
     publicIdentityProfiles,
     currentHandleClaims,
     retiredHandleClaims,
@@ -238,16 +235,6 @@ export function buildCountAuthAccountsQuery(
     .selectFrom("account")
     .select(sql<number>`count(*)`.as("count"))
     .where("userId", "=", requesterUserId);
-}
-
-export function buildCountPilotInviteGrantPresentQuery(
-  executor: QueryExecutor,
-  requesterUserId: string,
-) {
-  return executor
-    .selectFrom("pilot_invite_grants")
-    .select(sql<number>`count(*)`.as("count"))
-    .where("user_id", "=", requesterUserId);
 }
 
 export function buildCountPublicIdentityProfilesQuery(
@@ -708,17 +695,6 @@ async function countAuthAccounts(
   requesterUserId: string,
 ) {
   const row = await buildCountAuthAccountsQuery(
-    executor,
-    requesterUserId,
-  ).executeTakeFirst();
-  return toCount(row?.count);
-}
-
-async function countPilotInviteGrantPresent(
-  executor: QueryExecutor,
-  requesterUserId: string,
-) {
-  const row = await buildCountPilotInviteGrantPresentQuery(
     executor,
     requesterUserId,
   ).executeTakeFirst();

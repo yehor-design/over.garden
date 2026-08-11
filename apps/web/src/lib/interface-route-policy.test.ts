@@ -46,7 +46,9 @@ describe("interface route policy", () => {
     expect(getInterfaceRoutePolicy("/garden/profile").mode).toBe(
       "same-path-preference",
     );
-    expect(getInterfaceRoutePolicy("/admin").mode).toBe("same-path-preference");
+    expect(getInterfaceRoutePolicy("/admin/communities").mode).toBe(
+      "same-path-preference",
+    );
     expect(getInterfaceRoutePolicy("/markets/ukraine").mode).toBe(
       "localized-link",
     );

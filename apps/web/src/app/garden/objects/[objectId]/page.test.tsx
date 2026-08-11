@@ -6,8 +6,6 @@ const mocks = vi.hoisted(() => ({
   getAuthoritativeCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
   scopedToUser: vi.fn(),
-  resolvePilotWriteAccess: vi.fn(),
-  attachWriteEligibilityHint: vi.fn(),
   getPlantObjectPage: vi.fn(),
   getObjectProvenancePanel: vi.fn(),
   resolveFollowUpValuePulsePrompt: vi.fn(),
@@ -26,11 +24,6 @@ vi.mock("@/server/auth-session", () => ({
 
 vi.mock("@/server/request-scope", () => ({
   scopedToUser: mocks.scopedToUser,
-}));
-
-vi.mock("@/server/pilot-write-access", () => ({
-  resolvePilotWriteAccess: mocks.resolvePilotWriteAccess,
-  attachWriteEligibilityHint: mocks.attachWriteEligibilityHint,
 }));
 
 vi.mock("@/server/journal-repository", () => ({
@@ -110,12 +103,10 @@ describe("/garden/objects/[objectId]", () => {
         email: "gardener@example.com",
       },
     });
-    mocks.attachWriteEligibilityHint.mockImplementation(async (scope) => scope);
     mocks.getSessionId.mockReturnValue("session-1");
     mocks.scopedToUser.mockImplementation(
       (userId: string, sessionId: string | null) => ({ userId, sessionId }),
     );
-    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "real_self_serve" });
     mocks.getObjectProvenancePanel.mockResolvedValue({
       sourceObjectOptions: [],
       edges: [],
@@ -533,7 +524,6 @@ describe("/garden/objects/[objectId]", () => {
       "00000000-0000-4000-8000-000000000099",
       null,
     );
-    expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
     expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();
   });
 
@@ -570,7 +560,6 @@ describe("/garden/objects/[objectId]", () => {
       "00000000-0000-4000-8000-000000000099",
       null,
     );
-    expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
     expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();
   });
 

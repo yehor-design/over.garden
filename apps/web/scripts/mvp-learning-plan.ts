@@ -16,7 +16,6 @@ import {
 } from "../src/server/mvp-learning/plan";
 import {
   EDITORIAL_SEED_ACTOR_CLASS,
-  REAL_CLOSED_PILOT_ACTOR_CLASS,
   REAL_SELF_SERVE_ACTOR_CLASS,
 } from "../src/lib/garden/actor-class";
 
@@ -79,7 +78,6 @@ async function main() {
     const legacyEventRemaps = [];
     for (const pair of [
       { from: "self_serve", to: REAL_SELF_SERVE_ACTOR_CLASS },
-      { from: "closed_pilot", to: REAL_CLOSED_PILOT_ACTOR_CLASS },
       { from: "editorial", to: EDITORIAL_SEED_ACTOR_CLASS },
     ] as const) {
       const result = await pool.query(

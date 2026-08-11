@@ -26,7 +26,6 @@ export interface MvpLearningReconcileReport {
   environment: "local" | "production";
   agreement: {
     selfServeActivated: number;
-    closedPilotActivated: number;
     unclassifiedEvents: number;
     attributionOutstanding: number;
     exclusionsTotal: number;
@@ -101,7 +100,6 @@ async function buildMvpLearningReconcileReportFromSnapshot(
     environment: input.environment,
     agreement: {
       selfServeActivated: report.cohorts.real_self_serve.activatedGardeners,
-      closedPilotActivated: report.cohorts.real_closed_pilot.activatedGardeners,
       unclassifiedEvents: report.unclassifiedEventCount,
       attributionOutstanding,
       exclusionsTotal,

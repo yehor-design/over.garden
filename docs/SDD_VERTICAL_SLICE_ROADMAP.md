@@ -22,6 +22,14 @@ issues OVE-213 through OVE-244 in `Todo` under
 the newest issue update in that set was `2026-07-25T22:18:33.986Z`. Identifier
 order alone is not execution order.
 
+OVE-314 is the mandatory control-plane reconciliation gate inserted before
+resuming OVE-294. It removes `/admin`, `/admin/users`, pilot status/smoke/manual
+learning pages, `/join`, and product-access invite/grant/hint ownership; moves
+the four surviving sealed-owner destinations into the ordinary avatar menu;
+preserves self-serve email/password and Google plus lineage invitations; and
+converges learning to one real `real_self_serve` cohort. Historical roadmap
+mentions of closed-pilot/founder-rehearsal access are provenance only.
+
 On 2026-08-10, OVE-285 was individually re-audited against repository baseline
 `5c403444cddc2e195690808de08304d14fe41fd3`, the terminal OVE-296 receipt, and
 the authenticated Linear DAG. Its report-only v3 registry closes 592 production
@@ -348,7 +356,7 @@ cd apps/web
 pnpm mainline:closeout:check
 ```
 
-Then read `docs/MAINLINE_CLOSEOUT.md`. As of OVE-50, the critical OVE-29 and OVE-30 fixes that were branch-only during the 2026-06-29 audit are proven on current `main` by `docs/mainline-closeout-ledger.json`. OVE-53 has founder-provided redacted field-run evidence recorded in Linear and is closed: 8 invited, 8 started, 8 first entries, and 6 same-object follow-ups. Do not add raw participant identities, invite URLs, journal text, media keys, private screenshots, IP/user-agent, or precise location to repo docs.
+Then read `docs/MAINLINE_CLOSEOUT.md`. As of OVE-50, the critical OVE-29 and OVE-30 fixes that were branch-only during the 2026-06-29 audit are proven on current `main` by `docs/mainline-closeout-ledger.json`. Historical OVE-53 field evidence remains in Linear as a dated discovery receipt; OVE-314 supersedes its invite/cohort operating model. Do not add participant identities, credentials, private journal text, media keys, private screenshots, IP/user-agent, or precise location to repo docs.
 
 The 2026-07-01 OVE-96 lineage/social graph post-MVP decision is superseded by the 2026-07-03 founder/operator decision recorded in `docs/MVP_SCOPE_RECHECK_2026-07-03.md`. Lineage/social graph is now MVP scope and must be planned as vertical SDD slices with the privacy/consent invariants from `docs/product-research/CROSS_USER_TRUST_AND_PRIVACY_SPEC_v0.md`. The then-current coverage was OVE-122 through OVE-126 plus OVE-133 through OVE-135.
 
@@ -1038,7 +1046,7 @@ Acceptance criteria:
 - Creating a second entry on the same object is distinguishable from first-entry activation.
 - Event write failure is logged server-side but does not fail the user action.
 - Tests reject event payloads containing forbidden location/content fields.
-- Documentation states that event targets are provisional until live pilot calibration.
+- Documentation states that event targets are provisional until eligible real self-serve calibration.
 
 Verification commands:
 

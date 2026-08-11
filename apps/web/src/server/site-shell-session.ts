@@ -6,12 +6,14 @@ import {
   getAuthoritativeCurrentSession,
   getSessionId,
 } from "@/server/auth-session";
+import { resolveAdminAccess } from "@/server/admin-access";
 import { isDocumentMutationAdmissionEnabled } from "@/server/document-mutation-admission-config";
 
 export interface SiteShellSessionState {
   isAuthenticated: boolean;
   documentMutationGeneration: string | null;
   currentSessionBinding: string | null;
+  hasOperatorAccess: boolean;
 }
 
 export async function getSiteShellSessionState(): Promise<SiteShellSessionState> {
@@ -23,6 +25,7 @@ export async function getSiteShellSessionState(): Promise<SiteShellSessionState>
       isAuthenticated: false,
       documentMutationGeneration: null,
       currentSessionBinding: null,
+      hasOperatorAccess: false,
     };
   }
 
@@ -32,14 +35,20 @@ export async function getSiteShellSessionState(): Promise<SiteShellSessionState>
       isAuthenticated: false,
       documentMutationGeneration: null,
       currentSessionBinding: null,
+      hasOperatorAccess: false,
     };
   }
   const sessionId = getSessionId(session);
+  const hasOperatorAccess = await resolveShellOperatorAccess(
+    ownerUserId,
+    sessionId,
+  );
   if (!sessionId) {
     return {
       isAuthenticated: true,
       documentMutationGeneration: null,
       currentSessionBinding: null,
+      hasOperatorAccess,
     };
   }
   let currentSessionBinding: string | null = null;
@@ -54,6 +63,7 @@ export async function getSiteShellSessionState(): Promise<SiteShellSessionState>
       isAuthenticated: true,
       documentMutationGeneration: null,
       currentSessionBinding,
+      hasOperatorAccess,
     };
   }
 
@@ -68,12 +78,26 @@ export async function getSiteShellSessionState(): Promise<SiteShellSessionState>
       isAuthenticated: true,
       documentMutationGeneration: issued.transport,
       currentSessionBinding,
+      hasOperatorAccess,
     };
   } catch {
     return {
       isAuthenticated: true,
       documentMutationGeneration: null,
       currentSessionBinding,
+      hasOperatorAccess,
     };
+  }
+}
+
+async function resolveShellOperatorAccess(
+  userId: string,
+  sessionId: string | null,
+) {
+  try {
+    const access = await resolveAdminAccess({ userId, sessionId });
+    return access.status === "allowed";
+  } catch {
+    return false;
   }
 }

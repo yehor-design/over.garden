@@ -172,7 +172,7 @@ begin
       add constraint admin_role_audit_log_reason_check
       check (reason in (
         'manual_owner_grant',
-        'pilot_operator_delegation',
+        'operator_delegation',
         'temporary_coverage',
         'role_cleanup',
         'access_revoked'
@@ -3885,7 +3885,7 @@ create index if not exists community_reports_queue_idx
 create index if not exists community_moderation_audit_created_idx
   on community_moderation_audit_log (community_id, created_at desc);
 
--- Canonical pilot identity and code-owned rule keys. This is real product
+-- Canonical community identity and code-owned rule keys. This is real product
 -- configuration, not synthetic activity; readiness still requires a real
 -- public contribution and active moderator at read time.
 insert into journal_topics (id, slug, label, trust_state)
@@ -4532,7 +4532,7 @@ create table if not exists erasure_requests (
     )
   ),
   handled_by_user_id uuid,
-  intake_disclosure_version text not null default 'erasure-request-pilot-v1',
+  intake_disclosure_version text not null default 'erasure-request-mvp-v1',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -5014,102 +5014,6 @@ begin
   end if;
 end $$;
 
--- Closed-pilot write eligibility (OVE-42, OVE-52, OVE-54). One persistent grant per
--- user that proves invited write access. It stores ONLY the user id, enum
--- cohort, enum pilot segment, and timestamps: never the invite link, token,
--- email, phone, referrer, IP, user agent, or query string. Cohort membership
--- and segment decision support stay enum-only. Founder rehearsal grants can
--- exercise the path internally but must stay excluded from real pilot decisions.
-create table if not exists pilot_invite_grants (
-  user_id uuid primary key,
-  cohort text not null default 'closed_pilot' check (cohort in ('closed_pilot', 'founder_rehearsal')),
-  segment text not null default 'unknown_segment' check (
-    segment in (
-      'casual_micro_grower',
-      'casual_gen_z',
-      'casual_practical_beginner',
-      'casual_urban_balcony',
-      'casual_food_self_reliance',
-      'power_burned_out_it',
-      'power_collector',
-      'power_experienced',
-      'power_homestead',
-      'supply_expert_creator',
-      'supply_local_seller',
-      'channel_ally',
-      'unknown_segment'
-    )
-  ),
-  granted_at timestamptz not null default now(),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-alter table pilot_invite_grants
-  add column if not exists cohort text not null default 'closed_pilot';
-
-do $$
-begin
-  if exists (
-    select 1
-    from pg_constraint
-    where conname = 'pilot_invite_grants_cohort_check'
-      and conrelid = 'pilot_invite_grants'::regclass
-  ) then
-    alter table pilot_invite_grants
-      drop constraint pilot_invite_grants_cohort_check;
-  end if;
-
-  alter table pilot_invite_grants
-    add constraint pilot_invite_grants_cohort_check
-    check (cohort in ('closed_pilot', 'founder_rehearsal'));
-end $$;
-
-alter table pilot_invite_grants
-  add column if not exists segment text not null default 'unknown_segment';
-
-do $$
-begin
-  if exists (
-    select 1
-    from pg_constraint
-    where conname = 'pilot_invite_grants_segment_check'
-      and conrelid = 'pilot_invite_grants'::regclass
-  ) then
-    alter table pilot_invite_grants
-      drop constraint pilot_invite_grants_segment_check;
-  end if;
-
-  alter table pilot_invite_grants
-    add constraint pilot_invite_grants_segment_check
-    check (
-      segment in (
-        'casual_micro_grower',
-        'casual_gen_z',
-        'casual_practical_beginner',
-        'casual_urban_balcony',
-        'casual_food_self_reliance',
-        'power_burned_out_it',
-        'power_collector',
-        'power_experienced',
-        'power_homestead',
-        'supply_expert_creator',
-        'supply_local_seller',
-        'channel_ally',
-        'unknown_segment'
-      )
-    );
-end $$;
-
-create index if not exists pilot_invite_grants_granted_idx
-  on pilot_invite_grants (granted_at desc);
-
-create index if not exists pilot_invite_grants_segment_granted_idx
-  on pilot_invite_grants (segment, granted_at desc);
-
-create index if not exists pilot_invite_grants_cohort_segment_granted_idx
-  on pilot_invite_grants (cohort, segment, granted_at desc);
-
 -- OVE-200: durable learning actor/evidence attribution (no PII).
 -- Better Auth owns "user", so this table declares no inline foreign key and
 -- attaches it in the guarded block below once that table exists.
@@ -5148,8 +5052,6 @@ begin
       check (
         actor_class in (
           'real_self_serve',
-          'real_closed_pilot',
-          'founder_rehearsal',
           'production_smoke',
           'visual_fixture',
           'editorial_seed',
@@ -5168,7 +5070,6 @@ begin
       add constraint learning_actor_attributions_source_check
       check (
         source in (
-          'pilot_grant',
           'producer',
           'operator_plan',
           'self_serve_default'

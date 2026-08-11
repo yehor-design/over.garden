@@ -85,6 +85,17 @@ describe("garden workspace copy", () => {
     );
   });
 
+  it("describes self-serve access without retired invitation language", () => {
+    const retiredAccessLanguage =
+      /closed.?pilot|founder.?rehearsal|без запрошення|без покана|без приглашения|закрит(?:ий|ого) пілот|затворен(?:ия)? пилот|закрыт(?:ый|ого) пилот/i;
+
+    for (const locale of LOCALES) {
+      expect(flattenStrings(getGardenWorkspaceCopy(locale)).join("\n")).not.toMatch(
+        retiredAccessLanguage,
+      );
+    }
+  });
+
   it("contains no verified English workspace fallback in authored locale copy", () => {
     const forbidden =
       /\b(?:next useful action|living objects|drafts on this device|queued locally|save first entry|mention suggestions unavailable|voice input stopped|garden trail|try this section again)\b/i;

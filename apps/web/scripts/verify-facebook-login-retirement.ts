@@ -72,9 +72,7 @@ const RECEIPT_SOURCE_PATHS = [
   "src/app/garden/page.tsx",
   "src/app/garden/profile/page.tsx",
   "src/components/auth/blocked-session-account-methods.tsx",
-  "src/lib/operator-smoke-copy.ts",
   "src/server/auth/account-methods.ts",
-  "src/server/pilot-smoke-readiness.ts",
   "scripts/smoke-account-sign-out.ts",
   "scripts/smoke-canonical-launch.ts",
   "scripts/smoke-public-identity.ts",
@@ -386,7 +384,9 @@ async function assertMetaAdsUnchanged(root: string, signal: AbortSignal) {
   })) {
     const text = await readText(root, relativePath, signal);
     if (sha256(text) !== expectedDigest) {
-      throw new Error(`Meta Ads implementation/test drifted at ${relativePath}`);
+      throw new Error(
+        `Meta Ads implementation/test drifted at ${relativePath}`,
+      );
     }
   }
 

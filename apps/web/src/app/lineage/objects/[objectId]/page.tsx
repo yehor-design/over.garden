@@ -33,7 +33,6 @@ import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { getEngagementSummary } from "@/server/engagement-repository";
 import { listLineageInteractionTargets } from "@/server/lineage-interactions-repository";
-import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import {
   getPublicLineageGraphPage,
   type PublicLineageEdge,
@@ -120,16 +119,9 @@ export default async function PublicLineageObjectRoute({
   const session = await getCurrentSession();
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
-  const writeAccess = scope
-    ? await resolvePilotWriteAccess(scope)
-    : {
-        canWrite: false,
-        invited: false,
-        actorClass: "real_self_serve" as const,
-      };
   const edges = lineagePage?.edges ?? [];
   const interactionTargets =
-    scope && writeAccess.canWrite && edges.length > 0
+    scope && edges.length > 0
       ? await listLineageInteractionTargets(
           scope,
           edges.map((edge) => edge.id),

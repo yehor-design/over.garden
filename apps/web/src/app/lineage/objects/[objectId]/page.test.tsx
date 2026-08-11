@@ -9,7 +9,6 @@ const mocks = vi.hoisted(() => ({
   getPublicLineageGraphPage: vi.fn(),
   getEngagementSummary: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
-  resolvePilotWriteAccess: vi.fn(),
   listLineageInteractionTargets: vi.fn(),
 }));
 
@@ -32,10 +31,6 @@ vi.mock("@/server/engagement-repository", () => ({
 
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
-}));
-
-vi.mock("@/server/pilot-write-access", () => ({
-  resolvePilotWriteAccess: mocks.resolvePilotWriteAccess,
 }));
 
 vi.mock("@/server/lineage-interactions-repository", () => ({
@@ -188,11 +183,6 @@ describe("/lineage/objects/[objectId]", () => {
     mocks.getPublicObjectPassportPage.mockResolvedValue(objectPassportPage);
     mocks.getPublicLineageGraphPage.mockResolvedValue(lineageGraphPage);
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
-    mocks.resolvePilotWriteAccess.mockResolvedValue({
-      canWrite: true,
-      invited: false,
-      actorClass: "real_self_serve",
-    });
     mocks.listLineageInteractionTargets.mockResolvedValue([
       {
         edgeId: lineageGraphPage.edges[0].id,
@@ -291,43 +281,7 @@ describe("/lineage/objects/[objectId]", () => {
     expect(html).toContain(`id="lineage-follow-${followControl}"`);
     expect(html).not.toContain('id="lineage-follow"');
     expect(html).toContain("autofocus");
-    expect(mocks.resolvePilotWriteAccess).toHaveBeenCalled();
     expect(mocks.listLineageInteractionTargets).toHaveBeenCalled();
-  });
-
-  it("focuses a bounded status when resumed follow permission is no longer available", async () => {
-    mocks.getCurrentSession.mockResolvedValue({
-      user: { id: "00000000-0000-4000-8000-000000000001" },
-      session: { id: "session-1" },
-    });
-    mocks.resolvePilotWriteAccess.mockResolvedValue({
-      canWrite: false,
-      invited: false,
-      actorClass: "real_self_serve",
-    });
-    const followControl = createAuthIntentControlRef(
-      "follow",
-      `${lineageGraphPage.edges[0].id}:${sourceObjectId}`,
-    );
-    const { default: PublicLineageObjectRoute } = await import("./page");
-    const html = renderToStaticMarkup(
-      await PublicLineageObjectRoute({
-        params: Promise.resolve({ objectId }),
-        searchParams: Promise.resolve({
-          authIntent: "follow",
-          authControl: followControl,
-        }),
-      }),
-    );
-
-    expect(html).toContain(
-      "За да следите този произход, е необходим активен достъп за записване.",
-    );
-    expect(html).toContain(
-      `id="lineage-follow-${followControl}" role="status" tabindex="-1" data-auth-intent-control="follow" data-auth-intent-control-ref="${followControl}"`,
-    );
-    expect(html).not.toContain("Follow updates</button>");
-    expect(mocks.listLineageInteractionTargets).not.toHaveBeenCalled();
   });
 
   it("keeps missing object passport pages noindex", async () => {

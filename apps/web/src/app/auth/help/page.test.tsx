@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PasswordResetRequestForm } from "@/app/auth/help/password-reset-request-form";
 import { SUPPORT_EMAIL } from "@/lib/privacy/disclosures";
 import {
-  PILOT_AUTH_HELP_PATH,
-  PILOT_AUTH_RESET_PASSWORD_PATH,
-} from "@/lib/auth/pilot-auth-recovery";
+  AUTH_HELP_PATH,
+  AUTH_RESET_PASSWORD_PATH,
+} from "@/lib/auth/auth-recovery";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 import AuthHelpPage, { generateMetadata } from "./page";
 
@@ -16,14 +16,14 @@ vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
-describe("/auth/help closed-pilot recovery page copy", () => {
+describe("/auth/help self-serve recovery page copy", () => {
   beforeEach(() => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
   });
 
   it("uses stable auth recovery routes", () => {
-    expect(PILOT_AUTH_HELP_PATH).toBe("/auth/help");
-    expect(PILOT_AUTH_RESET_PASSWORD_PATH).toBe("/auth/reset-password");
+    expect(AUTH_HELP_PATH).toBe("/auth/help");
+    expect(AUTH_RESET_PASSWORD_PATH).toBe("/auth/reset-password");
   });
 
   it("owns recovery guidance in the typed trust namespace", () => {

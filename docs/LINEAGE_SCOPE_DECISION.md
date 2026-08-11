@@ -1,111 +1,72 @@
 # Lineage Scope Decision
 
-Status: superseded execution decision
-Date: 2026-07-01
-Owner: founder/operator
-Scope: lineage, provenance edges, claims, handles, invites, follow, and social graph implementation
+Status: current reconciliation after OVE-314
+Last updated: 2026-08-11
 
-## Superseded By 2026-07-03 Founder Decision
+The earlier decision to defer lineage until a closed-pilot gate is superseded by
+`docs/MVP_SCOPE_RECHECK_2026-07-03.md` and the implemented lineage vertical
+slices. Lineage and the social graph are MVP scope. They must not depend on a
+product-access invitation, cohort grant, pilot-health page, founder rehearsal,
+or manual owner learning form.
 
-This 2026-07-01 decision is no longer the current MVP scope.
+Any new or materially rewritten execution task affecting this boundary must
+follow `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`.
 
-On 2026-07-03, the founder/operator explicitly superseded the post-MVP gate and approved lineage/social graph for MVP execution now. The current scope includes provenance edges, chains, claim inbox, invitations, public-safe `@handle` identity/profile, cross-user mention/typeahead, lineage graph readback, follow, ask-the-lineage, followed feed, and bounded notifications, while preserving all privacy and consent invariants below.
+## Current boundary
 
-Current scope and execution authority:
+Lineage invitations represent provenance between garden objects. They do not
+grant access to OverGarden.
 
-- `docs/MVP_SCOPE_RECHECK_2026-07-03.md`
-- authenticated current Linear read-back for queue selection, reconciled with the dated `Current Execution State` mirror in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`
-- a fresh audit of current `main`, repository callers and dependencies, and relevant external state before implementation
-- `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md` for every new or materially rewritten execution issue
+- Product access is self-serve through email/password or Google.
+- A lineage invitation starts only after a gardener intentionally creates a
+  provenance relationship.
+- The private claim token stays in the client-only URL fragment and is handed
+  to the server through the dedicated claim flow.
+- A valid claim can create or connect only the bounded lineage relationship it
+  names; it cannot grant journal-write, admin, operator, or account access.
+- Existing consent, ownership, blocking, privacy, erasure, and public-projection
+  rules remain authoritative.
 
-Linear OVE-122 through OVE-126 and OVE-133 through OVE-135 are retained only as the then-created historical lineage issue identifiers. They are not current/fresh task-selection authority and must not be executed from their historical descriptions without current Linear and current-main revalidation plus a compliant rewrite when required.
+The preserved claim entry point is
+`/garden/lineage/invitations/claim`. OVE-314 removes only the unrelated
+product-access `/join` flow and its grant/token/cookie storage.
 
-The historical caution in this file remains useful context, but it is not an instruction to block MVP lineage work anymore.
+## Product rationale
 
-## Historical Decision (Superseded)
+Lineage provides a concrete user benefit: a gardener can record where an object
+came from, connect descendants or shared material, and preserve provenance
+without exposing private journal content or precise location. Removing this
+flow together with closed-pilot invitations would destroy an implemented MVP
+capability for an unrelated naming similarity.
 
-Lineage and social graph are post-MVP for current execution. They must not be started during founder rehearsal, the first friendly closed pilot, or the post-audit hardening batch.
+The falsification boundary remains practical: if real self-serve gardeners do
+not create, claim, revisit, or derive value from provenance relationships, the
+feature should be simplified or reprioritized based on eligible self-serve
+evidence. Synthetic fixtures, editorial rows, automation, and production smoke
+cannot justify expansion.
 
-The current MVP execution remains focused on:
+## Non-negotiable privacy rules
 
-- journal capture and same-object return behavior;
-- safe publication and archive/readback;
-- photo derivative safety;
-- catalog/typeahead and source-backed seed quality;
-- privacy, erasure readiness, and pilot trust copy;
-- H1/H4/H6 pilot learning;
-- public UGC/SEO readiness for journal and variety pages.
+- No precise location is collected, inferred, rendered, logged, indexed, or
+  encoded in an invitation.
+- Tokens, cookies, identities, private labels, journal content, and media keys
+  do not enter analytics or closeout evidence.
+- Private or blocked identities and relationships do not appear in public
+  projections.
+- Claim retries are idempotent and cannot cross owners or relationships.
+- Erasure and revocation must converge through the canonical private/public
+  lifecycle rather than a lineage-specific deletion shortcut.
 
-This decision supersedes the operational reading of `docs/product-research/LINEAGE_SOCIAL_GRAPH_SPEC_v0.md` and `docs/product-research/OverGarden_MVP_PRD_v0.md` where those files describe S14-S20 as full v0 scope. Those research files remain useful historical/product context, and their AC-INV1-5 privacy constraints remain binding for any future lineage work, but they are not authorization to implement social graph surfaces in the current MVP execution queue.
+## Verification
 
-## Historical Why
+Every change near auth or invitation code must prove both sides:
 
-`LINEAGE_SOCIAL_GRAPH_SPEC_v0.md` records a 2026-06-21 operator decision to build the full lineage layer in v0. Later repo execution did not implement that layer: `docs/SCAFFOLD_STATUS.md` records journal, publication, catalog, pilot, runtime, and post-audit hardening work, but no lineage tables, handles, follows, claim inbox, invitations, graph UI, or social graph job path.
+1. A new email/password or Google user reaches canonical garden writes without
+   any product-access grant.
+2. A valid lineage invitation still completes its existing claim semantics.
+3. An invalid, expired, replayed, blocked, or cross-owner claim fails closed.
+4. `/join` remains exact `404` and no product-access invite code or storage is
+   reintroduced.
 
-The product risk is not that lineage is weak. The risk is sequencing. Lineage can create retention and defensibility, but it also adds sensitive cross-user identity, consent, and location-adjacent exposure before the single-player journal habit and public publishing behavior have been proven by real closed-pilot users.
-
-The current active product learning gates remain:
-
-- H1: real gardeners sustain a useful narrative journal habit.
-- H4: real gardeners are willing to publish to an open/indexed channel.
-- H6: public UGC can support organic discovery after H1 and H4 create enough public material to measure.
-
-Lineage is a moat candidate after those gates, not a substitute for them.
-
-## Historical Reconsideration Gates
-
-Do not open implementation work for lineage/social graph until all gates below are true or a later dated founder/operator decision explicitly replaces this file.
-
-1. Real closed-pilot evidence exists from `closed_pilot` users, not `founder_rehearsal` users. Founder rehearsal proves operator readiness only.
-2. H1 is strong enough to widen learning: the automated closed-pilot aggregates on `/garden/pilot-health` meet the provisional continue threshold, or a founder/operator decision records why an iterate result is sufficient for a narrow next slice. The current threshold is invited first-save rate at or above roughly two-thirds and returning gardeners at roughly 30% of first savers, with segment distribution checked.
-3. H4 is not unknown or failed: `/garden/pilot-health` shows real `closed_pilot` publication behavior, and any H4 interpretation is recorded against `docs/product-research/KILL_CRITERIA_PREREG_v2.md` rather than inferred from internal smoke.
-4. Public/legal/privacy readiness is not blocking the new surface: erasure/anonymization, public copy, and search/noindex rules are ready for a cross-user feature that can preserve structural edges after account erasure.
-5. A fresh SDD slice exists and passes the roadmap SDD Slice Test. It must own the full user behavior end to end and must name the exact subset being built.
-
-## Historical Non-Goals
-
-Do not add any of the following in current MVP execution:
-
-- lineage or edge tables;
-- user handles;
-- follow relationships;
-- claim/confirm/decline inbox;
-- non-user invitations for provenance;
-- ask-the-lineage flows;
-- lineage graph UI;
-- cross-user typeahead;
-- social graph notifications or jobs;
-- public profile or full lineage graph routes.
-
-Do not add a narrow precursor unless a later Linear issue explicitly names it and repeats the gates above. A schema-only precursor is not allowed.
-
-## Current Lineage MVP Slice Rules
-
-Any lineage MVP slice must keep AC-INV1-5 from `OverGarden_MVP_PRD_v0.md` and `CROSS_USER_TRUST_AND_PRIVACY_SPEC_v0.md` as hard acceptance criteria:
-
-- public/indexed cross-user artifacts are variety-mediated, not person-location mediated;
-- tags/follows/mentions never raise target visibility;
-- consent lives in the edge state;
-- cross-links are earned and abuse-resistant;
-- erasure uses irreversible anonymization and removes region from rare tombstones when needed to avoid re-identification.
-
-The current slice sequence must test provenance value in small vertical behaviors without building the whole social network at once. Select work from authenticated current Linear read-back, reconcile it with the roadmap's dated execution-state mirror, and re-audit it against current `main`; treat the issue identifiers named in `docs/MVP_SCOPE_RECHECK_2026-07-03.md` only as historical provenance, not executable task authority. Any new or materially rewritten issue must satisfy `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`.
-
-## Current Next-Agent Instruction
-
-The correct current action is:
-
-1. Treat lineage/social graph as approved MVP scope under `docs/MVP_SCOPE_RECHECK_2026-07-03.md`.
-2. Use authenticated current Linear read-back as the primary queue authority, reconcile it with `Current Execution State` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`, and audit the selected work against current `main`; OVE-122 through OVE-126 and OVE-133 through OVE-135 are historical identifiers only.
-3. Preserve every privacy, consent, no-visibility-escalation, erasure, and public-safe projection invariant in this file and in `docs/product-research/CROSS_USER_TRUST_AND_PRIVACY_SPEC_v0.md`.
-4. Construct or materially rewrite the selected issue under `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`; do not implement lineage as a schema-only, backend-only, or social-network-generic task.
-
-## Historical Next-Agent Instruction (Superseded)
-
-If a future agent sees S14-S20, lineage, follows, handles, claims, invitations, provenance edges, or social graph in product-research files, it must read this file first.
-
-Unless this file has been superseded by a newer dated decision, the correct action is:
-
-1. Do not implement lineage/social graph.
-2. Continue current MVP/pilot hardening and evidence work.
-3. If the task explicitly asks for lineage, stop and require a new founder/operator decision or a fresh vertical SDD slice that cites this file and proves the reconsideration gates.
+Historical Git/Linear receipts may mention the superseded sequencing decision.
+They are provenance only, not current scope authority.

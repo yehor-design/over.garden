@@ -111,10 +111,8 @@ describe("OVE-291 strict authenticated mutation enforcement", () => {
     );
   });
 
-  it("keeps guest invite handoff and public/global catalog reads outside document admission", () => {
+  it("keeps public/global catalog reads outside document admission", () => {
     const exclusions = [
-      ["src/app/join/actions.ts", "claimPilotInviteAction"],
-      ["src/app/join/page.tsx", "JoinPage"],
       ["src/app/api/public/objects/suggestions/route.ts", "GET"],
       ["src/app/api/garden/catalog/typeahead/route.ts", "GET"],
     ] as const;

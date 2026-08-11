@@ -1,6 +1,7 @@
 {
   "ok": true,
   "issue": "OVE-200",
+  "status": "historical_superseded_by_ove314",
   "policyVersion": "ove200.learning.v1",
   "decisionGate": "ok",
   "agreement": {
@@ -28,5 +29,5 @@
       "publishedEntries": 2
     }
   },
-  "note": "Redacted production baseline after additive 0009 schema + non-destructive reclassify. No row IDs, journal text, emails, or media keys."
+  "note": "Historical redacted OVE-200 snapshot retained as provenance only. OVE-314 converges current learning to one real_self_serve cohort and four synthetic exclusion classes; these old cohort counts are not current product or decision state. No row IDs, journal text, emails, or media keys."
 }

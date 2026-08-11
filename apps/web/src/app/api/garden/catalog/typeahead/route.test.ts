@@ -64,10 +64,11 @@ describe("GET /api/garden/catalog/typeahead", () => {
           source: "internal_seed",
           trustState: "curated",
           trustLabel: "Curated",
-          sourceLabel: "OverGarden pilot seed",
+          sourceLabel: "OverGarden starter catalog",
           sourceCaveat:
             "Curated OverGarden identity. Compare the type and name before choosing.",
-          disambiguationLabel: "Plant variety · OverGarden pilot seed · en",
+          disambiguationLabel:
+            "Plant variety · OverGarden starter catalog · en",
         },
       ],
     });

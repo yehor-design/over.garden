@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import { useSiteShellLocale } from "@/components/site-shell/site-shell-locale-context";
 import type { ActivationSource } from "@/lib/garden/entry-contracts";
-import { PILOT_AUTH_HELP_PATH } from "@/lib/auth/pilot-auth-recovery";
+import { AUTH_HELP_PATH } from "@/lib/auth/auth-recovery";
 import { runBrowserAuthMutation } from "@/lib/auth/browser-auth-mutation-coordinator";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "@/lib/auth/public-identity-compatibility";
 import {
@@ -312,7 +312,7 @@ export function GardenAuthPanel({
       <p className="text-xs leading-5 text-muted-foreground">
         {copy.recoveryHint}{" "}
         <Link
-          href={PILOT_AUTH_HELP_PATH}
+          href={AUTH_HELP_PATH}
           className="font-medium text-primary underline-offset-4 hover:underline"
         >
           {copy.signInHelp}

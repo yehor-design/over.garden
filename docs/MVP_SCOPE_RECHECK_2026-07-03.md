@@ -1,7 +1,7 @@
 # MVP Scope Recheck 2026-07-03
 
 Status: current scope reconciliation note
-Date: 2026-07-03; localization clarification added 2026-07-22
+Date: 2026-07-03; localization clarification added 2026-07-22; access/learning reconciliation added 2026-08-11
 Owner: founder/operator
 
 ## Purpose
@@ -23,10 +23,17 @@ Product assumption: the fastest useful MVP now requires the single-player journa
 
 User job and trust concern: gardeners need a durable, low-friction growing memory that can become publicly useful without exposing precise location, private identity, raw media metadata, or unsafe thin UGC to search engines.
 
+OVE-314 reconciliation: self-serve access is the only current product-access
+model. The historical closed-pilot/founder-rehearsal invite model and its UI,
+storage, status, and manual-learning surfaces are retired. `real_self_serve` is
+the single decision-eligible learning cohort; synthetic classes remain explicit
+exclusions. Lineage invitations remain because they grant bounded provenance
+claim authority, not product access.
+
 ## Confirmed Decisions
 
 - Public SEO/AEO starts at MVP launch. Blog, guides, market landings, and useful answer pages may be public and indexable from day one. Thin UGC, variety, topic, lineage, and profile pages must stay `noindex` until explicit quality gates promote them.
-- OVE-53 field-run gate is closed from founder-provided redacted evidence: 8 invited, 8 started, 8 created a first entry, and 6 created a same-object follow-up. The decision is to continue with the same segment set.
+- Historical OVE-53 field-run evidence remains a dated discovery input, not a current access/cohort contract. Current product and learning decisions must use eligible self-serve behavior without invite-grant attribution.
 - The segment set remains: micro/one-pot growers, Gen Z and young beginners, burned-out IT/knowledge workers/digital exiles, practical beginners with land/new dacha owners, urban balcony/patio/small-space gardeners, plant collectors and rare plant people, food self-reliance beginners, homestead/smallholding aspirants, and experienced gardeners/farmers/animal keepers/DIY practitioners.
 - Lineage/social graph is MVP now, not post-MVP. The scope includes provenance edges, chains, claim inbox, invitations, public-safe handles/profiles, cross-user mention/typeahead, lineage readback, follow, ask-the-lineage, followed feed, and bounded notifications.
 - Localization is MVP under the OVE-205 market-first contract. Ukraine is

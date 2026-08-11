@@ -353,7 +353,7 @@ function JournalMediaGallery({
       <h2 id="journal-entry-media" className="sr-only">
         {copy.media}
       </h2>
-      <figure className="grid gap-2">
+      <figure className="grid min-w-0 grid-cols-1 gap-2">
         <SubjectAwareMediaImage
           src={page.media[0]!.publicUrl}
           alt={page.media[0]!.altText ?? `${page.entry.title}, 1`}
@@ -376,10 +376,10 @@ function JournalMediaGallery({
         ) : null}
       </figure>
       {page.media.length > 1 ? (
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <ul className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">
           {page.media.slice(1).map((media, index) => (
-            <li key={media.id}>
-              <figure className="grid gap-1.5">
+            <li key={media.id} className="min-w-0">
+              <figure className="grid min-w-0 grid-cols-1 gap-1.5">
                 <SubjectAwareMediaImage
                   src={media.publicUrl}
                   alt={media.altText ?? `${page.entry.title}, ${index + 2}`}

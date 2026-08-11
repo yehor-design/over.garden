@@ -1,68 +1,69 @@
-# Admin Role Bootstrap
+# Sealed Owner Bootstrap
 
-OVE-108 adds a durable admin role foundation for the internal `/admin` control
-plane. Admin access is tied to a Better Auth user through
+Status: current after OVE-314
+Last updated: 2026-08-11
+
+OverGarden keeps a durable, server-authoritative sealed-owner boundary for the
+few operations that must not be available to ordinary gardeners. It does not
+have an admin landing page, user-management page, owner-status page, role
+management UI, or separate admin navigation shell.
+
+Admin access is tied to a Better Auth user through
 `admin_user_roles.user_id`; it is never inferred from email domain, display
-name, provider, cookies, or client state.
+name, URL, cookie, provider claim, or client state. The runtime accepts only one
+`owner` role row whose user id exactly matches
+`OVERGARDEN_ADMIN_OWNER_USER_ID`. The account must have a verified email and
+exactly one email/password (`credential`) account with a password hash. A
+Google-linked or other social-linked account remains a valid gardener account
+but cannot satisfy the sealed-owner boundary.
 
-OVE-113 seals the admin boundary to one configured owner account:
-`OVERGARDEN_ADMIN_OWNER_USER_ID` must match the single `admin_user_roles.owner`
-row. The owner account must have a verified email and exactly one
-email/password (`credential`) account with a password hash. Google or any other
-remain gardener sign-in options, but a user with any linked social provider
-account is denied by `/admin`, and no social-created or social-linked user can
-become an admin-capable account.
+## Product behavior
 
-## Roles
+Every authenticated user receives the ordinary avatar menu. After a
+server-side sealed-owner check, the same menu conditionally adds exactly these
+four localized links:
 
-The live role enum is:
+- `/admin/communities`
+- `/admin/moderation/comments`
+- `/garden/catalog/curation`
+- `/garden/privacy/erasure-requests`
 
-- `owner`
+An ordinary gardener, guest, session-error state, non-sealed `owner` role row,
+or owner lookup failure receives no owner links and no empty owner section. The
+client receives only a boolean capability projection—never a role row, owner
+identifier, credential-provider detail, or denial reason.
 
-There are no grantable admin roles in the product. Historical audit rows may
-contain older bounded role/reason labels, but the runtime gate accepts only the
-configured credential-only owner.
+Menu visibility is not authorization. Each destination repeats the sealed
+owner check and the capability required for its read or mutation. Direct access
+by an ordinary gardener fails generically without mutation or private data.
 
-## Operator Surfaces
+The following retired pages must remain exact `404` for every role:
 
-OVE-109 moves the existing internal operator surfaces behind this sealed owner
-gate:
+- `/admin`
+- `/admin/users`
+- `/garden/pilot-health`
+- `/garden/pilot-smoke`
 
-- `/garden/pilot-smoke` and `/garden/pilot-health` require `operator:read`.
-- `/garden/catalog/curation` requires `operator:mutate`.
-- `/garden/privacy/erasure-requests` allows `operator:read` for minimized
-  readback, requires `operator:mutate` for review/status actions, and requires
-  `erasure:execute` for maintainer-approved irreversible erasure.
+## Capabilities
 
-Only the configured owner can receive those capabilities.
+The live role enum is exactly `owner`. Its server-side capability set protects:
 
-`CATALOG_CURATOR_USER_IDS` is not the long-term admin authorization model. Do
-not add new operator surfaces to that env allowlist pattern.
+- community and comment moderation;
+- catalog curation;
+- minimized erasure-request readback and review;
+- separately maintainer-approved irreversible erasure execution.
 
-## Sealed Owner Status
+There are no grantable admin roles in the product. `CATALOG_CURATOR_USER_IDS`
+is not an authorization model and must not be used for new operator surfaces.
+Historical audit rows can retain bounded provenance, but current runtime code
+accepts only current enum values and the configured credential-only owner.
 
-OVE-110 originally introduced `/admin/users`; OVE-113 seals it into a read-only
-owner status and audit surface. It cannot grant or revoke roles, it is not a
-broad user search or CRM surface, and it must not infer roles from email,
-provider claim, URL parameter, or client state. Server-side grant/revoke
-requests fail closed even for the owner.
+## Owner bootstrap
 
-Every role change writes `admin_role_audit_log` with actor user id, target user
-id, bounded action/reason/role enums, timestamp, and a one-way hash of the
-actor session id. The audit table and UI must not store or render emails,
-cookies, raw session ids, provider tokens, IP/user-agent fields, private
-journal/media content, precise coordinates, or env values.
-
-Owner creation remains a bootstrap-controlled operation. All non-owner admin
-role rows are treated as drift and are not accepted by the runtime gate.
-
-## Owner Bootstrap
-
-1. Complete the normal Better Auth email/password sign-up and email-verification
-   flow so the owner user exists with `emailVerified = true`. Do not bootstrap
-   an unverified, Google-created, other social-linked, passwordless,
-   or duplicate-credential account.
-2. Obtain the user id from a secure operator-only channel. Do not paste it into
+1. Complete normal Better Auth email/password signup and email verification so
+   the owner exists with `emailVerified = true`. Do not use a Google-created,
+   social-linked, passwordless, unverified, or duplicate-credential account.
+2. Obtain the user id through a secure operator-only channel. Never paste it in
    docs, Linear, screenshots, logs, commits, or chat.
 3. Set `OVERGARDEN_ADMIN_OWNER_USER_ID` in the target environment to that user
    id. Do not record the value in evidence.
@@ -73,36 +74,43 @@ cd apps/web
 pnpm admin:bootstrap-owner -- --user-id "$OVERGARDEN_OWNER_USER_ID"
 ```
 
-The script also accepts:
+Optional explicit local inputs:
 
 ```bash
-pnpm admin:bootstrap-owner -- --env-file .env.production.local --user-id "$OVERGARDEN_OWNER_USER_ID"
-pnpm admin:bootstrap-owner -- --ca-file /secure/path/ca.pem --user-id "$OVERGARDEN_OWNER_USER_ID"
+pnpm admin:bootstrap-owner -- \
+  --env-file .env.production.local \
+  --user-id "$OVERGARDEN_OWNER_USER_ID"
+
+pnpm admin:bootstrap-owner -- \
+  --ca-file /secure/path/ca.pem \
+  --user-id "$OVERGARDEN_OWNER_USER_ID"
 ```
 
-Before any role mutation, the script validates that the Better Auth user exists,
-the email is verified, the env matches the user id, and the user has exactly one
-credential row with a password hash and no linked social provider. It then
-removes stale non-owner admin rows, upserts `role = owner`, and prints only
-redacted JSON evidence, including the truthful booleans `emailVerified: true`
-and `credentialOnlyVerified: true`. It must not print user IDs, emails, cookies,
-tokens, connection strings, env values, IP addresses, user agents, or request
-metadata. Any failed identity invariant exits before changing role rows.
-Failure output is a fixed redacted message because database and network errors
-can embed private hosts, identifiers, or connection details; investigate the
-operator environment privately rather than copying raw errors into evidence.
+Before mutation, the script validates that the Better Auth user exists, the
+email is verified, the environment binding matches, and the user has exactly
+one credential row with a password hash and no linked social provider. It then
+removes stale non-owner role rows, upserts `role = owner`, and emits only
+redacted booleans and aggregate state. Any failed invariant exits before role
+mutation.
 
-## Redaction Boundary
+Bootstrap is the only role-creation path. The product does not expose a role
+grant/revoke action. A future change requires an explicit product decision, a
+new vertical SDD slice, and a fresh security/privacy review.
 
-`/admin` is a navigation and status surface only. It must not render:
+## Audit and redaction boundary
 
-- raw journal title/body
-- private media storage keys
-- user emails or contact fields
-- cookies, tokens, session IDs, IP addresses, or user agents
-- precise coordinates
-- env values or connection strings
+Role changes write `admin_role_audit_log` with bounded action, reason, and role
+enums, timestamps, and a one-way actor-session hash. Current reason
+`operator_delegation` supersedes the retired pilot-specific label.
 
-Existing operator surfaces must keep using the sealed owner capability model.
-`/admin/users` may render shortened internal user references for owner
-readback, but evidence and docs must not copy live user ids.
+Owner UI and retained evidence must never expose:
+
+- user ids, emails, contact fields, cookies, tokens, or raw session ids;
+- provider credentials or account payloads;
+- journal title/body or private media keys;
+- IP address, user agent, exact request metadata, or connection strings;
+- precise coordinates or environment values.
+
+Failure output remains fixed and redacted because provider/database errors can
+contain private hosts or identifiers. Investigate raw failures only inside the
+secure operator environment.

@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
   revalidatePath: vi.fn(),
-  requireWriteEligibleRequestScope: vi.fn(),
   scheduleLearningAttributionDrain: vi.fn(),
   createFirstPlantEntry: vi.fn(),
   createPlantObjectJournalEntry: vi.fn(),
@@ -20,11 +19,6 @@ vi.mock("@/server/auth-session", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: mocks.revalidatePath,
-}));
-
-vi.mock("@/server/pilot-write-access", () => ({
-  PilotWriteAccessError: class PilotWriteAccessError extends Error {},
-  requireWriteEligibleRequestScope: mocks.requireWriteEligibleRequestScope,
 }));
 
 vi.mock("@/server/mvp-learning/attribution-after-response", () => ({
@@ -67,10 +61,6 @@ describe("POST /api/garden/entries save progress readback", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    mocks.requireWriteEligibleRequestScope.mockResolvedValue({
-      userId: "00000000-0000-4000-8000-000000000001",
-      sessionId: "session-1",
-    });
     mocks.isBackdatedEntryDate.mockReturnValue(false);
     mocks.createAuthIntentToken.mockReturnValue("opaque-save-intent");
     mocks.admitDocumentMutation.mockResolvedValue({

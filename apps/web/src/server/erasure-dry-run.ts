@@ -54,7 +54,6 @@ export interface ErasureDryRunCounts {
   authUserPresent: number;
   authSessions: number;
   authAccounts: number;
-  pilotInviteGrantPresent: number;
   publicIdentityProfiles: number;
   currentHandleClaims: number;
   retiredHandleClaims: number;
@@ -110,12 +109,11 @@ function buildErasureDryRunDataClasses(
       key: "account_auth",
       label: "Account and auth-adjacent data",
       description:
-        "Better Auth user row, linked sessions, credential/provider accounts, and closed-pilot invite grant.",
+        "Better Auth user row, linked sessions, and credential/provider accounts.",
       counts: {
         user_row: counts.authUserPresent,
         sessions: counts.authSessions,
         accounts: counts.authAccounts,
-        pilot_invite_grant: counts.pilotInviteGrantPresent,
       },
     },
     {

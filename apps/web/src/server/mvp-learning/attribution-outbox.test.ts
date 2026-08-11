@@ -43,10 +43,6 @@ describe.skipIf(!postgresIntegrationEnabled)(
           .deleteFrom("learning_actor_attributions")
           .where("user_id", "=", userId)
           .execute();
-        await db
-          .deleteFrom("pilot_invite_grants")
-          .where("user_id", "=", userId)
-          .execute();
         await db.deleteFrom("user").where("id", "=", userId).execute();
       }
     });
@@ -58,13 +54,7 @@ describe.skipIf(!postgresIntegrationEnabled)(
     it("commits one bounded intent, leases it once under concurrent drains, and backfills post-response analytics", async () => {
       const userId = await createUserFixture();
       await db.transaction().execute(async (trx) => {
-        await enqueueLearningAttributionIntent(trx, {
-          userId,
-          learningAttributionHint: {
-            cohort: "closed_pilot",
-            segment: "casual_practical_beginner",
-          },
-        });
+        await enqueueLearningAttributionIntent(trx, { userId });
       });
       await db
         .insertInto("analytics_events")
@@ -77,12 +67,10 @@ describe.skipIf(!postgresIntegrationEnabled)(
 
       const outbox = await db
         .selectFrom("learning_attribution_outbox")
-        .select(["id", "cohort", "segment", "state"])
+        .select(["id", "state"])
         .where("user_id", "=", userId)
         .executeTakeFirstOrThrow();
       expect(outbox).toMatchObject({
-        cohort: "closed_pilot",
-        segment: "casual_practical_beginner",
         state: "pending",
       });
 
@@ -110,8 +98,8 @@ describe.skipIf(!postgresIntegrationEnabled)(
           .where("user_id", "=", userId)
           .executeTakeFirstOrThrow(),
       ).toMatchObject({
-        actor_class: "real_closed_pilot",
-        source: "pilot_grant",
+        actor_class: "real_self_serve",
+        source: "self_serve_default",
       });
       expect(
         await db
@@ -120,7 +108,7 @@ describe.skipIf(!postgresIntegrationEnabled)(
           .where("owner_user_id", "=", userId)
           .executeTakeFirstOrThrow(),
       ).toMatchObject({
-        properties: { actor_class: "real_closed_pilot", entry_scope: "object" },
+        properties: { actor_class: "real_self_serve", entry_scope: "object" },
       });
 
       // The next response can arrive after the first consumer completed. It
@@ -166,7 +154,7 @@ describe.skipIf(!postgresIntegrationEnabled)(
           .executeTakeFirstOrThrow(),
       ).toMatchObject({
         properties: {
-          actor_class: "real_closed_pilot",
+          actor_class: "real_self_serve",
           entry_scope: "general",
         },
       });
@@ -300,16 +288,10 @@ describe.skipIf(!postgresIntegrationEnabled)(
       });
     });
 
-    it("accepts documented legacy analytics actor-class aliases", async () => {
+    it("accepts the retained self-serve analytics alias", async () => {
       const userId = await createUserFixture();
       await db.transaction().execute(async (trx) => {
-        await enqueueLearningAttributionIntent(trx, {
-          userId,
-          learningAttributionHint: {
-            cohort: "closed_pilot",
-            segment: "casual_practical_beginner",
-          },
-        });
+        await enqueueLearningAttributionIntent(trx, { userId });
       });
       const outbox = await db
         .selectFrom("learning_attribution_outbox")
@@ -322,7 +304,7 @@ describe.skipIf(!postgresIntegrationEnabled)(
         .values({
           owner_user_id: userId,
           event_name: "entry_logged",
-          properties: { actor_class: "closed_pilot" },
+          properties: { actor_class: "self_serve" },
         })
         .execute();
 

@@ -44,6 +44,10 @@ import {
 } from "@/lib/interface-localization";
 import type { InterfaceMarket } from "@/lib/interface-market";
 import {
+  getOperatorMenuCopy,
+  OPERATOR_MENU_LINKS,
+} from "@/lib/operator-menu-copy";
+import {
   getInterfaceLanguageControlPlacement,
   getSessionRecheckMode,
   isSessionConvergenceSafeExitRoute,
@@ -74,6 +78,7 @@ export function SiteShell({
   isAuthenticated,
   documentMutationGeneration = null,
   currentSessionBinding = null,
+  hasOperatorAccess = false,
   communitiesReady = false,
 }: {
   children: React.ReactNode;
@@ -82,6 +87,7 @@ export function SiteShell({
   isAuthenticated: boolean;
   documentMutationGeneration?: string | null;
   currentSessionBinding?: string | null;
+  hasOperatorAccess?: boolean;
   communitiesReady?: boolean;
 }) {
   const pathname = usePathname() || "/";
@@ -371,7 +377,7 @@ export function SiteShell({
                           )?.label ?? ""}
                         </Link>
                       </span>
-                      <span className="hidden md:inline-flex">
+                      <span className="inline-flex">
                         <Sheet
                           open={accountMenuOpen}
                           onOpenChange={setAccountMenuOpen}
@@ -381,6 +387,7 @@ export function SiteShell({
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                data-site-shell-account-menu-trigger="true"
                                 aria-label={signOutCopy.openAccountMenu}
                                 className="site-shell-header-icon text-background hover:bg-background/10 hover:text-background"
                               />
@@ -419,6 +426,12 @@ export function SiteShell({
                                 />
                                 {signOutCopy.openProfile}
                               </SheetClose>
+                              {hasOperatorAccess ? (
+                                <SiteShellOperatorMenu
+                                  locale={locale}
+                                  onNavigate={() => setAccountMenuOpen(false)}
+                                />
+                              ) : null}
                               <SignOutControl
                                 presentation="menu"
                                 onBeforeRequest={() =>
@@ -615,6 +628,48 @@ export function SiteShell({
         </ForegroundAutosyncProvider>
       </DocumentMutationGenerationProvider>
     </SessionConvergenceBoundary>
+  );
+}
+
+export function SiteShellOperatorMenu({
+  locale,
+  onNavigate,
+}: {
+  locale: InterfaceLocale;
+  onNavigate?: () => void;
+}) {
+  const copy = getOperatorMenuCopy(locale);
+
+  return (
+    <section
+      data-site-shell-operator-menu="true"
+      aria-labelledby="site-shell-operator-menu-title"
+      className="grid gap-2"
+    >
+      <Separator />
+      <h3
+        id="site-shell-operator-menu-title"
+        className="px-1 text-xs font-semibold text-muted-foreground uppercase"
+      >
+        {copy.sectionTitle}
+      </h3>
+      <ul className="grid gap-2">
+        {OPERATOR_MENU_LINKS.map((item) => (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              className={buttonVariants({
+                variant: "outline",
+                className: "w-full justify-start",
+              })}
+              onClick={onNavigate}
+            >
+              {copy.links[item.key]}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

@@ -32,8 +32,6 @@ import { buildEnqueueCatalogMatchSuggestionsRefreshJobQuery } from "@/server/cat
 import { buildPendingCatalogMatchSuggestionsQuery } from "@/server/catalog-curation-repository";
 import { buildListOperatorErasureRequestsQuery } from "@/server/erasure-request-repository";
 import { buildCountJournalEntriesQuery } from "@/server/erasure-dry-run-repository";
-import { summarizePublicVarietyHealthRows } from "@/server/pilot-health-repository";
-import { buildPilotSmokeReadiness } from "@/server/pilot-smoke-readiness";
 import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
 import { scopedToUser } from "@/server/request-scope";
 import {
@@ -49,7 +47,6 @@ import {
   catalogTypeaheadRow,
   hiddenLocationJournalEntryPage,
   markupJournalEntryPage,
-  poisonOperatorEnv,
   poisonedTypeaheadHit,
   publicJournalEntryPage,
   publicJournalSearchRow,
@@ -472,43 +469,5 @@ describe("OVE-40 privacy invariant sweep — operator readbacks", () => {
     ]) {
       expect(sql).not.toContain(forbidden);
     }
-  });
-
-  it("pilot-health readout exposes only aggregate counts", () => {
-    const summary = summarizePublicVarietyHealthRows(
-      [
-        {
-          publicSlug: `POISON-${JOURNEY.catalogPublicSlug}`,
-          catalogStatus: "seeded",
-          catalogSource: "ua_state_register",
-          entryCount: 5,
-          aggregateBodyLength: 1200,
-        },
-      ],
-      [{ publicSlug: "POISON-archived-slug", archivedOrGoneEntryCount: 2 }],
-    );
-
-    expectPublicPayloadIsClean("pilot health summary", summary);
-    expect(summary).toMatchObject({
-      promotedIndexableCount: 1,
-      thinNoindexCount: 0,
-      currentPublicVarietyCount: 1,
-    });
-    for (const value of Object.values(summary)) {
-      if (value && typeof value === "object") continue; // threshold descriptor
-      expect(typeof value).toBe("number");
-    }
-  });
-
-  it("pilot smoke readiness reports classes without echoing secrets", () => {
-    const readiness = buildPilotSmokeReadiness({
-      env: poisonOperatorEnv(),
-      databaseProbe: { reachable: true },
-      generatedAt: new Date("2026-06-29T00:00:00.000Z"),
-    });
-
-    expectNoForbiddenValues("pilot smoke readiness", readiness);
-    expectNoPoisonSentinels("pilot smoke readiness", readiness);
-    expect(readiness.overall).toBe("ready");
   });
 });

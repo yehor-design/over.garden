@@ -16,7 +16,7 @@ vi.mock("@/components/public/language-switcher", () => ({
 }));
 
 describe("authenticated utility region", () => {
-  it("covers real operator and denied-admin paths only", async () => {
+  it("covers real operator paths only", async () => {
     const { isAuthenticatedUtilityPath } =
       await import("./authenticated-utility-region");
     const { INTERFACE_UTILITY_CONTROL_PREFIXES } =
@@ -37,7 +37,7 @@ describe("authenticated utility region", () => {
       <AuthenticatedUtilityRegion
         locale="bg"
         market="bulgaria"
-        pathname="/admin"
+        pathname="/admin/communities"
         isAuthenticated
       />,
     );

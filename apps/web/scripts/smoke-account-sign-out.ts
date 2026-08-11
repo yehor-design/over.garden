@@ -23,8 +23,7 @@ const EVIDENCE_SAFETY =
   "bounded_counts_and_booleans_no_identifiers_or_private_content";
 
 export const SIGN_OUT_PATH = "/api/auth/sign-out";
-export const LOCAL_EXIT_RECONCILIATION_PATH =
-  "/api/auth/local-exit-reconcile";
+export const LOCAL_EXIT_RECONCILIATION_PATH = "/api/auth/local-exit-reconcile";
 export const SESSION_CONFIRMATION_PATH =
   "/api/auth/get-session?disableCookieCache=true";
 export const PROTECTED_MUTATION_PATH = "/api/garden/entries";
@@ -828,21 +827,17 @@ async function postLocalExitReconciliation(
   client: CookieJar,
   sessionId: string,
 ) {
-  const response = await fetch(
-    `${baseUrl}${LOCAL_EXIT_RECONCILIATION_PATH}`,
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        [CURRENT_SESSION_BINDING_HEADER]:
-          deriveCurrentSessionBinding(sessionId),
-        Origin: baseUrl,
-        "Sec-Fetch-Site": "same-origin",
-        Cookie: client.header(),
-      },
-      redirect: "manual",
+  const response = await fetch(`${baseUrl}${LOCAL_EXIT_RECONCILIATION_PATH}`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      [CURRENT_SESSION_BINDING_HEADER]: deriveCurrentSessionBinding(sessionId),
+      Origin: baseUrl,
+      "Sec-Fetch-Site": "same-origin",
+      Cookie: client.header(),
     },
-  );
+    redirect: "manual",
+  });
   client.addFromResponse(response);
   assertEqual(response.status, 204, "local-exit reconciliation response");
   assertEqual(await response.text(), "", "local-exit reconciliation body");
@@ -1538,10 +1533,6 @@ export async function cleanupSyntheticAccount(
       .where("owner_user_id", "=", syntheticUserId)
       .execute();
     await trx
-      .deleteFrom("pilot_invite_grants")
-      .where("user_id", "=", syntheticUserId)
-      .execute();
-    await trx
       .deleteFrom("admin_user_roles")
       .where("user_id", "=", syntheticUserId)
       .execute();
@@ -1606,7 +1597,6 @@ async function readCleanupResidueFromFreshConnection(
       analyticsRows,
       entryRows,
       objectRows,
-      pilotRows,
       syntheticRoleRows,
       verificationRows,
     ] = await Promise.all([
@@ -1633,7 +1623,6 @@ async function readCleanupResidueFromFreshConnection(
         "owner_user_id",
         state.userId,
       ),
-      countOwnedRows(database, "pilot_invite_grants", state.userId),
       countWhereUserId(database, "admin_user_roles", "user_id", state.userId),
       countVerificationRows(database, state.email),
     ]);
@@ -1647,7 +1636,6 @@ async function readCleanupResidueFromFreshConnection(
       analyticsRows +
       entryRows +
       objectRows +
-      pilotRows +
       syntheticRoleRows +
       verificationRows
     );
@@ -1658,14 +1646,13 @@ async function readCleanupResidueFromFreshConnection(
 
 async function countOwnedRows(
   database: DB,
-  table: "analytics_events" | "pilot_invite_grants",
+  table: "analytics_events",
   userId: string,
 ) {
-  const column = table === "analytics_events" ? "owner_user_id" : "user_id";
   const result = await sql<{ count: number }>`
     select count(*)::int as count
     from ${sql.table(table)}
-    where ${sql.ref(column)} = ${userId}
+    where owner_user_id = ${userId}
   `.execute(database);
   return Number(result.rows[0]?.count ?? 0);
 }

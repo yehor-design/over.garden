@@ -1,7 +1,7 @@
 # OVE-299 Manual Pilot Learning Retirement
 
-Status: authorized bounded production retirement. The code deployment must land
-before the database step.
+Status: completed on 2026-08-11; historical receipt only. OVE-314 removed the
+one-off operator after its successful replay/closeout.
 
 ## Outcome
 
@@ -11,13 +11,11 @@ documentation. Their dedicated empty production relation is dropped only after
 the containing `main` deployment is `READY` and both retired routes return exact
 `404` responses.
 
-The automated `/garden/pilot-health` learning aggregates,
-`/garden/pilot-smoke`, closed-pilot invite/grant state, value-pulse events,
-H1/H4/H6 measurement, catalog curation, erasure operations, and `/admin` were
-outside this bounded operation. A later maintainer decision on 2026-08-11
-approved a separate follow-up retirement of the pilot-status, product-access
-invite, and redundant owner-status UI. This OVE-299 operator does not delete
-gardener content, analytics events, invite grants, or any unrelated table.
+Pilot status/smoke, product-access invite/grant state, `/admin`, and
+`/admin/users` were outside OVE-299 and are now retired separately by OVE-314.
+Value-pulse events, self-serve H1/H4/H6 learning, catalog curation, erasure
+operations, and sealed-owner authorization remain. OVE-299 did not delete
+gardener content, analytics events, grants, or any unrelated table.
 
 ## Authorization-bound preflight
 
@@ -43,47 +41,17 @@ implementation-SHA drift, migration-byte drift, or non-404 retired route
 invalidates this authorization. Stop without mutation and obtain a new exact
 plan.
 
-## Enforceable operator
+## Historical operator (removed)
 
-Run from `apps/web`. Obtain the production database connection through the
-existing masked/native operator environment; never paste or persist a
-connection value, credential, cookie, token, row, or private payload.
+The `pilot-learning:retire` package script and its one-off implementation no
+longer exist in current source and must not be recreated or run. Migration
+`0020` remains as immutable idempotent schema history.
 
-The plan is a repeatable-read, read-only transaction. It emits exactly one
-aggregate JSON receipt and fails closed:
+That historical operator verified the approved database binding, locked and
+re-read the target, executed only migration `0020`, and proved replay. Current
+bootstrap replays the migration directly; no active command is needed.
 
-```bash
-pnpm pilot-learning:retire -- \
-  --mode plan \
-  --environment production \
-  --implementation-sha "$OVE299_CONTAINING_MAIN_SHA" \
-  --route-absence-class exact_404
-```
-
-Review the exact receipt and retain only its digest/count/class fields. Apply
-once with the exact `evidenceDigest` returned by that immediately preceding
-plan:
-
-```bash
-pnpm pilot-learning:retire -- \
-  --mode apply \
-  --environment production \
-  --implementation-sha "$OVE299_CONTAINING_MAIN_SHA" \
-  --route-absence-class exact_404 \
-  --expected-plan-digest "$OVE299_PLAN_DIGEST"
-```
-
-The operator first verifies the exact approved production database host, port,
-and database name and emits only the preapproved binding digest. The apply
-transaction obtains a task-specific advisory lock plus an `ACCESS EXCLUSIVE`
-lock on the exact target, re-reads the full authorized aggregate shape after
-the table lock, verifies the plan digest, executes only
-`0020_ove299_remove_manual_pilot_learning.sql`, verifies relation absence in the
-same transaction, and then commits. Lock, statement, query, connection, and
-whole-process deadlines are finite. Re-running after success returns
-`already_completed` without another effect.
-
-## Deployment and verification order
+## Historical completed deployment and verification order
 
 1. Merge reviewed code through a PR and prove the implementation commit is
    contained in current `origin/main`.

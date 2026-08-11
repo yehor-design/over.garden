@@ -5,11 +5,9 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
 import {
-  actorClassFromPilotCohort,
   EDITORIAL_SEED_ACTOR_CLASS,
   normalizeActorClass,
   PRODUCTION_SMOKE_ACTOR_CLASS,
-  REAL_CLOSED_PILOT_ACTOR_CLASS,
   REAL_SELF_SERVE_ACTOR_CLASS,
   VISUAL_FIXTURE_ACTOR_CLASS,
   type ActorClass,
@@ -61,14 +59,6 @@ with user_signal as (
         select 1 from journal_entries je
         where je.owner_user_id = u.id and je.content_class in ('editorial', 'catalog_fact')
       ) then 'editorial_seed'
-      when exists (
-        select 1 from pilot_invite_grants g
-        where g.user_id = u.id and g.cohort = 'founder_rehearsal'
-      ) then 'founder_rehearsal'
-      when exists (
-        select 1 from pilot_invite_grants g
-        where g.user_id = u.id and g.cohort = 'closed_pilot'
-      ) then 'real_closed_pilot'
       when exists (
         select 1 from journal_entries je where je.owner_user_id = u.id
       ) or exists (
@@ -158,7 +148,6 @@ export function buildMvpLearningPlanReport(input: {
 
   const defaultRemaps = [
     { from: "self_serve", to: REAL_SELF_SERVE_ACTOR_CLASS },
-    { from: "closed_pilot", to: REAL_CLOSED_PILOT_ACTOR_CLASS },
     { from: "editorial", to: EDITORIAL_SEED_ACTOR_CLASS },
   ];
 
@@ -168,7 +157,7 @@ export function buildMvpLearningPlanReport(input: {
   ).map((row) => ({
     from: row.from,
     to: (normalizeActorClass(row.to) ??
-      actorClassFromPilotCohort(null)) as ActorClass,
+      REAL_SELF_SERVE_ACTOR_CLASS) as ActorClass,
     events: Number(row.events) || 0,
   }));
 
@@ -195,7 +184,6 @@ export async function loadLegacyActorClassRemapCounts(
 ): Promise<Array<{ from: string; to: string; events: number }>> {
   const pairs = [
     { from: "self_serve", to: REAL_SELF_SERVE_ACTOR_CLASS },
-    { from: "closed_pilot", to: REAL_CLOSED_PILOT_ACTOR_CLASS },
     { from: "editorial", to: EDITORIAL_SEED_ACTOR_CLASS },
   ] as const;
 
@@ -231,7 +219,6 @@ export async function applyMvpLearningReclassify(input: {
   let eventRemaps = 0;
   for (const pair of [
     { from: "self_serve", to: REAL_SELF_SERVE_ACTOR_CLASS },
-    { from: "closed_pilot", to: REAL_CLOSED_PILOT_ACTOR_CLASS },
     { from: "editorial", to: EDITORIAL_SEED_ACTOR_CLASS },
   ] as const) {
     const result = await sql`
@@ -243,7 +230,7 @@ export async function applyMvpLearningReclassify(input: {
     eventRemaps += Number(result.numAffectedRows ?? 0);
   }
 
-  // Upsert attributions from grants + content_class inference (aggregates only via SQL).
+  // Upsert attributions from content-class inference (aggregates only via SQL).
   const attributionResult = await sql`
     insert into learning_actor_attributions (user_id, actor_class, source, classified_at, created_at, updated_at)
     select
@@ -261,14 +248,6 @@ export async function applyMvpLearningReclassify(input: {
           select 1 from journal_entries je
           where je.owner_user_id = u.id and je.content_class in ('editorial', 'catalog_fact')
         ) then 'editorial_seed'
-        when exists (
-          select 1 from pilot_invite_grants g
-          where g.user_id = u.id and g.cohort = 'founder_rehearsal'
-        ) then 'founder_rehearsal'
-        when exists (
-          select 1 from pilot_invite_grants g
-          where g.user_id = u.id and g.cohort = 'closed_pilot'
-        ) then 'real_closed_pilot'
         else 'real_self_serve'
       end as actor_class,
       'operator_plan'::text as source,
@@ -278,7 +257,6 @@ export async function applyMvpLearningReclassify(input: {
     from "user" u
     where exists (select 1 from journal_entries je where je.owner_user_id = u.id)
        or exists (select 1 from analytics_events ae where ae.owner_user_id = u.id)
-       or exists (select 1 from pilot_invite_grants g where g.user_id = u.id)
     on conflict (user_id) do update set
       actor_class = excluded.actor_class,
       source = excluded.source,

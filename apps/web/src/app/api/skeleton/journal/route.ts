@@ -17,7 +17,6 @@ import {
 } from "@/server/document-mutation-admission";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
-import { PilotWriteAccessError } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
 
 export const runtime = "nodejs";
@@ -210,13 +209,6 @@ function errorResponse(error: unknown) {
     return Response.json(
       { error: "Sign in to continue." },
       { status: 401, headers: NO_STORE_HEADERS },
-    );
-  }
-
-  if (error instanceof PilotWriteAccessError) {
-    return Response.json(
-      { error: "This account cannot use this local diagnostic." },
-      { status: 403, headers: NO_STORE_HEADERS },
     );
   }
 

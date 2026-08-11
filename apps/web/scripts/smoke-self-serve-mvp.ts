@@ -1,6 +1,6 @@
 /**
  * OVE-193 local self-serve first-journal smoke.
- * Proves invite-free signup → first private entry → follow-up → cohort attribution
+ * Proves self-serve signup → first private entry → follow-up → actor attribution
  * without printing emails, handles, UUIDs, draft bodies, or media keys.
  */
 import { randomUUID } from "node:crypto";
@@ -21,7 +21,6 @@ import type { Database } from "../src/db/types";
 import {
   ACTOR_CLASSES,
   SELF_SERVE_ACTOR_CLASS,
-  actorClassFromPilotCohort,
 } from "../src/lib/garden/actor-class";
 import {
   JOURNAL_DOCUMENT_SCHEMA_VERSION,
@@ -71,12 +70,6 @@ class CookieJar {
       .map(([name, value]) => `${name}=${value}`)
       .join("; ");
   }
-
-  hasPilotInviteCookie() {
-    return [...this.values.keys()].some((name) =>
-      name.includes("pilot_invite"),
-    );
-  }
 }
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -85,7 +78,9 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function assertEqual<T>(actual: T, expected: T, message: string) {
   if (actual !== expected) {
-    throw new Error(`${message}: expected ${String(expected)}, got ${String(actual)}`);
+    throw new Error(
+      `${message}: expected ${String(expected)}, got ${String(actual)}`,
+    );
   }
 }
 
@@ -131,7 +126,10 @@ function assertLocalGate() {
     "Refuses non-loopback DATABASE_URL",
   );
   const baseUrl = readFlagValue("--base-url") ?? DEFAULT_BASE_URL;
-  assert(isLoopbackHost(new URL(baseUrl).hostname), "Refuses non-loopback base URL");
+  assert(
+    isLoopbackHost(new URL(baseUrl).hostname),
+    "Refuses non-loopback base URL",
+  );
   return baseUrl;
 }
 
@@ -159,10 +157,6 @@ async function main() {
   assert(
     pkg.scripts?.["smoke:self-serve-mvp"]?.includes("smoke-self-serve-mvp.ts"),
     "package.json must expose smoke:self-serve-mvp",
-  );
-  assert(
-    actorClassFromPilotCohort(null) === SELF_SERVE_ACTOR_CLASS,
-    "default actor class must be self_serve",
   );
   assert(ACTOR_CLASSES.includes(SELF_SERVE_ACTOR_CLASS), "actor class set");
 
@@ -200,11 +194,7 @@ async function main() {
     explicitCoverMediaAssetId: null,
     candidatesById,
   });
-  assertEqual(
-    cover.mediaAssetId,
-    tenInline[0],
-    "automatic first-inline cover",
-  );
+  assertEqual(cover.mediaAssetId, tenInline[0], "automatic first-inline cover");
   assertEqual(
     JOURNAL_MEDIA_USAGE_COVER_ONLY,
     "cover_only",
@@ -232,7 +222,6 @@ async function main() {
     });
     jar.addFromResponse(signup);
     assert(signup.ok, `signup failed with status ${signup.status}`);
-    assert(!jar.hasPilotInviteCookie(), "signup must not set invite cookie");
 
     const sessionPayload = (await signup.json()) as {
       user?: { id?: string };
@@ -263,18 +252,18 @@ async function main() {
       { headers: { cookie: jar.header() } },
     );
     jar.addFromResponse(sessionCheck);
-    assert(sessionCheck.ok, `get-session failed with status ${sessionCheck.status}`);
+    assert(
+      sessionCheck.ok,
+      `get-session failed with status ${sessionCheck.status}`,
+    );
     const sessionBody = (await sessionCheck.json()) as {
       user?: { id?: string };
     };
-    assertEqual(sessionBody.user?.id, userId, "session continuity after verify");
-
-    const grantCount = await database
-      .selectFrom("pilot_invite_grants")
-      .select((eb) => eb.fn.countAll<string>().as("count"))
-      .where("user_id", "=", userId)
-      .executeTakeFirstOrThrow();
-    assertEqual(Number(grantCount.count), 0, "zero invite grants before write");
+    assertEqual(
+      sessionBody.user?.id,
+      userId,
+      "session continuity after verify",
+    );
 
     const gardenHtml = await fetch(new URL("/garden", baseUrl), {
       headers: { cookie: jar.header() },
@@ -339,19 +328,12 @@ async function main() {
       .select(["visibility", "owner_user_id"])
       .where("id", "=", entryId)
       .executeTakeFirstOrThrow();
-    assertEqual(entryRow.visibility, "private", "first entry private by default");
-    assertEqual(entryRow.owner_user_id, userId, "owner continuity");
-
-    const postGrantCount = await database
-      .selectFrom("pilot_invite_grants")
-      .select((eb) => eb.fn.countAll<string>().as("count"))
-      .where("user_id", "=", userId)
-      .executeTakeFirstOrThrow();
     assertEqual(
-      Number(postGrantCount.count),
-      0,
-      "self-serve write must not create invite grant",
+      entryRow.visibility,
+      "private",
+      "first entry private by default",
     );
+    assertEqual(entryRow.owner_user_id, userId, "owner continuity");
 
     const actorClassRow = await database
       .selectFrom("analytics_events")
@@ -378,7 +360,7 @@ async function main() {
         target: "plant_object_entry",
         plantObjectId,
         title: "OVE-193 follow-up",
-        body: "Second dated note without invite.",
+        body: "Second dated self-serve note.",
         entryDate: "2026-07-24",
         clientMutationId: randomUUID(),
         syncStatus: "online",
@@ -408,11 +390,11 @@ async function main() {
           issue: "OVE-193",
           evidenceClass: "synthetic_local_self_serve_first_journal",
           runtimeClass: "local",
-          inviteGrants: 0,
+          accessMode: "self_serve",
           firstEntryVisibility: "private",
           entryCount: 2,
           actorClass: SELF_SERVE_ACTOR_CLASS,
-          inviteWriteGateAbsent: true,
+          retiredAccessGateAbsent: true,
           composerContracts: {
             maxInlineImages: MAX_JOURNAL_INLINE_IMAGES,
             automaticFirstInlineCover: true,
@@ -447,10 +429,6 @@ async function main() {
         await trx
           .deleteFrom("spaces")
           .where("owner_user_id", "=", cleanupUserId)
-          .execute();
-        await trx
-          .deleteFrom("pilot_invite_grants")
-          .where("user_id", "=", cleanupUserId)
           .execute();
         await trx
           .deleteFrom("session")

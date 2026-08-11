@@ -201,7 +201,7 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
     {
       path: "sql/0001_walking_skeleton.sql",
       sha256:
-        "a87bda7f46bfea1c0dd561193c8c0645c97e11f245c776022e1bd04c21ac1bc8",
+        "87b719977bf25a4a89205aa8ed0d0ad28dd40488ea262b13d038c8d6abf33689",
     },
     {
       path: "sql/0015_ove241_auth_email_outbox.sql",

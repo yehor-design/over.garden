@@ -1,12 +1,12 @@
 # MVP Learning Signals (OVE-200)
 
-Status: done on main (Vercel READY)  
+Status: current self-serve policy after OVE-314
 Policy version: `ove200.learning.v1`  
-Date: 2026-07-24
+Date: 2026-08-11
 
 ## Purpose
 
-H1 (journal retention), H4 (publication), and H6 (organic/public acquisition) must be computed from real eligible actors only. Synthetic, rehearsal, smoke, fixture, editorial, and bot evidence is visible as exclusions and cannot change continue/iterate/stop.
+H1 (journal retention), H4 (publication), and H6 (organic/public acquisition) must be computed from real eligible actors only. Production smoke, fixture, editorial, and bot evidence is visible as exclusions and cannot change continue/iterate/stop.
 
 Honest zero real users is a valid baseline. Synthetic activity must never pad it.
 
@@ -14,19 +14,17 @@ Honest zero real users is a valid baseline. Synthetic activity must never pad it
 
 Canonical write set:
 
-| Class               | Decision eligible?                                                |
-| ------------------- | ----------------------------------------------------------------- |
-| `real_self_serve`   | Yes (self-serve baseline cohort)                                  |
-| `real_closed_pilot` | Yes (historical closed-pilot cohort; never mixed into self-serve) |
-| `founder_rehearsal` | Exclusion only                                                    |
-| `production_smoke`  | Exclusion only                                                    |
-| `visual_fixture`    | Exclusion only                                                    |
-| `editorial_seed`    | Exclusion only                                                    |
-| `automated_bot`     | Exclusion only                                                    |
+| Class              | Decision eligible?                |
+| ------------------ | --------------------------------- |
+| `real_self_serve`  | Yes (the single real-user cohort) |
+| `production_smoke` | Exclusion only                    |
+| `visual_fixture`   | Exclusion only                    |
+| `editorial_seed`   | Exclusion only                    |
+| `automated_bot`    | Exclusion only                    |
 
-Legacy event property aliases still readable: `self_serve` → `real_self_serve`, `closed_pilot` → `real_closed_pilot`, `editorial` → `editorial_seed`.
+Migration `0021_ove314_retire_obsolete_control_plane.sql` converts historical aliases and retired cohort values once. Current runtime writers and readers accept only the canonical classes above.
 
-Durable rows live in `learning_actor_attributions` (`user_id`, bounded `actor_class`, source). OVE-219 makes attribution asynchronous and transactional: every successful canonical journal create/edit advances one non-identifying `learning_attribution_outbox` intent in the same database transaction; the response is not allowed to wait for attribution reads or writes. A monotonic desired generation guarantees that an event committed after an earlier consumer settlement is backfilled by a later lease; reopening terminal work resets the retry budget for that new generation. The leased consumer resolves durable row → optional pilot grant → `real_self_serve` default, then backfills only missing bounded `actor_class` properties on that owner's existing analytics. A post-response drain is best effort; protected `/api/cron/learning-attribution` is the normal recovery path. `pending`, `processing`, `failed`, or `dead` outbox work, any missing durable class for an active journal owner, and any analytics class inconsistent with its durable row all fail the decision gate closed; documented historical analytics aliases (`self_serve`, `closed_pilot`, `editorial`) normalize before this comparison. The outbox stores only user id plus enum cohort/segment; never an invite token, email, URL, request metadata, or content.
+Durable rows live in `learning_actor_attributions` (`user_id`, bounded `actor_class`, source). OVE-219 makes attribution asynchronous and transactional: every successful canonical journal create/edit advances one non-identifying `learning_attribution_outbox` intent in the same database transaction; the response is not allowed to wait for attribution reads or writes. A monotonic desired generation guarantees that an event committed after an earlier consumer settlement is backfilled by a later lease; reopening terminal work resets the retry budget for that new generation. The leased consumer resolves an explicit producer classification, then a durable row, then the `real_self_serve` default. A post-response drain is best effort; protected `/api/cron/learning-attribution` is the normal recovery path. `pending`, `processing`, `failed`, or `dead` outbox work, any missing durable class for an active journal owner, and any analytics class inconsistent with its durable row all fail the decision gate closed. The outbox stores only the user id and bounded processing state; never a product-access hint, invitation, email, URL, request metadata, or content.
 
 ## Metric rules
 
@@ -68,7 +66,7 @@ Production plan/smoke require matching `--environment production --confirm-envir
 pnpm smoke:mvp-learning-signals -- --environment local --confirm-environment local --confirm-reclassify
 ```
 
-Production reclassify (after reviewing the SELECT-only plan):
+Production reclassify (after reviewing the SELECT-only plan) is only for current canonical producer/self-serve classification. It does not recreate retired cohort semantics:
 
 ```bash
 pnpm smoke:mvp-learning-signals -- --environment production --confirm-environment production --confirm-reclassify --confirm-production-reclassify
@@ -76,7 +74,9 @@ pnpm smoke:mvp-learning-signals -- --environment production --confirm-environmen
 
 ## Operator surfaces
 
-- `/garden/pilot-health` — closed-pilot health plus MVP-learning dual-cohort H1/H4 panel and visible H6 deferral
+- There is no learning-status or pilot-health UI.
+- Operators use the aggregate-only CLI commands above and the protected `/api/cron/learning-attribution` recovery boundary.
+- Product decisions must not depend on owner-authored manual forms or synthetic activity.
 
 ## Retention
 

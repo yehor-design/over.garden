@@ -7,22 +7,13 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
 import {
-  actorClassFromPilotCohort,
+  REAL_SELF_SERVE_ACTOR_CLASS,
   type ActorClass,
 } from "@/lib/garden/actor-class";
-import {
-  isPilotInviteCohort,
-  type PilotInviteCohort,
-} from "@/lib/garden/pilot-invite";
-import { isPilotSegment, type PilotSegment } from "@/lib/pilot/segments";
 import {
   getLearningActorAttribution,
   upsertLearningActorAttribution,
 } from "@/server/learning-actor-attribution";
-import {
-  buildGetPilotInviteGrantQuery,
-  buildGrantPilotWriteAccessQuery,
-} from "@/server/pilot-invite-repository";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -36,8 +27,6 @@ type AttributionOutboxState = "attributed" | "failed" | "dead" | "cancelled";
 interface ClaimedAttributionOutboxRow {
   id: string;
   userId: string;
-  cohort: string | null;
-  segment: string | null;
   attempts: number;
   desiredGeneration: number;
   leaseToken: string;
@@ -76,26 +65,19 @@ export async function enqueueLearningAttributionIntent(
   executor: QueryExecutor,
   scope: RequestScope,
 ): Promise<void> {
-  const hint = scope.learningAttributionHint;
   await sql`
     insert into learning_attribution_outbox (
       user_id,
-      cohort,
-      segment,
       desired_generation,
       applied_generation
     )
     values (
       ${scope.userId},
-      ${hint?.cohort ?? null},
-      ${hint?.segment ?? null},
       1,
       0
     )
     on conflict (user_id) do update
     set desired_generation = learning_attribution_outbox.desired_generation + 1,
-        cohort = coalesce(learning_attribution_outbox.cohort, excluded.cohort),
-        segment = coalesce(learning_attribution_outbox.segment, excluded.segment),
         state = case
           when learning_attribution_outbox.state in ('attributed', 'dead', 'cancelled')
             then 'pending'
@@ -172,13 +154,6 @@ export async function drainLearningAttributionOutbox(
     claimed += 1;
     if (claim.reclaimed) reclaimed += 1;
 
-    const hint = parseAttributionHint(claim);
-    if (hint === "invalid") {
-      await settleLearningAttributionClaim(claim, "dead", null, "invalid_hint");
-      dead += 1;
-      continue;
-    }
-
     try {
       const outcome = await db.transaction().execute(async (trx) => {
         const user = await trx
@@ -190,7 +165,7 @@ export async function drainLearningAttributionOutbox(
 
         const durable = await getLearningActorAttribution(claim.userId, trx);
         const attribution =
-          durable ?? (await materializeAttribution(trx, claim.userId, hint));
+          durable ?? (await materializeAttribution(trx, claim.userId));
         await backfillActorClassForOwner(
           trx,
           claim.userId,
@@ -258,32 +233,12 @@ export async function getLearningAttributionOutboxCounts(
   return counts;
 }
 
-async function materializeAttribution(
-  executor: QueryExecutor,
-  userId: string,
-  hint: { cohort: PilotInviteCohort; segment: PilotSegment } | null,
-) {
-  if (hint) {
-    await buildGrantPilotWriteAccessQuery(executor, {
-      userId,
-      cohort: hint.cohort,
-      segment: hint.segment,
-    }).execute();
-  }
-  const grant = await buildGetPilotInviteGrantQuery(
-    executor,
-    userId,
-  ).executeTakeFirst();
-  const grantCohort = grant?.cohort ?? null;
-  if (grantCohort !== null && !isPilotInviteCohort(grantCohort)) {
-    throw new Error("Pilot grant has an unsupported cohort.");
-  }
-  const actorClass = actorClassFromPilotCohort(grantCohort);
+async function materializeAttribution(executor: QueryExecutor, userId: string) {
   return await upsertLearningActorAttribution(
     {
       userId,
-      actorClass,
-      source: grant ? "pilot_grant" : "self_serve_default",
+      actorClass: REAL_SELF_SERVE_ACTOR_CLASS,
+      source: "self_serve_default",
     },
     executor,
   );
@@ -307,16 +262,6 @@ async function backfillActorClassForOwner(
   `.execute(executor);
 }
 
-function parseAttributionHint(
-  claim: Pick<ClaimedAttributionOutboxRow, "cohort" | "segment">,
-): { cohort: PilotInviteCohort; segment: PilotSegment } | null | "invalid" {
-  if (claim.cohort === null && claim.segment === null) return null;
-  if (!isPilotInviteCohort(claim.cohort) || !isPilotSegment(claim.segment)) {
-    return "invalid";
-  }
-  return { cohort: claim.cohort, segment: claim.segment };
-}
-
 async function claimNextLearningAttributionOutboxRow(
   outboxIds?: readonly string[],
 ): Promise<ClaimedAttributionOutboxRow | null> {
@@ -329,8 +274,6 @@ async function claimNextLearningAttributionOutboxRow(
   const result = await sql<{
     id: string;
     user_id: string;
-    cohort: string | null;
-    segment: string | null;
     attempts: number;
     desired_generation: number;
     previous_state: string;
@@ -355,7 +298,7 @@ async function claimNextLearningAttributionOutboxRow(
         updated_at = now()
     from next_row
     where outbox.id = next_row.id
-    returning outbox.id, outbox.user_id, outbox.cohort, outbox.segment,
+    returning outbox.id, outbox.user_id,
       outbox.attempts, outbox.desired_generation, next_row.previous_state
   `.execute(db);
   const row = result.rows[0];
@@ -363,8 +306,6 @@ async function claimNextLearningAttributionOutboxRow(
     ? {
         id: row.id,
         userId: row.user_id,
-        cohort: row.cohort,
-        segment: row.segment,
         attempts: row.attempts,
         desiredGeneration: row.desired_generation,
         leaseToken,
@@ -377,7 +318,7 @@ async function settleLearningAttributionClaim(
   claim: ClaimedAttributionOutboxRow,
   state: AttributionOutboxState,
   availableAt: Date | null,
-  errorClass: "transient" | "invalid_hint" | "max_attempts" | null,
+  errorClass: "transient" | "max_attempts" | null,
 ): Promise<void> {
   const terminal =
     state === "attributed" || state === "dead" || state === "cancelled";

@@ -221,10 +221,10 @@ describe("catalog repository query contracts", () => {
         source: "internal_seed",
         trustState: "candidate",
         trustLabel: "Candidate",
-        sourceLabel: "OverGarden pilot seed",
+        sourceLabel: "OverGarden starter catalog",
         sourceCaveat:
           "Pilot seed row. Use your own name or Unknown if this is not exact.",
-        disambiguationLabel: "Plant variety · OverGarden pilot seed · uk",
+        disambiguationLabel: "Plant variety · OverGarden starter catalog · uk",
       },
     ]);
     expect(calls).toEqual([
@@ -250,10 +250,10 @@ describe("catalog repository query contracts", () => {
         source: "internal_seed",
         trustState: "candidate",
         trustLabel: "Candidate",
-        sourceLabel: "OverGarden pilot seed",
+        sourceLabel: "OverGarden starter catalog",
         sourceCaveat:
           "Pilot seed row. Use your own name or Unknown if this is not exact.",
-        disambiguationLabel: "Plant variety · OverGarden pilot seed · uk",
+        disambiguationLabel: "Plant variety · OverGarden starter catalog · uk",
       },
     ]);
   });

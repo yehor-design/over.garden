@@ -32,10 +32,6 @@ function deps(
 ): DocumentMutationAdmissionDeps {
   return {
     readAuthoritativeSession: vi.fn(async () => session),
-    attachWriteEligibilityHint: vi.fn(async (scope) => ({
-      ...scope,
-      learningAttributionHint: null,
-    })),
     authSecrets: configuration,
   };
 }
@@ -61,11 +57,9 @@ describe("document mutation admission", () => {
       scope: {
         userId: vector.ownerUserId,
         sessionId: vector.sessionId,
-        learningAttributionHint: null,
       },
     });
     expect(injected.readAuthoritativeSession).toHaveBeenCalledOnce();
-    expect(injected.attachWriteEligibilityHint).toHaveBeenCalledOnce();
   });
 
   it("supports a single explicit rollback flag without weakening request scope", async () => {
@@ -86,7 +80,6 @@ describe("document mutation admission", () => {
       },
     });
     expect(injected.readAuthoritativeSession).toHaveBeenCalledOnce();
-    expect(injected.attachWriteEligibilityHint).toHaveBeenCalledOnce();
   });
 
   it("separates owner, session, protocol, signed-out, and unavailable results", async () => {
@@ -208,7 +201,6 @@ describe("document mutation admission", () => {
     release(matchingSession);
     await Promise.resolve();
     await Promise.resolve();
-    expect(injected.attachWriteEligibilityHint).not.toHaveBeenCalled();
   });
 
   it("allows effects only for matching snapshots across a 32-request barrier", async () => {

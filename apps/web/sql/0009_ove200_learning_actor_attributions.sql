@@ -23,8 +23,6 @@ begin
       check (
         actor_class in (
           'real_self_serve',
-          'real_closed_pilot',
-          'founder_rehearsal',
           'production_smoke',
           'visual_fixture',
           'editorial_seed',
@@ -43,7 +41,6 @@ begin
       add constraint learning_actor_attributions_source_check
       check (
         source in (
-          'pilot_grant',
           'producer',
           'operator_plan',
           'self_serve_default'

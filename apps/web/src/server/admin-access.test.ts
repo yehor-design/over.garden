@@ -54,7 +54,7 @@ describe("admin access gate", () => {
     expect(where).toHaveBeenCalledWith("user_id", "=", userId);
   });
 
-  it("allows owners with role-management capability", async () => {
+  it("allows the sealed owner only the retained operator capabilities", async () => {
     const access = await assertAdminAccess(
       scopedToUser(OWNER_ID),
       fakeAdminDb({ role: "owner" }),
@@ -65,14 +65,13 @@ describe("admin access gate", () => {
       role: "owner",
       capabilities: [
         "admin:read",
-        "admin:manage_roles",
         "operator:read",
         "operator:mutate",
         "erasure:execute",
       ],
     });
     expect(() =>
-      assertAdminCapability(access, "admin:manage_roles"),
+      assertAdminCapability(access, "operator:mutate"),
     ).not.toThrow();
   });
 
