@@ -3,6 +3,7 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import type { PoolClient, QueryConfig } from "pg";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -14,6 +15,7 @@ import {
   buildRetirementPlan,
   isApprovedProductionDatabaseTarget,
   parseOptions,
+  readSnapshot,
   type RetirementSnapshot,
 } from "./retire-manual-pilot-learning";
 
@@ -262,6 +264,50 @@ describe("OVE-299 manual pilot learning retirement", () => {
 
     expect(lockIndex).toBeGreaterThan(-1);
     expect(snapshotIndex).toBeGreaterThan(lockIndex);
+  });
+
+  it("reads a transaction-bound snapshot without overlapping client queries", async () => {
+    let queryInFlight = false;
+    const client = {
+      async query(input: string | QueryConfig) {
+        if (queryInFlight) throw new Error("concurrent_query");
+        queryInFlight = true;
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 1));
+          const text = typeof input === "string" ? input : input.text;
+          if (text.includes("to_regclass")) {
+            return { rows: [{ table_exists: true }] };
+          }
+          if (text.includes("row_count")) {
+            return { rows: [{ row_count: "0" }] };
+          }
+          if (text.includes("pg_attribute")) {
+            return { rows: [] };
+          }
+          if (text.includes("constraint_count")) {
+            return { rows: [{ constraint_count: "0" }] };
+          }
+          if (text.includes("incoming_foreign_key_count")) {
+            return { rows: [{ incoming_foreign_key_count: "0" }] };
+          }
+          if (text.includes("view_dependency_count")) {
+            return { rows: [{ view_dependency_count: "0" }] };
+          }
+          throw new Error("unexpected_query");
+        } finally {
+          queryInFlight = false;
+        }
+      },
+    } as unknown as PoolClient;
+
+    await expect(readSnapshot(client)).resolves.toMatchObject({
+      tableExists: true,
+      rowCount: 0,
+      columnCount: 0,
+      constraintCount: 0,
+      incomingForeignKeyCount: 0,
+      viewDependencyCount: 0,
+    });
   });
 
   it("leaves only declared retirement tombstones in current repository text", async () => {
