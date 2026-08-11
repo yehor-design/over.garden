@@ -288,6 +288,10 @@ function snapshotMatchesCompletedDatabase(snapshot: RetirementSnapshot) {
   );
 }
 
+function providerCleanupRemains(targetClass: VercelEnvTargetClass) {
+  return targetClass === "present_all" || targetClass === "mixed";
+}
+
 export function buildRetirementPlan(
   input: BuildPlanInput,
 ): ObsoleteControlPlaneRetirementPlanV1 {
@@ -295,13 +299,13 @@ export function buildRetirementPlan(
   const state: RetirementState = !proofApproved
     ? "failed"
     : snapshotMatchesApprovedApply(input.snapshot) &&
-        input.vercelEnvTargetClass === "present_all"
+        providerCleanupRemains(input.vercelEnvTargetClass)
       ? "code_deployed"
       : snapshotMatchesCompletedDatabase(input.snapshot) &&
           input.vercelEnvTargetClass === "absent_all"
         ? "already_completed"
         : snapshotMatchesCompletedDatabase(input.snapshot) &&
-            input.vercelEnvTargetClass === "present_all"
+            providerCleanupRemains(input.vercelEnvTargetClass)
           ? "database_completed"
           : "failed";
 

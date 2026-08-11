@@ -80,8 +80,8 @@ if the locked second snapshot contains an orphan.
 7. Apply migration `0021` only if the plan is exactly `code_deployed` and every
    approved aggregate matches under the locked second snapshot.
 8. Read database completion, preservation, schema absence, and replay.
-9. Remove only `PILOT_INVITE_SIGNING_SECRET` from Vercel production, preview,
-   and development.
+9. Remove only `PILOT_INVITE_SIGNING_SECRET` from any of Vercel production,
+   preview, and development where a fresh read proves it still exists.
 10. Read exact target-name absence twice without reading values.
 11. Run current-main closeout and complete the authenticated Linear read-back.
 
@@ -117,7 +117,9 @@ After exact-SHA proof, export closed proof classes only:
 ```bash
 export OVE314_ROUTE_ABSENCE_CLASS=exact_404
 export OVE314_MENU_CONTRACT_CLASS=sealed_owner_exact_four
-export OVE314_VERCEL_ENV_TARGET_CLASS=present_all
+# Authenticated closeout read-back found the retired name on production only;
+# preview and development are already absent. Re-read before every command.
+export OVE314_VERCEL_ENV_TARGET_CLASS=mixed
 export OVE314_CONTAINED_IMPLEMENTATION_SHA="$OVE314_IMPLEMENTATION_SHA"
 export OVE314_VERCEL_READY_SHA="$OVE314_IMPLEMENTATION_SHA"
 ```
@@ -167,16 +169,19 @@ Require all of the following before provider cleanup:
 ## Vercel cleanup
 
 Use authenticated Vercel metadata and exact-name removal. Do not read or print
-the value. Remove only `PILOT_INVITE_SIGNING_SECRET`, separately from:
+the value. Remove only `PILOT_INVITE_SIGNING_SECRET` from each target where an
+immediate read proves that it still exists:
 
 - production;
 - preview;
 - development.
 
-If removal is partial, leave code/database retirement in place, classify only
-which environment names remain, and remove those exact remaining targets after
-a fresh absence plan. Never touch Better Auth, Google, lineage, R2, database,
-matching, analytics, or another Vercel setting.
+`present_all` and `mixed` are valid pre-cleanup classes; both require provider
+cleanup after database completion. `absent_all` is the only terminal provider
+class. If removal is partial, leave code/database retirement in place, classify
+only which environment names remain, and remove those exact remaining targets
+after a fresh absence plan. Never touch Better Auth, Google, lineage, R2,
+database, matching, analytics, or another Vercel setting.
 
 ## Failure gates
 
