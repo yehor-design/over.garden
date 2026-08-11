@@ -1,7 +1,5 @@
-import { execFile } from "node:child_process";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
 
 import { Pool } from "pg";
 import { describe, expect, it } from "vitest";
@@ -26,11 +24,30 @@ import {
   type RetirementSnapshot,
 } from "./retire-obsolete-control-plane";
 
-const execFileAsync = promisify(execFile);
 const webRoot = path.resolve(".");
 const repositoryRoot = path.resolve(webRoot, "../..");
 const implementationSha = "a".repeat(40);
 const migrationDigest = "b".repeat(64);
+
+async function collectFiles(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await collectFiles(entryPath)));
+    } else if (entry.isFile()) {
+      files.push(entryPath);
+    }
+  }
+
+  return files;
+}
+
+function toRepositoryRelativePath(filePath: string): string {
+  return path.relative(repositoryRoot, filePath).split(path.sep).join("/");
+}
 
 const retiredRouteOwners = [
   "src/app/admin/page.tsx",
@@ -411,21 +428,26 @@ describe("OVE-314 active caller and schema retirement", () => {
   });
 
   it("leaves no live product-access invite or retired control-plane caller", async () => {
-    const { stdout } = await execFileAsync(
-      "rg",
-      [
-        "-n",
-        "-e",
-        "pilot_invite_grants|PILOT_INVITE_SIGNING_SECRET|pilot-write-access|pilot-invite|closed-pilot-write-callout|/garden/pilot-(health|smoke)|/admin/users|href=[\\\"']?/admin[\\\"']|/join(?:[\\\"'/?]|$)",
-        "apps/web/src",
-        "apps/web/scripts",
-        "apps/web/.env.example",
-      ],
-      { cwd: repositoryRoot },
-    ).catch((error: { code?: number; stdout?: string }) => {
-      if (error.code === 1) return { stdout: "" };
-      throw error;
-    });
+    const pattern =
+      /pilot_invite_grants|PILOT_INVITE_SIGNING_SECRET|pilot-write-access|pilot-invite|closed-pilot-write-callout|\/garden\/pilot-(health|smoke)|\/admin\/users|href=["']?\/admin["']|\/join(?:["'/?]|$)/;
+    const sourceFiles = [
+      ...(await collectFiles(path.join(webRoot, "src"))),
+      ...(await collectFiles(path.join(webRoot, "scripts"))),
+      path.join(webRoot, ".env.example"),
+    ].sort();
+    const matches: string[] = [];
+
+    for (const filePath of sourceFiles) {
+      const source = await readFile(filePath, "utf8");
+      for (const [lineIndex, line] of source.split(/\r?\n/).entries()) {
+        if (pattern.test(line)) {
+          matches.push(
+            `${toRepositoryRelativePath(filePath)}:${lineIndex + 1}:${line}`,
+          );
+        }
+      }
+    }
+
     const allowed = [
       "apps/web/scripts/retire-obsolete-control-plane.ts:",
       "apps/web/scripts/retire-obsolete-control-plane.test.ts:",
@@ -433,15 +455,12 @@ describe("OVE-314 active caller and schema retirement", () => {
       "apps/web/scripts/smoke-self-serve-mvp.ts:",
       "apps/web/src/lib/retired-control-plane-routes.ts:",
     ];
-    const unexpected = stdout
-      .split("\n")
-      .filter(Boolean)
-      .filter(
-        (line) =>
-          !line.includes(".test.ts:") &&
-          !line.includes(".test.tsx:") &&
-          !allowed.some((prefix) => line.startsWith(prefix)),
-      );
+    const unexpected = matches.filter(
+      (line) =>
+        !line.includes(".test.ts:") &&
+        !line.includes(".test.tsx:") &&
+        !allowed.some((prefix) => line.startsWith(prefix)),
+    );
     expect(unexpected).toEqual([]);
   });
 });
