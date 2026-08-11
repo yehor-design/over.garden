@@ -2,12 +2,12 @@
   "schemaVersion": "overgarden.authenticated-mutation-deployment-receipt.v1",
   "registry": {
     "digest": "633f9071fd4f2ef30f4036e5faed5b295590a90b82f3a518a3080bcba67bcdda",
-    "sourceReceiptDigest": "664fe875da2c9c9ff986aac430962a572823bb7377ea013f217767ec92185b7a",
+    "sourceReceiptDigest": "6d2d4154d235bcdf318b3816355ba610b307135f9c7579949bd452afec67ee14",
     "entrypointCount": 314,
     "consumerEdgeCount": 656
   },
   "enforcement": {
-    "receiptDigest": "95d7f07bffce4efcbecbb673ac21e1443575067c9986c06fe2956d6834f0e44b",
+    "receiptDigest": "36e6f531bfe5d7f95022b26263149a674be29e07811a42e1fbbe8b4535bf07d2",
     "ove291EntrypointCount": 124,
     "ove291ConsumerEdgeCount": 347
   },

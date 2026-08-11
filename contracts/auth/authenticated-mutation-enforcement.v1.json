@@ -1,7 +1,7 @@
 {
   "schemaVersion": "overgarden.authenticated-mutation-enforcement.v1",
   "registryDigest": "633f9071fd4f2ef30f4036e5faed5b295590a90b82f3a518a3080bcba67bcdda",
-  "sourceRegistryReceiptDigest": "664fe875da2c9c9ff986aac430962a572823bb7377ea013f217767ec92185b7a",
+  "sourceRegistryReceiptDigest": "6d2d4154d235bcdf318b3816355ba610b307135f9c7579949bd452afec67ee14",
   "entrypointStates": [
     {
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_account_session_mutation",

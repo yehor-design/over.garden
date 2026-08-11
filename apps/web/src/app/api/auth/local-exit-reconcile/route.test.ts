@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { APIError } from "better-auth/api";
 
 import {
   CURRENT_SESSION_BINDING_HEADER,
@@ -8,9 +7,11 @@ import {
 } from "@/lib/auth/sign-out-hardening";
 
 const signOut = vi.hoisted(() => vi.fn());
+const authHandler = vi.hoisted(() => vi.fn());
+const info = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth", () => ({
-  auth: { api: { signOut } },
+  auth: { handler: authHandler, api: { signOut } },
 }));
 
 const BINDING_A = "A".repeat(43);
@@ -19,10 +20,36 @@ describe("local-exit reconciliation route", () => {
   beforeEach(() => {
     vi.resetModules();
     signOut.mockReset();
+    authHandler.mockReset();
+    info.mockReset();
+    vi.spyOn(console, "info").mockImplementation(info);
+  });
+
+  it("re-enters Better Auth through the canonical HTTP boundary for the exact-session delete", async () => {
+    authHandler.mockResolvedValue(
+      betterAuthResponse(200, { success: true }, expiredSessionCookie()),
+    );
+    const { POST } = await import("./route");
+
+    const response = await POST(reconcileRequest());
+
+    expect(response.status).toBe(204);
+    expect(authHandler).toHaveBeenCalledOnce();
+    const canonicalRequest = authHandler.mock.calls[0]?.[0] as Request;
+    expect(new URL(canonicalRequest.url).pathname).toBe("/api/auth/sign-out");
+    expect(canonicalRequest.method).toBe("POST");
+    expect(canonicalRequest.headers.get("content-type")).toBe(
+      "application/json",
+    );
+    expect(await canonicalRequest.json()).toEqual({});
+    expect(signOut).not.toHaveBeenCalled();
+    expect(info).toHaveBeenCalledWith(
+      "[auth] local-exit reconciliation outcome: revoked_confirmed",
+    );
   });
 
   it("returns a bodyless receipt with the library cookie expiry for the exact current session", async () => {
-    signOut.mockResolvedValue(
+    authHandler.mockResolvedValue(
       betterAuthResponse(200, { success: true }, expiredSessionCookie()),
     );
     const { POST } = await import("./route");
@@ -35,40 +62,54 @@ describe("local-exit reconciliation route", () => {
       "overgarden.session_token=",
     );
     expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
-    expect(signOut).toHaveBeenCalledOnce();
-    expect(signOut.mock.calls[0]?.[0].headers.get("cookie")).toBe(
+    expect(authHandler).toHaveBeenCalledOnce();
+    const canonicalRequest = authHandler.mock.calls[0]?.[0] as Request;
+    expect(canonicalRequest.headers.get("cookie")).toBe(
       "overgarden.session_token=signed-a",
     );
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("admits the empty body stream exposed by the server request adapter", async () => {
+    authHandler.mockResolvedValue(
+      betterAuthResponse(200, { success: true }, expiredSessionCookie()),
+    );
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      reconcileRequest({ body: new Blob([]) }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(authHandler).toHaveBeenCalledOnce();
   });
 
   it("still emits the library expiry when exact-session adapter deletion fails", async () => {
-    signOut
-      .mockRejectedValueOnce(
-        APIError.from("INTERNAL_SERVER_ERROR", {
-          code: SIGN_OUT_ADAPTER_FAILURE_CODE,
-          message: "Synthetic adapter failure",
-        }),
-      )
-      .mockResolvedValueOnce(
-        betterAuthResponse(200, { success: true }, expiredSessionCookie()),
-      );
+    authHandler.mockResolvedValueOnce(
+      betterAuthResponse(500, {
+        code: SIGN_OUT_ADAPTER_FAILURE_CODE,
+      }),
+    );
+    signOut.mockResolvedValueOnce(
+      betterAuthResponse(200, { success: true }, expiredSessionCookie()),
+    );
     const { POST } = await import("./route");
 
     const response = await POST(reconcileRequest());
 
     expect(response.status).toBe(204);
     expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
-    expect(signOut).toHaveBeenCalledTimes(2);
-    const expiryHeaders = signOut.mock.calls[1]?.[0].headers as Headers;
+    expect(authHandler).toHaveBeenCalledOnce();
+    expect(signOut).toHaveBeenCalledOnce();
+    const expiryHeaders = signOut.mock.calls[0]?.[0].headers as Headers;
     expect(expiryHeaders.has("cookie")).toBe(false);
     expect(expiryHeaders.has(CURRENT_SESSION_BINDING_HEADER)).toBe(false);
   });
 
   it("gives a stale account-A binding zero account-B cookie or session effect", async () => {
-    signOut.mockRejectedValue(
-      APIError.from("CONFLICT", {
+    authHandler.mockResolvedValue(
+      betterAuthResponse(409, {
         code: SIGN_OUT_BINDING_FAILURE_CODE,
-        message: "Synthetic binding conflict",
       }),
     );
     const { POST } = await import("./route");
@@ -79,7 +120,11 @@ describe("local-exit reconciliation route", () => {
 
     expect(response.status).toBe(204);
     expect(response.headers.get("set-cookie")).toBeNull();
-    expect(signOut).toHaveBeenCalledOnce();
+    expect(authHandler).toHaveBeenCalledOnce();
+    expect(signOut).not.toHaveBeenCalled();
+    expect(info).toHaveBeenCalledWith(
+      "[auth] local-exit reconciliation outcome: stale_operation",
+    );
   });
 
   it.each([
@@ -87,6 +132,7 @@ describe("local-exit reconciliation route", () => {
     reconcileRequest({ fetchSite: "cross-site" }),
     reconcileRequest({ binding: "malformed" }),
     reconcileRequest({ body: "{}" }),
+    reconcileRequest({ body: "{}", contentLength: "0" }),
   ])(
     "returns the same empty response with zero auth effect for denied input",
     async (request) => {
@@ -97,6 +143,7 @@ describe("local-exit reconciliation route", () => {
       expect(response.status).toBe(204);
       expect(await response.text()).toBe("");
       expect(response.headers.get("set-cookie")).toBeNull();
+      expect(authHandler).not.toHaveBeenCalled();
       expect(signOut).not.toHaveBeenCalled();
     },
   );
@@ -108,7 +155,8 @@ function reconcileRequest(
     fetchSite?: string;
     binding?: string;
     cookie?: string;
-    body?: string;
+    body?: BodyInit;
+    contentLength?: string;
   } = {},
 ) {
   return new Request("https://over.garden/api/auth/local-exit-reconcile", {
@@ -118,7 +166,12 @@ function reconcileRequest(
       "sec-fetch-site": overrides.fetchSite ?? "same-origin",
       [CURRENT_SESSION_BINDING_HEADER]: overrides.binding ?? BINDING_A,
       cookie: overrides.cookie ?? "overgarden.session_token=signed-a",
-      ...(overrides.body ? { "content-type": "application/json" } : {}),
+      ...(overrides.contentLength
+        ? { "content-length": overrides.contentLength }
+        : {}),
+      ...(typeof overrides.body === "string" && overrides.body.length > 0
+        ? { "content-type": "application/json" }
+        : {}),
     },
     body: overrides.body,
   });

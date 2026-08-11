@@ -738,7 +738,9 @@ async function runPlaywrightElevatedNativeFormJourney(
       throw new Error("OVE-291 elevated owner document was unavailable.");
     }
 
-    const form = page.locator('form:has(select[name="segment"])');
+    const form = page.locator(
+      'form:has(input[name="__overgardenDocumentGeneration"])',
+    );
     if ((await form.count()) !== 1) {
       throw new Error("OVE-291 elevated owner form was not uniquely rendered.");
     }
