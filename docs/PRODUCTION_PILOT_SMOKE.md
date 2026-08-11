@@ -138,7 +138,8 @@ and run the read-only plan:
 ```bash
 export OVE314_ROUTE_ABSENCE_CLASS=exact_404
 export OVE314_MENU_CONTRACT_CLASS=sealed_owner_exact_four
-export OVE314_VERCEL_ENV_TARGET_CLASS=present_all
+# The authenticated read-back found the retired name on production only.
+export OVE314_VERCEL_ENV_TARGET_CLASS=mixed
 export OVE314_CONTAINED_IMPLEMENTATION_SHA="$OVE314_IMPLEMENTATION_SHA"
 export OVE314_VERCEL_READY_SHA="$OVE314_IMPLEMENTATION_SHA"
 

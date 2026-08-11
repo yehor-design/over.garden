@@ -80,8 +80,8 @@ if the locked second snapshot contains an orphan.
 7. Apply migration `0021` only if the plan is exactly `code_deployed` and every
    approved aggregate matches under the locked second snapshot.
 8. Read database completion, preservation, schema absence, and replay.
-9. Remove only `PILOT_INVITE_SIGNING_SECRET` from Vercel production, preview,
-   and development.
+9. Remove only `PILOT_INVITE_SIGNING_SECRET` from any of Vercel production,
+   preview, and development where a fresh read proves it still exists.
 10. Read exact target-name absence twice without reading values.
 11. Run current-main closeout and complete the authenticated Linear read-back.
 

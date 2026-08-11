@@ -449,7 +449,9 @@ describe("OVE-314 active caller and schema retirement", () => {
     const sourceFiles = [
       ...(await collectFiles(path.join(webRoot, "src"))),
       ...(await collectFiles(path.join(webRoot, "scripts"))),
+      ...(await collectFiles(path.join(webRoot, "test"))),
       path.join(webRoot, ".env.example"),
+      path.join(repositoryRoot, "infra/run-with-local-infra-env"),
     ].sort();
     const matches: string[] = [];
 
