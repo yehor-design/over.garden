@@ -29,10 +29,12 @@ const EXPECTED_SOURCE_PATHS = [
   "sql/0001_walking_skeleton.sql",
   "sql/0015_ove241_auth_email_outbox.sql",
   "src/app/api/auth/[...all]/route.ts",
+  "src/lib/admin/owner-account-contract.ts",
   "src/lib/auth.ts",
   "src/lib/auth/explicit-google-linking.ts",
   "src/lib/auth/google-oauth.ts",
   "src/lib/auth/retired-social-provider.ts",
+  "src/server/auth/account-methods.ts",
 ] as const;
 
 const EXPECTED_PACKAGES = [
@@ -134,6 +136,23 @@ describe("authenticated mutation semantic evidence adapter", () => {
     );
     expect(source.get("src/lib/auth/retired-social-provider.ts")).toContain(
       "It runs before Better Auth",
+    );
+  });
+
+  it("pins the sealed-owner denial in both link admission and method projection", async () => {
+    const evidence = await currentEvidence();
+    const source = new Map(
+      evidence.sources.map((entry) => [entry.path, entry.sourceText]),
+    );
+
+    expect(source.get("src/lib/admin/owner-account-contract.ts")).toContain(
+      "resolveConfiguredSealedOwnerUserId(env) === userId",
+    );
+    expect(source.get("src/lib/auth/explicit-google-linking.ts")).toContain(
+      "!isSealedOwnerUserId(user.id, env)",
+    );
+    expect(source.get("src/server/auth/account-methods.ts")).toContain(
+      "isExplicitGoogleLinkingEnabledForUser(session.user.id)",
     );
   });
 

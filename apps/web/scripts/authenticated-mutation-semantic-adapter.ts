@@ -214,6 +214,11 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
         "98ceded5ee0e1b7ba6952b362964eb6316fd23e5dab7c7a577c8d86ddb417d59",
     },
     {
+      path: "src/lib/admin/owner-account-contract.ts",
+      sha256:
+        "a9df30aead1e460020c645323b808e8ff1a94a94467e0c5e115cdd80fd6bf5c4",
+    },
+    {
       path: "src/lib/auth.ts",
       sha256:
         "ab01351c18347c50e3eb05470d63fd2e5a8c0c006ee932a5119c7210980f2b41",
@@ -221,7 +226,7 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
     {
       path: "src/lib/auth/explicit-google-linking.ts",
       sha256:
-        "3b7f49aee594b6e0e3324f4c50676d2a1bbf81d742c954b8e68b70394bf5d068",
+        "63666eff20e4843ffd13110b2965da02015e1910158efaa8353c2a8add3e8619",
     },
     {
       path: "src/lib/auth/google-oauth.ts",
@@ -232,6 +237,11 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
       path: "src/lib/auth/retired-social-provider.ts",
       sha256:
         "0db69dcc8a16432397e84ffac0f58659e394ba5da77d75073d47bdf6df257f8a",
+    },
+    {
+      path: "src/server/auth/account-methods.ts",
+      sha256:
+        "11887eda5c0c10627b2726d2cfee95c4ded64209a116bf8c979949fcfb43464e",
     },
   ],
   effectBoundaries: [
@@ -381,8 +391,10 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
       ],
       evidencePaths: [
         "src/app/api/auth/[...all]/route.ts",
+        "src/lib/admin/owner-account-contract.ts",
         "src/lib/auth.ts",
         "src/lib/auth/explicit-google-linking.ts",
+        "src/server/auth/account-methods.ts",
       ],
       semanticAnchors: [
         '"/api/auth/link-social"',
@@ -390,6 +402,9 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
         "socialAccountPolicy(isExplicitGoogleLinkingEnabled())",
         "body?.provider !== GOOGLE_PROVIDER_ID",
         "findSession(sessionToken)",
+        "resolveConfiguredSealedOwnerUserId(env) === userId",
+        "!isSealedOwnerUserId(user.id, env)",
+        "isExplicitGoogleLinkingEnabledForUser(session.user.id)",
         '"ACCOUNT_LINKING_UNAVAILABLE"',
       ],
     },

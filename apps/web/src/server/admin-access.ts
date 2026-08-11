@@ -13,15 +13,14 @@ import {
 import {
   isVerifiedCredentialOnlyOwnerAccount,
   OWNER_CREDENTIAL_PROVIDER_ID,
+  resolveConfiguredSealedOwnerUserId,
+  SEALED_OWNER_USER_ID_ENV,
 } from "@/lib/admin/owner-account-contract";
 import type { RequestScope } from "@/server/request-scope";
 
 export const ADMIN_ACCESS_DENIED_MESSAGE = "Admin access denied.";
 export const ADMIN_CREDENTIAL_PROVIDER_ID = OWNER_CREDENTIAL_PROVIDER_ID;
-export const ADMIN_SEALED_OWNER_USER_ID_ENV = "OVERGARDEN_ADMIN_OWNER_USER_ID";
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const ADMIN_SEALED_OWNER_USER_ID_ENV = SEALED_OWNER_USER_ID_ENV;
 
 export interface AdminAccess {
   mode: "sealed_owner_credential_only";
@@ -158,9 +157,8 @@ export async function assertCredentialOnlyAdminAccount(
 export function resolveSealedAdminOwnerUserId(
   env: Record<string, string | undefined> = process.env,
 ) {
-  const configured = env[ADMIN_SEALED_OWNER_USER_ID_ENV]?.trim();
-
-  if (!configured || !UUID_PATTERN.test(configured)) {
+  const configured = resolveConfiguredSealedOwnerUserId(env);
+  if (!configured) {
     throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
   }
 
