@@ -90,10 +90,14 @@ describe("app route cache guardrail", () => {
     const retiredPaths = [
       "/admin",
       "/admin/",
+      "/admin/retired-descendant",
       "/bg/admin",
       "/ru/admin/",
+      "/bg/admin/communities",
       "/admin/users",
       "/admin/users/arbitrary",
+      "/admin/moderation/comments/arbitrary",
+      "/admin/communities/example/nested",
       "/join",
       "/join/arbitrary",
       "/garden/pilot-smoke",
@@ -131,6 +135,19 @@ describe("app route cache guardrail", () => {
     ]) {
       expect((await responseFor(preservedPath)).status, preservedPath).toBe(200);
     }
+  });
+
+  it("keeps canonical trailing-slash redirects after retired paths take precedence", async () => {
+    const response = await responseFor("/garden/?view=journal", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(
+      "https://over.garden/garden?view=journal",
+    );
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
   it("redirects www document navigation to the canonical apex before auth UI can render", async () => {
