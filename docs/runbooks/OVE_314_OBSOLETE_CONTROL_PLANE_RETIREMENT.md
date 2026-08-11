@@ -117,7 +117,9 @@ After exact-SHA proof, export closed proof classes only:
 ```bash
 export OVE314_ROUTE_ABSENCE_CLASS=exact_404
 export OVE314_MENU_CONTRACT_CLASS=sealed_owner_exact_four
-export OVE314_VERCEL_ENV_TARGET_CLASS=present_all
+# Authenticated closeout read-back found the retired name on production only;
+# preview and development are already absent. Re-read before every command.
+export OVE314_VERCEL_ENV_TARGET_CLASS=mixed
 export OVE314_CONTAINED_IMPLEMENTATION_SHA="$OVE314_IMPLEMENTATION_SHA"
 export OVE314_VERCEL_READY_SHA="$OVE314_IMPLEMENTATION_SHA"
 ```
@@ -167,16 +169,19 @@ Require all of the following before provider cleanup:
 ## Vercel cleanup
 
 Use authenticated Vercel metadata and exact-name removal. Do not read or print
-the value. Remove only `PILOT_INVITE_SIGNING_SECRET`, separately from:
+the value. Remove only `PILOT_INVITE_SIGNING_SECRET` from each target where an
+immediate read proves that it still exists:
 
 - production;
 - preview;
 - development.
 
-If removal is partial, leave code/database retirement in place, classify only
-which environment names remain, and remove those exact remaining targets after
-a fresh absence plan. Never touch Better Auth, Google, lineage, R2, database,
-matching, analytics, or another Vercel setting.
+`present_all` and `mixed` are valid pre-cleanup classes; both require provider
+cleanup after database completion. `absent_all` is the only terminal provider
+class. If removal is partial, leave code/database retirement in place, classify
+only which environment names remain, and remove those exact remaining targets
+after a fresh absence plan. Never touch Better Auth, Google, lineage, R2,
+database, matching, analytics, or another Vercel setting.
 
 ## Failure gates
 

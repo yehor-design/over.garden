@@ -161,6 +161,17 @@ describe("OVE-314 aggregate-only retirement plan", () => {
     expect(plan.evidenceDigest).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  it("accepts pre-existing partial provider absence before bounded cleanup", () => {
+    const plan = buildRetirementPlan(
+      buildInput(matchingSnapshot, { vercelEnvTargetClass: "mixed" }),
+    );
+
+    expect(plan).toMatchObject({
+      vercelEnvTargetClass: "mixed",
+      state: "code_deployed",
+    });
+  });
+
   it.each([
     ["grant total", { inviteGrantCount: 44 }],
     ["closed cohort", { closedPilotGrantCount: 5 }],
@@ -185,7 +196,7 @@ describe("OVE-314 aggregate-only retirement plan", () => {
     ["menu", { menuContractClass: "unproved" }],
     ["containment", { implementationContained: false }],
     ["READY SHA", { vercelReadySha: "c".repeat(40) }],
-    ["Vercel targets", { vercelEnvTargetClass: "mixed" }],
+    ["Vercel targets", { vercelEnvTargetClass: "unproved" }],
   ])("fails closed on %s proof drift", (_label, drift) => {
     expect(buildRetirementPlan(buildInput(matchingSnapshot, drift)).state).toBe(
       "failed",
@@ -196,6 +207,11 @@ describe("OVE-314 aggregate-only retirement plan", () => {
     expect(buildRetirementPlan(buildInput(completedSnapshot)).state).toBe(
       "database_completed",
     );
+    expect(
+      buildRetirementPlan(
+        buildInput(completedSnapshot, { vercelEnvTargetClass: "mixed" }),
+      ).state,
+    ).toBe("database_completed");
     expect(
       buildRetirementPlan(
         buildInput(completedSnapshot, {
