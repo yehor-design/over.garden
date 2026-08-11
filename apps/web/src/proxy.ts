@@ -201,6 +201,15 @@ function getCanonicalHostResponse(request: NextRequest) {
   return NextResponse.redirect(url, { status: 308 });
 }
 
+function getCanonicalTrailingSlashResponse(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  if (pathname === "/" || !pathname.endsWith("/")) return null;
+
+  const url = new URL(request.url);
+  url.pathname = pathname.replace(/\/+$/, "") || "/";
+  return NextResponse.redirect(url, { status: 308 });
+}
+
 function withAppRouteContract(
   response: NextResponse,
   request: NextRequest,
@@ -438,6 +447,10 @@ export async function proxy(request: NextRequest) {
   if (isRetiredControlPlanePath(request.nextUrl.pathname)) {
     return getHardNotFoundResponse();
   }
+
+  const canonicalTrailingSlashResponse =
+    getCanonicalTrailingSlashResponse(request);
+  if (canonicalTrailingSlashResponse) return canonicalTrailingSlashResponse;
 
   const canonicalHostResponse = getCanonicalHostResponse(request);
   if (canonicalHostResponse) return canonicalHostResponse;

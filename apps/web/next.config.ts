@@ -21,6 +21,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Retired control-plane paths must reach Proxy before framework-level
+  // trailing-slash canonicalization so they can return a direct hard 404.
+  // Proxy preserves the existing 308 canonical redirect for every other path.
+  skipTrailingSlashRedirect: true,
   images: {
     dangerouslyAllowLocalIP:
       process.env.VISUAL_FIXTURES_ENABLED === "true" &&

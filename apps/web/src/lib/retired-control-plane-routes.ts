@@ -10,6 +10,22 @@ const RETIRED_PATH_PREFIXES = [
   "/garden/pilot-learning",
 ] as const;
 
+function isPreservedAdminPath(pathname: string) {
+  if (
+    pathname === "/admin/communities" ||
+    pathname === "/admin/moderation/comments"
+  ) {
+    return true;
+  }
+
+  const communitySlug = pathname.slice("/admin/communities/".length);
+  return (
+    pathname.startsWith("/admin/communities/") &&
+    communitySlug.length > 0 &&
+    !communitySlug.includes("/")
+  );
+}
+
 function trimTrailingSlashes(pathname: string) {
   if (pathname === "/") return pathname;
   return pathname.replace(/\/+$/, "");
@@ -20,11 +36,13 @@ function trimTrailingSlashes(pathname: string) {
  * public profile or a streamed App Router not-found response with HTTP 200.
  */
 export function isRetiredControlPlanePath(pathname: string) {
-  const canonicalPath = trimTrailingSlashes(
-    stripLocalePrefix(pathname).path,
-  );
+  const strippedPath = stripLocalePrefix(pathname);
+  const canonicalPath = trimTrailingSlashes(strippedPath.path);
 
   if (RETIRED_EXACT_PATHS.has(canonicalPath)) return true;
+  if (canonicalPath.startsWith("/admin/")) {
+    return strippedPath.locale !== null || !isPreservedAdminPath(canonicalPath);
+  }
 
   return RETIRED_PATH_PREFIXES.some(
     (prefix) =>
