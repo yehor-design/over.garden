@@ -13,6 +13,7 @@ import {
   RETIRED_RELATION,
   buildRetirementPlan,
   isApprovedProductionDatabaseTarget,
+  parseOptions,
   type RetirementSnapshot,
 } from "./retire-manual-pilot-learning";
 
@@ -202,6 +203,48 @@ describe("OVE-299 manual pilot learning retirement", () => {
         "postgresql://redacted:redacted@overgarden-postgres-prod-fra1-do-user-39359942-0.j.db.ondigitalocean.com:25060/other",
       ),
     ).toBe(false);
+  });
+
+  it("accepts the pnpm argument separator without weakening bounded input", () => {
+    expect(
+      parseOptions([
+        "--",
+        "--mode",
+        "plan",
+        "--environment",
+        "production",
+        "--implementation-sha",
+        "a".repeat(40),
+        "--route-absence-class",
+        "exact_404",
+      ]),
+    ).toEqual({
+      mode: "plan",
+      environment: "production",
+      implementationSha: "a".repeat(40),
+      routeAbsenceClass: "exact_404",
+      expectedPlanDigest: undefined,
+    });
+  });
+
+  it.each([
+    ["unknown option", ["--unknown", "value"]],
+    ["duplicate option", ["--mode", "plan", "--mode", "apply"]],
+    ["plan-only digest", ["--expected-plan-digest", "b".repeat(64)]],
+  ])("rejects %s even with otherwise valid options", (_label, extra) => {
+    expect(() =>
+      parseOptions([
+        "--mode",
+        "plan",
+        "--environment",
+        "production",
+        "--implementation-sha",
+        "a".repeat(40),
+        "--route-absence-class",
+        "exact_404",
+        ...extra,
+      ]),
+    ).toThrow("invalid_input");
   });
 
   it("takes an exclusive table lock before the destructive re-snapshot", async () => {
