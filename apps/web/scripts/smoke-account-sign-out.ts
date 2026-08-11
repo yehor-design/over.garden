@@ -989,8 +989,12 @@ export function assertOldSessionGuestRouteContract(
     `old session ${route} must render the guest auth boundary`,
   );
   assert(
-    !html.includes('data-authenticated-utility-region="true"'),
-    `old session ${route} cannot render authenticated utility controls`,
+    !html.includes("data-sign-out-control="),
+    `old session ${route} cannot render a sign-out control`,
+  );
+  assert(
+    !html.includes('data-session-convergence-boundary="true"'),
+    `old session ${route} cannot render the authenticated session boundary`,
   );
   assert(
     !html.includes(PRIVATE_GARDEN_MARKER),

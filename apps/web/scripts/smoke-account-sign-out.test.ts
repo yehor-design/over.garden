@@ -260,6 +260,8 @@ describe("OVE-204 account sign-out smoke", () => {
 
   it("requires exact guest contracts for every old-cookie page", () => {
     const guest = '<section data-testid="garden-auth-panel"></section>';
+    const bulgarianUtilityGuest =
+      '<aside data-authenticated-utility-region="true"></aside>';
     expect(() =>
       assertOldSessionGuestRouteContract("garden", 200, guest),
     ).not.toThrow();
@@ -271,6 +273,13 @@ describe("OVE-204 account sign-out smoke", () => {
         "admin",
         200,
         `${guest}<main data-operator-access-state="sign-in-required"></main>`,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertOldSessionGuestRouteContract(
+        "admin",
+        200,
+        `${bulgarianUtilityGuest}${guest}<main data-operator-access-state="sign-in-required"></main>`,
       ),
     ).not.toThrow();
 
@@ -295,7 +304,7 @@ describe("OVE-204 account sign-out smoke", () => {
       assertOldSessionGuestRouteContract(
         "garden",
         200,
-        '<aside data-authenticated-utility-region="true"></aside>',
+        `${guest}<button data-sign-out-control="utility"></button>`,
       ),
     ).toThrow();
   });
