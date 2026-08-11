@@ -340,31 +340,36 @@ function defaultKind(expression: string | null) {
   return "other";
 }
 
-function observedActiveShapeDigest(
+export function observedActiveShapeDigest(
   grantColumns: ColumnShapeRow[],
   constraintCount: number,
   hintColumns: ColumnShapeRow[],
 ) {
+  const grantColumnsByName = new Map(
+    grantColumns.map((column) => [column.column_name, column]),
+  );
   const grantColumnsMatch =
     grantColumns.length === EXPECTED_GRANT_COLUMNS.length &&
-    grantColumns.every((column, index) => {
-      const expected = EXPECTED_GRANT_COLUMNS[index];
+    grantColumnsByName.size === EXPECTED_GRANT_COLUMNS.length &&
+    EXPECTED_GRANT_COLUMNS.every((expected) => {
+      const column = grantColumnsByName.get(expected[0]);
       return (
-        expected !== undefined &&
-        column.column_name === expected[0] &&
+        column !== undefined &&
         column.formatted_type === expected[1] &&
         column.not_null === expected[2] &&
         defaultKind(column.default_expression) === expected[3]
       );
     });
+  const hintColumnsByName = new Map(
+    hintColumns.map((column) => [column.column_name, column]),
+  );
   const hintColumnsMatch =
     hintColumns.length === 2 &&
-    hintColumns[0]?.column_name === "cohort" &&
-    hintColumns[0]?.formatted_type === "text" &&
-    hintColumns[0]?.not_null === false &&
-    hintColumns[1]?.column_name === "segment" &&
-    hintColumns[1]?.formatted_type === "text" &&
-    hintColumns[1]?.not_null === false;
+    hintColumnsByName.size === 2 &&
+    ["cohort", "segment"].every((name) => {
+      const column = hintColumnsByName.get(name);
+      return column?.formatted_type === "text" && column.not_null === false;
+    });
 
   if (
     grantColumnsMatch &&
@@ -377,18 +382,22 @@ function observedActiveShapeDigest(
   return sha256(
     JSON.stringify({
       relation: RETIRED_GRANT_RELATION,
-      columns: grantColumns.map((column) => [
-        column.column_name,
-        column.formatted_type,
-        column.not_null,
-        defaultKind(column.default_expression),
-      ]),
+      columns: grantColumns
+        .map((column) => [
+          column.column_name,
+          column.formatted_type,
+          column.not_null,
+          defaultKind(column.default_expression),
+        ])
+        .sort(([left], [right]) => String(left).localeCompare(String(right))),
       constraintCount,
-      outboxHintColumns: hintColumns.map((column) => [
-        column.column_name,
-        column.formatted_type,
-        column.not_null,
-      ]),
+      outboxHintColumns: hintColumns
+        .map((column) => [
+          column.column_name,
+          column.formatted_type,
+          column.not_null,
+        ])
+        .sort(([left], [right]) => String(left).localeCompare(String(right))),
     }),
   );
 }

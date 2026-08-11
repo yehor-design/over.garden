@@ -19,6 +19,7 @@ import {
   buildRetirementPlan,
   isApprovedProductionDatabaseTarget,
   measureBoundedLockWait,
+  observedActiveShapeDigest,
   parseOptions,
   readSnapshot,
   type RetirementSnapshot,
@@ -92,6 +93,60 @@ const completedSnapshot: RetirementSnapshot = {
   schemaShapeDigest: ABSENT_SCHEMA_SHAPE_DIGEST,
 };
 
+const productionUpgradeGrantColumns = [
+  {
+    column_name: "user_id",
+    formatted_type: "uuid",
+    not_null: true,
+    default_expression: null,
+  },
+  {
+    column_name: "cohort",
+    formatted_type: "text",
+    not_null: true,
+    default_expression: "'closed_pilot'::text",
+  },
+  {
+    column_name: "granted_at",
+    formatted_type: "timestamp with time zone",
+    not_null: true,
+    default_expression: "now()",
+  },
+  {
+    column_name: "created_at",
+    formatted_type: "timestamp with time zone",
+    not_null: true,
+    default_expression: "now()",
+  },
+  {
+    column_name: "updated_at",
+    formatted_type: "timestamp with time zone",
+    not_null: true,
+    default_expression: "now()",
+  },
+  {
+    column_name: "segment",
+    formatted_type: "text",
+    not_null: true,
+    default_expression: "'unknown_segment'::text",
+  },
+] as const;
+
+const productionUpgradeHintColumns = [
+  {
+    column_name: "cohort",
+    formatted_type: "text",
+    not_null: false,
+    default_expression: null,
+  },
+  {
+    column_name: "segment",
+    formatted_type: "text",
+    not_null: false,
+    default_expression: null,
+  },
+] as const;
+
 function buildInput(
   snapshot: RetirementSnapshot = matchingSnapshot,
   overrides: Record<string, unknown> = {},
@@ -113,6 +168,50 @@ function buildInput(
 }
 
 describe("OVE-314 aggregate-only retirement plan", () => {
+  it("accepts the exact upgrade schema independently of physical column order", () => {
+    expect(
+      observedActiveShapeDigest(
+        [...productionUpgradeGrantColumns],
+        9,
+        [...productionUpgradeHintColumns].reverse(),
+      ),
+    ).toBe(APPROVED_SCHEMA_SHAPE_DIGEST);
+  });
+
+  it("still rejects name, type, default, duplicate, hint, and constraint drift", () => {
+    const exactGrantColumns = [...productionUpgradeGrantColumns];
+    const exactHintColumns = [...productionUpgradeHintColumns];
+    const changedDefault = exactGrantColumns.map((column) =>
+      column.column_name === "segment"
+        ? { ...column, default_expression: "'closed_pilot'::text" }
+        : column,
+    );
+    const duplicateName = exactGrantColumns.map((column) =>
+      column.column_name === "segment"
+        ? { ...column, column_name: "cohort" }
+        : column,
+    );
+    const changedHintType = exactHintColumns.map((column) =>
+      column.column_name === "segment"
+        ? { ...column, formatted_type: "varchar" }
+        : column,
+    );
+
+    for (const digest of [
+      observedActiveShapeDigest(changedDefault, 9, exactHintColumns),
+      observedActiveShapeDigest(duplicateName, 9, exactHintColumns),
+      observedActiveShapeDigest(
+        exactGrantColumns.slice(1),
+        9,
+        exactHintColumns,
+      ),
+      observedActiveShapeDigest(exactGrantColumns, 9, changedHintType),
+      observedActiveShapeDigest(exactGrantColumns, 8, exactHintColumns),
+    ]) {
+      expect(digest).not.toBe(APPROVED_SCHEMA_SHAPE_DIGEST);
+    }
+  });
+
   it("classifies only the exact approved production snapshot as code deployed", () => {
     const plan = buildRetirementPlan(buildInput());
 

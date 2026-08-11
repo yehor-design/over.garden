@@ -51,6 +51,13 @@ The production read-only preflight classified:
 - grant columns: 6;
 - grant constraints: 9.
 
+The shape gate matches every approved column name, type, nullability, default
+class, hint column, and constraint count independently of physical column
+order. Fresh bootstrap and the historical upgrade path place `segment` at
+different physical positions; order is not an SQL dependency. Missing, extra,
+duplicate, renamed, retyped, re-defaulted, or re-constrained shapes still fail
+closed before mutation.
+
 No identifier, segment, email, token, cookie, user content, media key,
 connection string, or precise location is part of approval or evidence.
 
