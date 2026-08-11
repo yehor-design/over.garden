@@ -85,7 +85,6 @@ export async function collectErasureDryRunCounts(
     searchPendingUnindexJobs,
     searchTerminalJobsWithUserId,
     publicProjectionIntents,
-    pilotInterviewRecords,
     erasureRequestsTotal,
   ] = await Promise.all([
     countAuthUserPresent(executor, requesterUserId),
@@ -155,7 +154,6 @@ export async function collectErasureDryRunCounts(
     ),
     countTerminalJobQueueRowsWithUserId(executor, requesterUserId),
     countPublicProjectionIntents(executor, requesterUserId),
-    countPilotInterviewRecords(executor, requesterUserId),
     countErasureRequestsForUser(executor, requesterUserId),
   ]);
 
@@ -208,7 +206,6 @@ export async function collectErasureDryRunCounts(
     searchPendingUnindexJobs,
     searchTerminalJobsWithUserId,
     publicProjectionIntents,
-    pilotInterviewRecords,
     erasureRequestsTotal,
   };
 }
@@ -506,16 +503,6 @@ export function buildCountPendingJournalSearchJobsQuery(
     .where("status", "in", ["pending", "processing", "failed"])
     .where(sql`payload->>'userId'`, "=", requesterUserId)
     .where(sql`payload->>'kind'`, "=", kind);
-}
-
-export function buildCountPilotInterviewRecordsQuery(
-  executor: QueryExecutor,
-  requesterUserId: string,
-) {
-  return executor
-    .selectFrom("pilot_interview_learnings")
-    .select(sql<number>`count(*)`.as("count"))
-    .where("subject_user_id", "=", requesterUserId);
 }
 
 export function buildCountErasureRequestsForUserQuery(
@@ -950,17 +937,6 @@ async function countPendingJournalSearchJobs(
     executor,
     requesterUserId,
     kind,
-  ).executeTakeFirst();
-  return toCount(row?.count);
-}
-
-async function countPilotInterviewRecords(
-  executor: QueryExecutor,
-  requesterUserId: string,
-) {
-  const row = await buildCountPilotInterviewRecordsQuery(
-    executor,
-    requesterUserId,
   ).executeTakeFirst();
   return toCount(row?.count);
 }

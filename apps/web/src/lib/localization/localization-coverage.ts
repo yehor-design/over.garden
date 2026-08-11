@@ -1123,8 +1123,6 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/admin/users/page.tsx",
         "src/app/garden/catalog/curation/page.tsx",
         "src/app/garden/pilot-health/page.tsx",
-        "src/app/garden/pilot-learning/decision/page.tsx",
-        "src/app/garden/pilot-learning/interviews/page.tsx",
         "src/app/garden/pilot-smoke/page.tsx",
         "src/app/garden/privacy/erasure-requests/page.tsx",
         "src/app/health/page.tsx",

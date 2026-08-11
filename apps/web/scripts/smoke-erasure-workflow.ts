@@ -27,7 +27,6 @@ const PRIVATE_ENTRY_ID = "10000000-0000-4000-8000-000000005097";
 const MEDIA_ID = "10000000-0000-4000-8000-000000006097";
 const COVER_MEDIA_ID = "10000000-0000-4000-8000-000000006197";
 const ANALYTICS_EVENT_ID = "10000000-0000-4000-8000-000000007097";
-const INTERVIEW_ID = "10000000-0000-4000-8000-000000008097";
 const SESSION_ID = "10000000-0000-4000-8000-000000011097";
 const ACCOUNT_ID = "10000000-0000-4000-8000-000000012097";
 const VERIFICATION_ID = "10000000-0000-4000-8000-000000013097";
@@ -156,7 +155,11 @@ async function main() {
     .select(["handled_status as handledStatus", "status"])
     .where("id", "=", REQUEST_ID)
     .executeTakeFirstOrThrow();
-  assertEqual(pendingStatus.status, "handled", "cleanup_pending status handled");
+  assertEqual(
+    pendingStatus.status,
+    "handled",
+    "cleanup_pending status handled",
+  );
   assertEqual(
     pendingStatus.handledStatus,
     "cleanup_pending",
@@ -214,13 +217,21 @@ async function main() {
   assertEqual(summary.requestId, REQUEST_ID, "execution request id");
   assertEqual(summary.erasedSubjectUserId, ERASED_SUBJECT_USER_ID, "erased id");
   assertEqual(summary.handledStatus, "completed", "final handled status");
-  assertEqual(summary.mediaObjectsDeleted > 0, true, "media deletes after retry");
+  assertEqual(
+    summary.mediaObjectsDeleted > 0,
+    true,
+    "media deletes after retry",
+  );
   assertEqual(
     summary.publicEntriesQueuedForUnindex,
     0,
     "retry path does not re-queue unindex",
   );
-  assertEqual(deletedMediaObjects.length > 0, true, "fake media object deletes");
+  assertEqual(
+    deletedMediaObjects.length > 0,
+    true,
+    "fake media object deletes",
+  );
 
   const afterOldUser = await collectErasureDryRunCounts(db, REQUESTER_USER_ID);
   assertEqual(afterOldUser.authUserPresent, 0, "old auth user removed");
@@ -764,26 +775,6 @@ async function seedSmokeRows() {
     .execute();
 
   await db
-    .insertInto("pilot_interview_learnings")
-    .values({
-      id: INTERVIEW_ID,
-      recorded_by_user_id: OPERATOR_USER_ID,
-      subject_user_id: REQUESTER_USER_ID,
-      pilot_cohort: "founder_rehearsal",
-      segment: "unknown_segment",
-      activation_result: "unknown",
-      return_reason: "unknown",
-      main_objection: "unknown",
-      observed_value: "unknown",
-      next_action: "none",
-      redacted_note: "OVE-97 smoke note",
-      recorded_at: now,
-      created_at: now,
-      updated_at: now,
-    })
-    .execute();
-
-  await db
     .insertInto("erasure_requests")
     .values({
       id: REQUEST_ID,
@@ -902,18 +893,6 @@ async function cleanupSmokeRows() {
   await db
     .deleteFrom("pilot_invite_grants")
     .where("user_id", "in", [REQUESTER_USER_ID, ERASED_SUBJECT_USER_ID])
-    .execute();
-  await db
-    .updateTable("pilot_interview_learnings")
-    .set({
-      subject_user_id: null,
-      redacted_note: null,
-    })
-    .where("subject_user_id", "in", [REQUESTER_USER_ID, ERASED_SUBJECT_USER_ID])
-    .execute();
-  await db
-    .deleteFrom("pilot_interview_learnings")
-    .where("id", "=", INTERVIEW_ID)
     .execute();
   await db
     .deleteFrom("erasure_requests")

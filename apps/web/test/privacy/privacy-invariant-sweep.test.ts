@@ -32,7 +32,6 @@ import { buildEnqueueCatalogMatchSuggestionsRefreshJobQuery } from "@/server/cat
 import { buildPendingCatalogMatchSuggestionsQuery } from "@/server/catalog-curation-repository";
 import { buildListOperatorErasureRequestsQuery } from "@/server/erasure-request-repository";
 import { buildCountJournalEntriesQuery } from "@/server/erasure-dry-run-repository";
-import { buildListFounderInterviewLearningsQuery } from "@/server/founder-interview-repository";
 import { summarizePublicVarietyHealthRows } from "@/server/pilot-health-repository";
 import { buildPilotSmokeReadiness } from "@/server/pilot-smoke-readiness";
 import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
@@ -470,37 +469,6 @@ describe("OVE-40 privacy invariant sweep — operator readbacks", () => {
       "longitude",
       "session_id",
       "password",
-    ]) {
-      expect(sql).not.toContain(forbidden);
-    }
-  });
-
-  it("founder interview operator list selects only bounded learning columns", () => {
-    const { sql } = buildListFounderInterviewLearningsQuery(testDb, 25, {
-      segment: "casual_practical_beginner",
-      activationResult: "activated_with_follow_up",
-    }).compile();
-
-    expect(sql).toContain('from "pilot_interview_learnings"');
-    expect(sql).toContain('"segment"');
-    expect(sql).toContain('"activation_result" as "activationResult"');
-
-    for (const forbidden of [
-      "journal_entries",
-      "media_assets",
-      "quarantine",
-      "derivative",
-      "title",
-      "body",
-      "email",
-      "ip_address",
-      "user_agent",
-      "coordinates",
-      "latitude",
-      "longitude",
-      "session_id",
-      "password",
-      "transcript",
     ]) {
       expect(sql).not.toContain(forbidden);
     }

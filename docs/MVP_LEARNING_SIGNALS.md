@@ -77,7 +77,6 @@ pnpm smoke:mvp-learning-signals -- --environment production --confirm-environmen
 ## Operator surfaces
 
 - `/garden/pilot-health` — closed-pilot health plus MVP-learning dual-cohort H1/H4 panel and visible H6 deferral
-- `/garden/pilot-learning/decision` — visible H6 deferral and refusal of go/no-go unless the MVP-learning gate is exactly `ok`
 
 ## Retention
 

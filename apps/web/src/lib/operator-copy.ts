@@ -19,8 +19,6 @@ const UK_COPY = {
     admin: "Адміністрування",
     pilotHealth: "Стан пілоту",
     pilotSmoke: "Перевірка пілоту",
-    cohortDecision: "Рішення щодо когорти",
-    founderInterviews: "Інтерв'ю засновника",
     role: "Роль",
     gate: "Режим доступу",
     status: "Статус",
@@ -84,16 +82,6 @@ const UK_COPY = {
       health: {
         label: "Стан пілоту",
         detail: "Агреговані сигнали активації",
-        required: "Лише власник",
-      },
-      decision: {
-        label: "Рішення щодо когорти",
-        detail: "Захисні межі рішення на рівні сегментів",
-        required: "Лише власник",
-      },
-      interviews: {
-        label: "Інтерв'ю засновника",
-        detail: "Обмежені записи навчання в пілоті",
         required: "Лише власник",
       },
       curation: {
@@ -241,8 +229,6 @@ const BG_COPY = {
     admin: "Администриране",
     pilotHealth: "Състояние на пилота",
     pilotSmoke: "Проверка на пилота",
-    cohortDecision: "Решение за кохортата",
-    founderInterviews: "Интервюта на основателя",
     role: "Роля",
     gate: "Режим на достъп",
     status: "Статус",
@@ -306,16 +292,6 @@ const BG_COPY = {
       health: {
         label: "Състояние на пилота",
         detail: "Агрегирани сигнали за активация",
-        required: "Само собственик",
-      },
-      decision: {
-        label: "Решение за кохортата",
-        detail: "Защитна рамка за решение по сегменти",
-        required: "Само собственик",
-      },
-      interviews: {
-        label: "Интервюта на основателя",
-        detail: "Ограничени записи от пилотното обучение",
         required: "Само собственик",
       },
       curation: {
@@ -461,8 +437,6 @@ const RU_COPY = {
     admin: "Администрирование",
     pilotHealth: "Состояние пилота",
     pilotSmoke: "Проверка пилота",
-    cohortDecision: "Решение по когорте",
-    founderInterviews: "Интервью основателя",
     role: "Роль",
     gate: "Режим доступа",
     status: "Статус",
@@ -526,16 +500,6 @@ const RU_COPY = {
       health: {
         label: "Состояние пилота",
         detail: "Агрегированные сигналы активации",
-        required: "Только владелец",
-      },
-      decision: {
-        label: "Решение по когорте",
-        detail: "Защитные рамки решения на уровне сегментов",
-        required: "Только владелец",
-      },
-      interviews: {
-        label: "Интервью основателя",
-        detail: "Ограниченные записи обучения в пилоте",
         required: "Только владелец",
       },
       curation: {

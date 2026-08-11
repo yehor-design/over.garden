@@ -2498,22 +2498,6 @@
       ]
     },
     {
-      "admissionBoundaryId": "server_action:src/app/garden/pilot-learning/interviews/actions.ts#createFounderInterviewLearningAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:45110b77fb8ad8888152:always",
-      "consumerEdgeId": "edge:45110b77fb8ad8888152:1:86d530f8be2124b0a360",
-      "effectBoundaryId": "effect:37c36ff4b26d1f2ecd24:canonical-row-buildinsertfounderinterviewlearningquery",
-      "entrypointId": "native_form:src/app/garden/pilot-learning/interviews/page.tsx#FounderInterviewCapturePage:action:createFounderInterviewLearningAction",
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts",
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/server/founder-interview-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:45110b77fb8ad8888152",
-      "predecessorEdgeIds": []
-    },
-    {
       "admissionBoundaryId": "server_action:src/app/garden/profile/account-method-actions.ts#setCurrentAccountPassword",
       "branchConditionClass": "always",
       "branchId": "branch:47a54fd2a226e33ac45c:always",
@@ -3860,21 +3844,6 @@
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:5c6456bba8f455cbddab",
-      "predecessorEdgeIds": []
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/garden/pilot-learning/interviews/actions.ts#createFounderInterviewLearningAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:5dc652a9bb9643b5883e:always",
-      "consumerEdgeId": "edge:5dc652a9bb9643b5883e:1:86d530f8be2124b0a360",
-      "effectBoundaryId": "effect:37c36ff4b26d1f2ecd24:canonical-row-buildinsertfounderinterviewlearningquery",
-      "entrypointId": "server_action:src/app/garden/pilot-learning/interviews/actions.ts#createFounderInterviewLearningAction",
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts",
-        "src/server/founder-interview-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:5dc652a9bb9643b5883e",
       "predecessorEdgeIds": []
     },
     {
@@ -11699,20 +11668,6 @@
       "ownerSymbol": "followLineageNode"
     },
     {
-      "atomicity": "database_transaction",
-      "commitLabel": "canonical-row:buildInsertFounderInterviewLearningQuery",
-      "effectBoundaryId": "effect:37c36ff4b26d1f2ecd24:canonical-row-buildinsertfounderinterviewlearningquery",
-      "effectFamilies": [
-        "canonical_row"
-      ],
-      "evidencePaths": [
-        "src/server/founder-interview-repository.ts"
-      ],
-      "idempotencyOwner": "src/server/founder-interview-repository.ts#createFounderInterviewLearning",
-      "ownerPath": "src/server/founder-interview-repository.ts",
-      "ownerSymbol": "createFounderInterviewLearning"
-    },
-    {
       "atomicity": "auth_adapter_commit",
       "commitLabel": "auth-account",
       "effectBoundaryId": "effect:3a6102db21db718ed154:auth-account",
@@ -15055,22 +15010,6 @@
       "symbol": "PendingWishlistIntentPanel",
       "transport": "native_form",
       "variant": "action:addCatalogPublicSlugToWishlistAction"
-    },
-    {
-      "authority": "authenticated_user",
-      "classification": "effectful",
-      "entrypointId": "native_form:src/app/garden/pilot-learning/interviews/page.tsx#FounderInterviewCapturePage:action:createFounderInterviewLearningAction",
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts",
-        "src/app/garden/pilot-learning/interviews/page.tsx"
-      ],
-      "exclusionReason": null,
-      "executionOwner": "remaining_ove_291",
-      "generationRequirement": "required_before_first_effect",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "symbol": "FounderInterviewCapturePage",
-      "transport": "native_form",
-      "variant": "action:createFounderInterviewLearningAction"
     },
     {
       "authority": "authenticated_user",
@@ -18730,21 +18669,6 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "server_action:src/app/garden/pilot-learning/interviews/actions.ts#createFounderInterviewLearningAction",
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts"
-      ],
-      "exclusionReason": null,
-      "executionOwner": "remaining_ove_291",
-      "generationRequirement": "required_before_first_effect",
-      "path": "src/app/garden/pilot-learning/interviews/actions.ts",
-      "symbol": "createFounderInterviewLearningAction",
-      "transport": "server_action",
-      "variant": "createFounderInterviewLearningAction"
-    },
-    {
-      "authority": "authenticated_user",
-      "classification": "effectful",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "evidencePaths": [
         "src/app/garden/privacy/erasure-requests/actions.ts"
@@ -21034,18 +20958,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/operator-pilot-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-pilot-copy",
-      "sourceNodeId": "source:10ee3057fda1f62327b4",
-      "symbol": "operatorPilotLabel"
-    },
-    {
-      "evidencePaths": [
         "src/server/owner-profile-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -21065,18 +20977,6 @@
       "semanticVariant": "reportProfileAction",
       "sourceNodeId": "source:1121a1a0688c0a27deda",
       "symbol": "reportProfileAction"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:113e6b311da4804120a8",
-      "symbol": "getOperatorCopy"
     },
     {
       "evidencePaths": [
@@ -21887,18 +21787,6 @@
       "semanticVariant": "from:@/server/auth-intent-token",
       "sourceNodeId": "source:170e2b35f02aa14438ec",
       "symbol": "verifyAuthIntentToken"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/server/request-scope.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/request-scope",
-      "sourceNodeId": "source:172efb2b079dfcb9caa7",
-      "symbol": "scopedToUser"
     },
     {
       "evidencePaths": [
@@ -23016,18 +22904,6 @@
       "semanticVariant": "from:@/lib/offline/queue",
       "sourceNodeId": "source:1fde4964b0a215088efb",
       "symbol": "enqueueOfflineMutation"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:1ff77b4163d5c617af98",
-      "symbol": "formatOperatorDate"
     },
     {
       "evidencePaths": [
@@ -26045,18 +25921,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts",
-        "src/app/garden/pilot-learning/interviews/page.tsx"
-      ],
-      "nodeKind": "typed_action_prop",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:createFounderInterviewLearningAction",
-      "sourceNodeId": "source:387a462c5557e12652bf",
-      "symbol": "createFounderInterviewLearningAction"
-    },
-    {
-      "evidencePaths": [
         "src/lib/offline/owner-vault.ts"
       ],
       "nodeKind": "offline_producer",
@@ -26111,18 +25975,6 @@
       "semanticVariant": "POST",
       "sourceNodeId": "source:38e3a0b2348e6b6c7c15",
       "symbol": "POST"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/server/founder-interview-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/founder-interview-access",
-      "sourceNodeId": "source:39413296f917d36db47f",
-      "symbol": "resolveFounderInterviewOperatorAccess"
     },
     {
       "evidencePaths": [
@@ -26670,18 +26522,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/pilot/interview-learning.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:3d033c246ac1af5d51ff",
-      "symbol": "PILOT_INTERVIEW_ACTIVATION_RESULT_OPTIONS"
-    },
-    {
-      "evidencePaths": [
         "src/lib/garden/journal-mentions.ts",
         "src/server/journal-mention-repository.ts"
       ],
@@ -26881,18 +26721,6 @@
       "semanticVariant": "from:@/server/search/public-journal-document-contract",
       "sourceNodeId": "source:3ede556e527a3deede7e",
       "symbol": "fingerprintJournalSearchDocument"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/operator-pilot-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-pilot-copy",
-      "sourceNodeId": "source:3efa64210eaba8bb480e",
-      "symbol": "operatorPilotOptions"
     },
     {
       "evidencePaths": [
@@ -27653,18 +27481,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:447e401cef411304ff6a",
-      "symbol": "documentMutationGenerationFromFormData"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
         "src/server/journal-repository.ts"
       ],
@@ -27804,18 +27620,6 @@
       "semanticVariant": "from:@/lib/garden/voice-to-text",
       "sourceNodeId": "source:44e78eeb00159e23c377",
       "symbol": "appendVoiceTranscriptToBody"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/operator-pilot-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-pilot-copy",
-      "sourceNodeId": "source:44e964d0168e03d57120",
-      "symbol": "getOperatorPilotCopy"
     },
     {
       "evidencePaths": [
@@ -28393,18 +28197,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts",
-        "src/app/garden/pilot-learning/interviews/page.tsx"
-      ],
-      "nodeKind": "native_form",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:createFounderInterviewLearningAction",
-      "sourceNodeId": "source:4a5c558018accfb678b6",
-      "symbol": "FounderInterviewCapturePage"
-    },
-    {
-      "evidencePaths": [
         "src/server/plant-identification-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -28603,18 +28395,6 @@
       "semanticVariant": "canonical-row:buildPublicTopicTargetQuery",
       "sourceNodeId": "source:4c0c2621610462501f6c",
       "symbol": "findPublicEngagementTarget"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/server/founder-interview-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/founder-interview-repository",
-      "sourceNodeId": "source:4c106e34c7f903f8705e",
-      "symbol": "groupFounderInterviewLearningsBySegment"
     },
     {
       "evidencePaths": [
@@ -29078,17 +28858,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/founder-interview-repository.ts"
-      ],
-      "nodeKind": "effect_owner",
-      "path": "src/server/founder-interview-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "canonical-row:buildInsertFounderInterviewLearningQuery",
-      "sourceNodeId": "source:4fd8de8d0f102fc82c3b",
-      "symbol": "createFounderInterviewLearning"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/first-entry-composer.tsx",
         "src/lib/meta-marketing/client.ts"
       ],
@@ -29275,18 +29044,6 @@
       "semanticVariant": "from:./drafts",
       "sourceNodeId": "source:51874caf6ea26bc1b00c",
       "symbol": "FIRST_ENTRY_DRAFT_ID"
-    },
-    {
-      "evidencePaths": [
-        "src/server/founder-interview-repository.ts",
-        "src/server/request-scope.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/founder-interview-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/request-scope",
-      "sourceNodeId": "source:51999e96d51efc2509db",
-      "symbol": "RequestScope"
     },
     {
       "evidencePaths": [
@@ -29838,18 +29595,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/pilot/interview-learning.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:56c8437a2449baf9abd5",
-      "symbol": "MAX_REDACTED_NOTE_LENGTH"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/engagement/bookmarks/route.ts",
         "src/app/api/engagement/shared.ts"
       ],
@@ -30368,18 +30113,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:5acf4bf91d0be711c3a9",
-      "symbol": "admitDocumentMutation"
-    },
-    {
-      "evidencePaths": [
         "src/components/public/language-switcher.tsx",
         "src/components/ui/alert-dialog.tsx"
       ],
@@ -30449,17 +30182,6 @@
       "semanticVariant": "from:@/lib/offline/drafts",
       "sourceNodeId": "source:5c32746d4b2a82d2bde3",
       "symbol": "getOfflineDraft"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/garden/pilot-learning/interviews/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "createFounderInterviewLearningAction",
-      "sourceNodeId": "source:5c425b9d405a1d5b7d8f",
-      "symbol": "createFounderInterviewLearningAction"
     },
     {
       "evidencePaths": [
@@ -30807,18 +30529,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/garden-auth-panel.tsx",
-        "src/app/garden/pilot-learning/interviews/page.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:../../garden-auth-panel",
-      "sourceNodeId": "source:5ffe76c6919583884136",
-      "symbol": "GardenAuthPanel"
-    },
-    {
-      "evidencePaths": [
         "src/lib/offline/owner-vault.ts"
       ],
       "nodeKind": "offline_producer",
@@ -30958,18 +30668,6 @@
       "semanticVariant": "from:@/lib/structured-journal-composer-copy",
       "sourceNodeId": "source:613b03b04a3edd9cd135",
       "symbol": "getStructuredJournalComposerLabels"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/pilot/interview-learning.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:614a94142afd01088069",
-      "symbol": "DEFAULT_PILOT_INTERVIEW_COHORT"
     },
     {
       "evidencePaths": [
@@ -31463,18 +31161,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:64b554518d8efc72084a",
-      "symbol": "getSessionId"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/objects/[objectId]/actions.ts",
         "src/server/analytics-events.ts"
       ],
@@ -31484,30 +31170,6 @@
       "semanticVariant": "from:@/server/analytics-events",
       "sourceNodeId": "source:64c47ca0393d10d6366a",
       "symbol": "isBackdatedEntryDate"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/operator-pilot-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-pilot-copy",
-      "sourceNodeId": "source:64ddfe8b87f20b9a5691",
-      "symbol": "OperatorPilotCopy"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/pilot/interview-learning.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:64ef5607e4198c906815",
-      "symbol": "PILOT_INTERVIEW_MAIN_OBJECTION_OPTIONS"
     },
     {
       "evidencePaths": [
@@ -31887,18 +31549,6 @@
       "semanticVariant": "from:@/lib/garden/catalog-typeahead-contract",
       "sourceNodeId": "source:68956a6595509f3a94be",
       "symbol": "parseCatalogTypeaheadResponse"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:68c658c0d76d27009ca5",
-      "symbol": "OperatorCopy"
     },
     {
       "evidencePaths": [
@@ -32314,18 +31964,6 @@
       "semanticVariant": "from:@/server/catalog-alias-curation-repository",
       "sourceNodeId": "source:6cb9198e560502d9e9a8",
       "symbol": "listCatalogAliasSuggestionTargets"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:6cbeef668de00e25cc50",
-      "symbol": "operatorRoleLabel"
     },
     {
       "evidencePaths": [
@@ -32970,18 +32608,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/pilot/interview-learning.ts",
-        "src/server/founder-interview-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/founder-interview-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:7126bf897e3c059aa4bf",
-      "symbol": "PilotInterviewLearningInput"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/page.tsx",
         "src/components/auth/document-mutation-recovery.tsx"
       ],
@@ -33122,18 +32748,6 @@
       "semanticVariant": "from:@/server/social-return-repository",
       "sourceNodeId": "source:72a10b754ff6b455a8ba",
       "symbol": "getNotificationPreferences"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:72dd761cfb9ae95c3e50",
-      "symbol": "operatorAccessModeLabel"
     },
     {
       "evidencePaths": [
@@ -34478,18 +34092,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/pilot/interview-learning.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:7fcefa63d208edfa428f",
-      "symbol": "PILOT_INTERVIEW_OBSERVED_VALUE_OPTIONS"
-    },
-    {
-      "evidencePaths": [
         "src/app/engagement/public-engagement-panel.tsx",
         "src/server/engagement-repository.ts"
       ],
@@ -35252,18 +34854,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts",
-        "src/server/founder-interview-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/founder-interview-repository",
-      "sourceNodeId": "source:85555fc2b74ce034d84b",
-      "symbol": "createFounderInterviewLearning"
-    },
-    {
-      "evidencePaths": [
         "src/lib/catalog/genebank-long-tail.ts",
         "src/server/catalog-source/genebank-long-tail-import.ts"
       ],
@@ -35296,18 +34886,6 @@
       "semanticVariant": "database_transaction_at_3496",
       "sourceNodeId": "source:8595aee73004eb9451e2",
       "symbol": "upsertVarietySeedProof"
-    },
-    {
-      "evidencePaths": [
-        "src/db/schema.ts",
-        "src/server/founder-interview-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/founder-interview-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/db/schema",
-      "sourceNodeId": "source:85a7141a3fc597ea9dfa",
-      "symbol": "Database"
     },
     {
       "evidencePaths": [
@@ -35558,18 +35136,6 @@
       "semanticVariant": "from:@/lib/operator-curation-copy",
       "sourceNodeId": "source:8752fd97a4fa33b23aa5",
       "symbol": "operatorCurationMapLabel"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/pilot/interview-learning.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:87691934743e91a61e1a",
-      "symbol": "PILOT_INTERVIEW_NEXT_ACTION_OPTIONS"
     },
     {
       "evidencePaths": [
@@ -36455,18 +36021,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/pilot/interview-learning.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:8de35b5dc2b3c34925db",
-      "symbol": "PILOT_INTERVIEW_COHORT_OPTIONS"
-    },
-    {
-      "evidencePaths": [
         "src/app/auth/reset-password/reset-password-form.tsx",
         "src/lib/auth/pilot-auth-recovery.ts"
       ],
@@ -36975,18 +36529,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:916b30602a422f5fee1b",
-      "symbol": "formatOperatorTemplate"
-    },
-    {
-      "evidencePaths": [
         "src/app/wishlist/actions.ts",
         "src/server/wishlist-repository.ts"
       ],
@@ -37141,18 +36683,6 @@
       "semanticVariant": "from:@/components/site-shell/site-shell-context-rail",
       "sourceNodeId": "source:92a3d571a5c26f0913a9",
       "symbol": "SiteShellContextRailRegistration"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/components/auth/document-mutation-recovery.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
-      "sourceNodeId": "source:92bb617d8c1270a7efdc",
-      "symbol": "DocumentMutationActionForm"
     },
     {
       "evidencePaths": [
@@ -37334,18 +36864,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/pilot/interview-learning.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:957232182bd21ae45a64",
-      "symbol": "PILOT_INTERVIEW_SEGMENT_OPTIONS"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/plant-identification/route.ts",
         "src/server/media/media-repository.ts"
       ],
@@ -37403,18 +36921,6 @@
       "semanticVariant": "from:@/db",
       "sourceNodeId": "source:960d50fccc43bce0c21a",
       "symbol": "db"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/components/ui/button.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/components/ui/button",
-      "sourceNodeId": "source:960e2bbf25f6553be7b7",
-      "symbol": "buttonVariants"
     },
     {
       "evidencePaths": [
@@ -37841,18 +37347,6 @@
       "semanticVariant": "from:@/lib/public-localization",
       "sourceNodeId": "source:9887c6b5e1ebe432dc28",
       "symbol": "buildLanguageAlternates"
-    },
-    {
-      "evidencePaths": [
-        "src/db/index.ts",
-        "src/server/founder-interview-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/founder-interview-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/db",
-      "sourceNodeId": "source:988b7eff278ae4121220",
-      "symbol": "db"
     },
     {
       "evidencePaths": [
@@ -38295,18 +37789,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:9c581fac16fff03b6c08",
       "symbol": "PlantObjectKind"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/server/interface-localization.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/interface-localization",
-      "sourceNodeId": "source:9c9709b3152377b0d237",
-      "symbol": "getRequestInterfaceLocale"
     },
     {
       "evidencePaths": [
@@ -39881,30 +39363,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:a8b5b0afc7543df8e136",
-      "symbol": "formatOperatorCount"
-    },
-    {
-      "evidencePaths": [
-        "src/lib/pilot/interview-learning.ts",
-        "src/server/founder-interview-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/founder-interview-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:a8bc37756e0ac5c567a7",
-      "symbol": "NormalizedPilotInterviewLearningInput"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/offline/owner-vault-binding/route.ts",
         "src/server/offline-owner-vault-binding.ts"
       ],
@@ -40294,18 +39752,6 @@
       "semanticVariant": "from:@/server/catalog-source/candidate-review-repository",
       "sourceNodeId": "source:abe343b3ff1f702ea3a3",
       "symbol": "CatalogSourceCandidateDecisionResult"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:abec17d540ad74ef0a25",
-      "symbol": "getCurrentSession"
     },
     {
       "evidencePaths": [
@@ -41806,18 +41252,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/lib/pilot/interview-learning.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:b788b366d5f39f0ec335",
-      "symbol": "PILOT_INTERVIEW_RETURN_REASON_OPTIONS"
-    },
-    {
-      "evidencePaths": [
         "src/app/lineage/objects/[objectId]/page.tsx",
         "src/server/public-object-passport-repository.ts"
       ],
@@ -42914,18 +42348,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/server/founder-interview-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/founder-interview-repository",
-      "sourceNodeId": "source:c0a9010876bff6b8b058",
-      "symbol": "listFounderInterviewLearnings"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/profile/owner-profile-editor.tsx",
         "src/lib/utils.ts"
       ],
@@ -42935,18 +42357,6 @@
       "semanticVariant": "from:@/lib/utils",
       "sourceNodeId": "source:c0b9fd3dea901356d772",
       "symbol": "cn"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/page.tsx",
-        "src/server/admin-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/admin-access",
-      "sourceNodeId": "source:c0c01cd81870cd71986a",
-      "symbol": "hasAdminCapability"
     },
     {
       "evidencePaths": [
@@ -44200,18 +43610,6 @@
       "semanticVariant": "from:./owner-vault",
       "sourceNodeId": "source:cad95cdc38b9b679d4d1",
       "symbol": "OwnerVaultControlDb"
-    },
-    {
-      "evidencePaths": [
-        "src/lib/pilot/interview-learning.ts",
-        "src/server/founder-interview-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/founder-interview-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/pilot/interview-learning",
-      "sourceNodeId": "source:cae1ed45cf660251fb0a",
-      "symbol": "normalizePilotInterviewLearningInput"
     },
     {
       "evidencePaths": [
@@ -45769,18 +45167,6 @@
       "semanticVariant": "from:@/server/lineage-repository",
       "sourceNodeId": "source:d8ef1bed0929d71fff4a",
       "symbol": "resolveLineageInvitationClaim"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts",
-        "src/server/founder-interview-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/founder-interview-access",
-      "sourceNodeId": "source:d911f0c8f0959f5b8738",
-      "symbol": "assertFounderInterviewMutationAccess"
     },
     {
       "evidencePaths": [
@@ -48583,18 +47969,6 @@
       "semanticVariant": "from:@/components/auth/document-mutation-recovery",
       "sourceNodeId": "source:f02230aa09275ae2c9c2",
       "symbol": "useOptionalDocumentMutationGeneration"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/pilot-learning/interviews/actions.ts",
-        "src/app/garden/pilot-learning/interviews/page.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/pilot-learning/interviews/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:./actions",
-      "sourceNodeId": "source:f02b258648c741a2dac0",
-      "symbol": "createFounderInterviewLearningAction"
     },
     {
       "evidencePaths": [

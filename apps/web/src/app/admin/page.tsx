@@ -4,8 +4,6 @@ import {
   Activity,
   ClipboardCheck,
   DatabaseZap,
-  FileSearch,
-  ShieldCheck,
   ShieldAlert,
   Sprout,
   UsersRound,
@@ -205,7 +203,8 @@ function adminLinks(copy: OperatorCopy) {
     {
       href: "/admin/moderation/comments",
       label: "Comment moderation",
-      detail: "Review bounded comment-report states without rendering user content.",
+      detail:
+        "Review bounded comment-report states without rendering user content.",
       required: "Sealed owner capability required.",
       icon: ShieldAlert,
     },
@@ -215,16 +214,6 @@ function adminLinks(copy: OperatorCopy) {
       href: "/garden/pilot-health",
       ...copy.admin.links.health,
       icon: ClipboardCheck,
-    },
-    {
-      href: "/garden/pilot-learning/decision",
-      ...copy.admin.links.decision,
-      icon: FileSearch,
-    },
-    {
-      href: "/garden/pilot-learning/interviews",
-      ...copy.admin.links.interviews,
-      icon: ShieldCheck,
     },
     {
       href: "/garden/catalog/curation",

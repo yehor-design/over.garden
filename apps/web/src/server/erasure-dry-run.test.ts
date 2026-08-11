@@ -32,7 +32,6 @@ import {
   buildCountMediaAssetsQuery,
   buildCountOwnedRowsQuery,
   buildCountPendingJournalSearchJobsQuery,
-  buildCountPilotInterviewRecordsQuery,
   buildCountPublicIdentityProfilesQuery,
   buildCountUnreviewedIdentityRowsQuery,
 } from "./erasure-dry-run-repository";
@@ -113,7 +112,6 @@ describe("erasure dry-run preview assembly", () => {
         searchPendingUnindexJobs: 0,
         searchTerminalJobsWithUserId: 1,
         publicProjectionIntents: 1,
-        pilotInterviewRecords: 0,
         erasureRequestsTotal: 1,
       },
     });
@@ -347,12 +345,8 @@ describe("erasure dry-run repository privacy contracts", () => {
     expect(compiled.sql).not.toMatch(/title|body|email|quarantine|derivative/i);
   });
 
-  it("counts provisional catalog and interview records without private text", () => {
+  it("counts provisional catalog records without private text", () => {
     const catalogSql = buildCountCatalogProvisionalItemsQuery(
-      testDb,
-      requesterUserId,
-    ).compile().sql;
-    const interviewSql = buildCountPilotInterviewRecordsQuery(
       testDb,
       requesterUserId,
     ).compile().sql;
@@ -361,8 +355,5 @@ describe("erasure dry-run repository privacy contracts", () => {
     expect(catalogSql).not.toMatch(
       /canonical_name|normalized_name|title|body/i,
     );
-
-    expect(interviewSql).toContain('"pilot_interview_learnings"');
-    expect(interviewSql).not.toMatch(/redacted_note|title|body|email/i);
   });
 });

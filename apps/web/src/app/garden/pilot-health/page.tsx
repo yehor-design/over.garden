@@ -305,24 +305,6 @@ function PilotHealthHeader({
       >
         {operatorCopy.common.pilotSmoke}
       </Link>
-      <Link
-        href="/garden/pilot-learning/interviews"
-        className={buttonVariants({
-          variant: "outline",
-          className: "self-start",
-        })}
-      >
-        {operatorCopy.common.founderInterviews}
-      </Link>
-      <Link
-        href="/garden/pilot-learning/decision"
-        className={buttonVariants({
-          variant: "outline",
-          className: "self-start",
-        })}
-      >
-        {operatorCopy.common.cohortDecision}
-      </Link>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           {copy.health.title}

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "overgarden.authenticated-mutation-enforcement.v1",
-  "registryDigest": "e8a87b3291a3cb9948658f722b779fdc1d2c13fe2411aa74c73d7ac51387e5d9",
-  "sourceRegistryReceiptDigest": "e720b1c54a84ade23ea63929a11def99c98d0fd47265cc2c20f8f7c47f1f1ce9",
+  "registryDigest": "3a341dbb9748811cae023f28de3149172ca81adad3d27ac880b8bd5933a906b8",
+  "sourceRegistryReceiptDigest": "ae8a290babd45e5c0d1e0814e298d4ac20d3334271e5d5f6c21446e482e01d2c",
   "entrypointStates": [
     {
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_account_session_mutation",
@@ -277,10 +277,6 @@
     },
     {
       "entrypointId": "native_form:src/app/garden/page.tsx#PendingWishlistIntentPanel:action:addCatalogPublicSlugToWishlistAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "native_form:src/app/garden/pilot-learning/interviews/page.tsx#FounderInterviewCapturePage:action:createFounderInterviewLearningAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1245,10 +1241,6 @@
     },
     {
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#updatePlantObjectLocationAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "server_action:src/app/garden/pilot-learning/interviews/actions.ts#createFounderInterviewLearningAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2218,12 +2210,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:45110b77fb8ad8888152:1:86d530f8be2124b0a360",
-      "entrypointId": "native_form:src/app/garden/pilot-learning/interviews/page.tsx#FounderInterviewCapturePage:action:createFounderInterviewLearningAction",
-      "admissionBoundaryId": "server_action:src/app/garden/pilot-learning/interviews/actions.ts#createFounderInterviewLearningAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:47a54fd2a226e33ac45c:1:4411484218cc33ef2ce5",
       "entrypointId": "server_action:src/app/garden/profile/account-method-actions.ts#setCurrentAccountPassword",
       "admissionBoundaryId": "server_action:src/app/garden/profile/account-method-actions.ts#setCurrentAccountPassword",
@@ -2684,12 +2670,6 @@
       "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
       "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
       "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:5dc652a9bb9643b5883e:1:86d530f8be2124b0a360",
-      "entrypointId": "server_action:src/app/garden/pilot-learning/interviews/actions.ts#createFounderInterviewLearningAction",
-      "admissionBoundaryId": "server_action:src/app/garden/pilot-learning/interviews/actions.ts#createFounderInterviewLearningAction",
-      "enforcementState": "enforced_ove_291"
     },
     {
       "consumerEdgeId": "edge:60aed1982b0107113ebc:1:7897aa500191a8e5ee14",

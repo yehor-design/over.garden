@@ -1,6 +1,17 @@
-import type { PilotInterviewSegment } from "@/db/schema";
-
-export type PilotSegment = PilotInterviewSegment;
+export type PilotSegment =
+  | "casual_micro_grower"
+  | "casual_gen_z"
+  | "casual_practical_beginner"
+  | "casual_urban_balcony"
+  | "casual_food_self_reliance"
+  | "power_burned_out_it"
+  | "power_collector"
+  | "power_experienced"
+  | "power_homestead"
+  | "supply_expert_creator"
+  | "supply_local_seller"
+  | "channel_ally"
+  | "unknown_segment";
 
 export type PilotSegmentCoreBucket =
   | "casual_core"

@@ -5,11 +5,16 @@
 
 import type { ColumnType } from "kysely";
 
-export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
-  ? ColumnType<S, I | undefined, U>
-  : ColumnType<T, T | undefined, T>;
+export type Generated<T> =
+  T extends ColumnType<infer S, infer I, infer U>
+    ? ColumnType<S, I | undefined, U>
+    : ColumnType<T, T | undefined, T>;
 
-export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
+export type Int8 = ColumnType<
+  string,
+  bigint | number | string,
+  bigint | number | string
+>;
 
 export type Json = JsonValue;
 
@@ -743,23 +748,6 @@ export interface NotificationReceipts {
   updated_at: Generated<Timestamp>;
 }
 
-export interface PilotInterviewLearnings {
-  activation_result: string;
-  created_at: Generated<Timestamp>;
-  id: Generated<string>;
-  main_objection: string;
-  next_action: string;
-  observed_value: string;
-  pilot_cohort: string | null;
-  recorded_at: Generated<Timestamp>;
-  recorded_by_user_id: string;
-  redacted_note: string | null;
-  return_reason: string;
-  segment: string;
-  subject_user_id: string | null;
-  updated_at: Generated<Timestamp>;
-}
-
 export interface PilotInviteGrants {
   cohort: Generated<string>;
   created_at: Generated<Timestamp>;
@@ -1037,7 +1025,6 @@ export interface DB {
   media_lifecycle_retention_runs: MediaLifecycleRetentionRuns;
   notification_preferences: NotificationPreferences;
   notification_receipts: NotificationReceipts;
-  pilot_interview_learnings: PilotInterviewLearnings;
   pilot_invite_grants: PilotInviteGrants;
   plant_identification_candidates: PlantIdentificationCandidates;
   plant_identification_decisions: PlantIdentificationDecisions;

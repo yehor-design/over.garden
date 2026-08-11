@@ -1342,7 +1342,7 @@ function authorityFor(
   }
   if (/moderate|moderation|resolveCommunityReport/.test(key))
     return "moderator";
-  if (/pilot-learning|erasure-requests/.test(key)) return "founder_operator";
+  if (/erasure-requests/.test(key)) return "founder_operator";
   if (
     discovery.variant.startsWith("guest_") ||
     discovery.variant.includes("ordinary_registration") ||

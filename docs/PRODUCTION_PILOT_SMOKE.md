@@ -1009,7 +1009,7 @@ Run against the selected pilot URL. Record only enum class, aggregate counts, ro
 
 ### Decision criteria (continue / iterate / stop)
 
-These are provisional closed-pilot calibrators, not validated OverGarden targets. Ground them in `docs/product-research/OverGarden_B2_METRICS_v0.md` (NSM/H1) and `docs/product-research/KILL_CRITERIA_PREREG_v2.md` (Flag Ж / pre-registered go/no-go). The closed cohort is the denominator: read rates against invited gardeners who actually started. Operators can read the combined behavioral + interview + value-pulse frame without SQL at `/garden/pilot-learning/decision`.
+These are provisional closed-pilot calibrators, not validated OverGarden targets. Ground them in `docs/product-research/OverGarden_B2_METRICS_v0.md` (NSM/H1) and `docs/product-research/KILL_CRITERIA_PREREG_v2.md` (Flag Ж / pre-registered go/no-go). The closed cohort is the denominator: read rates against invited gardeners who actually started. Operators can read the automated behavioral and value-pulse aggregates without SQL at `/garden/pilot-health`.
 
 - NSM/H1 for this loop = an invited gardener with >= 2 dated entries on the same object plus a return visit. The pilot-health "returning gardeners" count is the cohort-scoped proxy for that loop.
 - Continue: a clear majority of invited gardeners who start also save a first entry, and a meaningful share return for a same-object follow-up within the first weeks (provisional calibrator: first-save rate among starts at or above roughly two-thirds, and returning gardeners at or above roughly 30% of first savers). The loop is real and worth widening the invite.
@@ -1064,14 +1064,14 @@ Goal: when real external invited gardeners are unavailable, a founder/operator c
 - Invite tokens and grant rows now distinguish `closed_pilot` from `founder_rehearsal`. The default remains `closed_pilot`; founders must opt in with `pnpm pilot:invite -- --cohort founder_rehearsal`.
 - Founder rehearsal grants can write through the same `/join` -> auth -> `/garden` path as a real invited gardener, so operator readiness can be tested end to end.
 - `/garden/pilot-health` counts real `closed_pilot` writers and `founder_rehearsal` writers separately. Core journal, value-pulse, segment, and public-variety health signals filter to real `closed_pilot` grants.
-- `/garden/pilot-learning/decision` excludes founder rehearsal grants and `founder_rehearsal` interview records from the continue / iterate / stop frame, while showing the rehearsal count as a separate warning marker.
+- `/garden/pilot-health` excludes founder rehearsal grants from real closed-pilot decision metrics while showing the rehearsal count as a separate warning marker.
 - Catalog curation pilot-origin signals require a `closed_pilot` grant, so provisional names created during rehearsal do not look like real pilot catalog demand.
 
 ### Founder rehearsal workflow (redacted)
 
 1. Generate a private rehearsal invite with `pnpm pilot:invite -- --cohort founder_rehearsal --base-url https://over.garden`.
 2. Do not paste the printed invite URL, token, cookie, email, journal text, or media key into docs, Linear, logs, or chat.
-3. Claim the link, sign in, save a first entry, optionally attach a photo, add a same-object follow-up, and open `/garden/pilot-health` plus `/garden/pilot-learning/decision`.
+3. Claim the link, sign in, save a first entry, optionally attach a photo, add a same-object follow-up, and open `/garden/pilot-health`.
 4. Record only: route classes, pass/fail, grant cohort class `founder_rehearsal`, aggregate counts, derivative host class if media was tested, and the statement that OVE-53 remains open.
 
 ### OVE-54 Done gate

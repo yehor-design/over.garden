@@ -57,8 +57,8 @@ Lineage is a moat candidate after those gates, not a substitute for them.
 Do not open implementation work for lineage/social graph until all gates below are true or a later dated founder/operator decision explicitly replaces this file.
 
 1. Real closed-pilot evidence exists from `closed_pilot` users, not `founder_rehearsal` users. Founder rehearsal proves operator readiness only.
-2. H1 is strong enough to widen learning: `/garden/pilot-learning/decision` reaches `continue`, or a founder/operator decision records why an `iterate` result is sufficient for a narrow next slice. The current `continue` rule is invited first-save rate at or above roughly two-thirds and returning gardeners at roughly 30% of first savers, with segment distribution checked.
-3. H4 is not unknown or failed: `/garden/pilot-health` and/or `/garden/pilot-learning/decision` shows real `closed_pilot` publication behavior, and any H4 interpretation is recorded against `docs/product-research/KILL_CRITERIA_PREREG_v2.md` rather than inferred from internal smoke.
+2. H1 is strong enough to widen learning: the automated closed-pilot aggregates on `/garden/pilot-health` meet the provisional continue threshold, or a founder/operator decision records why an iterate result is sufficient for a narrow next slice. The current threshold is invited first-save rate at or above roughly two-thirds and returning gardeners at roughly 30% of first savers, with segment distribution checked.
+3. H4 is not unknown or failed: `/garden/pilot-health` shows real `closed_pilot` publication behavior, and any H4 interpretation is recorded against `docs/product-research/KILL_CRITERIA_PREREG_v2.md` rather than inferred from internal smoke.
 4. Public/legal/privacy readiness is not blocking the new surface: erasure/anonymization, public copy, and search/noindex rules are ready for a cross-user feature that can preserve structural edges after account erasure.
 5. A fresh SDD slice exists and passes the roadmap SDD Slice Test. It must own the full user behavior end to end and must name the exact subset being built.
 

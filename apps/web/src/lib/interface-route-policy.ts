@@ -27,7 +27,6 @@ export const INTERFACE_UTILITY_CONTROL_PREFIXES = [
   "/health",
   "/garden/catalog/curation",
   "/garden/pilot-health",
-  "/garden/pilot-learning",
   "/garden/pilot-smoke",
   "/garden/privacy/erasure-requests",
 ] as const;
