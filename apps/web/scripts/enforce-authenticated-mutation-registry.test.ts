@@ -106,8 +106,12 @@ describe("OVE-291 strict authenticated mutation enforcement", () => {
 
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
-    expect(digestSource(source.slice(start, end).trim())).toBe(
-      "f32413e275b80f553a79de9a0932f8e49827e18d01bbac3053edb4de266ee206",
+    const initiationBody = source.slice(start, end).trim();
+    expect(initiationBody).toMatch(
+      /createDocumentMutationRequestHeaders\(\s*documentMutation\?\.transport,\s*\)/u,
+    );
+    expect(digestSource(initiationBody)).toBe(
+      "0963aa62e2eec5cd05e05818a177a768430d1757dc7d64ef101981c79dc2de1e",
     );
   });
 

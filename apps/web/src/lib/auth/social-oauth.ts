@@ -2,6 +2,9 @@ export const GOOGLE_PROVIDER_ID = "google";
 export type SocialProviderId = typeof GOOGLE_PROVIDER_ID;
 
 type QueryValue = string | string[] | undefined;
+type OAuthCallbackLocation = Pick<Location, "pathname" | "search"> &
+  Partial<Pick<Location, "hash">>;
+type OAuthCallbackHistory = Pick<History, "state" | "replaceState">;
 
 const OAUTH_AUTHORIZATION_HOSTS: Record<SocialProviderId, string> = {
   [GOOGLE_PROVIDER_ID]: "accounts.google.com",
@@ -34,6 +37,30 @@ export function oauthCallbackPath(
   const query = params.toString();
 
   return query ? `${pathname}?${query}` : pathname;
+}
+
+export function clearOAuthCallbackParameters(
+  location?: OAuthCallbackLocation,
+  history?: OAuthCallbackHistory,
+) {
+  const currentLocation =
+    location ?? (typeof window === "undefined" ? null : window.location);
+  const currentHistory =
+    history ?? (typeof window === "undefined" ? null : window.history);
+  if (!currentLocation || !currentHistory) return false;
+
+  const params = new URLSearchParams(currentLocation.search);
+  if (!params.has("error") && !params.has("error_description")) return false;
+
+  const hash = currentLocation.hash?.startsWith("#")
+    ? currentLocation.hash
+    : "";
+  currentHistory.replaceState(
+    currentHistory.state,
+    "",
+    `${oauthCallbackPath(currentLocation)}${hash}`,
+  );
+  return true;
 }
 
 export function oauthErrorCodeForRedirect(

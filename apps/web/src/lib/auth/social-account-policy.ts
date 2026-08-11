@@ -1,15 +1,14 @@
 import "server-only";
 
-import { GOOGLE_PROVIDER_ID } from "@/lib/auth/social-oauth";
-
-export function socialAccountPolicy() {
+export function socialAccountPolicy(explicitGoogleLinkingEnabled = false) {
   return {
     updateAccountOnSignIn: true,
     encryptOAuthTokens: true,
     accountLinking: {
-      enabled: true,
+      enabled: explicitGoogleLinkingEnabled,
       disableImplicitLinking: true,
-      trustedProviders: [GOOGLE_PROVIDER_ID],
+      trustedProviders: [],
+      requireLocalEmailVerified: true,
       // A different provider may carry a different verified email, but only an
       // already authenticated gardener can explicitly start that link flow.
       allowDifferentEmails: true,

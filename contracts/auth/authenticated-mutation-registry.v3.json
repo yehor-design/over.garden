@@ -35723,6 +35723,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/auth.ts",
+        "src/lib/auth/explicit-google-linking.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/auth.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/explicit-google-linking",
+      "sourceNodeId": "source:8db5ba7e312d94fa70e9",
+      "symbol": "isExplicitGoogleLinkingEnabled"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/engagement/comments/report/route.ts",
         "src/server/document-mutation-admission.ts"
       ],
@@ -44932,6 +44944,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/auth.ts",
+        "src/lib/auth/explicit-google-linking.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/auth.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/explicit-google-linking",
+      "sourceNodeId": "source:db087883c2e4d4cd45ab",
+      "symbol": "admitExplicitGoogleLinking"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/page.tsx",
         "src/db/schema.ts"
       ],
@@ -45903,18 +45927,6 @@
       "semanticVariant": "from:@/lib/garden/entry-contracts",
       "sourceNodeId": "source:e35c71c620b21017fb8e",
       "symbol": "ActivationSource"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/profile/page.tsx",
-        "src/lib/auth/google-oauth.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/profile/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/auth/google-oauth",
-      "sourceNodeId": "source:e36a663ce4eb86080668",
-      "symbol": "isGoogleSignInEnabled"
     },
     {
       "evidencePaths": [
@@ -47219,6 +47231,18 @@
       "semanticVariant": "from:@/lib/navigation/internal-return-path",
       "sourceNodeId": "source:ee5d59b41e0f6af50c28",
       "symbol": "normalizeInternalReturnPath"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/account-methods-panel.tsx",
+        "src/lib/auth/social-oauth.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/account-methods-panel.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/social-oauth",
+      "sourceNodeId": "source:ee8c57d76859cde27d49",
+      "symbol": "clearOAuthCallbackParameters"
     },
     {
       "evidencePaths": [

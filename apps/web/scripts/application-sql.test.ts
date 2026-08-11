@@ -26,6 +26,7 @@ describe("versioned application SQL bootstrap", () => {
       "0019_ove269_plantnet_identification.sql",
       "0020_ove299_remove_manual_pilot_learning.sql",
       "0021_ove314_retire_obsolete_control_plane.sql",
+      "0022_ove295_google_account_uniqueness.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });
@@ -58,5 +59,30 @@ describe("versioned application SQL bootstrap", () => {
     expect(convergence).toContain(
       "drop constraint if exists catalog_match_suggestions_source_matching_fingerprint_check",
     );
+  });
+
+  it("preflights and enforces both Google account identity dimensions", async () => {
+    const migrations = await loadVersionedApplicationSql(path.resolve("sql"));
+    const googleUniqueness = migrations.find(
+      ({ name }) => name === "0022_ove295_google_account_uniqueness.sql",
+    )?.sql;
+
+    expect(googleUniqueness).toContain('group by "providerId", "accountId"');
+    expect(googleUniqueness).toContain('group by "userId", "providerId"');
+    expect(googleUniqueness).toContain(
+      "account_google_provider_subject_unique_idx",
+    );
+    expect(googleUniqueness).toContain(
+      'on public.account ("providerId", "accountId")',
+    );
+    expect(googleUniqueness).toContain(
+      "account_google_user_provider_unique_idx",
+    );
+    expect(googleUniqueness).toContain(
+      'on public.account ("userId", "providerId")',
+    );
+    expect(
+      googleUniqueness?.match(/where "providerId" = 'google'/g),
+    ).toHaveLength(4);
   });
 });

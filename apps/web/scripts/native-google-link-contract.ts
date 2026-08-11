@@ -43,6 +43,7 @@ export interface NativeGoogleLinkSourceFiles {
   callback: string;
   corePackage: string;
   createContext: string;
+  explicitGoogleLinking: string;
   googleOauthConfig: string;
   googleProvider: string;
   linkSocial: string;
@@ -202,6 +203,7 @@ export async function readNativeGoogleLinkSourceSnapshot(
     callback,
     corePackage,
     createContext,
+    explicitGoogleLinking,
     googleOauthConfig,
     googleProvider,
     linkSocial,
@@ -221,6 +223,7 @@ export async function readNativeGoogleLinkSourceSnapshot(
     read(path.join(betterAuthRoot, "dist/api/routes/callback.mjs")),
     read(path.join(coreRoot, "package.json")),
     read(path.join(betterAuthRoot, "dist/context/create-context.mjs")),
+    read(path.join(appRoot, "src/lib/auth/explicit-google-linking.ts")),
     read(path.join(appRoot, "src/lib/auth/google-oauth.ts")),
     read(path.join(coreRoot, "dist/social-providers/google.mjs")),
     read(path.join(betterAuthRoot, "dist/api/routes/account.mjs")),
@@ -245,6 +248,7 @@ export async function readNativeGoogleLinkSourceSnapshot(
       callback,
       corePackage,
       createContext,
+      explicitGoogleLinking,
       googleOauthConfig,
       googleProvider,
       linkSocial,
@@ -383,9 +387,12 @@ export function evaluateNativeGoogleLinkContract(
 
   const accountMethodReadback =
     files.accountMethodsProjection.includes("auth.api.listUserAccounts") &&
-    files.accountMethodsProjection.includes(
+    (files.accountMethodsProjection.includes(
       "hasGoogle: providerIds.has(GOOGLE_PROVIDER_ID)",
-    ) &&
+    ) ||
+      files.accountMethodsProjection.includes(
+        "const hasGoogle = providerIds.has(GOOGLE_PROVIDER_ID)",
+      )) &&
     files.accountMethodsPanel.includes("hasGoogle") &&
     !files.accountMethodsPanel.includes("google_link_success");
   if (!accountMethodReadback) reasons.add("account_method_readback_drift");
@@ -413,11 +420,21 @@ export function evaluateNativeGoogleLinkContract(
   }
 
   const providerSet: string[] = [];
+  const explicitGooglePolicyConfigured =
+    files.socialAccountPolicy.includes("trustedProviders: []") &&
+    files.authConfig.includes(
+      "socialAccountPolicy(isExplicitGoogleLinkingEnabled())",
+    ) &&
+    files.explicitGoogleLinking.includes('"GOOGLE_ACCOUNT_LINKING_ENABLED"') &&
+    files.explicitGoogleLinking.includes(
+      "body?.provider !== GOOGLE_PROVIDER_ID",
+    );
   const googleConfigured =
     files.authConfig.includes("{ google: googleProvider }") &&
-    files.socialAccountPolicy.includes(
+    (files.socialAccountPolicy.includes(
       "trustedProviders: [GOOGLE_PROVIDER_ID]",
-    ) &&
+    ) ||
+      explicitGooglePolicyConfigured) &&
     files.socialOauth.includes('GOOGLE_PROVIDER_ID = "google"');
   if (googleConfigured) providerSet.push("google");
   const facebookConfigured =

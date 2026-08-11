@@ -30,9 +30,11 @@ describe("blocked session account-method action", () => {
     mocks.getSessionId.mockReturnValue("session-a");
     mocks.deriveCurrentSessionBinding.mockResolvedValue("binding-for-a");
     mocks.getCurrentAccountMethodProjection.mockResolvedValue({
+      readbackState: "ready",
       hasCredential: false,
       hasGoogle: true,
       canSetPassword: true,
+      canLinkGoogle: false,
     });
   });
 
@@ -42,9 +44,11 @@ describe("blocked session account-method action", () => {
     ).resolves.toEqual({
       status: "ready",
       methods: {
+        readbackState: "ready",
         hasCredential: false,
         hasGoogle: true,
         canSetPassword: true,
+        canLinkGoogle: false,
       },
     });
 

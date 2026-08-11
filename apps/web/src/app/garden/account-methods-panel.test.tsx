@@ -3,6 +3,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  clearOAuthCallbackParameters: vi.fn(),
   linkSocial: vi.fn(),
   navigateToOAuthAuthorization: vi.fn(),
   refresh: vi.fn(),
@@ -73,6 +74,7 @@ vi.mock("@/lib/auth-client", () => ({
   },
 }));
 vi.mock("@/lib/auth/social-oauth", () => ({
+  clearOAuthCallbackParameters: mocks.clearOAuthCallbackParameters,
   GOOGLE_PROVIDER_ID: "google",
   navigateToOAuthAuthorization: mocks.navigateToOAuthAuthorization,
   oauthCallbackPath: () => "/garden/profile",
@@ -84,11 +86,12 @@ vi.mock("./profile/account-method-actions", () => ({
 import { AccountMethodsPanel } from "./account-methods-panel";
 
 const DEFAULT_PROPS = {
+  canLinkGoogle: true,
   canSetPassword: true,
-  googleSignInEnabled: true,
   hasCredential: false,
   hasGoogle: false,
   locale: "uk" as const,
+  readbackState: "ready" as const,
 };
 
 describe("account methods panel", () => {
@@ -113,6 +116,31 @@ describe("account methods panel", () => {
     expect(html).not.toMatch(/facebook/i);
     expect(html).toContain("Пароль встановлено");
     expect(html).not.toMatch(/email|accountId|token|passwordHash/i);
+  });
+
+  it("keeps a connected method visible when new linking is disabled", () => {
+    const html = renderToStaticMarkup(
+      <AccountMethodsPanel
+        {...DEFAULT_PROPS}
+        canLinkGoogle={false}
+        canSetPassword={false}
+        hasCredential
+        hasGoogle
+      />,
+    );
+
+    expect(html).toContain("Підключено");
+    expect(html).toContain('data-testid="google-unlink-button"');
+    expect(html).not.toContain('data-testid="google-link-button"');
+  });
+
+  it("omits the Link Google control when the server projection is default-off", () => {
+    const html = renderToStaticMarkup(
+      <AccountMethodsPanel {...DEFAULT_PROPS} canLinkGoogle={false} />,
+    );
+
+    expect(html).not.toContain('data-testid="google-link-button"');
+    expect(html).toContain('data-testid="set-password-button"');
   });
 
   it("keeps the final connected method actionable while explaining its password bridge", () => {
@@ -423,12 +451,19 @@ describe("account methods panel", () => {
       await Promise.resolve();
     });
 
-    expect(mocks.linkSocial).toHaveBeenCalledWith({
-      provider: "google",
-      callbackURL: "/garden/profile",
-      errorCallbackURL: "/garden/profile",
-      disableRedirect: true,
-    });
+    expect(mocks.linkSocial).toHaveBeenCalledWith(
+      {
+        provider: "google",
+        callbackURL: "/garden/profile",
+        errorCallbackURL: "/garden/profile",
+        disableRedirect: true,
+      },
+      {
+        headers: {
+          "x-overgarden-document-generation": "opaque-generation-a",
+        },
+      },
+    );
     expect(
       renderer.root.findByProps({ "data-testid": "set-password-button" }).props
         .disabled,
@@ -450,6 +485,43 @@ describe("account methods panel", () => {
     await act(async () => renderer.unmount());
   });
 
+  it("renders one bounded localized retry state and starts one fresh read-back", async () => {
+    const renderer = await render(
+      <AccountMethodsPanel
+        {...DEFAULT_PROPS}
+        canLinkGoogle={false}
+        canSetPassword={false}
+        readbackState="retry"
+      />,
+    );
+
+    expect(
+      renderer.root.findByProps({ "data-testid": "account-method-retry" }).props
+        .children,
+    ).toContain("Не вдалося перевірити способи входу");
+    expect(
+      renderer.root.findAllByProps({ "data-testid": "google-link-button" }),
+    ).toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ "data-testid": "set-password-button" }),
+    ).toHaveLength(0);
+
+    await act(async () => {
+      renderer.root
+        .findByProps({ "data-testid": "account-method-retry-button" })
+        .props.onClick();
+    });
+    expect(mocks.refresh).toHaveBeenCalledOnce();
+    await act(async () => renderer.unmount());
+  });
+
+  it("cleans bounded OAuth callback parameters only after the client mounts", async () => {
+    const renderer = await render(<AccountMethodsPanel {...DEFAULT_PROPS} />);
+
+    expect(mocks.clearOAuthCallbackParameters).toHaveBeenCalledOnce();
+    await act(async () => renderer.unmount());
+  });
+
   it.each([
     ["uk", "Способи входу", "Створити пароль"],
     ["bg", "Начини за вход", "Създаване на парола"],
@@ -467,6 +539,26 @@ describe("account methods panel", () => {
       expect(html).not.toMatch(/accountId|providerId|emailVerified|token/i);
     },
   );
+
+  it.each([
+    ["uk", "Не вдалося перевірити способи входу", "Спробувати ще раз"],
+    ["bg", "Начините за вход не могат да бъдат проверени", "Опитайте отново"],
+    ["ru", "Не удалось проверить способы входа", "Попробовать снова"],
+  ] as const)("uses the bounded %s retry copy", (locale, message, action) => {
+    const html = renderToStaticMarkup(
+      <AccountMethodsPanel
+        {...DEFAULT_PROPS}
+        canLinkGoogle={false}
+        canSetPassword={false}
+        locale={locale}
+        readbackState="retry"
+      />,
+    );
+
+    expect(html).toContain(message);
+    expect(html).toContain(action);
+    expect(html).not.toMatch(/accountId|providerId|emailVerified|token/i);
+  });
 });
 
 async function openDisconnectDialog(

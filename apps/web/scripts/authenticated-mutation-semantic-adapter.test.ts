@@ -29,6 +29,8 @@ const EXPECTED_SOURCE_PATHS = [
   "sql/0001_walking_skeleton.sql",
   "sql/0015_ove241_auth_email_outbox.sql",
   "src/app/api/auth/[...all]/route.ts",
+  "src/lib/auth.ts",
+  "src/lib/auth/explicit-google-linking.ts",
   "src/lib/auth/google-oauth.ts",
   "src/lib/auth/retired-social-provider.ts",
 ] as const;

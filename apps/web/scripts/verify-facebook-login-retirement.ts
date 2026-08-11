@@ -56,6 +56,7 @@ const META_ENV_CONTRACT = [
 
 const RECEIPT_SOURCE_PATHS = [
   "src/lib/auth.ts",
+  "src/lib/auth/explicit-google-linking.ts",
   "src/lib/auth/facebook-oauth.test.ts",
   "src/lib/auth/retired-social-provider.ts",
   "src/lib/auth/social-account-policy.test.ts",
@@ -363,15 +364,23 @@ async function assertGoogleCredentialRegression(
   root: string,
   signal: AbortSignal,
 ) {
-  const [authSource, panelSource, policySource] = await Promise.all([
-    readText(root, "src/lib/auth.ts", signal),
-    readText(root, "src/app/garden/garden-auth-panel.tsx", signal),
-    readText(root, "src/lib/auth/social-account-policy.ts", signal),
-  ]);
+  const [authSource, explicitLinkSource, panelSource, policySource] =
+    await Promise.all([
+      readText(root, "src/lib/auth.ts", signal),
+      readText(root, "src/lib/auth/explicit-google-linking.ts", signal),
+      readText(root, "src/app/garden/garden-auth-panel.tsx", signal),
+      readText(root, "src/lib/auth/social-account-policy.ts", signal),
+    ]);
   if (
     !/emailAndPassword:\s*\{[\s\S]*?enabled:\s*true/.test(authSource) ||
     !panelSource.includes("google-sign-in-button") ||
-    !policySource.includes("trustedProviders: [GOOGLE_PROVIDER_ID]")
+    !authSource.includes(
+      "socialAccountPolicy(isExplicitGoogleLinkingEnabled())",
+    ) ||
+    !policySource.includes("trustedProviders: []") ||
+    !policySource.includes("disableImplicitLinking: true") ||
+    !explicitLinkSource.includes('"GOOGLE_ACCOUNT_LINKING_ENABLED"') ||
+    !explicitLinkSource.includes("body?.provider !== GOOGLE_PROVIDER_ID")
   ) {
     throw new Error("credential or Google regression guard is incomplete");
   }

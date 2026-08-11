@@ -7,6 +7,10 @@ import { nextCookies } from "better-auth/next-js";
 import { db } from "@/db";
 import { resolveBetterAuthSecretOptions } from "@/lib/auth-secret";
 import { logBetterAuth } from "@/lib/auth/better-auth-logger";
+import {
+  admitExplicitGoogleLinking,
+  isExplicitGoogleLinkingEnabled,
+} from "@/lib/auth/explicit-google-linking";
 import { resolveGoogleSocialProviderConfig } from "@/lib/auth/google-oauth";
 import {
   createRetiredSharedIdentityDatabaseHooks,
@@ -61,9 +65,11 @@ export const auth = betterAuth({
   },
   socialProviders:
     Object.keys(socialProviders).length > 0 ? socialProviders : undefined,
-  account: socialAccountPolicy(),
+  account: socialAccountPolicy(isExplicitGoogleLinkingEnabled()),
   hooks: {
     before: createAuthMiddleware(async (context) => {
+      await admitExplicitGoogleLinking(context);
+
       const email = (context.body as { email?: unknown } | undefined)?.email;
       if (isRetiredSharedIdentityEmailSignIn(context.path, email)) {
         throw APIError.from("UNAUTHORIZED", {
