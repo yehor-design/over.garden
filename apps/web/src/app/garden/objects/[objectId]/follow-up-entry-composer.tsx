@@ -26,6 +26,7 @@ import {
   createDocumentMutationRequestHeaders,
   useOptionalDocumentMutationGeneration,
 } from "@/components/auth/document-mutation-recovery";
+import { useOptionalForegroundAutosync } from "@/components/auth/foreground-autosync-provider";
 import {
   JournalCoverControls,
   journalCoverSelectionToOfflinePayload,
@@ -149,6 +150,7 @@ export function FollowUpEntryComposer({
 }: FollowUpEntryComposerProps) {
   const workspaceCopy = getGardenWorkspaceCopy(locale);
   const documentMutation = useOptionalDocumentMutationGeneration();
+  const foregroundAutosync = useOptionalForegroundAutosync();
   const ownerCopy = getOwnerObjectCopy(locale);
   useScrollToHashOnMount("follow-up-composer");
   const router = useRouter();
@@ -688,13 +690,13 @@ export function FollowUpEntryComposer({
     setMessage(workspaceCopy.composer.messages.sending);
 
     try {
-      const result = await syncOfflineJournalEntryMutation(mutation, {
-        expectedOwnerUserId: ownerUserId,
-        documentMutationGeneration,
-      });
+      const result = foregroundAutosync
+        ? await foregroundAutosync.runManualMutation(mutation.id)
+        : await syncOfflineJournalEntryMutation(mutation, {
+            expectedOwnerUserId: ownerUserId,
+            documentMutationGeneration,
+          });
       if (isComposerPersistenceFrozen()) return;
-      draftPersistencePausedRef.current = true;
-      await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
       setSubmitState("synced");
       setMessage(workspaceCopy.composer.messages.saved);
       await refreshQueue();
@@ -712,6 +714,12 @@ export function FollowUpEntryComposer({
         error instanceof JournalEntrySyncError &&
         error.documentMutationAdmission
       ) {
+        if (foregroundAutosync) {
+          setSubmitState("failed");
+          setMessage(localizedJournalSaveErrorMessage(locale, error));
+          await refreshQueue();
+          return;
+        }
         const result = error.documentMutationAdmission;
         const handledWithIdempotentRecovery =
           allowAutomaticSessionRetry &&

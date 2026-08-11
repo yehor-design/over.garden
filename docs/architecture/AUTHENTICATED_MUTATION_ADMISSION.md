@@ -1,7 +1,7 @@
 # Authenticated Mutation Admission
 
-Status: OVE-285 registry, OVE-290 high-risk enforcement, OVE-286 bounded browser rollout, and OVE-291 remainder enforcement — ready
-Baseline: `964a4a7e7c86fa95b0e15e98852b008f42613f09`
+Status: OVE-285 registry, OVE-290 high-risk enforcement, OVE-286 bounded browser rollout, OVE-291 remainder enforcement, and OVE-289 foreground autosync — implementation ready
+Baseline: `b53157a559c3a1087e8c53c142028ba0d9bcd5c2`
 Prerequisite: OVE-296 receipt `d05c0124f59c95b1db6db4d6e444c95d125218355b27ee87a793a7d31a08e152`
 
 ## Decision
@@ -28,18 +28,18 @@ The checked artifact is
 
 | Field                           |                                                      Checked value |
 | ------------------------------- | -----------------------------------------------------------------: |
-| Production source files         |                                                                615 |
-| Source nodes                    |                                                              2,618 |
-| Logical entrypoints             |                                                                314 |
-| Effect boundaries               |                                                                181 |
-| Consumer edges                  |                                                                656 |
-| Excluded entrypoints            |                                                                141 |
+| Production source files         |                                                                619 |
+| Source nodes                    |                                                              2,649 |
+| Logical entrypoints             |                                                                328 |
+| Effect boundaries               |                                                                184 |
+| Consumer edges                  |                                                                671 |
+| Excluded entrypoints            |                                                                149 |
 | Retired-provider entrypoints    |                                                                  1 |
 | Unresolved nodes or entrypoints |                                                                  0 |
-| Registry digest                 | `633f9071fd4f2ef30f4036e5faed5b295590a90b82f3a518a3080bcba67bcdda` |
-| Source-evidence digest          | `00a143bb0639d55836f71cb374a79dc22ae06fbb8a9f6b4f2c98d878cb9f4187` |
-| Receipt digest                  | `664fe875da2c9c9ff986aac430962a572823bb7377ea013f217767ec92185b7a` |
-| Artifact file SHA-256           | `6661e2d55b21fb4aad39531d721516933e999c0363c99ffa0474b803c43fd1c4` |
+| Registry digest                 | `e8a87b3291a3cb9948658f722b779fdc1d2c13fe2411aa74c73d7ac51387e5d9` |
+| Source-evidence digest          | `acc5405c23f5229e48f52bdc36947f8d2c4990d351ad9464b71914fc1d159437` |
+| Receipt digest                  | `e720b1c54a84ade23ea63929a11def99c98d0fd47265cc2c20f8f7c47f1f1ce9` |
+| Artifact file SHA-256           | `23a191e33d603f8021fcb9431b36b7dd7fd55027d85eba9a3be3a94335a6c65f` |
 
 The independently pinned Better Auth semantic adapter produced:
 
@@ -50,9 +50,9 @@ The independently pinned Better Auth semantic adapter produced:
 The receipt binds the exact baseline, TypeScript and Better Auth toolchain,
 OVE-296 prerequisite receipt, normalized production-source evidence, and
 canonical registry bytes. A change to any bound input changes the receipt. The
-values above are the deterministic OVE-291 enforcement regeneration; the
-original OVE-285 and OVE-290 terminal receipts remain preserved in their Linear
-closeouts and the execution roadmap.
+values above are the deterministic OVE-289 topology expansion after terminal
+OVE-291 enforcement; the original OVE-285, OVE-290, and OVE-291 terminal
+receipts remain preserved in their Linear closeouts and the execution roadmap.
 
 ## OVE-290 runtime enforcement
 
@@ -77,24 +77,24 @@ cross-origin R2 PUT.
 
 The separate enforcement artifact is
 `contracts/auth/authenticated-mutation-enforcement.v1.json` (SHA-256
-`7e3d7cf4d61c6a68a143f78a133ca1048d0e42d4fb037cd74ccfbd5cee4a1725`).
+`7ed7de69de5e93d82716a3095e36f02856ed7ece44d7a5444ac7eee3081f5b8f`).
 It binds registry digest
-`633f9071fd4f2ef30f4036e5faed5b295590a90b82f3a518a3080bcba67bcdda`
+`e8a87b3291a3cb9948658f722b779fdc1d2c13fe2411aa74c73d7ac51387e5d9`
 and source receipt digest
-`664fe875da2c9c9ff986aac430962a572823bb7377ea013f217767ec92185b7a`.
-All baseline 36 high-risk entrypoints and 281 consumer edges are
-`enforced_ove_290` at the same 24 admission boundaries. All 124 remainder
-entrypoints and 347 consumer edges are `enforced_ove_291` at their 65 declared
-admission boundaries. The five-entrypoint, 15-edge OVE-295 partition remains
-reserved with ownership digest
+`e720b1c54a84ade23ea63929a11def99c98d0fd47265cc2c20f8f7c47f1f1ce9`.
+The original 36 OVE-290 entrypoints plus six OVE-289 local effect owners form
+42 enforced high-risk entrypoints and 296 consumer edges at 30 admission
+boundaries. All 124 remainder entrypoints and 347 consumer edges remain
+`enforced_ove_291` at their 65 declared admission boundaries. The
+five-entrypoint, 15-edge OVE-295 partition remains reserved with ownership digest
 `9f9273ac6222c4e04cc77069dc14bfebc3860218d6791623055c27420687adad`;
 OVE-286 capability-runtime paths remain distinct from mutation enforcement.
 
 Production imports only the generated bounded receipt
 `contracts/auth/authenticated-mutation-deployment-receipt.v1.json` (SHA-256
-`3aeaa72567a990e798bdbe8bd11257fd1cfcdc9176799eb0b499ce6113d4a72d`,
+`e3fb3304f5641d364ee0943dfa2395e8c01385ae69e2a41403aab3ccf99f50cc`,
 canonical receipt digest
-`fe61f044ca6623a774709a2e55475a774cf8aed43db1f4c125e3b05e243fe340`).
+`05eb54b3d5db46ba432caaec1dbd3ea2a157c896045e6820b2579a3d0faf03f3`).
 It contains the deployment-receipt schema, counts, and digests only. The full
 registry and enforcement graph remain build-time artifacts and their schema
 sentinels are forbidden from Next.js runtime chunks.
@@ -158,6 +158,41 @@ The deployment read-back route exposes only schema versions, counts, and
 digests derived from the bundled registry and enforcement artifacts. It never
 returns graph paths, identifiers, sessions, generations, content, provider
 state, or other protected evidence.
+
+## OVE-289 foreground-only autosync
+
+The authenticated garden mounts one document-local coordinator only after the
+session-convergence boundary has activated exactly one physical owner vault.
+The coordinator reads that already-authorized owner from the in-memory vault
+map; the root shell still serializes only authentication state and opaque signed
+generations, never a raw owner identity.
+
+The trigger enum is closed to `initial_scan`, `queue_changed`, `online`,
+`window_focus`, `document_visible`, and explicit `manual`. Synchronous triggers
+coalesce behind one owner/document lease, re-read the exact-owner queue, and
+return before admission or network when no row is eligible. A non-empty drain
+uses the shared OVE-290 3,000-millisecond continuity check before any claim,
+processes at most 24 rows per local batch, and rejects every late or stale
+completion. There is no Background Sync registration or handler, periodic
+timer, jitter, polling, scheduled retry, production analytics, or global wait
+UI.
+
+`queueRevision` and `automaticAttemptConsumedRevision` are additive fields on
+the existing IndexedDB record; no table or index migration is needed. The
+atomic owner-scoped claim consumes one automatic attempt for that exact
+revision across concurrent documents. Any admission, transport, server, or
+`Retry-After` failure leaves the row in manual recovery. Only an explicit
+manual action or a newly enqueued revision can attempt again; reload alone does
+not reset the marker. Expired crash claims also become manual-only.
+
+Manual controls use the same coordinator and fail closed when it is not
+mounted. Successful sync conditionally removes only a draft whose current
+`clientMutationId` still matches the synced intent, so a newer local edit is
+never deleted. The guarded synthetic browser harness proves all six triggers,
+empty-queue zero effect, partial and failed recovery, late owner/document
+completion, and responsive navigation, editing, locale, manual-sync, and
+sign-out controls in Ukrainian, Bulgarian, and Russian while admission reaches
+its exact deadline.
 
 ## Closed source policy
 
@@ -230,13 +265,14 @@ re-audited.
 The registry assigns every effectful entrypoint to exactly one downstream
 owner:
 
-- `high_risk_ove_290`: 36 journal/media/offline mutation paths;
+- `high_risk_ove_290`: 42 journal/media/offline mutation paths, including the
+  six OVE-289 local effect owners;
 - `capability_runtime_ove_286`: 7 owner-session and owner-composer capability
   paths;
 - `owned_by_ove_295`: 5 explicit-linking paths;
 - `remaining_ove_291`: 124 remainder effectful paths, now enforced.
 
-The remaining 142 non-effectful paths are `excluded_with_reason`, including the
+The remaining 150 non-effectful paths are `excluded_with_reason`, including the
 one retired-provider entrypoint. Owner sets are disjoint by construction and
 validation.
 
@@ -266,8 +302,8 @@ Runtime enforcement checking is separate from graph generation:
 pnpm exec tsx scripts/authenticated-mutation-enforcement-receipt.ts --check
 ```
 
-It verifies final registry/source-receipt digest binding, the complete baseline
-36/281 high-risk and 124/347 remainder stable-ID sets, all 24 high-risk and 65
+It verifies final registry/source-receipt digest binding, the complete enforced
+42/296 high-risk and 124/347 remainder stable-ID sets, all 30 high-risk and 65
 remainder live pre-effect guard bodies, deterministic bytes, the frozen
 explicit-Google-link partition, and the committed enforcement artifact.
 

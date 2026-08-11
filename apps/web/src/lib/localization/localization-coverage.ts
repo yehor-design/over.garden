@@ -902,6 +902,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
       [
         "src/app/%5F%5Fvisual-fixtures/intent/[scenarioId]/route.ts",
         "src/app/%5F%5Fvisual-fixtures/account-sign-out/page.tsx",
+        "src/app/%5F%5Fvisual-fixtures/foreground-autosync/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/owner-vault/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/session-recheck/page.tsx",
@@ -1344,6 +1345,12 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
         ["jsx-text", "OVE-287 synthetic private account"],
         ["jsx-text", "One synthetic retained owner draft is active."],
       ],
+    ),
+    ...allowExactLiterals(
+      "src/app/%5F%5Fvisual-fixtures/foreground-autosync/foreground-autosync-visual-fixture.tsx",
+      "internal-fixture",
+      INTERNAL_FIXTURE_RATIONALE,
+      [["metadata-title", "Synthetic fixture"]],
     ),
     ...allowExactLiterals(
       "src/app/%5F%5Fvisual-fixtures/owner-vault/owner-vault-visual-fixture.tsx",

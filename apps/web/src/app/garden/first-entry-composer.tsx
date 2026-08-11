@@ -28,6 +28,7 @@ import {
   createDocumentMutationRequestHeaders,
   useOptionalDocumentMutationGeneration,
 } from "@/components/auth/document-mutation-recovery";
+import { useOptionalForegroundAutosync } from "@/components/auth/foreground-autosync-provider";
 import {
   JournalCoverControls,
   journalCoverSelectionToOfflinePayload,
@@ -175,6 +176,7 @@ export function FirstEntryComposer({
 }: FirstEntryComposerProps) {
   const copy = getGardenWorkspaceCopy(locale);
   const documentMutation = useOptionalDocumentMutationGeneration();
+  const foregroundAutosync = useOptionalForegroundAutosync();
   const offlinePersistenceEnabled =
     enableOfflinePersistence && visualScenario == null;
   useScrollToHashOnMount("first-entry-composer");
@@ -846,15 +848,13 @@ export function FirstEntryComposer({
     setMessage(copy.composer.messages.sending);
 
     try {
-      const result = await syncOfflineJournalEntryMutation(mutation, {
-        expectedOwnerUserId: ownerUserId,
-        documentMutationGeneration,
-      });
+      const result = foregroundAutosync
+        ? await foregroundAutosync.runManualMutation(mutation.id)
+        : await syncOfflineJournalEntryMutation(mutation, {
+            expectedOwnerUserId: ownerUserId,
+            documentMutationGeneration,
+          });
       if (isComposerPersistenceFrozen()) return;
-      draftPersistencePausedRef.current = true;
-      await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
-        () => undefined,
-      );
       setSubmitState("synced");
       setMessage(copy.composer.messages.saved);
       await refreshQueue();
@@ -867,6 +867,12 @@ export function FirstEntryComposer({
         error instanceof JournalEntrySyncError &&
         error.documentMutationAdmission
       ) {
+        if (foregroundAutosync) {
+          setSubmitState("failed");
+          setMessage(localizedJournalSaveErrorMessage(locale, error));
+          await refreshQueue();
+          return;
+        }
         const result = error.documentMutationAdmission;
         const handledWithIdempotentRecovery =
           allowAutomaticSessionRetry &&

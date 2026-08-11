@@ -16,6 +16,7 @@ import {
 } from "@/server/public-handle-mention-token";
 import {
   deleteOfflineDraft as deleteOwnedOfflineDraft,
+  deleteOfflineDraftIfClientMutationMatches,
   FIRST_ENTRY_DRAFT_ID,
   followUpEntryDraftId,
   getOfflineDraft as getOwnedOfflineDraft,
@@ -239,6 +240,56 @@ describe("offline journal drafts", () => {
     expect(
       await offlineDb?.draftSummaries.get([OWNER_A, first.id]),
     ).toBeUndefined();
+  });
+
+  it("deletes a synced draft only when the queued client mutation still matches", async () => {
+    const draft = (clientMutationId: string): FirstEntryDraftPayload => ({
+      clientMutationId,
+      draft: {
+        spaceName: "Balcony",
+        plantName: "Tomato",
+        objectKind: "plant",
+        title: "Update",
+        body: "Body",
+        entryDate: "2026-08-11",
+        locationVisibility: "hidden",
+        coarseRegionCode: "",
+      },
+      catalogQuery: "",
+      selectedCatalogItem: null,
+      userAddedCatalogName: null,
+      activationSource: null,
+      topicTagInput: "",
+      photoIntent: null,
+    });
+    await upsertOfflineDraft({
+      id: FIRST_ENTRY_DRAFT_ID,
+      kind: "first_entry",
+      payload: draft("newer-client-mutation"),
+    });
+
+    await expect(
+      deleteOfflineDraftIfClientMutationMatches(
+        OWNER_A,
+        FIRST_ENTRY_DRAFT_ID,
+        "older-client-mutation",
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID),
+    ).resolves.toMatchObject({
+      payload: { clientMutationId: "newer-client-mutation" },
+    });
+    await expect(
+      deleteOfflineDraftIfClientMutationMatches(
+        OWNER_A,
+        FIRST_ENTRY_DRAFT_ID,
+        "newer-client-mutation",
+      ),
+    ).resolves.toBe(true);
+    await expect(
+      getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID),
+    ).resolves.toBeUndefined();
   });
 
   it("reads only fixed owner-scoped pages from a 5,000 plus 5,000 summary fixture", async () => {

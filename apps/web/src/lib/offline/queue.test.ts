@@ -2,19 +2,24 @@ import Dexie from "dexie";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  claimOfflineMutationForAutomaticSync,
   claimOfflineMutationForSync,
   createOfflinePhotoIntent,
   enqueueOfflineMutation as enqueueOwnedOfflineMutation,
   getOfflineMutation as getOwnedOfflineMutation,
   listOfflineMutations as listOwnedOfflineMutations,
   listOfflineMutationSummaries,
+  listOfflineMutationsEligibleForAutomaticSync,
   listQueuedMutations as listOwnedQueuedMutations,
+  OFFLINE_AUTOMATIC_SYNC_BATCH_SIZE,
   OFFLINE_QUEUE_CHANGED_EVENT,
   offlineDb,
+  recoverExpiredOfflineMutationSyncClaims,
   settleClaimedOfflineMutationFailure,
   updateOfflineMutationPayload as updateOwnedOfflineMutationPayload,
   updateOfflineMutationStatus as updateOwnedOfflineMutationStatus,
   type OfflineJournalEntryPayload,
+  type OfflineMutationSyncCandidate,
 } from "./queue";
 import {
   hydrateOwnerOfflineActivitySession,
@@ -379,6 +384,139 @@ describe("offline queue", () => {
 
     expect(recovered?.status).toBe("syncing");
     expect(recovered?.syncLeaseExpiresAt).toBeGreaterThan(Date.now());
+  });
+
+  it("persists one automatic attempt per queue revision and reopens only a new revision", async () => {
+    const first = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload: { body: "First revision" },
+      idempotencyKey: "automatic-revision-key",
+    });
+
+    expect(first.queueRevision).toBe(1);
+    expect(first.automaticAttemptConsumedRevision).toBeNull();
+    expect(await listOfflineMutationsEligibleForAutomaticSync(OWNER_A)).toEqual(
+      [{ id: first.id, revision: 1, mode: "automatic" }],
+    );
+
+    const firstClaim = await claimOfflineMutationForAutomaticSync(OWNER_A, {
+      id: first.id,
+      revision: 1,
+      mode: "automatic",
+    });
+    if (!firstClaim) throw new Error("Expected the first automatic claim.");
+    expect(firstClaim.automaticAttemptConsumedRevision).toBe(1);
+    await settleClaimedOfflineMutationFailure(OWNER_A, first.id, firstClaim, {
+      lastError: "Retry-After: manual recovery required.",
+    });
+    expect(await listOfflineMutationsEligibleForAutomaticSync(OWNER_A)).toEqual(
+      [],
+    );
+
+    const second = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload: { body: "Second revision" },
+      idempotencyKey: "automatic-revision-key",
+    });
+    expect(second.id).toBe(first.id);
+    expect(second.queueRevision).toBe(2);
+    expect(second.automaticAttemptConsumedRevision).toBe(1);
+    expect(await listOfflineMutationsEligibleForAutomaticSync(OWNER_A)).toEqual(
+      [{ id: first.id, revision: 2, mode: "automatic" }],
+    );
+  });
+
+  it("bounds one automatic drain to 24 exact-owner journal intents", async () => {
+    const ownerA = await Promise.all(
+      Array.from(
+        { length: OFFLINE_AUTOMATIC_SYNC_BATCH_SIZE + 7 },
+        (_, index) =>
+          enqueueOfflineMutation({
+            kind: "journal_entry",
+            payload: { body: `Bounded owner A row ${index}` },
+            idempotencyKey: `bounded-owner-a-${index}`,
+          }),
+      ),
+    );
+    const ownerB = await enqueueOfflineMutation({
+      ownerUserId: OWNER_B,
+      kind: "journal_entry",
+      payload: { body: "Owner B excluded row" },
+      idempotencyKey: "bounded-owner-b",
+    });
+
+    const candidates =
+      await listOfflineMutationsEligibleForAutomaticSync(OWNER_A);
+    expect(candidates).toHaveLength(OFFLINE_AUTOMATIC_SYNC_BATCH_SIZE);
+    expect(candidates.every((item) => item.mode === "automatic")).toBe(true);
+    expect(candidates.every((item) => item.revision === 1)).toBe(true);
+    expect(candidates.map((item) => item.id)).not.toContain(ownerB.id);
+    expect(
+      candidates.every((item) =>
+        ownerA.some((mutation) => mutation.id === item.id),
+      ),
+    ).toBe(true);
+  });
+
+  it("treats legacy marker-free rows as revision one unattempted exactly once", async () => {
+    const legacy = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload: { body: "Legacy row" },
+      idempotencyKey: "legacy-automatic-revision",
+    });
+    await offlineDb?.mutations.update(legacy.id, {
+      queueRevision: undefined,
+      automaticAttemptConsumedRevision: undefined,
+    });
+
+    const expected: OfflineMutationSyncCandidate = {
+      id: legacy.id,
+      revision: 1,
+      mode: "automatic",
+    };
+    expect(await listOfflineMutationsEligibleForAutomaticSync(OWNER_A)).toEqual(
+      [expected],
+    );
+    expect(
+      await claimOfflineMutationForAutomaticSync(OWNER_A, expected),
+    ).toMatchObject({
+      queueRevision: 1,
+      automaticAttemptConsumedRevision: 1,
+      status: "syncing",
+    });
+    expect(await listOfflineMutationsEligibleForAutomaticSync(OWNER_A)).toEqual(
+      [],
+    );
+  });
+
+  it("turns an expired browser-crash claim into manual recovery without reopening automatic sync", async () => {
+    const queued = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload: { body: "Crash-safe row" },
+      idempotencyKey: "browser-crash-recovery",
+    });
+    const claim = await claimOfflineMutationForAutomaticSync(OWNER_A, {
+      id: queued.id,
+      revision: 1,
+      mode: "automatic",
+    });
+    if (!claim) throw new Error("Expected an automatic claim.");
+    await offlineDb?.mutations.update(claim.id, {
+      syncLeaseExpiresAt: Date.now() - 1,
+    });
+
+    await expect(
+      recoverExpiredOfflineMutationSyncClaims(OWNER_A),
+    ).resolves.toBe(1);
+    await expect(getOfflineMutation(claim.id)).resolves.toMatchObject({
+      status: "failed",
+      queueRevision: 1,
+      automaticAttemptConsumedRevision: 1,
+      syncLeaseExpiresAt: null,
+    });
+    expect(await listOfflineMutationsEligibleForAutomaticSync(OWNER_A)).toEqual(
+      [],
+    );
   });
 
   it("settles only an already-claimed sync while the owner is preparing sign-out", async () => {

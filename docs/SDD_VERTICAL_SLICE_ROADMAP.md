@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-08-11 (OVE-291 remainder stale-document admission execution; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-11 (OVE-289 foreground exact-owner autosync implementation; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -145,6 +145,30 @@ chunks.
 Exact-head CI, current-main containment, READY exact-SHA deployment,
 reject-only native-UI/provider proof, and authenticated Linear read-back remain
 the closeout gates before OVE-289.
+
+On 2026-08-11, OVE-289 was selected only after terminal OVE-291 containment in
+clean baseline `b53157a559c3a1087e8c53c142028ba0d9bcd5c2`. The authenticated
+garden now owns exactly six foreground triggers through one current
+owner/document coordinator. Empty queues stop before admission and network;
+non-empty queues consume the shared OVE-290 3,000-millisecond check and an
+atomic per-revision marker before one bounded sequential drain. Failure,
+`Retry-After`, crash recovery, cancellation, and late completion are
+manual-only; only an explicit manual action or genuinely new queue revision
+reopens work. The service worker retains zero Background Sync mutation paths,
+and success conditionally clears only the draft that still carries the synced
+client mutation ID. The local/preview-only browser proof covers all six
+triggers, owner/document races, three locales, and responsive garden, editor,
+locale, manual-sync, and sign-out controls at the exact admission deadline.
+The regenerated graph contains 619 production sources, 2,649 source nodes, 328
+entrypoints, 184 effect boundaries, 671 consumer edges, and zero unresolved
+findings; registry/source/receipt digests are respectively
+`e8a87b3291a3cb9948658f722b779fdc1d2c13fe2411aa74c73d7ac51387e5d9`,
+`acc5405c23f5229e48f52bdc36947f8d2c4990d351ad9464b71914fc1d159437`, and
+`e720b1c54a84ade23ea63929a11def99c98d0fd47265cc2c20f8f7c47f1f1ce9`.
+The enforcement expansion preserves all OVE-291 and OVE-295 sets while binding
+42 high-risk entrypoints, 296 edges, and 30 live boundaries. Exact-head CI,
+current-main containment, READY exact-SHA deployment, runtime isolation, and
+authenticated Linear read-back remain the closeout gates before OVE-294.
 
 On 2026-07-28, OVE-242 was re-audited and materially rewritten against current
 `main` (`dd3b7a6906d5dbf215627d7b6a1de6348befcd16`), passed final validation,

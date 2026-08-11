@@ -11,6 +11,7 @@ import {
 import {
   buildJournalEntryRequestBodyForSync,
   journalEntryAuthReturnTo,
+  offlineJournalDraftId,
   JournalEntrySyncError,
   submitOnlineJournalEntryPayload,
   submitJournalEntryPayload,
@@ -107,6 +108,31 @@ describe("offline journal entry sync", () => {
     );
 
     expect(body.syncStatus).toBe("offline_synced");
+  });
+
+  it("maps every queued journal target to only its matching owner draft", () => {
+    expect(offlineJournalDraftId(payload)).toBe("first-entry");
+    expect(
+      offlineJournalDraftId({
+        target: "plant_object_entry",
+        plantObjectId: OBJECT_ID,
+        title: "Update",
+        body: "Body",
+        entryDate: "2026-08-11",
+        clientMutationId: "follow-up",
+      }),
+    ).toBe(`follow-up-entry:${OBJECT_ID}`);
+    expect(
+      offlineJournalDraftId({
+        target: "space_entry",
+        spaceId: "space-1",
+        mentionedPlantObjectIds: [OBJECT_ID],
+        title: "Space update",
+        body: "Body",
+        entryDate: "2026-08-11",
+        clientMutationId: "space-entry",
+      }),
+    ).toBe("space-entry:space-1");
   });
 
   it("keeps bounded topic tags in retry requests", () => {

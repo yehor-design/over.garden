@@ -16,10 +16,11 @@ import {
 } from "@/lib/auth/document-mutation-generation-transport";
 import { isAllowedComposerImageSize } from "@/lib/media/image-limits";
 import {
-  claimOfflineMutationForSync,
+  claimOfflineMutationForManualSync,
   completeOfflineMutation,
   enqueueOfflineMutation,
   getOfflineMutation,
+  offlineMutationQueueRevision,
   settleClaimedOfflineMutationFailure,
   updateOfflineMutationPayload,
   OwnerOfflineActivityPausedError,
@@ -28,6 +29,12 @@ import {
   type OfflinePhotoIntent,
 } from "./queue";
 import { runOwnerSyncAttempt } from "./owner-session-lifecycle";
+import {
+  deleteOfflineDraftIfClientMutationMatches,
+  FIRST_ENTRY_DRAFT_ID,
+  followUpEntryDraftId,
+  spaceEntryDraftId,
+} from "./drafts";
 
 interface UploadResponse {
   mediaAssetId: string;
@@ -197,6 +204,7 @@ export async function syncOfflineJournalEntryMutation(
   options: {
     expectedOwnerUserId: string;
     documentMutationGeneration?: string | null;
+    signal?: AbortSignal;
   },
 ): Promise<FirstPlantEntryResponse> {
   if (mutation.kind !== "journal_entry") {
@@ -205,70 +213,175 @@ export async function syncOfflineJournalEntryMutation(
   if (mutation.ownerUserId !== options.expectedOwnerUserId) {
     throw new Error("Offline mutation does not belong to the active account.");
   }
+  const documentMutationGeneration = options.documentMutationGeneration;
 
-  return runOwnerSyncAttempt(options.expectedOwnerUserId, async (signal) => {
-    const claimed = await claimOfflineMutationForSync(
-      options.expectedOwnerUserId,
-      mutation.id,
-    );
-    if (!claimed) {
-      throw new Error("Offline mutation is already syncing or has synced.");
-    }
-
-    const payload = claimed.payload as OfflineJournalEntryPayload;
-
-    try {
-      const result = await submitJournalEntryPayload(payload, {
-        idempotencyKey: claimed.idempotencyKey,
-        documentMutationGeneration: options.documentMutationGeneration,
-        signal,
-        onProcessedMediaAsset: async (mediaAssetId) => {
-          const latest = await getOfflineMutation(
-            options.expectedOwnerUserId,
-            claimed.id,
-          );
-          const latestPayload =
-            (latest?.payload as OfflineJournalEntryPayload | undefined) ??
-            payload;
-
-          await updateOfflineMutationPayload(
-            options.expectedOwnerUserId,
-            claimed.id,
-            {
-              ...latestPayload,
-              processedMediaAssetId: mediaAssetId,
-            },
-          );
-        },
-        onResolvedPayload: async (next) => {
-          await updateOfflineMutationPayload(
-            options.expectedOwnerUserId,
-            claimed.id,
-            next,
-          );
-        },
-      });
-
-      await completeOfflineMutation(options.expectedOwnerUserId, claimed.id, {
-        payload: syncedPayloadReceipt(payload),
-        syncResult: syncedResultReceipt(result),
-      });
-
-      return result;
-    } catch (error) {
-      // Sign-out aborts active attempts only after installing a durable
-      // `preparing` fence. Settle this exact lease under that fence so the
-      // inventory and Stay/Sync-first path never wait 60 seconds for expiry.
-      // A settlement failure must not replace the original network/auth error.
-      await settleClaimedOfflineMutationFailure(
+  return runOwnerSyncAttempt(
+    options.expectedOwnerUserId,
+    async (ownerSignal) => {
+      const current = await getOfflineMutation(
         options.expectedOwnerUserId,
-        claimed.id,
+        mutation.id,
+      );
+      const claimed = current
+        ? await claimOfflineMutationForManualSync(options.expectedOwnerUserId, {
+            id: current.id,
+            revision: offlineMutationQueueRevision(current),
+            mode: "manual",
+          })
+        : undefined;
+      if (!claimed) {
+        throw new Error("Offline mutation is already syncing or has synced.");
+      }
+
+      return syncClaimedOfflineJournalEntryMutationWithSignal(
         claimed,
-        { lastError: normalizeError(error) },
-      ).catch(() => undefined);
-      throw error;
+        { ...options, documentMutationGeneration },
+        {
+          signal: combinedAbortSignal(ownerSignal, options.signal),
+        },
+      );
+    },
+  );
+}
+
+export async function syncClaimedOfflineJournalEntryMutation(
+  claimed: OfflineMutation,
+  options: {
+    expectedOwnerUserId: string;
+    documentMutationGeneration: string;
+    signal?: AbortSignal;
+  },
+): Promise<FirstPlantEntryResponse> {
+  assertClaimedJournalMutation(claimed, options.expectedOwnerUserId);
+  const documentMutationGeneration = options.documentMutationGeneration.trim();
+  if (
+    !documentMutationGeneration ||
+    documentMutationGeneration.length > 4_096
+  ) {
+    throw new Error("Claimed offline sync requires a current document.");
+  }
+  return runOwnerSyncAttempt(options.expectedOwnerUserId, (ownerSignal) =>
+    syncClaimedOfflineJournalEntryMutationWithSignal(
+      claimed,
+      { ...options, documentMutationGeneration },
+      {
+        signal: combinedAbortSignal(ownerSignal, options.signal),
+      },
+    ),
+  );
+}
+
+async function syncClaimedOfflineJournalEntryMutationWithSignal(
+  claimed: OfflineMutation,
+  options: {
+    expectedOwnerUserId: string;
+    documentMutationGeneration?: string | null;
+  },
+  execution: { signal: AbortSignal },
+) {
+  assertClaimedJournalMutation(claimed, options.expectedOwnerUserId);
+
+  const payload = claimed.payload as OfflineJournalEntryPayload;
+
+  try {
+    const result = await submitJournalEntryPayload(payload, {
+      idempotencyKey: claimed.idempotencyKey,
+      documentMutationGeneration: options.documentMutationGeneration,
+      signal: execution.signal,
+      onProcessedMediaAsset: async (mediaAssetId) => {
+        const latest = await getOfflineMutation(
+          options.expectedOwnerUserId,
+          claimed.id,
+        );
+        const latestPayload =
+          (latest?.payload as OfflineJournalEntryPayload | undefined) ??
+          payload;
+
+        await updateOfflineMutationPayload(
+          options.expectedOwnerUserId,
+          claimed.id,
+          {
+            ...latestPayload,
+            processedMediaAssetId: mediaAssetId,
+          },
+        );
+      },
+      onResolvedPayload: async (next) => {
+        await updateOfflineMutationPayload(
+          options.expectedOwnerUserId,
+          claimed.id,
+          next,
+        );
+      },
+    });
+
+    await completeOfflineMutation(options.expectedOwnerUserId, claimed.id, {
+      payload: syncedPayloadReceipt(payload),
+      syncResult: syncedResultReceipt(result),
+    });
+    const draftId = offlineJournalDraftId(payload);
+    if (draftId) {
+      await deleteOfflineDraftIfClientMutationMatches(
+        options.expectedOwnerUserId,
+        draftId,
+        payload.clientMutationId,
+      ).catch(() => false);
     }
-  });
+
+    return result;
+  } catch (error) {
+    // Sign-out aborts active attempts only after installing a durable
+    // `preparing` fence. Settle this exact lease under that fence so the
+    // inventory and Stay/Sync-first path never wait 60 seconds for expiry.
+    // A settlement failure must not replace the original network/auth error.
+    await settleClaimedOfflineMutationFailure(
+      options.expectedOwnerUserId,
+      claimed.id,
+      claimed,
+      { lastError: normalizeError(error) },
+    ).catch(() => undefined);
+    throw error;
+  }
+}
+
+export function offlineJournalDraftId(
+  payload: OfflineJournalEntryPayload,
+): string | null {
+  if (payload.target === "plant_object_entry") {
+    const objectId = payload.plantObjectId.trim();
+    return objectId ? followUpEntryDraftId(objectId) : null;
+  }
+  if (payload.target === "space_entry") {
+    const spaceId = payload.spaceId.trim();
+    return spaceId ? spaceEntryDraftId(spaceId) : null;
+  }
+  return payload.target === undefined || payload.target === "first_plant_entry"
+    ? FIRST_ENTRY_DRAFT_ID
+    : null;
+}
+
+function assertClaimedJournalMutation(
+  claimed: OfflineMutation,
+  expectedOwnerUserId: string,
+) {
+  if (claimed.kind !== "journal_entry") {
+    throw new Error("Only journal entry mutations can be synced here.");
+  }
+  if (claimed.ownerUserId !== expectedOwnerUserId) {
+    throw new Error("Offline mutation does not belong to the active account.");
+  }
+  if (claimed.status !== "syncing" || !claimed.syncLeaseExpiresAt) {
+    throw new Error("Offline mutation requires an active sync claim.");
+  }
+}
+
+function combinedAbortSignal(
+  ownerSignal: AbortSignal,
+  callerSignal: AbortSignal | undefined,
+) {
+  return callerSignal
+    ? AbortSignal.any([ownerSignal, callerSignal])
+    : ownerSignal;
 }
 
 function syncedPayloadReceipt(payload: OfflineJournalEntryPayload) {
