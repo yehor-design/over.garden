@@ -12,7 +12,7 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 
-loadEnv({ path: ".env.local", override: false });
+loadEnv({ path: ".env.local", override: false, quiet: true });
 
 export const RETIRED_RELATION = "public.pilot_interview_learnings" as const;
 export const APPROVED_AUTHORIZATION_RECEIPT_DIGEST =
@@ -101,7 +101,7 @@ interface BuildRetirementPlanInput {
   snapshot: RetirementSnapshot;
 }
 
-interface CliOptions {
+export interface CliOptions {
   mode: "plan" | "apply";
   environment: RetirementEnvironment;
   implementationSha: string;
@@ -344,13 +344,32 @@ async function readSnapshot(client: PoolClient): Promise<RetirementSnapshot> {
   };
 }
 
-function parseOptions(args: string[]): CliOptions {
+const CLI_OPTION_NAMES = new Set([
+  "mode",
+  "environment",
+  "implementation-sha",
+  "route-absence-class",
+  "expected-plan-digest",
+]);
+
+export function parseOptions(args: string[]): CliOptions {
+  const normalizedArgs = args[0] === "--" ? args.slice(1) : args;
+  if (normalizedArgs.length % 2 !== 0) throw new Error("invalid_input");
+
   const values = new Map<string, string>();
-  for (let index = 0; index < args.length; index += 2) {
-    const key = args[index];
-    const value = args[index + 1];
-    if (!key?.startsWith("--") || !value) throw new Error("invalid_input");
-    values.set(key.slice(2), value);
+  for (let index = 0; index < normalizedArgs.length; index += 2) {
+    const key = normalizedArgs[index];
+    const value = normalizedArgs[index + 1];
+    const optionName = key?.startsWith("--") ? key.slice(2) : "";
+    if (
+      !optionName ||
+      !value ||
+      !CLI_OPTION_NAMES.has(optionName) ||
+      values.has(optionName)
+    ) {
+      throw new Error("invalid_input");
+    }
+    values.set(optionName, value);
   }
 
   const mode = values.get("mode");
@@ -364,7 +383,8 @@ function parseOptions(args: string[]): CliOptions {
     (environment !== "local" && environment !== "production") ||
     !SHA_40.test(implementationSha) ||
     (routeAbsenceClass !== "unproved" && routeAbsenceClass !== "exact_404") ||
-    (mode === "apply" && !SHA_256.test(expectedPlanDigest ?? ""))
+    (mode === "apply" && !SHA_256.test(expectedPlanDigest ?? "")) ||
+    (mode === "plan" && expectedPlanDigest !== undefined)
   ) {
     throw new Error("invalid_input");
   }
