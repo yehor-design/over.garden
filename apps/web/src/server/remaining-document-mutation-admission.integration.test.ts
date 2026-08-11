@@ -158,7 +158,6 @@ describe("remaining document mutation admission", () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(effectCount).toBe(0);
-    expect(deps.attachWriteEligibilityHint).not.toHaveBeenCalled();
   });
 });
 
@@ -211,10 +210,6 @@ function baseDeps(
 ): DocumentMutationAdmissionDeps {
   return {
     readAuthoritativeSession: vi.fn(readAuthoritativeSession),
-    attachWriteEligibilityHint: vi.fn(async (scope) => ({
-      ...scope,
-      learningAttributionHint: null,
-    })),
     authSecrets: configuration,
   };
 }

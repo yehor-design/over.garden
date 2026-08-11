@@ -1,12 +1,10 @@
-// Closed-pilot auth route and error-classification helpers.
-
-export const PILOT_AUTH_HELP_PATH = "/auth/help";
-export const PILOT_AUTH_RESET_PASSWORD_PATH = "/auth/reset-password";
+export const AUTH_HELP_PATH = "/auth/help";
+export const AUTH_RESET_PASSWORD_PATH = "/auth/reset-password";
 export const PASSWORD_RESET_SUCCESS_PATH = "/garden";
 
-export function pilotPasswordResetRedirectUrl(baseUrl: string): string {
+export function passwordResetRedirectUrl(baseUrl: string): string {
   const normalizedBase = baseUrl.replace(/\/$/, "");
-  return `${normalizedBase}${PILOT_AUTH_RESET_PASSWORD_PATH}`;
+  return `${normalizedBase}${AUTH_RESET_PASSWORD_PATH}`;
 }
 
 export function passwordResetSuccessPath(): string {

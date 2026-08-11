@@ -167,7 +167,42 @@ describe("production site shell", () => {
     expect(html).toContain(
       'data-current-session-binding="opaque-current-session-binding"',
     );
+    expect(html).not.toContain('data-site-shell-operator-menu="true"');
+    expect(html).not.toContain('href="/admin/communities"');
+    expect(html).not.toContain('href="/admin/moderation/comments"');
+    expect(html).not.toContain('href="/garden/catalog/curation"');
+    expect(html).not.toContain('href="/garden/privacy/erasure-requests"');
     expect(mocks.currentSessionBinding).toBe("opaque-current-session-binding");
+  });
+
+  it("adds exactly the four surviving operator links to the sealed owner avatar menu", async () => {
+    mocks.pathname = "/garden";
+    const { SiteShell, SiteShellOperatorMenu } = await import("./site-shell");
+    const html = renderToStaticMarkup(
+      <SiteShell locale="uk" market="ukraine" isAuthenticated hasOperatorAccess>
+        <article>Сад власника</article>
+      </SiteShell>,
+    );
+
+    const operatorMenuHtml = renderToStaticMarkup(
+      <SiteShellOperatorMenu locale="uk" />,
+    );
+    expect(operatorMenuHtml).toContain('data-site-shell-operator-menu="true"');
+    expect(operatorMenuHtml).toContain('href="/admin/communities"');
+    expect(operatorMenuHtml).toContain('href="/admin/moderation/comments"');
+    expect(operatorMenuHtml).toContain('href="/garden/catalog/curation"');
+    expect(operatorMenuHtml).toContain(
+      'href="/garden/privacy/erasure-requests"',
+    );
+    expect(operatorMenuHtml).not.toContain('href="/admin"');
+    expect(operatorMenuHtml).not.toContain('href="/admin/users"');
+    expect(operatorMenuHtml).not.toContain('href="/garden/pilot-health"');
+    expect(operatorMenuHtml).not.toContain('href="/garden/pilot-smoke"');
+    expect(html).toContain('href="/garden/profile"');
+    expect(html).toContain('aria-label="Відкрити меню облікового запису"');
+    expect(html).toContain(
+      'data-site-shell-account-menu-trigger="true"',
+    );
   });
 
   it("passes non-fencing mode only to the exact OVE-290-closed editor", async () => {
@@ -187,7 +222,7 @@ describe("production site shell", () => {
   });
 
   it("keeps internal operational pages outside the product shell", async () => {
-    mocks.pathname = "/admin";
+    mocks.pathname = "/admin/communities";
     const { SiteShell } = await import("./site-shell");
     const html = renderToStaticMarkup(
       <SiteShell locale="uk" market="ukraine" isAuthenticated={true}>
@@ -205,7 +240,7 @@ describe("production site shell", () => {
   });
 
   it("keeps guest operator boundaries free of authenticated controls", async () => {
-    mocks.pathname = "/admin/denied";
+    mocks.pathname = "/admin/communities";
     const { SiteShell } = await import("./site-shell");
     const html = renderToStaticMarkup(
       <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
@@ -275,7 +310,7 @@ describe("production site shell", () => {
 
   it("renders the compact Bulgaria control on guest denied and health boundaries", async () => {
     const { SiteShell } = await import("./site-shell");
-    for (const pathname of ["/admin/denied", "/health"]) {
+    for (const pathname of ["/admin/communities", "/health"]) {
       mocks.pathname = pathname;
       const html = renderToStaticMarkup(
         <SiteShell locale="ru" market="bulgaria" isAuthenticated={false}>

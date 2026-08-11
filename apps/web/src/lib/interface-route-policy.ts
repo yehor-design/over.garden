@@ -23,11 +23,10 @@ export type SessionRecheckMode =
   | "effect_closed_non_fencing";
 
 export const INTERFACE_UTILITY_CONTROL_PREFIXES = [
-  "/admin",
+  "/admin/communities",
+  "/admin/moderation/comments",
   "/health",
   "/garden/catalog/curation",
-  "/garden/pilot-health",
-  "/garden/pilot-smoke",
   "/garden/privacy/erasure-requests",
 ] as const;
 

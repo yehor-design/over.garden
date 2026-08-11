@@ -118,7 +118,6 @@ describe("/garden/catalog/curation", () => {
       role: "owner",
       capabilities: [
         "admin:read",
-        "admin:manage_roles",
         "operator:read",
         "operator:mutate",
         "erasure:execute",
@@ -163,6 +162,7 @@ describe("/garden/catalog/curation", () => {
     const html = renderToStaticMarkup(await CatalogCurationPage());
 
     expect(html).toContain("Доступ заборонено.");
+    expect(html).toContain('data-operator-access-state="denied"');
     expect(mocks.listPendingCatalogCurationCandidates).not.toHaveBeenCalled();
     expect(mocks.listCatalogAliasSuggestionTargets).not.toHaveBeenCalled();
     expect(mocks.listCatalogAliasSuggestionsForCuration).not.toHaveBeenCalled();

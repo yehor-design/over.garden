@@ -42,9 +42,6 @@ vi.mock("@/server/lineage-repository", () => ({
   createLineageInvitation: vi.fn(),
   createProvenanceEdge: vi.fn(),
 }));
-vi.mock("@/server/pilot-write-access", () => ({
-  requireWriteEligibleRequestScope: vi.fn(),
-}));
 vi.mock("@/server/search/public-projection-outbox", () => ({
   convergePublicProjectionsNow: mocks.convergePublicProjectionsNow,
   arePublicProjectionsConverged: mocks.arePublicProjectionsConverged,

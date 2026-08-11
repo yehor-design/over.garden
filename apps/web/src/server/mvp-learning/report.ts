@@ -8,10 +8,8 @@ import {
   AUTOMATED_BOT_ACTOR_CLASS,
   EDITORIAL_SEED_ACTOR_CLASS,
   EXCLUDED_LEARNING_ACTOR_CLASSES,
-  FOUNDER_REHEARSAL_ACTOR_CLASS,
   normalizeActorClass,
   PRODUCTION_SMOKE_ACTOR_CLASS,
-  REAL_CLOSED_PILOT_ACTOR_CLASS,
   REAL_SELF_SERVE_ACTOR_CLASS,
   VISUAL_FIXTURE_ACTOR_CLASS,
   type ActorClass,
@@ -30,9 +28,7 @@ import {
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-export type MvpLearningCohortKey =
-  | typeof REAL_SELF_SERVE_ACTOR_CLASS
-  | typeof REAL_CLOSED_PILOT_ACTOR_CLASS;
+export type MvpLearningCohortKey = typeof REAL_SELF_SERVE_ACTOR_CLASS;
 
 export type MvpLearningDecisionGate =
   | "ok"
@@ -72,7 +68,6 @@ export interface MvpLearningCohortSignals {
 }
 
 export interface MvpLearningExclusionCounts {
-  founder_rehearsal: number;
   production_smoke: number;
   visual_fixture: number;
   editorial_seed: number;
@@ -88,7 +83,6 @@ export interface MvpLearningReport {
   since: Date;
   cohorts: {
     real_self_serve: MvpLearningCohortSignals;
-    real_closed_pilot: MvpLearningCohortSignals;
   };
   exclusions: MvpLearningExclusionCounts;
   attributionOutbox: LearningAttributionOutboxCounts;
@@ -105,7 +99,6 @@ export interface MvpLearningReport {
 }
 
 const EMPTY_EXCLUSIONS: MvpLearningExclusionCounts = {
-  founder_rehearsal: 0,
   production_smoke: 0,
   visual_fixture: 0,
   editorial_seed: 0,
@@ -127,14 +120,12 @@ export async function getMvpLearningReport(
   return withMvpLearningReadSnapshot(executor, async (snapshot) => {
     const [
       selfServe,
-      closedPilot,
       exclusions,
       unclassified,
       editorialPublic,
       attributionOutbox,
     ] = await Promise.all([
       loadCohortSignals(snapshot, REAL_SELF_SERVE_ACTOR_CLASS, since),
-      loadCohortSignals(snapshot, REAL_CLOSED_PILOT_ACTOR_CLASS, since),
       loadExclusionCounts(snapshot, since),
       loadUnclassifiedCounts(snapshot, since),
       loadEditorialPublicProxy(snapshot, since),
@@ -144,7 +135,6 @@ export async function getMvpLearningReport(
     const organicAcquisition = ORGANIC_ACQUISITION_NOT_INSTRUMENTED;
     const decisionGate = evaluateMvpLearningDecisionGate({
       selfServe,
-      closedPilot,
       unclassifiedEventCount: unclassified.events,
       unclassifiedActiveGardenerCount: unclassified.gardeners,
       attributionOutbox,
@@ -160,7 +150,6 @@ export async function getMvpLearningReport(
       since,
       cohorts: {
         real_self_serve: selfServe,
-        real_closed_pilot: closedPilot,
       },
       exclusions,
       attributionOutbox,
@@ -173,7 +162,7 @@ export async function getMvpLearningReport(
         "H1 requires same-object follow-up plus a same-session revisit/decision proxy; first save alone is not retention.",
         "H4 counts distinct eligible gardeners with at least one active public decision-eligible entry; raw entry volume is diagnostic only.",
         "H6 organic acquisition is not instrumented and cannot be inferred from editorial public traffic.",
-        "Closed-pilot and self-serve cohorts are never mixed into one denominator.",
+        "Self-serve registrations are the only real-user decision cohort.",
         "Synthetic/editorial/bot classes are exclusion counts only and cannot drive continue/iterate/stop.",
         "Unclassified activity fails the decision gate closed rather than defaulting to real.",
         "Pending, retried, or dead learning-attribution work keeps the decision gate closed until durable classification converges.",
@@ -205,7 +194,6 @@ export async function getMvpLearningReportSafely(
 
 export function evaluateMvpLearningDecisionGate(input: {
   selfServe: MvpLearningCohortSignals;
-  closedPilot: MvpLearningCohortSignals;
   unclassifiedEventCount: number;
   unclassifiedActiveGardenerCount: number;
   attributionOutbox: LearningAttributionOutboxCounts;
@@ -226,8 +214,7 @@ export function evaluateMvpLearningDecisionGate(input: {
     return "insufficient";
   }
 
-  const activated =
-    input.selfServe.activatedGardeners + input.closedPilot.activatedGardeners;
+  const activated = input.selfServe.activatedGardeners;
   if (activated < 1) {
     return "insufficient";
   }
@@ -388,7 +375,6 @@ async function loadUnclassifiedCounts(
           attribution.user_id is null
           or case analytics_events.properties ->> 'actor_class'
             when 'self_serve' then 'real_self_serve'
-            when 'closed_pilot' then 'real_closed_pilot'
             when 'editorial' then 'editorial_seed'
             else analytics_events.properties ->> 'actor_class'
           end is distinct from attribution.actor_class
@@ -479,8 +465,6 @@ export function emptyExclusionCounts(): MvpLearningExclusionCounts {
 export function listKnownActorClassLabels(): ActorClass[] {
   return [
     REAL_SELF_SERVE_ACTOR_CLASS,
-    REAL_CLOSED_PILOT_ACTOR_CLASS,
-    FOUNDER_REHEARSAL_ACTOR_CLASS,
     PRODUCTION_SMOKE_ACTOR_CLASS,
     VISUAL_FIXTURE_ACTOR_CLASS,
     EDITORIAL_SEED_ACTOR_CLASS,

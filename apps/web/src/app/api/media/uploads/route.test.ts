@@ -4,14 +4,6 @@ const authMock = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
 }));
 
-const pilotMock = vi.hoisted(() => ({
-  PilotWriteAccessError: class PilotWriteAccessError extends Error {},
-  requireWriteEligibleRequestScope: vi.fn(async () => ({
-    userId: "00000000-0000-0000-0000-000000000001",
-    sessionId: "session-1",
-  })),
-}));
-
 const mediaRepositoryMock = vi.hoisted(() => ({
   createQuarantinedMediaAsset: vi.fn(async () => ({
     id: "00000000-0000-0000-0000-000000000010",
@@ -46,7 +38,6 @@ const admissionMock = vi.hoisted(() => ({
 }));
 
 vi.mock("@/server/auth-session", () => authMock);
-vi.mock("@/server/pilot-write-access", () => pilotMock);
 vi.mock("@/server/media/media-repository", () => mediaRepositoryMock);
 vi.mock("@/lib/storage", () => storageMock);
 vi.mock("@/server/auth-intent-http", () => authIntentMock);

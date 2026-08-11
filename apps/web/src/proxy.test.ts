@@ -86,6 +86,53 @@ function interfaceCookies(market: InterfaceMarket, locale: "uk" | "bg" | "ru") {
 }
 
 describe("app route cache guardrail", () => {
+  it("hard-404s retired control-plane routes before locale or App Router fallback handling", async () => {
+    const retiredPaths = [
+      "/admin",
+      "/admin/",
+      "/bg/admin",
+      "/ru/admin/",
+      "/admin/users",
+      "/admin/users/arbitrary",
+      "/join",
+      "/join/arbitrary",
+      "/garden/pilot-smoke",
+      "/garden/pilot-smoke/arbitrary",
+      "/garden/pilot-health",
+      "/garden/pilot-health/arbitrary",
+      "/garden/pilot-learning",
+      "/garden/pilot-learning/interviews",
+      "/garden/pilot-learning/decision",
+    ];
+
+    for (const path of retiredPaths) {
+      const response = await responseFor(path, {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      });
+
+      expect(response.status, path).toBe(404);
+      expect(response.headers.get("Cache-Control"), path).toBe(
+        APP_ROUTE_CACHE_CONTROL,
+      );
+      expect(response.headers.get("X-Robots-Tag"), path).toBe(
+        "noindex, nofollow",
+      );
+      expect(response.headers.get("set-cookie"), path).toBeNull();
+    }
+
+    for (const preservedPath of [
+      "/admin/communities",
+      "/admin/communities/example",
+      "/admin/moderation/comments",
+      "/garden/catalog/curation",
+      "/garden/privacy/erasure-requests",
+      "/garden/lineage/invitations/example",
+    ]) {
+      expect((await responseFor(preservedPath)).status, preservedPath).toBe(200);
+    }
+  });
+
   it("redirects www document navigation to the canonical apex before auth UI can render", async () => {
     const response = await responseForHost(
       "https://www.over.garden/garden?returnTo=%2Fgarden%2Fprofile",
@@ -288,9 +335,7 @@ describe("app route cache guardrail", () => {
         expect(response.headers.get("Cache-Control")).toBe(
           APP_ROUTE_CACHE_CONTROL,
         );
-        expect(response.headers.get("X-Robots-Tag")).toBe(
-          "noindex, nofollow",
-        );
+        expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
         expect(response.headers.get("Content-Language")).toBeNull();
         expect(response.headers.get("set-cookie")).toBeNull();
         expect(await response.text()).toBe("");
@@ -319,10 +364,12 @@ describe("app route cache guardrail", () => {
       namespace: "visual-fixtures",
       representation: "encoded",
     });
-    expect(classifyInternalNamespacePath("/%255F%255Fvisual-fixtures")).toEqual({
-      namespace: "visual-fixtures",
-      representation: "encoded",
-    });
+    expect(classifyInternalNamespacePath("/%255F%255Fvisual-fixtures")).toEqual(
+      {
+        namespace: "visual-fixtures",
+        representation: "encoded",
+      },
+    );
     expect(classifyInternalNamespacePath("/%5F%5Fvisual-fixtures%")).toEqual({
       namespace: "visual-fixtures",
       representation: "encoded",
@@ -357,8 +404,6 @@ describe("app route cache guardrail", () => {
     "/",
     "/garden",
     "/garden/catalog/curation",
-    "/garden/pilot-health",
-    "/join",
     "/privacy",
     "/health",
     "/journal/smoke-slug",

@@ -2,11 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   gardenFirstEntryHomepagePath,
-  gardenFirstEntryInvitePath,
   gardenFirstEntryPreselectionPath,
   lineageInvitationClaimPath,
-  pilotInviteJoinPath,
-  pilotInviteJoinUrl,
   publicLineageObjectPath,
   publicCatalogEvidencePath,
   localizedPublicJournalEvidencePath,
@@ -15,16 +12,6 @@ import {
 describe("garden public paths", () => {
   it("builds a homepage start path with enum-only source attribution", () => {
     expect(gardenFirstEntryHomepagePath()).toBe("/garden?source=homepage");
-  });
-
-  it("builds an invite start path carrying only the enum cohort source", () => {
-    const path = gardenFirstEntryInvitePath();
-
-    expect(path).toBe("/garden?source=invited-cohort");
-    expect(path).not.toContain("invite=");
-    expect(path).not.toContain("email");
-    expect(path).not.toContain("token");
-    expect(path).not.toContain("referrer");
   });
 
   it("builds public variety preselection without raw referrer or display text", () => {
@@ -36,15 +23,6 @@ describe("garden public paths", () => {
     expect(path).not.toContain("referrer");
     expect(path).not.toContain("display");
     expect(path).not.toContain("title");
-  });
-
-  it("builds a join invite path with only the signed token query param", () => {
-    const token = "v1.payload.signature";
-    const path = pilotInviteJoinPath(token);
-
-    expect(path).toBe(`/join?invite=${encodeURIComponent(token)}`);
-    expect(path).not.toContain("email");
-    expect(path).not.toContain("referrer");
   });
 
   it("keeps a lineage invitation token in the client-only URL fragment", () => {
@@ -94,14 +72,5 @@ describe("garden public paths", () => {
     expect(localizedPublicJournalEvidencePath("ru", "demo entry")).toBe(
       "/ru/journal/demo%20entry",
     );
-  });
-
-  it("builds a full invite URL from a base origin and token", () => {
-    const url = pilotInviteJoinUrl(
-      "v1.payload.signature",
-      "https://over.garden",
-    );
-
-    expect(url).toBe("https://over.garden/join?invite=v1.payload.signature");
   });
 });

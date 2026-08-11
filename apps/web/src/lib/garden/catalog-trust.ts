@@ -92,7 +92,7 @@ export function catalogTrustStateLabel(
 export function catalogSourceLabel(source: string | null | undefined) {
   switch (source) {
     case "internal_seed":
-      return "OverGarden pilot seed";
+      return "OverGarden starter catalog";
     case "ua_state_register":
       return "Ukraine variety register";
     case "species_backbone":

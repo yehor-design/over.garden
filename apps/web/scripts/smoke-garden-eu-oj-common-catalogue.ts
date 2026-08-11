@@ -20,8 +20,6 @@ import {
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_UI_ATTRIBUTION,
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_UI_CAVEAT,
 } from "../src/lib/catalog/catalog-source-attribution";
-import { FOUNDER_REHEARSAL_COHORT } from "../src/lib/garden/pilot-invite";
-import { DEFAULT_PILOT_SEGMENT } from "../src/lib/pilot/segments";
 
 loadEnv({ path: ".env.local", override: false });
 
@@ -129,7 +127,6 @@ async function main() {
       email,
       password: TEST_PASSWORD,
     });
-    await grantSmokeWriteAccess(db, email);
 
     const gardenHtml = await textRequest(baseUrl, jar, "/garden");
     assertIncludes(
@@ -395,30 +392,6 @@ function buildEuOjSmokeTargetQuery(
   }
 
   return query;
-}
-
-async function grantSmokeWriteAccess(db: Kysely<Database>, email: string) {
-  const user = await db
-    .selectFrom("user")
-    .select("id")
-    .where("email", "=", email)
-    .executeTakeFirst();
-
-  if (!user) {
-    throw new Error(
-      "Smoke auth user was not persisted before write access setup.",
-    );
-  }
-
-  await db
-    .insertInto("pilot_invite_grants")
-    .values({
-      user_id: user.id,
-      cohort: FOUNDER_REHEARSAL_COHORT,
-      segment: DEFAULT_PILOT_SEGMENT,
-    })
-    .onConflict((oc) => oc.column("user_id").doNothing())
-    .execute();
 }
 
 async function fetchSuggestions(

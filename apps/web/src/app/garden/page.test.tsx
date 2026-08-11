@@ -7,7 +7,6 @@ const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
   scopedToUser: vi.fn(),
-  resolvePilotWriteAccess: vi.fn(),
   loadGardenWorkspace: vi.fn(),
   getMySpaceJournalTimeline: vi.fn(),
   findSelectableCatalogItemByPublicSlug: vi.fn(),
@@ -24,10 +23,6 @@ vi.mock("@/server/auth-session", () => ({
 
 vi.mock("@/server/request-scope", () => ({
   scopedToUser: mocks.scopedToUser,
-}));
-
-vi.mock("@/server/pilot-write-access", () => ({
-  resolvePilotWriteAccess: mocks.resolvePilotWriteAccess,
 }));
 
 vi.mock("@/server/garden-workspace-repository", () => ({
@@ -112,11 +107,6 @@ describe("/garden workspace V2", () => {
     mocks.scopedToUser.mockImplementation(
       (userId: string, sessionId: string | null) => ({ userId, sessionId }),
     );
-    mocks.resolvePilotWriteAccess.mockResolvedValue({
-      canWrite: true,
-      invited: false,
-      actorClass: "real_self_serve",
-    });
     mocks.findSelectableCatalogItemByPublicSlug.mockResolvedValue(null);
     mocks.scheduleGardenWorkspaceActivationAnalytics.mockReturnValue(undefined);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
@@ -224,13 +214,7 @@ describe("/garden workspace V2", () => {
     expect(html).not.toContain("Інструменти журналу простору");
   });
 
-  it("lets a self-serve gardener write without an invite grant", async () => {
-    mocks.resolvePilotWriteAccess.mockResolvedValueOnce({
-      canWrite: true,
-      invited: false,
-      actorClass: "real_self_serve",
-    });
-
+  it("lets a self-serve gardener write from an authenticated session", async () => {
     const { default: GardenPage } = await import("./page");
     const html = renderToStaticMarkup(
       await GardenPage({ searchParams: Promise.resolve({}) }),
@@ -304,7 +288,6 @@ describe("/garden workspace V2", () => {
     expect(html).toContain("Synthetic draft 1");
     expect(html).toContain("Очікує синхронізації");
     expect(html).not.toContain("Garden auth panel");
-    expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
     expect(
       mocks.scheduleGardenWorkspaceActivationAnalytics,
     ).not.toHaveBeenCalled();
@@ -351,7 +334,6 @@ describe("/garden workspace V2", () => {
       "space-1",
       { objectLimit: 20, entryLimit: 5 },
     );
-    expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
     expect(
       mocks.scheduleGardenWorkspaceActivationAnalytics,
     ).not.toHaveBeenCalled();

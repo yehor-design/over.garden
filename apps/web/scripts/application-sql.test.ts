@@ -25,6 +25,7 @@ describe("versioned application SQL bootstrap", () => {
       "0018_ove219_learning_attribution_outbox.sql",
       "0019_ove269_plantnet_identification.sql",
       "0020_ove299_remove_manual_pilot_learning.sql",
+      "0021_ove314_retire_obsolete_control_plane.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

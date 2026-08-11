@@ -1,7 +1,7 @@
 export const ADMIN_ROLES = ["owner"] as const;
 export const ADMIN_ROLE_CHANGE_REASONS = [
   "manual_owner_grant",
-  "pilot_operator_delegation",
+  "operator_delegation",
   "temporary_coverage",
   "role_cleanup",
   "access_revoked",
@@ -12,7 +12,6 @@ export type AdminRoleChangeReason = (typeof ADMIN_ROLE_CHANGE_REASONS)[number];
 
 export type AdminCapability =
   | "admin:read"
-  | "admin:manage_roles"
   | "operator:read"
   | "operator:mutate"
   | "erasure:execute";
@@ -35,7 +34,6 @@ export function capabilitiesForAdminRole(role: AdminRole): AdminCapability[] {
     case "owner":
       return [
         "admin:read",
-        "admin:manage_roles",
         "operator:read",
         "operator:mutate",
         "erasure:execute",

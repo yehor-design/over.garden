@@ -14,8 +14,6 @@ import type { Database, JsonValue, JournalEntry } from "../src/db/schema";
 import { buildVerifiedOwnerAccountEvidence } from "../src/lib/admin/owner-account-contract";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import { resolveBetterAuthSecret } from "../src/lib/auth-secret";
-import { FOUNDER_REHEARSAL_COHORT } from "../src/lib/garden/pilot-invite";
-import { DEFAULT_PILOT_SEGMENT } from "../src/lib/pilot/segments";
 
 const DEFAULT_BASE_URL = "https://over.garden";
 const TEST_PASSWORD = `ove-143-${randomUUID()}-${Date.now()}`;
@@ -608,16 +606,6 @@ async function createAndPrepareSmokeAccount(
     .executeTakeFirstOrThrow();
   assertEqual(account.emailVerified, true, "smoke account verification");
 
-  await db
-    .insertInto("pilot_invite_grants")
-    .values({
-      user_id: account.id,
-      cohort: FOUNDER_REHEARSAL_COHORT,
-      segment: DEFAULT_PILOT_SEGMENT,
-    })
-    .onConflict((oc) => oc.column("user_id").doNothing())
-    .execute();
-
   return account;
 }
 
@@ -850,22 +838,10 @@ async function verifyAdminAndErasureGates(
   recoveryMode = false,
 ) {
   const signedOutAdmin = await htmlResponse(base, signOutJar, "/admin");
-  assertEqual(signedOutAdmin.status, 200, "signed-out admin route status");
-  assertOperatorAccessState({
-    html: signedOutAdmin.text,
-    surface: "admin",
-    state: "sign-in-required",
-    label: "signed-out admin boundary",
-  });
+  assertEqual(signedOutAdmin.status, 404, "signed-out retired admin route");
 
   const normalAdmin = await htmlResponse(base, jar, "/admin");
-  assertEqual(normalAdmin.status, 200, "normal account admin status");
-  assertOperatorAccessState({
-    html: normalAdmin.text,
-    surface: "admin",
-    state: "denied",
-    label: "normal admin block",
-  });
+  assertEqual(normalAdmin.status, 404, "normal account retired admin route");
 
   const normalErasure = await htmlResponse(
     base,

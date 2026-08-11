@@ -21,7 +21,6 @@ import {
   normalizeFollowUpValuePulseResponseInput,
   recordFollowUpValuePulseResponse,
 } from "@/server/follow-up-value-pulse";
-import { buildPilotAnalyticsMetricsQuery } from "@/server/pilot-health-repository";
 import { scopedToUser } from "@/server/request-scope";
 
 class TestPostgresDialect implements Dialect {
@@ -140,19 +139,6 @@ describe("follow-up value pulse contracts", () => {
     expect(sql).toContain("prior_entry");
     expect(sql).toContain('"analytics_events"');
     expect(sql).toContain('"event_name" = $');
-  });
-
-  it("aggregates value pulse counts in pilot health analytics query", () => {
-    const sql = buildPilotAnalyticsMetricsQuery(
-      testDb,
-      new Date("2026-06-01T00:00:00.000Z"),
-    )
-      .compile()
-      .sql.toLowerCase();
-
-    expect(sql).toContain("follow_up_value_pulse");
-    expect(sql).toContain("valuepulsesubmitted");
-    expect(sql).toContain("valuepulseuseful");
   });
 
   it("returns ineligible when the follow-up entry cannot be validated", async () => {

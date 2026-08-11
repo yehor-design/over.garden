@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   getAuthoritativeCurrentSession: vi.fn(),
   issueDocumentMutationGeneration: vi.fn(),
   deriveCurrentSessionBinding: vi.fn(),
+  resolveAdminAccess: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -23,6 +24,10 @@ vi.mock("@/lib/auth/sign-out-hardening", () => ({
   deriveServerCurrentSessionBinding: mocks.deriveCurrentSessionBinding,
 }));
 
+vi.mock("@/server/admin-access", () => ({
+  resolveAdminAccess: mocks.resolveAdminAccess,
+}));
+
 describe("site shell session boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -30,6 +35,7 @@ describe("site shell session boundary", () => {
     mocks.deriveCurrentSessionBinding.mockReturnValue(
       "opaque-current-session-binding",
     );
+    mocks.resolveAdminAccess.mockResolvedValue({ status: "denied" });
   });
 
   it("serializes only authentication state and the opaque signed generation", async () => {
@@ -52,6 +58,7 @@ describe("site shell session boundary", () => {
       isAuthenticated: true,
       documentMutationGeneration: "opaque-signed-document-generation",
       currentSessionBinding: "opaque-current-session-binding",
+      hasOperatorAccess: false,
     });
     expect(mocks.issueDocumentMutationGeneration).toHaveBeenCalledWith({
       ownerUserId: "private-user-id",
@@ -74,6 +81,7 @@ describe("site shell session boundary", () => {
       isAuthenticated: false,
       documentMutationGeneration: null,
       currentSessionBinding: null,
+      hasOperatorAccess: false,
     });
   });
 
@@ -87,6 +95,7 @@ describe("site shell session boundary", () => {
       isAuthenticated: false,
       documentMutationGeneration: null,
       currentSessionBinding: null,
+      hasOperatorAccess: false,
     });
   });
 
@@ -104,6 +113,7 @@ describe("site shell session boundary", () => {
       isAuthenticated: true,
       documentMutationGeneration: null,
       currentSessionBinding: "opaque-current-session-binding",
+      hasOperatorAccess: false,
     });
   });
 
@@ -119,8 +129,63 @@ describe("site shell session boundary", () => {
       isAuthenticated: true,
       documentMutationGeneration: null,
       currentSessionBinding: "opaque-current-session-binding",
+      hasOperatorAccess: false,
     });
     expect(mocks.issueDocumentMutationGeneration).not.toHaveBeenCalled();
+  });
+
+  it("projects only one sealed-owner capability bit into the shell", async () => {
+    mocks.getAuthoritativeCurrentSession.mockResolvedValue({
+      user: { id: "private-owner-id" },
+      session: { id: "private-session-id" },
+    });
+    mocks.resolveAdminAccess.mockResolvedValue({
+      status: "allowed",
+      mode: "sealed_owner_credential_only",
+      role: "owner",
+      capabilities: ["admin:read", "operator:read", "operator:mutate"],
+    });
+    mocks.issueDocumentMutationGeneration.mockReturnValue({
+      transport: "opaque-signed-document-generation",
+    });
+    const { getSiteShellSessionState } = await import("./site-shell-session");
+
+    const result = await getSiteShellSessionState();
+
+    expect(result).toEqual({
+      isAuthenticated: true,
+      documentMutationGeneration: "opaque-signed-document-generation",
+      currentSessionBinding: "opaque-current-session-binding",
+      hasOperatorAccess: true,
+    });
+    expect(mocks.resolveAdminAccess).toHaveBeenCalledWith({
+      userId: "private-owner-id",
+      sessionId: "private-session-id",
+    });
+    expect(JSON.stringify(result)).not.toMatch(
+      /private-owner-id|private-session-id|sealed_owner|operator:mutate/,
+    );
+  });
+
+  it("fails closed to the ordinary authenticated menu when owner lookup fails", async () => {
+    mocks.getAuthoritativeCurrentSession.mockResolvedValue({
+      user: { id: "private-user-id" },
+      session: { id: "private-session-id" },
+    });
+    mocks.resolveAdminAccess.mockRejectedValue(
+      new Error("database unavailable"),
+    );
+    mocks.issueDocumentMutationGeneration.mockReturnValue({
+      transport: "opaque-signed-document-generation",
+    });
+    const { getSiteShellSessionState } = await import("./site-shell-session");
+
+    await expect(getSiteShellSessionState()).resolves.toEqual({
+      isAuthenticated: true,
+      documentMutationGeneration: "opaque-signed-document-generation",
+      currentSessionBinding: "opaque-current-session-binding",
+      hasOperatorAccess: false,
+    });
   });
 
   it("cannot import owner-scoped product loaders", () => {

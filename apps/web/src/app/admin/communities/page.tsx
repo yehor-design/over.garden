@@ -60,6 +60,7 @@ export default async function CommunityModerationDirectory() {
         </Link>
       ) : (
         <p
+          data-operator-access-state="unavailable"
           className="rounded-md border border-border p-4 text-sm text-muted-foreground"
           role="alert"
         >
@@ -74,14 +75,14 @@ function AdminCommunityHeader({ copy }: { copy: OperatorCopy }) {
   return (
     <header className="grid gap-4 border-b border-border pb-5">
       <Link
-        href="/admin"
+        href="/garden"
         className={buttonVariants({
           variant: "outline",
           size: "sm",
           className: "w-fit",
         })}
       >
-        {copy.community.backToAdmin}
+        {copy.community.backToGarden}
       </Link>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold">{copy.community.title}</h1>

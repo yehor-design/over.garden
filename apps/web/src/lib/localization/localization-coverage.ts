@@ -40,8 +40,6 @@ import { getLivingObjectPassportCopy } from "@/lib/living-object-passport";
 import { getOperatorCopy } from "@/lib/operator-copy";
 import { getOperatorCurationCopy } from "@/lib/operator-curation-copy";
 import { getOperatorErasureCopy } from "@/lib/operator-erasure-copy";
-import { getOperatorPilotCopy } from "@/lib/operator-pilot-copy";
-import { getOperatorSmokeCopy } from "@/lib/operator-smoke-copy";
 import { getOwnerLineageCopy } from "@/lib/owner-lineage-copy";
 import { getOwnerObjectCopy } from "@/lib/owner-object-copy";
 import { getPublicJournalDirectoryCopy } from "@/lib/public-journal-directory-copy";
@@ -535,7 +533,7 @@ const LOCALIZATION_OWNER_CONTRACTS: Record<
   operator: {
     rendered: true,
     authVariants: ["authenticated"],
-    roleVariants: ["admin", "curator", "pilot-operator"],
+    roleVariants: ["owner", "curator", "moderator"],
     stateClasses: [
       "empty",
       "dense",
@@ -548,18 +546,9 @@ const LOCALIZATION_OWNER_CONTRACTS: Record<
       "tooltip",
       "toast",
     ],
-    copyNamespaces: [
-      "operator",
-      "operator-pilot",
-      "operator-smoke",
-      "operator-erasure",
-      "operator-curation",
-    ],
+    copyNamespaces: ["operator", "operator-erasure", "operator-curation"],
     scenarioIds: ["community:ove184-community-moderator"],
-    focusedTests: [
-      "src/app/admin/page.test.tsx",
-      "src/app/garden/catalog/curation/page.test.tsx",
-    ],
+    focusedTests: ["src/app/garden/catalog/curation/page.test.tsx"],
   },
   "internal-fixture": {
     rendered: false,
@@ -672,16 +661,6 @@ export const LOCALIZATION_COPY_NAMESPACES: readonly LocalizationCopyNamespace[] 
       id: "operator",
       sourceFile: "src/lib/operator-copy.ts",
       load: getOperatorCopy,
-    },
-    {
-      id: "operator-pilot",
-      sourceFile: "src/lib/operator-pilot-copy.ts",
-      load: getOperatorPilotCopy,
-    },
-    {
-      id: "operator-smoke",
-      sourceFile: "src/lib/operator-smoke-copy.ts",
-      load: getOperatorSmokeCopy,
     },
     {
       id: "operator-erasure",
@@ -1069,7 +1048,6 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/[locale]/privacy/page.tsx",
         "src/app/erasure/page.tsx",
         "src/app/first-publication-disclosure/page.tsx",
-        "src/app/join/page.tsx",
         "src/app/privacy/page.tsx",
         "src/app/support/page.tsx",
       ],
@@ -1119,11 +1097,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/admin/communities/[slug]/page.tsx",
         "src/app/admin/communities/page.tsx",
         "src/app/admin/moderation/comments/page.tsx",
-        "src/app/admin/page.tsx",
-        "src/app/admin/users/page.tsx",
         "src/app/garden/catalog/curation/page.tsx",
-        "src/app/garden/pilot-health/page.tsx",
-        "src/app/garden/pilot-smoke/page.tsx",
         "src/app/garden/privacy/erasure-requests/page.tsx",
         "src/app/health/page.tsx",
       ],
@@ -1264,7 +1238,6 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
       "src/app/auth/reset-password/page.tsx",
       "src/app/erasure/page.tsx",
       "src/app/global-error.tsx",
-      "src/app/join/page.tsx",
       "src/app/not-found.tsx",
       "src/app/support/page.tsx",
       "src/components/site-shell/site-shell.tsx",

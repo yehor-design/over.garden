@@ -193,6 +193,12 @@ describe("public journal entry V2", () => {
     expect(html).toContain('data-media-object-position="50% 50%"');
     expect(html).toContain('alt="Стиглі томати на кущі"');
     expect(html).toContain("Перша китиця");
+    expect(html).toContain(
+      '<ul class="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">',
+    );
+    expect(html).toContain(
+      '<li class="min-w-0"><figure class="grid min-w-0 grid-cols-1 gap-1.5">',
+    );
     expect(html).toContain('href="/topics/harvest"');
     expect(html).toContain('href="/journal/pered-tsvitinniam"');
     expect(html).toContain('data-journal-chronology="true"');

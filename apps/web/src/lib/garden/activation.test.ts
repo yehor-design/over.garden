@@ -26,17 +26,11 @@ describe("garden activation attribution", () => {
     );
   });
 
-  it("normalizes the closed-cohort invite source from hyphen or underscore params", () => {
+  it("treats retired product-access invite sources as direct starts", () => {
     expect(normalizeActivationSourceParam("invited-cohort")).toBe(
-      "invited_cohort",
+      "direct_garden",
     );
-    expect(normalizeActivationSourceParam("invited_cohort")).toBe(
-      "invited_cohort",
-    );
-    expect(normalizeActivationSourceValue("invited_cohort")).toBe(
-      "invited_cohort",
-    );
-    expect(normalizeActivationSourceValue("invited-cohort")).toBeNull();
+    expect(normalizeActivationSourceValue("invited_cohort")).toBeNull();
   });
 
   it("rejects raw URLs and query strings from request payload attribution", () => {
@@ -57,6 +51,5 @@ describe("garden activation attribution", () => {
     expect(activationSurfaceKindForSource("homepage")).toBe("homepage");
     expect(activationSurfaceKindForSource("public_variety")).toBe("variety");
     expect(activationSurfaceKindForSource("direct_garden")).toBe("garden");
-    expect(activationSurfaceKindForSource("invited_cohort")).toBe("invite");
   });
 });

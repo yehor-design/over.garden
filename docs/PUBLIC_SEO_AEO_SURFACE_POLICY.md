@@ -46,8 +46,10 @@ Every sitemap row must include a stable `lastmod`/`lastModified` value. Authored
 
 The sitemap must not include:
 
-- authenticated routes such as `/garden`, `/admin`, or operator readouts;
-- invite, auth, reset, health, erasure, or pilot diagnostic routes;
+- authenticated routes such as `/garden` or surviving operator readouts;
+- lineage-invitation claim, auth, reset, health, or erasure routes;
+- retired control-plane paths such as `/admin`, `/admin/users`, `/join`, and
+  the former pilot diagnostic routes (which must remain exact `404`);
 - public journal entries while `public_noindex = true`;
 - private, archived, public-gone, owner-scoped, provisional, rejected, merged, unsafe-source, untrusted-topic, or thin aggregation rows;
 - free tag, object passport, profile, or lineage graph URLs while they are policy `noindex`.

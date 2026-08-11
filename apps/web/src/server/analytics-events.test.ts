@@ -135,16 +135,13 @@ describe("analytics event privacy contracts", () => {
     });
   });
 
-  it("allows the invited-cohort activation source and invite surface enum", () => {
-    expect(
+  it("rejects retired product-access invite attribution values", () => {
+    expect(() =>
       normalizeAnalyticsEventProperties({
-        activation_source: "invited_cohort",
-        source_surface_kind: "invite",
+        activation_source: "invited_cohort" as never,
+        source_surface_kind: "invite" as never,
       }),
-    ).toEqual({
-      activation_source: "invited_cohort",
-      source_surface_kind: "invite",
-    });
+    ).toThrow("Unsafe analytics event value for activation_source.");
   });
 
   it("records activation starts without raw URL, referrer, or query values", () => {

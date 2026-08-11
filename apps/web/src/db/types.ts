@@ -48,7 +48,6 @@ import type {
   PlantIdentificationDecisions as PlantIdentificationDecisionsTable,
   PlantIdentificationRequests as PlantIdentificationRequestsTable,
   PlantIdentificationSubmissionSlots as PlantIdentificationSubmissionSlotsTable,
-  PilotInviteGrants as PilotInviteGrantsTable,
   PlantObjects as PlantObjectsTable,
   Spaces as SpacesTable,
   UserHandleRegistry as UserHandleRegistryTable,
@@ -349,8 +348,6 @@ export type PlantIdentificationSubmissionSlot =
   Selectable<PlantIdentificationSubmissionSlotsTable>;
 export type NewPlantIdentificationSubmissionSlot =
   Insertable<PlantIdentificationSubmissionSlotsTable>;
-export type PilotInviteGrant = Selectable<PilotInviteGrantsTable>;
-export type NewPilotInviteGrant = Insertable<PilotInviteGrantsTable>;
 export type UserPublicProfile = Selectable<UserPublicProfilesTable>;
 export type NewUserPublicProfile = Insertable<UserPublicProfilesTable>;
 export type UserHandleRegistryEntry = Selectable<UserHandleRegistryTable>;

@@ -13,7 +13,6 @@ import type {
   Database,
 } from "@/db/schema";
 import { createCatalogPublicSlug } from "@/lib/garden/public-paths";
-import { CLOSED_PILOT_COHORT } from "@/lib/garden/pilot-invite";
 import {
   buildEnqueueCatalogTypeaheadReindexJobQuery,
   buildEnqueueCatalogMatchSuggestionsRefreshJobQuery,
@@ -38,8 +37,6 @@ export interface CatalogCurationCandidate {
   source: string;
   createdAt: Date | string;
   affectedObjectCount: number;
-  pilotOrigin: boolean;
-  invitedPilotUserCount: number;
   matchSuggestions: CatalogMatchSuggestionReadModel[];
 }
 
@@ -177,8 +174,6 @@ export async function listPendingCatalogCurationCandidates(
     source: row.source,
     createdAt: row.createdAt,
     affectedObjectCount: Number(row.affectedObjectCount),
-    pilotOrigin: Boolean(row.pilotOrigin),
-    invitedPilotUserCount: Number(row.invitedPilotUserCount),
     matchSuggestions: suggestionsByCandidate.get(row.id) ?? [],
   }));
 }
@@ -465,24 +460,6 @@ export function buildPendingCatalogCurationCandidatesQuery(
         .onRef("plant_objects.catalog_item_id", "=", "catalog_items.id")
         .on("plant_objects.variety_state", "=", "user_added"),
     )
-    .leftJoin("pilot_invite_grants as creator_pilot_grants", (join) =>
-      join
-        .onRef(
-          "creator_pilot_grants.user_id",
-          "=",
-          "catalog_items.created_by_user_id",
-        )
-        .on("creator_pilot_grants.cohort", "=", CLOSED_PILOT_COHORT),
-    )
-    .leftJoin("pilot_invite_grants as object_owner_pilot_grants", (join) =>
-      join
-        .onRef(
-          "object_owner_pilot_grants.user_id",
-          "=",
-          "plant_objects.owner_user_id",
-        )
-        .on("object_owner_pilot_grants.cohort", "=", CLOSED_PILOT_COHORT),
-    )
     .select(({ fn }) => [
       "catalog_items.id as id",
       "catalog_items.canonical_name as displayName",
@@ -492,13 +469,6 @@ export function buildPendingCatalogCurationCandidatesQuery(
       "catalog_items.source as source",
       "catalog_items.created_at as createdAt",
       fn.count<number>("plant_objects.id").as("affectedObjectCount"),
-      fn
-        .count<number>("object_owner_pilot_grants.user_id")
-        .distinct()
-        .as("invitedPilotUserCount"),
-      sql<boolean>`bool_or(creator_pilot_grants.user_id is not null)`.as(
-        "pilotOrigin",
-      ),
     ])
     .where("catalog_items.status", "=", "provisional")
     .where("catalog_items.source", "=", "user_added")
@@ -512,7 +482,6 @@ export function buildPendingCatalogCurationCandidatesQuery(
       "catalog_items.source",
       "catalog_items.created_at",
     ])
-    .orderBy(sql`bool_or(creator_pilot_grants.user_id is not null)`, "desc")
     .orderBy("catalog_items.created_at", "asc")
     .limit(boundedLimit);
 }

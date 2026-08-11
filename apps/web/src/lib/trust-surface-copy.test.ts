@@ -105,6 +105,21 @@ describe("trust-sensitive interface copy", () => {
     );
   });
 
+  it("keeps account recovery independent from retired product-access invitations", () => {
+    const retiredRecoveryLanguage =
+      /closed.?pilot|founder.?rehearsal|закрит(?:ий|ого) пілот|затворен(?:ия)? пилот|закрыт(?:ый|ого) пилот|хто вас запросив|който ви е поканил|кто вас пригласил/i;
+
+    for (const locale of LOCALES) {
+      const copy = getTrustSurfaceCopy(locale);
+      const recoveryCopy = flattenStrings({
+        authHelp: copy.authHelp,
+        resetPassword: copy.resetPassword,
+      }).join("\n");
+
+      expect(recoveryCopy).not.toMatch(retiredRecoveryLanguage);
+    }
+  });
+
   it("contains no accidental English fallback outside documented literals", () => {
     const forbidden =
       /\b(?:sign in|password|create account|support and privacy|data retention|review boundaries|public analytics|turn off|not chosen|request status|first-publication disclosure|this invitation|what to expect)\b/i;

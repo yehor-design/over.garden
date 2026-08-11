@@ -1,7 +1,7 @@
 {
   "schemaVersion": "overgarden.authenticated-mutation-enforcement.v1",
-  "registryDigest": "3a341dbb9748811cae023f28de3149172ca81adad3d27ac880b8bd5933a906b8",
-  "sourceRegistryReceiptDigest": "ae8a290babd45e5c0d1e0814e298d4ac20d3334271e5d5f6c21446e482e01d2c",
+  "registryDigest": "d887a4e2d233aedb705802492091174e794dadc2ca43de4d0834d05a39ff08e5",
+  "sourceRegistryReceiptDigest": "5f80f3dc7c6b7f6ecd412900f7ba8fcfb05e40be907693587d5476eb6f1054fe",
   "entrypointStates": [
     {
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_account_session_mutation",
@@ -306,10 +306,6 @@
     {
       "entrypointId": "native_form:src/app/garden/profile/page.tsx#GardenPublicProfilePage:action:unblockProfileAction",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "native_form:src/app/join/page.tsx#JoinPage:action:claimPilotInviteAction",
-      "enforcementState": "excluded_with_authority"
     },
     {
       "entrypointId": "native_form:src/app/lineage/objects/[objectId]/page.tsx#LineageInteractionPanel:action:askLineageQuestionAction",
@@ -1276,10 +1272,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/join/actions.ts#claimPilotInviteAction",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
       "entrypointId": "server_action:src/app/lineage/objects/[objectId]/actions.ts#askLineageQuestionAction:authority:authenticated_user",
       "enforcementState": "enforced_ove_291"
     },
@@ -1976,13 +1968,13 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:17:790167dd99c192ace88a",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:17:77cf888dc06e9a01e7fa",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:18:77cf888dc06e9a01e7fa",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:18:790167dd99c192ace88a",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "enforcementState": "enforced_ove_291"
@@ -3092,13 +3084,13 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:7:790167dd99c192ace88a",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:7:77cf888dc06e9a01e7fa",
       "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:8:77cf888dc06e9a01e7fa",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:8:790167dd99c192ace88a",
       "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "enforcementState": "enforced_ove_290"
@@ -3644,13 +3636,13 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:16:790167dd99c192ace88a",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:16:77cf888dc06e9a01e7fa",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:17:77cf888dc06e9a01e7fa",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:17:790167dd99c192ace88a",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "enforcementState": "enforced_ove_290"
@@ -3830,13 +3822,13 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:a96d9fef83e993dca970:6:790167dd99c192ace88a",
+      "consumerEdgeId": "edge:a96d9fef83e993dca970:6:77cf888dc06e9a01e7fa",
       "entrypointId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:a96d9fef83e993dca970:7:77cf888dc06e9a01e7fa",
+      "consumerEdgeId": "edge:a96d9fef83e993dca970:7:790167dd99c192ace88a",
       "entrypointId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "enforcementState": "enforced_ove_290"
@@ -4136,13 +4128,13 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:bfa6d07f7cc571bf0678:6:790167dd99c192ace88a",
+      "consumerEdgeId": "edge:bfa6d07f7cc571bf0678:6:77cf888dc06e9a01e7fa",
       "entrypointId": "same_origin_fetch:src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx#save:PATCH:/api/garden/entries/:dynamic",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:bfa6d07f7cc571bf0678:7:77cf888dc06e9a01e7fa",
+      "consumerEdgeId": "edge:bfa6d07f7cc571bf0678:7:790167dd99c192ace88a",
       "entrypointId": "same_origin_fetch:src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx#save:PATCH:/api/garden/entries/:dynamic",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "enforcementState": "enforced_ove_290"

@@ -96,7 +96,7 @@ const OWNER_SURFACE_ROUTE_IDS = [
   "surface-social-comments",
   "surface-community-moderation",
   "surface-operator-moderation",
-  "surface-admin-unauthorized",
+  "surface-operator-unauthorized",
   "surface-app-not-found",
   "surface-workspace-loading",
   "surface-workspace-error",
@@ -636,7 +636,12 @@ function localOwnerSurfaceRoutes(): TypographyBrowserRoute[] {
       "community:ove184-community-moderator",
       { locale: "ru", pathTransform: "community-moderation" },
     ),
-    explicitOwnerRoute("surface-admin-unauthorized", "/admin", 200, "bg"),
+    explicitOwnerRoute(
+      "surface-operator-unauthorized",
+      "/garden/catalog/curation",
+      200,
+      "bg",
+    ),
     explicitOwnerRoute(
       "surface-app-not-found",
       "/ru/ove208-standard-not-found/deep",

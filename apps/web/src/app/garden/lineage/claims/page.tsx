@@ -17,7 +17,6 @@ import {
   type LineageClaimInboxItem,
   type LineagePlantObjectOption,
 } from "@/server/lineage-repository";
-import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
@@ -63,10 +62,7 @@ export default async function LineageClaimInboxPage({
   }
 
   const scope = scopedToUser(userId, getSessionId(session));
-  const [writeAccess, claims] = await Promise.all([
-    resolvePilotWriteAccess(scope),
-    listLineageClaimInbox(scope),
-  ]);
+  const claims = await listLineageClaimInbox(scope);
 
   return (
     <main
@@ -98,7 +94,7 @@ export default async function LineageClaimInboxPage({
               claim={claim}
               copy={copy}
               locale={locale}
-              writeEnabled={writeAccess.canWrite}
+              writeEnabled
             />
           ))}
         </ol>

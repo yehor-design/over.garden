@@ -1257,16 +1257,6 @@ function exclusionFor(
     };
   }
   if (
-    (discovery.path === "src/app/join/actions.ts" &&
-      discovery.symbol === "claimPilotInviteAction") ||
-    discovery.path === "src/app/join/page.tsx"
-  ) {
-    return {
-      classification: "excluded_distinct_authority",
-      reason: "guest_pilot_invite_handoff_has_no_authenticated_document",
-    };
-  }
-  if (
     discovery.transport === "route_handler" &&
     discovery.symbol === "GET" &&
     (discovery.path === "src/app/api/public/objects/suggestions/route.ts" ||

@@ -2,8 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
-  PilotWriteAccessError: class PilotWriteAccessError extends Error {},
-  requireWriteEligibleRequestScope: vi.fn(),
   authIntentRequiredResponse: vi.fn(),
   getPlantObjectPage: vi.fn(),
   findMediaAssetForOwner: vi.fn(),
@@ -32,10 +30,6 @@ vi.mock("@/server/document-mutation-admission", () => ({
   admitDocumentMutation: mocks.admitDocumentMutation,
   documentMutationAdmissionResponse: mocks.documentMutationAdmissionResponse,
   documentMutationGenerationFromRequest: vi.fn(() => null),
-}));
-vi.mock("@/server/pilot-write-access", () => ({
-  PilotWriteAccessError: mocks.PilotWriteAccessError,
-  requireWriteEligibleRequestScope: mocks.requireWriteEligibleRequestScope,
 }));
 vi.mock("@/server/journal-repository", () => ({
   getPlantObjectPage: mocks.getPlantObjectPage,
@@ -80,10 +74,6 @@ describe("POST /api/garden/plant-identification", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    mocks.requireWriteEligibleRequestScope.mockResolvedValue({
-      userId: ownerId,
-      sessionId: "session-1",
-    });
     mocks.admitDocumentMutation.mockResolvedValue({
       status: "admitted",
       scope: { userId: ownerId, sessionId: "session-1" },

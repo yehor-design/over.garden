@@ -26,12 +26,14 @@ type SiteShellSessionState = {
   isAuthenticated: boolean;
   documentMutationGeneration: string | null;
   currentSessionBinding: string | null;
+  hasOperatorAccess: boolean;
 };
 
 const ROOT_LAYOUT_GUEST_SESSION_STATE: SiteShellSessionState = {
   isAuthenticated: false,
   documentMutationGeneration: null,
   currentSessionBinding: null,
+  hasOperatorAccess: false,
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -94,6 +96,7 @@ export default async function RootLayout({
             isAuthenticated={shellSession.isAuthenticated}
             documentMutationGeneration={shellSession.documentMutationGeneration}
             currentSessionBinding={shellSession.currentSessionBinding}
+            hasOperatorAccess={shellSession.hasOperatorAccess}
             communitiesReady={communitiesReady}
           >
             {children}

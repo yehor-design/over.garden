@@ -38,20 +38,6 @@ export function gardenFirstEntryHomepagePath(): string {
   return "/garden?source=homepage";
 }
 
-export function gardenFirstEntryInvitePath(): string {
-  return "/garden?source=invited-cohort";
-}
-
-export function pilotInviteJoinPath(token: string): string {
-  const params = new URLSearchParams({ invite: token });
-  return `/join?${params.toString()}`;
-}
-
-export function pilotInviteJoinUrl(token: string, baseUrl: string): string {
-  const normalizedBase = baseUrl.replace(/\/$/, "");
-  return `${normalizedBase}${pilotInviteJoinPath(token)}`;
-}
-
 export function lineageInvitationClaimPath(token: string): string {
   const params = new URLSearchParams({ token });
   return `/garden/lineage/invitations/claim#${params.toString()}`;

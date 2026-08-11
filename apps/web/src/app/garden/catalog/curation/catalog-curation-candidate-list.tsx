@@ -40,8 +40,6 @@ interface CatalogCurationCandidate {
   source: string;
   createdAt: Date | string;
   affectedObjectCount: number;
-  pilotOrigin: boolean;
-  invitedPilotUserCount: number;
   matchSuggestions: CatalogMatchSuggestion[];
 }
 
@@ -259,24 +257,13 @@ function CatalogCurationCandidateCard({
   }
 
   return (
-    <article
-      className={`grid gap-4 rounded-lg border p-4 ${
-        candidate.pilotOrigin
-          ? "border-primary/40 bg-primary/5"
-          : "border-border"
-      }`}
-    >
+    <article className="grid gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold break-words text-foreground">
             {candidate.displayName}
           </h2>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            {candidate.pilotOrigin ? (
-              <span className="rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-primary">
-                {copy.candidate.pilotSignal}
-              </span>
-            ) : null}
             <span className="rounded-md border border-border px-2 py-1">
               {candidate.locale}
             </span>
@@ -296,12 +283,6 @@ function CatalogCurationCandidateCard({
             <span className="rounded-md border border-border px-2 py-1">
               {copy.candidate.objects}: {candidate.affectedObjectCount}
             </span>
-            {candidate.invitedPilotUserCount > 0 ? (
-              <span className="rounded-md border border-border px-2 py-1">
-                {copy.candidate.invitedGardeners}:{" "}
-                {candidate.invitedPilotUserCount}
-              </span>
-            ) : null}
             <span className="rounded-md border border-border px-2 py-1">
               {copy.candidate.created}:{" "}
               {formatOperatorDate(locale, candidate.createdAt)}

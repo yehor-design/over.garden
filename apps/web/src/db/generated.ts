@@ -582,14 +582,12 @@ export interface LearningAttributionOutbox {
   applied_generation: Generated<number>;
   attempts: Generated<number>;
   available_at: Generated<Timestamp>;
-  cohort: string | null;
   created_at: Generated<Timestamp>;
   desired_generation: Generated<number>;
   id: Generated<string>;
   last_error_class: string | null;
   locked_at: Timestamp | null;
   locked_by: string | null;
-  segment: string | null;
   state: Generated<string>;
   terminalized_at: Timestamp | null;
   updated_at: Generated<Timestamp>;
@@ -741,15 +739,6 @@ export interface NotificationReceipts {
   read_at: Timestamp | null;
   receipt_state: Generated<string>;
   updated_at: Generated<Timestamp>;
-}
-
-export interface PilotInviteGrants {
-  cohort: Generated<string>;
-  created_at: Generated<Timestamp>;
-  granted_at: Generated<Timestamp>;
-  segment: Generated<string>;
-  updated_at: Generated<Timestamp>;
-  user_id: string;
 }
 
 export interface PlantIdentificationCandidates {
@@ -1020,7 +1009,6 @@ export interface DB {
   media_lifecycle_retention_runs: MediaLifecycleRetentionRuns;
   notification_preferences: NotificationPreferences;
   notification_receipts: NotificationReceipts;
-  pilot_invite_grants: PilotInviteGrants;
   plant_identification_candidates: PlantIdentificationCandidates;
   plant_identification_decisions: PlantIdentificationDecisions;
   plant_identification_requests: PlantIdentificationRequests;

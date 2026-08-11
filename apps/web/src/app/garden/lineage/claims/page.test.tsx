@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   listLineageClaimInbox: vi.fn(),
-  resolvePilotWriteAccess: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -22,10 +21,6 @@ vi.mock("@/server/request-scope", () => ({
 
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
-}));
-
-vi.mock("@/server/pilot-write-access", () => ({
-  resolvePilotWriteAccess: mocks.resolvePilotWriteAccess,
 }));
 
 vi.mock("@/server/lineage-repository", () => ({
@@ -51,7 +46,6 @@ describe("/garden/lineage/claims", () => {
       user: { id: "00000000-0000-4000-8000-000000000001" },
       session: { id: "session-1" },
     });
-    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "real_self_serve" });
     mocks.listLineageClaimInbox.mockResolvedValue([
       {
         id: "00000000-0000-4000-8000-000000000201",
@@ -88,7 +82,6 @@ describe("/garden/lineage/claims", () => {
     expect(html).toContain("Запити щодо походження");
     expect(html).toContain('data-locale="uk"');
     expect(mocks.listLineageClaimInbox).not.toHaveBeenCalled();
-    expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
   });
 
   it("renders bounded proposed claim cards without private payload fields", async () => {

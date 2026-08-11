@@ -57,10 +57,8 @@ import {
   getMySpaceJournalTimeline,
   type SpaceJournalTimeline,
 } from "@/server/journal-repository";
-import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
 import { addCatalogPublicSlugToWishlistAction } from "../wishlist/actions";
-import { ClosedPilotWriteCallout } from "./closed-pilot-write-callout";
 import { FirstEntryComposer } from "./first-entry-composer";
 import { GardenAuthPanel } from "./garden-auth-panel";
 import { GardenWorkspaceView } from "./garden-workspace-view";
@@ -179,16 +177,14 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     spacesPage: positivePage(params.spacesPage),
     faultSections: visualScenario?.faultSections ?? [],
   };
-  const [writeAccess, workspace] = await Promise.all([
-    visualScenario || creationScenario
-      ? Promise.resolve({
-          canWrite: true,
-          invited: false,
-          actorClass: "visual_fixture" as const,
-        })
-      : resolvePilotWriteAccess(scope),
-    loadGardenWorkspace(scope, loadOptions),
-  ]);
+  const workspace = await loadGardenWorkspace(scope, loadOptions);
+  const writeAccess = {
+    canWrite: true,
+    actorClass:
+      visualScenario || creationScenario
+        ? ("visual_fixture" as const)
+        : ("real_self_serve" as const),
+  };
   const workspaceForView = applyVisualWorkspaceSummary(
     workspace,
     visualScenario,
@@ -244,7 +240,6 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
           />
         ) : null}
         <GardenWriteTools
-          canWrite={writeAccess.canWrite}
           today={today}
           locale={locale}
           activationSource={activationSource}
@@ -453,7 +448,6 @@ function GuestGardenEntry({
 
 function GardenWriteTools({
   ownerUserId,
-  canWrite,
   today,
   locale,
   activationSource,
@@ -464,7 +458,6 @@ function GardenWriteTools({
   children,
 }: {
   ownerUserId: string;
-  canWrite: boolean;
   today: string;
   locale: InterfaceLocale;
   activationSource: Parameters<
@@ -490,22 +483,18 @@ function GardenWriteTools({
           {copy.page.creation.description}
         </p>
         <div className="mt-5" id="write-access">
-          {canWrite ? (
-            <FirstEntryComposer
-              ownerUserId={ownerUserId}
-              locale={locale}
-              key={initialCatalogItem?.id ?? "first-entry"}
-              today={today}
-              initialClientMutationId={crypto.randomUUID()}
-              initialSpace={initialSpace}
-              initialCatalogItem={initialCatalogItem}
-              activationSource={activationSource}
-              visualScenario={visualScenario}
-              enableOfflinePersistence={enableOfflinePersistence}
-            />
-          ) : (
-            <ClosedPilotWriteCallout locale={locale} />
-          )}
+          <FirstEntryComposer
+            ownerUserId={ownerUserId}
+            locale={locale}
+            key={initialCatalogItem?.id ?? "first-entry"}
+            today={today}
+            initialClientMutationId={crypto.randomUUID()}
+            initialSpace={initialSpace}
+            initialCatalogItem={initialCatalogItem}
+            activationSource={activationSource}
+            visualScenario={visualScenario}
+            enableOfflinePersistence={enableOfflinePersistence}
+          />
         </div>
       </section>
 

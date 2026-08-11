@@ -7,9 +7,9 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import {
+  AUTH_HELP_PATH,
   passwordResetSuccessPath,
-  PILOT_AUTH_HELP_PATH,
-} from "@/lib/auth/pilot-auth-recovery";
+} from "@/lib/auth/auth-recovery";
 import { authClient } from "@/lib/auth-client";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
@@ -49,7 +49,7 @@ export function ResetPasswordForm({
           {copy.invalidDescription}
         </p>
         <Link
-          href={PILOT_AUTH_HELP_PATH}
+          href={AUTH_HELP_PATH}
           className="text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
           {copy.helpLink}

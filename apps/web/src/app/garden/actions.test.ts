@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   redirect: vi.fn(),
-  requireWriteEligibleRequestScope: vi.fn(),
   scheduleLearningAttributionDrain: vi.fn(),
   createSpaceJournalEntry: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),
@@ -18,10 +17,6 @@ vi.mock("next/cache", () => ({
 
 vi.mock("next/navigation", () => ({
   redirect: mocks.redirect,
-}));
-
-vi.mock("@/server/pilot-write-access", () => ({
-  requireWriteEligibleRequestScope: mocks.requireWriteEligibleRequestScope,
 }));
 
 vi.mock("@/server/mvp-learning/attribution-after-response", () => ({
@@ -47,10 +42,6 @@ describe("garden entry actions", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    mocks.requireWriteEligibleRequestScope.mockResolvedValue({
-      userId: "00000000-0000-4000-8000-000000000001",
-      sessionId: "session-1",
-    });
     mocks.isBackdatedEntryDate.mockReturnValue(false);
     mocks.admitDocumentMutation.mockResolvedValue({
       status: "admitted",

@@ -55,7 +55,6 @@ describe("erasure request operator actions", () => {
       role: "owner",
       capabilities: [
         "admin:read",
-        "admin:manage_roles",
         "operator:read",
         "operator:mutate",
         "erasure:execute",

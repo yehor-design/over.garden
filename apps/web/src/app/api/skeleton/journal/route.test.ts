@@ -2,12 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
-  PilotWriteAccessError: class PilotWriteAccessError extends Error {},
   createJournalEntry: vi.fn(),
   convergePublicProjectionsNow: vi.fn(),
   listMyRecentJournalEntries: vi.fn(),
   requireCurrentUserId: vi.fn(),
-  requireWriteEligibleRequestScope: vi.fn(),
   scheduleLearningAttributionDrain: vi.fn(),
   tryResolveWalkingSkeletonEnvironment: vi.fn(),
   admitDocumentMutation: vi.fn(),
@@ -25,10 +23,6 @@ vi.mock("@/lib/walking-skeleton/environment", () => ({
 vi.mock("@/server/auth-session", () => ({
   AuthenticationRequiredError: mocks.AuthenticationRequiredError,
   requireCurrentUserId: mocks.requireCurrentUserId,
-}));
-vi.mock("@/server/pilot-write-access", () => ({
-  PilotWriteAccessError: mocks.PilotWriteAccessError,
-  requireWriteEligibleRequestScope: mocks.requireWriteEligibleRequestScope,
 }));
 vi.mock("@/server/document-mutation-admission", () => ({
   admitDocumentMutation: mocks.admitDocumentMutation,
@@ -65,7 +59,6 @@ describe("walking-skeleton journal API", () => {
       target: "local",
     });
     mocks.requireCurrentUserId.mockResolvedValue(scope.userId);
-    mocks.requireWriteEligibleRequestScope.mockResolvedValue(scope);
     mocks.admitDocumentMutation.mockResolvedValue({
       status: "admitted",
       scope,
@@ -92,7 +85,6 @@ describe("walking-skeleton journal API", () => {
     expect(await getResponse.text()).toBe("");
     expect(await postResponse.text()).toBe("");
     expect(mocks.requireCurrentUserId).not.toHaveBeenCalled();
-    expect(mocks.requireWriteEligibleRequestScope).not.toHaveBeenCalled();
     expect(mocks.listMyRecentJournalEntries).not.toHaveBeenCalled();
     expect(mocks.createJournalEntry).not.toHaveBeenCalled();
   });
@@ -118,7 +110,6 @@ describe("walking-skeleton journal API", () => {
     expect(getResponse.status).toBe(404);
     expect(postResponse.status).toBe(404);
     expect(mocks.requireCurrentUserId).not.toHaveBeenCalled();
-    expect(mocks.requireWriteEligibleRequestScope).not.toHaveBeenCalled();
   });
 
   it("returns fixed signed-out 401 responses without reading the POST body", async () => {

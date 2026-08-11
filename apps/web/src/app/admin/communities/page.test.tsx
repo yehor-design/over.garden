@@ -67,4 +67,15 @@ describe("/admin/communities", () => {
       expect(html).toContain("observation-and-care");
     },
   );
+
+  it("marks a fail-closed moderation lookup without exposing the queue", async () => {
+    mocks.listCommunityModerationQueue.mockRejectedValue(
+      new Error("denied"),
+    );
+    const { default: CommunityModerationDirectory } = await import("./page");
+    const html = renderToStaticMarkup(await CommunityModerationDirectory());
+
+    expect(html).toContain('data-operator-access-state="unavailable"');
+    expect(html).not.toContain("відкритих скарг:");
+  });
 });

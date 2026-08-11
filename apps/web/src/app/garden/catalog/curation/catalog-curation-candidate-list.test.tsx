@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("CatalogCurationCandidateList", () => {
-  it("highlights pilot-origin candidates with aggregate-safe context only", () => {
+  it("renders pending candidates with aggregate-safe context only", () => {
     const CandidateList = CatalogCurationCandidateList as unknown as (
       props: Record<string, unknown>,
     ) => React.ReactNode;
@@ -26,8 +26,6 @@ describe("CatalogCurationCandidateList", () => {
             source: "user_added",
             createdAt: "2026-06-26T12:00:00.000Z",
             affectedObjectCount: 2,
-            pilotOrigin: true,
-            invitedPilotUserCount: 1,
             matchSuggestions: [
               {
                 id: "00000000-0000-4000-8000-000000000301",
@@ -60,10 +58,10 @@ describe("CatalogCurationCandidateList", () => {
       />,
     );
 
-    expect(html).toContain("Сигнал пілоту");
+    expect(html).not.toContain("Сигнал пілоту");
     expect(html).toContain("Ваша назва");
     expect(html).toContain("Збережено лише для вашого саду");
-    expect(html).toContain("Запрошені садівники: 1");
+    expect(html).not.toContain("Запрошені садівники");
     expect(html).toContain("Об&#x27;єкти: 2");
     expect(html).toContain("Бабусин перець");
     expect(html).toContain("Детерміновані підказки зіставлення");
@@ -98,8 +96,6 @@ describe("CatalogCurationCandidateList", () => {
             source: "user_added",
             createdAt: "2026-07-14T12:00:00.000Z",
             affectedObjectCount: 1,
-            pilotOrigin: false,
-            invitedPilotUserCount: 0,
             matchSuggestions: [
               {
                 id: "00000000-0000-4000-8000-000000000304",
@@ -157,8 +153,6 @@ describe("CatalogCurationCandidateList", () => {
             source: "user_added",
             createdAt: "2026-07-14T12:00:00.000Z",
             affectedObjectCount: 1,
-            pilotOrigin: false,
-            invitedPilotUserCount: 0,
             matchSuggestions: [
               {
                 id: "00000000-0000-4000-8000-000000000302",
@@ -211,8 +205,6 @@ describe("CatalogCurationCandidateList", () => {
             source: "user_added",
             createdAt: "2026-07-14T12:00:00.000Z",
             affectedObjectCount: 3,
-            pilotOrigin: false,
-            invitedPilotUserCount: 0,
             matchSuggestions: [
               {
                 id: "00000000-0000-4000-8000-000000000303",

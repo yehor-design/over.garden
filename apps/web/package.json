@@ -86,7 +86,6 @@
     "smoke:self-serve-providers": "tsx scripts/smoke-self-serve-providers.ts",
     "smoke:exact-sha-self-serve": "tsx scripts/smoke-exact-sha-self-serve.ts",
     "facebook-login:external-cleanup": "tsx scripts/verify-facebook-login-external-cleanup.ts",
-    "pilot-learning:retire": "tsx scripts/retire-manual-pilot-learning.ts",
     "mutation:surface:audit": "tsx scripts/audit-authenticated-mutation-surface.ts",
     "mutation:surface:enforce": "vitest run scripts/enforce-authenticated-mutation-registry.test.ts src/server/remaining-document-mutation-admission.integration.test.ts",
     "smoke:remaining-document-mutation-admission": "tsx scripts/smoke-remaining-document-mutation-admission.ts",
@@ -144,9 +143,7 @@
     "identity:dry-run": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode dry-run",
     "identity:apply": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode apply",
     "identity:verify": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode verify",
-    "identity:rollback-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode rollback-proof",
-    "pilot:invite": "tsx scripts/generate-pilot-invite.ts",
-    "pilot:reset-password": "tsx scripts/generate-pilot-password-reset.ts"
+    "identity:rollback-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode rollback-proof"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",

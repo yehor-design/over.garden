@@ -56,10 +56,8 @@ import {
   type LineagePlantObjectOption,
   type ObjectProvenancePanel,
 } from "@/server/lineage-repository";
-import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { buildOwnerObjectPassportPresentation } from "@/server/owner-object-passport-presentation";
 import { scopedToUser } from "@/server/request-scope";
-import { ClosedPilotWriteCallout } from "../../closed-pilot-write-callout";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
   archiveJournalEntryAction,
@@ -150,13 +148,6 @@ export default async function PlantObjectReadbackPage({
     userId,
     fixtureScenario ? null : getSessionId(session),
   );
-  const writeAccess = fixtureScenario
-    ? {
-        canWrite: true,
-        invited: false,
-        actorClass: "visual_fixture" as const,
-      }
-    : await resolvePilotWriteAccess(scope);
   const page = await getPlantObjectPage(scope, objectId);
   if (!page) notFound();
   const provenancePanel = await getObjectProvenancePanel(scope, objectId);
@@ -281,20 +272,16 @@ export default async function PlantObjectReadbackPage({
           </p>
         </div>
 
-        {writeAccess.canWrite ? (
-          <FollowUpEntryComposer
-            ownerUserId={userId}
-            locale={locale}
-            objectId={objectId}
-            objectDisplayName={page.plantObject.display_name}
-            objectKind={page.plantObject.object_kind}
-            today={today}
-            initialClientMutationId={crypto.randomUUID()}
-            visualScenario={visualCreationScenario}
-          />
-        ) : (
-          <ClosedPilotWriteCallout context="follow-up" locale={locale} />
-        )}
+        <FollowUpEntryComposer
+          ownerUserId={userId}
+          locale={locale}
+          objectId={objectId}
+          objectDisplayName={page.plantObject.display_name}
+          objectKind={page.plantObject.object_kind}
+          today={today}
+          initialClientMutationId={crypto.randomUUID()}
+          visualScenario={visualCreationScenario}
+        />
       </section>
 
       <OwnerLivingObjectPassportTimeline
@@ -356,8 +343,7 @@ export default async function PlantObjectReadbackPage({
           </div>
         ) : null}
 
-        {writeAccess.canWrite &&
-        page.plantObject.object_kind === "plant" &&
+        {page.plantObject.object_kind === "plant" &&
         canResolveCatalogState(page.plantObject.variety_state) ? (
           <div id="passport-photo-identification" className="min-w-0">
             <PlantIdentificationPanel
@@ -392,7 +378,7 @@ export default async function PlantObjectReadbackPage({
       <ProvenanceSection
         objectId={objectId}
         provenancePanel={provenancePanel}
-        writeEnabled={writeAccess.canWrite}
+        writeEnabled
         lineageReadbackPath={lineageReadbackPath}
         locale={locale}
       />
@@ -708,9 +694,7 @@ function ProvenanceSection({
             </button>
           </DocumentMutationActionForm>
         </div>
-      ) : (
-        <ClosedPilotWriteCallout context="follow-up" locale={locale} />
-      )}
+      ) : null}
 
       {provenancePanel.edges.length === 0 ? (
         <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">

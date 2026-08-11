@@ -272,7 +272,7 @@ export interface TypographyGlobalErrorObservation {
 }
 
 const ROUTE_ID_PATTERN =
-  /^(?:uk-home|bg-home|ru-home|surface-(?:catalog-dense|knowledge-editorial|auth-help|journal-prose|profile-dense|workspace-dense|creation-form|social-comments|community-moderation|operator-moderation|admin-unauthorized|app-not-found|workspace-loading|workspace-error|workspace-offline)|raw-(?:community|profile|object|journal)-(?:not-found|gone))$/;
+  /^(?:uk-home|bg-home|ru-home|surface-(?:catalog-dense|knowledge-editorial|auth-help|journal-prose|profile-dense|workspace-dense|creation-form|social-comments|community-moderation|operator-moderation|operator-unauthorized|app-not-found|workspace-loading|workspace-error|workspace-offline)|raw-(?:community|profile|object|journal)-(?:not-found|gone))$/;
 const UNSAFE_ROUTE_PARAMETER =
   /^(?:access[_-]?token|auth|code|coord(?:inate)?s?|email|invite|lat(?:itude)?|lng|lon(?:gitude)?|password|secret|session|token)$/i;
 

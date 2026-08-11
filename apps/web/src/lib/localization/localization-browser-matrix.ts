@@ -280,7 +280,7 @@ export const LOCALIZATION_OWNER_BROWSER_PROBES: readonly LocalizationOwnerBrowse
       id: "operator-unauthorized",
       owner: "operator",
       scenarioId: null,
-      explicitPath: "/admin",
+      explicitPath: "/garden/catalog/curation",
       pathTransform: "identity",
       stateClasses: ["unauthorized"],
       viewportIds: REQUIRED_VIEWPORTS,
