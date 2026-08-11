@@ -51,6 +51,24 @@ vi.mock("@/components/auth/document-mutation-recovery", () => ({
     </div>
   ),
 }));
+vi.mock("@/components/auth/foreground-autosync-provider", () => ({
+  ForegroundAutosyncProvider: ({
+    children,
+    documentMutationGeneration,
+    enabled,
+  }: {
+    children: React.ReactNode;
+    documentMutationGeneration: string | null;
+    enabled: boolean;
+  }) => (
+    <div
+      data-foreground-autosync={enabled ? "enabled" : "disabled"}
+      data-foreground-document={documentMutationGeneration ?? "missing"}
+    >
+      {children}
+    </div>
+  ),
+}));
 
 describe("production site shell", () => {
   beforeEach(() => {

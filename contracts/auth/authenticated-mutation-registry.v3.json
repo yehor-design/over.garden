@@ -673,6 +673,34 @@
       "predecessorEdgeIds": []
     },
     {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraftIfClientMutationMatches:browser_storage:deleteOfflineDraftIfClientMutationMatches",
+      "branchConditionClass": "always",
+      "branchId": "branch:25d67c5b3276defc71f5:always",
+      "consumerEdgeId": "edge:25d67c5b3276defc71f5:1:c0ff971485cfff2c8e05",
+      "effectBoundaryId": "effect:3a9caab3ee0daafb0c8f:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraftIfClientMutationMatches:browser_storage:deleteOfflineDraftIfClientMutationMatches",
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:25d67c5b3276defc71f5",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#recoverExpiredOfflineMutationSyncClaims:browser_storage:recoverExpiredOfflineMutationSyncClaims",
+      "branchConditionClass": "always",
+      "branchId": "branch:27be4d2f030b3a5024ec:always",
+      "consumerEdgeId": "edge:27be4d2f030b3a5024ec:1:fa3b07f9913db881c4e8",
+      "effectBoundaryId": "effect:2006e048fd3f4a396fc5:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#recoverExpiredOfflineMutationSyncClaims:browser_storage:recoverExpiredOfflineMutationSyncClaims",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:27be4d2f030b3a5024ec",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#reportProfileAction",
       "branchConditionClass": "always",
       "branchId": "branch:27f2be88f252c2685b7a:always",
@@ -2520,8 +2548,8 @@
       "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
       "branchConditionClass": "always",
       "branchId": "branch:4d8ae49ba6c3fddea7c2:always",
-      "consumerEdgeId": "edge:4d8ae49ba6c3fddea7c2:1:a8e524f834a1122dc54e",
-      "effectBoundaryId": "effect:9ee02889ec781df1d439:browser-storage-transaction-1",
+      "consumerEdgeId": "edge:4d8ae49ba6c3fddea7c2:1:fc6cee05c30b761b8f6f",
+      "effectBoundaryId": "effect:8d5d7e4e14b1c6b61eb1:browser-storage",
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
       "evidencePaths": [
         "src/lib/offline/queue.ts"
@@ -2529,6 +2557,22 @@
       "executionMode": "required",
       "pipelineId": "pipeline:4d8ae49ba6c3fddea7c2",
       "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
+      "branchConditionClass": "always",
+      "branchId": "branch:4d8ae49ba6c3fddea7c2:always",
+      "consumerEdgeId": "edge:4d8ae49ba6c3fddea7c2:2:edcafce82abe1d969d6c",
+      "effectBoundaryId": "effect:6c4b73bd4f375b03620d:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:4d8ae49ba6c3fddea7c2",
+      "predecessorEdgeIds": [
+        "edge:4d8ae49ba6c3fddea7c2:1:fc6cee05c30b761b8f6f"
+      ]
     },
     {
       "admissionBoundaryId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#runOwnerSyncAttempt:browser_storage:runOwnerSyncAttempt",
@@ -3529,8 +3573,8 @@
       "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
       "branchConditionClass": "always",
       "branchId": "branch:59dd0fac15eb03913e22:always",
-      "consumerEdgeId": "edge:59dd0fac15eb03913e22:3:a8e524f834a1122dc54e",
-      "effectBoundaryId": "effect:9ee02889ec781df1d439:browser-storage-transaction-1",
+      "consumerEdgeId": "edge:59dd0fac15eb03913e22:3:edcafce82abe1d969d6c",
+      "effectBoundaryId": "effect:6c4b73bd4f375b03620d:browser-storage-transaction-1",
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
       "evidencePaths": [
         "src/lib/offline/journal-entry-sync.ts",
@@ -3556,7 +3600,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:59dd0fac15eb03913e22",
       "predecessorEdgeIds": [
-        "edge:59dd0fac15eb03913e22:3:a8e524f834a1122dc54e"
+        "edge:59dd0fac15eb03913e22:3:edcafce82abe1d969d6c"
       ]
     },
     {
@@ -3580,7 +3624,24 @@
       "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
       "branchConditionClass": "always",
       "branchId": "branch:59dd0fac15eb03913e22:always",
-      "consumerEdgeId": "edge:59dd0fac15eb03913e22:6:5bf190af988829b2b900",
+      "consumerEdgeId": "edge:59dd0fac15eb03913e22:6:c0ff971485cfff2c8e05",
+      "effectBoundaryId": "effect:3a9caab3ee0daafb0c8f:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:59dd0fac15eb03913e22",
+      "predecessorEdgeIds": [
+        "edge:59dd0fac15eb03913e22:5:598fa5a659a92eb0fb40"
+      ]
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
+      "branchConditionClass": "always",
+      "branchId": "branch:59dd0fac15eb03913e22:always",
+      "consumerEdgeId": "edge:59dd0fac15eb03913e22:7:5bf190af988829b2b900",
       "effectBoundaryId": "effect:ace0abe77c6f87209e15:browser-storage-transaction-1",
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
       "evidencePaths": [
@@ -3590,7 +3651,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:59dd0fac15eb03913e22",
       "predecessorEdgeIds": [
-        "edge:59dd0fac15eb03913e22:5:598fa5a659a92eb0fb40"
+        "edge:59dd0fac15eb03913e22:6:c0ff971485cfff2c8e05"
       ]
     },
     {
@@ -4501,8 +4562,8 @@
       "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
       "branchConditionClass": "always",
       "branchId": "branch:6f10f423547485812880:always",
-      "consumerEdgeId": "edge:6f10f423547485812880:2:a8e524f834a1122dc54e",
-      "effectBoundaryId": "effect:9ee02889ec781df1d439:browser-storage-transaction-1",
+      "consumerEdgeId": "edge:6f10f423547485812880:2:edcafce82abe1d969d6c",
+      "effectBoundaryId": "effect:6c4b73bd4f375b03620d:browser-storage-transaction-1",
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
       "evidencePaths": [
         "src/lib/offline/journal-entry-sync.ts",
@@ -4528,7 +4589,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:6f10f423547485812880",
       "predecessorEdgeIds": [
-        "edge:6f10f423547485812880:2:a8e524f834a1122dc54e"
+        "edge:6f10f423547485812880:2:edcafce82abe1d969d6c"
       ]
     },
     {
@@ -4552,7 +4613,24 @@
       "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
       "branchConditionClass": "always",
       "branchId": "branch:6f10f423547485812880:always",
-      "consumerEdgeId": "edge:6f10f423547485812880:5:5bf190af988829b2b900",
+      "consumerEdgeId": "edge:6f10f423547485812880:5:c0ff971485cfff2c8e05",
+      "effectBoundaryId": "effect:3a9caab3ee0daafb0c8f:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:6f10f423547485812880",
+      "predecessorEdgeIds": [
+        "edge:6f10f423547485812880:4:598fa5a659a92eb0fb40"
+      ]
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
+      "branchConditionClass": "always",
+      "branchId": "branch:6f10f423547485812880:always",
+      "consumerEdgeId": "edge:6f10f423547485812880:6:5bf190af988829b2b900",
       "effectBoundaryId": "effect:ace0abe77c6f87209e15:browser-storage-transaction-1",
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
       "evidencePaths": [
@@ -4562,7 +4640,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:6f10f423547485812880",
       "predecessorEdgeIds": [
-        "edge:6f10f423547485812880:4:598fa5a659a92eb0fb40"
+        "edge:6f10f423547485812880:5:c0ff971485cfff2c8e05"
       ]
     },
     {
@@ -7264,6 +7342,36 @@
       ]
     },
     {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
+      "branchConditionClass": "always",
+      "branchId": "branch:aae9a9063df29aca64cc:always",
+      "consumerEdgeId": "edge:aae9a9063df29aca64cc:1:fc6cee05c30b761b8f6f",
+      "effectBoundaryId": "effect:8d5d7e4e14b1c6b61eb1:browser-storage",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:aae9a9063df29aca64cc",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
+      "branchConditionClass": "always",
+      "branchId": "branch:aae9a9063df29aca64cc:always",
+      "consumerEdgeId": "edge:aae9a9063df29aca64cc:2:edcafce82abe1d969d6c",
+      "effectBoundaryId": "effect:6c4b73bd4f375b03620d:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:aae9a9063df29aca64cc",
+      "predecessorEdgeIds": [
+        "edge:aae9a9063df29aca64cc:1:fc6cee05c30b761b8f6f"
+      ]
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
       "branchConditionClass": "always",
       "branchId": "branch:ab3b53afd4aefa29c463:always",
@@ -8665,6 +8773,20 @@
       ]
     },
     {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#markOfflineMutationsForManualRecovery:browser_storage:markOfflineMutationsForManualRecovery",
+      "branchConditionClass": "always",
+      "branchId": "branch:cc8c2429c38da0e747a6:always",
+      "consumerEdgeId": "edge:cc8c2429c38da0e747a6:1:26b9671ef1d3adaf5298",
+      "effectBoundaryId": "effect:6ba137e6769140f8917f:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#markOfflineMutationsForManualRecovery:browser_storage:markOfflineMutationsForManualRecovery",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:cc8c2429c38da0e747a6",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#confirmCatalogCandidateAction",
       "branchConditionClass": "always",
       "branchId": "branch:cd7e9102a65dd950d977:always",
@@ -8855,6 +8977,36 @@
       "executionMode": "required",
       "pipelineId": "pipeline:d3c79dad4d319d2689e7",
       "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
+      "branchConditionClass": "always",
+      "branchId": "branch:d4f7bfb9e3b52345f610:always",
+      "consumerEdgeId": "edge:d4f7bfb9e3b52345f610:1:fc6cee05c30b761b8f6f",
+      "effectBoundaryId": "effect:8d5d7e4e14b1c6b61eb1:browser-storage",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:d4f7bfb9e3b52345f610",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
+      "branchConditionClass": "always",
+      "branchId": "branch:d4f7bfb9e3b52345f610:always",
+      "consumerEdgeId": "edge:d4f7bfb9e3b52345f610:2:edcafce82abe1d969d6c",
+      "effectBoundaryId": "effect:6c4b73bd4f375b03620d:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:d4f7bfb9e3b52345f610",
+      "predecessorEdgeIds": [
+        "edge:d4f7bfb9e3b52345f610:1:fc6cee05c30b761b8f6f"
+      ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/wishlist/actions.ts#addCatalogPublicSlugToWishlistAction:authority:authenticated_user",
@@ -9900,6 +10052,89 @@
       "pipelineId": "pipeline:e689dc36da87afdd1463",
       "predecessorEdgeIds": [
         "edge:e689dc36da87afdd1463:8:2506836770d600a3a0ba"
+      ]
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "branchConditionClass": "always",
+      "branchId": "branch:eb5b5c53ae9d48d208d3:always",
+      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:1:fc6cee05c30b761b8f6f",
+      "effectBoundaryId": "effect:8d5d7e4e14b1c6b61eb1:browser-storage",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "evidencePaths": [
+        "src/lib/offline/journal-entry-sync.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:eb5b5c53ae9d48d208d3",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "branchConditionClass": "always",
+      "branchId": "branch:eb5b5c53ae9d48d208d3:always",
+      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:2:7a1127d48a8f0f532e3a",
+      "effectBoundaryId": "effect:6209cefbd7b53edee240:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "evidencePaths": [
+        "src/lib/offline/journal-entry-sync.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:eb5b5c53ae9d48d208d3",
+      "predecessorEdgeIds": [
+        "edge:eb5b5c53ae9d48d208d3:1:fc6cee05c30b761b8f6f"
+      ]
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "branchConditionClass": "always",
+      "branchId": "branch:eb5b5c53ae9d48d208d3:always",
+      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:3:598fa5a659a92eb0fb40",
+      "effectBoundaryId": "effect:263d8aae8ddb7494b770:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "evidencePaths": [
+        "src/lib/offline/journal-entry-sync.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:eb5b5c53ae9d48d208d3",
+      "predecessorEdgeIds": [
+        "edge:eb5b5c53ae9d48d208d3:2:7a1127d48a8f0f532e3a"
+      ]
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "branchConditionClass": "always",
+      "branchId": "branch:eb5b5c53ae9d48d208d3:always",
+      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:4:c0ff971485cfff2c8e05",
+      "effectBoundaryId": "effect:3a9caab3ee0daafb0c8f:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:eb5b5c53ae9d48d208d3",
+      "predecessorEdgeIds": [
+        "edge:eb5b5c53ae9d48d208d3:3:598fa5a659a92eb0fb40"
+      ]
+    },
+    {
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "branchConditionClass": "always",
+      "branchId": "branch:eb5b5c53ae9d48d208d3:always",
+      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:5:5bf190af988829b2b900",
+      "effectBoundaryId": "effect:ace0abe77c6f87209e15:browser-storage-transaction-1",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "evidencePaths": [
+        "src/lib/offline/journal-entry-sync.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:eb5b5c53ae9d48d208d3",
+      "predecessorEdgeIds": [
+        "edge:eb5b5c53ae9d48d208d3:4:c0ff971485cfff2c8e05"
       ]
     },
     {
@@ -11250,6 +11485,20 @@
       "ownerSymbol": "processErasureMediaCleanupJobs"
     },
     {
+      "atomicity": "browser_storage_transaction",
+      "commitLabel": "browser-storage-transaction-1",
+      "effectBoundaryId": "effect:2006e048fd3f4a396fc5:browser-storage-transaction-1",
+      "effectFamilies": [
+        "browser_storage"
+      ],
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "idempotencyOwner": "src/lib/offline/queue.ts#recoverExpiredOfflineMutationSyncClaims",
+      "ownerPath": "src/lib/offline/queue.ts",
+      "ownerSymbol": "recoverExpiredOfflineMutationSyncClaims"
+    },
+    {
       "atomicity": "database_transaction",
       "commitLabel": "canonical-row",
       "effectBoundaryId": "effect:208eec0033db0e018a5e:canonical-row",
@@ -11490,6 +11739,21 @@
       "idempotencyOwner": "src/server/media/media-repository.ts#settleClaimedMediaPublicReady",
       "ownerPath": "src/server/media/media-repository.ts",
       "ownerSymbol": "settleClaimedMediaPublicReady"
+    },
+    {
+      "atomicity": "browser_storage_transaction",
+      "commitLabel": "browser-storage-transaction-1",
+      "effectBoundaryId": "effect:3a9caab3ee0daafb0c8f:browser-storage-transaction-1",
+      "effectFamilies": [
+        "browser_storage"
+      ],
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "idempotencyOwner": "src/lib/offline/drafts.ts#deleteOfflineDraftIfClientMutationMatches",
+      "ownerPath": "src/lib/offline/drafts.ts",
+      "ownerSymbol": "deleteOfflineDraftIfClientMutationMatches"
     },
     {
       "atomicity": "database_transaction",
@@ -12109,6 +12373,34 @@
       "idempotencyOwner": "src/server/engagement-repository.ts#deleteEngagementComment",
       "ownerPath": "src/server/engagement-repository.ts",
       "ownerSymbol": "deleteEngagementComment"
+    },
+    {
+      "atomicity": "browser_storage_transaction",
+      "commitLabel": "browser-storage-transaction-1",
+      "effectBoundaryId": "effect:6ba137e6769140f8917f:browser-storage-transaction-1",
+      "effectFamilies": [
+        "browser_storage"
+      ],
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "idempotencyOwner": "src/lib/offline/queue.ts#markOfflineMutationsForManualRecovery",
+      "ownerPath": "src/lib/offline/queue.ts",
+      "ownerSymbol": "markOfflineMutationsForManualRecovery"
+    },
+    {
+      "atomicity": "browser_storage_transaction",
+      "commitLabel": "browser-storage-transaction-1",
+      "effectBoundaryId": "effect:6c4b73bd4f375b03620d:browser-storage-transaction-1",
+      "effectFamilies": [
+        "browser_storage"
+      ],
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "idempotencyOwner": "src/lib/offline/queue.ts#claimOfflineMutationForMode",
+      "ownerPath": "src/lib/offline/queue.ts",
+      "ownerSymbol": "claimOfflineMutationForMode"
     },
     {
       "atomicity": "database_transaction",
@@ -12733,20 +13025,6 @@
       "idempotencyOwner": "src/lib/offline/queue.ts#updateOfflineMutationStatus",
       "ownerPath": "src/lib/offline/queue.ts",
       "ownerSymbol": "updateOfflineMutationStatus"
-    },
-    {
-      "atomicity": "browser_storage_transaction",
-      "commitLabel": "browser-storage-transaction-1",
-      "effectBoundaryId": "effect:9ee02889ec781df1d439:browser-storage-transaction-1",
-      "effectFamilies": [
-        "browser_storage"
-      ],
-      "evidencePaths": [
-        "src/lib/offline/queue.ts"
-      ],
-      "idempotencyOwner": "src/lib/offline/queue.ts#claimOfflineMutationForSync",
-      "ownerPath": "src/lib/offline/queue.ts",
-      "ownerSymbol": "claimOfflineMutationForSync"
     },
     {
       "atomicity": "database_transaction",
@@ -15225,6 +15503,21 @@
     },
     {
       "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraftIfClientMutationMatches:browser_storage:deleteOfflineDraftIfClientMutationMatches",
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "high_risk_ove_290",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/lib/offline/drafts.ts",
+      "symbol": "deleteOfflineDraftIfClientMutationMatches",
+      "transport": "offline_replay",
+      "variant": "browser_storage:deleteOfflineDraftIfClientMutationMatches"
+    },
+    {
+      "authority": "authenticated_user",
       "classification": "read_only",
       "entrypointId": "offline_replay:src/lib/offline/drafts.ts#followUpEntryDraftId:browser_storage:followUpEntryDraftId",
       "evidencePaths": [
@@ -15376,6 +15669,51 @@
     {
       "authority": "authenticated_user",
       "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/foreground-autosync.ts#createForegroundAutosyncCoordinator:browser_storage:createForegroundAutosyncCoordinator",
+      "evidencePaths": [
+        "src/lib/offline/foreground-autosync.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "symbol": "createForegroundAutosyncCoordinator",
+      "transport": "offline_replay",
+      "variant": "browser_storage:createForegroundAutosyncCoordinator"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/foreground-autosync.ts#installForegroundAutosyncEventTriggers:browser_storage:installForegroundAutosyncEventTriggers",
+      "evidencePaths": [
+        "src/lib/offline/foreground-autosync.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "symbol": "installForegroundAutosyncEventTriggers",
+      "transport": "offline_replay",
+      "variant": "browser_storage:installForegroundAutosyncEventTriggers"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/foreground-autosync.ts#withForegroundAutosyncLease:browser_storage:withForegroundAutosyncLease",
+      "evidencePaths": [
+        "src/lib/offline/foreground-autosync.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "symbol": "withForegroundAutosyncLease",
+      "transport": "offline_replay",
+      "variant": "browser_storage:withForegroundAutosyncLease"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#buildJournalEntryRequestBodyForSync:browser_storage:buildJournalEntryRequestBodyForSync",
       "evidencePaths": [
         "src/lib/offline/journal-entry-sync.ts"
@@ -15406,6 +15744,21 @@
     {
       "authority": "authenticated_user",
       "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#offlineJournalDraftId:browser_storage:offlineJournalDraftId",
+      "evidencePaths": [
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "symbol": "offlineJournalDraftId",
+      "transport": "offline_replay",
+      "variant": "browser_storage:offlineJournalDraftId"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:browser_storage:submitJournalEntryPayload",
       "evidencePaths": [
         "src/lib/offline/journal-entry-sync.ts"
@@ -15432,6 +15785,21 @@
       "symbol": "submitOnlineJournalEntryPayload",
       "transport": "offline_replay",
       "variant": "browser_storage:submitOnlineJournalEntryPayload"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "evidencePaths": [
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "high_risk_ove_290",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "symbol": "syncClaimedOfflineJournalEntryMutation",
+      "transport": "offline_replay",
+      "variant": "browser_storage:syncClaimedOfflineJournalEntryMutation"
     },
     {
       "authority": "authenticated_user",
@@ -16111,6 +16479,21 @@
     {
       "authority": "authenticated_user",
       "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#readActiveOwnerUserId:browser_storage:readActiveOwnerUserId",
+      "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-vault.ts",
+      "symbol": "readActiveOwnerUserId",
+      "transport": "offline_replay",
+      "variant": "browser_storage:readActiveOwnerUserId"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
       "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#readActiveOwnerVaultBinding:browser_storage:readActiveOwnerVaultBinding",
       "evidencePaths": [
         "src/lib/offline/owner-vault.ts"
@@ -16231,6 +16614,36 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "high_risk_ove_290",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/lib/offline/queue.ts",
+      "symbol": "claimOfflineMutationForAutomaticSync",
+      "transport": "offline_replay",
+      "variant": "browser_storage:claimOfflineMutationForAutomaticSync"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "high_risk_ove_290",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/lib/offline/queue.ts",
+      "symbol": "claimOfflineMutationForManualSync",
+      "transport": "offline_replay",
+      "variant": "browser_storage:claimOfflineMutationForManualSync"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
       "evidencePaths": [
         "src/lib/offline/queue.ts"
@@ -16306,6 +16719,21 @@
     {
       "authority": "authenticated_user",
       "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#getOfflineMutationManualSyncCandidate:browser_storage:getOfflineMutationManualSyncCandidate",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/queue.ts",
+      "symbol": "getOfflineMutationManualSyncCandidate",
+      "transport": "offline_replay",
+      "variant": "browser_storage:getOfflineMutationManualSyncCandidate"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#listOfflineMutationSummaries:browser_storage:listOfflineMutationSummaries",
       "evidencePaths": [
         "src/lib/offline/queue.ts"
@@ -16336,6 +16764,21 @@
     {
       "authority": "authenticated_user",
       "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#listOfflineMutationsEligibleForAutomaticSync:browser_storage:listOfflineMutationsEligibleForAutomaticSync",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/queue.ts",
+      "symbol": "listOfflineMutationsEligibleForAutomaticSync",
+      "transport": "offline_replay",
+      "variant": "browser_storage:listOfflineMutationsEligibleForAutomaticSync"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#listQueuedMutations:browser_storage:listQueuedMutations",
       "evidencePaths": [
         "src/lib/offline/queue.ts"
@@ -16347,6 +16790,21 @@
       "symbol": "listQueuedMutations",
       "transport": "offline_replay",
       "variant": "browser_storage:listQueuedMutations"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#markOfflineMutationsForManualRecovery:browser_storage:markOfflineMutationsForManualRecovery",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "high_risk_ove_290",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/lib/offline/queue.ts",
+      "symbol": "markOfflineMutationsForManualRecovery",
+      "transport": "offline_replay",
+      "variant": "browser_storage:markOfflineMutationsForManualRecovery"
     },
     {
       "authority": "authenticated_user",
@@ -16362,6 +16820,21 @@
       "symbol": "offlineDraftSummary",
       "transport": "offline_replay",
       "variant": "browser_storage:offlineDraftSummary"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#offlineMutationQueueRevision:browser_storage:offlineMutationQueueRevision",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/queue.ts",
+      "symbol": "offlineMutationQueueRevision",
+      "transport": "offline_replay",
+      "variant": "browser_storage:offlineMutationQueueRevision"
     },
     {
       "authority": "authenticated_user",
@@ -16422,6 +16895,21 @@
       "symbol": "readLocalOwnerActivitySessionGeneration",
       "transport": "offline_replay",
       "variant": "browser_storage:readLocalOwnerActivitySessionGeneration"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#recoverExpiredOfflineMutationSyncClaims:browser_storage:recoverExpiredOfflineMutationSyncClaims",
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "high_risk_ove_290",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/lib/offline/queue.ts",
+      "symbol": "recoverExpiredOfflineMutationSyncClaims",
+      "transport": "offline_replay",
+      "variant": "browser_storage:recoverExpiredOfflineMutationSyncClaims"
     },
     {
       "authority": "authenticated_user",
@@ -19794,6 +20282,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/foreground-autosync.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:09eb5247a673ccb685f9",
+      "symbol": "OfflineMutationSyncCandidate"
+    },
+    {
+      "evidencePaths": [
         "src/server/catalog-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -20323,6 +20823,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/foreground-autosync.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:0f47d36a22736b40cb91",
+      "symbol": "OFFLINE_QUEUE_CHANGED_EVENT"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/engagement-repository.ts"
       ],
@@ -20601,6 +21113,17 @@
       "semanticVariant": "from:./journal-mention-typeahead",
       "sourceNodeId": "source:11f480907c6fdc6a4fd2",
       "symbol": "JournalMentionTypeaheadPanel"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:deleteOfflineDraftIfClientMutationMatches",
+      "sourceNodeId": "source:11f4855c60a4d03bcbc1",
+      "symbol": "deleteOfflineDraftIfClientMutationMatches"
     },
     {
       "evidencePaths": [
@@ -21508,6 +22031,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/foreground-autosync.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:createForegroundAutosyncCoordinator",
+      "sourceNodeId": "source:181812286f78c27ef6a8",
+      "symbol": "createForegroundAutosyncCoordinator"
+    },
+    {
+      "evidencePaths": [
         "src/app/auth/help/password-reset-request-form.tsx"
       ],
       "nodeKind": "auth_client_call",
@@ -21808,6 +22342,17 @@
       "semanticVariant": "from:@/server/pilot-invite-repository",
       "sourceNodeId": "source:1a3855464c064660b2f3",
       "symbol": "buildGrantPilotWriteAccessQuery"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:offlineJournalDraftId",
+      "sourceNodeId": "source:1a4157df17cc3026458b",
+      "symbol": "offlineJournalDraftId"
     },
     {
       "evidencePaths": [
@@ -22320,6 +22865,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:recoverExpiredOfflineMutationSyncClaims",
+      "sourceNodeId": "source:1f0ff93998ac9b8eebe7",
+      "symbol": "recoverExpiredOfflineMutationSyncClaims"
+    },
+    {
+      "evidencePaths": [
         "src/app/lineage/objects/[objectId]/page.tsx",
         "src/server/public-object-passport-repository.ts"
       ],
@@ -22785,6 +23341,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/foreground-autosync.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:installForegroundAutosyncEventTriggers",
+      "sourceNodeId": "source:2305212341b39dc9ad43",
+      "symbol": "installForegroundAutosyncEventTriggers"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/[profileHandle]/actions.ts",
         "src/server/identity-policy.ts"
       ],
@@ -23138,6 +23705,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/journal-entry-sync.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:250168a9e7ecbe5f95f7",
+      "symbol": "claimOfflineMutationForManualSync"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/media/uploads/route.ts",
         "src/lib/offline/journal-entry-sync.ts"
       ],
@@ -23301,6 +23880,18 @@
       "semanticVariant": "from:@/server/visual-fixtures/social-actor",
       "sourceNodeId": "source:2657699a1d4466c8ef62",
       "symbol": "resolveVisualSocialMutationActor"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/first-entry-composer.tsx",
+        "src/components/auth/foreground-autosync-provider.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/first-entry-composer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/foreground-autosync-provider",
+      "sourceNodeId": "source:265cfe6d0d46ad7cbe6b",
+      "symbol": "useOptionalForegroundAutosync"
     },
     {
       "evidencePaths": [
@@ -23833,6 +24424,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+        "src/components/auth/foreground-autosync-provider.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/foreground-autosync-provider",
+      "sourceNodeId": "source:295d700cd4647b22a0aa",
+      "symbol": "useOptionalForegroundAutosync"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/%5F%5Fvisual-fixtures/journal-creation/route.ts",
         "src/lib/visual-fixtures/environment.ts"
       ],
@@ -23937,6 +24540,17 @@
       "semanticVariant": "action:action->moderateCommunityDiscussionAction",
       "sourceNodeId": "source:2a77c764c31c144f9382",
       "symbol": "ModerationForm"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:listOfflineMutationsEligibleForAutomaticSync",
+      "sourceNodeId": "source:2a8e001ca59fe32be9b2",
+      "symbol": "listOfflineMutationsEligibleForAutomaticSync"
     },
     {
       "evidencePaths": [
@@ -24329,6 +24943,17 @@
       "semanticVariant": "from:@/lib/garden/journal-document",
       "sourceNodeId": "source:2dc185de3a7322026aaf",
       "symbol": "createEmptyJournalDocument"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser-storage-transaction-1",
+      "sourceNodeId": "source:2dd2f9f58d1f677a18fa",
+      "symbol": "recoverExpiredOfflineMutationSyncClaims"
     },
     {
       "evidencePaths": [
@@ -25083,6 +25708,17 @@
       "semanticVariant": "from:@/components/auth/document-mutation-recovery",
       "sourceNodeId": "source:34b42e9131eea7a94e24",
       "symbol": "createDocumentMutationRequestHeaders"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:markOfflineMutationsForManualRecovery",
+      "sourceNodeId": "source:34b5ffba5ba8677b4f18",
+      "symbol": "markOfflineMutationsForManualRecovery"
     },
     {
       "evidencePaths": [
@@ -28630,6 +29266,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./drafts",
+      "sourceNodeId": "source:51874caf6ea26bc1b00c",
+      "symbol": "FIRST_ENTRY_DRAFT_ID"
+    },
+    {
+      "evidencePaths": [
         "src/server/founder-interview-repository.ts",
         "src/server/request-scope.ts"
       ],
@@ -29366,6 +30014,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./drafts",
+      "sourceNodeId": "source:578a1b2690488ba9744b",
+      "symbol": "deleteOfflineDraftIfClientMutationMatches"
+    },
+    {
+      "evidencePaths": [
         "src/lib/garden/pilot-invite.ts",
         "src/server/mvp-learning/attribution-outbox.ts"
       ],
@@ -29883,6 +30543,17 @@
       "semanticVariant": "from:./queue",
       "sourceNodeId": "source:5d1e6706489051cbf224",
       "symbol": "readLocalOwnerActivitySessionGeneration"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser-storage-transaction-1",
+      "sourceNodeId": "source:5d8c755c356a540b2254",
+      "symbol": "markOfflineMutationsForManualRecovery"
     },
     {
       "evidencePaths": [
@@ -31266,6 +31937,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./drafts",
+      "sourceNodeId": "source:69915d6e4c0e001533ea",
+      "symbol": "followUpEntryDraftId"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/media/process/route.ts",
         "src/server/media/processor.ts"
       ],
@@ -31299,6 +31982,18 @@
       "semanticVariant": "from:@/lib/garden/actor-class",
       "sourceNodeId": "source:69e189e85933222b54e6",
       "symbol": "normalizeActorClass"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/foreground-autosync.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:69eb1dce79f210f4e3a9",
+      "symbol": "OfflineMutation"
     },
     {
       "evidencePaths": [
@@ -36172,6 +36867,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser-storage-transaction-1",
+      "sourceNodeId": "source:90eb385fb20c607f537d",
+      "symbol": "deleteOfflineDraftIfClientMutationMatches"
+    },
+    {
+      "evidencePaths": [
         "src/app/admin/moderation/comments/actions.ts",
         "src/app/admin/moderation/comments/page.tsx"
       ],
@@ -36229,6 +36936,18 @@
       "semanticVariant": "from:@/lib/garden/journal-mentions",
       "sourceNodeId": "source:912f89e26dc330ee9bc7",
       "symbol": "JournalMentionSuggestion"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./drafts",
+      "sourceNodeId": "source:91471d15cd39846bfbfd",
+      "symbol": "spaceEntryDraftId"
     },
     {
       "evidencePaths": [
@@ -37379,6 +38098,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/foreground-autosync.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "re_export",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:9a828777d622df40fe56",
+      "symbol": "OfflineMutationSyncCandidate"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/lineage-repository.ts"
       ],
@@ -37672,6 +38403,17 @@
       "semanticVariant": "from:@/server/auth-session",
       "sourceNodeId": "source:9d6dec33d63cde067444",
       "symbol": "getSessionId"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser-storage-transaction-1",
+      "sourceNodeId": "source:9db2aab561accbf5988b",
+      "symbol": "claimOfflineMutationForMode"
     },
     {
       "evidencePaths": [
@@ -38051,6 +38793,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/foreground-autosync.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:withForegroundAutosyncLease",
+      "sourceNodeId": "source:a0c8caab240cdfc14362",
+      "symbol": "withForegroundAutosyncLease"
+    },
+    {
+      "evidencePaths": [
         "src/lib/visual-fixtures/journal-creation-client.ts"
       ],
       "nodeKind": "same_origin_call",
@@ -38420,6 +39173,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "sourceNodeId": "source:a3893f48dd73aa7219ce",
+      "symbol": "syncClaimedOfflineJournalEntryMutation"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
         "src/server/journal-repository.ts"
       ],
@@ -38703,6 +39467,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/journal-entry-sync.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:a622bdacb0d3f3d12319",
+      "symbol": "offlineMutationQueueRevision"
+    },
+    {
+      "evidencePaths": [
         "src/server/catalog-source/candidate-review-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -38913,6 +39689,18 @@
       "semanticVariant": "from:@/server/journal-repository",
       "sourceNodeId": "source:a7d6530ad0bf6a4bb739",
       "symbol": "resolvePlantObjectCatalog"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/auth/document-mutation-generation-transport.ts",
+        "src/lib/offline/foreground-autosync.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:a7e120778a15245130a6",
+      "symbol": "DocumentMutationAdmissionTransportResultV1"
     },
     {
       "evidencePaths": [
@@ -39576,6 +40364,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:ac5393c45768af34ab74",
       "symbol": "AnalyticsEventName"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/auth/document-mutation-generation-transport.ts",
+        "src/lib/offline/foreground-autosync.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:ac5bbc5ff1c3aa12072e",
+      "symbol": "isDocumentMutationAdmissionTransportResult"
     },
     {
       "evidencePaths": [
@@ -40464,6 +41264,17 @@
       "semanticVariant": "from:@/components/garden/structured-journal-composer",
       "sourceNodeId": "source:b39c9dea29fa7eb89c78",
       "symbol": "StructuredJournalComposer"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:getOfflineMutationManualSyncCandidate",
+      "sourceNodeId": "source:b3a8bccfde37ad8cf35f",
+      "symbol": "getOfflineMutationManualSyncCandidate"
     },
     {
       "evidencePaths": [
@@ -42007,6 +42818,17 @@
       "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
       "sourceNodeId": "source:bfc05c0e459b181a9b74",
       "symbol": "isDocumentMutationAdmissionTransportResult"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:offlineMutationQueueRevision",
+      "sourceNodeId": "source:bfc33b2b9b925cbf0cff",
+      "symbol": "offlineMutationQueueRevision"
     },
     {
       "evidencePaths": [
@@ -44584,6 +45406,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-vault.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-vault.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:readActiveOwnerUserId",
+      "sourceNodeId": "source:d60923b42269e4d5088e",
+      "symbol": "readActiveOwnerUserId"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx",
         "src/components/auth/document-mutation-recovery.tsx"
       ],
@@ -45822,18 +46655,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/offline/journal-entry-sync.ts",
-        "src/lib/offline/queue.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/lib/offline/journal-entry-sync.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:./queue",
-      "sourceNodeId": "source:e0ddc37e6250271eac14",
-      "symbol": "claimOfflineMutationForSync"
-    },
-    {
-      "evidencePaths": [
         "src/app/engagement/public-engagement-panel.tsx",
         "src/lib/auth/auth-intent-contract.ts"
       ],
@@ -46803,6 +47624,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:claimOfflineMutationForAutomaticSync",
+      "sourceNodeId": "source:e967a91c4bdf2c7a1787",
+      "symbol": "claimOfflineMutationForAutomaticSync"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/notifications/receipts/route.ts",
         "src/server/social-return-repository.ts"
       ],
@@ -47047,6 +47879,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/auth/document-mutation-generation-transport.ts",
+        "src/lib/offline/foreground-autosync.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/foreground-autosync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:eb6e961c3c6af2b31209",
+      "symbol": "DOCUMENT_MUTATION_ADMISSION_DEADLINE_MS"
+    },
+    {
+      "evidencePaths": [
         "src/server/owner-profile-repository.ts",
         "src/server/public-profile-repository.ts"
       ],
@@ -47188,17 +48032,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/offline/queue.ts"
-      ],
-      "nodeKind": "effect_owner",
-      "path": "src/lib/offline/queue.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "browser-storage-transaction-1",
-      "sourceNodeId": "source:ec598f78129e8383bad0",
-      "symbol": "claimOfflineMutationForSync"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/page.tsx",
         "src/lib/owner-lineage-copy.ts"
       ],
@@ -47243,6 +48076,17 @@
       "semanticVariant": "from:../../shared",
       "sourceNodeId": "source:ecd3ca421045d568895f",
       "symbol": "redirectWithEngagementStatus"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:claimOfflineMutationForManualSync",
+      "sourceNodeId": "source:ecd454fbde2a37bbf2b1",
+      "symbol": "claimOfflineMutationForManualSync"
     },
     {
       "evidencePaths": [

@@ -141,6 +141,17 @@ interface ActiveOwnerVault {
 // IndexedDB discovery and the physical database name use the opaque binding.
 const activeOwnerVaults = new Map<string, ActiveOwnerVault>();
 
+/**
+ * Document-local authority only. SessionConvergenceBoundary mounts private
+ * children after exactly one physical owner vault is active, so autosync can
+ * discover that already-authorized owner without serializing a raw identity
+ * through the root shell or deriving one from an opaque generation.
+ */
+export function readActiveOwnerUserId(): string | null {
+  if (activeOwnerVaults.size !== 1) return null;
+  return activeOwnerVaults.keys().next().value ?? null;
+}
+
 export async function withOwnerVaultWriterLease<T>(
   ownerUserId: string,
   operation: (database: OwnerOfflineDatabase) => Promise<T>,

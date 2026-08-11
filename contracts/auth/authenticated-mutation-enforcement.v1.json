@@ -1,7 +1,7 @@
 {
   "schemaVersion": "overgarden.authenticated-mutation-enforcement.v1",
-  "registryDigest": "633f9071fd4f2ef30f4036e5faed5b295590a90b82f3a518a3080bcba67bcdda",
-  "sourceRegistryReceiptDigest": "6d2d4154d235bcdf318b3816355ba610b307135f9c7579949bd452afec67ee14",
+  "registryDigest": "e8a87b3291a3cb9948658f722b779fdc1d2c13fe2411aa74c73d7ac51387e5d9",
+  "sourceRegistryReceiptDigest": "e720b1c54a84ade23ea63929a11def99c98d0fd47265cc2c20f8f7c47f1f1ce9",
   "entrypointStates": [
     {
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_account_session_mutation",
@@ -392,6 +392,10 @@
       "enforcementState": "enforced_ove_290"
     },
     {
+      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraftIfClientMutationMatches:browser_storage:deleteOfflineDraftIfClientMutationMatches",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
       "entrypointId": "offline_replay:src/lib/offline/drafts.ts#followUpEntryDraftId:browser_storage:followUpEntryDraftId",
       "enforcementState": "excluded_with_authority"
     },
@@ -432,6 +436,18 @@
       "enforcementState": "enforced_ove_290"
     },
     {
+      "entrypointId": "offline_replay:src/lib/offline/foreground-autosync.ts#createForegroundAutosyncCoordinator:browser_storage:createForegroundAutosyncCoordinator",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
+      "entrypointId": "offline_replay:src/lib/offline/foreground-autosync.ts#installForegroundAutosyncEventTriggers:browser_storage:installForegroundAutosyncEventTriggers",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
+      "entrypointId": "offline_replay:src/lib/offline/foreground-autosync.ts#withForegroundAutosyncLease:browser_storage:withForegroundAutosyncLease",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#buildJournalEntryRequestBodyForSync:browser_storage:buildJournalEntryRequestBodyForSync",
       "enforcementState": "excluded_with_authority"
     },
@@ -440,11 +456,19 @@
       "enforcementState": "excluded_with_authority"
     },
     {
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#offlineJournalDraftId:browser_storage:offlineJournalDraftId",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:browser_storage:submitJournalEntryPayload",
       "enforcementState": "excluded_with_authority"
     },
     {
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
       "enforcementState": "enforced_ove_290"
     },
     {
@@ -628,6 +652,10 @@
       "enforcementState": "excluded_with_authority"
     },
     {
+      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#readActiveOwnerUserId:browser_storage:readActiveOwnerUserId",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
       "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#readActiveOwnerVaultBinding:browser_storage:readActiveOwnerVaultBinding",
       "enforcementState": "excluded_with_authority"
     },
@@ -660,6 +688,14 @@
       "enforcementState": "enforced_ove_290"
     },
     {
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
       "enforcementState": "enforced_ove_290"
     },
@@ -680,6 +716,10 @@
       "enforcementState": "excluded_with_authority"
     },
     {
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#getOfflineMutationManualSyncCandidate:browser_storage:getOfflineMutationManualSyncCandidate",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#listOfflineMutationSummaries:browser_storage:listOfflineMutationSummaries",
       "enforcementState": "excluded_with_authority"
     },
@@ -688,11 +728,23 @@
       "enforcementState": "excluded_with_authority"
     },
     {
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#listOfflineMutationsEligibleForAutomaticSync:browser_storage:listOfflineMutationsEligibleForAutomaticSync",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#listQueuedMutations:browser_storage:listQueuedMutations",
       "enforcementState": "excluded_with_authority"
     },
     {
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#markOfflineMutationsForManualRecovery:browser_storage:markOfflineMutationsForManualRecovery",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#offlineDraftSummary:browser_storage:offlineDraftSummary",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#offlineMutationQueueRevision:browser_storage:offlineMutationQueueRevision",
       "enforcementState": "excluded_with_authority"
     },
     {
@@ -710,6 +762,10 @@
     {
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#readLocalOwnerActivitySessionGeneration:browser_storage:readLocalOwnerActivitySessionGeneration",
       "enforcementState": "excluded_with_authority"
+    },
+    {
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#recoverExpiredOfflineMutationSyncClaims:browser_storage:recoverExpiredOfflineMutationSyncClaims",
+      "enforcementState": "enforced_ove_290"
     },
     {
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#resumeOwnerOfflineActivityLocally:browser_storage:resumeOwnerOfflineActivityLocally",
@@ -1514,6 +1570,18 @@
       "enforcementState": "enforced_ove_291"
     },
     {
+      "consumerEdgeId": "edge:25d67c5b3276defc71f5:1:c0ff971485cfff2c8e05",
+      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraftIfClientMutationMatches:browser_storage:deleteOfflineDraftIfClientMutationMatches",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraftIfClientMutationMatches:browser_storage:deleteOfflineDraftIfClientMutationMatches",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:27be4d2f030b3a5024ec:1:fa3b07f9913db881c4e8",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#recoverExpiredOfflineMutationSyncClaims:browser_storage:recoverExpiredOfflineMutationSyncClaims",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#recoverExpiredOfflineMutationSyncClaims:browser_storage:recoverExpiredOfflineMutationSyncClaims",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
       "consumerEdgeId": "edge:27f2be88f252c2685b7a:1:047b476defb3c72a6518",
       "entrypointId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#reportProfileAction",
       "admissionBoundaryId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#reportProfileAction",
@@ -2168,7 +2236,13 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:4d8ae49ba6c3fddea7c2:1:a8e524f834a1122dc54e",
+      "consumerEdgeId": "edge:4d8ae49ba6c3fddea7c2:1:fc6cee05c30b761b8f6f",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:4d8ae49ba6c3fddea7c2:2:edcafce82abe1d969d6c",
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
       "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
       "enforcementState": "enforced_ove_290"
@@ -2516,7 +2590,7 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:59dd0fac15eb03913e22:3:a8e524f834a1122dc54e",
+      "consumerEdgeId": "edge:59dd0fac15eb03913e22:3:edcafce82abe1d969d6c",
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
       "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
       "enforcementState": "enforced_ove_290"
@@ -2534,7 +2608,13 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:59dd0fac15eb03913e22:6:5bf190af988829b2b900",
+      "consumerEdgeId": "edge:59dd0fac15eb03913e22:6:c0ff971485cfff2c8e05",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:59dd0fac15eb03913e22:7:5bf190af988829b2b900",
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
       "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
       "enforcementState": "enforced_ove_290"
@@ -2828,7 +2908,7 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:6f10f423547485812880:2:a8e524f834a1122dc54e",
+      "consumerEdgeId": "edge:6f10f423547485812880:2:edcafce82abe1d969d6c",
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
       "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
       "enforcementState": "enforced_ove_290"
@@ -2846,7 +2926,13 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:6f10f423547485812880:5:5bf190af988829b2b900",
+      "consumerEdgeId": "edge:6f10f423547485812880:5:c0ff971485cfff2c8e05",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:6f10f423547485812880:6:5bf190af988829b2b900",
       "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
       "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
       "enforcementState": "enforced_ove_290"
@@ -3788,6 +3874,18 @@
       "enforcementState": "enforced_ove_290"
     },
     {
+      "consumerEdgeId": "edge:aae9a9063df29aca64cc:1:fc6cee05c30b761b8f6f",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:aae9a9063df29aca64cc:2:edcafce82abe1d969d6c",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
       "consumerEdgeId": "edge:ab3b53afd4aefa29c463:1:8753a2814be9a86786c1",
       "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
       "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
@@ -4280,6 +4378,12 @@
       "enforcementState": "enforced_ove_290"
     },
     {
+      "consumerEdgeId": "edge:cc8c2429c38da0e747a6:1:26b9671ef1d3adaf5298",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#markOfflineMutationsForManualRecovery:browser_storage:markOfflineMutationsForManualRecovery",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#markOfflineMutationsForManualRecovery:browser_storage:markOfflineMutationsForManualRecovery",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
       "consumerEdgeId": "edge:cd7e9102a65dd950d977:1:970a499c3870affe9016",
       "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:confirmAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#confirmCatalogCandidateAction",
@@ -4350,6 +4454,18 @@
       "entrypointId": "server_action:src/app/lineage/objects/[objectId]/actions.ts#followLineageNodeAction:authority:authenticated_user",
       "admissionBoundaryId": "server_action:src/app/lineage/objects/[objectId]/actions.ts#followLineageNodeAction:authority:authenticated_user",
       "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:d4f7bfb9e3b52345f610:1:fc6cee05c30b761b8f6f",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:d4f7bfb9e3b52345f610:2:edcafce82abe1d969d6c",
+      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
+      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:d8d4e0b13ceb5508bdc0:1:43373f91402d5ff0aab3",
@@ -4703,6 +4819,36 @@
       "consumerEdgeId": "edge:e689dc36da87afdd1463:9:a6411b97b3677cd486eb",
       "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:1:fc6cee05c30b761b8f6f",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:2:7a1127d48a8f0f532e3a",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:3:598fa5a659a92eb0fb40",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:4:c0ff971485cfff2c8e05",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:5:5bf190af988829b2b900",
+      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
+      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
       "enforcementState": "enforced_ove_290"
     },
     {

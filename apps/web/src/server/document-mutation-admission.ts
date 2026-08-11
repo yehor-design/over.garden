@@ -4,6 +4,7 @@ import type { AuthSecretConfiguration } from "@/lib/auth-secret";
 import {
   DOCUMENT_MUTATION_GENERATION_FORM_FIELD,
   DOCUMENT_MUTATION_GENERATION_HEADER,
+  DOCUMENT_MUTATION_ADMISSION_DEADLINE_MS,
   type DocumentMutationAdmissionTransportResultV1,
 } from "@/lib/auth/document-mutation-generation-transport";
 import {
@@ -23,7 +24,8 @@ export {
   DOCUMENT_MUTATION_GENERATION_FORM_FIELD,
   DOCUMENT_MUTATION_GENERATION_HEADER,
 };
-export const MUTATION_ADMISSION_DEADLINE_MS = 3_000;
+export const MUTATION_ADMISSION_DEADLINE_MS =
+  DOCUMENT_MUTATION_ADMISSION_DEADLINE_MS;
 
 export type DocumentMutationAdmissionInternalResult =
   | "MATCH"

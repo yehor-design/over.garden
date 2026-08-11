@@ -4,6 +4,7 @@ export const DOCUMENT_MUTATION_GENERATION_FORM_FIELD =
   "__overgardenDocumentGeneration" as const;
 export const DOCUMENT_OWNER_CHANGED_EVENT =
   "overgarden:document-owner-changed" as const;
+export const DOCUMENT_MUTATION_ADMISSION_DEADLINE_MS = 3_000;
 
 export type DocumentMutationAdmissionTransportResultV1 =
   | "MATCH"

@@ -24,6 +24,7 @@ export type OfflineMutationStatus = "queued" | "syncing" | "synced" | "failed";
 export type OfflineMutationKind = "journal_entry" | "photo_upload";
 export const OFFLINE_QUEUE_CHANGED_EVENT = "overgarden:offline-queue-changed";
 export const OFFLINE_SYNC_LEASE_MS = 60_000;
+export const OFFLINE_AUTOMATIC_SYNC_BATCH_SIZE = 24;
 
 export interface OfflineOwnerActivityOperation {
   operationId: string;
@@ -129,6 +130,16 @@ export interface OfflineMutation {
   lastError?: string;
   syncResult?: unknown;
   syncLeaseExpiresAt?: number | null;
+  /** Additive local revision; legacy rows are interpreted as revision 1. */
+  queueRevision?: number;
+  /** The latest revision for which an automatic attempt was already claimed. */
+  automaticAttemptConsumedRevision?: number | null;
+}
+
+export interface OfflineMutationSyncCandidate {
+  id: string;
+  revision: number;
+  mode: "automatic" | "manual";
 }
 
 export type OfflineDraftKind =
@@ -317,6 +328,7 @@ export async function enqueueOfflineMutation(
 
         if (existing) {
           if (existing.status === "queued" || existing.status === "failed") {
+            const queueRevision = nextOfflineMutationQueueRevision(existing);
             const updated: OfflineMutation = {
               ...existing,
               payload: input.payload,
@@ -324,6 +336,9 @@ export async function enqueueOfflineMutation(
               updatedAt: now,
               lastError: undefined,
               syncLeaseExpiresAt: null,
+              queueRevision,
+              automaticAttemptConsumedRevision:
+                offlineMutationConsumedRevision(existing),
             };
             await putOfflineMutationWithSummary(database, updated);
             return { mutation: updated, changed: true };
@@ -342,6 +357,8 @@ export async function enqueueOfflineMutation(
           createdAt: now,
           updatedAt: now,
           syncLeaseExpiresAt: null,
+          queueRevision: 1,
+          automaticAttemptConsumedRevision: null,
         };
 
         await database.mutations.add(mutation);
@@ -359,6 +376,90 @@ export async function listQueuedMutations(
   ownerUserId: string,
 ): Promise<OfflineMutation[]> {
   return listOfflineMutations(ownerUserId, ["queued"]);
+}
+
+export async function listOfflineMutationsEligibleForAutomaticSync(
+  ownerUserId: string,
+): Promise<OfflineMutationSyncCandidate[]> {
+  const owner = requireOwnerUserId(ownerUserId);
+  const database = requireOwnerOfflineDatabase(owner);
+  const mutations = await database.mutations
+    .where("[ownerUserId+status]")
+    .equals([owner, "queued"])
+    .filter(
+      (mutation) =>
+        mutation.kind === "journal_entry" &&
+        !offlineMutationAutomaticAttemptConsumed(mutation),
+    )
+    .limit(OFFLINE_AUTOMATIC_SYNC_BATCH_SIZE)
+    .toArray();
+
+  return mutations
+    .sort((left, right) => left.createdAt - right.createdAt)
+    .map((mutation) => ({
+      id: mutation.id,
+      revision: offlineMutationQueueRevision(mutation),
+      mode: "automatic" as const,
+    }));
+}
+
+export async function recoverExpiredOfflineMutationSyncClaims(
+  ownerUserId: string,
+): Promise<number> {
+  const owner = requireOwnerUserId(ownerUserId);
+  const now = Date.now();
+  const changed = await withOwnerVaultWriterLease(owner, (database) =>
+    database.transaction(
+      "rw",
+      database.mutations,
+      database.mutationSummaries,
+      database.ownerActivity,
+      async () => {
+        await assertOwnerOfflineActivityAllowed(owner);
+        const expired = await database.mutations
+          .where("[ownerUserId+status]")
+          .equals([owner, "syncing"])
+          .filter((mutation) => (mutation.syncLeaseExpiresAt ?? 0) <= now)
+          .limit(OFFLINE_AUTOMATIC_SYNC_BATCH_SIZE)
+          .toArray();
+        for (const mutation of expired) {
+          const next: OfflineMutation = {
+            ...mutation,
+            status: "failed",
+            updatedAt: now,
+            lastError: "Interrupted sync requires manual recovery.",
+            syncLeaseExpiresAt: null,
+            queueRevision: offlineMutationQueueRevision(mutation),
+            automaticAttemptConsumedRevision:
+              offlineMutationConsumedRevision(mutation),
+          };
+          await putOfflineMutationWithSummary(database, next);
+        }
+        return expired.length;
+      },
+    ),
+  );
+  if (changed > 0) publishOfflineQueueChanged();
+  return changed;
+}
+
+export async function getOfflineMutationManualSyncCandidate(
+  ownerUserId: string,
+  id: string,
+): Promise<OfflineMutationSyncCandidate | null> {
+  const mutation = await getOfflineMutation(ownerUserId, id);
+  if (
+    !mutation ||
+    mutation.kind !== "journal_entry" ||
+    (mutation.status !== "queued" && mutation.status !== "failed")
+  ) {
+    return null;
+  }
+  return {
+    id: mutation.id,
+    revision: offlineMutationQueueRevision(mutation),
+    mode: "manual",
+  };
 }
 
 export async function listOfflineMutations(
@@ -456,6 +557,9 @@ export async function updateOfflineMutationStatus(
           syncResult: options.syncResult,
           syncLeaseExpiresAt:
             status === "syncing" ? Date.now() + OFFLINE_SYNC_LEASE_MS : null,
+          queueRevision: offlineMutationQueueRevision(mutation),
+          automaticAttemptConsumedRevision:
+            offlineMutationConsumedRevision(mutation),
         };
         await putOfflineMutationWithSummary(database, next);
         return next;
@@ -483,7 +587,14 @@ export async function updateOfflineMutationPayload(
         await assertOwnerOfflineActivityAllowed(owner);
         const mutation = await database.mutations.get(id);
         if (!mutation || mutation.ownerUserId !== owner) return undefined;
-        const next = { ...mutation, payload, updatedAt: Date.now() };
+        const next = {
+          ...mutation,
+          payload,
+          updatedAt: Date.now(),
+          queueRevision: offlineMutationQueueRevision(mutation),
+          automaticAttemptConsumedRevision:
+            offlineMutationConsumedRevision(mutation),
+        };
         await putOfflineMutationWithSummary(database, next);
         return next;
       },
@@ -498,6 +609,43 @@ export async function claimOfflineMutationForSync(
   ownerUserId: string,
   id: string,
 ): Promise<OfflineMutation | undefined> {
+  await assertOwnerOfflineActivityAllowed(ownerUserId);
+  const mutation = await getOfflineMutation(ownerUserId, id);
+  if (!mutation) return undefined;
+  return claimOfflineMutationForMode(
+    ownerUserId,
+    {
+      id,
+      revision: offlineMutationQueueRevision(mutation),
+      mode: "manual",
+    },
+    false,
+  );
+}
+
+export async function claimOfflineMutationForAutomaticSync(
+  ownerUserId: string,
+  candidate: OfflineMutationSyncCandidate,
+): Promise<OfflineMutation | undefined> {
+  if (candidate.mode !== "automatic") return undefined;
+  await assertOwnerOfflineActivityAllowed(ownerUserId);
+  return claimOfflineMutationForMode(ownerUserId, candidate, true);
+}
+
+export async function claimOfflineMutationForManualSync(
+  ownerUserId: string,
+  candidate: OfflineMutationSyncCandidate,
+): Promise<OfflineMutation | undefined> {
+  if (candidate.mode !== "manual") return undefined;
+  await assertOwnerOfflineActivityAllowed(ownerUserId);
+  return claimOfflineMutationForMode(ownerUserId, candidate, false);
+}
+
+async function claimOfflineMutationForMode(
+  ownerUserId: string,
+  candidate: OfflineMutationSyncCandidate,
+  automatic: boolean,
+): Promise<OfflineMutation | undefined> {
   const owner = requireOwnerUserId(ownerUserId);
   const now = Date.now();
   const claimed = await withOwnerVaultWriterLease(owner, (database) =>
@@ -508,9 +656,17 @@ export async function claimOfflineMutationForSync(
       database.ownerActivity,
       async () => {
         await assertOwnerOfflineActivityAllowed(owner);
-        const mutation = await database.mutations.get(id);
+        const mutation = await database.mutations.get(candidate.id);
         if (!mutation || mutation.ownerUserId !== owner) return undefined;
+        if (mutation.kind !== "journal_entry") return undefined;
         if (mutation.status === "synced") return undefined;
+        if (
+          offlineMutationQueueRevision(mutation) !== candidate.revision ||
+          (automatic && offlineMutationAutomaticAttemptConsumed(mutation))
+        ) {
+          return undefined;
+        }
+        if (automatic && mutation.status !== "queued") return undefined;
         if (
           mutation.status === "syncing" &&
           (mutation.syncLeaseExpiresAt ?? 0) > now
@@ -524,6 +680,10 @@ export async function claimOfflineMutationForSync(
           updatedAt: now,
           lastError: undefined,
           syncLeaseExpiresAt: now + OFFLINE_SYNC_LEASE_MS,
+          queueRevision: candidate.revision,
+          automaticAttemptConsumedRevision: automatic
+            ? candidate.revision
+            : offlineMutationConsumedRevision(mutation),
         };
         await putOfflineMutationWithSummary(database, next);
         return next;
@@ -532,6 +692,62 @@ export async function claimOfflineMutationForSync(
   );
   if (claimed) publishOfflineQueueChanged();
   return claimed;
+}
+
+export async function markOfflineMutationsForManualRecovery(
+  ownerUserId: string,
+  candidates: readonly OfflineMutationSyncCandidate[],
+  options: { lastError: string },
+): Promise<number> {
+  if (candidates.length === 0) return 0;
+  const owner = requireOwnerUserId(ownerUserId);
+  const uniqueCandidates = new Map(
+    candidates
+      .slice(0, OFFLINE_AUTOMATIC_SYNC_BATCH_SIZE)
+      .map((candidate) => [candidate.id, candidate]),
+  );
+  const changed = await withOwnerVaultWriterLease(owner, (database) =>
+    database.transaction(
+      "rw",
+      database.mutations,
+      database.mutationSummaries,
+      database.ownerActivity,
+      async () => {
+        await assertOwnerOfflineActivityAllowed(owner);
+        let count = 0;
+        const now = Date.now();
+        for (const candidate of uniqueCandidates.values()) {
+          const mutation = await database.mutations.get(candidate.id);
+          if (
+            !mutation ||
+            mutation.ownerUserId !== owner ||
+            mutation.kind !== "journal_entry" ||
+            offlineMutationQueueRevision(mutation) !== candidate.revision ||
+            (mutation.status !== "queued" && mutation.status !== "failed")
+          ) {
+            continue;
+          }
+          const next: OfflineMutation = {
+            ...mutation,
+            status: "failed",
+            updatedAt: now,
+            lastError: boundedOfflineSyncError(options.lastError),
+            syncLeaseExpiresAt: null,
+            queueRevision: candidate.revision,
+            automaticAttemptConsumedRevision:
+              candidate.mode === "automatic"
+                ? candidate.revision
+                : offlineMutationConsumedRevision(mutation),
+          };
+          await putOfflineMutationWithSummary(database, next);
+          count += 1;
+        }
+        return count;
+      },
+    ),
+  );
+  if (changed > 0) publishOfflineQueueChanged();
+  return changed;
 }
 
 /**
@@ -593,6 +809,9 @@ export async function settleClaimedOfflineMutationFailure(
           updatedAt: Date.now(),
           lastError: boundedOfflineSyncError(options.lastError),
           syncLeaseExpiresAt: null,
+          queueRevision: offlineMutationQueueRevision(mutation),
+          automaticAttemptConsumedRevision:
+            offlineMutationConsumedRevision(mutation),
         };
         await putOfflineMutationWithSummary(database, next);
         return next;
@@ -630,6 +849,9 @@ export async function completeOfflineMutation(
           lastError: undefined,
           syncResult: options.syncResult,
           syncLeaseExpiresAt: null,
+          queueRevision: offlineMutationQueueRevision(mutation),
+          automaticAttemptConsumedRevision:
+            offlineMutationConsumedRevision(mutation),
         };
         await putOfflineMutationWithSummary(database, next);
         return next;
@@ -863,6 +1085,46 @@ function boundedOfflineSyncError(value: string) {
     .replace(/\s+/g, " ")
     .trim();
   return (normalized || "Sync failed.").slice(0, 160);
+}
+
+export function offlineMutationQueueRevision(
+  mutation: Pick<OfflineMutation, "queueRevision">,
+): number {
+  return Number.isSafeInteger(mutation.queueRevision) &&
+    (mutation.queueRevision ?? 0) >= 1
+    ? (mutation.queueRevision as number)
+    : 1;
+}
+
+function offlineMutationConsumedRevision(
+  mutation: Pick<OfflineMutation, "automaticAttemptConsumedRevision">,
+): number | null {
+  return Number.isSafeInteger(mutation.automaticAttemptConsumedRevision) &&
+    (mutation.automaticAttemptConsumedRevision ?? 0) >= 1
+    ? (mutation.automaticAttemptConsumedRevision as number)
+    : null;
+}
+
+function offlineMutationAutomaticAttemptConsumed(
+  mutation: Pick<
+    OfflineMutation,
+    "queueRevision" | "automaticAttemptConsumedRevision"
+  >,
+) {
+  const consumed = offlineMutationConsumedRevision(mutation);
+  return (
+    consumed !== null && consumed >= offlineMutationQueueRevision(mutation)
+  );
+}
+
+function nextOfflineMutationQueueRevision(
+  mutation: Pick<OfflineMutation, "queueRevision">,
+) {
+  const current = offlineMutationQueueRevision(mutation);
+  if (current >= Number.MAX_SAFE_INTEGER) {
+    throw new Error("Offline mutation revision is exhausted.");
+  }
+  return current + 1;
 }
 
 export function publishOfflineQueueChanged() {

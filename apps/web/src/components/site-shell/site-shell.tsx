@@ -16,6 +16,7 @@ import { useState } from "react";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthenticatedUtilityRegion } from "@/components/auth/authenticated-utility-region";
 import { DocumentMutationGenerationProvider } from "@/components/auth/document-mutation-recovery";
+import { ForegroundAutosyncProvider } from "@/components/auth/foreground-autosync-provider";
 import { SessionConvergenceBoundary } from "@/components/auth/session-convergence-boundary";
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { SignOutProvider } from "@/components/auth/sign-out-provider";
@@ -156,12 +157,17 @@ export function SiteShell({
           locale={locale}
           transport={documentMutationGeneration}
         >
-          <SignOutProvider
-            locale={locale}
-            currentSessionBinding={currentSessionBinding}
+          <ForegroundAutosyncProvider
+            documentMutationGeneration={documentMutationGeneration}
+            enabled={isAuthenticatedGardenPath(pathname)}
           >
-            {excludedShell}
-          </SignOutProvider>
+            <SignOutProvider
+              locale={locale}
+              currentSessionBinding={currentSessionBinding}
+            >
+              {excludedShell}
+            </SignOutProvider>
+          </ForegroundAutosyncProvider>
         </DocumentMutationGenerationProvider>
       </SessionConvergenceBoundary>
     );
@@ -596,15 +602,24 @@ export function SiteShell({
         locale={locale}
         transport={documentMutationGeneration}
       >
-        <SignOutProvider
-          locale={locale}
-          currentSessionBinding={currentSessionBinding}
+        <ForegroundAutosyncProvider
+          documentMutationGeneration={documentMutationGeneration}
+          enabled={isAuthenticatedGardenPath(pathname)}
         >
-          {shell}
-        </SignOutProvider>
+          <SignOutProvider
+            locale={locale}
+            currentSessionBinding={currentSessionBinding}
+          >
+            {shell}
+          </SignOutProvider>
+        </ForegroundAutosyncProvider>
       </DocumentMutationGenerationProvider>
     </SessionConvergenceBoundary>
   );
+}
+
+function isAuthenticatedGardenPath(pathname: string) {
+  return pathname === "/garden" || pathname.startsWith("/garden/");
 }
 
 function GuestMutationActions({

@@ -25,13 +25,13 @@ export const AUTHENTICATED_MUTATION_DEPLOYMENT_RECEIPT_ARTIFACT_PATH =
 const HIGH_RISK_OWNER = "high_risk_ove_290" as const;
 const REMAINING_OWNER = "remaining_ove_291" as const;
 const EXPLICIT_GOOGLE_LINK_OWNER = "owned_by_ove_295" as const;
-const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 36;
+const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 42;
 const BASELINE_HIGH_RISK_ENTRYPOINT_SET_DIGEST =
-  "d622fb441a1ae7e864d6c92d5f4e592df1fab9816b4fc90095e026492ca47ba9";
-const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 281;
+  "ca1322bcd107497e2c9a1db856a5840476027dbf666284bd00bc70654647a003";
+const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 296;
 const BASELINE_HIGH_RISK_EDGE_BINDING_SET_DIGEST =
-  "2e7d5929875570c3eae3596996541ddd4d69c534c83c42b91a32add7a793c048";
-const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 24;
+  "1e20e6dc273813cc1182f26a4c6dd56f80f0e3b3ce3b2c55fe2575f1a865a970";
+const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 30;
 const BASELINE_REMAINING_ENTRYPOINT_COUNT = 124;
 const BASELINE_REMAINING_ENTRYPOINT_SET_DIGEST =
   "5851ee561e18167a76f50a48d187c13005048fc99c69778c4f1ad1486fdcaf13";
@@ -626,13 +626,21 @@ function localBoundaryIdentifiers(
     return ["assertOfflineDraftWriteAllowed"];
   }
   if (sourcePath === "src/lib/offline/journal-entry-sync.ts") {
-    return symbol === "submitOnlineJournalEntryPayload"
-      ? ["enqueueMutation", "documentMutationGeneration", "syncMutation"]
-      : [
-          "claimOfflineMutationForSync",
-          "documentMutationGeneration",
-          "submitJournalEntryPayload",
-        ];
+    if (symbol === "submitOnlineJournalEntryPayload") {
+      return ["enqueueMutation", "documentMutationGeneration", "syncMutation"];
+    }
+    if (symbol === "syncClaimedOfflineJournalEntryMutation") {
+      return [
+        "assertClaimedJournalMutation",
+        "documentMutationGeneration",
+        "syncClaimedOfflineJournalEntryMutationWithSignal",
+      ];
+    }
+    return [
+      "claimOfflineMutationForManualSync",
+      "documentMutationGeneration",
+      "syncClaimedOfflineJournalEntryMutationWithSignal",
+    ];
   }
   if (sourcePath === "src/lib/offline/owner-vault-migration.ts") {
     return [

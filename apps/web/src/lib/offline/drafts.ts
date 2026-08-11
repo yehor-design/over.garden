@@ -381,6 +381,44 @@ export async function deleteOfflineDraft(
   }
 }
 
+export async function deleteOfflineDraftIfClientMutationMatches(
+  ownerUserId: string,
+  id: string,
+  clientMutationId: string,
+): Promise<boolean> {
+  const owner = requireOwnerUserId(ownerUserId);
+  const expectedMutationId = clientMutationId.trim();
+  if (!expectedMutationId) return false;
+  const database = resolveOwnerOfflineDatabase(owner);
+  if (!database) return false;
+  const deleted = await withOwnerVaultWriterLease(owner, (activeDatabase) =>
+    activeDatabase.transaction(
+      "rw",
+      activeDatabase.drafts,
+      activeDatabase.draftSummaries,
+      activeDatabase.composerDurability,
+      activeDatabase.ownerActivity,
+      async () => {
+        await assertOfflineDraftWriteAllowed(owner);
+        const draft = await activeDatabase.drafts.get([owner, id]);
+        const payload =
+          draft?.payload && typeof draft.payload === "object"
+            ? (draft.payload as { clientMutationId?: unknown })
+            : null;
+        if (payload?.clientMutationId !== expectedMutationId) return false;
+        await Promise.all([
+          activeDatabase.drafts.delete([owner, id]),
+          activeDatabase.draftSummaries.delete([owner, id]),
+          activeDatabase.composerDurability.delete([owner, id]),
+        ]);
+        return true;
+      },
+    ),
+  );
+  if (deleted) publishOfflineDraftsChanged();
+  return deleted;
+}
+
 function composerDurabilityRecord(input: {
   ownerUserId: string;
   draftId: string;
