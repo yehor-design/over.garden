@@ -200,6 +200,22 @@ describe("OVE-294 pinned native Google link contract", () => {
     ).toContain("ordinary_sign_in_authority_drift");
   });
 
+  it("accepts the OVE-295 explicit-only policy and fails if its exact server gate drifts", () => {
+    expect(evaluateNativeGoogleLinkContract(snapshot).providerSet).toEqual([
+      "google",
+    ]);
+
+    const withoutExplicitGate = replaceRequired(
+      snapshot,
+      "explicitGoogleLinking",
+      '"GOOGLE_ACCOUNT_LINKING_ENABLED"',
+      '"GOOGLE_ACCOUNT_LINKING_DISABLED"',
+    );
+    expect(
+      evaluateNativeGoogleLinkContract(withoutExplicitGate).reasons,
+    ).toContain("provider_configuration_drift");
+  });
+
   it("requires authoritative current-session account-method read-back and forbids redirect-only success", () => {
     const withoutReadback = replaceRequired(
       snapshot,

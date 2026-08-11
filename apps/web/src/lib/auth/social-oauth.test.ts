@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  clearOAuthCallbackParameters,
   getSafeOAuthAuthorizationUrl,
   navigateToOAuthAuthorization,
   oauthCallbackPath,
@@ -22,6 +23,43 @@ describe("social OAuth client helpers", () => {
         search: "?error=invalid_code",
       }),
     ).toBe("/garden");
+  });
+
+  it("cleans only bounded OAuth callback keys while preserving unrelated query and hash", () => {
+    const history = {
+      state: { retained: true },
+      replaceState: vi.fn(),
+    };
+
+    expect(
+      clearOAuthCallbackParameters(
+        {
+          pathname: "/garden/profile",
+          search:
+            "?source=retained&error=unable_to_link_account&error_description=private",
+          hash: "#account-security",
+        },
+        history,
+      ),
+    ).toBe(true);
+    expect(history.replaceState).toHaveBeenCalledWith(
+      history.state,
+      "",
+      "/garden/profile?source=retained#account-security",
+    );
+
+    history.replaceState.mockClear();
+    expect(
+      clearOAuthCallbackParameters(
+        {
+          pathname: "/garden/profile",
+          search: "?source=retained",
+          hash: "#account-security",
+        },
+        history,
+      ),
+    ).toBe(false);
+    expect(history.replaceState).not.toHaveBeenCalled();
   });
 
   it("reduces callback failures to a bounded recovery code", () => {

@@ -5,7 +5,6 @@ import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
-import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
@@ -127,7 +126,6 @@ export default async function GardenPublicProfilePage({
 
       <section className="border-t border-border pt-7">
         <AccountMethodsPanel
-          googleSignInEnabled={isGoogleSignInEnabled()}
           initialMessage={getLocalizedOAuthErrorMessage(locale, params.error)}
           locale={locale}
           {...accountMethods}

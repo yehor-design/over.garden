@@ -90,11 +90,12 @@ describe("auth locale mutation fences", () => {
     mocks.linkSocial.mockReturnValue(request.promise);
     const renderer = await render(
       <AccountMethodsPanel
+        canLinkGoogle
         canSetPassword={false}
-        googleSignInEnabled
         hasCredential
         hasGoogle={false}
         locale="ru"
+        readbackState="ready"
       />,
     );
 

@@ -33,12 +33,12 @@ vi.mock("./blocked-session-account-method-actions", () => ({
 }));
 vi.mock("@/app/garden/account-methods-panel", () => ({
   AccountMethodsPanel: ({
-    googleSignInEnabled,
+    canLinkGoogle,
     hasCredential,
     hasGoogle,
     onMethodsChanged,
   }: {
-    googleSignInEnabled: boolean;
+    canLinkGoogle: boolean;
     hasCredential: boolean;
     hasGoogle: boolean;
     onMethodsChanged(): void;
@@ -46,7 +46,7 @@ vi.mock("@/app/garden/account-methods-panel", () => ({
     <button
       type="button"
       data-blocked-methods={`${hasCredential}:${hasGoogle}`}
-      data-blocked-linking={String(googleSignInEnabled)}
+      data-blocked-linking={String(canLinkGoogle)}
       onClick={onMethodsChanged}
     >
       Guarded methods
@@ -70,9 +70,11 @@ describe("blocked session account methods", () => {
     mocks.getBlockedSessionAccountMethods.mockResolvedValue({
       status: "ready",
       methods: {
+        readbackState: "ready",
         hasCredential: false,
         hasGoogle: true,
         canSetPassword: true,
+        canLinkGoogle: false,
       },
     });
   });
@@ -147,9 +149,11 @@ describe("blocked session account methods", () => {
     const delayed = deferred<{
       status: "ready";
       methods: {
+        readbackState: "ready" | "retry";
         hasCredential: boolean;
         hasGoogle: boolean;
         canSetPassword: boolean;
+        canLinkGoogle: boolean;
       };
     }>();
     mocks.getBlockedSessionAccountMethods
@@ -157,9 +161,11 @@ describe("blocked session account methods", () => {
       .mockResolvedValueOnce({
         status: "ready",
         methods: {
+          readbackState: "ready",
           hasCredential: true,
           hasGoogle: false,
           canSetPassword: false,
+          canLinkGoogle: true,
         },
       });
     const renderer = await render();
@@ -196,9 +202,11 @@ describe("blocked session account methods", () => {
       delayed.resolve({
         status: "ready",
         methods: {
+          readbackState: "ready",
           hasCredential: false,
           hasGoogle: true,
           canSetPassword: true,
+          canLinkGoogle: false,
         },
       });
       await Promise.resolve();

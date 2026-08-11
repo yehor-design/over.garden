@@ -34,6 +34,7 @@ export default defineConfig({
           "DATABASE_SSL=false",
           "GOOGLE_CLIENT_ID=local-browser-client.apps.googleusercontent.com",
           "GOOGLE_CLIENT_SECRET=local-browser-secret",
+          `GOOGLE_ACCOUNT_LINKING_ENABLED=${process.env.GOOGLE_ACCOUNT_LINKING_ENABLED ?? ""}`,
           "VISUAL_FIXTURES_ENABLED=true",
           "VISUAL_FIXTURES_TARGET=local",
           "VISUAL_FIXTURES_DATABASE=overgarden",

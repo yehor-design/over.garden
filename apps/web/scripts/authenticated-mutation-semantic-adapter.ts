@@ -211,7 +211,17 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
     {
       path: "src/app/api/auth/[...all]/route.ts",
       sha256:
-        "2b06d071d6a73dffdfb31099e6898c6f611929a36eaa79ee5698903392a449a5",
+        "98ceded5ee0e1b7ba6952b362964eb6316fd23e5dab7c7a577c8d86ddb417d59",
+    },
+    {
+      path: "src/lib/auth.ts",
+      sha256:
+        "ab01351c18347c50e3eb05470d63fd2e5a8c0c006ee932a5119c7210980f2b41",
+    },
+    {
+      path: "src/lib/auth/explicit-google-linking.ts",
+      sha256:
+        "3b7f49aee594b6e0e3324f4c50676d2a1bbf81d742c954b8e68b70394bf5d068",
     },
     {
       path: "src/lib/auth/google-oauth.ts",
@@ -354,9 +364,11 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
       zeroEffectReason: "google_direct_id_token_is_disabled_before_effect",
       evidencePaths: [
         "node_modules/.pnpm/node_modules/@better-auth/core/dist/social-providers/google.mjs",
+        "src/lib/auth/explicit-google-linking.ts",
         "src/lib/auth/google-oauth.ts",
       ],
       semanticAnchors: [
+        "body.idToken !== undefined",
         "disableIdTokenSignIn: true",
         "if (options.disableIdTokenSignIn) return false",
       ],
@@ -366,6 +378,19 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
       effectBoundaries: [
         boundary("better_auth.oauth_provider_operation", "conditional"),
         boundary("better_auth.cookie_commit", "conditional"),
+      ],
+      evidencePaths: [
+        "src/app/api/auth/[...all]/route.ts",
+        "src/lib/auth.ts",
+        "src/lib/auth/explicit-google-linking.ts",
+      ],
+      semanticAnchors: [
+        '"/api/auth/link-social"',
+        "await admitExplicitGoogleLinking(context)",
+        "socialAccountPolicy(isExplicitGoogleLinkingEnabled())",
+        "body?.provider !== GOOGLE_PROVIDER_ID",
+        "findSession(sessionToken)",
+        '"ACCOUNT_LINKING_UNAVAILABLE"',
       ],
     },
     {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
+  clearOAuthCallbackParameters,
   GOOGLE_PROVIDER_ID,
   navigateToOAuthAuthorization,
   oauthCallbackPath,
@@ -40,14 +41,14 @@ import {
 
 type AccountMethodState = Pick<
   AccountMethodsPanelProps,
-  "googleSignInEnabled" | "hasGoogle"
+  "canLinkGoogle" | "hasGoogle"
 >;
 
 const PROVIDERS = [
   {
     id: GOOGLE_PROVIDER_ID,
     label: "Google",
-    enabled: (methods: AccountMethodState) => methods.googleSignInEnabled,
+    enabled: (methods: AccountMethodState) => methods.canLinkGoogle,
     connected: (methods: AccountMethodState) => methods.hasGoogle,
   },
 ] as const;
@@ -62,17 +63,17 @@ type DisconnectIntent = {
 };
 
 export interface AccountMethodsPanelProps extends AccountMethodProjection {
-  googleSignInEnabled: boolean;
   initialMessage?: string | null;
   locale: InterfaceLocale;
   onMethodsChanged?: () => void;
 }
 
 export function AccountMethodsPanel({
-  googleSignInEnabled,
+  canLinkGoogle,
   hasCredential,
   hasGoogle,
   canSetPassword,
+  readbackState,
   initialMessage = null,
   locale,
   onMethodsChanged,
@@ -95,8 +96,11 @@ export function AccountMethodsPanel({
     dirty: password.length > 0 || disconnectPassword.length > 0,
     pending: pendingAction !== null,
   });
+  useEffect(() => {
+    clearOAuthCallbackParameters();
+  }, []);
   const methods = {
-    googleSignInEnabled,
+    canLinkGoogle,
     hasCredential,
     hasGoogle,
   };
@@ -108,6 +112,45 @@ export function AccountMethodsPanel({
     }
     router.refresh();
   };
+
+  if (readbackState === "retry") {
+    return (
+      <section
+        className="flex max-w-xl flex-col gap-4 rounded-lg border border-border p-4"
+        data-testid="account-methods-panel"
+        lang={locale}
+      >
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-semibold text-foreground">
+            {copy.title}
+          </h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {copy.description}
+          </p>
+        </div>
+        <div className="grid gap-3 rounded-md border border-border p-3">
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-sm leading-6 text-muted-foreground"
+            data-testid="account-method-retry"
+          >
+            {copy.readbackRetry}
+          </p>
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={refreshMethods}
+              data-testid="account-method-retry-button"
+            >
+              {copy.retry}
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   function openDisconnectDialog(
     event: MouseEvent<HTMLButtonElement>,
@@ -184,15 +227,25 @@ export function AccountMethodsPanel({
       const mutation = await runBrowserAuthMutation({
         kind: "account_mutation",
         operation: () =>
-          authClient.linkSocial({
-            provider,
-            callbackURL,
-            errorCallbackURL: callbackURL,
-            disableRedirect: true,
-          }),
+          authClient.linkSocial(
+            {
+              provider,
+              callbackURL,
+              errorCallbackURL: callbackURL,
+              disableRedirect: true,
+            },
+            {
+              headers: createDocumentMutationRequestHeaders(
+                documentMutation?.transport,
+              ),
+            },
+          ),
       });
       if (mutation.status === "stale_operation") return;
       const { data, error } = mutation.value;
+      if (isDocumentMutationAdmissionTransportResult(error?.code)) {
+        documentMutation?.handleTransportResult(error.code);
+      }
       if (error || !navigateToOAuthAuthorization(provider, data?.url)) {
         setMessage(
           getLocalizedAuthClientErrorMessage(locale, error) ??

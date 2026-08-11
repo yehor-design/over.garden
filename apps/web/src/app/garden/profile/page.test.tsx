@@ -27,13 +27,19 @@ vi.mock("../garden-auth-panel", () => ({
 }));
 vi.mock("../account-methods-panel", () => ({
   AccountMethodsPanel: ({
+    readbackState,
     hasCredential,
     hasGoogle,
+    canLinkGoogle,
   }: {
+    readbackState: "ready" | "retry";
     hasCredential: boolean;
     hasGoogle: boolean;
+    canLinkGoogle: boolean;
   }) => (
-    <section data-account-methods={`${hasCredential}:${hasGoogle}`}>
+    <section
+      data-account-methods={`${readbackState}:${hasCredential}:${hasGoogle}:${canLinkGoogle}`}
+    >
       Account sign-in methods
     </section>
   ),
@@ -105,9 +111,11 @@ describe("/garden/profile", () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.getOwnerProfileWorkspace.mockResolvedValue(WORKSPACE);
     mocks.getCurrentAccountMethodProjection.mockResolvedValue({
+      readbackState: "ready",
       hasCredential: true,
       hasGoogle: true,
       canSetPassword: false,
+      canLinkGoogle: false,
     });
   });
 
@@ -128,7 +136,7 @@ describe("/garden/profile", () => {
     expect(html).toContain('href="/@green_thumb"');
     expect(html).toContain("Blocked Keeper");
     expect(html).toContain("Account sign-in methods");
-    expect(html).toContain('data-account-methods="true:true"');
+    expect(html).toContain('data-account-methods="ready:true:true:false"');
     expect(mocks.getCurrentAccountMethodProjection).toHaveBeenCalledOnce();
     expect(html).toContain("Обліковий запис і безпека");
     expect(html).toContain('data-sign-out-control="profile"');

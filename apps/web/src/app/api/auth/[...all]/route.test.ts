@@ -182,6 +182,7 @@ describe("password-reset API boundary", () => {
       "change-email",
       "change-password",
       "delete-user",
+      "link-social",
       "revoke-other-sessions",
       "revoke-session",
       "revoke-sessions",
@@ -202,7 +203,6 @@ describe("password-reset API boundary", () => {
     }
 
     for (const path of [
-      "link-social",
       "sign-in/email",
       "sign-up/email",
       "sign-out",
@@ -244,6 +244,33 @@ describe("password-reset API boundary", () => {
     expect(admitDocumentMutation).toHaveBeenCalledWith({
       transport: "opaque-generation-a",
     });
+    expect(handlerPost).not.toHaveBeenCalled();
+  });
+
+  it("fences native link-social before Better Auth can create provider state", async () => {
+    admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      transportResult: "DOCUMENT_OWNER_CHANGED",
+      statusCode: 409,
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      new Request("https://over.garden/api/auth/link-social", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-overgarden-document-generation": "opaque-generation-a",
+        },
+        body: JSON.stringify({
+          provider: "google",
+          callbackURL: "/garden/profile",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ code: "DOCUMENT_OWNER_CHANGED" });
     expect(handlerPost).not.toHaveBeenCalled();
   });
 

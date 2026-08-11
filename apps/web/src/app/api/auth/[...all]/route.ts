@@ -27,6 +27,7 @@ const AUTHENTICATED_ACCOUNT_MUTATION_PATHS = new Set([
   "/api/auth/change-email",
   "/api/auth/change-password",
   "/api/auth/delete-user",
+  "/api/auth/link-social",
   "/api/auth/revoke-other-sessions",
   "/api/auth/revoke-session",
   "/api/auth/revoke-sessions",
