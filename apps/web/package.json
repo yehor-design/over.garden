@@ -86,6 +86,7 @@
     "smoke:self-serve-providers": "tsx scripts/smoke-self-serve-providers.ts",
     "smoke:exact-sha-self-serve": "tsx scripts/smoke-exact-sha-self-serve.ts",
     "facebook-login:external-cleanup": "tsx scripts/verify-facebook-login-external-cleanup.ts",
+    "pilot-learning:retire": "tsx scripts/retire-manual-pilot-learning.ts",
     "mutation:surface:audit": "tsx scripts/audit-authenticated-mutation-surface.ts",
     "mutation:surface:enforce": "vitest run scripts/enforce-authenticated-mutation-registry.test.ts src/server/remaining-document-mutation-admission.integration.test.ts",
     "smoke:remaining-document-mutation-admission": "tsx scripts/smoke-remaining-document-mutation-admission.ts",

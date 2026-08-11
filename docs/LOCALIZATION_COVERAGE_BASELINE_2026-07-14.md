@@ -153,9 +153,8 @@ historical baseline, not the target size or sufficiency of the OVE-205 gate.
 
 The OVE-171 gate retains route/state coverage for `/admin`, `/admin/users`,
 `/admin/communities`, `/admin/communities/:slug`,
-`/garden/catalog/curation`, `/garden/pilot-health`,
-`/garden/pilot-learning/interviews`, `/garden/pilot-learning/decision`,
-`/garden/pilot-smoke`, `/garden/privacy/erasure-requests`, and `/health`.
+`/garden/catalog/curation`, `/garden/pilot-health`, `/garden/pilot-smoke`,
+`/garden/privacy/erasure-requests`, and `/health`.
 
 The following values are deliberate literal exclusions, not untranslated UI:
 

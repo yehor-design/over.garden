@@ -12,7 +12,7 @@ export type ErasureDryRunDataClassKey =
   | "catalog_provisional"
   | "catalog_operator_links"
   | "search_index_artifacts"
-  | "pilot_operator_records";
+  | "erasure_operator_records";
 
 export interface ErasureDryRunDataClass {
   key: ErasureDryRunDataClassKey;
@@ -99,7 +99,6 @@ export interface ErasureDryRunCounts {
   searchPendingUnindexJobs: number;
   searchTerminalJobsWithUserId: number;
   publicProjectionIntents: number;
-  pilotInterviewRecords: number;
   erasureRequestsTotal: number;
 }
 
@@ -260,12 +259,10 @@ function buildErasureDryRunDataClasses(
       },
     },
     {
-      key: "pilot_operator_records",
-      label: "Pilot operator records",
-      description:
-        "Structured interview learnings linked to the requester plus erasure intake rows.",
+      key: "erasure_operator_records",
+      label: "Erasure operator records",
+      description: "Erasure intake rows linked to the requester.",
       counts: {
-        interview_records: counts.pilotInterviewRecords,
         erasure_requests: counts.erasureRequestsTotal,
       },
     },

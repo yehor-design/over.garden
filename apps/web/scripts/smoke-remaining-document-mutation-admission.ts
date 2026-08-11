@@ -24,7 +24,7 @@ const NOTIFICATION_RECEIPT_PATH = "/api/notifications/receipts";
 const UNLINK_ACCOUNT_PATH = "/api/auth/unlink-account";
 const GOOGLE_SIGN_IN_PATH = "/api/auth/sign-in/social";
 const FACEBOOK_CALLBACK_PATH = "/api/auth/callback/facebook?code=reject-only";
-const ELEVATED_FORM_PATH = "/garden/pilot-learning/interviews";
+const SIGNED_OWNER_DOCUMENT_PATH = "/garden/profile";
 const REQUEST_TIMEOUT_MS = 10_000;
 
 export type RemainingDocumentMutationSmokeFamily =
@@ -46,7 +46,6 @@ export interface RemainingDocumentMutationSmokeSessions {
 export interface RemainingDocumentMutationEffectCounts {
   notificationReceipts: number;
   ownerBGoogleAccounts: number;
-  founderInterviewLearnings: number;
   facebookAccounts: number;
 }
 
@@ -55,17 +54,15 @@ interface EffectCountScope {
   ownerBUserId: string;
 }
 
-interface ElevatedNativeFormJourneyInput {
+interface OwnerDocumentJourneyInput {
   baseUrl: string;
   ownerACookie: string;
-  ownerBCookie: string;
   commonHeaders: Record<string, string>;
 }
 
-interface ElevatedNativeFormJourneyReceipt {
+interface OwnerDocumentJourneyReceipt {
   documentGeneration: string;
   ownerDocumentRendered: true;
-  elevatedRejected: true;
 }
 
 export interface RemainingDocumentMutationAdmissionSmokeOptions {
@@ -81,9 +78,9 @@ export interface RemainingDocumentMutationAdmissionSmokeOptions {
   readEffectCounts: (
     scope: EffectCountScope,
   ) => Promise<RemainingDocumentMutationEffectCounts>;
-  runElevatedNativeFormJourney: (
-    input: ElevatedNativeFormJourneyInput,
-  ) => Promise<ElevatedNativeFormJourneyReceipt>;
+  readOwnerDocumentGeneration: (
+    input: OwnerDocumentJourneyInput,
+  ) => Promise<OwnerDocumentJourneyReceipt>;
   protectionBypass?: string;
 }
 
@@ -98,8 +95,10 @@ export interface RemainingDocumentMutationAdmissionSmokeReport {
   };
   rejectionFamilies: {
     remainderUser: true;
-    elevatedNativeForm: true;
     accountDisconnect: true;
+  };
+  documentContinuity: {
+    ownerDocumentRendered: true;
   };
   providerAuthorities: {
     ordinaryGoogleOpen: true;
@@ -184,15 +183,16 @@ export async function runRemainingDocumentMutationAdmissionSmoke(
   );
   requireRejectOnlyPreState(before);
 
-  const elevated = await options.runElevatedNativeFormJourney({
+  const ownerDocument = await options.readOwnerDocumentGeneration({
     baseUrl,
     ownerACookie: sessions.ownerACookie,
-    ownerBCookie: sessions.ownerBCookie,
     commonHeaders,
   });
-  const documentGeneration = requireGeneration(elevated.documentGeneration);
-  if (!elevated.ownerDocumentRendered || !elevated.elevatedRejected) {
-    throw new Error("OVE-291 elevated native-form receipt was incomplete.");
+  const documentGeneration = requireGeneration(
+    ownerDocument.documentGeneration,
+  );
+  if (!ownerDocument.ownerDocumentRendered) {
+    throw new Error("OVE-291 owner document receipt was incomplete.");
   }
 
   await expectContinuityMatch({
@@ -252,9 +252,9 @@ export async function runRemainingDocumentMutationAdmissionSmoke(
     },
     rejectionFamilies: {
       remainderUser: true,
-      elevatedNativeForm: true,
       accountDisconnect: true,
     },
+    documentContinuity: { ownerDocumentRendered: true },
     providerAuthorities: {
       ordinaryGoogleOpen: true,
       facebookInitiationRetired: true,
@@ -459,8 +459,8 @@ function requireReadback(
     throw new Error("OVE-291 deployment artifact receipt did not match.");
   }
   if (
-    sourceReceipt.enforcement.ove291EntrypointCount !== 124 ||
-    sourceReceipt.enforcement.ove291ConsumerEdgeCount !== 347 ||
+    sourceReceipt.enforcement.ove291EntrypointCount !== 122 ||
+    sourceReceipt.enforcement.ove291ConsumerEdgeCount !== 345 ||
     sourceReceipt.explicitGoogleLink.entrypointCount !== 5 ||
     sourceReceipt.explicitGoogleLink.consumerEdgeCount !== 15 ||
     sourceReceipt.explicitGoogleLink.ownershipDigest !==
@@ -541,7 +541,6 @@ function normalizeEffectCounts(
   const normalized = {
     notificationReceipts: Number(counts.notificationReceipts),
     ownerBGoogleAccounts: Number(counts.ownerBGoogleAccounts),
-    founderInterviewLearnings: Number(counts.founderInterviewLearnings),
     facebookAccounts: Number(counts.facebookAccounts),
   };
   if (
@@ -673,49 +672,42 @@ export async function runRemainingDocumentMutationAdmissionSmokeCli(input: {
       protectionBypass: input.env.VERCEL_AUTOMATION_BYPASS_SECRET,
       readEffectCounts: async ({ eventKey, ownerBUserId }) => {
         database ??= createSmokeDatabase(input.env);
-        const [notifications, googleAccounts, founderLearnings, facebook] =
-          await Promise.all([
-            database
-              .selectFrom("notification_receipts")
-              .select((builder) => builder.fn.countAll<number>().as("count"))
-              .where("event_key", "=", eventKey)
-              .executeTakeFirstOrThrow(),
-            database
-              .selectFrom("account")
-              .select((builder) => builder.fn.countAll<number>().as("count"))
-              .where("userId", "=", ownerBUserId)
-              .where("providerId", "=", "google")
-              .executeTakeFirstOrThrow(),
-            database
-              .selectFrom("pilot_interview_learnings")
-              .select((builder) => builder.fn.countAll<number>().as("count"))
-              .executeTakeFirstOrThrow(),
-            database
-              .selectFrom("account")
-              .select((builder) => builder.fn.countAll<number>().as("count"))
-              .where("providerId", "=", "facebook")
-              .executeTakeFirstOrThrow(),
-          ]);
+        const [notifications, googleAccounts, facebook] = await Promise.all([
+          database
+            .selectFrom("notification_receipts")
+            .select((builder) => builder.fn.countAll<number>().as("count"))
+            .where("event_key", "=", eventKey)
+            .executeTakeFirstOrThrow(),
+          database
+            .selectFrom("account")
+            .select((builder) => builder.fn.countAll<number>().as("count"))
+            .where("userId", "=", ownerBUserId)
+            .where("providerId", "=", "google")
+            .executeTakeFirstOrThrow(),
+          database
+            .selectFrom("account")
+            .select((builder) => builder.fn.countAll<number>().as("count"))
+            .where("providerId", "=", "facebook")
+            .executeTakeFirstOrThrow(),
+        ]);
         return {
           notificationReceipts: Number(notifications.count),
           ownerBGoogleAccounts: Number(googleAccounts.count),
-          founderInterviewLearnings: Number(founderLearnings.count),
           facebookAccounts: Number(facebook.count),
         };
       },
-      runElevatedNativeFormJourney: runPlaywrightElevatedNativeFormJourney,
+      readOwnerDocumentGeneration: readPlaywrightOwnerDocumentGeneration,
     });
   } finally {
     await database?.destroy();
   }
 }
 
-async function runPlaywrightElevatedNativeFormJourney(
-  input: ElevatedNativeFormJourneyInput,
-): Promise<ElevatedNativeFormJourneyReceipt> {
+async function readPlaywrightOwnerDocumentGeneration(
+  input: OwnerDocumentJourneyInput,
+): Promise<OwnerDocumentJourneyReceipt> {
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: true });
-  const requestedPaths: string[] = [];
   try {
     const context = await browser.newContext({
       extraHTTPHeaders: input.commonHeaders,
@@ -724,73 +716,31 @@ async function runPlaywrightElevatedNativeFormJourney(
       cookieHeaderToPlaywrightCookies(input.ownerACookie, input.baseUrl),
     );
     const page = await context.newPage();
-    page.on("request", (request) => {
-      requestedPaths.push(new URL(request.url()).pathname);
-    });
     const navigation = await page.goto(
-      `${input.baseUrl}${ELEVATED_FORM_PATH}`,
+      `${input.baseUrl}${SIGNED_OWNER_DOCUMENT_PATH}`,
       {
         waitUntil: "domcontentloaded",
         timeout: REQUEST_TIMEOUT_MS,
       },
     );
     if (!navigation?.ok()) {
-      throw new Error("OVE-291 elevated owner document was unavailable.");
+      throw new Error("OVE-291 owner document was unavailable.");
     }
 
-    const form = page.locator(
-      'form:has(input[name="__overgardenDocumentGeneration"])',
+    const generationFields = page.locator(
+      'input[name="__overgardenDocumentGeneration"]',
     );
-    if ((await form.count()) !== 1) {
-      throw new Error("OVE-291 elevated owner form was not uniquely rendered.");
+    if ((await generationFields.count()) < 1) {
+      throw new Error("OVE-291 owner document had no signed mutation form.");
     }
     const generation = requireGeneration(
-      await form
-        .locator('input[name="__overgardenDocumentGeneration"]')
-        .inputValue(),
+      await generationFields.first().inputValue(),
     );
-    for (const field of [
-      "segment",
-      "activationResult",
-      "returnReason",
-      "mainObjection",
-      "observedValue",
-      "nextAction",
-    ]) {
-      await form.locator(`select[name="${field}"]`).selectOption({ index: 1 });
-    }
-    await form
-      .locator('input[name="subjectUserId"]')
-      .fill("ove291-reject-only-invalid-user");
-
-    await context.clearCookies();
-    await context.addCookies(
-      cookieHeaderToPlaywrightCookies(input.ownerBCookie, input.baseUrl),
-    );
-    const actionResponsePromise = page.waitForResponse(
-      (response) =>
-        response.request().method() === "POST" &&
-        typeof response.request().headers()["next-action"] === "string",
-      { timeout: REQUEST_TIMEOUT_MS },
-    );
-    await form.locator('button[type="submit"]').click();
-    const actionResponse = await actionResponsePromise;
-    const actionBody = await actionResponse.text();
-    if (!actionBody.includes("DOCUMENT_OWNER_CHANGED")) {
-      throw new Error("OVE-291 elevated native form was not rejected.");
-    }
-    if (
-      requestedPaths.includes("/api/auth/link-social") ||
-      requestedPaths.includes("/api/auth/callback/google")
-    ) {
-      throw new Error("OVE-291 explicit Google-link runtime was invoked.");
-    }
 
     await context.close();
     return {
       documentGeneration: generation,
       ownerDocumentRendered: true,
-      elevatedRejected: true,
     };
   } finally {
     await browser.close();

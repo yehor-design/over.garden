@@ -48,44 +48,21 @@ vi.mock("pg", () => ({
 }));
 
 vi.mock("playwright", () => {
-  const fieldLocator = (selector: string) => {
-    if (selector === 'input[name="__overgardenDocumentGeneration"]') {
-      return { inputValue: async () => "opaque_document_generation_a" };
-    }
-    if (selector.startsWith('select[name="')) {
-      return { selectOption: async () => undefined };
-    }
-    if (selector === 'input[name="subjectUserId"]') {
-      return { fill: async () => undefined };
-    }
-    if (selector === 'button[type="submit"]') {
-      return { click: async () => undefined };
-    }
-    throw new Error(`Unexpected field locator: ${selector}`);
-  };
-  const mutationForm = {
-    count: async () => 1,
-    locator: fieldLocator,
+  const generationFields = {
+    count: async () => 2,
+    first: () => ({ inputValue: async () => "opaque_document_generation_a" }),
   };
   const page = {
-    on: () => undefined,
     goto: async () => ({ ok: () => true }),
     locator: (selector: string) => {
-      if (selector.includes("__overgardenDocumentGeneration")) {
-        return mutationForm;
+      if (selector === 'input[name="__overgardenDocumentGeneration"]') {
+        return generationFields;
       }
-      if (selector.includes('select[name="segment"]')) {
-        return { ...mutationForm, count: async () => 2 };
-      }
-      throw new Error(`Unexpected form locator: ${selector}`);
+      throw new Error(`Unexpected locator: ${selector}`);
     },
-    waitForResponse: async () => ({
-      text: async () => "DOCUMENT_OWNER_CHANGED",
-    }),
   };
   const context = {
     addCookies: async () => undefined,
-    clearCookies: async () => undefined,
     close: async () => undefined,
     newPage: async () => page,
   };
@@ -107,13 +84,13 @@ const ownerACookie = "better-auth.session_token=synthetic-owner-a";
 const ownerBCookie = "better-auth.session_token=synthetic-owner-b";
 const sourceReceipt = buildAuthenticatedMutationDeploymentReceipt();
 
-describe("OVE-291 elevated native-form production journey", () => {
+describe("OVE-291 signed owner-document production journey", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     fakeDatabaseState.destroyed = false;
   });
 
-  it("selects the signed owner mutation form when the page also has a segment filter form", async () => {
+  it("reads one signed owner mutation form without submitting it", async () => {
     const fetchImpl = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
@@ -199,7 +176,7 @@ describe("OVE-291 elevated native-form production journey", () => {
         },
       }),
     ).resolves.toMatchObject({
-      rejectionFamilies: { elevatedNativeForm: true },
+      documentContinuity: { ownerDocumentRendered: true },
       effects: { digestMatch: true },
     });
     expect(fakeDatabaseState.destroyed).toBe(true);

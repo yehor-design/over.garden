@@ -96,10 +96,10 @@ const UK_COPY = {
       description:
         "Публічні записи з похідними документами та journal jobs у будь-якому статусі черги.",
     },
-    pilot_operator_records: {
-      label: "Операторські записи пілоту",
+    erasure_operator_records: {
+      label: "Операторські записи видалення",
       description:
-        "Структуровані висновки інтерв'ю, пов'язані із заявником, та рядки приймання запитів на видалення.",
+        "Рядки приймання запитів на видалення, пов'язані із заявником.",
     },
   },
   countLabels: {
@@ -148,7 +148,6 @@ const UK_COPY = {
     pending_index_jobs: "очікувані index jobs",
     pending_unindex_jobs: "очікувані unindex jobs",
     terminal_jobs_with_user_id: "термінальні jobs з user id",
-    interview_records: "записи інтерв'ю",
     erasure_requests: "запити на видалення",
   },
   caveats: [
@@ -256,10 +255,9 @@ const BG_COPY: OperatorErasureCopy = {
       description:
         "Публични записи с производни документи и journal jobs във всеки статус на опашката.",
     },
-    pilot_operator_records: {
-      label: "Операторски записи на пилота",
-      description:
-        "Структурирани интервюта и редове за приемане на заявки за изтриване.",
+    erasure_operator_records: {
+      label: "Операторски записи за изтриване",
+      description: "Редове за приемане на заявки за изтриване.",
     },
   },
   countLabels: {
@@ -381,10 +379,9 @@ const RU_COPY: OperatorErasureCopy = {
       description:
         "Публичные записи с производными документами и journal jobs в любом статусе очереди.",
     },
-    pilot_operator_records: {
-      label: "Операторские записи пилота",
-      description:
-        "Структурированные интервью и строки приёма запросов на удаление.",
+    erasure_operator_records: {
+      label: "Операторские записи удаления",
+      description: "Строки приёма запросов на удаление.",
     },
   },
   countLabels: {

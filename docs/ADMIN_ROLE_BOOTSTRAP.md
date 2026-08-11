@@ -28,10 +28,7 @@ configured credential-only owner.
 OVE-109 moves the existing internal operator surfaces behind this sealed owner
 gate:
 
-- `/garden/pilot-smoke`, `/garden/pilot-health`, and
-  `/garden/pilot-learning/decision` require `operator:read`.
-- `/garden/pilot-learning/interviews` allows `operator:read` for readback and
-  requires `operator:mutate` for new interview capture.
+- `/garden/pilot-smoke` and `/garden/pilot-health` require `operator:read`.
 - `/garden/catalog/curation` requires `operator:mutate`.
 - `/garden/privacy/erasure-requests` allows `operator:read` for minimized
   readback, requires `operator:mutate` for review/status actions, and requires

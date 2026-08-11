@@ -663,28 +663,6 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     dryRunOwned: true,
     executionOwned: true,
   },
-  {
-    id: "pilot_interview_learnings.subject_user_id",
-    table: "pilot_interview_learnings",
-    columnOrPath: "subject_user_id",
-    kind: "soft_column",
-    disposition: "anonymize",
-    rationale: "Subject link and redacted note cleared.",
-    dryRunOwned: true,
-    executionOwned: true,
-  },
-  {
-    id: "pilot_interview_learnings.recorded_by_user_id",
-    table: "pilot_interview_learnings",
-    columnOrPath: "recorded_by_user_id",
-    kind: "soft_column",
-    disposition: "anonymize",
-    rationale:
-      "When the erased account recorded interviews, author rekeyed to synthetic id.",
-    dryRunOwned: true,
-    executionOwned: true,
-  },
-
   // Erasure request bookkeeping
   {
     id: "erasure_requests.requester_user_id",
@@ -861,7 +839,6 @@ export const ERASURE_SQL_DISCOVERY_REQUIRED_IDS = [
   "catalog_alias_projections.reviewed_by_user_id",
   "catalog_match_suggestions.reviewed_by_user_id",
   "variety_seed_proofs.author_user_id",
-  "pilot_interview_learnings.recorded_by_user_id",
   "erasure_requests.handled_by_user_id",
   "erasure_requests.dry_run_reviewed_by_user_id",
   "journal_entries.cover_media_asset_id",
@@ -928,8 +905,6 @@ export function discoverErasurePathsFromWalkingSkeletonSql(
     { table: "catalog_match_suggestions", column: "reviewed_by_user_id" },
     { table: "catalog_alias_projections", column: "reviewed_by_user_id" },
     { table: "variety_seed_proofs", column: "author_user_id" },
-    { table: "pilot_interview_learnings", column: "subject_user_id" },
-    { table: "pilot_interview_learnings", column: "recorded_by_user_id" },
     { table: "erasure_requests", column: "requester_user_id" },
     { table: "erasure_requests", column: "handled_by_user_id" },
     { table: "erasure_requests", column: "dry_run_reviewed_by_user_id" },

@@ -9,7 +9,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { legacyBodyToJournalDocumentV1 } from "@/lib/garden/journal-document";
-import { normalizePilotInterviewLearningInput } from "@/lib/pilot/interview-learning";
 import { preciseLocationRejectionMessage } from "@/lib/privacy/precise-location-copy";
 import { assertNoPreciseLocationInJournalDocument } from "@/lib/privacy/precise-location-journal-document";
 import {
@@ -211,32 +210,6 @@ describe("lineage write boundaries", () => {
     expect(normalizeLineageQuestionText("Коли ви збирали насіння?")).toBe(
       "Коли ви збирали насіння?",
     );
-  });
-});
-
-describe("interview capture boundary", () => {
-  const base = {
-    segment: "casual_micro_grower",
-    activationResult: "activated_first_entry_only",
-    returnReason: "same_object_follow_up",
-    mainObjection: "no_journal_habit",
-    observedValue: "history_worth_keeping",
-    nextAction: "continue_pilot",
-    subjectUserId: null,
-    pilotCohort: null,
-  };
-
-  it("rejects a subject-linked note that carries coordinates", () => {
-    const result = normalizePilotInterviewLearningInput({
-      ...base,
-      redactedNote: `Ділянка ${COORDINATES}`,
-    } as never);
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toContain("precise_location");
-      expect(result.error).not.toContain("50.45010");
-    }
   });
 });
 

@@ -49,7 +49,6 @@ import type {
   PlantIdentificationRequests as PlantIdentificationRequestsTable,
   PlantIdentificationSubmissionSlots as PlantIdentificationSubmissionSlotsTable,
   PilotInviteGrants as PilotInviteGrantsTable,
-  PilotInterviewLearnings as PilotInterviewLearningsTable,
   PlantObjects as PlantObjectsTable,
   Spaces as SpacesTable,
   UserHandleRegistry as UserHandleRegistryTable,
@@ -374,68 +373,6 @@ export type NewNotificationPreference =
   Insertable<NotificationPreferencesTable>;
 export type NotificationReceipt = Selectable<NotificationReceiptsTable>;
 export type NewNotificationReceipt = Insertable<NotificationReceiptsTable>;
-export type PilotInterviewLearning = Selectable<PilotInterviewLearningsTable>;
-export type NewPilotInterviewLearning =
-  Insertable<PilotInterviewLearningsTable>;
-export type PilotInterviewSegment =
-  | "casual_micro_grower"
-  | "casual_gen_z"
-  | "casual_practical_beginner"
-  | "casual_urban_balcony"
-  | "casual_food_self_reliance"
-  | "power_burned_out_it"
-  | "power_collector"
-  | "power_experienced"
-  | "power_homestead"
-  | "supply_expert_creator"
-  | "supply_local_seller"
-  | "channel_ally"
-  | "unknown_segment";
-export type PilotInterviewActivationResult =
-  | "not_activated"
-  | "activated_first_entry_only"
-  | "activated_with_follow_up"
-  | "started_no_save"
-  | "dropped_after_first"
-  | "not_in_cohort"
-  | "unknown";
-export type PilotInterviewReturnReason =
-  | "same_object_follow_up"
-  | "seasonal_return"
-  | "never_returned"
-  | "returned_no_save"
-  | "privacy_concern"
-  | "composer_friction"
-  | "not_relevant_yet"
-  | "unknown";
-export type PilotInterviewMainObjection =
-  | "no_journal_habit"
-  | "too_much_effort"
-  | "privacy_location"
-  | "no_clear_value"
-  | "prefers_paper_or_social"
-  | "product_too_early"
-  | "not_gardener_fit"
-  | "none_observed"
-  | "unknown";
-export type PilotInterviewObservedValue =
-  | "history_worth_keeping"
-  | "photo_safe_capture"
-  | "catalog_helpful"
-  | "offline_queue_helpful"
-  | "progress_moment_helpful"
-  | "public_variety_hook"
-  | "no_clear_value_yet"
-  | "unknown";
-export type PilotInterviewNextAction =
-  | "continue_pilot"
-  | "iterate_composer"
-  | "iterate_onboarding"
-  | "iterate_privacy_copy"
-  | "schedule_follow_up"
-  | "pause_recruiting"
-  | "close_track"
-  | "none";
 export type JobQueueJob = Selectable<JobQueueTable>;
 export type NewJobQueueJob = Insertable<JobQueueTable>;
 export type VarietySeedProof = Selectable<VarietySeedProofsTable>;

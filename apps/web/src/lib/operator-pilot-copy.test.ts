@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  getOperatorPilotCopy,
-  operatorDecisionSignalLabel,
-  operatorPilotLabel,
-  operatorPilotOptions,
-} from "@/lib/operator-pilot-copy";
+import { getOperatorPilotCopy } from "@/lib/operator-pilot-copy";
 
 describe("operator pilot copy", () => {
   it("keeps exact recursive parity across uk, bg, and ru", () => {
@@ -14,21 +9,19 @@ describe("operator pilot copy", () => {
     expect(recursiveKeys(getOperatorPilotCopy("ru"))).toEqual(expected);
   });
 
-  it("localizes display labels without changing enum values", () => {
-    expect(operatorPilotLabel("bg", "segments", "power_collector")).toContain(
-      "колекционер",
-    );
-    expect(
-      operatorPilotOptions("ru", "nextActions", ["continue_pilot"]),
-    ).toEqual([
-      { value: "continue_pilot", label: "Продолжить пилот с этим садоводом" },
+  it("contains only automatic health copy and its metric labels", () => {
+    expect(Object.keys(getOperatorPilotCopy("uk"))).toEqual([
+      "metrics",
+      "health",
     ]);
-    expect(operatorDecisionSignalLabel("uk", "distributed")).toBe(
-      "розподілений",
-    );
-    expect(operatorPilotLabel("uk", "segments", "future_segment")).toBe(
-      "future_segment",
-    );
+    expect(Object.keys(getOperatorPilotCopy("bg"))).toEqual([
+      "metrics",
+      "health",
+    ]);
+    expect(Object.keys(getOperatorPilotCopy("ru"))).toEqual([
+      "metrics",
+      "health",
+    ]);
   });
 
   it("states the deferred H6 acquisition status in every supported locale", () => {
@@ -39,15 +32,6 @@ describe("operator pilot copy", () => {
       "не се измерва",
     );
     expect(getOperatorPilotCopy("ru").health.mvpLearningH6).toContain(
-      "не измеряется",
-    );
-    expect(getOperatorPilotCopy("uk").decision.mvpLearningH6).toContain(
-      "ще не вимірюється",
-    );
-    expect(getOperatorPilotCopy("bg").decision.mvpLearningH6).toContain(
-      "не се измерва",
-    );
-    expect(getOperatorPilotCopy("ru").decision.mvpLearningH6).toContain(
       "не измеряется",
     );
   });

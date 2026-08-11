@@ -204,16 +204,6 @@ export async function executeApprovedErasureRequest(
         erasedSubjectUserId,
         now,
       }).execute();
-      await buildAnonymizePilotInterviewSubjectsForErasureQuery(
-        trx,
-        requesterUserId,
-        now,
-      ).execute();
-      await buildAnonymizePilotInterviewRecordersForErasureQuery(trx, {
-        requesterUserId,
-        erasedSubjectUserId,
-        now,
-      }).execute();
       await buildAnonymizeLineageProvenanceEdgesForErasureQuery(trx, {
         requesterUserId,
         now,
@@ -663,21 +653,6 @@ export function buildAnonymizeOwnedCatalogOperatorFieldsForErasureQuery(
     );
 }
 
-export function buildAnonymizePilotInterviewSubjectsForErasureQuery(
-  executor: QueryExecutor,
-  requesterUserId: string,
-  now: Date,
-) {
-  return executor
-    .updateTable("pilot_interview_learnings")
-    .set({
-      subject_user_id: null,
-      redacted_note: null,
-      updated_at: now,
-    })
-    .where("subject_user_id", "=", requesterUserId);
-}
-
 export function buildAnonymizeLineageProvenanceEdgesForErasureQuery(
   executor: QueryExecutor,
   input: {
@@ -1122,23 +1097,6 @@ export function buildAnonymizeVarietySeedProofAuthorsForErasureQuery(
       updated_at: input.now,
     })
     .where("author_user_id", "=", input.requesterUserId);
-}
-
-export function buildAnonymizePilotInterviewRecordersForErasureQuery(
-  executor: QueryExecutor,
-  input: {
-    requesterUserId: string;
-    erasedSubjectUserId: string;
-    now: Date;
-  },
-) {
-  return executor
-    .updateTable("pilot_interview_learnings")
-    .set({
-      recorded_by_user_id: input.erasedSubjectUserId,
-      updated_at: input.now,
-    })
-    .where("recorded_by_user_id", "=", input.requesterUserId);
 }
 
 export function buildNullErasureOperatorLinksForErasureQuery(

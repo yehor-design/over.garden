@@ -14,7 +14,7 @@ const documentGeneration = "opaque_document_generation_a";
 const sourceReceipt = buildAuthenticatedMutationDeploymentReceipt();
 
 describe("OVE-291 remaining document mutation production smoke", () => {
-  it("proves exact artifact receipts, three rejected families, and zero effects", async () => {
+  it("proves exact artifact receipts, owner continuity, rejected mutations, and zero effects", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const fetchImpl = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -86,14 +86,12 @@ describe("OVE-291 remaining document mutation production smoke", () => {
       async (): Promise<RemainingDocumentMutationEffectCounts> => ({
         notificationReceipts: 0,
         ownerBGoogleAccounts: 1,
-        founderInterviewLearnings: 2,
         facebookAccounts: 0,
       }),
     );
-    const runElevatedNativeFormJourney = vi.fn(async () => ({
+    const readOwnerDocumentGeneration = vi.fn(async () => ({
       documentGeneration,
       ownerDocumentRendered: true as const,
-      elevatedRejected: true as const,
     }));
 
     await expect(
@@ -112,7 +110,7 @@ describe("OVE-291 remaining document mutation production smoke", () => {
         sessions: { ownerACookie, ownerBCookie },
         fetchImpl,
         readEffectCounts,
-        runElevatedNativeFormJourney,
+        readOwnerDocumentGeneration,
       }),
     ).resolves.toMatchObject({
       issue: "OVE-291",
@@ -124,9 +122,9 @@ describe("OVE-291 remaining document mutation production smoke", () => {
       },
       rejectionFamilies: {
         remainderUser: true,
-        elevatedNativeForm: true,
         accountDisconnect: true,
       },
+      documentContinuity: { ownerDocumentRendered: true },
       providerAuthorities: {
         ordinaryGoogleOpen: true,
         facebookInitiationRetired: true,
@@ -137,14 +135,13 @@ describe("OVE-291 remaining document mutation production smoke", () => {
         before: {
           notificationReceipts: 0,
           ownerBGoogleAccounts: 1,
-          founderInterviewLearnings: 2,
           facebookAccounts: 0,
         },
         digestMatch: true,
       },
     });
     expect(readEffectCounts).toHaveBeenCalledTimes(2);
-    expect(runElevatedNativeFormJourney).toHaveBeenCalledOnce();
+    expect(readOwnerDocumentGeneration).toHaveBeenCalledOnce();
     expect(
       requests.some((request) => request.url.includes("/api/auth/link-social")),
     ).toBe(false);
@@ -182,7 +179,7 @@ describe("OVE-291 remaining document mutation production smoke", () => {
         sessions: { ownerACookie, ownerBCookie },
         fetchImpl,
         readEffectCounts: vi.fn(),
-        runElevatedNativeFormJourney: vi.fn(),
+        readOwnerDocumentGeneration: vi.fn(),
       }),
     ).rejects.toThrow("deployment artifact receipt");
   });
@@ -212,7 +209,7 @@ describe("OVE-291 remaining document mutation production smoke", () => {
         throw new Error("The smoke must stop before any mutation request.");
       },
     );
-    const runElevatedNativeFormJourney = vi.fn();
+    const readOwnerDocumentGeneration = vi.fn();
 
     await expect(
       runRemainingDocumentMutationAdmissionSmoke({
@@ -232,13 +229,12 @@ describe("OVE-291 remaining document mutation production smoke", () => {
         readEffectCounts: vi.fn(async () => ({
           notificationReceipts: 0,
           ownerBGoogleAccounts: 0,
-          founderInterviewLearnings: 0,
           facebookAccounts: 0,
         })),
-        runElevatedNativeFormJourney,
+        readOwnerDocumentGeneration,
       }),
     ).rejects.toThrow("reject-only pre-state was not clean");
-    expect(runElevatedNativeFormJourney).not.toHaveBeenCalled();
+    expect(readOwnerDocumentGeneration).not.toHaveBeenCalled();
   });
 
   it("rejects non-immutable CLI input before loading private sessions", async () => {

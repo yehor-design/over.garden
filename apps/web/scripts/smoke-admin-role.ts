@@ -30,14 +30,6 @@ const ADMIN_SURFACE_EXPECTATIONS = [
     normalForbiddenMarker: "provisional pilot signals",
   },
   {
-    path: "/garden/pilot-learning/decision",
-    normalForbiddenMarker: "provisional decision support",
-  },
-  {
-    path: "/garden/pilot-learning/interviews",
-    normalForbiddenMarker: "Capture structured learning",
-  },
-  {
     path: "/garden/catalog/curation",
     normalForbiddenMarker: "Source candidates",
   },
