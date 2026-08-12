@@ -214,6 +214,32 @@ describe("OVE-298 Google linking production proof plan", () => {
     expect(digestGoogleLinkingArtifact(artifact)).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  it("keeps the post-rollback retry plan exact-index and zero-index-effect bound", () => {
+    const artifact = readFileSync(
+      path.resolve(
+        "../../docs/runbooks/OVE_298_PRODUCTION_GOOGLE_LINK_PROOF_RETRY_PLAN.md",
+      ),
+      "utf8",
+    );
+    const plan = parseGoogleLinkingPlanArtifact(artifact, IMPLEMENTATION_SHA);
+
+    expect(plan).toMatchObject({
+      implementationSha: IMPLEMENTATION_SHA,
+      counts: {
+        googleAccountRowCount: 1,
+        duplicateGoogleSubjectGroupCount: 0,
+        duplicateGoogleUserGroupCount: 0,
+        missingGoogleSubjectCount: 0,
+        invalidGoogleProviderRowCount: 0,
+      },
+      preflightIndexState: "both_exact",
+      effectBounds: { indexCreates: 0 },
+      targetDigest:
+        "84503a97fba4e9febf14db87091ce05d2866796d78109f812a649c23f9c36462",
+    });
+    expect(digestGoogleLinkingArtifact(artifact)).toMatch(/^[0-9a-f]{64}$/);
+  });
+
   it("classifies exactly five aggregate counts and fails closed for every safety count", () => {
     expect(classifyGoogleLinkingCounts(SAFE_COUNTS)).toBe("safe_to_apply");
     for (const key of [
@@ -330,6 +356,9 @@ describe("OVE-298 Google linking production proof plan", () => {
     expect(() =>
       parsedPlan({ disposableIdentityClass: "sealed_owner" as never }),
     ).toThrow("disposable identity");
+    expect(() => parsedPlan({ preflightIndexState: "both_exact" })).toThrow(
+      "effect bounds drifted",
+    );
   });
 
   it("requires an exact closed approval receipt", () => {
@@ -414,6 +443,17 @@ describe("OVE-298 Google linking production proof plan", () => {
     const exactArtifact = planArtifact({
       migrationDigest,
       preflightIndexState: "both_exact",
+      effectBounds: {
+        indexCreates: 0,
+        configurationWrites: 1,
+        disposableAccountCreates: 1,
+        verificationCallbacks: 1,
+        linkInitiations: 1,
+        callbacks: 1,
+        unlinks: 1,
+        providerRevocations: 1,
+        erasureExecutions: 1,
+      },
     });
     const exactPlan = parseGoogleLinkingPlanArtifact(
       exactArtifact,

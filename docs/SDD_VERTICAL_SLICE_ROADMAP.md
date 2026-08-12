@@ -59,6 +59,18 @@ link/read-back/unlink/revocation/cleanup journey, and terminal production
 receipt. Its enablement fence must keep the OVE-314 sealed owner credential-only
 in both account-method projection and direct pre-provider-state admission.
 
+The first approved OVE-298 production attempt on 2026-08-12 applied and verified
+both additive indexes, enabled the explicit-link flag, created and verified one
+ordinary credential fixture, and consumed its single OAuth initiation. The
+isolated browser process ended before callback, so the attempt failed closed:
+the flag returned to absent, both exact indexes were preserved, the fixture was
+canonically erased with an anonymized completed request, and the five-count
+inventory returned to `1/0/0/0/0`. A second callback is forbidden under that
+spent approval. The new immutable retry contract is
+`docs/runbooks/OVE_298_PRODUCTION_GOOGLE_LINK_PROOF_RETRY_PLAN.md`; it owns zero
+index creates and awaits its own exact plan-digest and implementation-SHA
+approval before any new production effect.
+
 On 2026-08-10, OVE-293 was selected only after authenticated OVE-285 terminal
 read-back and was individually re-audited against clean repository baseline
 `05af6cd53c1c43f5d3754577a590f791f99ae869`. Its v6 device-local durability

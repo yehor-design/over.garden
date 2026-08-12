@@ -62,7 +62,7 @@ export interface GoogleLinkingProductionPlanV1 {
   terminalSuccessConfiguration: "enabled";
   targetDigest: string;
   effectBounds: {
-    indexCreates: 2;
+    indexCreates: 0 | 2;
     configurationWrites: 1;
     disposableAccountCreates: 1;
     verificationCallbacks: 1;
@@ -249,8 +249,7 @@ const EXPECTED_MUTATION_ORDER = [
   "erasure_cleanup",
 ] as const;
 
-const EFFECT_BOUNDS = {
-  indexCreates: 2,
+const EFFECT_BOUNDS_EXCEPT_INDEX_CREATES = {
   configurationWrites: 1,
   disposableAccountCreates: 1,
   verificationCallbacks: 1,
@@ -260,6 +259,15 @@ const EFFECT_BOUNDS = {
   providerRevocations: 1,
   erasureExecutions: 1,
 } as const;
+
+function expectedEffectBounds(
+  preflightIndexState: GoogleLinkingProductionPlanV1["preflightIndexState"],
+) {
+  return {
+    indexCreates: preflightIndexState === "both_exact" ? 0 : 2,
+    ...EFFECT_BOUNDS_EXCEPT_INDEX_CREATES,
+  } as const;
+}
 
 export function classifyGoogleLinkingCounts(
   counts: GoogleLinkingProductionCounts,
@@ -767,10 +775,13 @@ function assertGoogleLinkingPlan(
   }
   assertExactKeys(
     value.effectBounds,
-    Object.keys(EFFECT_BOUNDS),
+    Object.keys(expectedEffectBounds(value.preflightIndexState)),
     "effect bounds",
   );
-  if (JSON.stringify(value.effectBounds) !== JSON.stringify(EFFECT_BOUNDS)) {
+  if (
+    JSON.stringify(value.effectBounds) !==
+    JSON.stringify(expectedEffectBounds(value.preflightIndexState))
+  ) {
     throw new Error("plan effect bounds drifted");
   }
   if (
