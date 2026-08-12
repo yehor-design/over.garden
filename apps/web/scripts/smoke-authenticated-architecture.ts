@@ -27,6 +27,7 @@ import {
 } from "./smoke-authenticated-architecture-contract";
 
 const SCENARIO_DEADLINE_MS = 20_000;
+const PRODUCTION_AUTH_SURFACE_WAIT_MS = 10_000;
 const PRODUCTION_ORIGIN = "https://over.garden";
 const RUNTIME_READBACK_PATH = "/api/document-mutation-admission/readback";
 const GARDEN_PATH = "/garden";
@@ -92,6 +93,21 @@ interface PlaywrightHarnessDriver {
   runScenario: RunAuthenticatedArchitectureHarnessOptions["runScenario"];
   observeProduction: () => Promise<ProductionReadOnlyObservation>;
   closeBrowser: () => Promise<void>;
+}
+
+interface RequiredVisibleSurfaceLocator {
+  waitFor(options: { state: "visible"; timeout: number }): Promise<void>;
+  isVisible(): Promise<boolean>;
+}
+
+export async function waitForRequiredGoogleSignInSurface(
+  locator: RequiredVisibleSurfaceLocator,
+): Promise<boolean> {
+  await locator.waitFor({
+    state: "visible",
+    timeout: PRODUCTION_AUTH_SURFACE_WAIT_MS,
+  });
+  return locator.isVisible();
 }
 
 export async function runAuthenticatedArchitectureHarness(
@@ -545,9 +561,9 @@ export async function createPlaywrightHarnessDriver(input: {
         );
       }
       const activePage = requiredPage();
-      const googleSignInVisible = await activePage
-        .getByTestId("google-sign-in-button")
-        .isVisible()
+      const googleSignInVisible = await waitForRequiredGoogleSignInSurface(
+        activePage.getByTestId("google-sign-in-button"),
+      )
         .catch(() => false);
       const facebookAuthSurfaceCount = await activePage
         .locator(
