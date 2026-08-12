@@ -253,17 +253,25 @@ describe("production site shell", () => {
     expect(html).not.toContain("data-sign-out-control");
   });
 
-  it("keeps native erasure reachable without mounting private navigation or the local session gate", async () => {
+  it("keeps native erasure mutation-capable without mounting private navigation or the local session gate", async () => {
     mocks.pathname = "/erasure";
     const { SiteShell } = await import("./site-shell");
     const html = renderToStaticMarkup(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        isAuthenticated
+        documentMutationGeneration="signed-erasure-generation"
+      >
         <main>Native erasure request</main>
       </SiteShell>,
     );
 
     expect(html).toContain('data-site-shell="safe-exit"');
     expect(html).toContain('data-session-convergence-safe-exit="erasure"');
+    expect(html).toContain(
+      'data-document-mutation-generation="signed-erasure-generation"',
+    );
     expect(html).toContain("Native erasure request");
     expect(html).not.toContain('data-session-convergence-boundary="true"');
     expect(html).not.toContain('data-authenticated-utility-region="true"');
