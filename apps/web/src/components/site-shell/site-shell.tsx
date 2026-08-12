@@ -118,12 +118,26 @@ export function SiteShell({
     // person in an account while the private workspace remains sealed.
     return (
       <SiteShellLocaleProvider locale={locale}>
-        <div
-          data-site-shell="safe-exit"
-          data-session-convergence-safe-exit="erasure"
-        >
-          {children}
-        </div>
+        {isAuthenticated ? (
+          <DocumentMutationGenerationProvider
+            locale={locale}
+            transport={documentMutationGeneration}
+          >
+            <div
+              data-site-shell="safe-exit"
+              data-session-convergence-safe-exit="erasure"
+            >
+              {children}
+            </div>
+          </DocumentMutationGenerationProvider>
+        ) : (
+          <div
+            data-site-shell="safe-exit"
+            data-session-convergence-safe-exit="erasure"
+          >
+            {children}
+          </div>
+        )}
       </SiteShellLocaleProvider>
     );
   }
