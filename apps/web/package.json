@@ -105,6 +105,7 @@
     "smoke:journal-cover-selection": "tsx scripts/smoke-journal-cover-selection.ts",
     "smoke:session-locale-convergence": "tsx scripts/smoke-session-locale-convergence.ts",
     "smoke:session-convergence": "tsx scripts/smoke-session-convergence.ts",
+    "smoke:authenticated-architecture": "tsx scripts/smoke-authenticated-architecture.ts",
     "smoke:drive2-production": "tsx scripts/smoke-drive2-production.ts",
     "smoke:public-journal-search-budget": "NODE_OPTIONS=--conditions=react-server tsx scripts/prove-public-journal-search-budget.ts",
     "smoke:public-community-search-plan": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-public-community-search-plan.ts --environment local --confirm-environment local",

@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-08-11 (OVE-289 foreground exact-owner autosync implementation; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-12 (OVE-298 terminal Google-link production proof; OVE-292 authenticated architecture integration harness in progress; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -59,17 +59,24 @@ link/read-back/unlink/revocation/cleanup journey, and terminal production
 receipt. Its enablement fence must keep the OVE-314 sealed owner credential-only
 in both account-method projection and direct pre-provider-state admission.
 
-The first approved OVE-298 production attempt on 2026-08-12 applied and verified
-both additive indexes, enabled the explicit-link flag, created and verified one
-ordinary credential fixture, and consumed its single OAuth initiation. The
-isolated browser process ended before callback, so the attempt failed closed:
-the flag returned to absent, both exact indexes were preserved, the fixture was
-canonically erased with an anonymized completed request, and the five-count
-inventory returned to `1/0/0/0/0`. A second callback is forbidden under that
-spent approval. The new immutable retry contract is
-`docs/runbooks/OVE_298_PRODUCTION_GOOGLE_LINK_PROOF_RETRY_PLAN.md`; it owns zero
-index creates and awaits its own exact plan-digest and implementation-SHA
-approval before any new production effect.
+OVE-298 reached authenticated terminal closeout on 2026-08-12 after two earlier
+attempts failed closed and were independently cleaned. The approved second retry
+completed one ordinary credential-account link, authoritative credential-plus-
+Google read-back with unchanged identity/content digests, fresh credential
+session, unlink, provider revocation, and canonical erasure. Final production
+inventory is `1/0/0/0/0`; both partial unique indexes are exact;
+`GOOGLE_ACCOUNT_LINKING_ENABLED` is present/effective; and the sealed owner
+remains verified credential-only with exactly four avatar-menu operator links.
+Deployment `dpl_EcPeDH6WY9pLJTDriu2Bi4Y7DtT6` is READY for current main
+`a167afe5caacdadd9fa95d5c8ba3db4d396d358e`. Receipt
+`overgarden.google-linking-production-receipt.v1` passed with digest
+`eaa3c51b565aee03066da6d743215deb36d09d5862ca80d54e7465ef5bfa8262`;
+all disposable identity/provider/session/inbox/browser/local artifacts are
+absent. OVE-292 is now the active successor and owns only the exact-SHA
+integration harness and redacted composition receipt. Its source manifest
+digest is `0077a025a9facbaee60e4f78f21c77cb49ffeee9c2db30dfff9e6c088c896bc0`;
+production mode is GET-only, creates no authenticated session, and consumes
+child receipts for all mutation/provider/identity claims.
 
 On 2026-08-10, OVE-293 was selected only after authenticated OVE-285 terminal
 read-back and was individually re-audited against clean repository baseline
