@@ -37,6 +37,15 @@ export function getAuthBaseUrl(env: EnvLike = process.env) {
   );
 }
 
+export function shouldForceInsecureRecoveryCookies(
+  env: EnvLike = process.env,
+): boolean {
+  return (
+    env.OVE230_RECOVERY_DRILL === "true" &&
+    new URL(getAuthBaseUrl(env)).protocol === "http:"
+  );
+}
+
 export function vercelUrl(env: EnvLike = process.env): string | undefined {
   const raw = env.VERCEL_URL?.trim();
   if (!raw) return undefined;

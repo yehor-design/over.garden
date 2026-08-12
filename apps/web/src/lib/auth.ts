@@ -22,7 +22,10 @@ import {
   sendAuthVerificationEmail,
   shouldRequireAuthEmailVerification,
 } from "@/lib/auth/resend-auth-email-delivery";
-import { getAuthBaseUrl } from "@/lib/runtime-url";
+import {
+  getAuthBaseUrl,
+  shouldForceInsecureRecoveryCookies,
+} from "@/lib/runtime-url";
 
 const googleProvider = resolveGoogleSocialProviderConfig();
 const socialProviders = {
@@ -93,8 +96,7 @@ export const auth = betterAuth({
   plugins: [nextCookies()],
   advanced: {
     cookiePrefix: "overgarden",
-    useSecureCookies:
-      process.env.OVE230_RECOVERY_DRILL === "true" ? false : undefined,
+    useSecureCookies: shouldForceInsecureRecoveryCookies() ? false : undefined,
     database: {
       generateId: "uuid",
     },

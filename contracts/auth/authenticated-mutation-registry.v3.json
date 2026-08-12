@@ -41227,6 +41227,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/auth.ts",
+        "src/lib/runtime-url.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/auth.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/runtime-url",
+      "sourceNodeId": "source:b982f97cf44df39f4c61",
+      "symbol": "shouldForceInsecureRecoveryCookies"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/actions.ts",
         "src/server/analytics-events.ts"
       ],

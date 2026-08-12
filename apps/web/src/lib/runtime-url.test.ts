@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { getAuthBaseUrl, getPublicSiteUrl, vercelUrl } from "./runtime-url";
+import {
+  getAuthBaseUrl,
+  getPublicSiteUrl,
+  shouldForceInsecureRecoveryCookies,
+  vercelUrl,
+} from "./runtime-url";
 
 describe("runtime URL resolution", () => {
   it("uses explicit public site URL before Vercel deployment URL", () => {
@@ -56,5 +61,28 @@ describe("runtime URL resolution", () => {
     expect(vercelUrl({ VERCEL_URL: "https://preview.example.test" })).toBe(
       "https://preview.example.test",
     );
+  });
+
+  it("keeps recovery cookies secure when the auth authority is HTTPS", () => {
+    expect(
+      shouldForceInsecureRecoveryCookies({
+        BETTER_AUTH_URL: "https://over.garden",
+        OVE230_RECOVERY_DRILL: "true",
+      }),
+    ).toBe(false);
+  });
+
+  it("allows insecure recovery cookies only for an HTTP auth authority", () => {
+    expect(
+      shouldForceInsecureRecoveryCookies({
+        BETTER_AUTH_URL: "http://127.0.0.1:4310",
+        OVE230_RECOVERY_DRILL: "true",
+      }),
+    ).toBe(true);
+    expect(
+      shouldForceInsecureRecoveryCookies({
+        BETTER_AUTH_URL: "http://127.0.0.1:4310",
+      }),
+    ).toBe(false);
   });
 });
