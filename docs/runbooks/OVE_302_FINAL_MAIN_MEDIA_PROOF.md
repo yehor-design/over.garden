@@ -37,6 +37,27 @@ This approval permits one apply only. Environment, implementation SHA,
 deployment SHA, plan digest, production database target, task-canary count, or
 provider drift invalidates it before mutation.
 
+## Consumed authorization receipt
+
+The one approved OVE-302 apply was executed against contained main SHA
+`1618e828d77e11dc6150a04991ecf461f667a4e6`. It failed closed before any media
+route or media effect because the recovery drill selected an insecure local
+Better Auth cookie name while the canonical authority was HTTPS. The redacted
+failed receipt has evidence digest
+`7b33d31487065afdab8d7c639bdb20aec7add752d5e5b0e0d3176e29c7a1cd4b`.
+
+Separate cleanup proved authoritative database and object absence twice; its
+evidence digest is
+`c92c103ded90a382f342c0a69943666070b6255bf12652f5acf6d81c3f441022`.
+The authentication correction is contained in main SHA
+`660ddb7290a74b43f101fb58a372cc8c377fe8ed`, whose zero-effect plan has
+evidence digest
+`a4241cb782a7657470f53a099ab7711bc30c325ae9c8f3db01df951e0f820058`.
+
+The OVE-302 authorization is permanently consumed. Never run its apply command
+again. OVE-315 and `docs/runbooks/OVE_315_MEDIA_CANARY_RECOVERY.md` own the one
+separately approved replacement attempt.
+
 ## Preconditions
 
 1. Fetch `origin/main` and record the contained OVE-302 implementation SHA.

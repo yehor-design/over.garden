@@ -25,8 +25,10 @@ import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity
 
 export const OVE302_APPROVAL_DIGEST =
   "4d08b06ed2ba3de1c5de0152245d4e245d96f3d0ba7b39eeda982daed0517c42" as const;
+export const OVE315_APPROVAL_DIGEST =
+  "76643a09f3636efdb44cf03d257181d49726e168bf6ad138087b44f06e948406" as const;
 
-export const OVE302_MEDIA_PROOF_TIMEOUT_MS = 30_000;
+export const OVE315_MEDIA_PROOF_TIMEOUT_MS = 30_000;
 
 const SHA_40 = /^[0-9a-f]{40}$/;
 const APPROVED_PRODUCTION_DATABASE_HOST =
@@ -35,7 +37,7 @@ const APPROVED_PRODUCTION_DATABASE_PORT = "25060";
 const APPROVED_PRODUCTION_DATABASE_NAME = "defaultdb";
 const APPROVED_APP_ORIGIN = "https://over.garden";
 const APPROVED_MEDIA_ORIGIN = "https://media.over.garden";
-const TASK_EMAIL_PREFIX = "ove302-final-main-media-";
+const TASK_EMAIL_PREFIX = "ove315-media-recovery-";
 const TASK_EMAIL_SUFFIX = "@over.garden";
 const APPLY_LOCK_KEY = 3_020_313;
 const STATE_DIRECTORY = fileURLToPath(
@@ -72,8 +74,8 @@ export interface MediaProofReceiptV1 {
   version: 1;
   environment: "production";
   implementationSha: string;
-  planDigest: typeof OVE302_APPROVAL_DIGEST;
-  authorizationDigest: typeof OVE302_APPROVAL_DIGEST;
+  planDigest: typeof OVE315_APPROVAL_DIGEST;
+  authorizationDigest: typeof OVE315_APPROVAL_DIGEST;
   canaryCountBefore: number;
   applyCount: number;
   resultClass: MediaProofResultClass;
@@ -151,6 +153,13 @@ function sha256(value: string | Buffer) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+export function buildMediaProofReplayNamespace(implementationSha: string) {
+  assertImplementationSha(implementationSha);
+  return sha256(
+    `OVE-315\0${implementationSha}\0${OVE315_APPROVAL_DIGEST}`,
+  );
+}
+
 function canonicalReceiptPayload(
   receipt: Omit<MediaProofReceiptV1, "evidenceDigest">,
 ) {
@@ -164,7 +173,7 @@ function buildReceipt(input: BuildReceiptInput): MediaProofReceiptV1 {
   if (
     !Number.isSafeInteger(input.durationMs) ||
     input.durationMs < 0 ||
-    input.durationMs > OVE302_MEDIA_PROOF_TIMEOUT_MS
+    input.durationMs > OVE315_MEDIA_PROOF_TIMEOUT_MS
   ) {
     throw new Error("media proof duration must be between 0 and 30000ms");
   }
@@ -172,8 +181,8 @@ function buildReceipt(input: BuildReceiptInput): MediaProofReceiptV1 {
     version: 1,
     environment: input.environment,
     implementationSha: input.implementationSha,
-    planDigest: OVE302_APPROVAL_DIGEST,
-    authorizationDigest: OVE302_APPROVAL_DIGEST,
+    planDigest: OVE315_APPROVAL_DIGEST,
+    authorizationDigest: OVE315_APPROVAL_DIGEST,
     canaryCountBefore: input.canaryCountBefore,
     applyCount: input.applyCount,
     resultClass: input.resultClass,
@@ -184,7 +193,7 @@ function buildReceipt(input: BuildReceiptInput): MediaProofReceiptV1 {
   return {
     ...payload,
     evidenceDigest: sha256(
-      `overgarden.ove302.final-main-media-proof.v1\0${canonicalReceiptPayload(payload)}`,
+      `overgarden.ove315.media-canary-recovery.v1\0${canonicalReceiptPayload(payload)}`,
     ),
   };
 }
@@ -199,7 +208,7 @@ export function buildMediaProofFailureReceipt({
 
 function elapsedMs(startedAt: number, now = performance.now()) {
   return Math.min(
-    OVE302_MEDIA_PROOF_TIMEOUT_MS,
+    OVE315_MEDIA_PROOF_TIMEOUT_MS,
     Math.max(0, Math.ceil(now - startedAt)),
   );
 }
@@ -295,7 +304,7 @@ export async function runApprovedMediaProof(
     }
   }
 
-  if (options.approvalDigest !== OVE302_APPROVAL_DIGEST) {
+  if (options.approvalDigest !== OVE315_APPROVAL_DIGEST) {
     return buildMediaProofFailureReceipt({
       environment: options.environment,
       implementationSha: options.implementationSha,
@@ -342,7 +351,7 @@ export async function runApprovedMediaProof(
     const replay = await adapter.readReplayReceipt();
     if (
       replay?.implementationSha === options.implementationSha &&
-      replay.planDigest === OVE302_APPROVAL_DIGEST &&
+      replay.planDigest === OVE315_APPROVAL_DIGEST &&
       replay.state === "cleaned"
     ) {
       const boundary = await adapter.readBoundary(signal);
@@ -475,7 +484,7 @@ export function settleMediaProofWithinDeadline<T>(
   if (
     !Number.isSafeInteger(deadlineMs) ||
     deadlineMs <= 0 ||
-    deadlineMs > OVE302_MEDIA_PROOF_TIMEOUT_MS
+    deadlineMs > OVE315_MEDIA_PROOF_TIMEOUT_MS
   ) {
     throw new Error("media proof deadline must be between 1 and 30000ms");
   }
@@ -533,12 +542,12 @@ export function parseMediaProofCliArgs(
   const implementationSha = requiredFlag(argv, "--implementation-sha");
   assertImplementationSha(implementationSha);
   const timeoutMs = Number(
-    flagValue(argv, "--timeout-ms") ?? OVE302_MEDIA_PROOF_TIMEOUT_MS,
+    flagValue(argv, "--timeout-ms") ?? OVE315_MEDIA_PROOF_TIMEOUT_MS,
   );
   if (
     !Number.isSafeInteger(timeoutMs) ||
     timeoutMs <= 0 ||
-    timeoutMs > OVE302_MEDIA_PROOF_TIMEOUT_MS
+    timeoutMs > OVE315_MEDIA_PROOF_TIMEOUT_MS
   ) {
     throw new Error("--timeout-ms must be between 1 and 30000");
   }
@@ -554,8 +563,8 @@ export function parseMediaProofCliArgs(
   }
   if (mode === "apply") {
     const approvalDigest = requiredFlag(argv, "--approval-digest");
-    if (approvalDigest !== OVE302_APPROVAL_DIGEST) {
-      throw new Error("--approval-digest does not match OVE-302");
+    if (approvalDigest !== OVE315_APPROVAL_DIGEST) {
+      throw new Error("--approval-digest does not match OVE-315");
     }
     return {
       mode,
@@ -576,7 +585,7 @@ function assertRunOptions(options: MediaProofRunOptions) {
   if (
     !Number.isSafeInteger(options.timeoutMs) ||
     options.timeoutMs <= 0 ||
-    options.timeoutMs > OVE302_MEDIA_PROOF_TIMEOUT_MS
+    options.timeoutMs > OVE315_MEDIA_PROOF_TIMEOUT_MS
   ) {
     throw new Error("media proof timeout is invalid");
   }
@@ -660,17 +669,18 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
     private readonly pool: Pool,
     private readonly store: S3Client,
   ) {
-    const namespace = sha256(
-      `OVE-302\0${implementationSha}\0${OVE302_APPROVAL_DIGEST}`,
-    ).slice(0, 24);
+    const namespace = buildMediaProofReplayNamespace(implementationSha).slice(
+      0,
+      24,
+    );
     this.email = `${TASK_EMAIL_PREFIX}${namespace}${TASK_EMAIL_SUFFIX}`;
     this.stateFile = path.join(
       STATE_DIRECTORY,
-      `ove302-final-main-media-proof-${implementationSha}.json`,
+      `ove315-media-canary-recovery-${implementationSha}.json`,
     );
     this.cancelFile = path.join(
       STATE_DIRECTORY,
-      `ove302-final-main-media-proof-${implementationSha}.cancel`,
+      `ove315-media-canary-recovery-${implementationSha}.cancel`,
     );
   }
 
@@ -812,13 +822,13 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
         generation,
         body: {
           target: "first_plant_entry",
-          spaceName: "OVE-302 disposable proof space",
-          plantName: "OVE-302 disposable proof plant",
+          spaceName: "OVE-315 disposable proof space",
+          plantName: "OVE-315 disposable proof plant",
           objectKind: "plant",
           catalogItemId: null,
-          userAddedCatalogName: "OVE-302 disposable proof plant",
+          userAddedCatalogName: "OVE-315 disposable proof plant",
           varietyText: null,
-          title: "OVE-302 derivative-only canary",
+          title: "OVE-315 derivative-only canary",
           body: "Disposable non-personal final-main media proof.",
           entryDate: "2026-08-12",
           locationVisibility: "hidden",
@@ -1404,7 +1414,7 @@ async function createMetadataBearingCanary() {
     .jpeg({ quality: 91 })
     .withExif({
       IFD0: {
-        Artist: "OVE-302 synthetic canary",
+        Artist: "OVE-315 synthetic canary",
         Copyright: "Disposable privacy proof",
         ImageDescription: "Non-personal generated image",
       },
@@ -1501,8 +1511,8 @@ function validateStoredReceipt(
     value.version !== 1 ||
     value.environment !== "production" ||
     value.implementationSha !== implementationSha ||
-    value.planDigest !== OVE302_APPROVAL_DIGEST ||
-    value.authorizationDigest !== OVE302_APPROVAL_DIGEST ||
+    value.planDigest !== OVE315_APPROVAL_DIGEST ||
+    value.authorizationDigest !== OVE315_APPROVAL_DIGEST ||
     typeof value.canaryCountBefore !== "number" ||
     typeof value.applyCount !== "number" ||
     typeof value.durationMs !== "number" ||

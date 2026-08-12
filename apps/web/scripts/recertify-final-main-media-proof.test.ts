@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   OVE302_APPROVAL_DIGEST,
+  buildMediaProofReplayNamespace,
   buildMediaProofFailureReceipt,
   isAuthoritativePublicAbsence,
   parseMediaProofCliArgs,
@@ -17,6 +18,8 @@ import {
 } from "./recertify-final-main-media-proof";
 
 const IMPLEMENTATION_SHA = "a".repeat(40);
+const OVE315_APPROVAL_DIGEST =
+  "76643a09f3636efdb44cf03d257181d49726e168bf6ad138087b44f06e948406";
 
 const SAFE_BOUNDARY: MediaProofBoundary = {
   deploymentSha: IMPLEMENTATION_SHA,
@@ -49,7 +52,7 @@ function options(mode: "plan" | "apply" = "apply") {
     environment: "production" as const,
     implementationSha: IMPLEMENTATION_SHA,
     approvalDigest:
-      mode === "apply" ? OVE302_APPROVAL_DIGEST : undefined,
+      mode === "apply" ? OVE315_APPROVAL_DIGEST : undefined,
     timeoutMs: 30_000,
   };
 }
@@ -73,7 +76,7 @@ function adapter(
   };
 }
 
-describe("OVE-302 exact plan and owner boundary", () => {
+describe("OVE-315 exact recovery plan and owner boundary", () => {
   it("classifies an exact deployed zero-canary plan with zero effect", async () => {
     const proof = adapter();
     const receipt = await runApprovedMediaProof(options("plan"), proof);
@@ -82,8 +85,8 @@ describe("OVE-302 exact plan and owner boundary", () => {
       version: 1,
       environment: "production",
       implementationSha: IMPLEMENTATION_SHA,
-      planDigest: OVE302_APPROVAL_DIGEST,
-      authorizationDigest: OVE302_APPROVAL_DIGEST,
+      planDigest: OVE315_APPROVAL_DIGEST,
+      authorizationDigest: OVE315_APPROVAL_DIGEST,
       canaryCountBefore: 0,
       applyCount: 0,
       resultClass: "zero_effect_plan",
@@ -128,9 +131,33 @@ describe("OVE-302 exact plan and owner boundary", () => {
     expect(proof.acquireApplyLock).not.toHaveBeenCalled();
     expect(proof.applyCanary).not.toHaveBeenCalled();
   });
+
+  it("refuses the consumed OVE-302 digest before lock or effect", async () => {
+    const proof = adapter();
+    const receipt = await runApprovedMediaProof(
+      { ...options(), approvalDigest: OVE302_APPROVAL_DIGEST },
+      proof,
+    );
+
+    expect(receipt).toMatchObject({
+      planDigest: OVE315_APPROVAL_DIGEST,
+      authorizationDigest: OVE315_APPROVAL_DIGEST,
+      state: "failed",
+      resultClass: "refused",
+      applyCount: 0,
+    });
+    expect(proof.acquireApplyLock).not.toHaveBeenCalled();
+    expect(proof.applyCanary).not.toHaveBeenCalled();
+  });
+
+  it("derives a distinct OVE-315 replay namespace from the approved profile", () => {
+    expect(buildMediaProofReplayNamespace(IMPLEMENTATION_SHA)).toBe(
+      "b562cabd164493744a7dd3a10b7918e20f322638da414cc96d04d8d21e2d230f",
+    );
+  });
 });
 
-describe("OVE-302 effect, replay, race, timeout, and cleanup", () => {
+describe("OVE-315 effect, replay, race, timeout, and cleanup", () => {
   it("accepts only authoritative public absence and rejects transport/auth ambiguity", () => {
     expect(isAuthoritativePublicAbsence(404)).toBe(true);
     expect(isAuthoritativePublicAbsence(410)).toBe(true);
@@ -283,7 +310,7 @@ describe("OVE-302 effect, replay, race, timeout, and cleanup", () => {
   });
 });
 
-describe("OVE-302 closed receipt and CLI", () => {
+describe("OVE-315 closed receipt and CLI", () => {
   it("recursively drops unsafe error payloads and emits the exact closed field set", () => {
     const receipt = buildMediaProofFailureReceipt({
       environment: "production",
@@ -358,6 +385,34 @@ describe("OVE-302 closed receipt and CLI", () => {
         "--apply",
       ]),
     ).toThrow("--approval-digest");
+
+    expect(
+      parseMediaProofCliArgs([
+        "--environment",
+        "production",
+        "--confirm-environment",
+        "production",
+        "--implementation-sha",
+        IMPLEMENTATION_SHA,
+        "--apply",
+        "--approval-digest",
+        OVE315_APPROVAL_DIGEST,
+      ]),
+    ).toEqual(options());
+
+    expect(() =>
+      parseMediaProofCliArgs([
+        "--environment",
+        "production",
+        "--confirm-environment",
+        "production",
+        "--implementation-sha",
+        IMPLEMENTATION_SHA,
+        "--apply",
+        "--approval-digest",
+        OVE302_APPROVAL_DIGEST,
+      ]),
+    ).toThrow("does not match OVE-315");
 
     expect(() =>
       parseMediaProofCliArgs([
