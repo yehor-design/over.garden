@@ -17,6 +17,7 @@ import {
 import {
   parseAuthenticatedArchitectureCliOptions,
   runAuthenticatedArchitectureHarness,
+  waitForRequiredGoogleSignInSurface,
   type BrowserScenarioObservation,
 } from "./smoke-authenticated-architecture";
 
@@ -156,6 +157,25 @@ describe("OVE-292 authenticated architecture contract", () => {
 });
 
 describe("OVE-292 authenticated architecture harness", () => {
+  it("waits for the production Google sign-in surface to become visible", async () => {
+    let visible = false;
+    const locator = {
+      waitFor: vi.fn(async () => {
+        visible = true;
+      }),
+      isVisible: vi.fn(async () => visible),
+    };
+
+    await expect(waitForRequiredGoogleSignInSurface(locator)).resolves.toBe(
+      true,
+    );
+    expect(locator.waitFor).toHaveBeenCalledWith({
+      state: "visible",
+      timeout: 10_000,
+    });
+    expect(locator.isVisible).toHaveBeenCalledTimes(1);
+  });
+
   it("emits one exact production receipt with truthful provenance and zero writes", async () => {
     const runScenario = vi.fn(async ({ scenarioId, scenarioEpoch }) =>
       observation(scenarioId, scenarioEpoch),

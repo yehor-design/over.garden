@@ -149,7 +149,9 @@ Production-observed network scope is exactly normal GET navigation to
 Google control, authenticate, sign out, open account-method mutation UI, or send
 a POST. The runtime endpoint must report the exact expected SHA and enabled
 admission. Google sign-in must be visible and the Facebook authentication
-surface count must be zero.
+surface count must be zero. The runner waits up to 10 seconds within the
+20-second observation deadline for the streamed Google control to become
+visible instead of treating its first pre-hydration frame as terminal drift.
 
 The production receipt must contain:
 
