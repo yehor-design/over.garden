@@ -22,13 +22,16 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
+import { resolveR2ForcePathStyle } from "../src/lib/r2-addressing-contract";
 
 export const OVE302_APPROVAL_DIGEST =
   "4d08b06ed2ba3de1c5de0152245d4e245d96f3d0ba7b39eeda982daed0517c42" as const;
 export const OVE315_APPROVAL_DIGEST =
   "76643a09f3636efdb44cf03d257181d49726e168bf6ad138087b44f06e948406" as const;
+export const OVE316_APPROVAL_DIGEST =
+  "aadd6156c440c020fd435178b1631e20359c52119e6ea081663c1e495beb101d" as const;
 
-export const OVE315_MEDIA_PROOF_TIMEOUT_MS = 30_000;
+export const OVE316_MEDIA_PROOF_TIMEOUT_MS = 30_000;
 
 const SHA_40 = /^[0-9a-f]{40}$/;
 const APPROVED_PRODUCTION_DATABASE_HOST =
@@ -37,12 +40,10 @@ const APPROVED_PRODUCTION_DATABASE_PORT = "25060";
 const APPROVED_PRODUCTION_DATABASE_NAME = "defaultdb";
 const APPROVED_APP_ORIGIN = "https://over.garden";
 const APPROVED_MEDIA_ORIGIN = "https://media.over.garden";
-const TASK_EMAIL_PREFIX = "ove315-media-recovery-";
+const TASK_EMAIL_PREFIX = "ove316-r2-path-style-recovery-";
 const TASK_EMAIL_SUFFIX = "@over.garden";
 const APPLY_LOCK_KEY = 3_020_313;
-const STATE_DIRECTORY = fileURLToPath(
-  new URL("../.runtime/", import.meta.url),
-);
+const STATE_DIRECTORY = fileURLToPath(new URL("../.runtime/", import.meta.url));
 
 export type MediaProofState =
   | "unstarted"
@@ -74,8 +75,8 @@ export interface MediaProofReceiptV1 {
   version: 1;
   environment: "production";
   implementationSha: string;
-  planDigest: typeof OVE315_APPROVAL_DIGEST;
-  authorizationDigest: typeof OVE315_APPROVAL_DIGEST;
+  planDigest: typeof OVE316_APPROVAL_DIGEST;
+  authorizationDigest: typeof OVE316_APPROVAL_DIGEST;
   canaryCountBefore: number;
   applyCount: number;
   resultClass: MediaProofResultClass;
@@ -155,9 +156,7 @@ function sha256(value: string | Buffer) {
 
 export function buildMediaProofReplayNamespace(implementationSha: string) {
   assertImplementationSha(implementationSha);
-  return sha256(
-    `OVE-315\0${implementationSha}\0${OVE315_APPROVAL_DIGEST}`,
-  );
+  return sha256(`OVE-316\0${implementationSha}\0${OVE316_APPROVAL_DIGEST}`);
 }
 
 function canonicalReceiptPayload(
@@ -173,7 +172,7 @@ function buildReceipt(input: BuildReceiptInput): MediaProofReceiptV1 {
   if (
     !Number.isSafeInteger(input.durationMs) ||
     input.durationMs < 0 ||
-    input.durationMs > OVE315_MEDIA_PROOF_TIMEOUT_MS
+    input.durationMs > OVE316_MEDIA_PROOF_TIMEOUT_MS
   ) {
     throw new Error("media proof duration must be between 0 and 30000ms");
   }
@@ -181,8 +180,8 @@ function buildReceipt(input: BuildReceiptInput): MediaProofReceiptV1 {
     version: 1,
     environment: input.environment,
     implementationSha: input.implementationSha,
-    planDigest: OVE315_APPROVAL_DIGEST,
-    authorizationDigest: OVE315_APPROVAL_DIGEST,
+    planDigest: OVE316_APPROVAL_DIGEST,
+    authorizationDigest: OVE316_APPROVAL_DIGEST,
     canaryCountBefore: input.canaryCountBefore,
     applyCount: input.applyCount,
     resultClass: input.resultClass,
@@ -193,7 +192,7 @@ function buildReceipt(input: BuildReceiptInput): MediaProofReceiptV1 {
   return {
     ...payload,
     evidenceDigest: sha256(
-      `overgarden.ove315.media-canary-recovery.v1\0${canonicalReceiptPayload(payload)}`,
+      `overgarden.ove316.r2-path-style-recovery.v1\0${canonicalReceiptPayload(payload)}`,
     ),
   };
 }
@@ -208,7 +207,7 @@ export function buildMediaProofFailureReceipt({
 
 function elapsedMs(startedAt: number, now = performance.now()) {
   return Math.min(
-    OVE315_MEDIA_PROOF_TIMEOUT_MS,
+    OVE316_MEDIA_PROOF_TIMEOUT_MS,
     Math.max(0, Math.ceil(now - startedAt)),
   );
 }
@@ -304,7 +303,7 @@ export async function runApprovedMediaProof(
     }
   }
 
-  if (options.approvalDigest !== OVE315_APPROVAL_DIGEST) {
+  if (options.approvalDigest !== OVE316_APPROVAL_DIGEST) {
     return buildMediaProofFailureReceipt({
       environment: options.environment,
       implementationSha: options.implementationSha,
@@ -351,7 +350,7 @@ export async function runApprovedMediaProof(
     const replay = await adapter.readReplayReceipt();
     if (
       replay?.implementationSha === options.implementationSha &&
-      replay.planDigest === OVE315_APPROVAL_DIGEST &&
+      replay.planDigest === OVE316_APPROVAL_DIGEST &&
       replay.state === "cleaned"
     ) {
       const boundary = await adapter.readBoundary(signal);
@@ -430,9 +429,7 @@ export async function runApprovedMediaProof(
       });
     }
 
-    const cleaned = await proveCleanupTwice(adapter, signal).catch(
-      () => false,
-    );
+    const cleaned = await proveCleanupTwice(adapter, signal).catch(() => false);
     if (!isExactVerification(verification) || !cleaned) {
       return buildMediaProofFailureReceipt({
         environment: options.environment,
@@ -459,9 +456,10 @@ export async function runApprovedMediaProof(
     await adapter.writeReplayReceipt(receipt);
     return receipt;
   } catch (error) {
-    const cleaned = applyCount > 0
-      ? await proveCleanupTwice(adapter, signal).catch(() => false)
-      : false;
+    const cleaned =
+      applyCount > 0
+        ? await proveCleanupTwice(adapter, signal).catch(() => false)
+        : false;
     return buildMediaProofFailureReceipt({
       environment: options.environment,
       implementationSha: options.implementationSha,
@@ -484,7 +482,7 @@ export function settleMediaProofWithinDeadline<T>(
   if (
     !Number.isSafeInteger(deadlineMs) ||
     deadlineMs <= 0 ||
-    deadlineMs > OVE315_MEDIA_PROOF_TIMEOUT_MS
+    deadlineMs > OVE316_MEDIA_PROOF_TIMEOUT_MS
   ) {
     throw new Error("media proof deadline must be between 1 and 30000ms");
   }
@@ -499,9 +497,7 @@ export function settleMediaProofWithinDeadline<T>(
     };
     const timer = setTimeout(() => {
       controller.abort(new Error("Media proof deadline exceeded."));
-      finish(() =>
-        reject(new Error(`media proof exceeded ${deadlineMs}ms`)),
-      );
+      finish(() => reject(new Error(`media proof exceeded ${deadlineMs}ms`)));
     }, deadlineMs);
     void operation(controller.signal).then(
       (value) => finish(() => resolve(value)),
@@ -542,18 +538,23 @@ export function parseMediaProofCliArgs(
   const implementationSha = requiredFlag(argv, "--implementation-sha");
   assertImplementationSha(implementationSha);
   const timeoutMs = Number(
-    flagValue(argv, "--timeout-ms") ?? OVE315_MEDIA_PROOF_TIMEOUT_MS,
+    flagValue(argv, "--timeout-ms") ?? OVE316_MEDIA_PROOF_TIMEOUT_MS,
   );
   if (
     !Number.isSafeInteger(timeoutMs) ||
     timeoutMs <= 0 ||
-    timeoutMs > OVE315_MEDIA_PROOF_TIMEOUT_MS
+    timeoutMs > OVE316_MEDIA_PROOF_TIMEOUT_MS
   ) {
     throw new Error("--timeout-ms must be between 1 and 30000");
   }
 
-  const selected = ["--plan", "--apply", "--status", "--cancel", "--cleanup"]
-    .filter((flag) => argv.includes(flag));
+  const selected = [
+    "--plan",
+    "--apply",
+    "--status",
+    "--cancel",
+    "--cleanup",
+  ].filter((flag) => argv.includes(flag));
   if (selected.length !== 1) {
     throw new Error("choose exactly one proof mode");
   }
@@ -563,8 +564,8 @@ export function parseMediaProofCliArgs(
   }
   if (mode === "apply") {
     const approvalDigest = requiredFlag(argv, "--approval-digest");
-    if (approvalDigest !== OVE315_APPROVAL_DIGEST) {
-      throw new Error("--approval-digest does not match OVE-315");
+    if (approvalDigest !== OVE316_APPROVAL_DIGEST) {
+      throw new Error("--approval-digest does not match OVE-316");
     }
     return {
       mode,
@@ -585,7 +586,7 @@ function assertRunOptions(options: MediaProofRunOptions) {
   if (
     !Number.isSafeInteger(options.timeoutMs) ||
     options.timeoutMs <= 0 ||
-    options.timeoutMs > OVE315_MEDIA_PROOF_TIMEOUT_MS
+    options.timeoutMs > OVE316_MEDIA_PROOF_TIMEOUT_MS
   ) {
     throw new Error("media proof timeout is invalid");
   }
@@ -676,11 +677,11 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
     this.email = `${TASK_EMAIL_PREFIX}${namespace}${TASK_EMAIL_SUFFIX}`;
     this.stateFile = path.join(
       STATE_DIRECTORY,
-      `ove315-media-canary-recovery-${implementationSha}.json`,
+      `ove316-r2-path-style-recovery-${implementationSha}.json`,
     );
     this.cancelFile = path.join(
       STATE_DIRECTORY,
-      `ove315-media-canary-recovery-${implementationSha}.cancel`,
+      `ove316-r2-path-style-recovery-${implementationSha}.cancel`,
     );
   }
 
@@ -822,15 +823,15 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
         generation,
         body: {
           target: "first_plant_entry",
-          spaceName: "OVE-315 disposable proof space",
-          plantName: "OVE-315 disposable proof plant",
+          spaceName: "OVE-316 disposable proof space",
+          plantName: "OVE-316 disposable proof plant",
           objectKind: "plant",
           catalogItemId: null,
-          userAddedCatalogName: "OVE-315 disposable proof plant",
+          userAddedCatalogName: "OVE-316 disposable proof plant",
           varietyText: null,
-          title: "OVE-315 derivative-only canary",
+          title: "OVE-316 derivative-only canary",
           body: "Disposable non-personal final-main media proof.",
-          entryDate: "2026-08-12",
+          entryDate: "2026-08-13",
           locationVisibility: "hidden",
           coarseRegionCode: null,
           clientMutationId: randomUUID(),
@@ -927,9 +928,8 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
 
     if (this.derivativeKeys.size > 0 || this.quarantineKeys.size > 0) {
       this.serverDbLoaded = true;
-      const { revokeMediaObjectBytes } = await import(
-        "../src/server/media/lifecycle-revoke"
-      );
+      const { revokeMediaObjectBytes } =
+        await import("../src/server/media/lifecycle-revoke");
       for (const key of this.derivativeKeys) {
         throwIfAborted(signal);
         const proof = await revokeMediaObjectBytes({
@@ -970,8 +970,7 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
       ? await this.hasTaskDatabaseResidue(userId)
       : false;
     return {
-      taskCanaryCount:
-        inventory.canaryCount > 0 || databaseResidue ? 1 : 0,
+      taskCanaryCount: inventory.canaryCount > 0 || databaseResidue ? 1 : 0,
       originalPresent,
       derivativePresent,
       anotherOwnerEffects: 0,
@@ -980,7 +979,9 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
 
   async readReplayReceipt() {
     try {
-      const parsed = JSON.parse(await readFile(this.stateFile, "utf8")) as unknown;
+      const parsed = JSON.parse(
+        await readFile(this.stateFile, "utf8"),
+      ) as unknown;
       return validateStoredReceipt(parsed, this.implementationSha);
     } catch (error) {
       if (isNodeError(error, "ENOENT")) return null;
@@ -1068,10 +1069,7 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
     };
   }
 
-  private async createAuthenticatedOwner(
-    jar: CookieJar,
-    signal?: AbortSignal,
-  ) {
+  private async createAuthenticatedOwner(jar: CookieJar, signal?: AbortSignal) {
     assertServerRuntimeCondition();
     throwIfAborted(signal);
     process.env.OVE230_RECOVERY_DRILL = "true";
@@ -1113,7 +1111,8 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
       [userId],
     );
     const sessionId = sessionResult.rows[0]?.id;
-    if (!sessionId) throw new Error("Synthetic Better Auth session was absent.");
+    if (!sessionId)
+      throw new Error("Synthetic Better Auth session was absent.");
 
     const sessionResponse = await fetch(
       `${APPROVED_APP_ORIGIN}/api/auth/get-session?disableCookieCache=true`,
@@ -1258,19 +1257,15 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
       await client.query("delete from spaces where owner_user_id = $1::uuid", [
         userId,
       ]);
-      await client.query('delete from "session" where "userId" = $1', [
-        userId,
-      ]);
-      await client.query('delete from "account" where "userId" = $1', [
-        userId,
-      ]);
+      await client.query('delete from "session" where "userId" = $1', [userId]);
+      await client.query('delete from "account" where "userId" = $1', [userId]);
       await client.query('delete from "verification" where identifier = $1', [
         this.email,
       ]);
-      await client.query(
-        'delete from "user" where id = $1 and email = $2',
-        [userId, this.email],
-      );
+      await client.query('delete from "user" where id = $1 and email = $2', [
+        userId,
+        this.email,
+      ]);
       await client.query("commit");
     } catch (error) {
       await client.query("rollback").catch(() => undefined);
@@ -1337,7 +1332,10 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
 async function createProductionAdapter(implementationSha: string) {
   const resolution = resolveDatabaseConnection(process.env);
   const connectionString = resolvePgConnectionString(process.env, resolution);
-  if (!connectionString || !isApprovedProductionDatabaseTarget(connectionString)) {
+  if (
+    !connectionString ||
+    !isApprovedProductionDatabaseTarget(connectionString)
+  ) {
     throw new Error("Production database target did not match the registry.");
   }
   const pool = new Pool({
@@ -1348,7 +1346,7 @@ async function createProductionAdapter(implementationSha: string) {
   const store = new S3Client({
     region: "auto",
     endpoint: requiredEnv("R2_ENDPOINT"),
-    forcePathStyle: process.env.R2_FORCE_PATH_STYLE === "true",
+    forcePathStyle: resolveR2ForcePathStyle(process.env, "production"),
     credentials: {
       accessKeyId: requiredEnv("R2_ACCESS_KEY_ID"),
       secretAccessKey: requiredEnv("R2_SECRET_ACCESS_KEY"),
@@ -1364,7 +1362,8 @@ export function isApprovedProductionDatabaseTarget(connectionString: string) {
       (url.protocol === "postgres:" || url.protocol === "postgresql:") &&
       url.hostname === APPROVED_PRODUCTION_DATABASE_HOST &&
       url.port === APPROVED_PRODUCTION_DATABASE_PORT &&
-      decodeURIComponent(url.pathname) === `/${APPROVED_PRODUCTION_DATABASE_NAME}`
+      decodeURIComponent(url.pathname) ===
+        `/${APPROVED_PRODUCTION_DATABASE_NAME}`
     );
   } catch {
     return false;
@@ -1385,13 +1384,21 @@ async function readCanonicalDeploymentSha(signal?: AbortSignal) {
     deploymentSha?: unknown;
     enforcement?: unknown;
     r2UploadUrlTtl?: { effectiveSeconds?: unknown; maximumSeconds?: unknown };
+    r2Addressing?: {
+      environmentClass?: unknown;
+      addressingClass?: unknown;
+      enforcement?: unknown;
+    };
   };
   if (
     typeof body.deploymentSha !== "string" ||
     !SHA_40.test(body.deploymentSha) ||
     body.enforcement !== "enabled" ||
     body.r2UploadUrlTtl?.effectiveSeconds !== 900 ||
-    body.r2UploadUrlTtl?.maximumSeconds !== 900
+    body.r2UploadUrlTtl?.maximumSeconds !== 900 ||
+    body.r2Addressing?.environmentClass !== "production" ||
+    body.r2Addressing?.addressingClass !== "path_style" ||
+    body.r2Addressing?.enforcement !== "verified"
   ) {
     throw new Error("Canonical deployment read-back drifted.");
   }
@@ -1414,7 +1421,7 @@ async function createMetadataBearingCanary() {
     .jpeg({ quality: 91 })
     .withExif({
       IFD0: {
-        Artist: "OVE-315 synthetic canary",
+        Artist: "OVE-316 synthetic canary",
         Copyright: "Disposable privacy proof",
         ImageDescription: "Non-personal generated image",
       },
@@ -1507,12 +1514,13 @@ function validateStoredReceipt(
     "evidenceDigest",
   ].sort();
   if (
-    JSON.stringify(Object.keys(value).sort()) !== JSON.stringify(expectedKeys) ||
+    JSON.stringify(Object.keys(value).sort()) !==
+      JSON.stringify(expectedKeys) ||
     value.version !== 1 ||
     value.environment !== "production" ||
     value.implementationSha !== implementationSha ||
-    value.planDigest !== OVE315_APPROVAL_DIGEST ||
-    value.authorizationDigest !== OVE315_APPROVAL_DIGEST ||
+    value.planDigest !== OVE316_APPROVAL_DIGEST ||
+    value.authorizationDigest !== OVE316_APPROVAL_DIGEST ||
     typeof value.canaryCountBefore !== "number" ||
     typeof value.applyCount !== "number" ||
     typeof value.durationMs !== "number" ||
@@ -1570,7 +1578,9 @@ const MEDIA_PROOF_STATES = new Set<string>([
 ]);
 
 function isApprovedProductionRuntimeCondition() {
-  return process.env.NODE_OPTIONS?.includes("--conditions=react-server") === true;
+  return (
+    process.env.NODE_OPTIONS?.includes("--conditions=react-server") === true
+  );
 }
 
 function assertServerRuntimeCondition() {
@@ -1736,9 +1746,7 @@ async function runCli() {
           canaryCountBefore: receipt.canaryCountBefore,
           applyCount: receipt.applyCount,
           resultClass: "failed",
-          cleanupClass: cleaned
-            ? "authoritative_absent_twice"
-            : "uncertain",
+          cleanupClass: cleaned ? "authoritative_absent_twice" : "uncertain",
           durationMs: Math.min(args.timeoutMs, actualDurationMs),
           unsafeError: "deadline or cleanup recovery",
         });

@@ -144,6 +144,20 @@ R2_PUBLIC_BUCKET="overgarden-public"
 R2_PUBLIC_BASE_URL="https://media.over.garden"
 ```
 
+Production addressing is a fail-closed runtime and deployment contract, not a
+best-effort SDK preference. `apps/web/src/lib/r2-addressing-contract.ts`
+requires the exact endpoint above and exact `R2_FORCE_PATH_STYLE=true` whenever
+`VERCEL_ENV=production`; missing, `false`, `1`, whitespace, or endpoint drift
+refuses production presigning and fails the production prebuild guard. Preview
+and local runtimes retain the existing boolean compatibility behavior.
+
+On 2026-08-13, the consumed OVE-315 canary exposed live Vercel Production drift:
+`R2_FORCE_PATH_STYLE=false` generated a virtual-hosted presigned capability and
+the harness stopped before PUT. Cleanup proved zero task residue twice. OVE-316
+owns the bounded production-only correction, exact-main redeployment, closed
+runtime read-back, and separately approved one-canary proof. The approval plan
+and rollback rules are in `docs/runbooks/OVE_316_R2_PATH_STYLE_RECOVERY.md`.
+
 Secret values still required outside git:
 
 ```env

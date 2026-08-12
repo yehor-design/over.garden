@@ -9,6 +9,12 @@ describe("GET /api/document-mutation-admission/readback", () => {
 
   it("returns only the non-secret protocol, deployment, TTL, and artifact receipts", async () => {
     vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "synthetic-deployment-sha");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv(
+      "R2_ENDPOINT",
+      "https://cb03b15042adc74edfe2d8201636300a.r2.cloudflarestorage.com",
+    );
+    vi.stubEnv("R2_FORCE_PATH_STYLE", "true");
     vi.stubEnv("R2_UPLOAD_URL_TTL_SECONDS", "900");
 
     const response = GET();
@@ -23,6 +29,12 @@ describe("GET /api/document-mutation-admission/readback", () => {
         source: "environment",
         effectiveSeconds: 900,
         maximumSeconds: 900,
+      },
+      r2Addressing: {
+        schemaVersion: "overgarden.r2-addressing.v1",
+        environmentClass: "production",
+        addressingClass: "path_style",
+        enforcement: "verified",
       },
       authenticatedMutation: {
         schemaVersion:
@@ -45,6 +57,29 @@ describe("GET /api/document-mutation-admission/readback", () => {
         },
       },
     });
+  });
+
+  it("reports a closed refusal class without disclosing provider configuration", async () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv(
+      "R2_ENDPOINT",
+      "https://cb03b15042adc74edfe2d8201636300a.r2.cloudflarestorage.com",
+    );
+    vi.stubEnv("R2_FORCE_PATH_STYLE", "false");
+
+    const response = GET();
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.r2Addressing).toEqual({
+      schemaVersion: "overgarden.r2-addressing.v1",
+      environmentClass: "production",
+      addressingClass: "virtual_hosted_style",
+      enforcement: "refused",
+    });
+    expect(JSON.stringify(payload.r2Addressing)).not.toMatch(
+      /cloudflarestorage|bucket|access|secret/i,
+    );
   });
 
   it("fails closed without disclosing malformed environment input", async () => {

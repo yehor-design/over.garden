@@ -1,5 +1,13 @@
 # OVE-315 media canary recovery
 
+> Historical, consumed recovery profile. The single authorized OVE-315 apply
+> ran once and stopped before the media PUT because production
+> `R2_FORCE_PATH_STYLE=false` produced a virtual-hosted presigned capability.
+> Authoritative cleanup proved zero residue twice. Never rerun this profile:
+> the harness now refuses its digest. OVE-316 owns the one configuration
+> correction and any separately approved replacement canary; see
+> `docs/runbooks/OVE_316_R2_PATH_STYLE_RECOVERY.md`.
+
 This runbook owns one separately authorized replacement of the consumed
 OVE-302 derivative-only production canary. It changes only the harness
 authorization profile, task identity, replay namespace, and redacted evidence
@@ -8,7 +16,9 @@ private-quarantine, public-derivative, original-deletion, and cleanup behavior
 remains unchanged.
 
 Do not use the OVE-302 digest. Do not select a real gardener. Do not execute a
-second OVE-315 apply after any uncertainty.
+second OVE-315 apply after any uncertainty. All commands below are retained as
+historical protocol evidence and are no longer executable with the active
+harness profile.
 
 ## Immutable authorization
 
