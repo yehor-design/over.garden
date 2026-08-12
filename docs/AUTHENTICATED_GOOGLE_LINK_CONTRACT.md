@@ -116,7 +116,12 @@ transactional, tested slice:
    account already owns a Google subject.
 
 OVE-298 then owns the approved production preflight, migration, exact-SHA
-deployment, live two-account proof, replay, rollback evidence, and cleanup.
+deployment, one ordinary non-owner/non-admin disposable signup and verification,
+live link/current-user read-back/fresh-session unlink proof, provider revocation,
+canonical erasure cleanup, rollback evidence, and terminal receipt. The OVE-314
+sealed owner remains credential-only: both the account-method projection and
+the pre-provider-state admission hook deny its exact configured user ID even
+when the global explicit-link flag is true.
 
 ## Concurrency and Session-Switch Model
 

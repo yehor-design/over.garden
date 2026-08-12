@@ -1,4 +1,8 @@
 export const OWNER_CREDENTIAL_PROVIDER_ID = "credential";
+export const SEALED_OWNER_USER_ID_ENV = "OVERGARDEN_ADMIN_OWNER_USER_ID";
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface OwnerAccountProjection {
   providerId: string;
@@ -29,6 +33,20 @@ export function isVerifiedCredentialOnlyOwnerAccount(
     typeof account.password === "string" &&
     account.password.trim().length > 0
   );
+}
+
+export function resolveConfiguredSealedOwnerUserId(
+  env: Record<string, string | undefined> = process.env,
+) {
+  const configured = env[SEALED_OWNER_USER_ID_ENV]?.trim();
+  return configured && UUID_PATTERN.test(configured) ? configured : null;
+}
+
+export function isSealedOwnerUserId(
+  userId: string,
+  env: Record<string, string | undefined> = process.env,
+) {
+  return resolveConfiguredSealedOwnerUserId(env) === userId;
 }
 
 export function buildVerifiedOwnerAccountEvidence(

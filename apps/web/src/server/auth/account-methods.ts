@@ -3,7 +3,7 @@ import "server-only";
 import { headers } from "next/headers";
 
 import { GOOGLE_PROVIDER_ID } from "@/lib/auth/social-oauth";
-import { isExplicitGoogleLinkingEnabled } from "@/lib/auth/explicit-google-linking";
+import { isExplicitGoogleLinkingEnabledForUser } from "@/lib/auth/explicit-google-linking";
 import { auth } from "@/lib/auth";
 import { getCurrentSession } from "@/server/auth-session";
 
@@ -38,7 +38,9 @@ export async function getCurrentAccountMethodProjection(): Promise<AccountMethod
     hasGoogle,
     canSetPassword: !hasCredential && emailVerified,
     canLinkGoogle:
-      !hasGoogle && emailVerified && isExplicitGoogleLinkingEnabled(),
+      !hasGoogle &&
+      emailVerified &&
+      isExplicitGoogleLinkingEnabledForUser(session.user.id),
   };
 }
 

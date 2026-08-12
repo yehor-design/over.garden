@@ -2,11 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildVerifiedOwnerAccountEvidence,
+  isSealedOwnerUserId,
   isVerifiedCredentialOnlyOwnerAccount,
   redactOwnerBootstrapFailure,
   REDACTED_OWNER_BOOTSTRAP_FAILURE_MESSAGE,
+  SEALED_OWNER_USER_ID_ENV,
   type OwnerIdentityProjection,
 } from "@/lib/admin/owner-account-contract";
+
+const OWNER_ID = "11111111-1111-4111-8111-111111111111";
+const OTHER_ID = "22222222-2222-4222-8222-222222222222";
 
 const VALID_OWNER_IDENTITY = {
   emailVerified: true,
@@ -14,6 +19,25 @@ const VALID_OWNER_IDENTITY = {
 } as const satisfies OwnerIdentityProjection;
 
 describe("sealed owner account contract", () => {
+  it("classifies only the exact configured sealed-owner user id", () => {
+    expect(
+      isSealedOwnerUserId(OWNER_ID, {
+        [SEALED_OWNER_USER_ID_ENV]: `  ${OWNER_ID}  `,
+      }),
+    ).toBe(true);
+    expect(
+      isSealedOwnerUserId(OTHER_ID, {
+        [SEALED_OWNER_USER_ID_ENV]: OWNER_ID,
+      }),
+    ).toBe(false);
+    expect(isSealedOwnerUserId(OWNER_ID, {})).toBe(false);
+    expect(
+      isSealedOwnerUserId(OWNER_ID, {
+        [SEALED_OWNER_USER_ID_ENV]: "not-a-user-id",
+      }),
+    ).toBe(false);
+  });
+
   it("accepts only one verified password credential and builds truthful evidence", () => {
     expect(isVerifiedCredentialOnlyOwnerAccount(VALID_OWNER_IDENTITY)).toBe(
       true,

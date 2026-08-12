@@ -9,7 +9,12 @@ import {
   admitExplicitGoogleLinking,
   GOOGLE_ACCOUNT_LINKING_ENABLED_ENV,
   isExplicitGoogleLinkingEnabled,
+  isExplicitGoogleLinkingEnabledForUser,
 } from "./explicit-google-linking";
+import { SEALED_OWNER_USER_ID_ENV } from "@/lib/admin/owner-account-contract";
+
+const OWNER_ID = "11111111-1111-4111-8111-111111111111";
+const GARDENER_ID = "22222222-2222-4222-8222-222222222222";
 
 const ENABLED_ENV = {
   [GOOGLE_ACCOUNT_LINKING_ENABLED_ENV]: "true",
@@ -22,6 +27,7 @@ function linkContext(input?: {
   body?: unknown;
   token?: string | false | null;
   emailVerified?: boolean;
+  userId?: string;
   findSession?: (token: string) => Promise<unknown>;
 }) {
   return {
@@ -40,7 +46,10 @@ function linkContext(input?: {
           input?.findSession ??
           vi.fn(async () => ({
             session: { id: "session-a" },
-            user: { emailVerified: input?.emailVerified ?? true },
+            user: {
+              id: input?.userId ?? GARDENER_ID,
+              emailVerified: input?.emailVerified ?? true,
+            },
           })),
       },
     },
@@ -80,6 +89,16 @@ describe("explicit Google linking admission", () => {
         GOOGLE_CLIENT_SECRET: "",
       }),
     ).toBe(false);
+  });
+
+  it("keeps the global gate enabled for ordinary users but excludes the sealed owner", () => {
+    const env = {
+      ...ENABLED_ENV,
+      [SEALED_OWNER_USER_ID_ENV]: OWNER_ID,
+    };
+
+    expect(isExplicitGoogleLinkingEnabledForUser(GARDENER_ID, env)).toBe(true);
+    expect(isExplicitGoogleLinkingEnabledForUser(OWNER_ID, env)).toBe(false);
   });
 
   it("admits the exact Google redirect flow only for a verified live session", async () => {
@@ -134,6 +153,11 @@ describe("explicit Google linking admission", () => {
           throw new Error("raw database host and identity");
         }),
       }),
+    ],
+    [
+      "sealed owner",
+      { ...ENABLED_ENV, [SEALED_OWNER_USER_ID_ENV]: OWNER_ID },
+      linkContext({ userId: OWNER_ID }),
     ],
   ] as const)(
     "fails closed and generically for %s",

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   headers: vi.fn(),
-  isExplicitGoogleLinkingEnabled: vi.fn(),
+  isExplicitGoogleLinkingEnabledForUser: vi.fn(),
   listUserAccounts: vi.fn(),
 }));
 
@@ -21,7 +21,8 @@ vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
 }));
 vi.mock("@/lib/auth/explicit-google-linking", () => ({
-  isExplicitGoogleLinkingEnabled: mocks.isExplicitGoogleLinkingEnabled,
+  isExplicitGoogleLinkingEnabledForUser:
+    mocks.isExplicitGoogleLinkingEnabledForUser,
 }));
 
 import {
@@ -34,9 +35,12 @@ describe("current account-method projection", () => {
     vi.clearAllMocks();
     mocks.headers.mockResolvedValue(new Headers());
     mocks.getCurrentSession.mockResolvedValue({
-      user: { emailVerified: true },
+      user: {
+        id: "22222222-2222-4222-8222-222222222222",
+        emailVerified: true,
+      },
     });
-    mocks.isExplicitGoogleLinkingEnabled.mockReturnValue(true);
+    mocks.isExplicitGoogleLinkingEnabledForUser.mockReturnValue(true);
   });
 
   it("projects only current-user method booleans", async () => {
@@ -70,7 +74,10 @@ describe("current account-method projection", () => {
     });
 
     mocks.getCurrentSession.mockResolvedValueOnce({
-      user: { emailVerified: false },
+      user: {
+        id: "22222222-2222-4222-8222-222222222222",
+        emailVerified: false,
+      },
     });
     await expect(getCurrentAccountMethodProjection()).resolves.toMatchObject({
       canSetPassword: false,
@@ -80,7 +87,7 @@ describe("current account-method projection", () => {
 
   it("keeps the feature gate server-authoritative", async () => {
     mocks.listUserAccounts.mockResolvedValue([{ providerId: "credential" }]);
-    mocks.isExplicitGoogleLinkingEnabled.mockReturnValue(false);
+    mocks.isExplicitGoogleLinkingEnabledForUser.mockReturnValue(false);
 
     await expect(getCurrentAccountMethodProjection()).resolves.toMatchObject({
       readbackState: "ready",
@@ -88,6 +95,25 @@ describe("current account-method projection", () => {
       hasGoogle: false,
       canLinkGoogle: false,
     });
+  });
+
+  it("never projects explicit linking for the sealed owner", async () => {
+    const ownerId = "11111111-1111-4111-8111-111111111111";
+    mocks.getCurrentSession.mockResolvedValueOnce({
+      user: { id: ownerId, emailVerified: true },
+    });
+    mocks.listUserAccounts.mockResolvedValue([{ providerId: "credential" }]);
+    mocks.isExplicitGoogleLinkingEnabledForUser.mockReturnValueOnce(false);
+
+    await expect(getCurrentAccountMethodProjection()).resolves.toMatchObject({
+      readbackState: "ready",
+      hasCredential: true,
+      hasGoogle: false,
+      canLinkGoogle: false,
+    });
+    expect(mocks.isExplicitGoogleLinkingEnabledForUser).toHaveBeenCalledWith(
+      ownerId,
+    );
   });
 
   it("settles a slow read-back to retry at the exact deadline and fences its late result", async () => {

@@ -2,6 +2,7 @@ import "server-only";
 
 import { APIError } from "better-auth/api";
 
+import { isSealedOwnerUserId } from "@/lib/admin/owner-account-contract";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { configuredEnvValue, type EnvLike } from "@/lib/auth/oauth-env";
 import { GOOGLE_PROVIDER_ID } from "@/lib/auth/social-oauth";
@@ -38,6 +39,15 @@ export function isExplicitGoogleLinkingEnabled(env: EnvLike = process.env) {
   return (
     configuredEnvValue(env[GOOGLE_ACCOUNT_LINKING_ENABLED_ENV]) === "true" &&
     isGoogleSignInEnabled(env)
+  );
+}
+
+export function isExplicitGoogleLinkingEnabledForUser(
+  userId: string,
+  env: EnvLike = process.env,
+) {
+  return (
+    isExplicitGoogleLinkingEnabled(env) && !isSealedOwnerUserId(userId, env)
   );
 }
 
@@ -81,7 +91,9 @@ export async function admitExplicitGoogleLinking(
   } catch {
     throwUnavailable();
   }
-  if (!hasVerifiedCurrentUser(currentSession)) throwUnavailable();
+  if (!hasVerifiedCurrentNonOwnerUser(currentSession, options.env)) {
+    throwUnavailable();
+  }
 
   return "admitted";
 }
@@ -92,10 +104,14 @@ function readObject(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function hasVerifiedCurrentUser(value: unknown) {
+function hasVerifiedCurrentNonOwnerUser(value: unknown, env?: EnvLike) {
   const session = readObject(value);
   const user = readObject(session?.user);
-  return user?.emailVerified === true;
+  return (
+    typeof user?.id === "string" &&
+    user.emailVerified === true &&
+    !isSealedOwnerUserId(user.id, env)
+  );
 }
 
 function throwUnavailable(): never {

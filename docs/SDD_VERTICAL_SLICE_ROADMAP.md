@@ -44,9 +44,20 @@ The binding decision is
 provider state, production data, or deployment configuration is changed. The
 authenticated strict chain is OVE-296 -> OVE-285 -> OVE-293 -> OVE-288 ->
 OVE-290 -> OVE-286 -> OVE-287 -> OVE-291 -> OVE-289 -> OVE-294 -> OVE-295 ->
-OVE-292 -> OVE-284 -> OVE-186. OVE-297 and OVE-298 remain separate DAG leaves,
-not members of that strict chain. Terminal issue status and relations still
+OVE-298 -> OVE-292 -> OVE-284 -> OVE-186. OVE-297 remains a separate DAG leaf,
+not a member of that strict chain. Terminal issue status and relations still
 require authenticated Linear read-back before selecting OVE-293.
+
+On 2026-08-12, OVE-295 reached authenticated terminal closeout: feature commit
+`7c2e45f86e81b9bd1df61fce68a56ca49fc77b31` is contained in current-main merge
+`9449455db4e4417f03ad08e7bdd4c212eb4f1f00`; deployment
+`dpl_HMLdqNQE6U2nxSnpQ31DvRtESYKq` is READY and promoted; explicit linking is
+still absent/false; and migration `0022` remains production-unapplied by
+design. OVE-298 now owns the approval-bound aggregate preflight, the exact
+`0022` index apply, flag enablement, an ordinary non-owner/non-admin disposable
+link/read-back/unlink/revocation/cleanup journey, and terminal production
+receipt. Its enablement fence must keep the OVE-314 sealed owner credential-only
+in both account-method projection and direct pre-provider-state admission.
 
 On 2026-08-10, OVE-293 was selected only after authenticated OVE-285 terminal
 read-back and was individually re-audited against clean repository baseline
