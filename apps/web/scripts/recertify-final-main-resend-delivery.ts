@@ -20,6 +20,7 @@ import {
   resolveDatabaseSslConfig,
   resolvePgConnectionString,
 } from "../src/db/connection";
+import { SEALED_OWNER_USER_ID_ENV } from "../src/lib/admin/owner-account-contract";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import type { ErasureDryRunCounts } from "../src/server/erasure-dry-run";
 
@@ -345,6 +346,35 @@ export function resolveSealedOwnerUserId(
     return null;
   }
   return row.owner_user_id;
+}
+
+export async function withValidatedSealedOwnerEnvironment<T>(
+  ownerUserId: string,
+  callback: () => Promise<T>,
+  env: Record<string, string | undefined> = process.env,
+) {
+  if (!UUID_PATTERN.test(ownerUserId)) {
+    throw new Error("Validated owner identity was invalid.");
+  }
+  const hadPrevious = Object.prototype.hasOwnProperty.call(
+    env,
+    SEALED_OWNER_USER_ID_ENV,
+  );
+  const previous = env[SEALED_OWNER_USER_ID_ENV];
+  const configured = previous?.trim();
+  if (configured && configured !== ownerUserId) {
+    throw new Error("Validated owner did not match configured owner.");
+  }
+  env[SEALED_OWNER_USER_ID_ENV] = ownerUserId;
+  try {
+    return await callback();
+  } finally {
+    if (hadPrevious && previous !== undefined) {
+      env[SEALED_OWNER_USER_ID_ENV] = previous;
+    } else {
+      delete env[SEALED_OWNER_USER_ID_ENV];
+    }
+  }
 }
 
 async function proveCleanupTwice(
@@ -1644,26 +1674,31 @@ class ProductionResendDeliveryAdapter implements ResendDeliveryAdapter {
       userId,
     );
     assertExpectedResendCanaryDryRun(dryRun);
-    await accessModule.assertErasureRequestMutationAccess(
-      ownerScope,
-      databaseModule.db,
-    );
-    await requestModule.markErasureRequestDryRunReviewed(ownerScope, {
-      requestId: request.id,
-    });
-    await accessModule.assertErasureExecutionAccess(
-      ownerScope,
-      databaseModule.db,
-    );
-    const summary = await executionModule.executeApprovedErasureRequest(
-      ownerScope,
-      {
-        requestId: request.id,
-        approvalText: executionModule.expectedErasureMaintainerApprovalText(
-          request.id,
-        ),
+    const summary = await withValidatedSealedOwnerEnvironment(
+      ownerUserId,
+      async () => {
+        await accessModule.assertErasureRequestMutationAccess(
+          ownerScope,
+          databaseModule.db,
+        );
+        await requestModule.markErasureRequestDryRunReviewed(ownerScope, {
+          requestId: request.id,
+        });
+        await accessModule.assertErasureExecutionAccess(
+          ownerScope,
+          databaseModule.db,
+        );
+        return executionModule.executeApprovedErasureRequest(
+          ownerScope,
+          {
+            requestId: request.id,
+            approvalText: executionModule.expectedErasureMaintainerApprovalText(
+              request.id,
+            ),
+          },
+          { executor: databaseModule.db },
+        );
       },
-      { executor: databaseModule.db },
     );
     if (summary.handledStatus !== "completed") {
       throw new Error("Canonical canary erasure did not complete.");

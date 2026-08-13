@@ -83,6 +83,17 @@ authorization digest, and never permits a second apply. After the correction
 is contained in exact main, invoke cleanup only with the consumed apply SHA
 above so the original durable recovery namespace is resumed.
 
+The first cleanup after that correction remained fail-closed with zero apply
+and no erasure/mailbox effect. Read-only diagnosis proved one eligible durable
+owner row, an intentionally unavailable Sensitive owner variable, and denial
+from the canonical erasure admission because it repeated the owner comparison
+against only that unavailable variable. Amendment 4 is cleanup-only wiring:
+after the database owner passes the unique verified credential-only checks,
+the harness makes that value available only inside the awaited canonical
+erasure callback and restores the previous process environment in `finally`.
+It refuses a conflicting configured value, emits no owner value, and changes no
+product authorization or erasure rule.
+
 ## Preconditions
 
 1. Fetch `origin/main`, prove the feature SHA is contained, and use a clean
@@ -102,7 +113,10 @@ above so the original durable recovery namespace is resumed.
    linked provider before account-deletion cleanup can be admitted. The
    `OVERGARDEN_ADMIN_OWNER_USER_ID` Vercel variable is Sensitive and may be
    intentionally unreadable to `vercel env run`; the harness does not require
-   or emit its value.
+   or emit its value. During cleanup only, the validated database owner is
+   scoped to the existing canonical admission callback and the prior process
+   environment is restored on success or failure. A present conflicting value
+   is drift and refuses cleanup.
 8. Run commands from `apps/web`; the package script supplies the required
    `react-server` condition.
 
@@ -217,6 +231,10 @@ credential-only owner from the durable role/account rows, has that owner mark
 the dry run reviewed, executes the existing deletion workflow, and
 requires the handled audit to be rekeyed. It then deletes only the exact
 disposable inbox.
+The validated owner is copied to the canonical sealed-owner environment key
+only for the duration of that single awaited cleanup callback. The previous
+value is restored or the key is removed in `finally`; the value is never
+printed, persisted, returned in a receipt, or accepted from another source.
 It verifies authoritative absence twice and removes the recovery file only
 after the second clean read-back. A terminal attempt receipt fences replay even
 after successful cleanup. The durable one-shot marker provides the earlier and
