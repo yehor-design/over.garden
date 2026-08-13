@@ -11,6 +11,7 @@ import {
   isApprovedResendConfiguration,
   OVE313_APPROVAL_DIGEST,
   parseResendDeliveryCliArgs,
+  resolveSealedOwnerUserId,
   runApprovedResendDeliveryProof,
   settleResendDeliveryWithinDeadline,
   validateResendDeliveryRecoveryState,
@@ -55,6 +56,23 @@ const CLEAN: ResendDeliveryCleanupReadback = {
   anotherUserEffects: 0,
 };
 
+const SEALED_OWNER_ID = "11111111-1111-4111-8111-111111111111";
+
+function sealedOwnerRow(
+  overrides: Partial<Parameters<typeof resolveSealedOwnerUserId>[0][number]> = {},
+) {
+  return {
+    owner_user_id: SEALED_OWNER_ID,
+    role: "owner",
+    email_verified: true,
+    provider_id: "credential",
+    password_present: true,
+    owner_count: "1",
+    account_count: "1",
+    ...overrides,
+  };
+}
+
 function options(mode: "plan" | "apply" = "apply"): ResendDeliveryRunOptions {
   return {
     mode,
@@ -87,6 +105,30 @@ function adapter(
 }
 
 describe("OVE-313 immutable plan and pre-effect gates", () => {
+  it("resolves one eligible owner role without reading a Sensitive env value", () => {
+    vi.stubEnv("OVERGARDEN_ADMIN_OWNER_USER_ID", "");
+    try {
+      expect(resolveSealedOwnerUserId([sealedOwnerRow()])).toBe(
+        SEALED_OWNER_ID,
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it.each([
+    { rows: [] as ReturnType<typeof sealedOwnerRow>[] },
+    { rows: [sealedOwnerRow(), sealedOwnerRow()] },
+    { rows: [sealedOwnerRow({ owner_count: "2" })] },
+    { rows: [sealedOwnerRow({ account_count: "2" })] },
+    { rows: [sealedOwnerRow({ email_verified: false })] },
+    { rows: [sealedOwnerRow({ provider_id: "google" })] },
+    { rows: [sealedOwnerRow({ password_present: false })] },
+    { rows: [sealedOwnerRow({ owner_user_id: "not-a-uuid" })] },
+  ])("refuses non-singular or ineligible sealed-owner rows: $rows", ({ rows }) => {
+    expect(resolveSealedOwnerUserId(rows)).toBeNull();
+  });
+
   it("plans with zero effect only on exact main and a clean bounded namespace", async () => {
     const proof = adapter();
     const receipt = await runApprovedResendDeliveryProof(

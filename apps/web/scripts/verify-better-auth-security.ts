@@ -137,13 +137,15 @@ function assertAuthBoundary(authSource: string) {
     "emailVerification:",
     "sendVerificationEmail:",
     "socialProviders:",
-    "socialAccountPolicy()",
     "hardenCurrentSessionSignOut",
     "createRetiredSharedIdentityDatabaseHooks",
     "plugins: [nextCookies()]",
   ];
 
-  if (requiredMarkers.some((marker) => !authSource.includes(marker))) {
+  if (
+    requiredMarkers.some((marker) => !authSource.includes(marker)) ||
+    !/\bsocialAccountPolicy\s*\(/u.test(authSource)
+  ) {
     throw new BetterAuthSecurityGuardError("missing_auth_boundary");
   }
 

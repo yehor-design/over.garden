@@ -124,6 +124,16 @@ export interface ResendDeliveryCleanupReadback {
   anotherUserEffects: number;
 }
 
+export interface SealedOwnerAccessRow {
+  owner_user_id: string;
+  role: string;
+  email_verified: boolean;
+  provider_id: string | null;
+  password_present: boolean;
+  owner_count: string;
+  account_count: string;
+}
+
 export interface ResendDeliveryAdapter {
   acquireApplyLock(signal?: AbortSignal): Promise<"acquired" | "contended">;
   releaseApplyLock(): Promise<void>;
@@ -315,6 +325,26 @@ function isClean(readback: ResendDeliveryCleanupReadback) {
     readback.erasureAuditClass === "completed_rekeyed_or_not_applicable" &&
     readback.anotherUserEffects === 0
   );
+}
+
+export function resolveSealedOwnerUserId(
+  rows: readonly SealedOwnerAccessRow[],
+) {
+  if (rows.length !== 1) return null;
+  const row = rows[0];
+  if (
+    !row ||
+    !UUID_PATTERN.test(row.owner_user_id) ||
+    row.role !== "owner" ||
+    row.email_verified !== true ||
+    row.provider_id !== "credential" ||
+    row.password_present !== true ||
+    row.owner_count !== "1" ||
+    row.account_count !== "1"
+  ) {
+    return null;
+  }
+  return row.owner_user_id;
 }
 
 async function proveCleanupTwice(
@@ -1268,41 +1298,31 @@ class ProductionResendDeliveryAdapter implements ResendDeliveryAdapter {
     };
   }
 
-  private async readOwnerAccess(signal?: AbortSignal) {
+  private async resolveSealedOwnerAccess(signal?: AbortSignal) {
     throwIfAborted(signal);
-    const configured = process.env.OVERGARDEN_ADMIN_OWNER_USER_ID?.trim();
-    if (!configured || !UUID_PATTERN.test(configured)) return false;
-    const result = await this.pool.query<{
-      role: string;
-      email_verified: boolean;
-      provider_id: string;
-      password_present: boolean;
-      account_count: string;
-    }>(
+    const result = await this.pool.query<SealedOwnerAccessRow>(
       `
-        select role.role,
+        select role.user_id::text as owner_user_id,
+               role.role::text as role,
                owner."emailVerified" as email_verified,
                account."providerId" as provider_id,
-               (account.password is not null and length(trim(account.password)) > 0) as password_present,
-               (select count(*)::text from account all_accounts where all_accounts."userId" = owner.id) as account_count
+               coalesce(account.password is not null and length(trim(account.password)) > 0, false) as password_present,
+               (select count(*)::text from admin_user_roles owner_roles where owner_roles.role = 'owner') as owner_count,
+               (select count(*)::text from account all_accounts where all_accounts."userId" = role.user_id) as account_count
         from admin_user_roles role
         join "user" owner on owner.id = role.user_id
-        join account on account."userId" = owner.id
-        where role.user_id = $1::uuid
-        limit 2
+        left join account on account."userId" = owner.id
+        where role.role = 'owner'
+        order by role.user_id, account.id
+        limit 3
       `,
-      [configured],
     );
     throwIfAborted(signal);
-    const row = result.rows[0];
-    return (
-      result.rows.length === 1 &&
-      row?.role === "owner" &&
-      row.email_verified === true &&
-      row.provider_id === "credential" &&
-      row.password_present === true &&
-      Number(row.account_count) === 1
-    );
+    return resolveSealedOwnerUserId(result.rows);
+  }
+
+  private async readOwnerAccess(signal?: AbortSignal) {
+    return (await this.resolveSealedOwnerAccess(signal)) !== null;
   }
 
   private async ensureRecovery(signal?: AbortSignal) {
@@ -1605,8 +1625,8 @@ class ProductionResendDeliveryAdapter implements ResendDeliveryAdapter {
       import("../src/server/erasure-dry-run-repository"),
       import("../src/server/erasure-execution"),
     ]);
-    const ownerUserId = process.env.OVERGARDEN_ADMIN_OWNER_USER_ID?.trim();
-    if (!ownerUserId || !UUID_PATTERN.test(ownerUserId)) {
+    const ownerUserId = await this.resolveSealedOwnerAccess();
+    if (!ownerUserId) {
       throw new Error("Sealed erasure owner was unavailable.");
     }
     const ownerScope = {

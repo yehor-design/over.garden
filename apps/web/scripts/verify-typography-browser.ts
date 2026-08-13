@@ -2158,9 +2158,14 @@ async function installFallbackPerformanceObservers(context: BrowserContext) {
           ) {
             return;
           }
-          requestAnimationFrame(observeVisibility);
+          // A paused font request can throttle the first animation frame in
+          // headless WebKit even when server-rendered fallback text is already
+          // painted. Keep the proof on the browser timeline, but sample it
+          // immediately at DCL and then with a bounded timer instead of losing
+          // the visibility timestamp to engine-specific RAF scheduling.
+          setTimeout(observeVisibility, 20);
         };
-        requestAnimationFrame(observeVisibility);
+        observeVisibility();
       },
       { once: true },
     );
@@ -2318,7 +2323,10 @@ async function runFallbackCase(input: {
           return (state?.visibleMeaningfulTextMs ?? 0) > 0 && fcpMs > 0;
         },
         undefined,
-        { timeout: 1_500 },
+        {
+          polling: 20,
+          timeout: 1_500,
+        },
       )
       .catch(() => undefined);
     await page.evaluate(
