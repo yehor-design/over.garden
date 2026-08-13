@@ -82,6 +82,7 @@
     "prove:r2-media-lifecycle": "tsx scripts/prove-r2-media-lifecycle-provider.ts",
     "ove316:production-proof": "pnpm run check:r2-addressing -- --environment production --confirm-environment production --read-back && NODE_OPTIONS=--conditions=react-server tsx scripts/recertify-final-main-media-proof.ts",
     "ove303:production-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/recertify-final-main-public-journal-ssr.ts",
+    "ove304:production-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/recertify-final-main-archive-410.ts",
     "smoke:admin-role": "tsx scripts/smoke-admin-role.ts",
     "smoke:canonical-launch": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-canonical-launch.ts",
     "smoke:account-sign-out": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-account-sign-out.ts",
