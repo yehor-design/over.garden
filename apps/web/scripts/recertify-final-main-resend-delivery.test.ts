@@ -7,6 +7,7 @@ import {
   buildResendDeliveryAttemptFence,
   buildResendDeliveryFailureReceipt,
   buildResendDeliveryReplayNamespace,
+  expectedResendCanaryDryRunCount,
   extractApprovedAuthUrl,
   isApprovedProductionDatabaseTarget,
   isApprovedProductionRuntimeCondition,
@@ -190,6 +191,12 @@ describe("OVE-313 immutable plan and pre-effect gates", () => {
 });
 
 describe("OVE-313 one-apply, replay, race, failure, and cleanup", () => {
+  it("admits the one user-scoped analytics event emitted by the verified auth journey", () => {
+    expect(expectedResendCanaryDryRunCount("analyticsEvents")).toBe(1);
+    expect(expectedResendCanaryDryRunCount("authUserPresent")).toBe(1);
+    expect(expectedResendCanaryDryRunCount("journalEntriesTotal")).toBe(0);
+  });
+
   it("persists the one-shot fence before entering the external journey", async () => {
     const order: string[] = [];
     const proof = adapter({
@@ -696,5 +703,7 @@ describe("OVE-313 closed receipt, CLI, and runbook", () => {
     expect(runbook).toMatch(/Cleanup never deletes or resets the\s+marker/);
     expect(runbook).toContain("cleanup twice");
     expect(runbook).toContain("never run a second apply");
+    expect(runbook).toContain("one user-scoped analytics event");
+    expect(runbook).toContain("cleanup-only correction");
   });
 });
