@@ -48,13 +48,6 @@ const MATCHING_HANDLER_MANIFEST = [
   "journal_entry_index",
   "journal_entry_unindex",
 ] as const;
-const TASK_EMAIL_PREFIX = "ove306-journal-worker-";
-const TASK_EMAIL_SUFFIX = "@over.garden";
-const TASK_TITLE = "OVE-306 disposable worker proof";
-const TASK_BODY = "Synthetic non-personal worker convergence proof.";
-const TASK_SPACE_NAME = "OVE-306 disposable worker space";
-const TASK_PLANT_NAME = "OVE-306 disposable worker plant";
-const APPLY_LOCK_KEY = 3_060_306;
 const STATE_DIRECTORY = fileURLToPath(new URL("../.runtime/", import.meta.url));
 
 export type JournalWorkerState =
@@ -184,6 +177,33 @@ export function buildJournalWorkerReplayNamespace(implementationSha: string) {
   assertImplementationSha(implementationSha);
   return sha256(`OVE-306\0${implementationSha}\0${OVE306_APPROVAL_DIGEST}`);
 }
+
+export interface ProductionJournalWorkerTaskConfig {
+  emailPrefix: string;
+  emailSuffix: "@over.garden";
+  title: string;
+  body: string;
+  spaceName: string;
+  plantName: string;
+  entryDate: string;
+  statePrefix: string;
+  applyLockKey: number;
+  buildReplayNamespace: (implementationSha: string) => string;
+}
+
+export const OVE306_JOURNAL_WORKER_TASK_CONFIG: ProductionJournalWorkerTaskConfig =
+  {
+    emailPrefix: "ove306-journal-worker-",
+    emailSuffix: "@over.garden",
+    title: "OVE-306 disposable worker proof",
+    body: "Synthetic non-personal worker convergence proof.",
+    spaceName: "OVE-306 disposable worker space",
+    plantName: "OVE-306 disposable worker plant",
+    entryDate: "2026-08-13",
+    statePrefix: "ove306-journal-worker",
+    applyLockKey: 3_060_306,
+    buildReplayNamespace: buildJournalWorkerReplayNamespace,
+  };
 
 function buildReceipt(input: BuildReceiptInput): JournalWorkerReceiptV1 {
   assertImplementationSha(input.implementationSha);
@@ -785,7 +805,7 @@ class CookieJar {
   }
 }
 
-class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
+export class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
   private lockClient: PoolClient | null = null;
   private readonly email: string;
   private readonly stateFile: string;
@@ -802,26 +822,28 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
   constructor(
     private readonly implementationSha: string,
     private readonly pool: Pool,
+    private readonly taskConfig: ProductionJournalWorkerTaskConfig = OVE306_JOURNAL_WORKER_TASK_CONFIG,
   ) {
-    const namespace = buildJournalWorkerReplayNamespace(
-      implementationSha,
-    ).slice(0, 24);
-    this.email = `${TASK_EMAIL_PREFIX}${namespace}${TASK_EMAIL_SUFFIX}`;
+    assertProductionJournalWorkerTaskConfig(taskConfig, implementationSha);
+    const namespace = taskConfig
+      .buildReplayNamespace(implementationSha)
+      .slice(0, 24);
+    this.email = `${taskConfig.emailPrefix}${namespace}${taskConfig.emailSuffix}`;
     this.stateFile = path.join(
       STATE_DIRECTORY,
-      `ove306-journal-worker-${implementationSha}.json`,
+      `${taskConfig.statePrefix}-${implementationSha}.json`,
     );
     this.attemptFile = path.join(
       STATE_DIRECTORY,
-      `ove306-journal-worker-${implementationSha}.attempt`,
+      `${taskConfig.statePrefix}-${implementationSha}.attempt`,
     );
     this.cancelFile = path.join(
       STATE_DIRECTORY,
-      `ove306-journal-worker-${implementationSha}.cancel`,
+      `${taskConfig.statePrefix}-${implementationSha}.cancel`,
     );
     this.recoveryFile = path.join(
       STATE_DIRECTORY,
-      `ove306-journal-worker-${implementationSha}.recovery.json`,
+      `${taskConfig.statePrefix}-${implementationSha}.recovery.json`,
     );
   }
 
@@ -831,7 +853,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
     try {
       const result = await client.query<{ acquired: boolean }>(
         "select pg_try_advisory_lock($1::bigint) as acquired",
-        [APPLY_LOCK_KEY],
+        [this.taskConfig.applyLockKey],
       );
       throwIfAborted(signal);
       if (result.rows[0]?.acquired !== true) {
@@ -852,7 +874,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
     if (!client) return;
     try {
       await client.query("select pg_advisory_unlock($1::bigint)", [
-        APPLY_LOCK_KEY,
+        this.taskConfig.applyLockKey,
       ]);
     } finally {
       client.release();
@@ -925,15 +947,15 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
         generation,
         body: {
           target: "first_plant_entry",
-          spaceName: TASK_SPACE_NAME,
-          plantName: TASK_PLANT_NAME,
+          spaceName: this.taskConfig.spaceName,
+          plantName: this.taskConfig.plantName,
           objectKind: "plant",
           catalogItemId: null,
-          userAddedCatalogName: TASK_PLANT_NAME,
+          userAddedCatalogName: this.taskConfig.plantName,
           varietyText: null,
-          title: TASK_TITLE,
-          body: TASK_BODY,
-          entryDate: "2026-08-13",
+          title: this.taskConfig.title,
+          body: this.taskConfig.body,
+          entryDate: this.taskConfig.entryDate,
           locationVisibility: "hidden",
           coarseRegionCode: null,
           clientMutationId: randomUUID(),
@@ -1098,10 +1120,10 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
         this.email,
         userId,
         entryId,
-        TASK_TITLE,
-        TASK_BODY,
-        TASK_SPACE_NAME,
-        TASK_PLANT_NAME,
+        this.taskConfig.title,
+        this.taskConfig.body,
+        this.taskConfig.spaceName,
+        this.taskConfig.plantName,
       ],
       response.headers.get("x-robots-tag"),
     );
@@ -1918,7 +1940,10 @@ export function isAuthoritativeMeiliDocumentAbsence(error: unknown) {
   );
 }
 
-async function createProductionAdapter(implementationSha: string) {
+export async function createProductionJournalWorkerAdapter(
+  implementationSha: string,
+  taskConfig: ProductionJournalWorkerTaskConfig = OVE306_JOURNAL_WORKER_TASK_CONFIG,
+) {
   const resolution = resolveDatabaseConnection(process.env);
   const connectionString = resolvePgConnectionString(process.env, resolution);
   if (
@@ -1932,7 +1957,11 @@ async function createProductionAdapter(implementationSha: string) {
     max: 2,
     ssl: resolveDatabaseSslConfig(process.env, resolution),
   });
-  return new ProductionJournalWorkerAdapter(implementationSha, pool);
+  return new ProductionJournalWorkerAdapter(
+    implementationSha,
+    pool,
+    taskConfig,
+  );
 }
 
 export function isApprovedProductionDatabaseTarget(connectionString: string) {
@@ -2249,7 +2278,7 @@ const STATES = new Set<string>([
   "failed",
 ]);
 
-function isApprovedProductionRuntimeCondition() {
+export function isApprovedProductionRuntimeCondition() {
   return (
     process.env.NODE_OPTIONS?.includes("--conditions=react-server") === true
   );
@@ -2282,6 +2311,30 @@ function assertRunOptions(options: JournalWorkerRunOptions) {
 function assertImplementationSha(value: string) {
   if (!SHA_40.test(value)) {
     throw new Error("implementation SHA must be 40 lowercase hex characters");
+  }
+}
+
+function assertProductionJournalWorkerTaskConfig(
+  config: ProductionJournalWorkerTaskConfig,
+  implementationSha: string,
+) {
+  const replayNamespace = config.buildReplayNamespace(implementationSha);
+  if (
+    !/^[a-z0-9-]{3,48}$/.test(config.emailPrefix) ||
+    config.emailSuffix !== "@over.garden" ||
+    !/^[a-z0-9-]{3,48}$/.test(config.statePrefix) ||
+    !/^[0-9a-f]{64}$/.test(replayNamespace) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(config.entryDate) ||
+    !Number.isSafeInteger(config.applyLockKey) ||
+    config.applyLockKey <= 0 ||
+    [config.title, config.body, config.spaceName, config.plantName].some(
+      (value) =>
+        value.length === 0 ||
+        value.length > 160 ||
+        containsPreciseLocationText(value),
+    )
+  ) {
+    throw new Error("Production journal worker task configuration drifted.");
   }
 }
 
@@ -2342,7 +2395,9 @@ async function runCli() {
   ) {
     throw new Error("Production mutation runtime condition is absent.");
   }
-  const adapter = await createProductionAdapter(args.implementationSha);
+  const adapter = await createProductionJournalWorkerAdapter(
+    args.implementationSha,
+  );
   let receipt: JournalWorkerReceiptV1;
   try {
     if (args.mode === "cancel") {
