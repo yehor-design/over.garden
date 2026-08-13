@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { getEventListeners } from "node:events";
 import { readFileSync } from "node:fs";
 
 import { describe, expect, it, vi } from "vitest";
@@ -20,6 +21,7 @@ import {
   runApprovedJournalWorkerProof,
   settleJournalWorkerWithinDeadline,
   validateJournalWorkerRecoveryState,
+  waitForJournalWorkerCondition,
   type JournalWorkerAdapter,
   type JournalWorkerBoundary,
   type JournalWorkerCleanupReadback,
@@ -169,7 +171,7 @@ describe("OVE-306 exact plan and privacy boundary", () => {
 
   it("uses an OVE-306-only replay namespace", () => {
     expect(buildJournalWorkerReplayNamespace(IMPLEMENTATION_SHA)).toBe(
-      "fe1f211ac59637be7d5fbcfe48a754d8f0069e848dcdb9b0d252ce3a0586c587",
+      "05e0c60ee8fd3738ea0e721e2fe21c807c70247db8a7ef5de552e703c1d916f7",
     );
   });
 
@@ -177,7 +179,7 @@ describe("OVE-306 exact plan and privacy boundary", () => {
     expect(
       createHash("sha256").update(OVE306_APPROVED_PLAN).digest("hex"),
     ).toBe(OVE306_APPROVAL_DIGEST);
-    expect(OVE306_APPROVED_PLAN).toContain("OVE-306-amendment-1|production");
+    expect(OVE306_APPROVED_PLAN).toContain("OVE-306-amendment-2|production");
     expect(OVE306_APPROVED_PLAN).toContain(
       "observe one identifiers-only index job reach done",
     );
@@ -186,7 +188,7 @@ describe("OVE-306 exact plan and privacy boundary", () => {
     );
     expect(OVE306_APPROVED_PLAN).toContain("one-fresh-canary");
     expect(OVE306_APPROVED_PLAN).toContain(
-      "supersedes:2863b7e1b10d04e574e5cd53daf604dbe8dc4d121b1bbe1bd1114ab2a81f1c49",
+      "supersedes:601472f9690bad019e4e3a066ed98b653d77662fb65adf5087133b1625ee0346",
     );
     expect(OVE306_JOURNAL_WORKER_TIMEOUT_MS).toBe(180_000);
     expect(OVE306_ASYNC_WAIT_TIMEOUT_MS).toBe(60_000);
@@ -626,7 +628,7 @@ describe("OVE-306 effect, replay, race, timeout, and cleanup", () => {
     });
   });
 
-  it("fences late completion at the 180-second Amendment 1 budget", async () => {
+  it("fences late completion at the 180-second Amendment 2 budget", async () => {
     vi.useFakeTimers();
     try {
       let aborts = 0;
@@ -649,6 +651,27 @@ describe("OVE-306 effect, replay, race, timeout, and cleanup", () => {
       await expect(Promise.allSettled([pending])).resolves.toEqual([
         expect.objectContaining({ status: "rejected" }),
       ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("removes abort listeners after every successful polling interval", async () => {
+    vi.useFakeTimers();
+    try {
+      const controller = new AbortController();
+      let reads = 0;
+      const pending = waitForJournalWorkerCondition(
+        async () => (++reads === 12 ? "done" : null),
+        1_000,
+        10,
+        controller.signal,
+      );
+
+      await vi.advanceTimersByTimeAsync(110);
+
+      await expect(pending).resolves.toBe("done");
+      expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
     } finally {
       vi.useRealTimers();
     }
