@@ -16,7 +16,7 @@ const supportedAuthSource = `
     sendVerificationEmail: () => undefined,
   },
   socialProviders: providers,
-  account: socialAccountPolicy(),
+  account: socialAccountPolicy(isExplicitGoogleLinkingEnabled()),
   hooks: {
     before: hardenCurrentSessionSignOut,
   },
@@ -119,6 +119,18 @@ describe("Better Auth security guard", () => {
     expectFailure(
       makeInput({
         authSource: supportedAuthSource.replace("sendVerificationEmail:", ""),
+      }),
+      "missing_auth_boundary",
+    );
+  });
+
+  it("rejects an auth source without the canonical social-account policy", () => {
+    expectFailure(
+      makeInput({
+        authSource: supportedAuthSource.replace(
+          "account: socialAccountPolicy(isExplicitGoogleLinkingEnabled()),",
+          "",
+        ),
       }),
       "missing_auth_boundary",
     );

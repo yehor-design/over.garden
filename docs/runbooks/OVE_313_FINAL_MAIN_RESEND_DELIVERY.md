@@ -69,8 +69,13 @@ second apply under this digest; use status and task-scoped cleanup only.
    log, receipt, issue, PR, or evidence artifact.
 6. Require `RESEND_API_KEY`, an approved `RESEND_AUTH_FROM` address at the
    exact `over.garden` domain, and no recovery-drill verification bypass.
-7. Require the configured sealed owner to remain one verified credential-only
-   owner before account-deletion cleanup can be admitted.
+7. Resolve the sealed owner from the authoritative unique
+   `admin_user_roles.role = 'owner'` row and require it to join exactly one
+   verified user with exactly one password-bearing `credential` account and no
+   linked provider before account-deletion cleanup can be admitted. The
+   `OVERGARDEN_ADMIN_OWNER_USER_ID` Vercel variable is Sensitive and may be
+   intentionally unreadable to `vercel env run`; the harness does not require
+   or emit its value.
 8. Run commands from `apps/web`; the package script supplies the required
    `react-server` condition.
 
@@ -163,11 +168,11 @@ approved run reusable.
 
 ## Recovery and cleanup
 
-The harness writes a mode-0600 ignored recovery file before its first external
-effect. That file may contain only the disposable account/mailbox credentials
-and exact task IDs needed to resume cleanup. It is sensitive operator state and
-must never be attached to evidence or committed. The public receipt remains a
-strict closed shape.
+The harness writes a mode-0600 ignored recovery file before its first
+state-changing external effect. That file may contain only the disposable
+account/mailbox credentials and exact task IDs needed to resume cleanup. It is
+sensitive operator state and must never be attached to evidence or committed.
+The public receipt remains a strict closed shape.
 
 After timeout, partial delivery, duplicate mail, invalid sender/link,
 identity drift, provider uncertainty, or cleanup uncertainty, never run a
@@ -180,8 +185,9 @@ vercel env run -e production -- pnpm run ove313:production-proof -- \
 ```
 
 Cleanup resolves only the exact recovery identity. If the account exists it
-submits its own account-deletion request, has the sealed credential-only owner
-mark the dry run reviewed, executes the existing deletion workflow, and
+submits its own account-deletion request, re-proves the unique sealed
+credential-only owner from the durable role/account rows, has that owner mark
+the dry run reviewed, executes the existing deletion workflow, and
 requires the handled audit to be rekeyed. It then deletes only the exact
 disposable inbox.
 It verifies authoritative absence twice and removes the recovery file only
@@ -199,8 +205,9 @@ canaryCountBefore, applyCount, resultClass, cleanupClass, durationMs, state,
 evidenceDigest
 ```
 
-Before Linear `Done`, run focused and adjacent auth/outbox/erasure tests, lint,
-typecheck, full tests, build, `git diff --check`, exact-head CI, fetched-main
-containment, `pnpm mainline:closeout:check`, two exact-main deployment/runtime
-read-backs, one approved apply, explicit status/cleanup evidence, and two
-matching authenticated Linear read-backs.
+Before Linear `Done`, run focused and adjacent auth/outbox/erasure tests,
+`pnpm auth:security:check`, lint, typecheck, full tests, build,
+`git diff --check`, exact-head CI, fetched-main containment,
+`pnpm mainline:closeout:check`, two exact-main deployment/runtime read-backs,
+one approved apply, explicit status/cleanup evidence, and two matching
+authenticated Linear read-backs.
