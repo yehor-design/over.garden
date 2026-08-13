@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import { describe, expect, it, vi } from "vitest";
 
 import {
   OVE303_APPROVAL_DIGEST,
+  OVE303_APPROVED_PLAN,
   buildPublicJournalSsrFailureReceipt,
   buildPublicJournalSsrReplayNamespace,
   classifyPublicJournalSsrHtml,
@@ -12,6 +14,7 @@ import {
   resolveApprovedPublicJournalRedirect,
   runApprovedPublicJournalSsrProof,
   settlePublicJournalSsrWithinDeadline,
+  validatePublicJournalSsrRecoveryState,
   type PublicJournalSsrAdapter,
   type PublicJournalSsrBoundary,
   type PublicJournalSsrCleanupReadback,
@@ -134,8 +137,16 @@ describe("OVE-303 exact plan and privacy boundary", () => {
 
   it("uses an OVE-303-only replay namespace", () => {
     expect(buildPublicJournalSsrReplayNamespace(IMPLEMENTATION_SHA)).toBe(
-      "dfdb34b57871b6153817e68bcbecf7502657dbd06f7a02cccf25f6821382f67d",
+      "61357c8a6681be24e66a6f57800acd137b5beb1cd85f34d0b5a817a98b3fab3f",
     );
+  });
+
+  it("pins amendment 1 to its exact normalized operation", () => {
+    expect(
+      createHash("sha256").update(OVE303_APPROVED_PLAN).digest("hex"),
+    ).toBe(OVE303_APPROVAL_DIGEST);
+    expect(OVE303_APPROVED_PLAN).toContain("OVE-303-amendment-1");
+    expect(OVE303_APPROVED_PLAN).toContain("one-replacement-canary");
   });
 
   it("accepts only server-rendered noindex HTML without private or precise-location evidence", () => {
@@ -214,8 +225,76 @@ describe("OVE-303 exact plan and privacy boundary", () => {
       isAuthoritativeMeiliDocumentAbsence({ code: "invalid_api_key" }),
     ).toBe(false);
     expect(
+      isAuthoritativeMeiliDocumentAbsence({
+        cause: {
+          code: "document_not_found",
+          type: "invalid_request",
+        },
+        response: { status: 404 },
+      }),
+    ).toBe(true);
+    expect(
+      isAuthoritativeMeiliDocumentAbsence({
+        cause: {
+          code: "document_not_found",
+          type: "invalid_request",
+        },
+        response: { status: 500 },
+      }),
+    ).toBe(false);
+    expect(
+      isAuthoritativeMeiliDocumentAbsence({
+        cause: {
+          code: "invalid_api_key",
+          type: "auth",
+        },
+        response: { status: 404 },
+      }),
+    ).toBe(false);
+    expect(
       isAuthoritativeMeiliDocumentAbsence(new Error("network error")),
     ).toBe(false);
+  });
+
+  it("accepts only one exact task-scoped recovery identity", () => {
+    const entryId = "00000000-0000-4000-8000-000000000303";
+    expect(
+      validatePublicJournalSsrRecoveryState(
+        {
+          version: 1,
+          implementationSha: IMPLEMENTATION_SHA,
+          entryIds: [entryId],
+          publicPaths: ["/journal/ove-303-disposable-proof"],
+        },
+        IMPLEMENTATION_SHA,
+      ),
+    ).toEqual({
+      version: 1,
+      implementationSha: IMPLEMENTATION_SHA,
+      entryIds: [entryId],
+      publicPaths: ["/journal/ove-303-disposable-proof"],
+    });
+
+    for (const drift of [
+      { implementationSha: "f".repeat(40) },
+      { entryIds: [entryId, "00000000-0000-4000-8000-000000000304"] },
+      { entryIds: ["not-a-uuid"] },
+      { publicPaths: ["https://example.com/journal/proof"] },
+      { publicPaths: ["/journal/proof?private=1"] },
+    ]) {
+      expect(() =>
+        validatePublicJournalSsrRecoveryState(
+          {
+            version: 1,
+            implementationSha: IMPLEMENTATION_SHA,
+            entryIds: [entryId],
+            publicPaths: ["/journal/ove-303-disposable-proof"],
+            ...drift,
+          },
+          IMPLEMENTATION_SHA,
+        ),
+      ).toThrow("recovery state");
+    }
   });
 });
 
