@@ -20,6 +20,7 @@ import {
   settleResendDeliveryWithinDeadline,
   validateResendDeliveryRecoveryState,
   validateResendDeliveryAttemptFence,
+  withValidatedSealedOwnerEnvironment,
   type ResendDeliveryAdapter,
   type ResendDeliveryBoundary,
   type ResendDeliveryCleanupReadback,
@@ -131,6 +132,70 @@ describe("OVE-313 immutable plan and pre-effect gates", () => {
     { rows: [sealedOwnerRow({ owner_user_id: "not-a-uuid" })] },
   ])("refuses non-singular or ineligible sealed-owner rows: $rows", ({ rows }) => {
     expect(resolveSealedOwnerUserId(rows)).toBeNull();
+  });
+
+  it("scopes the validated sealed owner to one awaited cleanup callback", async () => {
+    const env: Record<string, string | undefined> = {};
+
+    const result = await withValidatedSealedOwnerEnvironment(
+      SEALED_OWNER_ID,
+      async () => env.OVERGARDEN_ADMIN_OWNER_USER_ID,
+      env,
+    );
+
+    expect(result).toBe(SEALED_OWNER_ID);
+    expect("OVERGARDEN_ADMIN_OWNER_USER_ID" in env).toBe(false);
+  });
+
+  it("restores a pre-existing sealed owner after the cleanup callback", async () => {
+    const original = "";
+    const env: Record<string, string | undefined> = {
+      OVERGARDEN_ADMIN_OWNER_USER_ID: original,
+    };
+
+    await withValidatedSealedOwnerEnvironment(
+      SEALED_OWNER_ID,
+      async () => {
+        expect(env.OVERGARDEN_ADMIN_OWNER_USER_ID).toBe(SEALED_OWNER_ID);
+      },
+      env,
+    );
+
+    expect(env.OVERGARDEN_ADMIN_OWNER_USER_ID).toBe(original);
+  });
+
+  it("refuses a configured sealed owner that conflicts with the database owner", async () => {
+    const configured = "22222222-2222-4222-8222-222222222222";
+    const env: Record<string, string | undefined> = {
+      OVERGARDEN_ADMIN_OWNER_USER_ID: configured,
+    };
+    const callback = vi.fn(async () => undefined);
+
+    await expect(
+      withValidatedSealedOwnerEnvironment(
+        SEALED_OWNER_ID,
+        callback,
+        env,
+      ),
+    ).rejects.toThrow("Validated owner did not match configured owner.");
+    expect(callback).not.toHaveBeenCalled();
+    expect(env.OVERGARDEN_ADMIN_OWNER_USER_ID).toBe(configured);
+  });
+
+  it("restores the sealed owner environment when cleanup throws", async () => {
+    const env: Record<string, string | undefined> = {};
+
+    await expect(
+      withValidatedSealedOwnerEnvironment(
+        SEALED_OWNER_ID,
+        async () => {
+          expect(env.OVERGARDEN_ADMIN_OWNER_USER_ID).toBe(SEALED_OWNER_ID);
+          throw new Error("cleanup failed");
+        },
+        env,
+      ),
+    ).rejects.toThrow("cleanup failed");
+    expect("OVERGARDEN_ADMIN_OWNER_USER_ID" in env).toBe(false);
   });
 
   it("plans with zero effect only on exact main and a clean bounded namespace", async () => {
