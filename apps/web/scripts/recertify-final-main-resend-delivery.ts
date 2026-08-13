@@ -2027,19 +2027,29 @@ function validateStoredReceipt(
   return candidate;
 }
 
-function assertExpectedResendCanaryDryRun(counts: ErasureDryRunCounts) {
-  const expectedNonzero: Partial<Record<keyof ErasureDryRunCounts, number>> = {
+const EXPECTED_RESEND_CANARY_DRY_RUN_NONZERO: Partial<
+  Record<keyof ErasureDryRunCounts, number>
+> = {
     authUserPresent: 1,
     authSessions: 1,
     authAccounts: 1,
     publicIdentityProfiles: 1,
     currentHandleClaims: 1,
+    analyticsEvents: 1,
     erasureRequestsTotal: 1,
-  };
+};
+
+export function expectedResendCanaryDryRunCount(
+  key: keyof ErasureDryRunCounts,
+) {
+  return EXPECTED_RESEND_CANARY_DRY_RUN_NONZERO[key] ?? 0;
+}
+
+function assertExpectedResendCanaryDryRun(counts: ErasureDryRunCounts) {
   for (const [key, value] of Object.entries(counts) as Array<
     [keyof ErasureDryRunCounts, number]
   >) {
-    const expected = expectedNonzero[key] ?? 0;
+    const expected = expectedResendCanaryDryRunCount(key);
     if (!Number.isSafeInteger(value) || value !== expected) {
       throw new Error("Canary erasure dry-run exceeded its approved shape.");
     }

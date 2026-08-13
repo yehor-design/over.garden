@@ -66,6 +66,23 @@ invalidates it before mutation. Every network/provider request has a hard
 retry of signup or reset. If any apply step is uncertain or fails, never run a
 second apply under this digest; use status and task-scoped cleanup only.
 
+### Cleanup-only correction after the consumed apply
+
+The one permitted Amendment 2 apply was consumed on exact main
+`522d1ba9b76a18ca0d1b867b74f862679e9a42e8`. The verification and password
+reset journey reached `verified` and emitted one user-scoped analytics event,
+as the canonical auth journey is expected to do. The cleanup dry-run guard had
+omitted that expected row, so it failed closed after creating the task-owned
+erasure request and before executing erasure or deleting the disposable
+mailbox.
+
+The cleanup-only correction admits exactly that one user-scoped analytics
+event while retaining zero as the requirement for every unapproved data class.
+It changes no auth, analytics, erasure, or product behavior, creates no new
+authorization digest, and never permits a second apply. After the correction
+is contained in exact main, invoke cleanup only with the consumed apply SHA
+above so the original durable recovery namespace is resumed.
+
 ## Preconditions
 
 1. Fetch `origin/main`, prove the feature SHA is contained, and use a clean
