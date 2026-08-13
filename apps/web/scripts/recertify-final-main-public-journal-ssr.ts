@@ -1291,8 +1291,10 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
       try {
         await index.getDocument(entryId);
         return true;
-      } catch {
-        // Canonical absence is the expected cleanup result.
+      } catch (error) {
+        if (!isAuthoritativeMeiliDocumentAbsence(error)) {
+          throw new Error("Public journal search cleanup read-back failed.");
+        }
       }
     }
     return false;
@@ -1303,6 +1305,20 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
       throw new Error("Public journal SSR proof was cancelled.");
     }
   }
+}
+
+export function isAuthoritativeMeiliDocumentAbsence(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    String((error as { code?: unknown }).code) === "document_not_found"
+  ) {
+    return true;
+  }
+  return (
+    error instanceof Error && /\bdocument_not_found\b/i.test(error.message)
+  );
 }
 
 async function createProductionAdapter(implementationSha: string) {

@@ -7,6 +7,7 @@ import {
   buildPublicJournalSsrFailureReceipt,
   buildPublicJournalSsrReplayNamespace,
   classifyPublicJournalSsrHtml,
+  isAuthoritativeMeiliDocumentAbsence,
   parsePublicJournalSsrCliArgs,
   runApprovedPublicJournalSsrProof,
   settlePublicJournalSsrWithinDeadline,
@@ -160,6 +161,26 @@ describe("OVE-303 exact plan and privacy boundary", () => {
       preciseLocationPresent: true,
       privateContentPresent: true,
     });
+  });
+
+  it("accepts only the provider's exact document-not-found class as search absence", () => {
+    expect(
+      isAuthoritativeMeiliDocumentAbsence({ code: "document_not_found" }),
+    ).toBe(true);
+    expect(
+      isAuthoritativeMeiliDocumentAbsence(
+        new Error("Meilisearch document_not_found"),
+      ),
+    ).toBe(true);
+    expect(isAuthoritativeMeiliDocumentAbsence(new Error("not found"))).toBe(
+      false,
+    );
+    expect(
+      isAuthoritativeMeiliDocumentAbsence({ code: "invalid_api_key" }),
+    ).toBe(false);
+    expect(
+      isAuthoritativeMeiliDocumentAbsence(new Error("network error")),
+    ).toBe(false);
   });
 });
 
