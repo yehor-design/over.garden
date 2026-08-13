@@ -24,10 +24,12 @@ import { containsPreciseLocationText } from "../src/lib/privacy/precise-location
 import { PREFIXED_PUBLIC_LOCALES } from "../src/lib/public-localization";
 
 export const OVE306_APPROVED_PLAN =
-  "OVE-306|production|create and publish one owner-scoped disposable journal canary, observe one identifiers-only index job reach done and one public-only document appear, archive it, observe unindex reach done and absence, then erase the exact canary|baseline:c45ddb639bc1fdff15ca124eda736f2cd9af7ce7|one-canary|cleanup-required" as const;
+  "OVE-306-amendment-1|production|after the exhausted clean failure, create and publish one fresh owner-scoped disposable journal canary, allow the canonical live worker and transactional projection outbox a bounded 180-second total proof budget, observe one identifiers-only index job reach done and one public-only document appear, archive it, observe one identifiers-only unindex job reach done and authoritative absence, then erase the exact canary|baseline:a79b8a71025b8b4d4e7d706b2fe477e81865182a|one-fresh-canary|cleanup-required|supersedes:2863b7e1b10d04e574e5cd53daf604dbe8dc4d121b1bbe1bd1114ab2a81f1c49" as const;
 export const OVE306_APPROVAL_DIGEST =
-  "2863b7e1b10d04e574e5cd53daf604dbe8dc4d121b1bbe1bd1114ab2a81f1c49" as const;
-export const OVE306_JOURNAL_WORKER_TIMEOUT_MS = 30_000;
+  "601472f9690bad019e4e3a066ed98b653d77662fb65adf5087133b1625ee0346" as const;
+export const OVE306_JOURNAL_WORKER_TIMEOUT_MS = 180_000;
+export const OVE306_ASYNC_WAIT_TIMEOUT_MS = 60_000;
+export const OVE306_DIRECT_REQUEST_TIMEOUT_MS = 30_000;
 
 const SHA_40 = /^[0-9a-f]{40}$/;
 const APPROVED_PRODUCTION_DATABASE_HOST =
@@ -173,6 +175,11 @@ function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function boundedRequestSignal(signal?: AbortSignal) {
+  const requestTimeout = AbortSignal.timeout(OVE306_DIRECT_REQUEST_TIMEOUT_MS);
+  return signal ? AbortSignal.any([signal, requestTimeout]) : requestTimeout;
+}
+
 export function buildJournalWorkerReplayNamespace(implementationSha: string) {
   assertImplementationSha(implementationSha);
   return sha256(`OVE-306\0${implementationSha}\0${OVE306_APPROVAL_DIGEST}`);
@@ -187,7 +194,9 @@ function buildReceipt(input: BuildReceiptInput): JournalWorkerReceiptV1 {
     input.durationMs < 0 ||
     input.durationMs > OVE306_JOURNAL_WORKER_TIMEOUT_MS
   ) {
-    throw new Error("journal worker duration must be between 0 and 30000ms");
+    throw new Error(
+      `journal worker duration must be between 0 and ${OVE306_JOURNAL_WORKER_TIMEOUT_MS}ms`,
+    );
   }
   const payload: Omit<JournalWorkerReceiptV1, "evidenceDigest"> = {
     version: 1,
@@ -515,7 +524,9 @@ export function settleJournalWorkerWithinDeadline<T>(
     deadlineMs <= 0 ||
     deadlineMs > OVE306_JOURNAL_WORKER_TIMEOUT_MS
   ) {
-    throw new Error("journal worker deadline must be between 1 and 30000ms");
+    throw new Error(
+      `journal worker deadline must be between 1 and ${OVE306_JOURNAL_WORKER_TIMEOUT_MS}ms`,
+    );
   }
   const controller = new AbortController();
   return new Promise<T>((resolve, reject) => {
@@ -576,7 +587,9 @@ export function parseJournalWorkerCliArgs(
     timeoutMs <= 0 ||
     timeoutMs > OVE306_JOURNAL_WORKER_TIMEOUT_MS
   ) {
-    throw new Error("--timeout-ms must be between 1 and 30000");
+    throw new Error(
+      `--timeout-ms must be between 1 and ${OVE306_JOURNAL_WORKER_TIMEOUT_MS}`,
+    );
   }
 
   const selected = [
@@ -976,7 +989,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
           ? state
           : null;
       },
-      7_000,
+      OVE306_ASYNC_WAIT_TIMEOUT_MS,
       200,
       signal,
     );
@@ -1046,7 +1059,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
           ? true
           : null;
       },
-      7_000,
+      OVE306_ASYNC_WAIT_TIMEOUT_MS,
       200,
       signal,
     );
@@ -1152,7 +1165,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
               ? true
               : null;
           },
-          7_000,
+          OVE306_ASYNC_WAIT_TIMEOUT_MS,
           200,
           signal,
         );
@@ -1300,7 +1313,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
         }
         return true;
       },
-      8_000,
+      OVE306_ASYNC_WAIT_TIMEOUT_MS,
       150,
       signal,
     );
@@ -1342,7 +1355,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
           ? true
           : null;
       },
-      8_000,
+      OVE306_ASYNC_WAIT_TIMEOUT_MS,
       150,
       signal,
     );
@@ -1399,7 +1412,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
           client.release();
         }
       },
-      8_000,
+      OVE306_ASYNC_WAIT_TIMEOUT_MS,
       150,
       signal,
     );
@@ -1513,7 +1526,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
           callbackURL: "/garden",
           rememberMe: false,
         }),
-        signal,
+        signal: boundedRequestSignal(signal),
       }),
     );
     jar.addFromResponse(signup);
@@ -1561,7 +1574,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
       {
         headers: { Cookie: jar.header(), Accept: "application/json" },
         redirect: "manual",
-        signal,
+        signal: boundedRequestSignal(signal),
       },
     );
     jar.addFromResponse(sessionResponse);
@@ -1869,7 +1882,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
       throw new Error("Task-scoped Meilisearch cleanup did not return a task.");
     }
     await client.tasks.waitForTask(taskUid, {
-      timeout: 7_000,
+      timeout: OVE306_ASYNC_WAIT_TIMEOUT_MS,
       interval: 50,
     });
   }
@@ -1943,7 +1956,7 @@ async function readCanonicalDeploymentSha(signal?: AbortSignal) {
     {
       headers: { Accept: "application/json" },
       redirect: "manual",
-      signal,
+      signal: boundedRequestSignal(signal),
     },
   );
   if (!response.ok) throw new Error("Canonical deployment read-back failed.");
@@ -1969,12 +1982,12 @@ async function readWorkerCapabilityClass(
       fetch(`${APPROVED_MATCHING_ORIGIN}/capabilities`, {
         headers: { Accept: "application/json" },
         redirect: "error",
-        signal,
+        signal: boundedRequestSignal(signal),
       }),
       fetch(`${APPROVED_MATCHING_ORIGIN}/ready`, {
         headers: { Accept: "application/json" },
         redirect: "error",
-        signal,
+        signal: boundedRequestSignal(signal),
       }),
     ]);
     if (!capabilitiesResponse.ok || !readinessResponse.ok) return "unexpected";
@@ -2048,7 +2061,7 @@ async function requestJson<T>(
     },
     body: JSON.stringify(input.body),
     redirect: "manual",
-    signal,
+    signal: boundedRequestSignal(signal),
   });
   jar.addFromResponse(response);
   if (!response.ok) {
@@ -2089,7 +2102,7 @@ async function fetchApprovedPublicJournalResponse(
     fetch(url, {
       headers: { Accept: "text/html" },
       redirect: "manual",
-      signal,
+      signal: boundedRequestSignal(signal),
     });
   const initial = await request(initialUrl.href);
   if (initial.status < 300 || initial.status >= 400) return initial;
