@@ -23,6 +23,13 @@ cookies, owner identity, content, public slug, raw HTML, precise location,
 request metadata, provider payloads, and database values are never printed or
 retained in the receipt.
 
+The canonical unprefixed journal path may return one same-origin `307` to the
+exact `/bg` or `/ru` locale-prefixed form for the same slug. The harness follows
+only that one-hop locale redirect, with no query or fragment, and requires the
+terminal response on `https://over.garden`; any other redirect or a second hop
+fails closed. Active proof requires terminal HTTP 200, while cleanup requires
+terminal 410 or 404.
+
 ## Immutable authorization
 
 Approved normalized operation:

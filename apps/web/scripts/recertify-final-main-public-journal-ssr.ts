@@ -21,6 +21,7 @@ import {
 } from "../src/db/connection";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import { containsPreciseLocationText } from "../src/lib/privacy/precise-location-text";
+import { PREFIXED_PUBLIC_LOCALES } from "../src/lib/public-localization";
 
 export const OVE303_APPROVAL_DIGEST =
   "01ac266c46154a8dac4b56acd7b9855374e2aff1efd59aa18ad38c4cf81e3a1b" as const;
@@ -609,6 +610,43 @@ export function classifyPublicJournalSsrHtml(
   };
 }
 
+export function resolveApprovedPublicJournalRedirect(
+  publicPath: string,
+  status: number,
+  location: string | null,
+) {
+  if (status !== 307 || !location || !/^\/journal\/[^/]+$/.test(publicPath)) {
+    return null;
+  }
+  try {
+    const requested = new URL(publicPath, APPROVED_APP_ORIGIN);
+    if (
+      requested.origin !== APPROVED_APP_ORIGIN ||
+      requested.pathname !== publicPath ||
+      requested.search ||
+      requested.hash
+    ) {
+      return null;
+    }
+    const redirect = new URL(location, APPROVED_APP_ORIGIN);
+    if (
+      redirect.origin !== APPROVED_APP_ORIGIN ||
+      redirect.username ||
+      redirect.password ||
+      redirect.search ||
+      redirect.hash ||
+      !PREFIXED_PUBLIC_LOCALES.some(
+        (locale) => redirect.pathname === `/${locale}${publicPath}`,
+      )
+    ) {
+      return null;
+    }
+    return redirect.href;
+  } catch {
+    return null;
+  }
+}
+
 interface TaskInventory {
   canaryCount: number;
   evidenceSafe: boolean;
@@ -812,13 +850,9 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
       throw new Error("Canonical public-only eligibility drifted.");
     }
 
-    const response = await fetch(
-      `${APPROVED_APP_ORIGIN}${published.publicUrl}`,
-      {
-        headers: { Accept: "text/html" },
-        redirect: "manual",
-        signal,
-      },
+    const response = await fetchApprovedPublicJournalResponse(
+      published.publicUrl,
+      signal,
     );
     if (
       response.status !== 200 ||
@@ -1407,15 +1441,55 @@ async function requestJson<T>(
 
 async function readPublicStatus(publicPath: string, signal?: AbortSignal) {
   try {
-    const response = await fetch(`${APPROVED_APP_ORIGIN}${publicPath}`, {
-      headers: { Accept: "text/html" },
-      redirect: "manual",
+    const response = await fetchApprovedPublicJournalResponse(
+      publicPath,
       signal,
-    });
+    );
     return response.status;
   } catch {
     return 0;
   }
+}
+
+async function fetchApprovedPublicJournalResponse(
+  publicPath: string,
+  signal?: AbortSignal,
+) {
+  const initialUrl = new URL(publicPath, APPROVED_APP_ORIGIN);
+  if (
+    initialUrl.origin !== APPROVED_APP_ORIGIN ||
+    initialUrl.pathname !== publicPath ||
+    initialUrl.search ||
+    initialUrl.hash ||
+    !/^\/journal\/[^/]+$/.test(publicPath)
+  ) {
+    throw new Error("Public journal path was outside the approved boundary.");
+  }
+  const request = (url: string) =>
+    fetch(url, {
+      headers: { Accept: "text/html" },
+      redirect: "manual",
+      signal,
+    });
+  const initial = await request(initialUrl.href);
+  if (initial.status < 300 || initial.status >= 400) return initial;
+
+  const redirectUrl = resolveApprovedPublicJournalRedirect(
+    publicPath,
+    initial.status,
+    initial.headers.get("location"),
+  );
+  if (!redirectUrl) {
+    throw new Error("Public journal redirect was outside the approved boundary.");
+  }
+  const terminal = await request(redirectUrl);
+  if (terminal.status >= 300 && terminal.status < 400) {
+    throw new Error("Public journal redirect chain exceeded one hop.");
+  }
+  if (new URL(terminal.url).origin !== APPROVED_APP_ORIGIN) {
+    throw new Error("Public journal terminal origin drifted.");
+  }
+  return terminal;
 }
 
 function isAuthoritativePublicAbsence(status: number) {

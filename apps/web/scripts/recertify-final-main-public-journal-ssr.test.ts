@@ -9,6 +9,7 @@ import {
   classifyPublicJournalSsrHtml,
   isAuthoritativeMeiliDocumentAbsence,
   parsePublicJournalSsrCliArgs,
+  resolveApprovedPublicJournalRedirect,
   runApprovedPublicJournalSsrProof,
   settlePublicJournalSsrWithinDeadline,
   type PublicJournalSsrAdapter,
@@ -161,6 +162,40 @@ describe("OVE-303 exact plan and privacy boundary", () => {
       preciseLocationPresent: true,
       privateContentPresent: true,
     });
+  });
+
+  it("follows only one exact same-origin locale redirect for a public journal", () => {
+    expect(
+      resolveApprovedPublicJournalRedirect(
+        "/journal/safe-proof",
+        307,
+        "/bg/journal/safe-proof",
+      ),
+    ).toBe("https://over.garden/bg/journal/safe-proof");
+    expect(
+      resolveApprovedPublicJournalRedirect(
+        "/journal/safe-proof",
+        307,
+        "https://over.garden/ru/journal/safe-proof",
+      ),
+    ).toBe("https://over.garden/ru/journal/safe-proof");
+
+    for (const [status, location] of [
+      [308, "/bg/journal/safe-proof"],
+      [307, "/uk/journal/safe-proof"],
+      [307, "/bg/journal/another-proof"],
+      [307, "/bg/journal/safe-proof?private=1"],
+      [307, "https://example.com/bg/journal/safe-proof"],
+      [307, "//example.com/bg/journal/safe-proof"],
+    ] as const) {
+      expect(
+        resolveApprovedPublicJournalRedirect(
+          "/journal/safe-proof",
+          status,
+          location,
+        ),
+      ).toBeNull();
+    }
   });
 
   it("accepts only the provider's exact document-not-found class as search absence", () => {
@@ -440,6 +475,7 @@ describe("OVE-303 closed receipt, CLI, and runbook", () => {
     expect(runbook).toContain("journal-repository.ts");
     expect(runbook).toContain("public-projection-outbox.ts");
     expect(runbook).toContain("public-surface-indexing-policy.ts");
+    expect(runbook).toContain("one-hop locale redirect");
     expect(runbook).toContain("cleanup twice");
     expect(runbook).toContain("never run a second apply");
   });
