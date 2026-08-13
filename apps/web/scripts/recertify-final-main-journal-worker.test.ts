@@ -6,6 +6,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   OVE306_APPROVAL_DIGEST,
   OVE306_APPROVED_PLAN,
+  OVE306_ASYNC_WAIT_TIMEOUT_MS,
+  OVE306_DIRECT_REQUEST_TIMEOUT_MS,
+  OVE306_JOURNAL_WORKER_TIMEOUT_MS,
   buildJournalWorkerFailureReceipt,
   buildJournalWorkerReplayNamespace,
   classifyJournalWorkerHtml,
@@ -60,8 +63,8 @@ function options(mode: "plan" | "apply" = "apply") {
     mode,
     environment: "production" as const,
     implementationSha: IMPLEMENTATION_SHA,
-    approvalDigest: mode === "apply" ? OVE306_APPROVAL_DIGEST : undefined,
-    timeoutMs: 30_000,
+    timeoutMs: 180_000,
+    ...(mode === "apply" ? { approvalDigest: OVE306_APPROVAL_DIGEST } : {}),
   };
 }
 
@@ -166,7 +169,7 @@ describe("OVE-306 exact plan and privacy boundary", () => {
 
   it("uses an OVE-306-only replay namespace", () => {
     expect(buildJournalWorkerReplayNamespace(IMPLEMENTATION_SHA)).toBe(
-      "15cbebc453594159eadbb57df1bacf302dbe99bfb2d4970b254011cb45d57f68",
+      "fe1f211ac59637be7d5fbcfe48a754d8f0069e848dcdb9b0d252ce3a0586c587",
     );
   });
 
@@ -174,14 +177,20 @@ describe("OVE-306 exact plan and privacy boundary", () => {
     expect(
       createHash("sha256").update(OVE306_APPROVED_PLAN).digest("hex"),
     ).toBe(OVE306_APPROVAL_DIGEST);
-    expect(OVE306_APPROVED_PLAN).toContain("OVE-306|production");
+    expect(OVE306_APPROVED_PLAN).toContain("OVE-306-amendment-1|production");
     expect(OVE306_APPROVED_PLAN).toContain(
       "observe one identifiers-only index job reach done",
     );
     expect(OVE306_APPROVED_PLAN).toContain(
-      "observe unindex reach done and absence",
+      "observe one identifiers-only unindex job reach done and authoritative absence",
     );
-    expect(OVE306_APPROVED_PLAN).toContain("one-canary");
+    expect(OVE306_APPROVED_PLAN).toContain("one-fresh-canary");
+    expect(OVE306_APPROVED_PLAN).toContain(
+      "supersedes:2863b7e1b10d04e574e5cd53daf604dbe8dc4d121b1bbe1bd1114ab2a81f1c49",
+    );
+    expect(OVE306_JOURNAL_WORKER_TIMEOUT_MS).toBe(180_000);
+    expect(OVE306_ASYNC_WAIT_TIMEOUT_MS).toBe(60_000);
+    expect(OVE306_DIRECT_REQUEST_TIMEOUT_MS).toBe(30_000);
   });
 
   it("accepts only exact identifiers-only worker payloads", () => {
@@ -617,7 +626,7 @@ describe("OVE-306 effect, replay, race, timeout, and cleanup", () => {
     });
   });
 
-  it("fences late completion at the 30-second budget", async () => {
+  it("fences late completion at the 180-second Amendment 1 budget", async () => {
     vi.useFakeTimers();
     try {
       let aborts = 0;
@@ -629,11 +638,11 @@ describe("OVE-306 effect, replay, race, timeout, and cleanup", () => {
               setTimeout(() => resolve("late"), 1);
             });
           }),
-        30_000,
+        180_000,
       );
-      const rejection = expect(pending).rejects.toThrow("exceeded 30000ms");
+      const rejection = expect(pending).rejects.toThrow("exceeded 180000ms");
 
-      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(180_000);
       await rejection;
       expect(aborts).toBe(1);
       await vi.advanceTimersByTimeAsync(1);
@@ -653,7 +662,7 @@ describe("OVE-306 closed receipt, CLI, and runbook", () => {
       implementationSha: IMPLEMENTATION_SHA,
       canaryCountBefore: 0,
       applyCount: 0,
-      durationMs: 30_000,
+      durationMs: 180_000,
       resultClass: "failed",
       cleanupClass: "uncertain",
       unsafeError: {
