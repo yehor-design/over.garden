@@ -3,9 +3,12 @@
 This runbook operates exactly one disposable, non-personal production canary
 after its implementation is contained in current `origin/main` and the
 canonical Vercel Production deployment is `READY` at that exact SHA. It proves
-that one eligible public-variety CTA carries only its safe catalog slug into
-the prepared owner garden, the canonical first-entry route saves the matching
-catalog identity with the `public_variety` enum, and task-owned state is erased.
+that the canonical `gardenFirstEntryPreselectionPath` carries only one safe
+globally selectable catalog slug into the prepared owner garden, the live
+first-entry route saves the matching catalog identity with the `public_variety`
+enum, and task-owned state is erased. It does not claim that a live-rendered
+`/variety/{slug}` CTA exists while the public production corpus has no eligible
+variety page.
 It changes no product behavior, schema, provider configuration, real-gardener
 record, or public catalog row.
 
@@ -21,10 +24,10 @@ Canonical behavior remains owned by:
 - `apps/web/src/server/analytics-events.ts`
 
 The harness selects one existing global `plant_variety` with a safe public
-slug, verifies its deployed CTA, creates one official Better Auth synthetic
-owner preclassified as excluded `production_smoke`, opens the deployed garden
-preselection, saves one private hidden-location first entry through the
-canonical API, reads back the exact catalog identity and allowlisted
+slug, verifies its canonical preselection path, creates one official Better
+Auth synthetic owner preclassified as excluded `production_smoke`, opens the
+live garden preselection, saves one private hidden-location first entry through
+the canonical API, reads back the exact catalog identity and allowlisted
 attribution, then erases only the deterministic task owner. Receipts contain
 only counts, booleans, closed classes, duration, exact SHA, and digests. They
 never contain credentials, cookies, owner identity, catalog slug, content, raw
@@ -35,22 +38,23 @@ URL or referrer, precise location, request metadata, or provider payloads.
 Approved normalized operation:
 
 ```text
-OVE-305|production|open one eligible public variety CTA, carry only its safe catalog slug and public_variety enum into the prepared owner garden, save one disposable first-entry canary, read it back, then erase the exact canary|baseline:c45ddb639bc1fdff15ca124eda736f2cd9af7ce7|one-canary|cleanup-required
+OVE-305|production|resolve one globally selectable safe plant-variety slug through the canonical gardenFirstEntryPreselectionPath, open that exact public_variety preselection in the prepared owner garden, save one disposable first-entry canary with only the safe slug and public_variety enum, read it back, then erase the exact canary|baseline:8ce1dec637234af06c8b5ca2c5c4837f0aec3f2c|one-canary|cleanup-required
 ```
 
 Approved SHA-256:
 
 ```text
-0f77a9ea0e1c45d4e15c023b711dbe755e174d9625b41df713f9184799075754
+1faedba60ec4716626ad764a97d11452ea27845ddf5d87fc8cd779587e03bb23
 ```
 
 This authorization permits exactly one apply. The baseline token above is the
 immutable authorization provenance; the runtime plan additionally binds the
 current exact-main deployment SHA. Environment, target, implementation or
-deployment SHA, digest, task-canary count, public CTA, database target,
-recovered identity, or provider drift invalidates authorization before an
-effect. After any apply attempt, never run a second apply under this digest;
-only `--status`, `--cancel`, and task-scoped `--cleanup` remain allowed.
+deployment SHA, digest, task-canary count, canonical preselection path,
+database target, recovered identity, or provider drift invalidates
+authorization before an effect. After any apply attempt, never run a second
+apply under this digest; only `--status`, `--cancel`, and task-scoped
+`--cleanup` remain allowed.
 
 ## Preconditions
 
@@ -77,7 +81,8 @@ vercel env run -e production -- pnpm run ove305:production-proof -- \
 
 Require `resultClass=zero_effect_plan`, `canaryCountBefore=0`, `applyCount=0`,
 `state=code_deployed`, and the approved digest. The plan must also classify one
-eligible deployed public-variety CTA without exposing the selected slug. Any
+eligible globally selectable plant-variety and its exact canonical
+`public_variety` preselection path without exposing the selected slug. Any
 drift stops before mutation.
 
 ## One approved apply
@@ -91,12 +96,13 @@ vercel env run -e production -- pnpm run ove305:production-proof -- \
   --confirm-environment production \
   --implementation-sha "$OVE305_IMPLEMENTATION_SHA" \
   --apply \
-  --approval-digest 0f77a9ea0e1c45d4e15c023b711dbe755e174d9625b41df713f9184799075754
+  --approval-digest 1faedba60ec4716626ad764a97d11452ea27845ddf5d87fc8cd779587e03bb23
 ```
 
-Terminal pass requires one canonical safe-slug CTA; one authenticated garden
-preselection; one owner-scoped object and entry linked to that exact global
-catalog item; private active state with hidden location and no coarse region;
+Terminal pass requires one canonical safe-slug preselection path; one
+authenticated garden preselection; one owner-scoped object and entry linked to
+that exact global catalog item; private active state with hidden location and no
+coarse region;
 the unique activation enum `public_variety`; excluded `production_smoke`
 learning class; zero raw URL, referrer, content, identity, or precise-location
 evidence; zero another-owner effects; and cleanup twice with no database,
