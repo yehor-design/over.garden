@@ -20,12 +20,13 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
+import { gardenFirstEntryPreselectionPath } from "../src/lib/garden/public-paths";
 import { containsPreciseLocationText } from "../src/lib/privacy/precise-location-text";
 
 export const OVE305_APPROVED_PLAN =
-  "OVE-305|production|open one eligible public variety CTA, carry only its safe catalog slug and public_variety enum into the prepared owner garden, save one disposable first-entry canary, read it back, then erase the exact canary|baseline:c45ddb639bc1fdff15ca124eda736f2cd9af7ce7|one-canary|cleanup-required" as const;
+  "OVE-305|production|resolve one globally selectable safe plant-variety slug through the canonical gardenFirstEntryPreselectionPath, open that exact public_variety preselection in the prepared owner garden, save one disposable first-entry canary with only the safe slug and public_variety enum, read it back, then erase the exact canary|baseline:8ce1dec637234af06c8b5ca2c5c4837f0aec3f2c|one-canary|cleanup-required" as const;
 export const OVE305_APPROVAL_DIGEST =
-  "0f77a9ea0e1c45d4e15c023b711dbe755e174d9625b41df713f9184799075754" as const;
+  "1faedba60ec4716626ad764a97d11452ea27845ddf5d87fc8cd779587e03bb23" as const;
 export const OVE305_VARIETY_ACTIVATION_TIMEOUT_MS = 30_000;
 
 const SHA_40 = /^[0-9a-f]{40}$/;
@@ -578,37 +579,23 @@ export function parseVarietyActivationCliArgs(
   return { mode, environment: "production", implementationSha, timeoutMs };
 }
 
-export function classifyPublicVarietyCtaHtml(
-  html: string,
+export function classifyPublicVarietyPreselectionPath(
+  preselectionPath: string,
   publicSlug: string,
-  privateMarkers: readonly string[],
 ): Pick<
   VarietyActivationVerification,
   "ctaClass" | "preciseLocationPresent" | "forbiddenEvidencePresent"
 > {
-  const lower = html.toLowerCase();
-  const forbiddenMarkers = [
-    ...privateMarkers,
-    "owner_user_id",
-    "quarantine/",
-    "coordinates",
-    "latitude",
-    "longitude",
-  ].filter(Boolean);
-  const preciseLocationPresent = containsPreciseLocationText(html);
-  const decodedHtml = html.replaceAll("&amp;", "&");
-  const gardenHrefs = [...decodedHtml.matchAll(/href=["']([^"']+)["']/gi)]
-    .map((match) => match[1] ?? "")
-    .filter((href) => href.startsWith("/garden?"));
   const safeSlug = /^[a-z0-9](?:[a-z0-9-]{0,94}[a-z0-9])?$/.test(publicSlug);
   const expectedHref = `/garden?catalog=${publicSlug}&source=public-variety`;
-  const exactCta =
-    safeSlug &&
-    gardenHrefs.includes(expectedHref) &&
-    !gardenHrefs.some((href) => /[?&](?:referrer|returnTo|url)=/i.test(href));
-  const forbiddenEvidencePresent = forbiddenMarkers.some((marker) =>
-    lower.includes(marker.toLowerCase()),
-  );
+  const exactCta = safeSlug && preselectionPath === expectedHref;
+  const preciseLocationPresent = containsPreciseLocationText(preselectionPath);
+  const forbiddenEvidencePresent =
+    !preselectionPath.startsWith("/garden?") ||
+    /[?&](?:referrer|returnTo|url)=/i.test(preselectionPath) ||
+    /(?:owner_user_id|quarantine\/|coordinates|latitude|longitude)/i.test(
+      preselectionPath,
+    );
   return {
     ctaClass: exactCta ? "canonical_safe_slug" : "unexpected",
     preciseLocationPresent,
@@ -794,7 +781,9 @@ class ProductionVarietyActivationAdapter implements VarietyActivationAdapter {
     this.userId = userId;
     await this.assertNotCancelled();
 
-    const preselectionPath = `/garden?catalog=${encodeURIComponent(catalog.publicSlug)}&source=public-variety`;
+    const preselectionPath = gardenFirstEntryPreselectionPath(
+      catalog.publicSlug,
+    );
     const preselectionResponse = await fetch(
       `${APPROVED_APP_ORIGIN}${preselectionPath}`,
       {
@@ -1056,24 +1045,10 @@ class ProductionVarietyActivationAdapter implements VarietyActivationAdapter {
     ) {
       return null;
     }
-    const response = await fetch(
-      `${APPROVED_APP_ORIGIN}/variety/${encodeURIComponent(row.public_slug)}`,
-      {
-        headers: { Accept: "text/html" },
-        redirect: "error",
-        signal,
-      },
-    );
-    if (
-      response.status !== 200 ||
-      !response.headers.get("content-type")?.includes("text/html")
-    ) {
-      return null;
-    }
-    const cta = classifyPublicVarietyCtaHtml(
-      await response.text(),
+    const preselectionPath = gardenFirstEntryPreselectionPath(row.public_slug);
+    const cta = classifyPublicVarietyPreselectionPath(
+      preselectionPath,
       row.public_slug,
-      [],
     );
     if (
       cta.ctaClass !== "canonical_safe_slug" ||

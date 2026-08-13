@@ -8,7 +8,7 @@ import {
   OVE305_APPROVED_PLAN,
   buildVarietyActivationFailureReceipt,
   buildVarietyActivationReplayNamespace,
-  classifyPublicVarietyCtaHtml,
+  classifyPublicVarietyPreselectionPath,
   parseVarietyActivationCliArgs,
   runApprovedVarietyActivationProof,
   settleVarietyActivationWithinDeadline,
@@ -135,7 +135,7 @@ describe("OVE-305 exact plan and privacy boundary", () => {
 
   it("uses an OVE-305-only replay namespace", () => {
     expect(buildVarietyActivationReplayNamespace(IMPLEMENTATION_SHA)).toBe(
-      "aae3c6adf0ecb530c31a0a168fea53547c016f74b366c0ed823614767bf73ef5",
+      "524227bd28624ebc6d9ba397c5ed36b2550bdc00f58e68433fc8a6ec949cc309",
     );
   });
 
@@ -144,17 +144,17 @@ describe("OVE-305 exact plan and privacy boundary", () => {
       createHash("sha256").update(OVE305_APPROVED_PLAN).digest("hex"),
     ).toBe(OVE305_APPROVAL_DIGEST);
     expect(OVE305_APPROVED_PLAN).toContain("OVE-305|production");
-    expect(OVE305_APPROVED_PLAN).toContain("safe catalog slug");
+    expect(OVE305_APPROVED_PLAN).toContain("safe plant-variety slug");
+    expect(OVE305_APPROVED_PLAN).toContain("gardenFirstEntryPreselectionPath");
     expect(OVE305_APPROVED_PLAN).toContain("public_variety enum");
     expect(OVE305_APPROVED_PLAN).toContain("one-canary");
   });
 
-  it("accepts only the canonical safe-slug CTA without private or precise-location evidence", () => {
+  it("accepts only the canonical safe-slug public-variety preselection path", () => {
     expect(
-      classifyPublicVarietyCtaHtml(
-        '<main><a href="/garden?catalog=black-krim-0000000305&amp;source=public-variety">Log this variety</a></main>',
+      classifyPublicVarietyPreselectionPath(
+        "/garden?catalog=black-krim-0000000305&source=public-variety",
         "black-krim-0000000305",
-        ["private-marker"],
       ),
     ).toEqual({
       ctaClass: "canonical_safe_slug",
@@ -163,35 +163,42 @@ describe("OVE-305 exact plan and privacy boundary", () => {
     });
 
     expect(
-      classifyPublicVarietyCtaHtml(
-        '<main><a href="https://example.com/garden?catalog=black-krim-0000000305&amp;source=public-variety">private-marker 50.4501, 30.5234</a></main>',
+      classifyPublicVarietyPreselectionPath(
+        "https://example.com/garden?catalog=black-krim-0000000305&source=public-variety",
         "black-krim-0000000305",
-        ["private-marker"],
       ),
     ).toMatchObject({
       ctaClass: "unexpected",
-      preciseLocationPresent: true,
       forbiddenEvidencePresent: true,
     });
 
     expect(
-      classifyPublicVarietyCtaHtml(
-        '<main><a href="/garden?catalog=another-slug&amp;source=public-variety">Log</a></main>',
+      classifyPublicVarietyPreselectionPath(
+        "/garden?catalog=another-slug&source=public-variety",
         "black-krim-0000000305",
-        [],
       ),
     ).toMatchObject({
       ctaClass: "unexpected",
     });
 
     expect(
-      classifyPublicVarietyCtaHtml(
-        '<main><a href="/garden?catalog=black-krim-0000000305&amp;source=public-variety&amp;referrer=secret">Log</a></main>',
+      classifyPublicVarietyPreselectionPath(
+        "/garden?catalog=black-krim-0000000305&source=public-variety&referrer=secret",
         "black-krim-0000000305",
-        ["00000000-0000-4000-8000-000000000304"],
       ),
     ).toMatchObject({
       ctaClass: "unexpected",
+      forbiddenEvidencePresent: true,
+    });
+
+    expect(
+      classifyPublicVarietyPreselectionPath(
+        "/garden?catalog=black-krim-0000000305&source=public-variety&location=50.4501,30.5234",
+        "black-krim-0000000305",
+      ),
+    ).toMatchObject({
+      ctaClass: "unexpected",
+      preciseLocationPresent: true,
     });
   });
 
@@ -498,7 +505,8 @@ describe("OVE-305 closed receipt, CLI, and runbook", () => {
     expect(runbook).toContain("catalog-repository.ts");
     expect(runbook).toContain("journal-repository.ts");
     expect(runbook).toContain("analytics-events.ts");
-    expect(runbook).toContain("safe catalog slug");
+    expect(runbook).toContain("safe plant-variety slug");
+    expect(runbook).toContain("gardenFirstEntryPreselectionPath");
     expect(runbook).toContain("public_variety");
     expect(runbook).toContain("cleanup twice");
     expect(runbook).toContain("never run a second apply");
