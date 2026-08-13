@@ -2014,7 +2014,10 @@ export function isExactMatchingRuntimeReadback(value: unknown, ready: boolean) {
   }
   if (!ready) return true;
   const dependencies = isRecord(value.dependencies) ? value.dependencies : null;
-  const recovery = isRecord(value.queueRecovery) ? value.queueRecovery : null;
+  const recovery =
+    dependencies && isRecord(dependencies.queueRecovery)
+      ? dependencies.queueRecovery
+      : null;
   return (
     dependencies !== null &&
     ["api", "postgres", "jobQueue", "meilisearch", "worker"].every(

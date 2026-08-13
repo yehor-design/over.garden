@@ -243,16 +243,17 @@ describe("OVE-306 exact plan and privacy boundary", () => {
     const readiness = {
       ...capabilities,
       status: "ready",
-      dependencies: Object.fromEntries(
-        ["api", "postgres", "jobQueue", "meilisearch", "worker"].map((key) => [
-          key,
-          { status: "available" },
-        ]),
-      ),
-      queueRecovery: {
-        claimCompatible: "available",
-        handlerCompatible: "available",
-        unsupportedRetryingClass: "none",
+      dependencies: {
+        api: { status: "available" },
+        postgres: { status: "available" },
+        jobQueue: { status: "available" },
+        meilisearch: { status: "available" },
+        worker: { status: "available" },
+        queueRecovery: {
+          claimCompatible: "available",
+          handlerCompatible: "available",
+          unsupportedRetryingClass: "none",
+        },
       },
     };
 
@@ -278,6 +279,19 @@ describe("OVE-306 exact plan and privacy boundary", () => {
             ...readiness.dependencies,
             worker: { status: "unavailable" },
           },
+        },
+        true,
+      ),
+    ).toBe(false);
+    expect(
+      isExactMatchingRuntimeReadback(
+        {
+          ...readiness,
+          dependencies: {
+            ...readiness.dependencies,
+            queueRecovery: undefined,
+          },
+          queueRecovery: readiness.dependencies.queueRecovery,
         },
         true,
       ),
