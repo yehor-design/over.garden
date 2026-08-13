@@ -30,24 +30,45 @@ terminal response on `https://over.garden`; any other redirect or a second hop
 fails closed. Active proof requires terminal HTTP 200, while cleanup requires
 terminal 410 or 404.
 
-## Immutable authorization
+## Immutable authorization history
 
-Approved normalized operation:
+The first authorization is consumed and must never be reused. Its normalized
+operation was:
 
 ```text
 OVE-303|production|create one owner-scoped disposable journal canary with hidden location, publish it, read its public server-rendered response, then archive and erase the exact canary|baseline:c45ddb639bc1fdff15ca124eda736f2cd9af7ce7|one-canary|cleanup-required
 ```
 
-Approved SHA-256:
+Its consumed SHA-256 was:
 
 ```text
 01ac266c46154a8dac4b56acd7b9855374e2aff1efd59aa18ad38c4cf81e3a1b
 ```
 
-This approval permits one apply only. Environment, implementation SHA,
+That tuple performed exactly one apply at main SHA
+`711b24581160800a343fee7281bd7b78cfb145ff`, returned failed evidence
+`434803887b36da42de787a6a8c2c62e525a8df4dcae73127f1d5f8e4b6899206`,
+and was followed by authoritative cleanup evidence
+`f75f973317c6c5496d058508741a350412ccfea215a4498be7f33d163333b668`.
+It cannot authorize another effect.
+
+The separately authorized remediation amendment is:
+
+```text
+OVE-303-amendment-1|production|after the consumed first tuple failed only on authoritative Meili absence classification and cleanup proved task residue absent, create one replacement owner-scoped disposable journal canary with hidden location, publish it, verify SSR and exact safe search, then archive and erase the exact canary|baseline:711b24581160800a343fee7281bd7b78cfb145ff|one-replacement-canary|cleanup-required|prior-failure:434803887b36da42de787a6a8c2c62e525a8df4dcae73127f1d5f8e4b6899206|prior-cleanup:f75f973317c6c5496d058508741a350412ccfea215a4498be7f33d163333b668
+```
+
+Its SHA-256 is:
+
+```text
+52332cfec814815e44cf141aec546331a23423fed76e72a323a2b8c07fd28a02
+```
+
+This amendment permits one replacement apply only after its implementation is
+contained in a newer exact-main deployment. Environment, implementation SHA,
 deployment SHA, plan digest, production database target, task-canary count, or
-provider drift invalidates it before mutation. If an apply is uncertain or
-fails, never run a second apply under this authorization.
+provider drift invalidates it before mutation. If it is uncertain or fails,
+never run another apply under this amendment.
 
 ## Preconditions
 
@@ -82,7 +103,7 @@ Stop if the receipt is not an exact zero-effect plan. Resolve residue only with
 the task-scoped cleanup command, then obtain a fresh read-only plan. Do not
 broaden selectors or inspect a real gardener record.
 
-## One approved apply
+## One amendment apply
 
 Run this command exactly once after the plan and exact deployment read-backs
 agree. The database advisory lock admits one contender; a concurrent loser is
@@ -95,7 +116,7 @@ vercel env run -e production -- pnpm run ove303:production-proof -- \
   --confirm-environment production \
   --implementation-sha "$OVE303_IMPLEMENTATION_SHA" \
   --apply \
-  --approval-digest 01ac266c46154a8dac4b56acd7b9855374e2aff1efd59aa18ad38c4cf81e3a1b
+  --approval-digest 52332cfec814815e44cf141aec546331a23423fed76e72a323a2b8c07fd28a02
 ```
 
 Terminal pass requires all of the following in the same bounded run:
@@ -146,10 +167,24 @@ vercel env run -e production -- pnpm run ove303:production-proof -- \
   --implementation-sha "$OVE303_IMPLEMENTATION_SHA" --cleanup
 ```
 
-After any uncertain or partial apply, never run a second apply. Save the failed
-redacted receipt, run cleanup, obtain a fresh zero-effect plan, and require a
-new exact authorization before any new canary effect. A clean replay of an
-already completed tuple returns `already_cleaned` without another effect.
+The harness persists at most one synthetic entry UUID and its matching public
+path in a mode-0600 task-local recovery file. It never stores owner identity,
+content, credentials, or those values in the receipt. Cleanup rehydrates only
+that exact identity, applies canonical archive/outbox convergence first, then
+idempotently deletes the exact derived Meilisearch document and proves route,
+search, and database absence twice. The recovery file is erased only after two
+clean read-backs.
+
+The official production SDK missing-document shape is accepted only when all
+three fields agree: nested `cause.code=document_not_found`, nested
+`cause.type=invalid_request`, and response status 404. Authentication, network,
+5xx, and unknown errors remain uncertainty.
+
+After any uncertain or partial apply, never run a second apply under the same
+digest. Save the failed redacted receipt, run cleanup, obtain a fresh zero-effect
+plan, and require a separately digested exact authorization before any new
+canary effect. A clean replay of an already completed tuple returns
+`already_cleaned` without another effect.
 
 ## Closeout receipt
 

@@ -23,8 +23,10 @@ import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity
 import { containsPreciseLocationText } from "../src/lib/privacy/precise-location-text";
 import { PREFIXED_PUBLIC_LOCALES } from "../src/lib/public-localization";
 
+export const OVE303_APPROVED_PLAN =
+  "OVE-303-amendment-1|production|after the consumed first tuple failed only on authoritative Meili absence classification and cleanup proved task residue absent, create one replacement owner-scoped disposable journal canary with hidden location, publish it, verify SSR and exact safe search, then archive and erase the exact canary|baseline:711b24581160800a343fee7281bd7b78cfb145ff|one-replacement-canary|cleanup-required|prior-failure:434803887b36da42de787a6a8c2c62e525a8df4dcae73127f1d5f8e4b6899206|prior-cleanup:f75f973317c6c5496d058508741a350412ccfea215a4498be7f33d163333b668" as const;
 export const OVE303_APPROVAL_DIGEST =
-  "01ac266c46154a8dac4b56acd7b9855374e2aff1efd59aa18ad38c4cf81e3a1b" as const;
+  "52332cfec814815e44cf141aec546331a23423fed76e72a323a2b8c07fd28a02" as const;
 export const OVE303_PUBLIC_JOURNAL_SSR_TIMEOUT_MS = 30_000;
 
 const SHA_40 = /^[0-9a-f]{40}$/;
@@ -659,6 +661,55 @@ interface TaskJournalRow {
   publicSlug: string | null;
 }
 
+export interface PublicJournalSsrRecoveryStateV1 {
+  version: 1;
+  implementationSha: string;
+  entryIds: string[];
+  publicPaths: string[];
+}
+
+export function validatePublicJournalSsrRecoveryState(
+  value: unknown,
+  implementationSha: string,
+): PublicJournalSsrRecoveryStateV1 {
+  const expectedKeys = [
+    "version",
+    "implementationSha",
+    "entryIds",
+    "publicPaths",
+  ].sort();
+  if (
+    !isRecord(value) ||
+    JSON.stringify(Object.keys(value).sort()) !==
+      JSON.stringify(expectedKeys) ||
+    value.version !== 1 ||
+    value.implementationSha !== implementationSha ||
+    !Array.isArray(value.entryIds) ||
+    value.entryIds.length !== 1 ||
+    !value.entryIds.every(
+      (entryId): entryId is string =>
+        typeof entryId === "string" && isUuid(entryId),
+    ) ||
+    new Set(value.entryIds).size !== value.entryIds.length ||
+    !Array.isArray(value.publicPaths) ||
+    value.publicPaths.length > 1 ||
+    !value.publicPaths.every(
+      (publicPath): publicPath is string =>
+        typeof publicPath === "string" &&
+        /^\/journal\/[^/?#]+$/.test(publicPath),
+    ) ||
+    new Set(value.publicPaths).size !== value.publicPaths.length
+  ) {
+    throw new Error("Public journal SSR recovery state drifted.");
+  }
+  return {
+    version: 1,
+    implementationSha,
+    entryIds: [...value.entryIds],
+    publicPaths: [...value.publicPaths],
+  };
+}
+
 class CookieJar {
   private readonly values = new Map<string, string>();
 
@@ -686,11 +737,13 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
   private readonly email: string;
   private readonly stateFile: string;
   private readonly cancelFile: string;
+  private readonly recoveryFile: string;
   private userId: string | null = null;
   private sessionId: string | null = null;
   private readonly entryIds = new Set<string>();
   private readonly publicPaths = new Set<string>();
   private serverDbLoaded = false;
+  private cleanRecoveryReadbacks = 0;
 
   constructor(
     private readonly implementationSha: string,
@@ -707,6 +760,10 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
     this.cancelFile = path.join(
       STATE_DIRECTORY,
       `ove303-public-journal-ssr-${implementationSha}.cancel`,
+    );
+    this.recoveryFile = path.join(
+      STATE_DIRECTORY,
+      `ove303-public-journal-ssr-${implementationSha}.recovery.json`,
     );
   }
 
@@ -745,13 +802,15 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
   }
 
   async readBoundary(signal?: AbortSignal): Promise<PublicJournalSsrBoundary> {
+    const recoveryPresent = await this.hydrateRecoveryState();
     const [deploymentSha, inventory] = await Promise.all([
       readCanonicalDeploymentSha(signal),
       this.readInventory(signal),
     ]);
     return {
       deploymentSha,
-      canaryCount: inventory.canaryCount,
+      canaryCount:
+        inventory.canaryCount > 0 || recoveryPresent ? 1 : 0,
       ownerAccessClass: "task_owned_or_absent",
       evidenceClass: inventory.evidenceSafe
         ? "closed_counts_and_booleans_only"
@@ -805,6 +864,7 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
       throw new Error("Journal canary did not settle.");
     }
     this.entryIds.add(entryId);
+    await this.writeRecoveryState();
     await this.assertPrivateHiddenEntry(userId, entryId);
     await this.assertNotCancelled();
 
@@ -819,6 +879,7 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
       { entryId, disclosureAccepted: true },
     );
     this.publicPaths.add(published.publicUrl);
+    await this.writeRecoveryState();
     await projection.convergePublicProjectionsNow([entryId], db);
     const exactProjection = await waitFor(
       async () => {
@@ -877,6 +938,7 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
     signal?: AbortSignal,
   ): Promise<PublicJournalSsrCleanupReadback> {
     throwIfAborted(signal);
+    await this.hydrateRecoveryState();
     const owner = await this.resolveTaskOwner();
     if (owner) this.userId = owner;
     const userId = this.userId;
@@ -934,18 +996,28 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
     }
 
     if (userId) await this.deleteExactTaskRows(userId);
+    await this.deleteExactTaskSearchDocuments();
     const inventory = await this.readInventory(signal);
     const publicRoutePresent = await this.anyPublicRoutePresent(signal);
     const searchDocumentPresent = await this.anySearchDocumentPresent();
     const databaseResidue = userId
       ? await this.hasTaskDatabaseResidue(userId)
       : false;
-    return {
+    const readback = {
       taskCanaryCount: inventory.canaryCount > 0 || databaseResidue ? 1 : 0,
       publicRoutePresent,
       searchDocumentPresent,
       anotherOwnerEffects: 0,
     };
+    if (isClean(readback)) {
+      this.cleanRecoveryReadbacks += 1;
+      if (this.cleanRecoveryReadbacks >= 2) {
+        await rm(this.recoveryFile, { force: true });
+      }
+    } else {
+      this.cleanRecoveryReadbacks = 0;
+    }
+    return readback;
   }
 
   async readReplayReceipt() {
@@ -1334,6 +1406,63 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
     return false;
   }
 
+  private async writeRecoveryState() {
+    const state = validatePublicJournalSsrRecoveryState(
+      {
+        version: 1,
+        implementationSha: this.implementationSha,
+        entryIds: [...this.entryIds],
+        publicPaths: [...this.publicPaths],
+      },
+      this.implementationSha,
+    );
+    await mkdir(STATE_DIRECTORY, { recursive: true, mode: 0o700 });
+    await chmod(STATE_DIRECTORY, 0o700);
+    const temporary = `${this.recoveryFile}.tmp-${process.pid}`;
+    await writeFile(temporary, `${JSON.stringify(state)}\n`, { mode: 0o600 });
+    await rename(temporary, this.recoveryFile);
+    await chmod(this.recoveryFile, 0o600);
+  }
+
+  private async hydrateRecoveryState() {
+    try {
+      const state = validatePublicJournalSsrRecoveryState(
+        JSON.parse(await readFile(this.recoveryFile, "utf8")) as unknown,
+        this.implementationSha,
+      );
+      for (const entryId of state.entryIds) this.entryIds.add(entryId);
+      for (const publicPath of state.publicPaths) {
+        this.publicPaths.add(publicPath);
+      }
+      return true;
+    } catch (error) {
+      if (isNodeError(error, "ENOENT")) return false;
+      throw error;
+    }
+  }
+
+  private async deleteExactTaskSearchDocuments() {
+    if (this.entryIds.size === 0) return;
+    this.serverDbLoaded = true;
+    const { meiliSearchClient } = await import("../src/server/search/client");
+    const client = meiliSearchClient();
+    const task = await client
+      .index("journal_entries")
+      .deleteDocuments([...this.entryIds]);
+    const taskUid = Number(
+      typeof task === "object" && task && "taskUid" in task
+        ? (task as { taskUid?: unknown }).taskUid
+        : Number.NaN,
+    );
+    if (!Number.isFinite(taskUid)) {
+      throw new Error("Task-scoped Meilisearch cleanup did not return a task.");
+    }
+    await client.tasks.waitForTask(taskUid, {
+      timeout: 7_000,
+      interval: 50,
+    });
+  }
+
   private async assertNotCancelled() {
     if (await this.cancellationRequested()) {
       throw new Error("Public journal SSR proof was cancelled.");
@@ -1347,6 +1476,16 @@ export function isAuthoritativeMeiliDocumentAbsence(error: unknown) {
     error !== null &&
     "code" in error &&
     String((error as { code?: unknown }).code) === "document_not_found"
+  ) {
+    return true;
+  }
+  if (
+    isRecord(error) &&
+    isRecord(error.cause) &&
+    error.cause.code === "document_not_found" &&
+    error.cause.type === "invalid_request" &&
+    isRecord(error.response) &&
+    error.response.status === 404
   ) {
     return true;
   }
