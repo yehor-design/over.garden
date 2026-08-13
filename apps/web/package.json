@@ -85,6 +85,7 @@
     "ove304:production-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/recertify-final-main-archive-410.ts",
     "ove305:production-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/recertify-final-main-variety-activation.ts",
     "ove306:production-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/recertify-final-main-journal-worker.ts",
+    "ove307:production-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/recertify-final-main-public-search-parity.ts",
     "smoke:admin-role": "tsx scripts/smoke-admin-role.ts",
     "smoke:canonical-launch": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-canonical-launch.ts",
     "smoke:account-sign-out": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-account-sign-out.ts",
