@@ -1,6 +1,6 @@
 # OVE-306 final-main journal worker proof
 
-This runbook operates exactly one fresh disposable, non-personal Amendment 1 production journal canary after the original digest was exhausted by one failed-clean attempt, authoritative cleanup was proved twice, the Amendment 1 implementation commit is contained in current `origin/main`, and the canonical Vercel Production deployment is `READY` at that exact SHA. It proves that publication reaches the live matching worker through one identifiers-only `journal_entry_index` job and that archive reaches the same worker through one identifiers-only `journal_entry_unindex` job. It changes no product behavior, schema, indexing policy, worker release, provider configuration, or real-user state.
+This runbook operates exactly one fresh disposable, non-personal Amendment 2 production journal canary after the original and Amendment 1 digests were each exhausted by one failed-clean attempt, authoritative cleanup was proved twice for both, the timezone-invariant calendar-date implementation commit is contained in current `origin/main`, and the canonical Vercel Production deployment is `READY` at that exact SHA. It proves that publication reaches the live matching worker through one identifiers-only `journal_entry_index` job and that archive reaches the same worker through one identifiers-only `journal_entry_unindex` job. It changes no product behavior, schema, indexing policy, worker release, provider configuration, or real-user state.
 
 Canonical behavior remains owned by:
 
@@ -26,23 +26,31 @@ The original digest is exhausted and can never be applied again:
 2863b7e1b10d04e574e5cd53daf604dbe8dc4d121b1bbe1bd1114ab2a81f1c49
 ```
 
-Its one terminal apply returned `failed` with `applyCount=1`, `durationMs=20381`, and `cleanupClass=authoritative_absent_twice`. Explicit status, cleanup, and status replays confirmed the same closed receipt. Only status and task-scoped cleanup remain legal for that digest.
+Its one terminal apply returned `failed` with `applyCount=1`, `durationMs=20381`, and `cleanupClass=authoritative_absent_twice`. Explicit status, cleanup, and status replays confirmed the same closed receipt.
 
-Approved Amendment 1 normalized operation:
-
-```text
-OVE-306-amendment-1|production|after the exhausted clean failure, create and publish one fresh owner-scoped disposable journal canary, allow the canonical live worker and transactional projection outbox a bounded 180-second total proof budget, observe one identifiers-only index job reach done and one public-only document appear, archive it, observe one identifiers-only unindex job reach done and authoritative absence, then erase the exact canary|baseline:a79b8a71025b8b4d4e7d706b2fe477e81865182a|one-fresh-canary|cleanup-required|supersedes:2863b7e1b10d04e574e5cd53daf604dbe8dc4d121b1bbe1bd1114ab2a81f1c49
-```
-
-Approved SHA-256:
+Amendment 1 is also exhausted and can never be applied again:
 
 ```text
 601472f9690bad019e4e3a066ed98b653d77662fb65adf5087133b1625ee0346
 ```
 
-This Amendment 1 authorization permits one fresh single-use apply. The harness writes a mode-0600 task-local attempt fence before the first canary effect. Environment, implementation SHA, deployment SHA, plan digest, production database target, task-canary count, matching capability manifest, recovered identity, or provider drift invalidates the operation before mutation.
+Its one terminal apply returned `failed` with `applyCount=1`, `durationMs=92939`, and `cleanupClass=authoritative_absent_twice`. The worker and Meilisearch add/delete tasks succeeded; exact parity failed only because the TypeScript proof process serialized the PostgreSQL calendar date through local midnight while the Python worker serialized the same date at UTC midnight. Explicit status, cleanup, and status replays confirmed evidence digest `04718f576925d9c59a8a31cde774f58cc98787a48a7fc1e4dddb787640846397`. Only status and task-scoped cleanup remain legal for both exhausted digests.
 
-After the Amendment 1 apply invocation, never run a second apply under this digest. Only `--status`, `--cancel`, and task-scoped `--cleanup` remain allowed. Never invoke apply under the exhausted original digest.
+Approved Amendment 2 normalized operation:
+
+```text
+OVE-306-amendment-2|production|after the exhausted clean Amendment 1 failure and exact-main timezone-invariant calendar-date normalization, create and publish one fresh owner-scoped disposable journal canary, observe one identifiers-only index job reach done and one public-only exact document appear, archive it, observe one identifiers-only unindex job reach done and authoritative absence, then erase the exact canary|baseline:8e02159c8934dc0ddd1846c11349e23a050d49c5|one-fresh-canary|cleanup-required|supersedes:601472f9690bad019e4e3a066ed98b653d77662fb65adf5087133b1625ee0346
+```
+
+Approved SHA-256:
+
+```text
+4576ffd409d0ed8411ff18326b39d37c98c475a9d8b69e72fd6d6f6cbeef21cd
+```
+
+Amendment 2 normalizes calendar dates from their calendar parts to UTC midnight, independent of the proof-process timezone. Real timestamps such as `createdAt` remain unchanged instants. This authorization permits one fresh single-use apply. The harness writes a mode-0600 task-local attempt fence before the first canary effect. Environment, implementation SHA, deployment SHA, plan digest, production database target, task-canary count, matching capability manifest, recovered identity, or provider drift invalidates the operation before mutation.
+
+After the Amendment 2 apply invocation, never run a second apply under this digest. Only `--status`, `--cancel`, and task-scoped `--cleanup` remain allowed. Never invoke apply under either exhausted digest.
 
 The complete proof has a 180-second monotonic deadline. Each live worker-job, projection-generation, Meilisearch task, and task-job cleanup wait is independently bounded to 60 seconds. These are finite waits, not retries of the canary effect; the canonical worker itself remains idempotent and finite-retry.
 
@@ -83,7 +91,7 @@ vercel env run -e production -- pnpm run ove306:production-proof -- \
   --confirm-environment production \
   --implementation-sha "$OVE306_IMPLEMENTATION_SHA" \
   --apply \
-  --approval-digest 601472f9690bad019e4e3a066ed98b653d77662fb65adf5087133b1625ee0346
+  --approval-digest 4576ffd409d0ed8411ff18326b39d37c98c475a9d8b69e72fd6d6f6cbeef21cd
 ```
 
 Terminal pass requires:
@@ -138,7 +146,7 @@ The recovery file stores at most one synthetic entry UUID and its matching publi
 
 The official production missing-document shape is authoritative only when the Meilisearch SDK reports `document_not_found` with the compatible 404 class. Authentication, network, 5xx, and unknown errors remain uncertainty.
 
-After any uncertain or partial Amendment 1 apply, save the redacted receipt, run cleanup, and never run a second apply under this digest. `--status` reads the persisted terminal receipt; clean status may report `already_cleaned` without an effect.
+After any uncertain or partial Amendment 2 apply, save the redacted receipt, run cleanup, and never run a second apply under this digest. `--status` reads the persisted terminal receipt; clean status may report `already_cleaned` without an effect.
 
 ## Closeout
 
@@ -150,4 +158,4 @@ canaryCountBefore, applyCount, resultClass, cleanupClass, durationMs, state,
 evidenceDigest
 ```
 
-Before Linear `Done`, run focused and adjacent tests, Python worker recovery tests, lint, typecheck, full tests, build, `git diff --check`, exact-head CI, main containment, `pnpm mainline:closeout:check`, exact-main deployment/runtime read-backs, one approved Amendment 1 apply, explicit cleanup and status receipts, and two matching authenticated Linear read-backs.
+Before Linear `Done`, run focused and adjacent tests, Python worker recovery tests, lint, typecheck, full tests, build, `git diff --check`, exact-head CI, main containment, `pnpm mainline:closeout:check`, exact-main deployment/runtime read-backs, one approved Amendment 2 apply, explicit cleanup and status receipts, and two matching authenticated Linear read-backs.

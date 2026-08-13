@@ -24,9 +24,9 @@ import { containsPreciseLocationText } from "../src/lib/privacy/precise-location
 import { PREFIXED_PUBLIC_LOCALES } from "../src/lib/public-localization";
 
 export const OVE306_APPROVED_PLAN =
-  "OVE-306-amendment-1|production|after the exhausted clean failure, create and publish one fresh owner-scoped disposable journal canary, allow the canonical live worker and transactional projection outbox a bounded 180-second total proof budget, observe one identifiers-only index job reach done and one public-only document appear, archive it, observe one identifiers-only unindex job reach done and authoritative absence, then erase the exact canary|baseline:a79b8a71025b8b4d4e7d706b2fe477e81865182a|one-fresh-canary|cleanup-required|supersedes:2863b7e1b10d04e574e5cd53daf604dbe8dc4d121b1bbe1bd1114ab2a81f1c49" as const;
+  "OVE-306-amendment-2|production|after the exhausted clean Amendment 1 failure and exact-main timezone-invariant calendar-date normalization, create and publish one fresh owner-scoped disposable journal canary, observe one identifiers-only index job reach done and one public-only exact document appear, archive it, observe one identifiers-only unindex job reach done and authoritative absence, then erase the exact canary|baseline:8e02159c8934dc0ddd1846c11349e23a050d49c5|one-fresh-canary|cleanup-required|supersedes:601472f9690bad019e4e3a066ed98b653d77662fb65adf5087133b1625ee0346" as const;
 export const OVE306_APPROVAL_DIGEST =
-  "601472f9690bad019e4e3a066ed98b653d77662fb65adf5087133b1625ee0346" as const;
+  "4576ffd409d0ed8411ff18326b39d37c98c475a9d8b69e72fd6d6f6cbeef21cd" as const;
 export const OVE306_JOURNAL_WORKER_TIMEOUT_MS = 180_000;
 export const OVE306_ASYNC_WAIT_TIMEOUT_MS = 60_000;
 export const OVE306_DIRECT_REQUEST_TIMEOUT_MS = 30_000;
@@ -982,7 +982,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
       userId,
       signal,
     );
-    const exactProjection = await waitFor(
+    const exactProjection = await waitForJournalWorkerCondition(
       async () => {
         const state = await projection.verifyPublicProjection(db, entryId);
         return state.observedState === "present" && state.matchesCurrentDatabase
@@ -1052,7 +1052,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
       userId,
       signal,
     );
-    const exactAbsence = await waitFor(
+    const exactAbsence = await waitForJournalWorkerCondition(
       async () => {
         const state = await projection.verifyPublicProjection(db, entryId);
         return state.observedState === "absent" && state.matchesCurrentDatabase
@@ -1157,7 +1157,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
           }
         }
         await projection.convergePublicProjectionsNow([row.id], db);
-        const absent = await waitFor(
+        const absent = await waitForJournalWorkerCondition(
           async () => {
             const state = await projection.verifyPublicProjection(db, row.id);
             return state.observedState === "absent" &&
@@ -1270,7 +1270,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
     userId: string,
     signal?: AbortSignal,
   ) {
-    const done = await waitFor(
+    const done = await waitForJournalWorkerCondition(
       async () => {
         const result = await this.pool.query<{
           status: string;
@@ -1325,7 +1325,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
     desiredState: "present" | "absent",
     signal?: AbortSignal,
   ) {
-    const converged = await waitFor(
+    const converged = await waitForJournalWorkerCondition(
       async () => {
         const result = await this.pool.query<{
           desired_state: string;
@@ -1367,7 +1367,7 @@ class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
   private async deleteTaskJobsAfterProcessing(signal?: AbortSignal) {
     if (this.entryIds.size === 0) return;
     const entryIds = [...this.entryIds];
-    const removed = await waitFor(
+    const removed = await waitForJournalWorkerCondition(
       async () => {
         const client = await this.pool.connect();
         try {
@@ -2131,7 +2131,7 @@ function isAuthoritativePublicAbsence(status: number) {
   return status === 404 || status === 410;
 }
 
-async function waitFor<T>(
+export async function waitForJournalWorkerCondition<T>(
   read: () => Promise<T | null>,
   timeoutMs: number,
   intervalMs: number,
@@ -2143,15 +2143,15 @@ async function waitFor<T>(
     const value = await read();
     if (value !== null) return value;
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(resolve, intervalMs);
-      signal?.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timer);
-          reject(new Error("Journal worker proof was cancelled."));
-        },
-        { once: true },
-      );
+      function onAbort() {
+        clearTimeout(timer);
+        reject(new Error("Journal worker proof was cancelled."));
+      }
+      const timer = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, intervalMs);
+      signal?.addEventListener("abort", onAbort, { once: true });
     });
   }
   return null;

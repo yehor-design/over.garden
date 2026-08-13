@@ -221,6 +221,42 @@ describe("journal entry search documents", () => {
     }
   });
 
+  it("normalizes calendar dates independently of the proof-process timezone", () => {
+    const originalTimezone = process.env.TZ;
+
+    try {
+      const databaseTimestamp = new Date("2026-08-12T21:15:00.000Z");
+      for (const [timezone, rawIso] of [
+        ["Europe/Sofia", "2026-08-12T21:00:00.000Z"],
+        ["America/New_York", "2026-08-13T04:00:00.000Z"],
+      ] as const) {
+        process.env.TZ = timezone;
+        const databaseCalendarDate = new Date(2026, 7, 13);
+        expect(databaseCalendarDate.toISOString()).toBe(rawIso);
+
+        expect(
+          buildJournalEntrySearchDocumentContractFixture(
+            entry("public", {
+              entry_date: databaseCalendarDate,
+              created_at: databaseTimestamp,
+            }),
+          ),
+        ).toMatchObject({
+          entryDate: "2026-08-13T00:00:00.000Z",
+          createdAt: "2026-08-12T21:15:00.000Z",
+        });
+      }
+      expect(
+        buildJournalEntrySearchDocumentContractFixture(
+          entry("public", { entry_date: "2026-08-13" }),
+        )?.entryDate,
+      ).toBe("2026-08-13T00:00:00.000Z");
+    } finally {
+      if (originalTimezone === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTimezone;
+    }
+  });
+
   it("indexes supported coarse region code only when visibility is region", () => {
     const document = buildJournalEntrySearchDocumentContractFixture(
       entry("public", {

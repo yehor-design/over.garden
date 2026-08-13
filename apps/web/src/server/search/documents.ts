@@ -107,9 +107,9 @@ export function buildJournalEntrySearchDocumentContractFixture(
     locationVisibility: entry.location_visibility,
     ...(coarseRegionCode ? { coarseRegionCode } : {}),
     noindex: entry.public_noindex,
-    entryDate: normalizeDate(entry.entry_date),
+    entryDate: normalizeCalendarDate(entry.entry_date),
     entryScope: entry.entry_scope,
-    createdAt: normalizeDate(entry.created_at),
+    createdAt: normalizeTimestamp(entry.created_at),
     kind: "journal_entry",
     coverSource,
     ...(coverPublicUrl ? { coverPublicUrl } : {}),
@@ -140,7 +140,9 @@ function normalizeCoverSource(
   return "none";
 }
 
-function normalizeCoverPublicUrl(value: string | null | undefined): string | null {
+function normalizeCoverPublicUrl(
+  value: string | null | undefined,
+): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed.startsWith("https://") && !trimmed.startsWith("http://")) {
@@ -151,6 +153,32 @@ function normalizeCoverPublicUrl(value: string | null | undefined): string | nul
   return trimmed;
 }
 
-function normalizeDate(value: Date | string) {
+function normalizeCalendarDate(value: Date | string) {
+  const match =
+    typeof value === "string"
+      ? /^([0-9]{4})-([0-9]{2})-([0-9]{2})(?:$|T)/.exec(value.trim())
+      : null;
+  const parts: [number, number, number] | null =
+    value instanceof Date
+      ? [value.getFullYear(), value.getMonth() + 1, value.getDate()]
+      : match
+        ? [Number(match[1]), Number(match[2]), Number(match[3])]
+        : null;
+  if (!parts || parts.some((part) => !Number.isSafeInteger(part))) {
+    return typeof value === "string" ? value : value.toISOString();
+  }
+  const [year, month, day] = parts;
+  const calendarDate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    calendarDate.getUTCFullYear() !== year ||
+    calendarDate.getUTCMonth() + 1 !== month ||
+    calendarDate.getUTCDate() !== day
+  ) {
+    return typeof value === "string" ? value : value.toISOString();
+  }
+  return calendarDate.toISOString();
+}
+
+function normalizeTimestamp(value: Date | string) {
   return value instanceof Date ? value.toISOString() : value;
 }
