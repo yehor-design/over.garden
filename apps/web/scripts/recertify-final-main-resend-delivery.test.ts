@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import { describe, expect, it, vi } from "vitest";
@@ -8,7 +9,9 @@ import {
   buildResendDeliveryReplayNamespace,
   extractApprovedAuthUrl,
   isApprovedProductionDatabaseTarget,
+  isApprovedProductionRuntimeCondition,
   isApprovedResendConfiguration,
+  OVE313_APPROVED_PLAN,
   OVE313_APPROVAL_DIGEST,
   parseResendDeliveryCliArgs,
   resolveSealedOwnerUserId,
@@ -439,6 +442,37 @@ describe("OVE-313 untrusted inbox boundary", () => {
 });
 
 describe("OVE-313 closed receipt, CLI, and runbook", () => {
+  it("binds Amendment 2 to its exact normalized operation digest", () => {
+    const approvedPlan =
+      "OVE-313-amendment-2|production|after the exact-main launcher refused before adapter creation with zero apply and authoritative absence twice, run one fresh isolated release-QA account lifecycle through the existing email verification and password-reset paths, prove both transitions preserve the same account, then remove only that generated test account through the existing self-service deletion path|refused-main:e176f5f2d015c0f4f949ab08c88f701fc8840cfb|one-disposable-test-account|fresh-durable-one-shot-fence|cleanup-required";
+    const approvedDigest =
+      "bb2de29b20b7deff5e3c4b64cbffb36fadbd4651fcc39f230ad6d5fbb8f3c80a";
+
+    expect(OVE313_APPROVED_PLAN).toBe(approvedPlan);
+    expect(
+      createHash("sha256").update(OVE313_APPROVED_PLAN).digest("hex"),
+    ).toBe(approvedDigest);
+    expect(OVE313_APPROVAL_DIGEST).toBe(approvedDigest);
+  });
+
+  it("recognizes the active react-server condition from Node argv or NODE_OPTIONS", () => {
+    expect(
+      isApprovedProductionRuntimeCondition(
+        ["--conditions=react-server"],
+        undefined,
+      ),
+    ).toBe(true);
+    expect(
+      isApprovedProductionRuntimeCondition([], "--conditions=react-server"),
+    ).toBe(true);
+    expect(
+      isApprovedProductionRuntimeCondition(
+        [],
+        "--conditions=react-server-disabled",
+      ),
+    ).toBe(false);
+  });
+
   it("pins the production database and exact sender-domain boundary", () => {
     expect(
       isApprovedProductionDatabaseTarget(

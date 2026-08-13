@@ -36,19 +36,29 @@ details.
 
 ## Immutable authorization
 
-Approved normalized operation:
+Active Amendment 2 normalized operation:
 
 ```text
-OVE-313|production|run one isolated release-QA account lifecycle through the existing email verification and password-reset paths, prove both transitions preserve the same account, then remove only that generated test account through the existing self-service deletion path|baseline:1e66fcf32f8d3b0fd1e5757cdee4837828805560|one-disposable-test-account|durable-one-shot-fence|cleanup-required
+OVE-313-amendment-2|production|after the exact-main launcher refused before adapter creation with zero apply and authoritative absence twice, run one fresh isolated release-QA account lifecycle through the existing email verification and password-reset paths, prove both transitions preserve the same account, then remove only that generated test account through the existing self-service deletion path|refused-main:e176f5f2d015c0f4f949ab08c88f701fc8840cfb|one-disposable-test-account|fresh-durable-one-shot-fence|cleanup-required
 ```
 
-Approved SHA-256:
+Active Amendment 2 SHA-256:
 
 ```text
-6e4cd2af0121667302f0d31c6e440f70786b9d7f8740b2af7ebb0c36cce96d86
+bb2de29b20b7deff5e3c4b64cbffb36fadbd4651fcc39f230ad6d5fbb8f3c80a
 ```
 
-This authorization permits exactly one apply. Environment, implementation
+The original digest
+`6e4cd2af0121667302f0d31c6e440f70786b9d7f8740b2af7ebb0c36cce96d86`
+is historical provenance only and cannot be used for another apply. Its
+exact-main command at `e176f5f2d015c0f4f949ab08c88f701fc8840cfb`
+was refused before adapter construction because the launcher checked only
+`process.execArgv` while the active `react-server` condition arrived through
+`NODE_OPTIONS`. The refusal recorded zero apply, zero canary, zero duration,
+no attempt marker, and no account/mailbox/message effect; independent status
+and task-scoped cleanup proved authoritative absence twice.
+
+Amendment 2 permits exactly one fresh apply. Environment, implementation
 SHA, deployment SHA, plan digest, database target, task-account count, sender
 domain, disposable-inbox domain, sealed owner, or evidence-shape drift
 invalidates it before mutation. Every network/provider request has a hard
@@ -108,7 +118,7 @@ vercel env run -e production -- pnpm run ove313:production-proof -- \
   --confirm-environment production \
   --implementation-sha "$OVE313_IMPLEMENTATION_SHA" \
   --apply \
-  --approval-digest 6e4cd2af0121667302f0d31c6e440f70786b9d7f8740b2af7ebb0c36cce96d86
+  --approval-digest bb2de29b20b7deff5e3c4b64cbffb36fadbd4651fcc39f230ad6d5fbb8f3c80a
 ```
 
 Terminal pass requires:
