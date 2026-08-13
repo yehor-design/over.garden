@@ -26738,6 +26738,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/document-mutation-admission/readback/route.ts",
+        "src/lib/r2-addressing-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/document-mutation-admission/readback/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/r2-addressing-contract",
+      "sourceNodeId": "source:403dbf5ab39fb9274b70",
+      "symbol": "resolveR2AddressingReceipt"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/actions.ts",
         "src/app/garden/lineage/invitations/claim/page.tsx"
       ],
@@ -37472,18 +37484,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/env.ts",
-        "src/lib/storage.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/lib/storage.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/env",
-      "sourceNodeId": "source:9c12bf2c1dc69055a757",
-      "symbol": "booleanServerEnv"
-    },
-    {
-      "evidencePaths": [
         "src/app/%5F%5Fvisual-fixtures/intent/[scenarioId]/route.ts"
       ],
       "nodeKind": "route_handler",
@@ -38792,6 +38792,18 @@
       "semanticVariant": "from:@/db",
       "sourceNodeId": "source:a7b2fe0ad470459a3e9c",
       "symbol": "db"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/r2-addressing-contract.ts",
+        "src/lib/storage.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/storage.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/r2-addressing-contract",
+      "sourceNodeId": "source:a7b8001fa22b4b21de38",
+      "symbol": "resolveR2ForcePathStyle"
     },
     {
       "evidencePaths": [

@@ -10,7 +10,8 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-import { booleanServerEnv, requiredServerEnv } from "@/lib/env";
+import { requiredServerEnv } from "@/lib/env";
+import { resolveR2ForcePathStyle } from "@/lib/r2-addressing-contract";
 
 export const MAX_R2_PRESIGN_TTL_SECONDS = 900;
 
@@ -47,7 +48,7 @@ function r2Client() {
   cachedR2Client ??= new S3Client({
     region: "auto",
     endpoint: requiredServerEnv("R2_ENDPOINT"),
-    forcePathStyle: booleanServerEnv("R2_FORCE_PATH_STYLE"),
+    forcePathStyle: resolveR2ForcePathStyle(),
     credentials: {
       accessKeyId: requiredServerEnv("R2_ACCESS_KEY_ID"),
       secretAccessKey: requiredServerEnv("R2_SECRET_ACCESS_KEY"),

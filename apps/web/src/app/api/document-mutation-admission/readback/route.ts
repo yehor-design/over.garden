@@ -2,6 +2,7 @@ import {
   MAX_R2_PRESIGN_TTL_SECONDS,
   resolveR2UploadUrlTtlConfiguration,
 } from "@/lib/storage";
+import { resolveR2AddressingReceipt } from "@/lib/r2-addressing-contract";
 import { DOCUMENT_MUTATION_GENERATION_PROTOCOL } from "@/lib/auth/document-mutation-generation-contract";
 import { buildAuthenticatedMutationDeploymentReceipt } from "@/server/authenticated-mutation-deployment-receipt";
 import { isDocumentMutationAdmissionEnabled } from "@/server/document-mutation-admission-config";
@@ -24,6 +25,7 @@ export function GET() {
           effectiveSeconds: ttl.effectiveSeconds,
           maximumSeconds: MAX_R2_PRESIGN_TTL_SECONDS,
         },
+        r2Addressing: resolveR2AddressingReceipt(),
         authenticatedMutation: buildAuthenticatedMutationDeploymentReceipt(),
       },
       { headers: { "Cache-Control": "public, no-store" } },
