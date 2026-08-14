@@ -18,6 +18,9 @@ Public SEO/AEO indexability policy lives in `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.
 - Next.js App Router + TypeScript on Vercel.
 - shadcn/ui only for UI primitives.
 - Better Auth for auth.
+- Lexical 0.49.0 for the authenticated structured-journal authoring surface;
+  `JournalDocumentV1` remains the sole persistence/API/offline/read contract,
+  and public/owner read routes must not load the authoring runtime.
 - DigitalOcean Managed Postgres for production data; Apple Container-first local Postgres on supported Macs, with Docker only as fallback.
 - Kysely as the typed SQL builder. SQL migrations are schema source of truth. No ORM.
 - Cloudflare R2 for media: private quarantine bucket -> worker-created public derivative.

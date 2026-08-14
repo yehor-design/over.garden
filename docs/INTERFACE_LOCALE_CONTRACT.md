@@ -197,13 +197,15 @@ every currently rendered product state, and the payload-free
 `owner-composer-drafts` adapter. OVE-205 also keeps a fail-closed ownership
 ledger for downstream UI, but it does not claim that nonexistent UI passed.
 
-- OVE-202 owns final Editor.js, Cyrillic IME/serialization, ten-inline-photo,
+- OVE-317 preserves OVE-202's Cyrillic IME/serialization, ten-inline-photo,
   inline-upload, conflict, offline, and failed-flush locale-transition proof.
   Its editor must consume the shared proportional token, use the real italic
   face, and persist no `font-family` styling in the structured document.
   OVE-202 records `browser-backed` proof with scenario
-  `editor-clean-locale-transition`; founder physical iPhone Safari checklist
-  confirmed and Linear Done accepted.
+  `editor-clean-locale-transition`; OVE-317 re-proves the migrated authoring
+  runtime on the required cross-browser and maintainer-authorized
+  device-equivalent matrix, with physical-device and VoiceOver-runtime residual
+  risk stated explicitly.
 - OVE-206 owns final pointer/touch/keyboard reorder, active-gesture blocking,
   committed-order serialization, focus, announcement, and transition proof.
   OVE-206 records `browser-backed` proof with scenario

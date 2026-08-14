@@ -1414,6 +1414,7 @@ export function FirstEntryComposer({
           locale={locale}
           labels={getStructuredJournalComposerLabels(locale)}
           initialDocument={draft.contentDocument ?? undefined}
+          bindingReady={draftHydrated}
           disabled={persistenceFrozen}
           composerRef={structuredComposerRef}
           onDocumentChange={(document) => {

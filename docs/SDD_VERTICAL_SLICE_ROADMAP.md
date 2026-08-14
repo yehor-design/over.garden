@@ -337,7 +337,7 @@ unvalidated product hypothesis and preserves the existing information
 architecture, color, copy, action semantics, and visual language. Its only
 component layout delta is a mobile community-report containment fix required by
 the 320 px localized reflow gate. After OVE-208 closeout, OVE-202 shipped the
-structured journal composer (`JournalDocumentV1`, Editor.js owner composers,
+structured journal composer (`JournalDocumentV1`, shared owner composers,
 multi-photo offline sync, edit/conflict, SSR renderer). OVE-206 is the next
 execution owner for accessible block reorder.
 
@@ -346,7 +346,7 @@ it is not permission to claim future UI. The founder-approved 2026-07-22
 clarification preserves the dependency order OVE-205 -> OVE-202 -> OVE-206 ->
 OVE-207. OVE-205 proved the extensible coordinator, all existing states, and a
 payload-free owner-composer adapter. OVE-202 must consume the shared
-proportional token, persist no `font-family` in Editor.js content, use a real
+proportional token, persist no `font-family` in structured content, use a real
 italic face, and replace only its Cyrillic IME, serialization, inline-photo,
 conflict, offline, upload, and failed-flush ownership entries with real browser
 proof; OVE-206 must then replace only

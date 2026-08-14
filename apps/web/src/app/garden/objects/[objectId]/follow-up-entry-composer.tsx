@@ -226,7 +226,7 @@ export function FollowUpEntryComposer({
     ),
   );
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
-  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [draftHydrated, setDraftHydrated] = useState(Boolean(visualScenario));
   const [persistenceFrozen, setPersistenceFrozen] = useState(false);
   const [localeMutationPending, setLocaleMutationPending] = useState(false);
 
@@ -1067,6 +1067,7 @@ export function FollowUpEntryComposer({
           locale={locale}
           labels={getStructuredJournalComposerLabels(locale)}
           initialDocument={draft.contentDocument ?? undefined}
+          bindingReady={draftHydrated}
           disabled={persistenceFrozen}
           composerRef={structuredComposerRef}
           onDocumentChange={(document) => {

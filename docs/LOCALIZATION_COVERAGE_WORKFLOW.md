@@ -167,7 +167,7 @@ the shared coordinator and replace only their own ledger entry with real
 product-browser scenarios. Adapter-only registration or an internal fixture is
 not proof for the owning downstream issue. OVE-202 must also consume the shared
 proportional token, load a real italic face, and serialize no `font-family`
-styling into Editor.js content.
+styling into the canonical structured document.
 
 ## Extending The Product
 

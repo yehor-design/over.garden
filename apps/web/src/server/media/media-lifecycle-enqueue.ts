@@ -4,6 +4,10 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import type { Database } from "@/db/schema";
 import type { JsonValue } from "@/db/types";
+import {
+  listJournalDocumentImageMediaIds,
+  normalizeJournalDocumentOrThrow,
+} from "@/lib/garden/journal-document";
 
 /** Local literals keep the job-queue producer scanner deterministic. */
 const MEDIA_LIFECYCLE_QUEUE = "media_lifecycle";
@@ -17,6 +21,15 @@ export interface MediaRevokeCandidate {
   mediaAssetId: string;
   bucket: MediaLifecycleBucket;
   objectKey: string;
+}
+
+export class MediaLifecycleDocumentError extends Error {
+  readonly code = "invalid_content_document" as const;
+
+  constructor() {
+    super("Journal media references could not be classified safely.");
+    this.name = "MediaLifecycleDocumentError";
+  }
 }
 
 /**
@@ -71,34 +84,20 @@ export async function listOrphanProcessedDerivativesForEntry(
 
   if (!entry) return [];
 
-  const referencedIds = new Set<string>();
-  if (entry.cover_media_asset_id) {
-    referencedIds.add(entry.cover_media_asset_id);
+  let document;
+  try {
+    document = normalizeJournalDocumentOrThrow(entry.content_document);
+  } catch {
+    // Never expose document content or validation detail through this operator
+    // path; malformed canonical state aborts classification before media I/O.
+    throw new MediaLifecycleDocumentError();
   }
 
-  const document = entry.content_document;
-  if (document && typeof document === "object" && !Array.isArray(document)) {
-    const blocks = (document as { blocks?: unknown }).blocks;
-    if (Array.isArray(blocks)) {
-      for (const block of blocks) {
-        if (!block || typeof block !== "object" || Array.isArray(block)) {
-          continue;
-        }
-        const typed = block as { type?: unknown; data?: unknown };
-        if (
-          typed.type !== "image" ||
-          !typed.data ||
-          typeof typed.data !== "object"
-        ) {
-          continue;
-        }
-        const mediaAssetId = (typed.data as { mediaAssetId?: unknown })
-          .mediaAssetId;
-        if (typeof mediaAssetId === "string" && mediaAssetId.length > 0) {
-          referencedIds.add(mediaAssetId);
-        }
-      }
-    }
+  const referencedIds = new Set<string>(
+    listJournalDocumentImageMediaIds(document),
+  );
+  if (entry.cover_media_asset_id) {
+    referencedIds.add(entry.cover_media_asset_id);
   }
 
   const rows = await executor

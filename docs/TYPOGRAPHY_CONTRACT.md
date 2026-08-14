@@ -585,8 +585,8 @@ exact OVE-208 commit contained in `main` and on this contract; its Linear and
 closeout evidence must name that exact final SHA rather than the pre-change
 baseline SHA recorded above.
 
-The Editor.js holder, block tools, inline toolbar, block toolbar, conversion
-toolbar, popovers, portals, contenteditable authoring surface, and read-only SSR
+The structured composer holder, toolbar, popovers, portals, contenteditable
+authoring surface, and read-only SSR
 projection must all inherit `--font-overgarden-sans` through the shared
 `font-sans` token. Formatted prose uses the pinned true Italic rather than
 synthesis. Every authoring and read-only document preserves the known `uk`,
@@ -597,9 +597,9 @@ OVE-202 must not:
 
 - add a second font loader, `@font-face` owner, runtime CDN request, or
   editor-only typography stylesheet;
-- add an Editor.js font-family tool or user typography preference;
+- add an editor-specific font-family tool or user typography preference;
 - serialize `font-family`, font URLs, or implementation-specific font tokens
-  into Editor.js blocks or persisted HTML.
+  into the canonical structured document or persisted HTML.
 
 OVE-202 browser evidence must exercise authoring and read-only SSR in all three
 locales, including representative IME input and toolbar/popover/portal states.
@@ -622,10 +622,10 @@ mail-client system fallbacks.
 One `size-adjust` cannot serve both scripts. Measured from the shipped binaries
 with `calculateMetricCompatibleFallback`:
 
-| Corpus | Arial | Google Sans | Required size-adjust |
-| --- | --- | --- | --- |
-| Latin | 934.51 | 463.40 | 101.55% |
-| Cyrillic | 1054.21 | 507.19 | 98.53% |
+| Corpus   | Arial   | Google Sans | Required size-adjust |
+| -------- | ------- | ----------- | -------------------- |
+| Latin    | 934.51  | 463.40      | 101.55%              |
+| Cyrillic | 1054.21 | 507.19      | 98.53%               |
 
 The Latin-derived 101.55% rendered Cyrillic fallback text about 3% too wide.
 Every OverGarden locale is Cyrillic, so the mistuning affected real first

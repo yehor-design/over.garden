@@ -1,103 +1,117 @@
-# OVE-202 Structured Journal Composer
+# Structured Journal Composer
 
-Status: done on main (founder iPhone Safari checklist confirmed)
-Issue: OVE-202
+Status: current implementation contract
+Owner: OVE-317
+Decision: ADR-0015
 
-## Package pins
+## Runtime decision
 
-| Package               | Version | License    |
-| --------------------- | ------- | ---------- |
-| `@editorjs/editorjs`  | 2.31.6  | Apache-2.0 |
-| `@editorjs/header`    | 2.8.9   | MIT        |
-| `@editorjs/list`      | 2.0.9   | MIT        |
-| `@editorjs/quote`     | 2.7.6   | MIT        |
-| `@editorjs/delimiter` | 1.4.2   | MIT        |
+The four authenticated journal journeys use one lazy-loaded, client-only
+`StructuredJournalComposer` backed by Lexical 0.49.0. The editor is a native
+Lexical node tree with app-owned extensions; it is not a generic block-editor
+compatibility layer. All twelve direct Lexical packages are pinned exactly to
+`0.49.0`, and the retirement verifier enforces one resolved Lexical build.
 
-Image handling uses first-party `OverGardenImageTool` (no `@editorjs/image`, no CDN).
+The editor engine remains an authoring implementation detail. The only stored,
+API, offline, public, search, and read contract is normalized
+`JournalDocumentV1` schema version 1. Lexical JSON, node keys, DOM, and HTML
+never cross that boundary.
 
-## Contract
+## Closed grammar and identity
 
-- Persistence boundary: application-owned `JournalDocumentV1`
-- Derived `body` remains plain-text projection for search/snippets/metrics
-- Aggregate `journal_revision` + `journal_entry_mutation_receipts` for create/edit idempotency
-- Max ten inline images (`MAX_JOURNAL_INLINE_IMAGES`)
-- Offline photo Blob logical ceiling: 120 MiB (`MAX_OFFLINE_PHOTO_LOGICAL_BYTES`)
-- Kill switch: `STRUCTURED_JOURNAL_AUTHORING_ENABLED` (default enabled; readers always accept V1)
-- Typography: inherits `--font-overgarden-sans` / `font-sans` only; never persists `font-family`
+- Top-level nodes are paragraph, H2/H3 heading, ordered/unordered list with at
+  most two levels, quote, delimiter, and image. An exact-version
+  `OverGardenListNode extends ListNode` replacement keeps adjacent same-style
+  canonical list blocks and IDs separate while retaining native list editing
+  and numbering.
+- Inline marks are bold, italic, and normalized safe links only.
+- Quote has exactly one body and zero or one attribution in the same tree.
+- Image state stores only the application block ID and durable media asset ID;
+  preview URLs remain ephemeral UI state.
+- NodeState `overgardenBlockId` carries the stable application block ID.
+  Lexical node keys are runtime-only.
+- Type transforms and reorder preserve the ID. Split preserves the leading ID
+  and gives the trailing block a fresh cryptographic ID. Merge preserves the
+  receiving ID. Undo and redo restore exact semantic IDs.
+- Unsupported structure or marks fail closed and retain the latest known-good
+  canonical document instead of silently dropping content.
 
-## Surfaces
+The pure adapter boundary is
+`apps/web/src/lib/garden/journal-document-lexical-adapter.ts`:
 
-- Shared owner composer: `StructuredJournalComposer`
-- Wired into first-entry, follow-up, space entry, and `/garden/entries/[entryId]/edit`
-- Public/owner read: `JournalDocumentRenderer` (no Editor.js on public/read)
-- Offline: Dexie `contentDocument` + multi `photoIntentsByBlockId`; sync uploads then remaps provisional media ids
-- Locale: registers through existing OVE-205 `owner-composer-drafts` participant
+- `journalDocumentV1ToLexicalEditorState(document)` validates before hydration;
+- `lexicalEditorStateToJournalDocumentV1(editorState)` traverses the committed
+  tree exhaustively and finishes with canonical normalization.
+
+## Shared journey and lifecycle
+
+`StructuredJournalComposer` remains the single props/ref boundary for first
+entry, space entry, object follow-up, and edit. Callers do not import Lexical or
+fork save, recovery, media, offline, locale, or conflict behavior.
+
+One stable extension identity is created per mounted owner/document binding.
+The three create flows finish their asynchronous owner-scoped IndexedDB draft
+hydration before mounting that binding, so Lexical captures the restored
+canonical document rather than an empty pre-hydration snapshot. The edit flow
+already starts from its synchronously loaded canonical document.
+Semantic committed changes advance one monotonically increasing generation;
+selection-only and hydration updates do not emit canonical changes.
+`flushLatest` waits at most 1,500 ms through composition or reorder, then exports
+one committed state. Owner changes, superseded generations, cancelled media,
+unmount, and late asynchronous completion cannot persist or emit a stale write.
+Failure degrades to the last normalized document with localized read-only and
+retry controls.
+
+## Safe input and media
+
+- Normal typing, IME, toolbar actions, voice transcript insertion, and local
+  image admission use native editor commands and selection.
+- External HTML paste is reduced through a closed text/mark allowlist. Scripts,
+  styles, SVG, handlers, remote images, URI-list drops, and unsupported
+  presentation cannot cause external I/O.
+- Only local image files enter the shared admission controller. Ten concurrent
+  reservations may win; the eleventh is rejected synchronously.
+- Object URLs have one controller owner and are revoked on removal, cancellation,
+  owner/document transition, and unmount.
+- Server orphan classification reads normalized `JournalDocumentV1`
+  `mediaAssetId` values and performs zero enqueue effects for malformed or
+  unauthorized content.
+- Public and owner read surfaces continue to use `JournalDocumentRenderer` and
+  load no authoring engine.
+
+## Typography and localization
+
+The editor, toolbar, popovers, portals, and read-only renderer inherit the
+shared `font-sans` token and the current `uk`, `bg`, or `ru` language context.
+No font family, implementation token, preview URL, or editor state is persisted.
+The composer uses the shared `owner-composer-drafts` locale participant; active
+reorder uses `owner-composer-reorder-gesture` and does not fork the coordinator.
 
 ## Verification
 
 ```bash
 cd apps/web
+pnpm exec vitest run src/lib/garden/journal-document-lexical-adapter.test.ts \
+  src/components/garden/lexical-journal/journal-lexical-nodes.test.tsx \
+  src/components/garden/lexical-journal/journal-lexical-image-node.test.tsx \
+  src/components/garden/lexical-journal/journal-node-reorder.test.tsx
 pnpm smoke:structured-journal-composer
+pnpm smoke:journal-block-reorder
+pnpm smoke:journal-composer-responsiveness
 pnpm smoke:inline-media-integrity -- --environment local --confirm-environment local
-pnpm lint && pnpm typecheck
-pnpm test src/lib/garden/journal-document.test.ts src/server/erasure-execution.test.ts
+OVE317_DEVICE_EQUIVALENT_AUTHORIZATION=/absolute/content-free-authorization.json \
+OVE317_ANDROID_CDP_URL=http://127.0.0.1:9224 \
+OVE317_ADB_PATH=/absolute/android-sdk/platform-tools/adb \
+  pnpm smoke:lexical-journal-browser-matrix
+pnpm verify:editorjs-retirement
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
-## Inline media integrity
-
-OVE-243 makes photo selection one shared atomic boundary across first-entry,
-follow-up, space, and edit composers. Each file is synchronously reserved before
-the first asynchronous read, so parallel picker callbacks cannot exceed ten
-inline images or the logical byte budget through stale React state. Create flows
-own a copied offline intent before a block becomes canonical; edit uploads obtain
-a processed durable media identity before insertion. Preview object URLs have one
-controller owner and are revoked on removal, owner or entry transition, cancel,
-and unmount.
-
-Explicit save waits at most 1500 ms for composition or reorder recovery and then
-serializes the latest editor generation. The finite deadline prevents a lost
-terminal browser event from leaving Save or Cancel permanently blocked. The
-local-only smoke refuses preview/production and emits only bounded synthetic
-counts and latency; it never uploads media or mutates a canonical journal. It
-loads the pinned Editor.js 2.31.6 browser bundle and the production shared
-reservation controller, starts eleven concurrent picker callbacks, proves ten
-atomic reservations/ordered durable image blocks, the synchronous eleventh
-rejection, and zero object-URL residue after controller teardown. Its companion
-integration test proves all four composer callers still route through the shared
-`StructuredJournalComposer` owner.
-
-Closeout pattern matches OVE-208: local suite + Vercel `READY` for exact SHA. GitHub Actions may remain `workflow_dispatch` under budget freeze.
-
-## Physical iPhone checklist (founder)
-
-Required before Linear Done (decision 1A):
-
-1. Open first-entry composer on current-support iPhone Safari
-2. Cyrillic IME composition in uk/bg/ru without truncated autosave
-3. Bold/italic/link, H2/H3, list depth 2, quote, delimiter
-4. Add/reorder/remove up to 10 device photos; reject 11th
-5. Offline draft resume after airplane mode
-6. Auth interruption resume without duplicate create
-7. Edit existing entry with expectedRevision conflict path
-
-Do not record private journal text, media URLs, or identities in evidence.
-
-## OVE-213 responsiveness boundary
-
-- Reorder chrome writes text, labels, and disabled state only when the value
-  changes. Controller-owned cosmetic mutations are ignored by its subtree
-  observer instead of feeding another synchronization delivery.
-- Real Editor.js mutation bursts schedule at most one synchronization per
-  animation frame. Destroy cancels that frame before disconnecting listeners
-  and removing controller chrome, so a departed composer cannot receive a late
-  write.
-- `pnpm smoke:journal-composer-responsiveness` loads the pinned Editor.js 2.31.6
-  bundle plus the production controller in Chromium, proves zero no-op and
-  five-second idle observer deliveries, measures a real 100-block/10-image
-  mutation burst at the first animation frame against the 34 ms policy, checks
-  its second-frame convergence, exercises the two wait-safe actions, and proves
-  teardown fencing. Its companion integration test proves first-entry,
-  follow-up, space-entry, and edit all use that one owner.
-- Receipts contain only bounded state classes. Journal content, block/media IDs,
-  identity, payloads, precise location, IP/user-agent, and credentials remain
-  forbidden evidence.
+Browser evidence must use the installed editor and record bounded,
+content-free results. For OVE-317, the maintainer-authorized device-equivalent
+gate requires Chromium/Firefox/WebKit, iPhone 17 Pro WebKit and Pixel 10
+Chromium profiles for `uk`/`bg`/`ru`, plus Android 16 Emulator Chrome with
+TalkBack bound, Chrome clipboard round-trip plus Android system
+`KEYCODE_PASTE`, and both CDP and UIAutomator accessibility-tree proof. It
+does not claim physical-device, VoiceOver-runtime, or OS-dictation coverage;
+those residual risks are explicit in the validated authorization receipt.
