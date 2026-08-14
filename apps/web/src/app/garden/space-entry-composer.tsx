@@ -381,6 +381,7 @@ export function SpaceEntryComposer({
           locale={locale}
           labels={labels}
           initialDocument={draft.contentDocument ?? undefined}
+          bindingReady={draftHydrated}
           composerRef={structuredComposerRef}
           onDocumentChange={(document) => {
             const plain = extractJournalDocumentPlainText(document);

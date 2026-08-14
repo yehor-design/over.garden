@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  editorOutputToJournalDocumentV1,
-  journalDocumentV1ToEditorOutput,
-  parseInlineHtmlToSpans,
-  spansToEditorHtml,
-} from "./journal-document-editor-adapter";
-import {
   JOURNAL_DOCUMENT_SCHEMA_VERSION,
   MAX_JOURNAL_INLINE_IMAGES,
   assertMeaningfulJournalDocument,
@@ -16,7 +10,6 @@ import {
   journalDocumentHasFormatting,
   journalDocumentImageCount,
   legacyBodyToJournalDocumentV1,
-  listJournalDocumentImageMediaIds,
   normalizeJournalDocument,
   normalizeSafeHref,
   photoCountBucket,
@@ -31,8 +24,10 @@ function failCode(result: JournalDocumentNormalizeResult) {
   return result.code;
 }
 
-const MEDIA_IDS = Array.from({ length: 10 }, (_, index) =>
-  `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+const MEDIA_IDS = Array.from(
+  { length: 10 },
+  (_, index) =>
+    `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
 );
 
 function paragraphDoc(text: string, id = "p1"): JournalDocumentV1 {
@@ -184,60 +179,6 @@ describe("JournalDocumentV1 normalize", () => {
       ),
     ).toBe("duplicate_media");
   });
-
-  it("rejects checklist-like deep lists and invalid heading levels via adapter", () => {
-    expect(() =>
-      editorOutputToJournalDocumentV1({
-        blocks: [
-          {
-            id: "l1",
-            type: "list",
-            data: {
-              style: "unordered",
-              items: [
-                {
-                  content: "a",
-                  items: [
-                    {
-                      content: "b",
-                      items: [{ content: "c" }],
-                    },
-                  ],
-                },
-              ],
-            },
-          },
-        ],
-      }),
-    ).toThrow(/depth/i);
-
-    expect(() =>
-      editorOutputToJournalDocumentV1({
-        blocks: [
-          {
-            id: "h1",
-            type: "header",
-            data: { text: "Nope", level: 1 },
-          },
-        ],
-      }),
-    ).toThrow(/heading levels 2 and 3/i);
-
-    expect(() =>
-      editorOutputToJournalDocumentV1({
-        blocks: [
-          {
-            id: "l2",
-            type: "list",
-            data: {
-              style: "unordered",
-              items: [{ content: "x", checked: true }],
-            },
-          },
-        ],
-      }),
-    ).toThrow(/Checklist/i);
-  });
 });
 
 describe("legacy body adapter", () => {
@@ -249,70 +190,21 @@ describe("legacy body adapter", () => {
   });
 });
 
-describe("editor adapters", () => {
-  it("round-trips marks and blocks through normalize(decode(encode))", () => {
-    const document: JournalDocumentV1 = {
-      schemaVersion: 1,
-      blocks: [
-        {
-          id: "p1",
-          type: "paragraph",
-          spans: [
-            { text: "Здравей ", marks: [{ type: "bold" }] },
-            {
-              text: "България",
-              marks: [
-                { type: "italic" },
-                { type: "link", href: "https://over.garden/bg" },
-              ],
-            },
-          ],
-        },
-        {
-          id: "h2",
-          type: "heading",
-          level: 3,
-          spans: [{ text: "Сезон" }],
-        },
-        { id: "d1", type: "delimiter" },
-        { id: "img1", type: "image", mediaAssetId: MEDIA_IDS[0]! },
-      ],
-    };
-
-    const editor = journalDocumentV1ToEditorOutput(document, {
-      get: () => "https://cdn.example/preview.webp",
-    });
-    expect(JSON.stringify(editor)).toContain("preview.webp");
-
-    const back = editorOutputToJournalDocumentV1(editor);
-    expect(back).toEqual(document);
-    expect(listJournalDocumentImageMediaIds(back)).toEqual([MEDIA_IDS[0]]);
-  });
-
-  it("parses nested inline HTML and strips unsafe protocols/attributes", () => {
-    const spans = parseInlineHtmlToSpans(
-      '<b>Hi</b> <a href="javascript:alert(1)">bad</a> <a href="https://ok.example">ok</a> <i onclick="x">x</i>',
-    );
-    const html = spansToEditorHtml(spans);
-    expect(html).toContain("<b>Hi</b>");
-    expect(html).toContain('href="https://ok.example/"');
-    expect(html).not.toContain("javascript:");
-    expect(html).not.toContain("onclick");
-  });
-
+describe("document identity checks", () => {
   it("detects silent block omission", () => {
     const serialized = paragraphDoc("kept", "keep");
-    expect(
-      compareMeaningfulBlockIds(["keep", "missing"], serialized),
-    ).toEqual({ ok: false, missingIds: ["missing"] });
+    expect(compareMeaningfulBlockIds(["keep", "missing"], serialized)).toEqual({
+      ok: false,
+      missingIds: ["missing"],
+    });
   });
 });
 
 describe("plain text, meaning, and buckets", () => {
   it("requires meaningful text or captioned image", () => {
-    expect(() =>
-      assertMeaningfulJournalDocument(paragraphDoc("   ")),
-    ).toThrow(/meaningful/i);
+    expect(() => assertMeaningfulJournalDocument(paragraphDoc("   "))).toThrow(
+      /meaningful/i,
+    );
 
     const withImage: JournalDocumentV1 = {
       schemaVersion: 1,
@@ -333,7 +225,11 @@ describe("plain text, meaning, and buckets", () => {
     const document: JournalDocumentV1 = {
       schemaVersion: 1,
       blocks: [
-        { id: "p1", type: "paragraph", spans: [{ text: "a", marks: [{ type: "bold" }] }] },
+        {
+          id: "p1",
+          type: "paragraph",
+          spans: [{ text: "a", marks: [{ type: "bold" }] }],
+        },
         { id: "img1", type: "image", mediaAssetId: MEDIA_IDS[0]! },
         { id: "img2", type: "image", mediaAssetId: MEDIA_IDS[1]! },
       ],

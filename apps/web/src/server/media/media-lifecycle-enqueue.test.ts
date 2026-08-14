@@ -5,11 +5,19 @@ import {
   listArchiveDerivativeRevokeCandidates,
   listDetachedInlineRevokeCandidates,
   listOrphanProcessedDerivativesForEntry,
+  MediaLifecycleDocumentError,
 } from "./media-lifecycle-enqueue";
 
 type Row = Record<string, unknown>;
 
-function mockExecutor(responses: Row[][]) {
+const INLINE_1 = "11111111-1111-4111-8111-111111111111";
+const INLINE_2 = "22222222-2222-4222-8222-222222222222";
+
+function mockExecutor(
+  responses: Row[][],
+  onExecute?: () => void,
+  onWhere?: (predicate: unknown[]) => void,
+) {
   let call = 0;
   const chain = {
     selectFrom() {
@@ -18,10 +26,12 @@ function mockExecutor(responses: Row[][]) {
     select() {
       return this;
     },
-    where() {
+    where(...predicate: unknown[]) {
+      onWhere?.(predicate);
       return this;
     },
     async execute() {
+      onExecute?.();
       const rows = responses[call] ?? [];
       call += 1;
       return rows;
@@ -61,21 +71,21 @@ describe("media lifecycle cover/10+1 reference safety", () => {
             content_document: {
               schemaVersion: 1,
               blocks: [
-                { type: "image", data: { mediaAssetId: "inline-1" } },
-                { type: "image", data: { mediaAssetId: "inline-2" } },
+                { id: "image-1", type: "image", mediaAssetId: INLINE_1 },
+                { id: "image-2", type: "image", mediaAssetId: INLINE_2 },
               ],
             },
           },
         ],
         [
           {
-            id: "inline-1",
+            id: INLINE_1,
             derivative_key: "derivatives/a.webp",
             usage_role: "inline",
             document_position: 1,
           },
           {
-            id: "inline-2",
+            id: INLINE_2,
             derivative_key: "derivatives/b.webp",
             usage_role: "inline",
             document_position: 2,
@@ -111,16 +121,18 @@ describe("media lifecycle cover/10+1 reference safety", () => {
         [
           {
             id: "entry-1",
-            cover_media_asset_id: "inline-1",
+            cover_media_asset_id: INLINE_1,
             content_document: {
               schemaVersion: 1,
-              blocks: [{ type: "image", data: { mediaAssetId: "inline-1" } }],
+              blocks: [
+                { id: "image-1", type: "image", mediaAssetId: INLINE_1 },
+              ],
             },
           },
         ],
         [
           {
-            id: "inline-1",
+            id: INLINE_1,
             derivative_key: "derivatives/a.webp",
             usage_role: "inline",
             document_position: 1,
@@ -200,7 +212,13 @@ describe("media lifecycle cover/10+1 reference safety", () => {
             cover_media_asset_id: null,
             content_document: {
               schemaVersion: 1,
-              blocks: [{ type: "paragraph", data: { text: "hello" } }],
+              blocks: [
+                {
+                  id: "paragraph-1",
+                  type: "paragraph",
+                  spans: [{ text: "hello" }],
+                },
+              ],
             },
           },
         ],
@@ -216,5 +234,73 @@ describe("media lifecycle cover/10+1 reference safety", () => {
       { journalEntryId: "entry-1", ownerUserId: "user-1" },
     );
     expect(candidates.map((row) => row.mediaAssetId)).toEqual(["stale-1"]);
+  });
+
+  it("fails closed before the media query for an unsupported document", async () => {
+    let queryCount = 0;
+    const executor = mockExecutor(
+      [
+        [
+          {
+            id: "entry-1",
+            cover_media_asset_id: null,
+            content_document: { schemaVersion: 2, blocks: [] },
+          },
+        ],
+        [
+          {
+            id: "must-not-be-read",
+            derivative_key: "derivatives/unsafe.webp",
+            usage_role: "inline",
+            document_position: 1,
+          },
+        ],
+      ],
+      () => {
+        queryCount += 1;
+      },
+    );
+
+    await expect(
+      listOrphanProcessedDerivativesForEntry(executor as never, {
+        journalEntryId: "entry-1",
+        ownerUserId: "user-1",
+      }),
+    ).rejects.toMatchObject({
+      name: "MediaLifecycleDocumentError",
+      code: "invalid_content_document",
+    } satisfies Partial<MediaLifecycleDocumentError>);
+    expect(queryCount).toBe(1);
+  });
+
+  it("returns no candidates or media query for an entry outside the owner scope", async () => {
+    let queryCount = 0;
+    const predicates: unknown[][] = [];
+    const executor = mockExecutor(
+      [
+        [],
+        [
+          {
+            id: "must-not-be-read",
+            derivative_key: "derivatives/unsafe.webp",
+            usage_role: "inline",
+            document_position: 1,
+          },
+        ],
+      ],
+      () => {
+        queryCount += 1;
+      },
+      (predicate) => predicates.push(predicate),
+    );
+
+    await expect(
+      listOrphanProcessedDerivativesForEntry(executor as never, {
+        journalEntryId: "another-owner-entry",
+        ownerUserId: "current-owner",
+      }),
+    ).resolves.toEqual([]);
+    expect(queryCount).toBe(1);
+    expect(predicates).toContainEqual(["owner_user_id", "=", "current-owner"]);
   });
 });

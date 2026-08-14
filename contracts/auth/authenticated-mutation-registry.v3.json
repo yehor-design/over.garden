@@ -43069,6 +43069,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/garden/journal-document.ts",
+        "src/server/media/media-lifecycle-enqueue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/media/media-lifecycle-enqueue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/journal-document",
+      "sourceNodeId": "source:c9b8181b237410ca09c3",
+      "symbol": "listJournalDocumentImageMediaIds"
+    },
+    {
+      "evidencePaths": [
         "src/server/interaction-admission.ts"
       ],
       "nodeKind": "effect_owner",
@@ -43659,6 +43671,18 @@
       "semanticVariant": "from:@/server/engagement-repository",
       "sourceNodeId": "source:cf498b3f8ee50ceb4dd8",
       "symbol": "setEngagementBookmark"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/garden/journal-document.ts",
+        "src/server/media/media-lifecycle-enqueue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/media/media-lifecycle-enqueue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/journal-document",
+      "sourceNodeId": "source:cf5069ee981eea5f49e9",
+      "symbol": "normalizeJournalDocumentOrThrow"
     },
     {
       "evidencePaths": [

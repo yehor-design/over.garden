@@ -199,7 +199,7 @@ describe("OVE-205 localization browser matrix", () => {
         id: "structured-editor-and-inline-photos",
         issue: "OVE-202",
         requiredStates: [
-          "editorjs-structured-editor",
+          "lexical-structured-editor",
           "cyrillic-ime-composition",
           "lossless-editor-serialization",
           "ten-inline-photos",

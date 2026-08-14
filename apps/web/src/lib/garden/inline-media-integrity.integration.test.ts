@@ -41,12 +41,22 @@ describe("OVE-243 vertical inline-media integration", () => {
   });
 
   it("binds explicit save flush to the finite idle deadline", () => {
-    const source = readFileSync(
+    const ownerSource = readFileSync(
       path.join(root, "components/garden/structured-journal-composer.tsx"),
       "utf8",
     );
-    expect(source).toContain("await waitForComposerIdle({");
-    expect(source).not.toContain(
+    const lexicalSource = readFileSync(
+      path.join(
+        root,
+        "components/garden/lexical-journal/journal-lexical-client.tsx",
+      ),
+      "utf8",
+    );
+    expect(ownerSource).toContain(
+      'import("./lexical-journal/journal-lexical-client")',
+    );
+    expect(lexicalSource).toContain("await waitForComposerIdle({");
+    expect(lexicalSource).not.toContain(
       "await new Promise((resolve) => setTimeout(resolve, 16))",
     );
   });

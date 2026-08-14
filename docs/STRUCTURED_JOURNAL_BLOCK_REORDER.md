@@ -1,59 +1,70 @@
-# OVE-206 Accessible Journal Block Reorder
+# Accessible Journal Block Reorder
 
-Status: done on main (Vercel READY; Linear Done)
-Issue: OVE-206
+Status: current implementation contract
+Owner: OVE-317, preserving the OVE-206 product outcome
 
 ## Contract
 
-- Canonical commit primitive: Editor.js `blocks.move(toIndex, fromIndex)` only.
-- Application-owned drag handle starts pointer/touch gestures; text selection, editing, links, image controls, and ordinary scrolling stay available outside the handle.
-- Localized Move up / Move down controls are keyboard/AT reachable on every block; first/last boundary actions disable truthfully.
-- Built-in Editor.js `moveUp` / `moveDown` / `delete` tunes are localized through composer i18n.
-- Source and destination resolve by stable block ID. Same-position drop and cancel paths create no mutation.
-- One committed move is one serialization generation and one live-region announcement with focus restoration.
-- Active gesture registers `owner-composer-reorder-gesture` as an OVE-205 `in-flight` participant so Bulgaria locale control stays visible and disabled; Ukraine remains zero-control.
-- After commit, OVE-202 `owner-composer-drafts` flush/seal owns locale transition persistence. Do not fork the coordinator.
-- Image moves preserve the same `mediaAssetId`, block ID, and offline intent mapping. Reorder never re-uploads or cross-claims media.
-- Public `JournalDocumentRenderer` loads no Editor.js and no reorder chrome.
-- OVE-207 cover UI is not owned here; automatic-cover fallback remains derived from canonical `JournalDocumentV1` order.
+- `MOVE_JOURNAL_BLOCK_COMMAND` moves one top-level semantic Lexical node in the
+  native editor tree. DOM order is presentation only and no observer is a state
+  authority.
+- Source and destination resolve by stable application block ID. Same-position,
+  missing-source, and boundary moves are no-ops.
+- One committed move is one history transaction, one semantic generation, and
+  one localized live-region announcement. Undo and redo restore exact IDs and
+  order.
+- The application drag handle owns pointer/touch gestures. Text editing,
+  selection, links, image controls, and ordinary scrolling remain available
+  outside the handle.
+- Localized Move up and Move down controls are keyboard and assistive-technology
+  reachable. First/last actions disable truthfully, controls are at least
+  44 by 44 CSS pixels, and focus is restored to the moved block control.
+- Localized Delete removes a non-image semantic block in one undoable native
+  transaction and announces the result. Deleting the final block creates one
+  fresh canonical paragraph. Images remain on their media-aware remove control
+  so object-URL and admission cleanup cannot be bypassed.
+- Escape or an invalid drop cancels without a canonical mutation.
+- Active gesture registers `owner-composer-reorder-gesture` as an in-flight
+  locale participant. After commit, `owner-composer-drafts` owns the flush/seal
+  transition; there is no second coordinator.
+- Reorder preserves block ID, media asset ID, offline intent mapping, and image
+  reservation. It never re-uploads or cross-claims media.
+- Public and owner read rendering contains neither reorder chrome nor authoring
+  runtime.
 
 ## Surfaces
 
-- Pure contract: `apps/web/src/components/garden/journal-block-reorder.ts`
-- DOM controller: `apps/web/src/components/garden/journal-block-reorder-controller.ts`
-- Owner composer wiring: `StructuredJournalComposer`
-- Copy: `getStructuredJournalComposerLabels(locale).reorder` (`uk` / `bg` / `ru`)
-- Downstream ledger: OVE-206 `browser-backed` with scenario `pointer-commit-immediate-transition`
+- Native command and UI:
+  `apps/web/src/components/garden/lexical-journal/journal-node-reorder-plugin.tsx`
+- Focused history/identity tests:
+  `apps/web/src/components/garden/lexical-journal/journal-node-reorder.test.tsx`
+- Shared owner: `StructuredJournalComposer`
+- Localized copy: `getStructuredJournalComposerLabels(locale).reorder`
+- Downstream scenario: `pointer-commit-immediate-transition`
 
 ## Verification
 
 ```bash
 cd apps/web
-pnpm test src/components/garden/journal-block-reorder.test.tsx \
-  src/lib/garden/journal-document.test.ts \
+pnpm exec vitest run \
+  src/components/garden/lexical-journal/journal-node-reorder.test.tsx \
+  src/lib/garden/journal-document-lexical-adapter.test.ts \
   src/lib/offline/drafts.test.ts \
   src/lib/offline/journal-entry-sync.test.ts
 pnpm smoke:journal-block-reorder
+OVE317_DEVICE_EQUIVALENT_AUTHORIZATION=/absolute/content-free-authorization.json \
+OVE317_ANDROID_CDP_URL=http://127.0.0.1:9224 \
+OVE317_ADB_PATH=/absolute/android-sdk/platform-tools/adb \
+  pnpm smoke:lexical-journal-browser-matrix
 pnpm localization:coverage:check
-pnpm lint && pnpm typecheck && pnpm test
-BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build
-git diff --check
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
-Closeout pattern matches OVE-202/OVE-208: local suite + Vercel `READY` for exact SHA. GitHub Actions may remain `workflow_dispatch` under budget freeze.
-
-## Physical iPhone checklist (founder)
-
-Required before Linear Done:
-
-1. Open first-entry composer on current-support iPhone Safari
-2. Drag from the handle only; confirm normal page scroll and text selection still work outside the handle
-3. Move paragraph, heading, list, quote, delimiter, and photo with Move up / Move down
-4. Confirm live-region / focus after move at first, middle, and last positions
-5. Cancel an in-progress drag with Escape or lifting outside a valid target; order unchanged
-6. During an active drag on `/bg`, language control stays visible and disabled; no locale navigation
-7. Commit a move, then switch `bg` ↔ `ru`; exact order and photo identities survive
-8. Offline / reload resume keeps the reordered block-ID sequence
-9. 10 inline photos still reorder without duplication or loss
-
-Do not record private journal text, media URLs, block IDs, or identities in evidence.
+The browser matrix covers pointer, touch event handling, keyboard, history,
+focus, locale fencing, forced colors, reduced motion, and the
+100-block/10-image boundary. OVE-317 uses the exact maintainer-authorized
+device-equivalent gate: iPhone 17 Pro WebKit and Pixel 10 Chromium profiles for
+all three locales, plus Android 16 Emulator Chrome with TalkBack bound and
+CDP/UIAutomator accessibility proof. Physical hardware and VoiceOver runtime
+remain explicitly unverified; evidence must contain no journal text, media
+URLs, block IDs, precise location, or identity.

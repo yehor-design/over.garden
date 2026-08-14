@@ -368,7 +368,7 @@ function structuredSnapshot(
   const paragraph = {
     id: `paragraph-${generation}`,
     type: "paragraph" as const,
-    data: { text: `Editor.js generation ${generation}` },
+    data: { text: `Editor generation ${generation}` },
   };
   const images = inlineBlobs.map((blob, index) => ({
     id: `image-${generation}-${index + 1}`,

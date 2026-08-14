@@ -1,6 +1,6 @@
 /**
  * Application-owned JournalDocumentV1 contract (OVE-202).
- * Editor.js OutputData is transient UI state and is never the persistence boundary.
+ * Editor engine state is transient UI state and is never the persistence boundary.
  */
 
 export const JOURNAL_DOCUMENT_SCHEMA_VERSION = 1 as const;
@@ -358,7 +358,9 @@ export function extractJournalDocumentPlainText(
         break;
       case "image":
         if (includeCaptions) {
-          const caption = options.imageCaptionByMediaId?.get(block.mediaAssetId);
+          const caption = options.imageCaptionByMediaId?.get(
+            block.mediaAssetId,
+          );
           if (typeof caption === "string" && caption.trim()) {
             parts.push(caption.trim());
           }
@@ -674,8 +676,7 @@ function normalizeMarks(value: unknown): JournalInlineMark[] {
   const seen = new Set<string>();
   for (const raw of value) {
     const mark = normalizeMark(raw);
-    const key =
-      mark.type === "link" ? `link:${mark.href}` : mark.type;
+    const key = mark.type === "link" ? `link:${mark.href}` : mark.type;
     if (seen.has(key)) continue;
     seen.add(key);
     marks.push(mark);
@@ -710,10 +711,7 @@ function normalizeMark(value: unknown): JournalInlineMark {
   }
 }
 
-function normalizeListItems(
-  value: unknown,
-  depth: number,
-): JournalListItem[] {
+function normalizeListItems(value: unknown, depth: number): JournalListItem[] {
   if (depth > MAX_JOURNAL_LIST_DEPTH) {
     throw new JournalDocumentValidationError(
       "invalid_block",
@@ -863,7 +861,9 @@ function spansToPlainText(spans: readonly JournalTextSpan[]): string {
   return spans.map((span) => span.text).join("");
 }
 
-function listItemsHaveMeaningfulText(items: readonly JournalListItem[]): boolean {
+function listItemsHaveMeaningfulText(
+  items: readonly JournalListItem[],
+): boolean {
   for (const item of items) {
     if (spansHaveMeaningfulText(item.spans)) return true;
     if (item.items && listItemsHaveMeaningfulText(item.items)) return true;

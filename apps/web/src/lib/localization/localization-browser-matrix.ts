@@ -155,10 +155,19 @@ export const OVE_202_BROWSER_SCENARIO_IDS = [
   "ukraine-editor-zero-control",
 ] as const;
 
-export {
-  OVE_206_BROWSER_SCENARIO_IDS,
-  OVE_206_PRIMARY_BROWSER_SCENARIO_ID,
-} from "@/components/garden/journal-block-reorder";
+export const OVE_206_BROWSER_SCENARIO_IDS = [
+  "pointer-drag-locale-blocked",
+  "touch-drag-locale-blocked",
+  "drag-cancel-then-transition",
+  "pointer-commit-immediate-transition",
+  "keyboard-move-immediate-transition",
+  "serialization-race-after-move",
+  "hundred-block-ten-inline-transition",
+  "ukraine-reorder-zero-control",
+] as const;
+
+export const OVE_206_PRIMARY_BROWSER_SCENARIO_ID =
+  "pointer-commit-immediate-transition" as const;
 
 const REQUIRED_VIEWPORTS = ["mobile-320", "desktop-1440"] as const;
 const ALL_MARKET_CASES = [
@@ -342,7 +351,7 @@ export const LOCALIZATION_DOWNSTREAM_UI_PROOF_REQUIREMENTS = [
     id: "structured-editor-and-inline-photos",
     issue: "OVE-202",
     requiredStates: [
-      "editorjs-structured-editor",
+      "lexical-structured-editor",
       "cyrillic-ime-composition",
       "lossless-editor-serialization",
       "ten-inline-photos",
