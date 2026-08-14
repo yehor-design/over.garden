@@ -79,6 +79,7 @@ export async function runSessionLocaleConvergenceSmoke(
       const russianOption = page.getByRole("menuitemradio", {
         name: PUBLIC_LOCALE_CONFIG.ru.label,
       });
+      await russianOption.waitFor({ state: "visible", timeout: 15_000 });
       if ((await russianOption.count()) !== 1) {
         throw new Error("Expected exactly one public Russian language option.");
       }
