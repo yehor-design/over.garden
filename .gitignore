@@ -62,5 +62,9 @@ pnpm-debug.log*
 # exact local volume identifiers and synthetic smoke handles here.
 infra/.runtime/
 apps/web/.runtime/
+
+# Local agent tooling state (session handles and ports). Never committed:
+# .superpowers/brainstorm/.last-token holds a live session token.
+.superpowers/
 apps/web/test-results/
 apps/web/playwright-report/
