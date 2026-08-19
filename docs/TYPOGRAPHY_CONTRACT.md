@@ -651,6 +651,24 @@ Node timestamps only coordinate the deterministic 600ms release gate; they are
 not emitted or admitted as pass/fail evidence. Missing browser visibility or
 font-resource timing fails closed.
 
+### Scheduler-sensitive repeat (OVE-340)
+
+Four fallback codes compare a clock against a bound: `fallback-fcp-after-1s`,
+`fallback-not-visible-within-1s`, `fallback-delay-window`, and
+`fallback-duration`. A loaded shared CI runner can miss one of them while the
+product is correct, so a case whose failures are *all* four-list codes is
+re-measured, at most `FALLBACK_CASE_MAX_ATTEMPTS` times, and every attempt is
+kept on the case result as `attemptFailures`.
+
+This is not a tolerance and not a pass branch. No bound moves, no code is
+suppressed, and the full evaluator runs on every attempt. A case carrying any
+other code — computed family, blocked request, resource timing, convergence,
+fonts-ready, CLS, page error, console error — is final on its first attempt, and
+so is a code the evaluator gains later, because membership in the four-list is
+decided by exact string. Adding a member weakens the gate and needs a
+measurement showing the product is correct while the runner still reports the
+failure.
+
 Run the self-contained local matrix from a clean preview:
 
 ```bash

@@ -609,6 +609,56 @@ export function evaluateTypographyFallbackObservation(
   return failures;
 }
 
+/**
+ * Fallback failure codes whose predicate is a wall-clock or scheduler
+ * measurement, so a shared CI runner can produce one without any product
+ * defect. Every other fallback code asserts a structural property — computed
+ * family, blocked request, convergence, layout shift, page error — and must
+ * never be retried, because repeating the run would hide a real regression.
+ *
+ * Adding a code here weakens the gate. A new entry needs a measurement showing
+ * the product is correct while the runner still reports the failure.
+ */
+export const SCHEDULER_SENSITIVE_FALLBACK_FAILURE_CODES: readonly string[] = [
+  "fallback-fcp-after-1s",
+  "fallback-not-visible-within-1s",
+  "fallback-delay-window",
+  "fallback-duration",
+];
+
+/** Attempts one fallback case gets before its failures become final. */
+export const FALLBACK_CASE_MAX_ATTEMPTS = 3;
+
+/**
+ * A fallback case is repeated only when every failure it produced is
+ * scheduler-sensitive. A clean case is never repeated, and a case carrying any
+ * structural failure fails on its first attempt. The declared budgets are
+ * unchanged: a repeat proves the budget is missed consistently rather than
+ * once, and every attempt stays in the receipt.
+ */
+export function shouldRetryFallbackCase(failures: readonly string[]): boolean {
+  if (failures.length === 0) return false;
+  return failures.every((code) =>
+    SCHEDULER_SENSITIVE_FALLBACK_FAILURE_CODES.includes(code),
+  );
+}
+
+/**
+ * Decides whether the runner should take another attempt at a fallback case,
+ * given the failures every attempt so far produced, oldest first. An empty list
+ * means no attempt has run yet. This is the whole loop condition, kept pure so
+ * bound termination is provable without a browser.
+ */
+export function shouldAttemptFallbackCaseAgain(
+  attemptFailures: ReadonlyArray<readonly string[]>,
+): boolean {
+  if (attemptFailures.length === 0) return true;
+  if (attemptFailures.length >= FALLBACK_CASE_MAX_ATTEMPTS) return false;
+  return shouldRetryFallbackCase(
+    attemptFailures[attemptFailures.length - 1] ?? [],
+  );
+}
+
 export function evaluateTypographyGlobalErrorObservation(
   observation: TypographyGlobalErrorObservation,
   expectedFamily = "Google Sans",

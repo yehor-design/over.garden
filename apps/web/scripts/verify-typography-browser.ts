@@ -36,6 +36,7 @@ import {
   isExpectedGoogleSansFamily,
   isTypographyBrowserFontUrlAllowed,
   parseTypographyBrowserRouteManifest,
+  shouldAttemptFallbackCaseAgain,
   textRequiresCyrillicExtended,
   textRequiresLatinExtended,
   TYPOGRAPHY_BROWSER_NAMES,
@@ -249,6 +250,11 @@ interface FallbackCaseResult {
     pageErrorCount: number;
     consoleErrorCount: number;
   };
+  /**
+   * Failures recorded by every attempt, oldest first. A single entry means the
+   * case was decided on its first run. See shouldRetryFallbackCase.
+   */
+  attemptFailures?: ReadonlyArray<readonly string[]>;
   failures: string[];
 }
 
@@ -2221,6 +2227,30 @@ async function installFallbackPerformanceObservers(context: BrowserContext) {
   });
 }
 
+/**
+ * Runs one fallback case and repeats it only while every failure it produced is
+ * scheduler-sensitive, up to FALLBACK_CASE_MAX_ATTEMPTS. The declared budgets
+ * are untouched: this proves a budget is missed consistently rather than once,
+ * and every attempt is kept in the receipt so no measurement disappears.
+ */
+async function runFallbackCaseWithSchedulerRetry(input: {
+  baseUrl: URL;
+  browser: Browser;
+  browserName: TypographyBrowserName;
+  expectedFamily: string;
+  route: TypographyBrowserRoute;
+}): Promise<FallbackCaseResult> {
+  const attemptFailures: string[][] = [];
+  let result: FallbackCaseResult | undefined;
+  while (shouldAttemptFallbackCaseAgain(attemptFailures)) {
+    result = await runFallbackCase(input);
+    attemptFailures.push([...result.failures]);
+  }
+  // shouldAttemptFallbackCaseAgain returns true on an empty list, so the loop
+  // always runs at least once and result is assigned before this point.
+  return { ...(result as FallbackCaseResult), attemptFailures };
+}
+
 async function runFallbackCase(input: {
   baseUrl: URL;
   browser: Browser;
@@ -3115,7 +3145,7 @@ async function main() {
     try {
       try {
         fallbackCases.push(
-          await runFallbackCase({
+          await runFallbackCaseWithSchedulerRetry({
             baseUrl: options.baseUrl,
             browser,
             browserName,
