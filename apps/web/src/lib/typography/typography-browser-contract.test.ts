@@ -6,12 +6,16 @@ import {
   evaluateTypographyBrowserObservation,
   evaluateTypographyFallbackObservation,
   evaluateTypographyGlobalErrorObservation,
+  FALLBACK_CASE_MAX_ATTEMPTS,
   firstComputedFontFamily,
   inspectTypographyBrowserFontUrls,
   isExpectedGoogleSansFamily,
   isTypographyBrowserFontPathAllowed,
   isTypographyBrowserFontUrlAllowed,
   parseTypographyBrowserRouteManifest,
+  shouldAttemptFallbackCaseAgain,
+  shouldRetryFallbackCase,
+  SCHEDULER_SENSITIVE_FALLBACK_FAILURE_CODES,
   parseUnicodeRange,
   textRequiresCyrillicExtended,
   textRequiresLatinExtended,
@@ -494,5 +498,147 @@ describe("OVE-208 typography browser contract", () => {
       "global-error-console-error",
       "global-error-platform-font",
     ]);
+  });
+});
+
+describe("shouldRetryFallbackCase", () => {
+  it("never repeats a case that produced no failures", () => {
+    expect(shouldRetryFallbackCase([])).toBe(false);
+  });
+
+  it("repeats a case whose only failure is a scheduler measurement", () => {
+    for (const code of SCHEDULER_SENSITIVE_FALLBACK_FAILURE_CODES) {
+      expect(shouldRetryFallbackCase([code])).toBe(true);
+    }
+  });
+
+  it("repeats a case when every failure is scheduler-sensitive", () => {
+    expect(
+      shouldRetryFallbackCase([
+        "fallback-fcp-after-1s",
+        "fallback-not-visible-within-1s",
+        "fallback-duration",
+      ]),
+    ).toBe(true);
+  });
+
+  it("decides a structural failure on its first attempt", () => {
+    const structural = [
+      "fallback-text-hidden",
+      "fallback-no-fcp",
+      "target-font-not-blocked",
+      "fallback-font-unavailable",
+      "fallback-family",
+      "fallback-no-blocked-font-request",
+      "fallback-no-font-resource-timing",
+      "target-font-not-loaded",
+      "fallback-no-convergence",
+      "fallback-fonts-not-ready",
+      "fallback-cls",
+      "fallback-page-error",
+      "fallback-console-error",
+    ];
+    for (const code of structural) {
+      expect(shouldRetryFallbackCase([code])).toBe(false);
+    }
+  });
+
+  it("does not repeat a mixed case, so one structural failure stays final", () => {
+    expect(
+      shouldRetryFallbackCase(["fallback-fcp-after-1s", "fallback-family"]),
+    ).toBe(false);
+  });
+
+  it("treats an unrecognised code as structural", () => {
+    expect(shouldRetryFallbackCase(["fallback-some-future-code"])).toBe(false);
+  });
+
+  it("names only codes the evaluator can emit from a timing measurement", () => {
+    const emitted = new Set<string>([
+      ...evaluateTypographyFallbackObservation(
+        fallbackObservation({ firstContentfulPaintMs: 1_400 }),
+      ),
+      ...evaluateTypographyFallbackObservation(
+        fallbackObservation({ visibleAfterDomContentLoadedMs: 1_800 }),
+      ),
+      ...evaluateTypographyFallbackObservation(
+        fallbackObservation({ blockedDurationMs: 2_400 }),
+      ),
+      ...evaluateTypographyFallbackObservation(
+        fallbackObservation({ fallbackDurationMs: 4_200 }),
+      ),
+    ]);
+    for (const code of SCHEDULER_SENSITIVE_FALLBACK_FAILURE_CODES) {
+      expect(emitted).toContain(code);
+    }
+  });
+
+  it("leaves a structural regression failing even under a slow runner", () => {
+    const failures = evaluateTypographyFallbackObservation(
+      fallbackObservation({
+        firstContentfulPaintMs: 1_400,
+        computedFallbackFamily: "Arial, sans-serif",
+      }),
+    );
+    expect(failures).toContain("fallback-fcp-after-1s");
+    expect(failures).toContain("fallback-family");
+    expect(shouldRetryFallbackCase(failures)).toBe(false);
+  });
+
+  it("allows at least one repeat and stays bounded", () => {
+    expect(FALLBACK_CASE_MAX_ATTEMPTS).toBeGreaterThan(1);
+    expect(FALLBACK_CASE_MAX_ATTEMPTS).toBeLessThanOrEqual(5);
+  });
+});
+
+describe("shouldAttemptFallbackCaseAgain", () => {
+  const clock = ["fallback-fcp-after-1s"];
+  const structural = ["fallback-family"];
+
+  it("takes a first attempt before anything has been measured", () => {
+    expect(shouldAttemptFallbackCaseAgain([])).toBe(true);
+  });
+
+  it("stops as soon as an attempt passes", () => {
+    expect(shouldAttemptFallbackCaseAgain([[]])).toBe(false);
+  });
+
+  it("stops at the declared bound even while failures stay scheduler-sensitive", () => {
+    const attempts: string[][] = [];
+    let taken = 0;
+    while (shouldAttemptFallbackCaseAgain(attempts)) {
+      taken += 1;
+      attempts.push([...clock]);
+      expect(taken).toBeLessThanOrEqual(FALLBACK_CASE_MAX_ATTEMPTS);
+    }
+    expect(taken).toBe(FALLBACK_CASE_MAX_ATTEMPTS);
+    expect(attempts).toHaveLength(FALLBACK_CASE_MAX_ATTEMPTS);
+  });
+
+  it("stops after one attempt when that attempt failed structurally", () => {
+    const attempts: string[][] = [];
+    let taken = 0;
+    while (shouldAttemptFallbackCaseAgain(attempts)) {
+      taken += 1;
+      attempts.push([...structural]);
+    }
+    expect(taken).toBe(1);
+  });
+
+  it("stops once a repeat of a scheduler-sensitive failure comes back clean", () => {
+    const attempts: string[][] = [];
+    const scripted = [clock, []];
+    let taken = 0;
+    while (shouldAttemptFallbackCaseAgain(attempts)) {
+      attempts.push([...(scripted[taken] ?? [])]);
+      taken += 1;
+    }
+    expect(taken).toBe(2);
+    expect(attempts.at(-1)).toEqual([]);
+  });
+
+  it("decides from the latest attempt, not from an earlier one", () => {
+    expect(shouldAttemptFallbackCaseAgain([clock, structural])).toBe(false);
+    expect(shouldAttemptFallbackCaseAgain([structural, clock])).toBe(true);
   });
 });
