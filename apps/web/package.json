@@ -37,6 +37,7 @@
     "eppo:credentials:setup": "NODE_OPTIONS=--conditions=react-server tsx scripts/setup-eppo-credentials.ts",
     "eppo:credentials:verify": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-eppo-api-access.ts",
     "eppo:source-contract:verify": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-eppo-source-contract.ts",
+    "stable-registry:canon:check": "tsx scripts/check-stable-registry-canon.ts",
     "catalog:inventory-object-kinds": "tsx scripts/inventory-object-kinds.ts",
     "launch:corpus:plan": "NODE_OPTIONS=--conditions=react-server tsx scripts/launch-corpus-plan.ts",
     "launch:corpus:check": "NODE_OPTIONS=--conditions=react-server tsx scripts/launch-corpus-check.ts",
