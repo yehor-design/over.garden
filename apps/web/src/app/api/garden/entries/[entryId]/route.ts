@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import { JOURNAL_ENTRY_PAYLOAD_MAX_BYTES } from "@/lib/garden/entry-contracts";
 import {
   DEFAULT_PUBLIC_LOCALE,
   localizedPath,
@@ -10,6 +11,10 @@ import {
   documentMutationAdmissionResponse,
   documentMutationGenerationFromRequest,
 } from "@/server/document-mutation-admission";
+import {
+  BoundedJsonPayloadTooLargeError,
+  readBoundedJsonRequest,
+} from "@/server/bounded-json-request";
 import {
   JournalAggregateConflictError,
   updateJournalEntryAggregate,
@@ -34,7 +39,7 @@ export async function PATCH(
   }
   const scope = admission.scope;
 
-  const body = (await request.json().catch(() => null)) as {
+  let body: {
     title?: string;
     body?: string;
     contentDocument?: unknown;
@@ -51,6 +56,21 @@ export async function PATCH(
     mentionSelections?: unknown;
     topicTags?: unknown;
   } | null;
+
+  try {
+    body = (await readBoundedJsonRequest(
+      request,
+      JOURNAL_ENTRY_PAYLOAD_MAX_BYTES,
+    )) as typeof body;
+  } catch (error) {
+    if (error instanceof BoundedJsonPayloadTooLargeError) {
+      return Response.json(
+        { code: "JOURNAL_ENTRY_TOO_LARGE" },
+        { status: 413 },
+      );
+    }
+    body = null;
+  }
 
   if (!body) {
     return Response.json(

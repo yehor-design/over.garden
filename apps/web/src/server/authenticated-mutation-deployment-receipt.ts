@@ -50,8 +50,8 @@ export function buildAuthenticatedMutationDeploymentReceipt(): AuthenticatedMuta
     receipt.registry.entrypointCount < 1 ||
     !Number.isSafeInteger(receipt.registry.consumerEdgeCount) ||
     receipt.registry.consumerEdgeCount < 1 ||
-    receipt.enforcement.ove291EntrypointCount !== 122 ||
-    receipt.enforcement.ove291ConsumerEdgeCount !== 345 ||
+    receipt.enforcement.ove291EntrypointCount !== 125 ||
+    receipt.enforcement.ove291ConsumerEdgeCount !== 350 ||
     receipt.explicitGoogleLink.entrypointCount !== 5 ||
     receipt.explicitGoogleLink.consumerEdgeCount !== 15 ||
     receipt.explicitGoogleLink.ownershipDigest !==

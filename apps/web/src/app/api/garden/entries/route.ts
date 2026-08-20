@@ -9,6 +9,7 @@ import type {
   FirstPlantEntryRequest,
   FirstPlantEntryResponse,
 } from "@/lib/garden/entry-contracts";
+import { JOURNAL_ENTRY_PAYLOAD_MAX_BYTES } from "@/lib/garden/entry-contracts";
 import { buildSaveProgressReadbackUrl } from "@/lib/garden/save-progress-moment";
 import { INTERFACE_LOCALE_REQUEST_HEADER } from "@/lib/interface-localization";
 import { preciseLocationRejectionMessage } from "@/lib/privacy/precise-location-copy";
@@ -30,6 +31,10 @@ import {
   documentMutationAdmissionResponse,
   documentMutationGenerationFromRequest,
 } from "@/server/document-mutation-admission";
+import {
+  BoundedJsonPayloadTooLargeError,
+  readBoundedJsonRequest,
+} from "@/server/bounded-json-request";
 import type { RequestScope } from "@/server/request-scope";
 import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import {
@@ -49,9 +54,21 @@ export async function POST(request: Request) {
   }
   const scope: RequestScope = admission.scope;
 
-  const body = (await request
-    .json()
-    .catch(() => null)) as Partial<FirstPlantEntryRequest> | null;
+  let body: Partial<FirstPlantEntryRequest> | null;
+  try {
+    body = (await readBoundedJsonRequest(
+      request,
+      JOURNAL_ENTRY_PAYLOAD_MAX_BYTES,
+    )) as Partial<FirstPlantEntryRequest>;
+  } catch (error) {
+    if (error instanceof BoundedJsonPayloadTooLargeError) {
+      return Response.json(
+        { code: "JOURNAL_ENTRY_TOO_LARGE" },
+        { status: 413 },
+      );
+    }
+    body = null;
+  }
 
   if (!body) {
     return Response.json(

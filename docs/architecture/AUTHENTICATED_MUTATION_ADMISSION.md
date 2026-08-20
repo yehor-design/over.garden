@@ -28,24 +28,24 @@ The checked artifact is
 
 | Field                           |                                                      Checked value |
 | ------------------------------- | -----------------------------------------------------------------: |
-| Production source files         |                                                                619 |
-| Source nodes                    |                                                              2,649 |
-| Logical entrypoints             |                                                                328 |
-| Effect boundaries               |                                                                184 |
-| Consumer edges                  |                                                                671 |
-| Excluded entrypoints            |                                                                149 |
+| Production source files         |                                                                611 |
+| Source nodes                    |                                                              2,626 |
+| Logical entrypoints             |                                                                327 |
+| Effect boundaries               |                                                                188 |
+| Consumer edges                  |                                                                674 |
+| Excluded entrypoints            |                                                                147 |
 | Retired-provider entrypoints    |                                                                  1 |
 | Unresolved nodes or entrypoints |                                                                  0 |
-| Registry digest                 | `e8a87b3291a3cb9948658f722b779fdc1d2c13fe2411aa74c73d7ac51387e5d9` |
-| Source-evidence digest          | `acc5405c23f5229e48f52bdc36947f8d2c4990d351ad9464b71914fc1d159437` |
-| Receipt digest                  | `e720b1c54a84ade23ea63929a11def99c98d0fd47265cc2c20f8f7c47f1f1ce9` |
-| Artifact file SHA-256           | `23a191e33d603f8021fcb9431b36b7dd7fd55027d85eba9a3be3a94335a6c65f` |
+| Registry digest                 | `e12440cfc1d7c70ddb60a1950fc5431ce811a61c93bf24470beea5b30d422727` |
+| Source-evidence digest          | `bc08f95477f1e072a200fe3e1cec08c0b01d0122cc4afe49c66d4a091e6b48e9` |
+| Receipt digest                  | `89ce1332582826b73ec6a855f4519db18f96d843abd76793cf210983cd9247d8` |
+| Artifact file SHA-256           | `cdf2cf0f2e9c990a6a947904a9ccb02d941f40f39fde38aee7bc6a3aafe8bac6` |
 
 The independently pinned Better Auth semantic adapter produced:
 
-- manifest digest `76e7539a7872d7a68215d32108d2b7ffb95deeb8c0b62e94cfd2ea87c53ec9b2`;
-- semantic source-evidence digest `b6564c613795ed4c088259907ebbf721509471428752279a9b3848ab3db876a2`;
-- semantic receipt digest `716b016d842e0d920710a140a9f38a437562dd9ced790715eaf2207af22399a9`.
+- manifest digest `64249abce3b5c190a7d0ee2c9d4e29f78100e4688920a35486b1e29c1bfa0842`;
+- semantic source-evidence digest `1a7bbf8c1584e638e9395db76825d18856d3ac8dbb8e6e2d3fa954b79b70f84d`;
+- semantic receipt digest `016fc918f791e9cc6459115408fccfba8734399de22478194e8cc4819def9c18`.
 
 The receipt binds the exact baseline, TypeScript and Better Auth toolchain,
 OVE-296 prerequisite receipt, normalized production-source evidence, and
@@ -77,24 +77,24 @@ cross-origin R2 PUT.
 
 The separate enforcement artifact is
 `contracts/auth/authenticated-mutation-enforcement.v1.json` (SHA-256
-`7ed7de69de5e93d82716a3095e36f02856ed7ece44d7a5444ac7eee3081f5b8f`).
+`ebb2843b6a91748f97846d000488983a4142ffbe15ecc68dad5a604b7a7b0c71`).
 It binds registry digest
-`e8a87b3291a3cb9948658f722b779fdc1d2c13fe2411aa74c73d7ac51387e5d9`
+`e12440cfc1d7c70ddb60a1950fc5431ce811a61c93bf24470beea5b30d422727`
 and source receipt digest
-`e720b1c54a84ade23ea63929a11def99c98d0fd47265cc2c20f8f7c47f1f1ce9`.
+`89ce1332582826b73ec6a855f4519db18f96d843abd76793cf210983cd9247d8`.
 The original 36 OVE-290 entrypoints plus six OVE-289 local effect owners form
 42 enforced high-risk entrypoints and 296 consumer edges at 30 admission
-boundaries. All 124 remainder entrypoints and 347 consumer edges remain
-`enforced_ove_291` at their 65 declared admission boundaries. The
+boundaries. All 125 remainder entrypoints and 350 consumer edges remain
+`enforced_ove_291` at their 67 declared admission boundaries. The
 five-entrypoint, 15-edge OVE-295 partition remains reserved with ownership digest
 `9f9273ac6222c4e04cc77069dc14bfebc3860218d6791623055c27420687adad`;
 OVE-286 capability-runtime paths remain distinct from mutation enforcement.
 
 Production imports only the generated bounded receipt
 `contracts/auth/authenticated-mutation-deployment-receipt.v1.json` (SHA-256
-`e3fb3304f5641d364ee0943dfa2395e8c01385ae69e2a41403aab3ccf99f50cc`,
+`57b64b0e294e3241c39bc41e159235609fb578fde4cf4fbbe44bb11d144b7f09`,
 canonical receipt digest
-`05eb54b3d5db46ba432caaec1dbd3ea2a157c896045e6820b2579a3d0faf03f3`).
+`e78ffe225c7b20faf8419cf8dd97a26cc4fcf0eafa3ad7de800977a9510a3d82`).
 It contains the deployment-receipt schema, counts, and digests only. The full
 registry and enforcement graph remain build-time artifacts and their schema
 sentinels are forbidden from Next.js runtime chunks.
@@ -270,9 +270,9 @@ owner:
 - `capability_runtime_ove_286`: 7 owner-session and owner-composer capability
   paths;
 - `owned_by_ove_295`: 5 explicit-linking paths;
-- `remaining_ove_291`: 124 remainder effectful paths, now enforced.
+- `remaining_ove_291`: 125 remainder effectful paths, now enforced.
 
-The remaining 150 non-effectful paths are `excluded_with_reason`, including the
+The remaining 148 non-effectful paths are `excluded_with_reason`, including the
 one retired-provider entrypoint. Owner sets are disjoint by construction and
 validation.
 
@@ -303,7 +303,7 @@ pnpm exec tsx scripts/authenticated-mutation-enforcement-receipt.ts --check
 ```
 
 It verifies final registry/source-receipt digest binding, the complete enforced
-42/296 high-risk and 124/347 remainder stable-ID sets, all 30 high-risk and 65
+42/296 high-risk and 125/350 remainder stable-ID sets, all 30 high-risk and 67
 remainder live pre-effect guard bodies, deterministic bytes, the frozen
 explicit-Google-link partition, and the committed enforcement artifact.
 

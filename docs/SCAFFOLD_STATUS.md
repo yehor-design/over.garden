@@ -1,7 +1,8 @@
 # Runtime Scaffold — Current Status and Verification
 
-Last reconciled: 2026-08-20 (OVE-320 online-only canon; runtime retirement is
-owned by OVE-321 through OVE-326)
+Last reconciled: 2026-08-20 (OVE-321 server-authoritative journal draft
+protocol; composer activation and remaining retirement are owned by OVE-325,
+OVE-322, OVE-323, and OVE-326)
 
 This file is the concise current-state mirror for the implemented OverGarden
 runtime. Authenticated Linear and the issue-specific execution contract remain
@@ -12,10 +13,11 @@ superseded by ADR-0017 remain the stack authority. Every new or materially rewri
 
 ADR-0017 is the current connectivity authority: all new journal writes are
 network-required and server-authoritative. Implementation status (2026-08-20):
-the checked-in runtime still contains the historical PWA, Dexie, IndexedDB,
-local-draft, queued, and sync paths; they are non-authoritative
-`runtime_pending_child` entries owned by OVE-321, OVE-322, or OVE-323 and must
-not be extended.
+the private owner-scoped server draft protocol exists but remains dormant until
+OVE-325 activates it in the four composers. The checked-in runtime still
+contains the historical PWA, Dexie, IndexedDB, local-draft, queued, and sync
+paths; they are non-authoritative `runtime_pending_child` entries owned by
+OVE-322 or OVE-323 and must not be extended.
 
 ## Current product model
 
@@ -33,9 +35,10 @@ Implemented user journeys include:
 - automatic pseudonymous public identity and owner profile management;
 - garden space, plant/animal object, structured journal entry, same-object
   follow-up, publication, archive/`410`, and derivative-only media;
-- a legacy first-entry/follow-up local queue still present pending its named
-  OVE-321/OVE-322/OVE-323 retirement owners; ADR-0017 forbids treating it as
-  current target behavior or extending it with new durable browser writes;
+- a dormant private server-authoritative draft protocol for first-entry,
+  follow-up, space-entry, and edit contexts; the legacy composer queue remains
+  active until OVE-325 switches all four callers and OVE-322/OVE-323 retire the
+  remaining device/runtime residue;
 - catalog typeahead, unknown/user-added identities, curation, canonical merge,
   official source provenance, and derived search indexing;
 - public journals, object passports, varieties, profiles, community/social
@@ -97,10 +100,14 @@ claim authority, not access to the product.
 ## Journal, online-only saves, media, and public lifecycle
 
 - Canonical journal mutations are owner/space/object scoped and idempotent.
+- `journal_entry_drafts` plus `GET|PUT|DELETE
+/api/garden/drafts/[draftKey]` own the private generation/hash/server-revision
+  compare-and-set protocol. No composer calls it until OVE-325.
 - ADR-0017 requires an acknowledged server response before a journal save is
   successful. PWA queues, IndexedDB journal ownership, and synchronization
-  claims are historical runtime residue scheduled for OVE-321 through OVE-323,
-  not current product authority.
+  claims are historical runtime residue scheduled for OVE-322 and OVE-323;
+  OVE-325 owns the caller cutover and honest online failure UI. None of those
+  paths is current product authority.
 - Browser-side EXIF handling is only an optimization. Originals enter private
   R2 quarantine; the server re-encodes/resizes/strips them, publishes only the
   derivative, and deletes the original after successful processing.

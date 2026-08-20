@@ -26,7 +26,7 @@ export interface ErasureCoverageEntry {
   executionOwned: boolean;
 }
 
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove237.erasure-schema.v3";
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove321.erasure-schema.v4";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Auth / Better Auth
@@ -424,6 +424,17 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     kind: "soft_column",
     disposition: "anonymize",
     rationale: "Rekeyed; content wiped; public slugs become 410 tombstones.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "journal_entry_drafts.owner_user_id",
+    table: "journal_entry_drafts",
+    columnOrPath: "owner_user_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale:
+      "Private server drafts are deleted by the owner user ON DELETE CASCADE before account removal completes.",
     dryRunOwned: true,
     executionOwned: true,
   },
