@@ -1,8 +1,9 @@
 # Online-only journal save protocol
 
 Status: server draft protocol implemented by OVE-321 and activated across all
-four composer journeys by OVE-325. Legacy local-data migration and final
-runtime retirement remain owned by OVE-322 and OVE-323.
+four composer journeys by OVE-325. OVE-322 adds the temporary returning-device
+retirement bridge documented in `docs/LEGACY_DEVICE_DATA_RETIREMENT.md`;
+OVE-323 owns its removal together with the remaining offline/PWA runtime.
 
 ADR-0017 is the connectivity authority. A journal change is durable only after
 the server returns an authoritative receipt. Browser memory may keep the text
@@ -111,7 +112,16 @@ The authenticated workspace lists owner-scoped server drafts and resumes their
 exact route contexts. The four composer callers, workspace panel, cover
 controls, and photo selectors create no durable browser journal state. The only
 production module allowed to import the historical offline runtime is the
-read-only OVE-322 retirement bridge.
+read-only OVE-322 retirement bridge. New documents do not register the legacy
+service worker.
+
+Current final journal publication and both media mutation routes send the
+positive `x-overgarden-online-journal-protocol` marker. An authenticated
+request without the exact current value is rejected with private/no-store
+`409 legacy_client_retired` before private payload parsing or any effect. The
+journal route redundantly rejects the retired `offline_synced` replay state even
+when the marker is present. This cutoff is a compatibility refusal, not an
+offline sync path.
 
 ## Payload budget
 
@@ -134,6 +144,10 @@ table and route until affected composer traffic has stopped; dropping the table
 or bulk-deleting drafts requires separate maintainer sign-off.
 
 No closeout may claim that legacy browser data was remotely removed. Devices
-that never reconnect cannot be inspected or cleaned by the server. OVE-322 owns
-the bounded, read-only legacy bridge and explicit per-copy decisions; OVE-323
-owns final runtime/package/service-worker retirement after those proofs.
+that never reconnect cannot be inspected or cleaned by the server. OVE-322's
+temporary bridge transfers and verifies exact current-owner records, retains
+another-owner or uncertain state, and requires two physical absence reads
+before exact-device completion. The localized non-blocking transfer banner
+exists only from the OVE-322 deployment through the OVE-323 production
+deployment. OVE-323 owns final bridge/runtime/package/service-worker retirement
+after those proofs.

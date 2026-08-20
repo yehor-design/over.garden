@@ -35,7 +35,9 @@ export type OwnerVaultControlState =
   | "active"
   | "cleanup_deferred"
   | "erasure_unconfirmed"
-  | "erased_confirmed";
+  | "erased_confirmed"
+  | "retirement_resolved"
+  | "foreign_or_orphan_retained";
 
 export interface OwnerVaultControlRecord {
   binding: string;

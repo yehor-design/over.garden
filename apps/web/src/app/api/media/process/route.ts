@@ -12,6 +12,10 @@ import {
   processQuarantinedImage,
 } from "@/server/media/processor";
 import {
+  hasCurrentOnlineJournalProtocol,
+  legacyClientRetiredResponse,
+} from "@/lib/garden/entry-contracts";
+import {
   SAFE_MEDIA_PROCESSING_TIMEOUT_MS,
   SafeMediaAdmissionError,
 } from "@/server/media/safe-media-admission";
@@ -22,6 +26,7 @@ import {
   documentMutationAdmissionResponse,
   documentMutationGenerationFromRequest,
 } from "@/server/document-mutation-admission";
+import type { RequestScope } from "@/server/request-scope";
 
 export const runtime = "nodejs";
 
@@ -30,9 +35,16 @@ export async function POST(request: Request) {
     transport: documentMutationGenerationFromRequest(request),
   });
   if (admission.status === "rejected") {
-    return documentMutationAdmissionResponse(admission);
+    return privateNoStore(documentMutationAdmissionResponse(admission));
   }
   const scope = admission.scope;
+  if (!hasCurrentOnlineJournalProtocol(request)) {
+    return privateNoStore(legacyClientRetiredResponse());
+  }
+  return privateNoStore(await processMedia(request, scope));
+}
+
+async function processMedia(request: Request, scope: RequestScope) {
   const body = (await request.json()) as { mediaAssetId?: string };
 
   if (!body.mediaAssetId) {
@@ -152,6 +164,16 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+function privateNoStore(response: Response) {
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "private, no-store");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 async function withProcessingDeadline<T>(

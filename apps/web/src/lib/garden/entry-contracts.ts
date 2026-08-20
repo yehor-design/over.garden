@@ -11,6 +11,34 @@ export const JOURNAL_DRAFT_REQUEST_MAX_BYTES =
   JOURNAL_ENTRY_PAYLOAD_MAX_BYTES + JOURNAL_DRAFT_TRANSPORT_OVERHEAD_MAX_BYTES;
 export const JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION = 1 as const;
 
+/**
+ * Positive capability marker for the server-authoritative journal client.
+ * Absence means the request may originate from a pre-cutover bundle whose
+ * IndexedDB queue can no longer be replayed safely.
+ */
+export const ONLINE_JOURNAL_PROTOCOL_HEADER =
+  "x-overgarden-online-journal-protocol" as const;
+export const ONLINE_JOURNAL_PROTOCOL =
+  "ove321.server-authoritative-journal.v1" as const;
+export const LEGACY_CLIENT_RETIRED_CODE = "legacy_client_retired" as const;
+
+export function hasCurrentOnlineJournalProtocol(request: Request): boolean {
+  return (
+    request.headers.get(ONLINE_JOURNAL_PROTOCOL_HEADER) ===
+    ONLINE_JOURNAL_PROTOCOL
+  );
+}
+
+export function legacyClientRetiredResponse(): Response {
+  return Response.json(
+    { code: LEGACY_CLIENT_RETIRED_CODE },
+    {
+      status: 409,
+      headers: { "Cache-Control": "private, no-store" },
+    },
+  );
+}
+
 export type ActivationSource = "homepage" | "public_variety" | "direct_garden";
 export type ActivationSurfaceKind = "homepage" | "variety" | "garden";
 

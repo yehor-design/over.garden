@@ -189,6 +189,41 @@ describe("online journal draft owner", () => {
     });
   });
 
+  it("honors the retirement bridge's explicit thirty-second draft deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const payload = firstEntryPayload("Retirement draft");
+      const fetchImpl = vi.fn(() => new Promise<Response>(() => undefined));
+      const owner = createOnlineJournalDraftOwner({
+        draftKey: "first-entry",
+        draftKind: "first_entry",
+        context: {},
+        documentMutationGeneration: "signed-generation",
+        deadlineMs: 30_000,
+        fetchImpl,
+      });
+      const outcome = owner.save(payload, { generation: 1 }).then(
+        () => "resolved",
+        (error: unknown) =>
+          error instanceof OnlineJournalDraftError ? error.code : "unknown",
+      );
+      let observed: string | undefined;
+      void outcome.then((result) => {
+        observed = result;
+      });
+
+      await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledOnce());
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(observed).toBeUndefined();
+
+      await vi.advanceTimersToNextTimerAsync();
+      await expect(outcome).resolves.toBe("JOURNAL_DRAFT_TIMEOUT");
+      expect(fetchImpl).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("coalesces simultaneous explicit retries into one transport request", async () => {
     const payload = firstEntryPayload("Single flight retry");
     const retryResponse = deferred<Response>();
@@ -302,7 +337,7 @@ describe("online journal draft owner", () => {
       );
 
     owner.abort();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await save;
 
     expect(outcome).toBe("rejected");
     expect(owner.getSnapshot()).toEqual({
@@ -311,7 +346,7 @@ describe("online journal draft owner", () => {
       error: null,
     });
     late.resolve(Response.json({ code: "late" }));
-    await save;
+    await Promise.resolve();
     expect(owner.getSnapshot()).toEqual({
       status: "idle",
       draft: null,

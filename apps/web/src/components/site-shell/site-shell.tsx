@@ -17,10 +17,14 @@ import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthenticatedUtilityRegion } from "@/components/auth/authenticated-utility-region";
 import { DocumentMutationGenerationProvider } from "@/components/auth/document-mutation-recovery";
 import { ForegroundAutosyncProvider } from "@/components/auth/foreground-autosync-provider";
-import { SessionConvergenceBoundary } from "@/components/auth/session-convergence-boundary";
+import {
+  SessionConvergenceBoundary,
+  useAuthenticatedSessionIdentity,
+} from "@/components/auth/session-convergence-boundary";
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { SignOutProvider } from "@/components/auth/sign-out-provider";
 import { InterfaceLanguageControl } from "@/components/public/language-switcher";
+import { LegacyDeviceRetirementBanner } from "@/components/retirement/legacy-device-retirement-banner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -185,6 +189,12 @@ export function SiteShell({
               locale={locale}
               currentSessionBinding={currentSessionBinding}
             >
+              {isAuthenticatedGardenPath(pathname) ? (
+                <AuthenticatedLegacyDeviceRetirement
+                  locale={locale}
+                  documentMutationGeneration={documentMutationGeneration}
+                />
+              ) : null}
               {excludedShell}
             </SignOutProvider>
           </ForegroundAutosyncProvider>
@@ -637,6 +647,12 @@ export function SiteShell({
             locale={locale}
             currentSessionBinding={currentSessionBinding}
           >
+            {isAuthenticatedGardenPath(pathname) ? (
+              <AuthenticatedLegacyDeviceRetirement
+                locale={locale}
+                documentMutationGeneration={documentMutationGeneration}
+              />
+            ) : null}
             {shell}
           </SignOutProvider>
         </ForegroundAutosyncProvider>
@@ -689,6 +705,24 @@ export function SiteShellOperatorMenu({
 
 function isAuthenticatedGardenPath(pathname: string) {
   return pathname === "/garden" || pathname.startsWith("/garden/");
+}
+
+function AuthenticatedLegacyDeviceRetirement({
+  locale,
+  documentMutationGeneration,
+}: {
+  locale: InterfaceLocale;
+  documentMutationGeneration: string | null;
+}) {
+  const identity = useAuthenticatedSessionIdentity();
+  return (
+    <LegacyDeviceRetirementBanner
+      locale={locale}
+      ownerUserId={identity.ownerUserId}
+      sessionGeneration={identity.sessionGeneration}
+      documentMutationGeneration={documentMutationGeneration ?? undefined}
+    />
+  );
 }
 
 function GuestMutationActions({

@@ -22,6 +22,10 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
+import {
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+} from "../src/lib/garden/entry-contracts";
 import { resolveR2ForcePathStyle } from "../src/lib/r2-addressing-contract";
 
 export const OVE302_APPROVAL_DIGEST =
@@ -1443,6 +1447,7 @@ async function requestJson<T>(
       Origin: APPROVED_APP_ORIGIN,
       Cookie: jar.header(),
       "x-overgarden-document-generation": input.generation,
+      [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
     },
     body: JSON.stringify(input.body),
     redirect: "manual",

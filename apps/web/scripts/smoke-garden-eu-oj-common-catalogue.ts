@@ -13,6 +13,10 @@ import {
 import type { Database } from "../src/db/types";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import {
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+} from "../src/lib/garden/entry-contracts";
+import {
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE,
 } from "../src/lib/catalog/eu-official-journal-common-catalogue";
@@ -442,6 +446,7 @@ async function jsonRequest<T>(
     method: init.method ?? "GET",
     headers: {
       Accept: "application/json",
+      [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: baseUrl } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       Cookie: jar.header(),

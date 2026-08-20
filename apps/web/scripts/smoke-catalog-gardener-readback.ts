@@ -7,7 +7,11 @@ import type { Kysely } from "kysely";
 
 import type { Database } from "../src/db/schema";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
-import type { FirstPlantEntryResponse } from "../src/lib/garden/entry-contracts";
+import {
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+  type FirstPlantEntryResponse,
+} from "../src/lib/garden/entry-contracts";
 import type {
   searchCatalogSuggestions as searchCatalogFn,
   searchCatalogSuggestionsForTypeahead as searchTypeaheadFn,
@@ -616,6 +620,7 @@ async function jsonRequest<T>(
     method: init.method ?? "GET",
     headers: {
       Accept: "application/json",
+      [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: baseUrl } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       Cookie: jar.header(),

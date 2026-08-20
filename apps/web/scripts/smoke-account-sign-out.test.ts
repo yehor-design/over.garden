@@ -15,6 +15,7 @@ import {
   CURRENT_SESSION_BINDING_HEADER,
   LOCAL_EXIT_RECONCILIATION_PATH,
   PROTECTED_MUTATION_PATH,
+  PROTECTED_OPERATOR_PATH,
   resolveDeploymentEvidence,
   SESSION_CONFIRMATION_PATH,
   SIGN_OUT_PATH,
@@ -106,13 +107,12 @@ describe("OVE-204 account sign-out smoke", () => {
     );
     expect(SESSION_CONFIRMATION_PATH).toContain("disableCookieCache=true");
     expect(PROTECTED_MUTATION_PATH).toBe("/api/garden/entries");
+    expect(PROTECTED_OPERATOR_PATH).toBe("/garden/privacy/erasure-requests");
     expect(CURRENT_SESSION_BINDING_HEADER).toBe(
       "x-overgarden-current-session-binding",
     );
     expect(source).toContain("fetch(`${baseUrl}${SIGN_OUT_PATH}`");
-    expect(source).toContain(
-      "`${baseUrl}${LOCAL_EXIT_RECONCILIATION_PATH}`",
-    );
+    expect(source).toContain("`${baseUrl}${LOCAL_EXIT_RECONCILIATION_PATH}`");
     expect(source).toMatch(
       /fetch\(`\$\{baseUrl\}\$\{SIGN_OUT_PATH\}`,[\s\S]*?method: "POST"/,
     );

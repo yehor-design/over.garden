@@ -882,6 +882,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/%5F%5Fvisual-fixtures/intent/[scenarioId]/route.ts",
         "src/app/%5F%5Fvisual-fixtures/account-sign-out/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/foreground-autosync/page.tsx",
+        "src/app/%5F%5Fvisual-fixtures/legacy-device-retirement/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/lexical-journal/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/owner-vault/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/page.tsx",
@@ -1324,6 +1325,17 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
       "internal-fixture",
       INTERNAL_FIXTURE_RATIONALE,
       [["metadata-title", "Synthetic fixture"]],
+    ),
+    ...allowExactLiterals(
+      "src/app/%5F%5Fvisual-fixtures/legacy-device-retirement/legacy-device-retirement-visual-fixture.tsx",
+      "internal-fixture",
+      INTERNAL_FIXTURE_RATIONALE,
+      [
+        ["jsx-text", "Synthetic retirement fixture could not start."],
+        ["jsx-text", "Preparing synthetic retirement storage…"],
+        ["jsx-text", "Synthetic returning-device workspace"],
+        ["jsx-text", "Independent workspace action"],
+      ],
     ),
     ...allowExactLiterals(
       "src/app/%5F%5Fvisual-fixtures/lexical-journal/page.tsx",

@@ -9,7 +9,11 @@ import type {
   FirstPlantEntryRequest,
   FirstPlantEntryResponse,
 } from "@/lib/garden/entry-contracts";
-import { JOURNAL_ENTRY_PAYLOAD_MAX_BYTES } from "@/lib/garden/entry-contracts";
+import {
+  hasCurrentOnlineJournalProtocol,
+  JOURNAL_ENTRY_PAYLOAD_MAX_BYTES,
+  legacyClientRetiredResponse,
+} from "@/lib/garden/entry-contracts";
 import { buildSaveProgressReadbackUrl } from "@/lib/garden/save-progress-moment";
 import { INTERFACE_LOCALE_REQUEST_HEADER } from "@/lib/interface-localization";
 import { preciseLocationRejectionMessage } from "@/lib/privacy/precise-location-copy";
@@ -41,19 +45,71 @@ import {
   createFirstPlantEntry,
   createPlantObjectJournalEntry,
   createSpaceJournalEntry,
+  findJournalEntryReceiptByClientMutationId,
 } from "@/server/journal-repository";
+import {
+  AuthenticationRequiredError,
+  requireCurrentRequestScope,
+} from "@/server/auth-session";
 
 export const runtime = "nodejs";
+
+export async function GET(request: Request) {
+  return privateNoStore(await getEntryReceipt(request));
+}
+
+async function getEntryReceipt(request: Request) {
+  try {
+    const scope = await requireCurrentRequestScope();
+    const clientMutationId = new URL(request.url).searchParams
+      .get("clientMutationId")
+      ?.trim();
+    if (!clientMutationId || clientMutationId.length > 200) {
+      return Response.json(
+        { code: "journal_entry_receipt_invalid" },
+        { status: 400, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+    const entry = await findJournalEntryReceiptByClientMutationId(
+      scope,
+      clientMutationId,
+    );
+    return Response.json(
+      entry ? { entry } : { code: "journal_entry_receipt_not_found" },
+      {
+        status: entry ? 200 : 404,
+        headers: { "Cache-Control": "private, no-store" },
+      },
+    );
+  } catch (error) {
+    if (error instanceof AuthenticationRequiredError) {
+      return Response.json(
+        { code: "AUTHENTICATION_REQUIRED" },
+        { status: 401, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+    return Response.json(
+      { code: "journal_entry_receipt_unavailable" },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+}
 
 export async function POST(request: Request) {
   const admission = await admitDocumentMutation({
     transport: documentMutationGenerationFromRequest(request),
   });
   if (admission.status === "rejected") {
-    return documentMutationAdmissionResponse(admission);
+    return privateNoStore(documentMutationAdmissionResponse(admission));
   }
   const scope: RequestScope = admission.scope;
+  if (!hasCurrentOnlineJournalProtocol(request)) {
+    return privateNoStore(legacyClientRetiredResponse());
+  }
+  return privateNoStore(await createEntry(request, scope));
+}
 
+async function createEntry(request: Request, scope: RequestScope) {
   let body: Partial<FirstPlantEntryRequest> | null;
   try {
     body = (await readBoundedJsonRequest(
@@ -75,6 +131,13 @@ export async function POST(request: Request) {
       { error: "Entry payload is required." },
       { status: 400 },
     );
+  }
+
+  // The positive protocol marker is the primary cutoff. Keep the legacy
+  // offline replay state closed as a redundant safety boundary even if a
+  // retired client copies the current marker.
+  if (body.syncStatus === "offline_synced") {
+    return legacyClientRetiredResponse();
   }
 
   try {
@@ -259,6 +322,16 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+}
+
+function privateNoStore(response: Response) {
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "private, no-store");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 function normalizeResponseDate(value: Date | string) {

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { flushSync } from "react-dom";
 
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
@@ -76,6 +83,24 @@ type SessionRecheckFence = {
   ready: Promise<void>;
 };
 
+export interface AuthenticatedSessionIdentity {
+  ownerUserId: string;
+  sessionGeneration: string;
+}
+
+const AuthenticatedSessionIdentityContext =
+  createContext<AuthenticatedSessionIdentity | null>(null);
+
+export function useAuthenticatedSessionIdentity(): AuthenticatedSessionIdentity {
+  const identity = useContext(AuthenticatedSessionIdentityContext);
+  if (!identity) {
+    throw new Error(
+      "Authenticated session identity is available only inside the ready session gate.",
+    );
+  }
+  return identity;
+}
+
 function isVisualFixtureBrowserRequest(): boolean {
   if (typeof window === "undefined") return false;
   if (
@@ -116,6 +141,8 @@ export function SessionConvergenceBoundary({
     "checking" | "ready" | "blocked"
   >("checking");
   const [localExitCommitted, setLocalExitCommitted] = useState(false);
+  const [authenticatedIdentity, setAuthenticatedIdentity] =
+    useState<AuthenticatedSessionIdentity | null>(null);
   const [remotePreparationPending, setRemotePreparationPending] =
     useState(false);
   const [fallbackExitState, setFallbackExitState] = useState<
@@ -190,13 +217,27 @@ export function SessionConvergenceBoundary({
       bootstrapInvalidationMarker.status === "present" ||
       bootstrapInvalidationMarker.status === "unknown";
     let bootstrapMarkerReleased = false;
+    let baselinePreparedSession:
+      | PreparedCurrentSessionSignOut
+      | null
+      | undefined;
+    let baselineOwnerUserId: string | null = null;
     const setDocumentGate = (gate: "checking" | "ready" | "blocked") => {
       if (gate === "ready" && terminalInvalidationObserved) {
         authenticatedTreeAdmitted = false;
+        setAuthenticatedIdentity(null);
         setActivityGate("blocked");
         return;
       }
       authenticatedTreeAdmitted = gate === "ready";
+      setAuthenticatedIdentity(
+        gate === "ready" && baselinePreparedSession && baselineOwnerUserId
+          ? {
+              ownerUserId: baselineOwnerUserId,
+              sessionGeneration: baselinePreparedSession.binding,
+            }
+          : null,
+      );
       setActivityGate(gate);
     };
     const releaseBootstrapInvalidationMarker = () => {
@@ -254,11 +295,6 @@ export function SessionConvergenceBoundary({
       // cannot be registered or enumerated.
     }
 
-    let baselinePreparedSession:
-      | PreparedCurrentSessionSignOut
-      | null
-      | undefined;
-    let baselineOwnerUserId: string | null = null;
     let terminalOwnerSyncAborted = false;
     const abortTerminalOwnerSync = () => {
       if (terminalOwnerSyncAborted || !baselineOwnerUserId) return;
@@ -1580,13 +1616,17 @@ export function SessionConvergenceBoundary({
     return <LocalExitPublicSafeSurface locale={locale} />;
   }
 
-  if (activityGate !== "ready") {
+  const renderedActivityGate =
+    activityGate === "ready" && !authenticatedIdentity
+      ? "checking"
+      : activityGate;
+  if (renderedActivityGate !== "ready") {
     const trustCopy = getTrustSurfaceCopy(locale);
     const copy = trustCopy.signOut;
     return (
       <div
-        data-session-convergence-gate={activityGate}
-        aria-busy={activityGate === "checking"}
+        data-session-convergence-gate={renderedActivityGate}
+        aria-busy={renderedActivityGate === "checking"}
         className="mx-auto grid min-h-40 w-full max-w-xl content-center gap-3 px-4 py-8 text-center"
       >
         {localeControlFallback ? (
@@ -1597,7 +1637,7 @@ export function SessionConvergenceBoundary({
             {localeControlFallback}
           </div>
         ) : null}
-        {activityGate === "checking" ? (
+        {renderedActivityGate === "checking" ? (
           <>
             <p role="status" className="text-sm text-muted-foreground">
               {copy.checking}
@@ -1660,7 +1700,11 @@ export function SessionConvergenceBoundary({
       </div>
     );
   }
-  return children;
+  return (
+    <AuthenticatedSessionIdentityContext.Provider value={authenticatedIdentity}>
+      {children}
+    </AuthenticatedSessionIdentityContext.Provider>
+  );
 }
 
 function SessionConvergenceSafeExits({

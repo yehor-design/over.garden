@@ -11,9 +11,10 @@ Current stack in this package:
   media; the current presigned quarantine path remains transitional runtime
   until OVE-333 and OVE-334 land.
 - `sharp` for WebP format conversion.
-- Network-required journal writes under ADR-0017. Existing Dexie/PWA runtime is
-  a temporary, explicitly owned retirement surface and must accept no new
-  durable browser journal writes after the child cutover.
+- Network-required journal writes under ADR-0017. OVE-322 supplies a temporary
+  read-only returning-device bridge with verified targeted cleanup; it accepts
+  no new durable browser journal writes, and OVE-323 removes it together with
+  the remaining Dexie/PWA runtime.
 - Meilisearch client for derived public search.
 
 ADR-0018 is the current MVP posture: unresolved authorization/ownership/session

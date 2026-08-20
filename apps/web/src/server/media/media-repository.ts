@@ -49,6 +49,18 @@ export async function createQuarantinedMediaAsset(
     .executeTakeFirstOrThrow();
 }
 
+export async function findMediaAssetByUploadGeneration(
+  scope: RequestScope,
+  uploadGenerationId: string,
+): Promise<MediaAsset | undefined> {
+  return db
+    .selectFrom("media_assets")
+    .selectAll()
+    .where("owner_user_id", "=", scope.userId)
+    .where("upload_generation_id", "=", uploadGenerationId)
+    .executeTakeFirst();
+}
+
 export interface MediaProcessingClaim {
   asset: MediaAsset;
   claimToken: string;

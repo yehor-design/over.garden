@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+} from "@/lib/garden/entry-contracts";
+
 const authMock = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
 }));
@@ -95,7 +100,7 @@ describe("media process API", () => {
       transportResult: "AUTHENTICATION_REQUIRED",
       statusCode: 401,
     });
-    const request = new Request("http://localhost/api/media/process", {
+    const request = onlineRequest("http://localhost/api/media/process", {
       method: "POST",
       headers: {
         "x-overgarden-auth-return":
@@ -132,6 +137,24 @@ describe("media process API", () => {
     expect(mediaRepositoryMock.findMediaAssetForOwner).not.toHaveBeenCalled();
   });
 
+  it("refuses an authenticated legacy client before reading its media id", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/media/process", {
+        method: "POST",
+        body: JSON.stringify({
+          mediaAssetId: "private-legacy-media-id",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      code: "legacy_client_retired",
+    });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(mediaRepositoryMock.findMediaAssetForOwner).not.toHaveBeenCalled();
+  });
+
   it("maps a protocol refresh before any media effect", async () => {
     admissionMock.admitDocumentMutation.mockResolvedValueOnce({
       status: "rejected",
@@ -141,7 +164,7 @@ describe("media process API", () => {
     });
 
     const response = await POST(
-      new Request("http://localhost/api/media/process", {
+      onlineRequest("http://localhost/api/media/process", {
         method: "POST",
         body: JSON.stringify({ mediaAssetId: "media-1" }),
       }),
@@ -200,7 +223,7 @@ describe("media process API", () => {
     );
 
     const response = await POST(
-      new Request("http://localhost/api/media/process", {
+      onlineRequest("http://localhost/api/media/process", {
         method: "POST",
         body: JSON.stringify({ mediaAssetId: asset.id }),
       }),
@@ -219,7 +242,7 @@ describe("media process API", () => {
     mediaRepositoryMock.findMediaAssetForOwner.mockResolvedValue(undefined);
 
     const response = await POST(
-      new Request("http://localhost/api/media/process", {
+      onlineRequest("http://localhost/api/media/process", {
         method: "POST",
         body: JSON.stringify({ mediaAssetId: "opaque-unavailable-id" }),
       }),
@@ -255,7 +278,7 @@ describe("media process API", () => {
     });
 
     const response = await POST(
-      new Request("http://localhost/api/media/process", {
+      onlineRequest("http://localhost/api/media/process", {
         method: "POST",
         body: JSON.stringify({ mediaAssetId: asset.id }),
       }),
@@ -303,7 +326,7 @@ describe("media process API", () => {
     });
 
     const response = await POST(
-      new Request("http://localhost/api/media/process", {
+      onlineRequest("http://localhost/api/media/process", {
         method: "POST",
         body: JSON.stringify({ mediaAssetId: asset.id }),
       }),
@@ -344,7 +367,7 @@ describe("media process API", () => {
     );
 
     const response = await POST(
-      new Request("http://localhost/api/media/process", {
+      onlineRequest("http://localhost/api/media/process", {
         method: "POST",
         body: JSON.stringify({ mediaAssetId: asset.id }),
       }),
@@ -375,7 +398,7 @@ describe("media process API", () => {
     mediaRepositoryMock.findMediaAssetForOwner.mockResolvedValue(asset);
 
     const response = await POST(
-      new Request("http://localhost/api/media/process", {
+      onlineRequest("http://localhost/api/media/process", {
         method: "POST",
         body: JSON.stringify({ mediaAssetId: asset.id }),
       }),
@@ -416,7 +439,7 @@ describe("media process API", () => {
     );
 
     const response = await POST(
-      new Request("http://localhost/api/media/process", {
+      onlineRequest("http://localhost/api/media/process", {
         method: "POST",
         body: JSON.stringify({ mediaAssetId: asset.id }),
       }),
@@ -436,3 +459,9 @@ describe("media process API", () => {
     ).not.toHaveBeenCalled();
   });
 });
+
+function onlineRequest(input: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set(ONLINE_JOURNAL_PROTOCOL_HEADER, ONLINE_JOURNAL_PROTOCOL);
+  return new Request(input, { ...init, headers });
+}

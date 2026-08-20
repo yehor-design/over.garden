@@ -66,7 +66,9 @@ ADR-0017 forbids new durable browser journal writes. OVE-322 owns the only
 successor: an exact-owner, read-only retirement bridge for legacy device state.
 The bridge may migrate or delete verified residue on the returning physical
 target, but it cannot accept a new local write or turn an unreachable device
-into an erasure-success claim.
+into an erasure-success claim. Its exact transfer, discard, foreign-owner
+retention, and two-read absence rules live in
+`docs/LEGACY_DEVICE_DATA_RETIREMENT.md`.
 
 Server-side account erasure cannot reach IndexedDB on an absent or different
 browser and therefore must not claim that browser-local work was deleted.
@@ -83,6 +85,14 @@ removes exact-owner legacy rows (including synced/privacy-blocked residue), and
 shows confirmation only after an independent target-nonexistence check and
 zero-row legacy read-back. Ordinary sign-out, account switching, and submission
 of the non-destructive server erasure request delete no browser vault.
+
+Implementation status (2026-08-21): OVE-322 mounts a non-blocking retirement
+banner only after exact authenticated session convergence, keeps safe sign-out
+available, and performs no browser deletion before authoritative server
+verification. The explicit `/erasure` current-device action remains a separate
+exact-device cleanup control during this temporary window. Neither surface may
+clear cookies, session state, unrelated origin storage, another-owner records,
+or an unreachable browser.
 
 ## Verification
 

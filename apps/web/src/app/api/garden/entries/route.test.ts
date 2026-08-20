@@ -1,13 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { JOURNAL_ENTRY_PAYLOAD_MAX_BYTES } from "@/lib/garden/entry-contracts";
+import {
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+} from "@/lib/garden/entry-contracts";
 
 const mocks = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
+  requireCurrentRequestScope: vi.fn(),
   revalidatePath: vi.fn(),
   scheduleLearningAttributionDrain: vi.fn(),
   createFirstPlantEntry: vi.fn(),
   createPlantObjectJournalEntry: vi.fn(),
+  findJournalEntryReceiptByClientMutationId: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),
   recordEntryLoggedEventSafely: vi.fn(),
   isBackdatedEntryDate: vi.fn(),
@@ -17,6 +23,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/server/auth-session", () => ({
   AuthenticationRequiredError: mocks.AuthenticationRequiredError,
+  requireCurrentRequestScope: mocks.requireCurrentRequestScope,
 }));
 
 vi.mock("next/cache", () => ({
@@ -30,6 +37,8 @@ vi.mock("@/server/mvp-learning/attribution-after-response", () => ({
 vi.mock("@/server/journal-repository", () => ({
   createFirstPlantEntry: mocks.createFirstPlantEntry,
   createPlantObjectJournalEntry: mocks.createPlantObjectJournalEntry,
+  findJournalEntryReceiptByClientMutationId:
+    mocks.findJournalEntryReceiptByClientMutationId,
 }));
 
 vi.mock("@/server/analytics-events", () => ({
@@ -74,6 +83,10 @@ describe("POST /api/garden/entries save progress readback", () => {
         userId: "00000000-0000-4000-8000-000000000001",
         sessionId: "session-1",
       },
+    });
+    mocks.requireCurrentRequestScope.mockResolvedValue({
+      userId: "00000000-0000-4000-8000-000000000001",
+      sessionId: "session-1",
     });
   });
 
@@ -149,12 +162,61 @@ describe("POST /api/garden/entries save progress readback", () => {
     });
   });
 
+  it("refuses an authenticated legacy client before reading its private payload", async () => {
+    const { POST } = await import("./route");
+    const response = await POST(
+      jsonRequest(
+        {
+          target: "first_plant_entry",
+          title: "Private legacy title",
+          body: "Private legacy body",
+          clientMutationId: "legacy-online-marked-row",
+          syncStatus: "online",
+        },
+        {},
+        false,
+      ),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      code: "legacy_client_retired",
+    });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
+    expect(mocks.createPlantObjectJournalEntry).not.toHaveBeenCalled();
+  });
+
+  it("redundantly refuses offline-synced replay even with the current protocol marker", async () => {
+    const { POST } = await import("./route");
+    const response = await POST(
+      jsonRequest({
+        target: "first_plant_entry",
+        title: "Retired replay",
+        body: "Must not create a server effect.",
+        clientMutationId: "legacy-offline-synced-row",
+        syncStatus: "offline_synced",
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      code: "legacy_client_retired",
+    });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
+    expect(mocks.createPlantObjectJournalEntry).not.toHaveBeenCalled();
+  });
+
   it("enforces the shared publication payload budget before repository access", async () => {
     const { POST } = await import("./route");
     const response = await POST(
       new Request("http://local.test/api/garden/entries", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
+        },
         body: JSON.stringify({
           target: "first_plant_entry",
           title: "x".repeat(JOURNAL_ENTRY_PAYLOAD_MAX_BYTES),
@@ -265,12 +327,56 @@ describe("POST /api/garden/entries save progress readback", () => {
     const deferred = mocks.scheduleLearningAttributionDrain.mock.calls[0]?.[0];
     expect(deferred).toEqual(expect.any(Function));
   });
+
+  it("returns a payload-free owner-scoped receipt for retirement verification", async () => {
+    mocks.findJournalEntryReceiptByClientMutationId.mockResolvedValue({
+      id: "entry-receipt-1",
+      clientMutationId: "legacy-mutation-1",
+    });
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request(
+        "http://local.test/api/garden/entries?clientMutationId=legacy-mutation-1",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    const receipt = await response.json();
+    expect(receipt).toEqual({
+      entry: {
+        id: "entry-receipt-1",
+        clientMutationId: "legacy-mutation-1",
+      },
+    });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(
+      mocks.findJournalEntryReceiptByClientMutationId,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "00000000-0000-4000-8000-000000000001",
+      }),
+      "legacy-mutation-1",
+    );
+    expect(JSON.stringify(receipt).toLowerCase()).not.toMatch(
+      /title|body|content|email|location|media/,
+    );
+  });
 });
 
-function jsonRequest(body: unknown, headers: Record<string, string> = {}) {
+function jsonRequest(
+  body: unknown,
+  headers: Record<string, string> = {},
+  includeOnlineProtocol = true,
+) {
   return new Request("http://local.test/api/garden/entries", {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...(includeOnlineProtocol
+        ? { [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL }
+        : {}),
+      ...headers,
+    },
     body: JSON.stringify(body),
   });
 }

@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -60,9 +61,18 @@ vi.mock("@/components/site-shell/site-shell", () => ({
 
 vi.mock("./google-analytics", () => ({ GoogleAnalytics: () => null }));
 vi.mock("./meta-marketing", () => ({ MetaMarketingAttribution: () => null }));
-vi.mock("./sw-register", () => ({ ServiceWorkerRegister: () => null }));
 
 describe("root document locale", () => {
+  it("does not register the retired service worker for new documents", async () => {
+    const source = await readFile(
+      new URL("./layout.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).not.toContain("ServiceWorkerRegister");
+    expect(source).not.toContain('from "./sw-register"');
+  });
+
   it("exposes the real global-error boundary only through the internal visual-fixture header", async () => {
     mocks.requestHeaders.mockResolvedValue(
       new Headers({ "x-overgarden-internal-visual-global-error": "1" }),
