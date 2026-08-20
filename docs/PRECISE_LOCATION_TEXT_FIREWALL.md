@@ -5,6 +5,16 @@ Owner issue: [OVE-234](https://linear.app/overgarden/issue/OVE-234/p0-precise-lo
 Policy version: `ove234.precise-location.v1`
 Authority: `AGENTS.md` hard rule 1
 
+## ADR-0018 successor posture
+
+ADR-0018 supersedes refusal-first language when authorization, ownership, or
+session state is unresolved: the request serves, with the accepted
+cross-account-read exposure, and OVE-332 owns that runtime transition. A
+positively detected precise coordinate is still outside the product data model;
+this successor does not authorize collecting or publishing precise location.
+The refusal descriptions below are the current transitional implementation and
+historical OVE-234 proof, not vocabulary that a new issue must reproduce.
+
 ## Why This Exists
 
 OverGarden serves Ukrainian gardeners under wartime risk. A precise coordinate
@@ -20,14 +30,14 @@ at every boundary.
 
 ## Authority
 
-| Concern                    | Module                                                        |
-| -------------------------- | ------------------------------------------------------------- |
-| Detection policy (TS)      | `apps/web/src/lib/privacy/precise-location-text.ts`           |
-| Structured journal walk    | `apps/web/src/lib/privacy/precise-location-journal-document.ts` |
-| Localized refusal copy     | `apps/web/src/lib/privacy/precise-location-copy.ts`           |
-| Detection policy (Python)  | `services/matching/app/precise_location.py`                   |
-| Shared corpus contract     | `contracts/privacy/precise-location-text-corpus.json`         |
-| Read-only inventory        | `apps/web/src/server/privacy/precise-location-inventory.ts`   |
+| Concern                   | Module                                                          |
+| ------------------------- | --------------------------------------------------------------- |
+| Detection policy (TS)     | `apps/web/src/lib/privacy/precise-location-text.ts`             |
+| Structured journal walk   | `apps/web/src/lib/privacy/precise-location-journal-document.ts` |
+| Localized refusal copy    | `apps/web/src/lib/privacy/precise-location-copy.ts`             |
+| Detection policy (Python) | `services/matching/app/precise_location.py`                     |
+| Shared corpus contract    | `contracts/privacy/precise-location-text-corpus.json`           |
+| Read-only inventory       | `apps/web/src/server/privacy/precise-location-inventory.ts`     |
 
 Both detectors are pinned to the same corpus. Changing detection means changing
 the corpus and re-running both suites; the policy version string must move with
@@ -35,19 +45,19 @@ any behavior change.
 
 ## What Counts As Precise Location
 
-| Kind                      | Example shape                       |
-| ------------------------- | ----------------------------------- |
-| `decimal_pair`            | `50.45010,30.52340`, `50,45010 30,52340` |
-| `labeled_decimal`         | `широта 50.4501`, `lat: 50.4501`    |
+| Kind                      | Example shape                                 |
+| ------------------------- | --------------------------------------------- |
+| `decimal_pair`            | `50.45010,30.52340`, `50,45010 30,52340`      |
+| `labeled_decimal`         | `широта 50.4501`, `lat: 50.4501`              |
 | `hemisphere_decimal`      | `50.4501N, 30.5234E`, `50.4501 Пн 30.5234 Сх` |
-| `degrees_minutes_seconds` | `50°27'0.4" N 30°31'24.2" E`        |
-| `geo_uri`                 | `geo:50.45010,30.52340`             |
-| `map_url_coordinates`     | a map link carrying a coordinate pair |
-| `plus_code`               | a full Open Location Code           |
+| `degrees_minutes_seconds` | `50°27'0.4" N 30°31'24.2" E`                  |
+| `geo_uri`                 | `geo:50.45010,30.52340`                       |
+| `map_url_coordinates`     | a map link carrying a coordinate pair         |
+| `plus_code`               | a full Open Location Code                     |
 
 Input is Unicode-normalized first: full-width digits, bidi and default-ignorable
 controls, minus/degree/prime/comma/full-stop homoglyphs all fold onto the ASCII
-forms before matching. Glyph folding runs before *and* after NFKC, because NFKC
+forms before matching. Glyph folding runs before _and_ after NFKC, because NFKC
 itself rewrites `º` to `o` and `″` to `''`.
 
 ### Precision thresholds
@@ -57,7 +67,7 @@ An unlabeled decimal pair needs **three** fractional digits on both numbers
 already declares intent. This is the deliberate trade-off that keeps prices,
 dimensions, quantities, and ratios writable.
 
-### What is deliberately *not* blocked
+### What is deliberately _not_ blocked
 
 Keyword-only detection is not a strategy here. Writing "не публікуйте
 координати своєї ділянки" is fine — a label only lowers the numeric threshold.
@@ -86,7 +96,8 @@ Write and query boundaries (refuse before any DB, outbox, queue, or log write):
   rather than thrown, so a crafted GET link cannot become an error page that
   routes the value through logs
 
-Read and projection boundaries (fail closed on legacy rows):
+Transitional read and projection behavior on legacy rows (the refusal-first
+wording is superseded for future contracts by ADR-0018):
 
 - Meilisearch public journal projection — `services/matching/app/search.py` and
   the TS contract fixture in `server/search/documents.ts` drop the document

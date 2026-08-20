@@ -1,6 +1,6 @@
 # AGENTS.md — OverGarden
 
-Operating guide for AI agents and humans working in this repo. Read this before any change. Current stack authority is `docs/TECH_STACK_DECISIONS.md` plus ADR-0014, as superseded for connectivity and browser-local journal persistence by ADR-0017. `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md` is the binding construction and Definition-of-Ready contract for every new or materially rewritten Linear work item. Live non-secret infrastructure values and provider links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Product-thinking research lives in `docs/product-research/`. Older ADR clauses are historical when a later accepted ADR explicitly supersedes them.
+Operating guide for AI agents and humans working in this repo. Read this before any change. Current stack authority is `docs/TECH_STACK_DECISIONS.md` plus ADR-0014, as superseded for connectivity and browser-local journal persistence by ADR-0017 and for the MVP refusal, media, indexability, and operator-surface posture by ADR-0018. `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md` is the binding construction and Definition-of-Ready contract for every new or materially rewritten Linear work item. Live non-secret infrastructure values and provider links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Product-thinking research lives in `docs/product-research/`. Older ADR clauses are historical when a later accepted ADR explicitly supersedes them.
 
 ## Project
 
@@ -11,7 +11,11 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 The current MVP scope reconciliation is `docs/MVP_SCOPE_RECHECK_2026-07-03.md`. It supersedes the 2026-07-01 OVE-96 decision that deferred lineage/social graph. SEO/AEO, localization, full M:N journaling, composer friction work, self-serve auth, and lineage/social graph are MVP scope as vertical SDD slices. Monetization is post-MVP. Apple Sign-In is not MVP after the 2026-07-04 founder decision; revisit it only after MVP if native App Store distribution or a fresh sign-in access requirement makes it necessary.
 Object kinds are exactly `{plant, animal}`; a hive is an animal with a bee-breed catalog identity; see `docs/OBJECT_CATEGORY_MODEL_2026-07-23.md`.
 
-Public SEO/AEO indexability policy lives in `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md` and `apps/web/src/server/public-surface-indexing-policy.ts`. Sitemap entries, route robots metadata, and structured data must use that server policy instead of duplicating thinness or public-surface rules.
+ADR-0018 is the current MVP-posture authority. Public SEO/AEO indexability
+policy lives in `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md` and
+`apps/web/src/server/public-surface-indexing-policy.ts`; public candidates use
+the declared `PUBLIC_SURFACE_INDEXABILITY_THRESHOLD` rather than per-kind
+blanket exclusion. The runtime predicate remains transitional until OVE-335.
 
 Current Stable Registry authority: ADR-0016 and `docs/STABLE_REGISTRY.md`.
 EPPO full-corpus inputs are OverGarden-owned observed captures, never official
@@ -31,7 +35,9 @@ acquisition gate.
   and public/owner read routes must not load the authoring runtime.
 - DigitalOcean Managed Postgres for production data; Apple Container-first local Postgres on supported Macs, with Docker only as fallback.
 - Kysely as the typed SQL builder. SQL migrations are schema source of truth. No ORM.
-- Cloudflare R2 for media: private quarantine bucket -> worker-created public derivative.
+- Cloudflare R2 for media. ADR-0018 targets format-conversion-only WebP delivery;
+  the current quarantine topology is transitional runtime owned by OVE-333 and
+  OVE-334, not a new-contract requirement.
 - Meilisearch as a derived public search/typeahead index.
 - Python worker for RapidFuzz/Splink/PyICU/CyrTranslit matching, dedup, and reindex work.
 - Plain Postgres `job_queue` table for TS -> Python background work. No Redis, no pgmq, no Python-only queue framework.
@@ -52,14 +58,14 @@ acquisition gate.
 ## Hard Rules
 
 1. User/product precise location remains locked in v0. Free-text coordinates are governed by `docs/PRECISE_LOCATION_TEXT_FIREWALL.md` (OVE-234): the authoritative detector is `apps/web/src/lib/privacy/precise-location-text.ts` with its Python mirror and shared corpus; never add a local coordinate regex. Do not collect, store, send, log, index, render, or infer precise coordinates for OverGarden users, journal entries, media, analytics, public/search documents, operator evidence, or product UI; region-level or hidden only. External catalog/source ingestion may store legally reusable occurrence/distribution coordinates only in isolated raw/source snapshot tables with provenance, license, and usage flags; those fields must stay out of user data, analytics, Meilisearch/public projections, logs, and product UI unless a later explicit ADR and SDD slice promote a safe aggregate projection.
-2. Public photos must be stripped derivatives. Upload originals only to private quarantine, re-encode/resize/strip with `sharp`, publish derivative only, delete the original after successful processing.
-3. Client-side EXIF stripping is an optimization, not a safety boundary. Never trust client processing as the only privacy control.
+2. Public product media follows ADR-0018's format-conversion-only target: image input is converted to WebP. Do not add a new quarantine-first, actual-byte, standalone metadata-stripping, or original-deletion readiness promise; OVE-333 and OVE-334 own removal of the transitional runtime controls.
+3. Metadata omission may remain an encoder property, but it is not a separate MVP admission promise. Client processing is an optimization and never proof of a server effect.
 4. No browser-direct broad database access. All app data access goes through server APIs/server actions/repositories. Presigned upload URLs are narrow object-specific exceptions.
 5. Kysely is allowed and expected. Do not introduce Prisma, Drizzle, TypeORM, or another ORM without a superseding ADR.
-6. Scoped repositories are mandatory for user/private data. Types do not protect against missing `user_id`, visibility, or public/private predicates.
-7. Meilisearch indexes public rows only. Treat search indexing as a privacy boundary and test it. Every canonical write that can change a public projection must record its intent in the same transaction through `apps/web/src/server/search/public-projection-outbox.ts` (OVE-242, `docs/PUBLIC_PROJECTION_REVOCATION.md`); never add a post-commit enqueue as the durability mechanism, and never report archive, erasure, moderation or location-hide as removed before verified convergence.
+6. Scoped repositories remain the canonical data-access shape. Under ADR-0018, however, an unresolved authorization, ownership, or session condition serves the request and carries the explicitly accepted cross-account-read exposure; OVE-332 owns that runtime cutover. Do not represent the transitional denial runtime as the future contract.
+7. Meilisearch remains a derived public projection. ADR-0018 admits uncertain derived rows with an explicit quality class instead of silently dropping them; OVE-331 owns that transition. Canonical writes still record projection intent transactionally, and positively resolved erasure remains canonical state.
 8. Realtime is not a source of truth. Add live updates only after the canonical server fetch path exists.
-9. Public editorial, landing, guide, and answer SEO/AEO pages may be server-rendered and indexable at MVP launch when they contain useful first-party content. Thin, unsafe, or user-generated public pages, including UGC, variety, topic, lineage, and profile pages, must stay `noindex` and out of sitemaps until explicit quality gates promote them.
+9. A public-surface candidate becomes indexable only through ADR-0018's shared measured threshold: quality class at least `partial`, at least 120 words, at least one distinct entity, and no more than 540 days stale. Private routes and positively non-public records are not candidates. OVE-335 owns runtime convergence.
 10. No secrets in git. Use env vars/platform secret stores. `.env*` is git-ignored except `.env.example`.
 11. Do not guess external service values. Read `docs/INFRASTRUCTURE_REGISTRY.md` before touching DNS, R2, media URLs, deployment env, or external service wiring, then verify live provider state when drift would matter.
 12. Do not make product decisions from implementation convenience alone. Before shaping a feature, UI flow, public page, analytics event, onboarding step, or user-facing Linear issue, run the Product Thinking Gate in `docs/product-research/README.md`. Every `User-facing: no` issue, including remediation, operator, security, migration, decision, canon, and coordination work, must still state its protected product/trust/reliability outcome, load-bearing assumption, and falsification signal under `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`; it must choose exactly one branch: identical non-empty sets of genuinely constraining non-README research paths in both its Product Thinking rationale and Required context, or a specific task-local no-direct-research conclusion with zero research paths. A `coordination_container` names the protected integration outcome and child evidence while owning zero implementation.

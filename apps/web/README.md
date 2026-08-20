@@ -7,12 +7,20 @@ Current stack in this package:
 - shadcn/ui for UI primitives.
 - Better Auth mounted at `/api/auth/[...all]`.
 - Kysely + `pg` for typed SQL access to Postgres.
-- Cloudflare R2 presigned quarantine uploads through the S3 SDK.
-- `sharp` for server/worker image derivatives.
+- Cloudflare R2 through the S3 SDK. ADR-0018 targets format-conversion-only
+  media; the current presigned quarantine path remains transitional runtime
+  until OVE-333 and OVE-334 land.
+- `sharp` for WebP format conversion.
 - Network-required journal writes under ADR-0017. Existing Dexie/PWA runtime is
   a temporary, explicitly owned retirement surface and must accept no new
   durable browser journal writes after the child cutover.
 - Meilisearch client for derived public search.
+
+ADR-0018 is the current MVP posture: unresolved authorization/ownership/session
+conditions serve with an accepted cross-account-read exposure, public candidates
+use one measured quality threshold, and admin tools belong in the account product.
+OVE-330 through OVE-339 own the runtime and final authority convergence; this
+package description does not claim those child effects have already shipped.
 
 ## Local Development
 

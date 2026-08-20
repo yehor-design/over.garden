@@ -3,6 +3,15 @@
 Status: active contract  
 Authority: Linear OVE-192 + this document + `apps/web/src/server/erasure-schema-coverage.ts`
 
+## ADR-0018 successor posture
+
+ADR-0018 supersedes refusal-first behavior only when authorization, ownership,
+or session state is unresolved: the request serves with the accepted
+cross-account-read exposure, and OVE-332 owns that runtime cutover. Positively
+resolved erasure remains canonical. The returning-device local-state bridge
+below remains read-only under ADR-0017 and is owned by OVE-322; it must use the
+ADR-0018 posture wording when its saved contract is reconciled by OVE-341.
+
 ## Goal
 
 An approved account erasure request finishes against the **current** walking-skeleton schema without FK failure and without leaving the old user id in product, auth, community, social, catalog, analytics, queue, media, or search surfaces.

@@ -9,6 +9,16 @@ This document is the canonical owner of how a public journal projection is
 revoked or rewritten. `docs/PUBLIC_JOURNAL_INDEX_PARITY.md` remains the owner of
 how the resulting corpus is compared.
 
+## ADR-0018 successor posture
+
+ADR-0018 supersedes refusal-first handling of unresolved or stale derived state.
+OVE-331 will admit the row with an explicit quality class and serve it rather
+than silently dropping it; OVE-335 will apply the shared measured indexability
+threshold. Positively resolved canonical erasure or non-public state still owns
+the target projection state. The mechanics below describe the current
+transitional OVE-242 implementation and remain useful provenance, but they are
+not the posture new work should restate.
+
 ## The failure this closes
 
 Every declassification event used to be "commit, then enqueue":
@@ -30,17 +40,17 @@ detail.
 
 `public_projection_intents` holds exactly one row per projected entity:
 
-| Column                                   | Meaning                                                    |
-| ---------------------------------------- | ---------------------------------------------------------- |
-| `entity_kind`, `entity_id`               | Primary key. Today `journal_entry` only.                   |
-| `desired_state`                          | `present` or `absent`.                                     |
-| `desired_generation`                     | `nextval('public_projection_generation_seq')` per write.   |
-| `desired_reason`                         | Which declassification event produced this state.          |
-| `privacy_reducing`                       | Claimed first; sticky while unconverged.                   |
-| `applied_state`, `applied_generation`    | What an applier verified, and for which generation.        |
-| `status`, `attempts`, `available_at`     | `pending`/`processing`/`applied`/`failed`/`dead`.          |
-| `lease_owner`, `lease_expires_at`        | One applier at a time; an expired lease is reclaimable.    |
-| `verified_at`                            | When Meilisearch was actually read back.                   |
+| Column                                | Meaning                                                  |
+| ------------------------------------- | -------------------------------------------------------- |
+| `entity_kind`, `entity_id`            | Primary key. Today `journal_entry` only.                 |
+| `desired_state`                       | `present` or `absent`.                                   |
+| `desired_generation`                  | `nextval('public_projection_generation_seq')` per write. |
+| `desired_reason`                      | Which declassification event produced this state.        |
+| `privacy_reducing`                    | Claimed first; sticky while unconverged.                 |
+| `applied_state`, `applied_generation` | What an applier verified, and for which generation.      |
+| `status`, `attempts`, `available_at`  | `pending`/`processing`/`applied`/`failed`/`dead`.        |
+| `lease_owner`, `lease_expires_at`     | One applier at a time; an expired lease is reclaimable.  |
+| `verified_at`                         | When Meilisearch was actually read back.                 |
 
 Four invariants are enforced by the database, not by prose:
 
@@ -58,16 +68,16 @@ Four invariants are enforced by the database, not by prose:
 Every canonical write that can change a public projection records its intent in
 the same transaction:
 
-| Event                       | Owner                                                       | State                         |
-| --------------------------- | ----------------------------------------------------------- | ----------------------------- |
-| publish, skeleton publish   | `journal-repository.ts` `publishJournalEntry`, `createJournalEntry` | `present`               |
-| edit                        | `journal-repository.ts` `updateJournalEntryAggregate`        | `present`                     |
-| archive                     | `journal-repository.ts` `archiveJournalEntry`                | `absent`                      |
-| location visibility/region  | `journal-repository.ts` `updatePlantObjectLocation`          | `present` (privacy-reducing)  |
-| catalog identity            | `journal-repository.ts` `resolvePlantObjectCatalog`          | `present`                     |
-| cover/focal presentation    | `media/media-repository.ts` `updateMediaAssetFocalForOwner`  | `present`                     |
-| profile visibility          | `owner-profile-repository.ts` `updateOwnerPublicProfile`     | `present`/`absent`            |
-| erasure, moderation removal | `erasure-execution.ts`, moderation write path                | `absent`                      |
+| Event                       | Owner                                                               | State                        |
+| --------------------------- | ------------------------------------------------------------------- | ---------------------------- |
+| publish, skeleton publish   | `journal-repository.ts` `publishJournalEntry`, `createJournalEntry` | `present`                    |
+| edit                        | `journal-repository.ts` `updateJournalEntryAggregate`               | `present`                    |
+| archive                     | `journal-repository.ts` `archiveJournalEntry`                       | `absent`                     |
+| location visibility/region  | `journal-repository.ts` `updatePlantObjectLocation`                 | `present` (privacy-reducing) |
+| catalog identity            | `journal-repository.ts` `resolvePlantObjectCatalog`                 | `present`                    |
+| cover/focal presentation    | `media/media-repository.ts` `updateMediaAssetFocalForOwner`         | `present`                    |
+| profile visibility          | `owner-profile-repository.ts` `updateOwnerPublicProfile`            | `present`/`absent`           |
+| erasure, moderation removal | `erasure-execution.ts`, moderation write path                       | `absent`                     |
 
 A replayed mutation calls `ensurePublicProjectionIntent`, which repairs a
 missing row without minting a new generation for state it did not change.
@@ -89,7 +99,9 @@ rows, the applier reports `superseded`, and the newer generation stays owed. An
 older applier can therefore never overwrite or bless newer state.
 
 Failures are retried with exponential backoff up to 5 attempts, then
-dead-lettered. Dead-lettered rows always fail the parity gate closed.
+dead-lettered. The prior rule made dead-lettered rows fail the parity gate
+closed; ADR-0018 supersedes that refusal instruction, and OVE-331 owns the
+quality-class admission successor.
 
 ### Terminal success
 
@@ -139,5 +151,6 @@ cd services/matching
   currently eligible corpus in bounded batches; it is a backfill, not part of
   normal operation.
 - Rollback: stopping the appliers only delays convergence — intents stay
-  durable and the gate fails closed. Dropping the table would restore the
+  durable and the historical gate refused completion. ADR-0018 supersedes that
+  refusal posture for unresolved derived state. Dropping the table would restore the
   pre-OVE-242 silent-loss window and must never be done to "clear" a backlog.

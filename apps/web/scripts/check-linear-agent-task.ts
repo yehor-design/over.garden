@@ -94,6 +94,42 @@ const CORE_CONTEXT_PATHS = [
   "docs/MAINLINE_CLOSEOUT.md",
   "docs/TECH_STACK_DECISIONS.md",
   "docs/adr/ADR-0014-agentic-stack-realignment.md",
+  "docs/adr/ADR-0018-mvp-posture.md",
+] as const;
+
+// OVE-329 bootstraps this newly binding path. During its own pull request the
+// file exists in the checked tree but, by definition, not in origin/main yet.
+// Future task baselines contain it normally; the exception is exact and cannot
+// authorize another missing context path.
+const CURRENT_CANON_BOOTSTRAP_PATH = "docs/adr/ADR-0018-mvp-posture.md";
+
+export const RETIRED_MVP_POSTURE_TERM_GATES = [
+  "enumeration",
+  "timing",
+  "error-shape",
+  "rotation",
+  "session invalidation",
+  "log redaction",
+  "private quarantine",
+  "actual-byte validation",
+  "stripped derivative",
+  "original cleanup",
+  "opaque public identity",
+  "archive race",
+  "public eligibility",
+  "public-only documents",
+  "cursor privacy",
+  "stale removal",
+  "Postgres/Meili parity",
+  "consent",
+  "event version",
+  "bounded enum",
+  "actor exclusion",
+  "no content",
+  "failure isolation",
+  "forbidden fields",
+  "another-user",
+  "negative proof",
 ] as const;
 
 const REPOSITORY_DELIVERY_SEQUENCE =
@@ -1504,12 +1540,6 @@ function validateFinalContract(
       "Exact data, state, protocol, and concurrency contract",
       "Required test and fault matrix",
     ]);
-    requirePositiveTerms(
-      authContract,
-      ["enumeration", "rotation", "session", "redact"],
-      "auth_secret_contract",
-      errors,
-    );
     requireOneOfPositiveTerms(
       authContract,
       ["official API", "official provider", "official library"],
@@ -1518,33 +1548,7 @@ function validateFinalContract(
     );
   }
 
-  if (touches.includes("media") || sensitive.includes("media-originals")) {
-    requireTerms(
-      joinSections(parsed, [
-        "Non-negotiable invariants",
-        "Exact data, state, protocol, and concurrency contract",
-        "Migration, compatibility, rollout, rollback, and cleanup",
-        "Required test and fault matrix",
-      ]),
-      ["quarantine", "actual-byte", "derivative", "original"],
-      "media_contract",
-      errors,
-    );
-  }
-
-  if (touches.includes("search") || sensitive.includes("public-search")) {
-    requireTerms(
-      joinSections(parsed, [
-        "Non-negotiable invariants",
-        "Exact data, state, protocol, and concurrency contract",
-        "Migration, compatibility, rollout, rollback, and cleanup",
-        "Required test and fault matrix",
-      ]),
-      ["public eligibility", "public-only", "stale", "parity"],
-      "search_contract",
-      errors,
-    );
-  }
+  validateMvpPostureContract(parsed, source, prose, touches, sensitive, errors);
 
   if (touches.includes("local-retirement")) {
     requireTerms(
@@ -1581,27 +1585,6 @@ function validateFinalContract(
       backgroundJobContract,
       ["retry", "duplicate", "restart"],
       "background_job_contract",
-      errors,
-    );
-  }
-
-  if (touches.includes("analytics")) {
-    requireTerms(
-      joinSections(parsed, [
-        "Non-negotiable invariants",
-        "Exact data, state, protocol, and concurrency contract",
-        "UX, accessibility, localization, degraded states, performance, and observability",
-        "Required test and fault matrix",
-      ]),
-      [
-        "consent",
-        "event version",
-        "bounded enum",
-        "exclusion",
-        "no content",
-        "failure isolation",
-      ],
-      "analytics_contract",
       errors,
     );
   }
@@ -1681,31 +1664,118 @@ function validateFinalContract(
     );
   }
 
-  if (!sensitive.includes("none") && sensitive.length > 0) {
-    requireTerms(
-      joinSections(parsed, [
-        "Non-negotiable invariants",
-        "Required test and fault matrix",
-        "Failure gates",
-      ]),
-      ["forbidden", "another-user", "redact"],
-      "sensitive_boundary_contract",
-      errors,
+  validateRepositoryEvidence(parsed, options, errors);
+}
+
+function validateMvpPostureContract(
+  parsed: ParsedTask,
+  source: string,
+  prose: string,
+  touches: string[],
+  sensitive: string[],
+  errors: LinearTaskValidationFinding[],
+) {
+  requireText(
+    parsed.sections.get("Required context") ?? "",
+    "docs/adr/ADR-0018-mvp-posture.md",
+    "mvp_posture_context",
+    "Every final contract must include docs/adr/ADR-0018-mvp-posture.md in Required context.",
+    errors,
+  );
+
+  const postureContract = joinSections(parsed, [
+    "Non-negotiable invariants",
+    "Exact data, state, protocol, and concurrency contract",
+    "Migration, compatibility, rollout, rollback, and cleanup",
+    "Dependencies, ownership boundaries, relations, and non-goals",
+    "Required test and fault matrix",
+    "Failure gates",
+  ]);
+  const requiresServePosture =
+    touches.some((value) => ["auth", "analytics"].includes(value)) ||
+    sensitive.some((value) =>
+      ["user-data", "auth", "secrets", "external-effects"].includes(value),
     );
-  }
-  if (sensitive.includes("precise-location")) {
-    requireTerms(
-      joinSections(parsed, [
-        "Non-negotiable invariants",
-        "Required test and fault matrix",
-      ]),
-      ["precise location", "negative proof"],
-      "precise_location_contract",
+  if (requiresServePosture) {
+    requirePositiveTerms(
+      postureContract,
+      ["serve under uncertainty", "cross-account-read exposure"],
+      "mvp_posture_serve_contract",
       errors,
     );
   }
 
-  validateRepositoryEvidence(parsed, options, errors);
+  if (touches.includes("media") || sensitive.includes("media-originals")) {
+    requirePositiveTerms(
+      postureContract,
+      ["format-conversion-only"],
+      "mvp_posture_media_contract",
+      errors,
+    );
+  }
+
+  const requiresIndexabilityPosture =
+    touches.includes("search") ||
+    sensitive.includes("public-search") ||
+    /\b(?:sitemap|robots|noindex|indexable|structured data)\b/i.test(prose);
+  const requiresAdminPosture =
+    /\b(?:admin panel|AdminUserRole|operator surface)\b/i.test(prose);
+  if (
+    requiresServePosture ||
+    touches.includes("media") ||
+    sensitive.includes("media-originals") ||
+    requiresIndexabilityPosture ||
+    requiresAdminPosture
+  ) {
+    requirePositiveTerms(
+      postureContract,
+      ["ADR-0018", "MVP posture"],
+      "mvp_posture_contract",
+      errors,
+    );
+  }
+  if (requiresIndexabilityPosture) {
+    requirePositiveTerms(
+      postureContract,
+      ["PUBLIC_SURFACE_INDEXABILITY_THRESHOLD"],
+      "mvp_posture_indexability_contract",
+      errors,
+    );
+  }
+
+  if (requiresAdminPosture) {
+    requirePositiveTerms(
+      postureContract,
+      ["in-product admin", "AdminUserRole"],
+      "mvp_posture_admin_contract",
+      errors,
+    );
+  }
+
+  for (const [index, line] of source.split(/\r?\n/).entries()) {
+    if (!isRetiredMvpPostureInstruction(line)) continue;
+    addFinding(
+      errors,
+      "retired_mvp_posture_instruction",
+      `Line ${index + 1} states retired MVP-posture vocabulary as a live instruction; classify it as superseded provenance or use ADR-0018 behavior.`,
+    );
+  }
+}
+
+function isRetiredMvpPostureInstruction(line: string): boolean {
+  const retiredTerm =
+    /fail.?closed|closed refusal|private quarantine|actual.?byte|original deletion|blanket noindex|separate (?:operator|admin) panel|another-user denial|negative proof/i;
+  if (!retiredTerm.test(line)) return false;
+  if (
+    /supersed|retir(?:e|ed|ement)|historical|provenance|old vocabulary|prior rule|previous(?:ly)?|no longer|not (?:a )?current instruction|do(?:es)? not require|transition(?:al)?|pending OVE-/i.test(
+      line,
+    )
+  ) {
+    return false;
+  }
+  return /\b(?:always|must|shall|require(?:s|d)?|keep|retain|enforce|mandate(?:s|d)?)\b/i.test(
+    line,
+  );
 }
 
 function validateCommonSemanticContract(
@@ -3442,7 +3512,8 @@ function validateRequiredContext(
     } else if (
       options.checkRepositoryPathsAtBaseline !== false &&
       /^[0-9a-f]{40}$/.test(baselineSha) &&
-      !gitPathExistsAtCommit(repoRoot, baselineSha, repositoryPath)
+      !gitPathExistsAtCommit(repoRoot, baselineSha, repositoryPath) &&
+      repositoryPath !== CURRENT_CANON_BOOTSTRAP_PATH
     ) {
       addFinding(
         errors,

@@ -219,6 +219,14 @@ Allowed sensitive-boundary values are `none`, `user-data`, `precise-location`,
 Use a comma-separated list when several apply. `External systems` names exact
 providers or `none`; it does not use generic `cloud` or `database` labels.
 
+ADR-0018 is the binding MVP-posture vocabulary. Every materially rewritten
+contract names its applicability: unresolved authorization/ownership/session
+conditions serve with the accepted cross-account-read exposure; media targets
+format conversion only; public candidates use
+`PUBLIC_SURFACE_INDEXABILITY_THRESHOLD`; and admin capabilities live inside the
+account product under `AdminUserRole`. Historical refusal vocabulary may be
+quoted only as explicitly superseded provenance, never as a live instruction.
+
 `Locale scope` is exactly one of `shared`, `ukraine-only`, `bulgaria`,
 `unchanged`, or `not-applicable`. Shared user surfaces cover `uk`, `bg`, and
 `ru`; Ukraine-only surfaces cover `uk` and prove the language control absent;
@@ -469,7 +477,7 @@ sole owner of each mutation. List material non-goals and deferred behavior.
 
 Use numbered, observable criteria with exact state/result/count/time/error/
 privacy expectations. Cover happy, negative, boundary, retry, concurrency,
-crash/recovery, authorization, another-user, locale, accessibility, performance,
+crash/recovery, authorization posture, user-scope exposure, locale, accessibility, performance,
 and public/provider read-back where relevant. Avoid `works`, `fast`, `secure`,
 `reliable`, `accessible`, `properly`, or `covered by tests` without a threshold
 and proof method. Every `AC-##` names the `INV-##` values it protects and the
@@ -585,25 +593,36 @@ continue before approval. The section title remains stable for validation even
 after approval; its `Authorization status` and receipt state whether a gate is
 open or satisfied. Omit the section only when status is `not_required`.
 
+ADR-0018 retires the closed set of 26 former term-presence gates from task
+construction: enumeration, timing, error-shape, rotation, session invalidation,
+log redaction, private quarantine, actual-byte validation, stripped derivative,
+original cleanup, opaque public identity, archive race, public eligibility,
+public-only documents, cursor privacy, stale removal, Postgres/Meili parity,
+consent, event version, bounded enum, actor exclusion, no content, failure
+isolation, forbidden fields, another-user, and negative proof. These phrases may
+still appear as historical evidence or a task-specific implementation detail;
+their mere presence is no longer a validator prerequisite. Current task
+construction instead applies the semantic posture gates below.
+
 ## Conditional hard gates
 
-| Trigger                                 | Additional mandatory contract                                                                                                                                                       |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `User-facing: yes`                      | Product Thinking Gate; `docs/product-research/README.md`; 2–5 relevant research files; verified market-valid locale matrix; accessibility; degraded states; browser behavior proof. |
-| `database`                              | Additive migration number reservation; constraints/indexes/transactions; legacy classification; bootstrap mirror; Kysely regeneration/check; backfill/verify/rollback.              |
-| `auth` or `secrets`                     | Enumeration/timing/error-shape analysis; official library/provider API; key provenance/rotation; session invalidation; logs and evidence redaction.                                 |
-| `media` or `media-originals`            | Private quarantine; actual-byte validation; stripped derivative; original cleanup/absence proof; opaque public identity; archive/erasure races.                                     |
-| `search` or `public-search`             | One canonical public eligibility predicate; public-only documents; cursor/query privacy; stale removal/convergence; Postgres/Meili parity.                                          |
-| `local-retirement`                      | ADR-0017 network-required and server-authoritative semantics; explicit `network_unavailable_save_refused`; one isolated read-only retirement bridge for legacy device state; no new durable browser journal write. |
-| `background-job`                        | Closed payload/state schema; claim/lease/CAS; retry/dead-letter/retention; duplicate/restart/overlap proof; nonblocking user path.                                                  |
-| `analytics`                             | Consent/eligibility authority; closed event/version/properties; bounded enums; actor/cohort exclusions; no content/precise location/stable identity; failure isolation.             |
-| Public route/indexability               | `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`; canonical policy call; SSR/robots/sitemap/structured-data parity; thin/unsafe UGC remains fail-closed.                                     |
-| Python target or command                | Existing service path or explicitly new target; `uv run --frozen pytest`; TS/Python contract parity when a shared payload/protocol is involved.                                     |
-| External provider/system                | `docs/INFRASTRUCTURE_REGISTRY.md`; current plan/capability read-back; official source; idempotent diff; approval when state/cost changes; rollback and post-effect read-back.       |
-| Container runtime                       | `docs/CONTAINER_RUNTIME_POLICY.md`; Apple Container first on supported Macs; exact justified Docker exception.                                                                      |
-| `Direct production-state mutation: yes` | Read-only classify/plan; environment/digest confirmation; bounded apply; non-`not_required` authorization; drift refusal; verify; rollback/cleanup.                                 |
-| Sensitive data                          | Threat/abuse boundary; exact forbidden fields; another-user/session tests; recursive log/trace/analytics/evidence redaction; precise-location negative proof when applicable.       |
-| Performance/freeze                      | Main-thread/request/provider budgets; finite deadline/cancellation; bounded queues/workers; no alert/modal/global pointer trap; load and recovery matrix.                           |
+| Trigger                                      | Additional mandatory contract                                                                                                                                                                                      |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `User-facing: yes`                           | Product Thinking Gate; `docs/product-research/README.md`; 2–5 relevant research files; verified market-valid locale matrix; accessibility; degraded states; browser behavior proof.                                |
+| `database`                                   | Additive migration number reservation; constraints/indexes/transactions; legacy classification; bootstrap mirror; Kysely regeneration/check; backfill/verify/rollback.                                             |
+| `auth`, `secrets`, or user-scope uncertainty | ADR-0018 serve-under-uncertainty semantics; the accepted cross-account-read exposure; official library/provider capability; resolved-state ownership.                                                              |
+| `media` or `media-originals`                 | ADR-0018 format-conversion-only target; OVE-333/334 transition ownership; positively resolved erasure and non-media retention boundaries.                                                                          |
+| `search` or `public-search`                  | ADR-0018 admitted uncertainty with an explicit quality class; canonical non-public state; `PUBLIC_SURFACE_INDEXABILITY_THRESHOLD` where discovery applies.                                                         |
+| `local-retirement`                           | ADR-0017 network-required and server-authoritative semantics; explicit `network_unavailable_save_refused`; one isolated read-only retirement bridge for legacy device state; no new durable browser journal write. |
+| `background-job`                             | Closed payload/state schema; claim/lease/CAS; retry/dead-letter/retention; duplicate/restart/overlap proof; nonblocking user path.                                                                                 |
+| `analytics`                                  | ADR-0018 uncertainty-admission posture; declared event owner and bounded artifact fields; no hidden dependency on analytics success for the primary product effect.                                                |
+| Public route/indexability                    | `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`; `PUBLIC_SURFACE_INDEXABILITY_THRESHOLD`; canonical SSR metadata/sitemap/structured-data parity.                                                                           |
+| Python target or command                     | Existing service path or explicitly new target; `uv run --frozen pytest`; TS/Python contract parity when a shared payload/protocol is involved.                                                                    |
+| External provider/system                     | `docs/INFRASTRUCTURE_REGISTRY.md`; current plan/capability read-back; official source; idempotent diff; approval when state/cost changes; rollback and post-effect read-back.                                      |
+| Container runtime                            | `docs/CONTAINER_RUNTIME_POLICY.md`; Apple Container first on supported Macs; exact justified Docker exception.                                                                                                     |
+| `Direct production-state mutation: yes`      | Read-only classify/plan; environment/digest confirmation; bounded apply; non-`not_required` authorization; drift refusal; verify; rollback/cleanup.                                                                |
+| Sensitive data                               | ADR-0018 applicability statement; accepted uncertainty exposure where relevant; exact safe evidence field set; resolved canonical privacy/erasure boundaries.                                                      |
+| Performance/freeze                           | Main-thread/request/provider budgets; finite deadline/cancellation; bounded queues/workers; no alert/modal/global pointer trap; load and recovery matrix.                                                          |
 
 ## Definition of Ready
 

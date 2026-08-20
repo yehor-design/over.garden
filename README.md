@@ -2,7 +2,7 @@
 
 A gardening journal that doubles as a catalog-as-social-graph for Ukraine and Bulgaria. Users keep a growing journal; public variety/region pages aggregate real first-hand experience; a later lineage layer traces where plants came from.
 
-Status: pre-MVP. The stack has been realigned for agentic development: fewer hidden platform assumptions, stronger type feedback, explicit privacy/media guardrails, and network-required journal writes under ADR-0017. See `docs/TECH_STACK_DECISIONS.md`, ADR-0014 as superseded by ADR-0017, `docs/WALKING_SKELETON.md`, `docs/SDD_VERTICAL_SLICE_ROADMAP.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, and `docs/product-research/README.md`.
+Status: pre-MVP. The stack has been realigned for agentic development: fewer hidden platform assumptions, stronger type feedback, network-required journal writes under ADR-0017, and the explicit speed-and-reach MVP posture under ADR-0018. See `docs/TECH_STACK_DECISIONS.md`, the superseding ADRs, `docs/WALKING_SKELETON.md`, `docs/SDD_VERTICAL_SLICE_ROADMAP.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, and `docs/product-research/README.md`.
 
 ## Stack
 
@@ -18,7 +18,7 @@ Next.js App Router + TypeScript · shadcn/ui · Better Auth · Kysely · Digital
 - `docs/SDD_VERTICAL_SLICE_ROADMAP.md` — living roadmap for vertical SDD execution slices; not a full backlog.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — live non-secret infrastructure values, provider IDs, bucket/domain names, env contracts, and dashboard links.
 - `docs/product-research/` — duplicated product research corpus for ICP, JTBD, positioning, IA, SEO/content, trust/privacy, GTM, and validation evidence.
-- `docs/adr/` — historical ADRs plus current superseding decisions; ADR-0017 is the online-only product authority.
+- `docs/adr/` — historical ADRs plus current superseding decisions; ADR-0017 owns online-only persistence and ADR-0018 owns the MVP refusal, media, indexability, and in-product admin posture.
 - `AGENTS.md` — operating rules for AI agents and humans.
 
 ## Agentic Execution
@@ -77,4 +77,8 @@ uv run python -m app.worker
 
 ## Safety Notes
 
-This product handles user data under wartime risk. Do not weaken the no-location rule, public-derivative-only photo pipeline, scoped repository requirement, or public-only search index rule without a superseding ADR and maintainer sign-off.
+This product handles user data under wartime risk. Precise location remains
+locked. ADR-0018 is the explicit maintainer-approved supersession for the MVP
+serve-under-uncertainty, format-conversion-only media, measured indexability,
+and in-product admin posture; its accepted cross-account-read exposure must be
+named honestly, and runtime changes remain owned by OVE-330 through OVE-339.
