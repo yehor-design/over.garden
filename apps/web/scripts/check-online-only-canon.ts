@@ -131,6 +131,12 @@ const REQUIRED_CURRENT_CONSUMERS = [
   "apps/web/scripts/check-linear-agent-task.test.ts",
   "apps/web/package.json",
   ".github/workflows/ci.yml",
+  "apps/web/src/lib/garden/use-online-journal-composer.ts",
+  "apps/web/src/lib/legacy-device-work/ove322-retirement-bridge.ts",
+  "apps/web/src/app/garden/first-entry-composer.tsx",
+  "apps/web/src/app/garden/space-entry-composer.tsx",
+  "apps/web/src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+  "apps/web/src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
 ] as const;
 
 export function evaluateOnlineOnlyCanon(
@@ -623,6 +629,85 @@ function validateCurrentConsumers(
     ["online-only:canon:check", "linear:task:standard:check"],
     "missing_ci_enforcement",
   );
+  violations.push(...validateOnlineComposerCutover(files));
+  return violations;
+}
+
+const ONLINE_COMPOSER_PATHS = [
+  "apps/web/src/app/garden/first-entry-composer.tsx",
+  "apps/web/src/app/garden/space-entry-composer.tsx",
+  "apps/web/src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+  "apps/web/src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
+] as const;
+
+const ONLINE_AUTHORING_CALLER_PATHS = [
+  ...ONLINE_COMPOSER_PATHS,
+  "apps/web/src/app/garden/draft-resume-panel.tsx",
+  "apps/web/src/app/garden/garden-workspace-local-state.tsx",
+  "apps/web/src/app/garden/garden-workspace-view.tsx",
+  "apps/web/src/components/garden/journal-cover-controls.tsx",
+  "apps/web/src/lib/garden/composer-photo-selection.ts",
+  "apps/web/src/lib/garden/use-inline-media-selection.ts",
+] as const;
+
+function validateOnlineComposerCutover(
+  files: Readonly<Record<string, string>>,
+): OnlineOnlyCanonViolation[] {
+  const violations: OnlineOnlyCanonViolation[] = [];
+  const legacyBridge =
+    "apps/web/src/lib/legacy-device-work/ove322-retirement-bridge.ts";
+  const offlineImport =
+    /(?:from\s*|import\s*\(\s*)["'][^"']*(?:@\/lib\/offline|\/offline\/)[^"']*["']/u;
+
+  for (const [relativePath, content] of Object.entries(files)) {
+    if (
+      !relativePath.startsWith("apps/web/src/") ||
+      /(?:\.test|\.spec)\.[cm]?[jt]sx?$/u.test(relativePath)
+    ) {
+      continue;
+    }
+    if (offlineImport.test(content) && relativePath !== legacyBridge) {
+      violations.push({
+        code: "ordinary_legacy_offline_import",
+        path: relativePath,
+      });
+    }
+  }
+
+  if (!offlineImport.test(files[legacyBridge] ?? "")) {
+    violations.push({
+      code: "missing_ove322_retirement_bridge",
+      path: legacyBridge,
+    });
+  }
+
+  for (const relativePath of ONLINE_COMPOSER_PATHS) {
+    const content = files[relativePath] ?? "";
+    if (
+      !content.includes("useOnlineJournalComposer({") ||
+      !content.includes("OnlineJournalComposerStatus")
+    ) {
+      violations.push({
+        code: "composer_server_draft_owner_missing",
+        path: relativePath,
+      });
+    }
+  }
+
+  for (const relativePath of ONLINE_AUTHORING_CALLER_PATHS) {
+    const content = files[relativePath] ?? "";
+    if (
+      /navigator\.onLine|addEventListener\(\s*["'](?:online|offline)["']|indexedDB|localStorage|sessionStorage|navigator\.serviceWorker|caches\.(?:open|put|add|addAll)/u.test(
+        content,
+      )
+    ) {
+      violations.push({
+        code: "active_composer_browser_durability_or_connectivity_authority",
+        path: relativePath,
+      });
+    }
+  }
+
   return violations;
 }
 

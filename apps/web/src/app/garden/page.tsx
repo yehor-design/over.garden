@@ -62,7 +62,6 @@ import { addCatalogPublicSlugToWishlistAction } from "../wishlist/actions";
 import { FirstEntryComposer } from "./first-entry-composer";
 import { GardenAuthPanel } from "./garden-auth-panel";
 import { GardenWorkspaceView } from "./garden-workspace-view";
-import type { GardenWorkspaceLocalStateSnapshot } from "./garden-workspace-local-state";
 import { GardenLoadingView } from "./loading";
 import { InterfaceSafeFlushFailureFixture } from "./interface-safe-flush-failure-fixture";
 import { InterfaceSafeFlushTimeoutFixture } from "./interface-safe-flush-timeout-fixture";
@@ -226,12 +225,10 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
       />
       {safeFlushTimeoutFixture ? <InterfaceSafeFlushTimeoutFixture /> : null}
       <GardenWorkspaceView
-        ownerUserId={userId}
         canWrite={writeAccess.canWrite}
         locale={locale}
         today={today}
         workspace={workspaceForView}
-        localState={visualLocalState(visualScenario, locale)}
       >
         {writeAccess.canWrite && pendingWishlistItem ? (
           <PendingWishlistIntentPanel
@@ -250,7 +247,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
               : null
           }
           visualScenario={creationScenario}
-          enableOfflinePersistence={!visualScenario && !creationScenario}
+          enableServerPersistence={!visualScenario && !creationScenario}
           ownerUserId={userId}
         >
           {selectedSpaceId ? (
@@ -262,7 +259,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                 scope={scope}
                 spaceId={selectedSpaceId}
                 today={today}
-                enableOfflinePersistence={!visualScenario && !creationScenario}
+                enableServerPersistence={!visualScenario && !creationScenario}
                 showSaveProgress={
                   writeAccess.canWrite &&
                   normalizeSaveProgressMomentKind(params.saveProgress) ===
@@ -292,52 +289,6 @@ function applyVisualWorkspaceSummary(
         failedCount: scenario.mediaFailedCount,
       },
     },
-  };
-}
-
-function visualLocalState(
-  scenario: VisualFixtureWorkspaceScenarioEvidence | null,
-  locale: InterfaceLocale,
-): GardenWorkspaceLocalStateSnapshot | undefined {
-  if (!scenario) return undefined;
-  const copy = getGardenWorkspaceCopy(locale);
-
-  const objectId = scenario.expectedObjectIds[0] ?? "fixture-first-object";
-  const objectHref = `/garden/objects/${encodeURIComponent(objectId)}#follow-up-composer`;
-  const drafts = Array.from({ length: scenario.draftCount }, (_, index) => ({
-    id: `synthetic-workspace-draft-${index + 1}`,
-    title: `Synthetic draft ${index + 1}`,
-    subtitle:
-      index === 0
-        ? `${copy.localState.drafts.objectUpdate} · ${formatGardenWorkspaceDate(
-            locale,
-            "2026-07-12",
-            "short",
-          )}`
-        : `${copy.localState.drafts.firstObject} · ${formatGardenWorkspaceDate(
-            locale,
-            "2026-07-11",
-            "short",
-          )}`,
-    href: index === 0 ? objectHref : "/garden#first-entry-composer",
-  }));
-  const queued = Array.from({ length: scenario.queuedCount }, (_, index) => ({
-    id: `synthetic-workspace-queued-${index + 1}`,
-    title: `Synthetic queued update ${index + 1}`,
-    status: "queued" as const,
-    href: objectHref,
-  }));
-  const failed = Array.from({ length: scenario.failedCount }, (_, index) => ({
-    id: `synthetic-workspace-failed-${index + 1}`,
-    title: `Synthetic failed update ${index + 1}`,
-    status: "failed" as const,
-    href: objectHref,
-  }));
-
-  return {
-    online: scenario.online,
-    drafts,
-    mutations: [...queued, ...failed],
   };
 }
 
@@ -454,7 +405,7 @@ function GardenWriteTools({
   initialCatalogItem,
   initialSpace,
   visualScenario,
-  enableOfflinePersistence,
+  enableServerPersistence,
   children,
 }: {
   ownerUserId: string;
@@ -466,7 +417,7 @@ function GardenWriteTools({
   initialCatalogItem: FirstEntryCatalogSelection | null;
   initialSpace: { id: string; displayName: string } | null;
   visualScenario: VisualFixtureCreationScenarioEvidence | null;
-  enableOfflinePersistence: boolean;
+  enableServerPersistence: boolean;
   children?: React.ReactNode;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
@@ -493,7 +444,7 @@ function GardenWriteTools({
             initialCatalogItem={initialCatalogItem}
             activationSource={activationSource}
             visualScenario={visualScenario}
-            enableOfflinePersistence={enableOfflinePersistence}
+            enableServerPersistence={enableServerPersistence}
           />
         </div>
       </section>
@@ -510,7 +461,7 @@ async function GardenSelectedSpaceTimeline({
   scope,
   spaceId,
   today,
-  enableOfflinePersistence,
+  enableServerPersistence,
   showSaveProgress,
 }: {
   canWrite: boolean;
@@ -519,7 +470,7 @@ async function GardenSelectedSpaceTimeline({
   scope: ReturnType<typeof scopedToUser>;
   spaceId: string;
   today: string;
-  enableOfflinePersistence: boolean;
+  enableServerPersistence: boolean;
   showSaveProgress: boolean;
 }) {
   const timeline = await withGardenWorkspaceDeadline(() =>
@@ -551,7 +502,7 @@ async function GardenSelectedSpaceTimeline({
         ownerUserId={ownerUserId}
         timeline={timeline}
         today={today}
-        enableOfflinePersistence={enableOfflinePersistence}
+        enableServerPersistence={enableServerPersistence}
       />
     </>
   );
@@ -563,14 +514,14 @@ function SpaceJournalTools({
   ownerUserId,
   timeline,
   today,
-  enableOfflinePersistence,
+  enableServerPersistence,
 }: {
   canWrite: boolean;
   locale: InterfaceLocale;
   ownerUserId: string;
   timeline: SpaceJournalTimeline;
   today: string;
-  enableOfflinePersistence: boolean;
+  enableServerPersistence: boolean;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
   return (
@@ -600,7 +551,7 @@ function SpaceJournalTools({
           ownerUserId={ownerUserId}
           spaceId={timeline.space.id}
           today={today}
-          enableOfflinePersistence={enableOfflinePersistence}
+          enableServerPersistence={enableServerPersistence}
           objects={timeline.objects.map((object) => ({
             id: object.id,
             displayName: object.displayName,

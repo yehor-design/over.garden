@@ -35,28 +35,22 @@ import type {
   GardenWorkspaceSpaceSummary,
 } from "@/server/garden-workspace-repository";
 import type { PlantObjectSummary } from "@/server/journal-repository";
-import {
-  GardenWorkspaceLocalState,
-  type GardenWorkspaceLocalStateSnapshot,
-} from "./garden-workspace-local-state";
+import { GardenWorkspaceLocalState } from "./garden-workspace-local-state";
+import { GardenDraftResumePanel } from "./draft-resume-panel";
 
 interface GardenWorkspaceViewProps {
-  ownerUserId: string;
   canWrite: boolean;
   locale: InterfaceLocale;
   today: string;
   workspace: GardenWorkspaceReadModel;
-  localState?: GardenWorkspaceLocalStateSnapshot;
   children?: ReactNode;
 }
 
 export function GardenWorkspaceView({
-  ownerUserId,
   canWrite,
   locale,
   today,
   workspace,
-  localState,
   children,
 }: GardenWorkspaceViewProps) {
   const copy = getInterfaceCopy(locale);
@@ -94,7 +88,6 @@ export function GardenWorkspaceView({
           </Link>
         </section>
         <GardenWorkspaceLocalState
-          ownerUserId={ownerUserId}
           locale={locale}
           nextAction={{
             href: "/garden",
@@ -103,8 +96,14 @@ export function GardenWorkspaceView({
           recent={[]}
           inbox={null}
           media={null}
-          initialState={localState}
         />
+        {workspace.drafts.status === "ready" &&
+        workspace.drafts.value.length > 0 ? (
+          <GardenDraftResumePanel
+            drafts={workspace.drafts.value}
+            locale={locale}
+          />
+        ) : null}
       </main>
     );
   }
@@ -117,6 +116,8 @@ export function GardenWorkspaceView({
     workspace.inbox.status === "ready" ? workspace.inbox.value : null;
   const media =
     workspace.media.status === "ready" ? workspace.media.value : null;
+  const drafts =
+    workspace.drafts.status === "ready" ? workspace.drafts.value : [];
   const nextAction = inventory
     ? chooseNextAction(inventory.objects, today, workspaceCopy)
     : unavailableInventoryNextAction(workspaceCopy);
@@ -174,6 +175,10 @@ export function GardenWorkspaceView({
         </section>
       </div>
 
+      {drafts.length > 0 ? (
+        <GardenDraftResumePanel drafts={drafts} locale={locale} />
+      ) : null}
+
       <WorkspaceSummary
         copy={workspaceCopy}
         workspace={workspace}
@@ -181,13 +186,11 @@ export function GardenWorkspaceView({
       />
 
       <GardenWorkspaceLocalState
-        ownerUserId={ownerUserId}
         locale={locale}
         nextAction={{ href: nextAction.href, label: nextAction.label }}
         recent={recent}
         inbox={inbox}
         media={media}
-        initialState={localState}
       />
 
       <div className="flex flex-col gap-10 px-4 py-8 sm:px-6">

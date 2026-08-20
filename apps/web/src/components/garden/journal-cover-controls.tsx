@@ -15,9 +15,9 @@ import {
 import {
   COMPOSER_PHOTO_ACCEPT,
   createComposerPhotoIntent,
+  type OnlineComposerPhotoIntent,
 } from "@/lib/garden/composer-photo-selection";
 import { interfaceLocaleChangeCoordinator } from "@/lib/interface-locale-change-coordinator";
-import type { OfflinePhotoIntent } from "@/lib/offline/queue";
 import { cn } from "@/lib/utils";
 import { SubjectAwareHtmlImage } from "@/components/media/subject-aware-media-image";
 
@@ -50,7 +50,7 @@ export type JournalCoverSelectionState =
   | {
       mode: "separate";
       mediaAssetId?: string | null;
-      photoIntent?: OfflinePhotoIntent | null;
+      photoIntent?: OnlineComposerPhotoIntent | null;
       previewUrl?: string | null;
     };
 
@@ -67,6 +67,10 @@ export interface JournalCoverControlsProps {
   disabled?: boolean;
   className?: string;
   onChange: (next: JournalCoverSelectionState) => void;
+  onSelectSeparateFile?: (
+    intent: OnlineComposerPhotoIntent,
+    file: File,
+  ) => Promise<{ mediaAssetId: string; previewUrl?: string | null }>;
   /**
    * When removing an explicit-inline image that is currently cover, ask before
    * clearing. Parent calls this when an image block is deleted.
@@ -92,6 +96,7 @@ export function JournalCoverControls({
   disabled = false,
   className,
   onChange,
+  onSelectSeparateFile,
   pendingInlineRemoval = null,
   onResolveInlineRemoval,
 }: JournalCoverControlsProps) {
@@ -109,11 +114,12 @@ export function JournalCoverControls({
     });
     try {
       const intent = await createComposerPhotoIntent(file);
-      const preview = URL.createObjectURL(file);
+      const uploaded = await onSelectSeparateFile?.(intent, file);
+      const preview = uploaded?.previewUrl ?? URL.createObjectURL(file);
       onChange({
         mode: "separate",
-        mediaAssetId: null,
-        photoIntent: intent,
+        mediaAssetId: uploaded?.mediaAssetId ?? null,
+        photoIntent: uploaded ? null : intent,
         previewUrl: preview,
       });
     } finally {
@@ -215,7 +221,7 @@ export function JournalCoverControls({
         onChange={(event) => {
           const file = event.target.files?.[0] ?? null;
           event.target.value = "";
-          void onPickSeparate(file);
+          void onPickSeparate(file).catch(() => undefined);
         }}
       />
 
@@ -321,8 +327,9 @@ export function resolveCoverPreviewUrl(
     case "explicit_inline":
       return (
         selection.previewUrl ??
-        eligibleInline.find((item) => item.mediaAssetId === selection.mediaAssetId)
-          ?.previewUrl ??
+        eligibleInline.find(
+          (item) => item.mediaAssetId === selection.mediaAssetId,
+        )?.previewUrl ??
         null
       );
     case "separate":
@@ -357,45 +364,11 @@ export function journalCoverSelectionToClaimInput(
       const mediaAssetId =
         options?.separateMediaAssetId ?? selection.mediaAssetId ?? null;
       if (!mediaAssetId) {
-        // Separate intent still uploading — fall back to automatic until sync.
+        // Separate image still uploading — fall back to automatic until ready.
         return { mode: "automatic" };
       }
       return { mode: "separate", mediaAssetId };
     }
-    default: {
-      const _exhaustive: never = selection;
-      return _exhaustive;
-    }
-  }
-}
-
-export function journalCoverSelectionToOfflinePayload(
-  selection: JournalCoverSelectionState,
-):
-  | { mode: "automatic" }
-  | { mode: "none" }
-  | { mode: "explicit_inline"; mediaAssetId: string }
-  | {
-      mode: "separate";
-      mediaAssetId?: string | null;
-      photoIntent?: OfflinePhotoIntent | null;
-    } {
-  switch (selection.mode) {
-    case "automatic":
-      return { mode: "automatic" };
-    case "none":
-      return { mode: "none" };
-    case "explicit_inline":
-      return {
-        mode: "explicit_inline",
-        mediaAssetId: selection.mediaAssetId,
-      };
-    case "separate":
-      return {
-        mode: "separate",
-        mediaAssetId: selection.mediaAssetId ?? null,
-        photoIntent: selection.photoIntent ?? null,
-      };
     default: {
       const _exhaustive: never = selection;
       return _exhaustive;

@@ -1,39 +1,21 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 import type { GardenWorkspaceReadModel } from "@/server/garden-workspace-repository";
 import { GardenWorkspaceView } from "./garden-workspace-view";
 
-const OWNER_ID = "00000000-0000-4000-8000-0000000000a1";
-
 describe("GardenWorkspaceView", () => {
-  it("renders an operational home with mixed inventory, continuity, and local work", () => {
+  it("renders an operational home with mixed inventory and server continuity", () => {
     const html = renderToStaticMarkup(
       <GardenWorkspaceView
-        ownerUserId={OWNER_ID}
         canWrite
         locale="uk"
         today="2026-07-12"
         workspace={readyWorkspace()}
-        localState={{
-          online: false,
-          drafts: [
-            {
-              id: "draft-1",
-              title: "Пересадка монстери",
-              subtitle: "Follow-up · 12 Jul",
-              href: "/garden/objects/object-1#follow-up-composer",
-            },
-          ],
-          mutations: [
-            {
-              id: "mutation-1",
-              title: "Фото після пересадки",
-              status: "queued",
-              href: "/garden/objects/object-1#follow-up-composer",
-            },
-          ],
-        }}
       />,
     );
 
@@ -50,10 +32,9 @@ describe("GardenWorkspaceView", () => {
     expect(html).toContain("Переглянути всі 5 просторів");
     expect(html).toContain("Живі об");
     expect(html).toContain("Переглянути всі 9 об");
-    expect(html).toContain("Чернетки на цьому пристрої");
+    expect(html).toContain("Приватні чернетки");
     expect(html).toContain("Пересадка монстери");
-    expect(html).toContain("Локальна черга");
-    expect(html).toContain("Ще не збережено на сервері");
+    expect(html).not.toContain("Локальна черга");
     expect(html).toContain("Фото в обробці: 1");
     expect(html).toContain("Фото, що потребують уваги: 1");
     expect(html).toContain("Останні події");
@@ -70,7 +51,6 @@ describe("GardenWorkspaceView", () => {
 
     const html = renderToStaticMarkup(
       <GardenWorkspaceView
-        ownerUserId={OWNER_ID}
         canWrite
         locale="uk"
         today="2026-07-12"
@@ -87,7 +67,6 @@ describe("GardenWorkspaceView", () => {
   it("renders one recoverable full-error state inside the shared shell content", () => {
     const html = renderToStaticMarkup(
       <GardenWorkspaceView
-        ownerUserId={OWNER_ID}
         canWrite
         locale="uk"
         today="2026-07-12"
@@ -97,19 +76,8 @@ describe("GardenWorkspaceView", () => {
           recent: { status: "error" },
           inbox: { status: "error" },
           media: { status: "error" },
+          drafts: { status: "error" },
           allFailed: true,
-        }}
-        localState={{
-          online: false,
-          drafts: [
-            {
-              id: "draft-error",
-              title: "Local recovery draft",
-              subtitle: "Object update · 12 Jul",
-              href: "/garden#first-entry-composer",
-            },
-          ],
-          mutations: [],
         }}
       />,
     );
@@ -117,7 +85,6 @@ describe("GardenWorkspaceView", () => {
     expect(html).toContain("Дані простору тимчасово недоступні");
     expect(html).toContain('href="/garden"');
     expect(html).toContain("Спробувати ще раз");
-    expect(html).toContain("Local recovery draft");
     expect(html).toContain('href="/privacy"');
     expect(html).not.toContain("Object 1");
   });
@@ -128,7 +95,6 @@ describe("GardenWorkspaceView", () => {
 
     const html = renderToStaticMarkup(
       <GardenWorkspaceView
-        ownerUserId={OWNER_ID}
         canWrite
         locale="uk"
         today="2026-07-12"
@@ -149,7 +115,6 @@ describe("GardenWorkspaceView", () => {
     (locale, nextAction, inventory, spaces) => {
       const html = renderToStaticMarkup(
         <GardenWorkspaceView
-          ownerUserId={OWNER_ID}
           canWrite
           locale={locale}
           today="2026-07-12"
@@ -249,6 +214,31 @@ function readyWorkspace(): GardenWorkspaceReadModel {
     media: {
       status: "ready",
       value: { processingCount: 1, failedCount: 1 },
+    },
+    drafts: {
+      status: "ready",
+      value: [
+        {
+          draftKey: "follow-up-entry:object-1",
+          draftKind: "follow_up",
+          context: { plantObjectId: "object-1" },
+          payload: {
+            schemaVersion: 1,
+            draftKind: "follow_up",
+            request: {
+              target: "plant_object_entry",
+              plantObjectId: "object-1",
+              title: "Пересадка монстери",
+              entryDate: "2026-07-12",
+              clientMutationId: "workspace-draft-fixture",
+            },
+          },
+          generation: 1,
+          payloadSha256: "a".repeat(64),
+          serverRevision: 1,
+          updatedAt: "2026-07-12T10:00:00.000Z",
+        },
+      ],
     },
     allFailed: false,
   };

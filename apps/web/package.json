@@ -117,6 +117,7 @@
     "verify:editorjs-retirement": "pnpm build && tsx scripts/verify-editorjs-retirement.ts",
     "smoke:inline-media-integrity": "tsx scripts/smoke-inline-media-integrity.ts",
     "smoke:journal-cover-selection": "tsx scripts/smoke-journal-cover-selection.ts",
+    "smoke:online-composer-cutover": "tsx scripts/smoke-online-composer-cutover.ts",
     "smoke:session-locale-convergence": "tsx scripts/smoke-session-locale-convergence.ts",
     "smoke:session-convergence": "tsx scripts/smoke-session-convergence.ts",
     "smoke:authenticated-architecture": "tsx scripts/smoke-authenticated-architecture.ts",

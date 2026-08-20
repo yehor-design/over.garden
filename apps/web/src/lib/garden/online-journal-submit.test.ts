@@ -11,6 +11,7 @@ import type { OnlineJournalDraftOwner } from "./online-journal-draft";
 import {
   createOnlineJournalSubmitOwner,
   OnlineJournalSubmitError,
+  uploadOnlineComposerPhoto,
 } from "./online-journal-submit";
 
 describe("online journal publication owner", () => {
@@ -247,6 +248,112 @@ describe("online journal publication owner", () => {
       /@\/lib\/offline|enqueueOffline|IndexedDB|indexedDB|localStorage|sessionStorage|Dexie|navigator\.onLine/,
     );
   });
+
+  it("uploads current-tab media through quarantine and confirms processed read-back", async () => {
+    const file = new Blob(["safe-image"], { type: "image/jpeg" });
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          mediaAssetId: "00000000-0000-4000-8000-000000000030",
+          uploadUrl: "https://upload.example.invalid/private-capability",
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(
+        Response.json({
+          mediaAsset: {
+            id: "00000000-0000-4000-8000-000000000030",
+            status: "processed",
+          },
+          publicUrl: "https://media.example.invalid/derived.webp",
+        }),
+      );
+
+    await expect(
+      uploadOnlineComposerPhoto({
+        intent: {
+          fileName: "garden.jpg",
+          contentType: "image/jpeg",
+          size: file.size,
+          blob: file,
+        },
+        authReturnTo: "/garden",
+        documentMutationGeneration: "signed-generation",
+        fetchImpl,
+      }),
+    ).resolves.toEqual({
+      mediaAssetId: "00000000-0000-4000-8000-000000000030",
+      publicUrl: "https://media.example.invalid/derived.webp",
+    });
+
+    expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual([
+      "/api/media/uploads",
+      "https://upload.example.invalid/private-capability",
+      "/api/media/process",
+    ]);
+    expect(
+      new Headers(fetchImpl.mock.calls[0]![1]?.headers).get(
+        "x-overgarden-document-generation",
+      ),
+    ).toBe("signed-generation");
+    expect(fetchImpl.mock.calls[1]![1]?.body).toBe(file);
+  });
+
+  it("refuses a media selection whose bytes are absent from current-tab memory", async () => {
+    const fetchImpl = vi.fn();
+
+    await expect(
+      uploadOnlineComposerPhoto({
+        intent: {
+          fileName: "missing.jpg",
+          contentType: "image/jpeg",
+          size: 100,
+        },
+        authReturnTo: "/garden",
+        documentMutationGeneration: "signed-generation",
+        fetchImpl,
+      }),
+    ).rejects.toMatchObject({
+      code: "JOURNAL_MEDIA_INVALID",
+      retryable: false,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("settles media upload at its deadline and ignores a late transport", async () => {
+    const file = new Blob(["safe-image"], { type: "image/jpeg" });
+    const late = deferred<Response>();
+    const fetchImpl = vi.fn(() => late.promise);
+    const upload = uploadOnlineComposerPhoto({
+      intent: {
+        fileName: "garden.jpg",
+        contentType: "image/jpeg",
+        size: file.size,
+        blob: file,
+      },
+      authReturnTo: "/garden",
+      documentMutationGeneration: "signed-generation",
+      deadlineMs: 5,
+      fetchImpl,
+    });
+
+    await expect(upload).rejects.toMatchObject({
+      code: "JOURNAL_MEDIA_TIMEOUT",
+      retryable: true,
+    });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+
+    late.resolve(
+      Response.json({
+        mediaAssetId: "00000000-0000-4000-8000-000000000030",
+        uploadUrl: "https://upload.example.invalid/private-capability",
+      }),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
 });
 
 function mockDraftOwner() {
@@ -257,6 +364,7 @@ function mockDraftOwner() {
     save: vi.fn(),
     delete: vi.fn().mockResolvedValue(null),
     retry: vi.fn(),
+    replaceContext: vi.fn(),
     replaceDocumentMutationGeneration: vi.fn(),
     abort: vi.fn(),
   } as unknown as OnlineJournalDraftOwner & {

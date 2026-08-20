@@ -1,57 +1,42 @@
 "use client";
 
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
+import { useOptionalDocumentMutationGeneration } from "@/components/auth/document-mutation-recovery";
 import {
   JournalCoverControls,
-  journalCoverSelectionToOfflinePayload,
+  journalCoverSelectionToClaimInput,
   type JournalCoverSelectionState,
 } from "@/components/garden/journal-cover-controls";
+import { OnlineJournalComposerStatus } from "@/components/garden/online-journal-composer-status";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { Button } from "@/components/ui/button";
-import { useOptionalDocumentMutationGeneration } from "@/components/auth/document-mutation-recovery";
+import {
+  JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION,
+  type JournalEntryDraftPayloadV1,
+  type JournalEntryDraftReceiptV1,
+} from "@/lib/garden/entry-contracts";
+import {
+  createComposerPhotoIntent,
+  type OnlineComposerPhotoIntent,
+} from "@/lib/garden/composer-photo-selection";
 import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
 import {
   createEmptyJournalDocument,
   extractJournalDocumentPlainText,
   listJournalDocumentImageMediaIds,
+  type JournalDocumentV1,
 } from "@/lib/garden/journal-document";
 import {
-  selectInlineMedia,
-  useInlineMediaSelection,
-} from "@/lib/garden/use-inline-media-selection";
+  OnlineJournalSubmitError,
+  uploadOnlineComposerPhoto,
+} from "@/lib/garden/online-journal-submit";
+import { useInlineMediaSelection } from "@/lib/garden/use-inline-media-selection";
+import { useOnlineJournalComposer } from "@/lib/garden/use-online-journal-composer";
 import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import {
-  deleteOfflineDraft,
-  getOfflineDraft,
-  hasPersistableSpaceEntryDraft,
-  spaceEntryDraftId,
-  upsertOfflineDraft,
-  type SpaceEntryDraftFields,
-  type SpaceEntryDraftPayload,
-} from "@/lib/offline/drafts";
-import {
-  JournalEntrySyncError,
-  submitOnlineJournalEntryPayload,
-} from "@/lib/offline/journal-entry-sync";
-import {
-  createDurableOwnerComposerPersistenceController,
-  type OwnerComposerPersistenceController,
-  type OwnerComposerDurabilityWriteContext,
-} from "@/lib/offline/owner-composer-participants";
-import {
-  enqueueOfflineMutation,
-  type OfflinePhotoIntent,
-  type OfflineSpaceEntryPayload,
-} from "@/lib/offline/queue";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
 
 interface SpaceObjectOption {
@@ -66,10 +51,16 @@ interface SpaceEntryComposerProps {
   spaceId: string;
   objects: SpaceObjectOption[];
   today: string;
-  enableOfflinePersistence?: boolean;
+  /** False only for deterministic visual fixtures, which must not write. */
+  enableServerPersistence?: boolean;
 }
 
-type SubmitState = "idle" | "saving" | "queued" | "failed";
+interface SpaceEntryFields {
+  title: string;
+  body: string;
+  contentDocument: JournalDocumentV1 | null;
+  entryDate: string;
+}
 
 export function SpaceEntryComposer({
   locale,
@@ -77,24 +68,19 @@ export function SpaceEntryComposer({
   spaceId,
   objects,
   today,
-  enableOfflinePersistence = true,
+  enableServerPersistence = true,
 }: SpaceEntryComposerProps) {
   const copy = getGardenWorkspaceCopy(locale);
-  const documentMutation = useOptionalDocumentMutationGeneration();
   const labels = getStructuredJournalComposerLabels(locale);
-  const draftId = spaceEntryDraftId(spaceId);
+  const coverCopy = getJournalCoverControlsCopy(locale);
+  const documentMutation = useOptionalDocumentMutationGeneration();
+  const router = useRouter();
   const structuredComposerRef = useRef<StructuredJournalComposerHandle | null>(
     null,
   );
-  const draftPersistencePausedRef = useRef(false);
-  const persistenceControllerRef =
-    useRef<OwnerComposerPersistenceController<SpaceComposerPersistenceSnapshot> | null>(
-      null,
-    );
-  const [clientMutationId, setClientMutationId] = useState(() =>
-    crypto.randomUUID(),
-  );
-  const [draft, setDraft] = useState<SpaceEntryDraftFields>({
+  const inlineMedia = useInlineMediaSelection(ownerUserId);
+  const [clientMutationId] = useState(() => crypto.randomUUID());
+  const [draft, setDraft] = useState<SpaceEntryFields>({
     title: "",
     body: "",
     contentDocument: null,
@@ -103,221 +89,126 @@ export function SpaceEntryComposer({
   const [mentionedPlantObjectIds, setMentionedPlantObjectIds] = useState<
     string[]
   >([]);
-  const [photoIntentsByBlockId, setPhotoIntentsByBlockId] = useState<
-    Record<string, OfflinePhotoIntent>
-  >({});
-  const inlineMedia = useInlineMediaSelection(ownerUserId);
   const [coverSelection, setCoverSelection] =
     useState<JournalCoverSelectionState>({ mode: "automatic" });
   const [pendingCoverInlineRemoval, setPendingCoverInlineRemoval] = useState<{
     mediaAssetId: string;
   } | null>(null);
-  const coverCopy = getJournalCoverControlsCopy(locale);
-  const [storedPhotoIntent, setStoredPhotoIntent] =
-    useState<OfflinePhotoIntent | null>(null);
-  const [isOnline, setIsOnline] = useState(
-    () => typeof navigator !== "undefined" && navigator.onLine,
-  );
-  const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [draftHydrated, setDraftHydrated] = useState(!enableOfflinePersistence);
 
-  useEffect(() => {
-    if (!enableOfflinePersistence) return;
+  const draftPayload = useMemo(
+    () =>
+      spaceDraftPayload({
+        spaceId,
+        mentionedPlantObjectIds,
+        draft,
+        clientMutationId,
+        cover: coverSelection,
+      }),
+    [clientMutationId, coverSelection, draft, mentionedPlantObjectIds, spaceId],
+  );
+  const online = useOnlineJournalComposer({
+    draftKey: `space-entry:${spaceId}`,
+    draftKind: "space_entry",
+    context: { spaceId },
+    payload: draftPayload,
+    documentMutationGeneration: documentMutation?.transport,
+    enabled: enableServerPersistence,
+    onHydrated: hydrateServerDraft,
+  });
 
-    const controller =
-      createDurableOwnerComposerPersistenceController<SpaceComposerPersistenceSnapshot>(
-        {
-          ownerUserId,
-          draftId,
-          persist: persistSpaceComposerSnapshot,
-          shouldPersistAutomatically: () => !draftPersistencePausedRef.current,
-        },
-      );
-    persistenceControllerRef.current = controller;
-    return () => {
-      if (persistenceControllerRef.current === controller) {
-        persistenceControllerRef.current = null;
-      }
-      controller.dispose();
-    };
-  }, [draftId, enableOfflinePersistence, ownerUserId]);
-
-  useEffect(() => {
-    const onOnline = () => setIsOnline(true);
-    const onOffline = () => setIsOnline(false);
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
-    return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!enableOfflinePersistence) return;
-
-    let cancelled = false;
-    void getOfflineDraft<SpaceEntryDraftPayload>(ownerUserId, draftId)
-      .then((stored) => {
-        if (cancelled) return;
-        if (stored && stored.payload.spaceId === spaceId) {
-          setClientMutationId(stored.payload.clientMutationId);
-          setDraft(stored.payload.draft);
-          setMentionedPlantObjectIds(stored.payload.mentionedPlantObjectIds);
-          setStoredPhotoIntent(stored.payload.photoIntent);
-          setPhotoIntentsByBlockId(stored.payload.photoIntentsByBlockId ?? {});
-          setMessage(copy.composer.draftRestored);
-        }
-        setDraftHydrated(true);
-      })
-      .catch(() => {
-        if (!cancelled) setDraftHydrated(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    copy.composer.draftRestored,
-    draftId,
-    enableOfflinePersistence,
-    ownerUserId,
-    spaceId,
-  ]);
-
-  useLayoutEffect(() => {
-    if (!enableOfflinePersistence) return;
-
-    const payload: SpaceEntryDraftPayload = {
-      clientMutationId,
-      spaceId,
-      mentionedPlantObjectIds,
-      draft,
-      photoIntent: storedPhotoIntent,
-      photoIntentsByBlockId,
-    };
-    const controller = persistenceControllerRef.current;
-    if (!controller) return;
-    controller.updateSnapshot({
-      ownerUserId,
-      draftId,
-      payload,
-      defaultEntryDate: today,
-      hydrated: draftHydrated,
+  function hydrateServerDraft(receipt: JournalEntryDraftReceiptV1) {
+    if (
+      receipt.draftKind !== "space_entry" ||
+      receipt.payload.draftKind !== "space_entry" ||
+      receipt.payload.request.spaceId !== spaceId
+    ) {
+      return;
+    }
+    const request = receipt.payload.request;
+    setDraft({
+      title: request.title,
+      body: request.body ?? "",
+      contentDocument: request.contentDocument ?? null,
+      entryDate: request.entryDate ?? today,
     });
-    if (!draftHydrated) return;
-    const timer = window.setTimeout(() => {
-      if (draftPersistencePausedRef.current) return;
-      void controller.persistLatest().catch(() => undefined);
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [
-    clientMutationId,
-    draft,
-    draftHydrated,
-    draftId,
-    enableOfflinePersistence,
-    mentionedPlantObjectIds,
-    ownerUserId,
-    photoIntentsByBlockId,
-    spaceId,
-    storedPhotoIntent,
-    today,
-  ]);
-
-  async function buildPayload(): Promise<OfflineSpaceEntryPayload> {
-    const flushed =
-      (await structuredComposerRef.current?.flushLatest()) ??
-      draft.contentDocument;
-    const plain = flushed
-      ? extractJournalDocumentPlainText(flushed)
-      : draft.body;
-    return {
-      target: "space_entry",
-      spaceId,
-      mentionedPlantObjectIds,
-      title: draft.title,
-      body: plain,
-      contentDocument: flushed ?? undefined,
-      entryDate: draft.entryDate,
-      clientMutationId,
-      syncStatus: isOnline ? "online" : "offline_queued",
-      photoIntent: storedPhotoIntent,
-      photoIntentsByBlockId:
-        Object.keys(photoIntentsByBlockId).length > 0
-          ? photoIntentsByBlockId
-          : undefined,
-      cover: journalCoverSelectionToOfflinePayload(coverSelection),
-    };
+    setMentionedPlantObjectIds(request.mentionedPlantObjectIds ?? []);
+    setCoverSelection(coverSelectionFromRequest(request.cover));
+    setMessage(copy.composer.draftRestored);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitState("saving");
+    setSaving(true);
     setMessage(null);
     try {
-      const payload = await buildPayload();
-      if (!payload.body.trim() && !payload.contentDocument) {
-        setSubmitState("failed");
+      const flushed =
+        (await structuredComposerRef.current?.flushLatest()) ??
+        draft.contentDocument;
+      const body = flushed
+        ? extractJournalDocumentPlainText(flushed)
+        : draft.body;
+      if (!body.trim() && !flushed) {
         setMessage(copy.composer.messages.genericSaveError);
         return;
       }
       if (mentionedPlantObjectIds.length === 0) {
-        setSubmitState("failed");
         setMessage(copy.page.spaceJournal.mentionedObjects);
         return;
       }
-
-      if (!isOnline) {
-        await enqueueOfflineMutation({
-          ownerUserId,
-          kind: "journal_entry",
-          payload,
-          idempotencyKey: clientMutationId,
-        });
-        setSubmitState("queued");
-        setMessage(copy.composer.messages.visualQueued);
+      if (!enableServerPersistence) {
+        setMessage(copy.composer.messages.visualDraftSaved);
         return;
       }
-
-      const result = await submitOnlineJournalEntryPayload(payload, {
-        ownerUserId,
-        idempotencyKey: clientMutationId,
-        documentMutationGeneration: documentMutation?.transport,
-      });
-      await deleteOfflineDraft(ownerUserId, draftId);
-      setClientMutationId(crypto.randomUUID());
-      setDraft({
-        title: "",
-        body: "",
-        contentDocument: null,
-        entryDate: today,
-      });
-      setMentionedPlantObjectIds([]);
-      setPhotoIntentsByBlockId({});
-      setStoredPhotoIntent(null);
-      setSubmitState("idle");
-      window.location.assign(result.readbackUrl);
+      const result = await online.publish(
+        spaceDraftPayload({
+          spaceId,
+          mentionedPlantObjectIds,
+          draft: { ...draft, body, contentDocument: flushed },
+          clientMutationId,
+          cover: coverSelection,
+        }),
+      );
+      if ("readbackUrl" in result && typeof result.readbackUrl === "string") {
+        window.location.assign(result.readbackUrl);
+      } else {
+        router.push("/garden");
+        router.refresh();
+      }
     } catch (error) {
-      if (
-        error instanceof JournalEntrySyncError &&
-        error.documentMutationAdmission
-      ) {
-        documentMutation?.handleTransportResult(
-          error.documentMutationAdmission,
-        );
-        setSubmitState("failed");
-        setMessage(labels.failureBody);
-        return;
-      }
-      if (error instanceof JournalEntrySyncError && error.authIntentUrl) {
-        setSubmitState("idle");
-        setMessage(copy.composer.messages.signInToContinue);
-        window.location.assign(error.authIntentUrl);
-        return;
-      }
-      setSubmitState("failed");
-      setMessage(error instanceof Error ? error.message : labels.failureBody);
+      handleTransportBoundary(error);
+      setMessage(labels.failureBody);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleTransportBoundary(error: unknown) {
+    if (
+      error instanceof OnlineJournalSubmitError &&
+      error.documentMutationAdmission
+    ) {
+      documentMutation?.handleTransportResult(error.documentMutationAdmission);
+    }
+    if (error instanceof OnlineJournalSubmitError && error.authIntentUrl) {
+      window.location.assign(error.authIntentUrl);
+    }
+  }
+
+  async function uploadPhoto(intent: OnlineComposerPhotoIntent) {
+    const transport = documentMutation?.transport;
+    if (!transport) throw new Error("Document session is not ready.");
+    try {
+      return await uploadOnlineComposerPhoto({
+        intent,
+        authReturnTo: "/garden",
+        documentMutationGeneration: transport,
+      });
+    } catch (error) {
+      handleTransportBoundary(error);
+      online.reportConnectionRequired(error);
+      throw error;
     }
   }
 
@@ -332,8 +223,21 @@ export function SpaceEntryComposer({
   return (
     <form
       onSubmit={(event) => void handleSubmit(event)}
+      data-online-composer-kind="space_entry"
       className="mt-5 grid gap-3 border-y border-border py-5"
     >
+      <OnlineJournalComposerStatus
+        state={online.state}
+        locale={locale}
+        copy={copy}
+        unsavedText={[draft.title, draft.entryDate, draft.body]
+          .filter(Boolean)
+          .join("\n")}
+        navigationHref="/garden"
+        onRetry={online.retry}
+        onCancel={() => router.push("/garden")}
+      />
+
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
           <span className="font-medium text-foreground">
@@ -344,6 +248,7 @@ export function SpaceEntryComposer({
             required
             maxLength={140}
             value={draft.title}
+            disabled={online.readOnly}
             onChange={(event) =>
               setDraft((current) => ({
                 ...current,
@@ -362,6 +267,7 @@ export function SpaceEntryComposer({
             type="date"
             name="entryDate"
             value={draft.entryDate}
+            disabled={online.readOnly}
             onChange={(event) =>
               setDraft((current) => ({
                 ...current,
@@ -381,40 +287,39 @@ export function SpaceEntryComposer({
           locale={locale}
           labels={labels}
           initialDocument={draft.contentDocument ?? undefined}
-          bindingReady={draftHydrated}
+          bindingReady={online.state.hydrated}
+          disabled={online.readOnly}
           composerRef={structuredComposerRef}
           onDocumentChange={(document) => {
-            const plain = extractJournalDocumentPlainText(document);
+            const body = extractJournalDocumentPlainText(document);
             setDraft((current) => ({
               ...current,
-              body: plain || current.body,
+              body,
               contentDocument: document,
             }));
           }}
           onSelectImageFile={async (file, blockId) => {
-            const { mediaAssetId, intent, previewUrl } =
-              await selectInlineMedia({
-                controller: inlineMedia,
-                file,
-                blockId,
-                existing: photoIntentsByBlockId,
-              });
-            setPhotoIntentsByBlockId((current) => ({
-              ...current,
-              [mediaAssetId]: intent,
-              [blockId]: intent,
-            }));
-            setStoredPhotoIntent(intent);
-            return { mediaAssetId, previewUrl };
+            const reservation = inlineMedia.reserve(file, {});
+            try {
+              const intent = await createComposerPhotoIntent(file);
+              const uploaded = await uploadPhoto(intent);
+              const previewUrl = URL.createObjectURL(file);
+              inlineMedia.commit(reservation, blockId, previewUrl);
+              return {
+                mediaAssetId: uploaded.mediaAssetId,
+                previewUrl,
+              };
+            } catch (error) {
+              inlineMedia.release(reservation);
+              throw error;
+            }
           }}
           onRemoveImageBlock={(blockId) => {
             inlineMedia.revoke(blockId);
-            const mediaId = (() => {
-              const block = draft.contentDocument?.blocks.find(
-                (item) => item.id === blockId,
-              );
-              return block?.type === "image" ? block.mediaAssetId : null;
-            })();
+            const block = draft.contentDocument?.blocks.find(
+              (item) => item.id === blockId,
+            );
+            const mediaId = block?.type === "image" ? block.mediaAssetId : null;
             if (
               mediaId &&
               coverSelection.mode === "explicit_inline" &&
@@ -422,17 +327,6 @@ export function SpaceEntryComposer({
             ) {
               setPendingCoverInlineRemoval({ mediaAssetId: mediaId });
             }
-            setPhotoIntentsByBlockId((current) => {
-              const next = { ...current };
-              const removed = next[blockId];
-              delete next[blockId];
-              if (removed) {
-                for (const [key, value] of Object.entries(next)) {
-                  if (value === removed) delete next[key];
-                }
-              }
-              return next;
-            });
           }}
         />
         <JournalCoverControls
@@ -445,7 +339,14 @@ export function SpaceEntryComposer({
             previewUrl: null,
             label: `${coverCopy.useAsCover} ${index + 1}`,
           }))}
-          disabled={submitState === "saving"}
+          disabled={saving || online.readOnly}
+          onSelectSeparateFile={async (intent) => {
+            const uploaded = await uploadPhoto(intent);
+            return {
+              mediaAssetId: uploaded.mediaAssetId,
+              previewUrl: uploaded.publicUrl,
+            };
+          }}
           pendingInlineRemoval={pendingCoverInlineRemoval}
           onChange={setCoverSelection}
           onResolveInlineRemoval={(choice) => {
@@ -454,21 +355,21 @@ export function SpaceEntryComposer({
               setPendingCoverInlineRemoval(null);
               return;
             }
-            if (choice === "keep_as_cover") {
-              setCoverSelection({
-                mode: "separate",
-                mediaAssetId: pendingCoverInlineRemoval.mediaAssetId,
-                previewUrl: null,
-              });
-            } else {
-              setCoverSelection({ mode: "automatic" });
-            }
+            setCoverSelection(
+              choice === "keep_as_cover"
+                ? {
+                    mode: "separate",
+                    mediaAssetId: pendingCoverInlineRemoval.mediaAssetId,
+                    previewUrl: null,
+                  }
+                : { mode: "automatic" },
+            );
             setPendingCoverInlineRemoval(null);
           }}
         />
       </div>
 
-      <fieldset className="grid gap-2">
+      <fieldset className="grid gap-2" disabled={online.readOnly}>
         <legend className="text-sm font-medium text-foreground">
           {copy.page.spaceJournal.mentionedObjects}
         </legend>
@@ -503,8 +404,8 @@ export function SpaceEntryComposer({
         </p>
       ) : null}
 
-      <Button type="submit" disabled={submitState === "saving"}>
-        {submitState === "saving"
+      <Button type="submit" disabled={saving || online.readOnly}>
+        {saving
           ? copy.composer.messages.savingPrivate
           : copy.page.spaceJournal.save}
       </Button>
@@ -512,35 +413,38 @@ export function SpaceEntryComposer({
   );
 }
 
-interface SpaceComposerPersistenceSnapshot {
-  ownerUserId: string;
-  draftId: string;
-  payload: SpaceEntryDraftPayload;
-  defaultEntryDate: string;
-  hydrated: boolean;
+function spaceDraftPayload(input: {
+  spaceId: string;
+  mentionedPlantObjectIds: string[];
+  draft: SpaceEntryFields;
+  clientMutationId: string;
+  cover: JournalCoverSelectionState;
+}): JournalEntryDraftPayloadV1 {
+  return {
+    schemaVersion: JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION,
+    draftKind: "space_entry",
+    request: {
+      target: "space_entry",
+      spaceId: input.spaceId,
+      mentionedPlantObjectIds: input.mentionedPlantObjectIds,
+      title: input.draft.title,
+      body: input.draft.body,
+      contentDocument: input.draft.contentDocument,
+      entryDate: input.draft.entryDate,
+      clientMutationId: input.clientMutationId,
+      syncStatus: "online",
+      cover: journalCoverSelectionToClaimInput(input.cover),
+    },
+  };
 }
 
-async function persistSpaceComposerSnapshot(
-  snapshot: SpaceComposerPersistenceSnapshot,
-  context: OwnerComposerDurabilityWriteContext,
-) {
-  if (!snapshot.hydrated) {
-    throw new Error("The space draft is not hydrated yet.");
+function coverSelectionFromRequest(
+  cover: JournalEntryDraftPayloadV1["request"]["cover"],
+): JournalCoverSelectionState {
+  if (!cover || cover.mode === "automatic") return { mode: "automatic" };
+  if (cover.mode === "none") return { mode: "none" };
+  if (cover.mode === "explicit_inline") {
+    return { mode: "explicit_inline", mediaAssetId: cover.mediaAssetId };
   }
-
-  if (
-    hasPersistableSpaceEntryDraft(snapshot.payload, snapshot.defaultEntryDate)
-  ) {
-    return upsertOfflineDraft(
-      {
-        ownerUserId: snapshot.ownerUserId,
-        id: snapshot.draftId,
-        kind: "space_entry",
-        payload: snapshot.payload,
-      },
-      context,
-    );
-  }
-
-  return deleteOfflineDraft(snapshot.ownerUserId, snapshot.draftId, context);
+  return { mode: "separate", mediaAssetId: cover.mediaAssetId };
 }

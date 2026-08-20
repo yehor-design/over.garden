@@ -33,8 +33,8 @@ import {
   type AuthenticatedSessionTabLease,
 } from "@/lib/auth/session-convergence";
 import { commitLocalExitInvalidationMarker } from "@/lib/auth/session-invalidation-marker";
+import { sealOnlineJournalComposerParticipantsForExit } from "@/lib/garden/online-journal-composer-participants";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import { sealActiveOwnerVaultsForLocalExit } from "@/lib/offline/owner-vault";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 import { LocalExitPublicSafeSurface } from "./local-exit-public-safe-surface";
 
@@ -107,7 +107,7 @@ export function SignOutProvider({
     // is created only by reconciliation after the public-safe commit and the
     // durable-navigation decision.
     const committed = commitLocalExitInvalidationMarker();
-    sealActiveOwnerVaultsForLocalExit();
+    sealOnlineJournalComposerParticipantsForExit();
     const operationId = createSignOutOperationId();
     const tabId =
       tabLeaseRef.current?.tabId ??

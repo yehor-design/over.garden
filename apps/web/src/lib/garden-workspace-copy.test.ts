@@ -23,15 +23,15 @@ describe("garden workspace copy", () => {
     }
   });
 
-  it("localizes representative inventory, creation, draft, offline, and save states", () => {
+  it("localizes representative inventory, creation, server-draft, and save states", () => {
     expect(getGardenWorkspaceCopy("uk").workspace.summary.objects).toBe(
       "Об'єкти",
     );
     expect(getGardenWorkspaceCopy("bg").composer.actions.saveOnline).toBe(
       "Запазване на първия запис",
     );
-    expect(getGardenWorkspaceCopy("ru").localState.connection.offline).toBe(
-      "Не в сети",
+    expect(getGardenWorkspaceCopy("ru").composer.online.notSaved).toBe(
+      "Изменения ещё не сохранены",
     );
     expect(getGardenWorkspaceCopy("bg").saveProgress.firstEntry.title).toBe(
       "Записът за градината ви е започнат",
@@ -74,7 +74,7 @@ describe("garden workspace copy", () => {
         "uk",
         new Error("photo intent no longer has selected bytes"),
       ),
-    ).toContain("цьому браузері більше немає вибраного фото");
+    ).toContain("Не вдалося прочитати це фото");
     expect(
       localizedJournalSaveErrorMessage("bg", new Error("Database unavailable")),
     ).toBe(
@@ -90,9 +90,9 @@ describe("garden workspace copy", () => {
       /closed.?pilot|founder.?rehearsal|без запрошення|без покана|без приглашения|закрит(?:ий|ого) пілот|затворен(?:ия)? пилот|закрыт(?:ый|ого) пилот/i;
 
     for (const locale of LOCALES) {
-      expect(flattenStrings(getGardenWorkspaceCopy(locale)).join("\n")).not.toMatch(
-        retiredAccessLanguage,
-      );
+      expect(
+        flattenStrings(getGardenWorkspaceCopy(locale)).join("\n"),
+      ).not.toMatch(retiredAccessLanguage);
     }
   });
 

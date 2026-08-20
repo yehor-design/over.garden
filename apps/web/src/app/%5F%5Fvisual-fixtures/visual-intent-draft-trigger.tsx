@@ -4,22 +4,7 @@ import { useState } from "react";
 import { ArrowUpRight, LoaderCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  FIRST_ENTRY_DRAFT_ID,
-  followUpEntryDraftId,
-  upsertOfflineDraft,
-  type FirstEntryDraftPayload,
-  type FollowUpEntryDraftPayload,
-} from "@/lib/offline/drafts";
-import { hydrateOwnerOfflineActivitySession } from "@/lib/offline/owner-session-lifecycle";
-
 type VisualIntentDraftKind = "first_entry" | "follow_up_entry";
-
-// This client is rendered only by the server-gated visual-fixture route. Its
-// synthetic owner never has a Better Auth session, so install an equally
-// synthetic, bounded generation before exercising the real guarded draft path.
-const VISUAL_FIXTURE_SESSION_GENERATION =
-  "visual-fixture-owner-session-generation-v1";
 
 export function VisualIntentDraftTrigger({
   kind,
@@ -44,7 +29,7 @@ export function VisualIntentDraftTrigger({
         ownerUserId,
         objectId,
       });
-      if (!saved) throw new Error("IndexedDB is unavailable.");
+      if (!saved) throw new Error("Visual intent is unavailable.");
       window.location.assign(startPath);
     } catch {
       setPending(false);
@@ -70,7 +55,7 @@ export function VisualIntentDraftTrigger({
       </Button>
       {failed ? (
         <span role="alert" className="text-xs text-destructive">
-          IndexedDB draft storage is unavailable in this browser.
+          The synthetic online draft intent is unavailable.
         </span>
       ) : null}
     </div>
@@ -78,7 +63,7 @@ export function VisualIntentDraftTrigger({
 }
 
 export async function seedVisualIntentDraft({
-  kind,
+  kind: _kind,
   ownerUserId,
   objectId,
 }: {
@@ -86,58 +71,11 @@ export async function seedVisualIntentDraft({
   ownerUserId: string;
   objectId?: string;
 }) {
-  const hydration = await hydrateOwnerOfflineActivitySession(
-    ownerUserId,
-    VISUAL_FIXTURE_SESSION_GENERATION,
-  );
-  if (hydration !== "ready") {
-    throw new Error("Visual fixture owner session is unavailable.");
+  void ownerUserId;
+  if (_kind === "follow_up_entry" && !objectId) {
+    throw new Error("Fixture object id is required.");
   }
-
-  if (kind === "follow_up_entry") {
-    if (!objectId) throw new Error("Fixture object id is required.");
-    const payload: FollowUpEntryDraftPayload = {
-      clientMutationId: "ove174-fixture-follow-up-draft",
-      plantObjectId: objectId,
-      draft: {
-        title: "Листя відновилося після спеки",
-        body: "Зберігаю це спостереження як тестову чернетку перед повторним входом.",
-        entryDate: "2026-07-10",
-      },
-      topicTagInput: "відновлення, спека",
-      photoIntent: null,
-    };
-    return upsertOfflineDraft({
-      ownerUserId,
-      id: followUpEntryDraftId(objectId),
-      kind,
-      payload,
-    });
-  }
-
-  const payload: FirstEntryDraftPayload = {
-    clientMutationId: "ove174-fixture-first-entry-draft",
-    draft: {
-      spaceName: "Тестова теплиця",
-      plantName: "Томат для перевірки входу",
-      objectKind: "plant",
-      title: "Перша зав'язь після прохолодної ночі",
-      body: "Реалістична тестова чернетка має залишитися на цьому пристрої після входу.",
-      entryDate: "2026-07-10",
-      locationVisibility: "hidden",
-      coarseRegionCode: "",
-    },
-    catalogQuery: "томат",
-    selectedCatalogItem: null,
-    userAddedCatalogName: "Тестовий ранній томат",
-    activationSource: "direct_garden",
-    topicTagInput: "розсада, спостереження",
-    photoIntent: null,
-  };
-  return upsertOfflineDraft({
-    ownerUserId,
-    id: FIRST_ENTRY_DRAFT_ID,
-    kind,
-    payload,
-  });
+  // Server-gated fixture routes cannot own a real authenticated server draft.
+  // Preserve only the navigation rehearsal; never seed browser persistence.
+  return true;
 }

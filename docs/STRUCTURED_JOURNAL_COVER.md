@@ -21,8 +21,9 @@ SQL consumers use `buildFirstProcessedMediaPerEntryQuery` /
 ## Composer
 
 Progressive optional Cover controls on first / follow-up / space / edit
-composers. Offline drafts store cover mode + separate photo intent; sync claims
-cover after processing. Cover upload registers
+composers. A selected file remains transient in the current tab, is uploaded
+through private quarantine and processing immediately, and only the processed
+media identity enters the owner-scoped server draft. Cover upload registers
 `owner-composer-cover-upload` as locale in-flight.
 
 Removing an explicit-inline cover image prompts keep-as-cover /

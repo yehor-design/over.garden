@@ -218,6 +218,73 @@ export function stableSerializeJournalDraftPayload(
   return JSON.stringify(sortJsonValue(payload));
 }
 
+/**
+ * Stable projection of fields that reflect an author action. Server-selected
+ * context, idempotency ids, and revisions are intentionally excluded so a
+ * route refresh cannot turn a fresh blank composer into a durable draft.
+ */
+export function stableSerializeJournalDraftUserIntent(
+  payload: JournalEntryDraftPayloadV1,
+): string {
+  const request = payload.request;
+  const shared = {
+    title: request.title,
+    body: request.body,
+    contentDocument: request.contentDocument,
+    entryDate: request.entryDate,
+    cover: request.cover,
+    mentionSelections: request.mentionSelections,
+    topicTags: request.topicTags,
+  };
+
+  if (payload.draftKind === "edit_entry") {
+    return JSON.stringify(
+      sortJsonValue({ draftKind: payload.draftKind, ...shared }),
+    );
+  }
+  if (payload.draftKind === "follow_up") {
+    const followUpRequest = payload.request;
+    return JSON.stringify(
+      sortJsonValue({
+        draftKind: payload.draftKind,
+        ...shared,
+        mediaAssetId: followUpRequest.mediaAssetId,
+        composerState: payload.composerState,
+      }),
+    );
+  }
+  if (payload.draftKind === "space_entry") {
+    const spaceRequest = payload.request;
+    return JSON.stringify(
+      sortJsonValue({
+        draftKind: payload.draftKind,
+        ...shared,
+        mentionedPlantObjectIds: spaceRequest.mentionedPlantObjectIds,
+      }),
+    );
+  }
+
+  const firstEntryRequest = payload.request;
+  return JSON.stringify(
+    sortJsonValue({
+      draftKind: payload.draftKind,
+      ...shared,
+      plantName: firstEntryRequest.plantName,
+      objectKind: firstEntryRequest.objectKind,
+      catalogItemId: firstEntryRequest.catalogItemId,
+      userAddedCatalogName: firstEntryRequest.userAddedCatalogName,
+      varietyText: firstEntryRequest.varietyText,
+      locationVisibility: firstEntryRequest.locationVisibility,
+      coarseRegionCode: firstEntryRequest.coarseRegionCode,
+      mediaAssetId: firstEntryRequest.mediaAssetId,
+      newSpaceName: firstEntryRequest.spaceId
+        ? undefined
+        : firstEntryRequest.spaceName,
+      composerState: payload.composerState,
+    }),
+  );
+}
+
 export async function journalDraftPayloadSha256(
   payload: JournalEntryDraftPayloadV1,
 ): Promise<string> {

@@ -1,26 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock3,
-  RefreshCw,
-  Search,
-  UploadCloud,
-  Wifi,
-  WifiOff,
-  X,
-} from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { Search, UploadCloud, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -28,12 +9,12 @@ import {
   createDocumentMutationRequestHeaders,
   useOptionalDocumentMutationGeneration,
 } from "@/components/auth/document-mutation-recovery";
-import { useOptionalForegroundAutosync } from "@/components/auth/foreground-autosync-provider";
 import {
   JournalCoverControls,
-  journalCoverSelectionToOfflinePayload,
+  journalCoverSelectionToClaimInput,
   type JournalCoverSelectionState,
 } from "@/components/garden/journal-cover-controls";
+import { OnlineJournalComposerStatus } from "@/components/garden/online-journal-composer-status";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
@@ -43,7 +24,6 @@ import {
   buildGardenCatalogTrustMetadata,
   formatGardenWorkspaceTemplate,
   getGardenWorkspaceCopy,
-  localizedJournalSaveErrorMessage,
   type GardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
 import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
@@ -51,12 +31,16 @@ import {
   extractJournalDocumentPlainText,
   listJournalDocumentImageMediaIds,
   createEmptyJournalDocument,
+  type JournalDocumentV1,
 } from "@/lib/garden/journal-document";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import type {
-  ActivationSource,
-  FirstEntryCatalogSelection,
+import {
+  JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION,
+  type ActivationSource,
+  type FirstEntryCatalogSelection,
+  type JournalEntryDraftPayloadV1,
+  type JournalEntryDraftReceiptV1,
 } from "@/lib/garden/entry-contracts";
 import type {
   JournalMentionSelection,
@@ -71,11 +55,14 @@ import {
   COMPOSER_PHOTO_ACCEPT,
   composerPhotoSelectionError,
   createComposerPhotoIntent,
+  type OnlineComposerPhotoIntent,
 } from "@/lib/garden/composer-photo-selection";
+import { useInlineMediaSelection } from "@/lib/garden/use-inline-media-selection";
 import {
-  selectInlineMedia,
-  useInlineMediaSelection,
-} from "@/lib/garden/use-inline-media-selection";
+  OnlineJournalSubmitError,
+  uploadOnlineComposerPhoto,
+} from "@/lib/garden/online-journal-submit";
+import { useOnlineJournalComposer } from "@/lib/garden/use-online-journal-composer";
 import {
   catalogItemIdForSelection,
   parseCatalogTypeaheadResponse,
@@ -86,38 +73,7 @@ import {
 } from "@/lib/garden/journal-title-prefill";
 import { appendVoiceTranscriptToBody } from "@/lib/garden/voice-to-text";
 import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
-import {
-  getLocalizedCoarseRegionLabel,
-  getLocalizedCoarseRegionOptions,
-} from "@/lib/garden/regions";
-import {
-  enqueueOfflineMutation,
-  listOfflineMutations,
-  updateOfflineMutationStatus,
-  type OfflineFirstPlantEntryPayload,
-  type OfflineJournalEntryPayload,
-  type OfflineMutation,
-  type OfflinePhotoIntent,
-} from "@/lib/offline/queue";
-import {
-  deleteOfflineDraft,
-  FIRST_ENTRY_DRAFT_ID,
-  getOfflineDraft,
-  hasPersistableFirstEntryDraft,
-  upsertOfflineDraft,
-  type FirstEntryDraftFields,
-  type FirstEntryDraftPayload,
-} from "@/lib/offline/drafts";
-import {
-  createDurableOwnerComposerPersistenceController,
-  type OwnerComposerPersistenceController,
-  type OwnerComposerDurabilityWriteContext,
-} from "@/lib/offline/owner-composer-participants";
-import {
-  JournalEntrySyncError,
-  submitOnlineJournalEntryPayload,
-  syncOfflineJournalEntryMutation,
-} from "@/lib/offline/journal-entry-sync";
+import { getLocalizedCoarseRegionOptions } from "@/lib/garden/regions";
 import { trackMetaMarketingEvent } from "@/lib/meta-marketing/client";
 import type { VisualFixtureCreationScenarioEvidence } from "@/lib/visual-fixtures/manifest";
 import { runVisualJournalCreationScenario } from "@/lib/visual-fixtures/journal-creation-client";
@@ -143,24 +99,28 @@ interface FirstEntryComposerProps {
   activationSource?: ActivationSource | null;
   visualScenario?: VisualFixtureCreationScenarioEvidence | null;
   /**
-   * Visual workspace fixtures must not open real IndexedDB drafts — Dexie
-   * open/hydration can freeze the browser main thread under Playwright and
-   * pollute fixture evidence with local owner state.
+   * Visual workspace fixtures use in-memory presentation state only and must
+   * not call the authenticated server-draft protocol.
    */
-  enableOfflinePersistence?: boolean;
+  enableServerPersistence?: boolean;
 }
 
-type SubmitState = "idle" | "queued" | "syncing" | "synced" | "failed";
+type SubmitState = "idle" | "publishing" | "published" | "failed";
 type CatalogStatus = "idle" | "loading" | "ready" | "failed";
 
 type CatalogSuggestion = FirstEntryCatalogSelection;
 
-interface FirstEntryComposerPersistenceSnapshot {
-  ownerUserId: string;
-  payload: FirstEntryDraftPayload;
-  photoFile: File | null;
-  defaultEntryDate: string;
-  hydrated: boolean;
+interface FirstEntryDraftFields {
+  spaceId: string | null;
+  spaceName: string;
+  plantName: string;
+  objectKind: PlantObjectKind;
+  title: string;
+  body: string;
+  contentDocument: JournalDocumentV1 | null;
+  entryDate: string;
+  locationVisibility: "hidden" | "region";
+  coarseRegionCode: string;
 }
 
 export function FirstEntryComposer({
@@ -172,21 +132,14 @@ export function FirstEntryComposer({
   initialCatalogItem = null,
   activationSource = null,
   visualScenario = null,
-  enableOfflinePersistence = true,
+  enableServerPersistence = true,
 }: FirstEntryComposerProps) {
   const copy = getGardenWorkspaceCopy(locale);
   const documentMutation = useOptionalDocumentMutationGeneration();
-  const foregroundAutosync = useOptionalForegroundAutosync();
-  const offlinePersistenceEnabled =
-    enableOfflinePersistence && visualScenario == null;
+  const onlinePersistenceEnabled =
+    enableServerPersistence && visualScenario == null;
   useScrollToHashOnMount("first-entry-composer");
   const router = useRouter();
-  const draftPersistencePausedRef = useRef(false);
-  const persistenceFrozenRef = useRef(false);
-  const persistenceControllerRef =
-    useRef<OwnerComposerPersistenceController<FirstEntryComposerPersistenceSnapshot> | null>(
-      null,
-    );
   const titleEditedByUserRef = useRef(false);
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const structuredComposerRef = useRef<StructuredJournalComposerHandle | null>(
@@ -218,7 +171,7 @@ export function FirstEntryComposer({
     coarseRegionCode: visualScenario?.coarseRegionCode ?? "",
   });
   const [photoIntentsByBlockId, setPhotoIntentsByBlockId] = useState<
-    Record<string, OfflinePhotoIntent>
+    Record<string, OnlineComposerPhotoIntent>
   >({});
   const inlineMedia = useInlineMediaSelection(ownerUserId);
   const [coverSelection, setCoverSelection] =
@@ -254,7 +207,7 @@ export function FirstEntryComposer({
     useState<MentionTypeaheadStatus>("idle");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [storedPhotoIntent, setStoredPhotoIntent] =
-    useState<OfflinePhotoIntent | null>(
+    useState<OnlineComposerPhotoIntent | null>(
       visualScenario?.mediaFileName
         ? {
             fileName: visualScenario.mediaFileName,
@@ -264,19 +217,54 @@ export function FirstEntryComposer({
         : null,
     );
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(visualScenario?.online ?? true);
+  const [primaryMediaAssetId, setPrimaryMediaAssetId] = useState<string | null>(
+    null,
+  );
   const [submitState, setSubmitState] = useState<SubmitState>(
-    visualScenario?.submitState ?? "idle",
+    visualScenario?.submitState === "failed" ? "failed" : "idle",
   );
   const [message, setMessage] = useState(
     localizedVisualScenarioMessage(copy, visualScenario),
   );
-  const [mutations, setMutations] = useState<OfflineMutation[]>([]);
-  const [draftHydrated, setDraftHydrated] = useState(
-    !offlinePersistenceEnabled,
-  );
-  const [persistenceFrozen, setPersistenceFrozen] = useState(false);
   const [localeMutationPending, setLocaleMutationPending] = useState(false);
+  const draftPayload = useMemo(
+    () =>
+      firstEntryDraftPayload({
+        draft,
+        clientMutationId,
+        selectedCatalogItem,
+        userAddedCatalogName,
+        activationSource,
+        mentionSelections,
+        topicTagInput,
+        primaryMediaAssetId,
+        coverSelection,
+        catalogQuery,
+      }),
+    [
+      activationSource,
+      catalogQuery,
+      clientMutationId,
+      coverSelection,
+      draft,
+      mentionSelections,
+      primaryMediaAssetId,
+      selectedCatalogItem,
+      topicTagInput,
+      userAddedCatalogName,
+    ],
+  );
+  const online = useOnlineJournalComposer({
+    draftKey: "first-entry",
+    draftKind: "first_entry",
+    context: { spaceId: draft.spaceId },
+    payload: draftPayload,
+    documentMutationGeneration: documentMutation?.transport,
+    enabled: onlinePersistenceEnabled,
+    onHydrated: hydrateServerDraft,
+  });
+  const draftHydrated = online.state.hydrated;
+  const persistenceFrozen = online.readOnly;
 
   useInterfaceLocaleChangeFormState({
     id: "first-entry-composer-mutation",
@@ -297,215 +285,39 @@ export function FirstEntryComposer({
     if (localeMutationCountRef.current === 0) setLocaleMutationPending(false);
   }
 
-  useEffect(() => {
-    if (!offlinePersistenceEnabled) return;
-
-    const controller =
-      createDurableOwnerComposerPersistenceController<FirstEntryComposerPersistenceSnapshot>(
-        {
-          ownerUserId,
-          draftId: FIRST_ENTRY_DRAFT_ID,
-          persist: persistFirstEntryComposerSnapshot,
-          shouldPersistAutomatically: () => !draftPersistencePausedRef.current,
-        },
-      );
-    persistenceControllerRef.current = controller;
-    const unsubscribeFrozen = controller.subscribeFrozen((frozen) => {
-      persistenceFrozenRef.current = frozen;
-      setPersistenceFrozen(frozen);
-    });
-
-    return () => {
-      unsubscribeFrozen();
-      if (persistenceControllerRef.current === controller) {
-        persistenceControllerRef.current = null;
-      }
-      persistenceFrozenRef.current = false;
-      controller.dispose();
-    };
-  }, [offlinePersistenceEnabled, ownerUserId]);
-
-  const refreshQueue = useCallback(async () => {
-    try {
-      const localMutations = await listOfflineMutations(ownerUserId, [
-        "queued",
-        "syncing",
-        "failed",
-        "synced",
-      ]);
-      setMutations(
-        localMutations
-          .filter((mutation) => mutation.kind === "journal_entry")
-          .slice(-6)
-          .reverse(),
-      );
-    } catch {
-      setMutations([]);
+  function hydrateServerDraft(receipt: JournalEntryDraftReceiptV1) {
+    if (
+      receipt.draftKind !== "first_entry" ||
+      receipt.payload.draftKind !== "first_entry"
+    ) {
+      return;
     }
-  }, [ownerUserId]);
-
-  useEffect(() => {
-    if (!offlinePersistenceEnabled) return;
-
-    const refreshTimer = window.setTimeout(() => {
-      setIsOnline(navigator.onLine);
-      void refreshQueue();
-    }, 0);
-
-    const handleOnline = () => {
-      setIsOnline(true);
-      void refreshQueue();
-    };
-    const handleOffline = () => {
-      setIsOnline(false);
-      void refreshQueue();
-    };
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.clearTimeout(refreshTimer);
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, [offlinePersistenceEnabled, refreshQueue]);
-
-  useEffect(() => {
-    if (!offlinePersistenceEnabled) return;
-
-    let cancelled = false;
-
-    void getOfflineDraft<FirstEntryDraftPayload>(
-      ownerUserId,
-      FIRST_ENTRY_DRAFT_ID,
-    )
-      .then((storedDraft) => {
-        if (cancelled) return;
-
-        if (storedDraft) {
-          setClientMutationId(storedDraft.payload.clientMutationId);
-          setDraft({
-            ...storedDraft.payload.draft,
-            spaceId:
-              storedDraft.payload.draft.spaceId ??
-              (storedDraft.payload.draft.spaceName === initialSpace?.displayName
-                ? (initialSpace?.id ?? null)
-                : null),
-          });
-          titleEditedByUserRef.current =
-            storedDraft.payload.draft.title.trim().length > 0;
-          setCatalogQuery(
-            storedDraft.payload.catalogQuery ||
-              storedDraft.payload.selectedCatalogItem?.displayName ||
-              "",
-          );
-          setSelectedCatalogItem(storedDraft.payload.selectedCatalogItem);
-          setUserAddedCatalogName(storedDraft.payload.userAddedCatalogName);
-          setMentionSelections(storedDraft.payload.mentionSelections ?? []);
-          setTopicTagInput(storedDraft.payload.topicTagInput ?? "");
-          setStoredPhotoIntent(storedDraft.payload.photoIntent);
-          setPhotoIntentsByBlockId(
-            storedDraft.payload.photoIntentsByBlockId ?? {},
-          );
-          if (storedDraft.payload.cover) {
-            const storedCover = storedDraft.payload.cover;
-            if (storedCover.mode === "separate") {
-              setCoverSelection({
-                mode: "separate",
-                mediaAssetId: storedCover.mediaAssetId ?? null,
-                photoIntent: storedCover.photoIntent ?? null,
-                previewUrl: null,
-              });
-            } else if (storedCover.mode === "explicit_inline") {
-              setCoverSelection({
-                mode: "explicit_inline",
-                mediaAssetId: storedCover.mediaAssetId,
-                previewUrl: null,
-              });
-            } else if (
-              storedCover.mode === "automatic" ||
-              storedCover.mode === "none"
-            ) {
-              setCoverSelection({ mode: storedCover.mode });
-            } else if (storedCover.mode === "keep_as_cover") {
-              setCoverSelection({
-                mode: "separate",
-                mediaAssetId: storedCover.mediaAssetId,
-                previewUrl: null,
-              });
-            }
-          }
-          setMessage(copy.composer.draftRestored);
-        }
-
-        setDraftHydrated(true);
-      })
-      .catch(() => {
-        if (!cancelled) setDraftHydrated(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [copy, initialSpace, offlinePersistenceEnabled, ownerUserId]);
-
-  useLayoutEffect(() => {
-    if (!offlinePersistenceEnabled) return;
-
-    const payload: FirstEntryDraftPayload = {
-      clientMutationId,
-      draft,
-      catalogQuery,
-      selectedCatalogItem,
-      userAddedCatalogName,
-      activationSource,
-      mentionSelections,
-      topicTagInput,
-      photoIntent: storedPhotoIntent,
-      photoIntentsByBlockId,
-      cover: journalCoverSelectionToOfflinePayload(coverSelection),
-    };
-
-    const controller = persistenceControllerRef.current;
-    if (!controller) return;
-    controller.updateSnapshot({
-      ownerUserId,
-      payload,
-      photoFile,
-      defaultEntryDate: today,
-      hydrated: draftHydrated,
+    const request = receipt.payload.request;
+    const composerState = receipt.payload.composerState;
+    setClientMutationId(request.clientMutationId);
+    setDraft({
+      spaceId: request.spaceId ?? null,
+      spaceName: request.spaceName ?? "",
+      plantName: request.plantName ?? "",
+      objectKind: request.objectKind ?? "plant",
+      title: request.title,
+      body: request.body ?? "",
+      contentDocument: request.contentDocument ?? null,
+      entryDate: request.entryDate ?? today,
+      locationVisibility:
+        request.locationVisibility === "region" ? "region" : "hidden",
+      coarseRegionCode: request.coarseRegionCode ?? "",
     });
-
-    if (!draftHydrated) return;
-
-    const timer = window.setTimeout(() => {
-      if (draftPersistencePausedRef.current) return;
-
-      void controller.persistLatest().catch(() => undefined);
-    }, 250);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [
-    activationSource,
-    catalogQuery,
-    clientMutationId,
-    coverSelection,
-    draft,
-    draftHydrated,
-    selectedCatalogItem,
-    mentionSelections,
-    ownerUserId,
-    photoFile,
-    photoIntentsByBlockId,
-    storedPhotoIntent,
-    today,
-    topicTagInput,
-    userAddedCatalogName,
-    offlinePersistenceEnabled,
-  ]);
+    titleEditedByUserRef.current = request.title.trim().length > 0;
+    setCatalogQuery(composerState?.catalogQuery ?? "");
+    setSelectedCatalogItem(composerState?.selectedCatalogItem ?? null);
+    setUserAddedCatalogName(composerState?.userAddedCatalogName ?? null);
+    setMentionSelections(request.mentionSelections ?? []);
+    setTopicTagInput(composerState?.topicTagInput ?? "");
+    setPrimaryMediaAssetId(request.mediaAssetId || null);
+    setCoverSelection(coverSelectionFromRequest(request.cover));
+    setMessage(copy.composer.draftRestored);
+  }
 
   useEffect(() => {
     if (visualScenario) return;
@@ -601,8 +413,8 @@ export function FirstEntryComposer({
 
   const photoHelp = localizedPhotoHelp(copy, {
     fileName: photoFile?.name ?? storedPhotoIntent?.fileName ?? null,
-    isOnline,
     photoError,
+    ready: primaryMediaAssetId !== null,
   });
   const catalogAliasCollisionKeys = useMemo(
     () => catalogSuggestionAliasCollisionKeys(catalogSuggestions),
@@ -618,7 +430,9 @@ export function FirstEntryComposer({
     locale: "und",
   });
 
-  const hasSelectedPhoto = Boolean(photoFile || storedPhotoIntent);
+  const hasSelectedPhoto = Boolean(
+    photoFile || storedPhotoIntent || primaryMediaAssetId,
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -637,7 +451,7 @@ export function FirstEntryComposer({
         return;
       }
 
-      let payload: OfflineFirstPlantEntryPayload;
+      let payload: JournalEntryDraftPayloadV1;
       try {
         payload = await buildPayload();
       } catch {
@@ -645,53 +459,25 @@ export function FirstEntryComposer({
         setMessage(copy.composer.photo.readError);
         return;
       }
-      if (isComposerPersistenceFrozen()) return;
-
-      if (!isOnline) {
-        try {
-          await enqueuePayload(payload);
-        } catch {
-          setSubmitState("failed");
-          setMessage(copy.composer.messages.offlineStorageUnavailable);
-        }
-        return;
-      }
-
-      setSubmitState("syncing");
+      setSubmitState("publishing");
       setMessage(copy.composer.messages.savingPrivate);
 
       try {
-        const result = await submitOnlineJournalEntryPayload(payload, {
-          ownerUserId,
-          idempotencyKey: clientMutationId,
-          documentMutationGeneration: documentMutation?.transport,
-        });
-        if (isComposerPersistenceFrozen()) return;
-        draftPersistencePausedRef.current = true;
-        await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
-          () => undefined,
-        );
-        setSubmitState("synced");
+        const result = await online.publish(payload);
+        setSubmitState("published");
         setMessage(copy.composer.messages.saved);
         void trackMetaMarketingEvent("first_entry_saved", {
           browserPixel: false,
         });
-        router.push(result.readbackUrl);
-      } catch (error) {
-        if (
-          error instanceof JournalEntrySyncError &&
-          error.documentMutationAdmission
-        ) {
-          documentMutation?.handleTransportResult(
-            error.documentMutationAdmission,
-          );
-          setSubmitState("failed");
-          setMessage(localizedJournalSaveErrorMessage(locale, error));
-          return;
+        if ("readbackUrl" in result && typeof result.readbackUrl === "string") {
+          router.push(result.readbackUrl);
+        } else {
+          router.push("/garden");
         }
-        if (await resumeAuthentication(error, payload)) return;
+      } catch (error) {
+        handleTransportBoundary(error);
         setSubmitState("failed");
-        setMessage(localizedJournalSaveErrorMessage(locale, error));
+        setMessage(copy.composer.messages.genericSaveError);
       }
     } finally {
       endLocaleMutation();
@@ -701,7 +487,7 @@ export function FirstEntryComposer({
   async function handleVisualScenarioSubmit(
     scenario: VisualFixtureCreationScenarioEvidence,
   ) {
-    setSubmitState("syncing");
+    setSubmitState("publishing");
     setMessage(copy.composer.messages.visualRunning);
 
     try {
@@ -709,15 +495,13 @@ export function FirstEntryComposer({
         const readbackPath = await runVisualJournalCreationScenario(
           scenario.id,
         );
-        setSubmitState("synced");
+        setSubmitState("published");
         setMessage(copy.composer.messages.visualSaved);
         router.push(readbackPath);
         return;
       }
 
-      const payload = await buildPayload();
       if (scenario.state === "draft" || scenario.state === "cancel") {
-        await persistVisualDraft(payload);
         setSubmitState("idle");
         setMessage(
           scenario.state === "cancel"
@@ -727,88 +511,31 @@ export function FirstEntryComposer({
         return;
       }
 
-      const mutation = await enqueueOfflineMutation({
-        ownerUserId,
-        kind: "journal_entry",
-        payload,
-        idempotencyKey: scenario.clientMutationId,
-      });
       if (scenario.state === "error") {
-        await updateOfflineMutationStatus(ownerUserId, mutation.id, "failed", {
-          lastError: "Recoverable fixture save failure.",
-        });
         setSubmitState("failed");
         setMessage(copy.composer.messages.visualRecoverableError);
       } else {
-        setSubmitState("queued");
-        setMessage(copy.composer.messages.visualQueued);
+        setSubmitState("idle");
+        setMessage(copy.composer.messages.visualDraftSaved);
       }
-      await refreshQueue();
-    } catch (error) {
+    } catch {
       setSubmitState("failed");
-      setMessage(localizedJournalSaveErrorMessage(locale, error));
+      setMessage(copy.composer.messages.genericSaveError);
     }
   }
 
-  async function persistVisualDraft(payload: OfflineFirstPlantEntryPayload) {
-    const persistedPayload = persistedDraftPayload(payload);
-    await upsertOfflineDraft({
-      ownerUserId,
-      id: FIRST_ENTRY_DRAFT_ID,
-      kind: "first_entry",
-      payload: persistedPayload,
-    });
-  }
-
-  function persistedDraftPayload(
-    payload: OfflineFirstPlantEntryPayload,
-  ): FirstEntryDraftPayload {
-    return {
-      clientMutationId: payload.clientMutationId,
-      draft: {
-        spaceId: payload.spaceId ?? null,
-        spaceName: payload.spaceName ?? "",
-        plantName: payload.plantName,
-        objectKind: payload.objectKind ?? "plant",
-        title: payload.title,
-        body: payload.body,
-        entryDate: payload.entryDate,
-        locationVisibility:
-          payload.locationVisibility === "region" ? "region" : "hidden",
-        coarseRegionCode: payload.coarseRegionCode ?? "",
-      },
-      catalogQuery,
-      selectedCatalogItem,
-      userAddedCatalogName,
-      activationSource: payload.activationSource ?? null,
-      mentionSelections: payload.mentionSelections ?? [],
-      topicTagInput,
-      photoIntent: payload.photoIntent ?? null,
-    };
-  }
-
   async function handleCancel() {
-    if (isComposerPersistenceFrozen()) return;
+    if (visualScenario || online.readOnly) {
+      router.push("/garden");
+      return;
+    }
     beginLocaleMutation();
     try {
       const payload = await buildPayload();
-      if (isComposerPersistenceFrozen()) return;
-      const persistedPayload = persistedDraftPayload(payload);
-      draftPersistencePausedRef.current = true;
-
-      if (
-        visualScenario?.state === "cancel" ||
-        hasPersistableFirstEntryDraft(persistedPayload, today)
-      ) {
-        await persistVisualDraft(payload);
-      } else {
-        await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID);
-      }
-
-      if (isComposerPersistenceFrozen()) return;
+      await online.saveNow(payload);
       router.push("/garden");
-    } catch {
-      draftPersistencePausedRef.current = false;
+    } catch (error) {
+      handleTransportBoundary(error);
       setSubmitState("failed");
       setMessage(copy.composer.messages.preserveDraftError);
     } finally {
@@ -816,180 +543,53 @@ export function FirstEntryComposer({
     }
   }
 
-  async function enqueuePayload(payload: OfflineJournalEntryPayload) {
-    const mutation = await enqueueOfflineMutation({
-      ownerUserId,
-      kind: "journal_entry",
-      payload,
-      idempotencyKey: clientMutationId,
-    });
-
-    if (isComposerPersistenceFrozen()) return;
-    setSubmitState("queued");
-    draftPersistencePausedRef.current = true;
-    await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
-      () => undefined,
-    );
-    setMessage(
-      mutation.status === "queued"
-        ? localizedLocalSavedMessage(copy, "entry")
-        : localizedLocalDuplicateMessage(copy, "entry"),
-    );
-    await refreshQueue();
-  }
-
-  async function handleSync(
-    mutation: OfflineMutation,
-    documentMutationGeneration = documentMutation?.transport,
-    allowAutomaticSessionRetry = true,
-  ) {
-    beginLocaleMutation();
-    setSubmitState("syncing");
-    setMessage(copy.composer.messages.sending);
-
-    try {
-      const result = foregroundAutosync
-        ? await foregroundAutosync.runManualMutation(mutation.id)
-        : await syncOfflineJournalEntryMutation(mutation, {
-            expectedOwnerUserId: ownerUserId,
-            documentMutationGeneration,
-          });
-      if (isComposerPersistenceFrozen()) return;
-      setSubmitState("synced");
-      setMessage(copy.composer.messages.saved);
-      await refreshQueue();
-      void trackMetaMarketingEvent("first_entry_saved", {
-        browserPixel: false,
-      });
-      router.push(result.readbackUrl);
-    } catch (error) {
-      if (
-        error instanceof JournalEntrySyncError &&
-        error.documentMutationAdmission
-      ) {
-        if (foregroundAutosync) {
-          setSubmitState("failed");
-          setMessage(localizedJournalSaveErrorMessage(locale, error));
-          await refreshQueue();
-          return;
-        }
-        const result = error.documentMutationAdmission;
-        const handledWithIdempotentRecovery =
-          allowAutomaticSessionRetry &&
-          documentMutation &&
-          result === "DOCUMENT_SESSION_REFRESH_REQUIRED";
-        if (handledWithIdempotentRecovery) {
-          documentMutation.handleIdempotentTransportResult({
-            retryKey: mutation.id,
-            result,
-            retry: (freshTransport) => {
-              void handleSync(mutation, freshTransport, false);
-            },
-          });
-        } else {
-          documentMutation?.handleTransportResult(result);
-        }
-        setSubmitState("failed");
-        setMessage(localizedJournalSaveErrorMessage(locale, error));
-        await refreshQueue();
-        return;
-      }
-      if (await resumeAuthentication(error)) return;
-      setSubmitState("failed");
-      setMessage(localizedJournalSaveErrorMessage(locale, error));
-      await refreshQueue();
-    } finally {
-      endLocaleMutation();
-    }
-  }
-
-  async function resumeAuthentication(
-    error: unknown,
-    payload?: OfflineFirstPlantEntryPayload,
-  ) {
+  function handleTransportBoundary(error: unknown) {
     if (
-      error instanceof JournalEntrySyncError &&
-      error.status === 401 &&
-      error.authIntentUrl
+      error instanceof OnlineJournalSubmitError &&
+      error.documentMutationAdmission
     ) {
-      if (payload) {
-        try {
-          const savedDraft = await upsertOfflineDraft({
-            ownerUserId,
-            id: FIRST_ENTRY_DRAFT_ID,
-            kind: "first_entry",
-            payload: {
-              clientMutationId: payload.clientMutationId,
-              draft: {
-                spaceId: payload.spaceId ?? null,
-                spaceName: payload.spaceName ?? "",
-                plantName: payload.plantName,
-                objectKind: payload.objectKind ?? "plant",
-                title: payload.title,
-                body: payload.body,
-                entryDate: payload.entryDate,
-                locationVisibility:
-                  payload.locationVisibility === "region" ? "region" : "hidden",
-                coarseRegionCode: payload.coarseRegionCode ?? "",
-              },
-              catalogQuery,
-              selectedCatalogItem,
-              userAddedCatalogName,
-              activationSource: payload.activationSource ?? null,
-              mentionSelections: payload.mentionSelections ?? [],
-              topicTagInput,
-              photoIntent: payload.photoIntent ?? null,
-            },
-          });
-          if (!savedDraft) throw new Error("Offline drafts are unavailable.");
-        } catch {
-          setSubmitState("failed");
-          setMessage(copy.composer.messages.preserveDraftBeforeSignInError);
-          return true;
-        }
-      }
-
-      setSubmitState("idle");
-      setMessage(copy.composer.messages.signInToContinue);
-      router.push(error.authIntentUrl);
-      return true;
+      documentMutation?.handleTransportResult(error.documentMutationAdmission);
     }
-    return false;
+    if (error instanceof OnlineJournalSubmitError && error.authIntentUrl) {
+      window.location.assign(error.authIntentUrl);
+    }
   }
 
-  async function buildPayload(): Promise<OfflineFirstPlantEntryPayload> {
-    const photoIntent = photoFile
-      ? await createComposerPhotoIntent(photoFile)
-      : storedPhotoIntent;
+  async function uploadPhoto(intent: OnlineComposerPhotoIntent) {
+    const transport = documentMutation?.transport;
+    if (!transport) throw new Error("Document session is not ready.");
+    try {
+      return await uploadOnlineComposerPhoto({
+        intent,
+        authReturnTo: "/garden",
+        documentMutationGeneration: transport,
+      });
+    } catch (error) {
+      handleTransportBoundary(error);
+      online.reportConnectionRequired(error);
+      throw error;
+    }
+  }
 
-    return {
-      target: "first_plant_entry",
-      ...draft,
-      spaceId: draft.spaceId,
-      spaceName: draft.spaceName,
-      objectKind: draft.objectKind,
-      catalogItemId: catalogItemIdForSelection(selectedCatalogItem),
-      userAddedCatalogName:
-        !selectedCatalogItem && userAddedCatalogName
-          ? userAddedCatalogName
-          : null,
-      varietyText: selectedCatalogItem?.displayName ?? userAddedCatalogName,
-      locationVisibility: draft.locationVisibility,
-      coarseRegionCode:
-        draft.locationVisibility === "region" ? draft.coarseRegionCode : null,
+  async function buildPayload(): Promise<JournalEntryDraftPayloadV1> {
+    const contentDocument =
+      (await structuredComposerRef.current?.flushLatest()) ??
+      draft.contentDocument;
+    const body = contentDocument
+      ? extractJournalDocumentPlainText(contentDocument)
+      : draft.body;
+    return firstEntryDraftPayload({
+      draft: { ...draft, body, contentDocument },
       clientMutationId,
+      selectedCatalogItem,
+      userAddedCatalogName,
       activationSource,
-      syncStatus: isOnline ? "online" : "offline_queued",
       mentionSelections,
-      topicTags: normalizeJournalTopicTagLabels(topicTagInput),
-      photoIntent,
-      contentDocument: draft.contentDocument ?? undefined,
-      photoIntentsByBlockId:
-        Object.keys(photoIntentsByBlockId).length > 0
-          ? photoIntentsByBlockId
-          : undefined,
-      cover: journalCoverSelectionToOfflinePayload(coverSelection),
-    };
+      topicTagInput,
+      primaryMediaAssetId,
+      coverSelection,
+      catalogQuery,
+    });
   }
 
   function updateDraft<K extends keyof FirstEntryDraftFields>(
@@ -997,7 +597,6 @@ export function FirstEntryComposer({
     value: FirstEntryDraftFields[K],
   ) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     setDraft((current) => {
       const next = { ...current, [field]: value };
       return field === "plantName" || field === "body" || field === "entryDate"
@@ -1008,7 +607,6 @@ export function FirstEntryComposer({
 
   function updateSpaceChoice(value: string) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     setDraft((current) =>
       value === initialSpace?.id
         ? {
@@ -1022,7 +620,6 @@ export function FirstEntryComposer({
 
   function updateObjectKind(value: PlantObjectKind) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     setDraft((current) => ({ ...current, objectKind: value }));
 
     if (selectedCatalogItem) {
@@ -1037,14 +634,12 @@ export function FirstEntryComposer({
 
   function updateTitle(value: string) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     titleEditedByUserRef.current = true;
     setDraft((current) => ({ ...current, title: value }));
   }
 
   function appendVoiceTranscript(transcript: string) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     void structuredComposerRef.current?.insertVoiceTranscript(transcript);
     setDraft((current) =>
       withSuggestedTitle({
@@ -1067,7 +662,6 @@ export function FirstEntryComposer({
     if (isComposerPersistenceFrozen()) return;
     if (!activeMentionToken) return;
 
-    draftPersistencePausedRef.current = false;
     const applied = applyMentionSuggestion(
       draft.body,
       activeMentionToken,
@@ -1103,7 +697,6 @@ export function FirstEntryComposer({
 
   function removeMentionSelection(selection: JournalMentionSelection) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     setMentionSelections((current) =>
       current.filter(
         (item) => mentionSelectionKey(item) !== mentionSelectionKey(selection),
@@ -1113,13 +706,11 @@ export function FirstEntryComposer({
 
   function updateTopicTagInput(value: string) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     setTopicTagInput(value);
   }
 
   function updateLocationVisibility(value: string) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     setDraft((current) => ({
       ...current,
       locationVisibility: value === "region" ? "region" : "hidden",
@@ -1129,7 +720,6 @@ export function FirstEntryComposer({
 
   function updateCatalogQuery(value: string) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     setCatalogQuery(value);
 
     if (selectedCatalogItem && value !== selectedCatalogItem.displayName) {
@@ -1148,7 +738,6 @@ export function FirstEntryComposer({
 
   function selectCatalogSuggestion(suggestion: CatalogSuggestion) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     setSelectedCatalogItem(suggestion);
     setUserAddedCatalogName(null);
     setCatalogQuery(suggestion.displayName);
@@ -1174,7 +763,6 @@ export function FirstEntryComposer({
     const displayName = catalogQuery.trim().replace(/\s+/g, " ");
     if (displayName.length < 1) return;
 
-    draftPersistencePausedRef.current = false;
     setSelectedCatalogItem(null);
     setUserAddedCatalogName(displayName);
     setCatalogQuery(displayName);
@@ -1187,7 +775,6 @@ export function FirstEntryComposer({
 
   function chooseUnknownCatalog() {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     setSelectedCatalogItem(null);
     setUserAddedCatalogName(null);
     setCatalogQuery("");
@@ -1198,7 +785,6 @@ export function FirstEntryComposer({
 
   function handlePhotoChange(file: File | undefined) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     setPhotoError(null);
     const requestId = photoIntentRequestRef.current + 1;
     photoIntentRequestRef.current = requestId;
@@ -1228,36 +814,33 @@ export function FirstEntryComposer({
     setStoredPhotoIntent(clearComposerPhotoIntent());
     setDraft((current) => withSuggestedTitle(current, { hasPhoto: true }));
     void createComposerPhotoIntent(file)
-      .then((intent) => {
+      .then(async (intent) => {
         if (
           !isComposerPersistenceFrozen() &&
           photoIntentRequestRef.current === requestId
         ) {
           setStoredPhotoIntent(intent);
+          const uploaded = await uploadPhoto(intent);
+          if (photoIntentRequestRef.current === requestId) {
+            setPrimaryMediaAssetId(uploaded.mediaAssetId);
+          }
         }
       })
-      .catch(() => {
-        if (
-          isComposerPersistenceFrozen() ||
-          photoIntentRequestRef.current !== requestId
-        ) {
+      .catch((error) => {
+        if (photoIntentRequestRef.current !== requestId) {
           return;
         }
-
-        setPhotoFile(null);
-        setStoredPhotoIntent(clearComposerPhotoIntent());
-        setPhotoError(copy.composer.photo.keepError);
-        resetPhotoInput();
-        setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
+        online.reportConnectionRequired(error);
+        setPhotoError(copy.composer.photo.uploadError);
       });
   }
 
   function clearPhotoSelection(resetInput = true) {
     if (isComposerPersistenceFrozen()) return;
-    draftPersistencePausedRef.current = false;
     photoIntentRequestRef.current += 1;
     setPhotoFile(null);
     setStoredPhotoIntent(clearComposerPhotoIntent());
+    setPrimaryMediaAssetId(null);
     setPhotoError(null);
     if (resetInput) resetPhotoInput();
     setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
@@ -1270,10 +853,7 @@ export function FirstEntryComposer({
   }
 
   function isComposerPersistenceFrozen() {
-    return (
-      persistenceControllerRef.current?.isFrozen() ??
-      persistenceFrozenRef.current
-    );
+    return online.readOnly;
   }
 
   function withSuggestedTitle(
@@ -1308,502 +888,517 @@ export function FirstEntryComposer({
   return (
     <form
       onSubmit={handleSubmit}
+      data-online-composer-kind="first_entry"
       data-visual-creation-scenario={visualScenario?.id}
-      inert={persistenceFrozen}
-      data-composer-sign-out-frozen={persistenceFrozen || undefined}
-      aria-busy={persistenceFrozen || undefined}
-      className={`grid min-w-0 gap-4 transition-opacity ${persistenceFrozen ? "pointer-events-none opacity-60" : ""}`}
+      data-online-composer-read-only={persistenceFrozen || undefined}
+      aria-busy={online.state.status === "hydrating" || undefined}
+      className="grid min-w-0 gap-4"
     >
-      {persistenceFrozen ? (
-        <p className="sr-only" role="status" aria-live="polite">
-          {copy.composer.saveStates.syncing}
-        </p>
-      ) : null}
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1">
-          {isOnline ? (
-            <Wifi className="size-3.5" />
-          ) : (
-            <WifiOff className="size-3.5" />
-          )}
-          {isOnline
-            ? copy.composer.connection.online
-            : copy.composer.connection.offline}
-        </span>
-        <span className="rounded-md border border-border px-2 py-1">
-          {copy.composer.saveStates[submitState]}
-        </span>
-      </div>
-
-      <JournalObjectKindSelector
+      <OnlineJournalComposerStatus
+        state={online.state}
         locale={locale}
-        value={draft.objectKind}
-        onChange={updateObjectKind}
+        copy={copy}
+        unsavedText={[draft.plantName, draft.title, draft.entryDate, draft.body]
+          .filter(Boolean)
+          .join("\n")}
+        navigationHref="/garden"
+        onRetry={online.retry}
+        onCancel={() => router.push("/garden")}
       />
 
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-        <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-          {copy.composer.fields.name}
-          <input
-            name="plantName"
-            data-auth-intent-control="create_object"
-            required
-            maxLength={120}
-            value={draft.plantName}
-            onChange={(event) => updateDraft("plantName", event.target.value)}
-            className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
-            placeholder={
-              draft.objectKind === "animal"
-                ? copy.composer.fields.animalPlaceholder
-                : copy.composer.fields.plantPlaceholder
-            }
-          />
-        </label>
+      <fieldset disabled={persistenceFrozen} className="contents">
+        <JournalObjectKindSelector
+          locale={locale}
+          value={draft.objectKind}
+          onChange={updateObjectKind}
+        />
 
-        {initialSpace ? (
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2">
           <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-            {copy.composer.fields.space}
-            <select
-              name="spaceChoice"
-              value={draft.spaceId ?? "new"}
-              onChange={(event) => updateSpaceChoice(event.target.value)}
+            {copy.composer.fields.name}
+            <input
+              name="plantName"
+              data-auth-intent-control="create_object"
+              required
+              maxLength={120}
+              value={draft.plantName}
+              onChange={(event) => updateDraft("plantName", event.target.value)}
               className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
-            >
-              <option value={initialSpace.id}>
-                {initialSpace.displayName}
-              </option>
-              <option value="new">{copy.composer.fields.createNewSpace}</option>
-            </select>
+              placeholder={
+                draft.objectKind === "animal"
+                  ? copy.composer.fields.animalPlaceholder
+                  : copy.composer.fields.plantPlaceholder
+              }
+            />
           </label>
-        ) : null}
-      </div>
 
-      {!draft.spaceId ? (
-        <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-          {copy.composer.fields.newSpaceName}
-          <input
-            name="spaceName"
-            required
-            maxLength={120}
-            value={draft.spaceName}
-            onChange={(event) => updateDraft("spaceName", event.target.value)}
-            className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
-            placeholder={copy.composer.fields.spacePlaceholder}
-          />
-          <span className="text-xs leading-5 font-normal text-muted-foreground">
-            {copy.composer.fields.spaceHelp}
-          </span>
-        </label>
-      ) : (
-        <input type="hidden" name="spaceId" value={draft.spaceId} />
-      )}
+          {initialSpace ? (
+            <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
+              {copy.composer.fields.space}
+              <select
+                name="spaceChoice"
+                value={draft.spaceId ?? "new"}
+                onChange={(event) => updateSpaceChoice(event.target.value)}
+                className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+              >
+                <option value={initialSpace.id}>
+                  {initialSpace.displayName}
+                </option>
+                <option value="new">
+                  {copy.composer.fields.createNewSpace}
+                </option>
+              </select>
+            </label>
+          ) : null}
+        </div>
 
-      <div className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm font-medium text-foreground">
-            {copy.composer.fields.firstUpdate}
-          </span>
-          <JournalVoiceInputControl
+        {!draft.spaceId ? (
+          <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
+            {copy.composer.fields.newSpaceName}
+            <input
+              name="spaceName"
+              required
+              maxLength={120}
+              value={draft.spaceName}
+              onChange={(event) => updateDraft("spaceName", event.target.value)}
+              className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+              placeholder={copy.composer.fields.spacePlaceholder}
+            />
+            <span className="text-xs leading-5 font-normal text-muted-foreground">
+              {copy.composer.fields.spaceHelp}
+            </span>
+          </label>
+        ) : (
+          <input type="hidden" name="spaceId" value={draft.spaceId} />
+        )}
+
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-medium text-foreground">
+              {copy.composer.fields.firstUpdate}
+            </span>
+            <JournalVoiceInputControl
+              locale={locale}
+              disabled={persistenceFrozen}
+              onTranscript={appendVoiceTranscript}
+            />
+          </div>
+          <input type="hidden" name="body" value={draft.body} required />
+          <StructuredJournalComposer
             locale={locale}
+            labels={getStructuredJournalComposerLabels(locale)}
+            initialDocument={draft.contentDocument ?? undefined}
+            bindingReady={draftHydrated}
             disabled={persistenceFrozen}
-            onTranscript={appendVoiceTranscript}
+            composerRef={structuredComposerRef}
+            onDocumentChange={(document) => {
+              const plain = extractJournalDocumentPlainText(document);
+              setDraft((current) => ({
+                ...current,
+                body: plain || current.body,
+                contentDocument: document,
+              }));
+            }}
+            onSelectImageFile={async (file, blockId) => {
+              const reservation = inlineMedia.reserve(
+                file,
+                photoIntentsByBlockId,
+              );
+              try {
+                const intent = await createComposerPhotoIntent(file);
+                const uploaded = await uploadPhoto(intent);
+                const previewUrl = URL.createObjectURL(file);
+                inlineMedia.commit(reservation, blockId, previewUrl);
+                setPhotoIntentsByBlockId((current) => ({
+                  ...current,
+                  [blockId]: intent,
+                }));
+                return {
+                  mediaAssetId: uploaded.mediaAssetId,
+                  previewUrl,
+                };
+              } catch (error) {
+                inlineMedia.release(reservation);
+                throw error;
+              }
+            }}
+            onRemoveImageBlock={(blockId) => {
+              inlineMedia.revoke(blockId);
+              const mediaId = (() => {
+                const block = draft.contentDocument?.blocks.find(
+                  (item) => item.id === blockId,
+                );
+                return block?.type === "image" ? block.mediaAssetId : null;
+              })();
+              if (
+                mediaId &&
+                coverSelection.mode === "explicit_inline" &&
+                coverSelection.mediaAssetId === mediaId
+              ) {
+                setPendingCoverInlineRemoval({ mediaAssetId: mediaId });
+              }
+              setPhotoIntentsByBlockId((current) => {
+                const next = { ...current };
+                const removed = next[blockId];
+                delete next[blockId];
+                if (removed) {
+                  for (const [key, value] of Object.entries(next)) {
+                    if (value === removed) delete next[key];
+                  }
+                }
+                return next;
+              });
+            }}
+          />
+          <JournalCoverControls
+            copy={coverCopy}
+            selection={coverSelection}
+            eligibleInline={listJournalDocumentImageMediaIds(
+              draft.contentDocument ?? createEmptyJournalDocument(),
+            ).map((mediaAssetId, index) => ({
+              mediaAssetId,
+              previewUrl: null,
+              label: `${coverCopy.useAsCover} ${index + 1}`,
+            }))}
+            disabled={persistenceFrozen}
+            onSelectSeparateFile={async (intent) => {
+              const uploaded = await uploadPhoto(intent);
+              return {
+                mediaAssetId: uploaded.mediaAssetId,
+                previewUrl: uploaded.publicUrl,
+              };
+            }}
+            pendingInlineRemoval={pendingCoverInlineRemoval}
+            onChange={setCoverSelection}
+            onResolveInlineRemoval={(choice) => {
+              if (!pendingCoverInlineRemoval) return;
+              if (choice === "cancel") {
+                setPendingCoverInlineRemoval(null);
+                return;
+              }
+              if (choice === "keep_as_cover") {
+                setCoverSelection({
+                  mode: "separate",
+                  mediaAssetId: pendingCoverInlineRemoval.mediaAssetId,
+                  previewUrl: null,
+                });
+              } else {
+                setCoverSelection({ mode: "automatic" });
+              }
+              setPendingCoverInlineRemoval(null);
+            }}
+          />
+          <JournalMentionTypeaheadPanel
+            locale={locale}
+            status={mentionStatus}
+            suggestions={mentionSuggestions}
+            selections={mentionSelections}
+            onSelect={selectMentionSuggestion}
+            onRemove={removeMentionSelection}
           />
         </div>
-        <input type="hidden" name="body" value={draft.body} required />
-        <StructuredJournalComposer
-          locale={locale}
-          labels={getStructuredJournalComposerLabels(locale)}
-          initialDocument={draft.contentDocument ?? undefined}
-          bindingReady={draftHydrated}
-          disabled={persistenceFrozen}
-          composerRef={structuredComposerRef}
-          onDocumentChange={(document) => {
-            const plain = extractJournalDocumentPlainText(document);
-            setDraft((current) => ({
-              ...current,
-              body: plain || current.body,
-              contentDocument: document,
-            }));
-          }}
-          onSelectImageFile={async (file, blockId) => {
-            const { mediaAssetId, intent, previewUrl } =
-              await selectInlineMedia({
-                controller: inlineMedia,
-                file,
-                blockId,
-                existing: photoIntentsByBlockId,
-              });
-            setPhotoIntentsByBlockId((current) => ({
-              ...current,
-              [mediaAssetId]: intent,
-              [blockId]: intent,
-            }));
-            setStoredPhotoIntent(intent);
-            setPhotoFile(file);
-            return {
-              mediaAssetId,
-              previewUrl,
-            };
-          }}
-          onRemoveImageBlock={(blockId) => {
-            inlineMedia.revoke(blockId);
-            const mediaId = (() => {
-              const block = draft.contentDocument?.blocks.find(
-                (item) => item.id === blockId,
-              );
-              return block?.type === "image" ? block.mediaAssetId : null;
-            })();
-            if (
-              mediaId &&
-              coverSelection.mode === "explicit_inline" &&
-              coverSelection.mediaAssetId === mediaId
-            ) {
-              setPendingCoverInlineRemoval({ mediaAssetId: mediaId });
-            }
-            setPhotoIntentsByBlockId((current) => {
-              const next = { ...current };
-              const removed = next[blockId];
-              delete next[blockId];
-              if (removed) {
-                for (const [key, value] of Object.entries(next)) {
-                  if (value === removed) delete next[key];
-                }
-              }
-              return next;
-            });
-          }}
-        />
-        <JournalCoverControls
-          copy={coverCopy}
-          selection={coverSelection}
-          eligibleInline={listJournalDocumentImageMediaIds(
-            draft.contentDocument ?? createEmptyJournalDocument(),
-          ).map((mediaAssetId, index) => ({
-            mediaAssetId,
-            previewUrl: null,
-            label: `${coverCopy.useAsCover} ${index + 1}`,
-          }))}
-          disabled={persistenceFrozen}
-          pendingInlineRemoval={pendingCoverInlineRemoval}
-          onChange={setCoverSelection}
-          onResolveInlineRemoval={(choice) => {
-            if (!pendingCoverInlineRemoval) return;
-            if (choice === "cancel") {
-              setPendingCoverInlineRemoval(null);
-              return;
-            }
-            if (choice === "keep_as_cover") {
-              setCoverSelection({
-                mode: "separate",
-                mediaAssetId: pendingCoverInlineRemoval.mediaAssetId,
-                previewUrl: null,
-              });
-            } else {
-              setCoverSelection({ mode: "automatic" });
-            }
-            setPendingCoverInlineRemoval(null);
-          }}
-        />
-        <JournalMentionTypeaheadPanel
-          locale={locale}
-          status={mentionStatus}
-          suggestions={mentionSuggestions}
-          selections={mentionSelections}
-          onSelect={selectMentionSuggestion}
-          onRemove={removeMentionSelection}
-        />
-      </div>
 
-      <div className="flex flex-col gap-2 border-y border-border py-3">
-        <span className="text-sm font-medium text-foreground">
-          {copy.composer.fields.optionalPhoto}
-        </span>
-        <input
-          ref={photoInputRef}
-          type="file"
-          accept={COMPOSER_PHOTO_ACCEPT}
-          capture="environment"
-          aria-label={copy.composer.photo.choose}
-          onChange={(event) =>
-            handlePhotoChange(event.currentTarget.files?.[0])
-          }
-          className="hidden"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          className="self-start"
-          data-photo-picker-control="true"
-          onClick={() => photoInputRef.current?.click()}
-        >
-          <UploadCloud className="size-4" />
-          {copy.composer.photo.choose}
-        </Button>
-        {hasSelectedPhoto ? (
+        <div className="flex flex-col gap-2 border-y border-border py-3">
+          <span className="text-sm font-medium text-foreground">
+            {copy.composer.fields.optionalPhoto}
+          </span>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept={COMPOSER_PHOTO_ACCEPT}
+            capture="environment"
+            aria-label={copy.composer.photo.choose}
+            onChange={(event) =>
+              handlePhotoChange(event.currentTarget.files?.[0])
+            }
+            className="hidden"
+          />
           <Button
             type="button"
             variant="outline"
             className="self-start"
-            onClick={() => clearPhotoSelection()}
+            data-photo-picker-control="true"
+            onClick={() => photoInputRef.current?.click()}
           >
-            <X className="size-4" />
-            {copy.composer.fields.removePhoto}
+            <UploadCloud className="size-4" />
+            {copy.composer.photo.choose}
           </Button>
-        ) : null}
-        <p
-          className={
-            photoError
-              ? "text-xs leading-5 text-destructive"
-              : "text-xs leading-5 text-muted-foreground"
-          }
-        >
-          {photoHelp}
-        </p>
-      </div>
-
-      <details
-        open={visualScenario?.detailsOpen || undefined}
-        className="group min-w-0 border-y border-border py-3"
-      >
-        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-foreground marker:text-muted-foreground sm:min-h-0">
-          {copy.composer.fields.moreDetails}
-          <span className="ml-2 font-normal text-muted-foreground">
-            {copy.composer.fields.detailsHint}
-          </span>
-        </summary>
-        <div data-composer-details-content className="mt-4 grid min-w-0 gap-4">
-          {draft.spaceId ? (
-            <p className="text-sm leading-6 text-muted-foreground">
-              {copy.composer.fields.selectedSpacePrivacy}
-            </p>
-          ) : (
-            <div
-              data-composer-details-grid="location"
-              className="grid min-w-0 gap-3 sm:grid-cols-2"
+          {hasSelectedPhoto ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="self-start"
+              onClick={() => clearPhotoSelection()}
             >
-              <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-                {copy.composer.fields.location}
-                <select
-                  name="locationVisibility"
-                  value={draft.locationVisibility}
-                  onChange={(event) =>
-                    updateLocationVisibility(event.target.value)
-                  }
-                  className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
-                >
-                  <option value="hidden">{copy.composer.fields.hidden}</option>
-                  <option value="region">{copy.composer.fields.region}</option>
-                </select>
-                <span className="text-xs leading-5 font-normal text-muted-foreground">
-                  {draft.locationVisibility === "region"
-                    ? copy.composer.locationHelp.region
-                    : copy.composer.locationHelp.hidden}
-                </span>
-              </label>
+              <X className="size-4" />
+              {copy.composer.fields.removePhoto}
+            </Button>
+          ) : null}
+          <p
+            className={
+              photoError
+                ? "text-xs leading-5 text-destructive"
+                : "text-xs leading-5 text-muted-foreground"
+            }
+          >
+            {photoHelp}
+          </p>
+        </div>
 
-              <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-                {copy.composer.fields.coarseRegion}
-                <select
-                  name="coarseRegionCode"
-                  required={draft.locationVisibility === "region"}
-                  disabled={draft.locationVisibility === "hidden"}
-                  value={draft.coarseRegionCode}
-                  onChange={(event) =>
-                    updateDraft("coarseRegionCode", event.target.value)
-                  }
-                  className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 sm:h-10"
-                >
-                  <option value="">{copy.composer.fields.chooseRegion}</option>
-                  {getLocalizedCoarseRegionOptions(locale).map((region) => (
-                    <option key={region.value} value={region.value}>
-                      {region.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          )}
-
-          <div className="flex min-w-0 flex-col gap-2">
-            <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-              {copy.composer.fields.catalogMatch}
-              <span className="relative block min-w-0">
-                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  name="catalogQuery"
-                  maxLength={120}
-                  value={catalogQuery}
-                  onChange={(event) => updateCatalogQuery(event.target.value)}
-                  className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
-                  placeholder={copy.composer.fields.catalogPlaceholder}
-                  autoComplete="off"
-                />
-                {catalogQuery ? (
-                  <button
-                    type="button"
-                    onClick={chooseUnknownCatalog}
-                    className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                    aria-label={copy.composer.fields.clearCatalogMatch}
-                  >
-                    <X className="size-4" />
-                  </button>
-                ) : null}
-              </span>
-            </label>
-
-            <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
-              {selectedCatalogItem ? (
-                <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
-                  <span>
-                    {copy.composer.fields.matchedInCatalog}{" "}
-                    {selectedCatalogItem.displayName} ·{" "}
-                    {selectedCatalogTrust?.trustLabel} ·{" "}
-                    {localizedCatalogKindLabel(
-                      selectedCatalogItem.catalogKind,
-                      draft.objectKind,
-                      copy,
-                      selectedCatalogItem.source,
-                    )}{" "}
-                    · {localizedObjectKindLabel(draft.objectKind, copy)}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {selectedCatalogTrust?.disambiguationLabel} ·{" "}
-                    {selectedCatalogTrust?.sourceCaveat}
-                  </span>
-                </span>
-              ) : userAddedCatalogName ? (
-                <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
-                  <span>
-                    {copy.composer.fields.savedWithCatalogName}{" "}
-                    {userAddedCatalogName} · {userAddedCatalogTrust.trustLabel}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {userAddedCatalogTrust.sourceCaveat}
-                  </span>
-                </span>
-              ) : (
-                <span className="max-w-full rounded-md border border-border px-2 py-1 break-words text-muted-foreground">
-                  {copy.composer.fields.noCatalogMatch}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={chooseUnknownCatalog}
-                className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
+        <details
+          open={visualScenario?.detailsOpen || undefined}
+          className="group min-w-0 border-y border-border py-3"
+        >
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-foreground marker:text-muted-foreground sm:min-h-0">
+            {copy.composer.fields.moreDetails}
+            <span className="ml-2 font-normal text-muted-foreground">
+              {copy.composer.fields.detailsHint}
+            </span>
+          </summary>
+          <div
+            data-composer-details-content
+            className="mt-4 grid min-w-0 gap-4"
+          >
+            {draft.spaceId ? (
+              <p className="text-sm leading-6 text-muted-foreground">
+                {copy.composer.fields.selectedSpacePrivacy}
+              </p>
+            ) : (
+              <div
+                data-composer-details-grid="location"
+                className="grid min-w-0 gap-3 sm:grid-cols-2"
               >
-                {copy.composer.fields.keepWithoutMatch}
-              </button>
-              {!selectedCatalogItem && catalogQuery.trim().length >= 2 ? (
+                <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
+                  {copy.composer.fields.location}
+                  <select
+                    name="locationVisibility"
+                    value={draft.locationVisibility}
+                    onChange={(event) =>
+                      updateLocationVisibility(event.target.value)
+                    }
+                    className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+                  >
+                    <option value="hidden">
+                      {copy.composer.fields.hidden}
+                    </option>
+                    <option value="region">
+                      {copy.composer.fields.region}
+                    </option>
+                  </select>
+                  <span className="text-xs leading-5 font-normal text-muted-foreground">
+                    {draft.locationVisibility === "region"
+                      ? copy.composer.locationHelp.region
+                      : copy.composer.locationHelp.hidden}
+                  </span>
+                </label>
+
+                <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
+                  {copy.composer.fields.coarseRegion}
+                  <select
+                    name="coarseRegionCode"
+                    required={draft.locationVisibility === "region"}
+                    disabled={draft.locationVisibility === "hidden"}
+                    value={draft.coarseRegionCode}
+                    onChange={(event) =>
+                      updateDraft("coarseRegionCode", event.target.value)
+                    }
+                    className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 sm:h-10"
+                  >
+                    <option value="">
+                      {copy.composer.fields.chooseRegion}
+                    </option>
+                    {getLocalizedCoarseRegionOptions(locale).map((region) => (
+                      <option key={region.value} value={region.value}>
+                        {region.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
+
+            <div className="flex min-w-0 flex-col gap-2">
+              <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
+                {copy.composer.fields.catalogMatch}
+                <span className="relative block min-w-0">
+                  <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    name="catalogQuery"
+                    maxLength={120}
+                    value={catalogQuery}
+                    onChange={(event) => updateCatalogQuery(event.target.value)}
+                    className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+                    placeholder={copy.composer.fields.catalogPlaceholder}
+                    autoComplete="off"
+                  />
+                  {catalogQuery ? (
+                    <button
+                      type="button"
+                      onClick={chooseUnknownCatalog}
+                      className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                      aria-label={copy.composer.fields.clearCatalogMatch}
+                    >
+                      <X className="size-4" />
+                    </button>
+                  ) : null}
+                </span>
+              </label>
+
+              <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
+                {selectedCatalogItem ? (
+                  <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+                    <span>
+                      {copy.composer.fields.matchedInCatalog}{" "}
+                      {selectedCatalogItem.displayName} ·{" "}
+                      {selectedCatalogTrust?.trustLabel} ·{" "}
+                      {localizedCatalogKindLabel(
+                        selectedCatalogItem.catalogKind,
+                        draft.objectKind,
+                        copy,
+                        selectedCatalogItem.source,
+                      )}{" "}
+                      · {localizedObjectKindLabel(draft.objectKind, copy)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {selectedCatalogTrust?.disambiguationLabel} ·{" "}
+                      {selectedCatalogTrust?.sourceCaveat}
+                    </span>
+                  </span>
+                ) : userAddedCatalogName ? (
+                  <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+                    <span>
+                      {copy.composer.fields.savedWithCatalogName}{" "}
+                      {userAddedCatalogName} ·{" "}
+                      {userAddedCatalogTrust.trustLabel}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {userAddedCatalogTrust.sourceCaveat}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="max-w-full rounded-md border border-border px-2 py-1 break-words text-muted-foreground">
+                    {copy.composer.fields.noCatalogMatch}
+                  </span>
+                )}
                 <button
                   type="button"
-                  onClick={addMissingCatalogName}
+                  onClick={chooseUnknownCatalog}
                   className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
                 >
-                  {copy.composer.fields.useThisName}
+                  {copy.composer.fields.keepWithoutMatch}
                 </button>
-              ) : null}
-              {catalogStatus === "loading" ? (
-                <span className="text-muted-foreground">
-                  {copy.composer.fields.searching}
-                </span>
-              ) : null}
-              {catalogStatus === "failed" ? (
-                <span className="text-destructive">
-                  {copy.composer.fields.suggestionsUnavailable}
-                </span>
+                {!selectedCatalogItem && catalogQuery.trim().length >= 2 ? (
+                  <button
+                    type="button"
+                    onClick={addMissingCatalogName}
+                    className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
+                  >
+                    {copy.composer.fields.useThisName}
+                  </button>
+                ) : null}
+                {catalogStatus === "loading" ? (
+                  <span className="text-muted-foreground">
+                    {copy.composer.fields.searching}
+                  </span>
+                ) : null}
+                {catalogStatus === "failed" ? (
+                  <span className="text-destructive">
+                    {copy.composer.fields.suggestionsUnavailable}
+                  </span>
+                ) : null}
+              </div>
+
+              {catalogSuggestions.length > 0 ? (
+                <ul className="grid gap-2">
+                  {catalogSuggestions.map((suggestion) => {
+                    const trust = buildGardenCatalogTrustMetadata(
+                      locale,
+                      suggestion,
+                    );
+                    const hasAliasCollision = catalogAliasCollisionKeys.has(
+                      catalogSuggestionAliasCollisionKey(suggestion),
+                    );
+
+                    return (
+                      <li key={suggestion.id}>
+                        <button
+                          type="button"
+                          onClick={() => selectCatalogSuggestion(suggestion)}
+                          className="flex min-h-11 w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium text-foreground">
+                              {suggestion.displayName}
+                            </span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {suggestion.canonicalName} ·{" "}
+                              {trust.disambiguationLabel}
+                            </span>
+                            {hasAliasCollision ? (
+                              <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                                {copy.composer.fields.aliasCollision}
+                              </span>
+                            ) : null}
+                            <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                              {trust.sourceCaveat}
+                            </span>
+                          </span>
+                          <span className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
+                            {trust.trustLabel}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               ) : null}
             </div>
 
-            {catalogSuggestions.length > 0 ? (
-              <ul className="grid gap-2">
-                {catalogSuggestions.map((suggestion) => {
-                  const trust = buildGardenCatalogTrustMetadata(
-                    locale,
-                    suggestion,
-                  );
-                  const hasAliasCollision = catalogAliasCollisionKeys.has(
-                    catalogSuggestionAliasCollisionKey(suggestion),
-                  );
+            <div
+              data-composer-details-grid="entry-metadata"
+              className="grid min-w-0 gap-3 sm:grid-cols-3"
+            >
+              <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
+                {copy.composer.fields.entryTitle}
+                <input
+                  name="title"
+                  required
+                  maxLength={140}
+                  value={draft.title}
+                  onChange={(event) => updateTitle(event.target.value)}
+                  className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+                  placeholder={copy.composer.fields.titlePlaceholder}
+                />
+              </label>
 
-                  return (
-                    <li key={suggestion.id}>
-                      <button
-                        type="button"
-                        onClick={() => selectCatalogSuggestion(suggestion)}
-                        className="flex min-h-11 w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium text-foreground">
-                            {suggestion.displayName}
-                          </span>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {suggestion.canonicalName} ·{" "}
-                            {trust.disambiguationLabel}
-                          </span>
-                          {hasAliasCollision ? (
-                            <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                              {copy.composer.fields.aliasCollision}
-                            </span>
-                          ) : null}
-                          <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                            {trust.sourceCaveat}
-                          </span>
-                        </span>
-                        <span className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
-                          {trust.trustLabel}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-          </div>
-
-          <div
-            data-composer-details-grid="entry-metadata"
-            className="grid min-w-0 gap-3 sm:grid-cols-3"
-          >
-            <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
-              {copy.composer.fields.entryTitle}
-              <input
-                name="title"
-                required
-                maxLength={140}
-                value={draft.title}
-                onChange={(event) => updateTitle(event.target.value)}
-                className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
-                placeholder={copy.composer.fields.titlePlaceholder}
-              />
-            </label>
+              <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
+                {copy.composer.fields.date}
+                <input
+                  type="date"
+                  name="entryDate"
+                  value={draft.entryDate}
+                  onChange={(event) =>
+                    updateDraft("entryDate", event.target.value)
+                  }
+                  className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+                />
+              </label>
+            </div>
 
             <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-              {copy.composer.fields.date}
+              {copy.composer.fields.tags}
               <input
-                type="date"
-                name="entryDate"
-                value={draft.entryDate}
-                onChange={(event) =>
-                  updateDraft("entryDate", event.target.value)
-                }
+                name="topicTags"
+                maxLength={160}
+                value={topicTagInput}
+                onChange={(event) => updateTopicTagInput(event.target.value)}
                 className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+                placeholder={copy.composer.fields.tagsPlaceholder}
               />
             </label>
           </div>
-
-          <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-            {copy.composer.fields.tags}
-            <input
-              name="topicTags"
-              maxLength={160}
-              value={topicTagInput}
-              onChange={(event) => updateTopicTagInput(event.target.value)}
-              className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
-              placeholder={copy.composer.fields.tagsPlaceholder}
-            />
-          </label>
-        </div>
-      </details>
+        </details>
+      </fieldset>
 
       <p
         className={
@@ -1819,13 +1414,11 @@ export function FirstEntryComposer({
         <Button
           type="submit"
           data-auth-intent-control="save"
-          disabled={submitState === "syncing"}
+          disabled={submitState === "publishing" || online.readOnly}
           className="min-h-11 min-w-0 flex-1 sm:min-h-8 sm:flex-none"
         >
           <UploadCloud className="size-4" />
-          {isOnline
-            ? copy.composer.actions.saveOnline
-            : copy.composer.actions.saveOffline}
+          {copy.composer.actions.saveOnline}
         </Button>
         <Button
           type="button"
@@ -1836,194 +1429,29 @@ export function FirstEntryComposer({
           {copy.composer.actions.cancel}
         </Button>
       </div>
-
-      {mutations.length > 0 ? (
-        <div className="flex flex-col gap-2 border-t border-border pt-4">
-          <h3 className="text-sm font-semibold text-foreground">
-            {copy.composer.queue.title}
-          </h3>
-          <ul className="flex flex-col gap-2">
-            {mutations.map((mutation) => (
-              <li
-                key={mutation.id}
-                className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                    {statusIcon(mutation.status)}
-                    {mutationTitle(mutation, copy)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {mutationSubtitle(mutation, locale, copy)}
-                  </span>
-                  {mutation.lastError ? (
-                    <span className="text-xs text-destructive">
-                      {copy.composer.queue.retryError}
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  {mutation.status === "synced" ? (
-                    <Link
-                      href={mutationReadbackUrl(mutation) ?? "/garden"}
-                      className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                      {copy.composer.queue.open}
-                    </Link>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="min-h-11 sm:min-h-8"
-                      disabled={
-                        !isOnline ||
-                        mutation.status === "syncing" ||
-                        submitState === "syncing"
-                      }
-                      onClick={() => void handleSync(mutation)}
-                    >
-                      <RefreshCw className="size-4" />
-                      {localizedOfflineSaveActionLabel(mutation.status, copy)}
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </form>
   );
-}
-
-async function persistFirstEntryComposerSnapshot(
-  snapshot: FirstEntryComposerPersistenceSnapshot,
-  context: OwnerComposerDurabilityWriteContext,
-) {
-  if (!snapshot.hydrated) {
-    throw new Error("The first-entry draft is not hydrated yet.");
-  }
-
-  const payload =
-    snapshot.photoFile && !snapshot.payload.photoIntent
-      ? {
-          ...snapshot.payload,
-          photoIntent: await createComposerPhotoIntent(snapshot.photoFile),
-        }
-      : snapshot.payload;
-
-  if (hasPersistableFirstEntryDraft(payload, snapshot.defaultEntryDate)) {
-    return upsertOfflineDraft(
-      {
-        ownerUserId: snapshot.ownerUserId,
-        id: FIRST_ENTRY_DRAFT_ID,
-        kind: "first_entry",
-        payload,
-      },
-      context,
-    );
-  }
-
-  return deleteOfflineDraft(
-    snapshot.ownerUserId,
-    FIRST_ENTRY_DRAFT_ID,
-    context,
-  );
-}
-
-function statusIcon(status: OfflineMutation["status"]) {
-  switch (status) {
-    case "synced":
-      return <CheckCircle2 className="size-4 text-green-600" />;
-    case "failed":
-      return <AlertCircle className="size-4 text-destructive" />;
-    case "syncing":
-      return <RefreshCw className="size-4 text-muted-foreground" />;
-    default:
-      return <Clock3 className="size-4 text-muted-foreground" />;
-  }
-}
-
-function mutationTitle(mutation: OfflineMutation, copy: GardenWorkspaceCopy) {
-  if (mutation.status === "synced") return copy.composer.queue.savedEntry;
-  const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
-  return payload.title || copy.composer.queue.untitledEntry;
-}
-
-function mutationSubtitle(
-  mutation: OfflineMutation,
-  locale: InterfaceLocale,
-  copy: GardenWorkspaceCopy,
-) {
-  if (mutation.status === "synced") {
-    return copy.composer.queue.savedAndRemoved;
-  }
-  const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
-  if (payload.target === "plant_object_entry") {
-    const parts = [
-      localizedOfflineSaveStatusSentence(mutation.status, copy),
-      copy.composer.queue.followUp,
-      payload.entryDate,
-      payload.photoIntent ? copy.composer.queue.photoLater : null,
-    ].filter(Boolean);
-
-    return parts.join(" · ");
-  }
-
-  const firstEntryPayload = payload as Partial<OfflineFirstPlantEntryPayload>;
-  const regionLabel =
-    firstEntryPayload.locationVisibility === "region" &&
-    firstEntryPayload.coarseRegionCode
-      ? getLocalizedCoarseRegionLabel(
-          locale,
-          firstEntryPayload.coarseRegionCode,
-        )
-      : null;
-  const parts = [
-    localizedOfflineSaveStatusLabel(mutation.status, copy),
-    firstEntryPayload.plantName,
-    regionLabel
-      ? formatGardenWorkspaceTemplate(copy.composer.queue.region, {
-          region: regionLabel,
-        })
-      : copy.composer.queue.locationHidden,
-    firstEntryPayload.catalogItemId
-      ? copy.composer.varietyStates.selected
-      : firstEntryPayload.userAddedCatalogName
-        ? copy.composer.varietyStates.userAdded
-        : copy.composer.varietyStates.unknown,
-    firstEntryPayload.entryDate,
-    firstEntryPayload.photoIntent ? copy.composer.queue.photoLater : null,
-  ].filter(Boolean);
-
-  return parts.join(" · ");
-}
-
-function mutationReadbackUrl(mutation: OfflineMutation) {
-  const result = mutation.syncResult as { readbackUrl?: unknown } | undefined;
-  return typeof result?.readbackUrl === "string" ? result.readbackUrl : null;
 }
 
 function localizedPhotoHelp(
   copy: GardenWorkspaceCopy,
   {
     fileName,
-    isOnline,
     photoError,
+    ready,
   }: {
     fileName: string | null;
-    isOnline: boolean;
     photoError: string | null;
+    ready: boolean;
   },
 ) {
   if (photoError) return photoError;
+  if (ready) return copy.composer.photo.ready;
   if (!fileName) return copy.composer.photo.empty;
 
-  return formatGardenWorkspaceTemplate(
-    isOnline ? copy.composer.photo.online : copy.composer.photo.offline,
-    { fileName },
-  );
+  return formatGardenWorkspaceTemplate(copy.composer.photo.uploading, {
+    fileName,
+  });
 }
 
 function localizedVisualScenarioMessage(
@@ -2043,51 +1471,69 @@ function localizedVisualScenarioMessage(
   return copy.composer.privacyDefault;
 }
 
-function localizedLocalSavedMessage(
-  copy: GardenWorkspaceCopy,
-  kind: "entry" | "follow-up",
-) {
-  return formatGardenWorkspaceTemplate(copy.composer.offline.savedMessage, {
-    entryKind:
-      kind === "entry"
-        ? copy.composer.offline.entry
-        : copy.composer.offline.followUp,
-  });
+function firstEntryDraftPayload(input: {
+  draft: FirstEntryDraftFields;
+  clientMutationId: string;
+  selectedCatalogItem: FirstEntryCatalogSelection | null;
+  userAddedCatalogName: string | null;
+  activationSource: ActivationSource | null;
+  mentionSelections: JournalMentionSelection[];
+  topicTagInput: string;
+  primaryMediaAssetId: string | null;
+  coverSelection: JournalCoverSelectionState;
+  catalogQuery: string;
+}): JournalEntryDraftPayloadV1 {
+  return {
+    schemaVersion: JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION,
+    draftKind: "first_entry",
+    request: {
+      target: "first_plant_entry",
+      spaceId: input.draft.spaceId,
+      spaceName: input.draft.spaceName,
+      plantName: input.draft.plantName,
+      objectKind: input.draft.objectKind,
+      catalogItemId: catalogItemIdForSelection(input.selectedCatalogItem),
+      userAddedCatalogName:
+        !input.selectedCatalogItem && input.userAddedCatalogName
+          ? input.userAddedCatalogName
+          : null,
+      varietyText:
+        input.selectedCatalogItem?.displayName ?? input.userAddedCatalogName,
+      title: input.draft.title,
+      body: input.draft.body,
+      contentDocument: input.draft.contentDocument,
+      entryDate: input.draft.entryDate,
+      locationVisibility: input.draft.locationVisibility,
+      coarseRegionCode:
+        input.draft.locationVisibility === "region"
+          ? input.draft.coarseRegionCode
+          : null,
+      clientMutationId: input.clientMutationId,
+      activationSource: input.activationSource,
+      syncStatus: "online",
+      mentionSelections: input.mentionSelections,
+      topicTags: normalizeJournalTopicTagLabels(input.topicTagInput),
+      mediaAssetId: input.primaryMediaAssetId,
+      cover: journalCoverSelectionToClaimInput(input.coverSelection),
+    },
+    composerState: {
+      catalogQuery: input.catalogQuery,
+      selectedCatalogItem: input.selectedCatalogItem,
+      userAddedCatalogName: input.userAddedCatalogName,
+      topicTagInput: input.topicTagInput,
+    },
+  };
 }
 
-function localizedLocalDuplicateMessage(
-  copy: GardenWorkspaceCopy,
-  kind: "entry" | "follow-up",
-) {
-  return formatGardenWorkspaceTemplate(copy.composer.offline.duplicateMessage, {
-    entryKind:
-      kind === "entry"
-        ? copy.composer.offline.entry
-        : copy.composer.offline.followUp,
-  });
-}
-
-function localizedOfflineSaveStatusLabel(
-  status: OfflineMutation["status"],
-  copy: GardenWorkspaceCopy,
-) {
-  return copy.composer.offline.statusLabels[status];
-}
-
-function localizedOfflineSaveActionLabel(
-  status: OfflineMutation["status"],
-  copy: GardenWorkspaceCopy,
-) {
-  return status === "failed"
-    ? copy.composer.offline.actionLabels.retry
-    : copy.composer.offline.actionLabels.send;
-}
-
-function localizedOfflineSaveStatusSentence(
-  status: OfflineMutation["status"],
-  copy: GardenWorkspaceCopy,
-) {
-  return copy.composer.offline.statusSentences[status];
+function coverSelectionFromRequest(
+  cover: JournalEntryDraftPayloadV1["request"]["cover"],
+): JournalCoverSelectionState {
+  if (!cover || cover.mode === "automatic") return { mode: "automatic" };
+  if (cover.mode === "none") return { mode: "none" };
+  if (cover.mode === "explicit_inline") {
+    return { mode: "explicit_inline", mediaAssetId: cover.mediaAssetId };
+  }
+  return { mode: "separate", mediaAssetId: cover.mediaAssetId };
 }
 
 function localizedObjectKindLabel(

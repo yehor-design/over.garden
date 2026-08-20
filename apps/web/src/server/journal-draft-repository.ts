@@ -86,6 +86,20 @@ export async function readJournalDraft(
   return row ? serializeJournalDraft(row) : null;
 }
 
+export async function listJournalDrafts(
+  scope: RequestScope,
+  limit = 25,
+  executor: QueryExecutor = db,
+): Promise<JournalEntryDraftReceiptV1[]> {
+  requireScope(scope);
+  const rows = await buildListJournalDraftsQuery(
+    executor,
+    scope,
+    Math.min(25, Math.max(1, Math.trunc(limit))),
+  ).execute();
+  return rows.map(serializeJournalDraft);
+}
+
 export async function saveJournalDraft(
   scope: RequestScope,
   input: SaveJournalDraftInput,
@@ -294,6 +308,19 @@ export function buildReadJournalDraftQuery(
     .selectAll()
     .where("owner_user_id", "=", scope.userId)
     .where("draft_key", "=", draftKey);
+}
+
+export function buildListJournalDraftsQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  limit: number,
+) {
+  return executor
+    .selectFrom("journal_entry_drafts")
+    .selectAll()
+    .where("owner_user_id", "=", scope.userId)
+    .orderBy("updated_at", "desc")
+    .limit(Math.min(25, Math.max(1, Math.trunc(limit))));
 }
 
 export function buildJournalDraftAdvisoryLockQuery(

@@ -1,8 +1,8 @@
 # Online-only journal save protocol
 
-Status: server draft protocol implemented by OVE-321; composer activation is
-owned by OVE-325; legacy local-data migration and retirement are owned by
-OVE-322 and OVE-323.
+Status: server draft protocol implemented by OVE-321 and activated across all
+four composer journeys by OVE-325. Legacy local-data migration and final
+runtime retirement remain owned by OVE-322 and OVE-323.
 
 ADR-0017 is the connectivity authority. A journal change is durable only after
 the server returns an authoritative receipt. Browser memory may keep the text
@@ -98,6 +98,21 @@ Neither module reads network-state hints or imports Dexie, IndexedDB,
 ownership remains transient in the active online tab; only processed media IDs
 may appear in the JSON draft.
 
+`use-online-journal-composer.ts` is the shared UI owner for first entry,
+follow-up, space entry, and edit. It hydrates before enabling the editor,
+debounces the first semantic change by 250 ms, renders the acknowledged server
+timestamp, and makes a bounded keepalive attempt when the document is hidden or
+unloaded. A request failure freezes only that composer, marks the tab title as
+not saved, retains current-tab memory, and keeps retry, copy, cancel, and
+navigation controls available. Retry is explicit and single-flight; online or
+offline browser events never cause replay.
+
+The authenticated workspace lists owner-scoped server drafts and resumes their
+exact route contexts. The four composer callers, workspace panel, cover
+controls, and photo selectors create no durable browser journal state. The only
+production module allowed to import the historical offline runtime is the
+read-only OVE-322 retirement bridge.
+
 ## Payload budget
 
 `JOURNAL_ENTRY_PAYLOAD_MAX_BYTES` is the semantic JSON budget shared by draft
@@ -113,10 +128,8 @@ The additive migration is `apps/web/sql/0029_online_journal_drafts.sql` and the
 same current shape is present in `0001_walking_skeleton.sql`. Normal bootstrap
 is repeatable and generated Kysely types must match the live schema.
 
-OVE-321 deploys the schema and dormant route/client protocol without changing
-composer behavior. OVE-325 is the activation boundary for the four composers.
-Before that activation, rolling application code back leaves an unused private
-table and is non-destructive. After activation, rollback must preserve the
+OVE-321 deployed the additive schema and route/client protocol. OVE-325
+activated it atomically across all four composers. Rollback must preserve the
 table and route until affected composer traffic has stopped; dropping the table
 or bulk-deleting drafts requires separate maintainer sign-off.
 

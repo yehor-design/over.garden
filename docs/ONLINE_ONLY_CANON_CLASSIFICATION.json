@@ -89,26 +89,6 @@
       "reason": "OVE-322 owns the legacy owner-binding retirement bridge tests."
     },
     {
-      "pathPrefix": "apps/web/src/app/garden/first-entry-composer",
-      "owner": "OVE-321",
-      "reason": "OVE-321 owns the server-authoritative draft protocol consumed by the composer."
-    },
-    {
-      "pathPrefix": "apps/web/src/app/garden/space-entry-composer",
-      "owner": "OVE-321",
-      "reason": "OVE-321 owns the server-authoritative draft protocol consumed by the composer."
-    },
-    {
-      "pathPrefix": "apps/web/src/app/garden/entries/",
-      "owner": "OVE-321",
-      "reason": "OVE-321 owns the server-authoritative edit-draft protocol."
-    },
-    {
-      "pathPrefix": "apps/web/src/app/garden/objects/",
-      "owner": "OVE-321",
-      "reason": "OVE-321 owns the server-authoritative follow-up draft protocol."
-    },
-    {
       "pathPrefix": "apps/web/",
       "owner": "OVE-323",
       "reason": "OVE-323 owns remaining PWA, service-worker, Dexie, and offline runtime residue."
@@ -158,7 +138,7 @@
     }
   ],
   "ownerStates": {
-    "OVE-321": "Backlog",
+    "OVE-321": "Done",
     "OVE-322": "Backlog",
     "OVE-323": "Backlog"
   }

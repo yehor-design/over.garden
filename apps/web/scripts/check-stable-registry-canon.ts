@@ -164,6 +164,9 @@ export function readStableRegistryCanonFiles(
   for (const relativePath of listTrackedTextFiles(repositoryRoot)) {
     if (files[relativePath] !== undefined) continue;
     const absolutePath = path.join(repositoryRoot, relativePath);
+    // A task may legitimately delete a tracked consumer before its commit.
+    // Treat that path as absent instead of crashing the unrelated canon scan.
+    if (!existsSync(absolutePath)) continue;
     const content = readFileSync(absolutePath, "utf8");
     if (/current stable registry authority\s*:/i.test(content)) {
       files[relativePath] = content;

@@ -141,6 +141,7 @@ describe("garden workspace read model", () => {
       offset: 0,
     });
     expect(sources.recent).toHaveBeenCalledWith(scope, WORKSPACE_RECENT_LIMIT);
+    expect(sources.drafts).toHaveBeenCalledWith(scope);
     expect(workspace.inventory.status).toBe("ready");
     if (workspace.inventory.status !== "ready") return;
     expect(workspace.inventory.value.objects).toHaveLength(
@@ -297,6 +298,7 @@ function workspaceSources({
       processingCount: 0,
       failedCount: 0,
     }),
+    drafts: vi.fn().mockResolvedValue([]),
   };
 }
 

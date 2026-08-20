@@ -61,8 +61,8 @@ vi.mock("@/lib/auth/session-convergence", () => ({
   createSignOutOperationId: mocks.createOperationId,
   publishLocalExitCommitted: mocks.publishLocalExit,
 }));
-vi.mock("@/lib/offline/owner-vault", () => ({
-  sealActiveOwnerVaultsForLocalExit: mocks.sealVaults,
+vi.mock("@/lib/garden/online-journal-composer-participants", () => ({
+  sealOnlineJournalComposerParticipantsForExit: mocks.sealVaults,
 }));
 
 import type { InterfaceLocale } from "@/lib/interface-localization";

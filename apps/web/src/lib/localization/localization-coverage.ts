@@ -1316,7 +1316,7 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
       INTERNAL_FIXTURE_RATIONALE,
       [
         ["jsx-text", "OVE-287 synthetic private account"],
-        ["jsx-text", "One synthetic retained owner draft is active."],
+        ["jsx-text", "One synthetic in-memory online composer is active."],
       ],
     ),
     ...allowExactLiterals(
@@ -1358,6 +1358,7 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
         ["jsx-text", "Retain owner A across sign-out"],
         ["jsx-text", "Deny offline binding"],
         ["jsx-text", "Server-backed private action"],
+        ["jsx-text", "Owner vault retired"],
       ],
     ),
     ...allowExactLiterals(
@@ -1374,7 +1375,7 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
       "internal-fixture",
       INTERNAL_FIXTURE_RATIONALE,
       [
-        ["jsx-text", "IndexedDB draft storage is unavailable in this browser."],
+        ["jsx-text", "The synthetic online draft intent is unavailable."],
         ["metadata-title", "Листя відновилося після спеки"],
         ["metadata-title", "Перша зав'язь після прохолодної ночі"],
       ],
