@@ -20,13 +20,16 @@ Use this corpus as product-thinking authority for:
 
 Do not use this corpus as the final authority for current implementation stack when it conflicts with root repo docs. For runtime architecture, use:
 
+- `docs/adr/ADR-0017-online-only-product.md` first for connectivity, save
+  authority, browser-local persistence, and PWA/runtime-retirement questions.
 - `AGENTS.md`
 - `docs/TECH_STACK_DECISIONS.md`
-- `docs/adr/ADR-0014-agentic-stack-realignment.md`
+- `docs/adr/ADR-0014-agentic-stack-realignment.md` for the remaining stack;
+  its PWA/offline clauses are historical after ADR-0017.
 - `docs/SDD_VERTICAL_SLICE_ROADMAP.md`
 - `docs/INFRASTRUCTURE_REGISTRY.md`
 
-If a copied research file such as `TECH_STACK_DECISIONS.md` conflicts with the current root stack docs, the root repo docs win for implementation. The research file still remains useful as historical context.
+If a copied research file such as `TECH_STACK_DECISIONS.md` conflicts with the current root stack docs, the root repo docs win for implementation. Specifically, `docs/product-research/TECH_STACK_DECISIONS.md` is classified `product_research` and derives from the root `docs/TECH_STACK_DECISIONS.md`; the root document plus its superseding ADRs wins. The research file still remains useful as historical context.
 
 ## Product Thinking Gate
 

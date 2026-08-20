@@ -1,5 +1,10 @@
 # Offline workspace summary contract
 
+> **Authority status (2026-08-20):** historical and non-operative for new
+> product behavior. ADR-0017 supersedes this local-summary contract. OVE-323
+> owns removal and fixture repinning; the text below remains implementation
+> provenance, not an instruction to create or extend offline capture.
+
 ## Purpose
 
 The authenticated garden workspace may show that device-local drafts or queued

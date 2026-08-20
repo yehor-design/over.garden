@@ -1,6 +1,6 @@
 # AGENTS.md — OverGarden
 
-Operating guide for AI agents and humans working in this repo. Read this before any change. Current stack authority is `docs/TECH_STACK_DECISIONS.md` plus ADR-0014. `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md` is the binding construction and Definition-of-Ready contract for every new or materially rewritten Linear work item. Live non-secret infrastructure values and provider links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Product-thinking research lives in `docs/product-research/`. Older ADRs are historical if ADR-0014 supersedes them.
+Operating guide for AI agents and humans working in this repo. Read this before any change. Current stack authority is `docs/TECH_STACK_DECISIONS.md` plus ADR-0014, as superseded for connectivity and browser-local journal persistence by ADR-0017. `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md` is the binding construction and Definition-of-Ready contract for every new or materially rewritten Linear work item. Live non-secret infrastructure values and provider links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Product-thinking research lives in `docs/product-research/`. Older ADR clauses are historical when a later accepted ADR explicitly supersedes them.
 
 ## Project
 
@@ -27,7 +27,7 @@ acquisition gate.
 - shadcn/ui only for UI primitives.
 - Better Auth for auth.
 - Lexical 0.49.0 for the authenticated structured-journal authoring surface;
-  `JournalDocumentV1` remains the sole persistence/API/offline/read contract,
+  `JournalDocumentV1` remains the sole persistence/API/read contract,
   and public/owner read routes must not load the authoring runtime.
 - DigitalOcean Managed Postgres for production data; Apple Container-first local Postgres on supported Macs, with Docker only as fallback.
 - Kysely as the typed SQL builder. SQL migrations are schema source of truth. No ORM.
@@ -35,7 +35,9 @@ acquisition gate.
 - Meilisearch as a derived public search/typeahead index.
 - Python worker for RapidFuzz/Splink/PyICU/CyrTranslit matching, dedup, and reindex work.
 - Plain Postgres `job_queue` table for TS -> Python background work. No Redis, no pgmq, no Python-only queue framework.
-- PWA offline capture with Dexie/IndexedDB and idempotency keys.
+- Network-required journal writes governed by ADR-0017: no new durable browser
+  journal state, PWA shell, offline mutation queue, or browser connectivity
+  hint may be presented as a successful save.
 - Cloudflare for DNS/edge/WAF/R2. Cloudflare must not cache HTML.
 
 ## Container Runtime Policy
@@ -88,7 +90,7 @@ acquisition gate.
 
 `docs/product-research/` is the duplicated research corpus from the original Startups research folder. Treat it as the repo-local product memory for ICP, JTBD, positioning, brand, IA, UX, SEO/content, growth, business model, trust/privacy, and validation evidence.
 
-Do not treat copied research files as the current technical stack authority when they conflict with root repo docs. Product facts come from the research corpus; implementation facts come from `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, ADR-0014, the SDD roadmap, and live code.
+Do not treat copied research files as the current technical stack authority when they conflict with root repo docs. Product facts come from the research corpus; implementation facts come from `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, ADR-0014 as superseded by ADR-0017, the SDD roadmap, and live code.
 
 ## Linear SDD Task Rule
 
@@ -104,7 +106,7 @@ pnpm linear:task:check -- --file ../../path/to/issue.md --phase final
 pnpm linear:task:standard:check
 ```
 
-Product execution issues must be vertical SDD slices, not layer tickets. A valid issue starts from a concrete user behavior and owns every affected layer needed to prove that behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Remediation and operator exceptions must still own a complete observable journey, one enforceable boundary, bounded blast radius, rollback, and executable read-back; do not add fake UI or unrelated layers to satisfy a quota.
+Product execution issues must be vertical SDD slices, not layer tickets. A valid issue starts from a concrete user behavior and owns every affected layer needed to prove that behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/local-retirement/event boundary when relevant -> tests -> docs. Remediation and operator exceptions must still own a complete observable journey, one enforceable boundary, bounded blast radius, rollback, and executable read-back; do not add fake UI or unrelated layers to satisfy a quota.
 
 Do not create standalone product-execution issues such as "build schema", "build UI", "add media pipeline", "add analytics", "build public pages", or "wire search" unless that work is inside the same user-visible path. Before creating or accepting any Linear work item, run the common `SDD Slice Test` plus its issue-kind-specific test in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`; rewrite any item that fails its applicable test before implementation or coordination.
 

@@ -4,6 +4,12 @@ Status: implemented by OVE-187, extended through OVE-184, consumed by OVE-185
 Manifest version: `ove187-v8`
 Manifest SHA-256: `98948a40053c83a1e307a5b10118c74637238d9116f0b19b204e600a6622370d`
 
+Connectivity addendum (2026-08-20): ADR-0017 retires the offline fixture
+contract. `network_unavailable_save_refused` is the successor state. OVE-323
+owns the manifest-version/hash re-pin and operator smoke update after the
+legacy Dexie/PWA runtime is removed; the current historical rows below are not
+authority to extend local capture.
+
 ## Purpose
 
 This environment gives product and design work a stable, realistic dataset on
@@ -60,24 +66,27 @@ The manifest owns exactly:
   maximum-handle/display-name/bio, hidden/coarse-region, visible/hidden
   relationship counters, guest, authenticated non-owner, owner, private,
   removed, and blocked outcomes with exact object/journal IDs and counts;
-- 9 garden-workspace states for guest, empty, sparse, typical, dense, offline,
+- 9 garden-workspace states for guest, empty, sparse, typical, dense,
+  `network_unavailable_save_refused`,
   loading, partial-error, and full-error behavior. Eight owner states are verified through
   owner-scoped production queries with exact space/object/kind/recent-entry
-  counts and ordering; the offline state adds deterministic local drafts,
-  queued/failed work, and media-processing recovery without storing credentials;
+  counts and ordering; OVE-323 re-pins the former local-state row to prove a
+  refused network save and media-processing recovery without storing credentials;
 - 20 journal-creation scenarios on the real first-object and next-update forms.
   Eleven first-entry and nine follow-up cases cover plant, animal, and bee
   colony creation; minimum, optional, provisional, Unknown, maximum-copy,
-  media, draft, explicit-publish, backdated, privacy, offline, recoverable
+  media, draft, explicit-publish, backdated, privacy,
+  `network_unavailable_save_refused`, recoverable
   error, cancel, and idempotent duplicate-retry states at desktop and 320px;
 - 21 intent-authentication scenarios covering Comment, Bookmark, Follow,
   Report profile, Block profile, Claim, Add object, Add journal entry, Save,
   and Publish across guest,
   authenticated, cancel, expired, invalid, deleted, unavailable,
   insufficient-permission, preserved-filter/cursor, profile-target, and
-  retained-draft states. The retained-draft starts write realistic synthetic
-  first-entry and follow-up payloads to IndexedDB before authentication instead
-  of representing retention with a query string alone. The first-entry draft
+  retained-draft states. Historical implementation status (2026-07-23): the
+  retained-draft start wrote realistic synthetic first-entry and follow-up
+  payloads to IndexedDB before authentication. ADR-0017 forbids extending that
+  path; OVE-323 re-pins the scenario. The first-entry draft
   resumes to an accessible owner workspace, while the synthetic-owner follow-up
   explicitly expects the permission-changed `404` boundary. The Claim start
   signs a short-lived invite for deterministic pending-identity and provenance
@@ -319,9 +328,10 @@ pnpm visual:fixtures:journal-create -- reset ove182-c005
 `run` resets each selected scenario before applying it. Server-write cases use
 the production first-entry/follow-up repositories, deterministic internal IDs,
 the real publication repository where specified, and two concurrent canonical
-calls for duplicate-retry cases. Draft, offline, recoverable-error, and cancel
-cases intentionally leave server tables unchanged; submitting their real form
-creates the owner-scoped Dexie draft or mutation state on that browser.
+calls for duplicate-retry cases. The replacement
+`network_unavailable_save_refused`, recoverable-error, and cancel cases leave
+server tables unchanged and must not create a new durable browser journal
+record. OVE-323 owns the exact fixture repin from the historical Dexie path.
 
 The expected final counts are:
 
@@ -499,7 +509,7 @@ production fallback or expose synthetic credentials:
 /garden?visualWorkspace=sparse
 /garden?visualWorkspace=typical
 /garden?visualWorkspace=dense
-/garden?visualWorkspace=offline
+/garden?visualWorkspace=network_unavailable_save_refused
 /garden?visualWorkspace=loading
 /garden?visualWorkspace=partial-error
 /garden?visualWorkspace=error
@@ -507,18 +517,19 @@ production fallback or expose synthetic credentials:
 
 The dense state proves five spaces and twelve mixed plant/animal/bee objects,
 crossing both the four-space and ten-object paginated disclosure thresholds,
-plus recent continuity, a local draft threshold, and one processing derivative.
-The offline state reuses that owner while exposing two browser-local drafts,
-one queued mutation, one failed mutation, and one failed media item with
-explicit local/server distinction.
+plus recent continuity and one processing derivative. OVE-323 replaces the
+historical local-draft threshold. The `network_unavailable_save_refused` state
+reuses that owner while exposing one refused save and one failed media item,
+with no false success and no new durable local journal state.
 
 The journal-creation scenarios resolve only after the complete fixture
 environment gate succeeds. They render the same first-object and follow-up
 forms as normal owner routes with deterministic safe field values. Submitting
 a server-write case calls the local/Preview-only evidence endpoint, executes
-the canonical repository path, and returns to the real owner readback. Draft,
-offline, error, and cancel submissions use the normal owner-scoped IndexedDB
-boundaries and do not create server rows:
+the canonical repository path, and returns to the real owner readback. The
+`network_unavailable_save_refused`, error, and cancel submissions do not create
+server rows or durable browser journal records; OVE-323 re-pins these paths and
+their operator smoke step:
 
 ```text
 /garden?visualCreate=ove182-c001#first-entry-composer

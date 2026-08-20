@@ -9,7 +9,9 @@ Current stack in this package:
 - Kysely + `pg` for typed SQL access to Postgres.
 - Cloudflare R2 presigned quarantine uploads through the S3 SDK.
 - `sharp` for server/worker image derivatives.
-- Dexie for browser offline-capture queue.
+- Network-required journal writes under ADR-0017. Existing Dexie/PWA runtime is
+  a temporary, explicitly owned retirement surface and must accept no new
+  durable browser journal writes after the child cutover.
 - Meilisearch client for derived public search.
 
 ## Local Development
