@@ -167,9 +167,22 @@
         ]
       }
     },
+    "stableRegistryCanon": {
+      "issue": "OVE-318",
+      "contractVersion": 1,
+      "authority": "ADR-0016",
+      "specification": "docs/STABLE_REGISTRY.md",
+      "observedCorpusScale": 129188,
+      "sourceCompleteness": "observed_capture",
+      "productCompleteness": "explicit_release_membership",
+      "captureAuthorizedBy": "OVE-254",
+      "releaseConstructionOwnedBy": "OVE-255",
+      "historicalReceipt": "OVE-253:blocked_manifest"
+    },
     "eppoFullCorpusContract": {
       "issue": "OVE-253",
       "contractVersion": 1,
+      "evidenceClass": "historical_decision_receipt",
       "verifiedAt": "2026-08-03",
       "baselineSha": "534e8d18ef402095ae1e77880e03749536066f6f",
       "decisionId": "d947b21f6f5e783b2bc04c79214e557b5c3a411c4b6438a5c446b350e377eae6",
@@ -363,7 +376,7 @@
       },
       {
         "slug": "catalogue-of-life-checklistbank",
-        "sourceVersionOrExport": "COL26.6 release alias 3LR, DOI 10.48580/dgy4k",
+        "sourceVersionOrExport": "COL26.7 Base Release alias 3LR, DOI 10.48580/dgyhw",
         "exportPathOrAccessMethod": "ChecklistBank/Catalogue of Life API or release export with release DOI preserved.",
         "license": "CC BY",
         "attributionRequired": true,
@@ -456,8 +469,8 @@
       },
       {
         "slug": "eppo-codes",
-        "sourceVersionOrExport": "EPPO Open Data Licence and Global Database taxon pages verified live; OVE-253 separately blocks only a new full taxonomy corpus without an official release/checksum manifest.",
-        "exportPathOrAccessMethod": "EPPO Data Services / Global Database taxon pages for the existing bounded code/name path; preserve Open Data Licence attribution. The OVE-253 contract separately forbids a full-corpus enumeration or mirror.",
+        "sourceVersionOrExport": "EPPO Open Data Licence and Global Database taxon pages verified live; ADR-0016 classifies future bounded API traversal as an OverGarden observed capture, never an official EPPO release.",
+        "exportPathOrAccessMethod": "EPPO Data Services / documented Global Database API for the existing bounded code/name path and the later OVE-254 observed-capture contract; preserve Open Data Licence attribution. Browser-session export, undocumented endpoints, and HTML scraping remain forbidden.",
         "license": "EPPO Codes Open Data Licence",
         "attributionRequired": true,
         "volumeEstimate": "EPPO code/name backbone subset relevant to garden plants and pests. This historical bounded path is not a full taxonomy corpus claim.",
@@ -470,7 +483,7 @@
           "distribution metadata",
           "regulated-organism notes unless explicitly modeled",
           "non-reviewed common-name candidates",
-          "any new full-corpus response before the OVE-253 official release/checksum manifest is approved"
+          "every observed-capture field until its independent rights, identity, release, and product-eligibility gates pass"
         ],
         "productProjectionFields": [
           "EPPO code",
@@ -483,9 +496,10 @@
           "OVE-82/OVE-83 bounded parser coverage report",
           "attribution rendering proof",
           "distribution-field exclusion test",
-          "a fresh OVE-253 contract_approved receipt before any new complete-corpus work begins"
+          "OVE-254 immutable observed-capture manifest and bounded closure proof",
+          "OVE-255 immutable Foundation release approval before any product projection"
         ],
-        "nextIssueDependency": "OVE-82, OVE-83 for the bounded path; OVE-253 rerun after EPPO publishes the missing official manifest for complete-corpus work"
+        "nextIssueDependency": "OVE-82 and OVE-83 for the historical bounded path; OVE-254 for observed capture and OVE-255 for separate release construction"
       },
       {
         "slug": "wikidata",
@@ -968,9 +982,9 @@
       "allowedUsage": ["raw_snapshot", "canonical_product_projection"],
       "allowedSensitiveFields": "Taxonomic names, ranks, synonyms, classification, identifiers, and source provenance. No occurrence coordinates in this backbone use.",
       "coordinateTreatment": "no_coordinates_in_source",
-      "sourceVersionOrDate": "COL26.6, key 315448, created 2026-06-12, modified 2026-06-16",
+      "sourceVersionOrDate": "COL26.7 Base Release, key 315777, created 2026-07-14, modified 2026-07-17",
       "verificationDate": "2026-06-29",
-      "sampleProof": "Live API dataset metadata returned alias COL26.6, license cc by, DOI 10.48580/dgy4k, and size 5,397,623; nameusage search returned Solanum lycopersicum.",
+      "sampleProof": "Live API dataset metadata returned alias COL26.7, license cc by, DOI 10.48580/dgyhw, and size 5,413,595; nameusage search returned Solanum lycopersicum.",
       "knownBlockers": [
         "Carry attribution and release DOI/version into source provenance.",
         "Do not treat vernacular coverage as sufficient for UA/BG; this is a species backbone source."
@@ -982,7 +996,7 @@
           "method": "GET",
           "url": "https://api.catalogueoflife.org/dataset/3LR",
           "expectStatus": 200,
-          "expectBodyIncludes": ["COL26.6", "cc by", "10.48580/dgy4k"],
+          "expectBodyIncludes": ["COL26.7", "cc by", "10.48580/dgyhw"],
           "notes": "Current release metadata proof."
         },
         {
@@ -1107,7 +1121,7 @@
         "Attribution is mandatory.",
         "Measure UA/BG common-name coverage before relying on EPPO as a vernacular source.",
         "Do not project distribution data into product UI/search in v0.",
-        "OVE-253 blocks full-corpus acquisition and projection until EPPO publishes an official versioned checksum manifest and complete closure method."
+        "Historical OVE-253 receipt forbids calling an API observation an official EPPO release; ADR-0016 requires an immutable OVE-254 observed capture plus independent rights, identity, release, and product-eligibility gates."
       ],
       "nextAllowedIssue": "OVE-58",
       "liveChecks": [

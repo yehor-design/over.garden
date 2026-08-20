@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-08-12 (OVE-298 terminal Google-link production proof; OVE-292 authenticated architecture integration harness in progress; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-20 (OVE-318 Stable Registry canon; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -21,6 +21,15 @@ issues OVE-213 through OVE-244 in `Todo` under
 [SDD Slice 19 - MVP Readiness Remediation And Launch Proof](https://linear.app/overgarden/project/sdd-slice-19-mvp-readiness-remediation-and-launch-proof-724bdf2ae236);
 the newest issue update in that set was `2026-07-25T22:18:33.986Z`. Identifier
 order alone is not execution order.
+
+Current Stable Registry authority: ADR-0016 and
+`docs/STABLE_REGISTRY.md`. OVE-253 remains a historical `blocked_manifest`
+receipt proving that no official EPPO release/checksum manifest was available;
+it is not the current future-work gate. OVE-254 may create an immutable,
+separately labelled OverGarden observed capture after OVE-318 terminal
+closeout. OVE-255 and later children independently own rights/identity/release,
+product readback, editions, and production parity. No capture count or raw
+source row can imply product completeness or flow directly to product/search.
 
 OVE-314 is the mandatory control-plane reconciliation gate inserted before
 resuming OVE-294. It removes `/admin`, `/admin/users`, pilot status/smoke/manual

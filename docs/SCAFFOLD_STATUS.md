@@ -1,6 +1,6 @@
 # Runtime Scaffold — Current Status and Verification
 
-Last reconciled: 2026-08-11 (OVE-314)
+Last reconciled: 2026-08-20 (OVE-318 canon; runtime remains at OVE-314 behavior)
 
 This file is the concise current-state mirror for the implemented OverGarden
 runtime. Authenticated Linear and the issue-specific execution contract remain
@@ -100,6 +100,11 @@ claim authority, not access to the product.
 
 ## Catalog, search, and lineage
 
+- Current Stable Registry authority: ADR-0016 and
+  `docs/STABLE_REGISTRY.md`. The `129188` EPPO observation is a sizing receipt,
+  not an official release or product-completeness claim. OVE-318 changes canon
+  only: no observed capture, SQL, release, search row, runtime behavior,
+  deployment, or production state is created here.
 - Catalog reads use canonical Postgres identity plus derived Meilisearch
   typeahead/search.
 - User-added/provisional catalog data stays private until an authorized curation
