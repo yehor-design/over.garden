@@ -31,6 +31,7 @@ import type {
   Health as HealthTable,
   JobQueue as JobQueueTable,
   JournalEntries as JournalEntriesTable,
+  JournalEntryDrafts as JournalEntryDraftsTable,
   JournalEntryMutationReceipts as JournalEntryMutationReceiptsTable,
   JournalEntryObjectMentions as JournalEntryObjectMentionsTable,
   JournalEntryTopicSignals as JournalEntryTopicSignalsTable,
@@ -58,6 +59,9 @@ import type {
 
 export type Database = DB;
 export type { JsonValue };
+
+export type JournalEntryDraft = Selectable<JournalEntryDraftsTable>;
+export type NewJournalEntryDraft = Insertable<JournalEntryDraftsTable>;
 
 export type EntryVisibility = "private" | "public";
 export type EntryLifecycleState = "active" | "archived";

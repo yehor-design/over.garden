@@ -1,7 +1,7 @@
 {
   "schemaVersion": "overgarden.authenticated-mutation-enforcement.v1",
-  "registryDigest": "1fea6eda4599c75be63727ab0241713e93bc04568fade89e1c4e85352cfc8c69",
-  "sourceRegistryReceiptDigest": "a55507436c322f68fab03eda90def81d22551632abc025fae49443d0a4297795",
+  "registryDigest": "e12440cfc1d7c70ddb60a1950fc5431ce811a61c93bf24470beea5b30d422727",
+  "sourceRegistryReceiptDigest": "89ce1332582826b73ec6a855f4519db18f96d843abd76793cf210983cd9247d8",
   "entrypointStates": [
     {
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_account_session_mutation",
@@ -886,6 +886,18 @@
     {
       "entrypointId": "route_handler:src/app/api/garden/catalog/typeahead/route.ts#GET",
       "enforcementState": "excluded_with_authority"
+    },
+    {
+      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#GET",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#PUT",
+      "enforcementState": "enforced_ove_291"
     },
     {
       "entrypointId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
@@ -3432,6 +3444,12 @@
       "enforcementState": "enforced_ove_290"
     },
     {
+      "consumerEdgeId": "edge:883a9ecffe80c9d64561:1:af451516c0ee5156cdd2",
+      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#GET",
+      "admissionBoundaryId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#GET",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
       "consumerEdgeId": "edge:8ac596ab3434a00a2b86:1:0628eb37b3436a9ce4a2",
       "entrypointId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#blockProfileAction",
       "admissionBoundaryId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#blockProfileAction",
@@ -4290,6 +4308,18 @@
       "enforcementState": "enforced_ove_291"
     },
     {
+      "consumerEdgeId": "edge:c6dd9a31ed36aa2b0564:1:990e93855964f188cf42",
+      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#PUT",
+      "admissionBoundaryId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#PUT",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:c6dd9a31ed36aa2b0564:2:add62d9f2f01e162374f",
+      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#PUT",
+      "admissionBoundaryId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#PUT",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
       "consumerEdgeId": "edge:c74457637e25e19a255b:1:06c622c691ab9d142d14",
       "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:mergeAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#mergeCatalogCandidateAction",
@@ -4438,6 +4468,18 @@
       "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
       "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
       "enforcementState": "enforced_ove_290"
+    },
+    {
+      "consumerEdgeId": "edge:d4f7e2edf013a69f9203:1:180b5f806739f1759059",
+      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
+      "admissionBoundaryId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:d4f7e2edf013a69f9203:2:31c18a3a7ba52b1e24c7",
+      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
+      "admissionBoundaryId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
+      "enforcementState": "enforced_ove_291"
     },
     {
       "consumerEdgeId": "edge:d8d4e0b13ceb5508bdc0:1:43373f91402d5ff0aab3",

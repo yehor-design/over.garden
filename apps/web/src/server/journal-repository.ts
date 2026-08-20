@@ -48,6 +48,7 @@ import {
 } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { persistJournalEntryMentions } from "@/server/journal-mention-repository";
+import { deleteJournalDraftsForArchivedEntry } from "@/server/journal-draft-repository";
 import {
   persistJournalEntryTopicSignals,
   refreshJournalEntryTopicSignalsForPlantObject,
@@ -2558,6 +2559,8 @@ export async function archiveJournalEntry(
       now,
       publicGoneAt: hadPublicUrl ? now : null,
     }).executeTakeFirstOrThrow();
+
+    await deleteJournalDraftsForArchivedEntry(trx, scope, entryId);
 
     await enqueueArchiveDerivativeRevokes(trx, {
       journalEntryId: entryId,

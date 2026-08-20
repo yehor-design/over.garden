@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { JOURNAL_ENTRY_PAYLOAD_MAX_BYTES } from "@/lib/garden/entry-contracts";
+
 const mocks = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
   revalidatePath: vi.fn(),
@@ -145,6 +147,27 @@ describe("POST /api/garden/entries save progress readback", () => {
     await expect(response.json()).resolves.toEqual({
       code: "MUTATION_ADMISSION_UNAVAILABLE",
     });
+  });
+
+  it("enforces the shared publication payload budget before repository access", async () => {
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://local.test/api/garden/entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          target: "first_plant_entry",
+          title: "x".repeat(JOURNAL_ENTRY_PAYLOAD_MAX_BYTES),
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toEqual({
+      code: "JOURNAL_ENTRY_TOO_LARGE",
+    });
+    expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
+    expect(mocks.createPlantObjectJournalEntry).not.toHaveBeenCalled();
   });
 
   it("returns a first-save progress readback URL and safe aggregate events", async () => {

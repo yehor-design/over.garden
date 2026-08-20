@@ -1174,6 +1174,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/api/engagement/follows/route.ts",
         "src/app/api/engagement/likes/route.ts",
         "src/app/api/garden/catalog/typeahead/route.ts",
+        "src/app/api/garden/drafts/[draftKey]/route.ts",
         "src/app/api/garden/entries/route.ts",
         "src/app/api/garden/entries/[entryId]/route.ts",
         "src/app/api/garden/mentions/typeahead/route.ts",

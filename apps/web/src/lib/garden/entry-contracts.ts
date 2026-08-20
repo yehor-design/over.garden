@@ -2,6 +2,14 @@ import type { EntrySyncStatus } from "@/db/schema";
 import type { CatalogKind, PlantObjectKind } from "@/db/schema";
 import type { CatalogTrustState } from "@/lib/garden/catalog-trust";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
+import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
+
+/** One bounded JSON budget shared by draft saves and final publication. */
+export const JOURNAL_ENTRY_PAYLOAD_MAX_BYTES = 128 * 1024;
+export const JOURNAL_DRAFT_TRANSPORT_OVERHEAD_MAX_BYTES = 16 * 1024;
+export const JOURNAL_DRAFT_REQUEST_MAX_BYTES =
+  JOURNAL_ENTRY_PAYLOAD_MAX_BYTES + JOURNAL_DRAFT_TRANSPORT_OVERHEAD_MAX_BYTES;
+export const JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION = 1 as const;
 
 export type ActivationSource = "homepage" | "public_variety" | "direct_garden";
 export type ActivationSurfaceKind = "homepage" | "variety" | "garden";
@@ -88,4 +96,149 @@ export interface FirstPlantEntryResponse {
   followUpValuePulse?: {
     journalEntryId: string;
   } | null;
+}
+
+export type JournalEntryDraftKind =
+  | "first_entry"
+  | "follow_up"
+  | "space_entry"
+  | "edit_entry";
+
+export interface JournalEntryDraftContext {
+  spaceId?: string | null;
+  plantObjectId?: string | null;
+  journalEntryId?: string | null;
+}
+
+export type JournalDraftCreateEntryRequest = Omit<
+  FirstPlantEntryRequest,
+  "contentDocument"
+> & {
+  contentDocument?: JournalDocumentV1 | null;
+};
+
+export interface JournalDraftEditEntryRequest {
+  entryId: string;
+  title?: string;
+  body?: string;
+  contentDocument?: JournalDocumentV1 | null;
+  entryDate?: string | null;
+  clientMutationId: string;
+  expectedRevision?: number;
+  cover?: FirstPlantEntryRequest["cover"];
+  mentionSelections?: JournalMentionSelection[];
+  topicTags?: string[];
+}
+
+export interface JournalDraftComposerStateV1 {
+  catalogQuery?: string;
+  selectedCatalogItem?: FirstEntryCatalogSelection | null;
+  userAddedCatalogName?: string | null;
+  topicTagInput?: string;
+}
+
+export type JournalEntryDraftPayloadV1 =
+  | {
+      schemaVersion: typeof JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION;
+      draftKind: "first_entry";
+      request: JournalDraftCreateEntryRequest & {
+        target: "first_plant_entry";
+      };
+      composerState?: JournalDraftComposerStateV1;
+    }
+  | {
+      schemaVersion: typeof JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION;
+      draftKind: "follow_up";
+      request: JournalDraftCreateEntryRequest & {
+        target: "plant_object_entry";
+        plantObjectId: string;
+      };
+      composerState?: JournalDraftComposerStateV1;
+    }
+  | {
+      schemaVersion: typeof JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION;
+      draftKind: "space_entry";
+      request: JournalDraftCreateEntryRequest & {
+        target: "space_entry";
+        spaceId: string;
+      };
+      composerState?: JournalDraftComposerStateV1;
+    }
+  | {
+      schemaVersion: typeof JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION;
+      draftKind: "edit_entry";
+      request: JournalDraftEditEntryRequest;
+      composerState?: JournalDraftComposerStateV1;
+    };
+
+export interface JournalEntryDraftReceiptV1 {
+  draftKey: string;
+  draftKind: JournalEntryDraftKind;
+  context: JournalEntryDraftContext;
+  payload: JournalEntryDraftPayloadV1;
+  generation: number;
+  payloadSha256: string;
+  serverRevision: number;
+  updatedAt: string;
+}
+
+export interface SaveJournalEntryDraftRequestV1 {
+  draftKind: JournalEntryDraftKind;
+  context: JournalEntryDraftContext;
+  payload: JournalEntryDraftPayloadV1;
+  generation: number;
+  payloadSha256: string;
+  expectedServerRevision: number | null;
+}
+
+export interface DeleteJournalEntryDraftRequestV1 {
+  generation: number;
+  payloadSha256: string;
+  expectedServerRevision: number;
+}
+
+export function journalEntryPayloadByteLength(value: unknown): number {
+  return new TextEncoder().encode(JSON.stringify(value)).byteLength;
+}
+
+export function journalDraftPublicationBody(
+  payload: JournalEntryDraftPayloadV1,
+): Record<string, unknown> {
+  if (payload.draftKind === "edit_entry") {
+    const body: Record<string, unknown> = { ...payload.request };
+    delete body.entryId;
+    return body;
+  }
+  return { ...payload.request, syncStatus: "online" };
+}
+
+export function stableSerializeJournalDraftPayload(
+  payload: JournalEntryDraftPayloadV1,
+): string {
+  return JSON.stringify(sortJsonValue(payload));
+}
+
+export async function journalDraftPayloadSha256(
+  payload: JournalEntryDraftPayloadV1,
+): Promise<string> {
+  const bytes = new TextEncoder().encode(
+    stableSerializeJournalDraftPayload(payload),
+  );
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+function sortJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortJsonValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, child]) => child !== undefined)
+        .sort(([left], [right]) => left.localeCompare(right, "en"))
+        .map(([key, child]) => [key, sortJsonValue(child)]),
+    );
+  }
+  return value;
 }

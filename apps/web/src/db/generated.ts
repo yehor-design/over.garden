@@ -531,6 +531,23 @@ export interface JournalEntryCatalogMentions {
   space_id: string;
 }
 
+export interface JournalEntryDrafts {
+  created_at: Generated<Timestamp>;
+  document_schema_version: Generated<number>;
+  draft_generation: Int8;
+  draft_key: string;
+  draft_kind: string;
+  id: Generated<string>;
+  journal_entry_id: string | null;
+  owner_user_id: string;
+  payload: Json;
+  payload_sha256: string;
+  plant_object_id: string | null;
+  server_revision: Generated<Int8>;
+  space_id: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface JournalEntryMutationReceipts {
   base_revision: Int8;
   client_mutation_id: string;
@@ -993,6 +1010,7 @@ export interface DB {
   job_queue: JobQueue;
   journal_entries: JournalEntries;
   journal_entry_catalog_mentions: JournalEntryCatalogMentions;
+  journal_entry_drafts: JournalEntryDrafts;
   journal_entry_mutation_receipts: JournalEntryMutationReceipts;
   journal_entry_object_mentions: JournalEntryObjectMentions;
   journal_entry_topic_signals: JournalEntryTopicSignals;

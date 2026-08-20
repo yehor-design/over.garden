@@ -27,6 +27,7 @@ describe("versioned application SQL bootstrap", () => {
       "0020_ove299_remove_manual_pilot_learning.sql",
       "0021_ove314_retire_obsolete_control_plane.sql",
       "0022_ove295_google_account_uniqueness.sql",
+      "0029_online_journal_drafts.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });
@@ -84,5 +85,29 @@ describe("versioned application SQL bootstrap", () => {
     expect(
       googleUniqueness?.match(/where "providerId" = 'google'/g),
     ).toHaveLength(4);
+  });
+
+  it("installs the owner-scoped online journal draft CAS contract", async () => {
+    const migrations = await loadVersionedApplicationSql(path.resolve("sql"));
+    const journalDrafts = migrations.find(
+      ({ name }) => name === "0029_online_journal_drafts.sql",
+    )?.sql;
+
+    expect(journalDrafts).toContain(
+      "create table if not exists journal_entry_drafts",
+    );
+    expect(journalDrafts).toContain(
+      'foreign key (owner_user_id) references "user"(id) on delete cascade',
+    );
+    expect(journalDrafts).toContain(
+      "unique (owner_user_id, draft_key)",
+    );
+    expect(journalDrafts).toContain(
+      "draft_kind in ('first_entry', 'follow_up', 'space_entry', 'edit_entry')",
+    );
+    expect(journalDrafts).toContain("draft_generation > 0");
+    expect(journalDrafts).toContain("server_revision > 0");
+    expect(journalDrafts).toContain("payload_sha256 ~ '^[a-f0-9]{64}$'");
+    expect(journalDrafts).toContain("journal_entry_drafts_context_check");
   });
 });
