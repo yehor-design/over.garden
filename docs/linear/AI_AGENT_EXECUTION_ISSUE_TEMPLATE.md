@@ -27,6 +27,14 @@ has no branch, implementation, deployment, or production mutation.
 - Sensitive boundaries: `{{comma-separated allowed values or none}}`
 - External systems: `{{exact provider names or none}}`
 
+Allowed `Touches` values: `database`, `repository`, `server`, `ui`,
+`local-retirement`, `background-job`, `search`, `media`, `auth`, `analytics`,
+`infrastructure`, `deployment`, `coordination`, `tests`, `docs`. A
+`local-retirement` issue must state ADR-0017 network-required and
+server-authoritative semantics, the `network_unavailable_save_refused` state,
+and the exact read-only retirement bridge; it cannot authorize a new durable
+browser journal write.
+
 # User or operator outcome and behavior
 
 - Actor and precondition: {{who starts from what state}}.
@@ -102,7 +110,7 @@ suspected cause, bounded investigation, decision branches, and stop condition.}}
 | Scoped repository                    | `{{path or reason}}`                     | {{contract}}              | {{status}}                                                                   |
 | Route/action/API                     | `{{path or reason}}`                     | {{contract}}              | {{status}}                                                                   |
 | UI/operator path                     | `{{path or reason}}`                     | {{contract}}              | {{status}}                                                                   |
-| Worker/search/media/offline/provider | `{{path or reason}}`                     | {{contract}}              | {{status}}                                                                   |
+| Worker/search/media/local-retirement/provider | `{{path or reason}}`          | {{contract}}              | {{status}}                                                                   |
 | Tests                                | `{{exact paths}}`                        | {{proof}}                 | {{required for a repository change, or specific no-repository-delta reason}} |
 | Docs/runbook                         | `{{exact paths}}`                        | {{authority/update}}      | {{required for a repository change, or specific no-repository-delta reason}} |
 

@@ -29,6 +29,10 @@ privacy firewall, media lifecycle, and public/search projections already use
 `JournalDocumentV1`; changing them or migrating stored rows would create risk
 without product value.
 
+> **Historical pointer:** ADR-0017 supersedes the offline-protocol dependency
+> in this context. `JournalDocumentV1` and the other named safety boundaries
+> remain current.
+
 ## Decision
 
 Use Lexical 0.49.0 as the only transient owner-authoring engine and use it as a
@@ -38,6 +42,10 @@ native node-tree editor rather than an Editor.js compatibility layer.
 contract. Lexical editor state, serialized nodes, runtime node keys, DOM, HTML,
 selection, history, and preview URLs are never persisted, queued, rendered,
 indexed, or sent through APIs.
+
+> **Historical pointer:** under ADR-0017, the cross-layer contract is the
+> server persistence/API/read contract. New browser-local queue persistence is
+> forbidden; this paragraph remains the accepted editor decision record.
 
 Pin these direct dependencies exactly to 0.49.0:
 
@@ -111,6 +119,10 @@ ephemeral React map/context. File picker, paste, drop, reservation, local Blob,
 quarantine, derivative, cleanup, and ten-image concurrency rules remain owned
 by the existing media/offline boundaries.
 
+> **Historical pointer:** ADR-0017 supersedes only the offline ownership named
+> here. Media quarantine, stripped derivatives, and ephemeral preview safety
+> remain binding throughout the retirement.
+
 ## Accessibility and verification
 
 The owner editor has a localized accessible name, visible focus, a roving
@@ -171,6 +183,9 @@ Ship one exact implementation through branch, PR, exact-head checks, main
 containment, READY exact-SHA Vercel deployment, and read-only live
 boot/type/cancel plus public-bundle proof. Production verification must not save
 a journal or mutate media, users, search, or provider state.
+
+> **Historical pointer:** ADR-0017 now governs connectivity and durable browser
+> persistence. This rollout receipt remains provenance for the Lexical change.
 
 Rollback promotes the immediately previous exact safe deployment or reverts
 the implementation commit and redeploys. Unchanged `JournalDocumentV1` rows need

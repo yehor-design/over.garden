@@ -3,6 +3,11 @@
 Status: binding OVE-186 release gate
 Last updated: 2026-07-23
 
+Connectivity addendum (2026-08-20): ADR-0017 supersedes every requirement to
+prove an offline product state. The successor state is
+`network_unavailable_save_refused`; OVE-323 owns the fixture-manifest and
+operator-smoke re-pin after runtime removal.
+
 OVE-186 closes Slice 18 only when the deterministic visual proof and the real
 canonical-production proof both pass for the same tested `main` commit. Neither
 evidence class can substitute for the other.
@@ -22,7 +27,8 @@ allowed only on loopback or an explicitly isolated preview. It proves:
 - the full guest and authenticated route/state matrix;
 - plant, animal creation and journal continuity;
 - empty, typical, dense, long-text, no-media, gallery, pagination, loading,
-  recoverable-error, offline, privacy, moderation, `404`, and `410` states;
+  recoverable-error, `network_unavailable_save_refused`, privacy, moderation,
+  `404`, and `410` states;
 - 320px and 1440px parity for every core archetype plus the wider OVE-185
   responsive matrix;
 - seed idempotency, namespace-bounded reset, unrelated database/media sentinel

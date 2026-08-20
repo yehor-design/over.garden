@@ -120,6 +120,9 @@ jobs:
       - name: Verify AI-executable Linear task standard
         run: pnpm linear:task:standard:check
 
+      - name: Verify online-only canon classification
+        run: pnpm online-only:canon:check
+
       - name: Verify pinned typography assets
         run: pnpm typography:assets:check
 

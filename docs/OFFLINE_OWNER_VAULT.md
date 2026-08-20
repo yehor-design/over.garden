@@ -1,6 +1,12 @@
 # Offline owner vault
 
-Status: active contract
+> **Authority status (2026-08-20):** historical and non-operative for new
+> product behavior. ADR-0017 supersedes this contract. OVE-322 may reuse only
+> its exact-owner mechanisms in a read-only retirement bridge; OVE-323 removes
+> the remaining runtime after cutover. This document preserves implementation
+> provenance and must not authorize a new durable browser write.
+
+Status: historical contract superseded by ADR-0017
 Authority: Linear OVE-288 plus the modules named below
 
 ## Product boundary

@@ -57,7 +57,7 @@ const TOUCH_VALUES = new Set([
   "repository",
   "server",
   "ui",
-  "offline",
+  "local-retirement",
   "background-job",
   "search",
   "media",
@@ -1546,15 +1546,21 @@ function validateFinalContract(
     );
   }
 
-  if (touches.includes("offline")) {
+  if (touches.includes("local-retirement")) {
     requireTerms(
       joinSections(parsed, [
         "Exact data, state, protocol, and concurrency contract",
         "UX, accessibility, localization, degraded states, performance, and observability",
+        "Migration, compatibility, rollout, rollback, and cleanup",
         "Required test and fault matrix",
       ]),
-      ["queued", "syncing", "failed", "synced", "idempotency", "session"],
-      "offline_contract",
+      [
+        "network-required",
+        "server-authoritative",
+        "read-only retirement bridge",
+        "network_unavailable_save_refused",
+      ],
+      "local_retirement_contract",
       errors,
     );
   }
@@ -3579,7 +3585,8 @@ function validateAuthorizationContract(
   const approvalReceipt =
     body.match(/^[-*+] Approval receipt:\s*(.+)$/m)?.[1]?.trim() ?? "";
   const approvalArtifact =
-    body.match(/^[-*+] Required approval artifact:\s*(.+)$/m)?.[1]?.trim() ?? "";
+    body.match(/^[-*+] Required approval artifact:\s*(.+)$/m)?.[1]?.trim() ??
+    "";
   if (sectionStatus !== authorizationStatus) {
     addFinding(
       errors,

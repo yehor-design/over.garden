@@ -2,11 +2,11 @@
 
 A gardening journal that doubles as a catalog-as-social-graph for Ukraine and Bulgaria. Users keep a growing journal; public variety/region pages aggregate real first-hand experience; a later lineage layer traces where plants came from.
 
-Status: pre-MVP. The stack has been realigned for agentic development: fewer hidden platform assumptions, stronger type feedback, and explicit privacy/media guardrails. See `docs/TECH_STACK_DECISIONS.md`, ADR-0014, `docs/WALKING_SKELETON.md`, `docs/SDD_VERTICAL_SLICE_ROADMAP.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, and `docs/product-research/README.md`.
+Status: pre-MVP. The stack has been realigned for agentic development: fewer hidden platform assumptions, stronger type feedback, explicit privacy/media guardrails, and network-required journal writes under ADR-0017. See `docs/TECH_STACK_DECISIONS.md`, ADR-0014 as superseded by ADR-0017, `docs/WALKING_SKELETON.md`, `docs/SDD_VERTICAL_SLICE_ROADMAP.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, and `docs/product-research/README.md`.
 
 ## Stack
 
-Next.js App Router + TypeScript · shadcn/ui · Better Auth · Kysely · DigitalOcean Managed Postgres · Cloudflare R2 · Meilisearch · Python worker (RapidFuzz, Splink, PyICU, CyrTranslit) · PWA offline capture with Dexie · Cloudflare edge/DNS.
+Next.js App Router + TypeScript · shadcn/ui · Better Auth · Kysely · DigitalOcean Managed Postgres · Cloudflare R2 · Meilisearch · Python worker (RapidFuzz, Splink, PyICU, CyrTranslit) · online-only server-authoritative journal writes · Cloudflare edge/DNS.
 
 ## Repository Layout
 
@@ -18,7 +18,7 @@ Next.js App Router + TypeScript · shadcn/ui · Better Auth · Kysely · Digital
 - `docs/SDD_VERTICAL_SLICE_ROADMAP.md` — living roadmap for vertical SDD execution slices; not a full backlog.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — live non-secret infrastructure values, provider IDs, bucket/domain names, env contracts, and dashboard links.
 - `docs/product-research/` — duplicated product research corpus for ICP, JTBD, positioning, IA, SEO/content, trust/privacy, GTM, and validation evidence.
-- `docs/adr/` — historical ADRs plus ADR-0014, the current superseding stack ADR.
+- `docs/adr/` — historical ADRs plus current superseding decisions; ADR-0017 is the online-only product authority.
 - `AGENTS.md` — operating rules for AI agents and humans.
 
 ## Agentic Execution

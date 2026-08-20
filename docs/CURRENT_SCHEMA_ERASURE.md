@@ -51,7 +51,13 @@ Rekey those columns to the synthetic erased subject before deleting the auth use
 - Public profiles and handle registry cascade with the user row and are counted in dry-run.
 - Journal cover (`cover_media_asset_id`, `usage_role=cover_only`) is cleared/deleted with media object cleanup; clearing only the pointer is insufficient.
 
-## Browser-local offline cleanup
+## Browser-local retirement and cleanup
+
+ADR-0017 forbids new durable browser journal writes. OVE-322 owns the only
+successor: an exact-owner, read-only retirement bridge for legacy device state.
+The bridge may migrate or delete verified residue on the returning physical
+target, but it cannot accept a new local write or turn an unreachable device
+into an erasure-success claim.
 
 Server-side account erasure cannot reach IndexedDB on an absent or different
 browser and therefore must not claim that browser-local work was deleted.
@@ -59,8 +65,10 @@ browser and therefore must not claim that browser-local work was deleted.
 helper for exact-owner residue in the known legacy `overgarden-offline`
 database; it is not a remote-erasure receipt and has no ordinary product caller.
 
-OVE-288 adds the separate signed-in current-device control documented in
-`docs/OFFLINE_OWNER_VAULT.md`. That explicit action resolves the current
+Historical implementation status (2026-08-13): OVE-288 added the separate
+signed-in current-device control documented in `docs/OFFLINE_OWNER_VAULT.md`.
+ADR-0017 makes that document non-operative except as OVE-322 retirement
+provenance. The existing action resolves the current
 authoritative owner binding, fences and deletes only that physical target,
 removes exact-owner legacy rows (including synced/privacy-blocked residue), and
 shows confirmation only after an independent target-nonexistence check and
@@ -70,6 +78,7 @@ of the non-destructive server erasure request delete no browser vault.
 ## Verification
 
 ```bash
+# Historical retirement-window verification; OVE-322 re-pins this read-only proof.
 cd apps/web
 pnpm erasure:schema-coverage:check
 pnpm test src/server/erasure-dry-run.test.ts src/server/erasure-execution.test.ts \

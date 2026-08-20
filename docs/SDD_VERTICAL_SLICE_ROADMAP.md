@@ -2,11 +2,17 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-08-20 (OVE-318 Stable Registry canon; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-20 (OVE-320 online-only canon; authenticated Linear remains primary queue authority)
 Owner: founder
-Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
+Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md` as superseded for connectivity by `docs/adr/ADR-0017-online-only-product.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
 This is not the full product backlog. It is the living execution roadmap for the next product-learning slices after the walking skeleton. The skeleton proved the stack; it is not product UI and it is not the final product data model.
+
+ADR-0017 is the current online-only authority. New work must use
+network-required, server-authoritative saves and must not extend the historical
+PWA, Dexie, IndexedDB, local-draft, queued/synced, or offline-capture behavior
+recorded later in this file. Those matches are implementation provenance or
+named `runtime_pending_child` residue until OVE-321 through OVE-326 close.
 
 From this point forward, product implementation work must be shipped as narrow vertical SDD slices that wire one user behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media if relevant -> tests -> docs. A task that only creates schema, only builds UI, only wires media, or only adds instrumentation is not a valid product execution slice unless it is embedded inside a user-visible path and proves integration through that path. Remediation, operator, decision, canon-correction, and coordination-container work uses the bounded issue-kind contracts in `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`; never invent fake product layers for those exceptions.
 
@@ -413,7 +419,9 @@ The implemented skeleton already proves:
 - Better Auth sign-up creates a session cookie.
 - Kysely + Postgres repositories work through scoped server code.
 - R2/MinIO quarantine upload and stripped WebP derivative processing work.
-- Dexie/IndexedDB offline queue exists and is test-covered.
+- Historical implementation status: the Dexie/IndexedDB offline queue exists
+  and is test-covered, but ADR-0017 makes it non-authoritative runtime residue
+  owned by OVE-321 through OVE-323.
 - Public-search document conversion refuses private skeleton entries.
 - Python worker can consume the Postgres `job_queue`.
 - Meilisearch Cyrillic typo proof passes locally.
@@ -429,7 +437,11 @@ Do not rebuild those proofs. Replace the skeleton surfaces with product behavior
 5. Scoped repositories are mandatory for user data. Kysely types do not protect against missing `user_id`, publication, or location predicates.
 6. Search indexes public-safe documents only. Treat indexing as a privacy boundary.
 7. Public editorial, landing, guide, and answer SEO/AEO pages may be SSR and indexable at MVP launch when they contain useful first-party content. Thin, unsafe, or UGC-derived surfaces, including UGC, variety, topic, lineage, and profile pages, stay `noindex` and out of sitemaps until explicit quality gates promote them.
-8. Offline capture is honest: queue locally, show queued/syncing/failed/synced states, allow retry, and do not promise iOS background sync reliability.
+8. **Network-required saves are honest.** ADR-0017 forbids new durable browser
+   journal writes, offline queues, PWA shell/installability promises, and
+   `navigator.onLine` as a success oracle. Only an acknowledged server response
+   establishes success; network uncertainty yields
+   `network_unavailable_save_refused`.
 9. Every new or materially rewritten Linear work item must conform to `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, use `docs/linear/AI_AGENT_EXECUTION_ISSUE_TEMPLATE.md`, and pass `pnpm linear:task:check` before Linear write and after exact-description read-back. Links and parent issues never replace the task-local execution contract.
 10. Linear tasks that touch media, DNS, production env, deployment, storage, or external services must include `docs/INFRASTRUCTURE_REGISTRY.md` and update it if provider values change.
 11. User-facing Linear tasks must run the Product Thinking Gate in `docs/product-research/README.md`, include the relevant research files under the exact `Required context` heading, and state the product assumption being tested.
@@ -502,7 +514,7 @@ Valid SDD slice shapes:
 
 - `Create first plant entry -> server save -> authenticated readback -> scoped tests`.
 - `Add one photo to entry -> quarantine upload -> derivative processing -> readback renders derivative -> EXIF test`.
-- `Create entry offline -> retry sync -> same server entry via idempotency -> readback -> queue-state tests`.
+- `Create entry while the network request is unavailable -> refuse false save -> retry the same server-authoritative idempotency key -> one readback -> failure-state tests`.
 - `Publish entry -> SSR public page -> noindex/location-safe metadata -> public search doc privacy test`.
 - `Delete published entry -> public 410 -> search/index removal guard -> authenticated archive state`.
 
@@ -515,14 +527,15 @@ The fastest useful path is:
 1. Authenticated user lands in a real workspace, not `/skeleton`.
 2. User creates one space and one plant object with minimal catalog assumptions.
 3. User writes a narrative entry with title + body, optional backdate, region/hidden location visibility, and one photo.
-4. Entry can be queued offline and synced later with an idempotency key.
+4. Entry save is network-required, uses a server-authoritative idempotency key,
+   and reports `network_unavailable_save_refused` when acknowledgement is unavailable.
 5. Server processes the photo derivative and deletes the original.
 6. User can read the entry back in the app and, if published, on an SSR public route that leaks no precise location and remains `noindex`.
 7. The system records privacy-safe events needed to evaluate activation and journal retention.
 
 ## Slice Roadmap
 
-This section is a historical horizon and original roadmap reference, not the active queue by itself. Use `Current Execution State`, Linear, and `docs/MAINLINE_CLOSEOUT.md` before accepting the next issue. Later slices remain directional bets that must be rewritten into fresh vertical SDD tasks after current implementation friction and product learning are reviewed.
+This section is a historical horizon and original roadmap reference, not the active queue by itself. Its offline/PWA/Dexie/local-queue language is non-operative provenance superseded by ADR-0017. Use `Current Execution State`, Linear, and `docs/MAINLINE_CLOSEOUT.md` before accepting the next issue. Later slices remain directional bets that must be rewritten into fresh vertical SDD tasks after current implementation friction and product learning are reviewed.
 
 ### Slice 1: Narrative Journal Capture
 
@@ -813,7 +826,11 @@ Failure gate:
 
 - Do not mark done if any UI/public read model can display a quarantine key, if EXIF stripping is only client-side, or if readback can point at the original object.
 
-### 3. Offline Entry With Photo Intent: Queue, Sync, No Duplicate
+### 3. Historical Offline Entry With Photo Intent: Queue, Sync, No Duplicate
+
+Authority status: this completed OVE-9 slice is historical provenance. ADR-0017
+supersedes its product behavior; OVE-321 through OVE-323 own the replacement
+and staged removal. Nothing in this section authorizes new local writes.
 
 User behavior: a gardener starts an entry with title/body and one photo intent while offline, sees it queued, regains connection, retries sync, and ends with exactly one server entry plus safe media state.
 

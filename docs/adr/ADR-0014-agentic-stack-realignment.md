@@ -5,9 +5,17 @@
 - **Supersedes:** ADR-0004, ADR-0007, ADR-0011, ADR-0012, ADR-0013 where they bind the app to Supabase Auth/Storage/RLS, Drizzle, Railway, pgmq, or Supabase Realtime.
 - **Still compatible with:** ADR-0001 (TS app + Python matching), ADR-0002 (Next.js SSR/ISR), ADR-0003 (shadcn/ui), ADR-0005 (Meilisearch), ADR-0006 (PWA-first), ADR-0009 (Cloudflare edge/DNS), ADR-0010 (analytics, with privacy review before implementation).
 
+> **Historical pointer:** ADR-0017 supersedes the ADR-0006 PWA-first
+> compatibility clause above. The remaining stack decisions retain their
+> authority unless another accepted ADR supersedes them explicitly.
+
 ## Context
 
 OverGarden will be built mostly by AI coding agents working from Linear SDD tasks. The previous locked stack optimized for Supabase bundle velocity, Drizzle RLS ergonomics, and Supabase Broadcast. After review, the sharper constraint is different: reduce agent mistakes and reduce operational ambiguity while preserving the product-critical properties: SSR SEO, offline capture, Cyrillic matching, media safety, low infra cost, and a small founder-operable surface.
+
+> **Historical pointer:** the offline-capture property in this context records
+> the 2026-06-26 decision. ADR-0017 supersedes it with the current
+> network-required product contract; the sentence remains provenance.
 
 The previous stack also had a contradictory rule: docs banned query builders while the app used an ORM. That contradiction is dangerous in an SDD/agent workflow because future agents will “fix” toward whichever sentence they read last.
 
@@ -22,6 +30,10 @@ The previous stack also had a contradictory rule: docs banned query builders whi
 7. Keep **Python worker-first** for matching/dedup/reindex. FastAPI is optional internal/admin/health surface only; product typeahead reads Meilisearch, not a synchronous Python API.
 8. Keep **PWA offline capture** via IndexedDB/Dexie, idempotency keys, visible sync state, and manual retry. Do not promise iOS Background Sync reliability.
 9. Build in this order: walking skeleton, then vertical SDD slices. CI gates and privacy/media/SSR tests are part of the stack, not polish.
+
+> **Historical pointer:** ADR-0017 supersedes Decision 8. OVE-321 through
+> OVE-326 own the staged runtime retirement; this ADR does not describe current
+> connectivity behavior.
 
 ## Consequences
 

@@ -3957,3 +3957,54 @@ describe("Linear list-marker normalization", () => {
     expect(report.errors).toEqual([]);
   });
 });
+
+describe("ADR-0017 local-retirement construction gate", () => {
+  function localRetirementTask(contract: string): string {
+    return validFinalTask({
+      "Execution metadata": metadataWith({
+        Touches: "repository, local-retirement, tests, docs",
+      }),
+      "Exact data, state, protocol, and concurrency contract": contract,
+    });
+  }
+
+  it("rejects the retired offline touch value", () => {
+    const report = validateLinearAgentTask(
+      validFinalTask({
+        "Execution metadata": metadataWith({
+          Touches: "repository, offline, tests, docs",
+        }),
+      }),
+    );
+
+    expect(report.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "metadata_list_value" }),
+      ]),
+    );
+  });
+
+  it("accepts the complete network-required retirement contract", () => {
+    const report = validateLinearAgentTask(
+      localRetirementTask(
+        "ADR-0017 makes journal writes network-required and server-authoritative. The bounded unavailable state is network_unavailable_save_refused. One exact-owner read-only retirement bridge may inspect and remove legacy device state, but no new durable browser write is accepted. Retry stays idempotent, cancellation fences late work, and the server read-back remains authoritative.",
+      ),
+    );
+
+    expect(report.errors).toEqual([]);
+  });
+
+  it("fails when local retirement omits its read-only bridge semantics", () => {
+    const report = validateLinearAgentTask(
+      localRetirementTask(
+        "ADR-0017 makes journal writes network-required and server-authoritative. The unavailable state is network_unavailable_save_refused, and retry remains bounded.",
+      ),
+    );
+
+    expect(report.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "local_retirement_contract" }),
+      ]),
+    );
+  });
+});

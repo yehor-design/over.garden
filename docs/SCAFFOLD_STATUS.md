@@ -1,13 +1,21 @@
 # Runtime Scaffold — Current Status and Verification
 
-Last reconciled: 2026-08-20 (OVE-318 canon; runtime remains at OVE-314 behavior)
+Last reconciled: 2026-08-20 (OVE-320 online-only canon; runtime retirement is
+owned by OVE-321 through OVE-326)
 
 This file is the concise current-state mirror for the implemented OverGarden
 runtime. Authenticated Linear and the issue-specific execution contract remain
 the queue authority; `docs/SDD_VERTICAL_SLICE_ROADMAP.md` remains the vertical
-slice/dependency authority; `docs/TECH_STACK_DECISIONS.md` plus ADR-0014 remain
-the stack authority. Every new or materially rewritten Linear task must follow
+slice/dependency authority; `docs/TECH_STACK_DECISIONS.md` plus ADR-0014 as
+superseded by ADR-0017 remain the stack authority. Every new or materially rewritten Linear task must follow
 `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`.
+
+ADR-0017 is the current connectivity authority: all new journal writes are
+network-required and server-authoritative. Implementation status (2026-08-20):
+the checked-in runtime still contains the historical PWA, Dexie, IndexedDB,
+local-draft, queued, and sync paths; they are non-authoritative
+`runtime_pending_child` entries owned by OVE-321, OVE-322, or OVE-323 and must
+not be extended.
 
 ## Current product model
 
@@ -25,8 +33,9 @@ Implemented user journeys include:
 - automatic pseudonymous public identity and owner profile management;
 - garden space, plant/animal object, structured journal entry, same-object
   follow-up, publication, archive/`410`, and derivative-only media;
-- offline first-entry/follow-up queueing with owner/session binding,
-  idempotency, explicit retry, and no duplicate canonical writes;
+- a legacy first-entry/follow-up local queue still present pending its named
+  OVE-321/OVE-322/OVE-323 retirement owners; ADR-0017 forbids treating it as
+  current target behavior or extending it with new durable browser writes;
 - catalog typeahead, unknown/user-added identities, curation, canonical merge,
   official source provenance, and derived search indexing;
 - public journals, object passports, varieties, profiles, community/social
@@ -78,17 +87,20 @@ claim authority, not access to the product.
 - The sealed owner must be a verified credential-only account with exactly one
   credential row and no linked social provider.
 - The profile recovery flow prevents removal of the final usable method.
-- Sign-out freezes new owner-scoped browser writes, resolves unsynced work,
-  invalidates only the current server session, purges only the current local
-  owner/session scope, and requires authoritative null-session convergence.
+- Sign-out invalidates only the current server session and requires
+  authoritative null-session convergence. Legacy browser-vault resolution is
+  a bounded retirement concern owned by OVE-322; ADR-0017 forbids new local
+  journal writes as the replacement.
 - Retired provider and product-access invitation code cannot be re-enabled by
   environment configuration.
 
-## Journal, offline, media, and public lifecycle
+## Journal, online-only saves, media, and public lifecycle
 
 - Canonical journal mutations are owner/space/object scoped and idempotent.
-- The PWA queue stores bounded structured drafts and optional copied photo bytes
-  in IndexedDB; server truth is authoritative after sync.
+- ADR-0017 requires an acknowledged server response before a journal save is
+  successful. PWA queues, IndexedDB journal ownership, and synchronization
+  claims are historical runtime residue scheduled for OVE-321 through OVE-323,
+  not current product authority.
 - Browser-side EXIF handling is only an optimization. Originals enter private
   R2 quarantine; the server re-encodes/resizes/strips them, publishes only the
   derivative, and deletes the original after successful processing.

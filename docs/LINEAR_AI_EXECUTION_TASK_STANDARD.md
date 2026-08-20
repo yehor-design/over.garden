@@ -203,7 +203,7 @@ Place this block immediately after `# AI execution directive`:
 ```
 
 Allowed `Touches` values are `database`, `repository`, `server`, `ui`,
-`offline`, `background-job`, `search`, `media`, `auth`, `analytics`,
+`local-retirement`, `background-job`, `search`, `media`, `auth`, `analytics`,
 `infrastructure`, `deployment`, `coordination`, `tests`, and `docs`. A repository-changing
 execution/remediation/operator issue includes `tests` and `docs` plus every
 actual affected layer. An external-state-only operator issue declares
@@ -498,7 +498,7 @@ safe receipt, and its own command/read-back block; AC/VER mapping is bidirection
 `external_readback` block names the exact provider command or uses a concrete
 `# Authenticated <provider|Linear|connector|API> read-back: <operation>`
 annotation when a connector operation is not a shell executable; authenticated
-Linear/provider read-back remains mandatory outside the offline checker.
+Linear/provider read-back remains mandatory outside the tracked task checker.
 
 ### 17. Delivery, exact-SHA proof, and Linear closeout
 
@@ -594,7 +594,7 @@ open or satisfied. Omit the section only when status is `not_required`.
 | `auth` or `secrets`                     | Enumeration/timing/error-shape analysis; official library/provider API; key provenance/rotation; session invalidation; logs and evidence redaction.                                 |
 | `media` or `media-originals`            | Private quarantine; actual-byte validation; stripped derivative; original cleanup/absence proof; opaque public identity; archive/erasure races.                                     |
 | `search` or `public-search`             | One canonical public eligibility predicate; public-only documents; cursor/query privacy; stale removal/convergence; Postgres/Meili parity.                                          |
-| `offline`                               | Honest queued/syncing/failed/synced states; owner/session fence; durable idempotency; reload/retry; no background-sync promise.                                                     |
+| `local-retirement`                      | ADR-0017 network-required and server-authoritative semantics; explicit `network_unavailable_save_refused`; one isolated read-only retirement bridge for legacy device state; no new durable browser journal write. |
 | `background-job`                        | Closed payload/state schema; claim/lease/CAS; retry/dead-letter/retention; duplicate/restart/overlap proof; nonblocking user path.                                                  |
 | `analytics`                             | Consent/eligibility authority; closed event/version/properties; bounded enums; actor/cohort exclusions; no content/precise location/stable identity; failure isolation.             |
 | Public route/indexability               | `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`; canonical policy call; SSR/robots/sitemap/structured-data parity; thin/unsafe UGC remains fail-closed.                                     |
@@ -626,10 +626,10 @@ An issue is not execution-ready when any of these is true:
   blast radius, drift check, read-back, and rollback/cleanup.
 - Several independent behaviors with different rollout/rollback are bundled.
 - Product Thinking is absent or replaced by irrelevant research citations.
-- The offline validator fails or the post-write Linear read-back differs.
+- The tracked task validator fails or the post-write Linear read-back differs.
 
 `pnpm linear:task:check` returning `valid` means only that the Markdown
-description satisfies the offline contract. It does not prove Linear title,
+description satisfies the task-local contract. It does not prove Linear title,
 team/project/milestone/status/priority/labels/assignee, relation DAG, approval,
 or saved bytes. Execution-ready additionally requires authenticated connector
 read-back of those fields, relation-cycle review, and post-write digest equality.

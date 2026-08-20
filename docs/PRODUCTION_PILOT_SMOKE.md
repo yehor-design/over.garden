@@ -4,6 +4,11 @@ Status: current self-serve production contract after OVE-314
 Legacy filename retained only because earlier immutable receipts link to it.
 Last updated: 2026-08-11
 
+Connectivity addendum (2026-08-20): ADR-0017 makes journal writes
+network-required. Every former offline-retry proof is replaced by
+`network_unavailable_save_refused`; OVE-323 re-pins the operator smoke step
+after removing the legacy runtime.
+
 ## OVE-314 supersession
 
 OverGarden no longer has a closed-pilot product-access model or a pilot/admin
@@ -50,8 +55,10 @@ The current production journey is:
    garden mutation path without an invite, grant, or cohort prerequisite.
 4. Optional media goes to private quarantine, is re-encoded into a stripped
    derivative, and the original is deleted after successful processing.
-5. The gardener can return to the same object, publish explicitly, archive, use
-   offline retry, and sign out through the shared convergence boundary.
+5. The gardener can return to the same object, publish explicitly, archive,
+   receive `network_unavailable_save_refused` without false success when the
+   server is unavailable, retry the server-authoritative request, and sign out
+   through the shared convergence boundary.
 6. A valid lineage invitation can still be claimed through
    `/garden/lineage/invitations/claim`; its token stays in the client-only URL
    fragment and never becomes product-access authority.
@@ -199,7 +206,7 @@ requirements, runtime instructions, route inventory, configuration guidance,
 or permission to restore retired behavior.
 
 Durable production capabilities established by those releases—managed
-Postgres, R2 derivative privacy, Meilisearch projection boundaries, offline
-idempotency, recovery, public lifecycle, self-serve auth, consent, and
+Postgres, R2 derivative privacy, Meilisearch projection boundaries, server
+idempotency, honest network-failure recovery, public lifecycle, self-serve auth, consent, and
 exact-main deployment proof—remain governed by their current focused runbooks
 and `docs/MAINLINE_CLOSEOUT.md`.
