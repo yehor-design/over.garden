@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseLinearTaskCliArgs,
   REQUIRED_LINEAR_TASK_HEADINGS,
+  RETIRED_MVP_POSTURE_TERM_GATES,
   validateLinearAgentTask,
 } from "./check-linear-agent-task";
 
@@ -26,6 +27,13 @@ const externalStateDeliverySequence =
   "baseline -> no_repository_delta -> environment_identity -> read_only_action -> immutable_receipt -> second_readback -> rollback_result -> cleanup_result -> linear_readback -> done";
 const coordinationDeliverySequence =
   "unassigned -> outside_in_progress -> child_readback -> dag_proof -> children_done -> integration_receipt -> linear_readback -> terminal_closeout";
+
+it("keeps the ADR-0018 retirement inventory closed at 26 former term gates", () => {
+  expect(RETIRED_MVP_POSTURE_TERM_GATES).toHaveLength(26);
+  expect(RETIRED_MVP_POSTURE_TERM_GATES).toContain("another-user");
+  expect(RETIRED_MVP_POSTURE_TERM_GATES).toContain("negative proof");
+  expect(RETIRED_MVP_POSTURE_TERM_GATES).toContain("failure isolation");
+});
 
 function repositoryDeliveryFields(branch: string) {
   return [
@@ -86,7 +94,7 @@ function validFinalTask(overrides: Record<string, string> = {}): string {
     "Non-negotiable invariants":
       "1. INV-01: authorization and owner scope remain unchanged.\n2. INV-02: no precise location, private content, secret, media capability, or public-search document may leak.\n3. INV-03: the existing scoped repository remains the sole data owner.\n4. INV-04: cancellation prevents late writes.\n5. INV-05: shipped exact-SHA proof is authoritative.",
     "Exact data, state, protocol, and concurrency contract":
-      "Data is unchanged. The server returns one closed error class by the finite deadline. Retry is bounded and idempotent. Concurrent attempts do not duplicate effects. Cancellation fences late writes; terminal read-back remains authoritative.",
+      "Data is unchanged. The server returns one closed error class by the finite deadline. Retry is bounded and idempotent. Concurrent attempts do not duplicate effects. Cancellation fences late writes; terminal read-back remains authoritative. ADR-0018 is the current MVP posture: relevant ambiguity uses serve under uncertainty with the accepted cross-account-read exposure, media is format-conversion-only, public discovery uses PUBLIC_SURFACE_INDEXABILITY_THRESHOLD, and operator capability uses in-product admin under AdminUserRole.",
     "Exact vertical scope, target files, and caller inventory":
       "Inspect `apps/web/src/server/public-surface-indexing-policy.ts`, its route caller, adjacent error mapper, focused tests, and this runbook. Change only the verified boundary and every caller that can bypass it. Tests and docs are required.",
     "Ordered implementation plan":
@@ -160,6 +168,7 @@ function validFinalTask(overrides: Record<string, string> = {}): string {
       "- `docs/MAINLINE_CLOSEOUT.md`",
       "- `docs/TECH_STACK_DECISIONS.md`",
       "- `docs/adr/ADR-0014-agentic-stack-realignment.md`",
+      "- `docs/adr/ADR-0018-mvp-posture.md`",
       "- `apps/web/src/server/public-surface-indexing-policy.ts`",
     ].join("\n"),
   };
@@ -278,6 +287,7 @@ function validVerticalExecutionTask(): string {
       "- `docs/MAINLINE_CLOSEOUT.md`",
       "- `docs/TECH_STACK_DECISIONS.md`",
       "- `docs/adr/ADR-0014-agentic-stack-realignment.md`",
+      "- `docs/adr/ADR-0018-mvp-posture.md`",
       "- `docs/product-research/README.md`",
       "- `docs/product-research/overgarden-living-journals.md`",
       "- `docs/product-research/OverGarden_PAGE_ARCHITECTURE_v1.md`",
@@ -371,6 +381,7 @@ function validDecisionSpikeTask(): string {
       "- `docs/MAINLINE_CLOSEOUT.md`",
       "- `docs/TECH_STACK_DECISIONS.md`",
       "- `docs/adr/ADR-0014-agentic-stack-realignment.md`",
+      "- `docs/adr/ADR-0018-mvp-posture.md`",
     ].join("\n"),
   });
 }
@@ -456,6 +467,7 @@ function validCanonCorrectionTask(): string {
       "- `docs/MAINLINE_CLOSEOUT.md`",
       "- `docs/TECH_STACK_DECISIONS.md`",
       "- `docs/adr/ADR-0014-agentic-stack-realignment.md`",
+      "- `docs/adr/ADR-0018-mvp-posture.md`",
     ].join("\n"),
   });
 }
@@ -541,6 +553,7 @@ function validExternalOperatorTask(): string {
       "- `docs/MAINLINE_CLOSEOUT.md`",
       "- `docs/TECH_STACK_DECISIONS.md`",
       "- `docs/adr/ADR-0014-agentic-stack-realignment.md`",
+      "- `docs/adr/ADR-0018-mvp-posture.md`",
       "- `docs/INFRASTRUCTURE_REGISTRY.md`",
     ].join("\n"),
   });
@@ -627,6 +640,7 @@ function validCoordinationContainerTask(): string {
       "- `docs/MAINLINE_CLOSEOUT.md`",
       "- `docs/TECH_STACK_DECISIONS.md`",
       "- `docs/adr/ADR-0014-agentic-stack-realignment.md`",
+      "- `docs/adr/ADR-0018-mvp-posture.md`",
       "- Linear issue `OVE-1000` full description, state, owner, receipts, and relations",
     ].join("\n"),
   });
@@ -1370,6 +1384,7 @@ describe("Linear AI execution task validator", () => {
           "- `docs/MAINLINE_CLOSEOUT.md`",
           "- `docs/TECH_STACK_DECISIONS.md`",
           "- `docs/adr/ADR-0014-agentic-stack-realignment.md`",
+          "- `docs/adr/ADR-0018-mvp-posture.md`",
           "- `apps/web/src/server/does-not-exist.ts`",
         ].join("\n"),
       }),
@@ -1870,7 +1885,7 @@ describe("Linear AI execution task validator", () => {
       }),
       { checkRepositoryPathsAtBaseline: false },
     ).errors.map((error) => error.code);
-    expect(authCodes).toContain("auth_secret_contract");
+    expect(authCodes).toContain("auth_official_source_contract");
   });
 
   it("rejects qualitative performance claims without numeric no-wedge proof", () => {
@@ -2443,9 +2458,33 @@ describe("Linear AI execution task validator", () => {
     ).errors.map((error) => error.code);
     expect(authCodes).toEqual(
       expect.arrayContaining([
-        "auth_secret_contract",
         "auth_official_source_contract",
+        "mvp_posture_contract",
+        "mvp_posture_serve_contract",
       ]),
+    );
+  });
+
+  it("accepts ADR-0018 vocabulary and classifies a retired posture instruction", () => {
+    const current = validateLinearAgentTask(
+      validFinalTask({
+        "Execution metadata": metadataWith({
+          "Sensitive boundaries": "user-data, public-search",
+        }),
+      }),
+      { checkRepositoryPathsAtBaseline: false },
+    );
+    expect(current.errors).toEqual([]);
+
+    const retired = validateLinearAgentTask(
+      validFinalTask({
+        "Exact data, state, protocol, and concurrency contract":
+          "ADR-0018 is named but the MVP posture must require a closed refusal, private quarantine, original deletion, blanket noindex, and a separate admin panel.",
+      }),
+      { checkRepositoryPathsAtBaseline: false },
+    );
+    expect(retired.errors.map((error) => error.code)).toContain(
+      "retired_mvp_posture_instruction",
     );
   });
 

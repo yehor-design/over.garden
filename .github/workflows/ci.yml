@@ -123,6 +123,9 @@ jobs:
       - name: Verify online-only canon classification
         run: pnpm online-only:canon:check
 
+      - name: Verify MVP posture canon classification
+        run: pnpm mvp-posture:canon:check
+
       - name: Verify pinned typography assets
         run: pnpm typography:assets:check
 

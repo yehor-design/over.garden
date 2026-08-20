@@ -35,6 +35,13 @@ server-authoritative semantics, the `network_unavailable_save_refused` state,
 and the exact read-only retirement bridge; it cannot authorize a new durable
 browser journal write.
 
+Every final issue must state the applicable ADR-0018 MVP posture. Use
+serve-under-uncertainty plus the accepted cross-account-read exposure for
+authorization/ownership/session ambiguity; format-conversion-only for media;
+`PUBLIC_SURFACE_INDEXABILITY_THRESHOLD` for public discovery; and in-product
+admin under `AdminUserRole` for operator surfaces. Retired refusal vocabulary
+may appear only inside an explicitly superseded historical statement.
+
 # User or operator outcome and behavior
 
 - Actor and precondition: {{who starts from what state}}.
@@ -104,15 +111,15 @@ suspected cause, bounded investigation, decision branches, and stop condition.}}
 
 # Exact vertical scope, target files, and caller inventory
 
-| Layer/surface                        | Exact existing owner or planned new path | Required change/read-back | Status                                                                       |
-| ------------------------------------ | ---------------------------------------- | ------------------------- | ---------------------------------------------------------------------------- |
-| Data/types                           | `{{path or reason}}`                     | {{contract}}              | {{required or specific Not applicable reason}}                               |
-| Scoped repository                    | `{{path or reason}}`                     | {{contract}}              | {{status}}                                                                   |
-| Route/action/API                     | `{{path or reason}}`                     | {{contract}}              | {{status}}                                                                   |
-| UI/operator path                     | `{{path or reason}}`                     | {{contract}}              | {{status}}                                                                   |
-| Worker/search/media/local-retirement/provider | `{{path or reason}}`          | {{contract}}              | {{status}}                                                                   |
-| Tests                                | `{{exact paths}}`                        | {{proof}}                 | {{required for a repository change, or specific no-repository-delta reason}} |
-| Docs/runbook                         | `{{exact paths}}`                        | {{authority/update}}      | {{required for a repository change, or specific no-repository-delta reason}} |
+| Layer/surface                                 | Exact existing owner or planned new path | Required change/read-back | Status                                                                       |
+| --------------------------------------------- | ---------------------------------------- | ------------------------- | ---------------------------------------------------------------------------- |
+| Data/types                                    | `{{path or reason}}`                     | {{contract}}              | {{required or specific Not applicable reason}}                               |
+| Scoped repository                             | `{{path or reason}}`                     | {{contract}}              | {{status}}                                                                   |
+| Route/action/API                              | `{{path or reason}}`                     | {{contract}}              | {{status}}                                                                   |
+| UI/operator path                              | `{{path or reason}}`                     | {{contract}}              | {{status}}                                                                   |
+| Worker/search/media/local-retirement/provider | `{{path or reason}}`                     | {{contract}}              | {{status}}                                                                   |
+| Tests                                         | `{{exact paths}}`                        | {{proof}}                 | {{required for a repository change, or specific no-repository-delta reason}} |
+| Docs/runbook                                  | `{{exact paths}}`                        | {{authority/update}}      | {{required for a repository change, or specific no-repository-delta reason}} |
 
 Caller/sibling/consumer inventory:
 
@@ -362,6 +369,7 @@ Repository authority:
 - `docs/MAINLINE_CLOSEOUT.md`
 - `docs/TECH_STACK_DECISIONS.md`
 - `docs/adr/ADR-0014-agentic-stack-realignment.md`
+- `docs/adr/ADR-0018-mvp-posture.md`
 - {{additional exact architecture/product/privacy/operation files}}
 
 Product research:

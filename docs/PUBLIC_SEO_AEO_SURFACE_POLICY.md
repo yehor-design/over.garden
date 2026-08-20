@@ -1,83 +1,107 @@
 # Public SEO/AEO Surface Policy
 
-Status: current implementation policy
-Date: 2026-07-03
+Status: current canon; runtime transition pending OVE-335 and OVE-336
+Date: 2026-08-20
 Owner: founder/operator
-Linear: OVE-115, OVE-116, OVE-117, OVE-130
+Linear: OVE-115, OVE-116, OVE-117, OVE-130, OVE-329
+Posture authority: ADR-0018
 
 ## Purpose
 
-This policy defines which public OverGarden surfaces may be indexable and eligible for `sitemap.xml`. It is the developer-facing bridge between the product research in `docs/product-research/B5_SEO_CONTENT_ARCHITECTURE_v2.md`, the page map in `docs/product-research/OverGarden_PAGE_ARCHITECTURE_v1.md`, and the app implementation in `apps/web/src/server/public-surface-indexing-policy.ts`.
+This policy defines which public OverGarden candidates may be indexable and
+eligible for `sitemap.xml`. It bridges the product research in
+`docs/product-research/B5_SEO_CONTENT_ARCHITECTURE_v2.md`, the page map in
+`docs/product-research/OverGarden_PAGE_ARCHITECTURE_v1.md`, ADR-0018, and the
+runtime owner in `apps/web/src/server/public-surface-indexing-policy.ts`.
+
+The App Router Metadata API remains the implementation surface for route
+metadata, `robots.ts`, and `sitemap.ts`. Route metadata and discovery files are
+SEO controls, never privacy or authorization boundaries.
 
 ## Product Assumption
 
-OverGarden can start public discovery at MVP through authored, useful pages, while UGC and aggregation pages earn indexability only after they are safe and non-thin. The upside is early search/AEO visibility; the risk is sitewide quality damage if thin programmatic pages enter the index too early.
+OverGarden earns public discovery through a single measurable content threshold
+instead of blanket route-kind exclusion. The upside is earlier search/AEO reach;
+the risk is index-quality damage if the starting threshold is too permissive.
+OVE-335 owns the threshold runtime and OVE-336 owns structured-answer,
+canonical, and locale-alternate parity.
 
-## User Job And Trust Concern
+## Candidate boundary
 
-A visitor should find useful public OverGarden pages without encountering empty catalog stubs, private workspace surfaces, unsafe UGC, precise location, raw media keys, or owner-scoped content. A gardener should be able to publish without that publication automatically making every related aggregation indexable.
+A page first has to be a public-surface candidate. Private workspace and auth
+routes, positively private or erased records, missing pages, and internal
+operator actions are not candidates. Their exclusion is a resolved product/data
+state, not a low quality score.
 
-## Current Server Policy
+Candidate examples include authored landing/editorial/guide/answer pages and
+publicly readable feed, journal, variety, topic, passport, profile, or lineage
+surfaces. A candidate is evaluated by one constant, regardless of its kind.
 
-The source of truth is `apps/web/src/server/public-surface-indexing-policy.ts`.
+## Canonical measured threshold
 
-Current decisions:
+Every caller reads the same owner-adjustable constant:
+`PUBLIC_SURFACE_INDEXABILITY_THRESHOLD`.
 
-- Authored useful surfaces may be indexable and sitemap-eligible: marketing landing pages, editorial blog pages, guide pages, and AEO answer pages.
-- OVE-173 replaces the localized authored homepages with a read-first public UGC feed. `/`, `/bg`, and `/ru` therefore emit `noindex, nofollow` and remain out of the sitemap until a later explicit quality gate promotes a safe, non-thin feed surface. Ukrainian remains the unprefixed canonical default for the primary domain.
-- Private workspace, auth, and operator route groups such as `/garden`, `/auth/*`, and `/admin/*` must emit `noindex, nofollow` route metadata. This metadata is a crawl-quality control, not a privacy boundary.
-- OVE-116 adds the first authored content foundation in `apps/web/src/server/public-seo-content.ts`: `/blog`, one blog article, one guide, one AEO answer page, and `/markets/ukraine` plus `/markets/bulgaria`.
-- OVE-117 moves the canonical public content routes into language-aware surfaces, superseded by the 2026-07-05 domain-default locale decision: Ukrainian uses unprefixed routes such as `/`, `/blog`, and `/markets/ukraine`; Bulgarian uses `/bg`; Russian remains available as `/ru` for the Bulgarian market.
-- Root `/` renders Ukrainian by default. Requests with a Bulgaria country signal redirect to `/bg`; legacy `/uk` URLs permanently redirect to their unprefixed equivalents.
-- Public journal entries require explicit publication and remain `noindex` while `public_noindex = true`.
-- Variety and topic aggregation pages require all content-quality thresholds before they become indexable.
-- Current aggregation thresholds are at least 3 safe public entries, at least 600 aggregate body characters, and a trust gate. Variety aggregation must be backed by either a curated `confirmed` catalog item or a seeded item from an approved source-backed family. Topic aggregation must pass a curated-topic trust state before a future topic route can become indexable.
-- Topic/tag capture is only a signal layer. `journal_entry_topic_signals` may connect entries to explicit safe tags, object context, catalog context, catalog mentions, or operator-curated topics, but public topic membership must use only `accepted` + `eligible` signals for `curated` topics and must still pass the aggregation thresholds above.
-- Public living-object passport pages, public profiles, and full lineage graph pages are shareable but `noindex`.
-- Missing public surfaces are `noindex` and never sitemap-eligible.
+| Member                    | MVP starting value | Passing behavior                                                     |
+| ------------------------- | ------------------ | -------------------------------------------------------------------- |
+| `minimumQualityClass`     | `partial`          | `verified` and `partial` pass; `unverified` remains below threshold. |
+| `minimumWordCount`        | `120`              | At least 120 meaningful visible words.                               |
+| `minimumDistinctEntities` | `1`                | At least one distinct public entity.                                 |
+| `maximumStalenessDays`    | `540`              | Content no older than 540 days at evaluation.                        |
 
-## Sitemap Rule
+All four members must pass. A passing candidate is indexable and
+sitemap-eligible. A below-threshold candidate emits `noindex` and stays out of
+the sitemap. This is a measured outcome, not a permanent per-kind rule.
 
-`apps/web/src/app/sitemap.ts` must include only surfaces whose server-side policy returns `sitemapEligible = true`.
+Until OVE-335 lands, `apps/web/src/server/public-surface-indexing-policy.ts`
+still implements the older per-surface thresholds. That code is transitional
+runtime and must not be copied into a new contract. OVE-335 replaces it with the
+constant above and extends the existing `PublicSurfaceIndexReason` vocabulary.
 
-Static and authored SEO/AEO sitemap URLs must use canonical localized paths. Non-localized public content URLs are legacy redirects and must not be included.
+## Sitemap rule
 
-Every sitemap row must include a stable `lastmod`/`lastModified` value. Authored static/content surfaces use their explicit content-foundation date, while promoted aggregation rows must provide the latest safe public source-content timestamp through the same sitemap-entry path. Do not use build time or request time as a fake freshness signal.
+`apps/web/src/app/sitemap.ts` includes only public candidates whose canonical
+server decision returns `sitemapEligible = true`. Static and authored entries
+use canonical localized paths. Each row carries a stable source/content
+`lastModified`; build or request time is never fake freshness.
 
-The sitemap must not include:
+The sitemap excludes non-candidates and below-threshold candidates. It does not
+maintain a second list of route kinds or repeat the threshold members.
 
-- authenticated routes such as `/garden` or surviving operator readouts;
-- lineage-invitation claim, auth, reset, health, or erasure routes;
-- retired control-plane paths such as `/admin`, `/admin/users`, `/join`, and
-  the former pilot diagnostic routes (which must remain exact `404`);
-- public journal entries while `public_noindex = true`;
-- private, archived, public-gone, owner-scoped, provisional, rejected, merged, unsafe-source, untrusted-topic, or thin aggregation rows;
-- free tag, object passport, profile, or lineage graph URLs while they are policy `noindex`.
+## Metadata and structured-data rule
 
-## Metadata And Structured Data Rule
+Every candidate route uses the same server decision for `robots` metadata,
+canonical status, sitemap membership, and structured-data admission. JSON-LD
+may contain only facts already visible on the page and may not bypass a failed
+threshold member. Authored FAQ/answer data remains limited to visible questions
+and answers.
 
-Public route metadata must use the same policy for `robots`.
+The older blanket `noindex` statements for UGC, variety, topic, profile,
+passport, lineage, and localized feed surfaces are superseded by ADR-0018. They
+remain discoverable in historical receipts but are not current instructions.
 
-Structured data must never bypass the policy. For example, variety JSON-LD is emitted only when the server policy marks the variety aggregation indexable. Thin pages must not receive templated JSON-LD because that is both a quality risk and an AEO spam signal.
+## Robots.txt rule
 
-OVE-116 answer-page JSON-LD is limited to curated authored answer pages. It must include only the page, FAQ questions, and FAQ answers already visible in the HTML; it must not carry private journal text, media internals, raw source payloads, or user identifiers.
+`apps/web/src/app/robots.ts` points to the canonical
+`https://over.garden/sitemap.xml` and permits normal retrieval so crawlers can
+observe route metadata. The Robots Exclusion Protocol is a discovery mechanism,
+not a privacy or authentication control.
 
-## Robots.txt Rule
+## Privacy and language boundary
 
-`apps/web/src/app/robots.ts` must point to the canonical `https://over.garden/sitemap.xml` and allow normal crawl/retrieval discovery for public authored/indexable pages. It must not block workspace/auth/operator paths as a substitute for route-level `noindex`, because crawlers need to see page metadata and `robots.txt` is not a privacy control.
+- Precise coordinates do not enter public HTML, metadata, URLs, sitemap rows,
+  JSON-LD, logs, or public search documents.
+- Owner ids, emails, invitation links, tokens, raw journal internals, media
+  capabilities, and source-only catalog fields stay out of public surfaces.
+- Positively private, erased, or public-gone records are not candidates.
+- User-authored journal bodies stay in the author's language and are not silently
+  translated for localized chrome or alternate-link clusters.
+- Media follows ADR-0018's format-conversion-only target; OVE-333 and OVE-334
+  own the runtime transition from the earlier quarantine pipeline.
 
-## Privacy Boundary
+## Non-goals
 
-Robots and sitemap controls are discovery controls, not privacy controls. The privacy boundary remains data-level minimization:
-
-- no precise coordinates in public HTML, metadata, URL, sitemap, JSON-LD, logs, or public search documents;
-- public media uses stripped derivatives only;
-- owner ids, emails, invite links, tokens, raw journal internals, quarantine keys, and source-only catalog fields stay out of public surfaces;
-- archived/public-gone entries leave sitemap/indexable metadata and return the appropriate public gone state.
-- user-generated journal bodies stay in the author's language and must not be machine-translated silently for localized route chrome or hreflang clusters.
-
-## Non-Goals
-
-- This policy does not localize authenticated product workspace routes; `/garden` remains the gated workspace path until a later slice migrates private/product app routing.
-- This policy does not promote every variety/topic page. OVE-130 adds the source/catalog trust gate for promotion; OVE-139 feeds topic pages through the same curated-topic gate before any topic URL enters the sitemap. Provisional explicit tags, low-confidence assignments, archived entries, private entries, and public-gone entries are not public topic membership.
-- This policy does not add monetization.
+- This canon-only policy does not change runtime indexability in OVE-329.
+- It does not make private product or account routes public candidates.
+- It does not add monetization or invent content to clear a threshold.
+- It does not treat metadata or the Robots Exclusion Protocol as access control.
