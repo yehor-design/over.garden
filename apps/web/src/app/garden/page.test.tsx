@@ -284,9 +284,9 @@ describe("/garden workspace V2", () => {
       expect.objectContaining({ faultSections: [] }),
     );
     expect(html).toContain('data-garden-workspace="operational-home"');
-    expect(html).toContain("Офлайн");
-    expect(html).toContain("Synthetic draft 1");
-    expect(html).toContain("Очікує синхронізації");
+    expect(html).toContain("Фото в обробці: 1");
+    expect(html).toContain("Фото, що потребують уваги: 1");
+    expect(html).not.toMatch(/Офлайн|Synthetic draft|Очікує синхронізації/u);
     expect(html).not.toContain("Garden auth panel");
     expect(
       mocks.scheduleGardenWorkspaceActivationAnalytics,
@@ -453,6 +453,7 @@ function workspaceModel(): GardenWorkspaceReadModel {
       status: "ready",
       value: { processingCount: 0, failedCount: 0 },
     },
+    drafts: { status: "ready", value: [] },
     allFailed: false,
   };
 }
@@ -491,6 +492,7 @@ function emptyWorkspaceModel(): GardenWorkspaceReadModel {
       status: "ready",
       value: { processingCount: 0, failedCount: 0 },
     },
+    drafts: { status: "ready", value: [] },
     allFailed: false,
   };
 }

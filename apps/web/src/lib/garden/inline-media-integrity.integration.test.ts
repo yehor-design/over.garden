@@ -17,7 +17,10 @@ describe("OVE-243 vertical inline-media integration", () => {
       expect(source).toMatch(
         /useInlineMediaSelection\((ownerUserId|entryId)\)/,
       );
-      expect(source).toContain("await selectInlineMedia({");
+      expect(source).toContain("const reservation = inlineMedia.reserve(");
+      expect(source).toContain("await uploadOnlineComposerPhoto({");
+      expect(source).toContain("inlineMedia.commit(reservation, blockId, previewUrl)");
+      expect(source).toContain("inlineMedia.release(reservation)");
       expect(source).not.toContain(
         "const existingBytes = sumOfflinePhotoIntentBytes",
       );
@@ -33,8 +36,8 @@ describe("OVE-243 vertical inline-media integration", () => {
       "utf8",
     );
     expect(source).toContain("<StructuredJournalComposer");
-    expect(source).toContain("await uploadComposerPhotoIntent(");
-    expect(source).toContain("return { mediaAssetId, previewUrl }");
+    expect(source).toContain("await uploadOnlineComposerPhoto({");
+    expect(source).toContain("inlineMedia.commit(reservation, blockId, previewUrl)");
     expect(source).not.toContain(
       "return { previewUrl: URL.createObjectURL(file) }",
     );

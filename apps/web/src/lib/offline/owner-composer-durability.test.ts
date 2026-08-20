@@ -244,21 +244,23 @@ describe("owner composer durability", () => {
     ).rejects.toMatchObject({ reason: "inventory_bounded" });
   });
 
-  it("keeps every production composer on the exact-receipt factory", async () => {
+  it("keeps every production composer on the online exact-receipt owner", async () => {
     const sources = await Promise.all([
       readComposerSource("../../app/garden/first-entry-composer.tsx"),
       readComposerSource("../../app/garden/space-entry-composer.tsx"),
       readComposerSource(
         "../../app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
       ),
+      readComposerSource(
+        "../../app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
+      ),
     ]);
 
     for (const source of sources) {
-      expect(source).toContain(
+      expect(source).toContain("useOnlineJournalComposer({");
+      expect(source).not.toMatch(/@\/lib\/offline|IndexedDB|indexedDB|Dexie/);
+      expect(source).not.toContain(
         "createDurableOwnerComposerPersistenceController",
-      );
-      expect(source).not.toMatch(
-        /createOwnerComposerPersistenceController\s*</,
       );
     }
   });

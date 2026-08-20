@@ -64,7 +64,10 @@ describe("shared sign-out control", () => {
     const marker = source.indexOf(
       "const committed = commitLocalExitInvalidationMarker();",
     );
-    const seal = source.indexOf("sealActiveOwnerVaultsForLocalExit();", marker);
+    const seal = source.indexOf(
+      "sealOnlineJournalComposerParticipantsForExit();",
+      marker,
+    );
     const publish = source.indexOf("publishLocalExitCommitted(", seal);
     const flush = source.indexOf("flushSync(() => setPhase", publish);
     const replace = source.indexOf("window.location.replace(", flush);

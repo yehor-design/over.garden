@@ -27,6 +27,7 @@ import {
 } from "./journal-repository";
 import {
   buildJournalDraftAdvisoryLockQuery,
+  buildListJournalDraftsQuery,
   buildReadJournalDraftQuery,
   deleteJournalDraft,
   decideJournalDraftSave,
@@ -69,6 +70,23 @@ describe("journal draft repository", () => {
     expect(compiled.parameters).toEqual([
       "00000000-0000-4000-8000-000000000001",
       "follow-up-entry:00000000-0000-4000-8000-000000000002",
+    ]);
+  });
+
+  it("lists only the scoped owner's newest server drafts with a bounded limit", () => {
+    const compiled = buildListJournalDraftsQuery(
+      testDb,
+      scopedToUser("00000000-0000-4000-8000-000000000001"),
+      25,
+    ).compile();
+
+    expect(compiled.sql).toContain('from "journal_entry_drafts"');
+    expect(compiled.sql).toContain('"owner_user_id" = $1');
+    expect(compiled.sql).toContain('order by "updated_at" desc');
+    expect(compiled.sql).toContain("limit $2");
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-4000-8000-000000000001",
+      25,
     ]);
   });
 

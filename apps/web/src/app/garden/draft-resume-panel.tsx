@@ -1,91 +1,81 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { FileText, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
+import { useOptionalDocumentMutationGeneration } from "@/components/auth/document-mutation-recovery";
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import { Button } from "@/components/ui/button";
 import {
   formatGardenWorkspaceDate,
   getGardenWorkspaceCopy,
-  type GardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
+import type { JournalEntryDraftReceiptV1 } from "@/lib/garden/entry-contracts";
+import { createOnlineJournalDraftOwner } from "@/lib/garden/online-journal-draft";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import {
-  deleteOfflineDraft,
-  FIRST_ENTRY_DRAFT_ID,
-  listOfflineDrafts,
-  OFFLINE_DRAFTS_CHANGED_EVENT,
-  type FirstEntryDraftPayload,
-  type FollowUpEntryDraftPayload,
-  type JournalDraftRecord,
-} from "@/lib/offline/drafts";
 
 export function GardenDraftResumePanel({
-  ownerUserId,
+  drafts: initialDrafts,
   locale,
 }: {
-  ownerUserId: string;
+  drafts: JournalEntryDraftReceiptV1[];
   locale: InterfaceLocale;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
-  const [drafts, setDrafts] = useState<JournalDraftRecord[]>([]);
-  const [pendingDiscardCount, setPendingDiscardCount] = useState(0);
-
-  const refreshDrafts = useCallback(async () => {
-    try {
-      setDrafts(
-        await listOfflineDrafts(ownerUserId, [
-          "first_entry",
-          "follow_up_entry",
-        ]),
-      );
-    } catch {
-      setDrafts([]);
-    }
-  }, [ownerUserId]);
-
-  const handleDiscard = useCallback(
-    async (id: string) => {
-      setPendingDiscardCount((count) => count + 1);
-      try {
-        await discardDraft(ownerUserId, id, refreshDrafts);
-      } finally {
-        setPendingDiscardCount((count) => Math.max(0, count - 1));
-      }
-    },
-    [ownerUserId, refreshDrafts],
-  );
+  const documentMutation = useOptionalDocumentMutationGeneration();
+  const router = useRouter();
+  const [drafts, setDrafts] = useState(initialDrafts);
+  const [discardingKey, setDiscardingKey] = useState<string | null>(null);
+  const [discardErrorKey, setDiscardErrorKey] = useState<string | null>(null);
 
   useInterfaceLocaleChangeFormState({
-    id: "garden-draft-resume-mutation",
+    id: "garden-server-draft-discard",
     dirty: false,
-    pending: pendingDiscardCount > 0,
+    pending: discardingKey !== null,
   });
 
-  useEffect(() => {
-    const refreshTimer = window.setTimeout(() => {
-      void refreshDrafts();
-    }, 0);
+  async function handleDiscard(draft: JournalEntryDraftReceiptV1) {
+    const transport = documentMutation?.transport?.trim();
+    if (!transport || discardingKey) {
+      setDiscardErrorKey(draft.draftKey);
+      return;
+    }
 
-    window.addEventListener(OFFLINE_DRAFTS_CHANGED_EVENT, refreshDrafts);
-    window.addEventListener("focus", refreshDrafts);
-
-    return () => {
-      window.clearTimeout(refreshTimer);
-      window.removeEventListener(OFFLINE_DRAFTS_CHANGED_EVENT, refreshDrafts);
-      window.removeEventListener("focus", refreshDrafts);
-    };
-  }, [refreshDrafts]);
+    setDiscardingKey(draft.draftKey);
+    setDiscardErrorKey(null);
+    const owner = createOnlineJournalDraftOwner({
+      draftKey: draft.draftKey,
+      draftKind: draft.draftKind,
+      context: draft.context,
+      documentMutationGeneration: transport,
+    });
+    try {
+      await owner.delete(draft);
+      setDrafts((current) =>
+        current.filter((item) => item.draftKey !== draft.draftKey),
+      );
+      router.refresh();
+    } catch {
+      setDiscardErrorKey(draft.draftKey);
+    } finally {
+      owner.abort();
+      setDiscardingKey(null);
+    }
+  }
 
   if (drafts.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
+    <section
+      id="server-drafts"
+      data-garden-server-drafts="true"
+      className="mx-4 mt-6 flex flex-col gap-3 rounded-lg border border-border p-4 sm:mx-6"
+    >
       <div className="flex flex-col gap-1">
         <h2 className="text-base font-semibold text-foreground">
-          {copy.localState.drafts.title}
+          {copy.draftResume.title}
         </h2>
         <p className="text-sm text-muted-foreground">
           {copy.draftResume.description}
@@ -93,14 +83,18 @@ export function GardenDraftResumePanel({
       </div>
       <ul className="grid gap-2 sm:grid-cols-2">
         {drafts.map((draft) => {
-          const summary = summarizeDraft(draft, locale, copy);
+          const summary = summarizeDraft(draft, locale, copy.draftResume);
+          const pending = discardingKey === draft.draftKey;
           return (
             <li
-              key={draft.id}
+              key={draft.draftKey}
               className="flex flex-col gap-3 rounded-lg border border-border p-3"
             >
               <div className="flex min-w-0 gap-2">
-                <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <FileText
+                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium text-foreground">
                     {summary.title}
@@ -115,18 +109,24 @@ export function GardenDraftResumePanel({
                   href={summary.href}
                   className="inline-flex h-8 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 >
-                  {copy.localState.drafts.resume}
+                  {copy.draftResume.resume}
                 </Link>
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={pendingDiscardCount > 0}
-                  onClick={() => void handleDiscard(draft.id)}
+                  disabled={discardingKey !== null}
+                  aria-busy={pending || undefined}
+                  onClick={() => void handleDiscard(draft)}
                 >
-                  <Trash2 className="size-4" />
-                  {copy.localState.drafts.discard}
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  {copy.draftResume.discard}
                 </Button>
               </div>
+              {discardErrorKey === draft.draftKey ? (
+                <p className="text-xs text-destructive" role="alert">
+                  {copy.draftResume.discardFailed}
+                </p>
+              ) : null}
             </li>
           );
         })}
@@ -135,71 +135,59 @@ export function GardenDraftResumePanel({
   );
 }
 
-async function discardDraft(
-  ownerUserId: string,
-  id: string,
-  refreshDrafts: () => Promise<void>,
-) {
-  await deleteOfflineDraft(ownerUserId, id);
-  await refreshDrafts();
-}
-
 function summarizeDraft(
-  draft: JournalDraftRecord,
+  draft: JournalEntryDraftReceiptV1,
   locale: InterfaceLocale,
-  copy: GardenWorkspaceCopy,
+  copy: ReturnType<typeof getGardenWorkspaceCopy>["draftResume"],
 ) {
-  if (draft.id === FIRST_ENTRY_DRAFT_ID && draft.kind === "first_entry") {
-    const payload = draft.payload as FirstEntryDraftPayload;
-    const title =
-      firstNonEmpty(
-        payload.draft.title,
-        payload.draft.plantName,
-        payload.selectedCatalogItem?.displayName,
-        payload.userAddedCatalogName,
-      ) ?? copy.localState.drafts.firstEntryDraft;
-    const subtitle = [
-      copy.localState.drafts.firstEntry,
-      draftDate(payload.draft.entryDate, locale),
-      payload.photoIntent ? copy.localState.drafts.photoAttached : null,
-    ]
-      .filter(Boolean)
-      .join(" · ");
+  const request = draft.payload.request;
+  const title = request.title?.trim() || copy.untitled;
+  const date = request.entryDate
+    ? formatGardenWorkspaceDate(locale, request.entryDate, "short")
+    : formatGardenWorkspaceDate(locale, draft.updatedAt, "short");
 
-    return {
-      title,
-      subtitle,
-      href: "/garden#first-entry-composer",
-    };
+  switch (draft.draftKind) {
+    case "first_entry":
+      return {
+        title,
+        subtitle: `${copy.firstEntry} · ${date}`,
+        href: "/garden#first-entry-composer",
+      };
+    case "follow_up": {
+      const objectId =
+        draft.context.plantObjectId ??
+        ("plantObjectId" in request ? request.plantObjectId : null);
+      return {
+        title,
+        subtitle: `${copy.followUp} · ${date}`,
+        href: objectId
+          ? `/garden/objects/${encodeURIComponent(objectId)}#follow-up-composer`
+          : "/garden",
+      };
+    }
+    case "space_entry": {
+      const spaceId =
+        draft.context.spaceId ??
+        ("spaceId" in request ? request.spaceId : null);
+      return {
+        title,
+        subtitle: `${copy.spaceEntry} · ${date}`,
+        href: spaceId
+          ? `/garden?space=${encodeURIComponent(spaceId)}#space-journal`
+          : "/garden",
+      };
+    }
+    case "edit_entry": {
+      const entryId =
+        draft.context.journalEntryId ??
+        ("entryId" in request ? request.entryId : null);
+      return {
+        title,
+        subtitle: `${copy.editEntry} · ${date}`,
+        href: entryId
+          ? `/garden/entries/${encodeURIComponent(entryId)}/edit`
+          : "/garden",
+      };
+    }
   }
-
-  const payload = draft.payload as FollowUpEntryDraftPayload;
-  return {
-    title:
-      firstNonEmpty(payload.draft.title) ??
-      copy.localState.drafts.followUpDraft,
-    subtitle: [
-      copy.localState.drafts.followUp,
-      draftDate(payload.draft.entryDate, locale),
-      photoLabel(payload, copy),
-    ]
-      .filter(Boolean)
-      .join(" · "),
-    href: `/garden/objects/${encodeURIComponent(payload.plantObjectId)}#follow-up-composer`,
-  };
-}
-
-function photoLabel(
-  payload: FollowUpEntryDraftPayload,
-  copy: GardenWorkspaceCopy,
-) {
-  return payload.photoIntent ? copy.localState.drafts.photoAttached : null;
-}
-
-function draftDate(value: string | null | undefined, locale: InterfaceLocale) {
-  return value ? formatGardenWorkspaceDate(locale, value, "short") : null;
-}
-
-function firstNonEmpty(...values: Array<string | null | undefined>) {
-  return values.find((value) => (value ?? "").trim().length > 0)?.trim();
 }

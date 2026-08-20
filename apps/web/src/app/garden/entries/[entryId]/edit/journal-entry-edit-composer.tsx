@@ -8,14 +8,12 @@ import {
   journalCoverSelectionToClaimInput,
   type JournalCoverSelectionState,
 } from "@/components/garden/journal-cover-controls";
+import { OnlineJournalComposerStatus } from "@/components/garden/online-journal-composer-status";
 import { OwnerMediaFocalPanel } from "@/components/media/owner-media-focal-panel";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { Button } from "@/components/ui/button";
-import {
-  createDocumentMutationRequestHeaders,
-  useOptionalDocumentMutationGeneration,
-} from "@/components/auth/document-mutation-recovery";
+import { useOptionalDocumentMutationGeneration } from "@/components/auth/document-mutation-recovery";
 import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
 import { getOwnerMediaFocalPanelCopy } from "@/lib/media/owner-media-focal-copy";
 import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
@@ -23,12 +21,23 @@ import {
   extractJournalDocumentPlainText,
   listJournalDocumentImageMediaIds,
 } from "@/lib/garden/journal-document";
-import { createComposerPhotoIntent } from "@/lib/garden/composer-photo-selection";
+import {
+  createComposerPhotoIntent,
+  type OnlineComposerPhotoIntent,
+} from "@/lib/garden/composer-photo-selection";
 import { useInlineMediaSelection } from "@/lib/garden/use-inline-media-selection";
 import {
-  JournalEntrySyncError,
-  uploadComposerPhotoIntent,
-} from "@/lib/offline/journal-entry-sync";
+  OnlineJournalSubmitError,
+  uploadOnlineComposerPhoto,
+} from "@/lib/garden/online-journal-submit";
+import { useOnlineJournalComposer } from "@/lib/garden/use-online-journal-composer";
+import {
+  JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION,
+  type JournalDraftEditEntryRequest,
+  type JournalEntryDraftPayloadV1,
+  type JournalEntryDraftReceiptV1,
+} from "@/lib/garden/entry-contracts";
+import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import type { PublicLocale } from "@/lib/public-localization";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
 
@@ -63,6 +72,7 @@ export function JournalEntryEditComposer({
     initialDocument,
   );
   const [expectedRevision, setExpectedRevision] = useState(initialRevision);
+  const [clientMutationId] = useState(() => crypto.randomUUID());
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [cover, setCover] = useState<JournalCoverSelectionState>(() => {
@@ -87,6 +97,7 @@ export function JournalEntryEditComposer({
     mediaAssetId: string;
   } | null>(null);
   const labels = getStructuredJournalComposerLabels(locale);
+  const workspaceCopy = getGardenWorkspaceCopy(locale);
   const coverCopy = getJournalCoverControlsCopy(locale);
   const focalCopy = getOwnerMediaFocalPanelCopy(locale);
   const previewMap = useMemo(
@@ -121,6 +132,55 @@ export function JournalEntryEditComposer({
     );
   }, [coverCopy.useAsCover, document, previewMap]);
 
+  const draftPayload = useMemo(
+    () =>
+      editDraftPayload({
+        entryId,
+        title,
+        entryDate,
+        expectedRevision,
+        document,
+        clientMutationId,
+        cover,
+      }),
+    [
+      clientMutationId,
+      cover,
+      document,
+      entryDate,
+      entryId,
+      expectedRevision,
+      title,
+    ],
+  );
+  const online = useOnlineJournalComposer({
+    draftKey: `edit-entry:${entryId}`,
+    draftKind: "edit_entry",
+    context: { journalEntryId: entryId },
+    payload: draftPayload,
+    documentMutationGeneration: documentMutation?.transport,
+    enabled: !documentUnavailable,
+    onHydrated: hydrateEditDraft,
+  });
+
+  function hydrateEditDraft(receipt: JournalEntryDraftReceiptV1) {
+    if (
+      receipt.draftKind !== "edit_entry" ||
+      receipt.payload.draftKind !== "edit_entry" ||
+      receipt.payload.request.entryId !== entryId
+    ) {
+      return;
+    }
+    const request = receipt.payload.request;
+    if (typeof request.title === "string") setTitle(request.title);
+    if (typeof request.entryDate === "string") setEntryDate(request.entryDate);
+    if (request.contentDocument) setDocument(request.contentDocument);
+    if (typeof request.expectedRevision === "number") {
+      setExpectedRevision(request.expectedRevision);
+    }
+    setCover(coverSelectionFromRequest(request.cover, imagePreviewUrls));
+  }
+
   async function save() {
     setSaving(true);
     setMessage(null);
@@ -130,49 +190,53 @@ export function JournalEntryEditComposer({
         setMessage(labels.failureBody);
         return;
       }
-      const response = await fetch(`/api/garden/entries/${entryId}`, {
-        method: "PATCH",
-        headers: {
-          "content-type": "application/json",
-          ...createDocumentMutationRequestHeaders(documentMutation?.transport),
-        },
-        body: JSON.stringify({
-          title,
-          entryDate,
-          contentDocument: flushed,
-          body: extractJournalDocumentPlainText(flushed),
-          expectedRevision,
-          clientMutationId: crypto.randomUUID(),
-          cover: journalCoverSelectionToClaimInput(cover),
-        }),
+      const payload = editDraftPayload({
+        entryId,
+        title,
+        entryDate,
+        expectedRevision,
+        document: flushed,
+        clientMutationId,
+        cover,
       });
-      if (await documentMutation?.handleResponse(response)) {
-        setMessage(labels.failureBody);
-        return;
+      const result = await online.publish(payload);
+      if (result.entry.journalRevision) {
+        setExpectedRevision(result.entry.journalRevision);
       }
-      const payload = (await response.json().catch(() => null)) as {
-        error?: string;
-        currentRevision?: number;
-        entry?: { journalRevision?: number };
-      } | null;
-      if (response.status === 409) {
-        setMessage(payload?.error ?? "Conflict");
-        if (payload?.currentRevision) {
-          setExpectedRevision(payload.currentRevision);
-        }
-        return;
-      }
-      if (!response.ok) {
-        setMessage(payload?.error ?? labels.failureBody);
-        return;
-      }
-      if (payload?.entry?.journalRevision) {
-        setExpectedRevision(payload.entry.journalRevision);
-      }
-      router.refresh();
       setMessage(labels.saveLabel);
+    } catch (error) {
+      handleTransportBoundary(error);
+      setMessage(labels.failureBody);
     } finally {
       setSaving(false);
+    }
+  }
+
+  function handleTransportBoundary(error: unknown) {
+    if (
+      error instanceof OnlineJournalSubmitError &&
+      error.documentMutationAdmission
+    ) {
+      documentMutation?.handleTransportResult(error.documentMutationAdmission);
+    }
+    if (error instanceof OnlineJournalSubmitError && error.authIntentUrl) {
+      window.location.assign(error.authIntentUrl);
+    }
+  }
+
+  async function uploadPhoto(intent: OnlineComposerPhotoIntent) {
+    const transport = documentMutation?.transport;
+    if (!transport) throw new Error("Document session is not ready.");
+    try {
+      return await uploadOnlineComposerPhoto({
+        intent,
+        authReturnTo: `/garden/entries/${entryId}/edit`,
+        documentMutationGeneration: transport,
+      });
+    } catch (error) {
+      handleTransportBoundary(error);
+      online.reportConnectionRequired(error);
+      throw error;
     }
   }
 
@@ -186,12 +250,17 @@ export function JournalEntryEditComposer({
   }
 
   return (
-    <section className="grid gap-4" data-journal-entry-edit="true">
+    <section
+      className="grid gap-4"
+      data-journal-entry-edit="true"
+      data-online-composer-kind="edit_entry"
+    >
       <label className="grid gap-1">
         <span className="text-sm font-medium">{labels.titleLabel}</span>
         <input
           className="h-10 rounded-md border border-input px-3"
           value={title}
+          disabled={online.readOnly}
           onChange={(event) => setTitle(event.target.value)}
           aria-label={labels.titleLabel}
         />
@@ -202,6 +271,7 @@ export function JournalEntryEditComposer({
           type="date"
           className="h-10 rounded-md border border-input px-3"
           value={entryDate}
+          disabled={online.readOnly}
           onChange={(event) => setEntryDate(event.target.value)}
           aria-label={labels.dateLabel}
         />
@@ -210,6 +280,8 @@ export function JournalEntryEditComposer({
         locale={locale}
         labels={labels}
         initialDocument={document}
+        bindingReady={online.state.hydrated}
+        disabled={online.readOnly}
         imagePreviewUrls={previewMap}
         composerRef={composerRef}
         onDocumentChange={setDocument}
@@ -217,24 +289,11 @@ export function JournalEntryEditComposer({
           const reservation = inlineMedia.reserve(file, {});
           try {
             const intent = await createComposerPhotoIntent(file);
-            const mediaAssetId = await uploadComposerPhotoIntent(
-              intent,
-              `/garden/entries/${entryId}/edit`,
-              documentMutation?.transport,
-            );
-            if (!mediaAssetId) throw new Error(labels.failureBody);
+            const { mediaAssetId } = await uploadPhoto(intent);
             const previewUrl = URL.createObjectURL(file);
             inlineMedia.commit(reservation, blockId, previewUrl);
             return { mediaAssetId, previewUrl };
           } catch (error) {
-            if (
-              error instanceof JournalEntrySyncError &&
-              error.documentMutationAdmission
-            ) {
-              documentMutation?.handleTransportResult(
-                error.documentMutationAdmission,
-              );
-            }
             inlineMedia.release(reservation);
             throw error;
           }
@@ -256,7 +315,14 @@ export function JournalEntryEditComposer({
         copy={coverCopy}
         selection={cover}
         eligibleInline={eligibleInline}
-        disabled={saving}
+        disabled={saving || online.readOnly}
+        onSelectSeparateFile={async (intent) => {
+          const result = await uploadPhoto(intent);
+          return {
+            mediaAssetId: result.mediaAssetId,
+            previewUrl: result.publicUrl,
+          };
+        }}
         pendingInlineRemoval={pendingInlineRemoval}
         onChange={setCover}
         onResolveInlineRemoval={(choice) => {
@@ -284,14 +350,33 @@ export function JournalEntryEditComposer({
           imageUrl={focalTarget.previewUrl}
           expectedRevision={expectedRevision}
           copy={focalCopy}
-          disabled={saving}
+          disabled={saving || online.readOnly}
           onSaved={({ journalRevision }) => {
             if (journalRevision != null) setExpectedRevision(journalRevision);
           }}
         />
       ) : null}
+      <OnlineJournalComposerStatus
+        state={online.state}
+        locale={locale}
+        copy={workspaceCopy}
+        unsavedText={[
+          title,
+          entryDate,
+          document ? extractJournalDocumentPlainText(document) : "",
+        ]
+          .filter(Boolean)
+          .join("\n")}
+        navigationHref="/garden"
+        onRetry={online.retry}
+        onCancel={() => router.push("/garden")}
+      />
       <div className="flex items-center gap-3">
-        <Button type="button" disabled={saving} onClick={() => void save()}>
+        <Button
+          type="button"
+          disabled={saving || online.readOnly}
+          onClick={() => void save()}
+        >
           {labels.saveLabel}
         </Button>
         {message ? (
@@ -300,4 +385,50 @@ export function JournalEntryEditComposer({
       </div>
     </section>
   );
+}
+
+function editDraftPayload(input: {
+  entryId: string;
+  title: string;
+  entryDate: string;
+  expectedRevision: number;
+  document: JournalDocumentV1 | null;
+  clientMutationId: string;
+  cover: JournalCoverSelectionState;
+}): JournalEntryDraftPayloadV1 {
+  const request: JournalDraftEditEntryRequest = {
+    entryId: input.entryId,
+    title: input.title,
+    entryDate: input.entryDate,
+    contentDocument: input.document,
+    body: input.document ? extractJournalDocumentPlainText(input.document) : "",
+    expectedRevision: input.expectedRevision,
+    clientMutationId: input.clientMutationId,
+    cover: journalCoverSelectionToClaimInput(input.cover),
+  };
+  return {
+    schemaVersion: JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION,
+    draftKind: "edit_entry",
+    request,
+  };
+}
+
+function coverSelectionFromRequest(
+  cover: JournalDraftEditEntryRequest["cover"],
+  imagePreviewUrls: Record<string, string>,
+): JournalCoverSelectionState {
+  if (!cover || cover.mode === "automatic") return { mode: "automatic" };
+  if (cover.mode === "none") return { mode: "none" };
+  if (cover.mode === "explicit_inline") {
+    return {
+      mode: "explicit_inline",
+      mediaAssetId: cover.mediaAssetId,
+      previewUrl: imagePreviewUrls[cover.mediaAssetId] ?? null,
+    };
+  }
+  return {
+    mode: "separate",
+    mediaAssetId: cover.mediaAssetId,
+    previewUrl: imagePreviewUrls[cover.mediaAssetId] ?? null,
+  };
 }

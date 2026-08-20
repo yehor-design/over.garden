@@ -15,8 +15,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({
   usePathname: () => mocks.pathname,
 }));
-vi.mock("@/lib/offline/owner-composer-locale-change-participant", () => ({
-  createOwnerComposerLocaleChangeParticipant: mocks.createComposerParticipant,
+vi.mock("@/lib/garden/online-journal-composer-locale-participant", () => ({
+  createOnlineJournalComposerLocaleChangeParticipant:
+    mocks.createComposerParticipant,
 }));
 
 import {

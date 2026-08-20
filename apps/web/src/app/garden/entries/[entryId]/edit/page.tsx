@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { readJournalDocumentFromEntry } from "@/server/journal-document-persistence";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import { journalEntryDateInputValue } from "@/lib/garden/journal-entry-date";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,9 @@ export default async function GardenEntryEditPage({
   try {
     scope = await requireCurrentRequestScope();
   } catch {
-    redirect(`/auth/intent?returnTo=${encodeURIComponent(`/garden/entries/${entryId}/edit`)}`);
+    redirect(
+      `/auth/intent?returnTo=${encodeURIComponent(`/garden/entries/${entryId}/edit`)}`,
+    );
   }
 
   const entry = await db
@@ -48,10 +51,7 @@ export default async function GardenEntryEditPage({
   const previewUrls = new Map(
     media
       .filter((item) => item.derivative_key)
-      .map((item) => [
-        item.id,
-        getPublicDerivativeUrl(item.derivative_key!),
-      ]),
+      .map((item) => [item.id, getPublicDerivativeUrl(item.derivative_key!)]),
   );
 
   return (
@@ -60,7 +60,7 @@ export default async function GardenEntryEditPage({
         locale={locale}
         entryId={entry.id}
         title={entry.title}
-        entryDate={String(entry.entry_date).slice(0, 10)}
+        entryDate={journalEntryDateInputValue(entry.entry_date)}
         expectedRevision={Number(entry.journal_revision ?? 1)}
         initialDocument={
           documentRead.status === "unavailable" ? null : documentRead.document

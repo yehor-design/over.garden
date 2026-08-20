@@ -144,21 +144,16 @@ vi.mock("@/lib/auth/session-invalidation-marker", () => ({
   clearSessionInvalidationMarkerIfCurrent: mocks.clearMarker,
   subscribeToSessionInvalidationMarker: mocks.subscribeMarker,
 }));
-vi.mock("@/lib/offline/owner-composer-participants", () => ({
-  prepareOwnerComposerParticipants: mocks.prepareComposer,
-}));
-vi.mock("@/lib/offline/owner-session-lifecycle", () => ({
-  abortOwnerSyncAttempts: mocks.abort,
-  finalizeOwnerOfflineActivityForSignedOut: mocks.finalizeStandalone,
-  finalizeOwnerOfflineActivityForSessionChange:
+vi.mock("@/lib/garden/online-journal-composer-participants", () => ({
+  abortOnlineJournalComposerParticipants: mocks.abort,
+  admitOnlineJournalComposerSession: mocks.hydrate,
+  pauseOnlineJournalComposerActivity: mocks.pause,
+  finalizeOnlineJournalComposerParticipantsForSignedOut:
+    mocks.finalizeStandalone,
+  finalizeOnlineJournalComposerParticipantsForSessionChange:
     mocks.finalizeSessionChangeStandalone,
-  hydrateOwnerOfflineActivitySession: mocks.hydrate,
-  pauseOwnerOfflineActivity: mocks.pause,
-}));
-vi.mock("@/lib/offline/owner-vault", () => ({
-  fetchAuthenticatedOwnerVaultBinding: mocks.fetchOwnerVaultBinding,
-  deactivatePhysicalOwnerVault: mocks.deactivateOwnerVault,
-  sealActiveOwnerVaultsForLocalExit: mocks.sealVaultsForLocalExit,
+  prepareOnlineJournalComposerParticipants: mocks.prepareComposer,
+  sealOnlineJournalComposerParticipantsForExit: mocks.sealVaultsForLocalExit,
 }));
 
 import {
@@ -619,18 +614,19 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("deactivates the physical owner vault when a terminal marker binding cannot be verified", async () => {
+  it("keeps a terminal marker blocked without consulting legacy device state", async () => {
     mocks.readMarker.mockReturnValueOnce({
       status: "present",
       persistence: "persistent",
     });
-    mocks.fetchOwnerVaultBinding.mockRejectedValueOnce(
-      new Error("synthetic owner-vault binding failure"),
+    mocks.hydrate.mockRejectedValueOnce(
+      new Error("synthetic online composer admission failure"),
     );
 
     const renderer = await renderBoundary();
 
-    expect(mocks.deactivateOwnerVault).toHaveBeenCalledWith("session-a");
+    expect(mocks.fetchOwnerVaultBinding).not.toHaveBeenCalled();
+    expect(mocks.deactivateOwnerVault).not.toHaveBeenCalled();
     expect(mocks.clearMarker).not.toHaveBeenCalled();
     expect(
       renderer.root.findAllByProps({ children: "Private surface" }),
@@ -655,41 +651,31 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("hydrates the physical vault only with the binding tied to the fresh session generation", async () => {
-    const ownerBinding = "B".repeat(43);
-    mocks.fetchOwnerVaultBinding.mockResolvedValueOnce(ownerBinding);
-
+  it("admits online composers with the fresh session generation and no device binding", async () => {
     const renderer = await renderBoundary();
 
-    expect(mocks.fetchOwnerVaultBinding).toHaveBeenCalledWith(
-      "opaque-binding-for-session-a",
-    );
+    expect(mocks.fetchOwnerVaultBinding).not.toHaveBeenCalled();
     expect(mocks.hydrate).toHaveBeenCalledWith(
       "session-a",
       "opaque-binding-for-session-a",
-      ownerBinding,
       {
-        signal: expect.any(AbortSignal),
         allowAuthoritativeSessionRebind: true,
+        requireVerifiedHydration: false,
       },
     );
     await unmount(renderer);
   });
 
-  it("keeps server-backed private UI usable when the offline binding is unavailable", async () => {
-    mocks.fetchOwnerVaultBinding.mockRejectedValueOnce(
-      new Error("binding endpoint unavailable"),
-    );
-
+  it("keeps server-backed private UI usable without a legacy binding lookup", async () => {
     const renderer = await renderBoundary();
 
+    expect(mocks.fetchOwnerVaultBinding).not.toHaveBeenCalled();
     expect(mocks.hydrate).toHaveBeenCalledWith(
       "session-a",
       "opaque-binding-for-session-a",
-      undefined,
       {
-        signal: expect.any(AbortSignal),
         allowAuthoritativeSessionRebind: true,
+        requireVerifiedHydration: false,
       },
     );
     expect(
@@ -699,9 +685,8 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("degrades a stalled owner-vault open without wedging safe exits or accepting its late completion", async () => {
+  it("degrades a stalled online composer admission without wedging safe exits", async () => {
     vi.useFakeTimers();
-    mocks.fetchOwnerVaultBinding.mockResolvedValueOnce("B".repeat(43));
     const stalledHydration = deferred<"ready">();
     mocks.hydrate.mockReturnValueOnce(stalledHydration.promise);
     const renderer = await renderBoundary(
@@ -718,7 +703,7 @@ describe("session convergence boundary", () => {
       await vi.advanceTimersByTimeAsync(AUTHORITATIVE_SESSION_READ_TIMEOUT_MS);
     });
 
-    expect(mocks.deactivateOwnerVault).toHaveBeenCalledWith("session-a");
+    expect(mocks.deactivateOwnerVault).not.toHaveBeenCalled();
     expect(
       renderer.root.findByProps({ children: "Sign out safely" }).props.disabled,
     ).not.toBe(true);
@@ -730,7 +715,7 @@ describe("session convergence boundary", () => {
       stalledHydration.resolve("ready");
       await Promise.resolve();
     });
-    expect(mocks.deactivateOwnerVault).toHaveBeenCalledOnce();
+    expect(mocks.deactivateOwnerVault).not.toHaveBeenCalled();
     await unmount(renderer);
   });
 
@@ -1816,10 +1801,9 @@ describe("session convergence boundary", () => {
     expect(mocks.hydrate).toHaveBeenCalledWith(
       "session-a",
       "opaque-binding-for-session-a",
-      undefined,
       {
-        signal: expect.any(AbortSignal),
         allowAuthoritativeSessionRebind: true,
+        requireVerifiedHydration: false,
       },
     );
     expect(

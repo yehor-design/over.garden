@@ -16,13 +16,29 @@ export default defineConfig({
   reporter: "line",
   use: {
     baseURL,
-    browserName: "chromium",
     trace: "retain-on-failure",
   },
+  projects: [
+    {
+      name: "chromium",
+      use: { browserName: "chromium" },
+    },
+    {
+      name: "firefox",
+      testMatch: /online-composer-cutover\.spec\.ts/u,
+      use: { browserName: "firefox" },
+    },
+    {
+      name: "webkit",
+      testMatch: /online-composer-cutover\.spec\.ts/u,
+      use: { browserName: "webkit" },
+    },
+  ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
         command: [
+          "../../infra/run-with-local-infra-env",
           "env",
           `PUBLIC_SITE_URL=${LOCAL_ORIGIN}`,
           `BETTER_AUTH_URL=${LOCAL_ORIGIN}`,
@@ -38,8 +54,6 @@ export default defineConfig({
           "VISUAL_FIXTURES_ENABLED=true",
           "VISUAL_FIXTURES_TARGET=local",
           "VISUAL_FIXTURES_DATABASE=overgarden",
-          "R2_ENDPOINT=http://127.0.0.1:9000",
-          "R2_PUBLIC_BASE_URL=http://127.0.0.1:9000",
           "NEXT_TELEMETRY_DISABLED=1",
           "pnpm exec next dev --hostname 127.0.0.1",
           `--port ${LOCAL_PORT}`,

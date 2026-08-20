@@ -10,8 +10,10 @@ import {
   prepareCurrentSessionSignOut,
 } from "@/lib/auth/sign-out-contract";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import { eraseCurrentDeviceOwnerOfflineStore } from "@/lib/offline/owner-session-lifecycle";
-import { fetchAuthenticatedOwnerVaultBinding } from "@/lib/offline/owner-vault";
+import {
+  eraseLegacyOwnerDeviceWork,
+  resolveLegacyOwnerVaultBinding,
+} from "@/lib/legacy-device-work/ove322-retirement-bridge";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
 type CleanupState =
@@ -38,7 +40,7 @@ export function ErasureLocalCleanup({ locale }: { locale: InterfaceLocale }) {
         setState("unconfirmed");
         return;
       }
-      const binding = await fetchAuthenticatedOwnerVaultBinding(
+      const binding = await resolveLegacyOwnerVaultBinding(
         preparedSession.binding,
       );
       if (!binding) {
@@ -50,10 +52,7 @@ export function ErasureLocalCleanup({ locale }: { locale: InterfaceLocale }) {
         setState("unconfirmed");
         return;
       }
-      const receipt = await eraseCurrentDeviceOwnerOfflineStore(
-        ownerUserId,
-        binding,
-      );
+      const receipt = await eraseLegacyOwnerDeviceWork(ownerUserId, binding);
       setState(
         receipt.status === "erased_confirmed" ? "confirmed" : "unconfirmed",
       );

@@ -15,9 +15,9 @@ import type {
   LexicalJournalFixtureController,
   LexicalJournalFixtureSnapshot,
 } from "@/lib/garden/lexical-journal-browser-fixture-contract";
+import { InlineMediaSelectionController } from "@/lib/garden/inline-media-selection-controller";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { interfaceLocaleChangeCoordinator } from "@/lib/interface-locale-change-coordinator";
-import { InlineMediaIntentController } from "@/lib/offline/inline-media-intent-controller";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
 
 const COPY: Record<InterfaceLocale, { cancel: string; heading: string }> = {
@@ -36,7 +36,7 @@ export function LexicalJournalVisualFixture({
   const [initialDocument] = useState(() => createFixtureDocument(dense));
   const documentRef = useRef(initialDocument);
   const composerRef = useRef<StructuredJournalComposerHandle | null>(null);
-  const [inlineMedia] = useState(() => new InlineMediaIntentController());
+  const [inlineMedia] = useState(() => new InlineMediaSelectionController());
   const urlsRef = useRef(new Map<string, string>());
   const generationRef = useRef(0);
   const cancelCountRef = useRef(0);

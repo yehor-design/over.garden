@@ -21,7 +21,7 @@ const localeExpectations = [
     {
       name: "Назва",
       firstUpdate: "Перше оновлення",
-      saveOffline: "Зберегти на цьому пристрої",
+      saveOnline: "Зберегти перший запис",
       region: "Київ",
       choosePhoto: "Обрати фото",
     },
@@ -31,7 +31,7 @@ const localeExpectations = [
     {
       name: "Име",
       firstUpdate: "Първо обновяване",
-      saveOffline: "Запазване на това устройство",
+      saveOnline: "Запазване на първия запис",
       region: "Киев",
       choosePhoto: "Избор на снимка",
     },
@@ -41,7 +41,7 @@ const localeExpectations = [
     {
       name: "Название",
       firstUpdate: "Первое обновление",
-      saveOffline: "Сохранить на этом устройстве",
+      saveOnline: "Сохранить первую запись",
       region: "Киев",
       choosePhoto: "Выбрать фото",
     },
@@ -51,32 +51,31 @@ const localeExpectations = [
   {
     name: string;
     firstUpdate: string;
-    saveOffline: string;
+    saveOnline: string;
     region: string;
     choosePhoto: string;
   },
 ][];
 
 describe("first entry composer localization", () => {
-  it("makes the whole form inert and guards late voice/photo/submit producers during sign-out", async () => {
+  it("fences every control behind the shared online composer state", async () => {
     const source = await readFile(
       fileURLToPath(new URL("./first-entry-composer.tsx", import.meta.url)),
       "utf8",
     );
 
-    expect(source).toMatch(
-      /useLayoutEffect\(\(\) => \{[\s\S]{0,1800}controller\.updateSnapshot/,
+    expect(source).toContain("useOnlineJournalComposer({");
+    expect(source).toContain(
+      '<fieldset disabled={persistenceFrozen} className="contents">',
     );
-    expect(source).toMatch(/<form[\s\S]*?inert=\{persistenceFrozen\}/);
-    expect(source).not.toContain("<fieldset");
     expect(source).toContain("disabled={persistenceFrozen}");
-    expect(
-      source.match(/if \(isComposerPersistenceFrozen\(\)\) return;/g)?.length,
-    ).toBeGreaterThanOrEqual(4);
+    expect(source).not.toMatch(
+      /navigator\.onLine|["']online["']\s*,\s*handle|@\/lib\/offline/u,
+    );
   });
 
   it.each(localeExpectations)(
-    "localizes creation and offline recovery in %s without translating authored data",
+    "localizes creation and request-failure recovery in %s without translating authored data",
     (locale, expected) => {
       const scenario = visualScenario();
       const html = renderToStaticMarkup(
@@ -91,7 +90,7 @@ describe("first entry composer localization", () => {
 
       expect(html).toContain(expected.name);
       expect(html).toContain(expected.firstUpdate);
-      expect(html).toContain(expected.saveOffline);
+      expect(html).toContain(expected.saveOnline);
       expect(html).toContain(expected.region);
       expect(html).toContain(expected.choosePhoto);
       expect(html).toContain('type="file"');
@@ -112,7 +111,7 @@ describe("first entry composer localization", () => {
         /data-composer-details-grid="entry-metadata" class="grid min-w-0 gap-3 sm:grid-cols-3"/,
       );
       expect(html).not.toMatch(
-        /Save first entry|More details|Mention suggestions unavailable|Choose File|No file chosen/i,
+        /Save first entry|More details|Mention suggestions unavailable|Choose File|No file chosen|на цьому пристрої|на това устройство|на этом устройстве|queued|syncing|synced/i,
       );
     },
   );

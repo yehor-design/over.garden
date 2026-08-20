@@ -12,12 +12,7 @@ import {
   readSessionInvalidationMarker,
 } from "@/lib/auth/session-invalidation-marker";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import {
-  activatePhysicalOwnerVault,
-  deactivatePhysicalOwnerVault,
-  readActiveOwnerVaultLifetimeSignal,
-  withOwnerVaultWriterLease,
-} from "@/lib/offline/owner-vault";
+import { registerOnlineJournalComposerParticipant } from "@/lib/garden/online-journal-composer-participants";
 
 const SYNTHETIC_OWNER_ID = "00000000-0000-4000-8000-000000000287";
 const SYNTHETIC_OWNER_BINDING = "X".repeat(43);
@@ -26,6 +21,7 @@ const SYNTHETIC_SESSION_STATE_KEY =
 const REMOVAL_DURATION_KEY = "overgarden:fixture:ove287:removal-duration";
 const ACTIVE_AT_REMOVAL_KEY = "overgarden:fixture:ove287:active-at-removal";
 const PRIVATE_SELECTOR = '[data-account-sign-out-private="true"]';
+let syntheticComposerLifetime = new AbortController();
 
 interface AccountSignOutFixtureController {
   armRemovalMeasurement(): void;
@@ -97,10 +93,7 @@ export function AccountSignOutVisualFixture({
       ) {
         measurementStartedAtRef.current = performance.now();
         activeLifetimeAtConfirmationRef.current =
-          readActiveOwnerVaultLifetimeSignal(
-            SYNTHETIC_OWNER_ID,
-            SYNTHETIC_OWNER_BINDING,
-          );
+          syntheticComposerLifetime.signal;
       }
     };
     const observer = new MutationObserver(recordRemoval);
@@ -114,10 +107,7 @@ export function AccountSignOutVisualFixture({
       armRemovalMeasurement: () => {
         measurementStartedAtRef.current = performance.now();
         activeLifetimeAtConfirmationRef.current =
-          readActiveOwnerVaultLifetimeSignal(
-            SYNTHETIC_OWNER_ID,
-            SYNTHETIC_OWNER_BINDING,
-          );
+          syntheticComposerLifetime.signal;
       },
       establishAuthoritativeSession: async () => {
         const result = await runBrowserAuthMutation({
@@ -178,31 +168,18 @@ function SyntheticPrivateAccountSurface({
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let disposed = false;
-    void activatePhysicalOwnerVault(SYNTHETIC_OWNER_ID, SYNTHETIC_OWNER_BINDING)
-      .then(() =>
-        withOwnerVaultWriterLease(SYNTHETIC_OWNER_ID, (database) =>
-          database.drafts.put({
-            ownerUserId: SYNTHETIC_OWNER_ID,
-            id: "retained-sign-out-fixture-draft",
-            kind: "first_entry",
-            payload: {
-              body: "synthetic retained owner work",
-              photo: new Blob(["synthetic-private-photo"], {
-                type: "image/webp",
-              }),
-            },
-            createdAt: 1,
-            updatedAt: 1,
-          }),
-        ),
-      )
-      .then(() => {
-        if (!disposed) setReady(true);
-      });
+    syntheticComposerLifetime = new AbortController();
+    const unregister = registerOnlineJournalComposerParticipant({
+      freeze: () => undefined,
+      flushLatest: async () => undefined,
+      resume: () => undefined,
+      abort: () => syntheticComposerLifetime.abort(),
+    });
+    const readyTimer = window.setTimeout(() => setReady(true), 0);
     return () => {
-      disposed = true;
-      void deactivatePhysicalOwnerVault(SYNTHETIC_OWNER_ID);
+      window.clearTimeout(readyTimer);
+      unregister();
+      syntheticComposerLifetime.abort();
     };
   }, []);
 
@@ -216,7 +193,7 @@ function SyntheticPrivateAccountSurface({
       <h1 className="text-xl font-semibold">
         OVE-287 synthetic private account
       </h1>
-      <p>One synthetic retained owner draft is active.</p>
+      <p>One synthetic in-memory online composer is active.</p>
       <SignOutControl presentation="profile" />
     </main>
   );

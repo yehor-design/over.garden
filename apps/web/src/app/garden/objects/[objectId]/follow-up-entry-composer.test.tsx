@@ -20,7 +20,7 @@ const localeExpectations = [
     "uk",
     {
       whatChanged: "Що змінилося?",
-      saveOffline: "Зберегти на цьому пристрої",
+      saveOnline: "Зберегти продовження",
       moreDetails: "Більше деталей",
       choosePhoto: "Обрати фото",
     },
@@ -29,7 +29,7 @@ const localeExpectations = [
     "bg",
     {
       whatChanged: "Какво се промени?",
-      saveOffline: "Запазване на това устройство",
+      saveOnline: "Запазване на продължението",
       moreDetails: "Повече подробности",
       choosePhoto: "Избор на снимка",
     },
@@ -38,7 +38,7 @@ const localeExpectations = [
     "ru",
     {
       whatChanged: "Что изменилось?",
-      saveOffline: "Сохранить на этом устройстве",
+      saveOnline: "Сохранить продолжение",
       moreDetails: "Больше подробностей",
       choosePhoto: "Выбрать фото",
     },
@@ -47,32 +47,31 @@ const localeExpectations = [
   InterfaceLocale,
   {
     whatChanged: string;
-    saveOffline: string;
+    saveOnline: string;
     moreDetails: string;
     choosePhoto: string;
   },
 ][];
 
 describe("follow-up entry composer localization", () => {
-  it("makes the whole form inert and guards late voice/photo/submit producers during sign-out", async () => {
+  it("fences every control behind the shared online composer state", async () => {
     const source = await readFile(
       fileURLToPath(new URL("./follow-up-entry-composer.tsx", import.meta.url)),
       "utf8",
     );
 
-    expect(source).toMatch(
-      /useLayoutEffect\(\(\) => \{[\s\S]{0,1800}controller\.updateSnapshot/,
+    expect(source).toContain("useOnlineJournalComposer({");
+    expect(source).toContain(
+      '<fieldset disabled={persistenceFrozen} className="contents">',
     );
-    expect(source).toMatch(/<form[\s\S]*?inert=\{persistenceFrozen\}/);
-    expect(source).not.toContain("<fieldset");
     expect(source).toContain("disabled={persistenceFrozen}");
-    expect(
-      source.match(/if \(isComposerPersistenceFrozen\(\)\) return;/g)?.length,
-    ).toBeGreaterThanOrEqual(4);
+    expect(source).not.toMatch(
+      /navigator\.onLine|["']online["']\s*,\s*handle|@\/lib\/offline/u,
+    );
   });
 
   it.each(localeExpectations)(
-    "localizes follow-up and offline recovery in %s without translating authored data",
+    "localizes follow-up and request-failure recovery in %s without translating authored data",
     (locale, expected) => {
       const scenario = visualScenario();
       const objectDisplayName = "Apis mellifera — Кошер № 7";
@@ -90,7 +89,7 @@ describe("follow-up entry composer localization", () => {
       );
 
       expect(html).toContain(expected.whatChanged);
-      expect(html).toContain(expected.saveOffline);
+      expect(html).toContain(expected.saveOnline);
       expect(html).toContain(expected.moreDetails);
       expect(html).toContain(expected.choosePhoto);
       expect(html).toContain('type="file"');
@@ -101,7 +100,7 @@ describe("follow-up entry composer localization", () => {
       expect(html).toContain(scenario.entryBody);
       expect(html).not.toContain(scenario.message);
       expect(html).not.toMatch(
-        /What changed\?|Save follow-up|Saved follow-ups on this device|More details|Choose File|No file chosen/i,
+        /What changed\?|Save follow-up|Saved follow-ups on this device|More details|Choose File|No file chosen|на цьому пристрої|на това устройство|на этом устройстве|queued|syncing|synced/i,
       );
     },
   );

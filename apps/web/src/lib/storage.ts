@@ -49,6 +49,10 @@ function r2Client() {
     region: "auto",
     endpoint: requiredServerEnv("R2_ENDPOINT"),
     forcePathStyle: resolveR2ForcePathStyle(),
+    // Browser PUT capabilities are signed before their body exists. The SDK's
+    // WHEN_SUPPORTED default otherwise bakes the empty-body CRC32 into the URL,
+    // causing an authoritative provider rejection for every non-empty upload.
+    requestChecksumCalculation: "WHEN_REQUIRED",
     credentials: {
       accessKeyId: requiredServerEnv("R2_ACCESS_KEY_ID"),
       secretAccessKey: requiredServerEnv("R2_SECRET_ACCESS_KEY"),

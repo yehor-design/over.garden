@@ -40,6 +40,7 @@ describe("online journal draft owner", () => {
     const [url, init] = fetchImpl.mock.calls[0]!;
     expect(url).toBe("/api/garden/drafts/first-entry");
     expect(init?.method).toBe("PUT");
+    expect(init?.keepalive).toBeUndefined();
     expect(
       new Headers(init?.headers).get("x-overgarden-document-generation"),
     ).toBe("signed-generation");
@@ -54,6 +55,43 @@ describe("online journal draft owner", () => {
       status: "saved",
       draft: receipt,
       error: null,
+    });
+  });
+
+  it("updates a mutable first-entry context without rehydrating or changing its key", async () => {
+    const payload = firstEntryPayload("Space-scoped title");
+    payload.request.spaceId = "00000000-0000-4000-8000-000000000020";
+    const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      return Response.json({
+        outcome: "saved",
+        draft: {
+          ...draftReceipt(payload, {
+            generation: 1,
+            payloadSha256: body.payloadSha256,
+            serverRevision: 1,
+          }),
+          context: body.context,
+        },
+      });
+    });
+    const owner = createOnlineJournalDraftOwner({
+      draftKey: "first-entry",
+      draftKind: "first_entry",
+      context: {},
+      documentMutationGeneration: "signed-generation",
+      fetchImpl,
+    });
+
+    owner.replaceContext({ spaceId: payload.request.spaceId });
+    await owner.save(payload, { generation: 1, keepalive: true });
+
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    expect(url).toBe("/api/garden/drafts/first-entry");
+    expect(init?.keepalive).toBe(true);
+    expect(JSON.parse(String(init?.body)).context).toEqual({
+      spaceId: payload.request.spaceId,
     });
   });
 
@@ -109,59 +147,46 @@ describe("online journal draft owner", () => {
   });
 
   it("settles at the deadline and ignores a transport that resolves after abort", async () => {
-    vi.useFakeTimers();
-    try {
-      const payload = firstEntryPayload("Late transport");
-      const late = deferred<Response>();
-      const fetchImpl = vi.fn(() => late.promise);
-      const owner = createOnlineJournalDraftOwner({
-        draftKey: "first-entry",
-        draftKind: "first_entry",
-        context: {},
-        documentMutationGeneration: "signed-generation",
-        deadlineMs: 5,
-        fetchImpl,
-      });
-      let outcome = "pending";
-      const save = owner.save(payload, { generation: 1 }).then(
-        () => {
-          outcome = "resolved";
-        },
-        () => {
-          outcome = "rejected";
-        },
-      );
+    const payload = firstEntryPayload("Late transport");
+    const late = deferred<Response>();
+    const fetchImpl = vi.fn(() => late.promise);
+    const owner = createOnlineJournalDraftOwner({
+      draftKey: "first-entry",
+      draftKind: "first_entry",
+      context: {},
+      documentMutationGeneration: "signed-generation",
+      deadlineMs: 5,
+      fetchImpl,
+    });
+    const save = owner.save(payload, { generation: 1 });
 
-      await vi.advanceTimersByTimeAsync(6);
+    await expect(save).rejects.toMatchObject({
+      code: "JOURNAL_DRAFT_TIMEOUT",
+      retryable: true,
+    });
+    expect(owner.getSnapshot()).toMatchObject({
+      status: "connection_required",
+      error: { code: "JOURNAL_DRAFT_TIMEOUT", retryable: true },
+    });
 
-      expect(outcome).toBe("rejected");
-      expect(owner.getSnapshot()).toMatchObject({
-        status: "connection_required",
-        error: { code: "JOURNAL_DRAFT_TIMEOUT", retryable: true },
-      });
-
-      late.resolve(
-        Response.json({
-          outcome: "saved",
-          draft: draftReceipt(payload, {
-            generation: 1,
-            payloadSha256: "a".repeat(64),
-            serverRevision: 1,
-          }),
+    late.resolve(
+      Response.json({
+        outcome: "saved",
+        draft: draftReceipt(payload, {
+          generation: 1,
+          payloadSha256: "a".repeat(64),
+          serverRevision: 1,
         }),
-      );
-      await Promise.resolve();
-      await Promise.resolve();
+      }),
+    );
+    await Promise.resolve();
+    await Promise.resolve();
 
-      expect(owner.getSnapshot()).toMatchObject({
-        status: "connection_required",
-        draft: null,
-        error: { code: "JOURNAL_DRAFT_TIMEOUT" },
-      });
-      await save;
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(owner.getSnapshot()).toMatchObject({
+      status: "connection_required",
+      draft: null,
+      error: { code: "JOURNAL_DRAFT_TIMEOUT" },
+    });
   });
 
   it("coalesces simultaneous explicit retries into one transport request", async () => {
@@ -336,7 +361,9 @@ describe("online journal draft owner", () => {
   });
 });
 
-function firstEntryPayload(title: string): JournalEntryDraftPayloadV1 {
+function firstEntryPayload(
+  title: string,
+): Extract<JournalEntryDraftPayloadV1, { draftKind: "first_entry" }> {
   return {
     schemaVersion: 1,
     draftKind: "first_entry",

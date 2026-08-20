@@ -27,14 +27,19 @@ describe("shared journal composer integration", () => {
     );
   });
 
-  it("waits for every asynchronous owner draft to hydrate before Lexical binds", () => {
+  it("waits for every owner-scoped server draft to hydrate before Lexical binds", () => {
     for (const file of [
       "app/garden/first-entry-composer.tsx",
       "app/garden/space-entry-composer.tsx",
       "app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+      "app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
     ]) {
       const source = readFileSync(path.join(root, file), "utf8");
-      expect(source).toContain("bindingReady={draftHydrated}");
+      expect(source).toContain("useOnlineJournalComposer({");
+      expect(source).toMatch(
+        /bindingReady=\{(?:draftHydrated|online\.state\.hydrated)\}/,
+      );
+      expect(source).not.toMatch(/@\/lib\/offline|IndexedDB|indexedDB|Dexie/);
     }
 
     const followUpOwner = readFileSync(
@@ -44,7 +49,7 @@ describe("shared journal composer integration", () => {
       ),
       "utf8",
     );
-    expect(followUpOwner).toContain("useState(Boolean(visualScenario))");
+    expect(followUpOwner).toContain("const draftHydrated = online.state.hydrated");
 
     const sharedOwner = readFileSync(
       path.join(root, "components/garden/structured-journal-composer.tsx"),

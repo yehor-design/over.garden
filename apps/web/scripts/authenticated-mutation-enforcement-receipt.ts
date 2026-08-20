@@ -25,12 +25,15 @@ export const AUTHENTICATED_MUTATION_DEPLOYMENT_RECEIPT_ARTIFACT_PATH =
 const HIGH_RISK_OWNER = "high_risk_ove_290" as const;
 const REMAINING_OWNER = "remaining_ove_291" as const;
 const EXPLICIT_GOOGLE_LINK_OWNER = "owned_by_ove_295" as const;
-const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 42;
+// OVE-325 removes the four browser-offline journal replay entrypoints. The
+// server admission boundaries remain unchanged, while their duplicate replay
+// consumer edges disappear from the enforced topology.
+const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 38;
 const BASELINE_HIGH_RISK_ENTRYPOINT_SET_DIGEST =
-  "ca1322bcd107497e2c9a1db856a5840476027dbf666284bd00bc70654647a003";
-const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 296;
+  "fed08940b1616296c375d71874c1e998ae7dfb1a64bebdbbaf798274e697913a";
+const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 232;
 const BASELINE_HIGH_RISK_EDGE_BINDING_SET_DIGEST =
-  "b2b75b6f1d02ba22be42f14b38bd23378b0501f91ee3d8f7200c6f50a503851a";
+  "86a235a8538df1d832fd4ffb55bf66efb272c1fcc4ac63e9992b530afe4f123c";
 const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 30;
 const BASELINE_REMAINING_ENTRYPOINT_COUNT = 125;
 const BASELINE_REMAINING_ENTRYPOINT_SET_DIGEST =

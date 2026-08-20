@@ -2,6 +2,10 @@
 
 import { AUTH_INTENT_RETURN_HEADER } from "@/lib/auth/auth-intent-http-contract";
 import { DOCUMENT_MUTATION_GENERATION_HEADER } from "@/lib/auth/document-mutation-generation-transport";
+import {
+  isDocumentMutationAdmissionTransportResult,
+  type DocumentMutationAdmissionTransportResultV1,
+} from "@/lib/auth/document-mutation-generation-transport";
 import type {
   FirstPlantEntryResponse,
   JournalDraftEditEntryRequest,
@@ -9,6 +13,8 @@ import type {
 } from "@/lib/garden/entry-contracts";
 import { journalDraftPublicationBody } from "@/lib/garden/entry-contracts";
 import type { OnlineJournalDraftOwner } from "@/lib/garden/online-journal-draft";
+import type { OnlineComposerPhotoIntent } from "@/lib/garden/composer-photo-selection";
+import { isAllowedComposerImageSize } from "@/lib/media/image-limits";
 
 const DEFAULT_SUBMIT_DEADLINE_MS = 15_000;
 
@@ -42,17 +48,29 @@ export class OnlineJournalSubmitError extends Error {
   readonly code: string;
   readonly status: number | null;
   readonly retryable: boolean;
+  readonly authIntentUrl: string | null;
+  readonly documentMutationAdmission: Exclude<
+    DocumentMutationAdmissionTransportResultV1,
+    "MATCH"
+  > | null;
 
   constructor(input: {
     code: string;
     status?: number | null;
     retryable: boolean;
+    authIntentUrl?: string | null;
+    documentMutationAdmission?: Exclude<
+      DocumentMutationAdmissionTransportResultV1,
+      "MATCH"
+    > | null;
   }) {
     super("The online journal publication did not complete.");
     this.name = "OnlineJournalSubmitError";
     this.code = input.code;
     this.status = input.status ?? null;
     this.retryable = input.retryable;
+    this.authIntentUrl = input.authIntentUrl ?? null;
+    this.documentMutationAdmission = input.documentMutationAdmission ?? null;
   }
 }
 
@@ -312,6 +330,10 @@ function submitTransportError(
 ) {
   const code =
     typeof body.code === "string" ? body.code : "JOURNAL_SUBMIT_UNAVAILABLE";
+  const authIntentUrl = boundedAuthIntentUrl(body.authIntentUrl);
+  const admission = isDocumentMutationAdmissionTransportResult(body.code)
+    ? body.code
+    : null;
   return new OnlineJournalSubmitError({
     code,
     status: response.status,
@@ -319,7 +341,183 @@ function submitTransportError(
       response.status >= 500 ||
       response.status === 408 ||
       response.status === 429,
+    authIntentUrl,
+    documentMutationAdmission:
+      admission && admission !== "MATCH" ? admission : null,
   });
+}
+
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+]);
+
+/**
+ * Upload one current-tab media selection through the canonical private
+ * quarantine -> processing path. The returned processed asset id is the only
+ * media value that may be persisted in a server draft.
+ */
+export async function uploadOnlineComposerPhoto(input: {
+  intent: OnlineComposerPhotoIntent;
+  authReturnTo: string;
+  documentMutationGeneration: string;
+  signal?: AbortSignal;
+  fetchImpl?: OnlineSubmitFetch;
+  deadlineMs?: number;
+}): Promise<{ mediaAssetId: string; publicUrl: string }> {
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const generation = requireGeneration(input.documentMutationGeneration);
+  const { intent } = input;
+  if (
+    !ALLOWED_IMAGE_TYPES.has(intent.contentType) ||
+    !isAllowedComposerImageSize(intent.size) ||
+    !intent.blob ||
+    intent.blob.size !== intent.size
+  ) {
+    throw new OnlineJournalSubmitError({
+      code: "JOURNAL_MEDIA_INVALID",
+      retryable: false,
+    });
+  }
+
+  const deadlineMs = Math.min(
+    DEFAULT_SUBMIT_DEADLINE_MS,
+    Math.max(
+      1,
+      Math.trunc(input.deadlineMs ?? DEFAULT_SUBMIT_DEADLINE_MS),
+    ),
+  );
+  const controller = new AbortController();
+  let timedOut = false;
+  let externallyAborted = false;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    controller.signal.addEventListener(
+      "abort",
+      () => reject(new DOMException("Aborted", "AbortError")),
+      { once: true },
+    );
+  });
+  const abortFromCaller = () => {
+    externallyAborted = true;
+    controller.abort();
+  };
+  if (input.signal?.aborted) abortFromCaller();
+  else input.signal?.addEventListener("abort", abortFromCaller, { once: true });
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, deadlineMs);
+  const raceAbort = <T,>(promise: Promise<T>) =>
+    Promise.race([promise, aborted]);
+
+  try {
+    const reservationResponse = await raceAbort(
+      fetchImpl("/api/media/uploads", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          [AUTH_INTENT_RETURN_HEADER]: input.authReturnTo,
+          [DOCUMENT_MUTATION_GENERATION_HEADER]: generation,
+        },
+        body: JSON.stringify({
+          contentType: intent.contentType,
+          sizeBytes: intent.size,
+        }),
+        signal: controller.signal,
+        cache: "no-store",
+        credentials: "same-origin",
+      }),
+    );
+    const reservationBody = await raceAbort(
+      responseRecord(reservationResponse),
+    );
+    if (!reservationResponse.ok) {
+      throw submitTransportError(reservationResponse, reservationBody);
+    }
+    const mediaAssetId = reservationBody.mediaAssetId;
+    const uploadUrl = reservationBody.uploadUrl;
+    if (typeof mediaAssetId !== "string" || typeof uploadUrl !== "string") {
+      throw new OnlineJournalSubmitError({
+        code: "JOURNAL_MEDIA_INVALID_RESPONSE",
+        retryable: true,
+      });
+    }
+
+    const quarantineResponse = await raceAbort(
+      fetchImpl(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": intent.contentType },
+        body: intent.blob!,
+        signal: controller.signal,
+      }),
+    );
+    if (!quarantineResponse.ok) {
+      throw new OnlineJournalSubmitError({
+        code: "JOURNAL_MEDIA_UPLOAD_FAILED",
+        status: quarantineResponse.status,
+        retryable: true,
+      });
+    }
+
+    const processResponse = await raceAbort(
+      fetchImpl("/api/media/process", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          [AUTH_INTENT_RETURN_HEADER]: input.authReturnTo,
+          [DOCUMENT_MUTATION_GENERATION_HEADER]: generation,
+        },
+        body: JSON.stringify({ mediaAssetId }),
+        signal: controller.signal,
+        cache: "no-store",
+        credentials: "same-origin",
+      }),
+    );
+    const processBody = await raceAbort(responseRecord(processResponse));
+    if (!processResponse.ok) {
+      throw submitTransportError(processResponse, processBody);
+    }
+    const mediaAsset = processBody.mediaAsset;
+    const publicUrl = processBody.publicUrl;
+    if (
+      !mediaAsset ||
+      typeof mediaAsset !== "object" ||
+      Array.isArray(mediaAsset) ||
+      (mediaAsset as Record<string, unknown>).status !== "processed" ||
+      (mediaAsset as Record<string, unknown>).id !== mediaAssetId ||
+      typeof publicUrl !== "string" ||
+      publicUrl.length < 1
+    ) {
+      throw new OnlineJournalSubmitError({
+        code: "JOURNAL_MEDIA_PROCESSING_UNCONFIRMED",
+        retryable: true,
+      });
+    }
+    return { mediaAssetId, publicUrl };
+  } catch (error) {
+    if (error instanceof OnlineJournalSubmitError) throw error;
+    throw new OnlineJournalSubmitError({
+      code: timedOut
+        ? "JOURNAL_MEDIA_TIMEOUT"
+        : externallyAborted
+          ? "JOURNAL_MEDIA_REQUEST_ABORTED"
+          : "JOURNAL_MEDIA_CONNECTION_REQUIRED",
+      retryable: timedOut || !externallyAborted,
+    });
+  } finally {
+    clearTimeout(timeout);
+    input.signal?.removeEventListener("abort", abortFromCaller);
+  }
+}
+
+function boundedAuthIntentUrl(value: unknown) {
+  return typeof value === "string" &&
+    value.length <= 2_048 &&
+    /^\/auth\/intent\?intent=[A-Za-z0-9._~-]+$/.test(value)
+    ? value
+    : null;
 }
 
 function normalizeSubmitError(

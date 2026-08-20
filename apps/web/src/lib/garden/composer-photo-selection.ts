@@ -1,10 +1,6 @@
 "use client";
 
 import {
-  createOfflinePhotoIntent,
-  type OfflinePhotoIntent,
-} from "@/lib/offline/queue";
-import {
   isAllowedComposerImageSize,
   MAX_COMPOSER_IMAGE_MEGABYTES,
 } from "@/lib/media/image-limits";
@@ -18,6 +14,19 @@ const SUPPORTED_COMPOSER_PHOTO_TYPES = new Set([
   "image/webp",
   "image/heic",
 ]);
+
+/**
+ * A current-tab-only media selection. The Blob is never serialized or written
+ * to browser storage; callers upload it through the canonical quarantine and
+ * processing routes before a server draft can reference the resulting asset.
+ */
+export interface OnlineComposerPhotoIntent {
+  fileName: string;
+  contentType: string;
+  size: number;
+  lastModified?: number;
+  blob?: Blob;
+}
 
 export function isSupportedComposerPhoto(
   file: Pick<File, "type" | "size"> | null | undefined,
@@ -39,12 +48,18 @@ export function composerPhotoSelectionError(
 
 export async function createComposerPhotoIntent(
   file: File,
-): Promise<OfflinePhotoIntent> {
+): Promise<OnlineComposerPhotoIntent> {
   const error = composerPhotoSelectionError(file);
   if (error) throw new Error(error);
-  return createOfflinePhotoIntent(file);
+  return {
+    fileName: file.name,
+    contentType: file.type,
+    size: file.size,
+    lastModified: file.lastModified,
+    blob: file,
+  };
 }
 
-export function clearComposerPhotoIntent(): OfflinePhotoIntent | null {
+export function clearComposerPhotoIntent(): OnlineComposerPhotoIntent | null {
   return null;
 }

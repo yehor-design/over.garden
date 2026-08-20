@@ -23,13 +23,13 @@ wait.
 
 ## Canonical owners
 
-| Owner                                                     | Responsibility                                                                                                                 |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `interfaceLocaleChangeCoordinator`                        | One locale operation, participant registry, synchronous commit gate, cancellation, and retryable release.                      |
-| `owner-composer-participants`                             | Acquires each mounted composer fence synchronously, flushes the latest generation, then resumes or cancels exactly that fence. |
-| `SessionConvergenceBoundary`                              | Bounded authoritative session read and owner-local hydration/recheck epoch.                                                    |
-| `language-switcher`                                       | Inline pending/recovery status, explicit cancellation, guarded preference rollback, and document handoff cleanup.              |
-| `sign-out-provider` / `browser-auth-mutation-coordinator` | Immediate retain-only local exit plus serialized sign-in, link, unlink, and exact-session reconciliation.                      |
+| Owner                                                     | Responsibility                                                                                                                        |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `interfaceLocaleChangeCoordinator`                        | One locale operation, participant registry, synchronous commit gate, cancellation, and retryable release.                             |
+| `online-journal-composer-participants`                    | Acquires each mounted composer fence synchronously, flushes the latest server generation, then resumes or cancels exactly that fence. |
+| `SessionConvergenceBoundary`                              | Bounded authoritative session read and owner-local hydration/recheck epoch.                                                           |
+| `language-switcher`                                       | Inline pending/recovery status, explicit cancellation, guarded preference rollback, and document handoff cleanup.                     |
+| `sign-out-provider` / `browser-auth-mutation-coordinator` | Immediate retain-only local exit plus serialized sign-in, link, unlink, and exact-session reconciliation.                             |
 
 ## Deadline and state contract
 
@@ -71,8 +71,8 @@ Focused deterministic contract and race proof:
 
 ```bash
 cd apps/web
-pnpm exec vitest run src/lib/interface-locale-change-coordinator.test.ts src/lib/offline/owner-composer-locale-change-participant.test.ts src/components/public/language-switcher.test.tsx src/components/auth/session-convergence-boundary.test.tsx
-pnpm exec vitest run src/components/site-shell/interface-locale-change-boundary.test.tsx src/components/site-shell/auth-locale-mutation-fences.test.tsx src/components/site-shell/local-state-locale-mutation-fences.test.tsx src/lib/offline/owner-session-lifecycle.test.ts
+pnpm exec vitest run src/lib/interface-locale-change-coordinator.test.ts src/lib/garden/online-journal-composer-participants.test.ts src/components/public/language-switcher.test.tsx src/components/auth/session-convergence-boundary.test.tsx
+pnpm exec vitest run src/components/site-shell/interface-locale-change-boundary.test.tsx src/components/site-shell/auth-locale-mutation-fences.test.tsx src/components/site-shell/local-state-locale-mutation-fences.test.tsx
 ```
 
 The local visual fixture `visualLocaleState=safe-flush-timeout` is admitted

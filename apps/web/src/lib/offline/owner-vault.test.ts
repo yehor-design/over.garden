@@ -172,12 +172,13 @@ describe("physical owner vault", () => {
   });
 
   it("keeps legacy access migration-only and the service worker storage-free", async () => {
-    const [queue, drafts, lifecycle, erasureControl, serviceWorker] =
+    const [queue, drafts, lifecycle, erasureControl, retirementBridge, serviceWorker] =
       await Promise.all([
         readSource("./queue.ts"),
         readSource("./drafts.ts"),
         readSource("./owner-session-lifecycle.ts"),
         readSource("../../app/erasure/erasure-local-cleanup.tsx"),
+        readSource("../legacy-device-work/ove322-retirement-bridge.ts"),
         readFile(
           fileURLToPath(new URL("../../../public/sw.js", import.meta.url)),
           "utf8",
@@ -193,7 +194,11 @@ describe("physical owner vault", () => {
     expect(lifecycle.indexOf("migrateLegacyOwnerVault(")).toBeLessThan(
       lifecycle.indexOf("activatePhysicalOwnerVault("),
     );
-    expect(erasureControl).toContain("eraseCurrentDeviceOwnerOfflineStore");
+    expect(erasureControl).toContain("eraseLegacyOwnerDeviceWork");
+    expect(erasureControl).toContain("resolveLegacyOwnerVaultBinding");
+    expect(erasureControl).not.toMatch(/@\/lib\/offline/);
+    expect(retirementBridge).toContain("eraseCurrentDeviceOwnerOfflineStore");
+    expect(retirementBridge).toContain("fetchAuthenticatedOwnerVaultBinding");
     expect(serviceWorker).not.toMatch(
       /indexedDB\s*[.(]|new\s+Dexie|Dexie\.|overgarden-offline/i,
     );

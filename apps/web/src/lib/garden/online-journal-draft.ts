@@ -61,12 +61,17 @@ export interface OnlineJournalDraftOwner {
   hydrate(): Promise<JournalEntryDraftReceiptV1 | null>;
   save(
     payload: JournalEntryDraftPayloadV1,
-    options: { generation: number; expectedServerRevision?: number | null },
+    options: {
+      generation: number;
+      expectedServerRevision?: number | null;
+      keepalive?: boolean;
+    },
   ): Promise<JournalEntryDraftReceiptV1>;
   delete(
     receipt?: JournalEntryDraftReceiptV1 | null,
   ): Promise<JournalEntryDraftReceiptV1 | null>;
   retry(): Promise<JournalEntryDraftReceiptV1 | null>;
+  replaceContext(context: JournalEntryDraftContext): void;
   replaceDocumentMutationGeneration(generation: string): void;
   abort(): void;
 }
@@ -97,6 +102,7 @@ export function createOnlineJournalDraftOwner(input: {
   let documentMutationGeneration = requireGeneration(
     input.documentMutationGeneration,
   );
+  let draftContext = input.context;
   let operationId = 0;
   let activeController: AbortController | null = null;
   let retryInFlight: Promise<JournalEntryDraftReceiptV1 | null> | null = null;
@@ -136,7 +142,11 @@ export function createOnlineJournalDraftOwner(input: {
 
   async function save(
     payload: JournalEntryDraftPayloadV1,
-    options: { generation: number; expectedServerRevision?: number | null },
+    options: {
+      generation: number;
+      expectedServerRevision?: number | null;
+      keepalive?: boolean;
+    },
   ) {
     if (!Number.isSafeInteger(options.generation) || options.generation < 1) {
       throw new OnlineJournalDraftError({
@@ -167,7 +177,7 @@ export function createOnlineJournalDraftOwner(input: {
     }
     const request: SaveJournalEntryDraftRequestV1 = {
       draftKind: input.draftKind,
-      context: input.context,
+      context: draftContext,
       payload,
       generation: options.generation,
       payloadSha256,
@@ -182,6 +192,7 @@ export function createOnlineJournalDraftOwner(input: {
         pendingStatus: "saving",
         method: "PUT",
         body,
+        keepalive: options.keepalive,
         parse: async (response) => {
           const result = await responseBody(response);
           if (!response.ok) throw transportError(response, result);
@@ -194,6 +205,7 @@ export function createOnlineJournalDraftOwner(input: {
         pendingStatus: "saving",
         method: "PUT",
         body,
+        keepalive: options.keepalive,
         parse: async (response) => {
           const result = await responseBody(response);
           if (!response.ok) throw transportError(response, result);
@@ -262,6 +274,20 @@ export function createOnlineJournalDraftOwner(input: {
     publish({ status: "idle", draft: null, error: null });
   }
 
+  function replaceContext(context: JournalEntryDraftContext) {
+    if (
+      (draftContext.spaceId ?? null) === (context.spaceId ?? null) &&
+      (draftContext.plantObjectId ?? null) ===
+        (context.plantObjectId ?? null) &&
+      (draftContext.journalEntryId ?? null) === (context.journalEntryId ?? null)
+    ) {
+      return;
+    }
+    draftContext = context;
+    supersede();
+    lastRetry = null;
+  }
+
   function abort() {
     supersede();
     publish({ status: "idle", draft: snapshot.draft, error: null });
@@ -272,6 +298,7 @@ export function createOnlineJournalDraftOwner(input: {
       pendingStatus: "hydrating" | "saving" | "deleting";
       method: "GET" | "PUT" | "DELETE";
       body?: string;
+      keepalive?: boolean;
       parse: (response: Response) => Promise<JournalEntryDraftReceiptV1 | null>;
       successStatus?: "deleted";
       clearDraftOnSuccess?: boolean;
@@ -303,6 +330,7 @@ export function createOnlineJournalDraftOwner(input: {
             [DOCUMENT_MUTATION_GENERATION_HEADER]: documentMutationGeneration,
           },
           ...(options.body ? { body: options.body } : {}),
+          ...(options.keepalive ? { keepalive: true } : {}),
           signal: controller.signal,
           cache: "no-store",
           credentials: "same-origin",
@@ -373,6 +401,7 @@ export function createOnlineJournalDraftOwner(input: {
     save,
     delete: deleteDraft,
     retry,
+    replaceContext,
     replaceDocumentMutationGeneration,
     abort,
   };

@@ -38,22 +38,16 @@ import {
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import type { SessionRecheckMode } from "@/lib/interface-route-policy";
 import {
-  prepareOwnerComposerParticipants,
-  type OwnerComposerPreparationHandle,
-} from "@/lib/offline/owner-composer-participants";
-import {
-  abortOwnerSyncAttempts,
-  finalizeOwnerOfflineActivityForSignedOut,
-  finalizeOwnerOfflineActivityForSessionChange,
-  hydrateOwnerOfflineActivitySession,
-  pauseOwnerOfflineActivity,
-  type OwnerOfflineActivityPauseHandle,
-} from "@/lib/offline/owner-session-lifecycle";
-import {
-  deactivatePhysicalOwnerVault,
-  fetchAuthenticatedOwnerVaultBinding,
-  sealActiveOwnerVaultsForLocalExit,
-} from "@/lib/offline/owner-vault";
+  abortOnlineJournalComposerParticipants as abortOwnerSyncAttempts,
+  admitOnlineJournalComposerSession as hydrateOwnerOfflineActivitySession,
+  pauseOnlineJournalComposerActivity as pauseOwnerOfflineActivity,
+  finalizeOnlineJournalComposerParticipantsForSessionChange as finalizeOwnerOfflineActivityForSessionChange,
+  finalizeOnlineJournalComposerParticipantsForSignedOut as finalizeOwnerOfflineActivityForSignedOut,
+  prepareOnlineJournalComposerParticipants as prepareOwnerComposerParticipants,
+  sealOnlineJournalComposerParticipantsForExit as sealActiveOwnerVaultsForLocalExit,
+  type OnlineJournalComposerPreparationHandle as OwnerComposerPreparationHandle,
+  type OnlineJournalSessionFence as OwnerOfflineActivityPauseHandle,
+} from "@/lib/garden/online-journal-composer-participants";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
 import { BlockedSessionAccountMethods } from "./blocked-session-account-methods";
@@ -1767,52 +1761,20 @@ async function hydrateBoundedOwnerOfflineActivitySession(
     requireVerifiedHydration?: boolean;
   },
 ) {
-  let ownerVaultBinding: string | null;
-  try {
-    ownerVaultBinding = await requireSettledWithin(
-      () => fetchAuthenticatedOwnerVaultBinding(sessionGeneration),
-      AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
-    );
-  } catch {
-    if (options?.requireVerifiedHydration) {
-      await deactivatePhysicalOwnerVault(ownerUserId).catch(() => undefined);
-      return "blocked" as const;
-    }
-    ownerVaultBinding = null;
-  }
-  const controller = new AbortController();
-  const lifecycleOptions = options?.allowAuthoritativeSessionRebind
-    ? {
-        signal: controller.signal,
-        allowAuthoritativeSessionRebind: true,
-      }
-    : { signal: controller.signal };
   try {
     return await requireSettledWithin(
       () =>
-        ownerVaultBinding
-          ? hydrateOwnerOfflineActivitySession(
-              ownerUserId,
-              sessionGeneration,
-              ownerVaultBinding,
-              lifecycleOptions,
-            )
-          : hydrateOwnerOfflineActivitySession(
-              ownerUserId,
-              sessionGeneration,
-              undefined,
-              lifecycleOptions,
-            ),
+        hydrateOwnerOfflineActivitySession(
+          ownerUserId,
+          sessionGeneration,
+          options,
+        ),
       AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
     );
   } catch {
-    controller.abort();
-    await deactivatePhysicalOwnerVault(ownerUserId).catch(() => undefined);
     return options?.requireVerifiedHydration
       ? ("blocked" as const)
       : ("ready" as const);
-  } finally {
-    controller.abort();
   }
 }
 
