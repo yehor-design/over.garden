@@ -292,8 +292,18 @@ export function runOnlineOnlyCanonCheck(
 export function formatOnlineOnlyCanonReceipt(
   receipt: OnlineOnlyCanonReceipt,
 ): string {
-  const { entries: _entries, ...redactedReceipt } = receipt;
-  return JSON.stringify(redactedReceipt);
+  return JSON.stringify({
+    version: receipt.version,
+    status: receipt.status,
+    baselineSha: receipt.baselineSha,
+    scope: receipt.scope,
+    scannedTrackedFiles: receipt.scannedTrackedFiles,
+    matchingSpans: receipt.matchingSpans,
+    counts: receipt.counts,
+    durationMs: receipt.durationMs,
+    digest: receipt.digest,
+    violations: receipt.violations,
+  });
 }
 
 export function parseOnlineOnlyCanonArguments(arguments_: readonly string[]): {
