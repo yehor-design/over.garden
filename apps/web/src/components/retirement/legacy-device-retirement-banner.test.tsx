@@ -40,6 +40,11 @@ describe("LegacyDeviceRetirementBanner", () => {
     const renderer = await renderBanner(port, { onSignOut });
 
     expect(text(renderer)).toMatch(/не вдалося безпечно видалити/i);
+    expect(
+      renderer.root.findByProps({
+        "data-legacy-device-retirement": "served_unresolved",
+      }),
+    ).toBeDefined();
     expect(text(renderer)).not.toMatch(/чернет|запис|фото|перенес/i);
     await click(renderer, /вийти/i);
     expect(onSignOut).toHaveBeenCalledOnce();

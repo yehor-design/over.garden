@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   acquireAuthenticatedSessionTabLease,
@@ -18,8 +18,14 @@ import {
   subscribeToSessionConvergence,
 } from "./session-convergence";
 import { SESSION_INVALIDATION_MARKER_STORAGE_KEY } from "./session-invalidation-marker";
+import {
+  getUnresolvedAuthorizationServeCounts,
+  resetUnresolvedAuthorizationServeCountsForTests,
+} from "./unresolved-authorization";
 
 describe("session convergence signals", () => {
+  beforeEach(() => resetUnresolvedAuthorizationServeCountsForTests());
+
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
@@ -319,20 +325,28 @@ describe("session convergence signals", () => {
     lease.release();
   });
 
-  it("fails closed when the initiating presence lease cannot be confirmed", () => {
+  it("serves sign-out with zero proven peers when the initiating presence lease cannot be confirmed", async () => {
     const harness = installBrowserHarness();
     const lease = acquireAuthenticatedSessionTabLease();
     harness.storage.removeItem(
       `overgarden:authenticated-session-tab:v1:${lease.tabId}`,
     );
 
-    expect(() =>
-      createPreparationAcknowledgementBarrier(
-        "op-missing-presence-1234",
-        lease.tabId,
-        "round-missing-presence-1234",
-      ),
-    ).toThrow(/presence could not be confirmed/i);
+    const barrier = createPreparationAcknowledgementBarrier(
+      "op-missing-presence-1234",
+      lease.tabId,
+      "round-missing-presence-1234",
+    );
+
+    expect(barrier.expectedTabCount).toBe(0);
+    await expect(barrier.wait()).resolves.toBeUndefined();
+    expect(getUnresolvedAuthorizationServeCounts()).toEqual([
+      {
+        owner: "session_presence",
+        unresolvedClass: "session_unresolved",
+        count: 1,
+      },
+    ]);
     lease.release();
   });
 

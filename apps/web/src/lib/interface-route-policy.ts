@@ -22,6 +22,10 @@ export type SessionRecheckMode =
   | "compatibility_fenced"
   | "effect_closed_non_fencing";
 
+export type SessionOwnershipUncertaintyMode =
+  | "serve_unresolved"
+  | "preserve_payload_free_exit";
+
 export const INTERFACE_UTILITY_CONTROL_PREFIXES = [
   "/admin/communities",
   "/admin/moderation/comments",
@@ -31,12 +35,11 @@ export const INTERFACE_UTILITY_CONTROL_PREFIXES = [
 ] as const;
 
 /**
- * A small allow-list of routes that remain useful while the local garden
- * ownership check is fail-closed. These routes must not render garden payloads
- * or authenticated navigation. They contain only the native account-erasure
- * request and its separately server-authorized owner review, so a failed local
- * garden hydration cannot trap a person in an account or prevent a requested
- * erasure from being completed.
+ * A small allow-list of payload-free account exits. These routes must not
+ * render garden payloads or authenticated navigation and therefore remain
+ * outside the local ownership gate entirely. The ownership uncertainty branch
+ * for ordinary server-admitted routes is classified separately below; route
+ * localization, sanitization, and these safe exits remain strict controls.
  */
 const SESSION_CONVERGENCE_SAFE_EXIT_PATHS = [
   "/erasure",
@@ -335,6 +338,19 @@ export function isSessionConvergenceSafeExitRoute(pathname: string) {
   return SESSION_CONVERGENCE_SAFE_EXIT_PATHS.some(
     (safeExitPath) => basePath === safeExitPath,
   );
+}
+
+/**
+ * ADR-0018 converts only an unresolved local ownership recheck for a
+ * server-admitted document. Payload-free erasure exits retain their existing
+ * bypass and every route/localization matcher remains untouched.
+ */
+export function getSessionOwnershipUncertaintyMode(
+  pathname: string,
+): SessionOwnershipUncertaintyMode {
+  return isSessionConvergenceSafeExitRoute(pathname)
+    ? "preserve_payload_free_exit"
+    : "serve_unresolved";
 }
 
 /**

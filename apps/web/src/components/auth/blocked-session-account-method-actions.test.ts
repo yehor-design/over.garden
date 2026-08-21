@@ -21,10 +21,15 @@ vi.mock("@/server/auth-session", () => ({
 }));
 
 import { getBlockedSessionAccountMethods } from "./blocked-session-account-method-actions";
+import {
+  getUnresolvedAuthorizationServeCounts,
+  resetUnresolvedAuthorizationServeCountsForTests,
+} from "@/lib/auth/unresolved-authorization";
 
 describe("blocked session account-method action", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetUnresolvedAuthorizationServeCountsForTests();
     mocks.hasCurrentSessionBinding.mockReturnValue(true);
     mocks.getCurrentSession.mockResolvedValue({ session: { id: "session-a" } });
     mocks.getSessionId.mockReturnValue("session-a");
@@ -76,13 +81,59 @@ describe("blocked session account-method action", () => {
     expect(mocks.getCurrentAccountMethodProjection).not.toHaveBeenCalled();
   });
 
-  it("hides a server read failure behind the generic unavailable result", async () => {
+  it("serves a retry projection with ownership_unresolved when the server read fails", async () => {
     mocks.getCurrentAccountMethodProjection.mockRejectedValue(
       new Error("account projection unavailable"),
     );
 
     await expect(
       getBlockedSessionAccountMethods("binding-for-a"),
-    ).resolves.toEqual({ status: "unavailable" });
+    ).resolves.toEqual({
+      status: "served_unresolved",
+      methods: {
+        readbackState: "retry",
+        hasCredential: false,
+        hasGoogle: false,
+        canSetPassword: false,
+        canLinkGoogle: false,
+      },
+      receipt: {
+        version: "ove332.unresolvedClass.v1",
+        status: "served_unresolved",
+        owner: "account_methods",
+        unresolvedClass: "ownership_unresolved",
+      },
+    });
+    expect(getUnresolvedAuthorizationServeCounts()).toEqual([
+      {
+        owner: "account_methods",
+        unresolvedClass: "ownership_unresolved",
+        count: 1,
+      },
+    ]);
+  });
+
+  it("serves the already-current projection when binding derivation is unresolved", async () => {
+    mocks.deriveCurrentSessionBinding.mockRejectedValueOnce(
+      new Error("crypto dependency unavailable"),
+    );
+
+    await expect(
+      getBlockedSessionAccountMethods("binding-for-a"),
+    ).resolves.toMatchObject({
+      status: "served_unresolved",
+      methods: {
+        readbackState: "ready",
+        hasCredential: false,
+        hasGoogle: true,
+        canSetPassword: true,
+        canLinkGoogle: false,
+      },
+      receipt: {
+        owner: "account_methods",
+        unresolvedClass: "ownership_unresolved",
+      },
+    });
+    expect(mocks.getCurrentAccountMethodProjection).toHaveBeenCalledOnce();
   });
 });

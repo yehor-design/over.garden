@@ -4,6 +4,7 @@ import {
   buildLocalizedInterfaceTarget,
   getInterfaceLanguageControlPlacement,
   getInterfaceRoutePolicy,
+  getSessionOwnershipUncertaintyMode,
   getSessionRecheckMode,
   INTERFACE_UTILITY_CONTROL_PREFIXES,
   isSessionConvergenceSafeExitRoute,
@@ -119,6 +120,26 @@ describe("interface route policy", () => {
     ).toBe(true);
     expect(isSessionConvergenceSafeExitRoute("/garden/profile")).toBe(false);
     expect(isSessionConvergenceSafeExitRoute("/erasure/untrusted")).toBe(false);
+  });
+
+  it("serves only the unresolved ownership branch while preserving payload-free exits", () => {
+    for (const pathname of [
+      "/garden",
+      "/garden/profile",
+      "/garden/entries/00000000-0000-4000-8000-000000000123/edit",
+      "/health",
+    ]) {
+      expect(getSessionOwnershipUncertaintyMode(pathname), pathname).toBe(
+        "serve_unresolved",
+      );
+    }
+
+    expect(getSessionOwnershipUncertaintyMode("/erasure")).toBe(
+      "preserve_payload_free_exit",
+    );
+    expect(
+      getSessionOwnershipUncertaintyMode("/garden/privacy/erasure-requests"),
+    ).toBe("preserve_payload_free_exit");
   });
 
   it("converges generic prefixed not-found routes while leaving unknown unprefixed routes canonical", () => {

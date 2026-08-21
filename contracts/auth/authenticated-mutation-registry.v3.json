@@ -23003,6 +23003,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/blocked-session-account-method-actions.ts",
+        "src/lib/auth/unresolved-authorization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/blocked-session-account-method-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/unresolved-authorization",
+      "sourceNodeId": "source:519cd339dcc544cadaa5",
+      "symbol": "recordUnresolvedAuthorizationServe"
+    },
+    {
+      "evidencePaths": [
         "src/app/admin/communities/[slug]/actions.ts",
         "src/app/admin/communities/[slug]/page.tsx"
       ],
@@ -29373,6 +29385,18 @@
       "semanticVariant": "from:../account-methods-panel",
       "sourceNodeId": "source:946a830c8863a621af52",
       "symbol": "AccountMethodsPanel"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/auth/unresolved-authorization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/unresolved-authorization",
+      "sourceNodeId": "source:9473fc69d1021c8a1255",
+      "symbol": "recordUnresolvedAuthorizationServe"
     },
     {
       "evidencePaths": [
@@ -36243,6 +36267,18 @@
       "semanticVariant": "from:@/components/auth/document-mutation-recovery",
       "sourceNodeId": "source:d881d51e95d1d48a683c",
       "symbol": "DocumentMutationActionForm"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/interface-route-policy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/interface-route-policy",
+      "sourceNodeId": "source:d889336e8566cb5671b2",
+      "symbol": "SessionOwnershipUncertaintyMode"
     },
     {
       "evidencePaths": [

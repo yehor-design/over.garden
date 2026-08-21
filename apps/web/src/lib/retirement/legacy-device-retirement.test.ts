@@ -1,4 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  getUnresolvedAuthorizationServeCounts,
+  resetUnresolvedAuthorizationServeCountsForTests,
+} from "@/lib/auth/unresolved-authorization";
 
 import { KnownClientStorageError } from "./known-client-storage";
 import {
@@ -8,6 +13,8 @@ import {
 } from "./legacy-device-retirement";
 
 describe("legacy device retirement controller", () => {
+  beforeEach(() => resetUnresolvedAuthorizationServeCountsForTests());
+
   it("silently confirms exact-name retirement with two absence reads", async () => {
     const port = mockPort();
     const controller = createLegacyDeviceRetirementController({ port });
@@ -21,6 +28,7 @@ describe("legacy device retirement controller", () => {
       deletedDatabaseCount: 3,
       unregisteredWorkerCount: 1,
       unresolvedBindingCount: 0,
+      unresolvedClass: null,
       errorCode: null,
       lastAction: null,
     });
@@ -28,7 +36,7 @@ describe("legacy device retirement controller", () => {
     expect(port.retire).toHaveBeenCalledWith(expect.any(AbortSignal));
   });
 
-  it("retains unresolved owner storage and exposes a content-free retry state", async () => {
+  it("retains unresolved owner storage while serving with a counted ownership class", async () => {
     const port = mockPort({
       status: "unresolved_retained",
       unresolvedBindingCount: 2,
@@ -40,15 +48,23 @@ describe("legacy device retirement controller", () => {
     await controller.inspect();
 
     expect(controller.getSnapshot()).toEqual({
-      state: "deletion_blocked",
+      state: "served_unresolved",
       visible: true,
       absenceReads: 2,
       deletedDatabaseCount: 1,
       unregisteredWorkerCount: 0,
       unresolvedBindingCount: 2,
-      errorCode: "unresolved_legacy_binding",
+      unresolvedClass: "ownership_unresolved",
+      errorCode: null,
       lastAction: null,
     });
+    expect(getUnresolvedAuthorizationServeCounts()).toEqual([
+      {
+        owner: "legacy_device_retirement",
+        unresolvedClass: "ownership_unresolved",
+        count: 1,
+      },
+    ]);
     expect(JSON.stringify(controller.getSnapshot())).not.toMatch(
       /payload|title|body|email|userId|ownerUserId/i,
     );

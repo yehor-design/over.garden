@@ -52,6 +52,7 @@ import {
 } from "@/lib/operator-menu-copy";
 import {
   getInterfaceLanguageControlPlacement,
+  getSessionOwnershipUncertaintyMode,
   getSessionRecheckMode,
   isSessionConvergenceSafeExitRoute,
 } from "@/lib/interface-route-policy";
@@ -97,6 +98,8 @@ export function SiteShell({
   const isSessionConvergenceSafeExit =
     isSessionConvergenceSafeExitRoute(pathname);
   const sessionRecheckMode = getSessionRecheckMode(pathname);
+  const sessionOwnershipUncertaintyMode =
+    getSessionOwnershipUncertaintyMode(pathname);
   const [routeContextModules, setRouteContextModules] = useState<
     SiteShellContextRailModule[] | null
   >(null);
@@ -182,6 +185,7 @@ export function SiteShell({
         localeControlFallback={sessionConvergenceLocaleControl}
         currentSessionBinding={currentSessionBinding}
         recheckMode={sessionRecheckMode}
+        ownershipUncertaintyMode={sessionOwnershipUncertaintyMode}
       >
         <DocumentMutationGenerationProvider
           locale={locale}
@@ -637,6 +641,7 @@ export function SiteShell({
       localeControlFallback={sessionConvergenceLocaleControl}
       currentSessionBinding={currentSessionBinding}
       recheckMode={sessionRecheckMode}
+      ownershipUncertaintyMode={sessionOwnershipUncertaintyMode}
     >
       <DocumentMutationGenerationProvider
         locale={locale}

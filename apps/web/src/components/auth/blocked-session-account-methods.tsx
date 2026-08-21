@@ -22,6 +22,7 @@ type AccountMethodsState =
   | { kind: "idle" }
   | { kind: "pending" }
   | { kind: "ready"; methods: AccountMethodProjection }
+  | { kind: "served_unresolved"; methods: AccountMethodProjection }
   | { kind: "unavailable" };
 
 export function BlockedSessionAccountMethods({
@@ -57,7 +58,9 @@ export function BlockedSessionAccountMethods({
       setState(
         result?.status === "ready"
           ? { kind: "ready", methods: result.methods }
-          : { kind: "unavailable" },
+          : result?.status === "served_unresolved"
+            ? { kind: "served_unresolved", methods: result.methods }
+            : { kind: "unavailable" },
       );
     } finally {
       if (requestGenerationRef.current === generation) {
@@ -72,13 +75,25 @@ export function BlockedSessionAccountMethods({
       aria-label={copy.blockedAccountMethodsRegionLabel}
       data-session-convergence-account-methods="true"
     >
-      {state.kind === "ready" ? (
-        <AccountMethodsPanel
-          {...state.methods}
-          canLinkGoogle={false}
-          locale={locale}
-          onMethodsChanged={() => void requestMethods()}
-        />
+      {state.kind === "ready" || state.kind === "served_unresolved" ? (
+        <>
+          {state.kind === "served_unresolved" ? (
+            <p
+              role="status"
+              aria-live="polite"
+              className="text-sm text-muted-foreground"
+              data-session-convergence-account-methods-served-unresolved="true"
+            >
+              {copy.blockedAccountMethodsServedUnresolved}
+            </p>
+          ) : null}
+          <AccountMethodsPanel
+            {...state.methods}
+            canLinkGoogle={false}
+            locale={locale}
+            onMethodsChanged={() => void requestMethods()}
+          />
+        </>
       ) : (
         <>
           <p className="text-sm leading-6 text-muted-foreground">

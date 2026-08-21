@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   pathname: "/",
   localeControlFallback: null as React.ReactNode,
   sessionRecheckMode: null as string | null,
+  ownershipUncertaintyMode: null as string | null,
   currentSessionBinding: null as string | null,
 }));
 
@@ -17,20 +18,24 @@ vi.mock("@/components/auth/session-convergence-boundary", () => ({
     children,
     localeControlFallback,
     recheckMode,
+    ownershipUncertaintyMode,
     currentSessionBinding,
   }: {
     children: React.ReactNode;
     localeControlFallback?: React.ReactNode;
     recheckMode: string;
+    ownershipUncertaintyMode: string;
     currentSessionBinding: string | null;
   }) => {
     mocks.localeControlFallback = localeControlFallback ?? null;
     mocks.sessionRecheckMode = recheckMode;
+    mocks.ownershipUncertaintyMode = ownershipUncertaintyMode;
     mocks.currentSessionBinding = currentSessionBinding;
     return (
       <div
         data-session-convergence-boundary="true"
         data-session-recheck-mode={recheckMode}
+        data-ownership-uncertainty-mode={ownershipUncertaintyMode}
         data-current-session-binding={currentSessionBinding ?? "missing"}
       >
         {children}
@@ -71,6 +76,7 @@ describe("production site shell", () => {
     mocks.pathname = "/";
     mocks.localeControlFallback = null;
     mocks.sessionRecheckMode = null;
+    mocks.ownershipUncertaintyMode = null;
     mocks.currentSessionBinding = null;
   });
 
@@ -162,6 +168,9 @@ describe("production site shell", () => {
       'data-document-mutation-generation="opaque-generation"',
     );
     expect(html).toContain('data-session-recheck-mode="compatibility_fenced"');
+    expect(html).toContain(
+      'data-ownership-uncertainty-mode="serve_unresolved"',
+    );
     expect(html).toContain(
       'data-current-session-binding="opaque-current-session-binding"',
     );
@@ -378,7 +387,7 @@ describe("production site shell", () => {
     );
     expect(
       source.match(
-        /<SessionConvergenceBoundary\s+locale=\{locale\}\s+localeControlFallback=\{sessionConvergenceLocaleControl\}\s+currentSessionBinding=\{currentSessionBinding\}\s+recheckMode=\{sessionRecheckMode\}\s*>[\s\S]*?<DocumentMutationGenerationProvider[\s\S]*?<SignOutProvider\s+locale=\{locale\}\s+currentSessionBinding=\{currentSessionBinding\}\s*>[\s\S]*?<\/SignOutProvider>[\s\S]*?<\/DocumentMutationGenerationProvider>[\s\S]*?<\/SessionConvergenceBoundary>/g,
+        /<SessionConvergenceBoundary\s+locale=\{locale\}\s+localeControlFallback=\{sessionConvergenceLocaleControl\}\s+currentSessionBinding=\{currentSessionBinding\}\s+recheckMode=\{sessionRecheckMode\}\s+ownershipUncertaintyMode=\{sessionOwnershipUncertaintyMode\}\s*>[\s\S]*?<DocumentMutationGenerationProvider[\s\S]*?<SignOutProvider\s+locale=\{locale\}\s+currentSessionBinding=\{currentSessionBinding\}\s*>[\s\S]*?<\/SignOutProvider>[\s\S]*?<\/DocumentMutationGenerationProvider>[\s\S]*?<\/SessionConvergenceBoundary>/g,
       ),
     ).toHaveLength(2);
     expect(source).not.toMatch(

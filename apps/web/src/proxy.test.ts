@@ -17,6 +17,10 @@ import {
   config,
   proxy,
 } from "./proxy";
+import {
+  getUnresolvedAuthorizationServeCounts,
+  resetUnresolvedAuthorizationServeCountsForTests,
+} from "@/lib/auth/unresolved-authorization";
 
 const mocks = vi.hoisted(() => ({
   getPublicObjectPassportLookup: vi.fn().mockResolvedValue({
@@ -764,6 +768,35 @@ describe("app route cache guardrail", () => {
       "blocked_garden",
       viewerUserId,
     );
+  });
+
+  it("serves the profile lifecycle read as an unresolved viewer when session lookup rejects", async () => {
+    resetUnresolvedAuthorizationServeCountsForTests();
+    mocks.getSession.mockRejectedValueOnce(
+      new Error("session lookup unavailable"),
+    );
+    mocks.getPublicProfileLifecycleLookup.mockResolvedValueOnce({
+      status: "active",
+    });
+
+    const response = await responseFor("/bg/@active_garden", {
+      accept: "text/html",
+      cookie: "__Secure-overgarden.session_token=opaque-test-token",
+      "sec-fetch-dest": "document",
+    });
+
+    expect(response.status).toBe(200);
+    expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
+      "active_garden",
+      null,
+    );
+    expect(getUnresolvedAuthorizationServeCounts()).toEqual([
+      {
+        owner: "public_profile_proxy",
+        unresolvedClass: "proxy_ambiguous",
+        count: 1,
+      },
+    ]);
   });
 
   it("hard-classifies unavailable communities without intercepting active or RSC routes", async () => {

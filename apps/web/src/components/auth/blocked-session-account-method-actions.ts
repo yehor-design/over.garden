@@ -4,6 +4,7 @@ import {
   deriveCurrentSessionBinding,
   hasCurrentSessionBinding,
 } from "@/lib/auth/current-session-binding";
+import { recordUnresolvedAuthorizationServe } from "@/lib/auth/unresolved-authorization";
 import {
   getCurrentAccountMethodProjection,
   type AccountMethodProjection,
@@ -12,6 +13,11 @@ import { getCurrentSession, getSessionId } from "@/server/auth-session";
 
 export type BlockedSessionAccountMethodsResult =
   | { status: "ready"; methods: AccountMethodProjection }
+  | {
+      status: "served_unresolved";
+      methods: AccountMethodProjection;
+      receipt: ReturnType<typeof recordUnresolvedAuthorizationServe>;
+    }
   | { status: "unavailable" };
 
 /**
@@ -26,21 +32,64 @@ export async function getBlockedSessionAccountMethods(
     return { status: "unavailable" };
   }
 
+  let session: Awaited<ReturnType<typeof getCurrentSession>>;
   try {
-    const session = await getCurrentSession();
-    const sessionId = getSessionId(session);
-    if (!sessionId) return { status: "unavailable" };
+    session = await getCurrentSession();
+  } catch {
+    return serveUnresolvedAccountMethodsWithProjection();
+  }
+  const sessionId = getSessionId(session);
+  if (!sessionId) return { status: "unavailable" };
 
-    const currentBinding = await deriveCurrentSessionBinding(sessionId);
-    if (currentBinding !== expectedSessionBinding) {
-      return { status: "unavailable" };
-    }
+  let currentBinding: string;
+  try {
+    currentBinding = await deriveCurrentSessionBinding(sessionId);
+  } catch {
+    return serveUnresolvedAccountMethodsWithProjection();
+  }
+  if (currentBinding !== expectedSessionBinding) {
+    return { status: "unavailable" };
+  }
 
+  try {
     return {
       status: "ready",
       methods: await getCurrentAccountMethodProjection(),
     };
   } catch {
-    return { status: "unavailable" };
+    return serveUnresolvedAccountMethods(retryProjection());
   }
+}
+
+async function serveUnresolvedAccountMethodsWithProjection() {
+  let methods: AccountMethodProjection;
+  try {
+    methods = await getCurrentAccountMethodProjection();
+  } catch {
+    methods = retryProjection();
+  }
+  return serveUnresolvedAccountMethods(methods);
+}
+
+function serveUnresolvedAccountMethods(
+  methods: AccountMethodProjection,
+): BlockedSessionAccountMethodsResult {
+  return {
+    status: "served_unresolved",
+    methods,
+    receipt: recordUnresolvedAuthorizationServe(
+      "account_methods",
+      "ownership_unresolved",
+    ),
+  };
+}
+
+function retryProjection(): AccountMethodProjection {
+  return {
+    readbackState: "retry",
+    hasCredential: false,
+    hasGoogle: false,
+    canSetPassword: false,
+    canLinkGoogle: false,
+  };
 }
