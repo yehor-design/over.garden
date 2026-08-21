@@ -8,22 +8,31 @@ import {
   admitSafeMediaBytes,
   detectSafeMediaType,
 } from "./safe-media-admission";
-import { isPublicMediaEligible } from "./public-media-eligibility";
+import {
+  classifyPublicMediaProjection,
+  isPublicMediaEligible,
+  isPublicMediaVerifiedForProcessing,
+} from "./public-media-eligibility";
 
 describe("OVE-244 safe media admission", () => {
   it.each([
     ["image/jpeg", "jpeg"],
     ["image/png", "png"],
     ["image/webp", "webp"],
-  ] as const)("admits actual %s bytes before decode", async (contentType, format) => {
-    const pipeline = sharp({
-      create: { width: 32, height: 24, channels: 3, background: "green" },
-    });
-    const bytes = await pipeline[format]().toBuffer();
+  ] as const)(
+    "admits actual %s bytes before decode",
+    async (contentType, format) => {
+      const pipeline = sharp({
+        create: { width: 32, height: 24, channels: 3, background: "green" },
+      });
+      const bytes = await pipeline[format]().toBuffer();
 
-    await expect(admitSafeMediaBytes(bytes, contentType)).resolves.toBe(contentType);
-    expect(detectSafeMediaType(bytes)).toBe(contentType);
-  });
+      await expect(admitSafeMediaBytes(bytes, contentType)).resolves.toBe(
+        contentType,
+      );
+      expect(detectSafeMediaType(bytes)).toBe(contentType);
+    },
+  );
 
   it("recognizes the closed HEIC brand family without trusting an extension", () => {
     const bytes = Buffer.alloc(16);
@@ -36,7 +45,9 @@ describe("OVE-244 safe media admission", () => {
   it("rejects declared/actual mismatch, SVG and valid-image polyglot suffixes", async () => {
     const png = await sharp({
       create: { width: 16, height: 16, channels: 3, background: "red" },
-    }).png().toBuffer();
+    })
+      .png()
+      .toBuffer();
     await expect(admitSafeMediaBytes(png, "image/jpeg")).rejects.toMatchObject({
       code: "declared_actual_mismatch",
     });
@@ -46,18 +57,22 @@ describe("OVE-244 safe media admission", () => {
 
     const jpeg = await sharp({
       create: { width: 16, height: 16, channels: 3, background: "blue" },
-    }).jpeg().toBuffer();
+    })
+      .jpeg()
+      .toBuffer();
     const polyglot = Buffer.concat([
       jpeg,
       Buffer.from("<script>alert(1)</script>"),
     ]);
-    await expect(admitSafeMediaBytes(polyglot, "image/jpeg")).rejects.toMatchObject({
+    await expect(
+      admitSafeMediaBytes(polyglot, "image/jpeg"),
+    ).rejects.toMatchObject({
       code: "polyglot_rejected",
     });
     expect(detectSafeMediaType(polyglot)).toBeNull();
   });
 
-  it("fails public serialization closed until every readiness proof is present", () => {
+  it("admits converted non-revoked public media and carries transitional quality", () => {
     const ready = {
       status: "processed",
       derivativeKey: "derivatives/opaque.webp",
@@ -69,14 +84,37 @@ describe("OVE-244 safe media admission", () => {
       qualityClass: "accepted",
     };
     expect(isPublicMediaEligible(ready)).toBe(true);
-    for (const missing of [
+    expect(isPublicMediaVerifiedForProcessing(ready)).toBe(true);
+    expect(classifyPublicMediaProjection(ready)).toEqual({
+      state: "admitted_verified",
+      qualityClass: "verified",
+      qualityReasons: [],
+    });
+    for (const transitional of [
       { ...ready, originalDeletedAt: null },
       { ...ready, mediaReadinessState: "derivative_written" },
       { ...ready, publicObjectId: null },
-      { ...ready, revokedAt: new Date() },
       { ...ready, qualityClass: "review_required" },
       { ...ready, qualityPolicyVersion: "stale-policy" },
-    ]) expect(isPublicMediaEligible(missing)).toBe(false);
+    ]) {
+      expect(isPublicMediaEligible(transitional)).toBe(true);
+      expect(isPublicMediaVerifiedForProcessing(transitional)).toBe(false);
+      expect(classifyPublicMediaProjection(transitional)).toEqual({
+        state: "admitted_partial",
+        qualityClass: "partial",
+        qualityReasons: ["media_projection_unresolved"],
+      });
+    }
+    expect(
+      classifyPublicMediaProjection({ ...ready, revokedAt: new Date() }),
+    ).toEqual({
+      state: "excluded",
+      qualityClass: "unverified",
+      qualityReasons: ["media_projection_unresolved"],
+    });
+    expect(isPublicMediaEligible({ ...ready, revokedAt: new Date() })).toBe(
+      false,
+    );
     expect(
       isPublicMediaEligible({
         ...ready,

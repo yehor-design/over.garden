@@ -465,6 +465,10 @@ describe("journal repository query contracts", () => {
       'distinct on ("journal_entries"."plant_object_id")',
     );
     expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.sql).toContain('"media_assets"."revoked_at" is null');
+    expect(compiled.sql).not.toMatch(
+      /original_deleted_at|media_readiness_state|quality_policy_version|quality_class/,
+    );
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000001",
@@ -472,9 +476,6 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000004",
       "active",
       "processed",
-      "public_ready",
-      "ove231.launch-media-quality.v1",
-      "accepted",
       "inline",
     ]);
   });
@@ -1140,7 +1141,9 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('from "journal_entries"');
     expect(compiled.sql).toContain('"journal_entries"."id" = $7');
     expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $8');
-    expect(compiled.sql).toContain('from "media_assets" as "existing_entry_media"');
+    expect(compiled.sql).toContain(
+      'from "media_assets" as "existing_entry_media"',
+    );
     expect(compiled.sql).toContain(
       '"existing_entry_media"."journal_entry_id" = $',
     );
@@ -1187,16 +1190,17 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"media_assets"."document_position" asc');
     expect(compiled.sql).toContain('"media_assets"."id" asc');
     expect(compiled.sql).not.toContain('"media_assets"."created_at" asc');
-    expect(compiled.sql).toContain("limit $9");
+    expect(compiled.sql).toContain("limit $6");
     expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.sql).toContain('"media_assets"."revoked_at" is null');
+    expect(compiled.sql).not.toMatch(
+      /original_deleted_at|media_readiness_state|quality_policy_version|quality_class/,
+    );
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000020",
       "public",
       "active",
       "processed",
-      "public_ready",
-      "ove231.launch-media-quality.v1",
-      "accepted",
       "inline",
       10,
     ]);
@@ -1217,14 +1221,15 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"status" = $4');
     expect(compiled.sql).toContain('"derivative_key" is not null');
     expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.sql).toContain('"revoked_at" is null');
+    expect(compiled.sql).not.toMatch(
+      /original_deleted_at|media_readiness_state|quality_policy_version|quality_class/,
+    );
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000020",
       "00000000-0000-0000-0000-000000000021",
       "processed",
-      "public_ready",
-      "ove231.launch-media-quality.v1",
-      "accepted",
     ]);
   });
 

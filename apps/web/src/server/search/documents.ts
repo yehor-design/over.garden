@@ -4,6 +4,11 @@ import {
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
 import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
+import {
+  searchProjectionQuality,
+  type PublicProjectionQualityClass,
+  type PublicProjectionQualityReason,
+} from "@/lib/public-projection-quality";
 import { isSafeJournalSearchDocumentId } from "@/server/search/public-journal-document-id";
 
 /*
@@ -40,6 +45,7 @@ export interface JournalEntrySearchContractRow {
   owner_profile_public_safe: boolean;
   cover_source?: JournalSearchCoverSource | null;
   cover_public_url?: string | null;
+  cover_projection_quality?: PublicProjectionQualityClass | null;
 }
 
 export interface JournalEntrySearchContractDocument {
@@ -57,6 +63,8 @@ export interface JournalEntrySearchContractDocument {
   kind: "journal_entry";
   coverSource: JournalSearchCoverSource;
   coverPublicUrl?: string;
+  qualityClass: PublicProjectionQualityClass;
+  qualityReasons: PublicProjectionQualityReason[];
 }
 
 export function buildJournalEntrySearchDocumentContractFixture(
@@ -72,12 +80,19 @@ export function buildJournalEntrySearchDocumentContractFixture(
   if (!entry.title.trim() || !entry.body.trim()) return null;
   if (!isPublicEntryScope(entry.entry_scope)) return null;
   if (!isPublicLocationVisibility(entry.location_visibility)) return null;
-  const coarseRegionCode =
+  const normalizedCoarseRegionCode =
     entry.location_visibility === "region"
       ? normalizeCoarseRegionCode(entry.coarse_region_code)
       : null;
-  if (entry.location_visibility === "region" && !coarseRegionCode) {
-    return null;
+  const qualityReasons: PublicProjectionQualityReason[] = [];
+  const locationVisibility =
+    entry.location_visibility === "region" && !normalizedCoarseRegionCode
+      ? "hidden"
+      : entry.location_visibility;
+  const coarseRegionCode =
+    locationVisibility === "region" ? normalizedCoarseRegionCode : null;
+  if (entry.location_visibility === "region" && !normalizedCoarseRegionCode) {
+    qualityReasons.push("coarse_region_unavailable");
   }
 
   // OVE-234: legacy rows written before the firewall must never be projected
@@ -89,14 +104,26 @@ export function buildJournalEntrySearchDocumentContractFixture(
     return null;
   }
 
-  const coverSource = normalizeCoverSource(entry.cover_source);
-  const coverPublicUrl =
-    coverSource === "none"
+  const requestedCoverSource = normalizeCoverSource(entry.cover_source);
+  const normalizedCoverPublicUrl =
+    requestedCoverSource === "none"
       ? null
       : normalizeCoverPublicUrl(entry.cover_public_url);
-  if (coverSource !== "none" && !coverPublicUrl) {
-    return null;
+  const coverProjectionResolved =
+    requestedCoverSource === "none" ||
+    (normalizedCoverPublicUrl !== null &&
+      entry.cover_projection_quality !== "unverified");
+  const coverSource = coverProjectionResolved ? requestedCoverSource : "none";
+  const coverPublicUrl = coverProjectionResolved
+    ? normalizedCoverPublicUrl
+    : null;
+  if (
+    !coverProjectionResolved ||
+    entry.cover_projection_quality === "partial"
+  ) {
+    qualityReasons.push("media_projection_unresolved");
   }
+  const quality = searchProjectionQuality(qualityReasons);
 
   return {
     id: entry.id.toLowerCase(),
@@ -104,7 +131,7 @@ export function buildJournalEntrySearchDocumentContractFixture(
     body: entry.body,
     publicSlug: entry.public_slug,
     publicPath: publicJournalEntryPath(entry.public_slug),
-    locationVisibility: entry.location_visibility,
+    locationVisibility,
     ...(coarseRegionCode ? { coarseRegionCode } : {}),
     noindex: entry.public_noindex,
     entryDate: normalizeCalendarDate(entry.entry_date),
@@ -113,6 +140,7 @@ export function buildJournalEntrySearchDocumentContractFixture(
     kind: "journal_entry",
     coverSource,
     ...(coverPublicUrl ? { coverPublicUrl } : {}),
+    ...quality,
   };
 }
 

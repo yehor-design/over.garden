@@ -349,7 +349,24 @@ describe("analytics event privacy contracts", () => {
     ]);
   });
 
-  it("logs event write failures without failing the caller", async () => {
+  it("returns a verified receipt after an event write", async () => {
+    const event = { id: "00000000-0000-4000-8000-000000000010" } as never;
+
+    await expect(
+      recordAnalyticsEventSafely(
+        scope,
+        { eventName: "entry_logged" },
+        { recorder: async () => event },
+      ),
+    ).resolves.toEqual({
+      status: "recorded_verified",
+      event,
+      qualityClass: "verified",
+      qualityReasons: [],
+    });
+  });
+
+  it("returns a redacted degraded receipt without failing the caller", async () => {
     const logger = { error: vi.fn() };
 
     const result = await recordAnalyticsEventSafely(
@@ -372,11 +389,39 @@ describe("analytics event privacy contracts", () => {
       },
     );
 
-    expect(result).toBeNull();
+    expect(result).toEqual({
+      status: "delivery_degraded",
+      event: null,
+      qualityClass: "unverified",
+      qualityReasons: ["analytics_delivery_unavailable"],
+    });
     expect(logger.error).toHaveBeenCalledWith("Analytics event write failed.", {
       eventName: "entry_logged",
-      error: "database unavailable",
+      status: "delivery_degraded",
+      qualityClass: "unverified",
+      qualityReasons: ["analytics_delivery_unavailable"],
     });
+    expect(JSON.stringify(logger.error.mock.calls)).not.toContain(
+      "database unavailable",
+    );
+  });
+
+  it("rejects unsafe analytics input instead of relabelling it as delivery uncertainty", async () => {
+    const logger = { error: vi.fn() };
+    const recorder = vi.fn();
+
+    await expect(
+      recordAnalyticsEventSafely(
+        scope,
+        {
+          eventName: "entry_logged",
+          properties: { body: "private journal text" } as never,
+        },
+        { logger, recorder },
+      ),
+    ).rejects.toThrow("Forbidden analytics event property: body.");
+    expect(recorder).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   it("flags dated entries earlier than today without sending raw dates in props", () => {

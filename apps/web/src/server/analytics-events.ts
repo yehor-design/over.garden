@@ -27,6 +27,7 @@ import type {
 } from "@/db/schema";
 import type { RequestScope } from "@/server/request-scope";
 import { assertNoPreciseLocationTextInValues } from "@/lib/privacy/precise-location-text";
+import { analyticsDeliveryQuality } from "@/lib/public-projection-quality";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type NewAnalyticsEventRow = Insertable<Database["analytics_events"]>;
@@ -90,6 +91,20 @@ type AnalyticsEventRecorder = (
   scope: RequestScope,
   input: RecordAnalyticsEventInput,
 ) => Promise<AnalyticsEvent>;
+
+export type AnalyticsDeliveryReceipt =
+  | {
+      status: "recorded_verified";
+      event: AnalyticsEvent;
+      qualityClass: "verified";
+      qualityReasons: [];
+    }
+  | {
+      status: "delivery_degraded";
+      event: null;
+      qualityClass: "unverified";
+      qualityReasons: ["analytics_delivery_unavailable"];
+    };
 
 const ALLOWED_EVENT_NAMES = new Set<AnalyticsEventName>([
   "activation_started",
@@ -174,52 +189,76 @@ export async function recordAnalyticsEventSafely(
     recorder?: AnalyticsEventRecorder;
     logger?: Pick<Console, "error">;
   } = {},
-): Promise<AnalyticsEvent | null> {
+): Promise<AnalyticsDeliveryReceipt> {
   const recorder = options.recorder ?? recordAnalyticsEvent;
   const logger = options.logger ?? console;
 
+  // Contract violations are not delivery uncertainty. Reject them before the
+  // best-effort recorder boundary so unsafe payloads cannot be relabelled as a
+  // harmless degraded write.
+  normalizeEventName(input.eventName);
+  normalizeAnalyticsEventProperties(input.properties ?? {});
+
   try {
-    return await recorder(scope, input);
-  } catch (error) {
+    return recordedAnalyticsDelivery(await recorder(scope, input));
+  } catch {
+    const receipt = degradedAnalyticsDelivery();
     logger.error("Analytics event write failed.", {
       eventName: input.eventName,
-      error: normalizeErrorForLog(error),
+      status: receipt.status,
+      qualityClass: receipt.qualityClass,
+      qualityReasons: receipt.qualityReasons,
     });
-    return null;
+    return receipt;
   }
 }
 
 export async function recordEntryLoggedEventSafely(
   scope: RequestScope,
   input: Omit<RecordAnalyticsEventInput, "eventName" | "relatedEventId">,
-): Promise<AnalyticsEvent | null> {
+): Promise<AnalyticsDeliveryReceipt> {
+  let linkableRevisit: AnalyticsEvent | null | undefined;
   try {
-    const linkableRevisit = await findLinkableOwnRecordRevisitEvent(
+    linkableRevisit = await findLinkableOwnRecordRevisitEvent(
       scope,
       input.plantObjectId ?? null,
     );
-    const event = await recordAnalyticsEvent(scope, {
-      ...input,
+  } catch {
+    const receipt = degradedAnalyticsDelivery();
+    console.error("Analytics event write failed.", {
       eventName: "entry_logged",
-      relatedEventId: linkableRevisit?.id ?? null,
+      status: receipt.status,
+      qualityClass: receipt.qualityClass,
+      qualityReasons: receipt.qualityReasons,
     });
+    return receipt;
+  }
 
-    if (linkableRevisit) {
+  const delivery = await recordAnalyticsEventSafely(scope, {
+    ...input,
+    eventName: "entry_logged",
+    relatedEventId: linkableRevisit?.id ?? null,
+  });
+  if (delivery.status === "delivery_degraded") return delivery;
+
+  if (linkableRevisit) {
+    try {
       await buildMarkOwnRecordRevisitFollowedByActionQuery(
         db,
         scope,
         linkableRevisit.id,
       ).executeTakeFirst();
+    } catch {
+      console.error("Analytics follow-up link write failed.", {
+        eventName: "entry_logged",
+        status: "delivery_degraded",
+        qualityClass: "unverified",
+        qualityReasons: ["analytics_delivery_unavailable"],
+      });
     }
-
-    return event;
-  } catch (error) {
-    console.error("Analytics event write failed.", {
-      eventName: "entry_logged",
-      error: normalizeErrorForLog(error),
-    });
-    return null;
   }
+
+  return delivery;
 }
 
 export function buildInsertAnalyticsEventQuery(
@@ -495,8 +534,24 @@ function normalizeOptionalText(value: string | null | undefined) {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function normalizeErrorForLog(error: unknown) {
-  return error instanceof Error ? error.message : "Unknown analytics error.";
+function recordedAnalyticsDelivery(
+  event: AnalyticsEvent,
+): AnalyticsDeliveryReceipt {
+  const quality = analyticsDeliveryQuality(true);
+  return {
+    status: "recorded_verified",
+    event,
+    ...quality,
+  };
+}
+
+function degradedAnalyticsDelivery(): AnalyticsDeliveryReceipt {
+  const quality = analyticsDeliveryQuality(false);
+  return {
+    status: "delivery_degraded",
+    event: null,
+    ...quality,
+  };
 }
 
 function toDateKey(value: Date | string) {

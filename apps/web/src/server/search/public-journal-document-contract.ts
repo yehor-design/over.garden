@@ -24,6 +24,12 @@ import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { isValidPublicJournalSlug } from "@/lib/garden/public-journal-slug";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
 import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
+import {
+  isPublicProjectionQualityClass,
+  isPublicSearchProjectionQualityReason,
+  normalizePublicProjectionQualityReasons,
+  type PublicProjectionQualityReason,
+} from "@/lib/public-projection-quality";
 import { isSafeJournalSearchDocumentId } from "@/server/search/public-journal-document-id";
 import type {
   JournalEntrySearchContractDocument,
@@ -43,6 +49,8 @@ export const REQUIRED_JOURNAL_DOCUMENT_FIELDS = [
   "noindex",
   "publicPath",
   "publicSlug",
+  "qualityClass",
+  "qualityReasons",
   "title",
 ] as const;
 
@@ -127,6 +135,8 @@ export const JOURNAL_DOCUMENT_REASONS = [
   "invalid_created_at",
   "invalid_cover_source",
   "invalid_cover_public_url",
+  "invalid_quality_class",
+  "invalid_quality_reasons",
   "precise_location_text",
 ] as const;
 
@@ -303,6 +313,38 @@ export function validateObservedJournalSearchDocument(
     }
   }
 
+  const qualityClass = isPublicProjectionQualityClass(doc.qualityClass)
+    ? doc.qualityClass
+    : null;
+  if (qualityClass === null) {
+    fail("invalid_quality_class", "qualityClass");
+  }
+
+  const rawQualityReasons = doc.qualityReasons;
+  let qualityReasons: PublicProjectionQualityReason[] | null = null;
+  if (
+    Array.isArray(rawQualityReasons) &&
+    rawQualityReasons.every(isPublicSearchProjectionQualityReason)
+  ) {
+    const normalized =
+      normalizePublicProjectionQualityReasons(rawQualityReasons);
+    if (
+      normalized.length === rawQualityReasons.length &&
+      normalized.every((reason, index) => reason === rawQualityReasons[index])
+    ) {
+      qualityReasons = normalized;
+    }
+  }
+  if (qualityReasons === null) {
+    fail("invalid_quality_reasons", "qualityReasons");
+  } else if (
+    (qualityClass === "verified" && qualityReasons.length !== 0) ||
+    ((qualityClass === "partial" || qualityClass === "unverified") &&
+      qualityReasons.length === 0)
+  ) {
+    fail("invalid_quality_reasons", "qualityReasons");
+  }
+
   if (reasons.size > 0) {
     return {
       ok: false,
@@ -329,6 +371,8 @@ export function validateObservedJournalSearchDocument(
     kind: "journal_entry",
     coverSource: coverSource as JournalSearchCoverSource,
     ...(coverPublicUrl ? { coverPublicUrl } : {}),
+    qualityClass: qualityClass as NonNullable<typeof qualityClass>,
+    qualityReasons: qualityReasons as PublicProjectionQualityReason[],
   };
 
   return { ok: true, document, reasons: [], fields: [] };
@@ -344,14 +388,18 @@ export function canonicalJournalSearchDocumentPayload(
   document: JournalEntrySearchContractDocument,
 ): string {
   const record = document as unknown as Record<string, unknown>;
-  const canonical: Array<[string, unknown]> = ALLOWED_JOURNAL_DOCUMENT_FIELDS.map(
-    (field) => [field, record[field] ?? null],
-  );
+  const canonical: Array<[string, unknown]> =
+    ALLOWED_JOURNAL_DOCUMENT_FIELDS.map((field) => [
+      field,
+      record[field] ?? null,
+    ]);
   return JSON.stringify(canonical);
 }
 
 export function hashJournalSearchDocumentValue(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value ?? null)).digest("hex");
+  return createHash("sha256")
+    .update(JSON.stringify(value ?? null))
+    .digest("hex");
 }
 
 /**
@@ -408,11 +456,10 @@ export function corpusFingerprint(fingerprints: readonly string[]): string {
  */
 export function isCanonicalIsoTimestamp(value: unknown): value is string {
   if (typeof value !== "string") return false;
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return false;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value))
+    return false;
   const parsed = new Date(value);
-  return (
-    Number.isFinite(parsed.getTime()) && parsed.toISOString() === value
-  );
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === value;
 }
 
 /**

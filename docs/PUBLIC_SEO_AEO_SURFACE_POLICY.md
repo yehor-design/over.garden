@@ -58,6 +58,13 @@ still implements the older per-surface thresholds. That code is transitional
 runtime and must not be copied into a new contract. OVE-335 replaces it with the
 constant above and extends the existing `PublicSurfaceIndexReason` vocabulary.
 
+OVE-331 supplies the derived input quality carried by public-journal search
+documents. `verified` means the safe projection is complete; `partial` means an
+optional cover was omitted/unresolved or an unavailable coarse region was
+conservatively represented as hidden. `unverified` stays below the threshold.
+These classes cannot turn a positively private, erased, revoked, invalid, or
+coordinate-bearing record into a public-surface candidate.
+
 ## Sitemap rule
 
 `apps/web/src/app/sitemap.ts` includes only public candidates whose canonical

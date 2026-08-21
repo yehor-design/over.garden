@@ -107,12 +107,18 @@ describe("OVE-40 privacy invariant sweep — search index", () => {
     ).toBeNull();
   });
 
-  it("drops region entries whose coarse code is really a precise string", () => {
-    expect(
-      buildJournalEntrySearchDocumentContractFixture(
-        publicJournalSearchRow({ coarse_region_code: POISON.streetAddress }),
-      ),
-    ).toBeNull();
+  it("hides a non-expressible coarse region without projecting its precise string", () => {
+    const document = buildJournalEntrySearchDocumentContractFixture(
+      publicJournalSearchRow({ coarse_region_code: POISON.streetAddress }),
+    );
+
+    expect(document).toMatchObject({
+      locationVisibility: "hidden",
+      qualityClass: "partial",
+      qualityReasons: ["coarse_region_unavailable"],
+    });
+    expect(document).not.toHaveProperty("coarseRegionCode");
+    expect(JSON.stringify(document)).not.toContain(POISON.streetAddress);
   });
 
   it("emits only a bounded public-safe document once published", () => {

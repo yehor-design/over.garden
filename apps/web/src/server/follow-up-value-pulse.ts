@@ -25,8 +25,7 @@ export interface FollowUpValuePulsePromptInput {
   journalEntryId: string;
 }
 
-export interface FollowUpValuePulseResponseInput
-  extends FollowUpValuePulsePromptInput {
+export interface FollowUpValuePulseResponseInput extends FollowUpValuePulsePromptInput {
   outcome: FollowUpValuePulseOutcome;
   usefulness?: FollowUpUsefulness | null;
   usefulnessReason?: FollowUpUsefulnessReason | null;
@@ -94,7 +93,11 @@ export async function recordFollowUpValuePulseResponse(
     return { recorded: false, error: normalized.error };
   }
 
-  const prompt = await resolveFollowUpValuePulsePrompt(scope, normalized, executor);
+  const prompt = await resolveFollowUpValuePulsePrompt(
+    scope,
+    normalized,
+    executor,
+  );
   if (!prompt.eligible) {
     return {
       recorded: false,
@@ -113,7 +116,7 @@ export async function recordFollowUpValuePulseResponse(
     }
   }
 
-  const event = await recordAnalyticsEventSafely(scope, {
+  const delivery = await recordAnalyticsEventSafely(scope, {
     eventName: "follow_up_value_pulse",
     properties,
     spaceId: null,
@@ -121,7 +124,7 @@ export async function recordFollowUpValuePulseResponse(
     journalEntryId: normalized.journalEntryId,
   });
 
-  return { recorded: event !== null };
+  return { recorded: delivery.status === "recorded_verified" };
 }
 
 export function normalizeFollowUpValuePulseResponseInput(

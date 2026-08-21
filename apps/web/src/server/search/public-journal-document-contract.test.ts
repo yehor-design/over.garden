@@ -33,11 +33,11 @@ const CANONICAL: JournalEntrySearchContractDocument = {
   kind: "journal_entry",
   coverSource: "automatic_inline",
   coverPublicUrl: `${PUBLIC_BASE_URL}derivative/abc123.webp`,
+  qualityClass: "verified",
+  qualityReasons: [],
 };
 
-function raw(
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
+function raw(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return { ...(CANONICAL as unknown as Record<string, unknown>), ...overrides };
 }
 
@@ -110,6 +110,11 @@ describe("exact public journal document fingerprint (OVE-227)", () => {
     ["noindex", { noindex: true }],
     ["entryScope", { entryScope: "space" as const }],
     ["coverSource", { coverSource: "separate" as const }],
+    ["qualityClass", { qualityClass: "partial" as const }],
+    [
+      "qualityReasons",
+      { qualityReasons: ["media_projection_unresolved"] as const },
+    ],
     [
       "coverPublicUrl",
       { coverPublicUrl: `${PUBLIC_BASE_URL}derivative/stale999.webp` },
@@ -146,7 +151,9 @@ describe("exact public journal document fingerprint (OVE-227)", () => {
 
   it("is stable and leaks no raw content", () => {
     const fingerprint = fingerprintJournalSearchDocument(CANONICAL);
-    expect(fingerprint).toBe(fingerprintJournalSearchDocument({ ...CANONICAL }));
+    expect(fingerprint).toBe(
+      fingerprintJournalSearchDocument({ ...CANONICAL }),
+    );
     expect(fingerprint).toMatch(/^[0-9a-f]{64}$/);
     expect(fingerprint).not.toContain("помідор");
     expect(fingerprint).not.toContain("pershyi");
@@ -181,6 +188,8 @@ describe("observed document validation (OVE-227)", () => {
     ["invalid_created_at", { createdAt: 1780000000000 }],
     ["invalid_entry_scope", { entryScope: "garden" }],
     ["invalid_cover_source", { coverSource: "hero" }],
+    ["invalid_quality_class", { qualityClass: "trusted" }],
+    ["invalid_quality_reasons", { qualityReasons: ["precise_location"] }],
   ])("rejects %s", (reason, override) => {
     const result = validate(raw(override));
     expect(result.ok).toBe(false);
@@ -212,18 +221,17 @@ describe("observed document validation (OVE-227)", () => {
       validate(raw({ locationVisibility: "region", coarseRegionCode: "UA-32" }))
         .ok,
     ).toBe(true);
+    expect(validate(raw({ locationVisibility: "region" })).reasons).toContain(
+      "invalid_coarse_region_code",
+    );
     expect(
-      validate(raw({ locationVisibility: "region" })).reasons,
-    ).toContain("invalid_coarse_region_code");
-    expect(
-      validate(
-        raw({ locationVisibility: "region", coarseRegionCode: "XX-99" }),
-      ).reasons,
+      validate(raw({ locationVisibility: "region", coarseRegionCode: "XX-99" }))
+        .reasons,
     ).toContain("invalid_coarse_region_code");
     // A hidden-location document must not carry a region at all.
-    expect(
-      validate(raw({ coarseRegionCode: "UA-32" })).reasons,
-    ).toContain("invalid_coarse_region_code");
+    expect(validate(raw({ coarseRegionCode: "UA-32" })).reasons).toContain(
+      "invalid_coarse_region_code",
+    );
   });
 
   it("fails closed on precise-location text even when the schema is valid", () => {
@@ -235,11 +243,34 @@ describe("observed document validation (OVE-227)", () => {
     expect(result.fields).toContain("body");
   });
 
+  it("requires verified documents to have no reasons and degraded documents to have reasons", () => {
+    expect(
+      validate(
+        raw({
+          qualityClass: "verified",
+          qualityReasons: ["media_projection_unresolved"],
+        }),
+      ).reasons,
+    ).toContain("invalid_quality_reasons");
+    expect(
+      validate(raw({ qualityClass: "partial", qualityReasons: [] })).reasons,
+    ).toContain("invalid_quality_reasons");
+    expect(
+      validate(
+        raw({
+          qualityClass: "partial",
+          qualityReasons: ["media_projection_unresolved"],
+        }),
+      ).ok,
+    ).toBe(true);
+  });
+
   it("never returns a raw value in reasons or fields", () => {
     const result = validate(
       raw({ title: "секретний заголовок", publicSlug: "bad slug!" }),
     );
-    const serialized = JSON.stringify(result.reasons) + JSON.stringify(result.fields);
+    const serialized =
+      JSON.stringify(result.reasons) + JSON.stringify(result.fields);
     expect(serialized).not.toContain("секретний");
     expect(serialized).not.toContain("bad slug");
   });
@@ -292,7 +323,9 @@ describe("observed document validation (OVE-227)", () => {
   it("accepts only canonical millisecond-UTC timestamps", () => {
     expect(isCanonicalIsoTimestamp("2026-06-25T00:00:00.000Z")).toBe(true);
     expect(isCanonicalIsoTimestamp("2026-06-25T00:00:00Z")).toBe(false);
-    expect(isCanonicalIsoTimestamp("2026-06-25T03:00:00.000+03:00")).toBe(false);
+    expect(isCanonicalIsoTimestamp("2026-06-25T03:00:00.000+03:00")).toBe(
+      false,
+    );
     expect(isCanonicalIsoTimestamp("2026-02-30T00:00:00.000Z")).toBe(false);
     expect(isCanonicalIsoTimestamp(1780000000000)).toBe(false);
   });
