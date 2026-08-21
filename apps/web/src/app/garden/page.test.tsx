@@ -266,13 +266,15 @@ describe("/garden workspace V2", () => {
   it("renders a deterministic owner on the real route without credentials or analytics", async () => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);
     mocks.resolveVisualGardenWorkspaceScenario.mockReturnValueOnce(
-      visualScenario("offline"),
+      visualScenario("connection-required"),
     );
 
     const { default: GardenPage } = await import("./page");
     const html = renderToStaticMarkup(
       await GardenPage({
-        searchParams: Promise.resolve({ visualWorkspace: "offline" }),
+        searchParams: Promise.resolve({
+          visualWorkspace: "connection-required",
+        }),
       }),
     );
 
@@ -360,7 +362,7 @@ function visualCreationScenario(flow: "first-entry" | "follow-up") {
     coarseRegionCode: null,
     topicTagInput: "",
     mediaFileName: null,
-    online: true,
+    serverAvailable: true,
     submitState: "idle",
     message: "Private by default.",
     detailsOpen: false,
@@ -370,7 +372,7 @@ function visualCreationScenario(flow: "first-entry" | "follow-up") {
   };
 }
 
-function visualScenario(state: "offline" | "loading") {
+function visualScenario(state: "connection-required" | "loading") {
   return {
     id: `workspace-${state}`,
     state,
@@ -384,12 +386,9 @@ function visualScenario(state: "offline" | "loading") {
     expectedSpaceIds: ["space-1"],
     expectedObjectIds: ["object-1"],
     expectedRecentEntryIds: ["entry-1"],
-    online: state !== "offline",
-    draftCount: state === "offline" ? 2 : 0,
-    queuedCount: state === "offline" ? 1 : 0,
-    failedCount: state === "offline" ? 1 : 0,
-    mediaProcessingCount: state === "offline" ? 1 : 0,
-    mediaFailedCount: state === "offline" ? 1 : 0,
+    serverAvailable: state !== "connection-required",
+    mediaProcessingCount: state === "connection-required" ? 1 : 0,
+    mediaFailedCount: state === "connection-required" ? 1 : 0,
     faultSections: [],
     viewportTargets: ["desktop", "mobile-320"] as const,
   };

@@ -1,14 +1,14 @@
 # Deterministic Visual Fixture Environment
 
 Status: implemented by OVE-187, extended through OVE-184, consumed by OVE-185
-Manifest version: `ove187-v8`
-Manifest SHA-256: `98948a40053c83a1e307a5b10118c74637238d9116f0b19b204e600a6622370d`
+Manifest version: `ove187-v9`
+Manifest SHA-256: `1867792eaf04f5f4e582d8ca83b56b2345ccabdb61c262b248c28cbe1cfd378b`
 
-Connectivity addendum (2026-08-20): ADR-0017 retires the offline fixture
-contract. `network_unavailable_save_refused` is the successor state. OVE-323
-owns the manifest-version/hash re-pin and operator smoke update after the
-legacy Dexie/PWA runtime is removed; the current historical rows below are not
-authority to extend local capture.
+Connectivity addendum (2026-08-21): ADR-0017 retires the offline fixture
+contract. `connection_required` is the successor state. OVE-323 re-pins this
+manifest after removing the legacy Dexie/PWA runtime and obsolete local
+fixture routes; historical rows below are not authority to extend local
+capture.
 
 ## Purpose
 
@@ -67,28 +67,29 @@ The manifest owns exactly:
   relationship counters, guest, authenticated non-owner, owner, private,
   removed, and blocked outcomes with exact object/journal IDs and counts;
 - 9 garden-workspace states for guest, empty, sparse, typical, dense,
-  `network_unavailable_save_refused`,
+  `connection_required`,
   loading, partial-error, and full-error behavior. Eight owner states are verified through
   owner-scoped production queries with exact space/object/kind/recent-entry
   counts and ordering; OVE-323 re-pins the former local-state row to prove a
-  refused network save and media-processing recovery without storing credentials;
+  refused save without a connection and media-processing recovery without
+  storing credentials;
 - 20 journal-creation scenarios on the real first-object and next-update forms.
   Eleven first-entry and nine follow-up cases cover plant, animal, and bee
   colony creation; minimum, optional, provisional, Unknown, maximum-copy,
   media, draft, explicit-publish, backdated, privacy,
-  `network_unavailable_save_refused`, recoverable
+  `connection_required`, recoverable
   error, cancel, and idempotent duplicate-retry states at desktop and 320px;
 - 21 intent-authentication scenarios covering Comment, Bookmark, Follow,
   Report profile, Block profile, Claim, Add object, Add journal entry, Save,
   and Publish across guest,
   authenticated, cancel, expired, invalid, deleted, unavailable,
   insufficient-permission, preserved-filter/cursor, profile-target, and
-  retained-draft states. Historical implementation status (2026-07-23): the
-  retained-draft start wrote realistic synthetic first-entry and follow-up
-  payloads to IndexedDB before authentication. ADR-0017 forbids extending that
-  path; OVE-323 re-pins the scenario. The first-entry draft
-  resumes to an accessible owner workspace, while the synthetic-owner follow-up
-  explicitly expects the permission-changed `404` boundary. The Claim start
+  network-required states. Historical implementation status (2026-07-23): the
+  former retained-draft start wrote synthetic first-entry and follow-up
+  payloads to IndexedDB before authentication. ADR-0017 superseded that path;
+  OVE-323 removes its trigger and re-pins all three cases as sign-in plus
+  network-required flows with no pre-authored browser draft. The follow-up case
+  still expects the permission-changed `404` boundary. The Claim start
   signs a short-lived invite for deterministic pending-identity and provenance
   rows, then traverses the real fragment handoff, encrypted HttpOnly cookie,
   clean claim route, and intent-aware sign-in boundary.
@@ -228,7 +229,8 @@ moderation actions are repaired without touching unrelated rows. Reset removes
 media, topic memberships, topics, entries, claimable lineage edges and pending
 identities, objects, catalog names, catalog identities, spaces, profiles, and
 actors in reverse foreign-key order and deletes only the manifest's storage
-keys under `visual-fixtures/ove187-v8/` plus the exact retired v5, v6, and v7 filenames during
+keys under `visual-fixtures/ove187-v9/` plus the exact retired v5, v6, v7, and
+v8 filenames during
 migration cleanup. It does not use wildcard or prefix database
 deletes. It does not write analytics, notifications, jobs, or search documents.
 The content contains no precise coordinates; spaces and objects use only the
@@ -329,9 +331,10 @@ pnpm visual:fixtures:journal-create -- reset ove182-c005
 the production first-entry/follow-up repositories, deterministic internal IDs,
 the real publication repository where specified, and two concurrent canonical
 calls for duplicate-retry cases. The replacement
-`network_unavailable_save_refused`, recoverable-error, and cancel cases leave
+`connection_required`, recoverable-error, and cancel cases leave
 server tables unchanged and must not create a new durable browser journal
-record. OVE-323 owns the exact fixture repin from the historical Dexie path.
+record. OVE-323 completed the exact fixture repin from the historical Dexie
+path.
 
 The expected final counts are:
 
@@ -509,7 +512,7 @@ production fallback or expose synthetic credentials:
 /garden?visualWorkspace=sparse
 /garden?visualWorkspace=typical
 /garden?visualWorkspace=dense
-/garden?visualWorkspace=network_unavailable_save_refused
+/garden?visualWorkspace=connection-required
 /garden?visualWorkspace=loading
 /garden?visualWorkspace=partial-error
 /garden?visualWorkspace=error
@@ -518,7 +521,7 @@ production fallback or expose synthetic credentials:
 The dense state proves five spaces and twelve mixed plant/animal/bee objects,
 crossing both the four-space and ten-object paginated disclosure thresholds,
 plus recent continuity and one processing derivative. OVE-323 replaces the
-historical local-draft threshold. The `network_unavailable_save_refused` state
+historical local-draft threshold. The `connection_required` state
 reuses that owner while exposing one refused save and one failed media item,
 with no false success and no new durable local journal state.
 
@@ -527,7 +530,7 @@ environment gate succeeds. They render the same first-object and follow-up
 forms as normal owner routes with deterministic safe field values. Submitting
 a server-write case calls the local/Preview-only evidence endpoint, executes
 the canonical repository path, and returns to the real owner readback. The
-`network_unavailable_save_refused`, error, and cancel submissions do not create
+`connection_required`, error, and cancel submissions do not create
 server rows or durable browser journal records; OVE-323 re-pins these paths and
 their operator smoke step:
 

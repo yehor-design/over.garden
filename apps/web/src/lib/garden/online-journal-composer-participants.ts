@@ -9,7 +9,7 @@ interface OnlineJournalComposerParticipant {
 
 export interface OnlineJournalComposerPreparationHandle {
   isActive(): boolean;
-  bindOfflineActivityScope(scope: OnlineJournalSessionFence): void;
+  bindSessionFence(scope: OnlineJournalSessionFence): void;
   flushLatest(): Promise<void>;
   resume(): Promise<void>;
 }
@@ -26,7 +26,7 @@ export interface AllOnlineJournalComposerPreparationHandle {
 export interface OnlineJournalSessionFence {
   operationId: string;
   sessionGeneration: string;
-  waitForSyncDrain(): Promise<void>;
+  waitForParticipantDrain(): Promise<void>;
   renewPreparationLease(): Promise<void>;
   resume(): Promise<void>;
   finalizeForSignedOut(): Promise<void>;
@@ -56,7 +56,7 @@ export async function prepareOnlineJournalComposerParticipants(
   await preparation.ready;
   return {
     isActive: preparation.isActive,
-    bindOfflineActivityScope: () => undefined,
+    bindSessionFence: () => undefined,
     flushLatest: preparation.flushLatest,
     resume: preparation.resume,
   };
@@ -82,7 +82,7 @@ export function createOnlineJournalSessionFence(input: {
   return {
     operationId: input.operationId,
     sessionGeneration: input.sessionGeneration,
-    waitForSyncDrain: async () => undefined,
+    waitForParticipantDrain: async () => undefined,
     renewPreparationLease: async () => undefined,
     resume: release,
     finalizeForSignedOut: release,

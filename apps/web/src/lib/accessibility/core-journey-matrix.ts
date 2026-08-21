@@ -79,7 +79,7 @@ export const CORE_JOURNEY_REQUIRED_STATES = [
   "guest",
   "authenticated",
   "pagination",
-  "offline",
+  "connection-required",
   "privacy",
   "moderation",
 ] as const;
@@ -151,7 +151,7 @@ const FULL_RESPONSIVE_SCENARIOS = new Set([
   "profile:gardener-dense",
   "workspace:workspace-guest",
   "workspace:workspace-dense",
-  "workspace:workspace-offline",
+  "workspace:workspace-connection-required",
   "workspace:workspace-loading",
   "workspace:workspace-error",
   "creation:ove182-c004",
@@ -328,7 +328,8 @@ function workspaceScenario(
     fixture.state === "guest" ? "guest" : "authenticated",
     ...stateFromText(fixture.state),
   ]);
-  if (fixture.state === "offline") states.add("offline");
+  if (fixture.state === "connection-required")
+    states.add("connection-required");
 
   return scenario({
     id: `workspace:${fixture.id}`,
@@ -350,7 +351,8 @@ function creationScenario(
   if (fixture.state === "unknown-long") states.add("long-text");
   if (fixture.state === "media") states.add("mixed-media");
   if (fixture.state === "privacy") states.add("privacy");
-  if (fixture.state === "offline") states.add("offline");
+  if (fixture.state === "connection-required")
+    states.add("connection-required");
   if (fixture.state === "error") states.add("recoverable-error");
   if (fixture.state === "cancel") states.add("cancelled");
 

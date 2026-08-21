@@ -561,7 +561,7 @@ OVE-194 live queue-recovery evidence:
 verified_at_utc: 2026-07-23T13:31:18Z
 main_commit_sha: 4e5385d55ac4ecda8c0c78d9493c5271a4d0a576
 vercel_deployment: dpl_5xPJcpyvhkq6L43HzbcLUBA1aooC READY
-matching_image_workflow: budget-frozen; offline host seal releaseRun=19400000001.1
+matching_image_workflow: budget-frozen; isolated host seal releaseRun=19400000001.1
 active_digest: sha256:85134c4e551e544034935c399e9aec8dfe5d0dd387eb308cd5c80ae3bd3cafb2
 runtime_schema: ove194.matchingRuntime.v1
 schema_compatibility: ove190.matching-schema.v1
@@ -579,7 +579,7 @@ verified_at_utc: 2026-07-23T15:55:00Z
 main_commit_sha: 3eb1506355a4e613ca2ff11a79dde39378329ee6
 behavior_commit_sha: 45c712be638ead7f45e3e2e9e011ef0b46502f7a
 vercel_deployment: dpl_5Khunrs83rBmQvcf7HH7Wg4AFx6v READY
-matching_image_workflow: budget-frozen; offline host seal releaseRun=19600000001.1
+matching_image_workflow: budget-frozen; isolated host seal releaseRun=19600000001.1
 active_digest: sha256:aa1bef90176371a7755439191cfbea59674a171782c95c3eab0fcd2006f8b805
 additive_sql: 0005_ove202_ove207_journal_document_cover.sql applied
 parity_before: zeroGap=false; unsafe_schema class non-zero; counts/booleans only

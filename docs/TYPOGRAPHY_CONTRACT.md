@@ -73,7 +73,7 @@ The pinned assets cover:
 - the binding Ukrainian, Bulgarian, Russian, Latin/scientific-name, combining
   mark, `№`, and `₴` corpus in OVE-208.
 
-The offline verifier decodes and shapes the actual WOFF2 OpenType data. It
+The local asset verifier decodes and shapes the actual WOFF2 OpenType data. It
 checks the family, PostScript name, version, copyright, axes, `cmap`, real
 Roman/Italic, and at least 23 Bulgarian `locl` substitutions under `cyrl/BGR`.
 For both the normal and Italic Cyrillic assets it shapes `вгдпт` and requires
@@ -329,7 +329,7 @@ moved to Done.
 WebKit. It covers the Ukrainian, Bulgarian, and Russian homes; 15 representative
 owner surfaces spanning catalog, editorial, auth/help, journal prose, profile,
 workspace, creation, social, community, operator/admin, not-found, loading,
-error, and offline states; the guarded global-error state; and seven exact raw
+error, and connection-required states; the guarded global-error state; and seven exact raw
 lifecycle states: community `404` plus profile, object-passport, and journal
 entry `404/410`. Product and raw-lifecycle routes exercise `320`, `390`, `768`,
 `1440`, and 200% reflow in all three engines; owner surfaces use the focused
@@ -518,7 +518,7 @@ remain mandatory; the waiver does not weaken any runtime, privacy, or exact-SHA
 gate.
 
 The asset verifier also injects a one-byte mutation through its test I/O and
-requires rejection. CI runs the offline asset gate before lint/build, installs
+requires rejection. CI runs the local asset gate before lint/build, installs
 the three focused browser engines, runs the typography browser gate against the
 seeded built app, stores the exact-SHA JSON plus its 30 hash-manifested
 screenshots in a 90-day GitHub Actions artifact, and then runs the complete

@@ -45,15 +45,15 @@ import {
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import type { SessionRecheckMode } from "@/lib/interface-route-policy";
 import {
-  abortOnlineJournalComposerParticipants as abortOwnerSyncAttempts,
-  admitOnlineJournalComposerSession as hydrateOwnerOfflineActivitySession,
-  pauseOnlineJournalComposerActivity as pauseOwnerOfflineActivity,
-  finalizeOnlineJournalComposerParticipantsForSessionChange as finalizeOwnerOfflineActivityForSessionChange,
-  finalizeOnlineJournalComposerParticipantsForSignedOut as finalizeOwnerOfflineActivityForSignedOut,
-  prepareOnlineJournalComposerParticipants as prepareOwnerComposerParticipants,
-  sealOnlineJournalComposerParticipantsForExit as sealActiveOwnerVaultsForLocalExit,
-  type OnlineJournalComposerPreparationHandle as OwnerComposerPreparationHandle,
-  type OnlineJournalSessionFence as OwnerOfflineActivityPauseHandle,
+  abortOnlineJournalComposerParticipants,
+  admitOnlineJournalComposerSession,
+  pauseOnlineJournalComposerActivity,
+  finalizeOnlineJournalComposerParticipantsForSessionChange,
+  finalizeOnlineJournalComposerParticipantsForSignedOut,
+  prepareOnlineJournalComposerParticipants,
+  sealOnlineJournalComposerParticipantsForExit,
+  type OnlineJournalComposerPreparationHandle,
+  type OnlineJournalSessionFence,
 } from "@/lib/garden/online-journal-composer-participants";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
@@ -63,10 +63,10 @@ import { LocalExitPublicSafeSurface } from "./local-exit-public-safe-surface";
 const REMOTE_PREPARATION_STALE_MS = 2 * 60_000;
 const REMOTE_PREPARATION_WATCHDOG_MS = 15_000;
 export const SESSION_CONVERGENCE_PHASE_TIMEOUT_MS = 3_000;
-// A live no-cache session read plus owner IndexedDB hydration may legitimately
-// take longer than one second. Keep the private tree payload-free for the
-// complete convergence phase instead of timing out after a fence has begun
-// but before this document can safely release it.
+// A live no-cache session read plus in-memory composer admission may
+// legitimately take longer than one second. Keep the private tree payload-free
+// for the complete convergence phase instead of timing out after a fence has
+// begun but before this document can safely release it.
 export const AUTHORITATIVE_SESSION_READ_TIMEOUT_MS =
   SESSION_CONVERGENCE_PHASE_TIMEOUT_MS;
 export const FALLBACK_SIGN_OUT_TIMEOUT_MS = 10_000;
@@ -76,8 +76,8 @@ const HARD_RELOAD_FINALIZATION_TIMEOUT_MS =
 type SessionRecheckFence = {
   epoch: number;
   ownerUserId: string;
-  pauseHandle: OwnerOfflineActivityPauseHandle | null;
-  composerPreparation: OwnerComposerPreparationHandle | null;
+  pauseHandle: OnlineJournalSessionFence | null;
+  composerPreparation: OnlineJournalComposerPreparationHandle | null;
   status: "preparing" | "ready" | "failed";
   terminal: "signed_out" | "changed" | null;
   ready: Promise<void>;
@@ -101,20 +101,6 @@ export function useAuthenticatedSessionIdentity(): AuthenticatedSessionIdentity 
   return identity;
 }
 
-function isVisualFixtureBrowserRequest(): boolean {
-  if (typeof window === "undefined") return false;
-  if (
-    window.location.pathname !== "/__visual-fixtures/session-recheck" &&
-    window.location.pathname !== "/__visual-fixtures/account-sign-out"
-  ) {
-    return false;
-  }
-  const params = new URLSearchParams(window.location.search);
-  return window.location.pathname === "/__visual-fixtures/session-recheck"
-    ? params.get("visualSessionConvergence") === "true"
-    : params.get("visualAccountSignOut") === "true";
-}
-
 export function SessionConvergenceBoundary({
   children,
   locale,
@@ -127,7 +113,7 @@ export function SessionConvergenceBoundary({
   locale: InterfaceLocale;
   /** Payload-free control only; authenticated children stay hidden by the gate. */
   localeControlFallback?: React.ReactNode;
-  /** Local visual-fixture seam; production callers use Better Auth directly. */
+  /** Unit-test seam; production callers use Better Auth directly. */
   authoritativeSessionRead?: () => Promise<unknown>;
   /** Immutable binding derived by the server for this admitted document. */
   currentSessionBinding?: string | null;
@@ -135,7 +121,7 @@ export function SessionConvergenceBoundary({
   recheckMode?: SessionRecheckMode;
 }) {
   // Mount Better Auth's session atom so its built-in session signal and the
-  // product's explicit offline-safe convergence signal are both active.
+  // product's explicit document-convergence signal are both active.
   authClient.useSession();
   const [activityGate, setActivityGate] = useState<
     "checking" | "ready" | "blocked"
@@ -153,12 +139,11 @@ export function SessionConvergenceBoundary({
     dirty: false,
     pending: activityGate === "ready" && remotePreparationPending,
   });
-  const retryHydrationRef = useRef<() => void>(() => undefined);
+  const retryAdmissionRef = useRef<() => void>(() => undefined);
   const reloadSessionGateRef = useRef<() => void>(() => undefined);
-  const pauseHandleRef = useRef<OwnerOfflineActivityPauseHandle | null>(null);
-  const composerPreparationRef = useRef<OwnerComposerPreparationHandle | null>(
-    null,
-  );
+  const pauseHandleRef = useRef<OnlineJournalSessionFence | null>(null);
+  const composerPreparationRef =
+    useRef<OnlineJournalComposerPreparationHandle | null>(null);
   const preparationPromiseRef = useRef<Promise<void> | null>(null);
   const preparationRoundTailRef = useRef<Promise<void>>(Promise.resolve());
   const preparationGenerationRef = useRef(0);
@@ -192,7 +177,7 @@ export function SessionConvergenceBoundary({
     if (bootstrapInvalidationMarker.kind === "local_exit") {
       terminalInvalidationObserved = true;
       localExitTransitionStarted = true;
-      sealActiveOwnerVaultsForLocalExit();
+      sealOnlineJournalComposerParticipantsForExit();
       // The initial render is already payload-free (`checking`), so ordinary
       // effect state is sufficient here and avoids flushSync inside a lifecycle
       // method. Event-driven peer/BFCache transitions still flush synchronously.
@@ -213,7 +198,7 @@ export function SessionConvergenceBoundary({
         disposed = true;
       };
     }
-    const bootstrapRequiresVerifiedHydration =
+    const bootstrapRequiresVerifiedAdmission =
       bootstrapInvalidationMarker.status === "present" ||
       bootstrapInvalidationMarker.status === "unknown";
     let bootstrapMarkerReleased = false;
@@ -271,7 +256,7 @@ export function SessionConvergenceBoundary({
       if (disposed) return;
       // The ordinary focus/visibility path is an identity boundary too. Commit
       // the payload-free checking gate before any asynchronous session or
-      // owner-store work can observe the potentially changed cookie.
+      // online participant work can observe the potentially changed cookie.
       flushSync(() => setDocumentGate("checking"));
     };
     const updateRemotePreparationFence = () => {
@@ -295,11 +280,11 @@ export function SessionConvergenceBoundary({
       // cannot be registered or enumerated.
     }
 
-    let terminalOwnerSyncAborted = false;
-    const abortTerminalOwnerSync = () => {
-      if (terminalOwnerSyncAborted || !baselineOwnerUserId) return;
-      terminalOwnerSyncAborted = true;
-      abortOwnerSyncAttempts(baselineOwnerUserId);
+    let terminalParticipantActivityAborted = false;
+    const abortTerminalParticipantActivity = () => {
+      if (terminalParticipantActivityAborted || !baselineOwnerUserId) return;
+      terminalParticipantActivityAborted = true;
+      abortOnlineJournalComposerParticipants(baselineOwnerUserId);
     };
     const beginLocalExitTransition = () => {
       if (disposed || localExitTransitionStarted) return;
@@ -307,13 +292,13 @@ export function SessionConvergenceBoundary({
       authoritativeNavigationStarted = true;
       terminalInvalidationObserved = true;
       const committed = commitLocalExitInvalidationMarker();
-      sealActiveOwnerVaultsForLocalExit();
+      sealOnlineJournalComposerParticipantsForExit();
       flushSync(() => {
         authenticatedTreeAdmitted = false;
         setActivityGate("blocked");
         setLocalExitCommitted(true);
       });
-      abortTerminalOwnerSync();
+      abortTerminalParticipantActivity();
       activeOperationIds.clear();
       operationLastSeenAt.clear();
       operationPreparationRounds.clear();
@@ -353,31 +338,22 @@ export function SessionConvergenceBoundary({
         return;
       }
       if (baselinePreparedSession && baselineOwnerUserId && !disposed) {
-        // Visual-fixture routes use synthetic owners and must not open the
-        // real offline IndexedDB lane — Dexie hydration can wedge Playwright
-        // Chromium and is not part of fixture evidence.
-        if (isVisualFixtureBrowserRequest()) {
-          setDocumentGate(
-            releaseBootstrapInvalidationMarker() ? "ready" : "blocked",
-          );
-          return;
-        }
-        const hydration = await hydrateBoundedOwnerOfflineActivitySession(
+        const admission = await admitBoundedOnlineJournalSession(
           baselineOwnerUserId,
           baselinePreparedSession.binding,
           {
             allowAuthoritativeSessionRebind: true,
-            requireVerifiedHydration: bootstrapRequiresVerifiedHydration,
+            requireVerifiedAdmission: bootstrapRequiresVerifiedAdmission,
           },
         ).catch(() => "blocked" as const);
         if (disposed) return;
-        if (hydration === "document_session_changed") {
+        if (admission === "document_session_changed") {
           hideAuthenticatedTree();
           window.location.reload();
           return;
         }
         setDocumentGate(
-          hydration === "ready" && releaseBootstrapInvalidationMarker()
+          admission === "ready" && releaseBootstrapInvalidationMarker()
             ? "ready"
             : "blocked",
         );
@@ -417,7 +393,7 @@ export function SessionConvergenceBoundary({
           if (baselinePreparedSession === undefined) {
             // No authenticated children were mounted while the initial proof was
             // unavailable. A successful retry may safely establish the immutable
-            // document baseline before hydration.
+            // document baseline before in-memory composer admission.
             baselinePreparedSession = freshPreparedSession;
             baselineOwnerUserId = freshOwnerUserId;
             establishesDocumentBaseline = true;
@@ -434,21 +410,18 @@ export function SessionConvergenceBoundary({
             return false;
           }
 
-          const hydration = isVisualFixtureBrowserRequest()
-            ? ("ready" as const)
-            : await hydrateBoundedOwnerOfflineActivitySession(
-                freshOwnerUserId,
-                freshPreparedSession.binding,
-                establishesDocumentBaseline
-                  ? {
-                      allowAuthoritativeSessionRebind: true,
-                      requireVerifiedHydration:
-                        bootstrapRequiresVerifiedHydration,
-                    }
-                  : undefined,
-              );
+          const admission = await admitBoundedOnlineJournalSession(
+            freshOwnerUserId,
+            freshPreparedSession.binding,
+            establishesDocumentBaseline
+              ? {
+                  allowAuthoritativeSessionRebind: true,
+                  requireVerifiedAdmission: bootstrapRequiresVerifiedAdmission,
+                }
+              : undefined,
+          );
           if (disposed || terminalInvalidationObserved) return false;
-          if (hydration === "document_session_changed") {
+          if (admission === "document_session_changed") {
             beginSameOwnerSessionReload();
             return false;
           }
@@ -457,7 +430,7 @@ export function SessionConvergenceBoundary({
             return false;
           }
           const ready =
-            hydration === "ready" && releaseBootstrapInvalidationMarker();
+            admission === "ready" && releaseBootstrapInvalidationMarker();
           setDocumentGate(ready ? "ready" : "blocked");
           return ready;
         } catch {
@@ -608,7 +581,7 @@ export function SessionConvergenceBoundary({
         try {
           await fence.ready;
         } catch {
-          // A composer-side failure can leave the durable owner pause handle
+          // A composer-side failure can leave the in-memory participant pause handle
           // available. Finalize that retained handle instead of stranding it.
         }
       }
@@ -640,7 +613,7 @@ export function SessionConvergenceBoundary({
             HARD_RELOAD_FINALIZATION_TIMEOUT_MS,
           );
         } catch {
-          // Do not replace the document while its owner-scoped durable fence
+          // Do not replace the document while its owner-scoped participant fence
           // might still belong to this session. The payload-free UI remains
           // available for a later explicit recovery action.
           authoritativeNavigationStarted = false;
@@ -656,11 +629,7 @@ export function SessionConvergenceBoundary({
     };
 
     const startSessionRecheckFence = (epoch: number) => {
-      if (
-        !baselineOwnerUserId ||
-        !baselinePreparedSession ||
-        isVisualFixtureBrowserRequest()
-      ) {
+      if (!baselineOwnerUserId || !baselinePreparedSession) {
         return null;
       }
 
@@ -683,11 +652,12 @@ export function SessionConvergenceBoundary({
       sessionRecheckFences.set(epoch, fence);
 
       // Both calls acquire their in-memory safety fences before their first
-      // await. Abort active sync first so no owner-A request can outlive the
+      // await. Abort active participant requests first so no owner-A request can outlive the
       // transition into the payload-free React gate.
-      abortOwnerSyncAttempts(ownerUserId);
-      const composerPreparation = prepareOwnerComposerParticipants(ownerUserId);
-      const pauseHandle = pauseOwnerOfflineActivity(ownerUserId, {
+      abortOnlineJournalComposerParticipants(ownerUserId);
+      const composerPreparation =
+        prepareOnlineJournalComposerParticipants(ownerUserId);
+      const pauseHandle = pauseOnlineJournalComposerActivity(ownerUserId, {
         operationId: createSignOutOperationId(),
         sessionGeneration,
       });
@@ -714,11 +684,9 @@ export function SessionConvergenceBoundary({
           fence.composerPreparation = composerResult.value;
           fence.pauseHandle = pauseResult.value;
           try {
-            fence.composerPreparation.bindOfflineActivityScope(
-              fence.pauseHandle,
-            );
-            abortOwnerSyncAttempts(ownerUserId);
-            await fence.pauseHandle.waitForSyncDrain();
+            fence.composerPreparation.bindSessionFence(fence.pauseHandle);
+            abortOnlineJournalComposerParticipants(ownerUserId);
+            await fence.pauseHandle.waitForParticipantDrain();
             fence.status = "ready";
             if (fence.terminal) {
               await finalizeSessionRecheckFence(fence, fence.terminal);
@@ -748,7 +716,7 @@ export function SessionConvergenceBoundary({
         if (!baselineOwnerUserId || !baselinePreparedSession) {
           throw new Error("Signed-out owner activity cannot be fenced.");
         }
-        await finalizeOwnerOfflineActivityForSignedOut(
+        await finalizeOnlineJournalComposerParticipantsForSignedOut(
           baselineOwnerUserId,
           baselinePreparedSession.binding,
         );
@@ -769,7 +737,7 @@ export function SessionConvergenceBoundary({
       if (pauseHandle) {
         await pauseHandle.finalizeForSessionChange();
       } else {
-        await finalizeOwnerOfflineActivityForSessionChange(
+        await finalizeOnlineJournalComposerParticipantsForSessionChange(
           baselineOwnerUserId,
           baselinePreparedSession.binding,
         );
@@ -799,7 +767,7 @@ export function SessionConvergenceBoundary({
       terminalInvalidationObserved = true;
       commitSessionInvalidationMarker();
       hideAuthenticatedTree();
-      abortTerminalOwnerSync();
+      abortTerminalParticipantActivity();
       activeOperationIds.clear();
       operationLastSeenAt.clear();
       operationPreparationRounds.clear();
@@ -814,7 +782,7 @@ export function SessionConvergenceBoundary({
       terminalInvalidationObserved = true;
       commitSessionInvalidationMarker();
       hideAuthenticatedTree();
-      abortTerminalOwnerSync();
+      abortTerminalParticipantActivity();
       publishChangedSessionInvalidation();
       startBestEffort(finalizeChangedSessionActivity);
       window.location.reload();
@@ -826,7 +794,7 @@ export function SessionConvergenceBoundary({
       terminalInvalidationObserved = true;
       commitSessionInvalidationMarker();
       hideAuthenticatedTree();
-      abortTerminalOwnerSync();
+      abortTerminalParticipantActivity();
       activeOperationIds.clear();
       operationLastSeenAt.clear();
       operationPreparationRounds.clear();
@@ -928,8 +896,8 @@ export function SessionConvergenceBoundary({
     fallbackExitRef.current = requestFallbackExit;
 
     const releasePartialPreparation = async (
-      pauseHandle: OwnerOfflineActivityPauseHandle | null,
-      composerPreparation: OwnerComposerPreparationHandle | null,
+      pauseHandle: OnlineJournalSessionFence | null,
+      composerPreparation: OnlineJournalComposerPreparationHandle | null,
     ) => {
       if (pauseHandle) {
         try {
@@ -966,8 +934,9 @@ export function SessionConvergenceBoundary({
         return;
       }
 
-      let composerPreparation: OwnerComposerPreparationHandle | null = null;
-      let pauseHandle: OwnerOfflineActivityPauseHandle | null = null;
+      let composerPreparation: OnlineJournalComposerPreparationHandle | null =
+        null;
+      let pauseHandle: OnlineJournalSessionFence | null = null;
       try {
         const sessionResult = await readBoundedAuthoritativeSession(
           readAuthoritativeSession,
@@ -1001,22 +970,22 @@ export function SessionConvergenceBoundary({
         }
 
         // Freeze and durably flush current React composer state before the
-        // durable pause or readiness acknowledgement.
+        // participant pause or readiness acknowledgement.
         composerPreparation =
-          await prepareOwnerComposerParticipants(ownerUserId);
+          await prepareOnlineJournalComposerParticipants(ownerUserId);
         if (!baselinePreparedSession) {
           throw new Error("Cross-tab session generation is unavailable.");
         }
-        pauseHandle = await pauseOwnerOfflineActivity(ownerUserId, {
-          // Remote documents own a distinct durable token. Reusing the shared
+        pauseHandle = await pauseOnlineJournalComposerActivity(ownerUserId, {
+          // Remote documents own a distinct bounded token. Reusing the shared
           // convergence id could let this tab delete the initiator's
           // commit_pending fence during unmount/cancellation.
           operationId: createSignOutOperationId(),
           sessionGeneration: baselinePreparedSession.binding,
         });
-        composerPreparation.bindOfflineActivityScope(pauseHandle);
-        abortOwnerSyncAttempts(ownerUserId);
-        await pauseHandle.waitForSyncDrain();
+        composerPreparation.bindSessionFence(pauseHandle);
+        abortOnlineJournalComposerParticipants(ownerUserId);
+        await pauseHandle.waitForParticipantDrain();
 
         if (
           disposed ||
@@ -1132,7 +1101,7 @@ export function SessionConvergenceBoundary({
       terminalInvalidationObserved = true;
       commitSessionInvalidationMarker();
       hideAuthenticatedTree();
-      abortTerminalOwnerSync();
+      abortTerminalParticipantActivity();
       committedOperationsInFlight.add(operationId);
       updateRemotePreparationFence();
       rememberTerminalOperation(
@@ -1145,7 +1114,7 @@ export function SessionConvergenceBoundary({
       operationPreparationRoundsRef.current.delete(operationId);
       await preparationPromiseRef.current?.catch(() => undefined);
       await baselineReady;
-      abortTerminalOwnerSync();
+      abortTerminalParticipantActivity();
 
       try {
         const sessionResult = await readBoundedAuthoritativeSession(
@@ -1234,8 +1203,8 @@ export function SessionConvergenceBoundary({
               await refreshActivityGate();
             }
             // Exact-owner success and any unknown/timeout failure are ordinary
-            // background observations. They do not pause owner activity,
-            // rehydrate IndexedDB, or replace already-authorized private UI.
+            // background observations. They do not pause owner activity or
+            // replace already-authorized private UI.
           } catch {
             // The effect-closed route remains usable on an inconclusive
             // background observation. Mutations still perform their own
@@ -1330,26 +1299,24 @@ export function SessionConvergenceBoundary({
               setDocumentGate("blocked");
               return;
             }
-            const hydration = isVisualFixtureBrowserRequest()
-              ? ("ready" as const)
-              : await hydrateBoundedOwnerOfflineActivitySession(
-                  ownerUserId,
-                  baselinePreparedSession.binding,
-                  establishesDocumentBaseline
-                    ? {
-                        allowAuthoritativeSessionRebind: true,
-                        requireVerifiedHydration:
-                          bootstrapRequiresVerifiedHydration,
-                      }
-                    : undefined,
-                );
+            const admission = await admitBoundedOnlineJournalSession(
+              ownerUserId,
+              baselinePreparedSession.binding,
+              establishesDocumentBaseline
+                ? {
+                    allowAuthoritativeSessionRebind: true,
+                    requireVerifiedAdmission:
+                      bootstrapRequiresVerifiedAdmission,
+                  }
+                : undefined,
+            );
             if (!isCurrentEpoch()) return;
-            if (hydration === "document_session_changed") {
+            if (admission === "document_session_changed") {
               beginSameOwnerSessionReload();
               return;
             }
             setDocumentGate(
-              hydration === "ready" && releaseBootstrapInvalidationMarker()
+              admission === "ready" && releaseBootstrapInvalidationMarker()
                 ? "ready"
                 : "blocked",
             );
@@ -1374,7 +1341,7 @@ export function SessionConvergenceBoundary({
       authoritativeRecheck = recheck;
     };
 
-    retryHydrationRef.current =
+    retryAdmissionRef.current =
       recheckMode === "effect_closed_non_fencing"
         ? () => {
             void refreshActivityGate();
@@ -1462,8 +1429,8 @@ export function SessionConvergenceBoundary({
           return;
         }
         // This is intentionally synchronous and payload-free. It proves this
-        // exact peer received the round before its asynchronous composer and
-        // offline preparation begins; the later ready/failed result remains
+        // exact peer received the round before its asynchronous composer
+        // preparation begins; the later ready/failed result remains
         // the strict safety gate for every acknowledged peer.
         publishSignOutPreparationReceived(
           payload.operationId,
@@ -1545,7 +1512,7 @@ export function SessionConvergenceBoundary({
 
     return () => {
       disposed = true;
-      retryHydrationRef.current = () => undefined;
+      retryAdmissionRef.current = () => undefined;
       reloadSessionGateRef.current = () => undefined;
       fallbackExitRef.current = () => undefined;
       unsubscribe();
@@ -1684,7 +1651,7 @@ export function SessionConvergenceBoundary({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => retryHydrationRef.current()}
+                onClick={() => retryAdmissionRef.current()}
               >
                 {copy.retry}
               </Button>
@@ -1797,18 +1764,18 @@ async function prepareBoundedSessionSignOut(sessionResult: unknown) {
   );
 }
 
-async function hydrateBoundedOwnerOfflineActivitySession(
+async function admitBoundedOnlineJournalSession(
   ownerUserId: string,
   sessionGeneration: string,
   options?: {
     allowAuthoritativeSessionRebind?: boolean;
-    requireVerifiedHydration?: boolean;
+    requireVerifiedAdmission?: boolean;
   },
 ) {
   try {
     return await requireSettledWithin(
       () =>
-        hydrateOwnerOfflineActivitySession(
+        admitOnlineJournalComposerSession(
           ownerUserId,
           sessionGeneration,
           options,
@@ -1816,7 +1783,7 @@ async function hydrateBoundedOwnerOfflineActivitySession(
       AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
     );
   } catch {
-    return options?.requireVerifiedHydration
+    return options?.requireVerifiedAdmission
       ? ("blocked" as const)
       : ("ready" as const);
   }

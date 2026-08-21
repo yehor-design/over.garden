@@ -1,7 +1,7 @@
 # Localization Coverage Baseline
 
-Status: preserved historical baseline; current route/copy inventory reconciled by OVE-314
-Date: 2026-08-11
+Status: preserved historical baseline; current route/copy inventory reconciled by OVE-323
+Date: 2026-08-21
 
 ## Purpose
 
@@ -34,11 +34,13 @@ locale plumbing exists but visible authored copy still has verified gaps.
   passport (`6b52ae02e`), journal entry (`dcaafac3e`), gardener profile
   (`dac896e89`), social return loop (`36a25479c`), and communities
   (`14f1831e9`).
-- Connectivity reconciliation (2026-08-20): ADR-0017 removes local drafts,
+- Connectivity reconciliation (2026-08-21): ADR-0017 removes local drafts,
   offline-queue, unsynced-work, and media-recovery copy from the current
   localization coverage input set. This retired copy leaves the coverage input set.
-  OVE-323 owns the runtime/copy removal,
-  manifest re-pin, and recount; dated rows below remain historical evidence.
+  OVE-323 completes the runtime/copy removal, re-pins the visual manifest to
+  `ove187-v9`, and recounts 101 classified route modules, 135 classified app
+  surface modules, and 139 registered surfaces with zero localization gaps;
+  dated rows below remain historical evidence.
 - OVE-166 adds `trust-surface-copy.ts` as the exact-parity `uk`/`bg`/`ru`
   contract for authentication, intent resume, account linking, recovery,
   support, erasure, privacy/consent, and publication disclosure. Raw auth and
@@ -46,11 +48,11 @@ locale plumbing exists but visible authored copy still has verified gaps.
   that same namespace with historical current-session/unsynced-work, destructive-choice,
   retry, and operator-utility copy; My Account, desktop/mobile shell, and real
   excluded operator surfaces consume one locale-aware sign-out state machine.
-- OVE-167 adds `garden-workspace-copy.ts` as the exact-parity `uk`/`bg`/`ru`
-  historical contract for the owner workspace, inventory, first-object creation, local
-  drafts, offline queue, media recovery, coarse-region labels, and save
-  feedback. The existing OVE-187 v8 corpus proves owner-scoped workspace and
-  creation states without changing repositories, draft payloads, media
+- OVE-167 added `garden-workspace-copy.ts` as the exact-parity `uk`/`bg`/`ru`
+  contract for the owner workspace, inventory, first-object creation,
+  coarse-region labels, and save feedback. OVE-323 removes its historical
+  local-draft/queue copy and re-pins the OVE-187 v9 corpus to server-draft and
+  connection-required states without changing canonical repositories, media
   boundaries, or idempotency behavior.
 - OVE-168 adds `owner-object-copy.ts` as the exact-parity `uk`/`bg`/`ru`
   contract for owner object follow-up, privacy, catalog resolution, provenance,
@@ -146,7 +148,7 @@ historical baseline, not the target size or sufficiency of the OVE-205 gate.
 | Guest community directory/detail                                                                                        | `community-copy.ts` and OVE-184/OVE-169 regression tests                                                                                                                                                                                   | Preserve         | OVE-171 regression gate only                                                                                                   |
 | Public and owner profile presentation/editor                                                                            | `public-profile-copy.ts`, `PublicProfileView`, owner profile `COPY` map, and OVE-169 regression tests                                                                                                                                      | Preserve         | OVE-171 regression gate only                                                                                                   |
 | Auth intent, account linking, current-session sign-out, recovery, support, erasure, privacy, and publication disclosure | Existing exact-parity copy, auth safety, intent continuity, and OVE-204 sign-out behavior remain regression inputs                                                                                                                         | Corrective delta | OVE-205 shipped Bulgaria control and dirty/in-flight coordination on auth/account states                                       |
-| Owner garden workspace and first-object creation                                                                        | Historical exact-parity workspace/draft/offline/media copy remains provenance; ADR-0017 removes it from current coverage inputs                                                                                                             | Corrective delta | OVE-323 owns copy/runtime removal and the exact coverage recount                                                               |
+| Owner garden workspace and first-object creation                                                                        | Current exact-parity workspace, server-draft, connection-required, and media-state copy; historical offline/local-draft copy is provenance only                                                                                              | Corrective delta | OVE-323 shipped runtime/copy removal and the exact zero-gap coverage recount                                                    |
 | Owner living-object continuity and follow-up                                                                            | `owner-object-copy.ts`, localized owner route/actions, follow-up composer, privacy/catalog/provenance controls, progress/value moments, source chrome, lifecycle consequences, and locale-aware public continuations across `uk`/`bg`/`ru` | Preserve         | OVE-171 regression gate only                                                                                                   |
 | Owner lineage claims, invitation handoff, and questions                                                                 | `owner-lineage-copy.ts`, localized route metadata/dates/states/actions, secure handoff copy, and exact intent/security regression tests across `uk`/`bg`/`ru`                                                                              | Preserve         | OVE-171 regression gate only                                                                                                   |
 | Owner avatar menu; community/comment moderation; curation; erasure operator UI                                          | `operator-menu-copy.ts` plus surviving operator copy modules and sealed-owner route tests                                                                                                                                                  | Preserve         | OVE-314 removed obsolete admin/pilot routes and requires exact four-link owner projection                                      |

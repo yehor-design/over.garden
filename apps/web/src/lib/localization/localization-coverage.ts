@@ -491,7 +491,7 @@ const LOCALIZATION_OWNER_CONTRACTS: Record<
       "empty",
       "dense",
       "loading",
-      "offline",
+      "connection-required",
       "recoverable-error",
       "success",
       "validation",
@@ -504,7 +504,10 @@ const LOCALIZATION_OWNER_CONTRACTS: Record<
       "public-profile",
       "structured-journal-composer",
     ],
-    scenarioIds: ["workspace:workspace-dense", "workspace:workspace-offline"],
+    scenarioIds: [
+      "workspace:workspace-dense",
+      "workspace:workspace-connection-required",
+    ],
     focusedTests: ["src/app/garden/page.test.tsx"],
   },
   "owner-object-lineage": {
@@ -880,13 +883,8 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
     ...routes(
       [
         "src/app/%5F%5Fvisual-fixtures/intent/[scenarioId]/route.ts",
-        "src/app/%5F%5Fvisual-fixtures/account-sign-out/page.tsx",
-        "src/app/%5F%5Fvisual-fixtures/foreground-autosync/page.tsx",
-        "src/app/%5F%5Fvisual-fixtures/legacy-device-retirement/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/lexical-journal/page.tsx",
-        "src/app/%5F%5Fvisual-fixtures/owner-vault/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/page.tsx",
-        "src/app/%5F%5Fvisual-fixtures/session-recheck/page.tsx",
         "src/app/skeleton/page.tsx",
       ],
       "internal-fixture",
@@ -1190,7 +1188,6 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/api/meta/conversions/route.ts",
         "src/app/api/notifications/preferences/route.ts",
         "src/app/api/notifications/receipts/route.ts",
-        "src/app/api/offline/owner-vault-binding/route.ts",
         "src/app/api/public/objects/suggestions/route.ts",
         "src/app/api/skeleton/journal/route.ts",
       ],
@@ -1276,7 +1273,7 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
         ["jsx-text", "Open route"],
         [
           "jsx-text",
-          "Owner-scoped inventory, continuity, drafts, and recovery states",
+          "Owner-scoped server inventory, continuity, and recovery states",
         ],
         ["jsx-text", "Garden workspace V2 evidence"],
         ["jsx-text", "Open workspace"],
@@ -1312,32 +1309,6 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
       ],
     ),
     ...allowExactLiterals(
-      "src/app/%5F%5Fvisual-fixtures/account-sign-out/account-sign-out-visual-fixture.tsx",
-      "internal-fixture",
-      INTERNAL_FIXTURE_RATIONALE,
-      [
-        ["jsx-text", "OVE-287 synthetic private account"],
-        ["jsx-text", "One synthetic in-memory online composer is active."],
-      ],
-    ),
-    ...allowExactLiterals(
-      "src/app/%5F%5Fvisual-fixtures/foreground-autosync/foreground-autosync-visual-fixture.tsx",
-      "internal-fixture",
-      INTERNAL_FIXTURE_RATIONALE,
-      [["metadata-title", "Synthetic fixture"]],
-    ),
-    ...allowExactLiterals(
-      "src/app/%5F%5Fvisual-fixtures/legacy-device-retirement/legacy-device-retirement-visual-fixture.tsx",
-      "internal-fixture",
-      INTERNAL_FIXTURE_RATIONALE,
-      [
-        ["jsx-text", "Synthetic retirement fixture could not start."],
-        ["jsx-text", "Preparing synthetic retirement storage…"],
-        ["jsx-text", "Synthetic returning-device workspace"],
-        ["jsx-text", "Independent workspace action"],
-      ],
-    ),
-    ...allowExactLiterals(
       "src/app/%5F%5Fvisual-fixtures/lexical-journal/page.tsx",
       "internal-fixture",
       INTERNAL_FIXTURE_RATIONALE,
@@ -1355,41 +1326,6 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
         ["jsx-text", "; generation="],
         ["jsx-text", "; cancels="],
         ["jsx-text", "; saved="],
-      ],
-    ),
-    ...allowExactLiterals(
-      "src/app/%5F%5Fvisual-fixtures/owner-vault/owner-vault-visual-fixture.tsx",
-      "internal-fixture",
-      INTERNAL_FIXTURE_RATIONALE,
-      [
-        ["jsx-text", "OVE-288 owner vault fixture"],
-        ["jsx-text", "Owner A rows"],
-        ["jsx-text", "Owner B rows"],
-        ["jsx-text", "Reset fixture"],
-        ["jsx-text", "Seed isolated owners"],
-        ["jsx-text", "Retain owner A across sign-out"],
-        ["jsx-text", "Deny offline binding"],
-        ["jsx-text", "Server-backed private action"],
-        ["jsx-text", "Owner vault retired"],
-      ],
-    ),
-    ...allowExactLiterals(
-      "src/app/%5F%5Fvisual-fixtures/session-recheck/session-recheck-visual-fixture.tsx",
-      "internal-fixture",
-      INTERNAL_FIXTURE_RATIONALE,
-      [
-        ["jsx-text", "Synthetic session recheck fixture"],
-        ["jsx-text", "Synthetic private action"],
-      ],
-    ),
-    ...allowExactLiterals(
-      "src/app/%5F%5Fvisual-fixtures/visual-intent-draft-trigger.tsx",
-      "internal-fixture",
-      INTERNAL_FIXTURE_RATIONALE,
-      [
-        ["jsx-text", "The synthetic online draft intent is unavailable."],
-        ["metadata-title", "Листя відновилося після спеки"],
-        ["metadata-title", "Перша зав'язь після прохолодної ночі"],
       ],
     ),
     ...allowExactLiterals(

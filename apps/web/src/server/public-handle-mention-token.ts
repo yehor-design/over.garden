@@ -48,7 +48,7 @@ interface PublicHandleMentionPayload {
 /**
  * Produces a self-contained, non-expiring selection token for an authenticated
  * viewer. The Better Auth user id remains server-only; the token can survive a
- * handle rename and an offline draft without creating a token registry.
+ * handle rename and a delayed server-draft save without creating a token registry.
  */
 export function sealPublicHandleMentionTarget(
   targetUserId: string,

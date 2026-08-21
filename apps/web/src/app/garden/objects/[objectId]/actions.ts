@@ -191,7 +191,7 @@ export async function archiveJournalEntryAction(
 
   // OVE-242: the removal intent already committed with the archive. Converge
   // it now; the owner object page then reports the verified convergence state
-  // from the durable outbox rather than claiming "a job was queued".
+  // from the durable outbox rather than claiming "a job was scheduled".
   await convergePublicProjectionsNow([result.entry.id]).catch(() => undefined);
 
   revalidatePath("/garden");

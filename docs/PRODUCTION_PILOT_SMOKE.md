@@ -6,8 +6,8 @@ Last updated: 2026-08-11
 
 Connectivity addendum (2026-08-20): ADR-0017 makes journal writes
 network-required. Every former offline-retry proof is replaced by
-`network_unavailable_save_refused`; OVE-323 re-pins the operator smoke step
-after removing the legacy runtime.
+`network_unavailable_save_refused`; OVE-323 re-pinned the operator smoke step
+and removed the legacy runtime.
 
 ## OVE-314 supersession
 

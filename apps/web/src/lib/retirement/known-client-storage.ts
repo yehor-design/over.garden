@@ -19,6 +19,22 @@ interface IndexedDbDeleteRequestLike {
   onblocked: ((...args: never[]) => unknown) | null;
 }
 
+export type LegacyControlState =
+  | "migration_unstarted"
+  | "copying"
+  | "conflict_blocked"
+  | "active"
+  | "cleanup_deferred"
+  | "erasure_unconfirmed"
+  | "erased_confirmed"
+  | "retirement_resolved"
+  | "foreign_or_orphan_retained";
+
+export interface LegacyControlRecord {
+  binding: string;
+  state: LegacyControlState;
+}
+
 interface ServiceWorkerRegistrationLike {
   active?: { scriptURL: string } | null;
   installing?: { scriptURL: string } | null;
@@ -31,6 +47,7 @@ export interface KnownClientStorageEnvironment {
   indexedDb: {
     databases?: () => Promise<IndexedDatabaseInfoLike[]>;
     deleteDatabase(name: string): IndexedDbDeleteRequestLike;
+    readControlRecords?: () => Promise<LegacyControlRecord[]>;
   };
   caches: { keys(): Promise<string[]> };
   serviceWorker: {
@@ -91,6 +108,7 @@ export function browserKnownClientStorageEnvironment(): KnownClientStorageEnviro
           ? () => factory.databases!()
           : undefined,
       deleteDatabase: (name) => factory.deleteDatabase(name),
+      readControlRecords: () => readNativeLegacyControlRecords(factory),
     },
     caches: {
       keys: () => {
@@ -106,6 +124,155 @@ export function browserKnownClientStorageEnvironment(): KnownClientStorageEnviro
             getRegistrations: () => navigator.serviceWorker.getRegistrations(),
           }
         : null,
+  };
+}
+
+export interface KnownClientStorageRetirementPlan {
+  deleteDatabaseNames: string[];
+  expectedAbsentDatabaseNames: string[];
+  unresolvedBindingCount: number;
+  preserveControlDatabase: boolean;
+}
+
+export interface KnownClientStorageRetirementReceipt {
+  status: "absent" | "unresolved_retained";
+  absenceReads: 2;
+  deletedDatabaseCount: number;
+  unregisteredWorkerCount: number;
+  unresolvedBindingCount: number;
+}
+
+const TERMINAL_OWNER_STATES = new Set<LegacyControlState>([
+  "retirement_resolved",
+  "foreign_or_orphan_retained",
+]);
+
+const LEGACY_CONTROL_STATES = new Set<LegacyControlState>([
+  "migration_unstarted",
+  "copying",
+  "conflict_blocked",
+  "active",
+  "cleanup_deferred",
+  "erasure_unconfirmed",
+  "erased_confirmed",
+  "retirement_resolved",
+  "foreign_or_orphan_retained",
+]);
+
+export function planKnownClientStorageRetirement(
+  databaseNames: readonly string[],
+  controlRecords: readonly LegacyControlRecord[],
+): KnownClientStorageRetirementPlan {
+  const names = [
+    ...new Set(databaseNames.filter(isKnownOverGardenDatabaseName)),
+  ];
+  if (names.length > 10_000 || controlRecords.length > 10_000) {
+    throw new KnownClientStorageError("known_storage_inventory_bounded");
+  }
+  const controlByBinding = new Map<string, LegacyControlState>();
+  for (const record of controlRecords) {
+    if (
+      !OPAQUE_BINDING.test(record.binding) ||
+      !LEGACY_CONTROL_STATES.has(record.state)
+    ) {
+      throw new KnownClientStorageError("control_registry_invalid");
+    }
+    if (controlByBinding.has(record.binding)) {
+      throw new KnownClientStorageError("control_registry_ambiguous");
+    }
+    controlByBinding.set(record.binding, record.state);
+  }
+
+  const deleteDatabaseNames: string[] = [];
+  const unresolvedBindings = new Set<string>();
+  if (names.includes(LEGACY_SHARED_DATABASE_NAME)) {
+    deleteDatabaseNames.push(LEGACY_SHARED_DATABASE_NAME);
+  }
+  const ownerNames = names
+    .filter((name) => name.startsWith(LEGACY_OWNER_DATABASE_PREFIX))
+    .sort();
+  for (const name of ownerNames) {
+    const binding = name.slice(LEGACY_OWNER_DATABASE_PREFIX.length);
+    const state = controlByBinding.get(binding);
+    if (state && TERMINAL_OWNER_STATES.has(state)) {
+      deleteDatabaseNames.push(name);
+    } else {
+      unresolvedBindings.add(binding);
+    }
+  }
+  for (const [binding, state] of controlByBinding) {
+    if (!TERMINAL_OWNER_STATES.has(state)) unresolvedBindings.add(binding);
+  }
+
+  const controlPresent = names.includes(LEGACY_CONTROL_DATABASE_NAME);
+  const preserveControlDatabase = controlPresent && unresolvedBindings.size > 0;
+  if (controlPresent && !preserveControlDatabase) {
+    deleteDatabaseNames.push(LEGACY_CONTROL_DATABASE_NAME);
+  }
+  return {
+    deleteDatabaseNames,
+    expectedAbsentDatabaseNames: [...deleteDatabaseNames],
+    unresolvedBindingCount: unresolvedBindings.size,
+    preserveControlDatabase,
+  };
+}
+
+export async function retireKnownClientStorage(
+  environment = browserKnownClientStorageEnvironment(),
+  options: { deadlineMs?: number; signal?: AbortSignal } = {},
+): Promise<KnownClientStorageRetirementReceipt> {
+  throwIfAborted(options.signal);
+  const startedAt = Date.now();
+  const deadlineMs = boundedDeadline(options.deadlineMs);
+  const inventory = await inventoryKnownClientStorage(environment);
+  throwIfAborted(options.signal);
+  if (inventory.databaseEnumeration !== "available") {
+    throw new KnownClientStorageError("indexeddb_enumeration_unavailable");
+  }
+  if (inventory.unexpectedOverGardenCacheNames.length > 0) {
+    throw new KnownClientStorageError("unexpected_overgarden_cache_present");
+  }
+
+  const controlPresent = inventory.databaseNames.includes(
+    LEGACY_CONTROL_DATABASE_NAME,
+  );
+  if (controlPresent && !environment.indexedDb.readControlRecords) {
+    throw new KnownClientStorageError("control_registry_unavailable");
+  }
+  const controlRecords = controlPresent
+    ? await environment.indexedDb.readControlRecords!()
+    : [];
+  throwIfAborted(options.signal);
+  const plan = planKnownClientStorageRetirement(
+    inventory.databaseNames,
+    controlRecords,
+  );
+  const workerReceipt =
+    await unregisterLegacyOverGardenServiceWorkers(environment);
+  throwIfAborted(options.signal);
+
+  for (const name of plan.deleteDatabaseNames) {
+    const remainingMs = deadlineMs - (Date.now() - startedAt);
+    if (remainingMs <= 0) {
+      throw new KnownClientStorageError("client_retirement_timeout");
+    }
+    await deleteKnownIndexedDatabase(name, environment, {
+      deadlineMs: remainingMs,
+      signal: options.signal,
+    });
+  }
+  throwIfAborted(options.signal);
+  await assertKnownClientStorageAbsentTwice(
+    plan.expectedAbsentDatabaseNames,
+    environment,
+  );
+  throwIfAborted(options.signal);
+  return {
+    status: plan.unresolvedBindingCount > 0 ? "unresolved_retained" : "absent",
+    absenceReads: 2,
+    deletedDatabaseCount: plan.deleteDatabaseNames.length,
+    unregisteredWorkerCount: workerReceipt.unregistered,
+    unresolvedBindingCount: plan.unresolvedBindingCount,
   };
 }
 
@@ -249,6 +416,91 @@ function isOverGardenCacheName(name: string) {
   return /^overgarden(?:$|[-_.:])/i.test(name);
 }
 
+async function readNativeLegacyControlRecords(
+  factory: IDBFactory,
+): Promise<LegacyControlRecord[]> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (outcome: () => void) => {
+      if (settled) return;
+      settled = true;
+      request.onerror = null;
+      request.onblocked = null;
+      request.onupgradeneeded = null;
+      request.onsuccess = null;
+      outcome();
+    };
+    const request = factory.open(LEGACY_CONTROL_DATABASE_NAME);
+    request.onblocked = () =>
+      finish(() =>
+        reject(new KnownClientStorageError("control_registry_blocked")),
+      );
+    request.onerror = () =>
+      finish(() =>
+        reject(new KnownClientStorageError("control_registry_unavailable")),
+      );
+    request.onupgradeneeded = () => {
+      request.transaction?.abort();
+      request.result.close();
+      finish(() =>
+        reject(new KnownClientStorageError("control_registry_unavailable")),
+      );
+    };
+    request.onsuccess = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains("vaults")) {
+        database.close();
+        finish(() =>
+          reject(new KnownClientStorageError("control_registry_invalid")),
+        );
+        return;
+      }
+      const transaction = database.transaction("vaults", "readonly");
+      const read = transaction.objectStore("vaults").getAll();
+      read.onerror = () => {
+        database.close();
+        finish(() =>
+          reject(new KnownClientStorageError("control_registry_unavailable")),
+        );
+      };
+      read.onsuccess = () => {
+        database.close();
+        try {
+          const records = read.result.map(normalizeLegacyControlRecord);
+          finish(() => resolve(records));
+        } catch (error) {
+          finish(() => reject(error));
+        }
+      };
+      transaction.onabort = () => {
+        database.close();
+        finish(() =>
+          reject(new KnownClientStorageError("control_registry_unavailable")),
+        );
+      };
+    };
+  });
+}
+
+function normalizeLegacyControlRecord(value: unknown): LegacyControlRecord {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new KnownClientStorageError("control_registry_invalid");
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.binding !== "string" ||
+    !OPAQUE_BINDING.test(record.binding) ||
+    typeof record.state !== "string" ||
+    !LEGACY_CONTROL_STATES.has(record.state as LegacyControlState)
+  ) {
+    throw new KnownClientStorageError("control_registry_invalid");
+  }
+  return {
+    binding: record.binding,
+    state: record.state as LegacyControlState,
+  };
+}
+
 function boundedDeadline(value: number | undefined) {
   if (!Number.isFinite(value)) return DEFAULT_DELETE_DEADLINE_MS;
   return Math.max(1, Math.min(DEFAULT_DELETE_DEADLINE_MS, Math.trunc(value!)));
@@ -256,4 +508,8 @@ function boundedDeadline(value: number | undefined) {
 
 function abortError() {
   return new DOMException("Known storage cleanup cancelled.", "AbortError");
+}
+
+function throwIfAborted(signal: AbortSignal | undefined) {
+  if (signal?.aborted) throw abortError();
 }

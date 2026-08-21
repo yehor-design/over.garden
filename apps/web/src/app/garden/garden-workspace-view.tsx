@@ -35,8 +35,8 @@ import type {
   GardenWorkspaceSpaceSummary,
 } from "@/server/garden-workspace-repository";
 import type { PlantObjectSummary } from "@/server/journal-repository";
-import { GardenWorkspaceLocalState } from "./garden-workspace-local-state";
-import { GardenDraftResumePanel } from "./draft-resume-panel";
+import { GardenWorkspaceServiceState } from "./garden-workspace-service-state";
+import { ServerDraftResumePanel } from "./server-draft-resume-panel";
 
 interface GardenWorkspaceViewProps {
   canWrite: boolean;
@@ -87,7 +87,7 @@ export function GardenWorkspaceView({
             {workspaceCopy.workspace.error.retry}
           </Link>
         </section>
-        <GardenWorkspaceLocalState
+        <GardenWorkspaceServiceState
           locale={locale}
           nextAction={{
             href: "/garden",
@@ -99,7 +99,7 @@ export function GardenWorkspaceView({
         />
         {workspace.drafts.status === "ready" &&
         workspace.drafts.value.length > 0 ? (
-          <GardenDraftResumePanel
+          <ServerDraftResumePanel
             drafts={workspace.drafts.value}
             locale={locale}
           />
@@ -176,7 +176,7 @@ export function GardenWorkspaceView({
       </div>
 
       {drafts.length > 0 ? (
-        <GardenDraftResumePanel drafts={drafts} locale={locale} />
+        <ServerDraftResumePanel drafts={drafts} locale={locale} />
       ) : null}
 
       <WorkspaceSummary
@@ -185,7 +185,7 @@ export function GardenWorkspaceView({
         today={today}
       />
 
-      <GardenWorkspaceLocalState
+      <GardenWorkspaceServiceState
         locale={locale}
         nextAction={{ href: nextAction.href, label: nextAction.label }}
         recent={recent}

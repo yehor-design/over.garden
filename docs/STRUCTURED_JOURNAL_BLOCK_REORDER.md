@@ -27,7 +27,7 @@ Owner: OVE-317, preserving the OVE-206 product outcome
 - Active gesture registers `owner-composer-reorder-gesture` as an in-flight
   locale participant. After commit, `owner-composer-drafts` owns the flush/seal
   transition; there is no second coordinator.
-- Reorder preserves block ID, media asset ID, offline intent mapping, and image
+- Reorder preserves block ID, media asset ID, transient upload intent mapping, and image
   reservation. It never re-uploads or cross-claims media.
 - Public and owner read rendering contains neither reorder chrome nor authoring
   runtime.
@@ -49,8 +49,8 @@ cd apps/web
 pnpm exec vitest run \
   src/components/garden/lexical-journal/journal-node-reorder.test.tsx \
   src/lib/garden/journal-document-lexical-adapter.test.ts \
-  src/lib/offline/drafts.test.ts \
-  src/lib/offline/journal-entry-sync.test.ts
+  src/lib/garden/online-journal-draft.test.ts \
+  src/lib/garden/online-journal-submit.test.ts
 pnpm smoke:journal-block-reorder
 OVE317_DEVICE_EQUIVALENT_AUTHORIZATION=/absolute/content-free-authorization.json \
 OVE317_ANDROID_CDP_URL=http://127.0.0.1:9224 \

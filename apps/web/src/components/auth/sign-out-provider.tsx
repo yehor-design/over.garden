@@ -103,7 +103,7 @@ export function SignOutProvider({
     confirmationOpenRef.current = false;
 
     // This order is the complete user-visible exit transaction. Every step is
-    // synchronous and cookie/network/IndexedDB independent. The first promise
+    // synchronous and independent of cookie or network completion. The first promise
     // is created only by reconciliation after the public-safe commit and the
     // durable-navigation decision.
     const committed = commitLocalExitInvalidationMarker();

@@ -132,7 +132,7 @@ const REQUIRED_CURRENT_CONSUMERS = [
   "apps/web/package.json",
   ".github/workflows/ci.yml",
   "apps/web/src/lib/garden/use-online-journal-composer.ts",
-  "apps/web/src/lib/legacy-device-work/ove322-retirement-bridge.ts",
+  "apps/web/src/lib/retirement/known-client-storage.ts",
   "apps/web/src/app/garden/first-entry-composer.tsx",
   "apps/web/src/app/garden/space-entry-composer.tsx",
   "apps/web/src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
@@ -575,12 +575,11 @@ function validateCurrentConsumers(
   );
   requireTerms(
     "docs/CURRENT_SCHEMA_ERASURE.md",
-    ["OVE-322", /read-only retirement bridge/i],
+    ["OVE-323", /name-only|known-client-storage/i],
     "erasure_successor_drift",
   );
   for (const relativePath of [
     "docs/DRIVE2_PARITY_PRODUCTION_CLOSEOUT.md",
-    "docs/VISUAL_FIXTURE_ENVIRONMENT.md",
     "docs/PRODUCTION_PILOT_SMOKE.md",
   ]) {
     requireTerms(
@@ -589,6 +588,11 @@ function validateCurrentConsumers(
       "operator_gate_successor_drift",
     );
   }
+  requireTerms(
+    "docs/VISUAL_FIXTURE_ENVIRONMENT.md",
+    ["connection_required", "OVE-323"],
+    "operator_gate_successor_drift",
+  );
   requireTerms(
     "docs/product-research/README.md",
     ["ADR-0017", /root.*TECH_STACK_DECISIONS|TECH_STACK_DECISIONS.*root/i],
@@ -642,8 +646,8 @@ const ONLINE_COMPOSER_PATHS = [
 
 const ONLINE_AUTHORING_CALLER_PATHS = [
   ...ONLINE_COMPOSER_PATHS,
-  "apps/web/src/app/garden/draft-resume-panel.tsx",
-  "apps/web/src/app/garden/garden-workspace-local-state.tsx",
+  "apps/web/src/app/garden/server-draft-resume-panel.tsx",
+  "apps/web/src/app/garden/garden-workspace-service-state.tsx",
   "apps/web/src/app/garden/garden-workspace-view.tsx",
   "apps/web/src/components/garden/journal-cover-controls.tsx",
   "apps/web/src/lib/garden/composer-photo-selection.ts",
@@ -654,8 +658,6 @@ function validateOnlineComposerCutover(
   files: Readonly<Record<string, string>>,
 ): OnlineOnlyCanonViolation[] {
   const violations: OnlineOnlyCanonViolation[] = [];
-  const legacyBridge =
-    "apps/web/src/lib/legacy-device-work/ove322-retirement-bridge.ts";
   const offlineImport =
     /(?:from\s*|import\s*\(\s*)["'][^"']*(?:@\/lib\/offline|\/offline\/)[^"']*["']/u;
 
@@ -666,19 +668,28 @@ function validateOnlineComposerCutover(
     ) {
       continue;
     }
-    if (offlineImport.test(content) && relativePath !== legacyBridge) {
+    if (offlineImport.test(content)) {
       violations.push({
-        code: "ordinary_legacy_offline_import",
+        code: "legacy_offline_import",
         path: relativePath,
       });
     }
   }
 
-  if (!offlineImport.test(files[legacyBridge] ?? "")) {
-    violations.push({
-      code: "missing_ove322_retirement_bridge",
-      path: legacyBridge,
-    });
+  for (const relativePath of Object.keys(files)) {
+    if (
+      relativePath.startsWith("apps/web/src/lib/offline/") ||
+      relativePath.startsWith("apps/web/src/lib/legacy-device-work/") ||
+      relativePath.startsWith("apps/web/src/app/api/offline/") ||
+      relativePath === "apps/web/src/app/manifest.ts" ||
+      relativePath === "apps/web/src/app/sw-register.tsx" ||
+      relativePath === "apps/web/public/sw.js"
+    ) {
+      violations.push({
+        code: "retired_runtime_path_present",
+        path: relativePath,
+      });
+    }
   }
 
   for (const relativePath of ONLINE_COMPOSER_PATHS) {

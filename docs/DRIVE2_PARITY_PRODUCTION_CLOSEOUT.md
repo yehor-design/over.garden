@@ -5,7 +5,7 @@ Last updated: 2026-07-23
 
 Connectivity addendum (2026-08-20): ADR-0017 supersedes every requirement to
 prove an offline product state. The successor state is
-`network_unavailable_save_refused`; OVE-323 owns the fixture-manifest and
+`network_unavailable_save_refused`; OVE-323 completed the fixture-manifest and
 operator-smoke re-pin after runtime removal.
 
 OVE-186 closes Slice 18 only when the deterministic visual proof and the real
@@ -21,7 +21,7 @@ unsafe/duplicate/invalid documents). See `docs/PUBLIC_JOURNAL_INDEX_PARITY.md`.
 
 ### Local deterministic fixtures
 
-The OVE-187 v8 manifest owns synthetic density and edge-state evidence. It is
+The OVE-187 v9 manifest owns synthetic density and edge-state evidence. It is
 allowed only on loopback or an explicitly isolated preview. It proves:
 
 - the full guest and authenticated route/state matrix;

@@ -47,45 +47,13 @@ describe("authenticated mutation enforcement receipt", () => {
       first.entrypointStates.filter(
         (state) => state.enforcementState === "enforced_ove_290",
       ),
-    ).toHaveLength(38);
+    ).toHaveLength(14);
     expect(
       first.consumerEdgeStates.filter(
         (state) => state.enforcementState === "enforced_ove_290",
       ),
-    ).toHaveLength(232);
+    ).toHaveLength(141);
     expect(JSON.stringify(first)).not.toMatch(/effectBoundaryId/);
-  });
-
-  it("classifies the six OVE-289 local effect owners as enforced high-risk boundaries", () => {
-    const expected = [
-      [
-        "src/lib/offline/drafts.ts",
-        "deleteOfflineDraftIfClientMutationMatches",
-      ],
-      [
-        "src/lib/offline/journal-entry-sync.ts",
-        "syncClaimedOfflineJournalEntryMutation",
-      ],
-      ["src/lib/offline/queue.ts", "claimOfflineMutationForAutomaticSync"],
-      ["src/lib/offline/queue.ts", "claimOfflineMutationForManualSync"],
-      ["src/lib/offline/queue.ts", "markOfflineMutationsForManualRecovery"],
-      ["src/lib/offline/queue.ts", "recoverExpiredOfflineMutationSyncClaims"],
-    ] as const;
-
-    for (const [path, symbol] of expected) {
-      const entrypoint = registry.entrypoints.find(
-        (candidate) => candidate.path === path && candidate.symbol === symbol,
-      );
-      expect(entrypoint, `${path}#${symbol}`).toMatchObject({
-        executionOwner: "high_risk_ove_290",
-        generationRequirement: "required_before_first_effect",
-      });
-      expect(
-        registry.consumerEdges.some(
-          (edge) => edge.entrypointId === entrypoint?.entrypointId,
-        ),
-      ).toBe(true);
-    }
   });
 
   it("binds both final registry digests byte-for-byte", () => {
@@ -173,7 +141,7 @@ describe("authenticated mutation enforcement receipt", () => {
     );
   });
 
-  it("reads all 30 live admission bodies and proves their task-owned guards", async () => {
+  it("reads all 11 live high-risk admission bodies and proves their task-owned guards", async () => {
     await expect(
       assertHighRiskAdmissionBoundaryEvidence({
         registry,

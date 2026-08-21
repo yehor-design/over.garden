@@ -458,7 +458,7 @@ describe("authenticated mutation registry v3", () => {
         "test",
         "tests",
       ],
-      productionRoots: ["public/sw.js", "sql", "src"],
+      productionRoots: ["sql", "src"],
     },
     prerequisiteReceipts: [
       {

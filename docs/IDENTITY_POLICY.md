@@ -77,7 +77,7 @@ returns a bounded AES-256-GCM selection token derived from
 bound to the requesting user. The fixed encrypted payload contains only a
 version and the target user ID; it contains no handle, email, provider name,
 timestamp, location, or redirect. Tokens have no expiry so an owner-isolated
-offline draft remains saveable after a delay or target-handle rename, and they
+server-retained draft remains saveable after a delay or target-handle rename, and they
 require no token registry or other remote state.
 
 On journal save, the server must authenticate and decrypt every token for the

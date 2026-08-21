@@ -119,9 +119,9 @@ describe("first entry composer localization", () => {
 
 function visualScenario(): VisualFixtureCreationScenarioEvidence {
   return {
-    id: "localized-offline",
+    id: "localized-connection-required",
     flow: "first-entry",
-    state: "offline",
+    state: "connection-required",
     label: "Fixture label is operator evidence",
     ownerActorId: "owner",
     objectId: null,
@@ -138,8 +138,8 @@ function visualScenario(): VisualFixtureCreationScenarioEvidence {
     coarseRegionCode: "UA-30",
     topicTagInput: "полив, balcony",
     mediaFileName: null,
-    online: false,
-    submitState: "queued",
+    serverAvailable: false,
+    submitState: "connection_required",
     message: "This raw fixture message must never reach the localized UI.",
     detailsOpen: true,
     path: "/garden",
@@ -158,7 +158,6 @@ function visualScenario(): VisualFixtureCreationScenarioEvidence {
     resetOwnedObjectIds: [],
     resetOwnedEntryIds: [],
     resetOwnedMediaAssetIds: [],
-    dexieDraftKey: "visual-draft",
     expectedStatus: 200,
     viewportTargets: ["desktop", "mobile-320"],
   };

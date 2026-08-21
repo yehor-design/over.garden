@@ -65,8 +65,8 @@ describe("visual journal creation evidence orchestration", () => {
     expect(result.duplicateStable).toBe(true);
   });
 
-  it("keeps offline evidence out of server tables", async () => {
-    const scenario = scenarioFor("first-entry", "offline");
+  it("keeps connection-required evidence out of server tables", async () => {
+    const scenario = scenarioFor("first-entry", "connection-required");
     const empty = snapshotFor(scenario, false);
     const dependencies = dependenciesFor([empty, empty]);
 
@@ -119,7 +119,7 @@ describe("visual journal creation evidence orchestration", () => {
 
 function scenarioFor(
   flow: "first-entry" | "follow-up",
-  state: "duplicate" | "offline" | "publish",
+  state: "connection-required" | "duplicate" | "publish",
 ) {
   const scenario = VISUAL_FIXTURE_MANIFEST.creationEvidence.scenarios.find(
     (candidate) => candidate.flow === flow && candidate.state === state,

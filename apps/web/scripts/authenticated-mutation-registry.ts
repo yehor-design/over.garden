@@ -25,7 +25,7 @@ export const AUTHENTICATED_MUTATION_SOURCE_POLICY = {
     "test",
     "tests",
   ],
-  productionRoots: ["public/sw.js", "sql", "src"],
+  productionRoots: ["sql", "src"],
 } as const;
 
 export type AuthenticatedMutationTransport =
@@ -2008,11 +2008,7 @@ function isRegistryProductionPath(repositoryPath: string): boolean {
   ) {
     return false;
   }
-  return (
-    normalized === "public/sw.js" ||
-    normalized.startsWith("sql/") ||
-    normalized.startsWith("src/")
-  );
+  return normalized.startsWith("sql/") || normalized.startsWith("src/");
 }
 
 export function canonicalizeAuthenticatedMutationRegistry(

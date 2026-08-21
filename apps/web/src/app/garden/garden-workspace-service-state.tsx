@@ -17,7 +17,7 @@ import type {
   GardenWorkspaceRecentEntry,
 } from "@/server/garden-workspace-repository";
 
-interface GardenWorkspaceLocalStateProps {
+interface GardenWorkspaceServiceStateProps {
   locale: InterfaceLocale;
   nextAction: { href: string; label: string };
   recent: GardenWorkspaceRecentEntry[];
@@ -29,13 +29,13 @@ interface GardenWorkspaceLocalStateProps {
  * Registers server-backed workspace context and renders media/privacy support.
  * This boundary intentionally has no browser persistence or connectivity API.
  */
-export function GardenWorkspaceLocalState({
+export function GardenWorkspaceServiceState({
   locale,
   nextAction,
   recent,
   inbox,
   media,
-}: GardenWorkspaceLocalStateProps) {
+}: GardenWorkspaceServiceStateProps) {
   const copy = getGardenWorkspaceCopy(locale);
   const modules = buildContextModules({
     locale,
@@ -60,7 +60,7 @@ export function GardenWorkspaceLocalState({
             {media?.processingCount ? (
               <span>
                 {formatGardenWorkspaceTemplate(
-                  copy.localState.media.processing,
+                  copy.serviceState.media.processing,
                   { count: media.processingCount },
                 )}
               </span>
@@ -68,7 +68,7 @@ export function GardenWorkspaceLocalState({
             {media?.failedCount ? (
               <span className="text-destructive">
                 {formatGardenWorkspaceTemplate(
-                  copy.localState.media.attention,
+                  copy.serviceState.media.attention,
                   { count: media.failedCount },
                 )}
               </span>
@@ -86,7 +86,7 @@ export function GardenWorkspaceLocalState({
             href={localizedPath(locale, "/privacy")}
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            {copy.localState.privacy}
+            {copy.serviceState.privacy}
           </Link>
         </div>
       </section>
@@ -113,7 +113,7 @@ function buildContextModules({
       ? [
           {
             href: "/garden#garden-service-state",
-            label: copy.localState.context.photosProcessing,
+            label: copy.serviceState.context.photosProcessing,
             meta: String(media.processingCount),
           },
         ]
@@ -122,7 +122,7 @@ function buildContextModules({
       ? [
           {
             href: "/garden#garden-service-state",
-            label: copy.localState.context.photosNeedAttention,
+            label: copy.serviceState.context.photosNeedAttention,
             meta: String(media.failedCount),
           },
         ]
@@ -132,12 +132,12 @@ function buildContextModules({
   return [
     {
       key: "garden-next",
-      title: copy.localState.context.nextAction,
+      title: copy.serviceState.context.nextAction,
       items: [{ href: nextAction.href, label: nextAction.label }],
     },
     {
       key: "garden-recent",
-      title: copy.localState.context.recent,
+      title: copy.serviceState.context.recent,
       items: recent.slice(0, 3).map((entry) => ({
         href: entry.objectId
           ? `/garden/objects/${entry.objectId}`
@@ -145,47 +145,47 @@ function buildContextModules({
         label: entry.title,
         meta: formatGardenWorkspaceDate(locale, entry.entryDate, "short"),
       })),
-      emptyLabel: copy.localState.context.noRecent,
+      emptyLabel: copy.serviceState.context.noRecent,
     },
     ...(mediaItems.length > 0
       ? [
           {
             key: "garden-media",
-            title: copy.localState.context.photosProcessing,
+            title: copy.serviceState.context.photosProcessing,
             items: mediaItems,
           },
         ]
       : []),
     {
       key: "garden-inbox",
-      title: copy.localState.context.inbox,
+      title: copy.serviceState.context.inbox,
       items: [
         {
           href: localizedPath(locale, "/notifications"),
-          label: copy.localState.context.notifications,
+          label: copy.serviceState.context.notifications,
           meta: inbox ? String(inbox.notificationCount) : "—",
         },
         {
           href: "/garden/lineage/claims",
-          label: copy.localState.context.lineageClaims,
+          label: copy.serviceState.context.lineageClaims,
           meta: inbox ? String(inbox.claimCount) : "—",
         },
       ],
     },
     {
       key: "garden-privacy",
-      title: copy.localState.context.privacy,
+      title: copy.serviceState.context.privacy,
       items: [
         {
           href: localizedPath(locale, "/privacy"),
-          label: copy.localState.context.privacyControls,
+          label: copy.serviceState.context.privacyControls,
         },
       ],
     },
   ];
 }
 
-export function GardenWorkspaceLocalStateError({
+export function GardenWorkspaceServiceStateError({
   locale,
 }: {
   locale: InterfaceLocale;

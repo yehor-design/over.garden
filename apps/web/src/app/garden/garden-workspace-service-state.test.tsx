@@ -16,12 +16,12 @@ vi.mock("@/components/site-shell/site-shell-context-rail", () => ({
   SiteShellContextRailRegistration: () => null,
 }));
 
-import { GardenWorkspaceLocalState } from "./garden-workspace-local-state";
+import { GardenWorkspaceServiceState } from "./garden-workspace-service-state";
 
-describe("GardenWorkspaceLocalState online-only boundary", () => {
+describe("GardenWorkspaceServiceState online-only boundary", () => {
   it("renders server media and privacy support without device queue claims", () => {
     const html = renderToStaticMarkup(
-      <GardenWorkspaceLocalState
+      <GardenWorkspaceServiceState
         locale="uk"
         nextAction={{ href: "/garden", label: "Next" }}
         recent={[]}

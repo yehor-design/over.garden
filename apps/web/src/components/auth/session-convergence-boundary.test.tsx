@@ -29,10 +29,8 @@ const mocks = vi.hoisted(() => ({
   composerBindScope: vi.fn(),
   composerFlush: vi.fn(),
   composerResume: vi.fn(),
-  hydrate: vi.fn(),
-  fetchOwnerVaultBinding: vi.fn(),
-  deactivateOwnerVault: vi.fn(),
-  sealVaultsForLocalExit: vi.fn(),
+  admit: vi.fn(),
+  sealParticipantsForLocalExit: vi.fn(),
   pause: vi.fn(),
   abort: vi.fn(),
   drain: vi.fn(),
@@ -146,14 +144,15 @@ vi.mock("@/lib/auth/session-invalidation-marker", () => ({
 }));
 vi.mock("@/lib/garden/online-journal-composer-participants", () => ({
   abortOnlineJournalComposerParticipants: mocks.abort,
-  admitOnlineJournalComposerSession: mocks.hydrate,
+  admitOnlineJournalComposerSession: mocks.admit,
   pauseOnlineJournalComposerActivity: mocks.pause,
   finalizeOnlineJournalComposerParticipantsForSignedOut:
     mocks.finalizeStandalone,
   finalizeOnlineJournalComposerParticipantsForSessionChange:
     mocks.finalizeSessionChangeStandalone,
   prepareOnlineJournalComposerParticipants: mocks.prepareComposer,
-  sealOnlineJournalComposerParticipantsForExit: mocks.sealVaultsForLocalExit,
+  sealOnlineJournalComposerParticipantsForExit:
+    mocks.sealParticipantsForLocalExit,
 }));
 
 import {
@@ -240,10 +239,10 @@ describe("session convergence boundary", () => {
       reconciliation: "canonical_response",
     });
     mocks.reconcileLocalExit.mockResolvedValue("response_observed");
-    mocks.sealVaultsForLocalExit.mockReturnValue(1);
+    mocks.sealParticipantsForLocalExit.mockReturnValue(1);
     mocks.prepareComposer.mockResolvedValue({
       isActive: () => true,
-      bindOfflineActivityScope: mocks.composerBindScope,
+      bindSessionFence: mocks.composerBindScope,
       flushLatest: mocks.composerFlush,
       resume: mocks.composerResume,
     });
@@ -252,7 +251,7 @@ describe("session convergence boundary", () => {
     mocks.pause.mockResolvedValue({
       operationId: "op-fallback-fence-1234",
       sessionGeneration: "opaque-binding-for-session-a",
-      waitForSyncDrain: mocks.drain,
+      waitForParticipantDrain: mocks.drain,
       resume: mocks.resume,
       finalizeForSessionChange: mocks.finalizeSessionChange,
       finalizeForSignedOut: mocks.finalize,
@@ -260,9 +259,7 @@ describe("session convergence boundary", () => {
       renewPreparationLease: mocks.renew,
       promoteToCommitFence: mocks.promote,
     });
-    mocks.hydrate.mockResolvedValue("ready");
-    mocks.fetchOwnerVaultBinding.mockResolvedValue(null);
-    mocks.deactivateOwnerVault.mockResolvedValue(undefined);
+    mocks.admit.mockResolvedValue("ready");
     mocks.drain.mockResolvedValue(undefined);
     mocks.resume.mockResolvedValue(undefined);
     mocks.finalize.mockResolvedValue("fenced");
@@ -274,7 +271,7 @@ describe("session convergence boundary", () => {
     mocks.promote.mockResolvedValue(undefined);
   });
 
-  it("uses one bounded payload-free phase for authoritative reads and hydration", () => {
+  it("uses one bounded payload-free phase for authoritative reads and admission", () => {
     expect(AUTHORITATIVE_SESSION_READ_TIMEOUT_MS).toBe(
       SESSION_CONVERGENCE_PHASE_TIMEOUT_MS,
     );
@@ -290,7 +287,7 @@ describe("session convergence boundary", () => {
 
     const renderer = await renderBoundary();
 
-    expect(mocks.sealVaultsForLocalExit).toHaveBeenCalledOnce();
+    expect(mocks.sealParticipantsForLocalExit).toHaveBeenCalledOnce();
     expect(mocks.reconcileLocalExit).toHaveBeenCalledWith(
       "B".repeat(43),
       marker,
@@ -372,7 +369,7 @@ describe("session convergence boundary", () => {
         preparationRoundId: null,
       });
     });
-    expect(mocks.sealVaultsForLocalExit).toHaveBeenCalledOnce();
+    expect(mocks.sealParticipantsForLocalExit).toHaveBeenCalledOnce();
     expect(mocks.replace).toHaveBeenCalledWith("/bg");
     expect(
       peer.root.findAllByProps({ "data-local-exit-public-safe": "true" }),
@@ -386,7 +383,7 @@ describe("session convergence boundary", () => {
       kind: "none",
     });
     mocks.getSession.mockResolvedValue(activeSession());
-    mocks.hydrate.mockResolvedValue("ready");
+    mocks.admit.mockResolvedValue("ready");
     mocks.acquireLease.mockReturnValue({
       tabId: "tab-boundary-test-1234",
       release: mocks.releaseLease,
@@ -420,7 +417,7 @@ describe("session convergence boundary", () => {
       })
       .mockReturnValue(localExitMarker);
     mocks.getSession.mockResolvedValue(activeSession());
-    mocks.hydrate.mockResolvedValue("ready");
+    mocks.admit.mockResolvedValue("ready");
     mocks.acquireLease.mockReturnValue({
       tabId: "tab-boundary-test-1234",
       release: mocks.releaseLease,
@@ -465,16 +462,10 @@ describe("session convergence boundary", () => {
     expect(source).toContain("finalizeForHardReload");
     expect(source).toContain('window.addEventListener("pageshow"');
     expect(source).toContain('window.addEventListener("focus"');
-    expect(source).toContain(
-      'window.location.pathname !== "/__visual-fixtures/session-recheck"',
-    );
-    expect(source).toContain(
-      'params.get("visualSessionConvergence") === "true"',
-    );
-    expect(source).toContain(
-      'window.location.pathname !== "/__visual-fixtures/account-sign-out"',
-    );
-    expect(source).toContain('params.get("visualAccountSignOut") === "true"');
+    expect(source).not.toContain("/__visual-fixtures/session-recheck");
+    expect(source).not.toContain("visualSessionConvergence");
+    expect(source).not.toContain("/__visual-fixtures/account-sign-out");
+    expect(source).not.toContain("visualAccountSignOut");
     expect(source).not.toMatch(/payload\.(?:user|session|account|owner)/);
   });
 
@@ -523,7 +514,7 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("clears the exact bootstrap invalidation marker only after authoritative hydration", async () => {
+  it("clears the exact bootstrap invalidation marker only after authoritative admission", async () => {
     const capturedMarker = {
       status: "present" as const,
       persistence: "persistent" as const,
@@ -535,7 +526,7 @@ describe("session convergence boundary", () => {
 
     expect(mocks.readMarker).toHaveBeenCalledOnce();
     expect(mocks.clearMarker).toHaveBeenCalledWith(capturedMarker);
-    expect(mocks.hydrate.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(mocks.admit.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.clearMarker.mock.invocationCallOrder[0]!,
     );
     expect(
@@ -570,8 +561,8 @@ describe("session convergence boundary", () => {
       status: "present",
       persistence: "persistent",
     });
-    const hydration = deferred<"ready">();
-    mocks.hydrate.mockReturnValueOnce(hydration.promise);
+    const admission = deferred<"ready">();
+    mocks.admit.mockReturnValueOnce(admission.promise);
     const renderer = await renderBoundary();
 
     await act(async () => {
@@ -579,7 +570,7 @@ describe("session convergence boundary", () => {
         status: "present",
         persistence: "persistent",
       });
-      hydration.resolve("ready");
+      admission.resolve("ready");
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -592,13 +583,13 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("keeps a terminal bootstrap marker when owner-vault hydration cannot be verified", async () => {
+  it("keeps a terminal bootstrap marker when composer admission cannot be verified", async () => {
     mocks.readMarker.mockReturnValueOnce({
       status: "present",
       persistence: "persistent",
     });
-    mocks.hydrate.mockRejectedValueOnce(
-      new Error("synthetic owner-vault hydration failure"),
+    mocks.admit.mockRejectedValueOnce(
+      new Error("synthetic composer admission failure"),
     );
 
     const renderer = await renderBoundary();
@@ -620,14 +611,12 @@ describe("session convergence boundary", () => {
       status: "present",
       persistence: "persistent",
     });
-    mocks.hydrate.mockRejectedValueOnce(
+    mocks.admit.mockRejectedValueOnce(
       new Error("synthetic online composer admission failure"),
     );
 
     const renderer = await renderBoundary();
 
-    expect(mocks.fetchOwnerVaultBinding).not.toHaveBeenCalled();
-    expect(mocks.deactivateOwnerVault).not.toHaveBeenCalled();
     expect(mocks.clearMarker).not.toHaveBeenCalled();
     expect(
       renderer.root.findAllByProps({ children: "Private surface" }),
@@ -655,13 +644,12 @@ describe("session convergence boundary", () => {
   it("admits online composers with the fresh session generation and no device binding", async () => {
     const renderer = await renderBoundary();
 
-    expect(mocks.fetchOwnerVaultBinding).not.toHaveBeenCalled();
-    expect(mocks.hydrate).toHaveBeenCalledWith(
+    expect(mocks.admit).toHaveBeenCalledWith(
       "session-a",
       "opaque-binding-for-session-a",
       {
         allowAuthoritativeSessionRebind: true,
-        requireVerifiedHydration: false,
+        requireVerifiedAdmission: false,
       },
     );
     await unmount(renderer);
@@ -670,13 +658,12 @@ describe("session convergence boundary", () => {
   it("keeps server-backed private UI usable without a legacy binding lookup", async () => {
     const renderer = await renderBoundary();
 
-    expect(mocks.fetchOwnerVaultBinding).not.toHaveBeenCalled();
-    expect(mocks.hydrate).toHaveBeenCalledWith(
+    expect(mocks.admit).toHaveBeenCalledWith(
       "session-a",
       "opaque-binding-for-session-a",
       {
         allowAuthoritativeSessionRebind: true,
-        requireVerifiedHydration: false,
+        requireVerifiedAdmission: false,
       },
     );
     expect(
@@ -688,8 +675,8 @@ describe("session convergence boundary", () => {
 
   it("degrades a stalled online composer admission without wedging safe exits", async () => {
     vi.useFakeTimers();
-    const stalledHydration = deferred<"ready">();
-    mocks.hydrate.mockReturnValueOnce(stalledHydration.promise);
+    const stalledAdmission = deferred<"ready">();
+    mocks.admit.mockReturnValueOnce(stalledAdmission.promise);
     const renderer = await renderBoundary(
       <>
         <button type="button">Sign out safely</button>
@@ -704,7 +691,6 @@ describe("session convergence boundary", () => {
       await vi.advanceTimersByTimeAsync(AUTHORITATIVE_SESSION_READ_TIMEOUT_MS);
     });
 
-    expect(mocks.deactivateOwnerVault).not.toHaveBeenCalled();
     expect(
       renderer.root.findByProps({ children: "Sign out safely" }).props.disabled,
     ).not.toBe(true);
@@ -713,15 +699,14 @@ describe("session convergence boundary", () => {
     ).toBe("/bg");
 
     await act(async () => {
-      stalledHydration.resolve("ready");
+      stalledAdmission.resolve("ready");
       await Promise.resolve();
     });
-    expect(mocks.deactivateOwnerVault).not.toHaveBeenCalled();
     await unmount(renderer);
   });
 
-  it("keeps payload-free locale navigation available while local session hydration is blocked", async () => {
-    mocks.hydrate.mockResolvedValue("blocked");
+  it("keeps payload-free locale navigation available while local session admission is blocked", async () => {
+    mocks.admit.mockResolvedValue("blocked");
     const renderer = await renderBoundary();
 
     expect(mocks.localeFormState).toHaveBeenCalledWith({
@@ -738,8 +723,8 @@ describe("session convergence boundary", () => {
   });
 
   it("renders only the payload-free locale control while authenticated children are gated", async () => {
-    const hydration = deferred<"ready">();
-    mocks.hydrate.mockReturnValueOnce(hydration.promise);
+    const admission = deferred<"ready">();
+    mocks.admit.mockReturnValueOnce(admission.promise);
     const renderer = await renderBoundary(
       <p data-private-surface="true">Private surface</p>,
       <button
@@ -767,7 +752,7 @@ describe("session convergence boundary", () => {
       renderer.root.findAllByProps({ "data-private-surface": "true" }),
     ).toHaveLength(0);
 
-    hydration.resolve("ready");
+    admission.resolve("ready");
     await vi.waitFor(() =>
       expect(
         renderer.root.findAllByProps({ "data-private-surface": "true" }),
@@ -866,7 +851,7 @@ describe("session convergence boundary", () => {
       });
 
       expectPrivateSignOutDialogPresent(renderer, "waiting");
-      expect(mocks.hydrate).toHaveBeenCalledOnce();
+      expect(mocks.admit).toHaveBeenCalledOnce();
       expect(mocks.reload).not.toHaveBeenCalled();
       await unmount(renderer);
     },
@@ -974,7 +959,7 @@ describe("session convergence boundary", () => {
     });
 
     expectPrivateSignOutDialogAbsent(renderer);
-    expect(mocks.hydrate).toHaveBeenCalledOnce();
+    expect(mocks.admit).toHaveBeenCalledOnce();
     expect(mocks.resume).not.toHaveBeenCalled();
     await unmount(renderer);
   });
@@ -1046,14 +1031,14 @@ describe("session convergence boundary", () => {
       await Promise.resolve();
     });
     expectPrivateSignOutDialogAbsent(renderer);
-    expect(mocks.hydrate).toHaveBeenCalledOnce();
+    expect(mocks.admit).toHaveBeenCalledOnce();
     await unmount(renderer);
     vi.useRealTimers();
   });
 
   it("keeps the private tree fenced when reload cannot finalize its owner recheck fence", async () => {
     mocks.finalizeHardReload.mockRejectedValueOnce(
-      new Error("IndexedDB finalization unavailable"),
+      new Error("participant finalization unavailable"),
     );
     const renderer = await renderBoundary(privateSignOutDialog("waiting"));
     const confirmation = deferred<ReturnType<typeof activeSession>>();
@@ -1186,7 +1171,7 @@ describe("session convergence boundary", () => {
     await vi.waitFor(() =>
       expectPrivateSignOutDialogPresent(renderer, "waiting"),
     );
-    const hydrationCountAfterRetry = mocks.hydrate.mock.calls.length;
+    const admissionCountAfterRetry = mocks.admit.mock.calls.length;
 
     await act(async () => {
       olderConfirmation.resolve(activeSession());
@@ -1194,7 +1179,7 @@ describe("session convergence boundary", () => {
       await Promise.resolve();
     });
     expectPrivateSignOutDialogPresent(renderer, "waiting");
-    expect(mocks.hydrate).toHaveBeenCalledTimes(hydrationCountAfterRetry);
+    expect(mocks.admit).toHaveBeenCalledTimes(admissionCountAfterRetry);
     await unmount(renderer);
     vi.useRealTimers();
   });
@@ -1271,7 +1256,7 @@ describe("session convergence boundary", () => {
       order.push("composer");
       return {
         isActive: () => true,
-        bindOfflineActivityScope: (scope: unknown) => {
+        bindSessionFence: (scope: unknown) => {
           order.push("bind");
           mocks.composerBindScope(scope);
         },
@@ -1284,7 +1269,7 @@ describe("session convergence boundary", () => {
       return {
         operationId: "op-fallback-fence-1234",
         sessionGeneration: "opaque-binding-for-session-a",
-        waitForSyncDrain: async () => void order.push("drain"),
+        waitForParticipantDrain: async () => void order.push("drain"),
         resume: mocks.resume,
         finalizeForSessionChange: mocks.finalizeSessionChange,
         finalizeForSignedOut: mocks.finalize,
@@ -1614,7 +1599,7 @@ describe("session convergence boundary", () => {
 
   it("privacy-gates and navigates a missed-PREP signed-out document even when standalone finalization rejects", async () => {
     mocks.finalizeStandalone.mockRejectedValue(
-      new Error("IndexedDB finalization failed"),
+      new Error("participant finalization failed"),
     );
     const renderer = await renderBoundary();
     mocks.getSession.mockResolvedValue({ data: null });
@@ -1640,7 +1625,7 @@ describe("session convergence boundary", () => {
 
   it("privacy-gates and reloads session B when session A finalization rejects", async () => {
     mocks.finalizeSessionChange.mockRejectedValue(
-      new Error("IndexedDB unavailable"),
+      new Error("composer admission unavailable"),
     );
     const renderer = await renderBoundary();
     await emit("sign_out_preparation");
@@ -1711,10 +1696,8 @@ describe("session convergence boundary", () => {
     expect(mocks.finalize).not.toHaveBeenCalled();
   });
 
-  it("keeps authenticated children gated while durable activity is blocked and retries hydration", async () => {
-    mocks.hydrate
-      .mockResolvedValueOnce("blocked")
-      .mockResolvedValueOnce("ready");
+  it("keeps authenticated children gated while durable activity is blocked and retries admission", async () => {
+    mocks.admit.mockResolvedValueOnce("blocked").mockResolvedValueOnce("ready");
     const renderer = await renderBoundary();
 
     expect(
@@ -1745,7 +1728,7 @@ describe("session convergence boundary", () => {
     expect(
       renderer.root.findAllByProps({ children: "Private surface" }),
     ).toHaveLength(1);
-    expect(mocks.hydrate).toHaveBeenCalledTimes(2);
+    expect(mocks.admit).toHaveBeenCalledTimes(2);
     await unmount(renderer);
   });
 
@@ -1767,7 +1750,7 @@ describe("session convergence boundary", () => {
     expect(
       renderer.root.findAllByProps({ children: "Private surface" }),
     ).toHaveLength(0);
-    expect(mocks.hydrate).not.toHaveBeenCalled();
+    expect(mocks.admit).not.toHaveBeenCalled();
 
     mocks.getSession.mockResolvedValueOnce(activeSession());
     const retry = renderer.root
@@ -1784,7 +1767,7 @@ describe("session convergence boundary", () => {
     ).toHaveLength(1);
     stalled.resolve(activeSession());
     await Promise.resolve();
-    expect(mocks.hydrate).toHaveBeenCalledOnce();
+    expect(mocks.admit).toHaveBeenCalledOnce();
     await unmount(renderer);
     vi.useRealTimers();
   });
@@ -1809,12 +1792,12 @@ describe("session convergence boundary", () => {
     });
 
     expect(mocks.getSession).toHaveBeenCalledTimes(2);
-    expect(mocks.hydrate).toHaveBeenCalledWith(
+    expect(mocks.admit).toHaveBeenCalledWith(
       "session-a",
       "opaque-binding-for-session-a",
       {
         allowAuthoritativeSessionRebind: true,
-        requireVerifiedHydration: false,
+        requireVerifiedAdmission: false,
       },
     );
     expect(
@@ -1833,7 +1816,7 @@ describe("session convergence boundary", () => {
     const fallbackExit = renderer.root.findByProps({
       "data-session-convergence-fallback-sign-out": "true",
     });
-    expect(mocks.hydrate).not.toHaveBeenCalled();
+    expect(mocks.admit).not.toHaveBeenCalled();
     expect(mocks.pause).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -1891,8 +1874,8 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("never rehydrates baseline A when a gate retry authoritatively observes session B", async () => {
-    mocks.hydrate.mockResolvedValueOnce("blocked");
+  it("never readmits baseline A when a gate retry authoritatively observes session B", async () => {
+    mocks.admit.mockResolvedValueOnce("blocked");
     mocks.getSession
       .mockResolvedValueOnce(activeSession())
       .mockResolvedValueOnce(activeSession("session-b"));
@@ -1911,7 +1894,7 @@ describe("session convergence boundary", () => {
       "session-a",
       "opaque-binding-for-session-a",
     );
-    expect(mocks.hydrate).toHaveBeenCalledOnce();
+    expect(mocks.admit).toHaveBeenCalledOnce();
     expect(mocks.reload).toHaveBeenCalledOnce();
     expect(
       renderer.root.findAllByProps({ children: "Private surface" }),
@@ -1920,7 +1903,7 @@ describe("session convergence boundary", () => {
   });
 
   it("fences baseline A and redirects when a gate retry authoritatively observes sign-out", async () => {
-    mocks.hydrate.mockResolvedValueOnce("blocked");
+    mocks.admit.mockResolvedValueOnce("blocked");
     mocks.getSession
       .mockResolvedValueOnce(activeSession())
       .mockResolvedValueOnce({ data: null });
@@ -1939,13 +1922,13 @@ describe("session convergence boundary", () => {
       "session-a",
       "opaque-binding-for-session-a",
     );
-    expect(mocks.hydrate).toHaveBeenCalledOnce();
+    expect(mocks.admit).toHaveBeenCalledOnce();
     expect(mocks.replace).toHaveBeenCalledWith("/bg");
     await unmount(renderer);
   });
 
-  it("offers a bound no-deletion exit from blocked hydration and hides private UI before public navigation", async () => {
-    mocks.hydrate.mockResolvedValue("blocked");
+  it("offers a bound no-deletion exit from blocked admission and hides private UI before public navigation", async () => {
+    mocks.admit.mockResolvedValue("blocked");
     const renderer = await renderBoundary(privateSignOutDialog("waiting"));
 
     expectPrivateSignOutDialogAbsent(renderer);
@@ -1991,7 +1974,7 @@ describe("session convergence boundary", () => {
   });
 
   it("keeps the recovery gate and no-deletion exit when the bound session remains active", async () => {
-    mocks.hydrate.mockResolvedValue("blocked");
+    mocks.admit.mockResolvedValue("blocked");
     mocks.canonicalSignOut.mockResolvedValue({
       status: "failed",
       reason: "session_still_active",
@@ -2026,7 +2009,7 @@ describe("session convergence boundary", () => {
   });
 
   it("reloads a changed fallback session without publishing a sign-out receipt", async () => {
-    mocks.hydrate.mockResolvedValue("blocked");
+    mocks.admit.mockResolvedValue("blocked");
     mocks.canonicalSignOut.mockResolvedValue({
       status: "failed",
       reason: "session_changed",
@@ -2051,7 +2034,7 @@ describe("session convergence boundary", () => {
 
   it("bounds duplicate fallback exit, keeps the safe exits usable, and rejects late completion", async () => {
     vi.useFakeTimers();
-    mocks.hydrate.mockResolvedValue("blocked");
+    mocks.admit.mockResolvedValue("blocked");
     const result = deferred<{
       status: "committed";
       reconciliation: "canonical_response";

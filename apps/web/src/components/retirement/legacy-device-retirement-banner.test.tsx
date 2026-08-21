@@ -6,15 +6,6 @@ import {
   type LegacyDeviceRetirementPort,
 } from "@/lib/retirement/legacy-device-retirement";
 
-const signOut = vi.hoisted(() => ({ requestSignOut: vi.fn() }));
-
-vi.mock("@/components/auth/sign-out-provider", () => ({
-  useSignOut: () => ({
-    phase: "idle",
-    requestSignOut: signOut.requestSignOut,
-    copy: {},
-  }),
-}));
 vi.mock("@/components/ui/button", () => ({
   Button: (props: Record<string, unknown>) => {
     const buttonProps = { ...props };
@@ -23,31 +14,8 @@ vi.mock("@/components/ui/button", () => ({
     return <button {...buttonProps} />;
   },
 }));
-vi.mock("@/components/ui/alert-dialog", () => ({
-  AlertDialog: ({
-    open,
-    children,
-  }: {
-    open: boolean;
-    children: React.ReactNode;
-  }) => (open ? <div data-dialog="true">{children}</div> : null),
-  AlertDialogContent: (props: React.ComponentProps<"div">) => (
-    <div {...props} />
-  ),
-  AlertDialogDescription: (props: React.ComponentProps<"div">) => (
-    <div {...props} />
-  ),
-  AlertDialogTitle: (props: React.ComponentProps<"h2">) => <h2 {...props} />,
-}));
 
 import { LegacyDeviceRetirementBanner } from "./legacy-device-retirement-banner";
-
-const identity = {
-  ownerUserId: "00000000-0000-4000-8000-000000000322",
-  ownerVaultBinding: "B".repeat(43),
-  sessionGeneration: "S".repeat(43),
-  documentMutationGeneration: "signed-document-generation",
-};
 
 describe("LegacyDeviceRetirementBanner", () => {
   beforeEach(() => {
@@ -55,70 +23,66 @@ describe("LegacyDeviceRetirementBanner", () => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   });
 
-  it("renders nothing for an empty inventory", async () => {
-    const port = mockPort([]);
+  it("renders nothing after exact known storage is absent", async () => {
+    const port = mockPort();
     const renderer = await renderBanner(port);
 
-    expect(port.finalize).toHaveBeenCalledOnce();
+    expect(port.retire).toHaveBeenCalledOnce();
     expect(renderer.toJSON()).toBeNull();
   });
 
-  it("keeps transfer, cancel, sign-out, and page content independently usable", async () => {
-    const transfer = deferred<{ status: "verified" }>();
-    const port = mockPort([
-      {
-        token: "r-draft",
-        kind: "draft",
-        mediaIntentCount: 1,
-        updatedAt: 1_786_381_200_000,
-      },
-    ]);
-    vi.mocked(port.transferAndVerify).mockReturnValue(transfer.promise);
-    const renderer = await renderBanner(port, true);
+  it("shows a content-free retry boundary for an unresolved binding", async () => {
+    const onSignOut = vi.fn();
+    const port = mockPort({
+      status: "unresolved_retained",
+      unresolvedBindingCount: 1,
+    });
+    const renderer = await renderBanner(port, { onSignOut });
 
-    expect(button(renderer, /перенести/i)).toBeDefined();
-    expect(
-      renderer.root.findByProps({ "data-independent-action": true }),
-    ).toBeDefined();
-    await click(renderer, /перенести/i);
+    expect(text(renderer)).toMatch(/не вдалося безпечно видалити/i);
+    expect(text(renderer)).not.toMatch(/чернет|запис|фото|перенес/i);
+    await click(renderer, /вийти/i);
+    expect(onSignOut).toHaveBeenCalledOnce();
+    await click(renderer, /сховати/i);
+    expect(renderer.toJSON()).toBeNull();
+  });
+
+  it("keeps cancel and independent page actions usable during a retry", async () => {
+    const retry = deferred<ReturnType<typeof receipt>>();
+    const port = mockPort({
+      status: "unresolved_retained",
+      unresolvedBindingCount: 1,
+    });
+    port.retire.mockResolvedValueOnce(
+      receipt({
+        status: "unresolved_retained",
+        unresolvedBindingCount: 1,
+      }),
+    );
+    port.retire.mockReturnValueOnce(retry.promise);
+    const renderer = await renderBanner(port, { independentAction: true });
+
+    await act(async () => {
+      button(renderer, /спробувати ще раз/i).props.onClick();
+      await Promise.resolve();
+    });
     expect(button(renderer, /скасувати/i).props.disabled).not.toBe(true);
     expect(
       renderer.root.findByProps({ "data-independent-action": true }).props
         .disabled,
     ).not.toBe(true);
-    await click(renderer, /вийти/i);
-    expect(signOut.requestSignOut).toHaveBeenCalledOnce();
     await click(renderer, /скасувати/i);
+    expect(text(renderer)).toMatch(/скасовано/i);
 
-    transfer.resolve({ status: "verified" });
-    await act(async () => void (await transfer.promise));
-    expect(port.deleteVerifiedBatch).not.toHaveBeenCalled();
-  });
-
-  it("requires two explicit confirmations and marks Cancel for initial focus", async () => {
-    const port = mockPort([
-      {
-        token: "r-draft",
-        kind: "draft",
-        mediaIntentCount: 0,
-        updatedAt: 1_786_381_200_000,
-      },
-    ]);
-    const renderer = await renderBanner(port);
-
-    await click(renderer, /^видалити$/i);
-    expect(button(renderer, /не видаляти/i).props.autoFocus).toBe(true);
-    await click(renderer, /підтвердити видалення/i);
-    expect(port.discardCurrentOwner).not.toHaveBeenCalled();
-    expect(text(renderer)).toMatch(/ще раз/i);
-    await click(renderer, /видалити безповоротно/i);
-    expect(port.discardCurrentOwner).toHaveBeenCalledOnce();
+    retry.resolve(receipt());
+    await act(async () => void (await retry.promise));
+    expect(text(renderer)).toMatch(/скасовано/i);
   });
 });
 
 async function renderBanner(
   port: ReturnType<typeof mockPort>,
-  withIndependentAction = false,
+  options: { onSignOut?: () => void; independentAction?: boolean } = {},
 ) {
   let renderer!: ReactTestRenderer;
   await act(async () => {
@@ -126,13 +90,14 @@ async function renderBanner(
       <>
         <LegacyDeviceRetirementBanner
           locale="uk"
-          controllerFactory={async () =>
-            createLegacyDeviceRetirementController({ identity, port })
+          onSignOut={options.onSignOut}
+          controllerFactory={() =>
+            createLegacyDeviceRetirementController({ port })
           }
         />
-        {withIndependentAction ? (
+        {options.independentAction ? (
           <button type="button" data-independent-action={true}>
-            Independent composer action
+            Independent page action
           </button>
         ) : null}
       </>,
@@ -175,33 +140,28 @@ function textNode(node: { children: Array<unknown> }): string {
     .join(" ");
 }
 
-function mockPort(
-  items: Array<{
-    token: string;
-    kind: "draft" | "mutation" | "synced_receipt" | "photo_upload";
-    mediaIntentCount: number;
-    updatedAt: number;
-  }>,
-): LegacyDeviceRetirementPort {
+function receipt(
+  overrides: Partial<{
+    status: "absent" | "unresolved_retained";
+    deletedDatabaseCount: number;
+    unregisteredWorkerCount: number;
+    unresolvedBindingCount: number;
+  }> = {},
+) {
   return {
-    inspect: vi.fn().mockResolvedValue({
-      items,
-      bounded: false,
-      foreignBindingCount: 0,
-      foreignOwnerResidueCount: 0,
-      capability: "enumeration_available",
-    }),
-    assertSession: vi.fn().mockResolvedValue(true),
-    transferAndVerify: vi.fn().mockResolvedValue({ status: "verified" }),
-    deleteVerifiedBatch: vi.fn().mockResolvedValue(undefined),
-    discardCurrentOwner: vi.fn().mockResolvedValue(undefined),
-    finalize: vi.fn().mockResolvedValue({
-      status: "completed",
-      absenceReads: 2,
-      foreignOwnerResidue: false,
-      foreignOrOrphanRetained: false,
-    }),
+    status: "absent" as const,
+    absenceReads: 2 as const,
+    deletedDatabaseCount: 3,
+    unregisteredWorkerCount: 1,
+    unresolvedBindingCount: 0,
+    ...overrides,
   };
+}
+
+function mockPort(overrides: Parameters<typeof receipt>[0] = {}) {
+  return {
+    retire: vi.fn(async () => receipt(overrides)),
+  } satisfies LegacyDeviceRetirementPort;
 }
 
 function deferred<T>() {

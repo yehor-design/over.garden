@@ -1026,8 +1026,8 @@ function localizedVisualScenarioMessage(
   if (scenario.state === "draft") {
     return workspaceCopy.composer.draftRestored;
   }
-  if (scenario.state === "offline") {
-    return workspaceCopy.composer.messages.fixtureOffline;
+  if (scenario.state === "connection-required") {
+    return workspaceCopy.composer.messages.fixtureConnectionRequired;
   }
   if (scenario.state === "error") {
     return workspaceCopy.composer.messages.fixturePhotoError;

@@ -16,7 +16,7 @@ import type { JournalEntryDraftReceiptV1 } from "@/lib/garden/entry-contracts";
 import { createOnlineJournalDraftOwner } from "@/lib/garden/online-journal-draft";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 
-export function GardenDraftResumePanel({
+export function ServerDraftResumePanel({
   drafts: initialDrafts,
   locale,
 }: {

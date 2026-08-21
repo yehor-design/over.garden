@@ -3,7 +3,7 @@
 Status: active release proof contract
 
 OVE-292 composes the authenticated-continuity children without becoming a new
-authentication, mutation, offline-vault, provider, or sign-out authority. The
+authentication, mutation, legacy-storage retirement, provider, or sign-out authority. The
 proof is intentionally asymmetric:
 
 - immutable child receipts prove the effects their tasks already owned;

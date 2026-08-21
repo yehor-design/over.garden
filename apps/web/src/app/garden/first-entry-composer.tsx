@@ -1460,8 +1460,8 @@ function localizedVisualScenarioMessage(
 ) {
   if (!scenario) return copy.composer.privacyDefault;
   if (scenario.state === "draft") return copy.composer.draftRestored;
-  if (scenario.state === "offline")
-    return copy.composer.messages.fixtureOffline;
+  if (scenario.state === "connection-required")
+    return copy.composer.messages.fixtureConnectionRequired;
   if (scenario.state === "error")
     return copy.composer.messages.fixturePhotoError;
   if (scenario.state === "cancel") return copy.composer.messages.fixtureCancel;

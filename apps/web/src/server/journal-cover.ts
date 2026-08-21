@@ -22,7 +22,7 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 /**
  * Shared SQL projection: one effective cover media row per journal entry.
  * Prefer explicit cover_media_asset_id when still a valid claimed processed
- * asset; otherwise first processed inline by document_position (synced to
+ * asset; otherwise first processed inline by document_position (aligned with
  * JournalDocumentV1 image order on claim). Never orders by created_at.
  */
 export function buildFirstProcessedMediaPerEntryQuery(executor: QueryExecutor) {
@@ -37,10 +37,7 @@ export function buildFirstProcessedMediaPerEntryQuery(executor: QueryExecutor) {
           "journal_entries.owner_user_id",
         ),
     )
-    .distinctOn([
-      "media_assets.journal_entry_id",
-      "media_assets.owner_user_id",
-    ])
+    .distinctOn(["media_assets.journal_entry_id", "media_assets.owner_user_id"])
     .select([
       "media_assets.id as mediaId",
       "media_assets.journal_entry_id as journalEntryId",

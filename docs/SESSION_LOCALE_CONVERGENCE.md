@@ -113,18 +113,17 @@ On the admitted editor, one bounded no-cache read is coalesced across focus and
 visible-page signals. Exact-session success changes nothing. Timeout, malformed
 data, unknown classification, or network failure is a silent nonterminal
 `background_unavailable` observation: the private React tree, form controls,
-composer, owner sync, and offline activity remain unchanged. The compatibility
-mode retains the prior eager `checking` gate, composer fence, sync abort, and
-owner-activity pause before the session await.
+composer, and in-memory online participant state remain unchanged. The
+compatibility mode retains the eager `checking` gate, composer fence, request
+abort, and participant pause before the session await.
 
 A same-owner new session binding is a fresh-document refresh, not an owner
 change. It writes no terminal marker, publishes no terminal signal, shows no
 owner-change message, and reloads once without pre-hiding the editor. Only the
 fresh bounded bootstrap may pass
 `allowAuthoritativeSessionRebind: true`; that path updates the same owner's
-local activity generation without moving, deleting, or reassigning vault,
-draft, queue, or owner-activity rows. Ordinary stale-document callers remain
-closed.
+in-memory session fence without moving, deleting, or reassigning a canonical
+server draft. Ordinary stale-document callers remain closed.
 
 Terminal evidence is a confirmed local exit/account switch, peer committed
 signal, present or malformed marker, authoritative signed-out/different-owner
@@ -135,34 +134,32 @@ session completion may reopen it. BroadcastChannel is the fast path;
 localStorage is the sleeping-tab and BFCache recovery path. The marker contains
 only a version and cryptographically random opaque generation. A fresh
 authoritative bootstrap captures the marker before asynchronous work and
-compare-clears only that byte-identical snapshot after session and owner-vault
-hydration; a newer marker always wins.
+compare-clears only that byte-identical snapshot after session admission and
+online-composer participant preparation; a newer marker always wins.
 
 The deterministic fixture remains local/isolated-preview only and contains
 synthetic markup. Production must return 404 for it. The browser matrix proves
 uk/bg/ru, twenty coalesced signals, degraded reads, compatibility fencing,
 same-owner refresh, marker reload/BFCache races, irreversible peer invalidation,
 responsive controls, and at most 100 ms terminal private-tree removal. No
-production account, cookie, draft, queue, media, identity, or marker generation
-enters its receipt.
+production account, cookie, journal content, media, identity, or marker
+generation enters its receipt.
 
 ```bash
 cd apps/web
-pnpm exec playwright test tests/session-convergence.spec.ts
 pnpm smoke:session-convergence
-BASE_URL="$OVE286_IMMUTABLE_URL" pnpm smoke:session-convergence
 ```
 
 ## OVE-287 immediate retain-only exit
 
 After the single confirmation, sign-out no longer waits for a session read,
-IndexedDB inspection, sync drain, peer acknowledgement, network response,
-cookie expiry, or adapter deletion. The initiating document synchronously
+browser-storage inspection, participant drain, peer acknowledgement, network
+response, cookie expiry, or adapter deletion. The initiating document synchronously
 commits the `local_exit` v2 variant under the existing
-`overgarden:session-invalidation:v1` key, seals every active owner-vault handle,
+`overgarden:session-invalidation:v1` key, seals every active online-composer participant,
 publishes the payload-free `local_exit_committed` signal, removes the private
-React tree, and exposes the localized public-safe surface. Local owner rows are
-retained without inspection, upload, sync, publication, or deletion.
+React tree, and exposes the localized public-safe surface. Canonical server
+draft rows are retained without publication or deletion.
 
 The marker value is exactly a schema version, bounded kind, and opaque random
 generation. The v1 generic terminal marker remains compatible. A v2 local-exit
@@ -191,12 +188,11 @@ An account-A completion that crosses a local-exit generation settles as
 `stale_operation`. A successful new session compare-clears only its captured
 generation, and a delayed generation-A response can never clear generation B.
 
-The local/isolated-preview-only account-sign-out fixture contains synthetic
-owner work and returns 404 when the visual-fixture environment is disabled.
-Its permanent browser matrix proves `uk`/`bg`/`ru`, storage and network denial,
-one-attempt bootstrap, cross-origin return, exact generation races, serialized
-new-session recovery, retained IndexedDB bytes, peer tabs, BFCache, responsive
-public exits, and at most 100 ms confirmed private-tree removal.
+The focused boundary suite proves `uk`/`bg`/`ru`, marker-storage and network
+denial, one-attempt bootstrap, exact generation races, serialized new-session
+recovery, peer tabs, BFCache semantics, and confirmed private-tree removal. The
+separate OVE-323 browser proof verifies exact legacy-name cleanup while
+preserving unrelated browser state; sign-out itself does not own that cleanup.
 
 ```bash
 cd apps/web
@@ -207,7 +203,7 @@ pnpm exec vitest run \
   src/lib/auth/browser-auth-mutation-coordinator.test.ts \
   src/lib/auth/sign-out-contract.test.ts \
   src/lib/auth/sign-out-hardening.test.ts \
-  src/lib/offline/owner-vault.test.ts \
+  src/lib/retirement/known-client-storage.test.ts \
   src/app/api/auth
-pnpm exec playwright test tests/account-sign-out.spec.ts
+pnpm exec playwright test tests/offline-runtime-absence.spec.ts
 ```

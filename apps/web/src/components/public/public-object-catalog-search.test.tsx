@@ -101,7 +101,7 @@ describe("public living-object catalog search", () => {
   });
 
   it("keeps the server search path usable when suggestions are unavailable", async () => {
-    mocks.fetch.mockRejectedValueOnce(new Error("offline"));
+    mocks.fetch.mockRejectedValueOnce(new Error("network unavailable"));
     const renderer = await renderSearch("ko");
 
     await runDebounce();

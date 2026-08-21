@@ -9,10 +9,10 @@ import {
   resolveR2UploadUrlTtlConfiguration,
 } from "@/lib/storage";
 import {
-  JournalEntrySyncError,
-  submitJournalEntryPayload,
-} from "@/lib/offline/journal-entry-sync";
-import type { OfflineJournalEntryPayload } from "@/lib/offline/queue";
+  OnlineJournalSubmitError,
+  uploadOnlineComposerPhoto,
+} from "@/lib/garden/online-journal-submit";
+import type { OnlineComposerPhotoIntent } from "@/lib/garden/composer-photo-selection";
 
 const GENERATION = "opaque-document-generation";
 
@@ -68,19 +68,13 @@ describe("media document mutation admission", () => {
             publicUrl: "https://media.example.invalid/opaque.webp",
           });
         }
-        if (url === "/api/garden/entries") {
-          return Response.json({
-            space: { id: "space-1", displayName: "Synthetic" },
-            plantObject: { id: "object-1", displayName: "Synthetic" },
-            entry: { id: "entry-1", title: "Synthetic", body: "Synthetic" },
-            readbackUrl: "/garden/objects/object-1",
-          });
-        }
         throw new Error(`Unexpected URL: ${url}`);
       }),
     );
 
-    await submitJournalEntryPayload(photoPayload(), {
+    await uploadOnlineComposerPhoto({
+      intent: photoIntent(),
+      authReturnTo: "/garden",
       documentMutationGeneration: GENERATION,
     });
 
@@ -88,7 +82,6 @@ describe("media document mutation admission", () => {
       "/api/media/uploads",
       "https://r2.example.invalid/private-capability",
       "/api/media/process",
-      "/api/garden/entries",
     ]);
     for (const call of calls.filter((item) => item.url.startsWith("/"))) {
       expect(call.headers.get("x-overgarden-document-generation")).toBe(
@@ -108,7 +101,9 @@ describe("media document mutation admission", () => {
 
     let received: unknown;
     try {
-      await submitJournalEntryPayload(photoPayload(), {
+      await uploadOnlineComposerPhoto({
+        intent: photoIntent(),
+        authReturnTo: "/garden",
         documentMutationGeneration: GENERATION,
       });
     } catch (error) {
@@ -116,7 +111,7 @@ describe("media document mutation admission", () => {
     }
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(received).toBeInstanceOf(JournalEntrySyncError);
+    expect(received).toBeInstanceOf(OnlineJournalSubmitError);
     expect(received).toMatchObject({
       status: 409,
       documentMutationAdmission: "DOCUMENT_OWNER_CHANGED",
@@ -147,22 +142,13 @@ describe("media document mutation admission", () => {
   });
 });
 
-function photoPayload(): OfflineJournalEntryPayload {
+function photoIntent(): OnlineComposerPhotoIntent {
   const blob = new Blob(["synthetic-photo"], { type: "image/jpeg" });
   return {
-    target: "first_plant_entry",
-    spaceName: "Synthetic",
-    plantName: "Synthetic",
-    title: "Synthetic",
-    body: "Synthetic",
-    entryDate: "2026-08-10",
-    clientMutationId: "synthetic-idempotency-key",
-    photoIntent: {
-      fileName: "synthetic.jpg",
-      contentType: "image/jpeg",
-      size: blob.size,
-      blob,
-    },
+    fileName: "synthetic.jpg",
+    contentType: "image/jpeg",
+    size: blob.size,
+    blob,
   };
 }
 

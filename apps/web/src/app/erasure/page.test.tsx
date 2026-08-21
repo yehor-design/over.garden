@@ -45,11 +45,6 @@ vi.mock("@/server/erasure-request-repository", () => ({
 vi.mock("./actions", () => ({
   submitErasureRequestAction: vi.fn(),
 }));
-vi.mock("./erasure-local-cleanup", () => ({
-  ErasureLocalCleanup: ({ locale }: { locale: string }) => (
-    <aside data-local-cleanup-locale={locale}>Local cleanup control</aside>
-  ),
-}));
 
 describe("/erasure", () => {
   beforeEach(() => {
@@ -73,7 +68,7 @@ describe("/erasure", () => {
     expect(html).toContain("удалить или анонимизировать ссылки");
     expect(html).toContain("только по возможности");
     expect(html).toContain(SUPPORT_EMAIL);
-    expect(html).toContain('data-local-cleanup-locale="ru"');
+    expect(html).not.toContain("Local cleanup control");
     expect(html).not.toContain("00000000-0000-4000-8000-000000000001");
     expect(html).not.toMatch(/placeholder|public release remains blocked/i);
     expect(html).not.toMatch(/quarantine\/|raw-token|session-token/i);

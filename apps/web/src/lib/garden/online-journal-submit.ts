@@ -366,7 +366,7 @@ const ALLOWED_IMAGE_TYPES = new Set([
  */
 export async function uploadOnlineComposerPhoto(input: {
   intent: OnlineComposerPhotoIntent;
-  /** Stable UUID used only by the temporary legacy-device retirement bridge. */
+  /** Optional stable UUID for an idempotent reservation retry. */
   stableUploadGenerationId?: string;
   authReturnTo: string;
   documentMutationGeneration: string;
