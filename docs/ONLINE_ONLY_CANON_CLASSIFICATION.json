@@ -98,6 +98,7 @@
     ".github/workflows/ci.yml"
   ],
   "historicalPaths": [
+    "docs/OFFLINE_RETIREMENT_PROVENANCE.md",
     "docs/OFFLINE_OWNER_VAULT.md",
     "docs/OFFLINE_WORKSPACE_SUMMARY_CONTRACT.md",
     "docs/adr/ADR-0013-realtime-broadcast-from-database.md",
@@ -105,7 +106,8 @@
     "docs/adr/ADR-0015-lexical-structured-journal-editor.md",
     "docs/linear/ove-253-eppo-source-contract-decision.md",
     "docs/linear/ove-317-lexical-structured-journal.md",
-    "docs/mainline-closeout-ledger.json"
+    "docs/mainline-closeout-ledger.json",
+    "docs/superpowers/plans/2026-08-21-ove-326-online-only-steady-state.md"
   ],
   "historicalPrefixes": [
     "docs/audit-inbox/",
