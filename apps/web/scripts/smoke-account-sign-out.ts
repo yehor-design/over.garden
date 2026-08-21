@@ -27,6 +27,7 @@ export const LOCAL_EXIT_RECONCILIATION_PATH = "/api/auth/local-exit-reconcile";
 export const SESSION_CONFIRMATION_PATH =
   "/api/auth/get-session?disableCookieCache=true";
 export const PROTECTED_MUTATION_PATH = "/api/garden/entries";
+export const PROTECTED_OPERATOR_PATH = "/garden/privacy/erasure-requests";
 export const CURRENT_SESSION_BINDING_HEADER =
   "x-overgarden-current-session-binding";
 
@@ -965,7 +966,7 @@ async function assertOldSessionCannotReadPrivateRoutes(
   const profileHtml = await profile.text();
   assertOldSessionGuestRouteContract("profile", profile.status, profileHtml);
 
-  const admin = await fetch(`${baseUrl}/admin`, {
+  const admin = await fetch(`${baseUrl}${PROTECTED_OPERATOR_PATH}`, {
     headers: { Accept: "text/html", Cookie: revokedCookieHeader },
     redirect: "manual",
   });

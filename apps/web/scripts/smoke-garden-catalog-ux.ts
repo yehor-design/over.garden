@@ -5,6 +5,10 @@ import { config as loadEnv } from "dotenv";
 
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import { defaultObjectKindForCatalogSelection } from "../src/lib/garden/catalog-object-kind";
+import {
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+} from "../src/lib/garden/entry-contracts";
 
 loadEnv({ path: ".env.local", override: false });
 
@@ -601,6 +605,7 @@ async function jsonRequest<T>(
     method: init.method ?? "GET",
     headers: {
       Accept: "application/json",
+      [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: baseUrl } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       Cookie: jar.header(),

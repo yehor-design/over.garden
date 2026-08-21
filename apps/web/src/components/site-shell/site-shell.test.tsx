@@ -37,6 +37,28 @@ vi.mock("@/components/auth/session-convergence-boundary", () => ({
       </div>
     );
   },
+  useAuthenticatedSessionIdentity: () => ({
+    ownerUserId: "authoritative-owner",
+    sessionGeneration: "authoritative-session-generation",
+  }),
+}));
+vi.mock("@/components/retirement/legacy-device-retirement-banner", () => ({
+  LegacyDeviceRetirementBanner: ({
+    ownerUserId,
+    sessionGeneration,
+    documentMutationGeneration,
+  }: {
+    ownerUserId: string;
+    sessionGeneration: string;
+    documentMutationGeneration: string | null;
+  }) => (
+    <aside
+      data-retirement-banner="true"
+      data-owner={ownerUserId}
+      data-session={sessionGeneration}
+      data-document={documentMutationGeneration ?? "missing"}
+    />
+  ),
 }));
 vi.mock("@/components/auth/document-mutation-recovery", () => ({
   DocumentMutationGenerationProvider: ({
@@ -173,6 +195,10 @@ describe("production site shell", () => {
     expect(html).not.toContain('href="/garden/catalog/curation"');
     expect(html).not.toContain('href="/garden/privacy/erasure-requests"');
     expect(mocks.currentSessionBinding).toBe("opaque-current-session-binding");
+    expect(html).toContain('data-retirement-banner="true"');
+    expect(html).toContain('data-owner="authoritative-owner"');
+    expect(html).toContain('data-session="authoritative-session-generation"');
+    expect(html).toContain('data-document="opaque-generation"');
   });
 
   it("adds exactly the four surviving operator links to the sealed owner avatar menu", async () => {
@@ -200,9 +226,7 @@ describe("production site shell", () => {
     expect(operatorMenuHtml).not.toContain('href="/garden/pilot-smoke"');
     expect(html).toContain('href="/garden/profile"');
     expect(html).toContain('aria-label="Відкрити меню облікового запису"');
-    expect(html).toContain(
-      'data-site-shell-account-menu-trigger="true"',
-    );
+    expect(html).toContain('data-site-shell-account-menu-trigger="true"');
   });
 
   it("passes non-fencing mode only to the exact OVE-290-closed editor", async () => {
@@ -237,6 +261,7 @@ describe("production site shell", () => {
     expect(html).toContain("Admin control plane");
     expect(html).not.toContain('data-site-shell-region="sidebar"');
     expect(html).not.toContain('data-site-shell-region="mobile-navigation"');
+    expect(html).not.toContain('data-retirement-banner="true"');
   });
 
   it("keeps guest operator boundaries free of authenticated controls", async () => {

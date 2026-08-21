@@ -1260,11 +1260,15 @@ function exclusionFor(
     discovery.transport === "route_handler" &&
     discovery.symbol === "GET" &&
     (discovery.path === "src/app/api/public/objects/suggestions/route.ts" ||
-      discovery.path === "src/app/api/garden/catalog/typeahead/route.ts")
+      discovery.path === "src/app/api/garden/catalog/typeahead/route.ts" ||
+      discovery.path === "src/app/api/garden/entries/route.ts")
   ) {
     return {
       classification: "read_only",
-      reason: "catalog_lookup_has_no_owner_scoped_effect",
+      reason:
+        discovery.path === "src/app/api/garden/entries/route.ts"
+          ? "owner_scoped_journal_receipt_read_has_no_mutating_effect"
+          : "catalog_lookup_has_no_owner_scoped_effect",
     };
   }
   if (

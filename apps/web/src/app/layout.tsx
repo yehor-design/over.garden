@@ -20,7 +20,6 @@ import "./globals.css";
 import "./google-sans.css";
 import { GoogleAnalytics } from "./google-analytics";
 import { MetaMarketingAttribution } from "./meta-marketing";
-import { ServiceWorkerRegister } from "./sw-register";
 
 type SiteShellSessionState = {
   isAuthenticated: boolean;
@@ -102,7 +101,6 @@ export default async function RootLayout({
             {children}
           </SiteShell>
         </InterfaceLocaleChangeBoundary>
-        <ServiceWorkerRegister />
         <GoogleAnalytics locale={locale} />
         <MetaMarketingAttribution locale={locale} />
       </body>

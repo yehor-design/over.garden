@@ -2603,6 +2603,28 @@ export function buildFindExistingEntryByClientMutationQuery(
     .where("client_mutation_id", "=", clientMutationId);
 }
 
+/**
+ * Payload-free, owner-scoped read-back used by the temporary legacy-device
+ * retirement bridge. A historical `synced` queue row may retain only its
+ * idempotency identity, so deletion requires this canonical existence proof.
+ */
+export async function findJournalEntryReceiptByClientMutationId(
+  scope: RequestScope,
+  clientMutationId: string,
+): Promise<{ id: string; clientMutationId: string } | null> {
+  if (!scope.userId) {
+    throw new Error("A scoped journal repository requires a user id.");
+  }
+  const normalized = clientMutationId.trim();
+  if (!normalized || normalized.length > 200) return null;
+  const row = await buildFindExistingEntryByClientMutationQuery(
+    db,
+    scope,
+    normalized,
+  ).executeTakeFirst();
+  return row ? { id: row.id, clientMutationId: row.client_mutation_id } : null;
+}
+
 export function buildJournalMutationAdvisoryLockQuery(
   scope: RequestScope,
   clientMutationId: string,

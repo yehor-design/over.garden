@@ -1,8 +1,9 @@
 # Runtime Scaffold — Current Status and Verification
 
-Last reconciled: 2026-08-20 (OVE-321 server-authoritative journal draft
-protocol and OVE-325 four-composer activation; remaining retirement is owned by
-OVE-322, OVE-323, and OVE-326)
+Last reconciled: 2026-08-21 (OVE-321 server-authoritative journal draft
+protocol, OVE-325 four-composer activation, and OVE-322 temporary returning-
+device retirement; remaining removal/absence proof is owned by OVE-323 and
+OVE-326)
 
 This file is the concise current-state mirror for the implemented OverGarden
 runtime. Authenticated Linear and the issue-specific execution contract remain
@@ -12,13 +13,16 @@ superseded by ADR-0017 remain the stack authority. Every new or materially rewri
 `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`.
 
 ADR-0017 is the current connectivity authority: all new journal writes are
-network-required and server-authoritative. Implementation status (2026-08-20):
+network-required and server-authoritative. Implementation status (2026-08-21):
 the private owner-scoped server draft protocol is active in first-entry,
 follow-up, space-entry, and edit composers. Ordinary authoring callers no
 longer import the historical offline runtime; only the OVE-322 read-only
-retirement bridge may reach it. The checked-in runtime still contains
-historical PWA, Dexie, IndexedDB, local-draft, queued, and sync residue owned by
-OVE-322 or OVE-323; it is non-authoritative and must not be extended.
+retirement bridge may reach it. New documents no longer register the service
+worker, and old journal/media replay without the positive current protocol
+marker is rejected before effects. The checked-in runtime still contains the
+temporary bridge plus historical PWA, Dexie, IndexedDB, local-draft, queued,
+and sync residue owned for removal by OVE-323; it is non-authoritative and must
+not be extended.
 
 ## Current product model
 
@@ -108,8 +112,14 @@ claim authority, not access to the product.
   successful. An actual request failure keeps current-tab text visible, makes
   that composer read-only, and exposes retry, copy, cancel, and navigation; no
   connectivity event replays it. PWA queues, IndexedDB journal ownership, and
-  synchronization claims are historical residue scheduled for OVE-322 and
-  OVE-323 and are not current product authority.
+  synchronization claims are historical residue scheduled for OVE-323 removal
+  and are not current product authority.
+- OVE-322 exposes a temporary, localized, non-blocking returning-device banner
+  inside the authenticated garden only. It transfers exact current-owner work
+  through the server-authoritative routes, verifies each effect before targeted
+  deletion, retains foreign/uncertain state, and requires two physical absence
+  reads. The banner and bridge end with the OVE-323 production deployment; see
+  `docs/LEGACY_DEVICE_DATA_RETIREMENT.md`.
 - Browser-side EXIF handling is only an optimization. Originals enter private
   R2 quarantine; the server re-encodes/resizes/strips them, publishes only the
   derivative, and deletes the original after successful processing.

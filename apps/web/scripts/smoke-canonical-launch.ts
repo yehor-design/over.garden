@@ -14,6 +14,10 @@ import type { Database, JsonValue, JournalEntry } from "../src/db/schema";
 import { buildVerifiedOwnerAccountEvidence } from "../src/lib/admin/owner-account-contract";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import { resolveBetterAuthSecret } from "../src/lib/auth-secret";
+import {
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+} from "../src/lib/garden/entry-contracts";
 
 const DEFAULT_BASE_URL = "https://over.garden";
 const TEST_PASSWORD = `ove-143-${randomUUID()}-${Date.now()}`;
@@ -1013,6 +1017,7 @@ async function jsonRequest<T>(
     method: init.method ?? "GET",
     headers: {
       Accept: "application/json",
+      [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: base } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       Cookie: jar.header(),

@@ -20,6 +20,10 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
+import {
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+} from "../src/lib/garden/entry-contracts";
 import { gardenFirstEntryPreselectionPath } from "../src/lib/garden/public-paths";
 import { containsPreciseLocationText } from "../src/lib/privacy/precise-location-text";
 
@@ -1552,6 +1556,7 @@ async function requestJson<T>(
       Origin: APPROVED_APP_ORIGIN,
       Cookie: jar.header(),
       "x-overgarden-document-generation": input.generation,
+      [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
     },
     body: JSON.stringify(input.body),
     redirect: "manual",

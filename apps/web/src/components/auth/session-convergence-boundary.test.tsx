@@ -160,6 +160,7 @@ import {
   AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
   SESSION_CONVERGENCE_PHASE_TIMEOUT_MS,
   SessionConvergenceBoundary,
+  useAuthenticatedSessionIdentity,
 } from "./session-convergence-boundary";
 import { DOCUMENT_OWNER_CHANGED_EVENT } from "@/lib/auth/document-mutation-generation-transport";
 
@@ -1254,6 +1255,16 @@ describe("session convergence boundary", () => {
     expect(html).not.toContain("Private server content");
   });
 
+  it("exposes the authoritative owner and session generation only inside the ready gate", async () => {
+    const renderer = await renderBoundary(<AuthenticatedIdentityProbe />);
+
+    expect(
+      renderer.root.findByProps({ "data-authenticated-owner": "session-a" })
+        .props["data-authenticated-session"],
+    ).toBe("opaque-binding-for-session-a");
+    await unmount(renderer);
+  });
+
   it("freezes and flushes memory before pausing, draining and acknowledging every operation", async () => {
     const order: string[] = [];
     mocks.prepareComposer.mockImplementation(async () => {
@@ -2152,6 +2163,16 @@ function privateSignOutDialog(phase: "waiting" | "error") {
         <button type="button">Discard private drafts and sign out</button>
       </div>
     </>
+  );
+}
+
+function AuthenticatedIdentityProbe() {
+  const identity = useAuthenticatedSessionIdentity();
+  return (
+    <span
+      data-authenticated-owner={identity.ownerUserId}
+      data-authenticated-session={identity.sessionGeneration}
+    />
   );
 }
 

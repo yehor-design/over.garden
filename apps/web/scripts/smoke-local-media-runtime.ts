@@ -21,6 +21,10 @@ import sharp from "sharp";
 
 import type { Database } from "../src/db/schema";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
+import {
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+} from "../src/lib/garden/entry-contracts";
 import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
 import { VISUAL_FIXTURE_MANIFEST } from "../src/lib/visual-fixtures/manifest";
 
@@ -802,6 +806,7 @@ async function jsonRequest<T>(
     method: init.method ?? "GET",
     headers: {
       Accept: "application/json",
+      [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: BASE_URL } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       Cookie: jar.header(),

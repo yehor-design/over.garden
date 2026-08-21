@@ -300,6 +300,51 @@ describe("online journal publication owner", () => {
     expect(fetchImpl.mock.calls[1]![1]?.body).toBe(file);
   });
 
+  it("reuses a stable retirement upload generation without restoring a deleted original", async () => {
+    const file = new Blob(["safe-image"], { type: "image/jpeg" });
+    const uploadGenerationId = "00000000-0000-4000-8000-000000000322";
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          mediaAssetId: "00000000-0000-4000-8000-000000000030",
+          uploadRequired: false,
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          mediaAsset: {
+            id: "00000000-0000-4000-8000-000000000030",
+            status: "processed",
+          },
+          publicUrl: "https://media.example.invalid/derived.webp",
+        }),
+      );
+
+    await uploadOnlineComposerPhoto({
+      intent: {
+        fileName: "garden.jpg",
+        contentType: "image/jpeg",
+        size: file.size,
+        blob: file,
+      },
+      stableUploadGenerationId: uploadGenerationId,
+      authReturnTo: "/garden",
+      documentMutationGeneration: "signed-generation",
+      fetchImpl,
+    });
+
+    expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual([
+      "/api/media/uploads",
+      "/api/media/process",
+    ]);
+    expect(JSON.parse(String(fetchImpl.mock.calls[0]![1]?.body))).toEqual({
+      contentType: "image/jpeg",
+      sizeBytes: file.size,
+      uploadGenerationId,
+    });
+  });
+
   it("refuses a media selection whose bytes are absent from current-tab memory", async () => {
     const fetchImpl = vi.fn();
 
@@ -353,6 +398,43 @@ describe("online journal publication owner", () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it("honors the retirement bridge's explicit thirty-second media deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const file = new Blob(["safe-image"], { type: "image/jpeg" });
+      const fetchImpl = vi.fn(() => new Promise<Response>(() => undefined));
+      const outcome = uploadOnlineComposerPhoto({
+        intent: {
+          fileName: "garden.jpg",
+          contentType: "image/jpeg",
+          size: file.size,
+          blob: file,
+        },
+        authReturnTo: "/garden",
+        documentMutationGeneration: "signed-generation",
+        deadlineMs: 30_000,
+        fetchImpl,
+      }).then(
+        () => "resolved",
+        (error: unknown) =>
+          error instanceof OnlineJournalSubmitError ? error.code : "unknown",
+      );
+      let observed: string | undefined;
+      void outcome.then((result) => {
+        observed = result;
+      });
+
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(observed).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(15_000);
+      await expect(outcome).resolves.toBe("JOURNAL_MEDIA_TIMEOUT");
+      expect(fetchImpl).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

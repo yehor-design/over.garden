@@ -32,6 +32,10 @@ import {
   JOURNAL_MEDIA_USAGE_INLINE,
   resolveEffectiveJournalCover,
 } from "../src/lib/garden/journal-cover-contract";
+import {
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+} from "../src/lib/garden/entry-contracts";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 
 const require = createRequire(import.meta.url);
@@ -288,6 +292,7 @@ async function main() {
       method: "POST",
       headers: {
         "content-type": "application/json",
+        [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
         cookie: jar.header(),
         origin: baseUrl,
       },
@@ -353,6 +358,7 @@ async function main() {
       method: "POST",
       headers: {
         "content-type": "application/json",
+        [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
         cookie: jar.header(),
         origin: baseUrl,
       },

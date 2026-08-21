@@ -25,12 +25,14 @@ export default defineConfig({
     },
     {
       name: "firefox",
-      testMatch: /online-composer-cutover\.spec\.ts/u,
+      testMatch:
+        /(?:online-composer-cutover|legacy-device-retirement)\.spec\.ts/u,
       use: { browserName: "firefox" },
     },
     {
       name: "webkit",
-      testMatch: /online-composer-cutover\.spec\.ts/u,
+      testMatch:
+        /(?:online-composer-cutover|legacy-device-retirement)\.spec\.ts/u,
       use: { browserName: "webkit" },
     },
   ],

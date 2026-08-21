@@ -11,7 +11,11 @@ import type {
   JournalDraftEditEntryRequest,
   JournalEntryDraftReceiptV1,
 } from "@/lib/garden/entry-contracts";
-import { journalDraftPublicationBody } from "@/lib/garden/entry-contracts";
+import {
+  journalDraftPublicationBody,
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+} from "@/lib/garden/entry-contracts";
 import type { OnlineJournalDraftOwner } from "@/lib/garden/online-journal-draft";
 import type { OnlineComposerPhotoIntent } from "@/lib/garden/composer-photo-selection";
 import { isAllowedComposerImageSize } from "@/lib/media/image-limits";
@@ -197,6 +201,7 @@ export function createOnlineJournalSubmitOwner(input: {
             "Content-Type": "application/json",
             [AUTH_INTENT_RETURN_HEADER]: publication.authReturnTo,
             [DOCUMENT_MUTATION_GENERATION_HEADER]: documentMutationGeneration,
+            [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
           },
           body: publication.body,
           signal: controller.signal,
@@ -361,6 +366,8 @@ const ALLOWED_IMAGE_TYPES = new Set([
  */
 export async function uploadOnlineComposerPhoto(input: {
   intent: OnlineComposerPhotoIntent;
+  /** Stable UUID used only by the temporary legacy-device retirement bridge. */
+  stableUploadGenerationId?: string;
   authReturnTo: string;
   documentMutationGeneration: string;
   signal?: AbortSignal;
@@ -382,12 +389,9 @@ export async function uploadOnlineComposerPhoto(input: {
     });
   }
 
-  const deadlineMs = Math.min(
-    DEFAULT_SUBMIT_DEADLINE_MS,
-    Math.max(
-      1,
-      Math.trunc(input.deadlineMs ?? DEFAULT_SUBMIT_DEADLINE_MS),
-    ),
+  const deadlineMs = Math.max(
+    1,
+    Math.trunc(input.deadlineMs ?? DEFAULT_SUBMIT_DEADLINE_MS),
   );
   const controller = new AbortController();
   let timedOut = false;
@@ -409,7 +413,7 @@ export async function uploadOnlineComposerPhoto(input: {
     timedOut = true;
     controller.abort();
   }, deadlineMs);
-  const raceAbort = <T,>(promise: Promise<T>) =>
+  const raceAbort = <T>(promise: Promise<T>) =>
     Promise.race([promise, aborted]);
 
   try {
@@ -420,10 +424,14 @@ export async function uploadOnlineComposerPhoto(input: {
           "Content-Type": "application/json",
           [AUTH_INTENT_RETURN_HEADER]: input.authReturnTo,
           [DOCUMENT_MUTATION_GENERATION_HEADER]: generation,
+          [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
         },
         body: JSON.stringify({
           contentType: intent.contentType,
           sizeBytes: intent.size,
+          ...(input.stableUploadGenerationId
+            ? { uploadGenerationId: input.stableUploadGenerationId }
+            : {}),
         }),
         signal: controller.signal,
         cache: "no-store",
@@ -438,27 +446,33 @@ export async function uploadOnlineComposerPhoto(input: {
     }
     const mediaAssetId = reservationBody.mediaAssetId;
     const uploadUrl = reservationBody.uploadUrl;
-    if (typeof mediaAssetId !== "string" || typeof uploadUrl !== "string") {
+    const uploadRequired = reservationBody.uploadRequired !== false;
+    if (
+      typeof mediaAssetId !== "string" ||
+      (uploadRequired && typeof uploadUrl !== "string")
+    ) {
       throw new OnlineJournalSubmitError({
         code: "JOURNAL_MEDIA_INVALID_RESPONSE",
         retryable: true,
       });
     }
 
-    const quarantineResponse = await raceAbort(
-      fetchImpl(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": intent.contentType },
-        body: intent.blob!,
-        signal: controller.signal,
-      }),
-    );
-    if (!quarantineResponse.ok) {
-      throw new OnlineJournalSubmitError({
-        code: "JOURNAL_MEDIA_UPLOAD_FAILED",
-        status: quarantineResponse.status,
-        retryable: true,
-      });
+    if (uploadRequired) {
+      const quarantineResponse = await raceAbort(
+        fetchImpl(uploadUrl as string, {
+          method: "PUT",
+          headers: { "Content-Type": intent.contentType },
+          body: intent.blob!,
+          signal: controller.signal,
+        }),
+      );
+      if (!quarantineResponse.ok) {
+        throw new OnlineJournalSubmitError({
+          code: "JOURNAL_MEDIA_UPLOAD_FAILED",
+          status: quarantineResponse.status,
+          retryable: true,
+        });
+      }
     }
 
     const processResponse = await raceAbort(
@@ -468,6 +482,7 @@ export async function uploadOnlineComposerPhoto(input: {
           "Content-Type": "application/json",
           [AUTH_INTENT_RETURN_HEADER]: input.authReturnTo,
           [DOCUMENT_MUTATION_GENERATION_HEADER]: generation,
+          [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
         },
         body: JSON.stringify({ mediaAssetId }),
         signal: controller.signal,

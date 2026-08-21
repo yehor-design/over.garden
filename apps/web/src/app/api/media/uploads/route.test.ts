@@ -1,13 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  ONLINE_JOURNAL_PROTOCOL,
+  ONLINE_JOURNAL_PROTOCOL_HEADER,
+} from "@/lib/garden/entry-contracts";
+
 const authMock = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
 }));
 
 const mediaRepositoryMock = vi.hoisted(() => ({
-  createQuarantinedMediaAsset: vi.fn(async () => ({
-    id: "00000000-0000-0000-0000-000000000010",
-  })),
+  createQuarantinedMediaAsset: vi.fn(
+    async (_scope: unknown, input: Record<string, unknown>) => ({
+      id: "00000000-0000-0000-0000-000000000010",
+      quarantine_key: input.quarantineKey,
+      declared_media_type: input.declaredMediaType,
+      declared_size_bytes: String(input.declaredSizeBytes),
+      media_readiness_state: "quarantined",
+      status: "quarantined",
+    }),
+  ),
+  findMediaAssetByUploadGeneration: vi.fn(),
 }));
 
 const storageMock = vi.hoisted(() => ({
@@ -60,6 +73,9 @@ import { POST } from "./route";
 describe("media upload API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mediaRepositoryMock.findMediaAssetByUploadGeneration.mockResolvedValue(
+      undefined,
+    );
     admissionMock.admitDocumentMutation.mockResolvedValue({
       status: "admitted",
       scope: {
@@ -81,7 +97,7 @@ describe("media upload API", () => {
       contentType: "image/jpeg",
       privateCaption: "A private balcony note",
     });
-    const request = new Request("http://localhost/api/media/uploads", {
+    const request = onlineRequest("http://localhost/api/media/uploads", {
       method: "POST",
       headers: { "x-overgarden-auth-return": "/garden" },
       body: privateBody,
@@ -118,9 +134,32 @@ describe("media upload API", () => {
     ).not.toHaveBeenCalled();
   });
 
-  it("rejects attempts to pre-bind quarantined media to a journal entry", async () => {
+  it("refuses an authenticated legacy client before reserving media", async () => {
     const response = await POST(
       new Request("http://localhost/api/media/uploads", {
+        method: "POST",
+        body: JSON.stringify({
+          contentType: "image/jpeg",
+          sizeBytes: 123,
+          privateCaption: "Private legacy caption",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      code: "legacy_client_retired",
+    });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(
+      mediaRepositoryMock.createQuarantinedMediaAsset,
+    ).not.toHaveBeenCalled();
+    expect(storageMock.createQuarantineUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it("rejects attempts to pre-bind quarantined media to a journal entry", async () => {
+    const response = await POST(
+      onlineRequest("http://localhost/api/media/uploads", {
         method: "POST",
         body: JSON.stringify({
           contentType: "image/jpeg",
@@ -142,7 +181,7 @@ describe("media upload API", () => {
     storageMock.createQuarantineUploadUrl.mockClear();
 
     const response = await POST(
-      new Request("http://localhost/api/media/uploads", {
+      onlineRequest("http://localhost/api/media/uploads", {
         method: "POST",
         body: JSON.stringify({
           contentType: "image/webp",
@@ -177,15 +216,112 @@ describe("media upload API", () => {
     });
   });
 
+  it("reuses the exact owner-scoped media generation for retirement retries", async () => {
+    const uploadGenerationId = "00000000-0000-4000-8000-000000000322";
+    mediaRepositoryMock.findMediaAssetByUploadGeneration.mockResolvedValue({
+      id: "00000000-0000-4000-8000-000000000010",
+      quarantine_key: `quarantine/${uploadGenerationId}.jpeg`,
+      declared_media_type: "image/jpeg",
+      declared_size_bytes: "123",
+      media_readiness_state: "public_ready",
+      status: "processed",
+    });
+
+    const response = await POST(
+      onlineRequest("http://localhost/api/media/uploads", {
+        method: "POST",
+        body: JSON.stringify({
+          contentType: "image/jpeg",
+          sizeBytes: 123,
+          uploadGenerationId,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({
+        mediaAssetId: "00000000-0000-4000-8000-000000000010",
+        uploadRequired: false,
+      }),
+    );
+    expect(
+      mediaRepositoryMock.findMediaAssetByUploadGeneration,
+    ).toHaveBeenCalledWith(expect.anything(), uploadGenerationId);
+    expect(
+      mediaRepositoryMock.createQuarantinedMediaAsset,
+    ).not.toHaveBeenCalled();
+    expect(storageMock.createQuarantineUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it("re-reads the owner-scoped generation after a concurrent unique insert", async () => {
+    const uploadGenerationId = "00000000-0000-4000-8000-000000000322";
+    const concurrentAsset = {
+      id: "00000000-0000-4000-8000-000000000010",
+      quarantine_key: `quarantine/${uploadGenerationId}.jpeg`,
+      declared_media_type: "image/jpeg",
+      declared_size_bytes: "123",
+      media_readiness_state: "quarantined",
+      status: "quarantined",
+    };
+    mediaRepositoryMock.findMediaAssetByUploadGeneration
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(concurrentAsset);
+    mediaRepositoryMock.createQuarantinedMediaAsset.mockRejectedValueOnce({
+      code: "23505",
+    });
+
+    const response = await POST(
+      onlineRequest("http://localhost/api/media/uploads", {
+        method: "POST",
+        body: JSON.stringify({
+          contentType: "image/jpeg",
+          sizeBytes: 123,
+          uploadGenerationId,
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({
+        mediaAssetId: concurrentAsset.id,
+        uploadRequired: true,
+      }),
+    );
+    expect(storageMock.createQuarantineUploadUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ objectKey: concurrentAsset.quarantine_key }),
+    );
+  });
+
+  it("does not misclassify a repository outage as an idempotency conflict", async () => {
+    mediaRepositoryMock.createQuarantinedMediaAsset.mockRejectedValueOnce({
+      code: "57P01",
+    });
+
+    const response = await POST(
+      onlineRequest("http://localhost/api/media/uploads", {
+        method: "POST",
+        body: JSON.stringify({ contentType: "image/jpeg", sizeBytes: 123 }),
+      }),
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      code: "media_upload_unavailable",
+    });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
   it("rejects missing and oversized byte contracts before creating quarantine rows", async () => {
     const missing = await POST(
-      new Request("http://localhost/api/media/uploads", {
+      onlineRequest("http://localhost/api/media/uploads", {
         method: "POST",
         body: JSON.stringify({ contentType: "image/jpeg" }),
       }),
     );
     const oversized = await POST(
-      new Request("http://localhost/api/media/uploads", {
+      onlineRequest("http://localhost/api/media/uploads", {
         method: "POST",
         body: JSON.stringify({
           contentType: "image/jpeg",
@@ -201,3 +337,9 @@ describe("media upload API", () => {
     ).not.toHaveBeenCalled();
   });
 });
+
+function onlineRequest(input: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set(ONLINE_JOURNAL_PROTOCOL_HEADER, ONLINE_JOURNAL_PROTOCOL);
+  return new Request(input, { ...init, headers });
+}

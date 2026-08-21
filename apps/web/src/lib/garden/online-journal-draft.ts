@@ -93,9 +93,9 @@ export function createOnlineJournalDraftOwner(input: {
   fetchImpl?: OnlineDraftFetch;
 }): OnlineJournalDraftOwner {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const deadlineMs = Math.min(
-    DEFAULT_DEADLINE_MS,
-    Math.max(1, Math.trunc(input.deadlineMs ?? DEFAULT_DEADLINE_MS)),
+  const deadlineMs = Math.max(
+    1,
+    Math.trunc(input.deadlineMs ?? DEFAULT_DEADLINE_MS),
   );
   const url = `/api/garden/drafts/${encodeURIComponent(input.draftKey)}`;
   const listeners = new Set<() => void>();
