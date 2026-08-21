@@ -66,7 +66,6 @@ export type {
   CommunityRule,
   CommunityRuleState,
   CoarseRegionCode,
-  EntrySyncStatus,
   Health,
   JobQueueJob,
   JobStatus,

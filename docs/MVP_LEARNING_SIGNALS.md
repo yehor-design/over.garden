@@ -32,6 +32,14 @@ Durable rows live in `learning_actor_attributions` (`user_id`, bounded `actor_cl
 - **H4:** the rate numerator is distinct eligible gardeners with at least one active public, decision-eligible journal `content_class` value (`real_ugc`, `founder_first_hand`). Raw publication-entry volume is diagnostic only, so the rate remains within `[0, 1]`. Location visibility stays a separate diagnostic.
 - **H6:** organic acquisition is deliberately `not_instrumented` and `decisionReady: false`. It is visibly reported as “organic acquisition is not measured yet”; editorial public traffic and indexability remain separate content diagnostics, never an H6 proxy. No new consent, cookie, referrer, ID, content, or third-party acquisition collection is authorized by this policy.
 
+The active first-party event vocabulary is bounded to `activation_started`,
+`space_created`, `object_created`, `entry_logged`, `entry_photo_attached`,
+`progress_screen_shown`, `own_record_revisited`, `follow_up_value_pulse`,
+`journal_blocks_reordered`, and `journal_cover_changed`. Historical connectivity
+events are non-operative provenance documented in
+`docs/OFFLINE_RETIREMENT_PROVENANCE.md`; they are never decision-eligible H1,
+H4, or H6 inputs.
+
 ## Decision gate
 
 The canonical report owns the gate and evaluates it fail-closed:

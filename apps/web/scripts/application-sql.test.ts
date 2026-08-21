@@ -28,6 +28,7 @@ describe("versioned application SQL bootstrap", () => {
       "0021_ove314_retire_obsolete_control_plane.sql",
       "0022_ove295_google_account_uniqueness.sql",
       "0029_online_journal_drafts.sql",
+      "0035_online_only_retirement.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });
@@ -99,9 +100,7 @@ describe("versioned application SQL bootstrap", () => {
     expect(journalDrafts).toContain(
       'foreign key (owner_user_id) references "user"(id) on delete cascade',
     );
-    expect(journalDrafts).toContain(
-      "unique (owner_user_id, draft_key)",
-    );
+    expect(journalDrafts).toContain("unique (owner_user_id, draft_key)");
     expect(journalDrafts).toContain(
       "draft_kind in ('first_entry', 'follow_up', 'space_entry', 'edit_entry')",
     );

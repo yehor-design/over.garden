@@ -1082,9 +1082,13 @@ Invariants:
 
 Data contract:
 
-- Events needed now: `space_created`, `object_created`, `entry_logged`, `entry_photo_attached`, `offline_entry_queued`, `offline_entry_synced`, `progress_screen_shown`.
+- Events needed now: `space_created`, `object_created`, `entry_logged`,
+  `entry_photo_attached`, and `progress_screen_shown`. Retired connectivity
+  counters are preserved only in `docs/OFFLINE_RETIREMENT_PROVENANCE.md` and
+  are not current learning inputs.
 - Add `own_record_revisited` and second-entry event linkage for the same object in the same session if session tracking exists.
-- Event props may include booleans/enums only: `entry_scope`, `has_photo`, `is_backdated`, `location_visibility_level`, `sync_status`, `variety_state`.
+- Event props may include booleans/enums only: `entry_scope`, `has_photo`,
+  `is_backdated`, `location_visibility_level`, and `variety_state`.
 - No raw body/title content in analytics events.
 
 Target files:

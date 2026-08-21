@@ -14385,18 +14385,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/actions.ts",
-        "src/db/schema.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/db/schema",
-      "sourceNodeId": "source:012ba43973644e97418d",
-      "symbol": "EntrySyncStatus"
-    },
-    {
-      "evidencePaths": [
         "src/server/erasure-execution.ts",
         "src/server/search/public-projection-outbox.ts"
       ],
@@ -32007,18 +31995,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/db/schema.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/entries/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/db/schema",
-      "sourceNodeId": "source:aeec8ced5344ca8d6d89",
-      "symbol": "EntrySyncStatus"
-    },
-    {
-      "evidencePaths": [
         "src/server/catalog-repository.ts",
         "src/server/search/catalog-documents.ts"
       ],
@@ -35145,18 +35121,6 @@
       "semanticVariant": "from:@/lib/auth/auth-recovery",
       "sourceNodeId": "source:ce26c1f522f48c352620",
       "symbol": "passwordResetSuccessPath"
-    },
-    {
-      "evidencePaths": [
-        "src/db/schema.ts",
-        "src/server/analytics-events.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/analytics-events.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/db/schema",
-      "sourceNodeId": "source:ce2b88180cd345f39a9c",
-      "symbol": "EntrySyncStatus"
     },
     {
       "evidencePaths": [

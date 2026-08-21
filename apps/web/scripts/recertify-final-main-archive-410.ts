@@ -856,7 +856,6 @@ class ProductionArchive410Adapter implements Archive410Adapter {
           locationVisibility: "hidden",
           coarseRegionCode: null,
           clientMutationId: randomUUID(),
-          syncStatus: "online",
           activationSource: "direct_garden",
           mediaAssetId: null,
         },

@@ -828,7 +828,6 @@ class ProductionVarietyActivationAdapter implements VarietyActivationAdapter {
           locationVisibility: "hidden",
           coarseRegionCode: null,
           clientMutationId: randomUUID(),
-          syncStatus: "online",
           activationSource: "public_variety",
           mediaAssetId: null,
         },

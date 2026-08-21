@@ -66,7 +66,6 @@ const CREATE_REQUEST_KEYS = new Set([
   "clientMutationId",
   "mediaAssetId",
   "cover",
-  "syncStatus",
   "activationSource",
   "mentionSelections",
   "topicTags",

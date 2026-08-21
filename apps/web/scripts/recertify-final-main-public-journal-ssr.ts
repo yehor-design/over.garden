@@ -855,7 +855,6 @@ class ProductionPublicJournalSsrAdapter implements PublicJournalSsrAdapter {
           locationVisibility: "hidden",
           coarseRegionCode: null,
           clientMutationId: randomUUID(),
-          syncStatus: "online",
           activationSource: "direct_garden",
           mediaAssetId: null,
         },

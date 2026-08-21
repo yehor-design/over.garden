@@ -212,7 +212,6 @@ async function recordPlantObjectJournalEntryEvents(
     location_visibility_level: result.plantObject
       .location_visibility as LocationVisibility,
     object_kind: result.plantObject.object_kind,
-    sync_status: "online" as const,
     variety_state: result.plantObject.variety_state as VarietyState,
   };
   const eventTarget = {

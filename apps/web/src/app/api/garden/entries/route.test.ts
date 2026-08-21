@@ -157,32 +157,10 @@ describe("POST /api/garden/entries save progress readback", () => {
           title: "Private legacy title",
           body: "Private legacy body",
           clientMutationId: "legacy-online-marked-row",
-          syncStatus: "online",
         },
         {},
         false,
       ),
-    );
-
-    expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toEqual({
-      code: "legacy_client_retired",
-    });
-    expect(response.headers.get("cache-control")).toBe("private, no-store");
-    expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
-    expect(mocks.createPlantObjectJournalEntry).not.toHaveBeenCalled();
-  });
-
-  it("redundantly refuses offline-synced replay even with the current protocol marker", async () => {
-    const { POST } = await import("./route");
-    const response = await POST(
-      jsonRequest({
-        target: "first_plant_entry",
-        title: "Retired replay",
-        body: "Must not create a server effect.",
-        clientMutationId: "legacy-offline-synced-row",
-        syncStatus: "offline_synced",
-      }),
     );
 
     expect(response.status).toBe(409);

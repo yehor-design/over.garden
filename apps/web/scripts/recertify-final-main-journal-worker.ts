@@ -963,7 +963,6 @@ export class ProductionJournalWorkerAdapter implements JournalWorkerAdapter {
           locationVisibility: "hidden",
           coarseRegionCode: null,
           clientMutationId: randomUUID(),
-          syncStatus: "online",
           activationSource: "direct_garden",
           mediaAssetId: null,
         },

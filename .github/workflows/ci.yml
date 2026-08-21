@@ -123,6 +123,9 @@ jobs:
       - name: Verify online-only canon classification
         run: pnpm online-only:canon:check
 
+      - name: Verify online-only retirement closure
+        run: pnpm verify:online-only-retirement -- --prove-determinism
+
       - name: Verify MVP posture canon classification
         run: pnpm mvp-posture:canon:check
 

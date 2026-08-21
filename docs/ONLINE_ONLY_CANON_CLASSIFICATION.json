@@ -40,6 +40,8 @@
   "requiredGuardrailPaths": [
     "docs/adr/ADR-0017-online-only-product.md",
     "docs/SDD_VERTICAL_SLICE_ROADMAP.md",
+    "docs/MVP_LEARNING_SIGNALS.md",
+    "docs/MVP_PRIVACY_RETENTION_POLICY.md",
     "docs/CURRENT_SCHEMA_ERASURE.md",
     "docs/ONLINE_ONLY_CANON_CLASSIFICATION.json",
     "docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md",
@@ -63,6 +65,9 @@
     "apps/web/scripts/smoke-authenticated-architecture.ts",
     "apps/web/scripts/smoke-offline-runtime-absence.ts",
     "apps/web/scripts/smoke-online-composer-cutover.ts",
+    "apps/web/scripts/smoke-online-only-product.ts",
+    "apps/web/scripts/verify-online-only-retirement.ts",
+    "apps/web/scripts/verify-online-only-retirement.test.ts",
     "apps/web/scripts/verify-typography-browser.ts",
     "apps/web/scripts/verify-typography-performance.ts",
     "apps/web/src/app/%5F%5Fvisual-fixtures/page.test.tsx",
@@ -88,6 +93,7 @@
     "apps/web/src/server/analytics-events.test.ts",
     "apps/web/tests/offline-runtime-absence.spec.ts",
     "apps/web/tests/online-composer-cutover.spec.ts",
+    "apps/web/tests/online-only-product.spec.ts",
     "docs/architecture/AUTHENTICATED_ARCHITECTURE_INTEGRATION_PROOF.md",
     "docs/architecture/AUTHENTICATED_MUTATION_ADMISSION.md",
     "docs/LEGACY_DEVICE_DATA_RETIREMENT.md",
@@ -98,6 +104,7 @@
     ".github/workflows/ci.yml"
   ],
   "historicalPaths": [
+    "docs/OFFLINE_RETIREMENT_PROVENANCE.md",
     "docs/OFFLINE_OWNER_VAULT.md",
     "docs/OFFLINE_WORKSPACE_SUMMARY_CONTRACT.md",
     "docs/adr/ADR-0013-realtime-broadcast-from-database.md",
@@ -105,7 +112,8 @@
     "docs/adr/ADR-0015-lexical-structured-journal-editor.md",
     "docs/linear/ove-253-eppo-source-contract-decision.md",
     "docs/linear/ove-317-lexical-structured-journal.md",
-    "docs/mainline-closeout-ledger.json"
+    "docs/mainline-closeout-ledger.json",
+    "docs/superpowers/plans/2026-08-21-ove-326-online-only-steady-state.md"
   ],
   "historicalPrefixes": [
     "docs/audit-inbox/",
