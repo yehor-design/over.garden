@@ -310,7 +310,6 @@ async function main() {
         locationVisibility: "hidden",
         coarseRegionCode: null,
         clientMutationId: firstMutationId,
-        syncStatus: "online",
         activationSource: "direct_garden",
       }),
     });
@@ -369,7 +368,6 @@ async function main() {
         body: "Second dated self-serve note.",
         entryDate: "2026-07-24",
         clientMutationId: randomUUID(),
-        syncStatus: "online",
       }),
     });
     jar.addFromResponse(followUp);

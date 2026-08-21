@@ -40,7 +40,6 @@ describe("online journal publication owner", () => {
     expect(JSON.parse(String(init?.body))).toMatchObject({
       target: "first_plant_entry",
       clientMutationId: "stable-mutation-1",
-      syncStatus: "online",
     });
     expect(draftOwner.delete).toHaveBeenCalledWith(draft);
     expect(draftOwner.hydrate).toHaveBeenCalledTimes(1);

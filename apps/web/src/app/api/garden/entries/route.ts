@@ -20,7 +20,6 @@ import { preciseLocationRejectionMessage } from "@/lib/privacy/precise-location-
 import { isPreciseLocationTextError } from "@/lib/privacy/precise-location-text";
 import type {
   EntryScope,
-  EntrySyncStatus,
   LocationVisibility,
   PlantObjectKind,
   VarietyState,
@@ -87,15 +86,7 @@ async function createEntry(request: Request, scope: RequestScope) {
     );
   }
 
-  // The positive protocol marker is the primary cutoff. Keep the legacy
-  // offline replay state closed as a redundant safety boundary even if a
-  // retired client copies the current marker.
-  if (body.syncStatus === "offline_synced") {
-    return legacyClientRetiredResponse();
-  }
-
   try {
-    const syncStatus = normalizeSyncStatus(body.syncStatus);
     const activationSource = normalizeActivationSource(body.activationSource);
     const target = normalizeTarget(body.target, body.plantObjectId);
 
@@ -114,7 +105,7 @@ async function createEntry(request: Request, scope: RequestScope) {
       });
 
       scheduleLearningAttributionDrain(async () => {
-        await recordSpaceEntryEvents(scope, result, syncStatus);
+        await recordSpaceEntryEvents(scope, result);
       });
 
       const anchorObject = result.mentionedObjects[0];
@@ -208,14 +199,9 @@ async function createEntry(request: Request, scope: RequestScope) {
 
     scheduleLearningAttributionDrain(async () => {
       if (target === "plant_object_entry") {
-        await recordPlantObjectEntryEvents(scope, result, syncStatus);
+        await recordPlantObjectEntryEvents(scope, result);
       } else {
-        await recordFirstPlantEntryEvents(
-          scope,
-          result,
-          syncStatus,
-          activationSource,
-        );
+        await recordFirstPlantEntryEvents(scope, result, activationSource);
       }
     });
 
@@ -293,10 +279,6 @@ function normalizeResponseDate(value: Date | string) {
   return value;
 }
 
-function normalizeSyncStatus(value: unknown): EntrySyncStatus {
-  return value === "offline_synced" ? "offline_synced" : "online";
-}
-
 function normalizeActivationSource(value: unknown): ActivationSource | null {
   return normalizeActivationSourceValue(value);
 }
@@ -312,7 +294,6 @@ function normalizeTarget(target: unknown, plantObjectId: unknown) {
 async function recordSpaceEntryEvents(
   scope: RequestScope,
   result: Awaited<ReturnType<typeof createSpaceJournalEntry>>,
-  syncStatus: EntrySyncStatus,
 ) {
   if (!result.isNewEntry) return;
 
@@ -322,7 +303,6 @@ async function recordSpaceEntryEvents(
     is_backdated: isBackdatedEntryDate(result.entry.entry_date),
     location_visibility_level: result.space
       .location_visibility as LocationVisibility,
-    sync_status: syncStatus,
   };
   const eventTarget = {
     spaceId: result.space.id,
@@ -343,7 +323,6 @@ async function recordSpaceEntryEvents(
 async function recordFirstPlantEntryEvents(
   scope: RequestScope,
   result: Awaited<ReturnType<typeof createFirstPlantEntry>>,
-  syncStatus: EntrySyncStatus,
   activationSource: ActivationSource | null,
 ) {
   if (!result.isNewEntry) return;
@@ -360,7 +339,6 @@ async function recordFirstPlantEntryEvents(
     is_backdated: isBackdatedEntryDate(result.entry.entry_date),
     location_visibility_level: result.plantObject
       .location_visibility as LocationVisibility,
-    sync_status: syncStatus,
     variety_state: result.plantObject.variety_state as VarietyState,
     object_kind: result.plantObject.object_kind,
     ...activationProperties,
@@ -403,22 +381,6 @@ async function recordFirstPlantEntryEvents(
     });
   }
 
-  if (syncStatus === "offline_synced") {
-    await recordAnalyticsEventSafely(scope, {
-      eventName: "offline_entry_queued",
-      properties: {
-        ...sharedEntryProperties,
-        sync_status: "offline_queued",
-      },
-      ...eventTarget,
-    });
-    await recordAnalyticsEventSafely(scope, {
-      eventName: "offline_entry_synced",
-      properties: sharedEntryProperties,
-      ...eventTarget,
-    });
-  }
-
   await recordAnalyticsEventSafely(scope, {
     eventName: "progress_screen_shown",
     properties: sharedEntryProperties,
@@ -429,7 +391,6 @@ async function recordFirstPlantEntryEvents(
 async function recordPlantObjectEntryEvents(
   scope: RequestScope,
   result: Awaited<ReturnType<typeof createPlantObjectJournalEntry>>,
-  syncStatus: EntrySyncStatus,
 ) {
   if (!result.isNewEntry) return;
 
@@ -439,7 +400,6 @@ async function recordPlantObjectEntryEvents(
     is_backdated: isBackdatedEntryDate(result.entry.entry_date),
     location_visibility_level: result.plantObject
       .location_visibility as LocationVisibility,
-    sync_status: syncStatus,
     variety_state: result.plantObject.variety_state as VarietyState,
   };
   const eventTarget = {
@@ -456,22 +416,6 @@ async function recordPlantObjectEntryEvents(
   if (result.mediaAttached) {
     await recordAnalyticsEventSafely(scope, {
       eventName: "entry_photo_attached",
-      properties: sharedEntryProperties,
-      ...eventTarget,
-    });
-  }
-
-  if (syncStatus === "offline_synced") {
-    await recordAnalyticsEventSafely(scope, {
-      eventName: "offline_entry_queued",
-      properties: {
-        ...sharedEntryProperties,
-        sync_status: "offline_queued",
-      },
-      ...eventTarget,
-    });
-    await recordAnalyticsEventSafely(scope, {
-      eventName: "offline_entry_synced",
       properties: sharedEntryProperties,
       ...eventTarget,
     });

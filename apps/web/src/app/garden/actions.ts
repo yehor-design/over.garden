@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 
 import type {
   EntryScope,
-  EntrySyncStatus,
   LocationVisibility,
 } from "@/db/schema";
 import { buildSaveProgressReadbackUrl } from "@/lib/garden/save-progress-moment";
@@ -75,7 +74,6 @@ async function recordSpaceJournalEntryEvents(
     is_backdated: isBackdatedEntryDate(result.entry.entry_date),
     location_visibility_level: result.space
       .location_visibility as LocationVisibility,
-    sync_status: "online" as EntrySyncStatus,
   };
   const eventTarget = {
     spaceId: result.space.id,

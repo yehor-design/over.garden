@@ -839,7 +839,6 @@ class ProductionMediaProofAdapter implements MediaProofAdapter {
           locationVisibility: "hidden",
           coarseRegionCode: null,
           clientMutationId: randomUUID(),
-          syncStatus: "online",
           activationSource: "direct_garden",
           mediaAssetId: upload.mediaAssetId,
         },

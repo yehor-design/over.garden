@@ -1510,7 +1510,6 @@ function firstEntryDraftPayload(input: {
           : null,
       clientMutationId: input.clientMutationId,
       activationSource: input.activationSource,
-      syncStatus: "online",
       mentionSelections: input.mentionSelections,
       topicTags: normalizeJournalTopicTagLabels(input.topicTagInput),
       mediaAssetId: input.primaryMediaAssetId,

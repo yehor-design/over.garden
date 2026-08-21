@@ -20,7 +20,6 @@ import type {
   AnalyticsEventName,
   Database,
   EntryScope,
-  EntrySyncStatus,
   JsonValue,
   LocationVisibility,
   PlantObjectKind,
@@ -49,7 +48,6 @@ export type ComposerMutationOutcome =
   | "succeeded"
   | "conflict"
   | "failed"
-  | "offline_queued"
   | "stale";
 
 export type AnalyticsCoverSource = JournalCoverSource;
@@ -64,7 +62,6 @@ export interface AnalyticsEventProperties {
   object_kind?: PlantObjectKind;
   pulse_outcome?: FollowUpValuePulseOutcome;
   source_surface_kind?: ActivationSurfaceKind;
-  sync_status?: EntrySyncStatus;
   usefulness?: FollowUpUsefulness;
   usefulness_reason?: FollowUpUsefulnessReason;
   variety_state?: VarietyState;
@@ -100,8 +97,6 @@ const ALLOWED_EVENT_NAMES = new Set<AnalyticsEventName>([
   "object_created",
   "entry_logged",
   "entry_photo_attached",
-  "offline_entry_queued",
-  "offline_entry_synced",
   "progress_screen_shown",
   "own_record_revisited",
   "follow_up_value_pulse",
@@ -118,7 +113,6 @@ const ALLOWED_PROPERTY_KEYS = new Set<keyof AnalyticsEventProperties>([
   "location_visibility_level",
   "object_kind",
   "source_surface_kind",
-  "sync_status",
   "variety_state",
   "followed_by_action",
   "pulse_outcome",
@@ -407,15 +401,6 @@ function normalizeAnalyticsEventPropertyValue(
         return value;
       }
       break;
-    case "sync_status":
-      if (
-        value === "online" ||
-        value === "offline_queued" ||
-        value === "offline_synced"
-      ) {
-        return value;
-      }
-      break;
     case "variety_state":
       if (
         value === "selected" ||
@@ -489,7 +474,6 @@ function normalizeAnalyticsEventPropertyValue(
         value === "succeeded" ||
         value === "conflict" ||
         value === "failed" ||
-        value === "offline_queued" ||
         value === "stale"
       ) {
         return value;

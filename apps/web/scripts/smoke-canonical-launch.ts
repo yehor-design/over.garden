@@ -268,7 +268,6 @@ async function main() {
         locationVisibility: "hidden",
         coarseRegionCode: null,
         clientMutationId: randomUUID(),
-        syncStatus: "online",
         activationSource: "direct_garden",
         mediaAssetId: upload.mediaAssetId,
       },
@@ -297,7 +296,6 @@ async function main() {
         body: "Smoke-only same-object follow-up. No personal garden details.",
         entryDate: "2026-07-05",
         clientMutationId: randomUUID(),
-        syncStatus: "online",
       },
     },
   );

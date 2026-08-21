@@ -45,6 +45,29 @@ const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 const scope = scopedToUser("00000000-0000-0000-0000-000000000001", "session-1");
 
 describe("analytics event privacy contracts", () => {
+  it("rejects every retired offline event and status from the active contract", () => {
+    expect(() =>
+      buildInsertAnalyticsEventQuery(testDb, scope, {
+        eventName: "offline_entry_queued" as never,
+      }).compile(),
+    ).toThrow("Unsupported analytics event: offline_entry_queued.");
+    expect(() =>
+      buildInsertAnalyticsEventQuery(testDb, scope, {
+        eventName: "offline_entry_synced" as never,
+      }).compile(),
+    ).toThrow("Unsupported analytics event: offline_entry_synced.");
+    expect(() =>
+      normalizeAnalyticsEventProperties({
+        sync_status: "online",
+      } as never),
+    ).toThrow("Unsupported analytics event property: sync_status.");
+    expect(() =>
+      normalizeAnalyticsEventProperties({
+        mutation_outcome: "offline_queued",
+      } as never),
+    ).toThrow("Unsafe analytics event value for mutation_outcome.");
+  });
+
   it("normalizes only privacy-safe boolean and enum properties", () => {
     expect(
       normalizeAnalyticsEventProperties({
@@ -55,7 +78,6 @@ describe("analytics event privacy contracts", () => {
         location_visibility_level: "hidden",
         object_kind: "animal",
         source_surface_kind: "homepage",
-        sync_status: "offline_synced",
         variety_state: "selected",
         followed_by_action: false,
       }),
@@ -67,7 +89,6 @@ describe("analytics event privacy contracts", () => {
       location_visibility_level: "hidden",
       object_kind: "animal",
       source_surface_kind: "homepage",
-      sync_status: "offline_synced",
       variety_state: "selected",
       followed_by_action: false,
     });
@@ -78,12 +99,10 @@ describe("analytics event privacy contracts", () => {
       normalizeAnalyticsEventProperties({
         entry_scope: "space",
         has_photo: false,
-        sync_status: "online",
       }),
     ).toEqual({
       entry_scope: "space",
       has_photo: false,
-      sync_status: "online",
     });
     expect(() =>
       normalizeAnalyticsEventProperties({
@@ -229,11 +248,6 @@ describe("analytics event privacy contracts", () => {
   it("rejects unsupported or non-enum property values", () => {
     expect(() =>
       normalizeAnalyticsEventProperties({
-        sync_status: "queued with body text",
-      } as never),
-    ).toThrow("Unsafe analytics event value for sync_status.");
-    expect(() =>
-      normalizeAnalyticsEventProperties({
         has_photo: "yes",
       } as never),
     ).toThrow("Unsafe analytics event value for has_photo.");
@@ -259,7 +273,6 @@ describe("analytics event privacy contracts", () => {
         location_visibility_level: "region",
         activation_source: "public_variety",
         source_surface_kind: "variety",
-        sync_status: "online",
         variety_state: "unknown",
       },
       spaceId: "00000000-0000-0000-0000-000000000002",
@@ -279,7 +292,6 @@ describe("analytics event privacy contracts", () => {
         location_visibility_level: "region",
         activation_source: "public_variety",
         source_surface_kind: "variety",
-        sync_status: "online",
         variety_state: "unknown",
       },
       "00000000-0000-0000-0000-000000000002",
@@ -349,7 +361,6 @@ describe("analytics event privacy contracts", () => {
           has_photo: false,
           is_backdated: false,
           location_visibility_level: "hidden",
-          sync_status: "online",
           variety_state: "unknown",
         },
       },

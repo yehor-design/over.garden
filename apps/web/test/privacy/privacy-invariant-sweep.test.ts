@@ -391,7 +391,6 @@ describe("OVE-40 privacy invariant sweep — analytics", () => {
         location_visibility_level: "region",
         activation_source: "public_variety",
         source_surface_kind: "variety",
-        sync_status: "online",
         variety_state: "selected",
       },
       journalEntryId: JOURNEY.entryId,
@@ -406,7 +405,6 @@ describe("OVE-40 privacy invariant sweep — analytics", () => {
       location_visibility_level: "region",
       activation_source: "public_variety",
       source_surface_kind: "variety",
-      sync_status: "online",
       variety_state: "selected",
     });
     expectNoForbiddenValues("analytics properties", properties);

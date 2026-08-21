@@ -1,4 +1,3 @@
-import type { EntrySyncStatus } from "@/db/schema";
 import type { CatalogKind, PlantObjectKind } from "@/db/schema";
 import type { CatalogTrustState } from "@/lib/garden/catalog-trust";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
@@ -88,7 +87,6 @@ export interface FirstPlantEntryRequest {
     | { mode: "separate"; mediaAssetId: string }
     | { mode: "keep_as_cover"; mediaAssetId: string }
     | null;
-  syncStatus?: EntrySyncStatus;
   activationSource?: ActivationSource | null;
   mentionSelections?: JournalMentionSelection[];
   topicTags?: string[];
@@ -237,7 +235,7 @@ export function journalDraftPublicationBody(
     delete body.entryId;
     return body;
   }
-  return { ...payload.request, syncStatus: "online" };
+  return { ...payload.request };
 }
 
 export function stableSerializeJournalDraftPayload(

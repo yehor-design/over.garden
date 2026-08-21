@@ -432,7 +432,6 @@ function spaceDraftPayload(input: {
       contentDocument: input.draft.contentDocument,
       entryDate: input.draft.entryDate,
       clientMutationId: input.clientMutationId,
-      syncStatus: "online",
       cover: journalCoverSelectionToClaimInput(input.cover),
     },
   };

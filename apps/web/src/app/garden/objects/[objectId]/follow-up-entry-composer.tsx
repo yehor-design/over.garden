@@ -970,7 +970,6 @@ function followUpDraftPayload(input: {
       contentDocument: input.draft.contentDocument,
       entryDate: input.draft.entryDate,
       clientMutationId: input.clientMutationId,
-      syncStatus: "online",
       mentionSelections: input.mentionSelections,
       topicTags: normalizeJournalTopicTagLabels(input.topicTagInput),
       mediaAssetId: input.primaryMediaAssetId,

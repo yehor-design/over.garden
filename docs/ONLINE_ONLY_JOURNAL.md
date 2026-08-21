@@ -120,9 +120,8 @@ Current final journal publication and both media mutation routes send the
 positive `x-overgarden-online-journal-protocol` marker. An authenticated
 request without the exact current value is rejected with private/no-store
 `409 legacy_client_retired` before private payload parsing or any effect. The
-journal route redundantly rejects the retired `offline_synced` replay state even
-when the marker is present. This cutoff is a compatibility refusal, not an
-offline sync path.
+journal request body has no connectivity or synchronization status contract.
+This cutoff is a compatibility refusal, not a replay or synchronization path.
 
 ## Payload budget
 

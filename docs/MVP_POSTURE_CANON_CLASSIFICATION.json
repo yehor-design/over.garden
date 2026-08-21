@@ -24,6 +24,7 @@
     "apps/web/scripts/check-mvp-posture-canon.test.ts",
     "apps/web/scripts/check-linear-agent-task.ts",
     "apps/web/scripts/check-linear-agent-task.test.ts",
+    "apps/web/tests/online-only-product.spec.ts",
     "docs/SDD_VERTICAL_SLICE_ROADMAP.md"
   ],
   "historicalPaths": [

@@ -383,7 +383,6 @@ async function createEntry(
         locationVisibility: "hidden",
         coarseRegionCode: null,
         clientMutationId: randomUUID(),
-        syncStatus: "online",
         activationSource: "direct_garden",
       },
     },

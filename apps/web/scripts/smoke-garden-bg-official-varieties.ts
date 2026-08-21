@@ -184,7 +184,6 @@ async function main() {
           locationVisibility: "hidden",
           coarseRegionCode: null,
           clientMutationId: randomUUID(),
-          syncStatus: "online",
           activationSource: "direct_garden",
         },
       },
