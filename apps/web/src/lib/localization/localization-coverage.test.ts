@@ -41,7 +41,11 @@ describe("OVE-205 market-first localization coverage", () => {
   it("produces one schema-v3 zero-regression-gap inventory across app states and raw lifecycle renderers", () => {
     const report = buildLocalizationCoverage();
 
-    expect(() => assertLocalizationCoverage(report)).not.toThrow();
+    expect(assertLocalizationCoverage(report)).toEqual({
+      serveClass: "exact",
+      warningCount: 0,
+      warningKinds: [],
+    });
     expect(report).toMatchObject({
       schemaVersion: 3,
       issue: "OVE-205",
@@ -422,6 +426,11 @@ describe("OVE-205 market-first localization coverage", () => {
     expect(reportWithoutOperatorProof.missing.ownerViewportProof).toContain(
       "operator:missing-browser-probe",
     );
+    expect(assertLocalizationCoverage(reportWithoutOperatorProof)).toEqual({
+      serveClass: "probe_missing",
+      warningCount: 1,
+      warningKinds: ["ownerViewportProof"],
+    });
 
     const reportWithoutRawJournalProof = buildLocalizationCoverage({
       browserProbes: LOCALIZATION_OWNER_BROWSER_PROBES.filter(
@@ -430,6 +439,37 @@ describe("OVE-205 market-first localization coverage", () => {
     });
     expect(reportWithoutRawJournalProof.missing.ownerViewportProof).toContain(
       "src/lib/public-journal-entry-lifecycle.ts:missing-raw-browser-probe",
+    );
+    expect(
+      assertLocalizationCoverage(reportWithoutRawJournalProof),
+    ).toMatchObject({
+      serveClass: "probe_missing",
+      warningCount: 1,
+    });
+  });
+
+  it("keeps malformed probe and missing scenario evidence blocking", () => {
+    const report = buildLocalizationCoverage();
+    const invalidProbeReport = {
+      ...report,
+      missing: {
+        ...report.missing,
+        ownerViewportProof: ["owner-shell:expected-status"],
+      },
+    };
+    expect(() => assertLocalizationCoverage(invalidProbeReport)).toThrow(
+      /ownerViewportProof:owner-shell:expected-status/,
+    );
+
+    const missingScenarioReport = {
+      ...report,
+      missing: {
+        ...report.missing,
+        ownerScenarioProof: ["operator:scenario:missing"],
+      },
+    };
+    expect(() => assertLocalizationCoverage(missingScenarioReport)).toThrow(
+      /ownerScenarioProof:operator:scenario:missing/,
     );
   });
 

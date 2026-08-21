@@ -25,6 +25,7 @@ function catalogRow(
     aliasNormalizedName: "томат чері",
     aliasLocale: "uk",
     isPrimary: false,
+    isGeneratedAlias: false,
     ...overrides,
   };
 }
@@ -51,6 +52,7 @@ describe("catalog typeahead search documents", () => {
       isPrimary: false,
       rank: 10,
       kind: "catalog_item",
+      serveClass: "exact",
     });
     expect(document).not.toHaveProperty("createdByUserId");
     expect(document).not.toHaveProperty("ownerUserId");
@@ -92,6 +94,7 @@ describe("catalog typeahead search documents", () => {
       isPrimary: false,
       rank: 10,
       kind: "catalog_item",
+      serveClass: "exact",
     });
     expect(document).not.toHaveProperty("colId");
     expect(document).not.toHaveProperty("wfoId");
@@ -110,6 +113,17 @@ describe("catalog typeahead search documents", () => {
     expect(document).not.toHaveProperty("sourceRecordKey");
     expect(document).not.toHaveProperty("coordinates");
     expect(document).not.toHaveProperty("rawPayload");
+  });
+
+  it("marks an accepted generated alias without exposing generator provenance", () => {
+    const document = toCatalogTypeaheadDocument(
+      catalogRow({ isGeneratedAlias: true }),
+    );
+
+    expect(document).toMatchObject({ serveClass: "generated" });
+    expect(document).not.toHaveProperty("sourceMethod");
+    expect(document).not.toHaveProperty("generatorVersion");
+    expect(document).not.toHaveProperty("confidence");
   });
 
   it("indexes breed aliases as breed documents without validation-only source IDs", () => {
@@ -170,7 +184,7 @@ describe("catalog typeahead search documents", () => {
     ).toBeNull();
   });
 
-  it("maps safe Meili hits back to selectable catalog suggestions", () => {
+  it("maps a safe generated Meili hit back with its served class", () => {
     expect(
       catalogTypeaheadHitToSuggestion({
         catalogItemId: "00000000-0000-4000-8000-000000000101",
@@ -180,6 +194,7 @@ describe("catalog typeahead search documents", () => {
         locale: "uk",
         status: "seeded",
         source: "internal_seed",
+        serveClass: "generated",
       }),
     ).toEqual({
       id: "00000000-0000-4000-8000-000000000101",
@@ -189,6 +204,7 @@ describe("catalog typeahead search documents", () => {
       locale: "uk",
       status: "seeded",
       source: "internal_seed",
+      serveClass: "generated",
       trustState: "candidate",
       trustLabel: "Candidate",
       sourceLabel: "OverGarden starter catalog",

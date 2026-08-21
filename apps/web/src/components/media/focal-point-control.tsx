@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   normalizeFocalPoint,
   objectPositionCss,
+  resolveMediaFocalPoint,
   type MediaFocalPoint,
 } from "@/lib/media/presentation-contract";
 
@@ -38,7 +39,8 @@ export function FocalPointControl({
   onChange,
 }: FocalPointControlProps) {
   const labelId = useId();
-  const safe = normalizeFocalPoint(focal);
+  const focalResolution = resolveMediaFocalPoint(focal);
+  const safe = focalResolution.focal;
   const surfaceRef = useRef<HTMLDivElement | null>(null);
 
   const setFromClientPoint = useCallback(
@@ -58,6 +60,7 @@ export function FocalPointControl({
     <div
       className={cn("grid gap-2", className)}
       data-focal-point-control="true"
+      data-media-serve-class={focalResolution.serveClass}
     >
       <div className="grid gap-0.5">
         <p id={labelId} className="text-xs font-medium text-foreground">
@@ -85,7 +88,8 @@ export function FocalPointControl({
           if (event.key === "ArrowLeft") next = { ...next, x: next.x - step };
           else if (event.key === "ArrowRight")
             next = { ...next, x: next.x + step };
-          else if (event.key === "ArrowUp") next = { ...next, y: next.y - step };
+          else if (event.key === "ArrowUp")
+            next = { ...next, y: next.y - step };
           else if (event.key === "ArrowDown")
             next = { ...next, y: next.y + step };
           else return;

@@ -20,6 +20,7 @@ export interface OwnerMediaFocalPanelCopy extends FocalPointControlCopy {
   save: string;
   saving: string;
   saved: string;
+  clamped: string;
   error: string;
 }
 
@@ -33,6 +34,7 @@ export interface OwnerMediaFocalPanelProps {
   onSaved?: (next: {
     focal: MediaFocalPoint;
     journalRevision: number | null;
+    serveClass: "exact";
   }) => void;
 }
 
@@ -50,7 +52,9 @@ export function OwnerMediaFocalPanel({
     normalizeFocalPoint(initialFocal),
   );
   const [revision, setRevision] = useState(expectedRevision);
-  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "saved" | "clamped" | "error">(
+    "idle",
+  );
   const [pending, startTransition] = useTransition();
 
   const save = useCallback(() => {
@@ -82,7 +86,13 @@ export function OwnerMediaFocalPanel({
         const payload = (await response.json()) as {
           mediaAsset?: { focalX?: number; focalY?: number };
           journalRevision?: number | null;
+          serveClass?: unknown;
         };
+        const serveClass = payload.serveClass ?? "exact";
+        if (serveClass !== "exact" && serveClass !== "clamped") {
+          setStatus("error");
+          return;
+        }
         const next = normalizeFocalPoint({
           x: payload.mediaAsset?.focalX,
           y: payload.mediaAsset?.focalY,
@@ -94,14 +104,19 @@ export function OwnerMediaFocalPanel({
         ) {
           setRevision(payload.journalRevision);
         }
-        setStatus("saved");
-        onSaved?.({
-          focal: next,
-          journalRevision:
-            typeof payload.journalRevision === "number"
-              ? payload.journalRevision
-              : null,
-        });
+        if (serveClass === "clamped") {
+          setStatus("clamped");
+        } else {
+          setStatus("saved");
+          onSaved?.({
+            focal: next,
+            journalRevision:
+              typeof payload.journalRevision === "number"
+                ? payload.journalRevision
+                : null,
+            serveClass: "exact",
+          });
+        }
       } catch {
         setStatus("error");
       }
@@ -132,6 +147,11 @@ export function OwnerMediaFocalPanel({
         {status === "saved" ? (
           <p className="text-xs text-muted-foreground" role="status">
             {copy.saved}
+          </p>
+        ) : null}
+        {status === "clamped" ? (
+          <p className="text-xs text-muted-foreground" role="status">
+            {copy.clamped}
           </p>
         ) : null}
         {status === "error" ? (

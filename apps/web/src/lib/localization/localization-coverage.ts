@@ -18,6 +18,7 @@ import {
   type LocalizationOwnerBrowserProbe,
   type LocalizationRenderedOwnerId,
 } from "@/lib/localization/localization-browser-matrix";
+import { classifyLocalizationCoverageAvailability } from "@/lib/localization/localization-coverage-availability";
 import {
   DEFAULT_INTERFACE_MARKET,
   INTERFACE_MARKET_CONFIG,
@@ -2286,15 +2287,15 @@ export function buildLocalizationCoverage(
 
 export function assertLocalizationCoverage(
   report: LocalizationCoverageReport,
-): void {
-  const failures = Object.entries(report.missing).flatMap(([kind, values]) =>
-    values.map((value) => `${kind}:${value}`),
-  );
-  if (failures.length > 0) {
-    throw new Error(
-      `OVE-205 localization coverage is incomplete: ${failures.join(", ")}`,
-    );
-  }
+): {
+  serveClass: "exact" | "probe_missing";
+  warningCount: number;
+  warningKinds: Array<"ownerViewportProof" | "ownerScenarioProof">;
+} {
+  return classifyLocalizationCoverageAvailability({
+    missing: report.missing,
+    browserProbeIds: report.browserProbes.map(({ id }) => id),
+  });
 }
 
 export function scanAuthoredLocalizationSources(

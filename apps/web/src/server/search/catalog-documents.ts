@@ -4,6 +4,10 @@ import {
   catalogSuggestionTrustMetadata,
   type CatalogTrustMetadata,
 } from "@/lib/garden/catalog-trust";
+import {
+  isOve330ServeClass,
+  type Ove330ServeClass,
+} from "@/lib/media/presentation-contract";
 
 export const CATALOG_TYPEAHEAD_INDEX = "catalog_typeahead";
 
@@ -189,6 +193,7 @@ export interface CatalogTypeaheadRow {
   aliasNormalizedName: string;
   aliasLocale: string;
   isPrimary: boolean;
+  isGeneratedAlias?: boolean;
 }
 
 export interface CatalogTypeaheadDocument {
@@ -205,6 +210,7 @@ export interface CatalogTypeaheadDocument {
   isPrimary: boolean;
   rank: number;
   kind: "catalog_item";
+  serveClass: "exact" | "generated";
 }
 
 export interface CatalogTypeaheadSuggestion extends Partial<CatalogTrustMetadata> {
@@ -215,6 +221,7 @@ export interface CatalogTypeaheadSuggestion extends Partial<CatalogTrustMetadata
   status: CatalogTypeaheadStatus;
   source: string;
   catalogKind: CatalogTypeaheadCatalogKind;
+  serveClass?: Ove330ServeClass;
 }
 
 export const SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES = [
@@ -259,6 +266,7 @@ export function toCatalogTypeaheadDocument(
     isPrimary: row.isPrimary,
     rank: row.isPrimary ? 0 : 10,
     kind: "catalog_item",
+    serveClass: row.isGeneratedAlias ? "generated" : "exact",
   };
 }
 
@@ -275,6 +283,9 @@ export function catalogTypeaheadHitToSuggestion(
   const status = stringValue(hit.status);
   const source = stringValue(hit.source);
   const catalogKind = stringValue(hit.catalogKind);
+  const serveClass = isOve330ServeClass(hit.serveClass)
+    ? hit.serveClass
+    : "exact";
 
   if (
     !catalogItemId ||
@@ -298,6 +309,7 @@ export function catalogTypeaheadHitToSuggestion(
     status,
     source,
     catalogKind,
+    serveClass,
     ...catalogSuggestionTrustMetadata({
       status,
       source,

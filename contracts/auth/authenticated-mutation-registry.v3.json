@@ -16949,6 +16949,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/media/[mediaAssetId]/focal/route.ts",
+        "src/lib/media/presentation-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/media/presentation-contract",
+      "sourceNodeId": "source:18d55ad53b0911e19258",
+      "symbol": "resolveMediaFocalPoint"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/engagement/follows/route.ts",
         "src/app/api/engagement/shared.ts"
       ],
@@ -19605,6 +19617,18 @@
       "semanticVariant": "from:@/server/request-scope",
       "sourceNodeId": "source:30c8514535bdbf448d79",
       "symbol": "scopedToUser"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/media/presentation-contract.ts",
+        "src/server/catalog-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/media/presentation-contract",
+      "sourceNodeId": "source:30e08b21850926ce81c2",
+      "symbol": "Ove330ServeClass"
     },
     {
       "evidencePaths": [
@@ -24001,6 +24025,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/garden/catalog-availability.ts",
+        "src/server/catalog-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/catalog-availability",
+      "sourceNodeId": "source:5cc34244d9b398596d06",
+      "symbol": "classifyHomonymousCatalogSuggestions"
+    },
+    {
+      "evidencePaths": [
         "src/app/admin/communities/[slug]/actions.ts",
         "src/lib/visual-fixtures/community-scenarios.ts"
       ],
@@ -24814,6 +24850,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/curation/variety-seed-proof-editor.tsx",
+        "src/lib/media/presentation-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/curation/variety-seed-proof-editor.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/media/presentation-contract",
+      "sourceNodeId": "source:66641775bc9791841606",
+      "symbol": "Ove330ServeClass"
+    },
+    {
+      "evidencePaths": [
         "src/server/journal-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -25203,18 +25251,6 @@
       "semanticVariant": "from:@/lib/auth/social-oauth",
       "sourceNodeId": "source:6bbcfcc1cf6b73961907",
       "symbol": "oauthCallbackPath"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/media/[mediaAssetId]/focal/route.ts",
-        "src/lib/media/presentation-contract.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/media/presentation-contract",
-      "sourceNodeId": "source:6bc0a074bda6adb77f60",
-      "symbol": "normalizeFocalPoint"
     },
     {
       "evidencePaths": [
@@ -29909,6 +29945,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/garden/catalog-availability.ts",
+        "src/server/catalog-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/catalog-availability",
+      "sourceNodeId": "source:99d8c71813c9ce84b55f",
+      "symbol": "catalogMeiliServeClass"
+    },
+    {
+      "evidencePaths": [
         "src/server/search/documents.ts",
         "src/server/search/public-journal-eligibility.ts"
       ],
@@ -30211,6 +30259,18 @@
       "semanticVariant": "from:@/server/auth-session",
       "sourceNodeId": "source:9d6dec33d63cde067444",
       "symbol": "getSessionId"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/media/presentation-contract.ts",
+        "src/server/catalog-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/media/presentation-contract",
+      "sourceNodeId": "source:9dae7d2533fa9f925968",
+      "symbol": "isOve330ServeClass"
     },
     {
       "evidencePaths": [
@@ -31651,6 +31711,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:aaecd2b86ae59c178c48",
       "symbol": "VarietyState"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/curation/variety-seed-proof-editor.tsx",
+        "src/lib/media/presentation-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/curation/variety-seed-proof-editor.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/media/presentation-contract",
+      "sourceNodeId": "source:ab220e058eef10802776",
+      "symbol": "isOve330ServeClass"
     },
     {
       "evidencePaths": [
@@ -35312,6 +35384,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/media/[mediaAssetId]/focal/route.ts",
+        "src/server/media/media-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/media-repository",
+      "sourceNodeId": "source:d105dc066c6bbffdb5de",
+      "symbol": "findMediaAssetForOwner"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/privacy/erasure-requests/page.tsx",
         "src/lib/operator-copy.ts"
       ],
@@ -35357,6 +35441,18 @@
       "semanticVariant": "from:./loading",
       "sourceNodeId": "source:d194eaf1cdc498ec6dce",
       "symbol": "GardenLoadingView"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx",
+        "src/lib/media/presentation-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/media/presentation-contract",
+      "sourceNodeId": "source:d1c427e45517450cc6ad",
+      "symbol": "Ove330ServeClass"
     },
     {
       "evidencePaths": [
@@ -38227,6 +38323,18 @@
       "semanticVariant": "from:@/lib/owner-lineage-copy",
       "sourceNodeId": "source:ec5e4c43e0d58cce1c8e",
       "symbol": "getOwnerLineageCopy"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx",
+        "src/lib/media/presentation-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/media/presentation-contract",
+      "sourceNodeId": "source:ec8b41f158f04eb2f530",
+      "symbol": "isOve330ServeClass"
     },
     {
       "evidencePaths": [

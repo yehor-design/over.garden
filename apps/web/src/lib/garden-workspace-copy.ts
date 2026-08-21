@@ -5,6 +5,7 @@ import {
   type CatalogTrustMetadata,
 } from "@/lib/garden/catalog-trust";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import type { Ove330ServeClass } from "@/lib/media/presentation-contract";
 
 type WidenCopy<T> = T extends string
   ? string
@@ -361,6 +362,12 @@ const UK_COPY = {
         species: "Вид",
         plantVariety: "Сорт рослини",
         identity: "Ідентичність у каталозі",
+      },
+      serveClasses: {
+        lowConfidence: "Низька впевненість: перевірте назву перед вибором.",
+        generated: "Згенерований варіант: перевірте його за канонічною назвою.",
+        homonymous:
+          "Однакова назва відповідає кільком ідентичностям: порівняйте тип і джерело.",
       },
       caveats: {
         curated:
@@ -816,6 +823,12 @@ const BG_COPY = {
         plantVariety: "Растителен сорт",
         identity: "Идентичност в каталога",
       },
+      serveClasses: {
+        lowConfidence: "Ниска увереност: проверете името, преди да изберете.",
+        generated: "Генериран вариант: проверете го спрямо каноничното име.",
+        homonymous:
+          "Едно и също име съответства на няколко идентичности: сравнете вида и източника.",
+      },
       caveats: {
         curated:
           "Проверена идентичност на OverGarden. Сравнете вида и името преди избор.",
@@ -1267,6 +1280,13 @@ const RU_COPY = {
         plantVariety: "Сорт растения",
         identity: "Идентичность в каталоге",
       },
+      serveClasses: {
+        lowConfidence: "Низкая уверенность: проверьте название перед выбором.",
+        generated:
+          "Сгенерированный вариант: проверьте его по каноническому названию.",
+        homonymous:
+          "Одинаковое название соответствует нескольким идентичностям: сравните тип и источник.",
+      },
       caveats: {
         curated:
           "Проверенная идентичность OverGarden. Перед выбором сравните тип и название.",
@@ -1457,7 +1477,7 @@ export function localizedJournalSaveErrorMessage(
 
 export function buildGardenCatalogTrustMetadata(
   locale: InterfaceLocale,
-  input: CatalogTrustInput,
+  input: CatalogTrustInput & { serveClass?: Ove330ServeClass },
 ): CatalogTrustMetadata {
   const base = catalogSuggestionTrustMetadata(input);
   const copy = getGardenWorkspaceCopy(locale).composer.catalogTrust;
@@ -1484,12 +1504,30 @@ export function buildGardenCatalogTrustMetadata(
     .filter(Boolean)
     .join(" · ");
 
+  const sourceCaveat = localizedCatalogSourceCaveat(input, state, copy.caveats);
+  const availabilityCaveat = localizedCatalogServeClass(
+    input.serveClass,
+    copy.serveClasses,
+  );
+
   return {
     ...base,
     trustLabel,
-    sourceCaveat: localizedCatalogSourceCaveat(input, state, copy.caveats),
+    sourceCaveat: availabilityCaveat
+      ? `${availabilityCaveat} ${sourceCaveat}`
+      : sourceCaveat,
     disambiguationLabel,
   };
+}
+
+function localizedCatalogServeClass(
+  serveClass: Ove330ServeClass | undefined,
+  copy: GardenWorkspaceCopy["composer"]["catalogTrust"]["serveClasses"],
+) {
+  if (serveClass === "low_confidence") return copy.lowConfidence;
+  if (serveClass === "generated") return copy.generated;
+  if (serveClass === "homonymous") return copy.homonymous;
+  return null;
 }
 
 function localizedCatalogTrustKind(

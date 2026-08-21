@@ -5,6 +5,22 @@
 
 export type MediaPresentationMode = "cover" | "contain";
 
+export const OVE330_SERVE_CLASS_VERSION = "ove330.serveClass.v1" as const;
+export const OVE330_SERVE_CLASSES = [
+  "exact",
+  "clamped",
+  "low_confidence",
+  "generated",
+  "homonymous",
+  "probe_missing",
+  "seam_unmet",
+] as const;
+export type Ove330ServeClass = (typeof OVE330_SERVE_CLASSES)[number];
+
+export function isOve330ServeClass(value: unknown): value is Ove330ServeClass {
+  return OVE330_SERVE_CLASSES.includes(value as Ove330ServeClass);
+}
+
 export interface MediaFocalPoint {
   x: number;
   y: number;
@@ -22,9 +38,15 @@ export interface ResolvedMediaPresentation {
   objectPosition: string;
   focal: MediaFocalPoint;
   intrinsic: MediaIntrinsicSize;
+  serveClass: "exact" | "clamped";
 }
 
 export const MEDIA_FOCAL_CENTER: MediaFocalPoint = { x: 0.5, y: 0.5 };
+
+export interface ResolvedMediaFocalPoint {
+  focal: MediaFocalPoint;
+  serveClass: "exact" | "clamped";
+}
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -36,13 +58,24 @@ function isFiniteNumber(value: unknown): value is number {
 export function normalizeFocalPoint(
   input?: Partial<MediaFocalPoint> | null,
 ): MediaFocalPoint {
+  return resolveMediaFocalPoint(input).focal;
+}
+
+/**
+ * Resolve presentation-time focal input without mutating the stored value.
+ * Missing, non-finite, and out-of-range values are served at centre and are
+ * explicitly distinguishable from an exact focal point by every caller.
+ */
+export function resolveMediaFocalPoint(
+  input?: Partial<MediaFocalPoint> | null,
+): ResolvedMediaFocalPoint {
   if (!input || !isFiniteNumber(input.x) || !isFiniteNumber(input.y)) {
-    return { ...MEDIA_FOCAL_CENTER };
+    return { focal: { ...MEDIA_FOCAL_CENTER }, serveClass: "clamped" };
   }
   if (input.x < 0 || input.x > 1 || input.y < 0 || input.y > 1) {
-    return { ...MEDIA_FOCAL_CENTER };
+    return { focal: { ...MEDIA_FOCAL_CENTER }, serveClass: "clamped" };
   }
-  return { x: input.x, y: input.y };
+  return { focal: { x: input.x, y: input.y }, serveClass: "exact" };
 }
 
 /**
@@ -61,7 +94,8 @@ export function resolveMediaPresentation(input: {
   focal?: Partial<MediaFocalPoint> | null;
   intrinsic?: Partial<MediaIntrinsicSize> | null;
 }): ResolvedMediaPresentation {
-  const focal = normalizeFocalPoint(input.focal);
+  const focalResolution = resolveMediaFocalPoint(input.focal);
+  const focal = focalResolution.focal;
   const width =
     input.intrinsic && isFiniteNumber(input.intrinsic.width)
       ? Math.trunc(input.intrinsic.width)
@@ -79,6 +113,7 @@ export function resolveMediaPresentation(input: {
       objectPosition: objectPositionCss(MEDIA_FOCAL_CENTER),
       focal,
       intrinsic: { width, height },
+      serveClass: focalResolution.serveClass,
     };
   }
 
@@ -88,5 +123,6 @@ export function resolveMediaPresentation(input: {
     objectPosition: objectPositionCss(focal),
     focal,
     intrinsic: { width, height },
+    serveClass: focalResolution.serveClass,
   };
 }

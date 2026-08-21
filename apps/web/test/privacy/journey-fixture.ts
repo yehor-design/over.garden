@@ -121,6 +121,7 @@ export const ALLOWED_CATALOG_DOCUMENT_KEYS: readonly string[] = [
   "isPrimary",
   "rank",
   "kind",
+  "serveClass",
 ];
 
 // A Meilisearch hit that an attacker (or a misconfigured index) stuffed with

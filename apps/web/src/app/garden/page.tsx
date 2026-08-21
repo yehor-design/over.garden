@@ -612,6 +612,7 @@ async function resolveInitialCatalogSelection(
     locale: item.locale,
     status: item.status,
     source: item.source,
+    serveClass: "exact",
   };
 }
 

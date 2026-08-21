@@ -1,5 +1,6 @@
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
+import { isOve330ServeClass } from "@/lib/media/presentation-contract";
 
 export function parseCatalogTypeaheadResponse(
   value: unknown,
@@ -33,6 +34,9 @@ export function parseCatalogTypeaheadResponse(
       locale: candidate.locale,
       status: candidate.status,
       source: candidate.source,
+      serveClass: isOve330ServeClass(candidate.serveClass)
+        ? candidate.serveClass
+        : "exact",
     } satisfies FirstEntryCatalogSelection;
 
     return [

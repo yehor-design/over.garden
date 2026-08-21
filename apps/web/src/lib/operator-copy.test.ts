@@ -4,6 +4,7 @@ import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   formatOperatorDate,
   formatOperatorTemplate,
+  getOperatorDatabaseAvailabilityCopy,
   getOperatorCopy,
   operatorCapabilityLabel,
   operatorCommunityStateLabel,
@@ -26,7 +27,14 @@ describe("operator copy", () => {
     expect(getOperatorCopy("bg").community.openReports).toBe(
       "Отворени сигнали",
     );
-    expect(getOperatorCopy("ru").health.dbUnavailable).toContain("недоступна");
+    for (const locale of LOCALES) {
+      const availability = getOperatorDatabaseAvailabilityCopy(locale);
+      expect(availability.serveClass).toBe("seam_unmet");
+      expect(availability.message).toMatch(/режим|режиме/u);
+      expect(availability.message).not.toMatch(
+        /недоступ|не е налична|fail-closed/iu,
+      );
+    }
   });
 
   it("preserves machine values while localizing their display labels", () => {

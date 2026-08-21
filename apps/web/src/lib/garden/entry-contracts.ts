@@ -2,6 +2,7 @@ import type { CatalogKind, PlantObjectKind } from "@/db/schema";
 import type { CatalogTrustState } from "@/lib/garden/catalog-trust";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
+import type { Ove330ServeClass } from "@/lib/media/presentation-contract";
 
 /** One bounded JSON budget shared by draft saves and final publication. */
 export const JOURNAL_ENTRY_PAYLOAD_MAX_BYTES = 128 * 1024;
@@ -54,6 +55,7 @@ export interface FirstEntryCatalogSelection {
   locale: string;
   status: "seeded" | "confirmed";
   source: string;
+  serveClass: Ove330ServeClass;
   trustState?: CatalogTrustState;
   trustLabel?: string;
   sourceLabel?: string;

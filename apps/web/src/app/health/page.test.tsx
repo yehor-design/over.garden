@@ -59,8 +59,9 @@ describe("/health", () => {
     const html = renderToStaticMarkup(await HealthPage());
 
     expect(html).toContain(
-      "Проверката на базата данни не е налична в тази среда",
+      "Диагностиката е показана в ограничен режим; наличните проверки продължават без отговор от базата данни",
     );
+    expect(html).toContain('data-operator-db-serve-class="seam_unmet"');
     expect(html).not.toContain("secret-user");
     expect(html).not.toContain("secret-pass");
     expect(html).not.toContain("example.internal");

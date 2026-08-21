@@ -170,7 +170,10 @@ export function CatalogResolveControl({
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {selected ? (
-            <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+            <span
+              className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground"
+              data-catalog-serve-class={selected.serveClass}
+            >
               <span>
                 {copy.matched} {selected.displayName} ·{" "}
                 {selectedTrust?.trustLabel} ·{" "}
@@ -195,7 +198,7 @@ export function CatalogResolveControl({
         </div>
 
         {suggestions.length > 0 ? (
-          <ul className="grid gap-2">
+          <ul className="grid gap-2" aria-live="polite">
             {suggestions.map((suggestion) => {
               const trust = buildGardenCatalogTrustMetadata(locale, suggestion);
 
@@ -204,6 +207,7 @@ export function CatalogResolveControl({
                   <button
                     type="button"
                     onClick={() => selectSuggestion(suggestion)}
+                    data-catalog-serve-class={suggestion.serveClass}
                     className="flex w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
                   >
                     <span className="min-w-0">
