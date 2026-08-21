@@ -120,6 +120,8 @@ const UK_COPY = {
       "Маршрут Better Auth підключено — legacy_transition; потрібна підготовлена versioned-конфігурація",
     authClosed:
       "Маршрут Better Auth підключено — secret відсутній або схожий на placeholder, автентифікація fail-closed",
+    authWeakSecret:
+      "Маршрут Better Auth обслуговує трафік — weak_secret; виправте versioned-конфігурацію",
     authLocalFallback:
       "Маршрут Better Auth підключено — активний лише локальний fallback",
     dbOk: "Читання Kysely успішне — ping={ping} · рядків стану: {count}",
@@ -241,6 +243,8 @@ const BG_COPY = {
       "Маршрутът на Better Auth е свързан — legacy_transition; нужна е подготвена versioned конфигурация",
     authClosed:
       "Маршрутът на Better Auth е свързан — secret липсва или прилича на placeholder, автентикацията е fail-closed",
+    authWeakSecret:
+      "Маршрутът на Better Auth обслужва трафик — weak_secret; коригирайте versioned конфигурацията",
     authLocalFallback:
       "Маршрутът на Better Auth е свързан — активен е само локалният fallback",
     dbOk: "Четенето с Kysely е успешно — ping={ping} · редове за състояние: {count}",
@@ -360,6 +364,8 @@ const RU_COPY = {
       "Маршрут Better Auth подключён — legacy_transition; нужна подготовленная versioned-конфигурация",
     authClosed:
       "Маршрут Better Auth подключён — secret отсутствует или похож на placeholder, аутентификация fail-closed",
+    authWeakSecret:
+      "Маршрут Better Auth обслуживает трафик — weak_secret; исправьте versioned-конфигурацию",
     authLocalFallback:
       "Маршрут Better Auth подключён — активен только локальный fallback",
     dbOk: "Чтение Kysely успешно — ping={ping} · строк состояния: {count}",

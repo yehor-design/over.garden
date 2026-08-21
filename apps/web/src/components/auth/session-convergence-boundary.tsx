@@ -35,6 +35,7 @@ import {
   SESSION_CONVERGENCE_SIGNALS,
   subscribeToSessionConvergence,
 } from "@/lib/auth/session-convergence";
+import { recordUnresolvedAuthorizationServe } from "@/lib/auth/unresolved-authorization";
 import {
   clearSessionInvalidationMarkerIfCurrent,
   commitLocalExitInvalidationMarker,
@@ -43,7 +44,10 @@ import {
   subscribeToSessionInvalidationMarker,
 } from "@/lib/auth/session-invalidation-marker";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import type { SessionRecheckMode } from "@/lib/interface-route-policy";
+import type {
+  SessionOwnershipUncertaintyMode,
+  SessionRecheckMode,
+} from "@/lib/interface-route-policy";
 import {
   abortOnlineJournalComposerParticipants,
   admitOnlineJournalComposerSession,
@@ -108,6 +112,7 @@ export function SessionConvergenceBoundary({
   authoritativeSessionRead,
   currentSessionBinding = null,
   recheckMode = "compatibility_fenced",
+  ownershipUncertaintyMode = "serve_unresolved",
 }: {
   children: React.ReactNode;
   locale: InterfaceLocale;
@@ -119,12 +124,14 @@ export function SessionConvergenceBoundary({
   currentSessionBinding?: string | null;
   /** Route-scoped OVE-286 rollout; all unproven routes retain the OVE-236 fence. */
   recheckMode?: SessionRecheckMode;
+  /** Route-local split: ordinary reads serve ambiguity; payload-free exits bypass this owner. */
+  ownershipUncertaintyMode?: SessionOwnershipUncertaintyMode;
 }) {
   // Mount Better Auth's session atom so its built-in session signal and the
   // product's explicit document-convergence signal are both active.
   authClient.useSession();
   const [activityGate, setActivityGate] = useState<
-    "checking" | "ready" | "blocked"
+    "checking" | "ready" | "served_unresolved" | "blocked"
   >("checking");
   const [localExitCommitted, setLocalExitCommitted] = useState(false);
   const [authenticatedIdentity, setAuthenticatedIdentity] =
@@ -207,14 +214,17 @@ export function SessionConvergenceBoundary({
       | null
       | undefined;
     let baselineOwnerUserId: string | null = null;
-    const setDocumentGate = (gate: "checking" | "ready" | "blocked") => {
+    const setDocumentGate = (
+      gate: "checking" | "ready" | "served_unresolved" | "blocked",
+    ) => {
       if (gate === "ready" && terminalInvalidationObserved) {
         authenticatedTreeAdmitted = false;
         setAuthenticatedIdentity(null);
         setActivityGate("blocked");
         return;
       }
-      authenticatedTreeAdmitted = gate === "ready";
+      authenticatedTreeAdmitted =
+        gate === "ready" || gate === "served_unresolved";
       setAuthenticatedIdentity(
         gate === "ready" && baselinePreparedSession && baselineOwnerUserId
           ? {
@@ -224,6 +234,27 @@ export function SessionConvergenceBoundary({
           : null,
       );
       setActivityGate(gate);
+    };
+    const serveUnresolvedDocument = () => {
+      if (
+        disposed ||
+        terminalInvalidationObserved ||
+        ownershipUncertaintyMode !== "serve_unresolved" ||
+        bootstrapInvalidationMarker.status === "present"
+      ) {
+        if (!disposed) setDocumentGate("blocked");
+        return false;
+      }
+      recordUnresolvedAuthorizationServe(
+        "session_boundary",
+        "session_unresolved",
+      );
+      recordUnresolvedAuthorizationServe(
+        "interface_route_ownership",
+        "ownership_unresolved",
+      );
+      setDocumentGate("served_unresolved");
+      return true;
     };
     const releaseBootstrapInvalidationMarker = () => {
       if (terminalInvalidationObserved) return false;
@@ -276,8 +307,8 @@ export function SessionConvergenceBoundary({
     try {
       tabLease = acquireAuthenticatedSessionTabLease();
     } catch {
-      // A local initiating tab will fail closed if authenticated presence
-      // cannot be registered or enumerated.
+      // The later acknowledgement barrier records an unresolved presence proof
+      // and proceeds with zero proven peers when this lease is unavailable.
     }
 
     let terminalParticipantActivityAborted = false;
@@ -360,7 +391,7 @@ export function SessionConvergenceBoundary({
         return;
       }
       if (!disposed && baselinePreparedSession !== null) {
-        setDocumentGate("blocked");
+        serveUnresolvedDocument();
       }
     })();
 
@@ -391,9 +422,16 @@ export function SessionConvergenceBoundary({
 
           let establishesDocumentBaseline = false;
           if (baselinePreparedSession === undefined) {
-            // No authenticated children were mounted while the initial proof was
-            // unavailable. A successful retry may safely establish the immutable
-            // document baseline before in-memory composer admission.
+            if (!currentSessionBinding) {
+              serveUnresolvedDocument();
+              return false;
+            }
+            if (currentSessionBinding !== freshPreparedSession.binding) {
+              beginChangedSessionTransition();
+              return false;
+            }
+            // The server-admitted binding proves this is the same session; a
+            // successful retry may establish the immutable client baseline.
             baselinePreparedSession = freshPreparedSession;
             baselineOwnerUserId = freshOwnerUserId;
             establishesDocumentBaseline = true;
@@ -434,7 +472,7 @@ export function SessionConvergenceBoundary({
           setDocumentGate(ready ? "ready" : "blocked");
           return ready;
         } catch {
-          if (!disposed) setDocumentGate("blocked");
+          if (!disposed) serveUnresolvedDocument();
           return false;
         }
       })();
@@ -833,10 +871,17 @@ export function SessionConvergenceBoundary({
       if (!freshOwnerUserId) {
         throw new Error("Action-time current session owner unavailable.");
       }
+      if (!currentSessionBinding) {
+        throw new Error("Server-admitted session binding unavailable.");
+      }
+      if (currentSessionBinding !== freshPreparedSession.binding) {
+        return { status: "session_changed" as const };
+      }
 
-      // The document never admits authenticated children from this recovery
-      // path. Retaining the fresh pair only gives existing terminal fencing a
-      // current owner/session generation after a failed initial baseline.
+      // The unresolved document may already render server-admitted children,
+      // but it has no client identity baseline. Retaining the fresh matching
+      // pair gives the existing mutation and terminal fences a current
+      // owner/session generation after the failed initial proof.
       baselinePreparedSession = freshPreparedSession;
       baselineOwnerUserId = freshOwnerUserId;
       return { status: "prepared" as const, prepared: freshPreparedSession };
@@ -851,7 +896,12 @@ export function SessionConvergenceBoundary({
       setFallbackExitState("pending");
       void requireSettledWithin(async () => {
         const target = await prepareActionTimeFallbackSession();
-        if (target.status === "already_signed_out") return target;
+        if (
+          target.status === "already_signed_out" ||
+          target.status === "session_changed"
+        ) {
+          return target;
+        }
         const mutation = await runBrowserAuthMutation({
           kind: "session_exit",
           operation: () =>
@@ -869,6 +919,10 @@ export function SessionConvergenceBoundary({
           fallbackExitInFlight = false;
           if (result.status === "already_signed_out") {
             beginSignedOutTransition();
+            return;
+          }
+          if (result.status === "session_changed") {
+            beginFallbackChangedSessionTransition();
             return;
           }
           if (result.status === "committed") {
@@ -1242,16 +1296,22 @@ export function SessionConvergenceBoundary({
               sessionComparison === "unavailable" &&
               baselinePreparedSession === undefined
             ) {
-              // The initial read may have timed out before any private tree was
-              // admitted. An explicit retry may establish the first immutable
-              // document baseline, but still acquires the owner fence before
-              // it can render authenticated children.
+              // A retry may establish the first client baseline only when it
+              // matches the immutable binding admitted by the server.
               const freshPreparedSession =
                 await prepareBoundedSessionSignOut(sessionResult);
               const freshOwnerUserId = readOwnerUserId(sessionResult);
               if (!isCurrentEpoch()) return;
               if (!freshPreparedSession || !freshOwnerUserId) {
-                setDocumentGate("blocked");
+                serveUnresolvedDocument();
+                return;
+              }
+              if (!currentSessionBinding) {
+                serveUnresolvedDocument();
+                return;
+              }
+              if (currentSessionBinding !== freshPreparedSession.binding) {
+                beginChangedSessionTransition();
                 return;
               }
               baselinePreparedSession = freshPreparedSession;
@@ -1268,7 +1328,7 @@ export function SessionConvergenceBoundary({
               return;
             }
             if (sessionComparison !== "matches") {
-              setDocumentGate("blocked");
+              serveUnresolvedDocument();
               return;
             }
 
@@ -1296,7 +1356,7 @@ export function SessionConvergenceBoundary({
 
             const ownerUserId = readOwnerUserId(sessionResult);
             if (!ownerUserId || !baselinePreparedSession) {
-              setDocumentGate("blocked");
+              serveUnresolvedDocument();
               return;
             }
             const admission = await admitBoundedOnlineJournalSession(
@@ -1328,12 +1388,11 @@ export function SessionConvergenceBoundary({
             if (isCurrentEpoch()) beginSignedOutTransition();
             return;
           }
-          setDocumentGate("blocked");
+          serveUnresolvedDocument();
         } catch {
-          // A timeout, malformed response, failed owner fence, or stale
-          // continuation remains payload-free until the user explicitly
-          // starts a newer epoch.
-          if (isCurrentEpoch()) setDocumentGate("blocked");
+          // An inconclusive read/recheck serves the server-admitted document;
+          // the existing mutation and owner fences remain authoritative.
+          if (isCurrentEpoch()) serveUnresolvedDocument();
         } finally {
           authoritativeRecheck = null;
         }
@@ -1577,7 +1636,13 @@ export function SessionConvergenceBoundary({
       }
       tabLease?.release();
     };
-  }, [currentSessionBinding, locale, readAuthoritativeSession, recheckMode]);
+  }, [
+    currentSessionBinding,
+    locale,
+    ownershipUncertaintyMode,
+    readAuthoritativeSession,
+    recheckMode,
+  ]);
 
   if (localExitCommitted) {
     return <LocalExitPublicSafeSurface locale={locale} />;
@@ -1587,6 +1652,67 @@ export function SessionConvergenceBoundary({
     activityGate === "ready" && !authenticatedIdentity
       ? "checking"
       : activityGate;
+  if (renderedActivityGate === "served_unresolved") {
+    const trustCopy = getTrustSurfaceCopy(locale);
+    return (
+      <div data-session-convergence-gate="served_unresolved">
+        <div className="mx-auto grid w-full max-w-xl gap-3 px-4 py-3 text-center">
+          {localeControlFallback ? (
+            <div
+              data-session-convergence-locale-control="true"
+              className="justify-self-end"
+            >
+              {localeControlFallback}
+            </div>
+          ) : null}
+          <p
+            role="status"
+            aria-live="polite"
+            data-session-convergence-served-unresolved="true"
+            className="text-sm leading-6 text-muted-foreground"
+          >
+            {trustCopy.signOut.servedUnresolved}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              data-session-convergence-retry="true"
+              onClick={() => retryAdmissionRef.current()}
+            >
+              {trustCopy.signOut.retry}
+            </Button>
+            <Button
+              ref={fallbackExitActionRef}
+              type="button"
+              variant="outline"
+              data-session-convergence-fallback-sign-out="true"
+              disabled={fallbackExitState === "pending"}
+              onClick={() => fallbackExitRef.current()}
+            >
+              {fallbackExitState === "pending"
+                ? trustCopy.signOut.fallbackExitPending
+                : trustCopy.signOut.fallbackExitAction}
+            </Button>
+          </div>
+          {fallbackExitState === "failed" ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              {trustCopy.signOut.fallbackExitUnconfirmedError}
+            </p>
+          ) : null}
+          <SessionConvergenceSafeExits
+            locale={locale}
+            publicHomeLabel={trustCopy.authIntent.returnToReading}
+            reloadLabel={trustCopy.signOut.reloadAndRecheck}
+            onReloadAndRecheck={() => reloadSessionGateRef.current()}
+          />
+        </div>
+        <AuthenticatedSessionIdentityContext.Provider value={null}>
+          {children}
+        </AuthenticatedSessionIdentityContext.Provider>
+      </div>
+    );
+  }
   if (renderedActivityGate !== "ready") {
     const trustCopy = getTrustSurfaceCopy(locale);
     const copy = trustCopy.signOut;

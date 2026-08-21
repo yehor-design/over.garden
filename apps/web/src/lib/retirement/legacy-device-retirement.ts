@@ -4,6 +4,7 @@ import {
   KnownClientStorageError,
   type KnownClientStorageRetirementReceipt,
 } from "./known-client-storage";
+import { recordUnresolvedAuthorizationServe } from "@/lib/auth/unresolved-authorization";
 
 export const LEGACY_RETIREMENT_DEADLINE_MS = 3_000;
 
@@ -11,6 +12,7 @@ export type LegacyRetirementState =
   | "checking"
   | "deleting"
   | "absent"
+  | "served_unresolved"
   | "deletion_blocked";
 
 export interface LegacyRetirementSnapshot {
@@ -20,6 +22,7 @@ export interface LegacyRetirementSnapshot {
   deletedDatabaseCount: number;
   unregisteredWorkerCount: number;
   unresolvedBindingCount: number;
+  unresolvedClass: "ownership_unresolved" | null;
   errorCode: string | null;
   lastAction: "cancelled" | null;
 }
@@ -39,8 +42,8 @@ export interface LegacyDeviceRetirementController {
 /**
  * Removes only the retired runtime's exact browser-owned names. The controller
  * never reads document rows, authenticates an owner, or hydrates application
- * content. Any unresolved owner binding is retained fail-closed for a later
- * explicit retry.
+ * content. Any unresolved owner binding is retained for a later explicit
+ * retry while the server-backed product continues with a counted uncertainty.
  */
 export function createLegacyDeviceRetirementController(input: {
   port: LegacyDeviceRetirementPort;
@@ -64,6 +67,7 @@ export function createLegacyDeviceRetirementController(input: {
     deletedDatabaseCount: 0,
     unregisteredWorkerCount: 0,
     unresolvedBindingCount: 0,
+    unresolvedClass: null,
     errorCode: null,
     lastAction: null,
   };
@@ -84,6 +88,7 @@ export function createLegacyDeviceRetirementController(input: {
     patch({
       state: "deleting",
       visible: visibleOnce,
+      unresolvedClass: null,
       errorCode: null,
       lastAction: null,
     });
@@ -106,15 +111,22 @@ export function createLegacyDeviceRetirementController(input: {
       const unresolved =
         receipt.status === "unresolved_retained" ||
         receipt.unresolvedBindingCount > 0;
-      if (unresolved) visibleOnce = true;
+      if (unresolved) {
+        visibleOnce = true;
+        recordUnresolvedAuthorizationServe(
+          "legacy_device_retirement",
+          "ownership_unresolved",
+        );
+      }
       patch({
-        state: unresolved ? "deletion_blocked" : "absent",
+        state: unresolved ? "served_unresolved" : "absent",
         visible: unresolved,
         absenceReads: 2,
         deletedDatabaseCount: boundedCount(receipt.deletedDatabaseCount),
         unregisteredWorkerCount: boundedCount(receipt.unregisteredWorkerCount),
         unresolvedBindingCount: boundedCount(receipt.unresolvedBindingCount),
-        errorCode: unresolved ? "unresolved_legacy_binding" : null,
+        unresolvedClass: unresolved ? "ownership_unresolved" : null,
+        errorCode: null,
         lastAction: null,
       });
     } catch (error) {
@@ -123,6 +135,7 @@ export function createLegacyDeviceRetirementController(input: {
       patch({
         state: "deletion_blocked",
         visible: true,
+        unresolvedClass: null,
         errorCode:
           error instanceof RetirementDeadlineError
             ? "client_retirement_timeout"
@@ -145,6 +158,7 @@ export function createLegacyDeviceRetirementController(input: {
     patch({
       state: "deletion_blocked",
       visible: true,
+      unresolvedClass: null,
       errorCode: "client_retirement_cancelled",
       lastAction: "cancelled",
     });

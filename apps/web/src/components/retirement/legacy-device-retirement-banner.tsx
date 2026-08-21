@@ -72,7 +72,7 @@ export function LegacyDeviceRetirementBanner({
   const controller = controllerRef.current;
   const busy = snapshot.state === "deleting";
   const status =
-    snapshot.errorCode === "unresolved_legacy_binding"
+    snapshot.unresolvedClass === "ownership_unresolved"
       ? copy.states.unresolved
       : snapshot.lastAction === "cancelled"
         ? copy.states.cancelled

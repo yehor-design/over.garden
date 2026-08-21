@@ -36,6 +36,10 @@ async function getAuthStatus(locale: InterfaceLocale): Promise<string> {
     return copy.authLegacyTransition;
   }
 
+  if (health.class === "weak_secret") {
+    return copy.authWeakSecret;
+  }
+
   return health.class === "local_fallback"
     ? copy.authLocalFallback
     : copy.authClosed;

@@ -162,10 +162,15 @@ import {
   useAuthenticatedSessionIdentity,
 } from "./session-convergence-boundary";
 import { DOCUMENT_OWNER_CHANGED_EVENT } from "@/lib/auth/document-mutation-generation-transport";
+import {
+  getUnresolvedAuthorizationServeCounts,
+  resetUnresolvedAuthorizationServeCountsForTests,
+} from "@/lib/auth/unresolved-authorization";
 
 describe("session convergence boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetUnresolvedAuthorizationServeCountsForTests();
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     mocks.intervalCallbacks.length = 0;
     mocks.windowListeners.clear();
@@ -289,7 +294,7 @@ describe("session convergence boundary", () => {
 
     expect(mocks.sealParticipantsForLocalExit).toHaveBeenCalledOnce();
     expect(mocks.reconcileLocalExit).toHaveBeenCalledWith(
-      "B".repeat(43),
+      "opaque-binding-for-session-a",
       marker,
     );
     expect(mocks.getSession).not.toHaveBeenCalled();
@@ -998,10 +1003,10 @@ describe("session convergence boundary", () => {
       await vi.advanceTimersByTimeAsync(AUTHORITATIVE_SESSION_READ_TIMEOUT_MS);
     });
 
-    expectPrivateSignOutDialogAbsent(renderer);
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
     expect(
       renderer.root.findAllByProps({
-        "data-session-convergence-gate": "blocked",
+        "data-session-convergence-gate": "served_unresolved",
       }),
     ).toHaveLength(1);
     expect(
@@ -1120,11 +1125,11 @@ describe("session convergence boundary", () => {
     await vi.waitFor(() =>
       expect(
         renderer.root.findAllByProps({
-          "data-session-convergence-gate": "blocked",
+          "data-session-convergence-gate": "served_unresolved",
         }),
       ).toHaveLength(1),
     );
-    expectPrivateSignOutDialogAbsent(renderer);
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
     expect(mocks.pause).toHaveBeenCalledOnce();
     expect(mocks.resume).not.toHaveBeenCalled();
 
@@ -1156,7 +1161,7 @@ describe("session convergence boundary", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(AUTHORITATIVE_SESSION_READ_TIMEOUT_MS);
     });
-    expectPrivateSignOutDialogAbsent(renderer);
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
 
     mocks.getSession.mockResolvedValueOnce(activeSession());
     const retry = renderer.root
@@ -1732,7 +1737,7 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("bounds a never-settling initial auth read and requires an explicit retry", async () => {
+  it("serves a timed-out initial proof with controls and recovers on an exact-session retry", async () => {
     vi.useFakeTimers();
     const stalled = deferred<ReturnType<typeof activeSession>>();
     mocks.getSession.mockReturnValueOnce(stalled.promise);
@@ -1744,18 +1749,40 @@ describe("session convergence boundary", () => {
 
     expect(
       renderer.root.findAllByProps({
-        "data-session-convergence-gate": "blocked",
+        "data-session-convergence-gate": "served_unresolved",
       }),
     ).toHaveLength(1);
     expect(
       renderer.root.findAllByProps({ children: "Private surface" }),
-    ).toHaveLength(0);
+    ).toHaveLength(1);
     expect(mocks.admit).not.toHaveBeenCalled();
+    expect(
+      renderer.root.findAllByProps({
+        "data-session-convergence-served-unresolved": "true",
+      }),
+    ).toHaveLength(1);
+    expect(
+      renderer.root.findAllByProps({
+        "data-session-convergence-public-home": "true",
+      }),
+    ).toHaveLength(1);
+    expect(getUnresolvedAuthorizationServeCounts()).toEqual([
+      {
+        owner: "interface_route_ownership",
+        unresolvedClass: "ownership_unresolved",
+        count: 1,
+      },
+      {
+        owner: "session_boundary",
+        unresolvedClass: "session_unresolved",
+        count: 1,
+      },
+    ]);
 
     mocks.getSession.mockResolvedValueOnce(activeSession());
-    const retry = renderer.root
-      .findAllByType("button")
-      .find((node) => textContent(node.props.children) === "Опитайте отново");
+    const retry = renderer.root.findByProps({
+      "data-session-convergence-retry": "true",
+    });
     await act(async () => {
       await retry?.props.onClick();
       await Promise.resolve();
@@ -1772,7 +1799,7 @@ describe("session convergence boundary", () => {
     vi.useRealTimers();
   });
 
-  it("recovers an unavailable initial baseline only through a fresh authoritative retry", async () => {
+  it("serves an unavailable initial baseline and upgrades only after a matching authoritative retry", async () => {
     mocks.getSession
       .mockRejectedValueOnce(new Error("network unavailable"))
       .mockResolvedValueOnce(activeSession());
@@ -1780,12 +1807,15 @@ describe("session convergence boundary", () => {
 
     expect(
       renderer.root.findAllByProps({
-        "data-session-convergence-gate": "blocked",
+        "data-session-convergence-gate": "served_unresolved",
       }),
     ).toHaveLength(1);
-    const retry = renderer.root
-      .findAllByType("button")
-      .find((node) => textContent(node.props.children) === "Опитайте отново");
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(1);
+    const retry = renderer.root.findByProps({
+      "data-session-convergence-retry": "true",
+    });
     await act(async () => {
       await retry?.props.onClick();
       await Promise.resolve();
@@ -1806,13 +1836,47 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
+  it("interface_route_ownership:resolved_another_user_denied removes an unresolved document when retry resolves B", async () => {
+    mocks.getSession
+      .mockRejectedValueOnce(new Error("network unavailable"))
+      .mockResolvedValueOnce(activeSession("session-b"));
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
+    const retry = renderer.root.findByProps({
+      "data-session-convergence-retry": "true",
+    });
+    await act(async () => {
+      retry.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => expect(mocks.reload).toHaveBeenCalledOnce());
+    expectPrivateSignOutDialogAbsent(renderer);
+    expect(mocks.admit).not.toHaveBeenCalled();
+    expect(getUnresolvedAuthorizationServeCounts()).toEqual([
+      {
+        owner: "interface_route_ownership",
+        unresolvedClass: "ownership_unresolved",
+        count: 1,
+      },
+      {
+        owner: "session_boundary",
+        unresolvedClass: "session_unresolved",
+        count: 1,
+      },
+    ]);
+    await unmount(renderer);
+  });
+
   it("offers action-time bound exit when the initial baseline was unavailable", async () => {
     mocks.getSession
       .mockRejectedValueOnce(new Error("initial proof unavailable"))
       .mockResolvedValueOnce(activeSession());
     const renderer = await renderBoundary(privateSignOutDialog("waiting"));
 
-    expectPrivateSignOutDialogAbsent(renderer);
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
     const fallbackExit = renderer.root.findByProps({
       "data-session-convergence-fallback-sign-out": "true",
     });
@@ -1874,7 +1938,7 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("never readmits baseline A when a gate retry authoritatively observes session B", async () => {
+  it("session_boundary:resolved_another_user_denied never readmits baseline A when retry observes B", async () => {
     mocks.admit.mockResolvedValueOnce("blocked");
     mocks.getSession
       .mockResolvedValueOnce(activeSession())
@@ -2117,7 +2181,7 @@ async function renderBoundary(
   recheckMode:
     | "compatibility_fenced"
     | "effect_closed_non_fencing" = "compatibility_fenced",
-  currentSessionBinding: string | null = "B".repeat(43),
+  currentSessionBinding: string | null = "opaque-binding-for-session-a",
 ) {
   let renderer: ReactTestRenderer | undefined;
   await act(async () => {

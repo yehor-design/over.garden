@@ -6,6 +6,7 @@ import { isSealedOwnerUserId } from "@/lib/admin/owner-account-contract";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { configuredEnvValue, type EnvLike } from "@/lib/auth/oauth-env";
 import { GOOGLE_PROVIDER_ID } from "@/lib/auth/social-oauth";
+import { recordUnresolvedAuthorizationServe } from "@/lib/auth/unresolved-authorization";
 
 export const GOOGLE_ACCOUNT_LINKING_ENABLED_ENV =
   "GOOGLE_ACCOUNT_LINKING_ENABLED";
@@ -13,7 +14,8 @@ export const ACCOUNT_LINKING_UNAVAILABLE_CODE = "ACCOUNT_LINKING_UNAVAILABLE";
 
 export type ExplicitGoogleLinkingAdmissionOutcome =
   | "not_link_social"
-  | "admitted";
+  | "admitted"
+  | "served_unresolved";
 
 interface ExplicitGoogleLinkingContext {
   path: string;
@@ -52,11 +54,12 @@ export function isExplicitGoogleLinkingEnabledForUser(
 }
 
 /**
- * Fail closed before Better Auth creates signed provider state. Better Auth's
- * global before hook runs before endpoint session middleware, so this gate
- * resolves the signed current-session cookie through the library's internal
- * adapter and admits only a verified local user. It deliberately returns no
- * identity/provider detail on every closed class.
+ * Reject definite local prohibitions before Better Auth creates signed
+ * provider state. Because this global hook runs before Better Auth's own
+ * endpoint session middleware, an inconclusive duplicate cookie/adapter proof
+ * records `provider_link_unverified` and delegates to that authoritative
+ * middleware; malformed requests, missing sessions, disabled providers,
+ * unverified users, and the sealed owner remain closed without identity detail.
  */
 export async function admitExplicitGoogleLinking(
   context: ExplicitGoogleLinkingContext,
@@ -80,7 +83,7 @@ export async function admitExplicitGoogleLinking(
       context.context.secret,
     );
   } catch {
-    throwUnavailable();
+    return serveUnresolvedProviderLink();
   }
   if (!sessionToken) throwUnavailable();
 
@@ -89,9 +92,13 @@ export async function admitExplicitGoogleLinking(
     currentSession =
       await context.context.internalAdapter.findSession(sessionToken);
   } catch {
-    throwUnavailable();
+    return serveUnresolvedProviderLink();
   }
-  if (!hasVerifiedCurrentNonOwnerUser(currentSession, options.env)) {
+  const sessionClass = classifyCurrentNonOwnerUser(currentSession, options.env);
+  if (sessionClass === "unresolved") {
+    return serveUnresolvedProviderLink();
+  }
+  if (sessionClass === "refused") {
     throwUnavailable();
   }
 
@@ -104,14 +111,28 @@ function readObject(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function hasVerifiedCurrentNonOwnerUser(value: unknown, env?: EnvLike) {
+function classifyCurrentNonOwnerUser(
+  value: unknown,
+  env?: EnvLike,
+): "admitted" | "refused" | "unresolved" {
+  if (value === null || value === undefined) return "refused";
   const session = readObject(value);
+  if (!session) return "unresolved";
   const user = readObject(session?.user);
-  return (
-    typeof user?.id === "string" &&
-    user.emailVerified === true &&
-    !isSealedOwnerUserId(user.id, env)
+  if (!user || typeof user.id !== "string" || !user.id) return "unresolved";
+  if (typeof user.emailVerified !== "boolean") return "unresolved";
+  if (user.emailVerified === true && !isSealedOwnerUserId(user.id, env)) {
+    return "admitted";
+  }
+  return "refused";
+}
+
+function serveUnresolvedProviderLink(): "served_unresolved" {
+  recordUnresolvedAuthorizationServe(
+    "explicit_google_linking",
+    "provider_link_unverified",
   );
+  return "served_unresolved";
 }
 
 function throwUnavailable(): never {

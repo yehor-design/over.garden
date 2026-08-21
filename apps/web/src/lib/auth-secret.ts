@@ -1,8 +1,11 @@
 import { randomBytes } from "node:crypto";
 
+import { recordUnresolvedAuthorizationServe } from "./auth/unresolved-authorization";
+
 type EnvLike = Record<string, string | undefined>;
 type GlobalWithLocalAuthSecret = typeof globalThis & {
   overGardenLocalBetterAuthSecret?: string;
+  overGardenUnresolvedBetterAuthSecret?: string;
 };
 
 export const BETTER_AUTH_SECRETS_ENV = "BETTER_AUTH_SECRETS";
@@ -11,8 +14,6 @@ export const BETTER_AUTH_CURRENT_SECRET_VERSION_ENV =
 export const BETTER_AUTH_LEGACY_GRACE_UNTIL_ENV =
   "BETTER_AUTH_LEGACY_GRACE_UNTIL";
 
-const missingAuthSecretMessage =
-  "Invalid Better Auth secret policy: a versioned current secret is required.";
 const localDevelopmentSecretPrefix =
   "local-development-only-overgarden-better-auth-secret-";
 const LOCAL_FALLBACK_VERSION = 0;
@@ -26,6 +27,7 @@ export type AuthSecretHealthClass =
   | "versioned_current"
   | "legacy_transition"
   | "local_fallback"
+  | "weak_secret"
   | "closed";
 
 export interface VersionedAuthSecret {
@@ -51,28 +53,17 @@ export interface AuthSecretConfiguration {
   legacySecret?: string;
 }
 
-interface ClosedAuthSecretConfiguration {
-  health: AuthSecretHealth;
-}
-
-type EvaluatedAuthSecretConfiguration =
-  | AuthSecretConfiguration
-  | ClosedAuthSecretConfiguration;
-
 /**
- * Resolves the one canonical server-side secret policy. In a serving
- * Production or Preview runtime, only a declared, strong versioned current
- * key is admissible. Builds and local development retain an isolated fallback
- * so static generation and test runners do not manufacture deployable state.
+ * Resolves the one canonical server-side secret policy. A recognized serving
+ * Production or Preview runtime uses only its declared strong versioned key;
+ * an unrecognized policy serves with one process-local random key and the
+ * observable `weak_secret` class. Builds and local development retain their
+ * separate fallback so neither path manufactures deployable configuration.
  */
 export function resolveAuthSecretConfiguration(
   env: EnvLike = readRuntimeAuthEnv(),
 ): AuthSecretConfiguration {
-  const evaluated = evaluateAuthSecretConfiguration(env);
-  if (!("active" in evaluated)) {
-    throw new Error(missingAuthSecretMessage);
-  }
-  return evaluated;
+  return evaluateAuthSecretConfiguration(env);
 }
 
 /**
@@ -182,7 +173,7 @@ export function isBlockedBetterAuthSecret(value: string | undefined): boolean {
 
 function evaluateAuthSecretConfiguration(
   env: EnvLike,
-): EvaluatedAuthSecretConfiguration {
+): AuthSecretConfiguration {
   const configuredLegacySecret = configuredLegacyBetterAuthSecret(
     env.BETTER_AUTH_SECRET,
   );
@@ -212,7 +203,15 @@ function evaluateAuthSecretConfiguration(
   }
 
   if (isProductionLikeRuntime(env) && !isBuildRuntime(env)) {
-    return { health: { class: "closed" } };
+    recordUnresolvedAuthorizationServe("auth_secret", "weak_secret");
+    return {
+      health: { class: "weak_secret" },
+      active: {
+        version: LOCAL_FALLBACK_VERSION,
+        value: getUnrecognizedServingSecret(),
+      },
+      versionedSecrets: [],
+    };
   }
 
   if (legacySecret) {
@@ -242,7 +241,8 @@ function parseVersionedAuthSecrets(
 
   // Secret material and version metadata are an exact provider contract. Do
   // not silently repair whitespace or quote-like values that could represent a
-  // mistaken console paste; a serving deployment must fail closed instead.
+  // mistaken console paste; a serving deployment classifies that policy as
+  // `weak_secret` and keeps the invalid material unobservable.
   if (configured.trim() !== configured) return null;
 
   const seenVersions = new Set<number>();
@@ -358,4 +358,11 @@ function getLocalDevelopmentSecret() {
   globalForAuth.overGardenLocalBetterAuthSecret ??= `${localDevelopmentSecretPrefix}${randomBytes(32).toString("base64url")}`;
 
   return globalForAuth.overGardenLocalBetterAuthSecret;
+}
+
+function getUnrecognizedServingSecret() {
+  const globalForAuth = globalThis as GlobalWithLocalAuthSecret;
+  globalForAuth.overGardenUnresolvedBetterAuthSecret ??=
+    randomBytes(32).toString("base64url");
+  return globalForAuth.overGardenUnresolvedBetterAuthSecret;
 }

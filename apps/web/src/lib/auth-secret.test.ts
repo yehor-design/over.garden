@@ -11,6 +11,10 @@ import {
   selectLegacyAuthSecret,
   selectVersionedAuthSecret,
 } from "./auth-secret";
+import {
+  getUnresolvedAuthorizationServeCounts,
+  resetUnresolvedAuthorizationServeCountsForTests,
+} from "./auth/unresolved-authorization";
 
 const currentFixture = Buffer.alloc(32, 3).toString("base64url");
 const priorFixture = Buffer.alloc(32, 4).toString("base64url");
@@ -34,13 +38,14 @@ describe("Better Auth secret policy", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-29T12:00:00.000Z"));
+    resetUnresolvedAuthorizationServeCountsForTests();
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("fails closed in production and Preview without a declared versioned current secret", () => {
+  it("serves production and Preview with a counted visible weak_secret class when policy is unrecognized", () => {
     for (const env of [
       productionEnv({
         BETTER_AUTH_SECRETS: undefined,
@@ -52,11 +57,16 @@ describe("Better Auth secret policy", () => {
         BETTER_AUTH_CURRENT_SECRET_VERSION: "1",
       }),
     ]) {
-      expect(() => resolveBetterAuthSecret(env)).toThrow(
-        "Invalid Better Auth secret policy",
-      );
-      expect(getAuthSecretHealth(env)).toEqual({ class: "closed" });
+      const fallback = resolveBetterAuthSecret(env);
+      expect(fallback).toMatch(/^[A-Za-z0-9_-]{43}$/);
+      expect(getAuthSecretHealth(env)).toEqual({ class: "weak_secret" });
+      expect(JSON.stringify(getAuthSecretHealth(env))).not.toContain(fallback);
     }
+    expect(getUnresolvedAuthorizationServeCounts()).toContainEqual({
+      owner: "auth_secret",
+      unresolvedClass: "weak_secret",
+      count: 6,
+    });
   });
 
   it("accepts only canonical 32-byte versioned keys and exposes a class-only active version", () => {
@@ -76,7 +86,7 @@ describe("Better Auth secret policy", () => {
     });
   });
 
-  it("rejects malformed versioned policy regardless of singular fallback material", () => {
+  it("serves malformed versioned policy with an isolated weak_secret fallback", () => {
     const shortFixture = Buffer.alloc(31, 9).toString("base64url");
     const invalidEnvs = [
       productionEnv({ BETTER_AUTH_SECRETS: "2:arbitrary-prose" }),
@@ -90,10 +100,10 @@ describe("Better Auth secret policy", () => {
     ];
 
     for (const env of invalidEnvs) {
-      expect(getAuthSecretHealth(env)).toEqual({ class: "closed" });
-      expect(() => resolveAuthSecretConfiguration(env)).toThrow(
-        "Invalid Better Auth secret policy",
-      );
+      expect(getAuthSecretHealth(env)).toEqual({ class: "weak_secret" });
+      const configuration = resolveAuthSecretConfiguration(env);
+      expect(configuration.health).toEqual({ class: "weak_secret" });
+      expect(configuration.active.value).toMatch(/^[A-Za-z0-9_-]{43}$/);
     }
   });
 
@@ -174,7 +184,7 @@ describe("Better Auth secret policy", () => {
     );
   });
 
-  it("never lets a serving Production or Preview CI marker bypass fail-closed auth", () => {
+  it("keeps serving Production and Preview CI in the visible weak_secret class", () => {
     for (const env of [
       productionEnv({
         BETTER_AUTH_SECRET: undefined,
@@ -192,7 +202,7 @@ describe("Better Auth secret policy", () => {
         CI: "true",
       }),
     ]) {
-      expect(getAuthSecretHealth(env)).toEqual({ class: "closed" });
+      expect(getAuthSecretHealth(env)).toEqual({ class: "weak_secret" });
     }
   });
 
@@ -250,7 +260,7 @@ describe("Better Auth secret policy", () => {
     for (let index = 0; index < 500; index += 1) {
       expect(
         getAuthSecretHealth(productionEnv({ BETTER_AUTH_SECRETS: "invalid" })),
-      ).toEqual({ class: "closed" });
+      ).toEqual({ class: "weak_secret" });
     }
     expect(performance.now() - startedAt).toBeLessThan(25);
   });
@@ -265,6 +275,6 @@ describe("Better Auth secret policy", () => {
       hasUsableBetterAuthSecret(
         productionEnv({ BETTER_AUTH_SECRETS: "invalid" }),
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 });

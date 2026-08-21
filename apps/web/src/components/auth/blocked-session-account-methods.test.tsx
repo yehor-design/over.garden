@@ -144,6 +144,39 @@ describe("blocked session account methods", () => {
     await unmount(renderer);
   });
 
+  it("renders the retry projection and a polite ownership_unresolved notice", async () => {
+    mocks.getBlockedSessionAccountMethods.mockResolvedValueOnce({
+      status: "served_unresolved",
+      methods: {
+        readbackState: "retry",
+        hasCredential: false,
+        hasGoogle: false,
+        canSetPassword: false,
+        canLinkGoogle: false,
+      },
+      receipt: {
+        version: "ove332.unresolvedClass.v1",
+        status: "served_unresolved",
+        owner: "account_methods",
+        unresolvedClass: "ownership_unresolved",
+      },
+    });
+    const renderer = await render();
+    await openMethods(renderer);
+
+    expect(
+      renderer.root.findAllByProps({
+        "data-blocked-methods": "false:false",
+      }),
+    ).toHaveLength(1);
+    const notice = renderer.root.findByProps({
+      "data-session-convergence-account-methods-served-unresolved": "true",
+    });
+    expect(notice.props.role).toBe("status");
+    expect(notice.props["aria-live"]).toBe("polite");
+    await unmount(renderer);
+  });
+
   it("deduplicates a pending request and discards its completion after the deadline", async () => {
     vi.useFakeTimers();
     const delayed = deferred<{

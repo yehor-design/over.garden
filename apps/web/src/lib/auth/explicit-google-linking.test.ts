@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { APIError } from "better-auth/api";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ACCOUNT_LINKING_UNAVAILABLE_CODE,
@@ -12,6 +12,10 @@ import {
   isExplicitGoogleLinkingEnabledForUser,
 } from "./explicit-google-linking";
 import { SEALED_OWNER_USER_ID_ENV } from "@/lib/admin/owner-account-contract";
+import {
+  getUnresolvedAuthorizationServeCounts,
+  resetUnresolvedAuthorizationServeCountsForTests,
+} from "@/lib/auth/unresolved-authorization";
 
 const OWNER_ID = "11111111-1111-4111-8111-111111111111";
 const GARDENER_ID = "22222222-2222-4222-8222-222222222222";
@@ -28,6 +32,7 @@ function linkContext(input?: {
   token?: string | false | null;
   emailVerified?: boolean;
   userId?: string;
+  getSignedCookie?: () => Promise<string | false | null>;
   findSession?: (token: string) => Promise<unknown>;
 }) {
   return {
@@ -35,8 +40,10 @@ function linkContext(input?: {
     body: input?.body ?? { provider: "google" },
     getSignedCookie: vi
       .fn<(key: string, secret: string) => Promise<string | false | null>>()
-      .mockResolvedValue(
-        input?.token === undefined ? "signed-token" : input.token,
+      .mockImplementation(
+        input?.getSignedCookie ??
+          (async () =>
+            input?.token === undefined ? "signed-token" : input.token),
       ),
     context: {
       authCookies: { sessionToken: { name: "overgarden.session_token" } },
@@ -66,6 +73,8 @@ async function captureFailure(operation: () => Promise<unknown>) {
 }
 
 describe("explicit Google linking admission", () => {
+  beforeEach(() => resetUnresolvedAuthorizationServeCountsForTests());
+
   it("enables only trimmed exact true with both Google provider credentials", () => {
     expect(isExplicitGoogleLinkingEnabled(ENABLED_ENV)).toBe(true);
     expect(
@@ -146,13 +155,9 @@ describe("explicit Google linking admission", () => {
       linkContext({ emailVerified: false }),
     ],
     [
-      "adapter failure",
+      "definite missing adapter session",
       ENABLED_ENV,
-      linkContext({
-        findSession: vi.fn(async () => {
-          throw new Error("raw database host and identity");
-        }),
-      }),
+      linkContext({ findSession: vi.fn(async () => null) }),
     ],
     [
       "sealed owner",
@@ -177,6 +182,43 @@ describe("explicit Google linking admission", () => {
       expect(JSON.stringify((thrown as APIError).body)).not.toMatch(
         /provider-secret|database host|identity|signed-token/i,
       );
+    },
+  );
+
+  it.each([
+    [
+      "signed-cookie exception",
+      linkContext({
+        getSignedCookie: async () => {
+          throw new Error("signed-cookie dependency unavailable");
+        },
+      }),
+    ],
+    [
+      "session-adapter exception",
+      linkContext({
+        findSession: vi.fn(async () => {
+          throw new Error("raw database host and identity");
+        }),
+      }),
+    ],
+    [
+      "structurally inconclusive session",
+      linkContext({ findSession: vi.fn(async () => ({ session: {} })) }),
+    ],
+  ] as const)(
+    "serves and counts provider_link_unverified for %s",
+    async (_label, context) => {
+      await expect(
+        admitExplicitGoogleLinking(context, { env: ENABLED_ENV }),
+      ).resolves.toBe("served_unresolved");
+      expect(getUnresolvedAuthorizationServeCounts()).toEqual([
+        {
+          owner: "explicit_google_linking",
+          unresolvedClass: "provider_link_unverified",
+          count: 1,
+        },
+      ]);
     },
   );
 

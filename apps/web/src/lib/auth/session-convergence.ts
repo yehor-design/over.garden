@@ -1,6 +1,7 @@
 "use client";
 
 import { commitSessionInvalidationMarker } from "./session-invalidation-marker";
+import { recordUnresolvedAuthorizationServe } from "./unresolved-authorization";
 
 export const SESSION_CONVERGENCE_CHANNEL = "overgarden:session-convergence:v2";
 export const SESSION_CONVERGENCE_STORAGE_KEY =
@@ -150,7 +151,16 @@ export function createPreparationAcknowledgementBarrier(
   ) {
     throw new Error("Preparation acknowledgement scope is unavailable.");
   }
-  const expectedTabIds = listLiveAuthenticatedSessionTabIds(initiatingTabId);
+  let expectedTabIds: Set<string>;
+  try {
+    expectedTabIds = listLiveAuthenticatedSessionTabIds(initiatingTabId);
+  } catch {
+    recordUnresolvedAuthorizationServe(
+      "session_presence",
+      "session_unresolved",
+    );
+    expectedTabIds = new Set();
+  }
   const expectedTabCount = expectedTabIds.size;
   const acknowledgedTabIds = new Set<string>();
   let settled = false;
@@ -287,8 +297,9 @@ function listLiveAuthenticatedSessionTabIds(initiatingTabId: string) {
   let initiatingLeaseIsLive = false;
   const storage = window.localStorage;
 
-  // Reading storage is part of the safety boundary. If it is unavailable, the
-  // caller must fail closed rather than assume that no other tabs are active.
+  // Reading storage is an unresolved presence proof. ADR-0018 serves the
+  // operation with zero proven peers; positively acknowledged peer failures
+  // still reject through the barrier below.
   const keys = Array.from({ length: storage.length }, (_, index) =>
     storage.key(index),
   );
