@@ -58,6 +58,28 @@ def test_claim_orders_privacy_reducing_work_first():
     assert claim["lease_owner"].startswith(public_projection.APPLIER_ID)
 
 
+def test_claim_includes_new_intent_without_applied_generation():
+    conn = FakeConnection([dict(CLAIM_ROW)])
+
+    claim = public_projection.claim_public_projection_intent(conn)
+
+    sql, _ = conn.statements[0]
+    assert "applied_generation is null" in sql
+    assert "or applied_generation < desired_generation" in sql
+    assert claim is not None
+
+
+def test_unconverged_count_includes_new_intent_without_applied_generation():
+    conn = FakeConnection([{"unconverged": 1}])
+
+    count = public_projection.count_unconverged_public_projections(conn)
+
+    sql, _ = conn.statements[0]
+    assert "applied_generation is null" in sql
+    assert "or applied_generation < desired_generation" in sql
+    assert count == 1
+
+
 def test_absent_intent_is_verified_before_convergence_is_recorded(monkeypatch):
     deleted: list[str] = []
     monkeypatch.setattr(

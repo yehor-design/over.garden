@@ -42,7 +42,10 @@ with claimable as (
   select entity_kind, entity_id
   from public_projection_intents
   where entity_kind = '{ENTITY_KIND}'
-    and applied_generation < desired_generation
+    and (
+      applied_generation is null
+      or applied_generation < desired_generation
+    )
     and (
       (status in ('pending', 'failed') and available_at <= now())
       or (status = 'processing' and lease_expires_at < now())
@@ -105,7 +108,10 @@ UNCONVERGED_COUNT_SQL = f"""
 select count(*)::int as unconverged
 from public_projection_intents
 where entity_kind = '{ENTITY_KIND}'
-  and applied_generation < desired_generation
+  and (
+    applied_generation is null
+    or applied_generation < desired_generation
+  )
 """
 
 
