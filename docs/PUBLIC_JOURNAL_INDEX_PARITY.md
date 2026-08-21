@@ -64,25 +64,34 @@ Production (read-only classify first; apply only after reviewing the plan):
 
 ```bash
 cd apps/web
-pnpm smoke:public-index-parity -- --environment production --confirm-environment production --allow-gap
-pnpm smoke:public-index-parity -- --environment production --confirm-environment production --mode plan
-pnpm smoke:public-index-parity -- --environment production --confirm-environment production --mode apply --allow-non-local-mutation
-pnpm smoke:public-index-parity -- --environment production --confirm-environment production
+pnpm smoke:public-index-parity:production -- --environment production --confirm-environment production --allow-gap
+pnpm smoke:public-index-parity:production -- --environment production --confirm-environment production --mode plan
+pnpm smoke:public-index-parity:production -- --environment production --confirm-environment production --mode apply --allow-non-local-mutation
+pnpm smoke:public-index-parity:production -- --environment production --confirm-environment production
 ```
+
+The production wrapper is mandatory. It starts the pinned Vercel CLI from a
+fresh temporary working directory so a repository-local `.env.local` cannot
+replace provider-fetched production bindings, removes inherited database,
+Meilisearch, matching-service, dotenv, and `NODE_OPTIONS` overrides before the
+provider fetch, and marks the resulting child as isolated. Direct production
+invocation of `smoke:public-index-parity` fails closed whenever the invocation
+working directory contains `.env.local` or the isolation marker is absent;
+local and recovery-drill dotenv behavior is unchanged.
 
 ## Parity classes
 
-| Class              | Meaning                                                    | Blocks `zeroGap` |
-| ------------------ | ---------------------------------------------------------- | ---------------- |
-| `missing`          | Eligible in Postgres, absent from Meilisearch              | yes              |
-| `extraneous`       | Present in Meilisearch, not eligible in Postgres           | yes              |
-| `stale`            | Present but any public field value differs                 | yes              |
-| `unsafe_schema`    | Failed schema/value/URL/lifecycle validation               | yes              |
-| `duplicate`        | Same id seen more than once                                | yes              |
-| `invalid_id`       | Primary key is not a journal UUID                          | yes              |
-| `overdue`          | Index/unindex job runnable for > 300 s                     | yes              |
-| `terminal_failure` | Index/unindex job dead-lettered                            | yes              |
-| `pending`          | Index/unindex job in flight and not yet overdue            | no               |
+| Class              | Meaning                                          | Blocks `zeroGap` |
+| ------------------ | ------------------------------------------------ | ---------------- |
+| `missing`          | Eligible in Postgres, absent from Meilisearch    | yes              |
+| `extraneous`       | Present in Meilisearch, not eligible in Postgres | yes              |
+| `stale`            | Present but any public field value differs       | yes              |
+| `unsafe_schema`    | Failed schema/value/URL/lifecycle validation     | yes              |
+| `duplicate`        | Same id seen more than once                      | yes              |
+| `invalid_id`       | Primary key is not a journal UUID                | yes              |
+| `overdue`          | Index/unindex job runnable for > 300 s           | yes              |
+| `terminal_failure` | Index/unindex job dead-lettered                  | yes              |
+| `pending`          | Index/unindex job in flight and not yet overdue  | no               |
 
 ## Validation the gate applies to each observed document
 

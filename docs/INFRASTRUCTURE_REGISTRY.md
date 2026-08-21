@@ -562,6 +562,17 @@ result: pass
 redaction: pass; no secrets, env contents, payloads, row/user ids, content, precise location, hosts, IPs, user agents, or raw errors
 ```
 
+Production public-index parity binding invariant (OVE-331): invoke
+`smoke:public-index-parity:production`, which starts the pinned Vercel CLI from
+a fresh temporary working directory. The underlying parity command refuses a
+production run whenever its working directory contains `.env.local` or the
+wrapper isolation marker is absent. The wrapper also removes inherited
+database, Meilisearch, matching-service, dotenv, and `NODE_OPTIONS` overrides
+before the provider fetch. This keeps repo-local or ambient state from
+replacing the provider-fetched production bindings; local and recovery-drill
+dotenv behavior is unchanged. Receipts remain limited to aggregate classes,
+counts, and safe hashes.
+
 OVE-194 live queue-recovery evidence:
 
 ```text
