@@ -16,6 +16,7 @@ describe("OVE-330 fail-open availability smoke", () => {
       status: "served_degraded",
       preciseLocationAbsent: true,
       canonicalWriteCount: 0,
+      durationScope: "serve_decision",
       controls: {
         retryActionButton: "usable",
         continueWithoutWaitingLink: "usable",
@@ -84,6 +85,31 @@ describe("OVE-330 fail-open availability smoke", () => {
     expect(availabilityReceiptSemanticDigest(first)).toBe(
       availabilityReceiptSemanticDigest(concurrent),
     );
+  });
+
+  it("keeps live network latency outside the bounded availability decision budget", async () => {
+    const fetchImpl = (async () => {
+      await new Promise((resolve) => setTimeout(resolve, 520));
+      return new Response(
+        '<main data-operator-db-serve-class="exact"></main>',
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const report = await runFailOpenAvailabilitySmoke({
+      baseUrl: "https://over.garden",
+      fetchImpl,
+    });
+
+    expect(report.durationMs).toBeLessThanOrEqual(
+      report.performanceBudgetMs,
+    );
+    expect(report.liveProbe).toMatchObject({
+      status: 200,
+      serveClass: "exact",
+      timeoutBudgetMs: 10_000,
+    });
+    expect(report.liveProbe?.durationMs).toBeGreaterThanOrEqual(500);
   });
 
   it("bounds timeout and cancel while preventing a late dependency result", async () => {

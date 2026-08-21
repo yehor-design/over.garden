@@ -47,6 +47,7 @@ export interface FailOpenAvailabilityReport {
   ownerCounts: Record<string, number>;
   classCounts: Record<Ove330ServeClass, number>;
   durationMs: number;
+  durationScope: "serve_decision";
   performanceBudgetMs: 500;
   canonicalWriteCount: 0;
   preciseLocationAbsent: true;
@@ -55,6 +56,8 @@ export interface FailOpenAvailabilityReport {
   liveProbe?: {
     status: 200;
     serveClass: "exact" | "seam_unmet";
+    durationMs: number;
+    timeoutBudgetMs: 10_000;
   };
 }
 
@@ -204,6 +207,8 @@ export async function runFailOpenAvailabilitySmoke(
     });
   }
 
+  const decisionDurationMs = Math.round(performance.now() - startedAt);
+
   let liveProbe: FailOpenAvailabilityReport["liveProbe"];
   if (options.baseUrl) {
     const liveHealth = await readLiveHealth(
@@ -225,7 +230,8 @@ export async function runFailOpenAvailabilitySmoke(
     ownerReceipts,
     ownerCounts: countBy(ownerReceipts.map(({ owner }) => owner)),
     classCounts: countClasses(ownerReceipts),
-    durationMs: Math.round(performance.now() - startedAt),
+    durationMs: decisionDurationMs,
+    durationScope: "serve_decision",
     performanceBudgetMs: MAX_SERVE_LATENCY_MS,
     canonicalWriteCount: 0,
     preciseLocationAbsent: true,
@@ -334,7 +340,11 @@ function catalogAvailabilityReceipts(): FailOpenOwnerReceipt[] {
   }));
 }
 
-async function readLiveHealth(baseUrl: string, fetchImpl: typeof fetch) {
+async function readLiveHealth(
+  baseUrl: string,
+  fetchImpl: typeof fetch,
+): Promise<NonNullable<FailOpenAvailabilityReport["liveProbe"]>> {
+  const startedAt = performance.now();
   const url = new URL(baseUrl);
   if (url.origin !== "https://over.garden" || url.pathname !== "/") {
     throw new Error("Live base URL must be the canonical OverGarden origin.");
@@ -355,7 +365,12 @@ async function readLiveHealth(baseUrl: string, fetchImpl: typeof fetch) {
     throw new Error("Live health omitted its served availability class.");
   }
   const serveClass = match[1] as "exact" | "seam_unmet";
-  return { status: 200 as const, serveClass };
+  return {
+    status: 200 as const,
+    serveClass,
+    durationMs: Math.round(performance.now() - startedAt),
+    timeoutBudgetMs: LIVE_PROBE_TIMEOUT_MS,
+  };
 }
 
 function countBy(values: readonly string[]) {
