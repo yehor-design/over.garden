@@ -100,7 +100,8 @@ Transitional read and projection behavior on legacy rows (the refusal-first
 wording is superseded for future contracts by ADR-0018):
 
 - Meilisearch public journal projection — `services/matching/app/search.py` and
-  the TS contract fixture in `server/search/documents.ts` drop the document
+  the TS contract fixture in `server/search/documents.ts` drop the document;
+  OVE-331 quality classes never convert precise location into a degraded reason
 - public profile serializer — bio and avatar alt are withheld
 - comment readback — a coordinate-bearing legacy comment reads as under review
 - notifications and followed-feed excerpts — label and excerpt are withheld

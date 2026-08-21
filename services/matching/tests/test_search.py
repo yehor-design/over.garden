@@ -92,6 +92,12 @@ def journal_row(**overrides):
         "cover_media_id": None,
         "cover_usage_role": None,
         "cover_derivative_key": None,
+        "cover_original_deleted_at": None,
+        "cover_revoked_at": None,
+        "cover_media_readiness_state": None,
+        "cover_public_object_id": None,
+        "cover_quality_policy_version": None,
+        "cover_quality_class": None,
     }
     row.update(overrides)
     return row
@@ -113,6 +119,8 @@ def test_journal_entry_document_indexes_public_hidden_entry_with_safe_fields():
         "createdAt": "2026-06-26T12:30:00.000Z",
         "kind": "journal_entry",
         "coverSource": "none",
+        "qualityClass": "verified",
+        "qualityReasons": [],
     }
 
     assert set(document.keys()) == PUBLIC_JOURNAL_REQUIRED_FIELDS
@@ -130,18 +138,36 @@ def test_public_journal_entry_document_contract_matches_runtime_settings():
     assert PUBLIC_JOURNAL_ALLOWED_FIELDS == (
         PUBLIC_JOURNAL_REQUIRED_FIELDS | set(PUBLIC_JOURNAL_CONTRACT["optionalFields"])
     )
-    assert search.JOURNAL_SEARCHABLE_ATTRIBUTES == PUBLIC_JOURNAL_CONTRACT[
-        "searchableAttributes"
-    ]
-    assert search.JOURNAL_FILTERABLE_ATTRIBUTES == PUBLIC_JOURNAL_CONTRACT[
-        "filterableAttributes"
-    ]
-    assert search.JOURNAL_SORTABLE_ATTRIBUTES == PUBLIC_JOURNAL_CONTRACT[
-        "sortableAttributes"
-    ]
+    assert (
+        search.JOURNAL_SEARCHABLE_ATTRIBUTES
+        == PUBLIC_JOURNAL_CONTRACT["searchableAttributes"]
+    )
+    assert (
+        search.JOURNAL_FILTERABLE_ATTRIBUTES
+        == PUBLIC_JOURNAL_CONTRACT["filterableAttributes"]
+    )
+    assert (
+        search.JOURNAL_SORTABLE_ATTRIBUTES
+        == PUBLIC_JOURNAL_CONTRACT["sortableAttributes"]
+    )
     assert "coarseRegionCode" in PUBLIC_JOURNAL_ALLOWED_FIELDS
     assert "coverSource" in PUBLIC_JOURNAL_REQUIRED_FIELDS
     assert "coverPublicUrl" in PUBLIC_JOURNAL_ALLOWED_FIELDS
+    assert "qualityClass" in PUBLIC_JOURNAL_REQUIRED_FIELDS
+    assert "qualityReasons" in PUBLIC_JOURNAL_REQUIRED_FIELDS
+    assert PUBLIC_JOURNAL_CONTRACT["qualityContract"] == {
+        "version": "ove331.qualityClass.v1",
+        "classes": ["verified", "partial", "unverified"],
+        "reasonCodes": [
+            "coarse_region_unavailable",
+            "media_projection_unresolved",
+            "analytics_delivery_unavailable",
+        ],
+        "searchReasonCodes": [
+            "coarse_region_unavailable",
+            "media_projection_unresolved",
+        ],
+    }
     assert "coverMediaAssetId" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
     assert "coarse_region_code" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
     assert "ownerUserId" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
@@ -160,6 +186,8 @@ def test_journal_entry_document_indexes_supported_region_only_when_visible(monke
     assert document["locationVisibility"] == "region"
     assert document["coarseRegionCode"] == "UA-30"
     assert document["coverSource"] == "none"
+    assert document["qualityClass"] == "verified"
+    assert document["qualityReasons"] == []
     assert set(document.keys()) == (
         PUBLIC_JOURNAL_REQUIRED_FIELDS | {"coarseRegionCode"}
     )
@@ -174,6 +202,11 @@ def test_journal_entry_document_indexes_effective_cover_without_media_ids(monkey
             cover_media_id="00000000-0000-4000-8000-000000000099",
             cover_usage_role="cover_only",
             cover_derivative_key="derivatives/cover.webp",
+            cover_original_deleted_at=datetime(2026, 6, 26, tzinfo=timezone.utc),
+            cover_media_readiness_state="public_ready",
+            cover_public_object_id="00000000-0000-4000-8000-000000000099",
+            cover_quality_policy_version="ove231.launch-media-quality.v1",
+            cover_quality_class="accepted",
         )
     )
 
@@ -183,6 +216,30 @@ def test_journal_entry_document_indexes_effective_cover_without_media_ids(monkey
     assert "mediaAssetId" not in document
     assert "coverMediaAssetId" not in document
     assert "derivativeKey" not in document
+    assert document["qualityClass"] == "verified"
+    assert document["qualityReasons"] == []
+
+
+def test_journal_entry_document_admits_transitional_converted_cover_as_partial(
+    monkeypatch,
+):
+    monkeypatch.setenv("R2_PUBLIC_BASE_URL", "https://media.example")
+    document = search.journal_entry_search_document_from_row(
+        journal_row(
+            cover_media_asset_id="00000000-0000-4000-8000-000000000099",
+            cover_media_id="00000000-0000-4000-8000-000000000099",
+            cover_usage_role="cover_only",
+            cover_derivative_key="derivatives/cover.webp",
+            cover_original_deleted_at=None,
+            cover_media_readiness_state="derivative_written",
+            cover_public_object_id=None,
+        )
+    )
+
+    assert document is not None
+    assert document["coverSource"] == "separate"
+    assert document["qualityClass"] == "partial"
+    assert document["qualityReasons"] == ["media_projection_unresolved"]
 
 
 def test_journal_entry_document_refuses_private_archived_or_gone_entries():
@@ -215,25 +272,27 @@ def test_journal_entry_document_refuses_private_archived_or_gone_entries():
 
 
 def test_journal_entry_document_refuses_unsafe_public_shape():
-    assert search.journal_entry_search_document_from_row(journal_row(public_slug=None)) is None
+    assert (
+        search.journal_entry_search_document_from_row(journal_row(public_slug=None))
+        is None
+    )
     assert (
         search.journal_entry_search_document_from_row(
             journal_row(location_visibility="exact", coarse_region_code="UA-30")
         )
         is None
     )
-    assert (
-        search.journal_entry_search_document_from_row(
-            journal_row(location_visibility="region", coarse_region_code="UA-99")
+    for coarse_region_code in ["UA-99", None]:
+        document = search.journal_entry_search_document_from_row(
+            journal_row(
+                location_visibility="region",
+                coarse_region_code=coarse_region_code,
+            )
         )
-        is None
-    )
-    assert (
-        search.journal_entry_search_document_from_row(
-            journal_row(location_visibility="region", coarse_region_code=None)
-        )
-        is None
-    )
+        assert document is not None
+        assert document["locationVisibility"] == "hidden"
+        assert document["qualityClass"] == "partial"
+        assert document["qualityReasons"] == ["coarse_region_unavailable"]
     assert (
         search.journal_entry_search_document_from_row(
             journal_row(entry_scope="raw-body-tag")
@@ -241,9 +300,7 @@ def test_journal_entry_document_refuses_unsafe_public_shape():
         is None
     )
     assert (
-        search.journal_entry_search_document_from_row(
-            journal_row(id="not-a-uuid")
-        )
+        search.journal_entry_search_document_from_row(journal_row(id="not-a-uuid"))
         is None
     )
 

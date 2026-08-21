@@ -17,7 +17,11 @@ import {
 import { fingerprintJournalSearchDocument } from "@/server/search/public-journal-document-contract";
 import { isSafeJournalSearchDocumentId } from "@/server/search/public-journal-document-id";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
-import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
+import {
+  classifyPublicMediaProjection,
+  publicMediaEligibilityPredicate,
+} from "@/server/media/public-media-eligibility";
+import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -52,6 +56,13 @@ export function buildGloballyEligibleJournalSearchRowsQuery(
       "media_assets.id as mediaId",
       "media_assets.usage_role as usageRole",
       "media_assets.derivative_key as derivativeKey",
+      "media_assets.status as mediaStatus",
+      "media_assets.original_deleted_at as originalDeletedAt",
+      "media_assets.revoked_at as revokedAt",
+      "media_assets.media_readiness_state as mediaReadinessState",
+      "media_assets.public_object_id as publicObjectId",
+      "media_assets.quality_policy_version as qualityPolicyVersion",
+      "media_assets.quality_class as mediaQualityClass",
       "journal_entries.cover_media_asset_id as coverMediaAssetId",
     ])
     .where("media_assets.journal_entry_id", "is not", null)
@@ -121,7 +132,11 @@ export function buildGloballyEligibleJournalSearchRowsQuery(
         .on("user_public_profiles.removed_at", "is", null),
     )
     .leftJoin(coverMedia, (join) =>
-      join.onRef("eligible_cover_media.journalEntryId", "=", "journal_entries.id"),
+      join.onRef(
+        "eligible_cover_media.journalEntryId",
+        "=",
+        "journal_entries.id",
+      ),
     )
     .select([
       "journal_entries.id as id",
@@ -161,6 +176,13 @@ export function buildGloballyEligibleJournalSearchRowsQuery(
       "eligible_cover_media.usageRole as coverUsageRole",
       "eligible_cover_media.derivativeKey as coverDerivativeKey",
       "eligible_cover_media.coverMediaAssetId as explicitCoverMediaAssetId",
+      "eligible_cover_media.mediaStatus as coverMediaStatus",
+      "eligible_cover_media.originalDeletedAt as coverOriginalDeletedAt",
+      "eligible_cover_media.revokedAt as coverRevokedAt",
+      "eligible_cover_media.mediaReadinessState as coverMediaReadinessState",
+      "eligible_cover_media.publicObjectId as coverPublicObjectId",
+      "eligible_cover_media.qualityPolicyVersion as coverQualityPolicyVersion",
+      "eligible_cover_media.mediaQualityClass as coverMediaQualityClass",
     ])
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
@@ -181,7 +203,8 @@ export function buildGloballyEligibleJournalSearchRowsQuery(
 export async function listGloballyEligibleJournalSearchDocuments(
   executor: QueryExecutor = db,
 ): Promise<PublicJournalSearchExpectedRow[]> {
-  const rows = await buildGloballyEligibleJournalSearchRowsQuery(executor).execute();
+  const rows =
+    await buildGloballyEligibleJournalSearchRowsQuery(executor).execute();
   const expected: PublicJournalSearchExpectedRow[] = [];
 
   for (const row of rows) {
@@ -191,6 +214,13 @@ export async function listGloballyEligibleJournalSearchDocuments(
       coverUsageRole: row.coverUsageRole,
       coverDerivativeKey: row.coverDerivativeKey,
       explicitCoverMediaAssetId: row.explicitCoverMediaAssetId,
+      mediaStatus: row.coverMediaStatus,
+      originalDeletedAt: row.coverOriginalDeletedAt,
+      revokedAt: row.coverRevokedAt,
+      mediaReadinessState: row.coverMediaReadinessState,
+      publicObjectId: row.coverPublicObjectId,
+      qualityPolicyVersion: row.coverQualityPolicyVersion,
+      mediaQualityClass: row.coverMediaQualityClass,
     });
     const document = buildJournalEntrySearchDocumentContractFixture({
       id: row.id,
@@ -210,6 +240,7 @@ export async function listGloballyEligibleJournalSearchDocuments(
       owner_profile_public_safe: true,
       cover_source: cover.coverSource,
       cover_public_url: cover.coverPublicUrl,
+      cover_projection_quality: cover.coverProjectionQuality,
     });
     if (!document) continue;
     expected.push({
@@ -230,27 +261,84 @@ export async function listGloballyEligibleJournalSearchDocuments(
  */
 export { fingerprintJournalSearchDocument };
 
-export function resolveCoverPresentation(input: {
-  coverMediaId: string | null;
-  coverUsageRole: string | null;
-  coverDerivativeKey: string | null;
-  explicitCoverMediaAssetId: string | null;
-}): {
+export function resolveCoverPresentation(
+  input: {
+    coverMediaId: string | null;
+    coverUsageRole: string | null;
+    coverDerivativeKey: string | null;
+    explicitCoverMediaAssetId: string | null;
+    mediaStatus?: string | null;
+    originalDeletedAt?: Date | null;
+    revokedAt?: Date | null;
+    mediaReadinessState?: string | null;
+    publicObjectId?: string | null;
+    qualityPolicyVersion?: string | null;
+    mediaQualityClass?: string | null;
+  },
+  resolvePublicUrl: (key: string) => string = getPublicDerivativeUrl,
+): {
   coverSource: JournalSearchCoverSource;
   coverPublicUrl: string | null;
+  coverProjectionQuality: PublicProjectionQualityClass;
 } {
   if (!input.coverMediaId || !input.coverDerivativeKey) {
-    return { coverSource: "none", coverPublicUrl: null };
+    return {
+      coverSource: "none",
+      coverPublicUrl: null,
+      coverProjectionQuality: "verified",
+    };
   }
-  const coverPublicUrl = getPublicDerivativeUrl(input.coverDerivativeKey);
+  const mediaDecision = classifyPublicMediaProjection({
+    status: input.mediaStatus ?? "",
+    derivativeKey: input.coverDerivativeKey,
+    originalDeletedAt: input.originalDeletedAt,
+    revokedAt: input.revokedAt,
+    mediaReadinessState: input.mediaReadinessState,
+    publicObjectId: input.publicObjectId,
+    qualityPolicyVersion: input.qualityPolicyVersion,
+    qualityClass: input.mediaQualityClass,
+  });
+  if (mediaDecision.state === "excluded") {
+    return {
+      coverSource: "none",
+      coverPublicUrl: null,
+      coverProjectionQuality: "unverified",
+    };
+  }
+  let coverPublicUrl: string;
+  try {
+    coverPublicUrl = resolvePublicUrl(input.coverDerivativeKey);
+  } catch {
+    return {
+      coverSource: "none",
+      coverPublicUrl: null,
+      coverProjectionQuality: "partial",
+    };
+  }
   if (input.explicitCoverMediaAssetId === input.coverMediaId) {
     if (input.coverUsageRole === JOURNAL_MEDIA_USAGE_COVER_ONLY) {
-      return { coverSource: "separate", coverPublicUrl };
+      return {
+        coverSource: "separate",
+        coverPublicUrl,
+        coverProjectionQuality: mediaDecision.qualityClass,
+      };
     }
-    return { coverSource: "explicit_inline", coverPublicUrl };
+    return {
+      coverSource: "explicit_inline",
+      coverPublicUrl,
+      coverProjectionQuality: mediaDecision.qualityClass,
+    };
   }
   if (input.coverUsageRole === JOURNAL_MEDIA_USAGE_INLINE) {
-    return { coverSource: "automatic_inline", coverPublicUrl };
+    return {
+      coverSource: "automatic_inline",
+      coverPublicUrl,
+      coverProjectionQuality: mediaDecision.qualityClass,
+    };
   }
-  return { coverSource: "none", coverPublicUrl: null };
+  return {
+    coverSource: "none",
+    coverPublicUrl: null,
+    coverProjectionQuality: "verified",
+  };
 }

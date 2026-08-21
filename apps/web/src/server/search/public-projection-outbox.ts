@@ -40,7 +40,8 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
  * the projection can never be silently forgotten. Convergence is then a real
  * read-back of Meilisearch, never "a job was queued".
  */
-export const PUBLIC_PROJECTION_OUTBOX_POLICY = "ove242.publicProjectionOutbox.v1";
+export const PUBLIC_PROJECTION_OUTBOX_POLICY =
+  "ove242.publicProjectionOutbox.v1";
 export const PUBLIC_PROJECTION_ISSUE = "OVE-242";
 export const PUBLIC_PROJECTION_ENTITY_KIND = "journal_entry";
 export const PUBLIC_JOURNAL_ENTRIES_INDEX = "journal_entries";
@@ -621,6 +622,13 @@ export async function loadExpectedPublicJournalDocument(
     coverUsageRole: row.coverUsageRole,
     coverDerivativeKey: row.coverDerivativeKey,
     explicitCoverMediaAssetId: row.explicitCoverMediaAssetId,
+    mediaStatus: row.coverMediaStatus,
+    originalDeletedAt: row.coverOriginalDeletedAt,
+    revokedAt: row.coverRevokedAt,
+    mediaReadinessState: row.coverMediaReadinessState,
+    publicObjectId: row.coverPublicObjectId,
+    qualityPolicyVersion: row.coverQualityPolicyVersion,
+    mediaQualityClass: row.coverMediaQualityClass,
   });
   const document = buildJournalEntrySearchDocumentContractFixture({
     id: row.id,
@@ -640,6 +648,7 @@ export async function loadExpectedPublicJournalDocument(
     owner_profile_public_safe: true,
     cover_source: cover.coverSource,
     cover_public_url: cover.coverPublicUrl,
+    cover_projection_quality: cover.coverProjectionQuality,
   });
   if (!document) return null;
 

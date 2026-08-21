@@ -6,9 +6,7 @@ import {
   LAUNCH_CORPUS_INVENTORY_SQL,
   assertLaunchCorpusInventorySqlIsSelectOnly,
 } from "@/server/launch-corpus/inventory";
-import {
-  publicMediaEligibilitySqlText,
-} from "./public-media-eligibility";
+import { publicMediaEligibilitySqlText } from "./public-media-eligibility";
 
 describe("OVE-231 persisted quality receipt integration", () => {
   it("fences receipt writes and readiness by owner, generation, identity, and claim token", () => {
@@ -38,10 +36,14 @@ describe("OVE-231 persisted quality receipt integration", () => {
     expect(sql).not.toMatch(/derivative_key|quarantine_key|owner_user_id/);
   });
 
-  it("admits legacy null receipts but closes known non-accepted policies", () => {
+  it("keeps the public projection predicate format-only", () => {
     const sql = publicMediaEligibilitySqlText("ma");
-    expect(sql).toContain("ma.quality_policy_version is null");
-    expect(sql).toContain("ove231.launch-media-quality.v1");
-    expect(sql).toContain("ma.quality_class = 'accepted'");
+    expect(sql).toContain("ma.status = 'processed'");
+    expect(sql).toContain("ma.derivative_key is not null");
+    expect(sql).toContain("ma.revoked_at is null");
+    expect(sql).not.toContain("original_deleted_at");
+    expect(sql).not.toContain("media_readiness_state");
+    expect(sql).not.toContain("quality_policy_version");
+    expect(sql).not.toContain("quality_class");
   });
 });

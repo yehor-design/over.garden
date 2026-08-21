@@ -20,7 +20,7 @@ import {
   SafeMediaAdmissionError,
 } from "@/server/media/safe-media-admission";
 import { revokeMediaObjectBytes } from "@/server/media/lifecycle-revoke";
-import { isPublicMediaEligible } from "@/server/media/public-media-eligibility";
+import { isPublicMediaVerifiedForProcessing } from "@/server/media/public-media-eligibility";
 import {
   admitDocumentMutation,
   documentMutationAdmissionResponse,
@@ -62,7 +62,7 @@ async function processMedia(request: Request, scope: RequestScope) {
     );
   }
   if (
-    isPublicMediaEligible({
+    isPublicMediaVerifiedForProcessing({
       status: asset.status,
       derivativeKey: asset.derivative_key,
       originalDeletedAt: asset.original_deleted_at,

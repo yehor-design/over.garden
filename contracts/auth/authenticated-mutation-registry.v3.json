@@ -14943,6 +14943,18 @@
     },
     {
       "evidencePaths": [
+        "src/server/media/public-media-eligibility.ts",
+        "src/server/search/public-journal-eligibility.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/search/public-journal-eligibility.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/public-media-eligibility",
+      "sourceNodeId": "source:05d342c65c7d81afb09c",
+      "symbol": "classifyPublicMediaProjection"
+    },
+    {
+      "evidencePaths": [
         "src/app/erasure/page.tsx",
         "src/lib/privacy/disclosures.ts"
       ],
@@ -24335,6 +24347,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/public-projection-quality.ts",
+        "src/server/analytics-events.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/analytics-events.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-projection-quality",
+      "sourceNodeId": "source:6196f69c16b67a56f1c0",
+      "symbol": "analyticsDeliveryQuality"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-object-catalog-search.tsx",
         "src/components/ui/button.tsx"
       ],
@@ -25405,6 +25429,18 @@
       "semanticVariant": "from:@/server/journal-document-persistence",
       "sourceNodeId": "source:6d34f86fe0341e63e891",
       "symbol": "writeJournalMutationReceipt"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/process/route.ts",
+        "src/server/media/public-media-eligibility.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/process/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/public-media-eligibility",
+      "sourceNodeId": "source:6d3dc401baff9dcdc941",
+      "symbol": "isPublicMediaVerifiedForProcessing"
     },
     {
       "evidencePaths": [
@@ -29097,18 +29133,6 @@
       "semanticVariant": "canonical-row:buildReadJournalDraftQuery",
       "sourceNodeId": "source:9153fdfa784bf642237a",
       "symbol": "readJournalDraft"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/media/process/route.ts",
-        "src/server/media/public-media-eligibility.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/process/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/media/public-media-eligibility",
-      "sourceNodeId": "source:915a2985bc9579500303",
-      "symbol": "isPublicMediaEligible"
     },
     {
       "evidencePaths": [
@@ -37747,6 +37771,18 @@
       "semanticVariant": "canonical-row:buildCountUnconvergedErasureMediaCleanupJobsQuery",
       "sourceNodeId": "source:e6a3198457901788f105",
       "symbol": "areErasureMediaCleanupJobsConverged"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/public-projection-quality.ts",
+        "src/server/search/public-journal-eligibility.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/search/public-journal-eligibility.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-projection-quality",
+      "sourceNodeId": "source:e6f83154ed71fb6707ee",
+      "symbol": "PublicProjectionQualityClass"
     },
     {
       "evidencePaths": [

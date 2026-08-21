@@ -17,6 +17,12 @@ interface PublicJournalSearchContract {
   filterableAttributes: string[];
   sortableAttributes: string[];
   typescriptContractFixture: string;
+  qualityContract: {
+    version: string;
+    classes: string[];
+    reasonCodes: string[];
+    searchReasonCodes: string[];
+  };
 }
 
 const contract = JSON.parse(
@@ -70,6 +76,8 @@ describe("journal entry search documents", () => {
       new Set([...contract.requiredFields, ...contract.optionalFields]),
     );
     expect(contract.requiredFields).toContain("coverSource");
+    expect(contract.requiredFields).toContain("qualityClass");
+    expect(contract.requiredFields).toContain("qualityReasons");
     expect(contract.requiredFields).not.toContain("coarseRegionCode");
     expect(contract.optionalFields).toEqual([
       "coarseRegionCode",
@@ -90,8 +98,22 @@ describe("journal entry search documents", () => {
       "coarseRegionCode",
       "noindex",
       "coverSource",
+      "qualityClass",
     ]);
     expect(contract.sortableAttributes).toEqual(["entryDate", "createdAt"]);
+    expect(contract.qualityContract).toEqual({
+      version: "ove331.qualityClass.v1",
+      classes: ["verified", "partial", "unverified"],
+      reasonCodes: [
+        "coarse_region_unavailable",
+        "media_projection_unresolved",
+        "analytics_delivery_unavailable",
+      ],
+      searchReasonCodes: [
+        "coarse_region_unavailable",
+        "media_projection_unresolved",
+      ],
+    });
   });
 
   it("does not index private entries", () => {
@@ -163,7 +185,7 @@ describe("journal entry search documents", () => {
     ).toBeNull();
   });
 
-  it("does not index region-visible entries without a supported coarse region", () => {
+  it("admits a region-visible entry without a supported coarse region as hidden partial", () => {
     expect(
       buildJournalEntrySearchDocumentContractFixture(
         entry("public", {
@@ -171,7 +193,11 @@ describe("journal entry search documents", () => {
           coarse_region_code: "Kyiv apartment address",
         }),
       ),
-    ).toBeNull();
+    ).toMatchObject({
+      locationVisibility: "hidden",
+      qualityClass: "partial",
+      qualityReasons: ["coarse_region_unavailable"],
+    });
   });
 
   it("indexes public entries with a narrow payload including coverSource", () => {
@@ -192,6 +218,8 @@ describe("journal entry search documents", () => {
       createdAt: "2026-06-26T00:00:00.000Z",
       kind: "journal_entry",
       coverSource: "none",
+      qualityClass: "verified",
+      qualityReasons: [],
     });
     expect(Object.keys(document ?? {}).sort()).toEqual(
       [...contract.requiredFields].sort(),
@@ -269,6 +297,8 @@ describe("journal entry search documents", () => {
       locationVisibility: "region",
       coarseRegionCode: "UA-30",
       coverSource: "none",
+      qualityClass: "verified",
+      qualityReasons: [],
     });
     expect(Object.keys(document ?? {}).sort()).toEqual(
       [...contract.requiredFields, "coarseRegionCode"].sort(),
@@ -286,9 +316,27 @@ describe("journal entry search documents", () => {
     expect(document).toMatchObject({
       coverSource: "separate",
       coverPublicUrl: "https://media.over.garden/derivatives/cover.webp",
+      qualityClass: "verified",
+      qualityReasons: [],
     });
     expect(document).not.toHaveProperty("mediaAssetId");
     expect(document).not.toHaveProperty("coverMediaAssetId");
+  });
+
+  it("admits safe text when an optional cover projection is unusable", () => {
+    const document = buildJournalEntrySearchDocumentContractFixture(
+      entry("public", {
+        cover_source: "separate",
+        cover_public_url: "https://media.over.garden/quarantine/original.jpg",
+      }),
+    );
+
+    expect(document).toMatchObject({
+      coverSource: "none",
+      qualityClass: "partial",
+      qualityReasons: ["media_projection_unresolved"],
+    });
+    expect(document).not.toHaveProperty("coverPublicUrl");
   });
 
   it("indexes space-level entries only with bounded scope metadata", () => {

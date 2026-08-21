@@ -82,7 +82,10 @@ def _public_row(**overrides: object) -> dict:
 
 
 def test_public_projection_accepts_a_safe_row() -> None:
-    assert search.journal_entry_search_document_from_row(_public_row()) is not None
+    document = search.journal_entry_search_document_from_row(_public_row())
+    assert document is not None
+    assert document["qualityClass"] == "verified"
+    assert document["qualityReasons"] == []
 
 
 @pytest.mark.parametrize("field", ["title", "body"])

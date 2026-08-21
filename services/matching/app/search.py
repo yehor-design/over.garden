@@ -47,6 +47,7 @@ JOURNAL_FILTERABLE_ATTRIBUTES = [
     "coarseRegionCode",
     "noindex",
     "coverSource",
+    "qualityClass",
 ]
 JOURNAL_SORTABLE_ATTRIBUTES = ["entryDate", "createdAt"]
 JOURNAL_COVER_SOURCES = {
@@ -55,6 +56,11 @@ JOURNAL_COVER_SOURCES = {
     "separate",
     "none",
 }
+JOURNAL_PROJECTION_QUALITY_REASON_ORDER = [
+    "coarse_region_unavailable",
+    "media_projection_unresolved",
+]
+LAUNCH_MEDIA_QUALITY_POLICY_VERSION = "ove231.launch-media-quality.v1"
 JOURNAL_ENTRY_UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
     re.IGNORECASE,
@@ -177,7 +183,14 @@ select
   end as coarse_region_code,
   cover_media.media_id::text as cover_media_id,
   cover_media.usage_role as cover_usage_role,
-  cover_media.derivative_key as cover_derivative_key
+  cover_media.derivative_key as cover_derivative_key,
+  cover_media.status as cover_media_status,
+  cover_media.original_deleted_at as cover_original_deleted_at,
+  cover_media.revoked_at as cover_revoked_at,
+  cover_media.media_readiness_state as cover_media_readiness_state,
+  cover_media.public_object_id::text as cover_public_object_id,
+  cover_media.quality_policy_version as cover_quality_policy_version,
+  cover_media.quality_class as cover_quality_class
 from journal_entries
 left join plant_objects
   on plant_objects.id = journal_entries.plant_object_id
@@ -198,7 +211,14 @@ left join lateral (
   select
     media_assets.id as media_id,
     media_assets.usage_role,
-    media_assets.derivative_key
+    media_assets.derivative_key,
+    media_assets.status,
+    media_assets.original_deleted_at,
+    media_assets.revoked_at,
+    media_assets.media_readiness_state,
+    media_assets.public_object_id,
+    media_assets.quality_policy_version,
+    media_assets.quality_class
   from media_assets
   where media_assets.journal_entry_id = journal_entries.id
     and media_assets.owner_user_id = journal_entries.owner_user_id
@@ -360,7 +380,7 @@ def journal_entry_search_document_from_row(
     body = _text(row, "body")
     public_slug = _text(row, "public_slug")
     entry_scope = _text(row, "entry_scope")
-    location_visibility = _text(row, "location_visibility")
+    requested_location_visibility = _text(row, "location_visibility")
 
     if not title or not body or not public_slug:
         return None
@@ -370,12 +390,34 @@ def journal_entry_search_document_from_row(
         return None
     if entry_scope not in {"object", "space"}:
         return None
-    if location_visibility not in {"hidden", "region"}:
+    if requested_location_visibility not in {"hidden", "region"}:
         return None
 
+    quality_reasons: list[str] = []
+    coarse_region_code: str | None = None
+    location_visibility = requested_location_visibility
+    if requested_location_visibility == "region":
+        coarse_region_code = _coarse_region_code(row)
+        if coarse_region_code is None:
+            location_visibility = "hidden"
+            quality_reasons.append("coarse_region_unavailable")
+
+    cover_requested = bool(
+        _text(row, "cover_media_id") and _text(row, "cover_derivative_key")
+    )
     cover_source, cover_public_url = _resolve_cover_presentation(row)
-    if cover_source != "none" and not cover_public_url:
-        return None
+    if cover_requested and (
+        cover_source == "none"
+        or not cover_public_url
+        or not _is_cover_media_verified(row)
+    ):
+        quality_reasons.append("media_projection_unresolved")
+
+    quality_reasons = [
+        reason
+        for reason in JOURNAL_PROJECTION_QUALITY_REASON_ORDER
+        if reason in quality_reasons
+    ]
 
     document: dict[str, object] = {
         "id": journal_entry_id,
@@ -390,14 +432,13 @@ def journal_entry_search_document_from_row(
         "createdAt": _iso_datetime(row.get("created_at")),
         "kind": "journal_entry",
         "coverSource": cover_source,
+        "qualityClass": "verified" if not quality_reasons else "partial",
+        "qualityReasons": quality_reasons,
     }
     if cover_public_url:
         document["coverPublicUrl"] = cover_public_url
 
-    if location_visibility == "region":
-        coarse_region_code = _coarse_region_code(row)
-        if coarse_region_code is None:
-            return None
+    if location_visibility == "region" and coarse_region_code is not None:
         document["coarseRegionCode"] = coarse_region_code
 
     return document
@@ -440,6 +481,24 @@ def _resolve_cover_presentation(
     if usage_role == "inline":
         return "automatic_inline", cover_public_url
     return "none", None
+
+
+def _is_cover_media_verified(row: Mapping[str, Any]) -> bool:
+    quality_policy_version = _text(row, "cover_quality_policy_version")
+    quality_class = _text(row, "cover_quality_class")
+    return bool(
+        row.get("cover_original_deleted_at") is not None
+        and row.get("cover_revoked_at") is None
+        and _text(row, "cover_media_readiness_state") == "public_ready"
+        and _text(row, "cover_public_object_id")
+        and (
+            not quality_policy_version
+            or (
+                quality_policy_version == LAUNCH_MEDIA_QUALITY_POLICY_VERSION
+                and quality_class == "accepted"
+            )
+        )
+    )
 
 
 def _public_derivative_url(object_key: str) -> str | None:
@@ -491,7 +550,9 @@ def index_journal_entry(
     index = c.index(PUBLIC_JOURNAL_ENTRIES_INDEX)
     _ensure_public_journal_entries_settings(c, index)
 
-    row = fetch_journal_entry_search_row(conn, safe_journal_entry_id, safe_owner_user_id)
+    row = fetch_journal_entry_search_row(
+        conn, safe_journal_entry_id, safe_owner_user_id
+    )
     if row is None:
         raise ValueError("journal entry was not found for the job owner")
 
@@ -512,7 +573,9 @@ def unindex_journal_entry_for_owner(
 ) -> dict[str, object]:
     safe_journal_entry_id = assert_safe_journal_search_document_id(journal_entry_id)
     safe_owner_user_id = assert_safe_journal_search_document_id(owner_user_id)
-    if not journal_entry_belongs_to_owner(conn, safe_journal_entry_id, safe_owner_user_id):
+    if not journal_entry_belongs_to_owner(
+        conn, safe_journal_entry_id, safe_owner_user_id
+    ):
         raise ValueError("journal entry was not found for the job owner")
     return unindex_journal_entry(safe_journal_entry_id, meili_client)
 
@@ -601,9 +664,9 @@ def prove_catalog_cyrillic_typeahead() -> dict[str, object]:
     result = index.search("помдор", {"limit": 3})
     hits = result["hits"]
     assert hits, f"catalog Cyrillic typeahead failed: {result}"
-    assert (
-        hits[0]["catalogItemId"] == "00000000-0000-4000-8000-000000000101"
-    ), f"catalog Cyrillic typeahead failed: {result}"
+    assert hits[0]["catalogItemId"] == "00000000-0000-4000-8000-000000000101", (
+        f"catalog Cyrillic typeahead failed: {result}"
+    )
     return hits[0]
 
 

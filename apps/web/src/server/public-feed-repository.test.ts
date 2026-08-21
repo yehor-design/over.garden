@@ -229,15 +229,17 @@ describe("public feed repository", () => {
     expect(media.sql).toContain("row_number() over");
     expect(media.sql).toContain('"media_rank" <=');
     expect(media.sql).not.toContain("quarantine_key");
-    expect(media.sql).toContain('"media_assets"."original_deleted_at" is not null');
-    expect(media.sql).toContain('"media_assets"."media_readiness_state" =');
+    expect(media.sql).toContain('"media_assets"."revoked_at" is null');
+    expect(media.sql).not.toMatch(
+      /original_deleted_at|media_readiness_state|quality_policy_version|quality_class/,
+    );
     expect(media.parameters).toEqual(
       expect.arrayContaining([
         ...entryIds,
         "public",
         "active",
         "processed",
-        "public_ready",
+        "inline",
         3,
       ]),
     );

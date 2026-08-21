@@ -408,11 +408,18 @@ Worker and search invariants:
 - Runtime writer: `services/matching/app/search.py:journal_entry_search_document_from_row`.
 - Machine-readable contract: `contracts/search/public-journal-entry-search-document.json`.
 - `journal_entries` index documents may contain only the current public-safe
-  machine contract: required keys `body`, `createdAt`, `entryDate`,
-  `entryScope`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`,
-  `publicSlug`, and `title`, plus optional `coarseRegionCode` only when
-  `locationVisibility = region`. Earlier OVE-36/OVE-39 evidence predates the
-  additive `entryScope` field and remains a historical exact-shape record.
+  machine contract: required keys `body`, `coverSource`, `createdAt`,
+  `entryDate`, `entryScope`, `id`, `kind`, `locationVisibility`, `noindex`,
+  `publicPath`, `publicSlug`, `qualityClass`, `qualityReasons`, and `title`,
+  plus optional `coarseRegionCode` only when `locationVisibility = region` and
+  optional `coverPublicUrl` only for the admitted converted public derivative.
+  `qualityClass` is the closed `ove331.qualityClass.v1` set `verified`,
+  `partial`, or `unverified`; public-journal reasons are limited to
+  `coarse_region_unavailable` and `media_projection_unresolved`. Missing coarse
+  region or optional cover state may lower derived quality, but precise
+  coordinates remain a hard exclusion and never become a quality reason.
+  Earlier OVE-36/OVE-39 evidence predates the additive `entryScope`, cover, and
+  quality fields and remains a historical exact-shape record.
 - No owner/user IDs, space IDs, plant object IDs, precise location, raw coarse-location columns, media keys, quarantine/original keys, signed URLs, request metadata, IPs, user agents, referrers, invite data, or private journal state may enter Meilisearch documents.
 
 Process management and recovery (OVE-39):
