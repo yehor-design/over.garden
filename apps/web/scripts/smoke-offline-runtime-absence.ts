@@ -128,13 +128,17 @@ async function main() {
   }
 
   const [home, manifest, worker, icon192, icon512] = await Promise.all([
-    fetch(new URL("/", baseUrl), { redirect: "manual" }),
+    fetch(new URL("/", baseUrl), { redirect: "follow" }),
     fetch(new URL("/manifest.webmanifest", baseUrl), { redirect: "manual" }),
     fetch(new URL("/sw.js", baseUrl), { redirect: "manual" }),
     fetch(new URL("/icon-192.png", baseUrl), { redirect: "manual" }),
     fetch(new URL("/icon-512.png", baseUrl), { redirect: "manual" }),
   ]);
   assert(home.status === 200, "Public application boot did not return 200.");
+  assert(
+    new URL(home.url).origin === baseUrl,
+    "Public application boot redirected outside the expected origin.",
+  );
   const homeHtml = await home.text();
   assert(
     !/<link\b[^>]*\brel=["']manifest["']/iu.test(homeHtml),
