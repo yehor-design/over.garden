@@ -177,7 +177,7 @@ sudo /opt/overgarden/meilisearch-upgrade snapshot
 sudo /opt/overgarden/meilisearch-upgrade provision
 sudo /opt/overgarden/meilisearch-upgrade rebuild
 # Dual-run catalog proofs against meilisearch-next, then converge journals with:
-#   cd apps/web && pnpm smoke:public-index-parity -- --environment production \
+#   cd apps/web && pnpm smoke:public-index-parity:production -- --environment production \
 #     --confirm-environment production --mode apply --allow-non-local-mutation
 # Then:
 sudo /opt/overgarden/meilisearch-upgrade cutover

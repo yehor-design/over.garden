@@ -1,7 +1,5 @@
 import process from "node:process";
 
-import { config as loadEnv } from "dotenv";
-
 import {
   resolveDatabaseConnection,
   resolvePgConnectionString,
@@ -12,10 +10,9 @@ import {
   hostnameFromDatabaseUrl,
   hostnameLooksLikeProduction,
 } from "../src/server/restore-readiness";
+import { preparePublicIndexParityEnvironment } from "./public-index-parity-environment";
 
 let recoveryStage = "initializing";
-
-loadEnv({ path: ".env.local" });
 
 function requireEnvironment(argv: string[]) {
   const environment = readFlag(argv, "--environment");
@@ -45,6 +42,7 @@ function readFlag(argv: string[], name: string): string | null {
 
 async function main() {
   const argv = process.argv.slice(2);
+  preparePublicIndexParityEnvironment(argv);
   // Resolve SSL before any db import — managed Postgres rejects
   // non-TLS connections (pg_hba "no encryption").
   const earlyEnvironment = readFlag(argv, "--environment");

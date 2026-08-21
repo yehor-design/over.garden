@@ -76,8 +76,8 @@ After a verified apply, run the canonical read-only classifier twice. Both
 receipts must match and remain zero-gap:
 
 ```bash
-vercel env run -e production -- pnpm smoke:public-index-parity -- --environment production --confirm-environment production
-vercel env run -e production -- pnpm smoke:public-index-parity -- --environment production --confirm-environment production
+pnpm smoke:public-index-parity:production -- --environment production --confirm-environment production
+pnpm smoke:public-index-parity:production -- --environment production --confirm-environment production
 ```
 
 ## Failure and recovery
