@@ -11,9 +11,10 @@ This is not product UI. It is the first end-to-end proof that the selected stack
 3. **Better Auth round-trip works.** The historical proof established the cookie-backed round trip. Current local diagnostics authenticate through `/garden`; they do not pre-fill, create, or advertise a shared identity. OVE-203 removes the user-entered signup name and proves supported credential/Google user creation converges on the same automatic pseudonymous profile/current-claim invariant. OVE-296 removes the former Meta social sign-in surface without changing that provider-independent provisioning boundary.
 4. **Vertical journal slice works.** In an explicitly enabled loopback-only environment, `/skeleton` provides scoped SSR readback and `/api/skeleton/journal` goes through auth -> authorization -> validation -> scoped repository -> Kysely -> Postgres -> queue. Production and preview return hard `404` before those layers.
 5. **Media quarantine pipeline works.** `/api/media/uploads` creates a presigned quarantine upload URL; `/api/media/process` reads the quarantine object, re-encodes a metadata-stripped WebP derivative with `sharp`, writes it to the public bucket, deletes the original, and marks the row processed.
-6. **Historical local-queue proof is recorded.** The 2026-06-26 skeleton
-   proved Dexie/IndexedDB queued-mutation behavior. ADR-0017 supersedes that
-   product decision; OVE-321 through OVE-323 own staged runtime retirement.
+6. **Historical local-queue proof is recorded, not shipped.** The 2026-06-26
+   skeleton proved Dexie/IndexedDB queued-mutation behavior. ADR-0017
+   superseded that decision, and OVE-323 removed its complete active runtime,
+   package, PWA, fixture, and build-output surface.
 7. **Search/worker seam works.** Public journal entries enqueue `matching` jobs; the Python worker consumes the Postgres queue with `FOR UPDATE SKIP LOCKED`; Meilisearch Cyrillic typo proof passes.
 
 ## Commands
@@ -101,9 +102,10 @@ in Vercel or another deployed runtime.
 ## Guardrail Tests
 
 - `src/server/media/derivatives.test.ts` proves derivatives are WebP and do not retain EXIF.
-- `src/lib/offline/queue.test.ts` is a historical guardrail for the current
-  retirement window. ADR-0017 forbids extending its offline mutation behavior,
-  and OVE-323 removes or re-pins it with the runtime.
+- `src/lib/retirement/known-client-storage.test.ts` proves the only surviving
+  browser-storage boundary is dependency-free, exact-name, content-free, and
+  fail-closed. `tests/offline-runtime-absence.spec.ts` proves fresh and
+  returning profiles across Chromium, Firefox, and WebKit.
 - `src/server/search/documents.test.ts` proves private entries are not turned into Meilisearch documents.
 
 ## Next SDD Rule

@@ -144,7 +144,7 @@ success authority.
 
 The decision artifact lives only under `apps/web/scripts/` and this document.
 The checker scans runtime source roots and requires zero imports or references
-from app routes, pages, components, server modules, proxy, or service-worker
+from app routes, pages, components, server modules, proxy, or browser-startup
 code. With `--build-output`, it additionally scans the emitted Next.js server
 and static artifacts and fails closed if the build is absent or contains the
 decision artifact. It also requires zero task-specific custom-claim protocol

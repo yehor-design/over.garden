@@ -104,7 +104,7 @@ describe("authenticated mutation registry v3 contract", () => {
         "test",
         "tests",
       ],
-      productionRoots: ["public/sw.js", "sql", "src"],
+      productionRoots: ["sql", "src"],
     });
     expect(registry.prerequisiteReceipts).toEqual([
       {
@@ -264,9 +264,7 @@ describe("authenticated mutation registry v3 contract", () => {
     });
     expect(
       registry.consumerEdges.filter((edge) =>
-        ["auth:id-token", "auth:retired-facebook"].includes(
-          edge.entrypointId,
-        ),
+        ["auth:id-token", "auth:retired-facebook"].includes(edge.entrypointId),
       ),
     ).toEqual([]);
     expect(
@@ -316,10 +314,11 @@ describe("authenticated mutation registry v3 contract", () => {
     expect(
       registry.consumerEdges
         .filter((edge) => edge.entrypointId === "auth:account-session")
-        .flatMap((edge) =>
-          registry.effectBoundaries.find(
-            (effect) => effect.effectBoundaryId === edge.effectBoundaryId,
-          )?.effectFamilies ?? [],
+        .flatMap(
+          (edge) =>
+            registry.effectBoundaries.find(
+              (effect) => effect.effectBoundaryId === edge.effectBoundaryId,
+            )?.effectFamilies ?? [],
         )
         .sort(),
     ).toEqual([
@@ -370,9 +369,7 @@ describe("authenticated mutation registry v3 contract", () => {
           betterAuthVersion: "1.6.25",
           typescriptVersion: "5.9.3",
         },
-        prerequisiteReceipts: [
-          { ...prerequisiteReceipt, receiptDigest },
-        ],
+        prerequisiteReceipts: [{ ...prerequisiteReceipt, receiptDigest }],
       });
     const registry = buildRegistry(prerequisiteReceipt.receiptDigest);
     const sourceEvidence = [
@@ -401,9 +398,7 @@ describe("authenticated mutation registry v3 contract", () => {
       )({
         baselineSha: "5c403444cddc2e195690808de08304d14fe41fd3",
         decisionState: "ready",
-        prerequisiteReceipts: [
-          { ...prerequisiteReceipt, receiptDigest },
-        ],
+        prerequisiteReceipts: [{ ...prerequisiteReceipt, receiptDigest }],
         registry: receiptRegistry,
         sourceEvidence,
       });
@@ -418,9 +413,9 @@ describe("authenticated mutation registry v3 contract", () => {
     expect(receipt.sourceEvidenceDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(receipt.receiptDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(receipt).not.toHaveProperty("byteVectorDigest");
-    expect(
-      buildReceipt("a".repeat(64)).receiptDigest,
-    ).not.toBe(receipt.receiptDigest);
+    expect(buildReceipt("a".repeat(64)).receiptDigest).not.toBe(
+      receipt.receiptDigest,
+    );
   });
 
   it("fails closed on source-policy, prerequisite, resolution, and branch drift", () => {
@@ -468,7 +463,9 @@ describe("authenticated mutation registry v3 contract", () => {
         productionRoots: ["src"],
       },
       sourceNodes: registry.sourceNodes.map((node, index) =>
-        index === 0 ? { ...node, resolutionState: "unresolved" as const } : node,
+        index === 0
+          ? { ...node, resolutionState: "unresolved" as const }
+          : node,
       ),
       consumerEdges: registry.consumerEdges.map((edge, index) =>
         index === 0 ? { ...edge, branchId: "" } : edge,

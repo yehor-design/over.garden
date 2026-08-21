@@ -16,8 +16,8 @@ import {
 
 describe("visual fixture manifest", () => {
   it("contains the complete deterministic baseline", () => {
-    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v8");
-    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v8");
+    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v9");
+    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v9");
     expect(VISUAL_FIXTURE_MANIFEST.actors).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profiles).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profileFollows).toHaveLength(9);
@@ -241,7 +241,7 @@ describe("visual fixture manifest", () => {
         "publish",
         "backdated",
         "privacy",
-        "offline",
+        "connection-required",
         "error",
         "cancel",
         "duplicate",
@@ -312,7 +312,7 @@ describe("visual fixture manifest", () => {
         "sparse",
         "typical",
         "dense",
-        "offline",
+        "connection-required",
         "loading",
         "partial-error",
         "error",
@@ -322,7 +322,7 @@ describe("visual fixture manifest", () => {
       expectedSpaceCount: 0,
       expectedObjectCount: 0,
       expectedRecentCount: 0,
-      draftCount: 0,
+      serverAvailable: true,
     });
     expect(sparse).toMatchObject({
       expectedSpaceCount: 1,
@@ -341,11 +341,8 @@ describe("visual fixture manifest", () => {
     expect(dense?.expectedObjectIds).toHaveLength(
       dense?.expectedObjectCount ?? 0,
     );
-    expect(byState.get("offline")).toMatchObject({
-      online: false,
-      draftCount: 2,
-      queuedCount: 1,
-      failedCount: 1,
+    expect(byState.get("connection-required")).toMatchObject({
+      serverAvailable: false,
     });
     expect(serialized).not.toMatch(
       /@visual-fixtures\.invalid|email|password|token/i,
@@ -484,7 +481,7 @@ describe("visual fixture manifest", () => {
         "deleted_410",
         "now_private",
         "insufficient_permission",
-        "draft_retained",
+        "network_required",
       ]),
     );
     expect(new Set(scenarios.map((scenario) => scenario.id)).size).toBe(
@@ -526,15 +523,15 @@ describe("visual fixture manifest", () => {
     });
     expect(
       scenarios
-        .filter((scenario) => scenario.state === "draft_retained")
-        .map((scenario) => scenario.draftKind),
-    ).toEqual(["first_entry", "first_entry", "follow_up_entry"]);
+        .filter((scenario) => scenario.state === "network_required")
+        .map((scenario) => scenario.id),
+    ).toEqual(["ove174-i007", "ove174-i017", "ove174-i019"]);
     expect(
       scenarios.find((scenario) => scenario.id === "ove174-i019"),
     ).toMatchObject({
       action: "save",
       expectedStatus: 404,
-      draftKind: "follow_up_entry",
+      state: "network_required",
     });
     expect(
       scenarios.find((scenario) => scenario.id === "ove174-i020"),
@@ -852,7 +849,7 @@ describe("visual fixture manifest", () => {
         "owner-workspace-sparse",
         "owner-workspace-typical",
         "owner-workspace-dense",
-        "owner-workspace-offline",
+        "owner-workspace-connection-required",
         "owner-workspace-loading",
         "owner-workspace-partial-error",
         "owner-workspace-error",

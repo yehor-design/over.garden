@@ -2568,7 +2568,7 @@ export async function archiveJournalEntry(
     });
 
     // OVE-242: archive commits the removal intent atomically. Previously the
-    // unindex job was enqueued by the action after this transaction, so a
+    // unindex job was scheduled by the action after this transaction, so a
     // failure there left archived content searchable with nothing recording it.
     if (existing.public_slug !== null) {
       await recordPublicProjectionIntent(trx, {
@@ -2601,28 +2601,6 @@ export function buildFindExistingEntryByClientMutationQuery(
     .selectAll("journal_entries")
     .where("owner_user_id", "=", scope.userId)
     .where("client_mutation_id", "=", clientMutationId);
-}
-
-/**
- * Payload-free, owner-scoped read-back used by the temporary legacy-device
- * retirement bridge. A historical `synced` queue row may retain only its
- * idempotency identity, so deletion requires this canonical existence proof.
- */
-export async function findJournalEntryReceiptByClientMutationId(
-  scope: RequestScope,
-  clientMutationId: string,
-): Promise<{ id: string; clientMutationId: string } | null> {
-  if (!scope.userId) {
-    throw new Error("A scoped journal repository requires a user id.");
-  }
-  const normalized = clientMutationId.trim();
-  if (!normalized || normalized.length > 200) return null;
-  const row = await buildFindExistingEntryByClientMutationQuery(
-    db,
-    scope,
-    normalized,
-  ).executeTakeFirst();
-  return row ? { id: row.id, clientMutationId: row.client_mutation_id } : null;
 }
 
 export function buildJournalMutationAdvisoryLockQuery(

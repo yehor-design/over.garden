@@ -101,7 +101,7 @@ const OWNER_SURFACE_ROUTE_IDS = [
   "surface-app-not-found",
   "surface-workspace-loading",
   "surface-workspace-error",
-  "surface-workspace-offline",
+  "surface-workspace-connection-required",
 ] as const;
 const RAW_LIFECYCLE_ROUTE_IDS = [
   "raw-community-not-found",
@@ -658,9 +658,13 @@ function localOwnerSurfaceRoutes(): TypographyBrowserRoute[] {
     routeFor("surface-workspace-error", "workspace:workspace-error", {
       locale: "bg",
     }),
-    routeFor("surface-workspace-offline", "workspace:workspace-offline", {
-      locale: "ru",
-    }),
+    routeFor(
+      "surface-workspace-connection-required",
+      "workspace:workspace-connection-required",
+      {
+        locale: "ru",
+      },
+    ),
   ];
 }
 

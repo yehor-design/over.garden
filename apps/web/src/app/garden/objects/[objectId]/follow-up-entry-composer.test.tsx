@@ -110,7 +110,7 @@ function visualScenario(): VisualFixtureCreationScenarioEvidence {
   return {
     id: "ove182-c019",
     flow: "follow-up",
-    state: "offline",
+    state: "connection-required",
     label: "Fixture label is operator evidence",
     ownerActorId: "owner",
     objectId: "18700003-0000-4000-8000-000000000001",
@@ -127,8 +127,8 @@ function visualScenario(): VisualFixtureCreationScenarioEvidence {
     coarseRegionCode: null,
     topicTagInput: "огляд, queen",
     mediaFileName: null,
-    online: false,
-    submitState: "queued",
+    serverAvailable: false,
+    submitState: "connection_required",
     message: "This raw fixture message must never reach the localized UI.",
     detailsOpen: true,
     path: "/garden/objects/18700003-0000-4000-8000-000000000001",
@@ -147,7 +147,6 @@ function visualScenario(): VisualFixtureCreationScenarioEvidence {
     resetOwnedObjectIds: [],
     resetOwnedEntryIds: [],
     resetOwnedMediaAssetIds: [],
-    dexieDraftKey: "visual-draft",
     expectedStatus: 200,
     viewportTargets: ["desktop", "mobile-320"],
   };

@@ -237,11 +237,7 @@ export function isAuthenticatedMutationProductionSourcePath(
   ) {
     return false;
   }
-  return (
-    normalized === "public/sw.js" ||
-    normalized.startsWith("sql/") ||
-    normalized.startsWith("src/")
-  );
+  return normalized.startsWith("sql/") || normalized.startsWith("src/");
 }
 
 function isTypeScriptOrJavaScriptSource(relativePath: string): boolean {
@@ -1158,7 +1154,6 @@ async function readAuthenticatedMutationSourceInventory(
   const sourcePaths = [
     ...(await listFilesRecursively(path.join(appRoot, "src"), signal)),
     ...(await listFilesRecursively(path.join(appRoot, "sql"), signal)),
-    path.join(appRoot, "public/sw.js"),
   ]
     .filter((absolutePath) => /(?:\.[cm]?[jt]sx?|\.sql)$/.test(absolutePath))
     .sort(byteCompare);

@@ -71,8 +71,12 @@ describe("/knowledge", () => {
   });
 
   it("renders a recoverable error when repository evidence is unavailable", async () => {
-    mocks.listPublicKnowledgeEvidence.mockRejectedValue(new Error("offline"));
-    mocks.listPublicKnowledgeTopics.mockRejectedValue(new Error("offline"));
+    mocks.listPublicKnowledgeEvidence.mockRejectedValue(
+      new Error("service unavailable"),
+    );
+    mocks.listPublicKnowledgeTopics.mockRejectedValue(
+      new Error("service unavailable"),
+    );
     const { renderPublicKnowledgePage } =
       await import("../[locale]/knowledge/page");
     const html = renderToStaticMarkup(

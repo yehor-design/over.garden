@@ -170,7 +170,9 @@ describe("/", () => {
   });
 
   it("renders a recoverable localized feed error instead of an auth wall", async () => {
-    mocks.listPublicFeedPage.mockRejectedValue(new Error("database offline"));
+    mocks.listPublicFeedPage.mockRejectedValue(
+      new Error("database unavailable"),
+    );
 
     const html = renderToStaticMarkup(
       await HomeRoute({

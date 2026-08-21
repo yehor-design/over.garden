@@ -45,7 +45,7 @@ describe("/__visual-fixtures", () => {
       target: "local",
     });
     mocks.getVisualFixtureStatus.mockResolvedValue({
-      version: "ove187-v8",
+      version: "ove187-v9",
       expected: {
         actors: 8,
         profiles: 8,
@@ -168,10 +168,13 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("Expected object");
     expect(html).toContain("Expected entry");
     expect(html).toContain("workspace dense");
-    expect(html).toContain("Drafts");
-    expect(html).toContain("Queued 1 · failed 1");
+    expect(html).toContain("Owner-scoped server inventory");
+    expect(html).toContain("connection required");
+    expect(html).not.toContain("Queued 1 · failed 1");
     expect(html).toContain('href="/garden?visualWorkspace=dense"');
-    expect(html).toContain('href="/garden?visualWorkspace=offline"');
+    expect(html).toContain(
+      'href="/garden?visualWorkspace=connection-required"',
+    );
     expect(html).toContain("gardener dense");
     expect(html).toContain("blocked unavailable");
     expect(html).toContain("Profile follows");
@@ -203,8 +206,8 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("Comment · guest start");
     expect(html).toContain("Publish · permission recheck");
     expect(html).toContain("Bookmark · profile target");
-    expect(html).toContain("Save · follow-up draft permission changed");
-    expect(html).toContain("Seed draft and start");
+    expect(html).toContain("Save · network required and permission changed");
+    expect(html).toContain("Start intent");
     expect(html).toContain('href="/__visual-fixtures/intent/ove174-i001"');
     expect(html).toContain("authIntent=comment");
     expect(html).toContain("authIntent=create_object");

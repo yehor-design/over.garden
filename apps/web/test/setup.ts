@@ -1,4 +1,3 @@
-import "fake-indexeddb/auto";
 import "@/lib/object-group-by-polyfill";
 
 // Agent/dev shells often export VERCEL_ENV=production from .env.local.

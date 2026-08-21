@@ -1,6 +1,6 @@
 # Authenticated Mutation Admission
 
-Status: OVE-285 registry, OVE-290 high-risk enforcement, OVE-286 bounded browser rollout, OVE-291 remainder enforcement, and OVE-289 foreground autosync — implementation ready
+Status: OVE-285 registry, OVE-290 high-risk enforcement, OVE-286 bounded browser rollout, and OVE-291 remainder enforcement remain active. OVE-323 retired OVE-289 foreground autosync and every browser-journal storage producer.
 Baseline: `b53157a559c3a1087e8c53c142028ba0d9bcd5c2`
 Prerequisite: OVE-296 receipt `d05c0124f59c95b1db6db4d6e444c95d125218355b27ee87a793a7d31a08e152`
 
@@ -14,7 +14,7 @@ execution owner. It is the handoff contract for OVE-293 through OVE-295; it is
 not itself an admission implementation.
 
 OVE-285 itself is report-only. It changes no application runtime, database schema,
-provider state, production data, authentication behavior, cookie, offline
+provider state, production data, authentication behavior, cookie, browser-storage
 record, search document, media object, analytics event, or deployment setting.
 The test-only effect oracle is unreachable from production modules, and the
 runtime-import check fails closed if source or a built Next.js chunk imports its
@@ -28,31 +28,32 @@ The checked artifact is
 
 | Field                           |                                                      Checked value |
 | ------------------------------- | -----------------------------------------------------------------: |
-| Production source files         |                                                                611 |
-| Source nodes                    |                                                              2,626 |
-| Logical entrypoints             |                                                                327 |
-| Effect boundaries               |                                                                188 |
-| Consumer edges                  |                                                                674 |
-| Excluded entrypoints            |                                                                147 |
+| Production source files         |                                                                593 |
+| Source nodes                    |                                                              2,190 |
+| Logical entrypoints             |                                                                217 |
+| Effect boundaries               |                                                                167 |
+| Consumer edges                  |                                                                506 |
+| Excluded entrypoints            |                                                                 72 |
 | Retired-provider entrypoints    |                                                                  1 |
 | Unresolved nodes or entrypoints |                                                                  0 |
-| Registry digest                 | `e12440cfc1d7c70ddb60a1950fc5431ce811a61c93bf24470beea5b30d422727` |
-| Source-evidence digest          | `bc08f95477f1e072a200fe3e1cec08c0b01d0122cc4afe49c66d4a091e6b48e9` |
-| Receipt digest                  | `89ce1332582826b73ec6a855f4519db18f96d843abd76793cf210983cd9247d8` |
-| Artifact file SHA-256           | `cdf2cf0f2e9c990a6a947904a9ccb02d941f40f39fde38aee7bc6a3aafe8bac6` |
+| Registry digest                 | `a147908910898445fddeeead325748446c3004361f529b97eecafcee21377f29` |
+| Source-evidence digest          | `0dc5d0e017eecf9510959d0111d4e7c3440e748c892736f8420e35978b451ee5` |
+| Receipt digest                  | `cfe781930f04279dc082583b5ffff48e056594034f16ea228ea901c86737e80e` |
+| Artifact file SHA-256           | `35fa0472b6afe7cfb52950db81d15b1fc10cf7b039a7770d086ca1ed0aa78157` |
 
 The independently pinned Better Auth semantic adapter produced:
 
-- manifest digest `64249abce3b5c190a7d0ee2c9d4e29f78100e4688920a35486b1e29c1bfa0842`;
-- semantic source-evidence digest `1a7bbf8c1584e638e9395db76825d18856d3ac8dbb8e6e2d3fa954b79b70f84d`;
-- semantic receipt digest `016fc918f791e9cc6459115408fccfba8734399de22478194e8cc4819def9c18`.
+- manifest digest `7967e4374a6d24441ffee5d738dcfd9cf0ab18340c1f039fe411e32783491c56`;
+- semantic source-evidence digest `0eed120517f46162f449ac0d9de7117f9040ebcf0a5f086306fff2497c9fa880`;
+- semantic receipt digest `43c14d0b3e0eb764b9057498516d968ccd4f403b429de1ee11f4668b6a45df94`.
 
 The receipt binds the exact baseline, TypeScript and Better Auth toolchain,
 OVE-296 prerequisite receipt, normalized production-source evidence, and
 canonical registry bytes. A change to any bound input changes the receipt. The
-values above are the deterministic OVE-289 topology expansion after terminal
-OVE-291 enforcement; the original OVE-285, OVE-290, and OVE-291 terminal
-receipts remain preserved in their Linear closeouts and the execution roadmap.
+values above must be regenerated with the checked artifacts whenever the
+production graph changes. OVE-323 removed the OVE-289 expansion; the original
+OVE-285, OVE-290, OVE-291, and OVE-289 terminal receipts remain historical in
+their Linear closeouts and the execution roadmap.
 
 ## OVE-290 runtime enforcement
 
@@ -77,14 +78,14 @@ cross-origin R2 PUT.
 
 The separate enforcement artifact is
 `contracts/auth/authenticated-mutation-enforcement.v1.json` (SHA-256
-`ebb2843b6a91748f97846d000488983a4142ffbe15ecc68dad5a604b7a7b0c71`).
+`e0489a3762509dcd7fcedc2144ce5f1cee7a4f2958621b9d14ba256a4dea5d4b`).
 It binds registry digest
-`e12440cfc1d7c70ddb60a1950fc5431ce811a61c93bf24470beea5b30d422727`
+`a147908910898445fddeeead325748446c3004361f529b97eecafcee21377f29`
 and source receipt digest
-`89ce1332582826b73ec6a855f4519db18f96d843abd76793cf210983cd9247d8`.
-The original 36 OVE-290 entrypoints plus six OVE-289 local effect owners form
-42 enforced high-risk entrypoints and 296 consumer edges at 30 admission
-boundaries. All 125 remainder entrypoints and 350 consumer edges remain
+`cfe781930f04279dc082583b5ffff48e056594034f16ea228ea901c86737e80e`.
+The current server-side OVE-290 partition contains 14 enforced high-risk
+entrypoints and 141 consumer edges at 11 admission boundaries. All 125
+remainder entrypoints and 350 consumer edges remain
 `enforced_ove_291` at their 67 declared admission boundaries. The
 five-entrypoint, 15-edge OVE-295 partition remains reserved with ownership digest
 `9f9273ac6222c4e04cc77069dc14bfebc3860218d6791623055c27420687adad`;
@@ -92,24 +93,21 @@ OVE-286 capability-runtime paths remain distinct from mutation enforcement.
 
 Production imports only the generated bounded receipt
 `contracts/auth/authenticated-mutation-deployment-receipt.v1.json` (SHA-256
-`57b64b0e294e3241c39bc41e159235609fb578fde4cf4fbbe44bb11d144b7f09`,
+`7d53af323eebacf59ef6ac4f10aeae2a86c0c2d4ec4f31d047822baee21009bc`,
 canonical receipt digest
-`e78ffe225c7b20faf8419cf8dd97a26cc4fcf0eafa3ad7de800977a9510a3d82`).
+`b7ec91469c96d2e6b3db55f2f2b5d6123f21c1b28f7ea53d59a2ec43aed96ed5`).
 It contains the deployment-receipt schema, counts, and digests only. The full
 registry and enforcement graph remain build-time artifacts and their schema
 sentinels are forbidden from Next.js runtime chunks.
 
-Matching work preserves existing behavior. A valid owner transition emits one
-payload-free `DOCUMENT_OWNER_CHANGED` event into the existing terminal session
-invalidation path. A same-owner session refresh may automatically retry only
-one already-durable idempotent offline row, once, with the same owner and key;
-the read-only private/no-store continuity endpoint rechecks the old generation
-against the authoritative refreshed session before that retry, so a refresh
-resolved under another owner emits the owner-change result and performs no
-retry. Native/edit/publish/media actions never auto-replay. Explicit rollback
-sets `DOCUMENT_MUTATION_ADMISSION_ENABLED=false`, which disables envelope
-issuance and enforcement together while retaining Better Auth, request scope,
-owner predicates, media safety, and offline vault fences.
+Matching work preserves the active server-authoritative behavior. A valid owner
+transition emits one payload-free `DOCUMENT_OWNER_CHANGED` event into the
+terminal session invalidation path. No session refresh, focus, visibility, or
+connectivity observation replays a journal mutation. Native, edit, publish, and
+media actions retain current-tab intent for explicit retry only. Explicit
+rollback sets `DOCUMENT_MUTATION_ADMISSION_ENABLED=false`, which disables
+envelope issuance and enforcement together while retaining Better Auth,
+request scope, owner predicates, and media safety.
 
 ## OVE-286 bounded non-fencing rollout
 
@@ -159,44 +157,19 @@ digests derived from the bundled registry and enforcement artifacts. It never
 returns graph paths, identifiers, sessions, generations, content, provider
 state, or other protected evidence.
 
-## OVE-289 foreground-only autosync
+## Historical OVE-289 foreground autosync
 
-The authenticated garden mounts one document-local coordinator only after the
-session-convergence boundary has activated exactly one physical owner vault.
-The coordinator reads that already-authorized owner from the in-memory vault
-map; the root shell still serializes only authentication state and opaque signed
-generations, never a raw owner identity.
-
-The trigger enum is closed to `initial_scan`, `queue_changed`, `online`,
-`window_focus`, `document_visible`, and explicit `manual`. Synchronous triggers
-coalesce behind one owner/document lease, re-read the exact-owner queue, and
-return before admission or network when no row is eligible. A non-empty drain
-uses the shared OVE-290 3,000-millisecond continuity check before any claim,
-processes at most 24 rows per local batch, and rejects every late or stale
-completion. There is no Background Sync registration or handler, periodic
-timer, jitter, polling, scheduled retry, production analytics, or global wait
-UI.
-
-`queueRevision` and `automaticAttemptConsumedRevision` are additive fields on
-the existing IndexedDB record; no table or index migration is needed. The
-atomic owner-scoped claim consumes one automatic attempt for that exact
-revision across concurrent documents. Any admission, transport, server, or
-`Retry-After` failure leaves the row in manual recovery. Only an explicit
-manual action or a newly enqueued revision can attempt again; reload alone does
-not reset the marker. Expired crash claims also become manual-only.
-
-Manual controls use the same coordinator and fail closed when it is not
-mounted. Successful sync conditionally removes only a draft whose current
-`clientMutationId` still matches the synced intent, so a newer local edit is
-never deleted. The guarded synthetic browser harness proves all six triggers,
-empty-queue zero effect, partial and failed recovery, late owner/document
-completion, and responsive navigation, editing, locale, manual-sync, and
-sign-out controls in Ukrainian, Bulgarian, and Russian while admission reaches
-its exact deadline.
+OVE-289 previously owned a document-local queue coordinator and browser-storage
+effect owners. OVE-323 deleted that coordinator, its triggers, queue ownership,
+runtime imports, fixtures, and package dependencies. This section is retained
+only as provenance for the generated-registry contraction: current production
+code has no autosync mount, durable browser journal row, or automatic retry
+trigger. The structural audit keeps negative recognizers so any reintroduction
+fails the checked graph.
 
 ## Closed source policy
 
-The only production roots are `public/sw.js`, `sql`, and `src`. A path is
+The only production roots are `sql` and `src`. A path is
 excluded when an exact segment is one of:
 
 `__test__`, `__tests__`, `fixture`, `fixtures`, `snapshot`, `snapshots`,
@@ -209,9 +182,10 @@ finding rather than an implicit exclusion.
 
 The structural scan records imports, re-exports, typed action props, callbacks,
 route handlers, Server Actions, native forms, same-origin calls, Better Auth
-client calls, offline producers, contextual transactions, SQL triggers, and
-effect owners. Every ready source node is resolved and every evidence path is
-covered by the source-evidence digest.
+client calls, contextual transactions, SQL triggers, effect owners, and
+negative signatures for retired browser-storage producers. Every ready source
+node is resolved and every evidence path is covered by the source-evidence
+digest; current production source resolves zero retired producer entrypoints.
 
 ## Admission and effect model
 
@@ -231,13 +205,13 @@ Effect families are exactly:
 - `browser_cookie` and `browser_storage`;
 - `analytics_event` and `external_call`.
 
-The checked artifact contains at least one boundary for every family. Kysely
-transaction callbacks co-commit only proven canonical/outbox effects reached
-through the same executor. Dexie `rw` callbacks similarly collapse proven
-IndexedDB writes into one browser-storage transaction; ordinary `Map` and `Set`
-methods are not storage effects. Provider calls, cookies, projections, and
-best-effort effects remain separate true boundaries. Branch conditions,
-execution modes, and predecessor edges form an acyclic graph.
+The checked artifact contains at least one boundary for every active family.
+Kysely transaction callbacks co-commit only proven canonical/outbox effects
+reached through the same executor. The audit retains Dexie and IndexedDB
+recognizers only as negative fixtures so a retired producer cannot be mistaken
+for an ordinary in-memory `Map` or `Set` mutation. Provider calls, cookies,
+projections, and best-effort effects remain separate true boundaries. Branch
+conditions, execution modes, and predecessor edges form an acyclic graph.
 
 The test-only effect oracle consumes the registry instance-locally. Rejected
 admission emits zero boundary receipts; accepted admission emits each reachable
@@ -265,16 +239,16 @@ re-audited.
 The registry assigns every effectful entrypoint to exactly one downstream
 owner:
 
-- `high_risk_ove_290`: 42 journal/media/offline mutation paths, including the
-  six OVE-289 local effect owners;
+- `high_risk_ove_290`: current journal and media mutation paths after removal of
+  all six historical OVE-289 local effect owners;
 - `capability_runtime_ove_286`: 7 owner-session and owner-composer capability
   paths;
 - `owned_by_ove_295`: 5 explicit-linking paths;
 - `remaining_ove_291`: 125 remainder effectful paths, now enforced.
 
-The remaining 148 non-effectful paths are `excluded_with_reason`, including the
-one retired-provider entrypoint. Owner sets are disjoint by construction and
-validation.
+The remaining 73 non-enforced paths map to `excluded_with_reason`: 72 excluded
+entrypoints plus one retired-provider entrypoint. Owner sets are disjoint by
+construction and validation.
 
 ## Determinism and bounded execution
 
@@ -303,7 +277,7 @@ pnpm exec tsx scripts/authenticated-mutation-enforcement-receipt.ts --check
 ```
 
 It verifies final registry/source-receipt digest binding, the complete enforced
-42/296 high-risk and 125/350 remainder stable-ID sets, all 30 high-risk and 67
+14/141 high-risk and 125/350 remainder stable-ID sets, all 11 high-risk and 67
 remainder live pre-effect guard bodies, deterministic bytes, the frozen
 explicit-Google-link partition, and the committed enforcement artifact.
 

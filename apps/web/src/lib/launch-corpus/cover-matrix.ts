@@ -1,6 +1,6 @@
 /**
  * OVE-199 cover/reorder/lifecycle matrix covered by local fixtures + unit proof.
- * Does not mutate VISUAL_FIXTURE_MANIFEST (ove187-v8 hash stays frozen).
+ * Does not mutate the current VISUAL_FIXTURE_MANIFEST (ove187-v9 hash stays frozen).
  */
 
 export const LAUNCH_CORPUS_LOCAL_COVER_MATRIX = [

@@ -39,7 +39,7 @@ vi.mock("@/lib/garden/online-journal-draft", () => ({
   }),
 }));
 
-import { GardenDraftResumePanel } from "@/app/garden/draft-resume-panel";
+import { ServerDraftResumePanel } from "@/app/garden/server-draft-resume-panel";
 import { interfaceLocaleChangeCoordinator } from "@/lib/interface-locale-change-coordinator";
 import type { JournalEntryDraftReceiptV1 } from "@/lib/garden/entry-contracts";
 
@@ -55,7 +55,7 @@ describe("server draft locale mutation fence", () => {
     let renderer: ReactTestRenderer;
     await act(async () => {
       renderer = create(
-        <GardenDraftResumePanel drafts={[DRAFT]} locale="bg" />,
+        <ServerDraftResumePanel drafts={[DRAFT]} locale="bg" />,
       );
     });
 

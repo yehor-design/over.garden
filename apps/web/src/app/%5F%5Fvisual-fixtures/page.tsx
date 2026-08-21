@@ -28,7 +28,6 @@ import {
   type VisualFixtureMediaAspect,
 } from "@/lib/visual-fixtures/manifest";
 import { cn } from "@/lib/utils";
-import { VisualIntentDraftTrigger } from "./visual-intent-draft-trigger";
 import { VisualJournalCreationControls } from "./visual-journal-creation-controls";
 
 export const dynamic = "force-dynamic";
@@ -432,7 +431,7 @@ export default async function VisualFixtureIndexPage() {
           <div>
             <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <PanelsTopLeft className="size-4" aria-hidden="true" />
-              Owner-scoped inventory, continuity, drafts, and recovery states
+              Owner-scoped server inventory, continuity, and recovery states
             </p>
             <h2
               id="workspace-evidence-heading"
@@ -452,7 +451,9 @@ export default async function VisualFixtureIndexPage() {
                         {scenario.id.replaceAll("-", " ")}
                       </h3>
                       <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                        {scenario.online ? "online" : "offline"}
+                        {scenario.serverAvailable
+                          ? "server available"
+                          : "connection required"}
                       </span>
                     </div>
                     <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
@@ -471,14 +472,6 @@ export default async function VisualFixtureIndexPage() {
                       <PassportEvidenceFact
                         label="Recent"
                         value={String(scenario.expectedRecentCount)}
-                      />
-                      <PassportEvidenceFact
-                        label="Drafts"
-                        value={String(scenario.draftCount)}
-                      />
-                      <PassportEvidenceFact
-                        label="Queue"
-                        value={`Queued ${scenario.queuedCount} · failed ${scenario.failedCount}`}
                       />
                     </dl>
                     <Link
@@ -541,8 +534,12 @@ export default async function VisualFixtureIndexPage() {
                         value={scenario.objectKind.replaceAll("_", " ")}
                       />
                       <PassportEvidenceFact
-                        label="Network"
-                        value={scenario.online ? "online" : "offline"}
+                        label="Server"
+                        value={
+                          scenario.serverAvailable
+                            ? "available"
+                            : "connection required"
+                        }
                       />
                       <PassportEvidenceFact
                         label="Save"
@@ -834,25 +831,16 @@ export default async function VisualFixtureIndexPage() {
                       </span>
                     </div>
                     <div className="mt-auto flex flex-wrap gap-2">
-                      {scenario.draftKind ? (
-                        <VisualIntentDraftTrigger
-                          kind={scenario.draftKind}
-                          ownerUserId={VISUAL_FIXTURE_MANIFEST.actors[0].id}
-                          objectId={scenario.target?.ref}
-                          startPath={scenario.startPath}
-                        />
-                      ) : (
-                        <Link
-                          href={scenario.startPath}
-                          className={buttonVariants({
-                            variant: "outline",
-                            size: "sm",
-                          })}
-                        >
-                          Start intent
-                          <ArrowUpRight aria-hidden="true" />
-                        </Link>
-                      )}
+                      <Link
+                        href={scenario.startPath}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
+                      >
+                        Start intent
+                        <ArrowUpRight aria-hidden="true" />
+                      </Link>
                       <Link
                         href={scenario.resumePath}
                         className={buttonVariants({

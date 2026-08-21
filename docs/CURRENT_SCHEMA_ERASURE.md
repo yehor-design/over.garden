@@ -62,49 +62,43 @@ Rekey those columns to the synthetic erased subject before deleting the auth use
 
 ## Browser-local retirement and cleanup
 
-ADR-0017 forbids new durable browser journal writes. OVE-322 owns the only
-successor: an exact-owner, read-only retirement bridge for legacy device state.
-The bridge may migrate or delete verified residue on the returning physical
-target, but it cannot accept a new local write or turn an unreachable device
-into an erasure-success claim. Its exact transfer, discard, foreign-owner
-retention, and two-read absence rules live in
-`docs/LEGACY_DEVICE_DATA_RETIREMENT.md`.
+ADR-0017 forbids new durable browser journal writes. OVE-323 removed the offline
+runtime and the explicit erasure-page device control after OVE-322 completed its
+temporary migration window. The only current successor is
+`apps/web/src/lib/retirement/known-client-storage.ts`: a dependency-free,
+name-only returning-device boundary that may enumerate exact known database,
+service-worker, and cache names and delete only targets whose OVE-322 control
+state is terminal. It never hydrates journal content or writes server data.
 
 Server-side account erasure cannot reach IndexedDB on an absent or different
 browser and therefore must not claim that browser-local work was deleted.
-`purgeErasedOwnerOfflineStore(ownerUserId)` remains a bounded compatibility
-helper for exact-owner residue in the known legacy `overgarden-offline`
-database; it is not a remote-erasure receipt and has no ordinary product caller.
+An unresolved legacy owner binding is retained fail-closed and reported by the
+returning-device boundary; it is not a remote-erasure receipt.
 
 Historical implementation status (2026-08-13): OVE-288 added the separate
 signed-in current-device control documented in `docs/OFFLINE_OWNER_VAULT.md`.
-ADR-0017 makes that document non-operative except as OVE-322 retirement
-provenance. The existing action resolves the current
-authoritative owner binding, fences and deletes only that physical target,
-removes exact-owner legacy rows (including synced/privacy-blocked residue), and
-shows confirmation only after an independent target-nonexistence check and
-zero-row legacy read-back. Ordinary sign-out, account switching, and submission
-of the non-destructive server erasure request delete no browser vault.
+ADR-0017 makes that document non-operative retirement provenance. OVE-323
+removed its route, server owner, and current-device action. Ordinary sign-out,
+account switching, and submission of the non-destructive server erasure request
+do not claim to clean an unreachable browser.
 
-Implementation status (2026-08-21): OVE-322 mounts a non-blocking retirement
-banner only after exact authenticated session convergence, keeps safe sign-out
-available, and performs no browser deletion before authoritative server
-verification. The explicit `/erasure` current-device action remains a separate
-exact-device cleanup control during this temporary window. Neither surface may
-clear cookies, session state, unrelated origin storage, another-owner records,
-or an unreachable browser.
+Implementation status (2026-08-21): the reduced OVE-323 boundary is non-blocking
+for guests and authenticated users, keeps safe sign-out available when a session
+exists, and deletes no unresolved owner database. It may not clear cookies,
+session state, unrelated origin storage, another-owner records, or an
+unreachable browser.
 
 ## Verification
 
 ```bash
-# Historical retirement-window verification; OVE-322 re-pins this read-only proof.
+# Current server erasure and returning-device successor verification.
 cd apps/web
 pnpm erasure:schema-coverage:check
 pnpm test src/server/erasure-dry-run.test.ts src/server/erasure-execution.test.ts \
   src/server/erasure-schema-coverage.test.ts \
   src/server/erasure-request-repository.test.ts src/server/erasure-request-access.test.ts \
-  src/lib/offline/owner-session-lifecycle.test.ts \
-  src/lib/offline/owner-vault-migration.test.ts
+  src/lib/retirement/known-client-storage.test.ts \
+  src/lib/retirement/legacy-device-retirement.test.ts
 pnpm smoke:erasure-workflow -- --environment local --confirm-environment local
 ```
 

@@ -7,7 +7,7 @@ import {
   type AuthIntentTarget,
 } from "@/lib/auth/auth-intent-contract";
 
-export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v8";
+export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v9";
 export const VISUAL_FIXTURE_NAMESPACE =
   `visual-fixtures/${VISUAL_FIXTURE_MANIFEST_VERSION}` as const;
 
@@ -112,7 +112,7 @@ export type VisualFixtureScenarioKind =
   | "owner-workspace-sparse"
   | "owner-workspace-typical"
   | "owner-workspace-dense"
-  | "owner-workspace-offline"
+  | "owner-workspace-connection-required"
   | "owner-workspace-loading"
   | "owner-workspace-partial-error"
   | "owner-workspace-error"
@@ -533,7 +533,7 @@ export type VisualFixtureWorkspaceState =
   | "sparse"
   | "typical"
   | "dense"
-  | "offline"
+  | "connection-required"
   | "loading"
   | "partial-error"
   | "error";
@@ -558,10 +558,7 @@ export interface VisualFixtureWorkspaceScenarioEvidence {
   expectedSpaceIds: readonly string[];
   expectedObjectIds: readonly string[];
   expectedRecentEntryIds: readonly string[];
-  online: boolean;
-  draftCount: number;
-  queuedCount: number;
-  failedCount: number;
+  serverAvailable: boolean;
   mediaProcessingCount: number;
   mediaFailedCount: number;
   faultSections: readonly VisualFixtureWorkspaceFaultSection[];
@@ -586,7 +583,7 @@ export type VisualFixtureCreationState =
   | "publish"
   | "backdated"
   | "privacy"
-  | "offline"
+  | "connection-required"
   | "error"
   | "cancel"
   | "duplicate";
@@ -611,8 +608,8 @@ export interface VisualFixtureCreationScenarioEvidence {
   coarseRegionCode: string | null;
   topicTagInput: string;
   mediaFileName: string | null;
-  online: boolean;
-  submitState: "idle" | "queued" | "syncing" | "synced" | "failed";
+  serverAvailable: boolean;
+  submitState: "idle" | "saving" | "saved" | "connection_required" | "failed";
   message: string;
   detailsOpen: boolean;
   path: string;
@@ -631,7 +628,6 @@ export interface VisualFixtureCreationScenarioEvidence {
   resetOwnedObjectIds: readonly string[];
   resetOwnedEntryIds: readonly string[];
   resetOwnedMediaAssetIds: readonly string[];
-  dexieDraftKey: string | null;
   expectedStatus: 200;
   viewportTargets: readonly ["desktop", "mobile-320"];
 }
@@ -659,7 +655,7 @@ export type VisualFixtureIntentState =
   | "deleted_410"
   | "now_private"
   | "insufficient_permission"
-  | "draft_retained";
+  | "network_required";
 
 export interface VisualFixtureIntentScenario {
   id: string;
@@ -671,7 +667,6 @@ export interface VisualFixtureIntentScenario {
   startPath: string;
   resumePath: string;
   tokenMode: "valid" | "expired" | "invalid";
-  draftKind?: "first_entry" | "follow_up_entry";
   expectedStatus: 200 | 404 | 410;
   viewportTargets: readonly ("desktop" | "mobile-320")[];
 }
@@ -1891,10 +1886,10 @@ const creationEvidence: VisualFixtureCreationEvidence = {
     creationScenario(6, {
       flow: "first-entry",
       state: "draft",
-      label: "First object · restored local draft",
+      label: "First object · restored server draft",
       objectName: "Чернетка лимона",
       entryBody: "Листя відновило тургор після поливу.",
-      message: "Draft restored on this device.",
+      message: "Server draft restored for this account.",
     }),
     creationScenario(7, {
       flow: "first-entry",
@@ -1908,13 +1903,13 @@ const creationEvidence: VisualFixtureCreationEvidence = {
     }),
     creationScenario(8, {
       flow: "first-entry",
-      state: "offline",
-      label: "First object · offline queued",
-      objectName: "Офлайн перець",
-      entryBody: "Збережено під час роботи без мережі.",
-      online: false,
-      submitState: "queued",
-      message: "Saved on this device. It will sync when you are online.",
+      state: "connection-required",
+      label: "First object · connection required",
+      objectName: "Перець без з’єднання",
+      entryBody: "Поточний текст не збережено через відсутнє з’єднання.",
+      serverAvailable: false,
+      submitState: "connection_required",
+      message: "Connection required. Current text was not saved.",
     }),
     creationScenario(9, {
       flow: "first-entry",
@@ -1929,10 +1924,10 @@ const creationEvidence: VisualFixtureCreationEvidence = {
     creationScenario(10, {
       flow: "first-entry",
       state: "cancel",
-      label: "First object · cancel with draft retained",
+      label: "First object · cancel with server draft retained",
       objectName: "Чернетка перед виходом",
-      entryBody: "Незавершений запис лишається на цьому пристрої.",
-      message: "Cancel returns to the garden and keeps this local draft.",
+      entryBody: "Незавершений запис уже підтверджено сервером як чернетку.",
+      message: "Cancel returns to the garden and keeps the server draft.",
     }),
     creationScenario(11, {
       flow: "first-entry",
@@ -1940,7 +1935,7 @@ const creationEvidence: VisualFixtureCreationEvidence = {
       label: "First object · duplicate retry readback",
       objectName: "Томат без дубліката",
       entryBody: "Повторна відправка повернула вже створений запис.",
-      submitState: "synced",
+      submitState: "saved",
       message: "Already saved. No duplicate object or entry was created.",
     }),
     creationScenario(12, {
@@ -1959,16 +1954,16 @@ const creationEvidence: VisualFixtureCreationEvidence = {
     creationScenario(14, {
       flow: "follow-up",
       state: "draft",
-      label: "Next update · restored local draft",
+      label: "Next update · restored server draft",
       entryBody: "Чернетка порівнює стан із попереднім тижнем.",
-      message: "Draft restored on this device.",
+      message: "Server draft restored for this account.",
     }),
     creationScenario(15, {
       flow: "follow-up",
       state: "publish",
       label: "Next update · private save before explicit publish",
       entryBody: "Запис готовий до окремого підтвердження публікації.",
-      submitState: "synced",
+      submitState: "saved",
       message:
         "Saved privately. Publishing remains a separate explicit action.",
     }),
@@ -1989,12 +1984,12 @@ const creationEvidence: VisualFixtureCreationEvidence = {
     }),
     creationScenario(18, {
       flow: "follow-up",
-      state: "offline",
-      label: "Next update · offline queued",
-      entryBody: "Наступний запис збережено без мережі.",
-      online: false,
-      submitState: "queued",
-      message: "Saved on this device. It will sync when you are online.",
+      state: "connection-required",
+      label: "Next update · connection required",
+      entryBody: "Поточний текст не збережено через відсутнє з’єднання.",
+      serverAvailable: false,
+      submitState: "connection_required",
+      message: "Connection required. Current text was not saved.",
     }),
     creationScenario(19, {
       flow: "follow-up",
@@ -2009,7 +2004,7 @@ const creationEvidence: VisualFixtureCreationEvidence = {
       state: "duplicate",
       label: "Next update · duplicate retry readback",
       entryBody: "Повторна відправка не створила другий запис.",
-      submitState: "synced",
+      submitState: "saved",
       message: "Already saved. No duplicate journal entry was created.",
     }),
   ],
@@ -2618,16 +2613,13 @@ const intentEvidence: VisualFixtureIntentEvidence = {
       "guest",
       "/garden",
     ),
-    {
-      ...intentScenario(
-        7,
-        "save",
-        "Save · retained first-entry draft",
-        "draft_retained",
-        "/garden?tab=drafts",
-      ),
-      draftKind: "first_entry",
-    },
+    intentScenario(
+      7,
+      "save",
+      "Save · sign-in and network required",
+      "network_required",
+      "/garden",
+    ),
     intentScenario(
       8,
       "publish",
@@ -2711,16 +2703,13 @@ const intentEvidence: VisualFixtureIntentEvidence = {
       `/?topic=${feedEvidence.denseTopicSlug}&cursor=fixture-page-2&tab=journal&sort=newest`,
       { kind: "collection", ref: feedEvidence.denseTopicSlug },
     ),
-    {
-      ...intentScenario(
-        17,
-        "create_entry",
-        "Add journal entry · retained draft",
-        "draft_retained",
-        "/garden?tab=drafts&entry=fixture-draft-17",
-      ),
-      draftKind: "first_entry",
-    },
+    intentScenario(
+      17,
+      "create_entry",
+      "Add journal entry · sign-in and network required",
+      "network_required",
+      "/garden",
+    ),
     intentScenario(
       18,
       "bookmark",
@@ -2729,19 +2718,16 @@ const intentEvidence: VisualFixtureIntentEvidence = {
       `/@${actors[0].handle}`,
       { kind: "profile", ref: actors[0].handle },
     ),
-    {
-      ...intentScenario(
-        19,
-        "save",
-        "Save · follow-up draft permission changed",
-        "draft_retained",
-        `/garden/objects/${objects[0].id}`,
-        { kind: "object", ref: objects[0].id },
-        "valid",
-        404,
-      ),
-      draftKind: "follow_up_entry",
-    },
+    intentScenario(
+      19,
+      "save",
+      "Save · network required and permission changed",
+      "network_required",
+      `/garden/objects/${objects[0].id}`,
+      { kind: "object", ref: objects[0].id },
+      "valid",
+      404,
+    ),
     intentScenario(
       20,
       "report",
@@ -4478,12 +4464,6 @@ export function validateVisualFixtureManifest(
     } catch {
       errors.push(`Intent scenario ${intent.id} has an invalid auth contract.`);
     }
-    if (intent.state === "draft_retained" && !intent.draftKind) {
-      errors.push(`Intent scenario ${intent.id} does not seed a real draft.`);
-    }
-    if (intent.state !== "draft_retained" && intent.draftKind) {
-      errors.push(`Intent scenario ${intent.id} has an unexpected draft seed.`);
-    }
   }
 
   for (const workspace of manifest.workspaceEvidence.scenarios) {
@@ -4562,10 +4542,7 @@ function buildWorkspaceEvidence(): VisualFixtureWorkspaceEvidence {
     options: Partial<
       Pick<
         VisualFixtureWorkspaceScenarioEvidence,
-        | "online"
-        | "draftCount"
-        | "queuedCount"
-        | "failedCount"
+        | "serverAvailable"
         | "mediaProcessingCount"
         | "mediaFailedCount"
         | "faultSections"
@@ -4605,10 +4582,7 @@ function buildWorkspaceEvidence(): VisualFixtureWorkspaceEvidence {
       expectedSpaceIds: ownerSpaces.map((space) => space.id),
       expectedObjectIds: ownerObjects.map((object) => object.id),
       expectedRecentEntryIds: ownerEntries.slice(0, 8).map((entry) => entry.id),
-      online: options.online ?? true,
-      draftCount: options.draftCount ?? 0,
-      queuedCount: options.queuedCount ?? 0,
-      failedCount: options.failedCount ?? 0,
+      serverAvailable: options.serverAvailable ?? true,
       mediaProcessingCount: options.mediaProcessingCount ?? 0,
       mediaFailedCount: options.mediaFailedCount ?? 0,
       faultSections: options.faultSections ?? [],
@@ -4624,21 +4598,20 @@ function buildWorkspaceEvidence(): VisualFixtureWorkspaceEvidence {
       scenarioFor("workspace-guest", "guest", null),
       scenarioFor("workspace-empty", "empty", actors[4]),
       scenarioFor("workspace-sparse", "sparse", actors[5]),
-      scenarioFor("workspace-typical", "typical", actors[1], {
-        draftCount: 1,
-      }),
+      scenarioFor("workspace-typical", "typical", actors[1]),
       scenarioFor("workspace-dense", "dense", actors[0], {
-        draftCount: 2,
         mediaProcessingCount: 1,
       }),
-      scenarioFor("workspace-offline", "offline", actors[0], {
-        online: false,
-        draftCount: 2,
-        queuedCount: 1,
-        failedCount: 1,
-        mediaProcessingCount: 1,
-        mediaFailedCount: 1,
-      }),
+      scenarioFor(
+        "workspace-connection-required",
+        "connection-required",
+        actors[0],
+        {
+          serverAvailable: false,
+          mediaProcessingCount: 1,
+          mediaFailedCount: 1,
+        },
+      ),
       scenarioFor("workspace-loading", "loading", actors[0]),
       scenarioFor("workspace-partial-error", "partial-error", actors[0], {
         faultSections: ["recent"],
@@ -4685,8 +4658,8 @@ function workspaceScenarioKind(
       return "owner-workspace-typical";
     case "dense":
       return "owner-workspace-dense";
-    case "offline":
-      return "owner-workspace-offline";
+    case "connection-required":
+      return "owner-workspace-connection-required";
     case "loading":
       return "owner-workspace-loading";
     case "partial-error":
@@ -7238,7 +7211,7 @@ type VisualFixtureCreationScenarioInput = Pick<
       | "coarseRegionCode"
       | "topicTagInput"
       | "mediaFileName"
-      | "online"
+      | "serverAvailable"
       | "submitState"
       | "message"
       | "detailsOpen"
@@ -7274,9 +7247,12 @@ function creationScenario(
   const expectedSpaceId = fixtureObject?.spaceId ?? fixtureUuid(17, index);
   const expectedObjectId = fixtureObject?.id ?? fixtureUuid(18, index);
   const expectedEntryId = fixtureUuid(19, index);
-  const expectedServerWrite = !["draft", "offline", "error", "cancel"].includes(
-    input.state,
-  );
+  const expectedServerWrite = ![
+    "draft",
+    "connection-required",
+    "error",
+    "cancel",
+  ].includes(input.state);
   const expectedMediaAssetIds =
     expectedServerWrite && input.mediaFileName ? [fixtureUuid(20, index)] : [];
   const path =
@@ -7314,7 +7290,7 @@ function creationScenario(
         : null,
     topicTagInput: input.topicTagInput ?? "",
     mediaFileName: input.mediaFileName ?? null,
-    online: input.online ?? true,
+    serverAvailable: input.serverAvailable ?? true,
     submitState: input.submitState ?? "idle",
     message:
       input.message ??
@@ -7340,12 +7316,6 @@ function creationScenario(
     resetOwnedObjectIds: input.flow === "first-entry" ? [expectedObjectId] : [],
     resetOwnedEntryIds: [expectedEntryId],
     resetOwnedMediaAssetIds: expectedMediaAssetIds,
-    dexieDraftKey:
-      input.state === "draft" || input.state === "cancel"
-        ? input.flow === "first-entry"
-          ? "first-entry"
-          : `follow-up-entry:${fixtureObject!.id}`
-        : null,
     expectedStatus: 200,
     viewportTargets: ["desktop", "mobile-320"],
   };

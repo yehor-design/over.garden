@@ -1,9 +1,9 @@
 # Online-only journal save protocol
 
 Status: server draft protocol implemented by OVE-321 and activated across all
-four composer journeys by OVE-325. OVE-322 adds the temporary returning-device
-retirement bridge documented in `docs/LEGACY_DEVICE_DATA_RETIREMENT.md`;
-OVE-323 owns its removal together with the remaining offline/PWA runtime.
+four composer journeys by OVE-325. OVE-323 removed OVE-322's temporary content
+bridge and the complete offline/PWA runtime; the reduced exact-name cleanup is
+documented in `docs/LEGACY_DEVICE_DATA_RETIREMENT.md`.
 
 ADR-0017 is the connectivity authority. A journal change is durable only after
 the server returns an authoritative receipt. Browser memory may keep the text
@@ -110,10 +110,11 @@ offline browser events never cause replay.
 
 The authenticated workspace lists owner-scoped server drafts and resumes their
 exact route contexts. The four composer callers, workspace panel, cover
-controls, and photo selectors create no durable browser journal state. The only
-production module allowed to import the historical offline runtime is the
-read-only OVE-322 retirement bridge. New documents do not register the legacy
-service worker.
+controls, and photo selectors create no durable browser journal state. No
+production module imports the historical offline runtime. New documents expose
+no manifest, installable PWA shell, legacy worker registration, or retired
+icons. The separate dependency-free exact-name cleanup reads no journal
+content and is not an authoring owner.
 
 Current final journal publication and both media mutation routes send the
 positive `x-overgarden-online-journal-protocol` marker. An authenticated
@@ -145,9 +146,7 @@ or bulk-deleting drafts requires separate maintainer sign-off.
 
 No closeout may claim that legacy browser data was remotely removed. Devices
 that never reconnect cannot be inspected or cleaned by the server. OVE-322's
-temporary bridge transfers and verifies exact current-owner records, retains
-another-owner or uncertain state, and requires two physical absence reads
-before exact-device completion. The localized non-blocking transfer banner
-exists only from the OVE-322 deployment through the OVE-323 production
-deployment. OVE-323 owns final bridge/runtime/package/service-worker retirement
-after those proofs.
+temporary content-transfer bridge is historical after OVE-323. The surviving
+localized boundary deletes only exact known physical names, retains unresolved
+or unrelated state, and requires two physical absence reads. It does not
+restore a bridge, runtime package, PWA surface, or service-worker asset.

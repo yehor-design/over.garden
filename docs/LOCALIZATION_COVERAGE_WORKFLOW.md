@@ -176,7 +176,7 @@ When adding a page, layout, handler, rendered state, or visible component:
 1. Register the exact source and rendered owner with every required attribute.
 2. Extend an existing typed locale namespace, or add one exact-parity loader.
 3. Add every behavior-relevant state: loading, empty, dense, pagination,
-   validation, success, error, unauthorized, archived, `404`/`410`, offline,
+   validation, success, error, unauthorized, archived, `404`/`410`, connection-required,
    dialog/menu/tooltip/toast, and raw lifecycle output.
 4. Select the market-specific control rule and one owner. Never add an ad hoc
    second switcher.

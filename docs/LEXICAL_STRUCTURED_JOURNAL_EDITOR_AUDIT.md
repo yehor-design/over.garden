@@ -9,8 +9,8 @@ and does not authorize an unreviewed dependency upgrade.
 ## Decision
 
 Replace the transient Editor.js owner composer with one native Lexical editor
-while keeping `JournalDocumentV1` schema version 1 as the only durable,
-offline, API, render, privacy, media, and search document. The migration needs
+while keeping `JournalDocumentV1` schema version 1 as the only persistence,
+server-draft, API, render, privacy, media, and search document. The migration needs
 no SQL or stored-data conversion. A failed rollout is reversed by promoting
 the previous exact deployment or reverting the implementation commit.
 
@@ -54,7 +54,7 @@ production build, and bundle inspection are the final compatibility gates.
 | Immutable editor state and committed snapshots      | `supported_native`                                     | Read/export only from committed `EditorState`; never use DOM as source of truth.                                                                                                                                               |
 | Native selection, commands, transforms, and history | `supported_native`                                     | Formatting, insertion, reorder, focus, undo, and redo use Lexical APIs.                                                                                                                                                        |
 | React lifecycle with one stable extension graph     | `supported_native`                                     | Mount with `LexicalExtensionComposer`; owner/document changes deliberately remount the binding.                                                                                                                                |
-| Asynchronous owner-draft hydration                  | `supported_custom`                                     | First-entry, space-entry, and follow-up owners hold the client island in a localized loading state until IndexedDB hydration settles; edit starts from its synchronous canonical document.                                     |
+| Asynchronous server-draft hydration                 | `supported_custom`                                     | All four owners hold the client island in a localized loading state until the authenticated server-draft request settles; edit starts from its synchronous canonical document and then reconciles the server draft.             |
 | Paragraph and H2/H3                                 | `supported_native`                                     | `ParagraphNode` and `HeadingNode`; H1 and other headings are rejected.                                                                                                                                                         |
 | Ordered/unordered list, depth at most two           | `supported_native` plus application replacement policy | `OverGardenListNode extends ListNode` retains native list commands/items/numbering while suppressing stock adjacent-list coalescing; checklist, custom starts, unsupported item presentation, and deeper nesting are rejected. |
 | Bold, italic, and safe link only                    | `supported_native` plus application validation         | `TextNode` format bits and `LinkNode`; all other formats fail closed on export.                                                                                                                                                |
@@ -120,10 +120,10 @@ historical string allowlisting.
   media IDs with `listJournalDocumentImageMediaIds`. Malformed canonical content
   aborts before the media query and produces no update or enqueue.
 - Precise-location, owner/session generation, revision CAS, idempotency,
-  offline-vault, public projection, and search boundaries remain outside and
+  server-draft, client-retirement, public projection, and search boundaries remain outside and
   authoritative over the editor.
-- Async create-flow draft owners do not mount Lexical until owner-scoped
-  IndexedDB hydration succeeds or fails closed, so the immutable initial state
+- Async draft owners do not mount Lexical until the authenticated server read
+  succeeds or fails closed, so the immutable initial state
   cannot race ahead of a restored canonical document.
 - A destroyed or superseded binding unregisters listeners/commands, cancels
   scheduled work, releases locale/reorder participants, and rejects late
@@ -157,7 +157,7 @@ experimental production dependency. Merge and rollout remain blocked unless:
    transform, reorder, undo, and redo;
 2. hostile and unknown internal state fails closed and safe paste produces zero
    prohibited network/public effect;
-3. all four owner callers, offline/session/media/privacy/search/read boundaries,
+3. all four owner callers, server-draft/session/media/privacy/search/read boundaries,
    1,500 ms recovery, and the 34 ms mutation budget pass;
 4. real-browser and maintainer-authorized device-equivalent accessibility/IME
    evidence passes with its residual risks stated, without inflating the result

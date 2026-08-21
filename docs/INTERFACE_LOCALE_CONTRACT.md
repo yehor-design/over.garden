@@ -177,7 +177,7 @@ product mutation. One shared coordinator owns it across all Bulgaria surfaces:
    copies a draft, token, upload, journal text, object data, or mutation payload
    into a URL, cookie, header, analytics event, or locale request.
 
-Existing draft, offline queue, media, auth-intent, and current-session exit
+Existing server draft, media, auth-intent, and current-session exit
 boundaries must register with this coordinator where their current rendered
 state can be dirty or in flight. The coordinator must remain extensible; a
 future editor/photo/cover slice must extend it rather than fork language-change
@@ -198,7 +198,8 @@ every currently rendered product state, and the payload-free
 ledger for downstream UI, but it does not claim that nonexistent UI passed.
 
 - OVE-317 preserves OVE-202's Cyrillic IME/serialization, ten-inline-photo,
-  inline-upload, conflict, offline, and failed-flush locale-transition proof.
+  inline-upload, conflict, connection-required refusal, and failed-flush
+  locale-transition proof.
   Its editor must consume the shared proportional token, use the real italic
   face, and persist no `font-family` styling in the structured document.
   OVE-202 records `browser-backed` proof with scenario
@@ -230,7 +231,8 @@ not block OVE-205 after OVE-205's own current-surface and exact-SHA gates pass.
 Translate interface-owned content:
 
 - navigation and application chrome;
-- commands, labels, forms, validation, recovery, loading, empty, offline, and
+- commands, labels, forms, validation, recovery, loading, empty,
+  connection-required, and
   error states;
 - application-authored metadata and structured interface copy;
 - application-authored editorial and aggregation copy where the route supports
@@ -284,7 +286,7 @@ artifacts must not encode or vary on locale cookies, account state, private
 content, or precise location.
 
 Locale branches must not alter repositories, authorization, visibility,
-publication, lifecycle, search-index eligibility, idempotency, offline schemas,
+publication, lifecycle, search-index eligibility, idempotency, client-retirement boundaries,
 media processing, analytics semantics, or domain mutations. Public photos
 remain processed derivatives only, and precise user location remains locked.
 

@@ -101,11 +101,11 @@ describe("OVE-205 executable localization browser contract", () => {
     ).toBe("/ru/knowledge?__visualKnowledge=error#results");
     expect(
       resolveLocalizationMarketCaseRoute({
-        route: "/ru/garden?visualWorkspace=offline#composer",
+        route: "/ru/garden?visualWorkspace=connection-required#composer",
         routeMode: "same-path-preference",
         plan: russian,
       }),
-    ).toBe("/garden?visualWorkspace=offline#composer");
+    ).toBe("/garden?visualWorkspace=connection-required#composer");
   });
 
   it("counts only the declared shared control owner and fails duplicate/hidden controls", () => {

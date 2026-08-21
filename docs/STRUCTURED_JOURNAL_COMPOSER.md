@@ -52,8 +52,8 @@ fork save, recovery, media, locale, or conflict behavior.
 One stable extension identity is created per mounted owner/document binding.
 All four flows finish their owner-scoped server-draft hydration before enabling
 that binding, so Lexical captures the restored canonical document rather than
-an empty pre-hydration snapshot. No active composer hydrates or writes an
-IndexedDB draft.
+an empty pre-hydration snapshot. No active composer hydrates or writes durable
+browser journal state.
 Semantic committed changes advance one monotonically increasing generation;
 selection-only and hydration updates do not emit canonical changes.
 `flushLatest` waits at most 1,500 ms through composition or reorder, then exports

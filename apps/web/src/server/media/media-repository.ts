@@ -414,7 +414,7 @@ export async function updateMediaAssetFocalForOwner(
 
     // OVE-242: a focal change rewrites how the public cover is presented, so
     // the projection intent commits with the revision bump instead of being
-    // enqueued afterwards by the route.
+    // scheduled afterwards by the route.
     if (bumped.visibility === "public" && bumped.public_slug) {
       await recordPublicProjectionIntent(trx, {
         entityId: bumped.id,

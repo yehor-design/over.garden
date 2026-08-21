@@ -45,55 +45,9 @@ import {
   createFirstPlantEntry,
   createPlantObjectJournalEntry,
   createSpaceJournalEntry,
-  findJournalEntryReceiptByClientMutationId,
 } from "@/server/journal-repository";
-import {
-  AuthenticationRequiredError,
-  requireCurrentRequestScope,
-} from "@/server/auth-session";
 
 export const runtime = "nodejs";
-
-export async function GET(request: Request) {
-  return privateNoStore(await getEntryReceipt(request));
-}
-
-async function getEntryReceipt(request: Request) {
-  try {
-    const scope = await requireCurrentRequestScope();
-    const clientMutationId = new URL(request.url).searchParams
-      .get("clientMutationId")
-      ?.trim();
-    if (!clientMutationId || clientMutationId.length > 200) {
-      return Response.json(
-        { code: "journal_entry_receipt_invalid" },
-        { status: 400, headers: { "Cache-Control": "private, no-store" } },
-      );
-    }
-    const entry = await findJournalEntryReceiptByClientMutationId(
-      scope,
-      clientMutationId,
-    );
-    return Response.json(
-      entry ? { entry } : { code: "journal_entry_receipt_not_found" },
-      {
-        status: entry ? 200 : 404,
-        headers: { "Cache-Control": "private, no-store" },
-      },
-    );
-  } catch (error) {
-    if (error instanceof AuthenticationRequiredError) {
-      return Response.json(
-        { code: "AUTHENTICATION_REQUIRED" },
-        { status: 401, headers: { "Cache-Control": "private, no-store" } },
-      );
-    }
-    return Response.json(
-      { code: "journal_entry_receipt_unavailable" },
-      { status: 503, headers: { "Cache-Control": "private, no-store" } },
-    );
-  }
-}
 
 export async function POST(request: Request) {
   const admission = await admitDocumentMutation({

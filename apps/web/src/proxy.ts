@@ -67,6 +67,12 @@ const INTERNAL_PROFILE_REWRITE_SIGNATURE_CONTEXT =
   "overgarden:internal-profile-rewrite:v1";
 const CANONICAL_PRODUCTION_HOST = "over.garden";
 const NON_CANONICAL_PRODUCTION_HOST = "www.over.garden";
+const RETIRED_PWA_ASSET_PATHS = new Set([
+  "/manifest.webmanifest",
+  "/sw.js",
+  "/icon-192.png",
+  "/icon-512.png",
+]);
 
 type InternalNamespace = "visual-fixtures" | "skeleton";
 
@@ -417,6 +423,10 @@ async function getPublicProfileLifecycleResponse(
 // viewer solely to fail closed on mutual blocks and is not a mutation authz
 // boundary.
 export async function proxy(request: NextRequest) {
+  if (RETIRED_PWA_ASSET_PATHS.has(request.nextUrl.pathname)) {
+    return getHardNotFoundResponse();
+  }
+
   const internalNamespacePath = classifyInternalNamespacePath(
     request.nextUrl.pathname,
   );
@@ -718,6 +728,8 @@ function hasValidInternalProfileRewrite(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|fonts/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$|sw.js|manifest.webmanifest).*)",
+    "/((?!_next/static|_next/image|fonts/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/icon-192.png",
+    "/icon-512.png",
   ],
 };

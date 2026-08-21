@@ -205,7 +205,7 @@ describe("OVE-205 localization browser matrix", () => {
           "ten-inline-photos",
           "inline-photo-upload-in-flight",
           "save-conflict",
-          "offline-recovery",
+          "connection-required-save-refusal",
           "locale-transition-failed-flush",
         ],
       }),

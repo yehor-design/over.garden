@@ -48,6 +48,52 @@
     "apps/web/scripts/check-linear-agent-task.test.ts",
     "apps/web/scripts/check-online-only-canon.ts",
     "apps/web/scripts/check-online-only-canon.test.ts",
+    "apps/web/src/lib/retirement/known-client-storage.ts",
+    "apps/web/src/lib/retirement/known-client-storage.test.ts",
+    "apps/web/src/proxy.ts",
+    "apps/web/src/proxy.test.ts",
+    "apps/web/playwright.config.ts",
+    "apps/web/scripts/audit-authenticated-mutation-surface.ts",
+    "apps/web/scripts/audit-authenticated-mutation-surface.test.ts",
+    "apps/web/scripts/authenticated-mutation-enforcement-receipt.ts",
+    "apps/web/scripts/authenticated-mutation-registry.ts",
+    "apps/web/scripts/authenticated-mutation-source-graph.ts",
+    "apps/web/scripts/check-linear-contract-posture.ts",
+    "apps/web/scripts/check-linear-contract-posture.test.ts",
+    "apps/web/scripts/smoke-authenticated-architecture.ts",
+    "apps/web/scripts/smoke-offline-runtime-absence.ts",
+    "apps/web/scripts/smoke-online-composer-cutover.ts",
+    "apps/web/scripts/verify-typography-browser.ts",
+    "apps/web/scripts/verify-typography-performance.ts",
+    "apps/web/src/app/%5F%5Fvisual-fixtures/page.test.tsx",
+    "apps/web/src/app/api/garden/entries/route.ts",
+    "apps/web/src/app/api/garden/entries/route.test.ts",
+    "apps/web/src/app/garden/first-entry-composer.test.tsx",
+    "apps/web/src/app/garden/garden-workspace-service-state.test.tsx",
+    "apps/web/src/app/garden/garden-workspace-view.test.tsx",
+    "apps/web/src/app/garden/objects/[objectId]/follow-up-entry-composer.test.tsx",
+    "apps/web/src/app/garden/page.test.tsx",
+    "apps/web/src/app/layout.test.tsx",
+    "apps/web/src/components/auth/sign-out-control.test.tsx",
+    "apps/web/src/db/types.ts",
+    "apps/web/src/lib/garden-workspace-copy.test.ts",
+    "apps/web/src/lib/garden/entry-contracts.ts",
+    "apps/web/src/lib/garden/inline-media-integrity.integration.test.ts",
+    "apps/web/src/lib/garden/journal-composer-shared-owner.integration.test.ts",
+    "apps/web/src/lib/garden/online-journal-draft.test.ts",
+    "apps/web/src/lib/garden/online-journal-submit.test.ts",
+    "apps/web/src/lib/retirement/legacy-device-retirement.test.ts",
+    "apps/web/src/lib/typography/typography-performance.ts",
+    "apps/web/src/server/analytics-events.ts",
+    "apps/web/src/server/analytics-events.test.ts",
+    "apps/web/tests/offline-runtime-absence.spec.ts",
+    "apps/web/tests/online-composer-cutover.spec.ts",
+    "docs/architecture/AUTHENTICATED_ARCHITECTURE_INTEGRATION_PROOF.md",
+    "docs/architecture/AUTHENTICATED_MUTATION_ADMISSION.md",
+    "docs/LEGACY_DEVICE_DATA_RETIREMENT.md",
+    "docs/MAINLINE_CLOSEOUT.md",
+    "docs/ONLINE_ONLY_JOURNAL.md",
+    "docs/SESSION_LOCALE_CONVERGENCE.md",
     "apps/web/package.json",
     ".github/workflows/ci.yml"
   ],
@@ -68,26 +114,6 @@
   ],
   "productResearchPrefix": "docs/product-research/",
   "runtimeRules": [
-    {
-      "pathPrefix": "apps/web/src/lib/offline/owner-vault",
-      "owner": "OVE-322",
-      "reason": "OVE-322 owns the returning-device read-only retirement bridge and cleanup state."
-    },
-    {
-      "pathPrefix": "apps/web/src/app/erasure/erasure-local-cleanup",
-      "owner": "OVE-322",
-      "reason": "OVE-322 owns current-device legacy-vault retirement and verified cleanup."
-    },
-    {
-      "path": "apps/web/src/server/offline-owner-vault-binding.ts",
-      "owner": "OVE-322",
-      "reason": "OVE-322 owns the legacy owner-binding retirement bridge."
-    },
-    {
-      "path": "apps/web/src/server/offline-owner-vault-binding.test.ts",
-      "owner": "OVE-322",
-      "reason": "OVE-322 owns the legacy owner-binding retirement bridge tests."
-    },
     {
       "pathPrefix": "apps/web/",
       "owner": "OVE-323",
@@ -135,11 +161,95 @@
     {
       "pathPrefix": "apps/web/scripts/import-",
       "reason": "Queued vocabulary belongs to server-side catalog import tooling."
+    },
+    {
+      "path": "apps/web/pnpm-lock.yaml",
+      "reason": "Term-shaped substrings occur only inside dependency integrity hashes."
+    },
+    {
+      "path": "apps/web/scripts/smoke-canonical-launch.ts",
+      "reason": "Queue vocabulary belongs to canonical server-side recovery cleanup."
+    },
+    {
+      "path": "apps/web/scripts/smoke-catalog-match-approval.ts",
+      "reason": "Queue vocabulary belongs to server-side catalog approval and reindex work."
+    },
+    {
+      "path": "apps/web/scripts/smoke-erasure-workflow.ts",
+      "reason": "Queue vocabulary belongs to server-side public-projection erasure work."
+    },
+    {
+      "path": "apps/web/scripts/smoke-local-media-runtime.ts",
+      "reason": "Queue vocabulary belongs to Meilisearch task handling."
+    },
+    {
+      "pathPrefix": "apps/web/src/app/garden/catalog/curation/",
+      "reason": "Queue vocabulary belongs to authenticated server-side catalog curation jobs."
+    },
+    {
+      "path": "apps/web/src/lib/matching-runtime-proof.ts",
+      "reason": "Queue vocabulary belongs to the server-side matching worker readiness contract."
+    },
+    {
+      "path": "apps/web/src/lib/matching-runtime-proof.test.ts",
+      "reason": "Queue vocabulary belongs to the server-side matching worker readiness contract."
+    },
+    {
+      "path": "apps/web/src/lib/meta-marketing/client.ts",
+      "reason": "Queued indicates a server conversion API dispatch result, not browser journal storage."
+    },
+    {
+      "path": "apps/web/src/lib/operator-curation-copy.ts",
+      "reason": "Queue copy describes server-side catalog curation jobs."
+    },
+    {
+      "path": "apps/web/src/lib/privacy/disclosures.ts",
+      "reason": "Queue copy describes server-side public-search removal."
+    },
+    {
+      "path": "apps/web/src/lib/privacy/disclosures.test.ts",
+      "reason": "Queue copy describes server-side public-search removal."
+    },
+    {
+      "path": "apps/web/src/server/erasure-execution.ts",
+      "reason": "Queue vocabulary belongs to server-side public-projection erasure work."
+    },
+    {
+      "path": "apps/web/src/server/job-queue-contract.test.ts",
+      "reason": "Queue vocabulary belongs to the canonical Postgres job contract."
+    },
+    {
+      "path": "apps/web/src/server/journal-repository.ts",
+      "reason": "Queue vocabulary belongs to server-side public-projection work."
+    },
+    {
+      "path": "apps/web/src/server/restore-readiness/checks.ts",
+      "reason": "Queue vocabulary belongs to server-side recovery readiness."
+    },
+    {
+      "path": "docs/CATALOG_ALIAS_SUGGESTION_REVIEW.md",
+      "reason": "Queue vocabulary belongs to server-side catalog alias generation."
+    },
+    {
+      "path": "docs/CATALOG_MATCH_SUGGESTION_QUEUE.md",
+      "reason": "Offline refers to server worker unavailability and queue vocabulary to Postgres jobs."
+    },
+    {
+      "path": "docs/CATALOG_SEED_ROLLOUT_PROOF.md",
+      "reason": "Queued describes a historical server-side reindex receipt."
+    },
+    {
+      "path": "docs/MEDIA_LIFECYCLE.md",
+      "reason": "Queue vocabulary belongs to the transactional server media outbox."
+    },
+    {
+      "path": "docs/PUBLIC_PROJECTION_REVOCATION.md",
+      "reason": "Queue vocabulary describes the server-side projection durability boundary."
     }
   ],
   "ownerStates": {
     "OVE-321": "Done",
-    "OVE-322": "Backlog",
-    "OVE-323": "Backlog"
+    "OVE-322": "Done",
+    "OVE-323": "Done"
   }
 }

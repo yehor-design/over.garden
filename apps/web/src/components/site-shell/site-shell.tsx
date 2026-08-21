@@ -16,13 +16,12 @@ import { useState } from "react";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthenticatedUtilityRegion } from "@/components/auth/authenticated-utility-region";
 import { DocumentMutationGenerationProvider } from "@/components/auth/document-mutation-recovery";
-import { ForegroundAutosyncProvider } from "@/components/auth/foreground-autosync-provider";
-import {
-  SessionConvergenceBoundary,
-  useAuthenticatedSessionIdentity,
-} from "@/components/auth/session-convergence-boundary";
+import { SessionConvergenceBoundary } from "@/components/auth/session-convergence-boundary";
 import { SignOutControl } from "@/components/auth/sign-out-control";
-import { SignOutProvider } from "@/components/auth/sign-out-provider";
+import {
+  SignOutProvider,
+  useSignOut,
+} from "@/components/auth/sign-out-provider";
 import { InterfaceLanguageControl } from "@/components/public/language-switcher";
 import { LegacyDeviceRetirementBanner } from "@/components/retirement/legacy-device-retirement-banner";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -117,11 +116,11 @@ export function SiteShell({
 
   if (isSessionConvergenceSafeExit) {
     // The native erasure page intentionally contains no garden payload or
-    // authenticated navigation. Keeping this escape hatch outside the local
-    // owner-hydration guard prevents a failed local check from trapping a
-    // person in an account while the private workspace remains sealed.
+    // authenticated navigation. It stays outside the session convergence
+    // guard so a failed session recheck cannot trap a person in an account.
     return (
       <SiteShellLocaleProvider locale={locale}>
+        <LegacyDeviceRetirementBanner locale={locale} />
         {isAuthenticated ? (
           <DocumentMutationGenerationProvider
             locale={locale}
@@ -167,7 +166,14 @@ export function SiteShell({
     );
 
     if (!isAuthenticated || languageControlPlacement !== "utility") {
-      return excludedShell;
+      return shouldRunLegacyRetirement(pathname) ? (
+        <>
+          <LegacyDeviceRetirementBanner locale={locale} />
+          {excludedShell}
+        </>
+      ) : (
+        excludedShell
+      );
     }
 
     return (
@@ -181,23 +187,13 @@ export function SiteShell({
           locale={locale}
           transport={documentMutationGeneration}
         >
-          <ForegroundAutosyncProvider
-            documentMutationGeneration={documentMutationGeneration}
-            enabled={isAuthenticatedGardenPath(pathname)}
+          <SignOutProvider
+            locale={locale}
+            currentSessionBinding={currentSessionBinding}
           >
-            <SignOutProvider
-              locale={locale}
-              currentSessionBinding={currentSessionBinding}
-            >
-              {isAuthenticatedGardenPath(pathname) ? (
-                <AuthenticatedLegacyDeviceRetirement
-                  locale={locale}
-                  documentMutationGeneration={documentMutationGeneration}
-                />
-              ) : null}
-              {excludedShell}
-            </SignOutProvider>
-          </ForegroundAutosyncProvider>
+            <AuthenticatedLegacyDeviceRetirement locale={locale} />
+            {excludedShell}
+          </SignOutProvider>
         </DocumentMutationGenerationProvider>
       </SessionConvergenceBoundary>
     );
@@ -626,7 +622,14 @@ export function SiteShell({
     </SiteShellLocaleProvider>
   );
 
-  if (!isAuthenticated) return shell;
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LegacyDeviceRetirementBanner locale={locale} />
+        {shell}
+      </>
+    );
+  }
 
   return (
     <SessionConvergenceBoundary
@@ -639,23 +642,13 @@ export function SiteShell({
         locale={locale}
         transport={documentMutationGeneration}
       >
-        <ForegroundAutosyncProvider
-          documentMutationGeneration={documentMutationGeneration}
-          enabled={isAuthenticatedGardenPath(pathname)}
+        <SignOutProvider
+          locale={locale}
+          currentSessionBinding={currentSessionBinding}
         >
-          <SignOutProvider
-            locale={locale}
-            currentSessionBinding={currentSessionBinding}
-          >
-            {isAuthenticatedGardenPath(pathname) ? (
-              <AuthenticatedLegacyDeviceRetirement
-                locale={locale}
-                documentMutationGeneration={documentMutationGeneration}
-              />
-            ) : null}
-            {shell}
-          </SignOutProvider>
-        </ForegroundAutosyncProvider>
+          <AuthenticatedLegacyDeviceRetirement locale={locale} />
+          {shell}
+        </SignOutProvider>
       </DocumentMutationGenerationProvider>
     </SessionConvergenceBoundary>
   );
@@ -703,24 +696,20 @@ export function SiteShellOperatorMenu({
   );
 }
 
-function isAuthenticatedGardenPath(pathname: string) {
-  return pathname === "/garden" || pathname.startsWith("/garden/");
+function shouldRunLegacyRetirement(pathname: string) {
+  return !pathname.startsWith("/__visual-fixtures");
 }
 
 function AuthenticatedLegacyDeviceRetirement({
   locale,
-  documentMutationGeneration,
 }: {
   locale: InterfaceLocale;
-  documentMutationGeneration: string | null;
 }) {
-  const identity = useAuthenticatedSessionIdentity();
+  const signOut = useSignOut();
   return (
     <LegacyDeviceRetirementBanner
       locale={locale}
-      ownerUserId={identity.ownerUserId}
-      sessionGeneration={identity.sessionGeneration}
-      documentMutationGeneration={documentMutationGeneration ?? undefined}
+      onSignOut={signOut.requestSignOut}
     />
   );
 }

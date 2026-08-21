@@ -70,11 +70,11 @@ describe("OVE-205 market-first localization coverage", () => {
         ],
       },
       summary: {
-        routeModuleCount: 108,
-        classifiedRouteModuleCount: 108,
-        appSurfaceModuleCount: 142,
-        classifiedAppSurfaceModuleCount: 142,
-        registeredSurfaceCount: 146,
+        routeModuleCount: 102,
+        classifiedRouteModuleCount: 102,
+        appSurfaceModuleCount: 136,
+        classifiedAppSurfaceModuleCount: 136,
+        registeredSurfaceCount: 140,
         renderedRouteModuleCount: 62,
         renderedSurfaceCount: 100,
         renderedStateModuleCount: 34,
@@ -83,7 +83,7 @@ describe("OVE-205 market-first localization coverage", () => {
         copyNamespaceCount: LOCALIZATION_COPY_NAMESPACES.length,
         localeCount: 3,
         ownerBrowserProbeCount: 15,
-        preservedRouteModuleCount: 96,
+        preservedRouteModuleCount: 90,
         newlyClosedDeltaRouteModuleCount: 10,
         ove205CorrectiveSurfaceCount: 40,
         downstreamOwnedUiGateCount: 3,
@@ -406,13 +406,13 @@ describe("OVE-205 market-first localization coverage", () => {
   });
 
   it("fails when required state or owner/browser proof disappears", () => {
-    const scenariosWithoutOffline = CORE_JOURNEY_SCENARIOS.filter(
-      ({ states }) => !states.includes("offline"),
+    const scenariosWithoutConnectionRequired = CORE_JOURNEY_SCENARIOS.filter(
+      ({ states }) => !states.includes("connection-required"),
     );
     const report = buildLocalizationCoverage({
-      scenarios: scenariosWithoutOffline,
+      scenarios: scenariosWithoutConnectionRequired,
     });
-    expect(report.missing.requiredStates).toContain("offline");
+    expect(report.missing.requiredStates).toContain("connection-required");
 
     const reportWithoutOperatorProof = buildLocalizationCoverage({
       browserProbes: LOCALIZATION_OWNER_BROWSER_PROBES.filter(

@@ -455,10 +455,7 @@ describe("OVE-208 typography browser contract", () => {
           blockedDurationMs: 1_851,
         }),
       ),
-    ).toEqual([
-      "fallback-not-visible-within-1s",
-      "fallback-delay-window",
-    ]);
+    ).toEqual(["fallback-not-visible-within-1s", "fallback-delay-window"]);
   });
 
   it("gates the guarded local global-error typography surface", () => {

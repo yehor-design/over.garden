@@ -1,7 +1,7 @@
 {
   "schemaVersion": "overgarden.authenticated-mutation-enforcement.v1",
-  "registryDigest": "64ce46bf4ef3b56ebcf68eb08efa682e5ddec26be4d473703cd3074400aba929",
-  "sourceRegistryReceiptDigest": "e10453fe8a6c7d2151d6e94f60490885a207d038cc398ab6d47686c8236e3cf5",
+  "registryDigest": "a147908910898445fddeeead325748446c3004361f529b97eecafcee21377f29",
+  "sourceRegistryReceiptDigest": "cfe781930f04279dc082583b5ffff48e056594034f16ea228ea901c86737e80e",
   "entrypointStates": [
     {
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_account_session_mutation",
@@ -368,406 +368,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraft:browser_storage:deleteOfflineDraft",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraftIfClientMutationMatches:browser_storage:deleteOfflineDraftIfClientMutationMatches",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#followUpEntryDraftId:browser_storage:followUpEntryDraftId",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#getOfflineDraft:browser_storage:getOfflineDraft",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#hasPersistableFirstEntryDraft:browser_storage:hasPersistableFirstEntryDraft",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#hasPersistableFollowUpDraft:browser_storage:hasPersistableFollowUpDraft",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#hasPersistableSpaceEntryDraft:browser_storage:hasPersistableSpaceEntryDraft",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#listOfflineDraftSummaries:browser_storage:listOfflineDraftSummaries",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#listOfflineDrafts:browser_storage:listOfflineDrafts",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#publishOfflineDraftsChanged:browser_storage:publishOfflineDraftsChanged",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#spaceEntryDraftId:browser_storage:spaceEntryDraftId",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#upsertOfflineDraft:browser_storage:upsertOfflineDraft",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/foreground-autosync.ts#createForegroundAutosyncCoordinator:browser_storage:createForegroundAutosyncCoordinator",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/foreground-autosync.ts#installForegroundAutosyncEventTriggers:browser_storage:installForegroundAutosyncEventTriggers",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/foreground-autosync.ts#withForegroundAutosyncLease:browser_storage:withForegroundAutosyncLease",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#buildJournalEntryRequestBodyForSync:browser_storage:buildJournalEntryRequestBodyForSync",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#journalEntryAuthReturnTo:browser_storage:journalEntryAuthReturnTo",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#offlineJournalDraftId:browser_storage:offlineJournalDraftId",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:browser_storage:submitJournalEntryPayload",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#uploadComposerPhotoIntent:browser_storage:uploadComposerPhotoIntent",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/offline-media-quota.ts#assertOfflinePhotoQuotaAllows:browser_storage:assertOfflinePhotoQuotaAllows",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/offline-media-quota.ts#canAcceptOfflinePhotoBytes:browser_storage:canAcceptOfflinePhotoBytes",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/offline-media-quota.ts#estimateBrowserStorageRemainingBytes:browser_storage:estimateBrowserStorageRemainingBytes",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/offline-media-quota.ts#sumOfflinePhotoIntentBytes:browser_storage:sumOfflinePhotoIntentBytes",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#createOwnerComposerParticipantNonce:browser_storage:createOwnerComposerParticipantNonce",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#deletedOwnerComposerFingerprint:browser_storage:deletedOwnerComposerFingerprint",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#fingerprintOwnerComposerPayload:browser_storage:fingerprintOwnerComposerPayload",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#fingerprintOwnerVaultPayload:browser_storage:fingerprintOwnerVaultPayload",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#isExactOwnerComposerDurabilityReceipt:browser_storage:isExactOwnerComposerDurabilityReceipt",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#requireOwnerComposerDurabilityExpectation:browser_storage:requireOwnerComposerDurabilityExpectation",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-locale-change-participant.ts#createOwnerComposerLocaleChangeParticipant:browser_storage:createOwnerComposerLocaleChangeParticipant",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-participants.ts#createDurableOwnerComposerPersistenceController:browser_storage:createDurableOwnerComposerPersistenceController",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-participants.ts#createOwnerComposerPersistenceController:browser_storage:createOwnerComposerPersistenceController",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-participants.ts#prepareAllOwnerComposerTransitionParticipants:browser_storage:prepareAllOwnerComposerTransitionParticipants",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-participants.ts#prepareOwnerComposerParticipants:browser_storage:prepareOwnerComposerParticipants",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-participants.ts#prepareOwnerComposerTransitionParticipants:browser_storage:prepareOwnerComposerTransitionParticipants",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-participants.ts#readOwnerComposerEvidenceRevision:browser_storage:readOwnerComposerEvidenceRevision",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-composer-participants.ts#startAllOwnerComposerTransitionParticipants:browser_storage:startAllOwnerComposerTransitionParticipants",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#abortOwnerSyncAttempts:browser_storage:abortOwnerSyncAttempts",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#eraseCurrentDeviceOwnerOfflineStore:browser_storage:eraseCurrentDeviceOwnerOfflineStore",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#finalizeOwnerOfflineActivityForSessionChange:browser_storage:finalizeOwnerOfflineActivityForSessionChange",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#finalizeOwnerOfflineActivityForSignedOut:browser_storage:finalizeOwnerOfflineActivityForSignedOut",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#hydrateOwnerOfflineActivitySession:browser_storage:hydrateOwnerOfflineActivitySession",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#inspectOwnerWork:browser_storage:inspectOwnerWork",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#inspectOwnerWorkFromSource:browser_storage:inspectOwnerWorkFromSource",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#pauseOwnerOfflineActivity:browser_storage:pauseOwnerOfflineActivity",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#purgeErasedOwnerOfflineStore:browser_storage:purgeErasedOwnerOfflineStore",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#purgeUnsyncedOwnerData:browser_storage:purgeUnsyncedOwnerData",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#registerOwnerPreviewObjectUrl:browser_storage:registerOwnerPreviewObjectUrl",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#runOwnerSyncAttempt:browser_storage:runOwnerSyncAttempt",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#eraseCurrentDeviceOwnerVault:browser_storage:eraseCurrentDeviceOwnerVault",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#migrateLegacyOwnerVault:browser_storage:migrateLegacyOwnerVault",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#readOwnerVaultControlReceipt:browser_storage:readOwnerVaultControlReceipt",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#abandonOwnerVaultExclusiveFence:browser_storage:abandonOwnerVaultExclusiveFence",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#acquireOwnerVaultExclusiveFence:browser_storage:acquireOwnerVaultExclusiveFence",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#activateLegacyOwnerDatabaseForTesting:browser_storage:activateLegacyOwnerDatabaseForTesting",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#activatePhysicalOwnerVault:browser_storage:activatePhysicalOwnerVault",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#deactivatePhysicalOwnerVault:browser_storage:deactivatePhysicalOwnerVault",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#deleteResolvedPhysicalOwnerVault:browser_storage:deleteResolvedPhysicalOwnerVault",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#fetchAuthenticatedOwnerVaultBinding:browser_storage:fetchAuthenticatedOwnerVaultBinding",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#finalizeOwnerVaultExclusiveFence:browser_storage:finalizeOwnerVaultExclusiveFence",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#hasOwnerVaultBinding:browser_storage:hasOwnerVaultBinding",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#offlineOwnerVaultDatabaseName:browser_storage:offlineOwnerVaultDatabaseName",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#readActiveOwnerUserId:browser_storage:readActiveOwnerUserId",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#readActiveOwnerVaultBinding:browser_storage:readActiveOwnerVaultBinding",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#readActiveOwnerVaultLifetimeSignal:browser_storage:readActiveOwnerVaultLifetimeSignal",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#requireOwnerOfflineDatabase:browser_storage:requireOwnerOfflineDatabase",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#resolveOwnerOfflineDatabase:browser_storage:resolveOwnerOfflineDatabase",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#sealActiveOwnerVaultsForLocalExit:browser_storage:sealActiveOwnerVaultsForLocalExit",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#waitForOwnerVaultWritersToSettle:browser_storage:waitForOwnerVaultWritersToSettle",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault.ts#withOwnerVaultWriterLease:browser_storage:withOwnerVaultWriterLease",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#assertOwnerOfflineActivityAllowed:browser_storage:assertOwnerOfflineActivityAllowed",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#completeOfflineMutation:browser_storage:completeOfflineMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#createOfflinePhotoIntent:browser_storage:createOfflinePhotoIntent",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#enqueueOfflineMutation:browser_storage:enqueueOfflineMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#getOfflineMutation:browser_storage:getOfflineMutation",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#getOfflineMutationManualSyncCandidate:browser_storage:getOfflineMutationManualSyncCandidate",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#listOfflineMutationSummaries:browser_storage:listOfflineMutationSummaries",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#listOfflineMutations:browser_storage:listOfflineMutations",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#listOfflineMutationsEligibleForAutomaticSync:browser_storage:listOfflineMutationsEligibleForAutomaticSync",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#listQueuedMutations:browser_storage:listQueuedMutations",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#markOfflineMutationsForManualRecovery:browser_storage:markOfflineMutationsForManualRecovery",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#offlineDraftSummary:browser_storage:offlineDraftSummary",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#offlineMutationQueueRevision:browser_storage:offlineMutationQueueRevision",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#offlineMutationSummary:browser_storage:offlineMutationSummary",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#pauseOwnerOfflineActivityLocally:browser_storage:pauseOwnerOfflineActivityLocally",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#publishOfflineQueueChanged:browser_storage:publishOfflineQueueChanged",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#readLocalOwnerActivitySessionGeneration:browser_storage:readLocalOwnerActivitySessionGeneration",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#recoverExpiredOfflineMutationSyncClaims:browser_storage:recoverExpiredOfflineMutationSyncClaims",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#resumeOwnerOfflineActivityLocally:browser_storage:resumeOwnerOfflineActivityLocally",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#setLocalOwnerActivitySessionGeneration:browser_storage:setLocalOwnerActivitySessionGeneration",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#settleClaimedOfflineMutationFailure:browser_storage:settleClaimedOfflineMutationFailure",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#updateOfflineMutationPayload:browser_storage:updateOfflineMutationPayload",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#updateOfflineMutationStatus:browser_storage:updateOfflineMutationStatus",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "entrypointId": "route_handler:src/app/%5F%5Fvisual-fixtures/intent/[scenarioId]/route.ts#GET",
       "enforcementState": "excluded_with_authority"
     },
@@ -972,10 +572,6 @@
       "enforcementState": "excluded_with_authority"
     },
     {
-      "entrypointId": "route_handler:src/app/api/offline/owner-vault-binding/route.ts#GET",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
       "entrypointId": "route_handler:src/app/api/public/objects/suggestions/route.ts#GET",
       "enforcementState": "excluded_with_authority"
     },
@@ -1042,26 +638,6 @@
     {
       "entrypointId": "same_origin_fetch:src/lib/meta-marketing/client.ts#trackMetaMarketingEvent:POST:/api/meta/conversions:keepalive",
       "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/uploads",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "entrypointId": "same_origin_fetch:src/lib/visual-fixtures/journal-creation-client.ts#runVisualJournalCreationScenario:POST:/api/__visual-fixtures/journal-creation",
@@ -1304,12 +880,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:0751bd144104971ab3a3:1:a7d986f6466d5c517884",
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraft:browser_storage:deleteOfflineDraft",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraft:browser_storage:deleteOfflineDraft",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:0893f45d1f0a5dc2c996:1:3a8f18c5962ed631c02e",
       "entrypointId": "native_form:src/app/engagement/public-engagement-panel.tsx#CommentActions:POST:/api/engagement/comments/delete",
       "admissionBoundaryId": "route_handler:src/app/api/engagement/comments/delete/route.ts#POST:authority:authenticated_user",
@@ -1338,12 +908,6 @@
       "entrypointId": "browser_operator:src/app/garden/account-methods-panel.tsx#linkProvider:auth_client.linkSocial",
       "admissionBoundaryId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#link_social_post_redirect",
       "enforcementState": "owned_by_ove_295"
-    },
-    {
-      "consumerEdgeId": "edge:0fc07607be4a9407f3c9:1:dcdff1cff96e33c4fe2e",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#updateOfflineMutationStatus:browser_storage:updateOfflineMutationStatus",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#updateOfflineMutationStatus:browser_storage:updateOfflineMutationStatus",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:102ab96f7daeb34a13b1:1:013fcb62d10e41d3d02e",
@@ -1428,12 +992,6 @@
       "entrypointId": "native_form:src/app/garden/profile/owner-profile-editor.tsx#OwnerProfileEditor:action:handleFormAction",
       "admissionBoundaryId": "server_action:src/app/garden/profile/actions.ts#updatePublicHandleAction",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:1abcfde6d0ab574a23f2:1:ac46b9443bce5dbc20ab",
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#eraseCurrentDeviceOwnerVault:browser_storage:eraseCurrentDeviceOwnerVault",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/owner-vault-migration.ts#eraseCurrentDeviceOwnerVault:browser_storage:eraseCurrentDeviceOwnerVault",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:1af84486aa45f8e7730a:1:236152af6438eade1f36",
@@ -1526,12 +1084,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:207d5b2a0885e190c312:1:5bf190af988829b2b900",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#settleClaimedOfflineMutationFailure:browser_storage:settleClaimedOfflineMutationFailure",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#settleClaimedOfflineMutationFailure:browser_storage:settleClaimedOfflineMutationFailure",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:2573df848f56e4aaac99:1:99b14fee541bdb014839",
       "entrypointId": "server_action:src/app/garden/profile/actions.ts#unblockProfileAction",
       "admissionBoundaryId": "server_action:src/app/garden/profile/actions.ts#unblockProfileAction",
@@ -1548,18 +1100,6 @@
       "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogSourceCandidateAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogSourceCandidateAction",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:25d67c5b3276defc71f5:1:c0ff971485cfff2c8e05",
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraftIfClientMutationMatches:browser_storage:deleteOfflineDraftIfClientMutationMatches",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/drafts.ts#deleteOfflineDraftIfClientMutationMatches:browser_storage:deleteOfflineDraftIfClientMutationMatches",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:27be4d2f030b3a5024ec:1:fa3b07f9913db881c4e8",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#recoverExpiredOfflineMutationSyncClaims:browser_storage:recoverExpiredOfflineMutationSyncClaims",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#recoverExpiredOfflineMutationSyncClaims:browser_storage:recoverExpiredOfflineMutationSyncClaims",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:27f2be88f252c2685b7a:1:047b476defb3c72a6518",
@@ -2006,12 +1546,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:3e7a6e5f14b8d0ed1d5d:1:fc6cee05c30b761b8f6f",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#assertOwnerOfflineActivityAllowed:browser_storage:assertOwnerOfflineActivityAllowed",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#assertOwnerOfflineActivityAllowed:browser_storage:assertOwnerOfflineActivityAllowed",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:3eb80b7c46b7b979faa7:1:8753a2814be9a86786c1",
       "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:3:132cb6d07672006dab93",
       "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
@@ -2040,12 +1574,6 @@
       "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#ProvenanceSection:action:createLineageInvitationAction",
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createLineageInvitationAction:authority:authenticated_user",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:411f27a896695ae8b992:1:598fa5a659a92eb0fb40",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#completeOfflineMutation:browser_storage:completeOfflineMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#completeOfflineMutation:browser_storage:completeOfflineMutation",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:4402e76020b32a7ae13c:1:b3e0d21528bb4fd73750",
@@ -2106,18 +1634,6 @@
       "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:rejectAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogCandidateAction",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:4d8ae49ba6c3fddea7c2:1:fc6cee05c30b761b8f6f",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:4d8ae49ba6c3fddea7c2:2:edcafce82abe1d969d6c",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForSync:browser_storage:claimOfflineMutationForSync",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:51e9a13a50106c31e2ee:1:a9c2ee75a9cdafce3ae7",
@@ -2348,112 +1864,10 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:59dd0fac15eb03913e22:1:b488e7a6df16ddb72e0c",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:59dd0fac15eb03913e22:2:fc6cee05c30b761b8f6f",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:59dd0fac15eb03913e22:3:edcafce82abe1d969d6c",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:59dd0fac15eb03913e22:4:7a1127d48a8f0f532e3a",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:59dd0fac15eb03913e22:5:598fa5a659a92eb0fb40",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:59dd0fac15eb03913e22:6:c0ff971485cfff2c8e05",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:59dd0fac15eb03913e22:7:5bf190af988829b2b900",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#submitOnlineJournalEntryPayload:browser_storage:submitOnlineJournalEntryPayload",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:5ab38cf210523ffa14d0:1:63d0f87edb4044b648b5",
       "entrypointId": "server_action:src/app/admin/moderation/comments/actions.ts#moderateCommentReportAction",
       "admissionBoundaryId": "server_action:src/app/admin/moderation/comments/actions.ts#moderateCommentReportAction",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:5bde191e607ff0ca3ee8:10:fff386b1a87bb211b863",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:5bde191e607ff0ca3ee8:1:1f74fbcf3a88937cb036",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:5bde191e607ff0ca3ee8:2:4fc1150e788e76d1c82a",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:5bde191e607ff0ca3ee8:3:c987599f9b246ad4f817",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:5bde191e607ff0ca3ee8:4:abcbb59954d96ec7f49b",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:5bde191e607ff0ca3ee8:5:dea3444fb388664106d2",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:5bde191e607ff0ca3ee8:6:04f645b76f47f1150cdc",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:5bde191e607ff0ca3ee8:7:278b4c20e4853b1430b8",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:5bde191e607ff0ca3ee8:8:5d7e5340a76fecabf300",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:5bde191e607ff0ca3ee8:9:d39f555d2c9d4b232afe",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/process",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:60aed1982b0107113ebc:1:7897aa500191a8e5ee14",
@@ -2664,42 +2078,6 @@
       "entrypointId": "native_form:src/app/engagement/public-engagement-panel.tsx#EngagementButtonForm:action:action:binding:2:e4b08a23bfb2775bbd0d",
       "admissionBoundaryId": "route_handler:src/app/api/engagement/follows/route.ts#POST:authority:authenticated_user",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:6f10f423547485812880:1:fc6cee05c30b761b8f6f",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:6f10f423547485812880:2:edcafce82abe1d969d6c",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:6f10f423547485812880:3:7a1127d48a8f0f532e3a",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:6f10f423547485812880:4:598fa5a659a92eb0fb40",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:6f10f423547485812880:5:c0ff971485cfff2c8e05",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:6f10f423547485812880:6:5bf190af988829b2b900",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncOfflineJournalEntryMutation:browser_storage:syncOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:731c365b501b4e81adad:1:fb356767ee3645b25fc0",
@@ -3014,108 +2392,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:83f9eae827decff57805:10:f357c7c482b419e1b53d",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:11:d49bd1631169d877721f",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:12:49b0ee451c6b7baa2d1e",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:13:329a6f9a5476c3b4466f",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:14:cef87e5dd8bc668e0528",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:15:47484ff842ec3e0e50a1",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:16:7f173ecc6a4dbcd0870d",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:17:d482e6d15ab18bd12386",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:1:2b96f89dd1a409b9295c",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:2:88468ccdcf388cca2cea",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:3:812c59a20b586947971f",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:4:081c66c6bca619f42631",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:5:477c0198234593213489",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:6:522683864f8f12b1cd0f",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:7:b2e3cd3a93bb78f0b500",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:8:2506836770d600a3a0ba",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:83f9eae827decff57805:9:a6411b97b3677cd486eb",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:84b20124c4d9e6e19446:1:03707a3b38302d566b9a",
       "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#CommunityModerationPage:action:setCommunityParticipationAction",
       "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
@@ -3326,12 +2602,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:9a139ef153cdde1e2bb9:1:7a1127d48a8f0f532e3a",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#updateOfflineMutationPayload:browser_storage:updateOfflineMutationPayload",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#updateOfflineMutationPayload:browser_storage:updateOfflineMutationPayload",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:9ce4e073a3d2764b2ed9:1:6b24d4ac21c772703780",
       "entrypointId": "route_handler:src/app/api/media/[mediaAssetId]/focal/route.ts#PATCH:authority:authenticated_user",
       "admissionBoundaryId": "route_handler:src/app/api/media/[mediaAssetId]/focal/route.ts#PATCH:authority:authenticated_user",
@@ -3384,18 +2654,6 @@
       "entrypointId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#followProfileAction",
       "admissionBoundaryId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#followProfileAction",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:a0c1e631b9cc2c6d5dbc:1:c3dc6f024450e94221ac",
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#migrateLegacyOwnerVault:browser_storage:migrateLegacyOwnerVault",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/owner-vault-migration.ts#migrateLegacyOwnerVault:browser_storage:migrateLegacyOwnerVault",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0c1e631b9cc2c6d5dbc:2:ac46b9443bce5dbc20ab",
-      "entrypointId": "offline_replay:src/lib/offline/owner-vault-migration.ts#migrateLegacyOwnerVault:browser_storage:migrateLegacyOwnerVault",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/owner-vault-migration.ts#migrateLegacyOwnerVault:browser_storage:migrateLegacyOwnerVault",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:a0e26d5a3a55edb77721:10:f357c7c482b419e1b53d",
@@ -3518,12 +2776,6 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:a14d259cfd5f3b13f230:1:b488e7a6df16ddb72e0c",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#enqueueOfflineMutation:browser_storage:enqueueOfflineMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#enqueueOfflineMutation:browser_storage:enqueueOfflineMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:a35d75db1eac3e7d0d2d:1:f7f730a6d2751f0ce598",
       "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#promoteCatalogSourceCandidateAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#promoteCatalogSourceCandidateAction",
@@ -3641,18 +2893,6 @@
       "consumerEdgeId": "edge:a96d9fef83e993dca970:9:83cb0b36ac40ec081833",
       "entrypointId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:aae9a9063df29aca64cc:1:fc6cee05c30b761b8f6f",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:aae9a9063df29aca64cc:2:edcafce82abe1d969d6c",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForManualSync:browser_storage:claimOfflineMutationForManualSync",
       "enforcementState": "enforced_ove_290"
     },
     {
@@ -4082,12 +3322,6 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:cc8c2429c38da0e747a6:1:26b9671ef1d3adaf5298",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#markOfflineMutationsForManualRecovery:browser_storage:markOfflineMutationsForManualRecovery",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#markOfflineMutationsForManualRecovery:browser_storage:markOfflineMutationsForManualRecovery",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:cd7e9102a65dd950d977:1:970a499c3870affe9016",
       "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:confirmAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#confirmCatalogCandidateAction",
@@ -4160,18 +3394,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:d4f7bfb9e3b52345f610:1:fc6cee05c30b761b8f6f",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:d4f7bfb9e3b52345f610:2:edcafce82abe1d969d6c",
-      "entrypointId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/queue.ts#claimOfflineMutationForAutomaticSync:browser_storage:claimOfflineMutationForAutomaticSync",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:d4f7e2edf013a69f9203:1:180b5f806739f1759059",
       "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
       "admissionBoundaryId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
@@ -4202,12 +3424,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:da17fa83348610ea16fe:1:4e31b0424e5a2bdd67d8",
-      "entrypointId": "offline_replay:src/lib/offline/drafts.ts#upsertOfflineDraft:browser_storage:upsertOfflineDraft",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/drafts.ts#upsertOfflineDraft:browser_storage:upsertOfflineDraft",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:e06bf10cd774fec08fb3:1:2d44d7d624e5013c3c97",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#resolvePlantObjectCatalogAction:authority:authenticated_user",
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#resolvePlantObjectCatalogAction:authority:authenticated_user",
@@ -4218,54 +3434,6 @@
       "entrypointId": "native_form:src/app/garden/catalog/curation/fuzzy-duplicate-refresh-form.tsx#FuzzyDuplicateRefreshForm:action:queueRefresh",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#refreshCatalogFuzzyDuplicateQaAction",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:e1593fccb59850d9ae71:1:2b96f89dd1a409b9295c",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e1593fccb59850d9ae71:2:a6411b97b3677cd486eb",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e1593fccb59850d9ae71:3:f88d084cc712c7e87b2e",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e1593fccb59850d9ae71:4:cf3b6b0379f6370b55e5",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e1593fccb59850d9ae71:5:c29a9bfe4c796b418f14",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e1593fccb59850d9ae71:6:47484ff842ec3e0e50a1",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e1593fccb59850d9ae71:7:7f173ecc6a4dbcd0870d",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e1593fccb59850d9ae71:8:d482e6d15ab18bd12386",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:e19209fcf22583264cb6:1:ca74dec03489c5354b77",
@@ -4284,12 +3452,6 @@
       "entrypointId": "server_action:src/app/[locale]/communities/[slug]/actions.ts#blockCommunityContributionAuthorAction",
       "admissionBoundaryId": "server_action:src/app/[locale]/communities/[slug]/actions.ts#blockCommunityContributionAuthorAction",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:e4d49d053211998790cc:1:d83d1734dd7cbeefd6b2",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#processPhotoIntent:POST:/api/media/uploads",
-      "admissionBoundaryId": "route_handler:src/app/api/media/uploads/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:e5906b16b6ebd7804c85:1:b3e0d21528bb4fd73750",
@@ -4332,138 +3494,6 @@
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#DryRunPreviewPanel:action:markErasureRequestDryRunReviewedAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#markErasureRequestDryRunReviewedAction",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:10:f357c7c482b419e1b53d",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:11:d49bd1631169d877721f",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:12:49b0ee451c6b7baa2d1e",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:13:d696323b46215033d1d9",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:14:ada0fab3fe283a872a98",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:15:7f173ecc6a4dbcd0870d",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:16:47484ff842ec3e0e50a1",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:17:d482e6d15ab18bd12386",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:1:2b96f89dd1a409b9295c",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:2:88468ccdcf388cca2cea",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:3:812c59a20b586947971f",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:4:081c66c6bca619f42631",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:5:477c0198234593213489",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:6:522683864f8f12b1cd0f",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:7:b2e3cd3a93bb78f0b500",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:8:2506836770d600a3a0ba",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:e689dc36da87afdd1463:9:a6411b97b3677cd486eb",
-      "entrypointId": "same_origin_fetch:src/lib/offline/journal-entry-sync.ts#submitJournalEntryPayload:POST:/api/garden/entries:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:1:fc6cee05c30b761b8f6f",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:2:7a1127d48a8f0f532e3a",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:3:598fa5a659a92eb0fb40",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:4:c0ff971485cfff2c8e05",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:eb5b5c53ae9d48d208d3:5:5bf190af988829b2b900",
-      "entrypointId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
-      "admissionBoundaryId": "offline_replay:src/lib/offline/journal-entry-sync.ts#syncClaimedOfflineJournalEntryMutation:browser_storage:syncClaimedOfflineJournalEntryMutation",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:ebda18295b81b7ec2f42:1:9a15a196e97f1a569a41",

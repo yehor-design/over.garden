@@ -1,9 +1,9 @@
 # Runtime Scaffold — Current Status and Verification
 
-Last reconciled: 2026-08-21 (OVE-321 server-authoritative journal draft
-protocol, OVE-325 four-composer activation, and OVE-322 temporary returning-
-device retirement; remaining removal/absence proof is owned by OVE-323 and
-OVE-326)
+Last reconciled: 2026-08-21 (OVE-321 server-authoritative journal drafts,
+OVE-325 four-composer activation, OVE-322 returning-device transfer, and
+OVE-323 removed all offline/PWA runtime surfaces; OVE-326 retains only the bounded
+database/analytics compatibility cleanup)
 
 This file is the concise current-state mirror for the implemented OverGarden
 runtime. Authenticated Linear and the issue-specific execution contract remain
@@ -15,14 +15,12 @@ superseded by ADR-0017 remain the stack authority. Every new or materially rewri
 ADR-0017 is the current connectivity authority: all new journal writes are
 network-required and server-authoritative. Implementation status (2026-08-21):
 the private owner-scoped server draft protocol is active in first-entry,
-follow-up, space-entry, and edit composers. Ordinary authoring callers no
-longer import the historical offline runtime; only the OVE-322 read-only
-retirement bridge may reach it. New documents no longer register the service
-worker, and old journal/media replay without the positive current protocol
-marker is rejected before effects. The checked-in runtime still contains the
-temporary bridge plus historical PWA, Dexie, IndexedDB, local-draft, queued,
-and sync residue owned for removal by OVE-323; it is non-authoritative and must
-not be extended.
+follow-up, space-entry, and edit composers. OVE-323 deleted the historical
+offline writers, replay queue, foreground autosync, owner vault, PWA manifest,
+service worker, icons, dependencies, and runtime fixtures. New documents have
+no installable PWA surface. A dependency-free native retirement boundary
+enumerates and deletes only exact known legacy names, preserves unresolved or
+unrelated state, reads no journal content, and never becomes authoring storage.
 
 ## Current product model
 
@@ -95,9 +93,9 @@ claim authority, not access to the product.
   credential row and no linked social provider.
 - The profile recovery flow prevents removal of the final usable method.
 - Sign-out invalidates only the current server session and requires
-  authoritative null-session convergence. Legacy browser-vault resolution is
-  a bounded retirement concern owned by OVE-322; ADR-0017 forbids new local
-  journal writes as the replacement.
+  authoritative null-session convergence. The retired owner-vault runtime no
+  longer participates in sign-out; exact-name legacy cleanup is independent,
+  bounded, content-free, and non-authoritative.
 - Retired provider and product-access invitation code cannot be re-enabled by
   environment configuration.
 
@@ -111,14 +109,12 @@ claim authority, not access to the product.
 - ADR-0017 requires an acknowledged server response before a journal save is
   successful. An actual request failure keeps current-tab text visible, makes
   that composer read-only, and exposes retry, copy, cancel, and navigation; no
-  connectivity event replays it. PWA queues, IndexedDB journal ownership, and
-  synchronization claims are historical residue scheduled for OVE-323 removal
-  and are not current product authority.
-- OVE-322 exposes a temporary, localized, non-blocking returning-device banner
-  inside the authenticated garden only. It transfers exact current-owner work
-  through the server-authoritative routes, verifies each effect before targeted
-  deletion, retains foreign/uncertain state, and requires two physical absence
-  reads. The banner and bridge end with the OVE-323 production deployment; see
+  connectivity event replays it. There is no PWA queue, IndexedDB journal
+  owner, background replay, or synchronization-success state in the client.
+- OVE-322's content transfer bridge is retired. The surviving localized banner
+  reports only content-free exact-name cleanup failure or unresolved-binding
+  state, never hydrates legacy records, and offers bounded retry/cancel plus a
+  safe sign-out action when an authenticated shell is present. See
   `docs/LEGACY_DEVICE_DATA_RETIREMENT.md`.
 - Browser-side EXIF handling is only an optimization. Originals enter private
   R2 quarantine; the server re-encodes/resizes/strips them, publishes only the

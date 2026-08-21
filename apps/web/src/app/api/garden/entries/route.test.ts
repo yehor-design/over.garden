@@ -7,23 +7,15 @@ import {
 } from "@/lib/garden/entry-contracts";
 
 const mocks = vi.hoisted(() => ({
-  AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
-  requireCurrentRequestScope: vi.fn(),
   revalidatePath: vi.fn(),
   scheduleLearningAttributionDrain: vi.fn(),
   createFirstPlantEntry: vi.fn(),
   createPlantObjectJournalEntry: vi.fn(),
-  findJournalEntryReceiptByClientMutationId: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),
   recordEntryLoggedEventSafely: vi.fn(),
   isBackdatedEntryDate: vi.fn(),
   createAuthIntentToken: vi.fn(),
   admitDocumentMutation: vi.fn(),
-}));
-
-vi.mock("@/server/auth-session", () => ({
-  AuthenticationRequiredError: mocks.AuthenticationRequiredError,
-  requireCurrentRequestScope: mocks.requireCurrentRequestScope,
 }));
 
 vi.mock("next/cache", () => ({
@@ -37,8 +29,6 @@ vi.mock("@/server/mvp-learning/attribution-after-response", () => ({
 vi.mock("@/server/journal-repository", () => ({
   createFirstPlantEntry: mocks.createFirstPlantEntry,
   createPlantObjectJournalEntry: mocks.createPlantObjectJournalEntry,
-  findJournalEntryReceiptByClientMutationId:
-    mocks.findJournalEntryReceiptByClientMutationId,
 }));
 
 vi.mock("@/server/analytics-events", () => ({
@@ -83,10 +73,6 @@ describe("POST /api/garden/entries save progress readback", () => {
         userId: "00000000-0000-4000-8000-000000000001",
         sessionId: "session-1",
       },
-    });
-    mocks.requireCurrentRequestScope.mockResolvedValue({
-      userId: "00000000-0000-4000-8000-000000000001",
-      sessionId: "session-1",
     });
   });
 
@@ -326,40 +312,6 @@ describe("POST /api/garden/entries save progress readback", () => {
     );
     const deferred = mocks.scheduleLearningAttributionDrain.mock.calls[0]?.[0];
     expect(deferred).toEqual(expect.any(Function));
-  });
-
-  it("returns a payload-free owner-scoped receipt for retirement verification", async () => {
-    mocks.findJournalEntryReceiptByClientMutationId.mockResolvedValue({
-      id: "entry-receipt-1",
-      clientMutationId: "legacy-mutation-1",
-    });
-    const { GET } = await import("./route");
-    const response = await GET(
-      new Request(
-        "http://local.test/api/garden/entries?clientMutationId=legacy-mutation-1",
-      ),
-    );
-
-    expect(response.status).toBe(200);
-    const receipt = await response.json();
-    expect(receipt).toEqual({
-      entry: {
-        id: "entry-receipt-1",
-        clientMutationId: "legacy-mutation-1",
-      },
-    });
-    expect(response.headers.get("cache-control")).toBe("private, no-store");
-    expect(
-      mocks.findJournalEntryReceiptByClientMutationId,
-    ).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: "00000000-0000-4000-8000-000000000001",
-      }),
-      "legacy-mutation-1",
-    );
-    expect(JSON.stringify(receipt).toLowerCase()).not.toMatch(
-      /title|body|content|email|location|media/,
-    );
   });
 });
 

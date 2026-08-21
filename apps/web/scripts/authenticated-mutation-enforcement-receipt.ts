@@ -25,16 +25,15 @@ export const AUTHENTICATED_MUTATION_DEPLOYMENT_RECEIPT_ARTIFACT_PATH =
 const HIGH_RISK_OWNER = "high_risk_ove_290" as const;
 const REMAINING_OWNER = "remaining_ove_291" as const;
 const EXPLICIT_GOOGLE_LINK_OWNER = "owned_by_ove_295" as const;
-// OVE-325 removes the four browser-offline journal replay entrypoints. The
-// server admission boundaries remain unchanged, while their duplicate replay
-// consumer edges disappear from the enforced topology.
-const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 38;
+// OVE-323 removes every browser-offline mutation owner and replay edge. The
+// remaining high-risk topology is the server-side admission surface only.
+const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 14;
 const BASELINE_HIGH_RISK_ENTRYPOINT_SET_DIGEST =
-  "fed08940b1616296c375d71874c1e998ae7dfb1a64bebdbbaf798274e697913a";
-const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 232;
+  "bdbedb11c601d55116bb63b8a1f79d8d5fafee59f8013aa31ac5bd3791fe6571";
+const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 141;
 const BASELINE_HIGH_RISK_EDGE_BINDING_SET_DIGEST =
-  "86a235a8538df1d832fd4ffb55bf66efb272c1fcc4ac63e9992b530afe4f123c";
-const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 30;
+  "2109d0bbd56c57a5937049d60cf64cfacf876e4b4b68824e90ae7244741d43b0";
+const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 11;
 const BASELINE_REMAINING_ENTRYPOINT_COUNT = 125;
 const BASELINE_REMAINING_ENTRYPOINT_SET_DIGEST =
   "723715ce31f54396d927402f400db53fdfe1837b2e4c7d299a91482f4df77f94";
@@ -625,43 +624,9 @@ function localBoundaryIdentifiers(
   sourcePath: string,
   symbol: string,
 ): string[] {
-  if (sourcePath === "src/lib/offline/drafts.ts") {
-    return ["assertOfflineDraftWriteAllowed"];
-  }
-  if (sourcePath === "src/lib/offline/journal-entry-sync.ts") {
-    if (symbol === "submitOnlineJournalEntryPayload") {
-      return ["enqueueMutation", "documentMutationGeneration", "syncMutation"];
-    }
-    if (symbol === "syncClaimedOfflineJournalEntryMutation") {
-      return [
-        "assertClaimedJournalMutation",
-        "documentMutationGeneration",
-        "syncClaimedOfflineJournalEntryMutationWithSignal",
-      ];
-    }
-    return [
-      "claimOfflineMutationForManualSync",
-      "documentMutationGeneration",
-      "syncClaimedOfflineJournalEntryMutationWithSignal",
-    ];
-  }
-  if (sourcePath === "src/lib/offline/owner-vault-migration.ts") {
-    return [
-      "hasOwnerVaultBinding",
-      "acquireOwnerVaultExclusiveFence",
-      "throwIfCancelled",
-    ];
-  }
-  if (sourcePath === "src/lib/offline/queue.ts") {
-    return symbol === "assertOwnerOfflineActivityAllowed"
-      ? [
-          "localOwnerActivitySessionGenerations",
-          "signed_out_fence",
-          "OwnerOfflineActivityPausedError",
-        ]
-      : ["assertOwnerOfflineActivityAllowed"];
-  }
-  throw new Error(`No admission evidence policy for ${sourcePath}#${symbol}`);
+  throw new Error(
+    `No browser-local mutation policy exists for ${sourcePath}#${symbol}`,
+  );
 }
 
 function requireSha256(value: string, label: string): void {

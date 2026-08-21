@@ -148,7 +148,7 @@ receipt is [`docs/launch-corpus-unsplash-license-receipt.md`](launch-corpus-unsp
 
 ## Local cover matrix (fixtures / unit — not production photos)
 
-`apps/web/src/lib/launch-corpus/cover-matrix.ts` covers 10+1, eleventh reject, keep-as-cover, replace failure, removal fallback, aspects, lifecycle surfaces, and production fixture refusal **without** mutating the frozen `ove187-v8` visual fixture manifest hash.
+`apps/web/src/lib/launch-corpus/cover-matrix.ts` covers 10+1, eleventh reject, keep-as-cover, replace failure, removal fallback, aspects, lifecycle surfaces, and production fixture refusal **without** mutating the frozen `ove187-v9` visual fixture manifest hash.
 
 ## Before → after disposition (exact classes)
 
@@ -188,4 +188,4 @@ Re-run `pnpm launch:corpus:plan -- --environment production --confirm-environmen
 - No production archive/seed in Phase A.
 - No OVE-186 Done.
 - No claim that H1/H4/H6 passed.
-- Visual fixture manifest remains `ove187-v8`.
+- Visual fixture manifest remains `ove187-v9`.
