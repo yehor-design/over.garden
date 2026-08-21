@@ -1246,7 +1246,10 @@ export function FirstEntryComposer({
 
               <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
                 {selectedCatalogItem ? (
-                  <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+                  <span
+                    className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground"
+                    data-catalog-serve-class={selectedCatalogItem.serveClass}
+                  >
                     <span>
                       {copy.composer.fields.matchedInCatalog}{" "}
                       {selectedCatalogItem.displayName} ·{" "}
@@ -1309,7 +1312,7 @@ export function FirstEntryComposer({
               </div>
 
               {catalogSuggestions.length > 0 ? (
-                <ul className="grid gap-2">
+                <ul className="grid gap-2" aria-live="polite">
                   {catalogSuggestions.map((suggestion) => {
                     const trust = buildGardenCatalogTrustMetadata(
                       locale,
@@ -1324,6 +1327,7 @@ export function FirstEntryComposer({
                         <button
                           type="button"
                           onClick={() => selectCatalogSuggestion(suggestion)}
+                          data-catalog-serve-class={suggestion.serveClass}
                           className="flex min-h-11 w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
                         >
                           <span className="min-w-0">

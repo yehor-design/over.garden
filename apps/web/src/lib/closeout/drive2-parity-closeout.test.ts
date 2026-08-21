@@ -49,8 +49,8 @@ describe("OVE-186 Drive2-parity closeout coverage", () => {
     );
   });
 
-  it("fails OVE-186 when OVE-227 search parity is not zero-gap", () => {
-    expect(() =>
+  it("serves OVE-186 with seam_unmet when OVE-227 search parity is not zero-gap", () => {
+    expect(
       assertDrive2PublicSearchParityGate({
         zeroGap: false,
         counts: {
@@ -64,10 +64,10 @@ describe("OVE-186 Drive2-parity closeout coverage", () => {
           terminal_failure: 0,
         },
       }),
-    ).toThrow(/OVE-227/);
+    ).toEqual({ serveClass: "seam_unmet", blockingCount: 1 });
   });
 
-  it("fails OVE-186 when overdue or dead indexing jobs can hide drift", () => {
+  it("serves OVE-186 with seam_unmet when overdue or dead indexing jobs can hide drift", () => {
     const converged = {
       missing: 0,
       extraneous: 0,
@@ -79,23 +79,23 @@ describe("OVE-186 Drive2-parity closeout coverage", () => {
       terminal_failure: 0,
     };
 
-    expect(() =>
+    expect(
       assertDrive2PublicSearchParityGate({
         zeroGap: true,
         counts: { ...converged, overdue: 1 },
       }),
-    ).toThrow(/OVE-227/);
+    ).toEqual({ serveClass: "seam_unmet", blockingCount: 1 });
 
-    expect(() =>
+    expect(
       assertDrive2PublicSearchParityGate({
         zeroGap: true,
         counts: { ...converged, terminal_failure: 1 },
       }),
-    ).toThrow(/OVE-227/);
+    ).toEqual({ serveClass: "seam_unmet", blockingCount: 1 });
 
-    expect(() =>
+    expect(
       assertDrive2PublicSearchParityGate({ zeroGap: true, counts: converged }),
-    ).not.toThrow();
+    ).toEqual({ serveClass: "exact", blockingCount: 0 });
   });
 
   it("keeps every archetype reproducible at 320px and 1440px", () => {

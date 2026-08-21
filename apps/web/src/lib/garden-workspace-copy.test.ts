@@ -68,6 +68,33 @@ describe("garden workspace copy", () => {
     expect(trust.sourceCaveat).toContain("безопасную проекцию каталога");
   });
 
+  it("renders every degraded catalog class as locale-owned text", () => {
+    const expected = {
+      uk: [/Низька впевненість/u, /Згенерований варіант/u, /Однакова назва/u],
+      bg: [/Ниска увереност/u, /Генериран вариант/u, /Едно и също име/u],
+      ru: [
+        /Низкая уверенность/u,
+        /Сгенерированный вариант/u,
+        /Одинаковое название/u,
+      ],
+    } as const;
+
+    for (const locale of LOCALES) {
+      for (const [index, serveClass] of (
+        ["low_confidence", "generated", "homonymous"] as const
+      ).entries()) {
+        const trust = buildGardenCatalogTrustMetadata(locale, {
+          status: "promoted",
+          source: "eu_oj_eur_lex_common_catalogue",
+          catalogKind: "plant_variety",
+          locale,
+          serveClass,
+        });
+        expect(trust.sourceCaveat).toMatch(expected[locale][index]!);
+      }
+    }
+  });
+
   it("maps photo and generic save failures to locale-owned recovery copy", () => {
     expect(
       localizedJournalSaveErrorMessage(

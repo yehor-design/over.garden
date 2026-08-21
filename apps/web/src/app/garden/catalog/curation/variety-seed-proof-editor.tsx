@@ -10,6 +10,10 @@ import { buildGardenCatalogTrustMetadata } from "@/lib/garden-workspace-copy";
 import { publicVarietyPath } from "@/lib/garden/public-paths";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
+  isOve330ServeClass,
+  type Ove330ServeClass,
+} from "@/lib/media/presentation-contract";
+import {
   getOperatorCurationCopy,
   operatorCurationMapLabel,
 } from "@/lib/operator-curation-copy";
@@ -46,6 +50,7 @@ interface CatalogSuggestion {
   locale: string;
   status: string;
   source: string;
+  serveClass: Ove330ServeClass;
 }
 
 export function VarietySeedProofEditor({
@@ -384,7 +389,10 @@ function CatalogSearchState({
     <div className="grid gap-2 text-xs">
       <div className="flex flex-wrap items-center gap-2">
         {selected ? (
-          <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+          <span
+            className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground"
+            data-catalog-serve-class={selected.serveClass}
+          >
             <span>
               {copy.common.selected}: {selected.displayName} ·{" "}
               {buildGardenCatalogTrustMetadata(locale, selected).trustLabel}
@@ -412,7 +420,7 @@ function CatalogSearchState({
       </div>
 
       {suggestions.length > 0 ? (
-        <ul className="grid gap-2">
+        <ul className="grid gap-2" aria-live="polite">
           {suggestions.map((suggestion) => {
             const trust = buildGardenCatalogTrustMetadata(locale, suggestion);
 
@@ -421,6 +429,7 @@ function CatalogSearchState({
                 <button
                   type="button"
                   onClick={() => selectSuggestion(suggestion)}
+                  data-catalog-serve-class={suggestion.serveClass}
                   className="flex w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
                 >
                   <span className="min-w-0">
@@ -476,6 +485,9 @@ function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
         locale: candidate.locale,
         status: candidate.status,
         source: candidate.source,
+        serveClass: isOve330ServeClass(candidate.serveClass)
+          ? candidate.serveClass
+          : "exact",
       },
     ];
   });

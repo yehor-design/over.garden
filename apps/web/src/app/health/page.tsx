@@ -3,7 +3,12 @@ import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { getAuthSecretHealth } from "@/lib/auth-secret";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import { formatOperatorTemplate, getOperatorCopy } from "@/lib/operator-copy";
+import {
+  formatOperatorTemplate,
+  getOperatorCopy,
+  getOperatorDatabaseAvailabilityCopy,
+} from "@/lib/operator-copy";
+import type { Ove330ServeClass } from "@/lib/media/presentation-contract";
 import { pingDatabase, readRecentHealth } from "@/server/health-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 
@@ -36,19 +41,25 @@ async function getAuthStatus(locale: InterfaceLocale): Promise<string> {
     : copy.authClosed;
 }
 
-async function getDbStatus(locale: InterfaceLocale): Promise<string> {
+async function getDbStatus(locale: InterfaceLocale): Promise<{
+  message: string;
+  serveClass: "exact" | "seam_unmet";
+}> {
   const copy = getOperatorCopy(locale).health;
   try {
     const [isReachable, rows] = await Promise.all([
       pingDatabase(),
       readRecentHealth(3),
     ]);
-    return formatOperatorTemplate(copy.dbOk, {
-      ping: String(isReachable),
-      count: rows.length,
-    });
+    return {
+      message: formatOperatorTemplate(copy.dbOk, {
+        ping: String(isReachable),
+        count: rows.length,
+      }),
+      serveClass: "exact",
+    };
   } catch {
-    return copy.dbUnavailable;
+    return getOperatorDatabaseAvailabilityCopy(locale);
   }
 }
 
@@ -76,7 +87,11 @@ export default async function HealthPage() {
         <Row label={copy.renderedAt} value={renderedAt} />
         <Row label={copy.utf8} value={cyrillic} />
         <Row label={copy.auth} value={authStatus} />
-        <Row label={copy.database} value={dbStatus} />
+        <Row
+          label={copy.database}
+          value={dbStatus.message}
+          serveClass={dbStatus.serveClass}
+        />
       </dl>
 
       <div className="flex items-center gap-3">
@@ -87,9 +102,21 @@ export default async function HealthPage() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+  serveClass,
+}: {
+  label: string;
+  value: string;
+  serveClass?: Ove330ServeClass;
+}) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-border p-3">
+    <div
+      className="flex flex-col gap-1 rounded-lg border border-border p-3"
+      data-operator-db-serve-class={serveClass}
+      role={serveClass ? "status" : undefined}
+    >
       <dt className="text-sm font-medium text-muted-foreground">{label}</dt>
       <dd className="font-mono text-sm break-words text-foreground">{value}</dd>
     </div>

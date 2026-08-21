@@ -123,7 +123,8 @@ const UK_COPY = {
     authLocalFallback:
       "Маршрут Better Auth підключено — активний лише локальний fallback",
     dbOk: "Читання Kysely успішне — ping={ping} · рядків стану: {count}",
-    dbUnavailable: "Перевірка бази даних недоступна в цьому середовищі",
+    dbUnavailable:
+      "Діагностику показано в обмеженому режимі; доступні перевірки продовжуються без відповіді бази даних",
     primaryButton: "Кнопка shadcn (SSR)",
     outlineButton: "Контурна",
   },
@@ -243,7 +244,8 @@ const BG_COPY = {
     authLocalFallback:
       "Маршрутът на Better Auth е свързан — активен е само локалният fallback",
     dbOk: "Четенето с Kysely е успешно — ping={ping} · редове за състояние: {count}",
-    dbUnavailable: "Проверката на базата данни не е налична в тази среда",
+    dbUnavailable:
+      "Диагностиката е показана в ограничен режим; наличните проверки продължават без отговор от базата данни",
     primaryButton: "Бутон shadcn (SSR)",
     outlineButton: "Контурен",
   },
@@ -361,7 +363,8 @@ const RU_COPY = {
     authLocalFallback:
       "Маршрут Better Auth подключён — активен только локальный fallback",
     dbOk: "Чтение Kysely успешно — ping={ping} · строк состояния: {count}",
-    dbUnavailable: "Проверка базы данных недоступна в этой среде",
+    dbUnavailable:
+      "Диагностика показана в ограниченном режиме; доступные проверки продолжаются без ответа базы данных",
     primaryButton: "Кнопка shadcn (SSR)",
     outlineButton: "Контурная",
   },
@@ -381,6 +384,13 @@ const DATE_LOCALE_BY_INTERFACE_LOCALE: Record<InterfaceLocale, string> = {
 
 export function getOperatorCopy(locale: InterfaceLocale): OperatorCopy {
   return COPY_BY_LOCALE[locale];
+}
+
+export function getOperatorDatabaseAvailabilityCopy(locale: InterfaceLocale) {
+  return {
+    message: getOperatorCopy(locale).health.dbUnavailable,
+    serveClass: "seam_unmet" as const,
+  };
 }
 
 export function formatOperatorTemplate(

@@ -80,6 +80,7 @@ export function SubjectAwareMediaImage({
       }}
       data-media-presentation={presentation.mode}
       data-media-object-position={presentation.objectPosition}
+      data-media-serve-class={presentation.serveClass}
     />
   );
 }
@@ -124,6 +125,7 @@ export function SubjectAwareHtmlImage({
       style={{ objectPosition: presentation.objectPosition }}
       data-media-presentation={presentation.mode}
       data-media-object-position={presentation.objectPosition}
+      data-media-serve-class={presentation.serveClass}
     />
   );
 }

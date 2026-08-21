@@ -1,13 +1,16 @@
 import { revalidatePath } from "next/cache";
 
-import { updateMediaAssetFocalForOwner } from "@/server/media/media-repository";
+import {
+  findMediaAssetForOwner,
+  updateMediaAssetFocalForOwner,
+} from "@/server/media/media-repository";
 import {
   admitDocumentMutation,
   documentMutationAdmissionResponse,
   documentMutationGenerationFromRequest,
 } from "@/server/document-mutation-admission";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
-import { normalizeFocalPoint } from "@/lib/media/presentation-contract";
+import { resolveMediaFocalPoint } from "@/lib/media/presentation-contract";
 
 export const runtime = "nodejs";
 
@@ -40,23 +43,36 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const rawX = typeof body.focalX === "number" ? body.focalX : Number.NaN;
   const rawY = typeof body.focalY === "number" ? body.focalY : Number.NaN;
-  if (
-    !Number.isFinite(rawX) ||
-    !Number.isFinite(rawY) ||
-    rawX < 0 ||
-    rawX > 1 ||
-    rawY < 0 ||
-    rawY > 1
-  ) {
+  if (!Number.isFinite(rawX) || !Number.isFinite(rawY)) {
     return Response.json(
-      { error: "Focal coordinates must be between 0 and 1." },
+      { error: "Focal coordinates must be finite numbers." },
       { status: 400 },
     );
   }
 
-  const focal = normalizeFocalPoint({ x: rawX, y: rawY });
-  // Reject if normalize fail-closed because client sent invalid that somehow passed range
-  // (normalize only fails closed outside range / non-finite — already gated above).
+  const focalResolution = resolveMediaFocalPoint({ x: rawX, y: rawY });
+  const focal = focalResolution.focal;
+  if (focalResolution.serveClass === "clamped") {
+    const asset = await findMediaAssetForOwner(scope, mediaAssetId);
+    if (!asset) {
+      return Response.json(
+        { error: "Media asset not found." },
+        { status: 404 },
+      );
+    }
+    return Response.json({
+      mediaAsset: {
+        id: asset.id,
+        focalX: focal.x,
+        focalY: focal.y,
+        intrinsicWidth: asset.intrinsic_width,
+        intrinsicHeight: asset.intrinsic_height,
+      },
+      journalRevision: null,
+      canonicalMutation: "none",
+      serveClass: focalResolution.serveClass,
+    });
+  }
 
   const expectedRevision =
     typeof body.expectedRevision === "number"
@@ -104,6 +120,8 @@ export async function PATCH(request: Request, context: RouteContext) {
         intrinsicHeight: result.asset.intrinsic_height,
       },
       journalRevision: result.journalRevision,
+      canonicalMutation: "updated",
+      serveClass: focalResolution.serveClass,
     });
   } catch (error) {
     const statusCode =

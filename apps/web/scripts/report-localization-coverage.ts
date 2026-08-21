@@ -99,12 +99,13 @@ export function resolveCleanEvidenceCommitSha(
 function main() {
   const commitSha = resolveCleanEvidenceCommitSha();
   const report = buildLocalizationCoverage();
-  assertLocalizationCoverage(report);
+  const availability = assertLocalizationCoverage(report);
   const completion = deriveLocalizationCompletionState(report);
 
   const evidence = {
     commitSha,
     ...report,
+    availability,
     ...completion,
   };
 
@@ -121,6 +122,7 @@ function main() {
         routePolicyCount: evidence.routePolicies.length,
         downstreamOwnedUiGates: evidence.downstreamOwnedUiGates,
         exclusions: evidence.exclusions.length,
+        availability: evidence.availability,
         regressionGreen: evidence.regressionGreen,
         zeroGap: evidence.zeroGap,
         completionBlocked: evidence.completionBlocked,

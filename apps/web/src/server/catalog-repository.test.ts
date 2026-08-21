@@ -58,6 +58,7 @@ function catalogSuggestion<
 >(suggestion: T) {
   return {
     ...suggestion,
+    serveClass: "exact" as const,
     ...catalogSuggestionTrustMetadata(suggestion),
   };
 }
@@ -77,6 +78,9 @@ describe("catalog repository query contracts", () => {
     expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
+    );
+    expect(compiled.sql).toContain(
+      "generated_alias.source_method = 'generated'",
     );
     expect(compiled.sql).toContain(
       'lower("catalog_item_names"."display_name") like $3',
@@ -219,6 +223,7 @@ describe("catalog repository query contracts", () => {
         locale: "uk",
         status: "seeded",
         source: "internal_seed",
+        serveClass: "low_confidence",
         trustState: "candidate",
         trustLabel: "Candidate",
         sourceLabel: "OverGarden starter catalog",
@@ -248,6 +253,7 @@ describe("catalog repository query contracts", () => {
         locale: "uk",
         status: "seeded",
         source: "internal_seed",
+        serveClass: "exact",
         trustState: "candidate",
         trustLabel: "Candidate",
         sourceLabel: "OverGarden starter catalog",
@@ -258,7 +264,7 @@ describe("catalog repository query contracts", () => {
     ]);
   });
 
-  it("rejects Meili fuzzy evidence without a ranked word or with more than one typo", async () => {
+  it("serves previously rejected Meili fuzzy evidence as low confidence", async () => {
     const hit = {
       catalogItemId: "00000000-0000-4000-8000-000000000101",
       displayName: "Помідор чері",
@@ -269,6 +275,7 @@ describe("catalog repository query contracts", () => {
       source: "internal_seed",
     };
 
+    let index = 0;
     for (const _rankingScoreDetails of [
       {
         exactness: { matchingWords: 0, maxMatchingWords: 0 },
@@ -279,14 +286,77 @@ describe("catalog repository query contracts", () => {
         typo: { typoCount: 2, maxTypoCount: 2 },
       },
     ]) {
+      index += 1;
       await expect(
         searchCatalogSuggestionsWithMeili("помдрр", 5, {
           index: () => ({
-            search: async () => ({ hits: [{ ...hit, _rankingScoreDetails }] }),
+            search: async () => ({
+              hits: [
+                {
+                  ...hit,
+                  catalogItemId: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+                  _rankingScoreDetails,
+                },
+              ],
+            }),
           }),
         }),
-      ).resolves.toEqual([]);
+      ).resolves.toEqual([
+        expect.objectContaining({
+          serveClass: "low_confidence",
+        }),
+      ]);
     }
+  });
+
+  it("serves accepted generated aliases and homonymous names with explicit classes", async () => {
+    const base = {
+      displayName: "Роза",
+      canonicalName: "Rosa",
+      catalogKind: "species",
+      locale: "uk",
+      status: "confirmed",
+      source: "species_backbone",
+    } as const;
+
+    const generated = await searchCatalogSuggestionsWithMeili("роза", 5, {
+      index: () => ({
+        search: async () => ({
+          hits: [
+            {
+              ...base,
+              catalogItemId: "00000000-0000-4000-8000-000000000401",
+              serveClass: "generated",
+            },
+          ],
+        }),
+      }),
+    });
+    expect(generated).toEqual([
+      expect.objectContaining({ serveClass: "generated" }),
+    ]);
+
+    const homonymous = await searchCatalogSuggestionsWithMeili("роза", 5, {
+      index: () => ({
+        search: async () => ({
+          hits: [
+            {
+              ...base,
+              catalogItemId: "00000000-0000-4000-8000-000000000402",
+            },
+            {
+              ...base,
+              canonicalName: "Rhododendron",
+              catalogItemId: "00000000-0000-4000-8000-000000000403",
+            },
+          ],
+        }),
+      }),
+    });
+    expect(homonymous.map(({ serveClass }) => serveClass)).toEqual([
+      "homonymous",
+      "homonymous",
+    ]);
   });
 
   it("dedupes source-backed Meili hits that represent the same catalog concept", async () => {
@@ -341,6 +411,7 @@ describe("catalog repository query contracts", () => {
         locale: "uk",
         status: "seeded",
         source: "ua_state_register",
+        serveClass: "exact",
         trustState: "source_backed",
         trustLabel: "Source-backed",
         sourceLabel: "Ukraine variety register",
@@ -457,7 +528,10 @@ describe("catalog repository query contracts", () => {
         searchWithMeili: async () => [variety],
         searchWithPostgres: async () => [species],
       }),
-    ).resolves.toEqual([variety, species]);
+    ).resolves.toEqual([
+      { ...variety, serveClass: "homonymous" },
+      { ...species, serveClass: "homonymous" },
+    ]);
     expect(variety.disambiguationLabel).toBe(
       "Plant variety · EU Official Journal · en",
     );
@@ -549,6 +623,9 @@ describe("catalog repository query contracts", () => {
     expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
+    );
+    expect(compiled.sql).toContain(
+      "generated_alias.source_method = 'generated'",
     );
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.sql).not.toContain("owner_user_id");

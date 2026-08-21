@@ -14,6 +14,14 @@ import {
   catalogSuggestionTrustMetadata,
   type CatalogTrustMetadata,
 } from "@/lib/garden/catalog-trust";
+import {
+  catalogMeiliServeClass,
+  classifyHomonymousCatalogSuggestions,
+} from "@/lib/garden/catalog-availability";
+import {
+  isOve330ServeClass,
+  type Ove330ServeClass,
+} from "@/lib/media/presentation-contract";
 import type { RequestScope } from "@/server/request-scope";
 import { meiliSearchClient } from "@/server/search/client";
 import {
@@ -65,6 +73,7 @@ export interface CatalogSuggestion extends CatalogTrustMetadata {
   locale: string;
   status: SelectableCatalogStatus;
   source: string;
+  serveClass: Ove330ServeClass;
 }
 
 export interface SelectableCatalogItem {
@@ -126,10 +135,13 @@ export async function searchCatalogSuggestionsForTypeahead(
 
   const postgresSuggestions = await searchWithPostgres(query, normalizedLimit);
 
-  return dedupeCatalogTypeaheadSuggestions([
-    ...meiliSuggestions,
-    ...postgresSuggestions,
-  ]).slice(0, normalizedLimit);
+  return classifyHomonymousCatalogSuggestions(
+    dedupeCatalogTypeaheadSuggestions(
+      [...meiliSuggestions, ...postgresSuggestions].map(
+        ensureCatalogSuggestionServeClass,
+      ),
+    ),
+  ).slice(0, normalizedLimit);
 }
 
 export async function searchCatalogSuggestionsWithMeili(
@@ -150,24 +162,37 @@ export async function searchCatalogSuggestionsWithMeili(
     });
 
   const hits = Array.isArray(result.hits) ? result.hits : [];
-  return dedupeCatalogTypeaheadSuggestions(
-    hits
-      .map((hit) => ({
-        hit,
-        suggestion: catalogTypeaheadHitToSuggestion(hit),
-      }))
-      .filter(
-        (
-          result,
-        ): result is { hit: unknown; suggestion: CatalogTypeaheadSuggestion } =>
-          result.suggestion !== null &&
-          meiliHitMatchesCatalogQuery(
-            result.hit,
-            result.suggestion,
-            normalizedQuery,
-          ),
-      )
-      .map((result) => toCatalogSuggestion(result.suggestion)),
+  return classifyHomonymousCatalogSuggestions(
+    dedupeCatalogTypeaheadSuggestions(
+      hits
+        .map((hit) => ({
+          hit,
+          suggestion: catalogTypeaheadHitToSuggestion(hit),
+        }))
+        .filter(
+          (
+            result,
+          ): result is {
+            hit: unknown;
+            suggestion: CatalogTypeaheadSuggestion;
+          } => result.suggestion !== null,
+        )
+        .map(({ hit, suggestion }) => ({
+          suggestion,
+          serveClass: catalogMeiliServeClass(hit, suggestion, normalizedQuery),
+        }))
+        .filter(
+          (
+            result,
+          ): result is {
+            suggestion: CatalogTypeaheadSuggestion;
+            serveClass: Ove330ServeClass;
+          } => result.serveClass !== null,
+        )
+        .map(({ suggestion, serveClass }) =>
+          toCatalogSuggestion({ ...suggestion, serveClass }),
+        ),
+    ),
   ).slice(0, normalizedLimit);
 }
 
@@ -186,17 +211,20 @@ export async function searchCatalogSuggestions(
     normalizedLimit * 3,
   ).execute();
 
-  return dedupeCatalogTypeaheadSuggestions(
-    rows.map((row) =>
-      toCatalogSuggestion({
-        id: row.id,
-        displayName: row.displayName,
-        canonicalName: row.canonicalName,
-        catalogKind: row.catalogKind as CatalogKind,
-        locale: row.locale,
-        status: row.status as SelectableCatalogStatus,
-        source: row.source,
-      }),
+  return classifyHomonymousCatalogSuggestions(
+    dedupeCatalogTypeaheadSuggestions(
+      rows.map((row) =>
+        toCatalogSuggestion({
+          id: row.id,
+          displayName: row.displayName,
+          canonicalName: row.canonicalName,
+          catalogKind: row.catalogKind as CatalogKind,
+          locale: row.locale,
+          status: row.status as SelectableCatalogStatus,
+          source: row.source,
+          serveClass: row.isGeneratedAlias ? "generated" : "exact",
+        }),
+      ),
     ),
   ).slice(0, normalizedLimit);
 }
@@ -415,6 +443,13 @@ export function buildCatalogTypeaheadQuery(
       "catalog_items.status as status",
       "catalog_items.source as source",
       "catalog_item_names.display_name as displayName",
+      sql<boolean>`exists (
+        select 1
+        from catalog_alias_projections as generated_alias
+        where generated_alias.catalog_item_name_id = catalog_item_names.id
+          and generated_alias.status = 'accepted'
+          and generated_alias.source_method = 'generated'
+      )`.as("isGeneratedAlias"),
     ])
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
     .where("catalog_items.created_by_user_id", "is", null)
@@ -456,6 +491,13 @@ export function buildCatalogTypeaheadReindexRowsQuery(executor: QueryExecutor) {
       "catalog_item_names.normalized_name as aliasNormalizedName",
       "catalog_item_names.locale as aliasLocale",
       "catalog_item_names.is_primary as isPrimary",
+      sql<boolean>`exists (
+        select 1
+        from catalog_alias_projections as generated_alias
+        where generated_alias.catalog_item_name_id = catalog_item_names.id
+          and generated_alias.status = 'accepted'
+          and generated_alias.source_method = 'generated'
+      )`.as("isGeneratedAlias"),
     ])
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
     .where("catalog_items.created_by_user_id", "is", null)
@@ -686,50 +728,6 @@ export function normalizeCatalogQuery(query: string) {
     .toLowerCase();
 }
 
-function meiliHitMatchesCatalogQuery(
-  hit: unknown,
-  suggestion: CatalogTypeaheadSuggestion,
-  normalizedQuery: string,
-) {
-  if (!isCatalogSearchHitRecord(hit)) {
-    return (
-      textMatchesCatalogQuery(suggestion.displayName, normalizedQuery) ||
-      textMatchesCatalogQuery(suggestion.canonicalName, normalizedQuery)
-    );
-  }
-
-  const exactTextMatch = [
-    hit.normalizedName,
-    hit.displayName,
-    hit.canonicalName,
-  ].some((value) => textMatchesCatalogQuery(value, normalizedQuery));
-
-  return exactTextMatch || hasBoundedMeiliTypoEvidence(hit);
-}
-
-function hasBoundedMeiliTypoEvidence(hit: Record<string, unknown>) {
-  const details = hit._rankingScoreDetails;
-  if (!isCatalogSearchHitRecord(details)) return false;
-
-  const exactness = details.exactness;
-  const typo = details.typo;
-  if (!isCatalogSearchHitRecord(exactness) || !isCatalogSearchHitRecord(typo)) {
-    return false;
-  }
-
-  const maxMatchingWords = exactness.maxMatchingWords;
-  const typoCount = typo.typoCount;
-  const maxTypoCount = typo.maxTypoCount;
-
-  return (
-    typeof maxMatchingWords === "number" &&
-    maxMatchingWords > 0 &&
-    typoCount === 1 &&
-    typeof maxTypoCount === "number" &&
-    maxTypoCount >= typoCount
-  );
-}
-
 function toCatalogSuggestion(input: {
   id: string;
   displayName: string;
@@ -738,23 +736,23 @@ function toCatalogSuggestion(input: {
   locale: string;
   status: SelectableCatalogStatus;
   source: string;
+  serveClass?: Ove330ServeClass;
 }): CatalogSuggestion {
   return {
     ...input,
+    serveClass: isOve330ServeClass(input.serveClass)
+      ? input.serveClass
+      : "exact",
     ...catalogSuggestionTrustMetadata(input),
   };
 }
 
-function textMatchesCatalogQuery(value: unknown, normalizedQuery: string) {
-  if (typeof value !== "string") return false;
-  const normalizedValue = normalizeCatalogQuery(value);
-  return normalizedValue.includes(normalizedQuery);
-}
-
-function isCatalogSearchHitRecord(
-  value: unknown,
-): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function ensureCatalogSuggestionServeClass(
+  suggestion: CatalogSuggestion,
+): CatalogSuggestion {
+  return isOve330ServeClass(suggestion.serveClass)
+    ? suggestion
+    : { ...suggestion, serveClass: "exact" };
 }
 
 export function normalizeUserAddedCatalogName(value: string) {

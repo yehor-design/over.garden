@@ -21,6 +21,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { buildGardenCatalogTrustMetadata } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
+  isOve330ServeClass,
+  type Ove330ServeClass,
+} from "@/lib/media/presentation-contract";
+import {
   getOperatorCurationCopy,
   operatorCurationMapLabel,
 } from "@/lib/operator-curation-copy";
@@ -100,6 +104,7 @@ interface CatalogSuggestion {
   locale: string;
   status: string;
   source: string;
+  serveClass: Ove330ServeClass;
 }
 
 export function CatalogCurationCandidateList({
@@ -351,7 +356,10 @@ function CatalogCurationCandidateCard({
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
             {selected ? (
-              <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+              <span
+                className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground"
+                data-catalog-serve-class={selected.serveClass}
+              >
                 <span>
                   {copy.candidate.target}: {selected.displayName} ·{" "}
                   {buildGardenCatalogTrustMetadata(locale, selected).trustLabel}
@@ -381,7 +389,7 @@ function CatalogCurationCandidateCard({
           </div>
 
           {suggestions.length > 0 ? (
-            <ul className="grid gap-2">
+            <ul className="grid gap-2" aria-live="polite">
               {suggestions.map((suggestion) => {
                 const trust = buildGardenCatalogTrustMetadata(
                   locale,
@@ -393,6 +401,7 @@ function CatalogCurationCandidateCard({
                     <button
                       type="button"
                       onClick={() => selectSuggestion(suggestion)}
+                      data-catalog-serve-class={suggestion.serveClass}
                       className="flex w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
                     >
                       <span className="min-w-0">
@@ -834,6 +843,9 @@ function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
         locale: candidate.locale,
         status: candidate.status,
         source: candidate.source,
+        serveClass: isOve330ServeClass(candidate.serveClass)
+          ? candidate.serveClass
+          : "exact",
       },
     ];
   });

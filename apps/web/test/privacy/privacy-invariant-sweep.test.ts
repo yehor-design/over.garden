@@ -146,6 +146,7 @@ describe("OVE-40 privacy invariant sweep — catalog typeahead", () => {
     for (const key of Object.keys(doc)) {
       expect(ALLOWED_CATALOG_DOCUMENT_KEYS).toContain(key);
     }
+    expect(doc.serveClass).toBe("exact");
   });
 
   it("never indexes user-created catalog rows", () => {
