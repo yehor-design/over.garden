@@ -126,6 +126,14 @@ Caller/sibling/consumer inventory:
 - {{Every path that could bypass or diverge from the fix}}.
 - `{{new exact path}}` (new) — {{single owner and purpose}}.
 
+Internal-consistency authoring check:
+
+- Mark each existing canonical-owner row `required existing owner`; mark planned paths `new`.
+- `owner_count_agreement`: every stated owner-row or test-file count equals the rows or paths it describes.
+- `scope_context_completeness`: every path marked `required existing owner` is repeated in Required context.
+- `terminal_predecessor_reference`: every Failure-gates `OVE-###` Done dependency is live in the authenticated `overgarden.contract-status-manifest.v1` capture; an absent/incomplete/future/older-than-24-hours capture stops as `status_manifest_stale`.
+- `surface_coherence`: no fault or failure proof requires a canonical write after the data contract declares that surface absent.
+
 # Ordered implementation plan
 
 1. Re-read context, fetch current `main`, inspect dirty state, read Linear relations, and rerun reproduction. Stop if drift invalidates the contract.
@@ -356,6 +364,7 @@ Do not start implementation, mutate production, merge, deploy, or mark `Done` wh
 - The description contains a placeholder or depends on hidden knowledge.
 - Only local/branch/configured proof exists where current-main/CI/deployment/provider/live proof is required.
 - The blocker graph is cyclic or saved relations differ from the intended DAG.
+- One of `owner_count_agreement`, `scope_context_completeness`, `terminal_predecessor_reference`, or `surface_coherence` reports a contradiction, or the required status manifest reports `status_manifest_stale`. Record a redacted reconciliation comment on this issue, correct and read back the saved body or manifest, rerun final validation, and only then open or resume the implementation branch.
 - Linear saved-description SHA-256 differs from the validated payload.
 - Evidence contains secrets, precise location, raw user content, media keys/capabilities, email, IP/user-agent, or stable user identity.
 

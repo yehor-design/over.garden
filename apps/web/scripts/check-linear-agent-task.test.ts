@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,9 +7,11 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  type ContractStatusManifest,
   parseLinearTaskCliArgs,
   REQUIRED_LINEAR_TASK_HEADINGS,
   RETIRED_MVP_POSTURE_TERM_GATES,
+  validateContractConsistencyRules,
   validateLinearAgentTask,
 } from "./check-linear-agent-task";
 
@@ -4045,5 +4048,231 @@ describe("ADR-0017 local-retirement construction gate", () => {
         expect.objectContaining({ code: "local_retirement_contract" }),
       ]),
     );
+  });
+});
+
+describe("OVE-344 contract internal consistency rules", () => {
+  const fixtureRoot = path.join(
+    repoRoot,
+    "apps",
+    "web",
+    "scripts",
+    "fixtures",
+    "contract-consistency",
+  );
+  const freshInstant = "2026-08-22T20:00:00.000Z";
+
+  function manifest(
+    contracts: ContractStatusManifest["contracts"],
+    capturedAt = "2026-08-22T19:30:00.000Z",
+  ): ContractStatusManifest {
+    return {
+      schema: "overgarden.contract-status-manifest.v1",
+      capturedAt,
+      maxAgeHours: 24,
+      contracts,
+    };
+  }
+
+  async function fixture(name: string) {
+    return readFile(path.join(fixtureRoot, name), "utf8");
+  }
+
+  function codes(
+    source: string,
+    statusManifest?: ContractStatusManifest | null,
+  ) {
+    return validateContractConsistencyRules(source, {
+      statusManifest,
+      validationInstant: freshInstant,
+      enforceStatusManifest: statusManifest !== undefined,
+    }).map((finding) => finding.code);
+  }
+
+  it("binds every recorded defect to the authenticated current-body anchor", async () => {
+    const record = JSON.parse(await fixture("recorded-defects.json")) as {
+      records: Array<{
+        rule: string;
+        currentAnchors: Record<string, string>;
+        verbatimDefectExcerpt: string;
+      }>;
+    };
+    const anchors = {
+      "OVE-332": await fixture("ove-332-current.md"),
+      "OVE-337": await fixture("ove-337-current.md"),
+      "OVE-339": await fixture("ove-339-current.md"),
+    };
+
+    expect(record.records.map(({ rule }) => rule)).toEqual([
+      "owner_count_agreement",
+      "scope_context_completeness",
+      "terminal_predecessor_reference",
+      "surface_coherence",
+    ]);
+    for (const entry of record.records) {
+      expect(entry.verbatimDefectExcerpt.length).toBeGreaterThan(80);
+      for (const [issueId, digest] of Object.entries(entry.currentAnchors)) {
+        expect(
+          createHash("sha256")
+            .update(anchors[issueId as keyof typeof anchors], "utf8")
+            .digest("hex"),
+        ).toBe(digest);
+      }
+    }
+  });
+
+  it("owner_count_agreement rejects the recorded owner and test-file count disagreements", async () => {
+    const corrected = await fixture("ove-332-current.md");
+    const ownerDefect = corrected.replace(
+      "nine audited authorization, ownership, session, and preserved-control owner rows",
+      "seven audited authorization, ownership, session, and preserved-control owner rows",
+    );
+    const testFileDefect = corrected.replace(
+      "Exactly nine existing owner/caller test files",
+      "Exactly seven existing owner/caller test files",
+    );
+
+    expect(codes(corrected)).not.toContain("owner_count_agreement");
+    expect(codes(ownerDefect)).toContain("owner_count_agreement");
+    expect(codes(testFileDefect)).toContain("owner_count_agreement");
+  });
+
+  it("scope_context_completeness requires every required existing canonical owner in Required context", async () => {
+    const corrected = await fixture("ove-332-current.md");
+    const defect = corrected
+      .replace(
+        "* apps/web/src/lib/retirement/known-client-storage.ts (current-main replacement context added after the pinned audit baseline)\n",
+        "",
+      )
+      .replace("* `apps/web/scripts/verify-responsive-accessibility.ts`\n", "");
+    const findings = validateContractConsistencyRules(defect);
+
+    expect(codes(corrected)).not.toContain("scope_context_completeness");
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "scope_context_completeness",
+          message: expect.stringContaining(
+            "apps/web/src/lib/retirement/known-client-storage.ts",
+          ),
+        }),
+        expect.objectContaining({
+          code: "scope_context_completeness",
+          message: expect.stringContaining(
+            "apps/web/scripts/verify-responsive-accessibility.ts",
+          ),
+        }),
+      ]),
+    );
+  });
+
+  it("terminal_predecessor_reference rejects a Done gate aimed at a Canceled predecessor", async () => {
+    const source = await fixture("ove-337-current.md");
+    const canceled = manifest({
+      "OVE-335": { status: "Canceled", statusType: "canceled" },
+    });
+    const completed = manifest({
+      "OVE-335": { status: "Done", statusType: "completed" },
+    });
+
+    expect(codes(source, canceled)).toContain("terminal_predecessor_reference");
+    expect(codes(source, completed)).not.toContain(
+      "terminal_predecessor_reference",
+    );
+  });
+
+  it("fails the predecessor rule closed for an absent, malformed, incomplete, future, or stale manifest", async () => {
+    const source = await fixture("ove-337-current.md");
+    const cases: Array<ContractStatusManifest | null> = [
+      null,
+      manifest({}),
+      {
+        ...manifest({
+          "OVE-335": { status: "Backlog", statusType: "backlog" },
+        }),
+        unexpected: true,
+      } as ContractStatusManifest,
+      {
+        ...manifest({
+          "OVE-335": { status: "Backlog", statusType: "backlog" },
+        }),
+        maxAgeHours: 23,
+      } as unknown as ContractStatusManifest,
+      {
+        ...manifest({}),
+        contracts: {
+          "OVE-335": {
+            status: "Backlog",
+            statusType: "backlog",
+            unexpected: true,
+          },
+        },
+      } as unknown as ContractStatusManifest,
+      manifest(
+        { "OVE-335": { status: "Backlog", statusType: "backlog" } },
+        "2026-08-22T20:30:00.000Z",
+      ),
+      manifest(
+        { "OVE-335": { status: "Backlog", statusType: "backlog" } },
+        "2026-08-21T19:59:59.999Z",
+      ),
+    ];
+
+    for (const statusManifest of cases) {
+      expect(codes(source, statusManifest)).toContain("status_manifest_stale");
+    }
+  });
+
+  it("continues the other consistency rules when predecessor evidence is stale", async () => {
+    const corrected = await fixture("ove-332-current.md");
+    const defect = corrected.replace(
+      "nine audited authorization, ownership, session, and preserved-control owner rows",
+      "seven audited authorization, ownership, session, and preserved-control owner rows",
+    );
+    const findings = validateContractConsistencyRules(defect, {
+      statusManifest: null,
+      validationInstant: freshInstant,
+      enforceStatusManifest: true,
+    });
+
+    expect(findings.map(({ code }) => code)).toEqual(
+      expect.arrayContaining([
+        "owner_count_agreement",
+        "status_manifest_stale",
+      ]),
+    );
+  });
+
+  it("does not guess when a count, path, or absent-surface claim is missing", async () => {
+    const corrected = await fixture("ove-332-current.md");
+    const incomplete = `${corrected.replace(
+      "`apps/web/src/lib/retirement/known-client-storage.ts`",
+      "the verified legacy retirement owner",
+    )}\n\nSeven test files were consulted as non-owner evidence.\n`;
+
+    const incompleteCodes = codes(incomplete);
+    expect(incompleteCodes).not.toContain("owner_count_agreement");
+    expect(incompleteCodes).not.toContain("scope_context_completeness");
+    expect(incompleteCodes).not.toContain("surface_coherence");
+  });
+
+  it("surface_coherence rejects a canonical write required by proof after the contract declares that surface absent", async () => {
+    const corrected = await fixture("ove-332-current.md");
+    const defect = corrected
+      .replace(
+        /^\* Data\/schema:.*$/m,
+        "* Data/schema: Not applicable — this is read and serve only and creates no SQL migration, database row, backfill, or production state.",
+      )
+      .replace(
+        "and a redacted nine-row aggregate read-back",
+        "and one committed canonical state",
+      )
+      .replace(
+        "Do not merge, deploy, or mark `Done` when:\n",
+        "Do not merge, deploy, or mark `Done` when:\n\n* the value is not written back to canonical storage;\n",
+      );
+
+    expect(codes(corrected)).not.toContain("surface_coherence");
+    expect(codes(defect)).toContain("surface_coherence");
   });
 });

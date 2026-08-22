@@ -157,6 +157,12 @@ export const DEFAULT_LINEAR_TASK_REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../..",
 );
+export const DEFAULT_CONTRACT_STATUS_MANIFEST_PATH = path.join(
+  DEFAULT_LINEAR_TASK_REPO_ROOT,
+  "docs",
+  "linear",
+  "CONTRACT_STATUS_MANIFEST.json",
+);
 
 const VAGUE_FINAL_PATTERNS: ReadonlyArray<[RegExp, string]> = [
   [/\bTODO\b/i, "TODO"],
@@ -194,6 +200,51 @@ export type LinearTaskValidationOptions = {
   checkRepositoryEvidence?: boolean;
   checkRepositoryPathsAtBaseline?: boolean;
   expectedSha256?: string;
+  statusManifest?: ContractStatusManifest | null;
+  validationInstant?: string;
+  enforceStatusManifest?: boolean;
+};
+
+export const CONTRACT_CONSISTENCY_RULE_CODES = [
+  "owner_count_agreement",
+  "scope_context_completeness",
+  "terminal_predecessor_reference",
+  "surface_coherence",
+] as const;
+
+export type ContractConsistencyRuleCode =
+  (typeof CONTRACT_CONSISTENCY_RULE_CODES)[number];
+
+export type ContractStatusManifest = {
+  schema: "overgarden.contract-status-manifest.v1";
+  capturedAt: string;
+  maxAgeHours: 24;
+  contracts: Record<
+    string,
+    {
+      status: string;
+      statusType: string;
+    }
+  >;
+};
+
+export type ContractConsistencyValidationOptions = {
+  statusManifest?: ContractStatusManifest | null;
+  validationInstant?: string;
+  enforceStatusManifest?: boolean;
+};
+
+export type ContractConsistencyRunStatus =
+  | "running"
+  | "completed"
+  | "timed_out"
+  | "cancelled";
+
+export type ContractConsistencyRunReceipt = {
+  status: Exclude<ContractConsistencyRunStatus, "running">;
+  findings: LinearTaskValidationFinding[];
+  durationMs: number;
+  workingTreeMutated: false;
 };
 
 type ParsedTask = {
@@ -1665,6 +1716,480 @@ function validateFinalContract(
   }
 
   validateRepositoryEvidence(parsed, options, errors);
+  errors.push(
+    ...validateContractConsistencyRules(source, {
+      statusManifest: options.statusManifest,
+      validationInstant: options.validationInstant,
+      enforceStatusManifest: options.enforceStatusManifest,
+    }),
+  );
+}
+
+const COUNT_WORDS = new Map<string, number>([
+  ["zero", 0],
+  ["one", 1],
+  ["two", 2],
+  ["three", 3],
+  ["four", 4],
+  ["five", 5],
+  ["six", 6],
+  ["seven", 7],
+  ["eight", 8],
+  ["nine", 9],
+  ["ten", 10],
+  ["eleven", 11],
+  ["twelve", 12],
+  ["thirteen", 13],
+  ["fourteen", 14],
+  ["fifteen", 15],
+  ["sixteen", 16],
+  ["seventeen", 17],
+  ["eighteen", 18],
+  ["nineteen", 19],
+  ["twenty", 20],
+]);
+const COUNT_TOKEN =
+  "(?:\\d+|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)";
+
+function parseCountToken(value: string): number | undefined {
+  if (/^\d+$/.test(value)) return Number.parseInt(value, 10);
+  return COUNT_WORDS.get(value.toLowerCase());
+}
+
+function parseScopeInventoryRows(source: string): string[][] {
+  const lines = scanMarkdown(source).lines;
+  const headerIndex = lines.findIndex((line) => {
+    if (line.insideFence || line.isFence) return false;
+    const cells = splitMarkdownTableRow(line.text);
+    return (
+      cells?.map((cell) => cell.toLowerCase()).join("|") ===
+      "layer/surface|exact existing owner or planned new path|required change/read-back|status"
+    );
+  });
+  if (headerIndex < 0) return [];
+
+  const rows: string[][] = [];
+  for (const line of lines.slice(headerIndex + 1)) {
+    const cells = splitMarkdownTableRow(line.text);
+    if (!cells) {
+      if (rows.length > 0 && line.text.trim()) break;
+      continue;
+    }
+    if (cells.every((cell) => /^:?-{2,}:?$/.test(cell))) continue;
+    if (cells.length !== 4) break;
+    rows.push(cells);
+  }
+  return rows;
+}
+
+function splitMarkdownTableRow(line: string): string[] | undefined {
+  if (!/^ {0,3}\|.*\|\s*$/.test(line)) return undefined;
+  return line
+    .trim()
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function isRequiredExistingOwnerRow(status: string): boolean {
+  return (
+    /\brequired\b/i.test(status) &&
+    /\bowner\b/i.test(status) &&
+    !/\bnew\b/i.test(status)
+  );
+}
+
+function activeCountContract(parsed: ParsedTask): string {
+  return joinSections(parsed, [
+    "AI execution directive",
+    "User or operator outcome and behavior",
+    "Root cause or proof gap",
+    "Non-negotiable invariants",
+    "Exact data, state, protocol, and concurrency contract",
+    "Exact vertical scope, target files, and caller inventory",
+    "Ordered implementation plan",
+    "Dependencies, ownership boundaries, relations, and non-goals",
+    "Measurable acceptance criteria",
+    "Required test and fault matrix",
+    "Failure gates",
+  ]);
+}
+
+function countsImmediatelyQualifying(
+  source: string,
+  qualifiedNoun: RegExp,
+): number[] {
+  const counts: number[] = [];
+  for (const line of semanticMarkdownText(source).split("\n")) {
+    for (const match of line.matchAll(qualifiedNoun)) {
+      const prefix = line.slice(
+        Math.max(0, (match.index ?? 0) - 120),
+        match.index,
+      );
+      const countMatches = [
+        ...prefix.matchAll(new RegExp(`\\b(${COUNT_TOKEN})\\b`, "gi")),
+      ];
+      const nearest = countMatches.at(-1)?.[1];
+      const count = nearest ? parseCountToken(nearest) : undefined;
+      if (count !== undefined) counts.push(count);
+    }
+  }
+  return counts;
+}
+
+function validateOwnerCountAgreement(
+  parsed: ParsedTask,
+  rows: string[][],
+  errors: LinearTaskValidationFinding[],
+) {
+  const ownerRows = rows.filter((row) =>
+    isRequiredExistingOwnerRow(row[3] ?? ""),
+  );
+  if (ownerRows.length > 0) {
+    const statedCounts = countsImmediatelyQualifying(
+      activeCountContract(parsed),
+      /\bowner rows?\b/gi,
+    );
+    const mismatches = [...new Set(statedCounts)].filter(
+      (count) => count !== ownerRows.length,
+    );
+    if (mismatches.length > 0) {
+      addFinding(
+        errors,
+        "owner_count_agreement",
+        `Stated owner-row count ${mismatches.join(
+          ", ",
+        )} differs from the ${ownerRows.length} required existing owner rows in Exact vertical scope.`,
+      );
+    }
+  }
+
+  for (const row of rows) {
+    const listedTestFiles = [
+      ...(row[1] ?? "").matchAll(/`([^\`\n]+\.(?:test|spec)\.[^\`\n]+)`/gi),
+    ].length;
+    if (listedTestFiles === 0) continue;
+    const statedCounts = countsImmediatelyQualifying(
+      row[2] ?? "",
+      /\btest files?\b/gi,
+    );
+    for (const statedCount of new Set(statedCounts)) {
+      if (statedCount !== listedTestFiles) {
+        addFinding(
+          errors,
+          "owner_count_agreement",
+          `Stated test-file count ${statedCount} differs from the ${listedTestFiles} test files listed in the same scope row.`,
+        );
+      }
+    }
+  }
+}
+
+function validateScopeContextCompleteness(
+  parsed: ParsedTask,
+  rows: string[][],
+  errors: LinearTaskValidationFinding[],
+) {
+  const context = parsed.sections.get("Required context") ?? "";
+  const missing = new Set<string>();
+  for (const row of rows) {
+    if (!isRequiredExistingOwnerRow(row[3] ?? "")) continue;
+    const canonicalOwner = (row[1] ?? "").match(
+      /`((?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+\.[A-Za-z0-9._-]+)`/,
+    )?.[1];
+    if (canonicalOwner && !context.includes(canonicalOwner)) {
+      missing.add(canonicalOwner);
+    }
+  }
+  for (const owner of missing) {
+    addFinding(
+      errors,
+      "scope_context_completeness",
+      `Required existing canonical owner \`${owner}\` is absent from Required context.`,
+    );
+  }
+}
+
+function statusManifestProblem(
+  manifest: ContractStatusManifest | null | undefined,
+  referencedIds: string[],
+  validationInstant: string,
+): string | undefined {
+  if (!manifest) return "status manifest is absent";
+  const rootKeys = Object.keys(manifest).sort((left, right) =>
+    left.localeCompare(right, "en"),
+  );
+  if (
+    manifest.schema !== "overgarden.contract-status-manifest.v1" ||
+    manifest.maxAgeHours !== 24 ||
+    typeof manifest.contracts !== "object" ||
+    manifest.contracts === null ||
+    Array.isArray(manifest.contracts) ||
+    !arraysEqual(rootKeys, ["capturedAt", "contracts", "maxAgeHours", "schema"])
+  ) {
+    return "status manifest schema or 24-hour bound is invalid";
+  }
+  const capturedAt = new Date(manifest.capturedAt);
+  const now = new Date(validationInstant);
+  if (
+    Number.isNaN(capturedAt.valueOf()) ||
+    Number.isNaN(now.valueOf()) ||
+    capturedAt.toISOString() !== manifest.capturedAt
+  ) {
+    return "status manifest timestamp is invalid";
+  }
+  const ageMs = now.valueOf() - capturedAt.valueOf();
+  if (ageMs < 0) return "status manifest timestamp is in the future";
+  if (ageMs > manifest.maxAgeHours * 60 * 60 * 1_000) {
+    return "status manifest is older than 24 hours";
+  }
+  for (const [identifier, entry] of Object.entries(manifest.contracts)) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      return `status manifest has an invalid ${identifier} entry`;
+    }
+    const entryKeys = Object.keys(entry).sort((left, right) =>
+      left.localeCompare(right, "en"),
+    );
+    if (
+      !/^OVE-\d+$/.test(identifier) ||
+      !arraysEqual(entryKeys, ["status", "statusType"]) ||
+      typeof entry.status !== "string" ||
+      !entry.status ||
+      typeof entry.statusType !== "string" ||
+      !entry.statusType
+    ) {
+      return `status manifest has an invalid ${identifier} entry`;
+    }
+  }
+  for (const identifier of referencedIds) {
+    const entry = manifest.contracts[identifier];
+    if (
+      !entry ||
+      typeof entry.status !== "string" ||
+      !entry.status ||
+      typeof entry.statusType !== "string" ||
+      !entry.statusType
+    ) {
+      return `status manifest has no complete ${identifier} entry`;
+    }
+  }
+  return undefined;
+}
+
+function validateTerminalPredecessorReference(
+  parsed: ParsedTask,
+  options: ContractConsistencyValidationOptions,
+  errors: LinearTaskValidationFinding[],
+) {
+  if (!options.enforceStatusManifest) return;
+  const failureGates = parsed.sections.get("Failure gates") ?? "";
+  const referencedIds = [
+    ...new Set(
+      failureGates
+        .split("\n")
+        .filter((line) => /\bDone\b/.test(line))
+        .flatMap((line) => line.match(/\bOVE-\d+\b/g) ?? []),
+    ),
+  ].sort((left, right) => left.localeCompare(right, "en"));
+  if (referencedIds.length === 0) return;
+
+  const validationInstant =
+    options.validationInstant ?? new Date().toISOString();
+  const problem = statusManifestProblem(
+    options.statusManifest,
+    referencedIds,
+    validationInstant,
+  );
+  if (problem) {
+    addFinding(
+      errors,
+      "status_manifest_stale",
+      `terminal_predecessor_reference stopped: ${problem}.`,
+    );
+    return;
+  }
+
+  const manifest = options.statusManifest!;
+  for (const identifier of referencedIds) {
+    const entry = manifest.contracts[identifier]!;
+    if (
+      /^(?:canceled|cancelled)$/i.test(entry.statusType) ||
+      /^(?:canceled|cancelled)$/i.test(entry.status)
+    ) {
+      addFinding(
+        errors,
+        "terminal_predecessor_reference",
+        `Failure gates require ${identifier} to be Done, but the authenticated status manifest records ${entry.status} (${entry.statusType}), which cannot reach Done without explicit reopening.`,
+      );
+    }
+  }
+}
+
+function validateSurfaceCoherence(
+  parsed: ParsedTask,
+  errors: LinearTaskValidationFinding[],
+) {
+  const dataContract =
+    parsed.sections.get(
+      "Exact data, state, protocol, and concurrency contract",
+    ) ?? "";
+  const dataLine =
+    semanticMarkdownText(dataContract).match(
+      /^[-*+] Data\/schema:\s*([^\n]+)$/im,
+    )?.[1] ?? "";
+  const declaresCanonicalWriteAbsent =
+    /\bread and serve only\b/i.test(dataLine) ||
+    (/\b(?:Not applicable|no)\b/i.test(dataLine) &&
+      /\b(?:SQL migration|database row|production state|canonical commit|canonical write|backfill)\b/i.test(
+        dataLine,
+      ));
+  if (!declaresCanonicalWriteAbsent) return;
+
+  const proofContract = joinSections(parsed, [
+    "Required test and fault matrix",
+    "Failure gates",
+  ]);
+  const requiresCanonicalWrite =
+    /\bone committed canonical state\b/i.test(proofContract) ||
+    /\bwritten back to canonical storage\b/i.test(proofContract) ||
+    /\b(?:write|writes|written|commit|commits|committed|persist|persists|persisted)\b[^.\n|]{0,60}\bcanonical (?:storage|state)\b/i.test(
+      proofContract,
+    );
+  if (requiresCanonicalWrite) {
+    addFinding(
+      errors,
+      "surface_coherence",
+      "The data contract declares canonical writes absent while the fault matrix or failure gates require a canonical write.",
+    );
+  }
+}
+
+export function validateContractConsistencyRules(
+  source: string,
+  options: ContractConsistencyValidationOptions = {},
+): LinearTaskValidationFinding[] {
+  const normalized = normalizeLinearMarkup(source.replace(/\r\n?/g, "\n"));
+  const parsed = parseTask(normalized);
+  const errors: LinearTaskValidationFinding[] = [];
+  const scopeRows = parseScopeInventoryRows(
+    parsed.sections.get(
+      "Exact vertical scope, target files, and caller inventory",
+    ) ?? "",
+  );
+
+  validateOwnerCountAgreement(parsed, scopeRows, errors);
+  validateScopeContextCompleteness(parsed, scopeRows, errors);
+  validateTerminalPredecessorReference(parsed, options, errors);
+  validateSurfaceCoherence(parsed, errors);
+  return errors;
+}
+
+export function compareContractFindingVectors(
+  baseline: readonly LinearTaskValidationFinding[],
+  extended: readonly LinearTaskValidationFinding[],
+): {
+  valid: boolean;
+  additions: LinearTaskValidationFinding[];
+  violations: string[];
+} {
+  const violations: string[] = [];
+  if (extended.length < baseline.length) {
+    violations.push("extended vector removed one or more baseline findings");
+  }
+  for (const [index, finding] of baseline.entries()) {
+    const candidate = extended[index];
+    if (
+      !candidate ||
+      candidate.code !== finding.code ||
+      candidate.message !== finding.message
+    ) {
+      violations.push(`baseline finding ${index + 1} changed or moved`);
+    }
+  }
+  const additions = extended.slice(baseline.length);
+  const allowed = new Set<string>(CONTRACT_CONSISTENCY_RULE_CODES);
+  for (const finding of additions) {
+    if (!allowed.has(finding.code)) {
+      violations.push(
+        `extended vector added finding outside the closed rule set: ${finding.code}`,
+      );
+    }
+  }
+  return {
+    valid: violations.length === 0,
+    additions: [...additions],
+    violations,
+  };
+}
+
+export function createContractConsistencyCheck(
+  source: string,
+  options: {
+    loadStatusManifest: () => Promise<ContractStatusManifest>;
+    validationInstant: string;
+    timeoutMs?: number;
+  },
+): {
+  result: Promise<ContractConsistencyRunReceipt>;
+  getStatus: () => ContractConsistencyRunStatus;
+  cancel: () => boolean;
+} {
+  const startedAt = performance.now();
+  const timeoutMs = options.timeoutMs ?? 60_000;
+  let status: ContractConsistencyRunStatus = "running";
+  let finish:
+    | ((
+        terminalStatus: Exclude<ContractConsistencyRunStatus, "running">,
+        findings?: LinearTaskValidationFinding[],
+      ) => boolean)
+    | undefined;
+
+  const result = new Promise<ContractConsistencyRunReceipt>((resolve) => {
+    finish = (terminalStatus, findings = []) => {
+      if (status !== "running") return false;
+      status = terminalStatus;
+      clearTimeout(timeout);
+      resolve({
+        status: terminalStatus,
+        findings,
+        durationMs: performance.now() - startedAt,
+        workingTreeMutated: false,
+      });
+      return true;
+    };
+    const timeout = setTimeout(() => {
+      finish?.("timed_out");
+    }, timeoutMs);
+
+    void Promise.resolve()
+      .then(() => options.loadStatusManifest())
+      .then((statusManifest) => {
+        finish?.(
+          "completed",
+          validateContractConsistencyRules(source, {
+            statusManifest,
+            validationInstant: options.validationInstant,
+            enforceStatusManifest: true,
+          }),
+        );
+      })
+      .catch(() => {
+        finish?.(
+          "completed",
+          validateContractConsistencyRules(source, {
+            statusManifest: null,
+            validationInstant: options.validationInstant,
+            enforceStatusManifest: true,
+          }),
+        );
+      });
+  });
+
+  return {
+    result,
+    getStatus: () => status,
+    cancel: () => finish?.("cancelled") ?? false,
+  };
 }
 
 function validateMvpPostureContract(
@@ -5981,11 +6506,25 @@ async function runCli() {
     return;
   }
 
+  let statusManifest: ContractStatusManifest | null = null;
+  if (options.phase === "final") {
+    try {
+      statusManifest = JSON.parse(
+        await readFile(DEFAULT_CONTRACT_STATUS_MANIFEST_PATH, "utf8"),
+      ) as ContractStatusManifest;
+    } catch {
+      statusManifest = null;
+    }
+  }
+
   const report = validateLinearAgentTask(source, {
     phase: options.phase,
     repoRoot: DEFAULT_LINEAR_TASK_REPO_ROOT,
     checkRepositoryEvidence: options.phase === "final",
     expectedSha256: options.expectedSha256,
+    statusManifest,
+    validationInstant: new Date().toISOString(),
+    enforceStatusManifest: options.phase === "final",
   });
   if (options.json) {
     console.log(JSON.stringify({ source: label, ...report }, null, 2));

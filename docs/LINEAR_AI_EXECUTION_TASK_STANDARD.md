@@ -361,6 +361,10 @@ List verified existing paths/symbols, intended new paths, every direct caller or
 sibling contract that could bypass the fix, generated artifacts, tests, docs,
 and external configuration surfaces. Existing paths under `Required context` must exist at
 task-creation time; planned new target files are explicitly marked `new`.
+Mark every table row whose existing path is a canonical execution owner with
+`required existing owner`. The stated number of owner rows and test files must
+equal the rows and paths the table actually contains; do not maintain a second
+hand-written count that can drift.
 
 ### 10. Ordered implementation plan
 
@@ -582,6 +586,36 @@ must be verified with `rg --files`. For a `User-facing: no` research branch,
 repeat the exact non-README path cited and explained in Product Thinking; a path
 listed only here is padding and does not satisfy the gate. Do not paste secrets
 or private comments.
+
+Before final validation, the task author and executor must satisfy these four
+machine-decidable internal-consistency rules:
+
+1. `owner_count_agreement` — a number immediately qualifying `owner row(s)` or
+   `test file(s)` agrees with the required existing-owner rows or test paths in
+   the same scope inventory. A number with no adjacent counted inventory is not
+   guessed.
+2. `scope_context_completeness` — the canonical path in every scope row marked
+   `required existing owner` also appears in `Required context`. New paths and
+   rows that do not name a path are outside this rule.
+3. `terminal_predecessor_reference` — a Failure-gates requirement that an
+   `OVE-###` predecessor be `Done` is checked against
+   `docs/linear/CONTRACT_STATUS_MANIFEST.json`. A Canceled predecessor is not a
+   live route to Done. A missing/incomplete entry, invalid or future timestamp,
+   or capture older than the manifest's exact 24-hour bound stops this rule with
+   `status_manifest_stale`; it must never infer a live predecessor.
+4. `surface_coherence` — fault/failure proof cannot require a canonical write
+   after the data contract declares canonical writes or production state absent.
+   Missing input does not authorize the checker to invent a surface claim.
+
+The manifest is a redacted, sorted, authenticated status capture, not a source
+of truth beyond its timestamp. Refresh it through authenticated Linear read-back
+before validation outside the 24-hour bound. These rules are additive: they do
+not rename, reorder, loosen, or remove any prior finding. If any rule stops
+execution or reports a contradiction, record one redacted reconciliation
+comment on the affected Linear issue, correct the saved body or its manifest,
+read the complete saved issue back, rerun final validation, and only then open or
+resume its implementation branch. Never silently reinterpret the contract in
+code and never repair an unrelated issue as part of the executing task.
 
 ### 20. Open maintainer authorization gates
 
