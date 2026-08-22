@@ -12,6 +12,7 @@ import {
 export const ONLINE_ONLY_RETIREMENT_VERSION =
   "ove326.onlineOnlyRetirement.v1" as const;
 export const ONLINE_ONLY_RETIREMENT_DEADLINE_MS = 5_000;
+export const ONLINE_ONLY_RETIREMENT_READ_CONCURRENCY = 32;
 
 const RETIRED_RUNTIME_PATTERN =
   /(?:\bEntrySyncStatus\b|\bsyncStatus\b|\bsync_status\b|\boffline_queued\b|\boffline_synced\b|\boffline_entry_queued\b|\boffline_entry_synced\b|(?:from|require\s*\()\s*["']dexie(?:["'/)]|$)|\bfake-indexeddb\b|serviceWorker\.register\s*\(|rel\s*=\s*["']manifest["']|manifest\.webmanifest|["']\/sw\.js["'])/iu;
@@ -594,19 +595,12 @@ async function collectVerificationScanContext(input: {
     trackedPaths,
     manifest,
   );
-  const trackedFiles: RetirementScanFile[] = [];
-  for (const relativePath of trackedPaths) {
-    throwIfScanAborted(input.signal);
-    if (!isScannableTextPath(relativePath)) continue;
-    trackedFiles.push({
-      relativePath,
-      content: await readFile(
-        path.join(input.repositoryRoot, relativePath),
-        "utf8",
-      ),
-      surface: classifySurface(relativePath, classifications),
-    });
-  }
+  const trackedFiles = await readTrackedRetirementScanFiles({
+    repositoryRoot: input.repositoryRoot,
+    trackedPaths,
+    classifications,
+    signal: input.signal,
+  });
 
   const [
     packageJsonText,
@@ -664,6 +658,56 @@ async function collectVerificationScanContext(input: {
     checkedChunkCount: buildFiles.length,
     canon,
   };
+}
+
+export async function readTrackedRetirementScanFiles(input: {
+  repositoryRoot: string;
+  trackedPaths: readonly string[];
+  classifications: RetirementClassifications;
+  signal: AbortSignal;
+  maxConcurrency?: number;
+  readText?: (absolutePath: string) => Promise<string>;
+}): Promise<RetirementScanFile[]> {
+  const maxConcurrency =
+    input.maxConcurrency ?? ONLINE_ONLY_RETIREMENT_READ_CONCURRENCY;
+  if (!Number.isInteger(maxConcurrency) || maxConcurrency < 1) {
+    throw new Error("Tracked-file read concurrency must be a positive integer.");
+  }
+
+  const relativePaths = input.trackedPaths
+    .filter(isScannableTextPath)
+    .toSorted((left, right) => left.localeCompare(right));
+  const files = new Array<RetirementScanFile>(relativePaths.length);
+  const readText =
+    input.readText ??
+    ((absolutePath: string) => readFile(absolutePath, "utf8"));
+  let nextIndex = 0;
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(maxConcurrency, relativePaths.length) },
+      async () => {
+        while (true) {
+          throwIfScanAborted(input.signal);
+          const index = nextIndex;
+          nextIndex += 1;
+          const relativePath = relativePaths[index];
+          if (relativePath === undefined) return;
+          const content = await readText(
+            path.join(input.repositoryRoot, relativePath),
+          );
+          throwIfScanAborted(input.signal);
+          files[index] = {
+            relativePath,
+            content,
+            surface: classifySurface(relativePath, input.classifications),
+          };
+        }
+      },
+    ),
+  );
+
+  return files;
 }
 
 function buildRetirementClassifications(

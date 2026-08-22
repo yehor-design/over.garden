@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   evaluateOnlineOnlyRetirement,
+  readTrackedRetirementScanFiles,
   runRetirementScanWithDeadline,
   validateOnlineOnlyMigrationSql,
   validateRetirementPackageSurface,
@@ -221,6 +222,53 @@ describe("OVE-326 online-only retirement verifier", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(onEvidence).toHaveBeenCalledTimes(1);
     expect(evaluate).not.toHaveBeenCalled();
+  });
+
+  it("reads every scannable tracked file with bounded concurrency in deterministic order", async () => {
+    let activeReads = 0;
+    let peakActiveReads = 0;
+    const readText = vi.fn(async (absolutePath: string) => {
+      activeReads += 1;
+      peakActiveReads = Math.max(peakActiveReads, activeReads);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      activeReads -= 1;
+      return `content:${absolutePath}`;
+    });
+
+    const files = await readTrackedRetirementScanFiles({
+      repositoryRoot: "/repository",
+      trackedPaths: [
+        "docs/zeta.md",
+        "assets/ignored.png",
+        "apps/web/src/bravo.ts",
+        "docs/alpha.md",
+        "apps/web/src/charlie.tsx",
+      ],
+      classifications: {
+        historical: {},
+        guardrail: {},
+        nameOnlyCleanup: {},
+        productResearch: {},
+        activeUnrelated: {},
+      },
+      signal: new AbortController().signal,
+      maxConcurrency: 2,
+      readText,
+    });
+
+    expect(readText).toHaveBeenCalledTimes(4);
+    expect(peakActiveReads).toBe(2);
+    expect(files.map(({ relativePath }) => relativePath)).toEqual([
+      "apps/web/src/bravo.ts",
+      "apps/web/src/charlie.tsx",
+      "docs/alpha.md",
+      "docs/zeta.md",
+    ]);
+    expect(files.map(({ content }) => content)).toEqual(
+      files.map(
+        ({ relativePath }) => `content:/repository/${relativePath}`,
+      ),
+    );
   });
 
   it("requires a history-preserving NOT VALID migration and reduced bootstrap", () => {

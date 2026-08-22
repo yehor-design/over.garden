@@ -116,6 +116,7 @@
     "docs/superpowers/plans/2026-08-21-ove-326-online-only-steady-state.md"
   ],
   "historicalPrefixes": [
+    "apps/web/scripts/fixtures/contract-consistency/",
     "docs/audit-inbox/",
     "docs/reviews/",
     "docs/superpowers/specs/"

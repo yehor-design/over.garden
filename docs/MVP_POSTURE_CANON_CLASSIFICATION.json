@@ -38,6 +38,7 @@
     "docs/adr/ADR-0016-stable-registry-observed-capture.md"
   ],
   "historicalPrefixes": [
+    "apps/web/scripts/fixtures/contract-consistency/",
     "docs/audit-inbox/",
     "docs/reviews/",
     "docs/superpowers/specs/",
