@@ -1,12 +1,17 @@
 # MVP Scope Recheck 2026-07-03
 
 Status: current scope reconciliation note
-Date: 2026-07-03; localization clarification added 2026-07-22; access/learning reconciliation added 2026-08-11; online-only reconciliation added 2026-08-20
+Date: 2026-07-03; localization clarification added 2026-07-22; access/learning reconciliation added 2026-08-11; online-only reconciliation added 2026-08-20; atomic journal-media reconciliation added 2026-08-23
 Owner: founder/operator
 
 Connectivity authority: ADR-0017 makes the MVP network-required and forbids
 new durable browser journal writes. Earlier local-draft and offline-transition
 scope statements below remain dated provenance only where explicitly labeled.
+
+Publication authority: ADR-0019 makes unpublished authoring local-only and
+non-durable before Publish. The browser-generated WebP is the sole final
+artifact, image bytes never traverse a Vercel Function, and one acknowledged
+Publish creates or replaces the complete public journal record atomically.
 
 ## Purpose
 
@@ -50,12 +55,13 @@ claim authority, not product access.
   UGC is never translated.
 - Self-serve auth is MVP. Email auth uses Resend and Google is the supported social sign-in provider. OVE-296 removes the former Meta social sign-in surface; OVE-297 owns bounded provider-state cleanup without making dormant rows part of the product surface. Apple Sign-In is not MVP after the 2026-07-04 founder decision to avoid AppleID login for launch; revisit it only after MVP if native App Store distribution or a fresh sign-in access requirement makes it necessary.
 - Full M:N journaling is MVP: a space-level entry can mention multiple objects and appear in the relevant timelines without duplicated entries.
-- Composer friction work is MVP now: server-authoritative draft persistence,
-  draft-through-auth, photo-start, title prefill, and voice-to-text. Under
-  ADR-0017, no new durable browser journal state or PWA/offline success promise
-  belongs to this scope.
+- Composer friction work is MVP now: photo-start, title prefill, voice-to-text,
+  ordered media, bounded progress, retry/remove/cancel, and one atomic Publish.
+  Under ADR-0019, authoring is local-only and non-durable before Publish; there
+  is no server draft, durable browser draft, draft-through-auth, or PWA/offline
+  success promise.
 - MVP legal/privacy copy is founder-approved for MVP, written/generated internally, with lawyer review deferred until after MVP. Public support contact is `support.overgarden@gmail.com`.
-- Retention policy for MVP: private quarantine originals are deleted after successful processing or after 7 failed-processing days; public derivatives remain while active and are removed from public surfaces after archive/erasure; operator audit logs and erasure evidence are retained for 1 year; analytics events are retained for up to 13 months; operator evidence must not include private journal text, precise location, emails, IP/user-agent, media keys, or raw tokens.
+- Retention policy for the ADR-0019 target: source originals are never retained; abandoned final-WebP staging is normally reclaimed at 15 minutes with a one-day bucket lifecycle as catastrophic fallback; public final WebPs remain while active and are removed from public surfaces after archive/erasure. The existing quarantine-original and seven-day failed-processing policy is transitional until OVE-349/350. Operator audit logs and erasure evidence are retained for 1 year; analytics events are retained for up to 13 months; operator evidence must not include private journal text, precise location, emails, IP/user-agent, media keys, object keys, capabilities, or raw tokens.
 - Catalog trust UX is MVP: curated/source-backed/candidate/user-added/quarantined/rejected states, clear ambiguous-name handling, alias-collision handling, hidden quarantined rows, and visible source caveats where needed.
 - Monetization is not MVP. The first launch must prove usefulness and public behavior before payment or business-model surfaces are built.
 
