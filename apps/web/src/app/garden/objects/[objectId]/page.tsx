@@ -280,6 +280,9 @@ export default async function PlantObjectReadbackPage({
           objectKind={page.plantObject.object_kind}
           today={today}
           initialClientMutationId={crypto.randomUUID()}
+          requiresFirstPublicationDisclosure={
+            !page.hasPriorPublicationDisclosure
+          }
           visualScenario={visualCreationScenario}
         />
       </section>

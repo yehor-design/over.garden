@@ -1353,7 +1353,24 @@
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:10:f357c7c482b419e1b53d",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:10:a6411b97b3677cd486eb",
+      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
+      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
+      "evidencePaths": [
+        "src/app/api/skeleton/journal/route.ts",
+        "src/server/journal-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
+      "predecessorEdgeIds": [
+        "edge:3aadc02fe0be8c73e31a:9:2506836770d600a3a0ba"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
+      "branchConditionClass": "always",
+      "branchId": "branch:3aadc02fe0be8c73e31a:always",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:11:f357c7c482b419e1b53d",
       "effectBoundaryId": "effect:05f9ab89e52ea96113d4:canonical-row-buildprocessedobjectmediagalleryquery",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1363,14 +1380,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:9:a6411b97b3677cd486eb"
+        "edge:3aadc02fe0be8c73e31a:10:a6411b97b3677cd486eb"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:11:d49bd1631169d877721f",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:12:d49bd1631169d877721f",
       "effectBoundaryId": "effect:69bdeb2e74b347c27f30:canonical-row-buildplantobjectcatalogsourcecreditquery",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1380,14 +1397,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:10:f357c7c482b419e1b53d"
+        "edge:3aadc02fe0be8c73e31a:11:f357c7c482b419e1b53d"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:12:49b0ee451c6b7baa2d1e",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:13:49b0ee451c6b7baa2d1e",
       "effectBoundaryId": "effect:3e321084e2a12511f9a3:canonical-row-buildpriorpublicationdisclosurequery",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1397,14 +1414,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:11:d49bd1631169d877721f"
+        "edge:3aadc02fe0be8c73e31a:12:d49bd1631169d877721f"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:13:d696323b46215033d1d9",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:14:d696323b46215033d1d9",
       "effectBoundaryId": "effect:ef4bd34c1afaeec702f2:database-transaction-1",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1414,14 +1431,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:12:49b0ee451c6b7baa2d1e"
+        "edge:3aadc02fe0be8c73e31a:13:49b0ee451c6b7baa2d1e"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:14:ada0fab3fe283a872a98",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:15:ada0fab3fe283a872a98",
       "effectBoundaryId": "effect:2c380e616e48af8b93d6:canonical-row-buildjournalmutationadvisorylockquery",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1431,14 +1448,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:13:d696323b46215033d1d9"
+        "edge:3aadc02fe0be8c73e31a:14:d696323b46215033d1d9"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:15:3bd60f8274b61f4a9c48",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:16:3bd60f8274b61f4a9c48",
       "effectBoundaryId": "effect:2884d19468165f99561b:database-transaction-1",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1448,14 +1465,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:14:ada0fab3fe283a872a98"
+        "edge:3aadc02fe0be8c73e31a:15:ada0fab3fe283a872a98"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:16:dc0408f8d59dd9ef1415",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:17:dc0408f8d59dd9ef1415",
       "effectBoundaryId": "effect:ab638cd1e5e8f2d6851e:canonical-row",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1465,14 +1482,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:15:3bd60f8274b61f4a9c48"
+        "edge:3aadc02fe0be8c73e31a:16:3bd60f8274b61f4a9c48"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:17:77cf888dc06e9a01e7fa",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:18:77cf888dc06e9a01e7fa",
       "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1482,14 +1499,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:16:dc0408f8d59dd9ef1415"
+        "edge:3aadc02fe0be8c73e31a:17:dc0408f8d59dd9ef1415"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:18:790167dd99c192ace88a",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:19:790167dd99c192ace88a",
       "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1499,24 +1516,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:17:77cf888dc06e9a01e7fa"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:19:83cb0b36ac40ec081833",
-      "effectBoundaryId": "effect:70b5270a1df335d21871:canonical-row",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/skeleton/journal/route.ts",
-        "src/server/search/public-projection-outbox.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
-      "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:18:790167dd99c192ace88a"
+        "edge:3aadc02fe0be8c73e31a:18:77cf888dc06e9a01e7fa"
       ]
     },
     {
@@ -1538,7 +1538,24 @@
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:20:3cba31d4baad96aa60da",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:20:83cb0b36ac40ec081833",
+      "effectBoundaryId": "effect:70b5270a1df335d21871:canonical-row",
+      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
+      "evidencePaths": [
+        "src/app/api/skeleton/journal/route.ts",
+        "src/server/search/public-projection-outbox.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
+      "predecessorEdgeIds": [
+        "edge:3aadc02fe0be8c73e31a:19:790167dd99c192ace88a"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
+      "branchConditionClass": "always",
+      "branchId": "branch:3aadc02fe0be8c73e31a:always",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:21:3cba31d4baad96aa60da",
       "effectBoundaryId": "effect:974eb98cf27bcd29a7ba:canonical-row-buildgloballyeligiblejournalsearchrowsquery",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1548,14 +1565,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:19:83cb0b36ac40ec081833"
+        "edge:3aadc02fe0be8c73e31a:20:83cb0b36ac40ec081833"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "success",
       "branchId": "branch:3aadc02fe0be8c73e31a:success",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:21:35758e85acd914507fc0",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:22:35758e85acd914507fc0",
       "effectBoundaryId": "effect:9af9bf8d776f6cc3230d:public-projection",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1565,14 +1582,14 @@
       "executionMode": "conditional",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:20:3cba31d4baad96aa60da"
+        "edge:3aadc02fe0be8c73e31a:21:3cba31d4baad96aa60da"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:22:a541f110924bbe3819d1",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:23:a541f110924bbe3819d1",
       "effectBoundaryId": "effect:a857ff9e53c00ea08c90:canonical-row",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1582,14 +1599,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:20:3cba31d4baad96aa60da"
+        "edge:3aadc02fe0be8c73e31a:21:3cba31d4baad96aa60da"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:23:bca7b996e15c0765d3bd",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:24:bca7b996e15c0765d3bd",
       "effectBoundaryId": "effect:fe26c5c9a573035ae737:canonical-row",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1599,19 +1616,19 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:22:a541f110924bbe3819d1"
+        "edge:3aadc02fe0be8c73e31a:23:a541f110924bbe3819d1"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:2:88468ccdcf388cca2cea",
-      "effectBoundaryId": "effect:57f2651db663d564e127:transactional-outbox",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:2:c06fc21e75a674ca999f",
+      "effectBoundaryId": "effect:24af613cb65c7a93bc83:canonical-row-buildfindjournalentrybyidquery",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
         "src/app/api/skeleton/journal/route.ts",
-        "src/server/media/media-lifecycle-enqueue.ts"
+        "src/server/journal-repository.ts"
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
@@ -1623,7 +1640,24 @@
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:3:812c59a20b586947971f",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:3:88468ccdcf388cca2cea",
+      "effectBoundaryId": "effect:57f2651db663d564e127:transactional-outbox",
+      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
+      "evidencePaths": [
+        "src/app/api/skeleton/journal/route.ts",
+        "src/server/media/media-lifecycle-enqueue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
+      "predecessorEdgeIds": [
+        "edge:3aadc02fe0be8c73e31a:2:c06fc21e75a674ca999f"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
+      "branchConditionClass": "always",
+      "branchId": "branch:3aadc02fe0be8c73e31a:always",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:4:812c59a20b586947971f",
       "effectBoundaryId": "effect:9b57ab80243bd0863a07:transactional-outbox-buildenqueuemediaderivativerevokejobquery",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1633,14 +1667,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:2:88468ccdcf388cca2cea"
+        "edge:3aadc02fe0be8c73e31a:3:88468ccdcf388cca2cea"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:4:081c66c6bca619f42631",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:5:081c66c6bca619f42631",
       "effectBoundaryId": "effect:7fc8eaad1f414a53ab0f:canonical-row",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1650,14 +1684,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:3:812c59a20b586947971f"
+        "edge:3aadc02fe0be8c73e31a:4:812c59a20b586947971f"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:5:477c0198234593213489",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:6:477c0198234593213489",
       "effectBoundaryId": "effect:98986e23cd4ed6803871:canonical-row-buildattachprocessedmediaassettoentryquery",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1667,14 +1701,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:4:081c66c6bca619f42631"
+        "edge:3aadc02fe0be8c73e31a:5:081c66c6bca619f42631"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:6:522683864f8f12b1cd0f",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:7:522683864f8f12b1cd0f",
       "effectBoundaryId": "effect:613cba4b73892888b73b:canonical-row-buildplantobjectpageobjectquery",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1684,14 +1718,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:5:477c0198234593213489"
+        "edge:3aadc02fe0be8c73e31a:6:477c0198234593213489"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:7:b2e3cd3a93bb78f0b500",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:8:b2e3cd3a93bb78f0b500",
       "effectBoundaryId": "effect:7d94998d88faec904041:canonical-row-buildobjecttimelineentriesquery",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1701,14 +1735,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:6:522683864f8f12b1cd0f"
+        "edge:3aadc02fe0be8c73e31a:7:522683864f8f12b1cd0f"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:8:2506836770d600a3a0ba",
+      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:9:2506836770d600a3a0ba",
       "effectBoundaryId": "effect:ef13bce9b2a47fc6aff4:canonical-row-buildprocessedmediaforentriesquery",
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -1718,24 +1752,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
       "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:7:b2e3cd3a93bb78f0b500"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:3aadc02fe0be8c73e31a:always",
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:9:a6411b97b3677cd486eb",
-      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/skeleton/journal/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:3aadc02fe0be8c73e31a",
-      "predecessorEdgeIds": [
-        "edge:3aadc02fe0be8c73e31a:8:2506836770d600a3a0ba"
+        "edge:3aadc02fe0be8c73e31a:8:b2e3cd3a93bb78f0b500"
       ]
     },
     {
@@ -2473,7 +2490,24 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:10:f357c7c482b419e1b53d",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:10:a6411b97b3677cd486eb",
+      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/journal-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:58d59fbd01f055fee315",
+      "predecessorEdgeIds": [
+        "edge:58d59fbd01f055fee315:9:2506836770d600a3a0ba"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
+      "branchConditionClass": "always",
+      "branchId": "branch:58d59fbd01f055fee315:always",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:11:f357c7c482b419e1b53d",
       "effectBoundaryId": "effect:05f9ab89e52ea96113d4:canonical-row-buildprocessedobjectmediagalleryquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2483,14 +2517,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:9:a6411b97b3677cd486eb"
+        "edge:58d59fbd01f055fee315:10:a6411b97b3677cd486eb"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:11:d49bd1631169d877721f",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:12:d49bd1631169d877721f",
       "effectBoundaryId": "effect:69bdeb2e74b347c27f30:canonical-row-buildplantobjectcatalogsourcecreditquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2500,14 +2534,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:10:f357c7c482b419e1b53d"
+        "edge:58d59fbd01f055fee315:11:f357c7c482b419e1b53d"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:12:49b0ee451c6b7baa2d1e",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:13:49b0ee451c6b7baa2d1e",
       "effectBoundaryId": "effect:3e321084e2a12511f9a3:canonical-row-buildpriorpublicationdisclosurequery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2517,14 +2551,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:11:d49bd1631169d877721f"
+        "edge:58d59fbd01f055fee315:12:d49bd1631169d877721f"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:13:d696323b46215033d1d9",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:14:d696323b46215033d1d9",
       "effectBoundaryId": "effect:ef4bd34c1afaeec702f2:database-transaction-1",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2534,14 +2568,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:12:49b0ee451c6b7baa2d1e"
+        "edge:58d59fbd01f055fee315:13:49b0ee451c6b7baa2d1e"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:14:ada0fab3fe283a872a98",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:15:ada0fab3fe283a872a98",
       "effectBoundaryId": "effect:2c380e616e48af8b93d6:canonical-row-buildjournalmutationadvisorylockquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2551,14 +2585,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:13:d696323b46215033d1d9"
+        "edge:58d59fbd01f055fee315:14:d696323b46215033d1d9"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "eligible",
       "branchId": "branch:58d59fbd01f055fee315:eligible",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:15:7f173ecc6a4dbcd0870d",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:16:7f173ecc6a4dbcd0870d",
       "effectBoundaryId": "effect:7d7a5b2a40076634ae70:analytics-event-buildinsertanalyticseventquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2568,14 +2602,14 @@
       "executionMode": "asynchronous_from_durable_intent",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:14:ada0fab3fe283a872a98"
+        "edge:58d59fbd01f055fee315:15:ada0fab3fe283a872a98"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "eligible",
       "branchId": "branch:58d59fbd01f055fee315:eligible",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:16:47484ff842ec3e0e50a1",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:17:47484ff842ec3e0e50a1",
       "effectBoundaryId": "effect:860c05d8fb406c82e823:analytics-event-buildfindopenownrecordrevisiteventquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2585,14 +2619,14 @@
       "executionMode": "asynchronous_from_durable_intent",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:14:ada0fab3fe283a872a98"
+        "edge:58d59fbd01f055fee315:15:ada0fab3fe283a872a98"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "eligible",
       "branchId": "branch:58d59fbd01f055fee315:eligible",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:17:d482e6d15ab18bd12386",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:18:d482e6d15ab18bd12386",
       "effectBoundaryId": "effect:6dd0a6e445db15e9dde2:analytics-event-buildmarkownrecordrevisitfollowedbyactionquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2602,7 +2636,7 @@
       "executionMode": "asynchronous_from_durable_intent",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:14:ada0fab3fe283a872a98"
+        "edge:58d59fbd01f055fee315:15:ada0fab3fe283a872a98"
       ]
     },
     {
@@ -2624,12 +2658,12 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:2:88468ccdcf388cca2cea",
-      "effectBoundaryId": "effect:57f2651db663d564e127:transactional-outbox",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:2:c06fc21e75a674ca999f",
+      "effectBoundaryId": "effect:24af613cb65c7a93bc83:canonical-row-buildfindjournalentrybyidquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
-        "src/server/media/media-lifecycle-enqueue.ts"
+        "src/server/journal-repository.ts"
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
@@ -2641,7 +2675,24 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:3:812c59a20b586947971f",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:3:88468ccdcf388cca2cea",
+      "effectBoundaryId": "effect:57f2651db663d564e127:transactional-outbox",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/media/media-lifecycle-enqueue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:58d59fbd01f055fee315",
+      "predecessorEdgeIds": [
+        "edge:58d59fbd01f055fee315:2:c06fc21e75a674ca999f"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
+      "branchConditionClass": "always",
+      "branchId": "branch:58d59fbd01f055fee315:always",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:4:812c59a20b586947971f",
       "effectBoundaryId": "effect:9b57ab80243bd0863a07:transactional-outbox-buildenqueuemediaderivativerevokejobquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2651,14 +2702,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:2:88468ccdcf388cca2cea"
+        "edge:58d59fbd01f055fee315:3:88468ccdcf388cca2cea"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:4:081c66c6bca619f42631",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:5:081c66c6bca619f42631",
       "effectBoundaryId": "effect:7fc8eaad1f414a53ab0f:canonical-row",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2668,14 +2719,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:3:812c59a20b586947971f"
+        "edge:58d59fbd01f055fee315:4:812c59a20b586947971f"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:5:477c0198234593213489",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:6:477c0198234593213489",
       "effectBoundaryId": "effect:98986e23cd4ed6803871:canonical-row-buildattachprocessedmediaassettoentryquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2685,14 +2736,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:4:081c66c6bca619f42631"
+        "edge:58d59fbd01f055fee315:5:081c66c6bca619f42631"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:6:522683864f8f12b1cd0f",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:7:522683864f8f12b1cd0f",
       "effectBoundaryId": "effect:613cba4b73892888b73b:canonical-row-buildplantobjectpageobjectquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2702,14 +2753,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:5:477c0198234593213489"
+        "edge:58d59fbd01f055fee315:6:477c0198234593213489"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:7:b2e3cd3a93bb78f0b500",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:8:b2e3cd3a93bb78f0b500",
       "effectBoundaryId": "effect:7d94998d88faec904041:canonical-row-buildobjecttimelineentriesquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2719,14 +2770,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:6:522683864f8f12b1cd0f"
+        "edge:58d59fbd01f055fee315:7:522683864f8f12b1cd0f"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "branchConditionClass": "always",
       "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:8:2506836770d600a3a0ba",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:9:2506836770d600a3a0ba",
       "effectBoundaryId": "effect:ef13bce9b2a47fc6aff4:canonical-row-buildprocessedmediaforentriesquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "evidencePaths": [
@@ -2736,24 +2787,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:58d59fbd01f055fee315",
       "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:7:b2e3cd3a93bb78f0b500"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "branchConditionClass": "always",
-      "branchId": "branch:58d59fbd01f055fee315:always",
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:9:a6411b97b3677cd486eb",
-      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:58d59fbd01f055fee315",
-      "predecessorEdgeIds": [
-        "edge:58d59fbd01f055fee315:8:2506836770d600a3a0ba"
+        "edge:58d59fbd01f055fee315:8:b2e3cd3a93bb78f0b500"
       ]
     },
     {
@@ -3410,6 +3444,74 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "branchConditionClass": "always",
       "branchId": "branch:74919c23265529d457ae:always",
+      "consumerEdgeId": "edge:74919c23265529d457ae:10:c29a9bfe4c796b418f14",
+      "effectBoundaryId": "effect:df41288b47efe787a963:canonical-row-buildjournalmutationadvisorylockquery",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/journal-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:74919c23265529d457ae",
+      "predecessorEdgeIds": [
+        "edge:74919c23265529d457ae:9:cf3b6b0379f6370b55e5"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "branchConditionClass": "eligible",
+      "branchId": "branch:74919c23265529d457ae:eligible",
+      "consumerEdgeId": "edge:74919c23265529d457ae:11:47484ff842ec3e0e50a1",
+      "effectBoundaryId": "effect:860c05d8fb406c82e823:analytics-event-buildfindopenownrecordrevisiteventquery",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/analytics-events.ts"
+      ],
+      "executionMode": "asynchronous_from_durable_intent",
+      "pipelineId": "pipeline:74919c23265529d457ae",
+      "predecessorEdgeIds": [
+        "edge:74919c23265529d457ae:10:c29a9bfe4c796b418f14"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "branchConditionClass": "eligible",
+      "branchId": "branch:74919c23265529d457ae:eligible",
+      "consumerEdgeId": "edge:74919c23265529d457ae:12:7f173ecc6a4dbcd0870d",
+      "effectBoundaryId": "effect:7d7a5b2a40076634ae70:analytics-event-buildinsertanalyticseventquery",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/analytics-events.ts"
+      ],
+      "executionMode": "asynchronous_from_durable_intent",
+      "pipelineId": "pipeline:74919c23265529d457ae",
+      "predecessorEdgeIds": [
+        "edge:74919c23265529d457ae:10:c29a9bfe4c796b418f14"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "branchConditionClass": "eligible",
+      "branchId": "branch:74919c23265529d457ae:eligible",
+      "consumerEdgeId": "edge:74919c23265529d457ae:13:d482e6d15ab18bd12386",
+      "effectBoundaryId": "effect:6dd0a6e445db15e9dde2:analytics-event-buildmarkownrecordrevisitfollowedbyactionquery",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/analytics-events.ts"
+      ],
+      "executionMode": "asynchronous_from_durable_intent",
+      "pipelineId": "pipeline:74919c23265529d457ae",
+      "predecessorEdgeIds": [
+        "edge:74919c23265529d457ae:10:c29a9bfe4c796b418f14"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "branchConditionClass": "always",
+      "branchId": "branch:74919c23265529d457ae:always",
       "consumerEdgeId": "edge:74919c23265529d457ae:1:2b96f89dd1a409b9295c",
       "effectBoundaryId": "effect:87bbd85f3806497e30ff:canonical-row-buildfindexistingentrybyclientmutationquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
@@ -3425,8 +3527,8 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "branchConditionClass": "always",
       "branchId": "branch:74919c23265529d457ae:always",
-      "consumerEdgeId": "edge:74919c23265529d457ae:2:a6411b97b3677cd486eb",
-      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
+      "consumerEdgeId": "edge:74919c23265529d457ae:2:c06fc21e75a674ca999f",
+      "effectBoundaryId": "effect:24af613cb65c7a93bc83:canonical-row-buildfindjournalentrybyidquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
@@ -3442,7 +3544,92 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "branchConditionClass": "always",
       "branchId": "branch:74919c23265529d457ae:always",
-      "consumerEdgeId": "edge:74919c23265529d457ae:3:f88d084cc712c7e87b2e",
+      "consumerEdgeId": "edge:74919c23265529d457ae:3:a6411b97b3677cd486eb",
+      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/journal-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:74919c23265529d457ae",
+      "predecessorEdgeIds": [
+        "edge:74919c23265529d457ae:2:c06fc21e75a674ca999f"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "branchConditionClass": "always",
+      "branchId": "branch:74919c23265529d457ae:always",
+      "consumerEdgeId": "edge:74919c23265529d457ae:4:88468ccdcf388cca2cea",
+      "effectBoundaryId": "effect:57f2651db663d564e127:transactional-outbox",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/media/media-lifecycle-enqueue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:74919c23265529d457ae",
+      "predecessorEdgeIds": [
+        "edge:74919c23265529d457ae:3:a6411b97b3677cd486eb"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "branchConditionClass": "always",
+      "branchId": "branch:74919c23265529d457ae:always",
+      "consumerEdgeId": "edge:74919c23265529d457ae:5:812c59a20b586947971f",
+      "effectBoundaryId": "effect:9b57ab80243bd0863a07:transactional-outbox-buildenqueuemediaderivativerevokejobquery",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/media/media-lifecycle-enqueue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:74919c23265529d457ae",
+      "predecessorEdgeIds": [
+        "edge:74919c23265529d457ae:4:88468ccdcf388cca2cea"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "branchConditionClass": "always",
+      "branchId": "branch:74919c23265529d457ae:always",
+      "consumerEdgeId": "edge:74919c23265529d457ae:6:081c66c6bca619f42631",
+      "effectBoundaryId": "effect:7fc8eaad1f414a53ab0f:canonical-row",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/journal-document-persistence.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:74919c23265529d457ae",
+      "predecessorEdgeIds": [
+        "edge:74919c23265529d457ae:5:812c59a20b586947971f"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "branchConditionClass": "always",
+      "branchId": "branch:74919c23265529d457ae:always",
+      "consumerEdgeId": "edge:74919c23265529d457ae:7:477c0198234593213489",
+      "effectBoundaryId": "effect:98986e23cd4ed6803871:canonical-row-buildattachprocessedmediaassettoentryquery",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/media/media-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:74919c23265529d457ae",
+      "predecessorEdgeIds": [
+        "edge:74919c23265529d457ae:6:081c66c6bca619f42631"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
+      "branchConditionClass": "always",
+      "branchId": "branch:74919c23265529d457ae:always",
+      "consumerEdgeId": "edge:74919c23265529d457ae:8:f88d084cc712c7e87b2e",
       "effectBoundaryId": "effect:9c78b885dba46e7b2f6a:canonical-row-buildspacebyidquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "evidencePaths": [
@@ -3452,14 +3639,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:74919c23265529d457ae",
       "predecessorEdgeIds": [
-        "edge:74919c23265529d457ae:2:a6411b97b3677cd486eb"
+        "edge:74919c23265529d457ae:7:477c0198234593213489"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "branchConditionClass": "always",
       "branchId": "branch:74919c23265529d457ae:always",
-      "consumerEdgeId": "edge:74919c23265529d457ae:4:cf3b6b0379f6370b55e5",
+      "consumerEdgeId": "edge:74919c23265529d457ae:9:cf3b6b0379f6370b55e5",
       "effectBoundaryId": "effect:ad830686a3373b7516ad:database-transaction-1",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "evidencePaths": [
@@ -3469,75 +3656,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:74919c23265529d457ae",
       "predecessorEdgeIds": [
-        "edge:74919c23265529d457ae:3:f88d084cc712c7e87b2e"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "branchConditionClass": "always",
-      "branchId": "branch:74919c23265529d457ae:always",
-      "consumerEdgeId": "edge:74919c23265529d457ae:5:c29a9bfe4c796b418f14",
-      "effectBoundaryId": "effect:df41288b47efe787a963:canonical-row-buildjournalmutationadvisorylockquery",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:74919c23265529d457ae",
-      "predecessorEdgeIds": [
-        "edge:74919c23265529d457ae:4:cf3b6b0379f6370b55e5"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "branchConditionClass": "eligible",
-      "branchId": "branch:74919c23265529d457ae:eligible",
-      "consumerEdgeId": "edge:74919c23265529d457ae:6:47484ff842ec3e0e50a1",
-      "effectBoundaryId": "effect:860c05d8fb406c82e823:analytics-event-buildfindopenownrecordrevisiteventquery",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/server/analytics-events.ts"
-      ],
-      "executionMode": "asynchronous_from_durable_intent",
-      "pipelineId": "pipeline:74919c23265529d457ae",
-      "predecessorEdgeIds": [
-        "edge:74919c23265529d457ae:5:c29a9bfe4c796b418f14"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "branchConditionClass": "eligible",
-      "branchId": "branch:74919c23265529d457ae:eligible",
-      "consumerEdgeId": "edge:74919c23265529d457ae:7:7f173ecc6a4dbcd0870d",
-      "effectBoundaryId": "effect:7d7a5b2a40076634ae70:analytics-event-buildinsertanalyticseventquery",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/server/analytics-events.ts"
-      ],
-      "executionMode": "asynchronous_from_durable_intent",
-      "pipelineId": "pipeline:74919c23265529d457ae",
-      "predecessorEdgeIds": [
-        "edge:74919c23265529d457ae:5:c29a9bfe4c796b418f14"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "branchConditionClass": "eligible",
-      "branchId": "branch:74919c23265529d457ae:eligible",
-      "consumerEdgeId": "edge:74919c23265529d457ae:8:d482e6d15ab18bd12386",
-      "effectBoundaryId": "effect:6dd0a6e445db15e9dde2:analytics-event-buildmarkownrecordrevisitfollowedbyactionquery",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/server/analytics-events.ts"
-      ],
-      "executionMode": "asynchronous_from_durable_intent",
-      "pipelineId": "pipeline:74919c23265529d457ae",
-      "predecessorEdgeIds": [
-        "edge:74919c23265529d457ae:5:c29a9bfe4c796b418f14"
+        "edge:74919c23265529d457ae:8:f88d084cc712c7e87b2e"
       ]
     },
     {
@@ -3722,9 +3841,94 @@
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:7e6165a571f644e8c94f:always",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:10:c29a9bfe4c796b418f14",
+      "effectBoundaryId": "effect:df41288b47efe787a963:canonical-row-buildjournalmutationadvisorylockquery",
+      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/journal-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:7e6165a571f644e8c94f",
+      "predecessorEdgeIds": [
+        "edge:7e6165a571f644e8c94f:9:cf3b6b0379f6370b55e5"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:7e6165a571f644e8c94f:always",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:11:dc0408f8d59dd9ef1415",
+      "effectBoundaryId": "effect:ab638cd1e5e8f2d6851e:canonical-row",
+      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/mvp-learning/attribution-outbox.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:7e6165a571f644e8c94f",
+      "predecessorEdgeIds": [
+        "edge:7e6165a571f644e8c94f:10:c29a9bfe4c796b418f14"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:7e6165a571f644e8c94f:always",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:12:77cf888dc06e9a01e7fa",
+      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
+      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/mvp-learning/attribution-outbox.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:7e6165a571f644e8c94f",
+      "predecessorEdgeIds": [
+        "edge:7e6165a571f644e8c94f:11:dc0408f8d59dd9ef1415"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:7e6165a571f644e8c94f:always",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:13:790167dd99c192ace88a",
+      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
+      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/mvp-learning/attribution-outbox.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:7e6165a571f644e8c94f",
+      "predecessorEdgeIds": [
+        "edge:7e6165a571f644e8c94f:12:77cf888dc06e9a01e7fa"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "branchConditionClass": "success",
       "branchId": "branch:7e6165a571f644e8c94f:success",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:10:7f173ecc6a4dbcd0870d",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:14:47484ff842ec3e0e50a1",
+      "effectBoundaryId": "effect:860c05d8fb406c82e823:analytics-event-buildfindopenownrecordrevisiteventquery",
+      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/analytics-events.ts"
+      ],
+      "executionMode": "best_effort_after_commit",
+      "pipelineId": "pipeline:7e6165a571f644e8c94f",
+      "predecessorEdgeIds": [
+        "edge:7e6165a571f644e8c94f:13:790167dd99c192ace88a"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "branchConditionClass": "success",
+      "branchId": "branch:7e6165a571f644e8c94f:success",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:15:7f173ecc6a4dbcd0870d",
       "effectBoundaryId": "effect:7d7a5b2a40076634ae70:analytics-event-buildinsertanalyticseventquery",
       "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "evidencePaths": [
@@ -3734,14 +3938,14 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:7e6165a571f644e8c94f",
       "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:8:790167dd99c192ace88a"
+        "edge:7e6165a571f644e8c94f:13:790167dd99c192ace88a"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "branchConditionClass": "success",
       "branchId": "branch:7e6165a571f644e8c94f:success",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:11:d482e6d15ab18bd12386",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:16:d482e6d15ab18bd12386",
       "effectBoundaryId": "effect:6dd0a6e445db15e9dde2:analytics-event-buildmarkownrecordrevisitfollowedbyactionquery",
       "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "evidencePaths": [
@@ -3751,7 +3955,7 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:7e6165a571f644e8c94f",
       "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:8:790167dd99c192ace88a"
+        "edge:7e6165a571f644e8c94f:13:790167dd99c192ace88a"
       ]
     },
     {
@@ -3773,8 +3977,8 @@
       "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "branchConditionClass": "always",
       "branchId": "branch:7e6165a571f644e8c94f:always",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:2:a6411b97b3677cd486eb",
-      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:2:c06fc21e75a674ca999f",
+      "effectBoundaryId": "effect:24af613cb65c7a93bc83:canonical-row-buildfindjournalentrybyidquery",
       "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "evidencePaths": [
         "src/app/garden/actions.ts",
@@ -3790,7 +3994,92 @@
       "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "branchConditionClass": "always",
       "branchId": "branch:7e6165a571f644e8c94f:always",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:3:f88d084cc712c7e87b2e",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:3:a6411b97b3677cd486eb",
+      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
+      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/journal-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:7e6165a571f644e8c94f",
+      "predecessorEdgeIds": [
+        "edge:7e6165a571f644e8c94f:2:c06fc21e75a674ca999f"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:7e6165a571f644e8c94f:always",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:4:88468ccdcf388cca2cea",
+      "effectBoundaryId": "effect:57f2651db663d564e127:transactional-outbox",
+      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/media/media-lifecycle-enqueue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:7e6165a571f644e8c94f",
+      "predecessorEdgeIds": [
+        "edge:7e6165a571f644e8c94f:3:a6411b97b3677cd486eb"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:7e6165a571f644e8c94f:always",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:5:812c59a20b586947971f",
+      "effectBoundaryId": "effect:9b57ab80243bd0863a07:transactional-outbox-buildenqueuemediaderivativerevokejobquery",
+      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/media/media-lifecycle-enqueue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:7e6165a571f644e8c94f",
+      "predecessorEdgeIds": [
+        "edge:7e6165a571f644e8c94f:4:88468ccdcf388cca2cea"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:7e6165a571f644e8c94f:always",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:6:081c66c6bca619f42631",
+      "effectBoundaryId": "effect:7fc8eaad1f414a53ab0f:canonical-row",
+      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/journal-document-persistence.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:7e6165a571f644e8c94f",
+      "predecessorEdgeIds": [
+        "edge:7e6165a571f644e8c94f:5:812c59a20b586947971f"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:7e6165a571f644e8c94f:always",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:7:477c0198234593213489",
+      "effectBoundaryId": "effect:98986e23cd4ed6803871:canonical-row-buildattachprocessedmediaassettoentryquery",
+      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/media/media-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:7e6165a571f644e8c94f",
+      "predecessorEdgeIds": [
+        "edge:7e6165a571f644e8c94f:6:081c66c6bca619f42631"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:7e6165a571f644e8c94f:always",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:8:f88d084cc712c7e87b2e",
       "effectBoundaryId": "effect:9c78b885dba46e7b2f6a:canonical-row-buildspacebyidquery",
       "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "evidencePaths": [
@@ -3800,14 +4089,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:7e6165a571f644e8c94f",
       "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:2:a6411b97b3677cd486eb"
+        "edge:7e6165a571f644e8c94f:7:477c0198234593213489"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "branchConditionClass": "always",
       "branchId": "branch:7e6165a571f644e8c94f:always",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:4:cf3b6b0379f6370b55e5",
+      "consumerEdgeId": "edge:7e6165a571f644e8c94f:9:cf3b6b0379f6370b55e5",
       "effectBoundaryId": "effect:ad830686a3373b7516ad:database-transaction-1",
       "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
       "evidencePaths": [
@@ -3817,92 +4106,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:7e6165a571f644e8c94f",
       "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:3:f88d084cc712c7e87b2e"
-      ]
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:7e6165a571f644e8c94f:always",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:5:c29a9bfe4c796b418f14",
-      "effectBoundaryId": "effect:df41288b47efe787a963:canonical-row-buildjournalmutationadvisorylockquery",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "evidencePaths": [
-        "src/app/garden/actions.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:7e6165a571f644e8c94f",
-      "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:4:cf3b6b0379f6370b55e5"
-      ]
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:7e6165a571f644e8c94f:always",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:6:dc0408f8d59dd9ef1415",
-      "effectBoundaryId": "effect:ab638cd1e5e8f2d6851e:canonical-row",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "evidencePaths": [
-        "src/app/garden/actions.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:7e6165a571f644e8c94f",
-      "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:5:c29a9bfe4c796b418f14"
-      ]
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:7e6165a571f644e8c94f:always",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:7:77cf888dc06e9a01e7fa",
-      "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "evidencePaths": [
-        "src/app/garden/actions.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:7e6165a571f644e8c94f",
-      "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:6:dc0408f8d59dd9ef1415"
-      ]
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:7e6165a571f644e8c94f:always",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:8:790167dd99c192ace88a",
-      "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "evidencePaths": [
-        "src/app/garden/actions.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:7e6165a571f644e8c94f",
-      "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:7:77cf888dc06e9a01e7fa"
-      ]
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "branchConditionClass": "success",
-      "branchId": "branch:7e6165a571f644e8c94f:success",
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:9:47484ff842ec3e0e50a1",
-      "effectBoundaryId": "effect:860c05d8fb406c82e823:analytics-event-buildfindopenownrecordrevisiteventquery",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "evidencePaths": [
-        "src/app/garden/actions.ts",
-        "src/server/analytics-events.ts"
-      ],
-      "executionMode": "best_effort_after_commit",
-      "pipelineId": "pipeline:7e6165a571f644e8c94f",
-      "predecessorEdgeIds": [
-        "edge:7e6165a571f644e8c94f:8:790167dd99c192ace88a"
+        "edge:7e6165a571f644e8c94f:8:f88d084cc712c7e87b2e"
       ]
     },
     {
@@ -3941,7 +4145,24 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:10:f357c7c482b419e1b53d",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:10:a6411b97b3677cd486eb",
+      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/journal-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
+      "predecessorEdgeIds": [
+        "edge:80cbcd9b9471ff635a1e:9:2506836770d600a3a0ba"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
+      "branchConditionClass": "always",
+      "branchId": "branch:80cbcd9b9471ff635a1e:always",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:11:f357c7c482b419e1b53d",
       "effectBoundaryId": "effect:05f9ab89e52ea96113d4:canonical-row-buildprocessedobjectmediagalleryquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -3951,14 +4172,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:9:a6411b97b3677cd486eb"
+        "edge:80cbcd9b9471ff635a1e:10:a6411b97b3677cd486eb"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:11:d49bd1631169d877721f",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:12:d49bd1631169d877721f",
       "effectBoundaryId": "effect:69bdeb2e74b347c27f30:canonical-row-buildplantobjectcatalogsourcecreditquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -3968,14 +4189,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:10:f357c7c482b419e1b53d"
+        "edge:80cbcd9b9471ff635a1e:11:f357c7c482b419e1b53d"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:12:49b0ee451c6b7baa2d1e",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:13:49b0ee451c6b7baa2d1e",
       "effectBoundaryId": "effect:3e321084e2a12511f9a3:canonical-row-buildpriorpublicationdisclosurequery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -3985,14 +4206,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:11:d49bd1631169d877721f"
+        "edge:80cbcd9b9471ff635a1e:12:d49bd1631169d877721f"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:13:329a6f9a5476c3b4466f",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:14:329a6f9a5476c3b4466f",
       "effectBoundaryId": "effect:444b9e3ac7e64c0671e7:database-transaction-1",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -4002,14 +4223,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:12:49b0ee451c6b7baa2d1e"
+        "edge:80cbcd9b9471ff635a1e:13:49b0ee451c6b7baa2d1e"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:14:cef87e5dd8bc668e0528",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:15:cef87e5dd8bc668e0528",
       "effectBoundaryId": "effect:51432f9a1e5bc26d64e7:canonical-row-buildjournalmutationadvisorylockquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -4019,14 +4240,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:13:329a6f9a5476c3b4466f"
+        "edge:80cbcd9b9471ff635a1e:14:329a6f9a5476c3b4466f"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "eligible",
       "branchId": "branch:80cbcd9b9471ff635a1e:eligible",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:15:47484ff842ec3e0e50a1",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:16:47484ff842ec3e0e50a1",
       "effectBoundaryId": "effect:860c05d8fb406c82e823:analytics-event-buildfindopenownrecordrevisiteventquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -4036,14 +4257,14 @@
       "executionMode": "asynchronous_from_durable_intent",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:14:cef87e5dd8bc668e0528"
+        "edge:80cbcd9b9471ff635a1e:15:cef87e5dd8bc668e0528"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "eligible",
       "branchId": "branch:80cbcd9b9471ff635a1e:eligible",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:16:7f173ecc6a4dbcd0870d",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:17:7f173ecc6a4dbcd0870d",
       "effectBoundaryId": "effect:7d7a5b2a40076634ae70:analytics-event-buildinsertanalyticseventquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -4053,14 +4274,14 @@
       "executionMode": "asynchronous_from_durable_intent",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:14:cef87e5dd8bc668e0528"
+        "edge:80cbcd9b9471ff635a1e:15:cef87e5dd8bc668e0528"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "eligible",
       "branchId": "branch:80cbcd9b9471ff635a1e:eligible",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:17:d482e6d15ab18bd12386",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:18:d482e6d15ab18bd12386",
       "effectBoundaryId": "effect:6dd0a6e445db15e9dde2:analytics-event-buildmarkownrecordrevisitfollowedbyactionquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -4070,7 +4291,7 @@
       "executionMode": "asynchronous_from_durable_intent",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:14:cef87e5dd8bc668e0528"
+        "edge:80cbcd9b9471ff635a1e:15:cef87e5dd8bc668e0528"
       ]
     },
     {
@@ -4092,12 +4313,12 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:2:88468ccdcf388cca2cea",
-      "effectBoundaryId": "effect:57f2651db663d564e127:transactional-outbox",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:2:c06fc21e75a674ca999f",
+      "effectBoundaryId": "effect:24af613cb65c7a93bc83:canonical-row-buildfindjournalentrybyidquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
-        "src/server/media/media-lifecycle-enqueue.ts"
+        "src/server/journal-repository.ts"
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
@@ -4109,7 +4330,24 @@
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:3:812c59a20b586947971f",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:3:88468ccdcf388cca2cea",
+      "effectBoundaryId": "effect:57f2651db663d564e127:transactional-outbox",
+      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/media/media-lifecycle-enqueue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
+      "predecessorEdgeIds": [
+        "edge:80cbcd9b9471ff635a1e:2:c06fc21e75a674ca999f"
+      ]
+    },
+    {
+      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
+      "branchConditionClass": "always",
+      "branchId": "branch:80cbcd9b9471ff635a1e:always",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:4:812c59a20b586947971f",
       "effectBoundaryId": "effect:9b57ab80243bd0863a07:transactional-outbox-buildenqueuemediaderivativerevokejobquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -4119,14 +4357,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:2:88468ccdcf388cca2cea"
+        "edge:80cbcd9b9471ff635a1e:3:88468ccdcf388cca2cea"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:4:081c66c6bca619f42631",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:5:081c66c6bca619f42631",
       "effectBoundaryId": "effect:7fc8eaad1f414a53ab0f:canonical-row",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -4136,14 +4374,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:3:812c59a20b586947971f"
+        "edge:80cbcd9b9471ff635a1e:4:812c59a20b586947971f"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:5:477c0198234593213489",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:6:477c0198234593213489",
       "effectBoundaryId": "effect:98986e23cd4ed6803871:canonical-row-buildattachprocessedmediaassettoentryquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -4153,14 +4391,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:4:081c66c6bca619f42631"
+        "edge:80cbcd9b9471ff635a1e:5:081c66c6bca619f42631"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:6:522683864f8f12b1cd0f",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:7:522683864f8f12b1cd0f",
       "effectBoundaryId": "effect:613cba4b73892888b73b:canonical-row-buildplantobjectpageobjectquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -4170,14 +4408,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:5:477c0198234593213489"
+        "edge:80cbcd9b9471ff635a1e:6:477c0198234593213489"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:7:b2e3cd3a93bb78f0b500",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:8:b2e3cd3a93bb78f0b500",
       "effectBoundaryId": "effect:7d94998d88faec904041:canonical-row-buildobjecttimelineentriesquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -4187,14 +4425,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:6:522683864f8f12b1cd0f"
+        "edge:80cbcd9b9471ff635a1e:7:522683864f8f12b1cd0f"
       ]
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "branchConditionClass": "always",
       "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:8:2506836770d600a3a0ba",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:9:2506836770d600a3a0ba",
       "effectBoundaryId": "effect:ef13bce9b2a47fc6aff4:canonical-row-buildprocessedmediaforentriesquery",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "evidencePaths": [
@@ -4204,24 +4442,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
       "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:7:b2e3cd3a93bb78f0b500"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "branchConditionClass": "always",
-      "branchId": "branch:80cbcd9b9471ff635a1e:always",
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:9:a6411b97b3677cd486eb",
-      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:80cbcd9b9471ff635a1e",
-      "predecessorEdgeIds": [
-        "edge:80cbcd9b9471ff635a1e:8:2506836770d600a3a0ba"
+        "edge:80cbcd9b9471ff635a1e:8:b2e3cd3a93bb78f0b500"
       ]
     },
     {
@@ -4964,7 +5185,24 @@
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:10:f357c7c482b419e1b53d",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:10:a6411b97b3677cd486eb",
+      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
+      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
+      "evidencePaths": [
+        "src/app/garden/objects/[objectId]/actions.ts",
+        "src/server/journal-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:a0e26d5a3a55edb77721",
+      "predecessorEdgeIds": [
+        "edge:a0e26d5a3a55edb77721:9:2506836770d600a3a0ba"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
+      "branchConditionClass": "always",
+      "branchId": "branch:a0e26d5a3a55edb77721:always",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:11:f357c7c482b419e1b53d",
       "effectBoundaryId": "effect:05f9ab89e52ea96113d4:canonical-row-buildprocessedobjectmediagalleryquery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -4974,14 +5212,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:9:a6411b97b3677cd486eb"
+        "edge:a0e26d5a3a55edb77721:10:a6411b97b3677cd486eb"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:11:d49bd1631169d877721f",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:12:d49bd1631169d877721f",
       "effectBoundaryId": "effect:69bdeb2e74b347c27f30:canonical-row-buildplantobjectcatalogsourcecreditquery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -4991,14 +5229,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:10:f357c7c482b419e1b53d"
+        "edge:a0e26d5a3a55edb77721:11:f357c7c482b419e1b53d"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:12:49b0ee451c6b7baa2d1e",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:13:49b0ee451c6b7baa2d1e",
       "effectBoundaryId": "effect:3e321084e2a12511f9a3:canonical-row-buildpriorpublicationdisclosurequery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5008,14 +5246,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:11:d49bd1631169d877721f"
+        "edge:a0e26d5a3a55edb77721:12:d49bd1631169d877721f"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:13:329a6f9a5476c3b4466f",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:14:329a6f9a5476c3b4466f",
       "effectBoundaryId": "effect:444b9e3ac7e64c0671e7:database-transaction-1",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5025,14 +5263,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:12:49b0ee451c6b7baa2d1e"
+        "edge:a0e26d5a3a55edb77721:13:49b0ee451c6b7baa2d1e"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:14:cef87e5dd8bc668e0528",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:15:cef87e5dd8bc668e0528",
       "effectBoundaryId": "effect:51432f9a1e5bc26d64e7:canonical-row-buildjournalmutationadvisorylockquery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5042,14 +5280,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:13:329a6f9a5476c3b4466f"
+        "edge:a0e26d5a3a55edb77721:14:329a6f9a5476c3b4466f"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:15:dc0408f8d59dd9ef1415",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:16:dc0408f8d59dd9ef1415",
       "effectBoundaryId": "effect:ab638cd1e5e8f2d6851e:canonical-row",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5059,14 +5297,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:14:cef87e5dd8bc668e0528"
+        "edge:a0e26d5a3a55edb77721:15:cef87e5dd8bc668e0528"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:16:77cf888dc06e9a01e7fa",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:17:77cf888dc06e9a01e7fa",
       "effectBoundaryId": "effect:09b888fcae5da93c496c:database-transaction-1",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5076,14 +5314,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:15:dc0408f8d59dd9ef1415"
+        "edge:a0e26d5a3a55edb77721:16:dc0408f8d59dd9ef1415"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:17:790167dd99c192ace88a",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:18:790167dd99c192ace88a",
       "effectBoundaryId": "effect:845ed6f3cdcbecc8e297:canonical-row",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5093,14 +5331,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:16:77cf888dc06e9a01e7fa"
+        "edge:a0e26d5a3a55edb77721:17:77cf888dc06e9a01e7fa"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "success",
       "branchId": "branch:a0e26d5a3a55edb77721:success",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:18:47484ff842ec3e0e50a1",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:19:47484ff842ec3e0e50a1",
       "effectBoundaryId": "effect:860c05d8fb406c82e823:analytics-event-buildfindopenownrecordrevisiteventquery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5110,24 +5348,7 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:17:790167dd99c192ace88a"
-      ]
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "branchConditionClass": "success",
-      "branchId": "branch:a0e26d5a3a55edb77721:success",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:19:7f173ecc6a4dbcd0870d",
-      "effectBoundaryId": "effect:7d7a5b2a40076634ae70:analytics-event-buildinsertanalyticseventquery",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts",
-        "src/server/analytics-events.ts"
-      ],
-      "executionMode": "best_effort_after_commit",
-      "pipelineId": "pipeline:a0e26d5a3a55edb77721",
-      "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:17:790167dd99c192ace88a"
+        "edge:a0e26d5a3a55edb77721:18:790167dd99c192ace88a"
       ]
     },
     {
@@ -5149,7 +5370,24 @@
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "success",
       "branchId": "branch:a0e26d5a3a55edb77721:success",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:20:d482e6d15ab18bd12386",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:20:7f173ecc6a4dbcd0870d",
+      "effectBoundaryId": "effect:7d7a5b2a40076634ae70:analytics-event-buildinsertanalyticseventquery",
+      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
+      "evidencePaths": [
+        "src/app/garden/objects/[objectId]/actions.ts",
+        "src/server/analytics-events.ts"
+      ],
+      "executionMode": "best_effort_after_commit",
+      "pipelineId": "pipeline:a0e26d5a3a55edb77721",
+      "predecessorEdgeIds": [
+        "edge:a0e26d5a3a55edb77721:18:790167dd99c192ace88a"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
+      "branchConditionClass": "success",
+      "branchId": "branch:a0e26d5a3a55edb77721:success",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:21:d482e6d15ab18bd12386",
       "effectBoundaryId": "effect:6dd0a6e445db15e9dde2:analytics-event-buildmarkownrecordrevisitfollowedbyactionquery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5159,19 +5397,19 @@
       "executionMode": "best_effort_after_commit",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:17:790167dd99c192ace88a"
+        "edge:a0e26d5a3a55edb77721:18:790167dd99c192ace88a"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:2:88468ccdcf388cca2cea",
-      "effectBoundaryId": "effect:57f2651db663d564e127:transactional-outbox",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:2:c06fc21e75a674ca999f",
+      "effectBoundaryId": "effect:24af613cb65c7a93bc83:canonical-row-buildfindjournalentrybyidquery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
         "src/app/garden/objects/[objectId]/actions.ts",
-        "src/server/media/media-lifecycle-enqueue.ts"
+        "src/server/journal-repository.ts"
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
@@ -5183,7 +5421,24 @@
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:3:812c59a20b586947971f",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:3:88468ccdcf388cca2cea",
+      "effectBoundaryId": "effect:57f2651db663d564e127:transactional-outbox",
+      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
+      "evidencePaths": [
+        "src/app/garden/objects/[objectId]/actions.ts",
+        "src/server/media/media-lifecycle-enqueue.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:a0e26d5a3a55edb77721",
+      "predecessorEdgeIds": [
+        "edge:a0e26d5a3a55edb77721:2:c06fc21e75a674ca999f"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
+      "branchConditionClass": "always",
+      "branchId": "branch:a0e26d5a3a55edb77721:always",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:4:812c59a20b586947971f",
       "effectBoundaryId": "effect:9b57ab80243bd0863a07:transactional-outbox-buildenqueuemediaderivativerevokejobquery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5193,14 +5448,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:2:88468ccdcf388cca2cea"
+        "edge:a0e26d5a3a55edb77721:3:88468ccdcf388cca2cea"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:4:081c66c6bca619f42631",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:5:081c66c6bca619f42631",
       "effectBoundaryId": "effect:7fc8eaad1f414a53ab0f:canonical-row",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5210,14 +5465,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:3:812c59a20b586947971f"
+        "edge:a0e26d5a3a55edb77721:4:812c59a20b586947971f"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:5:477c0198234593213489",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:6:477c0198234593213489",
       "effectBoundaryId": "effect:98986e23cd4ed6803871:canonical-row-buildattachprocessedmediaassettoentryquery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5227,14 +5482,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:4:081c66c6bca619f42631"
+        "edge:a0e26d5a3a55edb77721:5:081c66c6bca619f42631"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:6:522683864f8f12b1cd0f",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:7:522683864f8f12b1cd0f",
       "effectBoundaryId": "effect:613cba4b73892888b73b:canonical-row-buildplantobjectpageobjectquery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5244,14 +5499,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:5:477c0198234593213489"
+        "edge:a0e26d5a3a55edb77721:6:477c0198234593213489"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:7:b2e3cd3a93bb78f0b500",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:8:b2e3cd3a93bb78f0b500",
       "effectBoundaryId": "effect:7d94998d88faec904041:canonical-row-buildobjecttimelineentriesquery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5261,14 +5516,14 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:6:522683864f8f12b1cd0f"
+        "edge:a0e26d5a3a55edb77721:7:522683864f8f12b1cd0f"
       ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:8:2506836770d600a3a0ba",
+      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:9:2506836770d600a3a0ba",
       "effectBoundaryId": "effect:ef13bce9b2a47fc6aff4:canonical-row-buildprocessedmediaforentriesquery",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
       "evidencePaths": [
@@ -5278,24 +5533,7 @@
       "executionMode": "required",
       "pipelineId": "pipeline:a0e26d5a3a55edb77721",
       "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:7:b2e3cd3a93bb78f0b500"
-      ]
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:a0e26d5a3a55edb77721:always",
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:9:a6411b97b3677cd486eb",
-      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:a0e26d5a3a55edb77721",
-      "predecessorEdgeIds": [
-        "edge:a0e26d5a3a55edb77721:8:2506836770d600a3a0ba"
+        "edge:a0e26d5a3a55edb77721:8:b2e3cd3a93bb78f0b500"
       ]
     },
     {
@@ -8946,7 +9184,8 @@
         "src/server/lineage-repository.ts",
         "src/server/media/media-lifecycle-enqueue.ts",
         "src/server/media/media-repository.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
+        "src/server/mvp-learning/attribution-outbox.ts",
+        "src/server/search/public-projection-outbox.ts"
       ],
       "idempotencyOwner": "src/server/journal-repository.ts#createPlantObjectJournalEntry",
       "ownerPath": "src/server/journal-repository.ts",
@@ -10199,7 +10438,8 @@
         "src/server/journal-topic-repository.ts",
         "src/server/media/media-lifecycle-enqueue.ts",
         "src/server/media/media-repository.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
+        "src/server/mvp-learning/attribution-outbox.ts",
+        "src/server/search/public-projection-outbox.ts"
       ],
       "idempotencyOwner": "src/server/journal-repository.ts#createSpaceJournalEntry",
       "ownerPath": "src/server/journal-repository.ts",
@@ -10757,7 +10997,8 @@
         "src/server/lineage-repository.ts",
         "src/server/media/media-lifecycle-enqueue.ts",
         "src/server/media/media-repository.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
+        "src/server/mvp-learning/attribution-outbox.ts",
+        "src/server/search/public-projection-outbox.ts"
       ],
       "idempotencyOwner": "src/server/journal-repository.ts#createFirstPlantEntry",
       "ownerPath": "src/server/journal-repository.ts",
@@ -15246,6 +15487,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/garden/journal-composer-return.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/journal-composer-return",
+      "sourceNodeId": "source:0814e7c7cf1f4b3273db",
+      "symbol": "normalizeJournalComposerReturnTo"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/skeleton/journal/route.ts",
         "src/server/search/public-projection-outbox.ts"
       ],
@@ -16125,6 +16378,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/media/media-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/media/media-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_10798",
+      "sourceNodeId": "source:122b77f0cfcdcdbecd54",
+      "symbol": "settleClaimedMediaPublicReady"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-journal-directory.tsx",
         "src/server/public-journal-directory-repository.ts"
       ],
@@ -16552,6 +16816,17 @@
       "semanticVariant": "from:@/lib/auth/auth-intent-contract",
       "sourceNodeId": "source:1558cf8948de3922eba4",
       "symbol": "buildAuthIntentAnchor"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_60691",
+      "sourceNodeId": "source:156b5606cd594db1f86f",
+      "symbol": "updatePlantObjectLocation"
     },
     {
       "evidencePaths": [
@@ -17087,17 +17362,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_38327",
-      "sourceNodeId": "source:195f9ad53b02e332e11e",
-      "symbol": "createPlantObjectJournalEntry"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/meta/conversions/route.ts",
         "src/server/meta-marketing/conversions-api.ts"
       ],
@@ -17250,6 +17514,18 @@
       "semanticVariant": "from:@/server/social-return-repository",
       "sourceNodeId": "source:1b92969147f355166790",
       "symbol": "updateNotificationPreferences"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/media/ephemeral-publication-handoff.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/ephemeral-publication-handoff",
+      "sourceNodeId": "source:1b947343f5ab0271cdee",
+      "symbol": "claimEphemeralPublicationMedia"
     },
     {
       "evidencePaths": [
@@ -18630,6 +18906,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_71732",
+      "sourceNodeId": "source:278a89096717d4b71b49",
+      "symbol": "publishJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/server/engagement-repository.ts",
         "src/server/launch-corpus/public-surface.ts"
       ],
@@ -18864,7 +19151,8 @@
         "src/server/lineage-repository.ts",
         "src/server/media/media-lifecycle-enqueue.ts",
         "src/server/media/media-repository.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
+        "src/server/mvp-learning/attribution-outbox.ts",
+        "src/server/search/public-projection-outbox.ts"
       ],
       "nodeKind": "effect_owner",
       "path": "src/server/journal-repository.ts",
@@ -18908,6 +19196,18 @@
       "semanticVariant": "from:@/lib/auth/public-identity-compatibility",
       "sourceNodeId": "source:294fed5578e86746fa63",
       "symbol": "PRIVATE_AUTH_COMPATIBILITY_NAME"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/garden/entry-contracts.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/entry-contracts",
+      "sourceNodeId": "source:298edef076f5d0f2784e",
+      "symbol": "ATOMIC_JOURNAL_CREATE_PROTOCOL"
     },
     {
       "evidencePaths": [
@@ -20343,14 +20643,14 @@
     },
     {
       "evidencePaths": [
-        "src/server/media/media-repository.ts"
+        "src/server/journal-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
-      "path": "src/server/media/media-repository.ts",
+      "path": "src/server/journal-repository.ts",
       "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_3459",
-      "sourceNodeId": "source:38223d1167f372f72976",
-      "symbol": "claimMediaAssetForProcessing"
+      "semanticVariant": "database_transaction_at_70723",
+      "sourceNodeId": "source:382ca0ba5045393a9eed",
+      "symbol": "repairPublicProjectionIntentForReplay"
     },
     {
       "evidencePaths": [
@@ -20977,6 +21277,18 @@
       "semanticVariant": "from:@/lib/navigation/internal-return-path",
       "sourceNodeId": "source:3db3e57f4580e6eb52d6",
       "symbol": "normalizeInternalReturnPath"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/journal-repository",
+      "sourceNodeId": "source:3dc96f628f9a9ca731e8",
+      "symbol": "readCommittedAtomicJournalCreate"
     },
     {
       "evidencePaths": [
@@ -22338,6 +22650,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_62202",
+      "sourceNodeId": "source:4a9000076d4a6bb0efe1",
+      "symbol": "createJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/app/catalog-evidence-route.tsx",
         "src/lib/auth/auth-intent-contract.ts"
       ],
@@ -22668,6 +22991,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/media/ephemeral-publication-handoff.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/ephemeral-publication-handoff",
+      "sourceNodeId": "source:4d6bb0ec2914706efbda",
+      "symbol": "finalizeEphemeralPublicationMedia"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/skeleton/journal/route.ts",
         "src/lib/walking-skeleton/environment.ts"
       ],
@@ -22810,17 +23145,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/media/media-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/media/media-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_7831",
-      "sourceNodeId": "source:4e95cce7af21b1eb2756",
-      "symbol": "settleClaimedMediaPublicReady"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/profile/actions.ts",
         "src/app/garden/profile/page.tsx"
       ],
@@ -22928,18 +23252,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/lib/garden/entry-contracts.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/entries/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/garden/entry-contracts",
-      "sourceNodeId": "source:500ce1a51476665c8fb6",
-      "symbol": "hasCurrentOnlineJournalProtocol"
-    },
-    {
-      "evidencePaths": [
         "src/server/profile-interaction-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -22960,17 +23272,6 @@
       "semanticVariant": "from:@/lib/visual-fixtures/social-return-scenarios",
       "sourceNodeId": "source:503b1931d4977b7b75d2",
       "symbol": "resolveVisualSocialScenario"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_64415",
-      "sourceNodeId": "source:5040e303e5cff6dc1030",
-      "symbol": "publishJournalEntry"
     },
     {
       "evidencePaths": [
@@ -23428,6 +23729,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/journal-repository",
+      "sourceNodeId": "source:55010371271a66a03073",
+      "symbol": "atomicClientMutationId"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-community.tsx",
         "src/lib/public-localization.ts"
       ],
@@ -23461,6 +23774,18 @@
       "semanticVariant": "from:@/components/media/subject-aware-media-image",
       "sourceNodeId": "source:5563a4897780306e1d7f",
       "symbol": "SubjectAwareMediaImage"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/storage.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/storage",
+      "sourceNodeId": "source:55a35b21786718ad32cf",
+      "symbol": "getPublicDerivativeUrl"
     },
     {
       "evidencePaths": [
@@ -24221,6 +24546,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_21613",
+      "sourceNodeId": "source:5e2b8a058393d5afb4c8",
+      "symbol": "createFirstPlantEntry"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/page.tsx",
         "src/lib/localization/localization-visual-fixture.ts"
       ],
@@ -24893,6 +25229,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_84806",
+      "sourceNodeId": "source:65a485afb2b0bde8a42b",
+      "symbol": "archiveJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/server/engagement-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -24901,6 +25248,18 @@
       "semanticVariant": "canonical-row:buildPublicCommunityContributionCommentTargetQuery",
       "sourceNodeId": "source:65ad8e2060d7bf1e5c38",
       "symbol": "ensureEngagementCommentTargetIsPublic"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/garden/journal-composer-return.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/journal-composer-return",
+      "sourceNodeId": "source:65c7cb5e8cd696335a61",
+      "symbol": "journalCreateReturnFallback"
     },
     {
       "evidencePaths": [
@@ -25008,17 +25367,6 @@
       "semanticVariant": "from:@/lib/media/presentation-contract",
       "sourceNodeId": "source:66641775bc9791841606",
       "symbol": "Ove330ServeClass"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_53374",
-      "sourceNodeId": "source:66cd30b6662c66256471",
-      "symbol": "updatePlantObjectLocation"
     },
     {
       "evidencePaths": [
@@ -26504,17 +26852,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_45573",
-      "sourceNodeId": "source:76b722605a5e5920448b",
-      "symbol": "createSpaceJournalEntry"
-    },
-    {
-      "evidencePaths": [
         "src/components/media/owner-media-focal-panel.tsx",
         "src/components/ui/button.tsx"
       ],
@@ -26845,6 +27182,18 @@
       "semanticVariant": "action:reportCommunityContributionAction",
       "sourceNodeId": "source:79a8417ca5117997d583",
       "symbol": "reportCommunityContributionAction"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts",
+        "src/server/media/ephemeral-publication-handoff.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/ephemeral-publication-handoff",
+      "sourceNodeId": "source:79e202e7cdce2b706250",
+      "symbol": "ClaimedEphemeralPublicationMedia"
     },
     {
       "evidencePaths": [
@@ -27687,6 +28036,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/media/media-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/media/media-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_6426",
+      "sourceNodeId": "source:827f309dd3bb433b5644",
+      "symbol": "claimMediaAssetForProcessing"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/drafts/[draftKey]/route.ts",
         "src/lib/privacy/precise-location-copy.ts"
       ],
@@ -27814,6 +28174,18 @@
       "semanticVariant": "from:@/lib/auth/sign-out-contract",
       "sourceNodeId": "source:8432ae4414148cf245f6",
       "symbol": "prepareCurrentSessionSignOut"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/page.tsx",
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/journal-repository",
+      "sourceNodeId": "source:8455154d6593b11d5aa1",
+      "symbol": "hasPriorPublicationDisclosure"
     },
     {
       "evidencePaths": [
@@ -28229,17 +28601,6 @@
       "semanticVariant": "from:@/lib/visual-fixtures/journal-creation-scenarios",
       "sourceNodeId": "source:88152baf7023f6f2a6be",
       "symbol": "resolveVisualJournalCreationResultScenario"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_57765",
-      "sourceNodeId": "source:8831d6cf7ca967567682",
-      "symbol": "updateJournalEntryAggregate"
     },
     {
       "evidencePaths": [
@@ -30024,6 +30385,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_44417",
+      "sourceNodeId": "source:98b5a831b44fb3925984",
+      "symbol": "createPlantObjectJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/catalog-resolve-control.tsx",
         "src/lib/garden-workspace-copy.ts"
       ],
@@ -30127,6 +30499,17 @@
       "semanticVariant": "from:@/lib/garden/catalog-availability",
       "sourceNodeId": "source:99d8c71813c9ce84b55f",
       "symbol": "catalogMeiliServeClass"
+    },
+    {
+      "evidencePaths": [
+        "src/server/media/media-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/media/media-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_14563",
+      "sourceNodeId": "source:99f13c13a1fc151a3aca",
+      "symbol": "updateMediaAssetFocalForOwner"
     },
     {
       "evidencePaths": [
@@ -30290,17 +30673,6 @@
       "semanticVariant": "from:@/server/visual-fixtures/community-actor",
       "sourceNodeId": "source:9b5f9e38c04dbdb1669f",
       "symbol": "resolveVisualCommunityMutationActor"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_54885",
-      "sourceNodeId": "source:9b7d2496c1a5f13daffb",
-      "symbol": "createJournalEntry"
     },
     {
       "evidencePaths": [
@@ -30576,6 +30948,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/garden/entry-contracts.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/entry-contracts",
+      "sourceNodeId": "source:9ee4ea23fb4f5bc8ac2c",
+      "symbol": "AtomicJournalCreateResponse"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/plant-identification/route.ts",
         "src/server/auth-intent-http.ts"
       ],
@@ -30807,6 +31191,28 @@
       "semanticVariant": "canonical-row:buildInsertErasureRequestQuery",
       "sourceNodeId": "source:a12bf8e4027aa4b5d3eb",
       "symbol": "submitErasureRequest"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_57153",
+      "sourceNodeId": "source:a14a231e9098a8948111",
+      "symbol": "resolvePlantObjectCatalog"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_65082",
+      "sourceNodeId": "source:a1514c837d7224ecb87c",
+      "symbol": "updateJournalEntryAggregate"
     },
     {
       "evidencePaths": [
@@ -31139,6 +31545,18 @@
       "semanticVariant": "from:@/components/site-shell/interface-locale-change-boundary",
       "sourceNodeId": "source:a42ec267a525b48842b7",
       "symbol": "useInterfaceLocaleChangeFormState"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts",
+        "src/server/media/media-lifecycle-enqueue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/media-lifecycle-enqueue",
+      "sourceNodeId": "source:a4383b327f88e6543403",
+      "symbol": "buildEnqueueMediaStagingFinalizeJobQuery"
     },
     {
       "evidencePaths": [
@@ -31603,17 +32021,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_49836",
-      "sourceNodeId": "source:a8a0a59275b268921e15",
-      "symbol": "resolvePlantObjectCatalog"
-    },
-    {
-      "evidencePaths": [
         "src/app/[locale]/[profileHandle]/actions.ts",
         "src/components/public/public-profile.tsx"
       ],
@@ -31730,17 +32137,6 @@
       "semanticVariant": "action:reportProfileAction",
       "sourceNodeId": "source:a9ce9d8d51fc41957540",
       "symbol": "reportProfileAction"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_77489",
-      "sourceNodeId": "source:a9d858ad379be34aa645",
-      "symbol": "archiveJournalEntry"
     },
     {
       "evidencePaths": [
@@ -32170,17 +32566,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_15709",
-      "sourceNodeId": "source:ae497e792eeda01929df",
-      "symbol": "createFirstPlantEntry"
-    },
-    {
-      "evidencePaths": [
         "src/server/catalog-alias-curation-repository.ts",
         "src/server/catalog-repository.ts"
       ],
@@ -32427,6 +32812,30 @@
       "semanticVariant": "from:@/server/document-mutation-admission",
       "sourceNodeId": "source:b0e3dd16b10c8505afea",
       "symbol": "documentMutationAdmissionResponse"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/garden/public-paths.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/public-paths",
+      "sourceNodeId": "source:b114ff1c3332ce61b518",
+      "symbol": "publicJournalEntryPath"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts",
+        "src/server/media/media-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/media-repository",
+      "sourceNodeId": "source:b13862c45c8ba6ffd20e",
+      "symbol": "insertClaimedEphemeralMediaForEntry"
     },
     {
       "evidencePaths": [
@@ -33171,17 +33580,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_65505",
-      "sourceNodeId": "source:b7a783571a3665f8c734",
-      "symbol": "publishJournalEntry"
-    },
-    {
-      "evidencePaths": [
         "src/server/community-repository.ts",
         "src/server/launch-corpus/public-surface.ts"
       ],
@@ -33677,6 +34075,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/garden/journal-document.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/journal-document",
+      "sourceNodeId": "source:bc5bdf7a0ceb0028251b",
+      "symbol": "listJournalDocumentImageMediaIds"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/bookmarks/page.tsx",
         "src/lib/visual-fixtures/social-return-scenarios.ts"
       ],
@@ -33898,6 +34308,18 @@
       "semanticVariant": "from:@/lib/garden/save-progress-moment",
       "sourceNodeId": "source:be9f8298b8ffe8bc5363",
       "symbol": "buildSaveProgressReadbackUrl"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/garden/entry-contracts.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/entry-contracts",
+      "sourceNodeId": "source:bef4f434c97e71cfe413",
+      "symbol": "AtomicJournalCreateRequest"
     },
     {
       "evidencePaths": [
@@ -34488,17 +34910,6 @@
       "semanticVariant": "from:@/server/catalog-repository",
       "sourceNodeId": "source:c4e30207175a9cad15a5",
       "symbol": "findSelectableCatalogItem"
-    },
-    {
-      "evidencePaths": [
-        "src/server/media/media-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/media/media-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_11596",
-      "sourceNodeId": "source:c4f114cc41eb9673e12b",
-      "symbol": "updateMediaAssetFocalForOwner"
     },
     {
       "evidencePaths": [
@@ -35190,6 +35601,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/media/ephemeral-staging-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/media/ephemeral-staging-contract",
+      "sourceNodeId": "source:cbd88be798e2eade2402",
+      "symbol": "bytesToBase64Url"
+    },
+    {
+      "evidencePaths": [
         "src/lib/garden/catalog-trust.ts",
         "src/server/catalog-repository.ts"
       ],
@@ -35646,7 +36069,8 @@
         "src/server/journal-topic-repository.ts",
         "src/server/media/media-lifecycle-enqueue.ts",
         "src/server/media/media-repository.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
+        "src/server/mvp-learning/attribution-outbox.ts",
+        "src/server/search/public-projection-outbox.ts"
       ],
       "nodeKind": "effect_owner",
       "path": "src/server/journal-repository.ts",
@@ -36667,6 +37091,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_52055",
+      "sourceNodeId": "source:dac7b641084bb6be438b",
+      "symbol": "createSpaceJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/actions.ts",
         "src/server/lineage-repository.ts"
       ],
@@ -37169,17 +37604,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_63406",
-      "sourceNodeId": "source:df64a06f8bc7152632fa",
-      "symbol": "repairPublicProjectionIntentForReplay"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/plant-identification/route.ts",
         "src/server/catalog-repository.ts"
       ],
@@ -37496,6 +37920,18 @@
       "semanticVariant": "from:@/lib/public-localization",
       "sourceNodeId": "source:e2a4fff2e95f760f24bb",
       "symbol": "localizedPath"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/media/ephemeral-staging-crypto.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/media/ephemeral-staging-crypto",
+      "sourceNodeId": "source:e2b19d8867453281649e",
+      "symbol": "stableJson"
     },
     {
       "evidencePaths": [
@@ -38137,6 +38573,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/garden/journal-document.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/journal-document",
+      "sourceNodeId": "source:e889a8f0a11cbf2f7f1b",
+      "symbol": "normalizeJournalDocumentOrThrow"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/page.tsx",
         "src/components/auth/auth-intent-focus.tsx"
       ],
@@ -38347,7 +38795,8 @@
         "src/server/lineage-repository.ts",
         "src/server/media/media-lifecycle-enqueue.ts",
         "src/server/media/media-repository.ts",
-        "src/server/mvp-learning/attribution-outbox.ts"
+        "src/server/mvp-learning/attribution-outbox.ts",
+        "src/server/search/public-projection-outbox.ts"
       ],
       "nodeKind": "effect_owner",
       "path": "src/server/journal-repository.ts",
@@ -38998,6 +39447,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/lib/garden/entry-contracts.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/garden/entry-contracts",
+      "sourceNodeId": "source:f027c724f9e4fcc5f9de",
+      "symbol": "ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/%5F%5Fvisual-fixtures/journal-creation/route.ts",
         "src/lib/visual-fixtures/manifest.ts"
       ],
@@ -39425,6 +39886,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_72822",
+      "sourceNodeId": "source:f5db19baa3410025304f",
+      "symbol": "publishJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/drafts/[draftKey]/route.ts",
         "src/server/bounded-json-request.ts"
       ],
@@ -39458,6 +39930,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:f5f68c872abfb149bd9e",
       "symbol": "LocationVisibility"
+    },
+    {
+      "evidencePaths": [
+        "src/server/media/ephemeral-publication-handoff.ts",
+        "src/server/media/media-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/media/media-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/ephemeral-publication-handoff",
+      "sourceNodeId": "source:f5f7200701486c0c1d7f",
+      "symbol": "ClaimedEphemeralPublicationMedia"
     },
     {
       "evidencePaths": [

@@ -73,6 +73,16 @@ JOB_QUEUE_PAYLOAD_CONTRACTS: Final = {
         "optionalKeys": [],
         "uuidKeys": ["mediaAssetId"],
     },
+    "media_lifecycle:media_staging_finalize": {
+        "requiredKeys": [
+            "kind",
+            "publishId",
+            "stagingSessionId",
+            "receiptSetDigest",
+        ],
+        "optionalKeys": [],
+        "uuidKeys": ["publishId", "stagingSessionId"],
+    },
 }
 
 MATCHING_MANIFEST_ENTRIES: Final = (
@@ -132,6 +142,14 @@ WEB_OWNED_MANIFEST_ENTRIES: Final = (
         "queueName": "erasure",
         "kind": "erasure_media_object_delete",
         "consumer": "web-erasure-execution",
+        "maxAttempts": MATCHING_DEFAULT_MAX_ATTEMPTS,
+        "privacyClass": "identifiers_only",
+        "coversStructuredJournalCover": True,
+    },
+    {
+        "queueName": "media_lifecycle",
+        "kind": "media_staging_finalize",
+        "consumer": "web-media-lifecycle",
         "maxAttempts": MATCHING_DEFAULT_MAX_ATTEMPTS,
         "privacyClass": "identifiers_only",
         "coversStructuredJournalCover": True,

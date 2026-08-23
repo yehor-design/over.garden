@@ -55,6 +55,7 @@ import { scheduleGardenWorkspaceActivationAnalytics } from "@/server/garden-work
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   getMySpaceJournalTimeline,
+  hasPriorPublicationDisclosure,
   type SpaceJournalTimeline,
 } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
@@ -176,7 +177,12 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     spacesPage: positivePage(params.spacesPage),
     faultSections: visualScenario?.faultSections ?? [],
   };
-  const workspace = await loadGardenWorkspace(scope, loadOptions);
+  const [workspace, priorPublicationDisclosure] = await Promise.all([
+    loadGardenWorkspace(scope, loadOptions),
+    visualScenario || creationScenario
+      ? Promise.resolve(false)
+      : hasPriorPublicationDisclosure(scope).catch(() => false),
+  ]);
   const writeAccess = {
     canWrite: true,
     actorClass:
@@ -249,6 +255,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
           visualScenario={creationScenario}
           enableServerPersistence={!visualScenario && !creationScenario}
           ownerUserId={userId}
+          requiresFirstPublicationDisclosure={!priorPublicationDisclosure}
         >
           {selectedSpaceId ? (
             <Suspense fallback={null}>
@@ -260,6 +267,9 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                 spaceId={selectedSpaceId}
                 today={today}
                 enableServerPersistence={!visualScenario && !creationScenario}
+                requiresFirstPublicationDisclosure={
+                  !priorPublicationDisclosure
+                }
                 showSaveProgress={
                   writeAccess.canWrite &&
                   normalizeSaveProgressMomentKind(params.saveProgress) ===
@@ -406,6 +416,7 @@ function GardenWriteTools({
   initialSpace,
   visualScenario,
   enableServerPersistence,
+  requiresFirstPublicationDisclosure,
   children,
 }: {
   ownerUserId: string;
@@ -418,6 +429,7 @@ function GardenWriteTools({
   initialSpace: { id: string; displayName: string } | null;
   visualScenario: VisualFixtureCreationScenarioEvidence | null;
   enableServerPersistence: boolean;
+  requiresFirstPublicationDisclosure: boolean;
   children?: React.ReactNode;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
@@ -445,6 +457,9 @@ function GardenWriteTools({
             activationSource={activationSource}
             visualScenario={visualScenario}
             enableServerPersistence={enableServerPersistence}
+            requiresFirstPublicationDisclosure={
+              requiresFirstPublicationDisclosure
+            }
           />
         </div>
       </section>
@@ -462,6 +477,7 @@ async function GardenSelectedSpaceTimeline({
   spaceId,
   today,
   enableServerPersistence,
+  requiresFirstPublicationDisclosure,
   showSaveProgress,
 }: {
   canWrite: boolean;
@@ -471,6 +487,7 @@ async function GardenSelectedSpaceTimeline({
   spaceId: string;
   today: string;
   enableServerPersistence: boolean;
+  requiresFirstPublicationDisclosure: boolean;
   showSaveProgress: boolean;
 }) {
   const timeline = await withGardenWorkspaceDeadline(() =>
@@ -503,6 +520,7 @@ async function GardenSelectedSpaceTimeline({
         timeline={timeline}
         today={today}
         enableServerPersistence={enableServerPersistence}
+        requiresFirstPublicationDisclosure={requiresFirstPublicationDisclosure}
       />
     </>
   );
@@ -515,6 +533,7 @@ function SpaceJournalTools({
   timeline,
   today,
   enableServerPersistence,
+  requiresFirstPublicationDisclosure,
 }: {
   canWrite: boolean;
   locale: InterfaceLocale;
@@ -522,6 +541,7 @@ function SpaceJournalTools({
   timeline: SpaceJournalTimeline;
   today: string;
   enableServerPersistence: boolean;
+  requiresFirstPublicationDisclosure: boolean;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
   return (
@@ -552,6 +572,9 @@ function SpaceJournalTools({
           spaceId={timeline.space.id}
           today={today}
           enableServerPersistence={enableServerPersistence}
+          requiresFirstPublicationDisclosure={
+            requiresFirstPublicationDisclosure
+          }
           objects={timeline.objects.map((object) => ({
             id: object.id,
             displayName: object.displayName,

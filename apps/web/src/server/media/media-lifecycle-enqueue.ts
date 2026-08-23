@@ -12,6 +12,7 @@ import {
 /** Local literals keep the job-queue producer scanner deterministic. */
 const MEDIA_LIFECYCLE_QUEUE = "media_lifecycle";
 const MEDIA_DERIVATIVE_REVOKE_KIND = "media_derivative_revoke";
+const MEDIA_STAGING_FINALIZE_KIND = "media_staging_finalize";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -30,6 +31,36 @@ export class MediaLifecycleDocumentError extends Error {
     super("Journal media references could not be classified safely.");
     this.name = "MediaLifecycleDocumentError";
   }
+}
+
+export function buildEnqueueMediaStagingFinalizeJobQuery(
+  executor: QueryExecutor,
+  input: {
+    publishId: string;
+    stagingSessionId: string;
+    receiptSetDigest: string;
+  },
+) {
+  const payload = {
+    kind: MEDIA_STAGING_FINALIZE_KIND,
+    publishId: input.publishId,
+    stagingSessionId: input.stagingSessionId,
+    receiptSetDigest: input.receiptSetDigest,
+  } satisfies JsonValue;
+  return executor
+    .insertInto("job_queue")
+    .values({
+      queue_name: MEDIA_LIFECYCLE_QUEUE,
+      payload,
+      idempotency_key: `media_staging_finalize:${input.publishId}:${input.receiptSetDigest}`,
+    })
+    .onConflict((oc) =>
+      oc
+        .column("idempotency_key")
+        .where("idempotency_key", "is not", null)
+        .doNothing(),
+    )
+    .returning("id");
 }
 
 /**

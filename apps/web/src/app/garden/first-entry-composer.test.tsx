@@ -21,7 +21,7 @@ const localeExpectations = [
     {
       name: "Назва",
       firstUpdate: "Перше оновлення",
-      saveOnline: "Зберегти перший запис",
+      saveOnline: "Опублікувати",
       region: "Київ",
       choosePhoto: "Обрати фото",
     },
@@ -31,7 +31,7 @@ const localeExpectations = [
     {
       name: "Име",
       firstUpdate: "Първо обновяване",
-      saveOnline: "Запазване на първия запис",
+      saveOnline: "Публикувай",
       region: "Киев",
       choosePhoto: "Избор на снимка",
     },
@@ -41,7 +41,7 @@ const localeExpectations = [
     {
       name: "Название",
       firstUpdate: "Первое обновление",
-      saveOnline: "Сохранить первую запись",
+      saveOnline: "Опубликовать",
       region: "Киев",
       choosePhoto: "Выбрать фото",
     },
@@ -58,19 +58,24 @@ const localeExpectations = [
 ][];
 
 describe("first entry composer localization", () => {
-  it("fences every control behind the shared online composer state", async () => {
+  it("fences every control behind the local-only atomic composer state", async () => {
     const source = await readFile(
       fileURLToPath(new URL("./first-entry-composer.tsx", import.meta.url)),
       "utf8",
     );
 
-    expect(source).toContain("useOnlineJournalComposer({");
+    expect(source).toContain("useLocalJournalComposer({");
+    expect(source).toContain('imageInsertionMode="immediate"');
+    expect(source).toContain("LocalJournalPublicationDisclosure");
     expect(source).toContain(
       '<fieldset disabled={persistenceFrozen} className="contents">',
     );
     expect(source).toContain("disabled={persistenceFrozen}");
     expect(source).not.toMatch(
       /navigator\.onLine|["']online["']\s*,\s*handle|@\/lib\/offline/u,
+    );
+    expect(source).not.toMatch(
+      /use-online-journal-composer|online-journal-submit|use-inline-media-selection|createComposerPhotoIntent/u,
     );
   });
 
@@ -84,6 +89,7 @@ describe("first entry composer localization", () => {
           locale={locale}
           today="2026-07-16"
           initialClientMutationId="test-mutation"
+          requiresFirstPublicationDisclosure
           visualScenario={scenario}
         />,
       );
@@ -115,6 +121,21 @@ describe("first entry composer localization", () => {
       );
     },
   );
+
+  it("does not repeat first-publication consent after the owner has disclosed", () => {
+    const html = renderToStaticMarkup(
+      <FirstEntryComposer
+        ownerUserId="00000000-0000-4000-8000-000000000001"
+        locale="uk"
+        today="2026-07-16"
+        initialClientMutationId="test-mutation"
+        requiresFirstPublicationDisclosure={false}
+        visualScenario={visualScenario()}
+      />,
+    );
+
+    expect(html).not.toContain("Я розумію, що цей запис");
+  });
 });
 
 function visualScenario(): VisualFixtureCreationScenarioEvidence {

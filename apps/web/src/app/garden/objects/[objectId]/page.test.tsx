@@ -64,10 +64,14 @@ vi.mock("./catalog-resolve-control", () => ({
 vi.mock("./follow-up-entry-composer", () => ({
   FollowUpEntryComposer: (props: {
     objectKind: string;
+    requiresFirstPublicationDisclosure: boolean;
     visualScenario?: { id: string } | null;
   }) => (
     <form
       data-object-kind={props.objectKind}
+      data-requires-first-publication-disclosure={String(
+        props.requiresFirstPublicationDisclosure,
+      )}
       data-visual-create={props.visualScenario?.id ?? ""}
     >
       Follow-up composer
@@ -588,6 +592,9 @@ describe("/garden/objects/[objectId]", () => {
 
     expect(html).toContain(
       "параметрами публічного поширення, які ви вже переглянули",
+    );
+    expect(html).toContain(
+      'data-requires-first-publication-disclosure="false"',
     );
     expect(html).not.toContain('name="publicationDisclosureAccepted"');
   });

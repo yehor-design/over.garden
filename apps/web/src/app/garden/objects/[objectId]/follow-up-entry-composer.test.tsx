@@ -20,7 +20,7 @@ const localeExpectations = [
     "uk",
     {
       whatChanged: "Що змінилося?",
-      saveOnline: "Зберегти продовження",
+      saveOnline: "Опублікувати",
       moreDetails: "Більше деталей",
       choosePhoto: "Обрати фото",
     },
@@ -29,7 +29,7 @@ const localeExpectations = [
     "bg",
     {
       whatChanged: "Какво се промени?",
-      saveOnline: "Запазване на продължението",
+      saveOnline: "Публикувай",
       moreDetails: "Повече подробности",
       choosePhoto: "Избор на снимка",
     },
@@ -38,7 +38,7 @@ const localeExpectations = [
     "ru",
     {
       whatChanged: "Что изменилось?",
-      saveOnline: "Сохранить продолжение",
+      saveOnline: "Опубликовать",
       moreDetails: "Больше подробностей",
       choosePhoto: "Выбрать фото",
     },
@@ -54,19 +54,24 @@ const localeExpectations = [
 ][];
 
 describe("follow-up entry composer localization", () => {
-  it("fences every control behind the shared online composer state", async () => {
+  it("fences every control behind the local-only atomic composer state", async () => {
     const source = await readFile(
       fileURLToPath(new URL("./follow-up-entry-composer.tsx", import.meta.url)),
       "utf8",
     );
 
-    expect(source).toContain("useOnlineJournalComposer({");
+    expect(source).toContain("useLocalJournalComposer({");
+    expect(source).toContain('imageInsertionMode="immediate"');
+    expect(source).toContain("LocalJournalPublicationDisclosure");
     expect(source).toContain(
       '<fieldset disabled={persistenceFrozen} className="contents">',
     );
     expect(source).toContain("disabled={persistenceFrozen}");
     expect(source).not.toMatch(
       /navigator\.onLine|["']online["']\s*,\s*handle|@\/lib\/offline/u,
+    );
+    expect(source).not.toMatch(
+      /use-online-journal-composer|online-journal-submit|use-inline-media-selection|createComposerPhotoIntent/u,
     );
   });
 
@@ -84,6 +89,7 @@ describe("follow-up entry composer localization", () => {
           objectKind="animal"
           today="2026-07-16"
           initialClientMutationId="test-mutation"
+          requiresFirstPublicationDisclosure
           visualScenario={scenario}
         />,
       );
@@ -104,6 +110,24 @@ describe("follow-up entry composer localization", () => {
       );
     },
   );
+
+  it("does not repeat first-publication consent after the owner has disclosed", () => {
+    const html = renderToStaticMarkup(
+      <FollowUpEntryComposer
+        ownerUserId="00000000-0000-4000-8000-000000000001"
+        locale="uk"
+        objectId="18700003-0000-4000-8000-000000000001"
+        objectDisplayName="Rose"
+        objectKind="plant"
+        today="2026-07-16"
+        initialClientMutationId="test-mutation"
+        requiresFirstPublicationDisclosure={false}
+        visualScenario={visualScenario()}
+      />,
+    );
+
+    expect(html).not.toContain("Я розумію, що цей запис");
+  });
 });
 
 function visualScenario(): VisualFixtureCreationScenarioEvidence {

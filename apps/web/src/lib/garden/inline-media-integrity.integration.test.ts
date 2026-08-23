@@ -14,13 +14,14 @@ describe("OVE-243 vertical inline-media integration", () => {
     ]) {
       const source = readFileSync(path.join(root, file), "utf8");
       expect(source).toContain("<StructuredJournalComposer");
-      expect(source).toMatch(
-        /useInlineMediaSelection\((ownerUserId|entryId)\)/,
+      expect(source).toContain("useLocalJournalComposer({");
+      expect(source).toContain('imageInsertionMode="immediate"');
+      expect(source).toContain(
+        "const selected = local.selectImage(file, blockId, mediaAssetId);",
       );
-      expect(source).toContain("const reservation = inlineMedia.reserve(");
-      expect(source).toContain("await uploadOnlineComposerPhoto({");
-      expect(source).toContain("inlineMedia.commit(reservation, blockId, previewUrl)");
-      expect(source).toContain("inlineMedia.release(reservation)");
+      expect(source).toContain("const ready = await selected.ready;");
+      expect(source).not.toContain("useInlineMediaSelection(");
+      expect(source).not.toContain("uploadOnlineComposerPhoto({");
       expect(source).not.toContain(
         "const existingBytes = sumOfflinePhotoIntentBytes",
       );
@@ -37,7 +38,9 @@ describe("OVE-243 vertical inline-media integration", () => {
     );
     expect(source).toContain("<StructuredJournalComposer");
     expect(source).toContain("await uploadOnlineComposerPhoto({");
-    expect(source).toContain("inlineMedia.commit(reservation, blockId, previewUrl)");
+    expect(source).toContain(
+      "inlineMedia.commit(reservation, blockId, previewUrl)",
+    );
     expect(source).not.toContain(
       "return { previewUrl: URL.createObjectURL(file) }",
     );

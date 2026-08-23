@@ -52,7 +52,7 @@ describe("authenticated mutation enforcement receipt", () => {
       first.consumerEdgeStates.filter(
         (state) => state.enforcementState === "enforced_ove_290",
       ),
-    ).toHaveLength(141);
+    ).toHaveLength(154);
     expect(JSON.stringify(first)).not.toMatch(/effectBoundaryId/);
   });
 
@@ -97,7 +97,7 @@ describe("authenticated mutation enforcement receipt", () => {
       enforcement: {
         receiptDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
         ove291EntrypointCount: 125,
-        ove291ConsumerEdgeCount: 350,
+        ove291ConsumerEdgeCount: 351,
       },
       explicitGoogleLink: {
         ownershipDigest:

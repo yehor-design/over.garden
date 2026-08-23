@@ -87,8 +87,14 @@ class JournalDegradationBridge {
 }
 
 export function JournalLexicalClient(props: JournalLexicalClientProps) {
-  const { imagePreviewUrls, onRemoveImageBlock } = props;
-  const imageRemoveLabel = props.labels.imageRemove;
+  const {
+    imagePreviewUrls,
+    imageStates,
+    onRemoveImageBlock,
+    onReplaceImage,
+    onRetryImage,
+    onSetImageAsCover,
+  } = props;
   const [initialBinding] = useState(() =>
     normalizeJournalDocumentOrThrow(
       props.initialDocument ?? createEmptyJournalDocument(),
@@ -144,19 +150,47 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
   const previewContext = useMemo(
     () => ({
       disabled: props.disabled ?? false,
-      getPreviewUrl: (mediaAssetId: string) => previewUrls.get(mediaAssetId),
-      removeLabel: imageRemoveLabel,
+      getState: (mediaAssetId: string) => {
+        const localState = imageStates?.get(mediaAssetId);
+        if (localState) return localState;
+        const previewUrl = previewUrls.get(mediaAssetId);
+        return previewUrl
+          ? { status: "ready" as const, previewUrl, failureCode: null }
+          : undefined;
+      },
+      labels: {
+        processing: props.labels.imageUploading,
+        failed: props.labels.imageFailed,
+        retry: props.labels.imageRetry,
+        replace: props.labels.imageReplace,
+        remove: props.labels.imageRemove,
+        setCover: props.labels.imageSetCover,
+      },
       onRemove: (blockId: string, mediaAssetId: string) => {
         onPreviewRemoved(mediaAssetId);
-        onRemoveImageBlock?.(blockId);
+        onRemoveImageBlock?.(blockId, mediaAssetId);
       },
+      onRetry: (mediaAssetId: string) => onRetryImage?.(mediaAssetId),
+      onReplace: (mediaAssetId: string, file: File) =>
+        onReplaceImage?.(mediaAssetId, file),
+      onSetCover: (mediaAssetId: string) =>
+        onSetImageAsCover?.(mediaAssetId),
     }),
     [
-      imageRemoveLabel,
+      imageStates,
       onPreviewRemoved,
       onRemoveImageBlock,
+      onReplaceImage,
+      onRetryImage,
+      onSetImageAsCover,
       previewUrls,
       props.disabled,
+      props.labels.imageFailed,
+      props.labels.imageRemove,
+      props.labels.imageReplace,
+      props.labels.imageRetry,
+      props.labels.imageSetCover,
+      props.labels.imageUploading,
     ],
   );
 
@@ -192,6 +226,7 @@ function JournalLexicalClientBody({
   onDegraded,
   onPreviewResolved,
   onLatestGoodDocument,
+  imageInsertionMode = "after-ready",
 }: JournalLexicalClientBodyProps) {
   const [editor] = useLexicalComposerContext();
   const normalizedInitial = initialDocument ?? createEmptyJournalDocument();
@@ -320,6 +355,43 @@ function JournalLexicalClientBody({
       }
       const binding = bindingRef.current;
       const blockId = createJournalBlockId();
+      if (imageInsertionMode === "immediate") {
+        const mediaAssetId = crypto.randomUUID();
+        editor.update(
+          () => {
+            const image = $createOverGardenImageNode({ blockId, mediaAssetId });
+            const trailing = $setJournalBlockId(
+              $createParagraphNode(),
+              createJournalBlockId(),
+            );
+            if ($getSelection()) $insertNodes([image, trailing]);
+            else $getRoot().append(image, trailing);
+            trailing.selectStart();
+          },
+          { discrete: true },
+        );
+        serialize();
+        void callbacksRef.current
+          .onSelectImageFile(file, blockId, mediaAssetId)
+          .then((result) => {
+            if (
+              !mountedRef.current ||
+              bindingRef.current !== binding ||
+              (result.mediaAssetId && result.mediaAssetId !== mediaAssetId)
+            ) {
+              return;
+            }
+            if (result.previewUrl) {
+              onPreviewResolved(mediaAssetId, result.previewUrl);
+            }
+          })
+          .catch(() => {
+            if (mountedRef.current && bindingRef.current === binding) {
+              setMediaMessage(labels.imageFailed);
+            }
+          });
+        return;
+      }
       pendingMediaCountRef.current += 1;
       mediaInFlightCountRef.current += 1;
       setLifecycle("media_in_flight");
@@ -364,7 +436,9 @@ function JournalLexicalClientBody({
           },
           { discrete: true },
         );
-        onPreviewResolved(result.mediaAssetId, result.previewUrl);
+        if (result.previewUrl) {
+          onPreviewResolved(result.mediaAssetId, result.previewUrl);
+        }
       } catch {
         if (completedUnserialized) {
           completedUnserializedMediaCountRef.current = Math.max(
@@ -391,7 +465,15 @@ function JournalLexicalClientBody({
         }
       }
     },
-    [disabled, editor, labels.failureBody, onPreviewResolved, serialize],
+    [
+      disabled,
+      editor,
+      imageInsertionMode,
+      labels.failureBody,
+      labels.imageFailed,
+      onPreviewResolved,
+      serialize,
+    ],
   );
 
   const updateReordering = useCallback(

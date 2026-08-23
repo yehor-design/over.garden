@@ -883,6 +883,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
   [
     ...routes(
       [
+        "src/app/%5F%5Fvisual-fixtures/atomic-journal-codec/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/intent/[scenarioId]/route.ts",
         "src/app/%5F%5Fvisual-fixtures/lexical-journal/page.tsx",
         "src/app/%5F%5Fvisual-fixtures/page.tsx",
@@ -1309,6 +1310,25 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
         ["jsx-text", "Test profiles"],
         ["jsx-text", "EXIF-free generated raster set"],
         ["jsx-text", "Media aspect gallery"],
+      ],
+    ),
+    ...allowExactLiterals(
+      "src/app/%5F%5Fvisual-fixtures/atomic-journal-codec/page.tsx",
+      "internal-fixture",
+      INTERNAL_FIXTURE_RATIONALE,
+      [["metadata-title", "Atomic journal codec fixture | OverGarden"]],
+    ),
+    ...allowExactLiterals(
+      "src/app/%5F%5Fvisual-fixtures/atomic-journal-codec/atomic-journal-codec-fixture.tsx",
+      "internal-fixture",
+      INTERNAL_FIXTURE_RATIONALE,
+      [
+        ["jsx-text", "OVE-347 synthetic codec evidence"],
+        ["jsx-text", "Atomic journal codec fixture"],
+        [
+          "jsx-text",
+          "Local and preview only. No source bytes leave this browser page.",
+        ],
       ],
     ),
     ...allowExactLiterals(

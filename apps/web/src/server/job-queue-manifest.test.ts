@@ -39,6 +39,7 @@ describe("job queue manifest", () => {
       "matching:journal_entry_index",
       "matching:journal_entry_unindex",
       "erasure:erasure_media_object_delete",
+      "media_lifecycle:media_staging_finalize",
       "media_lifecycle:media_derivative_revoke",
       "media_lifecycle:media_quarantine_expire",
     ]);
@@ -60,6 +61,7 @@ describe("job queue manifest", () => {
     expect(python).toContain("web-erasure-execution");
     expect(python).toContain("media_derivative_revoke");
     expect(python).toContain("media_quarantine_expire");
+    expect(python).toContain("media_staging_finalize");
     expect(python).toContain("web-media-lifecycle");
     expect(python).toContain("matching-python-worker");
     expect(python).toContain("JOURNAL_ENTRY_INDEX_KIND");

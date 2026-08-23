@@ -15,8 +15,89 @@ import {
   LAUNCH_MEDIA_QUALITY_POLICY_VERSION,
   type LaunchMediaQualityResult,
 } from "@/lib/media/launch-media-quality";
+import type { ClaimedEphemeralPublicationMedia } from "@/server/media/ephemeral-publication-handoff";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
+
+export function buildInsertClaimedEphemeralMediaQuery(
+  executor: QueryExecutor,
+  input: {
+    ownerUserId: string;
+    journalEntryId: string;
+    stagingSessionId: string;
+    media: ClaimedEphemeralPublicationMedia;
+    documentPosition: number | null;
+    usageRole: "inline" | "cover_only";
+  },
+) {
+  const now = new Date();
+  return executor
+    .insertInto("media_assets")
+    .values({
+      id: input.media.mediaAssetId,
+      owner_user_id: input.ownerUserId,
+      journal_entry_id: input.journalEntryId,
+      // Transitional non-null column retained until OVE-349. This is an
+      // opaque locator only; no object exists at this legacy path.
+      quarantine_key: `atomic-create/${input.stagingSessionId}/${input.media.mediaAssetId}/${input.media.generation}`,
+      upload_generation_id: input.media.mediaAssetId,
+      public_object_id: input.media.mediaAssetId,
+      upload_generation: input.media.generation,
+      declared_media_type: "image/webp",
+      admitted_media_type: "image/webp",
+      declared_size_bytes: String(input.media.sizeBytes),
+      derivative_key: input.media.publicPath,
+      intrinsic_width: input.media.width,
+      intrinsic_height: input.media.height,
+      focal_x: 0.5,
+      focal_y: 0.5,
+      status: "processed",
+      media_readiness_state: "public_ready",
+      original_deleted_at: now,
+      processing_claim_token: null,
+      processing_claimed_at: null,
+      usage_role: input.usageRole,
+      document_position: input.documentPosition,
+      updated_at: now,
+    })
+    .returningAll();
+}
+
+export async function insertClaimedEphemeralMediaForEntry(
+  executor: QueryExecutor,
+  input: {
+    ownerUserId: string;
+    journalEntryId: string;
+    stagingSessionId: string;
+    media: readonly ClaimedEphemeralPublicationMedia[];
+    orderedInlineMediaAssetIds: readonly string[];
+    coverMediaAssetId: string | null;
+  },
+): Promise<void> {
+  const expectedIds = new Set(input.orderedInlineMediaAssetIds);
+  if (input.coverMediaAssetId) expectedIds.add(input.coverMediaAssetId);
+  if (
+    expectedIds.size !== input.media.length ||
+    input.media.some((item) => !expectedIds.has(item.mediaAssetId))
+  ) {
+    throw new Error("claimed_media_set_mismatch");
+  }
+  const positionById = new Map(
+    input.orderedInlineMediaAssetIds.map((id, index) => [id, index + 1]),
+  );
+  for (const media of input.media) {
+    const documentPosition = positionById.get(media.mediaAssetId) ?? null;
+    const inserted = await buildInsertClaimedEphemeralMediaQuery(executor, {
+      ownerUserId: input.ownerUserId,
+      journalEntryId: input.journalEntryId,
+      stagingSessionId: input.stagingSessionId,
+      media,
+      documentPosition,
+      usageRole: documentPosition === null ? "cover_only" : "inline",
+    }).executeTakeFirst();
+    if (!inserted) throw new Error("claimed_media_insert_failed");
+  }
+}
 
 export async function createQuarantinedMediaAsset(
   scope: RequestScope,

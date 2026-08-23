@@ -548,14 +548,14 @@ async function mediaProof(baseUrl: string) {
 
     const dense = await browser.newPage();
     await openFixture(dense, baseUrl, "uk", true);
-    await dense.locator("[contenteditable='true']").click();
+    await dense.locator("[contenteditable='true'] p").last().click();
     const before = await snapshot(dense);
     await pasteLocalImage(dense, "eleventh.png");
     await dense.waitForTimeout(100);
     const after = await snapshot(dense);
     assert(
       after.imageCount === 10,
-      "Eleventh image crossed the canonical boundary.",
+      `Eleventh image changed the canonical count (${before.imageCount} -> ${after.imageCount}).`,
     );
     assert(
       after.blockCount === before.blockCount,
