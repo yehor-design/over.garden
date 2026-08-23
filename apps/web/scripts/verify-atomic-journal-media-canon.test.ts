@@ -31,7 +31,7 @@ function alignedInput(): AtomicJournalMediaCanonInput {
     "overgarden-media-staging",
     "media-stage.over.garden",
     "MEDIA_STAGING_SESSIONS",
-    "unprovisioned until OVE-346",
+    "provisioned by OVE-346",
     "OVE-333 -> OVE-345 -> OVE-346 -> OVE-347 -> OVE-348 -> OVE-349 -> OVE-350",
   ].join("\n");
 

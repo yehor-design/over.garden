@@ -157,6 +157,10 @@
       "reason": "Queued vocabulary belongs to canonical Postgres job and outbox state."
     },
     {
+      "pathPrefix": "apps/web/cloudflare/media-staging/",
+      "reason": "Queued and service-worker vocabulary belongs to the server-edge Cloudflare Worker, SQLite Durable Object cleanup state, and generated workerd declarations, not browser-local journal state."
+    },
+    {
       "pathPrefix": "apps/web/src/server/catalog-source/",
       "reason": "Queued vocabulary belongs to server-side catalog import work."
     },

@@ -196,7 +196,7 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
     {
       path: "pnpm-lock.yaml",
       sha256:
-        "de41c57e3799a1e9b5509d6d170f31b1a1032d78e211ec441a4869503b366be1",
+        "6b46c458c2000401fdcde7b9a7ea99f05a51d9024c69f8baa8605b5b7e43b8d2",
     },
     {
       path: "sql/0001_walking_skeleton.sql",

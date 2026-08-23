@@ -1185,6 +1185,8 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/api/interface/locale/route.ts",
         "src/app/api/media/[mediaAssetId]/focal/route.ts",
         "src/app/api/media/process/route.ts",
+        "src/app/api/media/staging/commit-status/route.ts",
+        "src/app/api/media/staging/reservations/route.ts",
         "src/app/api/media/uploads/route.ts",
         "src/app/api/meta/conversions/route.ts",
         "src/app/api/notifications/preferences/route.ts",

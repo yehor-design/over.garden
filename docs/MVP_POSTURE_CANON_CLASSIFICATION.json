@@ -180,6 +180,10 @@
       "reason": "Static browser assets remain runtime residue outside canon wording."
     },
     {
+      "pathPrefix": "apps/web/cloudflare/media-staging/",
+      "reason": "Fail-closed wording describes bounded server-edge owner admission, not ADR-0018 unresolved application authorization or availability posture."
+    },
+    {
       "pathPrefix": "apps/web/node_modules/",
       "reason": "Dependency material is outside tracked OverGarden authority."
     },
