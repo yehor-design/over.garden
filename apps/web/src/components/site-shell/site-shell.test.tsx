@@ -141,7 +141,7 @@ describe("production site shell", () => {
     expect(html).toContain("Моята градина");
     expect(html).toContain("Добавяне на обект");
     expect(html).toContain("Нов запис");
-    expect(html).toContain("Чернови");
+    expect(html).not.toContain("Чернови");
     expect(html).toContain("Следвани записи");
     expect(html).toContain("Известия");
     expect(html).toContain("Отметки");

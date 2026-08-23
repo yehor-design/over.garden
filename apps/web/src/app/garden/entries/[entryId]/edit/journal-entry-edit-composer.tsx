@@ -1,434 +1,540 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import { useOptionalDocumentMutationGeneration } from "@/components/auth/document-mutation-recovery";
 import {
   JournalCoverControls,
-  journalCoverSelectionToClaimInput,
   type JournalCoverSelectionState,
 } from "@/components/garden/journal-cover-controls";
-import { OnlineJournalComposerStatus } from "@/components/garden/online-journal-composer-status";
-import { OwnerMediaFocalPanel } from "@/components/media/owner-media-focal-panel";
+import { LocalJournalComposerStatus } from "@/components/garden/local-journal-composer-status";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
+import { FocalPointControl } from "@/components/media/focal-point-control";
+import type { JournalImageUiState } from "@/components/garden/lexical-journal/journal-lexical-image-node";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { useOptionalDocumentMutationGeneration } from "@/components/auth/document-mutation-recovery";
+import { getAtomicJournalEditCopy } from "@/lib/garden/atomic-journal-edit-copy";
 import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
-import { getOwnerMediaFocalPanelCopy } from "@/lib/media/owner-media-focal-copy";
-import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
+import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
 import {
   extractJournalDocumentPlainText,
   listJournalDocumentImageMediaIds,
+  type JournalDocumentV1,
 } from "@/lib/garden/journal-document";
 import {
-  createComposerPhotoIntent,
-  type OnlineComposerPhotoIntent,
-} from "@/lib/garden/composer-photo-selection";
-import { useInlineMediaSelection } from "@/lib/garden/use-inline-media-selection";
-import {
-  OnlineJournalSubmitError,
-  uploadOnlineComposerPhoto,
-} from "@/lib/garden/online-journal-submit";
-import { useOnlineJournalComposer } from "@/lib/garden/use-online-journal-composer";
-import {
-  JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION,
-  type JournalDraftEditEntryRequest,
-  type JournalEntryDraftPayloadV1,
-  type JournalEntryDraftReceiptV1,
-} from "@/lib/garden/entry-contracts";
-import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
+  LocalJournalComposerError,
+  useLocalJournalComposer,
+} from "@/lib/garden/use-local-journal-composer";
+import { stableJson } from "@/lib/media/ephemeral-staging-crypto";
+import { getOwnerMediaFocalPanelCopy } from "@/lib/media/owner-media-focal-copy";
 import type { PublicLocale } from "@/lib/public-localization";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
+
+export interface JournalEntryEditExistingMedia {
+  mediaAssetId: string;
+  blockId: string;
+  generation: number;
+  previewUrl: string;
+  width: number | null;
+  height: number | null;
+  focalX: number;
+  focalY: number;
+}
 
 export function JournalEntryEditComposer({
   locale,
   entryId,
   title: initialTitle,
   entryDate: initialEntryDate,
-  expectedRevision: initialRevision,
+  expectedRevision,
   initialDocument,
-  documentUnavailable,
-  imagePreviewUrls,
+  existingMedia,
   initialCoverMediaAssetId = null,
+  returnTo,
 }: {
   locale: PublicLocale;
   entryId: string;
   title: string;
   entryDate: string;
   expectedRevision: number;
-  initialDocument: JournalDocumentV1 | null;
-  documentUnavailable: boolean;
-  imagePreviewUrls: Record<string, string>;
+  initialDocument: JournalDocumentV1;
+  existingMedia: readonly JournalEntryEditExistingMedia[];
   initialCoverMediaAssetId?: string | null;
+  returnTo: string;
 }) {
   const router = useRouter();
   const documentMutation = useOptionalDocumentMutationGeneration();
   const composerRef = useRef<StructuredJournalComposerHandle | null>(null);
-  const inlineMedia = useInlineMediaSelection(entryId);
+  const saveButtonRef = useRef<HTMLButtonElement | null>(null);
+  const cancelEditingButtonRef = useRef<HTMLButtonElement | null>(null);
   const [title, setTitle] = useState(initialTitle);
   const [entryDate, setEntryDate] = useState(initialEntryDate);
-  const [document, setDocument] = useState<JournalDocumentV1 | null>(
-    initialDocument,
+  const [document, setDocument] = useState(initialDocument);
+  const [mediaDirty, setMediaDirty] = useState(false);
+  const [conflictOpen, setConflictOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [pendingInlineRemoval, setPendingInlineRemoval] = useState<{
+    mediaAssetId: string;
+  } | null>(null);
+  const initialInlineIds = useMemo(
+    () => listJournalDocumentImageMediaIds(initialDocument),
+    [initialDocument],
   );
-  const [expectedRevision, setExpectedRevision] = useState(initialRevision);
-  const [clientMutationId] = useState(() => crypto.randomUUID());
-  const [message, setMessage] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [cover, setCover] = useState<JournalCoverSelectionState>(() => {
     if (!initialCoverMediaAssetId) return { mode: "automatic" };
-    const inlineIds = initialDocument
-      ? listJournalDocumentImageMediaIds(initialDocument)
-      : [];
-    if (inlineIds.includes(initialCoverMediaAssetId)) {
+    if (initialInlineIds.includes(initialCoverMediaAssetId)) {
       return {
         mode: "explicit_inline",
         mediaAssetId: initialCoverMediaAssetId,
-        previewUrl: imagePreviewUrls[initialCoverMediaAssetId] ?? null,
       };
     }
     return {
       mode: "separate",
       mediaAssetId: initialCoverMediaAssetId,
-      previewUrl: imagePreviewUrls[initialCoverMediaAssetId] ?? null,
     };
   });
-  const [pendingInlineRemoval, setPendingInlineRemoval] = useState<{
-    mediaAssetId: string;
-  } | null>(null);
+  const initialCoverKey = initialCoverMediaAssetId
+    ? `media:${initialCoverMediaAssetId}`
+    : "automatic";
+  const [focalByMediaId, setFocalByMediaId] = useState(
+    () =>
+      new Map(
+        existingMedia.map((media) => [
+          media.mediaAssetId,
+          { x: media.focalX, y: media.focalY },
+        ]),
+      ),
+  );
   const labels = getStructuredJournalComposerLabels(locale);
-  const workspaceCopy = getGardenWorkspaceCopy(locale);
+  const editCopy = getAtomicJournalEditCopy(locale);
   const coverCopy = getJournalCoverControlsCopy(locale);
   const focalCopy = getOwnerMediaFocalPanelCopy(locale);
-  const previewMap = useMemo(
-    () => new Map(Object.entries(imagePreviewUrls)),
-    [imagePreviewUrls],
-  );
-  const focalTarget = useMemo(() => {
-    if (cover.mode === "explicit_inline" || cover.mode === "separate") {
-      const mediaAssetId = cover.mediaAssetId;
-      if (!mediaAssetId) return null;
-      const previewUrl =
-        cover.previewUrl ?? previewMap.get(mediaAssetId) ?? null;
-      if (!previewUrl) return null;
-      return { mediaAssetId, previewUrl };
-    }
-    const firstInline = document
-      ? listJournalDocumentImageMediaIds(document)[0]
-      : null;
-    if (!firstInline) return null;
-    const previewUrl = previewMap.get(firstInline) ?? null;
-    if (!previewUrl) return null;
-    return { mediaAssetId: firstInline, previewUrl };
-  }, [cover, document, previewMap]);
-  const eligibleInline = useMemo(() => {
-    if (!document) return [];
-    return listJournalDocumentImageMediaIds(document).map(
-      (mediaAssetId, index) => ({
-        mediaAssetId,
-        previewUrl: previewMap.get(mediaAssetId) ?? null,
-        label: `${coverCopy.useAsCover} ${index + 1}`,
-      }),
-    );
-  }, [coverCopy.useAsCover, document, previewMap]);
-
-  const draftPayload = useMemo(
-    () =>
-      editDraftPayload({
-        entryId,
-        title,
-        entryDate,
-        expectedRevision,
-        document,
-        clientMutationId,
-        cover,
-      }),
-    [
-      clientMutationId,
-      cover,
-      document,
-      entryDate,
-      entryId,
-      expectedRevision,
-      title,
-    ],
-  );
-  const online = useOnlineJournalComposer({
-    draftKey: `edit-entry:${entryId}`,
-    draftKind: "edit_entry",
-    context: { journalEntryId: entryId },
-    payload: draftPayload,
+  const safeReturnTo = normalizeJournalComposerReturnTo(returnTo, "/garden");
+  const dirty =
+    title !== initialTitle ||
+    entryDate !== initialEntryDate ||
+    stableJson(document) !== stableJson(initialDocument) ||
+    coverSelectionKey(cover) !== initialCoverKey ||
+    mediaDirty ||
+    existingMedia.some((media) => {
+      const focal = focalByMediaId.get(media.mediaAssetId);
+      return focal?.x !== media.focalX || focal?.y !== media.focalY;
+    });
+  const local = useLocalJournalComposer({
     documentMutationGeneration: documentMutation?.transport,
-    enabled: !documentUnavailable,
-    onHydrated: hydrateEditDraft,
+    fallbackReturnTo: safeReturnTo,
+    dirty,
+    existingMedia,
   });
-
-  function hydrateEditDraft(receipt: JournalEntryDraftReceiptV1) {
-    if (
-      receipt.draftKind !== "edit_entry" ||
-      receipt.payload.draftKind !== "edit_entry" ||
-      receipt.payload.request.entryId !== entryId
-    ) {
-      return;
+  const imageStates = useMemo(() => {
+    const states = new Map<string, JournalImageUiState>(
+      existingMedia.map((media) => [
+        media.mediaAssetId,
+        {
+          status: "ready" as const,
+          previewUrl: media.previewUrl,
+          failureCode: null,
+        },
+      ]),
+    );
+    for (const item of local.media.items) {
+      states.set(item.mediaAssetId, {
+        status: item.status,
+        previewUrl: item.previewUrl,
+        failureCode: item.failureCode,
+      });
     }
-    const request = receipt.payload.request;
-    if (typeof request.title === "string") setTitle(request.title);
-    if (typeof request.entryDate === "string") setEntryDate(request.entryDate);
-    if (request.contentDocument) setDocument(request.contentDocument);
-    if (typeof request.expectedRevision === "number") {
-      setExpectedRevision(request.expectedRevision);
-    }
-    setCover(coverSelectionFromRequest(request.cover, imagePreviewUrls));
-  }
-
-  async function save() {
-    setSaving(true);
-    setMessage(null);
-    try {
-      const flushed = (await composerRef.current?.flushLatest()) ?? document;
-      if (!flushed) {
-        setMessage(labels.failureBody);
-        return;
+    return states;
+  }, [existingMedia, local.media.items]);
+  const inlineIds = listJournalDocumentImageMediaIds(document);
+  const selectedCoverId = selectedCoverMediaAssetId(cover);
+  const focalTargetId = selectedCoverId ?? inlineIds[0] ?? null;
+  const focalTarget = focalTargetId
+    ? {
+        mediaAssetId: focalTargetId,
+        imageUrl: imageStates.get(focalTargetId)?.previewUrl ?? null,
+        focal: focalByMediaId.get(focalTargetId) ?? { x: 0.5, y: 0.5 },
       }
-      const payload = editDraftPayload({
+    : null;
+  const persistenceFrozen = local.readOnly;
+
+  async function save(event?: FormEvent) {
+    event?.preventDefault();
+    const flushed = (await composerRef.current?.flushLatest()) ?? document;
+    setDocument(flushed);
+    setCopied(false);
+    try {
+      const result = await local.publishEdit({
         entryId,
+        expectedRevision,
         title,
         entryDate,
-        expectedRevision,
         document: flushed,
-        clientMutationId,
-        cover,
+        coverMediaAssetId: selectedCoverMediaAssetId(cover),
+        focalPoints: finalMediaPoints(flushed, cover, focalByMediaId),
+        returnTo: safeReturnTo,
       });
-      const result = await online.publish(payload);
-      if (result.entry.journalRevision) {
-        setExpectedRevision(result.entry.journalRevision);
-      }
-      setMessage(labels.saveLabel);
+      router.push(result.returnTo);
+      router.refresh();
     } catch (error) {
       handleTransportBoundary(error);
-      setMessage(labels.failureBody);
-    } finally {
-      setSaving(false);
+      if (
+        error instanceof LocalJournalComposerError &&
+        error.code === "journal_aggregate_conflict"
+      ) {
+        setConflictOpen(true);
+      }
     }
   }
 
   function handleTransportBoundary(error: unknown) {
     if (
-      error instanceof OnlineJournalSubmitError &&
-      error.documentMutationAdmission
+      error instanceof LocalJournalComposerError &&
+      typeof error.details?.documentMutationAdmission === "string"
     ) {
-      documentMutation?.handleTransportResult(error.documentMutationAdmission);
+      documentMutation?.handleTransportResult(
+        error.details.documentMutationAdmission as Parameters<
+          NonNullable<typeof documentMutation>["handleTransportResult"]
+        >[0],
+      );
     }
-    if (error instanceof OnlineJournalSubmitError && error.authIntentUrl) {
-      window.location.assign(error.authIntentUrl);
+    if (
+      error instanceof LocalJournalComposerError &&
+      error.details?.authIntentUrl
+    ) {
+      window.location.assign(error.details.authIntentUrl);
     }
   }
 
-  async function uploadPhoto(intent: OnlineComposerPhotoIntent) {
-    const transport = documentMutation?.transport;
-    if (!transport) throw new Error("Document session is not ready.");
+  function ensureFocal(mediaAssetId: string) {
+    setFocalByMediaId((current) => {
+      if (current.has(mediaAssetId)) return current;
+      const next = new Map(current);
+      next.set(mediaAssetId, { x: 0.5, y: 0.5 });
+      return next;
+    });
+  }
+
+  function changeCover(next: JournalCoverSelectionState) {
+    if (
+      cover.mode === "separate" &&
+      cover.mediaAssetId &&
+      (next.mode !== "separate" || next.mediaAssetId !== cover.mediaAssetId)
+    ) {
+      void local.removeImage(cover.mediaAssetId);
+      setMediaDirty(true);
+    }
+    setCover(next);
+  }
+
+  async function copyLocalChanges() {
+    const flushed = (await composerRef.current?.flushLatest()) ?? document;
+    const plainText = [
+      title.trim(),
+      entryDate,
+      extractJournalDocumentPlainText(flushed).trim(),
+    ]
+      .filter(Boolean)
+      .join("\n\n");
     try {
-      return await uploadOnlineComposerPhoto({
-        intent,
-        authReturnTo: `/garden/entries/${entryId}/edit`,
-        documentMutationGeneration: transport,
-      });
-    } catch (error) {
-      handleTransportBoundary(error);
-      online.reportConnectionRequired(error);
-      throw error;
+      await navigator.clipboard.writeText(plainText);
+      setCopied(true);
+    } catch {
+      setCopied(false);
     }
-  }
-
-  if (documentUnavailable) {
-    return (
-      <section className="grid gap-3">
-        <h1 className="text-2xl font-medium">{labels.unavailableTitle}</h1>
-        <p className="text-muted-foreground">{labels.unavailableBody}</p>
-      </section>
-    );
   }
 
   return (
-    <section
+    <form
       className="grid gap-4"
-      data-journal-entry-edit="true"
-      data-online-composer-kind="edit_entry"
+      data-local-composer-kind="edit_entry"
+      data-local-composer-read-only={persistenceFrozen || undefined}
+      onSubmit={(event) => void save(event)}
     >
-      <label className="grid gap-1">
-        <span className="text-sm font-medium">{labels.titleLabel}</span>
-        <input
-          className="h-10 rounded-md border border-input px-3"
-          value={title}
-          disabled={online.readOnly}
-          onChange={(event) => setTitle(event.target.value)}
-          aria-label={labels.titleLabel}
-        />
-      </label>
-      <label className="grid gap-1">
-        <span className="text-sm font-medium">{labels.dateLabel}</span>
-        <input
-          type="date"
-          className="h-10 rounded-md border border-input px-3"
-          value={entryDate}
-          disabled={online.readOnly}
-          onChange={(event) => setEntryDate(event.target.value)}
-          aria-label={labels.dateLabel}
-        />
-      </label>
-      <StructuredJournalComposer
-        locale={locale}
-        labels={labels}
-        initialDocument={document}
-        bindingReady={online.state.hydrated}
-        disabled={online.readOnly}
-        imagePreviewUrls={previewMap}
-        composerRef={composerRef}
-        onDocumentChange={setDocument}
-        onSelectImageFile={async (file, blockId) => {
-          const reservation = inlineMedia.reserve(file, {});
-          try {
-            const intent = await createComposerPhotoIntent(file);
-            const { mediaAssetId } = await uploadPhoto(intent);
-            const previewUrl = URL.createObjectURL(file);
-            inlineMedia.commit(reservation, blockId, previewUrl);
-            return { mediaAssetId, previewUrl };
-          } catch (error) {
-            inlineMedia.release(reservation);
-            throw error;
-          }
-        }}
-        onRemoveImageBlock={(blockId) => {
-          inlineMedia.revoke(blockId);
-          const block = document?.blocks.find((item) => item.id === blockId);
-          const mediaId = block?.type === "image" ? block.mediaAssetId : null;
-          if (
-            mediaId &&
-            cover.mode === "explicit_inline" &&
-            cover.mediaAssetId === mediaId
-          ) {
-            setPendingInlineRemoval({ mediaAssetId: mediaId });
-          }
-        }}
+      <LocalJournalComposerStatus
+        state={local.state}
+        copy={editCopy}
+        onCancelPublishing={local.cancelPublishing}
       />
-      <JournalCoverControls
-        copy={coverCopy}
-        selection={cover}
-        eligibleInline={eligibleInline}
-        disabled={saving || online.readOnly}
-        onSelectSeparateFile={async (intent) => {
-          const result = await uploadPhoto(intent);
-          return {
-            mediaAssetId: result.mediaAssetId,
-            previewUrl: result.publicUrl,
-          };
-        }}
-        pendingInlineRemoval={pendingInlineRemoval}
-        onChange={setCover}
-        onResolveInlineRemoval={(choice) => {
-          if (!pendingInlineRemoval) return;
-          if (choice === "cancel") {
-            setPendingInlineRemoval(null);
-            return;
+
+      <fieldset disabled={persistenceFrozen} className="contents">
+        <label className="grid gap-1">
+          <span className="text-sm font-medium">{labels.titleLabel}</span>
+          <input
+            className="h-10 rounded-md border border-input px-3"
+            value={title}
+            maxLength={140}
+            required
+            onChange={(event) => setTitle(event.currentTarget.value)}
+            aria-label={labels.titleLabel}
+          />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-sm font-medium">{labels.dateLabel}</span>
+          <input
+            type="date"
+            className="h-10 rounded-md border border-input px-3"
+            value={entryDate}
+            required
+            onChange={(event) => setEntryDate(event.currentTarget.value)}
+            aria-label={labels.dateLabel}
+          />
+        </label>
+        <StructuredJournalComposer
+          locale={locale}
+          labels={labels}
+          initialDocument={initialDocument}
+          bindingReady
+          disabled={persistenceFrozen}
+          composerRef={composerRef}
+          imageInsertionMode="immediate"
+          imageStates={imageStates}
+          onDocumentChange={setDocument}
+          onSelectImageFile={async (file, blockId, mediaAssetId) => {
+            const selected = local.selectImage(file, blockId, mediaAssetId);
+            ensureFocal(selected.mediaAssetId);
+            setMediaDirty(true);
+            const ready = await selected.ready;
+            return {
+              mediaAssetId: selected.mediaAssetId,
+              previewUrl: ready.previewUrl ?? undefined,
+            };
+          }}
+          onRetryImage={(mediaAssetId) => local.retryImage(mediaAssetId)}
+          onReplaceImage={(mediaAssetId, file) => {
+            setMediaDirty(true);
+            local.replaceImage(mediaAssetId, file);
+          }}
+          onSetImageAsCover={(mediaAssetId) =>
+            changeCover({ mode: "explicit_inline", mediaAssetId })
           }
-          if (choice === "keep_as_cover") {
-            setCover({
-              mode: "separate",
-              mediaAssetId: pendingInlineRemoval.mediaAssetId,
-              previewUrl:
-                previewMap.get(pendingInlineRemoval.mediaAssetId) ?? null,
-            });
-          } else {
-            setCover({ mode: "automatic" });
-          }
-          setPendingInlineRemoval(null);
-        }}
-      />
-      {focalTarget ? (
-        <OwnerMediaFocalPanel
-          mediaAssetId={focalTarget.mediaAssetId}
-          imageUrl={focalTarget.previewUrl}
-          expectedRevision={expectedRevision}
-          copy={focalCopy}
-          disabled={saving || online.readOnly}
-          onSaved={({ journalRevision }) => {
-            if (journalRevision != null) setExpectedRevision(journalRevision);
+          onRemoveImageBlock={(_blockId, mediaAssetId) => {
+            setMediaDirty(true);
+            if (
+              cover.mode === "explicit_inline" &&
+              cover.mediaAssetId === mediaAssetId
+            ) {
+              setPendingInlineRemoval({ mediaAssetId });
+              return;
+            }
+            void local.removeImage(mediaAssetId);
           }}
         />
-      ) : null}
-      <OnlineJournalComposerStatus
-        state={online.state}
-        locale={locale}
-        copy={workspaceCopy}
-        unsavedText={[
-          title,
-          entryDate,
-          document ? extractJournalDocumentPlainText(document) : "",
-        ]
-          .filter(Boolean)
-          .join("\n")}
-        navigationHref="/garden"
-        onRetry={online.retry}
-        onCancel={() => router.push("/garden")}
-      />
-      <div className="flex items-center gap-3">
+        <JournalCoverControls
+          copy={coverCopy}
+          selection={withLocalCoverPreview(cover, imageStates)}
+          eligibleInline={inlineIds.map((mediaAssetId, index) => ({
+            mediaAssetId,
+            previewUrl: imageStates.get(mediaAssetId)?.previewUrl ?? null,
+            label: `${coverCopy.useAsCover} ${index + 1}`,
+          }))}
+          disabled={persistenceFrozen}
+          selectedLocalMediaState={
+            cover.mode === "explicit_inline" || cover.mode === "separate"
+              ? imageStates.get(cover.mediaAssetId ?? "")
+              : undefined
+          }
+          onRetrySelectedLocal={(mediaAssetId) =>
+            local.retryImage(mediaAssetId)
+          }
+          onSelectLocalSeparateFile={async (file) => {
+            const currentId =
+              cover.mode === "separate" ? cover.mediaAssetId : null;
+            const selected = currentId
+              ? local.replaceImage(currentId, file)
+              : local.selectImage(file, `cover_${crypto.randomUUID()}`);
+            ensureFocal(selected.mediaAssetId);
+            setMediaDirty(true);
+            return { mediaAssetId: selected.mediaAssetId };
+          }}
+          pendingInlineRemoval={pendingInlineRemoval}
+          onChange={changeCover}
+          onResolveInlineRemoval={(choice) => {
+            if (!pendingInlineRemoval) return;
+            if (choice === "cancel") {
+              setPendingInlineRemoval(null);
+              return;
+            }
+            if (choice === "keep_as_cover") {
+              setCover({
+                mode: "separate",
+                mediaAssetId: pendingInlineRemoval.mediaAssetId,
+                previewUrl:
+                  imageStates.get(pendingInlineRemoval.mediaAssetId)
+                    ?.previewUrl ?? null,
+              });
+            } else {
+              void local.removeImage(pendingInlineRemoval.mediaAssetId);
+              setCover({ mode: "automatic" });
+            }
+            setPendingInlineRemoval(null);
+          }}
+        />
+        {focalTarget?.imageUrl ? (
+          <FocalPointControl
+            imageUrl={focalTarget.imageUrl}
+            focal={focalTarget.focal}
+            copy={focalCopy}
+            disabled={persistenceFrozen}
+            onChange={(next) => {
+              setFocalByMediaId((current) => {
+                const updated = new Map(current);
+                updated.set(focalTarget.mediaAssetId, next);
+                return updated;
+              });
+            }}
+          />
+        ) : null}
+      </fieldset>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          ref={saveButtonRef}
+          type="submit"
+          disabled={persistenceFrozen || !dirty}
+        >
+          {editCopy.save}
+        </Button>
         <Button
           type="button"
-          disabled={saving || online.readOnly}
-          onClick={() => void save()}
+          variant="outline"
+          onClick={() => void copyLocalChanges()}
         >
-          {labels.saveLabel}
+          {editCopy.copyLocalChanges}
         </Button>
-        {message ? (
-          <p className="text-sm text-muted-foreground">{message}</p>
-        ) : null}
+        <Button
+          ref={cancelEditingButtonRef}
+          type="button"
+          variant="ghost"
+          disabled={persistenceFrozen}
+          onClick={() => {
+            if (dirty) {
+              setDiscardOpen(true);
+              return;
+            }
+            local.abandon();
+            router.push(safeReturnTo);
+          }}
+        >
+          {editCopy.cancelEditing}
+        </Button>
       </div>
-    </section>
+      {copied ? (
+        <p className="text-sm text-muted-foreground" role="status">
+          {editCopy.localChangesCopied}
+        </p>
+      ) : null}
+
+      <AlertDialog
+        open={conflictOpen}
+        onOpenChange={(open) => setConflictOpen(open)}
+      >
+        <AlertDialogContent
+          data-atomic-journal-edit-conflict="true"
+          finalFocus={saveButtonRef}
+        >
+          <AlertDialogTitle>{editCopy.conflictTitle}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {editCopy.conflictBody}
+          </AlertDialogDescription>
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <AlertDialogClose className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:min-h-9">
+              {editCopy.closeConflict}
+            </AlertDialogClose>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void copyLocalChanges()}
+            >
+              {editCopy.copyLocalChanges}
+            </Button>
+            <Button type="button" onClick={() => window.location.reload()}>
+              {editCopy.reloadLatest}
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={discardOpen}
+        onOpenChange={(open) => setDiscardOpen(open)}
+      >
+        <AlertDialogContent
+          data-atomic-journal-edit-discard="true"
+          finalFocus={cancelEditingButtonRef}
+        >
+          <AlertDialogTitle>{editCopy.discardTitle}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {editCopy.discardBody}
+          </AlertDialogDescription>
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <AlertDialogClose className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:min-h-9">
+              {editCopy.keepEditing}
+            </AlertDialogClose>
+            <AlertDialogClose
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-destructive px-3 py-2 text-sm font-medium text-white hover:bg-destructive/90 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:min-h-9"
+              onClick={() => {
+                local.abandon();
+                router.push(safeReturnTo);
+              }}
+            >
+              {editCopy.discardChanges}
+            </AlertDialogClose>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+    </form>
   );
 }
 
-function editDraftPayload(input: {
-  entryId: string;
-  title: string;
-  entryDate: string;
-  expectedRevision: number;
-  document: JournalDocumentV1 | null;
-  clientMutationId: string;
-  cover: JournalCoverSelectionState;
-}): JournalEntryDraftPayloadV1 {
-  const request: JournalDraftEditEntryRequest = {
-    entryId: input.entryId,
-    title: input.title,
-    entryDate: input.entryDate,
-    contentDocument: input.document,
-    body: input.document ? extractJournalDocumentPlainText(input.document) : "",
-    expectedRevision: input.expectedRevision,
-    clientMutationId: input.clientMutationId,
-    cover: journalCoverSelectionToClaimInput(input.cover),
-  };
-  return {
-    schemaVersion: JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION,
-    draftKind: "edit_entry",
-    request,
-  };
+function selectedCoverMediaAssetId(selection: JournalCoverSelectionState) {
+  if (selection.mode === "none") return null;
+  // A null canonical pointer means automatic presentation. Preserve that
+  // distinction during unrelated edits instead of silently pinning the first
+  // inline image as an explicit cover.
+  if (selection.mode === "automatic") return null;
+  return selection.mediaAssetId ?? null;
 }
 
-function coverSelectionFromRequest(
-  cover: JournalDraftEditEntryRequest["cover"],
-  imagePreviewUrls: Record<string, string>,
+function finalMediaPoints(
+  document: JournalDocumentV1,
+  cover: JournalCoverSelectionState,
+  focalByMediaId: ReadonlyMap<string, { x: number; y: number }>,
+) {
+  const mediaIds = listJournalDocumentImageMediaIds(document);
+  const coverId = selectedCoverMediaAssetId(cover);
+  if (coverId && !mediaIds.includes(coverId)) mediaIds.push(coverId);
+  return mediaIds.map((mediaAssetId) => ({
+    mediaAssetId,
+    ...(focalByMediaId.get(mediaAssetId) ?? { x: 0.5, y: 0.5 }),
+  }));
+}
+
+function coverSelectionKey(selection: JournalCoverSelectionState) {
+  if (selection.mode === "automatic" || selection.mode === "none") {
+    return selection.mode;
+  }
+  return `media:${selection.mediaAssetId ?? ""}`;
+}
+
+function withLocalCoverPreview(
+  selection: JournalCoverSelectionState,
+  states: ReadonlyMap<string, { previewUrl: string | null }>,
 ): JournalCoverSelectionState {
-  if (!cover || cover.mode === "automatic") return { mode: "automatic" };
-  if (cover.mode === "none") return { mode: "none" };
-  if (cover.mode === "explicit_inline") {
-    return {
-      mode: "explicit_inline",
-      mediaAssetId: cover.mediaAssetId,
-      previewUrl: imagePreviewUrls[cover.mediaAssetId] ?? null,
-    };
+  if (selection.mode !== "explicit_inline" && selection.mode !== "separate") {
+    return selection;
   }
   return {
-    mode: "separate",
-    mediaAssetId: cover.mediaAssetId,
-    previewUrl: imagePreviewUrls[cover.mediaAssetId] ?? null,
+    ...selection,
+    previewUrl: states.get(selection.mediaAssetId ?? "")?.previewUrl ?? null,
   };
 }

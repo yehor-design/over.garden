@@ -36,7 +36,6 @@ import type {
 } from "@/server/garden-workspace-repository";
 import type { PlantObjectSummary } from "@/server/journal-repository";
 import { GardenWorkspaceServiceState } from "./garden-workspace-service-state";
-import { ServerDraftResumePanel } from "./server-draft-resume-panel";
 
 interface GardenWorkspaceViewProps {
   canWrite: boolean;
@@ -97,13 +96,6 @@ export function GardenWorkspaceView({
           inbox={null}
           media={null}
         />
-        {workspace.drafts.status === "ready" &&
-        workspace.drafts.value.length > 0 ? (
-          <ServerDraftResumePanel
-            drafts={workspace.drafts.value}
-            locale={locale}
-          />
-        ) : null}
       </main>
     );
   }
@@ -116,8 +108,6 @@ export function GardenWorkspaceView({
     workspace.inbox.status === "ready" ? workspace.inbox.value : null;
   const media =
     workspace.media.status === "ready" ? workspace.media.value : null;
-  const drafts =
-    workspace.drafts.status === "ready" ? workspace.drafts.value : [];
   const nextAction = inventory
     ? chooseNextAction(inventory.objects, today, workspaceCopy)
     : unavailableInventoryNextAction(workspaceCopy);
@@ -174,10 +164,6 @@ export function GardenWorkspaceView({
           </div>
         </section>
       </div>
-
-      {drafts.length > 0 ? (
-        <ServerDraftResumePanel drafts={drafts} locale={locale} />
-      ) : null}
 
       <WorkspaceSummary
         copy={workspaceCopy}

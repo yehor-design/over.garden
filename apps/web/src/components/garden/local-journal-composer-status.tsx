@@ -6,13 +6,22 @@ import { Button } from "@/components/ui/button";
 import type { AtomicJournalCreateCopy } from "@/lib/garden/atomic-journal-create-copy";
 import type { LocalJournalComposerState } from "@/lib/garden/use-local-journal-composer";
 
+export interface LocalJournalComposerStatusCopy {
+  localOnly: string;
+  waitingMedia: string;
+  publishing: string;
+  published: string;
+  failed: string;
+  cancelPublishing: string;
+}
+
 export function LocalJournalComposerStatus({
   state,
   copy,
   onCancelPublishing,
 }: {
   state: LocalJournalComposerState;
-  copy: AtomicJournalCreateCopy;
+  copy: LocalJournalComposerStatusCopy;
   onCancelPublishing(): void;
 }) {
   const waiting =
@@ -31,7 +40,10 @@ export function LocalJournalComposerStatus({
             : copy.localOnly;
 
   return (
-    <div className="grid gap-2" data-local-journal-composer-status={state.status}>
+    <div
+      className="grid gap-2"
+      data-local-journal-composer-status={state.status}
+    >
       <p
         className={
           state.status === "failed"

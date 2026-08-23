@@ -14,4 +14,10 @@ describe("journalEntryDateInputValue", () => {
       "2026-08-20",
     );
   });
+
+  it("keeps a PostgreSQL calendar date when local midnight is not UTC midnight", () => {
+    expect(journalEntryDateInputValue(new Date(2026, 7, 20))).toBe(
+      "2026-08-20",
+    );
+  });
 });

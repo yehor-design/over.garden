@@ -115,9 +115,10 @@ export async function readEphemeralMediaCommitStatus(
   const expected = [...input.expectedMedia].sort((left, right) =>
     left.mediaAssetId.localeCompare(right.mediaAssetId),
   );
-  if (media.length !== expected.length) return "indeterminate";
-  return media.every((row, index) => {
-    const item = expected[index]!;
+  const mediaById = new Map(media.map((row) => [row.id, row]));
+  return expected.every((item) => {
+    const row = mediaById.get(item.mediaAssetId);
+    if (!row) return false;
     return (
       row.id === item.mediaAssetId &&
       row.owner_user_id === entry.owner_user_id &&

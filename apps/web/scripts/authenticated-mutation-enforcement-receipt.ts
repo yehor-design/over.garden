@@ -25,14 +25,15 @@ export const AUTHENTICATED_MUTATION_DEPLOYMENT_RECEIPT_ARTIFACT_PATH =
 const HIGH_RISK_OWNER = "high_risk_ove_290" as const;
 const REMAINING_OWNER = "remaining_ove_291" as const;
 const EXPLICIT_GOOGLE_LINK_OWNER = "owned_by_ove_295" as const;
-// OVE-323 removes every browser-offline mutation owner and replay edge. The
-// remaining high-risk topology is the server-side admission surface only.
+// OVE-323 removes every browser-offline mutation owner and replay edge.
+// OVE-348 repins the high-risk edge bindings after the published-edit route
+// converges on the same admitted atomic mutation owner as journal creation.
 const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 14;
 const BASELINE_HIGH_RISK_ENTRYPOINT_SET_DIGEST =
   "bdbedb11c601d55116bb63b8a1f79d8d5fafee59f8013aa31ac5bd3791fe6571";
-const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 154;
+const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 153;
 const BASELINE_HIGH_RISK_EDGE_BINDING_SET_DIGEST =
-  "2d489bd93f251dee3a4c383e0ab6d0f58f32ecbbdcfc8bbac7e95b56a48d405c";
+  "ccc09e527415e523af19eed81ac3da40d68607b4e8382053b22fd5169aa986ec";
 const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 11;
 const BASELINE_REMAINING_ENTRYPOINT_COUNT = 125;
 const BASELINE_REMAINING_ENTRYPOINT_SET_DIGEST =

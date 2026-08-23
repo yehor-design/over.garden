@@ -41,7 +41,7 @@ describe("shared journal composer integration", () => {
     }
   });
 
-  it("keeps edit on its owner-scoped server draft until the OVE-348 cutover", () => {
+  it("cuts edit over to the same local-only atomic owner without server drafts", () => {
     const editOwner = readFileSync(
       path.join(
         root,
@@ -49,8 +49,11 @@ describe("shared journal composer integration", () => {
       ),
       "utf8",
     );
-    expect(editOwner).toContain("useOnlineJournalComposer({");
-    expect(editOwner).toContain("bindingReady={online.state.hydrated}");
+    expect(editOwner).toContain("useLocalJournalComposer({");
+    expect(editOwner).toContain("publishEdit({");
+    expect(editOwner).toMatch(/\bbindingReady\b/);
+    expect(editOwner).not.toContain("useOnlineJournalComposer({");
+    expect(editOwner).not.toContain("JournalEntryDraftPayloadV1");
     expect(editOwner).not.toMatch(/@\/lib\/offline|IndexedDB|indexedDB|Dexie/);
 
     const sharedOwner = readFileSync(

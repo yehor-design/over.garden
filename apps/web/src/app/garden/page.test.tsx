@@ -152,9 +152,7 @@ describe("/garden workspace V2", () => {
     expect(html).toContain("First entry composer");
     expect(html).toContain('data-initial-space-id="space-1"');
     expect(html).toContain('data-initial-space-name="Balcony"');
-    expect(html).toContain(
-      'data-requires-first-publication-disclosure="true"',
-    );
+    expect(html).toContain('data-requires-first-publication-disclosure="true"');
     // Timeline work is a deferred server boundary: first-entry composition is
     // already present in the initial response instead of waiting for it.
     expect(mocks.getMySpaceJournalTimeline).toHaveBeenCalledWith(
@@ -475,7 +473,6 @@ function workspaceModel(): GardenWorkspaceReadModel {
       status: "ready",
       value: { processingCount: 0, failedCount: 0 },
     },
-    drafts: { status: "ready", value: [] },
     allFailed: false,
   };
 }
@@ -514,7 +511,6 @@ function emptyWorkspaceModel(): GardenWorkspaceReadModel {
       status: "ready",
       value: { processingCount: 0, failedCount: 0 },
     },
-    drafts: { status: "ready", value: [] },
     allFailed: false,
   };
 }

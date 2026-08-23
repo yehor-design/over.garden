@@ -153,7 +153,6 @@ export function getSiteShellNavigation(
           "/garden#first-entry-composer",
           "personal",
         ),
-        item("drafts", copy.navigation.drafts, "/garden#drafts", "personal"),
         item(
           "followed-feed",
           copy.navigation.followedFeed,

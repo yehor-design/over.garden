@@ -109,6 +109,12 @@ export default async function PublicJournalEntryRoute({
   const engagementReturnTo = visualScenario
     ? `${lookup.page.entry.publicPath}?visualSocial=${visualScenario.id}`
     : lookup.page.entry.publicPath;
+  const editOwnerControl = ownerControl
+    ? {
+        ...ownerControl,
+        managePath: `/garden/entries/${encodeURIComponent(ownerControl.entryId)}/edit?returnTo=${encodeURIComponent(lookup.page.entry.publicPath)}`,
+      }
+    : null;
 
   return (
     <PublicJournalEntryView
@@ -116,7 +122,7 @@ export default async function PublicJournalEntryRoute({
       copy={getPublicJournalEntryCopy(locale)}
       page={lookup.page}
       directoryReturnTo={directoryReturnTo}
-      ownerControl={ownerControl}
+      ownerControl={editOwnerControl}
     >
       <PublicEngagementPanel
         isAuthenticated={Boolean(userId)}
