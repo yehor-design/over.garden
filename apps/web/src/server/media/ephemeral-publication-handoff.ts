@@ -259,10 +259,24 @@ function validateClaimResponse(
   ) {
     throw new EphemeralPublicationHandoffError("claim_response_invalid");
   }
-  return value.publicMedia.map((raw, index) => {
-    const receipt = expected.receipts[index]!;
+  const rawByMediaAssetId = new Map<string, Record<string, unknown>>();
+  for (const raw of value.publicMedia) {
     if (!isRecord(raw)) {
       throw new EphemeralPublicationHandoffError("claim_response_invalid");
+    }
+    const mediaAssetId = raw.mediaAssetId;
+    if (
+      typeof mediaAssetId !== "string" ||
+      rawByMediaAssetId.has(mediaAssetId)
+    ) {
+      throw new EphemeralPublicationHandoffError("claim_response_invalid");
+    }
+    rawByMediaAssetId.set(mediaAssetId, raw);
+  }
+  return expected.receipts.map((receipt) => {
+    const raw = rawByMediaAssetId.get(receipt.mediaAssetId);
+    if (!raw) {
+      throw new EphemeralPublicationHandoffError("claim_response_mismatch");
     }
     const expectedPath = `derivatives/${receipt.mediaAssetId}/${receipt.generation}.webp`;
     if (

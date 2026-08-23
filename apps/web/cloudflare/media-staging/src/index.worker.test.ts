@@ -650,8 +650,12 @@ describe("media staging Worker in workerd", () => {
       ),
     );
     const receipts: string[] = [];
+    const receiptMediaOrder = [
+      "ffffffff-ffff-4fff-8fff-fffffffffff1",
+      "00000000-0000-4000-8000-000000000001",
+    ];
     for (let index = 0; index < 2; index += 1) {
-      const media = crypto.randomUUID();
+      const media = receiptMediaOrder[index]!;
       const issued = await issueWorkerUploadCapabilityForTest(env, {
         ownerUserId: owner,
         stagingSessionId: session,
@@ -732,9 +736,12 @@ describe("media staging Worker in workerd", () => {
       Array.from({ length: 10 }, () => 200),
     );
     const claimReceipt = (await concurrentClaims[0]!.json()) as {
-      publicMedia: Array<{ publicPath: string }>;
+      publicMedia: Array<{ mediaAssetId: string; publicPath: string }>;
     };
     expect(claimReceipt.publicMedia).toHaveLength(2);
+    expect(claimReceipt.publicMedia.map((item) => item.mediaAssetId)).toEqual(
+      receiptMediaOrder,
+    );
     expect((await env.PUBLIC_MEDIA_BUCKET.list()).objects).toHaveLength(2);
     const claimedObject = await env.PUBLIC_MEDIA_BUCKET.head(
       claimReceipt.publicMedia[0]!.publicPath,
