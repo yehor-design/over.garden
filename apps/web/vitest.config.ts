@@ -13,7 +13,11 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    exclude: [...configDefaults.exclude, "tests/**"],
+    exclude: [
+      ...configDefaults.exclude,
+      "tests/**",
+      "cloudflare/media-staging/src/**/*.worker.test.ts",
+    ],
     setupFiles: ["./test/setup.ts"],
   },
 });

@@ -53,7 +53,7 @@ const CURRENT_AUTHORITY_REQUIREMENTS = {
     "overgarden-media-staging",
     "media-stage.over.garden",
     "MEDIA_STAGING_SESSIONS",
-    "unprovisioned until OVE-346",
+    "provisioned by OVE-346",
   ],
 } as const;
 

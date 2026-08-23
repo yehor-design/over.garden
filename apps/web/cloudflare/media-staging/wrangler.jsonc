@@ -1,0 +1,64 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "overgarden-media-staging",
+  "main": "src/index.ts",
+  "account_id": "cb03b15042adc74edfe2d8201636300a",
+  "compatibility_date": "2026-08-23",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "media-stage.over.garden",
+      "custom_domain": true,
+    },
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "invocation_logs": false,
+    },
+  },
+  "version_metadata": {
+    "binding": "WORKER_VERSION",
+  },
+  "vars": {
+    "EPHEMERAL_MEDIA_CAPABILITY_CURRENT_VERSION": "1",
+    "EPHEMERAL_MEDIA_COMMIT_STATUS_URL": "https://over.garden/api/media/staging/commit-status",
+    "EPHEMERAL_MEDIA_PUBLIC_BASE_URL": "https://media.over.garden",
+    "EPHEMERAL_MEDIA_PROTOCOL_VERSION": "ove346.ephemeralMediaStaging.v1",
+    "EPHEMERAL_MEDIA_RECEIPT_CURRENT_VERSION": "1",
+  },
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_STAGING_BUCKET",
+      "bucket_name": "overgarden-media-staging",
+    },
+    {
+      "binding": "PUBLIC_MEDIA_BUCKET",
+      "bucket_name": "overgarden-public",
+    },
+  ],
+  "ratelimits": [
+    {
+      "name": "MEDIA_STAGING_UPLOAD_RATE_LIMIT",
+      "namespace_id": "346001",
+      "simple": {
+        "limit": 30,
+        "period": 60,
+      },
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MEDIA_STAGING_SESSIONS",
+        "class_name": "MediaStagingSession",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["MediaStagingSession"],
+    },
+  ],
+}

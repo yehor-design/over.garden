@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "lib": ["ES2023"],
+    "types": ["@cloudflare/vitest-plugin/types"],
+    "noEmit": true
+  },
+  "include": [
+    "worker-configuration.d.ts",
+    "worker-secrets.d.ts",
+    "src/**/*.ts",
+    "../../src/lib/media/ephemeral-staging-contract.ts",
+    "../../src/lib/media/ephemeral-staging-crypto.ts"
+  ],
+  "exclude": ["src/index.test.ts", "src/staging-session.test.ts"]
+}

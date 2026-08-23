@@ -12,7 +12,7 @@
     "postbuild": "tsx scripts/check-walking-skeleton-boundary.ts --require-build-output && tsx scripts/verify-google-sans-assets.ts --build-output",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p cloudflare/media-staging/tsconfig.json",
     "check:node-runtime": "tsx scripts/check-node-runtime.ts",
     "check:r2-addressing": "tsx scripts/check-r2-addressing-contract.ts",
     "prebuild": "pnpm run check:node-runtime && pnpm run check:r2-addressing && pnpm run lint && pnpm run typecheck",
@@ -151,7 +151,11 @@
     "test:google-account-linking": "../../infra/container-up && ../../infra/run-with-local-infra-env pnpm local:bootstrap && pnpm exec vitest run src/server/auth/account-methods.test.ts && OVE295_RUN_DB_INTEGRATION=true ../../infra/run-with-local-infra-env pnpm exec vitest run scripts/google-account-linking-db.test.ts && GOOGLE_ACCOUNT_LINKING_ENABLED=true ../../infra/run-with-local-infra-env pnpm exec playwright test tests/google-account-linking.spec.ts",
     "google-linking:production-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/check-google-linking-production-proof-plan.ts",
     "test:mutation-surface-concurrency": "vitest run scripts/audit-authenticated-mutation-surface.test.ts -t \"returns four identical three-digest receipts\" --maxWorkers=1",
-    "test": "pnpm test:mutation-surface-concurrency && OVERGARDEN_SKIP_MUTATION_AUDIT_CONCURRENCY=1 vitest run",
+    "test": "pnpm test:mutation-surface-concurrency && OVERGARDEN_SKIP_MUTATION_AUDIT_CONCURRENCY=1 vitest run && pnpm test:media-staging-worker && pnpm media:staging:verify",
+    "test:media-staging-worker": "vitest run --config cloudflare/media-staging/vitest.config.mts",
+    "media:staging:types": "wrangler types --config cloudflare/media-staging/wrangler.jsonc cloudflare/media-staging/worker-configuration.d.ts",
+    "media:staging:dry-run": "wrangler deploy --config cloudflare/media-staging/wrangler.jsonc --dry-run --outdir /tmp/overgarden-media-staging-dry-run",
+    "media:staging:verify": "tsx scripts/verify-ephemeral-media-handoff.ts",
     "test:watch": "vitest",
     "local:bootstrap": "tsx scripts/bootstrap-local.ts",
     "visual:fixtures:seed": "NODE_OPTIONS=--conditions=react-server tsx scripts/visual-fixtures-seed.ts",
@@ -200,6 +204,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.0.0",
+    "@cloudflare/workers-types": "5.20260823.1",
+    "@msw/cloudflare": "0.0.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",
@@ -212,6 +219,7 @@
     "eslint-config-next": "16.2.11",
     "eslint-config-prettier": "^10.1.8",
     "kysely-codegen": "^0.20.0",
+    "msw": "^2.15.0",
     "playwright": "1.61.1",
     "prettier": "3.8.4",
     "prettier-plugin-tailwindcss": "^0.8.0",
@@ -220,17 +228,22 @@
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
     "typescript": "^5",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "wrangler": "4.125.0"
   },
   "pnpm": {
     "overrides": {
-      "@eslint/eslintrc@3.3.5>js-yaml": "4.3.0",
-      "ajv@8.20.0>fast-uri": "3.1.4",
-      "cosmiconfig@9.0.2>js-yaml": "4.3.0",
-      "minimatch@3.1.5>brace-expansion": "1.1.16",
-      "minimatch@10.2.5>brace-expansion": "5.0.7",
+      "@eslint/eslintrc@3.3.5>js-yaml": "4.3.1",
+      "ajv@8.20.0>fast-uri": "3.1.5",
+      "cosmiconfig@9.0.2>js-yaml": "4.3.1",
+      "express-rate-limit@8.5.2>ip-address": "10.3.1",
+      "minimatch@3.1.5>brace-expansion": "1.1.18",
+      "minimatch@10.2.5>brace-expansion": "5.0.9",
       "next@16.2.11>sharp": "0.35.3",
-      "postcss": "8.5.18"
+      "postcss": "8.5.18",
+      "postcss@8.5.18>nanoid": "3.3.18",
+      "shadcn@4.13.1>undici": "7.29.0",
+      "@dotenvx/dotenvx@1.75.1>undici": "7.29.0"
     }
   }
 }

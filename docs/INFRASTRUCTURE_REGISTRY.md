@@ -134,23 +134,78 @@ Reference docs:
 
 ## Cloudflare R2
 
-### ADR-0019 target staging (planned; unprovisioned until OVE-346)
+### ADR-0019 ephemeral staging (provisioned by OVE-346)
 
-OVE-345 selects, but does not create, the following exact production identities:
+OVE-346 provisioned and read back the following exact production identities on
+2026-08-23:
 
-- private R2 Standard bucket: `overgarden-media-staging`;
-- Worker: `overgarden-media-staging`;
-- custom staging domain: `media-stage.over.garden`;
-- SQLite-backed Durable Object namespace binding: `MEDIA_STAGING_SESSIONS`.
+- private R2 Standard bucket `overgarden-media-staging`, created
+  `2026-08-23T09:05:44.620Z` in `EEUR` and kept non-public;
+- Worker `overgarden-media-staging` on the custom domain
+  `media-stage.over.garden` with `workers_dev` disabled;
+- SQLite-backed Durable Object binding `MEDIA_STAGING_SESSIONS`, namespace ID
+  `84963a6e9a62469e935876b0d5c1e07a`, class `MediaStagingSession`, migration
+  tag `v1`; the same namespace holds opaque owner-admission coordinators as
+  well as per-session coordinators and creates no Postgres state;
+- Worker Rate Limiting binding `MEDIA_STAGING_UPLOAD_RATE_LIMIT`, namespace
+  `346001`, with a permissive edge-local `30` calls per `60` seconds guard;
+  the authoritative global owner guard remains the SQLite coordinator at no
+  more than `20` upload attempts per minute and `3` concurrent 15-minute
+  staging sessions per owner hash;
+- existing public bucket binding `PUBLIC_MEDIA_BUCKET` ->
+  `overgarden-public`, without changing that bucket's public delivery domain or
+  cache policy.
 
 This surface accepts only the browser-generated final WebP through a
 short-lived, owner/session/media-generation-specific capability. It stores no
 journal text or source original, remains private, and is not a public delivery
-origin. Normal abandoned-object cleanup targets 15 minutes; a one-day R2
-lifecycle is the catastrophic fallback. OVE-346 alone owns provider creation,
-configuration, secrets, Vercel environment binding, deployment, rollback, and
-live read-back. Until that issue succeeds, every identity above is explicitly
-unprovisioned and must not be inferred from this planned registry entry.
+origin. The exact bucket CORS allowlist is `http://localhost:3000`,
+`https://over-garden.vercel.app`, `https://over.garden`, and
+`https://www.over.garden`; methods are `PUT, HEAD`, allowed headers are `*`,
+the exposed header is `ETag`, and max age is `3600` seconds. Normal
+abandoned-object cleanup targets 15 minutes. Enabled lifecycle rule
+`delete-staged-webp-after-1-day` applies only to prefix `staging/` and expires
+objects and incomplete multipart uploads after one day as the catastrophic
+fallback.
+
+The Worker has exactly three secret bindings:
+`EPHEMERAL_MEDIA_CAPABILITY_SECRETS`,
+`EPHEMERAL_MEDIA_RECEIPT_SECRETS`, and
+`EPHEMERAL_MEDIA_COMMIT_STATUS_SECRET`. Vercel production has those three plus
+`EPHEMERAL_MEDIA_CAPABILITY_CURRENT_VERSION`,
+`EPHEMERAL_MEDIA_RECEIPT_CURRENT_VERSION`, and
+`EPHEMERAL_MEDIA_STAGING_BASE_URL`; all six are stored as encrypted production
+environment variables. Secret values and provider-generated Worker version
+UUIDs never belong in this registry. The terminal OVE-346 receipt must instead
+record the redacted exact feature-SHA Worker version and exact-SHA READY Vercel
+deployment read-backs.
+
+Cloudflare Free automatically applies the 10 ms HTTP Worker CPU ceiling. The
+tracked Wrangler configuration deliberately declares no `limits.cpu_ms`
+override because Cloudflare rejects that field for this Free Worker; no paid
+plan or plan change was required. Workers observability stays enabled for
+aggregate/provider health, while `observability.logs.invocation_logs=false`
+prevents automatic persistence of session/media/generation URL identifiers;
+application code emits no capability or media-identifier logs. The bounded
+live proof streams the request body Worker -> R2 with R2-enforced SHA-256,
+verifies exact CORS, owner admission, and idempotent explicit delete, and
+requires alarm/claim/finalize convergence after the exact application
+deployment. A generation replacement first records every superseded object key
+in the session Durable Object's SQLite delete ledger, deletes and confirms the
+old R2 object before accepting the new body, and removes the ledger entry only
+after R2 acknowledges deletion. An interrupted replacement therefore remains
+alarm-recoverable instead of orphaning the old object; a bounded backlog of
+`100` entries fails closed. Every claimed public object also carries a
+server-derived HMAC ownership proof bound to the owner hash, staging session,
+media UUID, generation, and SHA-256. Promotion, finalization, and cleanup all
+require that exact proof, so a byte-identical object created by another session
+cannot be adopted or deleted. The Durable Object acquires a persisted
+`finalizing` or `abandoning` fence before any finalization or cleanup R2 effect;
+alarms recover those states idempotently, and no stale cleanup may cross a
+successful finalization. Rollback disables the staging custom domain and
+reservation route first, then removes only synthetic objects and the newly
+created empty OVE-346 resources after read-back; it never mutates the legacy
+quarantine/public buckets or shared credentials.
 
 The existing `overgarden-quarantine` bucket and server conversion path below
 are transitional legacy runtime. OVE-349 owns their application/schema/package

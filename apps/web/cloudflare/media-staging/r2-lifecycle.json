@@ -1,0 +1,23 @@
+{
+  "rules": [
+    {
+      "id": "delete-staged-webp-after-1-day",
+      "enabled": true,
+      "conditions": {
+        "prefix": "staging/"
+      },
+      "deleteObjectsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 86400
+        }
+      },
+      "abortMultipartUploadsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 86400
+        }
+      }
+    }
+  ]
+}

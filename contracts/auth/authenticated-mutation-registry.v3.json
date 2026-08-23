@@ -13016,6 +13016,36 @@
     },
     {
       "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/media/staging/commit-status/route.ts#POST",
+      "evidencePaths": [
+        "src/app/api/media/staging/commit-status/route.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/media/staging/commit-status/route.ts",
+      "symbol": "POST",
+      "transport": "route_handler",
+      "variant": "POST"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/media/staging/reservations/route.ts#POST",
+      "evidencePaths": [
+        "src/app/api/media/staging/reservations/route.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/media/staging/reservations/route.ts",
+      "symbol": "POST",
+      "transport": "route_handler",
+      "variant": "POST"
+    },
+    {
+      "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "route_handler:src/app/api/media/uploads/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -14394,6 +14424,18 @@
       "semanticVariant": "from:@/server/search/public-projection-outbox",
       "sourceNodeId": "source:0141ba8cce4412815eeb",
       "symbol": "convergePublicProjectionsNow"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/staging/reservations/route.ts",
+        "src/lib/media/ephemeral-staging-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/staging/reservations/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/media/ephemeral-staging-contract",
+      "sourceNodeId": "source:01524f62bc5b19c79a8f",
+      "symbol": "parseEphemeralMediaReservation"
     },
     {
       "evidencePaths": [
@@ -17021,6 +17063,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/media/staging/commit-status/route.ts",
+        "src/server/media/ephemeral-staging-commit-status.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/staging/commit-status/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/ephemeral-staging-commit-status",
+      "sourceNodeId": "source:193fe81d59c72fccdc60",
+      "symbol": "verifyCommitStatusRequest"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/catalog/curation/actions.ts",
         "src/lib/auth/document-mutation-generation-transport.ts"
       ],
@@ -19154,6 +19208,17 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/media/staging/commit-status/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/media/staging/commit-status/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "POST",
+      "sourceNodeId": "source:2c9b0db4e7a7db268eab",
+      "symbol": "POST"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/follow-up-value-pulse.tsx",
         "src/lib/interface-localization.ts"
       ],
@@ -20561,6 +20626,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/media/staging/commit-status/route.ts",
+        "src/server/media/ephemeral-staging-commit-status.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/staging/commit-status/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/ephemeral-staging-commit-status",
+      "sourceNodeId": "source:3b545b8ec448b3e2632d",
+      "symbol": "readEphemeralMediaCommitStatus"
+    },
+    {
+      "evidencePaths": [
         "src/app/admin/communities/[slug]/actions.ts"
       ],
       "nodeKind": "server_action",
@@ -21528,6 +21605,18 @@
       "semanticVariant": "from:@/lib/public-profile-copy",
       "sourceNodeId": "source:4357c2b3683641edfe4f",
       "symbol": "PUBLIC_PROFILE_LANGUAGE_LABELS"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/staging/reservations/route.ts",
+        "src/server/media/ephemeral-staging-capability.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/staging/reservations/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/media/ephemeral-staging-capability",
+      "sourceNodeId": "source:43633fd0a965e53ff6ef",
+      "symbol": "issueEphemeralStagingCapability"
     },
     {
       "evidencePaths": [
@@ -23588,6 +23677,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/media/staging/reservations/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/staging/reservations/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:57572ce9efa7dd3b3eca",
+      "symbol": "documentMutationGenerationFromRequest"
+    },
+    {
+      "evidencePaths": [
         "src/lib/storage.ts",
         "src/server/media/lifecycle-revoke.ts"
       ],
@@ -24070,6 +24171,18 @@
       "semanticVariant": "from:@/lib/visual-fixtures/community-scenarios",
       "sourceNodeId": "source:5cf1bc85c18c6b565352",
       "symbol": "resolveVisualCommunityScenario"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/staging/reservations/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/staging/reservations/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:5d97e2e7b1b27bcf3f9c",
+      "symbol": "documentMutationAdmissionResponse"
     },
     {
       "evidencePaths": [
@@ -28884,6 +28997,18 @@
       "semanticVariant": "DELETE",
       "sourceNodeId": "source:8ef958b279c514a663f5",
       "symbol": "DELETE"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/staging/reservations/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/staging/reservations/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:8f099fceb454325dfe2f",
+      "symbol": "admitDocumentMutation"
     },
     {
       "evidencePaths": [
@@ -40274,6 +40399,17 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:fe76ae80ec2be819feb6",
       "symbol": "EngagementCommentReportReason"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/staging/reservations/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/media/staging/reservations/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "POST",
+      "sourceNodeId": "source:feb53fe7922998d14a70",
+      "symbol": "POST"
     },
     {
       "evidencePaths": [

@@ -87,6 +87,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "public/sw.js",
+    "cloudflare/media-staging/worker-configuration.d.ts",
   ]),
 ]);
 
