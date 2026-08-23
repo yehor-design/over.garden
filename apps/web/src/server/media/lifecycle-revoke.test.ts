@@ -116,6 +116,29 @@ describe("lifecycle revoke", () => {
     expect(result.outcome).toBe(outcome);
   });
 
+  it("performs one canonical probe when the deadline advances before the first attempt", async () => {
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValueOnce(100).mockReturnValue(101);
+    vi.stubGlobal("fetch", vi.fn(async () => ({ status: 401 })));
+
+    try {
+      const { proveCanonicalUrlUnreachable } =
+        await import("./lifecycle-revoke");
+      const result = await proveCanonicalUrlUnreachable(
+        "https://media.over.garden/x",
+        { timeoutMs: 0, pollMs: 0 },
+      );
+
+      expect(result).toEqual({
+        outcome: "indeterminate_auth",
+        canonicalStatus: 401,
+      });
+      expect(fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it("keeps failed HEAD and GET transport indeterminate", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("network"); }));
     const { proveCanonicalUrlUnreachable } = await import("./lifecycle-revoke");
