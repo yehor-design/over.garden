@@ -39,6 +39,7 @@
   ],
   "requiredGuardrailPaths": [
     "docs/adr/ADR-0017-online-only-product.md",
+    "docs/adr/ADR-0019-atomic-local-journal-media.md",
     "docs/SDD_VERTICAL_SLICE_ROADMAP.md",
     "docs/MVP_LEARNING_SIGNALS.md",
     "docs/MVP_PRIVACY_RETENTION_POLICY.md",

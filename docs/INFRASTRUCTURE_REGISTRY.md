@@ -134,6 +134,29 @@ Reference docs:
 
 ## Cloudflare R2
 
+### ADR-0019 target staging (planned; unprovisioned until OVE-346)
+
+OVE-345 selects, but does not create, the following exact production identities:
+
+- private R2 Standard bucket: `overgarden-media-staging`;
+- Worker: `overgarden-media-staging`;
+- custom staging domain: `media-stage.over.garden`;
+- SQLite-backed Durable Object namespace binding: `MEDIA_STAGING_SESSIONS`.
+
+This surface accepts only the browser-generated final WebP through a
+short-lived, owner/session/media-generation-specific capability. It stores no
+journal text or source original, remains private, and is not a public delivery
+origin. Normal abandoned-object cleanup targets 15 minutes; a one-day R2
+lifecycle is the catastrophic fallback. OVE-346 alone owns provider creation,
+configuration, secrets, Vercel environment binding, deployment, rollback, and
+live read-back. Until that issue succeeds, every identity above is explicitly
+unprovisioned and must not be inferred from this planned registry entry.
+
+The existing `overgarden-quarantine` bucket and server conversion path below
+are transitional legacy runtime. OVE-349 owns their application/schema/package
+removal after a zero-use production gate; OVE-350 alone owns isolated provider
+and credential retirement after the full seven-day rollback/retention horizon.
+
 Production S3-compatible client settings:
 
 ```env
@@ -218,11 +241,11 @@ OVE-290 document-generation media contract:
 - Production closeout runs `scripts/smoke-document-mutation-admission.ts` in `reject-only` mode against the immutable exact-SHA deployment. Private A1/A2/B session cookies and the A1 document generation are supplied only through process environment, discarded after the run, and never printed or committed. The smoke performs read-only pre/post database counts and no successful product mutation.
 - On 2026-08-10, Git-backed deployment `dpl_Di1Mwcbtms8mQjjNxgZL9fr2WcwR` reached `READY` at `over-garden-fwg7ddk6a-yehors-projects-01221e2b.vercel.app` and served feature SHA `da38a2c2b5901426353e8d0a55a91a79b584863f` through the canonical aliases. Immutable and canonical read-back both reported enforcement enabled and the default `900`-second TTL. The exact-SHA reject-only smoke proved owner-change, same-owner session-refresh, and malformed-protocol rejection with zero journal-entry and mutation-receipt effects before and after; all three synthetic sessions were revoked and confirmed guest afterward.
 
-### Quarantine Bucket
+### Legacy transitional Quarantine Bucket
 
 - Bucket name: `overgarden-quarantine`
 - Bucket ID: `13b1358d8ffb40d996c50aa7b089a792`
-- Purpose: private original uploads only
+- Purpose: transitional private original uploads for pre-ADR-0019 runtime only
 - Public development URL: disabled
 - Managed `r2.dev` domain: `pub-13b1358d8ffb40d996c50aa7b089a792.r2.dev` (disabled)
 
@@ -255,6 +278,8 @@ Invariants:
 
 - Quarantine keys are server/internal and must not appear in public read models, public HTML, search documents, analytics events, or client-visible derivative URLs.
 - Public pages must never render this bucket or its `r2.dev` domain.
+- No new target flow may depend on this bucket; OVE-349/350 own its gated
+  application and provider retirement respectively.
 
 ### Public Derivative Bucket
 
@@ -287,8 +312,10 @@ Lifecycle:
 
 Invariants:
 
-- Only worker/server-created stripped derivatives belong in this bucket.
-- Do not upload user originals here.
+- During transition, legacy rows may still reference server-created WebP
+  derivatives. Under ADR-0019, atomic publication promotes the exact staged
+  browser-final WebP without re-encoding; both paths must remain final-WebP-only.
+- Do not upload source originals here.
 - Derivative writes should use long-lived immutable cache headers only for content-addressed or otherwise immutable object keys.
 
 ## DigitalOcean

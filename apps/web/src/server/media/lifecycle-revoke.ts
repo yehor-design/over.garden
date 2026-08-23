@@ -80,8 +80,10 @@ export async function proveCanonicalUrlUnreachable(
   const pollMs = options.pollMs ?? MEDIA_REVOKE_PROVE_POLL_MS;
   const deadline = Date.now() + timeoutMs;
   let lastStatus: number | null = null;
+  let firstAttempt = true;
 
-  while (Date.now() <= deadline) {
+  while (firstAttempt || Date.now() <= deadline) {
+    firstAttempt = false;
     const read = await canonicalStatus(canonicalUrl);
     lastStatus = read.canonicalStatus;
     if (read.outcome !== "still_reachable") return read;

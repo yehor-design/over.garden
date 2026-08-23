@@ -2,9 +2,9 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-08-20 (OVE-329 MVP posture canon; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-23 (OVE-345 atomic journal-media canon; authenticated Linear remains primary queue authority)
 Owner: founder
-Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md` as superseded for connectivity by `docs/adr/ADR-0017-online-only-product.md` and for MVP posture by `docs/adr/ADR-0018-mvp-posture.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
+Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md` as superseded for connectivity by `docs/adr/ADR-0017-online-only-product.md`, for MVP posture by `docs/adr/ADR-0018-mvp-posture.md`, and for atomic local journal authoring/client-final media by `docs/adr/ADR-0019-atomic-local-journal-media.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
 This is not the full product backlog. It is the living execution roadmap for the next product-learning slices after the walking skeleton. The skeleton proved the stack; it is not product UI and it is not the final product data model.
 
@@ -20,6 +20,12 @@ use `PUBLIC_SURFACE_INDEXABILITY_THRESHOLD`, and keep admin inside the account
 product. OVE-330 through OVE-339 own runtime and final document convergence;
 their pre-cutover code and historical receipts are not competing authority.
 
+ADR-0019 is the current atomic journal-media authority. New journal authoring
+is transient in tab memory, the exact browser-created WebP is the only final
+media artifact, and only one acknowledged Publish creates durable journal
+state. Legacy server drafts, quarantine originals, and server conversion are
+transitional runtime until their declared child owners complete.
+
 From this point forward, product implementation work must be shipped as narrow vertical SDD slices that wire one user behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media if relevant -> tests -> docs. A task that only creates schema, only builds UI, only wires media, or only adds instrumentation is not a valid product execution slice unless it is embedded inside a user-visible path and proves integration through that path. Remediation, operator, decision, canon-correction, and coordination-container work uses the bounded issue-kind contracts in `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`; never invent fake product layers for those exceptions.
 
 ## Current Execution State
@@ -33,6 +39,19 @@ issues OVE-213 through OVE-244 in `Todo` under
 [SDD Slice 19 - MVP Readiness Remediation And Launch Proof](https://linear.app/overgarden/project/sdd-slice-19-mvp-readiness-remediation-and-launch-proof-724bdf2ae236);
 the newest issue update in that set was `2026-07-25T22:18:33.986Z`. Identifier
 order alone is not execution order.
+
+The authenticated 2026-08-23 media read-back establishes this acyclic chain:
+
+`OVE-333 -> OVE-345 -> OVE-346 -> OVE-347 -> OVE-348 -> OVE-349 -> OVE-350`
+
+OVE-345 owns ADR-0019 and synchronized canon. OVE-346 provisions and proves
+ephemeral Cloudflare staging; OVE-347 cuts over atomic create; OVE-348 cuts over
+atomic edit; OVE-349 removes the unused server-draft/legacy-media application,
+schema, and package surface after zero-use proof; OVE-350 retires only the
+isolated legacy provider surface after its full seven-day horizon. OVE-333 is a
+non-executable, unassigned coordination container that closes last from child
+receipts. Linear status and relation read-back remains authoritative over this
+dated mirror.
 
 Current Stable Registry authority: ADR-0016 and
 `docs/STABLE_REGISTRY.md`. OVE-253 remains a historical `blocked_manifest`
@@ -533,11 +552,17 @@ The fastest useful path is:
 1. Authenticated user lands in a real workspace, not `/skeleton`.
 2. User creates one space and one plant object with minimal catalog assumptions.
 3. User writes a narrative entry with title + body, optional backdate, region/hidden location visibility, and one photo.
-4. Entry save is network-required, uses a server-authoritative idempotency key,
-   and reports `network_unavailable_save_refused` when acknowledgement is unavailable.
-5. Server processes the photo derivative and deletes the original.
-6. User can read the entry back in the app and, if published, on an SSR public route that leaks no precise location and remains `noindex`.
-7. The system records privacy-safe events needed to evaluate activation and journal retention.
+4. Before Publish, text and media orchestration are tab-memory only; the browser
+   creates and previews the exact final WebP and stages those bytes directly to
+   private Cloudflare storage through a narrow capability.
+5. Publish is network-required and freezes one exact document/media snapshot.
+   A server-authoritative idempotency key produces one atomic public record or
+   reports `network_unavailable_save_refused` when acknowledgement is unavailable.
+6. User reads the complete entry back in the app and on its SSR public route;
+   no pending media, precise location, source original, or staging identity is
+   observable, and discoverability remains governed by the measured threshold.
+7. The system records privacy-safe events needed to evaluate activation and
+   journal retention.
 
 ## Slice Roadmap
 

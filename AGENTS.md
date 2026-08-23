@@ -1,6 +1,6 @@
 # AGENTS.md — OverGarden
 
-Operating guide for AI agents and humans working in this repo. Read this before any change. Current stack authority is `docs/TECH_STACK_DECISIONS.md` plus ADR-0014, as superseded for connectivity and browser-local journal persistence by ADR-0017 and for the MVP refusal, media, indexability, and operator-surface posture by ADR-0018. `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md` is the binding construction and Definition-of-Ready contract for every new or materially rewritten Linear work item. Live non-secret infrastructure values and provider links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Product-thinking research lives in `docs/product-research/`. Older ADR clauses are historical when a later accepted ADR explicitly supersedes them.
+Operating guide for AI agents and humans working in this repo. Read this before any change. Current stack authority is `docs/TECH_STACK_DECISIONS.md` plus ADR-0014, as superseded for connectivity and browser-local journal persistence by ADR-0017, for the MVP refusal, media, indexability, and operator-surface posture by ADR-0018, and for atomic local journal authoring and client-final media publication by ADR-0019. `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md` is the binding construction and Definition-of-Ready contract for every new or materially rewritten Linear work item. Live non-secret infrastructure values and provider links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Product-thinking research lives in `docs/product-research/`. Older ADR clauses are historical when a later accepted ADR explicitly supersedes them.
 
 ## Project
 
@@ -17,6 +17,12 @@ policy lives in `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md` and
 the declared `PUBLIC_SURFACE_INDEXABILITY_THRESHOLD` rather than per-kind
 blanket exclusion. The runtime predicate remains transitional until OVE-335.
 
+ADR-0019 is the current atomic journal-media authority. Authoring is
+local-only and non-durable before Publish, the browser-generated WebP is the
+sole final artifact, and image bytes never traverse a Vercel Function. The
+legacy server-draft, quarantine-original, and server-conversion runtime remains
+transitional until OVE-347 through OVE-350 complete.
+
 Current Stable Registry authority: ADR-0016 and `docs/STABLE_REGISTRY.md`.
 EPPO full-corpus inputs are OverGarden-owned observed captures, never official
 EPPO releases. Source capture, rights clearance, identity resolution, immutable
@@ -32,18 +38,21 @@ acquisition gate.
 - Better Auth for auth.
 - Lexical 0.49.0 for the authenticated structured-journal authoring surface;
   `JournalDocumentV1` remains the sole persistence/API/read contract,
-  and public/owner read routes must not load the authoring runtime.
+  public/owner read routes must not load the authoring runtime, and unpublished
+  composer state is local-only and non-durable before Publish under ADR-0019.
 - DigitalOcean Managed Postgres for production data; Apple Container-first local Postgres on supported Macs, with Docker only as fallback.
 - Kysely as the typed SQL builder. SQL migrations are schema source of truth. No ORM.
-- Cloudflare R2 for media. ADR-0018 targets format-conversion-only WebP delivery;
-  the current quarantine topology is transitional runtime owned by OVE-333 and
-  OVE-334, not a new-contract requirement.
+- Cloudflare R2 for media. Under ADR-0019 the browser-generated WebP is the sole
+  final artifact and is uploaded directly to bounded private staging before an
+  atomic publication. The current quarantine-original/server-conversion
+  topology is transitional runtime owned by OVE-349 and OVE-350.
 - Meilisearch as a derived public search/typeahead index.
 - Python worker for RapidFuzz/Splink/PyICU/CyrTranslit matching, dedup, and reindex work.
 - Plain Postgres `job_queue` table for TS -> Python background work. No Redis, no pgmq, no Python-only queue framework.
-- Network-required journal writes governed by ADR-0017: no new durable browser
-  journal state, PWA shell, offline mutation queue, or browser connectivity
-  hint may be presented as a successful save.
+- Network-required journal publication governed by ADR-0017 and ADR-0019: no
+  new durable browser journal state, PWA shell, offline mutation queue, server
+  draft, or browser connectivity hint may be presented as a successful save.
+  Only an acknowledged atomic Publish creates durable product state.
 - Cloudflare for DNS/edge/WAF/R2. Cloudflare must not cache HTML.
 
 ## Container Runtime Policy
@@ -58,9 +67,9 @@ acquisition gate.
 ## Hard Rules
 
 1. User/product precise location remains locked in v0. Free-text coordinates are governed by `docs/PRECISE_LOCATION_TEXT_FIREWALL.md` (OVE-234): the authoritative detector is `apps/web/src/lib/privacy/precise-location-text.ts` with its Python mirror and shared corpus; never add a local coordinate regex. Do not collect, store, send, log, index, render, or infer precise coordinates for OverGarden users, journal entries, media, analytics, public/search documents, operator evidence, or product UI; region-level or hidden only. External catalog/source ingestion may store legally reusable occurrence/distribution coordinates only in isolated raw/source snapshot tables with provenance, license, and usage flags; those fields must stay out of user data, analytics, Meilisearch/public projections, logs, and product UI unless a later explicit ADR and SDD slice promote a safe aggregate projection.
-2. Public product media follows ADR-0018's format-conversion-only target: image input is converted to WebP. Do not add a new quarantine-first, actual-byte, standalone metadata-stripping, or original-deletion readiness promise; OVE-333 and OVE-334 own removal of the transitional runtime controls.
-3. Metadata omission may remain an encoder property, but it is not a separate MVP admission promise. Client processing is an optimization and never proof of a server effect.
-4. No browser-direct broad database access. All app data access goes through server APIs/server actions/repositories. Presigned upload URLs are narrow object-specific exceptions.
+2. Public product media follows ADR-0019: the browser-generated WebP is the sole final artifact, and its exact bytes are previewed, staged, promoted, stored, and served. Image bytes never traverse a Vercel Function. Do not add source-original retention, server re-encoding, a durable pending-media card, or a second final artifact; OVE-347 through OVE-350 own convergence from the transitional runtime.
+3. Metadata omission may remain an encoder property, but it is not a separate MVP admission promise. Client conversion establishes the final WebP itself; a failed client conversion is removable/retryable and must not fall back to server conversion.
+4. No browser-direct broad database access. All app data access goes through server APIs/server actions/repositories. Short-lived, object-specific Cloudflare staging capabilities are narrow exceptions and never authorize journal/database access.
 5. Kysely is allowed and expected. Do not introduce Prisma, Drizzle, TypeORM, or another ORM without a superseding ADR.
 6. Scoped repositories remain the canonical data-access shape. Under ADR-0018, however, an unresolved authorization, ownership, or session condition serves the request and carries the explicitly accepted cross-account-read exposure; OVE-332 owns that runtime cutover. Do not represent the transitional denial runtime as the future contract.
 7. Meilisearch remains a derived public projection. ADR-0018 admits uncertain derived rows with an explicit quality class instead of silently dropping them; OVE-331 owns that transition. Canonical writes still record projection intent transactionally, and positively resolved erasure remains canonical state.
