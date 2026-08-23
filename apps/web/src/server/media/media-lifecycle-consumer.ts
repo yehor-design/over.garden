@@ -10,8 +10,10 @@ import {
   MEDIA_DERIVATIVE_REVOKE_KIND,
   MEDIA_LIFECYCLE_QUEUE,
   MEDIA_QUARANTINE_EXPIRE_KIND,
+  MEDIA_STAGING_FINALIZE_KIND,
   maxAttemptsForKind,
 } from "@/server/job-queue-manifest";
+import { finalizeEphemeralPublicationMedia } from "@/server/media/ephemeral-publication-handoff";
 import {
   revokeMediaObjectBytes,
   type MediaObjectReference,
@@ -141,6 +143,30 @@ export async function claimNextMediaLifecycleJob(
 
 async function processMediaLifecycleJob(job: ClaimedMediaLifecycleJob) {
   const payload = parsePayload(job.payload);
+  if (payload.kind === MEDIA_STAGING_FINALIZE_KIND) {
+    const entry = await db
+      .selectFrom("journal_entries")
+      .select(["owner_user_id", "visibility", "lifecycle_state", "published_at"])
+      .where("id", "=", payload.publishId)
+      .executeTakeFirst();
+    // Erasure can legitimately win before a delayed finalize attempt. The
+    // OVE-346 lease/alarm then removes the uncommitted provider objects.
+    if (!entry) return payload;
+    if (
+      entry.visibility !== "public" ||
+      entry.lifecycle_state !== "active" ||
+      !entry.published_at
+    ) {
+      throw new Error("Atomic publication is not committed.");
+    }
+    await finalizeEphemeralPublicationMedia({
+      ownerUserId: entry.owner_user_id,
+      publishId: payload.publishId,
+      stagingSessionId: payload.stagingSessionId,
+      receiptSetDigest: payload.receiptSetDigest,
+    });
+    return payload;
+  }
   if (
     payload.kind !== MEDIA_DERIVATIVE_REVOKE_KIND &&
     payload.kind !== MEDIA_QUARANTINE_EXPIRE_KIND
@@ -158,17 +184,46 @@ async function processMediaLifecycleJob(job: ClaimedMediaLifecycleJob) {
   return payload;
 }
 
-function parsePayload(raw: unknown): {
-  kind: string;
-  bucket: MediaObjectReference["bucket"];
-  objectKey: string;
-  mediaAssetId?: string;
-} {
+type ParsedMediaLifecyclePayload =
+  | {
+      kind: typeof MEDIA_STAGING_FINALIZE_KIND;
+      publishId: string;
+      stagingSessionId: string;
+      receiptSetDigest: string;
+    }
+  | {
+      kind:
+        | typeof MEDIA_DERIVATIVE_REVOKE_KIND
+        | typeof MEDIA_QUARANTINE_EXPIRE_KIND;
+      bucket: MediaObjectReference["bucket"];
+      objectKey: string;
+      mediaAssetId?: string;
+    };
+
+function parsePayload(raw: unknown): ParsedMediaLifecyclePayload {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error("Media lifecycle job payload is malformed.");
   }
   const payload = raw as Record<string, unknown>;
   const kind = typeof payload.kind === "string" ? payload.kind : "";
+  if (kind === MEDIA_STAGING_FINALIZE_KIND) {
+    const publishId = stringValue(payload.publishId);
+    const stagingSessionId = stringValue(payload.stagingSessionId);
+    const receiptSetDigest = stringValue(payload.receiptSetDigest);
+    if (
+      !UUID.test(publishId) ||
+      !UUID.test(stagingSessionId) ||
+      !/^[A-Za-z0-9_-]{43}$/.test(receiptSetDigest)
+    ) {
+      throw new Error("Media lifecycle job payload is malformed.");
+    }
+    return {
+      kind: MEDIA_STAGING_FINALIZE_KIND,
+      publishId,
+      stagingSessionId,
+      receiptSetDigest,
+    };
+  }
   const bucket = payload.bucket;
   const objectKey =
     typeof payload.objectKey === "string" ? payload.objectKey : "";
@@ -182,17 +237,25 @@ function parsePayload(raw: unknown): {
   ) {
     throw new Error("Media lifecycle job payload is malformed.");
   }
+  if (
+    kind !== MEDIA_DERIVATIVE_REVOKE_KIND &&
+    kind !== MEDIA_QUARANTINE_EXPIRE_KIND
+  ) {
+    throw new Error("Unsupported media lifecycle job kind.");
+  }
   return { kind, bucket, objectKey, mediaAssetId };
 }
 
 async function markJobDone(
   job: ClaimedMediaLifecycleJob,
-  payload: ReturnType<typeof parsePayload>,
+  payload: ParsedMediaLifecyclePayload,
 ): Promise<boolean> {
   return db.transaction().execute(async (trx) => {
     const settled = await settleClaimedJob(trx, job, "done", null);
     if (!settled) return false;
-    if (!payload.mediaAssetId) return true;
+    if (payload.kind === MEDIA_STAGING_FINALIZE_KIND || !payload.mediaAssetId) {
+      return true;
+    }
 
     const now = new Date();
     if (payload.kind === MEDIA_DERIVATIVE_REVOKE_KIND) {
@@ -315,4 +378,11 @@ async function countUnfinishedMediaLifecycleJobs() {
 function parsePayloadSafe(raw: unknown): { kind?: string } | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   return raw as { kind?: string };
+}
+
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function stringValue(value: unknown) {
+  return typeof value === "string" ? value : "";
 }

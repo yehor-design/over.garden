@@ -69,7 +69,12 @@ import {
   readJournalDocumentFromEntry,
   type JournalCoverClaimInput,
 } from "@/server/journal-document-persistence";
-import { enqueueArchiveDerivativeRevokes } from "@/server/media/media-lifecycle-enqueue";
+import {
+  buildEnqueueMediaStagingFinalizeJobQuery,
+  enqueueArchiveDerivativeRevokes,
+} from "@/server/media/media-lifecycle-enqueue";
+import { insertClaimedEphemeralMediaForEntry } from "@/server/media/media-repository";
+import type { ClaimedEphemeralPublicationMedia } from "@/server/media/ephemeral-publication-handoff";
 import {
   ensurePublicProjectionIntent,
   recordPublicProjectionIntent,
@@ -94,12 +99,26 @@ const MAX_PUBLIC_JOURNAL_MEDIA = 10;
 const MAX_PUBLIC_JOURNAL_TOPICS = 8;
 const MAX_PUBLIC_JOURNAL_MENTIONED_OBJECTS = 6;
 const MAX_PUBLIC_JOURNAL_MENTIONED_PROFILES = 8;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const DEFAULT_LOCATION_VISIBILITY: LocationVisibility = "hidden";
 const DEFAULT_ENTRY_VISIBILITY: EntryVisibility = "private";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type NewJournalEntryRow = Insertable<Database["journal_entries"]>;
+
+export interface AtomicCreatePublicationInput {
+  publishId: string;
+  requestDigest: string;
+  disclosureAccepted: boolean;
+  coverMediaAssetId: string | null;
+  handoff: {
+    stagingSessionId: string;
+    receiptSetDigest: string;
+    publicMedia: readonly ClaimedEphemeralPublicationMedia[];
+  } | null;
+}
 
 export interface CreateFirstPlantEntryInput {
   spaceId?: string | null;
@@ -125,6 +144,7 @@ export interface CreateFirstPlantEntryInput {
     plantObjectId: string;
     entryId: string;
   };
+  atomicPublication?: AtomicCreatePublicationInput;
 }
 
 export interface CreateJournalEntryInput {
@@ -147,6 +167,7 @@ export interface CreatePlantObjectJournalEntryInput {
   internalDeterministicIds?: {
     entryId: string;
   };
+  atomicPublication?: AtomicCreatePublicationInput;
 }
 
 export interface CreateSpaceJournalEntryInput {
@@ -160,6 +181,10 @@ export interface CreateSpaceJournalEntryInput {
   mediaAssetId?: string | null;
   cover?: JournalCoverClaimInput | null;
   topicTags?: unknown;
+  internalDeterministicIds?: {
+    entryId: string;
+  };
+  atomicPublication?: AtomicCreatePublicationInput;
 }
 
 export interface PublishJournalEntryInput {
@@ -561,6 +586,170 @@ export interface SpaceJournalEntryResult {
   entry: JournalEntry;
   mentionedObjects: MentionedPlantObjectReadback[];
   isNewEntry: boolean;
+  mediaAttached: boolean;
+}
+
+export interface CommittedAtomicJournalCreateReadback {
+  entry: JournalEntry;
+  publicMedia: Array<{
+    mediaAssetId: string;
+    publicPath: string;
+  }>;
+  finalizeHandoff: {
+    stagingSessionId: string;
+    receiptSetDigest: string;
+  } | null;
+}
+
+/**
+ * Durable owner-scoped replay boundary for a publication whose staging lease
+ * may already be expired or whose provider control plane is unavailable. The
+ * persisted client mutation binds the complete normalized request digest;
+ * every media row is independently required to be in its final public shape.
+ */
+export async function readCommittedAtomicJournalCreate(
+  scope: RequestScope,
+  input: {
+    publishId: string;
+    clientMutationId: string;
+    orderedMediaAssetIds: readonly string[];
+    coverMediaAssetId: string | null;
+  },
+): Promise<CommittedAtomicJournalCreateReadback | null> {
+  const entry = await findJournalEntryById(scope, input.publishId);
+  if (!entry) return null;
+  if (
+    entry.client_mutation_id !== input.clientMutationId ||
+    entry.visibility !== "public" ||
+    entry.lifecycle_state !== "active" ||
+    !entry.public_slug ||
+    !entry.published_at ||
+    entry.public_gone_at !== null ||
+    entry.cover_media_asset_id !== input.coverMediaAssetId
+  ) {
+    throw new Error("idempotency_mismatch");
+  }
+
+  const orderedIds = [...input.orderedMediaAssetIds];
+  const expectedIds = [...orderedIds];
+  if (
+    input.coverMediaAssetId &&
+    !expectedIds.includes(input.coverMediaAssetId)
+  ) {
+    expectedIds.push(input.coverMediaAssetId);
+  }
+  if (new Set(expectedIds).size !== expectedIds.length) {
+    throw new Error("idempotency_mismatch");
+  }
+  const rows = await db
+    .selectFrom("media_assets")
+    .select([
+      "id",
+      "declared_media_type",
+      "admitted_media_type",
+      "derivative_key",
+      "upload_generation",
+      "status",
+      "media_readiness_state",
+      "original_deleted_at",
+      "processing_claim_token",
+      "processing_claimed_at",
+      "revoked_at",
+      "usage_role",
+      "document_position",
+    ])
+    .where("owner_user_id", "=", scope.userId)
+    .where("journal_entry_id", "=", entry.id)
+    .execute();
+  const rowById = new Map(rows.map((row) => [row.id, row]));
+  if (
+    rows.length !== expectedIds.length ||
+    expectedIds.some((id) => !rowById.has(id)) ||
+    rows.some((row) => {
+      const inlineIndex = orderedIds.indexOf(row.id);
+      const expectedRole = inlineIndex >= 0 ? "inline" : "cover_only";
+      const expectedPosition = inlineIndex >= 0 ? inlineIndex + 1 : null;
+      return (
+        row.declared_media_type !== "image/webp" ||
+        row.admitted_media_type !== "image/webp" ||
+        row.derivative_key !==
+          `derivatives/${row.id}/${Number(row.upload_generation)}.webp` ||
+        row.status !== "processed" ||
+        row.media_readiness_state !== "public_ready" ||
+        row.original_deleted_at === null ||
+        row.processing_claim_token !== null ||
+        row.processing_claimed_at !== null ||
+        row.revoked_at !== null ||
+        row.usage_role !== expectedRole ||
+        row.document_position !== expectedPosition
+      );
+    })
+  ) {
+    throw new Error("idempotency_mismatch");
+  }
+
+  const finalizeJobs = await db
+    .selectFrom("job_queue")
+    .select(["idempotency_key", "payload"])
+    .where("queue_name", "=", "media_lifecycle")
+    .where("idempotency_key", "like", `media_staging_finalize:${entry.id}:%`)
+    .execute();
+  const finalizeHandoff =
+    expectedIds.length === 0
+      ? finalizeJobs.length === 0
+        ? null
+        : invalidAtomicReplay()
+      : finalizeJobs.length === 1
+        ? parseAtomicFinalizeHandoff(finalizeJobs[0]!, entry.id)
+        : invalidAtomicReplay();
+
+  return {
+    entry,
+    publicMedia: expectedIds.map((mediaAssetId) => ({
+      mediaAssetId,
+      publicPath: rowById.get(mediaAssetId)!.derivative_key!,
+    })),
+    finalizeHandoff,
+  };
+}
+
+function parseAtomicFinalizeHandoff(
+  job: { idempotency_key: string | null; payload: unknown },
+  publishId: string,
+) {
+  const payload = job.payload;
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    Array.isArray(payload) ||
+    Object.keys(payload).sort().join("\0") !==
+      ["kind", "publishId", "receiptSetDigest", "stagingSessionId"]
+        .sort()
+        .join("\0")
+  ) {
+    return invalidAtomicReplay();
+  }
+  const value = payload as Record<string, unknown>;
+  if (
+    value.kind !== "media_staging_finalize" ||
+    value.publishId !== publishId ||
+    typeof value.stagingSessionId !== "string" ||
+    !UUID_PATTERN.test(value.stagingSessionId) ||
+    typeof value.receiptSetDigest !== "string" ||
+    !/^[A-Za-z0-9_-]{43}$/.test(value.receiptSetDigest) ||
+    job.idempotency_key !==
+      `media_staging_finalize:${publishId}:${value.receiptSetDigest}`
+  ) {
+    return invalidAtomicReplay();
+  }
+  return {
+    stagingSessionId: value.stagingSessionId,
+    receiptSetDigest: value.receiptSetDigest,
+  };
+}
+
+function invalidAtomicReplay(): never {
+  throw new Error("idempotency_mismatch");
 }
 
 export async function createFirstPlantEntry(
@@ -568,10 +757,7 @@ export async function createFirstPlantEntry(
   input: CreateFirstPlantEntryInput,
 ): Promise<FirstPlantEntryResult> {
   const normalized = normalizeCreateFirstPlantEntryInput(input);
-  const existing = await findJournalEntryByClientMutation(
-    scope,
-    normalized.clientMutationId,
-  );
+  const existing = await findExistingJournalEntryForCreate(scope, normalized);
 
   if (existing) {
     return readExistingFirstPlantEntryResult(
@@ -583,13 +769,14 @@ export async function createFirstPlantEntry(
   }
 
   return db.transaction().execute(async (trx) => {
+    await prepareAtomicCreateTransaction(trx, scope, normalized);
     await buildJournalMutationAdvisoryLockQuery(
       scope,
-      normalized.clientMutationId,
+      atomicCreateLockKey(normalized),
     ).execute(trx);
-    const existingAfterLock = await findJournalEntryByClientMutation(
+    const existingAfterLock = await findExistingJournalEntryForCreate(
       scope,
-      normalized.clientMutationId,
+      normalized,
       trx,
     );
     if (existingAfterLock) {
@@ -676,6 +863,7 @@ export async function createFirstPlantEntry(
       ...(normalized.internalDeterministicIds
         ? { id: normalized.internalDeterministicIds.entryId }
         : {}),
+      ...(await atomicJournalEntryValues(trx, scope, normalized)),
       owner_user_id: scope.userId,
       space_id: space.id,
       plant_object_id: plantObject.id,
@@ -686,11 +874,11 @@ export async function createFirstPlantEntry(
       journal_revision: 1,
       entry_scope: "object",
       entry_date: normalized.entryDate,
-      visibility: DEFAULT_ENTRY_VISIBILITY,
       client_mutation_id: normalized.clientMutationId,
     });
 
     if (entry) {
+      await insertAtomicPublicationMedia(trx, scope, entry.id, normalized);
       const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
         journalEntryId: entry.id,
         orderedMediaAssetIds: normalized.orderedMediaAssetIds,
@@ -721,6 +909,7 @@ export async function createFirstPlantEntry(
         explicitTagLabels: normalized.topicTags,
       });
       await enqueueLearningAttributionIntent(trx, scope);
+      await recordAtomicPublicationEffects(trx, scope, entry.id, normalized);
 
       return {
         space: {
@@ -750,9 +939,9 @@ export async function createFirstPlantEntry(
       };
     }
 
-    const existingAfterConflict = await findJournalEntryByClientMutation(
+    const existingAfterConflict = await findExistingJournalEntryForCreate(
       scope,
-      normalized.clientMutationId,
+      normalized,
       trx,
     );
 
@@ -1255,10 +1444,7 @@ export async function createPlantObjectJournalEntry(
   input: CreatePlantObjectJournalEntryInput,
 ): Promise<PlantObjectJournalEntryResult> {
   const normalized = normalizeCreatePlantObjectJournalEntryInput(input);
-  const existing = await findJournalEntryByClientMutation(
-    scope,
-    normalized.clientMutationId,
-  );
+  const existing = await findExistingJournalEntryForCreate(scope, normalized);
 
   if (existing) {
     if (
@@ -1291,13 +1477,14 @@ export async function createPlantObjectJournalEntry(
   }
 
   return db.transaction().execute(async (trx) => {
+    await prepareAtomicCreateTransaction(trx, scope, normalized);
     await buildJournalMutationAdvisoryLockQuery(
       scope,
-      normalized.clientMutationId,
+      atomicCreateLockKey(normalized),
     ).execute(trx);
-    const existingAfterLock = await findJournalEntryByClientMutation(
+    const existingAfterLock = await findExistingJournalEntryForCreate(
       scope,
-      normalized.clientMutationId,
+      normalized,
       trx,
     );
     if (existingAfterLock) {
@@ -1354,6 +1541,7 @@ export async function createPlantObjectJournalEntry(
       ...(normalized.internalDeterministicIds
         ? { id: normalized.internalDeterministicIds.entryId }
         : {}),
+      ...(await atomicJournalEntryValues(trx, scope, normalized)),
       owner_user_id: scope.userId,
       space_id: target.spaceId,
       plant_object_id: target.objectId,
@@ -1364,11 +1552,11 @@ export async function createPlantObjectJournalEntry(
       journal_revision: 1,
       entry_scope: "object",
       entry_date: normalized.entryDate,
-      visibility: DEFAULT_ENTRY_VISIBILITY,
       client_mutation_id: normalized.clientMutationId,
     });
 
     if (entry) {
+      await insertAtomicPublicationMedia(trx, scope, entry.id, normalized);
       const mediaAttached = await attachMediaAssetToEntryIfPresent(
         trx,
         scope,
@@ -1407,6 +1595,7 @@ export async function createPlantObjectJournalEntry(
         explicitTagLabels: normalized.topicTags,
       });
       await enqueueLearningAttributionIntent(trx, scope);
+      await recordAtomicPublicationEffects(trx, scope, entry.id, normalized);
 
       return {
         space: {
@@ -1436,9 +1625,9 @@ export async function createPlantObjectJournalEntry(
       };
     }
 
-    const existingAfterConflict = await findJournalEntryByClientMutation(
+    const existingAfterConflict = await findExistingJournalEntryForCreate(
       scope,
-      normalized.clientMutationId,
+      normalized,
       trx,
     );
 
@@ -1498,10 +1687,7 @@ export async function createSpaceJournalEntry(
   input: CreateSpaceJournalEntryInput,
 ): Promise<SpaceJournalEntryResult> {
   const normalized = normalizeCreateSpaceJournalEntryInput(input);
-  const existing = await findJournalEntryByClientMutation(
-    scope,
-    normalized.clientMutationId,
-  );
+  const existing = await findExistingJournalEntryForCreate(scope, normalized);
 
   if (existing) {
     if (
@@ -1518,22 +1704,31 @@ export async function createSpaceJournalEntry(
       scope,
       existing.id,
     );
+    const mediaAttached = await attachMediaAssetToEntryIfPresent(
+      db,
+      scope,
+      normalized.mediaAssetId,
+      existing.id,
+      normalized.orderedMediaAssetIds,
+    );
     return {
       space: await requireSpaceInScope(db, scope, existing.space_id),
       entry: existing,
       mentionedObjects,
       isNewEntry: false,
+      mediaAttached,
     };
   }
 
   return db.transaction().execute(async (trx) => {
+    await prepareAtomicCreateTransaction(trx, scope, normalized);
     await buildJournalMutationAdvisoryLockQuery(
       scope,
-      normalized.clientMutationId,
+      atomicCreateLockKey(normalized),
     ).execute(trx);
-    const existingAfterLock = await findJournalEntryByClientMutation(
+    const existingAfterLock = await findExistingJournalEntryForCreate(
       scope,
-      normalized.clientMutationId,
+      normalized,
       trx,
     );
     if (existingAfterLock) {
@@ -1551,6 +1746,13 @@ export async function createSpaceJournalEntry(
         scope,
         existingAfterLock.id,
       );
+      const mediaAttached = await attachMediaAssetToEntryIfPresent(
+        trx,
+        scope,
+        normalized.mediaAssetId,
+        existingAfterLock.id,
+        normalized.orderedMediaAssetIds,
+      );
       return {
         space: await requireSpaceInScope(
           trx,
@@ -1560,6 +1762,7 @@ export async function createSpaceJournalEntry(
         entry: existingAfterLock,
         mentionedObjects: existingMentions,
         isNewEntry: false,
+        mediaAttached,
       };
     }
 
@@ -1574,6 +1777,10 @@ export async function createSpaceJournalEntry(
     }
 
     const entry = await insertJournalEntry(trx, {
+      ...(normalized.internalDeterministicIds
+        ? { id: normalized.internalDeterministicIds.entryId }
+        : {}),
+      ...(await atomicJournalEntryValues(trx, scope, normalized)),
       owner_user_id: scope.userId,
       space_id: space.id,
       plant_object_id: null,
@@ -1584,12 +1791,12 @@ export async function createSpaceJournalEntry(
       journal_revision: 1,
       entry_scope: "space",
       entry_date: normalized.entryDate,
-      visibility: DEFAULT_ENTRY_VISIBILITY,
       client_mutation_id: normalized.clientMutationId,
     });
 
     if (entry) {
-      await attachMediaAssetToEntryIfPresent(
+      await insertAtomicPublicationMedia(trx, scope, entry.id, normalized);
+      const mediaAttached = await attachMediaAssetToEntryIfPresent(
         trx,
         scope,
         normalized.mediaAssetId,
@@ -1625,18 +1832,20 @@ export async function createSpaceJournalEntry(
         explicitTagLabels: normalized.topicTags,
       });
       await enqueueLearningAttributionIntent(trx, scope);
+      await recordAtomicPublicationEffects(trx, scope, entry.id, normalized);
 
       return {
         space,
         entry,
         mentionedObjects,
         isNewEntry: true,
+        mediaAttached,
       };
     }
 
-    const existingAfterConflict = await findJournalEntryByClientMutation(
+    const existingAfterConflict = await findExistingJournalEntryForCreate(
       scope,
-      normalized.clientMutationId,
+      normalized,
       trx,
     );
 
@@ -1655,12 +1864,20 @@ export async function createSpaceJournalEntry(
       scope,
       existingAfterConflict.id,
     );
+    const mediaAttached = await attachMediaAssetToEntryIfPresent(
+      trx,
+      scope,
+      normalized.mediaAssetId,
+      existingAfterConflict.id,
+      normalized.orderedMediaAssetIds,
+    );
 
     return {
       space,
       entry: existingAfterConflict,
       mentionedObjects: existingMentions,
       isNewEntry: false,
+      mediaAttached,
     };
   });
 }
@@ -2689,6 +2906,14 @@ export function buildPriorPublicationDisclosureQuery(
     .limit(1);
 }
 
+export async function hasPriorPublicationDisclosure(
+  scope: RequestScope,
+): Promise<boolean> {
+  return Boolean(
+    await buildPriorPublicationDisclosureQuery(db, scope).executeTakeFirst(),
+  );
+}
+
 export function buildPublishJournalEntryQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -3709,6 +3934,211 @@ async function insertJournalEntry(
   return buildInsertJournalEntryQuery(executor, row).executeTakeFirst();
 }
 
+type NormalizedAtomicCreate = {
+  clientMutationId: string;
+  title: string;
+  orderedMediaAssetIds: readonly string[];
+  atomicPublication: AtomicCreatePublicationInput | null;
+};
+
+async function findExistingJournalEntryForCreate(
+  scope: RequestScope,
+  input: NormalizedAtomicCreate,
+  executor: QueryExecutor = db,
+): Promise<JournalEntry | undefined> {
+  const atomic = input.atomicPublication;
+  if (!atomic) {
+    return findJournalEntryByClientMutation(
+      scope,
+      input.clientMutationId,
+      executor,
+    );
+  }
+  assertAtomicClientMutation(input.clientMutationId, atomic);
+  const existing = await findJournalEntryById(
+    scope,
+    atomic.publishId,
+    executor,
+  );
+  if (!existing) return undefined;
+  await assertAtomicPublicationReplayComplete(executor, scope, existing, input);
+  return existing;
+}
+
+function atomicCreateLockKey(input: NormalizedAtomicCreate) {
+  return input.atomicPublication?.publishId ?? input.clientMutationId;
+}
+
+async function prepareAtomicCreateTransaction(
+  executor: Transaction<Database>,
+  scope: RequestScope,
+  input: NormalizedAtomicCreate,
+) {
+  if (!input.atomicPublication) return;
+  await sql`set local statement_timeout = '3000ms'`.execute(executor);
+  await sql`set local lock_timeout = '2750ms'`.execute(executor);
+  await sql`select pg_advisory_xact_lock(hashtextextended(${`atomic-create-owner:${scope.userId}`}, 0))`.execute(
+    executor,
+  );
+}
+
+async function atomicJournalEntryValues(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: NormalizedAtomicCreate,
+): Promise<Partial<NewJournalEntryRow>> {
+  const atomic = input.atomicPublication;
+  if (!atomic) return { visibility: DEFAULT_ENTRY_VISIBILITY };
+  assertAtomicClientMutation(input.clientMutationId, atomic);
+  const priorDisclosure = await buildPriorPublicationDisclosureQuery(
+    executor,
+    scope,
+  ).executeTakeFirst();
+  const disclosureLogged = !priorDisclosure;
+  if (disclosureLogged && !atomic.disclosureAccepted) {
+    throw new Error("First-publication disclosure must be accepted.");
+  }
+  const now = new Date();
+  return {
+    id: atomic.publishId,
+    visibility: "public",
+    lifecycle_state: "active",
+    public_slug: createAtomicPublicSlug(input.title, atomic.publishId),
+    public_noindex: true,
+    published_at: now,
+    first_publication_disclosure_version: disclosureLogged
+      ? FIRST_PUBLICATION_DISCLOSURE_VERSION
+      : null,
+    first_publication_disclosed_at: disclosureLogged ? now : null,
+  };
+}
+
+async function insertAtomicPublicationMedia(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  journalEntryId: string,
+  input: NormalizedAtomicCreate,
+) {
+  const atomic = input.atomicPublication;
+  if (!atomic?.handoff) return;
+  await insertClaimedEphemeralMediaForEntry(executor, {
+    ownerUserId: scope.userId,
+    journalEntryId,
+    stagingSessionId: atomic.handoff.stagingSessionId,
+    media: atomic.handoff.publicMedia,
+    orderedInlineMediaAssetIds: input.orderedMediaAssetIds,
+    coverMediaAssetId: atomic.coverMediaAssetId,
+  });
+}
+
+async function recordAtomicPublicationEffects(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  journalEntryId: string,
+  input: NormalizedAtomicCreate,
+) {
+  const atomic = input.atomicPublication;
+  if (!atomic) return;
+  await recordPublicProjectionIntent(executor, {
+    entityId: journalEntryId,
+    ownerUserId: scope.userId,
+    desiredState: "present",
+    reason: "publish",
+  });
+  if (atomic.handoff) {
+    await buildEnqueueMediaStagingFinalizeJobQuery(executor, {
+      publishId: atomic.publishId,
+      stagingSessionId: atomic.handoff.stagingSessionId,
+      receiptSetDigest: atomic.handoff.receiptSetDigest,
+    }).execute();
+  }
+}
+
+async function assertAtomicPublicationReplayComplete(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  entry: JournalEntry,
+  input: NormalizedAtomicCreate,
+) {
+  const atomic = input.atomicPublication;
+  if (!atomic) return;
+  if (
+    entry.id !== atomic.publishId ||
+    entry.client_mutation_id !== atomicClientMutationId(atomic) ||
+    entry.visibility !== "public" ||
+    entry.lifecycle_state !== "active" ||
+    !entry.public_slug ||
+    !entry.published_at ||
+    entry.cover_media_asset_id !== atomic.coverMediaAssetId
+  ) {
+    throw new Error("idempotency_mismatch");
+  }
+  const expected = atomic.handoff?.publicMedia ?? [];
+  const rows = await executor
+    .selectFrom("media_assets")
+    .select([
+      "id",
+      "upload_generation",
+      "declared_size_bytes",
+      "intrinsic_width",
+      "intrinsic_height",
+      "derivative_key",
+      "media_readiness_state",
+      "status",
+    ])
+    .where("owner_user_id", "=", scope.userId)
+    .where("journal_entry_id", "=", entry.id)
+    .orderBy("id", "asc")
+    .execute();
+  const sortedExpected = [...expected].sort((left, right) =>
+    left.mediaAssetId.localeCompare(right.mediaAssetId),
+  );
+  if (
+    rows.length !== sortedExpected.length ||
+    rows.some((row, index) => {
+      const media = sortedExpected[index]!;
+      return (
+        row.id !== media.mediaAssetId ||
+        Number(row.upload_generation) !== media.generation ||
+        Number(row.declared_size_bytes) !== media.sizeBytes ||
+        row.intrinsic_width !== media.width ||
+        row.intrinsic_height !== media.height ||
+        row.derivative_key !== media.publicPath ||
+        row.media_readiness_state !== "public_ready" ||
+        row.status !== "processed"
+      );
+    })
+  ) {
+    throw new Error("idempotency_mismatch");
+  }
+}
+
+function assertAtomicClientMutation(
+  clientMutationId: string,
+  atomic: AtomicCreatePublicationInput,
+) {
+  if (clientMutationId !== atomicClientMutationId(atomic)) {
+    throw new Error("idempotency_mismatch");
+  }
+}
+
+export function atomicClientMutationId(
+  atomic: Pick<AtomicCreatePublicationInput, "publishId" | "requestDigest">,
+) {
+  return `atomic:${atomic.publishId}:${atomic.requestDigest}`;
+}
+
+function createAtomicPublicSlug(title: string, publishId: string) {
+  const suffix = publishId.replaceAll("-", "").slice(0, 12);
+  const base = title
+    .toLocaleLowerCase("en")
+    .normalize("NFKD")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, Math.max(1, MAX_PUBLIC_SLUG_LENGTH - suffix.length - 1));
+  return `${base || "entry"}-${suffix}`;
+}
+
 async function findJournalEntryByClientMutation(
   scope: RequestScope,
   clientMutationId: string,
@@ -3891,6 +4321,7 @@ function normalizeCreateFirstPlantEntryInput(
         ? [mediaAssetId]
         : [];
 
+  const cover = normalizeJournalCoverClaimInput(input.cover);
   return {
     spaceId,
     spaceName: spaceName ?? "",
@@ -3924,10 +4355,15 @@ function normalizeCreateFirstPlantEntryInput(
       200,
     ),
     mediaAssetId,
-    cover: normalizeJournalCoverClaimInput(input.cover),
+    cover,
     mentionSelections: input.mentionSelections ?? [],
     topicTags: input.topicTags ?? [],
     internalDeterministicIds: input.internalDeterministicIds ?? null,
+    atomicPublication: normalizeAtomicCreatePublication(
+      input.atomicPublication,
+      orderedMediaAssetIds,
+      cover,
+    ),
   };
 }
 
@@ -3951,6 +4387,7 @@ function normalizeCreatePlantObjectJournalEntryInput(
         ? [mediaAssetId]
         : [];
 
+  const cover = normalizeJournalCoverClaimInput(input.cover);
   return {
     plantObjectId: normalizeRequiredText(
       input.plantObjectId,
@@ -3969,10 +4406,15 @@ function normalizeCreatePlantObjectJournalEntryInput(
       200,
     ),
     mediaAssetId,
-    cover: normalizeJournalCoverClaimInput(input.cover),
+    cover,
     mentionSelections: input.mentionSelections ?? [],
     topicTags: input.topicTags ?? [],
     internalDeterministicIds: input.internalDeterministicIds ?? null,
+    atomicPublication: normalizeAtomicCreatePublication(
+      input.atomicPublication,
+      orderedMediaAssetIds,
+      cover,
+    ),
   };
 }
 
@@ -4009,6 +4451,7 @@ function normalizeCreateSpaceJournalEntryInput(
         ? [mediaAssetId]
         : [];
 
+  const cover = normalizeJournalCoverClaimInput(input.cover);
   return {
     spaceId,
     mentionedPlantObjectIds,
@@ -4024,9 +4467,56 @@ function normalizeCreateSpaceJournalEntryInput(
       200,
     ),
     mediaAssetId,
-    cover: normalizeJournalCoverClaimInput(input.cover),
+    cover,
     topicTags: input.topicTags ?? [],
+    internalDeterministicIds: input.internalDeterministicIds ?? null,
+    atomicPublication: normalizeAtomicCreatePublication(
+      input.atomicPublication,
+      orderedMediaAssetIds,
+      cover,
+    ),
   };
+}
+
+function normalizeAtomicCreatePublication(
+  input: AtomicCreatePublicationInput | undefined,
+  orderedInlineMediaAssetIds: readonly string[],
+  cover: JournalCoverClaimInput,
+): AtomicCreatePublicationInput | null {
+  if (!input) return null;
+  if (
+    !UUID_PATTERN.test(input.publishId) ||
+    !/^[A-Za-z0-9_-]{43}$/.test(input.requestDigest)
+  ) {
+    throw new Error("atomic_publication_invalid");
+  }
+  const coverMediaAssetId =
+    cover.mode === "explicit_inline" ||
+    cover.mode === "separate" ||
+    cover.mode === "keep_as_cover"
+      ? cover.mediaAssetId
+      : null;
+  if (coverMediaAssetId !== input.coverMediaAssetId) {
+    throw new Error("atomic_cover_mismatch");
+  }
+  const expected = new Set(orderedInlineMediaAssetIds);
+  if (coverMediaAssetId) expected.add(coverMediaAssetId);
+  if (expected.size === 0) {
+    if (input.handoff !== null) throw new Error("atomic_media_set_mismatch");
+  } else {
+    if (
+      !input.handoff ||
+      !UUID_PATTERN.test(input.handoff.stagingSessionId) ||
+      !/^[A-Za-z0-9_-]{43}$/.test(input.handoff.receiptSetDigest) ||
+      input.handoff.publicMedia.length !== expected.size ||
+      input.handoff.publicMedia.some(
+        (media) => !expected.has(media.mediaAssetId),
+      )
+    ) {
+      throw new Error("atomic_media_set_mismatch");
+    }
+  }
+  return input;
 }
 
 function normalizeJournalCoverClaimInput(

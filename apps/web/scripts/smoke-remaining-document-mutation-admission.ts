@@ -460,7 +460,7 @@ function requireReadback(
   }
   if (
     sourceReceipt.enforcement.ove291EntrypointCount !== 125 ||
-    sourceReceipt.enforcement.ove291ConsumerEdgeCount !== 350 ||
+    sourceReceipt.enforcement.ove291ConsumerEdgeCount !== 351 ||
     sourceReceipt.explicitGoogleLink.entrypointCount !== 5 ||
     sourceReceipt.explicitGoogleLink.consumerEdgeCount !== 15 ||
     sourceReceipt.explicitGoogleLink.ownershipDigest !==

@@ -21,6 +21,10 @@ export const ONLINE_JOURNAL_PROTOCOL_HEADER =
 export const ONLINE_JOURNAL_PROTOCOL =
   "ove321.server-authoritative-journal.v1" as const;
 export const LEGACY_CLIENT_RETIRED_CODE = "legacy_client_retired" as const;
+export const ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER =
+  "x-overgarden-atomic-journal-create" as const;
+export const ATOMIC_JOURNAL_CREATE_PROTOCOL =
+  "ove347.atomic-journal-create.v1" as const;
 
 export function hasCurrentOnlineJournalProtocol(request: Request): boolean {
   return (
@@ -46,6 +50,64 @@ export type JournalEntryTarget =
   | "first_plant_entry"
   | "plant_object_entry"
   | "space_entry";
+
+export type AtomicJournalCreateContext =
+  | {
+      target: "first_plant_entry";
+      spaceId?: string | null;
+      spaceName?: string | null;
+      plantName: string;
+      objectKind?: PlantObjectKind | null;
+      catalogItemId?: string | null;
+      userAddedCatalogName?: string | null;
+      locationVisibility?: string | null;
+      coarseRegionCode?: string | null;
+      entryDate?: string | null;
+      activationSource?: ActivationSource | null;
+      mentionSelections?: JournalMentionSelection[];
+      topicTags?: string[];
+    }
+  | {
+      target: "plant_object_entry";
+      plantObjectId: string;
+      entryDate?: string | null;
+      mentionSelections?: JournalMentionSelection[];
+      topicTags?: string[];
+    }
+  | {
+      target: "space_entry";
+      spaceId: string;
+      mentionedPlantObjectIds: string[];
+      entryDate?: string | null;
+      topicTags?: string[];
+    };
+
+export interface AtomicJournalCreateRequest {
+  publishId: string;
+  clientMutationId: string;
+  context: AtomicJournalCreateContext;
+  title: string;
+  document: JournalDocumentV1;
+  coverMediaAssetId: string | null;
+  mediaClaimReceipts: string[];
+  returnTo: string;
+  disclosureAccepted: boolean;
+}
+
+export interface AtomicJournalCreateResponse {
+  entryId: string;
+  slug: string;
+  revision: number;
+  card: {
+    entryId: string;
+    title: string;
+    bodyPreview: string;
+    entryDate: string;
+    coverUrl: string | null;
+    publicPath: string;
+  };
+  returnTo: string;
+}
 
 export interface FirstEntryCatalogSelection {
   id: string;

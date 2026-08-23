@@ -12,6 +12,10 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       "Збереження зупинено: частина блоку зникла під час серіалізації.",
     imageChoose: "Додати фото",
     imageUploading: "Обробка фото…",
+    imageFailed: "Фото не вдалося підготувати. Запис ще не опубліковано.",
+    imageRetry: "Повторити фото",
+    imageReplace: "Замінити фото",
+    imageSetCover: "Використати як обкладинку",
     imageRemove: "Прибрати фото",
     imageRejectRemote:
       "Можна лише файл з пристрою. Посилання й віддалені зображення відхилено.",
@@ -72,6 +76,10 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     silentLoss: "Записът е спрян: част от блок изчезна при сериализация.",
     imageChoose: "Добави снимка",
     imageUploading: "Обработка на снимка…",
+    imageFailed: "Снимката не можа да бъде подготвена. Записът не е публикуван.",
+    imageRetry: "Опитай снимката отново",
+    imageReplace: "Замени снимката",
+    imageSetCover: "Използвай за корица",
     imageRemove: "Премахни снимка",
     imageRejectRemote:
       "Само файл от устройството. Връзки и отдалечени изображения са отхвърлени.",
@@ -132,6 +140,10 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     silentLoss: "Сохранение остановлено: часть блока исчезла при сериализации.",
     imageChoose: "Добавить фото",
     imageUploading: "Обработка фото…",
+    imageFailed: "Фото не удалось подготовить. Запись ещё не опубликована.",
+    imageRetry: "Повторить фото",
+    imageReplace: "Заменить фото",
+    imageSetCover: "Использовать как обложку",
     imageRemove: "Убрать фото",
     imageRejectRemote:
       "Только файл с устройства. Ссылки и удалённые изображения отклонены.",

@@ -11,29 +11,24 @@ import {
 } from "@/components/auth/document-mutation-recovery";
 import {
   JournalCoverControls,
-  journalCoverSelectionToClaimInput,
   type JournalCoverSelectionState,
 } from "@/components/garden/journal-cover-controls";
-import { OnlineJournalComposerStatus } from "@/components/garden/online-journal-composer-status";
+import {
+  LocalJournalComposerStatus,
+  LocalJournalPublicationDisclosure,
+} from "@/components/garden/local-journal-composer-status";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import { useScrollToHashOnMount } from "@/lib/browser/hash-scroll";
 import type { PlantObjectKind } from "@/db/schema";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import { COMPOSER_PHOTO_ACCEPT } from "@/lib/garden/composer-photo-selection";
 import {
-  clearComposerPhotoIntent,
-  COMPOSER_PHOTO_ACCEPT,
-  composerPhotoSelectionError,
-  createComposerPhotoIntent,
-  type OnlineComposerPhotoIntent,
-} from "@/lib/garden/composer-photo-selection";
-import { useInlineMediaSelection } from "@/lib/garden/use-inline-media-selection";
-import {
-  OnlineJournalSubmitError,
-  uploadOnlineComposerPhoto,
-} from "@/lib/garden/online-journal-submit";
-import { useOnlineJournalComposer } from "@/lib/garden/use-online-journal-composer";
+  LocalJournalComposerError,
+  useLocalJournalComposer,
+} from "@/lib/garden/use-local-journal-composer";
+import { getAtomicJournalCreateCopy } from "@/lib/garden/atomic-journal-create-copy";
 import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
 import {
   createEmptyJournalDocument,
@@ -51,17 +46,10 @@ import {
   suggestJournalEntryTitle,
 } from "@/lib/garden/journal-title-prefill";
 import {
-  formatGardenWorkspaceTemplate,
   getGardenWorkspaceCopy,
   type GardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
 import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
-import {
-  JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION,
-  type JournalEntryDraftPayloadV1,
-  type JournalEntryDraftReceiptV1,
-} from "@/lib/garden/entry-contracts";
-import { buildFollowUpValuePulseReadbackUrl } from "@/lib/garden/follow-up-value-pulse";
 import {
   formatOwnerObjectTemplate,
   getOwnerObjectCopy,
@@ -88,6 +76,7 @@ interface FollowUpEntryComposerProps {
   objectKind: PlantObjectKind;
   today: string;
   initialClientMutationId: string;
+  requiresFirstPublicationDisclosure: boolean;
   visualScenario?: VisualFixtureCreationScenarioEvidence | null;
 }
 
@@ -101,15 +90,15 @@ interface FollowUpEntryDraftFields {
 }
 
 export function FollowUpEntryComposer({
-  ownerUserId,
   locale,
   objectId,
   objectDisplayName,
   today,
-  initialClientMutationId,
+  requiresFirstPublicationDisclosure,
   visualScenario = null,
 }: FollowUpEntryComposerProps) {
   const workspaceCopy = getGardenWorkspaceCopy(locale);
+  const atomicCopy = getAtomicJournalCreateCopy(locale);
   const documentMutation = useOptionalDocumentMutationGeneration();
   const ownerCopy = getOwnerObjectCopy(locale);
   useScrollToHashOnMount("follow-up-composer");
@@ -120,22 +109,13 @@ export function FollowUpEntryComposer({
     null,
   );
   const photoInputRef = useRef<HTMLInputElement | null>(null);
-  const photoIntentRequestRef = useRef(0);
   const localeMutationCountRef = useRef(0);
-  const draftId = `follow-up-entry:${objectId}`;
-  const [clientMutationId, setClientMutationId] = useState(
-    visualScenario?.clientMutationId ?? initialClientMutationId,
-  );
   const [draft, setDraft] = useState<FollowUpEntryDraftFields>({
     title: visualScenario?.entryTitle ?? "",
     body: visualScenario?.entryBody ?? "",
     contentDocument: null,
     entryDate: visualScenario?.entryDate ?? today,
   });
-  const [photoIntentsByBlockId, setPhotoIntentsByBlockId] = useState<
-    Record<string, OnlineComposerPhotoIntent>
-  >({});
-  const inlineMedia = useInlineMediaSelection(ownerUserId);
   const [coverSelection, setCoverSelection] =
     useState<JournalCoverSelectionState>({ mode: "automatic" });
   const [pendingCoverInlineRemoval, setPendingCoverInlineRemoval] = useState<{
@@ -156,16 +136,6 @@ export function FollowUpEntryComposer({
   const [mentionStatus, setMentionStatus] =
     useState<MentionTypeaheadStatus>("idle");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [storedPhotoIntent, setStoredPhotoIntent] =
-    useState<OnlineComposerPhotoIntent | null>(
-      visualScenario?.mediaFileName
-        ? {
-            fileName: visualScenario.mediaFileName,
-            contentType: "image/jpeg",
-            size: 2_400_000,
-          }
-        : null,
-    );
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [primaryMediaAssetId, setPrimaryMediaAssetId] = useState<string | null>(
     null,
@@ -174,46 +144,43 @@ export function FollowUpEntryComposer({
     visualScenario?.submitState === "failed" ? "failed" : "idle",
   );
   const [message, setMessage] = useState(
-    localizedVisualScenarioMessage(
-      workspaceCopy,
-      ownerCopy,
-      visualScenario,
-      objectDisplayName,
-    ),
+    visualScenario
+      ? localizedVisualScenarioMessage(
+          workspaceCopy,
+          ownerCopy,
+          visualScenario,
+          objectDisplayName,
+        )
+      : atomicCopy.localOnly,
   );
+  const [disclosureAccepted, setDisclosureAccepted] = useState(false);
   const [localeMutationPending, setLocaleMutationPending] = useState(false);
-  const draftPayload = useMemo(
-    () =>
-      followUpDraftPayload({
-        objectId,
-        draft,
-        clientMutationId,
-        mentionSelections,
-        topicTagInput,
-        primaryMediaAssetId,
-        coverSelection,
-      }),
-    [
-      clientMutationId,
-      coverSelection,
-      draft,
-      mentionSelections,
-      objectId,
-      primaryMediaAssetId,
-      topicTagInput,
-    ],
-  );
-  const online = useOnlineJournalComposer({
-    draftKey: draftId,
-    draftKind: "follow_up",
-    context: { plantObjectId: objectId },
-    payload: draftPayload,
+  const local = useLocalJournalComposer({
     documentMutationGeneration: documentMutation?.transport,
     enabled: visualScenario == null,
-    onHydrated: hydrateServerDraft,
+    fallbackReturnTo: `/garden/objects/${objectId}`,
+    dirty: Boolean(
+      draft.title ||
+      draft.body ||
+      draft.contentDocument?.blocks.length ||
+      photoFile,
+    ),
   });
-  const draftHydrated = online.state.hydrated;
-  const persistenceFrozen = online.readOnly;
+  const imageStates = useMemo(
+    () =>
+      new Map(
+        local.media.items.map((item) => [
+          item.mediaAssetId,
+          {
+            status: item.status,
+            previewUrl: item.previewUrl,
+            failureCode: item.failureCode,
+          },
+        ]),
+      ),
+    [local.media],
+  );
+  const persistenceFrozen = local.readOnly;
 
   useInterfaceLocaleChangeFormState({
     id: "follow-up-entry-composer-mutation",
@@ -234,39 +201,13 @@ export function FollowUpEntryComposer({
     if (localeMutationCountRef.current === 0) setLocaleMutationPending(false);
   }
 
-  function hydrateServerDraft(receipt: JournalEntryDraftReceiptV1) {
-    if (
-      receipt.draftKind !== "follow_up" ||
-      receipt.payload.draftKind !== "follow_up" ||
-      receipt.payload.request.plantObjectId !== objectId
-    ) {
-      return;
-    }
-    const request = receipt.payload.request;
-    setClientMutationId(request.clientMutationId);
-    setDraft({
-      title: request.title,
-      body: request.body ?? "",
-      contentDocument: request.contentDocument ?? null,
-      entryDate: request.entryDate ?? today,
-    });
-    titleEditedByUserRef.current = request.title.trim().length > 0;
-    setMentionSelections(request.mentionSelections ?? []);
-    setTopicTagInput(receipt.payload.composerState?.topicTagInput ?? "");
-    setPrimaryMediaAssetId(request.mediaAssetId || null);
-    setCoverSelection(coverSelectionFromRequest(request.cover));
-    setMessage(workspaceCopy.composer.draftRestored);
-  }
-
-  const photoHelp = localizedPhotoHelp(workspaceCopy, {
-    fileName: photoFile?.name ?? storedPhotoIntent?.fileName ?? null,
+  const photoHelp = localizedAtomicPhotoHelp(atomicCopy, {
+    fileName: photoFile?.name ?? null,
     photoError,
     ready: primaryMediaAssetId !== null,
   });
 
-  const hasSelectedPhoto = Boolean(
-    photoFile || storedPhotoIntent || primaryMediaAssetId,
-  );
+  const hasSelectedPhoto = Boolean(photoFile || primaryMediaAssetId);
 
   useEffect(() => {
     if (!activeMentionToken) {
@@ -334,9 +275,9 @@ export function FollowUpEntryComposer({
         return;
       }
 
-      let payload: JournalEntryDraftPayloadV1;
+      let document: JournalDocumentV1;
       try {
-        payload = await buildPayload();
+        document = await buildDocument();
       } catch {
         setSubmitState("failed");
         setMessage(workspaceCopy.composer.photo.readError);
@@ -344,29 +285,41 @@ export function FollowUpEntryComposer({
       }
 
       setSubmitState("publishing");
-      setMessage(workspaceCopy.composer.messages.savingPrivate);
+      setMessage(atomicCopy.publishing);
 
       try {
-        const result = await online.publish(payload);
+        const result = await local.publish({
+          context: {
+            target: "plant_object_entry",
+            plantObjectId: objectId,
+            entryDate: draft.entryDate,
+            mentionSelections,
+            topicTags: normalizeJournalTopicTagLabels(topicTagInput),
+          },
+          title: draft.title,
+          document,
+          coverMediaAssetId: selectedCoverMediaAssetId(
+            coverSelection,
+            document,
+          ),
+          disclosureAccepted,
+        });
         setSubmitState("published");
-        setMessage(workspaceCopy.composer.messages.saved);
-        if ("readbackUrl" in result && typeof result.readbackUrl === "string") {
-          router.push(
-            result.followUpValuePulse
-              ? buildFollowUpValuePulseReadbackUrl(
-                  result.readbackUrl,
-                  result.followUpValuePulse.journalEntryId,
-                )
-              : result.readbackUrl,
-          );
-        } else {
-          router.push(`/garden/objects/${objectId}`);
-        }
+        setMessage(atomicCopy.published);
+        router.push(result.returnTo);
         router.refresh();
       } catch (error) {
         handleTransportBoundary(error);
+        if (
+          error instanceof LocalJournalComposerError &&
+          error.code === "publication_cancelled"
+        ) {
+          setSubmitState("idle");
+          setMessage(atomicCopy.localOnly);
+          return;
+        }
         setSubmitState("failed");
-        setMessage(workspaceCopy.composer.messages.genericSaveError);
+        setMessage(atomicCopy.failed);
       }
     } finally {
       endLocaleMutation();
@@ -414,69 +367,36 @@ export function FollowUpEntryComposer({
     }
   }
 
-  async function handleCancel() {
-    if (visualScenario || online.readOnly) {
-      router.push(`/garden/objects/${objectId}`);
-      return;
-    }
-    beginLocaleMutation();
-    try {
-      const payload = await buildPayload();
-      await online.saveNow(payload);
-      router.push(`/garden/objects/${objectId}`);
-    } catch (error) {
-      handleTransportBoundary(error);
-      setSubmitState("failed");
-      setMessage(workspaceCopy.composer.messages.preserveDraftError);
-    } finally {
-      endLocaleMutation();
-    }
+  function handleCancel() {
+    local.abandon();
+    router.push(`/garden/objects/${objectId}`);
   }
 
   function handleTransportBoundary(error: unknown) {
     if (
-      error instanceof OnlineJournalSubmitError &&
-      error.documentMutationAdmission
+      error instanceof LocalJournalComposerError &&
+      typeof error.details?.documentMutationAdmission === "string"
     ) {
-      documentMutation?.handleTransportResult(error.documentMutationAdmission);
+      documentMutation?.handleTransportResult(
+        error.details.documentMutationAdmission as Parameters<
+          NonNullable<typeof documentMutation>["handleTransportResult"]
+        >[0],
+      );
     }
-    if (error instanceof OnlineJournalSubmitError && error.authIntentUrl) {
-      window.location.assign(error.authIntentUrl);
-    }
-  }
-
-  async function uploadPhoto(intent: OnlineComposerPhotoIntent) {
-    const transport = documentMutation?.transport;
-    if (!transport) throw new Error("Document session is not ready.");
-    try {
-      return await uploadOnlineComposerPhoto({
-        intent,
-        authReturnTo: `/garden/objects/${objectId}`,
-        documentMutationGeneration: transport,
-      });
-    } catch (error) {
-      handleTransportBoundary(error);
-      online.reportConnectionRequired(error);
-      throw error;
+    if (
+      error instanceof LocalJournalComposerError &&
+      error.details?.authIntentUrl
+    ) {
+      window.location.assign(error.details.authIntentUrl);
     }
   }
 
-  async function buildPayload(): Promise<JournalEntryDraftPayloadV1> {
-    const contentDocument =
+  async function buildDocument(): Promise<JournalDocumentV1> {
+    return (
       (await structuredComposerRef.current?.flushLatest()) ??
-      draft.contentDocument;
-    const body = contentDocument
-      ? extractJournalDocumentPlainText(contentDocument)
-      : draft.body;
-    return followUpDraftPayload({
-      objectId,
-      draft: { ...draft, body, contentDocument },
-      clientMutationId,
-      mentionSelections,
-      topicTagInput,
-      primaryMediaAssetId,
-      coverSelection,
-    });
+      draft.contentDocument ??
+      createEmptyJournalDocument()
+    );
   }
 
   function updateDraft<K extends keyof FollowUpEntryDraftFields>(
@@ -566,62 +486,46 @@ export function FollowUpEntryComposer({
   function handlePhotoChange(file: File | undefined) {
     if (isComposerPersistenceFrozen()) return;
     setPhotoError(null);
-    const requestId = photoIntentRequestRef.current + 1;
-    photoIntentRequestRef.current = requestId;
 
     if (!file) {
       clearPhotoSelection(false);
       return;
     }
 
-    const selectionError = composerPhotoSelectionError(file);
-    if (selectionError) {
+    try {
+      const selected = primaryMediaAssetId
+        ? local.replaceImage(primaryMediaAssetId, file)
+        : local.selectImage(file, `cover_${crypto.randomUUID()}`);
+      setPhotoFile(file);
+      setPrimaryMediaAssetId(selected.mediaAssetId);
+      setCoverSelection({
+        mode: "separate",
+        mediaAssetId: selected.mediaAssetId,
+        previewUrl: null,
+      });
+      setDraft((current) => withSuggestedTitle(current, { hasPhoto: true }));
+      void selected.ready.catch(() => {
+        setPhotoError(atomicCopy.photoFailed);
+      });
+    } catch {
       setPhotoFile(null);
-      setStoredPhotoIntent(clearComposerPhotoIntent());
-      setPhotoError(
-        selectionError.startsWith("Choose a photo up to")
-          ? formatGardenWorkspaceTemplate(
-              workspaceCopy.composer.photo.tooLarge,
-              {
-                maxMegabytes: selectionError.match(/\d+/u)?.[0] ?? "12",
-              },
-            )
-          : workspaceCopy.composer.photo.unsupported,
-      );
+      setPhotoError(atomicCopy.photoFailed);
       resetPhotoInput();
       setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
-      return;
     }
-
-    setPhotoFile(file);
-    setStoredPhotoIntent(clearComposerPhotoIntent());
-    setDraft((current) => withSuggestedTitle(current, { hasPhoto: true }));
-    void createComposerPhotoIntent(file)
-      .then(async (intent) => {
-        if (
-          !isComposerPersistenceFrozen() &&
-          photoIntentRequestRef.current === requestId
-        ) {
-          setStoredPhotoIntent(intent);
-          const uploaded = await uploadPhoto(intent);
-          if (photoIntentRequestRef.current === requestId) {
-            setPrimaryMediaAssetId(uploaded.mediaAssetId);
-          }
-        }
-      })
-      .catch((error) => {
-        if (photoIntentRequestRef.current !== requestId) return;
-        online.reportConnectionRequired(error);
-        setPhotoError(workspaceCopy.composer.photo.uploadError);
-      });
   }
 
   function clearPhotoSelection(resetInput = true) {
     if (isComposerPersistenceFrozen()) return;
-    photoIntentRequestRef.current += 1;
+    if (primaryMediaAssetId) void local.removeImage(primaryMediaAssetId);
     setPhotoFile(null);
-    setStoredPhotoIntent(clearComposerPhotoIntent());
     setPrimaryMediaAssetId(null);
+    if (
+      coverSelection.mode === "separate" &&
+      coverSelection.mediaAssetId === primaryMediaAssetId
+    ) {
+      setCoverSelection({ mode: "automatic" });
+    }
     setPhotoError(null);
     if (resetInput) resetPhotoInput();
     setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
@@ -634,7 +538,7 @@ export function FollowUpEntryComposer({
   }
 
   function isComposerPersistenceFrozen() {
-    return online.readOnly;
+    return local.readOnly;
   }
 
   function withSuggestedTitle(
@@ -645,7 +549,7 @@ export function FollowUpEntryComposer({
       entryDate: nextDraft.entryDate,
       objectLabel: objectDisplayName,
       body: nextDraft.body,
-      hasPhoto: options.hasPhoto ?? Boolean(photoFile || storedPhotoIntent),
+      hasPhoto: options.hasPhoto ?? Boolean(photoFile || primaryMediaAssetId),
     });
 
     return {
@@ -658,30 +562,34 @@ export function FollowUpEntryComposer({
     };
   }
 
+  function changeCover(next: JournalCoverSelectionState) {
+    if (
+      coverSelection.mode === "separate" &&
+      coverSelection.mediaAssetId &&
+      (next.mode !== "separate" ||
+        next.mediaAssetId !== coverSelection.mediaAssetId)
+    ) {
+      void local.removeImage(coverSelection.mediaAssetId);
+      if (primaryMediaAssetId === coverSelection.mediaAssetId) {
+        setPrimaryMediaAssetId(null);
+        setPhotoFile(null);
+      }
+    }
+    setCoverSelection(next);
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
-      data-online-composer-kind="follow_up"
+      data-local-composer-kind="follow_up"
       data-visual-creation-scenario={visualScenario?.id}
-      data-online-composer-read-only={persistenceFrozen || undefined}
-      aria-busy={online.state.status === "hydrating" || undefined}
+      data-local-composer-read-only={persistenceFrozen || undefined}
       className="grid gap-4"
     >
-      <OnlineJournalComposerStatus
-        state={online.state}
-        locale={locale}
-        copy={workspaceCopy}
-        unsavedText={[
-          objectDisplayName,
-          draft.title,
-          draft.entryDate,
-          draft.body,
-        ]
-          .filter(Boolean)
-          .join("\n")}
-        navigationHref={`/garden/objects/${objectId}`}
-        onRetry={online.retry}
-        onCancel={() => router.push(`/garden/objects/${objectId}`)}
+      <LocalJournalComposerStatus
+        state={local.state}
+        copy={atomicCopy}
+        onCancelPublishing={local.cancelPublishing}
       />
 
       <fieldset disabled={persistenceFrozen} className="contents">
@@ -707,9 +615,11 @@ export function FollowUpEntryComposer({
             locale={locale}
             labels={getStructuredJournalComposerLabels(locale)}
             initialDocument={draft.contentDocument ?? undefined}
-            bindingReady={draftHydrated}
+            bindingReady
             disabled={persistenceFrozen}
             composerRef={structuredComposerRef}
+            imageInsertionMode="immediate"
+            imageStates={imageStates}
             onDocumentChange={(document) => {
               const plain = extractJournalDocumentPlainText(document);
               setDraft((current) =>
@@ -720,74 +630,64 @@ export function FollowUpEntryComposer({
                 }),
               );
             }}
-            onSelectImageFile={async (file, blockId) => {
-              const reservation = inlineMedia.reserve(
-                file,
-                photoIntentsByBlockId,
-              );
-              try {
-                const intent = await createComposerPhotoIntent(file);
-                const uploaded = await uploadPhoto(intent);
-                const previewUrl = URL.createObjectURL(file);
-                inlineMedia.commit(reservation, blockId, previewUrl);
-                setPhotoIntentsByBlockId((current) => ({
-                  ...current,
-                  [blockId]: intent,
-                }));
-                return { mediaAssetId: uploaded.mediaAssetId, previewUrl };
-              } catch (error) {
-                inlineMedia.release(reservation);
-                throw error;
-              }
+            onSelectImageFile={async (file, blockId, mediaAssetId) => {
+              const selected = local.selectImage(file, blockId, mediaAssetId);
+              const ready = await selected.ready;
+              return {
+                mediaAssetId: selected.mediaAssetId,
+                previewUrl: ready.previewUrl ?? undefined,
+              };
             }}
-            onRemoveImageBlock={(blockId) => {
-              inlineMedia.revoke(blockId);
-              const mediaId = (() => {
-                const block = draft.contentDocument?.blocks.find(
-                  (item) => item.id === blockId,
-                );
-                return block?.type === "image" ? block.mediaAssetId : null;
-              })();
+            onRetryImage={(mediaAssetId) => local.retryImage(mediaAssetId)}
+            onReplaceImage={(mediaAssetId, file) =>
+              local.replaceImage(mediaAssetId, file)
+            }
+            onSetImageAsCover={(mediaAssetId) =>
+              changeCover({ mode: "explicit_inline", mediaAssetId })
+            }
+            onRemoveImageBlock={(_blockId, mediaId) => {
               if (
-                mediaId &&
                 coverSelection.mode === "explicit_inline" &&
                 coverSelection.mediaAssetId === mediaId
               ) {
                 setPendingCoverInlineRemoval({ mediaAssetId: mediaId });
+                return;
               }
-              setPhotoIntentsByBlockId((current) => {
-                const next = { ...current };
-                const removed = next[blockId];
-                delete next[blockId];
-                if (removed) {
-                  for (const [key, value] of Object.entries(next)) {
-                    if (value === removed) delete next[key];
-                  }
-                }
-                return next;
-              });
+              void local.removeImage(mediaId);
             }}
           />
           <JournalCoverControls
             copy={coverCopy}
-            selection={coverSelection}
+            selection={withLocalCoverPreview(coverSelection, imageStates)}
             eligibleInline={listJournalDocumentImageMediaIds(
               draft.contentDocument ?? createEmptyJournalDocument(),
             ).map((mediaAssetId, index) => ({
               mediaAssetId,
-              previewUrl: null,
+              previewUrl: imageStates.get(mediaAssetId)?.previewUrl ?? null,
               label: `${coverCopy.useAsCover} ${index + 1}`,
             }))}
             disabled={persistenceFrozen}
-            onSelectSeparateFile={async (intent) => {
-              const uploaded = await uploadPhoto(intent);
-              return {
-                mediaAssetId: uploaded.mediaAssetId,
-                previewUrl: uploaded.publicUrl,
-              };
+            selectedLocalMediaState={
+              coverSelection.mode === "explicit_inline" ||
+              coverSelection.mode === "separate"
+                ? imageStates.get(coverSelection.mediaAssetId ?? "")
+                : undefined
+            }
+            onRetrySelectedLocal={(mediaAssetId) =>
+              local.retryImage(mediaAssetId)
+            }
+            onSelectLocalSeparateFile={async (file) => {
+              const currentId =
+                coverSelection.mode === "separate"
+                  ? coverSelection.mediaAssetId
+                  : null;
+              const selected = currentId
+                ? local.replaceImage(currentId, file)
+                : local.selectImage(file, `cover_${crypto.randomUUID()}`);
+              return { mediaAssetId: selected.mediaAssetId };
             }}
             pendingInlineRemoval={pendingCoverInlineRemoval}
-            onChange={setCoverSelection}
+            onChange={changeCover}
             onResolveInlineRemoval={(choice) => {
               if (!pendingCoverInlineRemoval) return;
               if (choice === "cancel") {
@@ -798,9 +698,12 @@ export function FollowUpEntryComposer({
                 setCoverSelection({
                   mode: "separate",
                   mediaAssetId: pendingCoverInlineRemoval.mediaAssetId,
-                  previewUrl: null,
+                  previewUrl:
+                    imageStates.get(pendingCoverInlineRemoval.mediaAssetId)
+                      ?.previewUrl ?? null,
                 });
-              } else {
+              } else if (choice === "remove_everywhere") {
+                void local.removeImage(pendingCoverInlineRemoval.mediaAssetId);
                 setCoverSelection({ mode: "automatic" });
               }
               setPendingCoverInlineRemoval(null);
@@ -915,6 +818,15 @@ export function FollowUpEntryComposer({
             </label>
           </div>
         </details>
+
+        {requiresFirstPublicationDisclosure ? (
+          <LocalJournalPublicationDisclosure
+            accepted={disclosureAccepted}
+            disabled={persistenceFrozen}
+            copy={atomicCopy}
+            onChange={setDisclosureAccepted}
+          />
+        ) : null}
       </fieldset>
 
       <p
@@ -931,16 +843,20 @@ export function FollowUpEntryComposer({
         <Button
           type="submit"
           data-auth-intent-control="save"
-          disabled={submitState === "publishing" || persistenceFrozen}
+          disabled={
+            submitState === "publishing" ||
+            persistenceFrozen ||
+            (requiresFirstPublicationDisclosure && !disclosureAccepted)
+          }
           className="min-h-11 min-w-0 flex-1 sm:min-h-8 sm:flex-none"
         >
           <UploadCloud className="size-4" />
-          {ownerCopy.composer.actions.saveOnline}
+          {atomicCopy.publish}
         </Button>
         <Button
           type="button"
           variant="ghost"
-          onClick={() => void handleCancel()}
+          onClick={handleCancel}
           className="min-h-11 shrink-0 text-muted-foreground sm:min-h-8"
         >
           {workspaceCopy.composer.actions.cancel}
@@ -950,48 +866,32 @@ export function FollowUpEntryComposer({
   );
 }
 
-function followUpDraftPayload(input: {
-  objectId: string;
-  draft: FollowUpEntryDraftFields;
-  clientMutationId: string;
-  mentionSelections: JournalMentionSelection[];
-  topicTagInput: string;
-  primaryMediaAssetId: string | null;
-  coverSelection: JournalCoverSelectionState;
-}): JournalEntryDraftPayloadV1 {
+function selectedCoverMediaAssetId(
+  selection: JournalCoverSelectionState,
+  document: JournalDocumentV1,
+) {
+  if (selection.mode === "none") return null;
+  if (selection.mode === "automatic") {
+    return listJournalDocumentImageMediaIds(document)[0] ?? null;
+  }
+  return selection.mediaAssetId ?? null;
+}
+
+function withLocalCoverPreview(
+  selection: JournalCoverSelectionState,
+  states: ReadonlyMap<string, { previewUrl: string | null }>,
+): JournalCoverSelectionState {
+  if (selection.mode !== "explicit_inline" && selection.mode !== "separate") {
+    return selection;
+  }
   return {
-    schemaVersion: JOURNAL_ENTRY_DRAFT_SCHEMA_VERSION,
-    draftKind: "follow_up",
-    request: {
-      target: "plant_object_entry",
-      plantObjectId: input.objectId,
-      title: input.draft.title,
-      body: input.draft.body,
-      contentDocument: input.draft.contentDocument,
-      entryDate: input.draft.entryDate,
-      clientMutationId: input.clientMutationId,
-      mentionSelections: input.mentionSelections,
-      topicTags: normalizeJournalTopicTagLabels(input.topicTagInput),
-      mediaAssetId: input.primaryMediaAssetId,
-      cover: journalCoverSelectionToClaimInput(input.coverSelection),
-    },
-    composerState: { topicTagInput: input.topicTagInput },
+    ...selection,
+    previewUrl: states.get(selection.mediaAssetId ?? "")?.previewUrl ?? null,
   };
 }
 
-function coverSelectionFromRequest(
-  cover: JournalEntryDraftPayloadV1["request"]["cover"],
-): JournalCoverSelectionState {
-  if (!cover || cover.mode === "automatic") return { mode: "automatic" };
-  if (cover.mode === "none") return { mode: "none" };
-  if (cover.mode === "explicit_inline") {
-    return { mode: "explicit_inline", mediaAssetId: cover.mediaAssetId };
-  }
-  return { mode: "separate", mediaAssetId: cover.mediaAssetId };
-}
-
-function localizedPhotoHelp(
-  copy: GardenWorkspaceCopy,
+function localizedAtomicPhotoHelp(
+  copy: ReturnType<typeof getAtomicJournalCreateCopy>,
   {
     fileName,
     photoError,
@@ -1003,12 +903,9 @@ function localizedPhotoHelp(
   },
 ) {
   if (photoError) return photoError;
-  if (ready) return copy.composer.photo.ready;
-  if (!fileName) return copy.composer.photo.empty;
-
-  return formatGardenWorkspaceTemplate(copy.composer.photo.uploading, {
-    fileName,
-  });
+  if (ready) return copy.photoReady;
+  if (!fileName) return copy.photoEmpty;
+  return copy.photoPreparing;
 }
 
 function localizedVisualScenarioMessage(

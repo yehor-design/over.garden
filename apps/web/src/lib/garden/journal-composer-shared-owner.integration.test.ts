@@ -27,29 +27,31 @@ describe("shared journal composer integration", () => {
     );
   });
 
-  it("waits for every owner-scoped server draft to hydrate before Lexical binds", () => {
+  it("binds local-only create owners immediately without durable browser or server drafts", () => {
     for (const file of [
       "app/garden/first-entry-composer.tsx",
       "app/garden/space-entry-composer.tsx",
       "app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
-      "app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
     ]) {
       const source = readFileSync(path.join(root, file), "utf8");
-      expect(source).toContain("useOnlineJournalComposer({");
-      expect(source).toMatch(
-        /bindingReady=\{(?:draftHydrated|online\.state\.hydrated)\}/,
-      );
+      expect(source).toContain("useLocalJournalComposer({");
+      expect(source).toMatch(/\bbindingReady\b/);
+      expect(source).not.toContain("useOnlineJournalComposer({");
       expect(source).not.toMatch(/@\/lib\/offline|IndexedDB|indexedDB|Dexie/);
     }
+  });
 
-    const followUpOwner = readFileSync(
+  it("keeps edit on its owner-scoped server draft until the OVE-348 cutover", () => {
+    const editOwner = readFileSync(
       path.join(
         root,
-        "app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+        "app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
       ),
       "utf8",
     );
-    expect(followUpOwner).toContain("const draftHydrated = online.state.hydrated");
+    expect(editOwner).toContain("useOnlineJournalComposer({");
+    expect(editOwner).toContain("bindingReady={online.state.hydrated}");
+    expect(editOwner).not.toMatch(/@\/lib\/offline|IndexedDB|indexedDB|Dexie/);
 
     const sharedOwner = readFileSync(
       path.join(root, "components/garden/structured-journal-composer.tsx"),

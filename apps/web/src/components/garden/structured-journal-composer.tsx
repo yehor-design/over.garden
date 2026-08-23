@@ -17,6 +17,7 @@ import {
 } from "@/lib/garden/journal-document";
 import type { PublicLocale } from "@/lib/public-localization";
 import { cn } from "@/lib/utils";
+import type { JournalImageUiState } from "./lexical-journal/journal-lexical-image-node";
 
 export type JournalReorderBlockTypeClass =
   | "paragraph"
@@ -45,6 +46,10 @@ export interface StructuredJournalComposerLabels {
   silentLoss: string;
   imageChoose: string;
   imageUploading: string;
+  imageFailed: string;
+  imageRetry: string;
+  imageReplace: string;
+  imageSetCover: string;
   imageRemove: string;
   imageRejectRemote: string;
   unavailableTitle: string;
@@ -86,6 +91,8 @@ export interface StructuredJournalComposerProps {
   initialDocument?: JournalDocumentV1 | null;
   bindingReady?: boolean;
   imagePreviewUrls?: ReadonlyMap<string, string>;
+  imageStates?: ReadonlyMap<string, JournalImageUiState>;
+  imageInsertionMode?: "after-ready" | "immediate";
   disabled?: boolean;
   className?: string;
   onDocumentChange: (
@@ -95,8 +102,12 @@ export interface StructuredJournalComposerProps {
   onSelectImageFile: (
     file: File,
     blockId: string,
-  ) => Promise<{ mediaAssetId?: string; previewUrl: string }>;
-  onRemoveImageBlock?: (blockId: string) => void;
+    mediaAssetId?: string,
+  ) => Promise<{ mediaAssetId?: string; previewUrl?: string }>;
+  onRemoveImageBlock?: (blockId: string, mediaAssetId: string) => void;
+  onRetryImage?: (mediaAssetId: string) => void;
+  onReplaceImage?: (mediaAssetId: string, file: File) => void;
+  onSetImageAsCover?: (mediaAssetId: string) => void;
   composerRef?: MutableRefObject<StructuredJournalComposerHandle | null>;
 }
 

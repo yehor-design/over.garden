@@ -54,6 +54,7 @@ export interface JobQueueManifestEntry {
 export const MEDIA_LIFECYCLE_QUEUE = "media_lifecycle" as const;
 export const MEDIA_DERIVATIVE_REVOKE_KIND = "media_derivative_revoke" as const;
 export const MEDIA_QUARANTINE_EXPIRE_KIND = "media_quarantine_expire" as const;
+export const MEDIA_STAGING_FINALIZE_KIND = "media_staging_finalize" as const;
 
 export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
   {
@@ -156,6 +157,26 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
     },
     notes:
       "DB-first erasure outbox for quarantine/public object keys after cover refs cleared. Consumed in-process by erasure-execution via shared lifecycle revoke helper.",
+  },
+  {
+    queueName: MEDIA_LIFECYCLE_QUEUE,
+    kind: MEDIA_STAGING_FINALIZE_KIND,
+    consumer: "web-media-lifecycle",
+    maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,
+    privacyClass: "identifiers_only",
+    coversStructuredJournalCover: true,
+    payloadContract: {
+      requiredKeys: [
+        "kind",
+        "publishId",
+        "stagingSessionId",
+        "receiptSetDigest",
+      ],
+      optionalKeys: [],
+      uuidKeys: ["publishId", "stagingSessionId"],
+    },
+    notes:
+      "Atomic journal create queues only publish/session identifiers plus the receipt-set digest; the consumer derives owner scope from the committed entry and idempotently finalizes OVE-346 staging.",
   },
   {
     queueName: MEDIA_LIFECYCLE_QUEUE,

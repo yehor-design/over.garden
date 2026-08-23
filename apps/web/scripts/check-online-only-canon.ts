@@ -637,20 +637,26 @@ function validateCurrentConsumers(
   return violations;
 }
 
-const ONLINE_COMPOSER_PATHS = [
+const ATOMIC_LOCAL_CREATE_COMPOSER_PATHS = [
   "apps/web/src/app/garden/first-entry-composer.tsx",
   "apps/web/src/app/garden/space-entry-composer.tsx",
   "apps/web/src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+] as const;
+
+const ONLINE_EDIT_COMPOSER_PATHS = [
   "apps/web/src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
 ] as const;
 
 const ONLINE_AUTHORING_CALLER_PATHS = [
-  ...ONLINE_COMPOSER_PATHS,
+  ...ATOMIC_LOCAL_CREATE_COMPOSER_PATHS,
+  ...ONLINE_EDIT_COMPOSER_PATHS,
   "apps/web/src/app/garden/server-draft-resume-panel.tsx",
   "apps/web/src/app/garden/garden-workspace-service-state.tsx",
   "apps/web/src/app/garden/garden-workspace-view.tsx",
   "apps/web/src/components/garden/journal-cover-controls.tsx",
   "apps/web/src/lib/garden/composer-photo-selection.ts",
+  "apps/web/src/lib/garden/local-journal-media-coordinator.ts",
+  "apps/web/src/lib/garden/use-local-journal-composer.ts",
   "apps/web/src/lib/garden/use-inline-media-selection.ts",
 ] as const;
 
@@ -692,7 +698,21 @@ function validateOnlineComposerCutover(
     }
   }
 
-  for (const relativePath of ONLINE_COMPOSER_PATHS) {
+  for (const relativePath of ATOMIC_LOCAL_CREATE_COMPOSER_PATHS) {
+    const content = files[relativePath] ?? "";
+    if (
+      !content.includes("useLocalJournalComposer({") ||
+      !content.includes("LocalJournalComposerStatus") ||
+      content.includes("useOnlineJournalComposer({")
+    ) {
+      violations.push({
+        code: "composer_atomic_local_owner_missing",
+        path: relativePath,
+      });
+    }
+  }
+
+  for (const relativePath of ONLINE_EDIT_COMPOSER_PATHS) {
     const content = files[relativePath] ?? "";
     if (
       !content.includes("useOnlineJournalComposer({") ||

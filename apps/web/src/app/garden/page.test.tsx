@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   scopedToUser: vi.fn(),
   loadGardenWorkspace: vi.fn(),
   getMySpaceJournalTimeline: vi.fn(),
+  hasPriorPublicationDisclosure: vi.fn(),
   findSelectableCatalogItemByPublicSlug: vi.fn(),
   scheduleGardenWorkspaceActivationAnalytics: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
@@ -37,6 +38,7 @@ vi.mock("@/server/garden-workspace-after-response", () => ({
 
 vi.mock("@/server/journal-repository", () => ({
   getMySpaceJournalTimeline: mocks.getMySpaceJournalTimeline,
+  hasPriorPublicationDisclosure: mocks.hasPriorPublicationDisclosure,
 }));
 
 vi.mock("@/server/catalog-repository", () => ({
@@ -73,11 +75,15 @@ vi.mock("./actions", () => ({
 vi.mock("./first-entry-composer", () => ({
   FirstEntryComposer: (props: {
     initialSpace?: { id: string; displayName: string } | null;
+    requiresFirstPublicationDisclosure: boolean;
     visualScenario?: { id: string } | null;
   }) => (
     <form
       data-initial-space-id={props.initialSpace?.id ?? ""}
       data-initial-space-name={props.initialSpace?.displayName ?? ""}
+      data-requires-first-publication-disclosure={String(
+        props.requiresFirstPublicationDisclosure,
+      )}
       data-visual-create={props.visualScenario?.id ?? ""}
     >
       First entry composer
@@ -114,6 +120,7 @@ describe("/garden workspace V2", () => {
     mocks.resolveVisualJournalCreationScenario.mockReturnValue(null);
     mocks.loadGardenWorkspace.mockResolvedValue(workspaceModel());
     mocks.getMySpaceJournalTimeline.mockResolvedValue(spaceTimeline());
+    mocks.hasPriorPublicationDisclosure.mockResolvedValue(false);
   });
 
   it("renders the shared-shell operational home and preserves write paths", async () => {
@@ -145,6 +152,9 @@ describe("/garden workspace V2", () => {
     expect(html).toContain("First entry composer");
     expect(html).toContain('data-initial-space-id="space-1"');
     expect(html).toContain('data-initial-space-name="Balcony"');
+    expect(html).toContain(
+      'data-requires-first-publication-disclosure="true"',
+    );
     // Timeline work is a deferred server boundary: first-entry composition is
     // already present in the initial response instead of waiting for it.
     expect(mocks.getMySpaceJournalTimeline).toHaveBeenCalledWith(
@@ -159,6 +169,19 @@ describe("/garden workspace V2", () => {
     expect(html).not.toMatch(
       /owner_user_id|client_mutation_id|quarantine_key|latitude|longitude/i,
     );
+  });
+
+  it("does not ask a previously disclosed owner for first-publication consent again", async () => {
+    mocks.hasPriorPublicationDisclosure.mockResolvedValueOnce(true);
+    const { default: GardenPage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await GardenPage({ searchParams: Promise.resolve({}) }),
+    );
+
+    expect(html).toContain(
+      'data-requires-first-publication-disclosure="false"',
+    );
+    expect(html).not.toContain("Я розумію, що цей запис");
   });
 
   it("parses bounded inventory and space view-all pages from URL state", async () => {

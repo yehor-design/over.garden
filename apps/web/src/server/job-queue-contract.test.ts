@@ -27,6 +27,14 @@ const consumedJobContracts = new Map<
   { consumer: string; consumerToken: string; testedBy: string }
 >([
   [
+    "media_lifecycle:media_staging_finalize",
+    {
+      consumer: "apps/web/src/server/media/media-lifecycle-consumer.ts",
+      consumerToken: "MEDIA_STAGING_FINALIZE_KIND",
+      testedBy: "apps/web/src/server/media/media-lifecycle-consumer.test.ts",
+    },
+  ],
+  [
     "matching:catalog_alias_suggestions_refresh",
     {
       consumer: "services/matching/app/worker.py",
@@ -192,6 +200,11 @@ describe("job queue producer/consumer contract", () => {
         source: "server/media/media-lifecycle-enqueue.ts",
         queueName: "media_lifecycle",
         kind: "media_derivative_revoke",
+      },
+      {
+        source: "server/media/media-lifecycle-enqueue.ts",
+        queueName: "media_lifecycle",
+        kind: "media_staging_finalize",
       },
       {
         source: "server/media/retention-executor.ts",

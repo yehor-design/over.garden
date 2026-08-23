@@ -20,6 +20,7 @@ import {
 import { interfaceLocaleChangeCoordinator } from "@/lib/interface-locale-change-coordinator";
 import { cn } from "@/lib/utils";
 import { SubjectAwareHtmlImage } from "@/components/media/subject-aware-media-image";
+import type { JournalImageUiState } from "./lexical-journal/journal-lexical-image-node";
 
 export interface JournalCoverControlsCopy {
   sectionLabel: string;
@@ -37,6 +38,9 @@ export interface JournalCoverControlsCopy {
   cancelRemoval: string;
   removeInlinePrompt: string;
   eligibleInlineEmpty: string;
+  preparing: string;
+  failed: string;
+  retry: string;
 }
 
 export type JournalCoverSelectionState =
@@ -71,6 +75,11 @@ export interface JournalCoverControlsProps {
     intent: OnlineComposerPhotoIntent,
     file: File,
   ) => Promise<{ mediaAssetId: string; previewUrl?: string | null }>;
+  onSelectLocalSeparateFile?: (
+    file: File,
+  ) => Promise<{ mediaAssetId: string; previewUrl?: string | null }>;
+  selectedLocalMediaState?: JournalImageUiState;
+  onRetrySelectedLocal?: (mediaAssetId: string) => void;
   /**
    * When removing an explicit-inline image that is currently cover, ask before
    * clearing. Parent calls this when an image block is deleted.
@@ -97,6 +106,9 @@ export function JournalCoverControls({
   className,
   onChange,
   onSelectSeparateFile,
+  onSelectLocalSeparateFile,
+  selectedLocalMediaState,
+  onRetrySelectedLocal,
   pendingInlineRemoval = null,
   onResolveInlineRemoval,
 }: JournalCoverControlsProps) {
@@ -113,9 +125,15 @@ export function JournalCoverControls({
       kind: "in-flight",
     });
     try {
-      const intent = await createComposerPhotoIntent(file);
-      const uploaded = await onSelectSeparateFile?.(intent, file);
-      const preview = uploaded?.previewUrl ?? URL.createObjectURL(file);
+      const intent = onSelectLocalSeparateFile
+        ? null
+        : await createComposerPhotoIntent(file);
+      const uploaded = onSelectLocalSeparateFile
+        ? await onSelectLocalSeparateFile(file)
+        : await onSelectSeparateFile?.(intent!, file);
+      const preview =
+        uploaded?.previewUrl ??
+        (onSelectLocalSeparateFile ? null : URL.createObjectURL(file));
       onChange({
         mode: "separate",
         mediaAssetId: uploaded?.mediaAssetId ?? null,
@@ -161,6 +179,34 @@ export function JournalCoverControls({
         </figure>
       ) : selection.mode === "none" ? (
         <p className="text-xs text-muted-foreground">{copy.noCover}</p>
+      ) : null}
+
+      {selectedLocalMediaState &&
+      selectedLocalMediaState.status !== "ready" &&
+      selectedLocalMediaState.status !== "failed" ? (
+        <p className="text-xs text-muted-foreground" role="status">
+          {copy.preparing}
+        </p>
+      ) : null}
+      {selectedLocalMediaState?.status === "failed" ? (
+        <div className="flex flex-wrap items-center gap-2" role="alert">
+          <p className="text-xs text-destructive">{copy.failed}</p>
+          {onRetrySelectedLocal &&
+          (selection.mode === "explicit_inline" || selection.mode === "separate") &&
+          selection.mediaAssetId ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={disabled}
+              onClick={() =>
+                onRetrySelectedLocal(selection.mediaAssetId!)
+              }
+            >
+              {copy.retry}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="flex flex-wrap gap-2">

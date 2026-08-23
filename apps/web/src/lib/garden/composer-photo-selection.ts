@@ -6,7 +6,7 @@ import {
 } from "@/lib/media/image-limits";
 
 export const COMPOSER_PHOTO_ACCEPT =
-  "image/jpeg,image/png,image/webp,image/heic,.heic";
+  "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
 
 const SUPPORTED_COMPOSER_PHOTO_TYPES = new Set([
   "image/jpeg",

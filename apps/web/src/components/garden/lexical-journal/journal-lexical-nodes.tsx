@@ -1,12 +1,10 @@
 "use client";
 
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { ListNode, type ListType } from "@lexical/list";
 import {
   $applyNodeReplacement,
   $createParagraphNode,
   $getDocument,
-  $getNodeByKey,
   $getState,
   $setState,
   createState,
@@ -18,9 +16,15 @@ import {
   type NodeKey,
   type RangeSelection,
 } from "lexical";
-import { createContext, useContext, type JSX, type ReactNode } from "react";
+import type { JSX } from "react";
 
 import { JOURNAL_BLOCK_ID_PATTERN } from "@/lib/garden/journal-document";
+import { JournalLexicalImageNodeView } from "./journal-lexical-image-node";
+
+export {
+  JournalImagePreviewProvider,
+  type JournalImagePreviewContextValue,
+} from "./journal-lexical-image-node";
 
 function parseBlockId(value: unknown): string {
   return typeof value === "string" && JOURNAL_BLOCK_ID_PATTERN.test(value)
@@ -103,30 +107,6 @@ export function createJournalBlockId(): string {
   return `b_${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
 }
 
-export interface JournalImagePreviewContextValue {
-  disabled: boolean;
-  getPreviewUrl(mediaAssetId: string): string | undefined;
-  removeLabel: string;
-  onRemove(blockId: string, mediaAssetId: string): void;
-}
-
-const JournalImagePreviewContext =
-  createContext<JournalImagePreviewContextValue | null>(null);
-
-export function JournalImagePreviewProvider({
-  value,
-  children,
-}: {
-  value: JournalImagePreviewContextValue;
-  children: ReactNode;
-}) {
-  return (
-    <JournalImagePreviewContext.Provider value={value}>
-      {children}
-    </JournalImagePreviewContext.Provider>
-  );
-}
-
 export class OverGardenImageNode extends DecoratorNode<JSX.Element> {
   $config() {
     return this.config("overgarden-image", {
@@ -154,7 +134,7 @@ export class OverGardenImageNode extends DecoratorNode<JSX.Element> {
 
   decorate(): JSX.Element {
     return (
-      <OverGardenImageDecorator
+      <JournalLexicalImageNodeView
         blockId={this.getBlockId()}
         mediaAssetId={this.getMediaAssetId()}
         nodeKey={this.getKey()}
@@ -196,59 +176,6 @@ export function $isOverGardenImageNode(
   node: LexicalNode | null | undefined,
 ): node is OverGardenImageNode {
   return node instanceof OverGardenImageNode;
-}
-
-function OverGardenImageDecorator({
-  blockId,
-  mediaAssetId,
-  nodeKey,
-}: {
-  blockId: string;
-  mediaAssetId: string;
-  nodeKey: NodeKey;
-}) {
-  const [editor] = useLexicalComposerContext();
-  const context = useContext(JournalImagePreviewContext);
-  const previewUrl = context?.getPreviewUrl(mediaAssetId);
-
-  return (
-    <div
-      className="grid gap-2 rounded-md border border-border bg-muted/20 p-2"
-      data-lexical-journal-image-content="true"
-    >
-      {previewUrl ? (
-        // A local blob or processed preview is resolved outside node state.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={previewUrl}
-          alt=""
-          className="max-h-96 w-full rounded object-contain"
-        />
-      ) : (
-        <div
-          className="h-24 animate-pulse rounded bg-muted"
-          aria-hidden="true"
-        />
-      )}
-      {context ? (
-        <button
-          type="button"
-          disabled={context.disabled}
-          className="min-h-11 justify-self-start rounded border border-border px-3 text-sm disabled:opacity-40"
-          onClick={() => {
-            if (context.disabled) return;
-            editor.update(() => {
-              const node = $getNodeByKey(nodeKey);
-              node?.remove();
-            });
-            context.onRemove(blockId, mediaAssetId);
-          }}
-        >
-          {context.removeLabel}
-        </button>
-      ) : null}
-    </div>
-  );
 }
 
 class OverGardenQuotePartNode extends ElementNode {
