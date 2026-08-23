@@ -565,11 +565,21 @@ async function handleClaim(
     );
     if (completed.status !== "claimed") throw workerError(completed.code, 409);
   }
+  const claimedByMediaAssetId = new Map(
+    begin.items.map((item) => [item.mediaAssetId, item] as const),
+  );
+  const orderedClaimedItems = items.map((requested) => {
+    const claimed = claimedByMediaAssetId.get(requested.mediaAssetId);
+    if (!claimed || claimed.generation !== requested.generation) {
+      throw workerError("claim_response_mismatch", 409);
+    }
+    return claimed;
+  });
   return closedResponse(
     {
       status: "claimed",
       publishId: parsed.publishId,
-      publicMedia: begin.items.map((item) => ({
+      publicMedia: orderedClaimedItems.map((item) => ({
         mediaAssetId: item.mediaAssetId,
         generation: item.generation,
         sha256: item.sha256,

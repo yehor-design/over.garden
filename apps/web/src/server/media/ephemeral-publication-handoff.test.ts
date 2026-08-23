@@ -19,6 +19,7 @@ const OWNER = "2c732b1d-968c-4721-9a20-9e5495014bbc";
 const SESSION = "46045ba1-d1dc-465a-aea9-0240785e3aa0";
 const PUBLISH = "0bcaa85b-34ad-4fda-b1df-8705892e5cb4";
 const MEDIA = "8f5fa87d-b94e-4217-b68d-28303827ad89";
+const MEDIA_2 = "0f12d28a-3369-4c31-9779-e0ef2b08e10d";
 const SECRET = "q".repeat(43);
 const policy: EphemeralMediaSigningPolicy = {
   active: { version: 7, value: "r".repeat(43) },
@@ -138,11 +139,24 @@ describe("ephemeral publication handoff", () => {
 
   it("accepts only a claim response that exactly matches the authenticated receipts", async () => {
     const token = await receipt();
+    const secondToken = await receipt({
+      mediaAssetId: MEDIA_2,
+      receiptNonce: "s".repeat(32),
+    });
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       Response.json({
         status: "claimed",
         publishId: PUBLISH,
         publicMedia: [
+          {
+            mediaAssetId: MEDIA_2,
+            generation: 1,
+            sha256: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            sizeBytes: 4,
+            width: 1,
+            height: 1,
+            publicPath: `derivatives/${MEDIA_2}/1.webp`,
+          },
           {
             mediaAssetId: MEDIA,
             generation: 1,
@@ -162,8 +176,8 @@ describe("ephemeral publication handoff", () => {
           ownerUserId: OWNER,
           publishId: PUBLISH,
           stagingSessionId: SESSION,
-          stagingReceipts: [token],
-          orderedMediaAssetIds: [MEDIA],
+          stagingReceipts: [token, secondToken],
+          orderedMediaAssetIds: [MEDIA, MEDIA_2],
         },
         {
           receiptPolicy: policy,
@@ -178,6 +192,10 @@ describe("ephemeral publication handoff", () => {
       receiptSetDigest: expect.any(String),
       publicMedia: [
         { mediaAssetId: MEDIA, publicPath: `derivatives/${MEDIA}/1.webp` },
+        {
+          mediaAssetId: MEDIA_2,
+          publicPath: `derivatives/${MEDIA_2}/1.webp`,
+        },
       ],
     });
     expect(fetcher).toHaveBeenCalledWith(
