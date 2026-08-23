@@ -149,8 +149,10 @@ python -m app.runtime ready
 ```
 
 `preflight` checks release metadata plus Postgres, the exact queue/heartbeat
-schema, and Meilisearch before service activation. `ready` additionally
-requires the matching worker heartbeat.
+schema, Meilisearch, and the canonical production `R2_PUBLIC_BASE_URL` before
+service activation. This prevents a journal projection from silently omitting
+an otherwise valid public cover because the matching runtime cannot construct
+its public URL. `ready` additionally requires the matching worker heartbeat.
 
 ### Production release, rollback, and handler proof
 

@@ -209,6 +209,7 @@ jobs:
 
           docker run --rm \
             -e OVERGARDEN_MATCHING_ENVIRONMENT=production \
+            -e R2_PUBLIC_BASE_URL=https://media.over.garden \
             -e OVERGARDEN_MATCHING_IMAGE_DIGEST="$REGISTRY_DIGEST" \
             -e QUEUE_NAME=matching \
             "$digest_ref" \

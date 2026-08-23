@@ -222,6 +222,12 @@ R2_PUBLIC_BUCKET="overgarden-public"
 R2_PUBLIC_BASE_URL="https://media.over.garden"
 ```
 
+The same exact non-secret `R2_PUBLIC_BASE_URL` is required in the DigitalOcean
+matching runtime's protected `worker.env`, not only in Vercel. Matching
+candidate preflight and active readiness fail closed when it is missing or
+drifted so Meilisearch cannot settle a journal projection with an omitted
+public cover URL.
+
 Production addressing is a fail-closed runtime and deployment contract, not a
 best-effort SDK preference. `apps/web/src/lib/r2-addressing-contract.ts`
 requires the exact endpoint above and exact `R2_FORCE_PATH_STYLE=true` whenever
