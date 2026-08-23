@@ -29,6 +29,8 @@ SCHEMA_COMPATIBILITY_CLASS = "ove190.matching-schema.v1"
 SERVICE_NAME = "overgarden-matching"
 DEFAULT_QUEUE_NAME = "matching"
 WORKER_HEARTBEAT_MAX_AGE_SECONDS = 30
+PRODUCTION_ENVIRONMENT = "production"
+PRODUCTION_PUBLIC_MEDIA_ORIGIN = "https://media.over.garden"
 
 _COMMIT_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 _IMAGE_DIGEST_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -87,6 +89,14 @@ class RuntimeConfigurationError(ValueError):
     """Raised without including the rejected value or any environment secret."""
 
 
+def require_public_projection_runtime_configuration() -> None:
+    """Fail closed before a production worker can project broken media URLs."""
+    if os.environ.get("OVERGARDEN_MATCHING_ENVIRONMENT") != PRODUCTION_ENVIRONMENT:
+        return
+    if os.environ.get("R2_PUBLIC_BASE_URL") != PRODUCTION_PUBLIC_MEDIA_ORIGIN:
+        raise RuntimeConfigurationError("public media origin is invalid")
+
+
 @dataclass(frozen=True)
 class RuntimeRelease:
     commit_sha: str
@@ -97,6 +107,7 @@ class RuntimeRelease:
 
     @classmethod
     def from_environment(cls) -> "RuntimeRelease":
+        require_public_projection_runtime_configuration()
         commit_sha = os.environ.get("OVERGARDEN_MATCHING_COMMIT_SHA", "")
         image_digest = os.environ.get("OVERGARDEN_MATCHING_IMAGE_DIGEST", "")
         build_timestamp = os.environ.get(
@@ -174,6 +185,7 @@ def unavailable_manifest() -> dict[str, str]:
 def readiness_manifest(
     release: RuntimeRelease | None = None,
 ) -> tuple[dict[str, object], bool]:
+    require_public_projection_runtime_configuration()
     resolved_release = release or RuntimeRelease.from_environment()
     postgres_state = _read_postgres_state(resolved_release)
     meilisearch_status = _read_meilisearch_status()
@@ -221,6 +233,7 @@ def readiness_manifest(
 def preflight_manifest(
     release: RuntimeRelease | None = None,
 ) -> tuple[dict[str, object], bool]:
+    require_public_projection_runtime_configuration()
     resolved_release = release or RuntimeRelease.from_environment()
     postgres_state = _read_postgres_state(resolved_release)
     meilisearch_status = _read_meilisearch_status()

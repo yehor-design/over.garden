@@ -254,6 +254,50 @@ def test_preflight_requires_schema_but_not_an_existing_worker_heartbeat(
 
 
 @pytest.mark.parametrize(
+    "public_media_origin",
+    [
+        None,
+        "",
+        "http://media.over.garden",
+        "https://media.over.garden/",
+        "https://private.invalid",
+    ],
+)
+def test_production_preflight_rejects_missing_or_drifted_public_media_origin(
+    monkeypatch: pytest.MonkeyPatch,
+    public_media_origin: str | None,
+) -> None:
+    monkeypatch.setenv("OVERGARDEN_MATCHING_ENVIRONMENT", "production")
+    if public_media_origin is None:
+        monkeypatch.delenv("R2_PUBLIC_BASE_URL", raising=False)
+    else:
+        monkeypatch.setenv("R2_PUBLIC_BASE_URL", public_media_origin)
+
+    with pytest.raises(runtime.RuntimeConfigurationError) as error:
+        runtime.preflight_manifest(release())
+
+    assert "public media origin is invalid" in str(error.value)
+    if public_media_origin:
+        assert public_media_origin not in str(error.value)
+
+
+def test_production_preflight_accepts_the_canonical_public_media_origin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OVERGARDEN_MATCHING_ENVIRONMENT", "production")
+    monkeypatch.setenv("R2_PUBLIC_BASE_URL", "https://media.over.garden")
+    monkeypatch.setattr(
+        runtime, "_read_postgres_state", lambda _release: ready_postgres_state()
+    )
+    monkeypatch.setattr(runtime, "_read_meilisearch_status", lambda: "available")
+
+    manifest, is_ready = runtime.preflight_manifest(release())
+
+    assert is_ready is True
+    assert manifest["status"] == "ready"
+
+
+@pytest.mark.parametrize(
     ("depth", "expected"),
     [(-1, "empty"), (0, "empty"), (1, "low"), (10, "low"), (11, "medium"), (101, "high")],
 )

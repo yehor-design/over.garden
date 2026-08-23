@@ -52,6 +52,11 @@ The existing `/opt/overgarden/worker.env`, `overgarden_default` network,
 Meilisearch, and Caddy remain in place. Never print or copy `worker.env` into CI,
 chat, Linear, or release evidence.
 
+`worker.env` must contain the non-secret canonical setting
+`R2_PUBLIC_BASE_URL=https://media.over.garden`. Production runtime validation
+fails closed when it is missing or drifted, because journal search projection
+must construct the same public cover URL as the Vercel application.
+
 The production host must expose at least 2.5 GiB of combined RAM and active
 swap, 1 GiB of currently available RAM plus free swap, and 5 GiB plus the
 compressed archive size on both the release and Docker-root filesystems before
