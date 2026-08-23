@@ -141,6 +141,7 @@ export async function claimOrderedInlineMediaForEntry(
   input: {
     journalEntryId: string;
     orderedMediaAssetIds: readonly string[];
+    preserveDetachedMediaAssetIds?: readonly string[];
   },
 ): Promise<boolean> {
   const ordered = [...input.orderedMediaAssetIds];
@@ -154,10 +155,14 @@ export async function claimOrderedInlineMediaForEntry(
   }
 
   const keep = new Set(ordered);
+  const revokeKeep = new Set([
+    ...keep,
+    ...(input.preserveDetachedMediaAssetIds ?? []),
+  ]);
   const detached = await listDetachedInlineRevokeCandidates(executor, {
     journalEntryId: input.journalEntryId,
     ownerUserId: scope.userId,
-    keepMediaAssetIds: keep,
+    keepMediaAssetIds: revokeKeep,
   });
   await enqueueMediaDerivativeRevokes(executor, {
     candidates: detached,
@@ -194,14 +199,10 @@ export async function claimOrderedInlineMediaForEntry(
   let attached = false;
   for (let index = 0; index < ordered.length; index += 1) {
     const mediaAssetId = ordered[index]!;
-    const mediaAsset = await attachProcessedMediaAssetToEntry(
-      executor,
-      scope,
-      {
-        mediaAssetId,
-        journalEntryId: input.journalEntryId,
-      },
-    );
+    const mediaAsset = await attachProcessedMediaAssetToEntry(executor, scope, {
+      mediaAssetId,
+      journalEntryId: input.journalEntryId,
+    });
     if (!mediaAsset) {
       throw new Error("Processed media asset is unavailable for this entry.");
     }
@@ -298,7 +299,12 @@ export async function claimJournalEntryCover(
         mediaAssetId,
         journalEntryId: null,
       });
-      await clearCoverOnlyAssetsForEntry(executor, scope, entryId, mediaAssetId);
+      await clearCoverOnlyAssetsForEntry(
+        executor,
+        scope,
+        entryId,
+        mediaAssetId,
+      );
       const claimed = await executor
         .updateTable("media_assets")
         .set({

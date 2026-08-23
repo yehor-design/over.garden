@@ -63,6 +63,94 @@ export function buildInsertClaimedEphemeralMediaQuery(
     .returningAll();
 }
 
+export function buildInsertClaimedEphemeralEditMediaQuery(
+  executor: QueryExecutor,
+  input: {
+    ownerUserId: string;
+    stagingSessionId: string;
+    media: ClaimedEphemeralPublicationMedia;
+  },
+) {
+  const now = new Date();
+  return executor
+    .insertInto("media_assets")
+    .values({
+      id: input.media.mediaAssetId,
+      owner_user_id: input.ownerUserId,
+      journal_entry_id: null,
+      quarantine_key: `atomic-edit/${input.stagingSessionId}/${input.media.mediaAssetId}/${input.media.generation}`,
+      upload_generation_id: input.media.mediaAssetId,
+      public_object_id: input.media.mediaAssetId,
+      upload_generation: input.media.generation,
+      declared_media_type: "image/webp",
+      admitted_media_type: "image/webp",
+      declared_size_bytes: String(input.media.sizeBytes),
+      derivative_key: input.media.publicPath,
+      intrinsic_width: input.media.width,
+      intrinsic_height: input.media.height,
+      focal_x: 0.5,
+      focal_y: 0.5,
+      status: "processed",
+      media_readiness_state: "public_ready",
+      original_deleted_at: now,
+      processing_claim_token: null,
+      processing_claimed_at: null,
+      usage_role: "inline",
+      document_position: null,
+      updated_at: now,
+    })
+    .returningAll();
+}
+
+export function buildReplaceClaimedEphemeralMediaQuery(
+  executor: QueryExecutor,
+  input: {
+    ownerUserId: string;
+    journalEntryId: string;
+    stagingSessionId: string;
+    priorGeneration: number;
+    priorPublicPath: string;
+    media: ClaimedEphemeralPublicationMedia;
+  },
+) {
+  const now = new Date();
+  return executor
+    .updateTable("media_assets")
+    .set({
+      quarantine_key: `atomic-edit/${input.stagingSessionId}/${input.media.mediaAssetId}/${input.media.generation}`,
+      upload_generation_id: input.media.mediaAssetId,
+      public_object_id: input.media.mediaAssetId,
+      upload_generation: input.media.generation,
+      declared_media_type: "image/webp",
+      admitted_media_type: "image/webp",
+      declared_size_bytes: String(input.media.sizeBytes),
+      derivative_key: input.media.publicPath,
+      intrinsic_width: input.media.width,
+      intrinsic_height: input.media.height,
+      status: "processed",
+      media_readiness_state: "public_ready",
+      original_deleted_at: now,
+      processing_claim_token: null,
+      processing_claimed_at: null,
+      quality_policy_version: null,
+      quality_class: null,
+      quality_reason_codes: null,
+      quality_metrics: null,
+      quality_evaluated_at: null,
+      revoked_at: null,
+      public_unreachable_at: null,
+      updated_at: now,
+    })
+    .where("id", "=", input.media.mediaAssetId)
+    .where("owner_user_id", "=", input.ownerUserId)
+    .where("journal_entry_id", "=", input.journalEntryId)
+    .where("upload_generation", "=", input.priorGeneration)
+    .where("derivative_key", "=", input.priorPublicPath)
+    .where("status", "=", "processed")
+    .where("revoked_at", "is", null)
+    .returningAll();
+}
+
 export async function insertClaimedEphemeralMediaForEntry(
   executor: QueryExecutor,
   input: {

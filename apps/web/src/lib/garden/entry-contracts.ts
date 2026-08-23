@@ -25,6 +25,10 @@ export const ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER =
   "x-overgarden-atomic-journal-create" as const;
 export const ATOMIC_JOURNAL_CREATE_PROTOCOL =
   "ove347.atomic-journal-create.v1" as const;
+export const ATOMIC_JOURNAL_EDIT_PROTOCOL_HEADER =
+  "x-overgarden-atomic-journal-edit" as const;
+export const ATOMIC_JOURNAL_EDIT_PROTOCOL =
+  "ove348.atomic-journal-edit.v1" as const;
 
 export function hasCurrentOnlineJournalProtocol(request: Request): boolean {
   return (
@@ -106,6 +110,35 @@ export interface AtomicJournalCreateResponse {
     coverUrl: string | null;
     publicPath: string;
   };
+  returnTo: string;
+}
+
+export interface AtomicJournalEditFocalPoint {
+  mediaAssetId: string;
+  x: number;
+  y: number;
+}
+
+export interface AtomicJournalEditRequest {
+  publishId: string;
+  clientMutationId: string;
+  expectedRevision: number;
+  title: string;
+  entryDate: string;
+  document: JournalDocumentV1;
+  coverMediaAssetId: string | null;
+  newMediaClaimReceipts: string[];
+  retainedMediaAssetIds: string[];
+  removedMediaAssetIds: string[];
+  focalPoints: AtomicJournalEditFocalPoint[];
+  returnTo: string;
+}
+
+export interface AtomicJournalEditResponse {
+  entryId: string;
+  slug: string;
+  revision: number;
+  card: AtomicJournalCreateResponse["card"];
   returnTo: string;
 }
 

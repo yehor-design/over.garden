@@ -16,8 +16,6 @@ import {
 } from "@/server/journal-repository";
 import type { RequestScope } from "@/server/request-scope";
 import { listNotificationCenter } from "@/server/social-readback-repository";
-import { listJournalDrafts } from "@/server/journal-draft-repository";
-import type { JournalEntryDraftReceiptV1 } from "@/lib/garden/entry-contracts";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -98,7 +96,6 @@ export interface GardenWorkspaceReadModel {
   recent: GardenWorkspaceSection<GardenWorkspaceRecentEntry[]>;
   inbox: GardenWorkspaceSection<GardenWorkspaceInboxSummary>;
   media: GardenWorkspaceSection<GardenWorkspaceMediaSummary>;
-  drafts: GardenWorkspaceSection<JournalEntryDraftReceiptV1[]>;
   allFailed: boolean;
 }
 
@@ -115,8 +112,7 @@ export type GardenWorkspaceSectionKey =
   | "spaces"
   | "recent"
   | "inbox"
-  | "media"
-  | "drafts";
+  | "media";
 
 export interface GardenWorkspaceSources {
   inventory(
@@ -133,7 +129,6 @@ export interface GardenWorkspaceSources {
   ): Promise<GardenWorkspaceRecentEntry[]>;
   inbox(scope: RequestScope): Promise<GardenWorkspaceInboxSummary>;
   media(scope: RequestScope): Promise<GardenWorkspaceMediaSummary>;
-  drafts?(scope: RequestScope): Promise<JournalEntryDraftReceiptV1[]>;
 }
 
 const defaultSources: GardenWorkspaceSources = {
@@ -205,9 +200,6 @@ const defaultSources: GardenWorkspaceSources = {
       failedCount: counts.get("failed") ?? 0,
     };
   },
-  async drafts(scope) {
-    return listJournalDrafts(scope);
-  },
 };
 
 export async function loadGardenWorkspace(
@@ -231,29 +223,25 @@ export async function loadGardenWorkspace(
     : 0;
   const faultSections = new Set(options.faultSections ?? []);
 
-  const [inventory, spaces, recent, inbox, media, drafts] =
-    await Promise.allSettled([
-      runWorkspaceSource(faultSections, "inventory", () =>
-        sources.inventory(scope, {
-          limit: inventoryPageSize + 1,
-          offset: inventoryOffset,
-        }),
-      ),
-      runWorkspaceSource(faultSections, "spaces", () =>
-        sources.spaces(scope, {
-          limit: spacesPageSize + 1,
-          offset: spacesOffset,
-        }),
-      ),
-      runWorkspaceSource(faultSections, "recent", () =>
-        sources.recent(scope, WORKSPACE_RECENT_LIMIT),
-      ),
-      runWorkspaceSource(faultSections, "inbox", () => sources.inbox(scope)),
-      runWorkspaceSource(faultSections, "media", () => sources.media(scope)),
-      runWorkspaceSource(faultSections, "drafts", () =>
-        (sources.drafts ?? defaultSources.drafts!)(scope),
-      ),
-    ]);
+  const [inventory, spaces, recent, inbox, media] = await Promise.allSettled([
+    runWorkspaceSource(faultSections, "inventory", () =>
+      sources.inventory(scope, {
+        limit: inventoryPageSize + 1,
+        offset: inventoryOffset,
+      }),
+    ),
+    runWorkspaceSource(faultSections, "spaces", () =>
+      sources.spaces(scope, {
+        limit: spacesPageSize + 1,
+        offset: spacesOffset,
+      }),
+    ),
+    runWorkspaceSource(faultSections, "recent", () =>
+      sources.recent(scope, WORKSPACE_RECENT_LIMIT),
+    ),
+    runWorkspaceSource(faultSections, "inbox", () => sources.inbox(scope)),
+    runWorkspaceSource(faultSections, "media", () => sources.media(scope)),
+  ]);
 
   const readModel: GardenWorkspaceReadModel = {
     inventory: resultSection(inventory, (value) => ({
@@ -277,7 +265,6 @@ export async function loadGardenWorkspace(
     recent: resultSection(recent, (value) => value),
     inbox: resultSection(inbox, (value) => value),
     media: resultSection(media, (value) => value),
-    drafts: resultSection(drafts, (value) => value),
     allFailed: false,
   };
 

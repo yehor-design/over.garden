@@ -59,6 +59,7 @@ export interface LocalJournalMediaItemSnapshot {
   mediaAssetId: string;
   blockId: string;
   generation: number;
+  source: "existing" | "staged";
   status: LocalJournalMediaStatus;
   previewUrl: string | null;
   width: number | null;
@@ -76,6 +77,15 @@ export interface LocalJournalMediaSelection {
   blockId: string;
   generation: number;
   ready: Promise<LocalJournalMediaItemSnapshot>;
+}
+
+export interface LocalJournalExistingMedia {
+  mediaAssetId: string;
+  blockId: string;
+  generation: number;
+  previewUrl: string;
+  width: number | null;
+  height: number | null;
 }
 
 export class LocalJournalMediaError extends Error {
@@ -99,10 +109,12 @@ interface InternalItem {
   mediaAssetId: string;
   blockId: string;
   generation: number;
+  origin: "existing" | "staged";
   retryCount: number;
-  source: Blob;
+  source: Blob | null;
   status: LocalJournalMediaStatus;
   previewUrl: string | null;
+  previewOwned: boolean;
   width: number | null;
   height: number | null;
   failureCode: string | null;
@@ -124,11 +136,47 @@ export class LocalJournalMediaCoordinator {
       stagingSessionId: string;
       encoder: LocalJournalImageEncoder;
       stager: LocalJournalMediaStager;
+      existingItems?: readonly LocalJournalExistingMedia[];
       createObjectURL?: (blob: Blob) => string;
       revokeObjectURL?: (url: string) => void;
       createId?: () => string;
     },
-  ) {}
+  ) {
+    for (const existing of options.existingItems ?? []) {
+      if (
+        !isUuid(existing.mediaAssetId) ||
+        !Number.isSafeInteger(existing.generation) ||
+        existing.generation < 1 ||
+        !existing.blockId ||
+        !existing.previewUrl ||
+        this.items.has(existing.mediaAssetId)
+      ) {
+        throw new LocalJournalMediaError("existing_media_invalid");
+      }
+      const operation = createGeneration();
+      const item: InternalItem = {
+        mediaAssetId: existing.mediaAssetId,
+        blockId: existing.blockId,
+        generation: existing.generation,
+        origin: "existing",
+        retryCount: 0,
+        source: null,
+        status: "ready",
+        previewUrl: existing.previewUrl,
+        previewOwned: false,
+        width: existing.width,
+        height: existing.height,
+        failureCode: null,
+        stagingReceipt: null,
+        deleteCapability: null,
+        controller: new AbortController(),
+        operation,
+      };
+      this.items.set(item.mediaAssetId, item);
+      settleGeneration(operation, "resolve", publicItem(item));
+    }
+    this.publish();
+  }
 
   getSnapshot = (): LocalJournalMediaSnapshot => this.snapshot;
 
@@ -157,10 +205,12 @@ export class LocalJournalMediaCoordinator {
       mediaAssetId,
       blockId: input.blockId,
       generation: 1,
+      origin: "staged",
       retryCount: 0,
       source,
       status: "selected",
       previewUrl: null,
+      previewOwned: false,
       width: null,
       height: null,
       failureCode: null,
@@ -178,16 +228,25 @@ export class LocalJournalMediaCoordinator {
   replace(mediaAssetId: string, source: Blob): LocalJournalMediaSelection {
     this.assertMutable();
     const current = this.requireItem(mediaAssetId);
+    // One unpublished slot owns one canonical target generation. Replacing
+    // local bytes again after a codec/stage/claim failure must not skip from
+    // current N to N+2, because the atomic server fence admits exactly N+1.
+    const generation =
+      current.origin === "existing"
+        ? current.generation + 1
+        : current.generation;
     this.retireOperation(current, "generation_replaced");
     this.revokePreview(current);
     this.deleteStagedBestEffort(current);
     const item: InternalItem = {
       ...current,
-      generation: current.generation + 1,
+      generation,
+      origin: "staged",
       retryCount: 0,
       source,
       status: "selected",
       previewUrl: null,
+      previewOwned: false,
       width: null,
       height: null,
       failureCode: null,
@@ -265,17 +324,19 @@ export class LocalJournalMediaCoordinator {
         };
       });
       await Promise.all(captured.map(({ ready }) => ready));
-      const receipts = captured.map(({ mediaAssetId, generation }) => {
-        const item = this.requireItem(mediaAssetId);
-        if (
-          item.generation !== generation ||
-          item.status !== "ready" ||
-          !item.stagingReceipt
-        ) {
-          throw new LocalJournalMediaError("media_not_ready");
-        }
-        return item.stagingReceipt;
-      });
+      const receipts = captured
+        .map(({ mediaAssetId, generation }) => {
+          const item = this.requireItem(mediaAssetId);
+          if (item.generation !== generation || item.status !== "ready") {
+            throw new LocalJournalMediaError("media_not_ready");
+          }
+          if (item.origin === "existing") return null;
+          if (!item.stagingReceipt) {
+            throw new LocalJournalMediaError("media_not_ready");
+          }
+          return item.stagingReceipt;
+        })
+        .filter((receipt): receipt is string => receipt !== null);
       return {
         stagingSessionId: this.options.stagingSessionId,
         mediaClaimReceipts: receipts,
@@ -352,6 +413,9 @@ export class LocalJournalMediaCoordinator {
 
   private async run(item: InternalItem): Promise<void> {
     try {
+      if (!item.source) {
+        throw new LocalJournalMediaError("media_source_missing");
+      }
       this.updateCurrent(item, { status: "decoding", failureCode: null });
       const encoded = await this.options.encoder.encode({
         source: item.source,
@@ -362,6 +426,7 @@ export class LocalJournalMediaCoordinator {
       });
       this.assertCurrent(item);
       const previewUrl = this.createObjectURL(encoded.blob);
+      item.previewOwned = true;
       this.updateCurrent(item, {
         status: "staging",
         previewUrl,
@@ -436,8 +501,9 @@ export class LocalJournalMediaCoordinator {
 
   private revokePreview(item: InternalItem) {
     if (!item.previewUrl) return;
-    this.revokeObjectURL(item.previewUrl);
+    if (item.previewOwned) this.revokeObjectURL(item.previewUrl);
     item.previewUrl = null;
+    item.previewOwned = false;
   }
 
   private deleteStagedBestEffort(item: InternalItem) {
@@ -496,6 +562,7 @@ function publicItem(item: InternalItem): LocalJournalMediaItemSnapshot {
     mediaAssetId: item.mediaAssetId,
     blockId: item.blockId,
     generation: item.generation,
+    source: item.origin,
     status: item.status,
     previewUrl: item.previewUrl,
     width: item.width,

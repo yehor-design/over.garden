@@ -127,7 +127,7 @@ describe("local-only journal media coordinator", () => {
     const original = coordinator.add(photo([1]), { blockId: "b_first" });
     await Promise.resolve();
     const replacement = coordinator.replace(MEDIA_1, photo([8, 8]));
-    expect(replacement.generation).toBe(2);
+    expect(replacement.generation).toBe(1);
 
     first.resolve(encodedImage([1]));
     await expect(original.ready).rejects.toMatchObject({
@@ -139,10 +139,10 @@ describe("local-only journal media coordinator", () => {
     await replacement.ready;
     expect(stager.stage).toHaveBeenCalledTimes(1);
     expect(stager.stage).toHaveBeenCalledWith(
-      expect.objectContaining({ mediaAssetId: MEDIA_1, generation: 2 }),
+      expect.objectContaining({ mediaAssetId: MEDIA_1, generation: 1 }),
     );
     expect(coordinator.getSnapshot().items[0]).toMatchObject({
-      generation: 2,
+      generation: 1,
       status: "ready",
     });
   });
@@ -182,6 +182,95 @@ describe("local-only journal media coordinator", () => {
       mediaClaimReceipts: ["receipt-2", "receipt-1"],
       orderedMediaAssetIds: [MEDIA_2, MEDIA_1],
     });
+  });
+
+  it("seeds existing public media as ready without codec or upload work and freezes only changed generations", async () => {
+    const encoder: LocalJournalImageEncoder = {
+      encode: vi.fn(async () => encodedImage([8])),
+    };
+    const stager = fakeStager();
+    const revokeObjectURL = vi.fn();
+    const coordinator = new LocalJournalMediaCoordinator({
+      stagingSessionId: SESSION_ID,
+      encoder,
+      stager,
+      createObjectURL: () => "blob:replacement",
+      revokeObjectURL,
+      createId: idSequence(MEDIA_2),
+      existingItems: [
+        {
+          mediaAssetId: MEDIA_1,
+          blockId: "b_existing",
+          generation: 7,
+          previewUrl: "https://media.over.garden/existing.webp",
+          width: 1200,
+          height: 800,
+        },
+      ],
+    });
+
+    expect(coordinator.getSnapshot().items).toEqual([
+      expect.objectContaining({
+        mediaAssetId: MEDIA_1,
+        generation: 7,
+        status: "ready",
+        previewUrl: "https://media.over.garden/existing.webp",
+        source: "existing",
+      }),
+    ]);
+    expect(encoder.encode).not.toHaveBeenCalled();
+    expect(stager.stage).not.toHaveBeenCalled();
+
+    const replacement = coordinator.replace(MEDIA_1, photo([8]));
+    expect(replacement.generation).toBe(8);
+    await replacement.ready;
+    const secondReplacement = coordinator.replace(MEDIA_1, photo([9]));
+    expect(secondReplacement.generation).toBe(8);
+    await secondReplacement.ready;
+    await expect(coordinator.freeze([MEDIA_1])).resolves.toEqual({
+      stagingSessionId: SESSION_ID,
+      mediaClaimReceipts: ["receipt-8"],
+      orderedMediaAssetIds: [MEDIA_1],
+    });
+    expect(stager.stage).toHaveBeenCalledWith(
+      expect.objectContaining({ mediaAssetId: MEDIA_1, generation: 8 }),
+    );
+    expect(stager.delete).toHaveBeenCalledWith(
+      expect.objectContaining({ mediaAssetId: MEDIA_1, generation: 8 }),
+    );
+    expect(revokeObjectURL).not.toHaveBeenCalledWith(
+      "https://media.over.garden/existing.webp",
+    );
+  });
+
+  it("publishes an unchanged existing-media snapshot with no claim receipt", async () => {
+    const encoder: LocalJournalImageEncoder = {
+      encode: vi.fn(async () => encodedImage([1])),
+    };
+    const stager = fakeStager();
+    const coordinator = new LocalJournalMediaCoordinator({
+      stagingSessionId: SESSION_ID,
+      encoder,
+      stager,
+      existingItems: [
+        {
+          mediaAssetId: MEDIA_1,
+          blockId: "b_existing",
+          generation: 3,
+          previewUrl: "https://media.over.garden/existing.webp",
+          width: 900,
+          height: 1200,
+        },
+      ],
+    });
+
+    await expect(coordinator.freeze([MEDIA_1])).resolves.toEqual({
+      stagingSessionId: SESSION_ID,
+      mediaClaimReceipts: [],
+      orderedMediaAssetIds: [MEDIA_1],
+    });
+    expect(encoder.encode).not.toHaveBeenCalled();
+    expect(stager.stage).not.toHaveBeenCalled();
   });
 
   it("locks every media mutation while a publication snapshot is frozen", async () => {

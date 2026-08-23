@@ -52,7 +52,7 @@ describe("authenticated mutation enforcement receipt", () => {
       first.consumerEdgeStates.filter(
         (state) => state.enforcementState === "enforced_ove_290",
       ),
-    ).toHaveLength(154);
+    ).toHaveLength(153);
     expect(JSON.stringify(first)).not.toMatch(/effectBoundaryId/);
   });
 

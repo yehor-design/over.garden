@@ -76,6 +76,42 @@ describe("ephemeral publication handoff", () => {
     });
   });
 
+  it("derives a unique media set when edit verification has no frozen full order", async () => {
+    const token = await receipt();
+
+    await expect(
+      verifyEphemeralPublicationReceipts(
+        {
+          ownerUserId: OWNER,
+          stagingReceipts: [token],
+        },
+        {
+          receiptPolicy: policy,
+          ownerHashSecret: SECRET,
+          nowSeconds: 2_000_000_010,
+        },
+      ),
+    ).resolves.toMatchObject({
+      stagingSessionId: SESSION,
+      media: [{ mediaAssetId: MEDIA, generation: 1 }],
+    });
+
+    const duplicate = await receipt({ receiptNonce: "d".repeat(32) });
+    await expect(
+      verifyEphemeralPublicationReceipts(
+        {
+          ownerUserId: OWNER,
+          stagingReceipts: [token, duplicate],
+        },
+        {
+          receiptPolicy: policy,
+          ownerHashSecret: SECRET,
+          nowSeconds: 2_000_000_010,
+        },
+      ),
+    ).rejects.toMatchObject({ code: "receipt_set_invalid" });
+  });
+
   it("rejects a validly signed receipt from another owner before claim", async () => {
     const otherHash = await deriveEphemeralMediaOwnerSubjectHash(
       SECRET,

@@ -32,8 +32,7 @@ describe("GardenWorkspaceView", () => {
     expect(html).toContain("Переглянути всі 5 просторів");
     expect(html).toContain("Живі об");
     expect(html).toContain("Переглянути всі 9 об");
-    expect(html).toContain("Приватні чернетки");
-    expect(html).toContain("Пересадка монстери");
+    expect(html).not.toContain("Приватні чернетки");
     expect(html).not.toContain("Локальна черга");
     expect(html).toContain("Фото в обробці: 1");
     expect(html).toContain("Фото, що потребують уваги: 1");
@@ -76,7 +75,6 @@ describe("GardenWorkspaceView", () => {
           recent: { status: "error" },
           inbox: { status: "error" },
           media: { status: "error" },
-          drafts: { status: "error" },
           allFailed: true,
         }}
       />,
@@ -214,31 +212,6 @@ function readyWorkspace(): GardenWorkspaceReadModel {
     media: {
       status: "ready",
       value: { processingCount: 1, failedCount: 1 },
-    },
-    drafts: {
-      status: "ready",
-      value: [
-        {
-          draftKey: "follow-up-entry:object-1",
-          draftKind: "follow_up",
-          context: { plantObjectId: "object-1" },
-          payload: {
-            schemaVersion: 1,
-            draftKind: "follow_up",
-            request: {
-              target: "plant_object_entry",
-              plantObjectId: "object-1",
-              title: "Пересадка монстери",
-              entryDate: "2026-07-12",
-              clientMutationId: "workspace-draft-fixture",
-            },
-          },
-          generation: 1,
-          payloadSha256: "a".repeat(64),
-          serverRevision: 1,
-          updatedAt: "2026-07-12T10:00:00.000Z",
-        },
-      ],
     },
     allFailed: false,
   };

@@ -154,7 +154,7 @@ describe("/journal/[slug] V2", () => {
       page.entry.publicSlug,
     );
     expect(html).toContain(
-      'data-owner-control="/garden/objects/object-1#passport-entry-entry-1"',
+      'data-owner-control="/garden/entries/entry-1/edit?returnTo=%2Fbg%2Fjournal%2Ffirst-public-chapter"',
     );
     expect(html).toContain('data-authenticated="true"');
   });

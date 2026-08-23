@@ -1,74 +1,81 @@
 import { notFound, redirect } from "next/navigation";
 
 import { JournalEntryEditComposer } from "@/app/garden/entries/[entryId]/edit/journal-entry-edit-composer";
-import { requireCurrentRequestScope } from "@/server/auth-session";
-import { db } from "@/db";
-import { readJournalDocumentFromEntry } from "@/server/journal-document-persistence";
-import { getPublicDerivativeUrl } from "@/lib/storage";
-import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
 import { journalEntryDateInputValue } from "@/lib/garden/journal-entry-date";
+import { requireCurrentRequestScope } from "@/server/auth-session";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import { readAtomicJournalEditBaseline } from "@/server/journal-repository";
 
 export const runtime = "nodejs";
 
 export default async function GardenEntryEditPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ entryId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { entryId } = await params;
+  const [{ entryId }, query] = await Promise.all([
+    params,
+    searchParams ??
+      Promise.resolve<Record<string, string | string[] | undefined>>({}),
+  ]);
+  const requestedReturnTo = firstParam(query.returnTo);
+  const returnTo = normalizeJournalComposerReturnTo(
+    requestedReturnTo,
+    "/garden",
+  );
+  const editPath = `/garden/entries/${encodeURIComponent(entryId)}/edit?returnTo=${encodeURIComponent(returnTo)}`;
+
   let scope;
   try {
     scope = await requireCurrentRequestScope();
   } catch {
-    redirect(
-      `/auth/intent?returnTo=${encodeURIComponent(`/garden/entries/${entryId}/edit`)}`,
-    );
+    redirect(`/auth/intent?returnTo=${encodeURIComponent(editPath)}`);
   }
 
-  const entry = await db
-    .selectFrom("journal_entries")
-    .selectAll()
-    .where("id", "=", entryId)
-    .where("owner_user_id", "=", scope.userId)
-    .executeTakeFirst();
-
-  if (!entry || entry.lifecycle_state !== "active" || entry.public_gone_at) {
-    notFound();
-  }
-
-  const media = await db
-    .selectFrom("media_assets")
-    .selectAll()
-    .where("owner_user_id", "=", scope.userId)
-    .where("journal_entry_id", "=", entry.id)
-    .where("status", "=", "processed")
-    .orderBy("document_position", "asc")
-    .orderBy("created_at", "asc")
-    .execute();
-
-  const documentRead = readJournalDocumentFromEntry(entry);
-  const locale = await getRequestInterfaceLocale();
-  const previewUrls = new Map(
-    media
-      .filter((item) => item.derivative_key)
-      .map((item) => [item.id, getPublicDerivativeUrl(item.derivative_key!)]),
+  const baseline = await readAtomicJournalEditBaseline(scope, entryId).catch(
+    () => null,
   );
+  if (!baseline) notFound();
+
+  const locale = await getRequestInterfaceLocale();
+  const blockIdByMediaId = new Map(
+    baseline.document.blocks.flatMap((block) =>
+      block.type === "image" ? [[block.mediaAssetId, block.id] as const] : [],
+    ),
+  );
+  const existingMedia = baseline.media.map((media) => ({
+    mediaAssetId: media.mediaAssetId,
+    blockId:
+      blockIdByMediaId.get(media.mediaAssetId) ?? `cover_${media.mediaAssetId}`,
+    generation: media.generation,
+    previewUrl: media.publicUrl,
+    width: media.intrinsicWidth,
+    height: media.intrinsicHeight,
+    focalX: media.focalX,
+    focalY: media.focalY,
+  }));
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
       <JournalEntryEditComposer
+        key={`${baseline.entry.id}:${baseline.entry.journal_revision}`}
         locale={locale}
-        entryId={entry.id}
-        title={entry.title}
-        entryDate={journalEntryDateInputValue(entry.entry_date)}
-        expectedRevision={Number(entry.journal_revision ?? 1)}
-        initialDocument={
-          documentRead.status === "unavailable" ? null : documentRead.document
-        }
-        documentUnavailable={documentRead.status === "unavailable"}
-        imagePreviewUrls={Object.fromEntries(previewUrls)}
-        initialCoverMediaAssetId={entry.cover_media_asset_id}
+        entryId={baseline.entry.id}
+        title={baseline.entry.title}
+        entryDate={journalEntryDateInputValue(baseline.entry.entry_date)}
+        expectedRevision={Number(baseline.entry.journal_revision ?? 1)}
+        initialDocument={baseline.document}
+        existingMedia={existingMedia}
+        initialCoverMediaAssetId={baseline.entry.cover_media_asset_id}
+        returnTo={returnTo}
       />
     </main>
   );
+}
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
 }

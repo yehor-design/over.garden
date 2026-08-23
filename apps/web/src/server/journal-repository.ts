@@ -70,10 +70,15 @@ import {
   type JournalCoverClaimInput,
 } from "@/server/journal-document-persistence";
 import {
+  buildEnqueueMediaDerivativeRevokeJobQuery,
   buildEnqueueMediaStagingFinalizeJobQuery,
   enqueueArchiveDerivativeRevokes,
 } from "@/server/media/media-lifecycle-enqueue";
-import { insertClaimedEphemeralMediaForEntry } from "@/server/media/media-repository";
+import {
+  buildInsertClaimedEphemeralEditMediaQuery,
+  buildReplaceClaimedEphemeralMediaQuery,
+  insertClaimedEphemeralMediaForEntry,
+} from "@/server/media/media-repository";
 import type { ClaimedEphemeralPublicationMedia } from "@/server/media/ephemeral-publication-handoff";
 import {
   ensurePublicProjectionIntent,
@@ -86,6 +91,13 @@ import {
   type JournalDocumentV1,
 } from "@/lib/garden/journal-document";
 import { blockOrderHashFromDocument } from "@/server/mvp-learning/composer-signals";
+import type { AtomicJournalEditFocalPoint } from "@/lib/garden/entry-contracts";
+import { journalEntryDateInputValue } from "@/lib/garden/journal-entry-date";
+import { stableJson } from "@/lib/media/ephemeral-staging-crypto";
+import {
+  isAtomicJournalEditPublicPath,
+  validateAtomicJournalEditMediaPlan,
+} from "@/server/atomic-journal-edit-contract";
 
 export { JournalAggregateConflictError, readJournalDocumentFromEntry };
 
@@ -601,6 +613,523 @@ export interface CommittedAtomicJournalCreateReadback {
   } | null;
 }
 
+export interface AtomicJournalEditMediaBaseline {
+  mediaAssetId: string;
+  generation: number;
+  publicPath: string;
+  publicUrl: string;
+  focalX: number;
+  focalY: number;
+  intrinsicWidth: number | null;
+  intrinsicHeight: number | null;
+  caption: string | null;
+  altText: string | null;
+  usageRole: "inline" | "cover_only";
+  documentPosition: number | null;
+}
+
+export interface AtomicJournalEditBaseline {
+  entry: JournalEntry;
+  document: JournalDocumentV1;
+  media: AtomicJournalEditMediaBaseline[];
+}
+
+export interface AtomicJournalEditReadback {
+  entry: JournalEntry;
+  publicMedia: Array<{
+    mediaAssetId: string;
+    publicPath: string;
+  }>;
+  finalizeHandoff: {
+    stagingSessionId: string;
+    receiptSetDigest: string;
+  } | null;
+  isReplay: boolean;
+}
+
+export interface AtomicJournalEditInput {
+  entryId: string;
+  mutationPrefix: string;
+  mutationReceiptId: string;
+  expectedRevision: number;
+  title: string;
+  entryDate: string;
+  document: JournalDocumentV1;
+  coverMediaAssetId: string | null;
+  finalMediaAssetIds: readonly string[];
+  retainedMediaAssetIds: readonly string[];
+  removedMediaAssetIds: readonly string[];
+  focalPoints: readonly AtomicJournalEditFocalPoint[];
+  handoff: {
+    stagingSessionId: string;
+    receiptSetDigest: string;
+    publicMedia: readonly ClaimedEphemeralPublicationMedia[];
+  } | null;
+}
+
+/**
+ * Owner-scoped, public-only baseline for the OVE-348 atomic editor. A private,
+ * archived, malformed, transitional, or partially ready aggregate is
+ * intentionally indistinguishable from a missing entry at this boundary.
+ */
+export async function readAtomicJournalEditBaseline(
+  scope: RequestScope,
+  entryId: string,
+  executor: QueryExecutor = db,
+): Promise<AtomicJournalEditBaseline> {
+  const entry = await buildFindJournalEntryByIdQuery(
+    executor,
+    scope,
+    entryId,
+  ).executeTakeFirst();
+  if (
+    !entry ||
+    entry.visibility !== "public" ||
+    entry.lifecycle_state !== "active" ||
+    !entry.public_slug ||
+    !entry.published_at ||
+    entry.public_gone_at !== null
+  ) {
+    return atomicEditUnavailable();
+  }
+
+  const documentRead = readJournalDocumentFromEntry(entry);
+  if (documentRead.status === "unavailable") {
+    return atomicEditUnavailable();
+  }
+  const document = documentRead.document;
+  const expectedIds = listJournalDocumentImageMediaIds(document);
+  if (
+    entry.cover_media_asset_id &&
+    !expectedIds.includes(entry.cover_media_asset_id)
+  ) {
+    expectedIds.push(entry.cover_media_asset_id);
+  }
+  if (new Set(expectedIds).size !== expectedIds.length) {
+    return atomicEditUnavailable();
+  }
+
+  const rows = await executor
+    .selectFrom("media_assets")
+    .select([
+      "id",
+      "quarantine_key",
+      "upload_generation",
+      "derivative_key",
+      "admitted_media_type",
+      "status",
+      "media_readiness_state",
+      "original_deleted_at",
+      "processing_claim_token",
+      "processing_claimed_at",
+      "revoked_at",
+      "focal_x",
+      "focal_y",
+      "intrinsic_width",
+      "intrinsic_height",
+      "caption",
+      "alt_text",
+      "usage_role",
+      "document_position",
+    ])
+    .where("owner_user_id", "=", scope.userId)
+    .where("journal_entry_id", "=", entry.id)
+    .orderBy("document_position", "asc")
+    .orderBy("id", "asc")
+    .execute();
+  const rowById = new Map(rows.map((row) => [row.id, row]));
+  if (
+    rows.length !== expectedIds.length ||
+    expectedIds.some((id) => !rowById.has(id)) ||
+    rows.some(
+      (row) =>
+        row.quarantine_key.startsWith("visual-fixtures/") ||
+        row.admitted_media_type !== "image/webp" ||
+        !row.derivative_key ||
+        !isAtomicJournalEditPublicPath(row.derivative_key) ||
+        row.status !== "processed" ||
+        row.media_readiness_state !== "public_ready" ||
+        row.original_deleted_at === null ||
+        row.processing_claim_token !== null ||
+        row.processing_claimed_at !== null ||
+        row.revoked_at !== null ||
+        (row.usage_role !== "inline" && row.usage_role !== "cover_only"),
+    )
+  ) {
+    return atomicEditUnavailable();
+  }
+
+  return {
+    entry,
+    document,
+    media: expectedIds.map((mediaAssetId) => {
+      const row = rowById.get(mediaAssetId)!;
+      const publicPath = row.derivative_key!;
+      return {
+        mediaAssetId,
+        generation: Math.max(1, Number(row.upload_generation ?? 1)),
+        publicPath,
+        publicUrl: getPublicDerivativeUrl(publicPath),
+        focalX: Number(row.focal_x ?? 0.5),
+        focalY: Number(row.focal_y ?? 0.5),
+        intrinsicWidth: row.intrinsic_width,
+        intrinsicHeight: row.intrinsic_height,
+        caption: row.caption,
+        altText: row.alt_text,
+        usageRole: row.usage_role as "inline" | "cover_only",
+        documentPosition: row.document_position,
+      };
+    }),
+  };
+}
+
+export async function readCommittedAtomicJournalEdit(
+  scope: RequestScope,
+  input: Omit<
+    AtomicJournalEditInput,
+    "retainedMediaAssetIds" | "removedMediaAssetIds" | "handoff"
+  > & {
+    receiptSetDigest: string | null;
+  },
+): Promise<AtomicJournalEditReadback | null> {
+  return readCommittedAtomicJournalEditWithExecutor(scope, input, db);
+}
+
+async function readCommittedAtomicJournalEditWithExecutor(
+  scope: RequestScope,
+  input: Omit<
+    AtomicJournalEditInput,
+    "retainedMediaAssetIds" | "removedMediaAssetIds" | "handoff"
+  > & {
+    receiptSetDigest: string | null;
+  },
+  executor: QueryExecutor,
+): Promise<AtomicJournalEditReadback | null> {
+  const receipts = await executor
+    .selectFrom("journal_entry_mutation_receipts")
+    .selectAll()
+    .where("owner_user_id", "=", scope.userId)
+    .where("journal_entry_id", "=", input.entryId)
+    .where("mutation_kind", "=", "edit")
+    .where("client_mutation_id", "like", `${input.mutationPrefix}%`)
+    .execute();
+  if (receipts.length === 0) return null;
+  const receipt = receipts.find(
+    (candidate) => candidate.client_mutation_id === input.mutationReceiptId,
+  );
+  if (
+    receipts.length !== 1 ||
+    !receipt ||
+    Number(receipt.base_revision) !== input.expectedRevision ||
+    Number(receipt.result_revision) !== input.expectedRevision + 1
+  ) {
+    return invalidAtomicReplay();
+  }
+
+  const baseline = await readAtomicJournalEditBaseline(
+    scope,
+    input.entryId,
+    executor,
+  );
+  const normalizedTitle = normalizeJournalEntryTitle(input.title);
+  const replayChecks = {
+    revision:
+      journalRevisionNumber(baseline.entry.journal_revision) ===
+      input.expectedRevision + 1,
+    title: baseline.entry.title === normalizedTitle,
+    entryDate: journalEntryDateMatches(
+      baseline.entry.entry_date,
+      input.entryDate,
+    ),
+    document: stableJson(baseline.document) === stableJson(input.document),
+    cover: baseline.entry.cover_media_asset_id === input.coverMediaAssetId,
+    mediaSet: sameStringSet(
+      baseline.media.map((item) => item.mediaAssetId),
+      input.finalMediaAssetIds,
+    ),
+    focal: focalPointsMatch(baseline.media, input.focalPoints),
+  };
+  if (Object.values(replayChecks).some((passed) => !passed)) {
+    return invalidAtomicReplay();
+  }
+
+  let finalizeHandoff: AtomicJournalEditReadback["finalizeHandoff"] = null;
+  if (input.receiptSetDigest) {
+    const job = await executor
+      .selectFrom("job_queue")
+      .select(["idempotency_key", "payload"])
+      .where("queue_name", "=", "media_lifecycle")
+      .where(
+        "idempotency_key",
+        "=",
+        `media_staging_finalize:${input.entryId}:${input.receiptSetDigest}`,
+      )
+      .executeTakeFirst();
+    if (!job) return invalidAtomicReplay();
+    finalizeHandoff = parseAtomicFinalizeHandoff(job, input.entryId);
+  }
+
+  const mediaById = new Map(
+    baseline.media.map((item) => [item.mediaAssetId, item]),
+  );
+  return {
+    entry: baseline.entry,
+    publicMedia: input.finalMediaAssetIds.map((mediaAssetId) => ({
+      mediaAssetId,
+      publicPath: mediaById.get(mediaAssetId)!.publicPath,
+    })),
+    finalizeHandoff,
+    isReplay: true,
+  };
+}
+
+export async function updateAtomicJournalEntry(
+  scope: RequestScope,
+  input: AtomicJournalEditInput,
+): Promise<
+  AtomicJournalEditReadback & {
+    learning?: UpdateJournalEntryAggregateResult["learning"];
+  }
+> {
+  const entryId = normalizeRequiredText(input.entryId, "Entry id", 200);
+  const expectedRevision = Math.trunc(Number(input.expectedRevision));
+  if (
+    !Number.isFinite(expectedRevision) ||
+    expectedRevision < 1 ||
+    !input.mutationReceiptId.startsWith(input.mutationPrefix)
+  ) {
+    throw new Error("atomic_edit_request_invalid");
+  }
+  const title = normalizeJournalEntryTitle(input.title);
+  const entryDate = normalizeEntryDate(input.entryDate);
+  const content = resolveJournalContentForWrite({
+    contentDocument: input.document,
+    requireStructured: true,
+  });
+  const expectedFinalIds = [...content.mediaAssetIds];
+  if (
+    input.coverMediaAssetId &&
+    !expectedFinalIds.includes(input.coverMediaAssetId)
+  ) {
+    expectedFinalIds.push(input.coverMediaAssetId);
+  }
+  if (
+    stableJson(content.document) !== stableJson(input.document) ||
+    !sameOrderedStrings(expectedFinalIds, input.finalMediaAssetIds)
+  ) {
+    throw new Error("atomic_media_claim_mismatch");
+  }
+
+  return db.transaction().execute(async (trx) => {
+    await sql`set local statement_timeout = '3000ms'`.execute(trx);
+    await sql`set local lock_timeout = '2750ms'`.execute(trx);
+    await buildJournalMutationAdvisoryLockQuery(scope, entryId).execute(trx);
+
+    const replay = await readCommittedAtomicJournalEditWithExecutor(
+      scope,
+      {
+        entryId,
+        mutationPrefix: input.mutationPrefix,
+        mutationReceiptId: input.mutationReceiptId,
+        expectedRevision,
+        title: input.title,
+        entryDate: input.entryDate,
+        document: input.document,
+        coverMediaAssetId: input.coverMediaAssetId,
+        finalMediaAssetIds: input.finalMediaAssetIds,
+        focalPoints: input.focalPoints,
+        receiptSetDigest: input.handoff?.receiptSetDigest ?? null,
+      },
+      trx,
+    );
+    if (replay) return replay;
+
+    const existing = await readAtomicJournalEditBaseline(scope, entryId, trx);
+    const currentRevision = journalRevisionNumber(
+      existing.entry.journal_revision,
+    );
+    if (currentRevision !== expectedRevision) {
+      throw new JournalAggregateConflictError(currentRevision);
+    }
+    const mediaPlan = validateAtomicJournalEditMediaPlan({
+      currentMedia: existing.media,
+      finalMediaAssetIds: input.finalMediaAssetIds,
+      retainedMediaAssetIds: input.retainedMediaAssetIds,
+      removedMediaAssetIds: input.removedMediaAssetIds,
+      claimedMedia: input.handoff?.publicMedia ?? [],
+      focalPoints: input.focalPoints,
+    });
+    if (
+      (mediaPlan.replacements.length > 0 || mediaPlan.additions.length > 0) &&
+      !input.handoff
+    ) {
+      throw new Error("atomic_media_claim_mismatch");
+    }
+
+    const nextRevision = currentRevision + 1;
+    const updated = await trx
+      .updateTable("journal_entries")
+      .set({
+        title,
+        body: content.body,
+        content_document: journalDocumentAsJson(content.document),
+        content_schema_version: content.contentSchemaVersion,
+        journal_revision: nextRevision,
+        entry_date: entryDate,
+        updated_at: new Date(),
+      })
+      .where("id", "=", entryId)
+      .where("owner_user_id", "=", scope.userId)
+      .where("journal_revision", "=", String(expectedRevision))
+      .where("visibility", "=", "public")
+      .where("lifecycle_state", "=", "active")
+      .where("public_slug", "is not", null)
+      .where("published_at", "is not", null)
+      .where("public_gone_at", "is", null)
+      .returningAll()
+      .executeTakeFirst();
+    if (!updated) {
+      const latest = await readAtomicJournalEditBaseline(scope, entryId, trx);
+      throw new JournalAggregateConflictError(
+        journalRevisionNumber(latest.entry.journal_revision),
+      );
+    }
+
+    for (const replacement of mediaPlan.replacements) {
+      await buildEnqueueMediaDerivativeRevokeJobQuery(trx, {
+        bucket: "public_derivative",
+        objectKey: replacement.priorPublicPath,
+        reason: "orphan",
+        journalEntryId: entryId,
+      }).execute();
+      const replaced = await buildReplaceClaimedEphemeralMediaQuery(trx, {
+        ownerUserId: scope.userId,
+        journalEntryId: entryId,
+        stagingSessionId: input.handoff!.stagingSessionId,
+        priorGeneration: replacement.priorGeneration,
+        priorPublicPath: replacement.priorPublicPath,
+        media: replacement,
+      }).executeTakeFirst();
+      if (!replaced) throw new Error("atomic_media_claim_mismatch");
+    }
+    for (const addition of mediaPlan.additions) {
+      const inserted = await buildInsertClaimedEphemeralEditMediaQuery(trx, {
+        ownerUserId: scope.userId,
+        stagingSessionId: input.handoff!.stagingSessionId,
+        media: addition,
+      }).executeTakeFirst();
+      if (!inserted) throw new Error("atomic_media_claim_mismatch");
+    }
+
+    await claimOrderedInlineMediaForEntry(trx, scope, {
+      journalEntryId: entryId,
+      orderedMediaAssetIds: content.mediaAssetIds,
+      preserveDetachedMediaAssetIds:
+        input.coverMediaAssetId &&
+        !content.mediaAssetIds.includes(input.coverMediaAssetId)
+          ? [input.coverMediaAssetId]
+          : [],
+    });
+    await claimJournalEntryCover(trx, scope, {
+      journalEntryId: entryId,
+      cover: input.coverMediaAssetId
+        ? content.mediaAssetIds.includes(input.coverMediaAssetId)
+          ? {
+              mode: "explicit_inline",
+              mediaAssetId: input.coverMediaAssetId,
+            }
+          : { mode: "separate", mediaAssetId: input.coverMediaAssetId }
+        : { mode: "none" },
+      orderedInlineMediaAssetIds: content.mediaAssetIds,
+    });
+    for (const focalPoint of input.focalPoints) {
+      const focalUpdated = await trx
+        .updateTable("media_assets")
+        .set({
+          focal_x: focalPoint.x,
+          focal_y: focalPoint.y,
+          updated_at: new Date(),
+        })
+        .where("id", "=", focalPoint.mediaAssetId)
+        .where("owner_user_id", "=", scope.userId)
+        .where("journal_entry_id", "=", entryId)
+        .where("status", "=", "processed")
+        .where("media_readiness_state", "=", "public_ready")
+        .where("derivative_key", "is not", null)
+        .where("revoked_at", "is", null)
+        .returning("id")
+        .executeTakeFirst();
+      if (!focalUpdated) throw new Error("atomic_media_focal_mismatch");
+    }
+
+    await writeJournalMutationReceipt(trx, {
+      ownerUserId: scope.userId,
+      journalEntryId: entryId,
+      clientMutationId: input.mutationReceiptId,
+      baseRevision: expectedRevision,
+      resultRevision: nextRevision,
+      mutationKind: "edit",
+    });
+    await recordPublicProjectionIntent(trx, {
+      entityId: entryId,
+      ownerUserId: scope.userId,
+      desiredState: "present",
+      reason: "edit",
+      privacyReducing: isPublicTextReducingEdit(
+        { title: existing.entry.title, body: existing.entry.body },
+        { title, body: content.body },
+      ),
+    });
+    await enqueueLearningAttributionIntent(trx, scope);
+    if (input.handoff) {
+      await buildEnqueueMediaStagingFinalizeJobQuery(trx, {
+        publishId: entryId,
+        stagingSessionId: input.handoff.stagingSessionId,
+        receiptSetDigest: input.handoff.receiptSetDigest,
+      }).execute();
+    }
+
+    const committed = await readCommittedAtomicJournalEditWithExecutor(
+      scope,
+      {
+        entryId,
+        mutationPrefix: input.mutationPrefix,
+        mutationReceiptId: input.mutationReceiptId,
+        expectedRevision,
+        title: input.title,
+        entryDate: input.entryDate,
+        document: input.document,
+        coverMediaAssetId: input.coverMediaAssetId,
+        finalMediaAssetIds: input.finalMediaAssetIds,
+        focalPoints: input.focalPoints,
+        receiptSetDigest: input.handoff?.receiptSetDigest ?? null,
+      },
+      trx,
+    );
+    if (!committed) return invalidAtomicReplay();
+
+    const priorCoverSource = inferCoverSourceFromEntryState({
+      document: existing.document,
+      explicitCoverMediaAssetId: existing.entry.cover_media_asset_id,
+    });
+    const nextCoverSource = inferCoverSourceFromEntryState({
+      document: content.document,
+      explicitCoverMediaAssetId: input.coverMediaAssetId,
+    });
+    return {
+      ...committed,
+      isReplay: false,
+      learning: {
+        priorBlockOrderHash: blockOrderHashFromDocument(existing.document),
+        nextBlockOrderHash: blockOrderHashFromDocument(content.document),
+        priorCoverSource,
+        nextCoverSource,
+        document: content.document,
+      },
+    };
+  });
+}
+
 /**
  * Durable owner-scoped replay boundary for a publication whose staging lease
  * may already be expired or whose provider control plane is unavailable. The
@@ -750,6 +1279,53 @@ function parseAtomicFinalizeHandoff(
 
 function invalidAtomicReplay(): never {
   throw new Error("idempotency_mismatch");
+}
+
+function atomicEditUnavailable(): never {
+  throw new Error("atomic_edit_unavailable");
+}
+
+function journalEntryDateMatches(value: Date | string, expected: string) {
+  return (
+    journalEntryDateInputValue(value) === expected ||
+    (value instanceof Date && value.toISOString().slice(0, 10) === expected)
+  );
+}
+
+function sameStringSet(left: readonly string[], right: readonly string[]) {
+  if (
+    new Set(left).size !== left.length ||
+    new Set(right).size !== right.length ||
+    left.length !== right.length
+  ) {
+    return false;
+  }
+  const expected = new Set(right);
+  return left.every((item) => expected.has(item));
+}
+
+function sameOrderedStrings(left: readonly string[], right: readonly string[]) {
+  return (
+    left.length === right.length &&
+    left.every((item, index) => item === right[index])
+  );
+}
+
+function focalPointsMatch(
+  media: readonly AtomicJournalEditMediaBaseline[],
+  focalPoints: readonly AtomicJournalEditFocalPoint[],
+) {
+  if (media.length !== focalPoints.length) return false;
+  const focalById = new Map(
+    focalPoints.map((item) => [item.mediaAssetId, item]),
+  );
+  if (focalById.size !== focalPoints.length) return false;
+  return media.every((item) => {
+    const focal = focalById.get(item.mediaAssetId);
+    return (
+      focal !== undefined && item.focalX === focal.x && item.focalY === focal.y
+    );
+  });
 }
 
 export async function createFirstPlantEntry(

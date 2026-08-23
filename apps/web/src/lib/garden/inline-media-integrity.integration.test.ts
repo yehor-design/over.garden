@@ -28,7 +28,7 @@ describe("OVE-243 vertical inline-media integration", () => {
     }
   });
 
-  it("gives edit selections a processed durable identity before insertion", () => {
+  it("gives edit selections one local generation-fenced identity before atomic save", () => {
     const source = readFileSync(
       path.join(
         root,
@@ -37,10 +37,14 @@ describe("OVE-243 vertical inline-media integration", () => {
       "utf8",
     );
     expect(source).toContain("<StructuredJournalComposer");
-    expect(source).toContain("await uploadOnlineComposerPhoto({");
+    expect(source).toContain("useLocalJournalComposer({");
+    expect(source).toContain('imageInsertionMode="immediate"');
     expect(source).toContain(
-      "inlineMedia.commit(reservation, blockId, previewUrl)",
+      "const selected = local.selectImage(file, blockId, mediaAssetId);",
     );
+    expect(source).toContain("local.replaceImage(mediaAssetId, file)");
+    expect(source).not.toContain("uploadOnlineComposerPhoto({");
+    expect(source).not.toContain("useInlineMediaSelection(");
     expect(source).not.toContain(
       "return { previewUrl: URL.createObjectURL(file) }",
     );

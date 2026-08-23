@@ -19,14 +19,20 @@ import type {
   AtomicJournalCreateContext,
   AtomicJournalCreateRequest,
   AtomicJournalCreateResponse,
+  AtomicJournalEditFocalPoint,
+  AtomicJournalEditRequest,
+  AtomicJournalEditResponse,
 } from "@/lib/garden/entry-contracts";
 import {
   ATOMIC_JOURNAL_CREATE_PROTOCOL,
   ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
+  ATOMIC_JOURNAL_EDIT_PROTOCOL,
+  ATOMIC_JOURNAL_EDIT_PROTOCOL_HEADER,
 } from "@/lib/garden/entry-contracts";
 import {
   LocalJournalMediaCoordinator,
   LocalJournalMediaError,
+  type LocalJournalExistingMedia,
   type LocalJournalMediaSelection,
   type LocalJournalMediaSnapshot,
 } from "@/lib/garden/local-journal-media-coordinator";
@@ -49,6 +55,7 @@ export type LocalJournalComposerStatus =
   | "waiting_media"
   | "publishing"
   | "published"
+  | "conflict"
   | "failed";
 
 export interface LocalJournalComposerState {
@@ -65,6 +72,17 @@ export interface LocalJournalPublicationInput {
   returnTo?: string;
 }
 
+export interface LocalJournalEditPublicationInput {
+  entryId: string;
+  expectedRevision: number;
+  title: string;
+  entryDate: string;
+  document: JournalDocumentV1;
+  coverMediaAssetId: string | null;
+  focalPoints: AtomicJournalEditFocalPoint[];
+  returnTo?: string;
+}
+
 export class LocalJournalComposerError extends Error {
   constructor(
     readonly code: string,
@@ -72,6 +90,7 @@ export class LocalJournalComposerError extends Error {
       status?: number;
       documentMutationAdmission?: unknown;
       authIntentUrl?: string;
+      currentRevision?: number;
     },
   ) {
     super(code);
@@ -86,6 +105,7 @@ export interface LocalJournalComposerDependencies {
     stagingSessionId: string;
     documentMutationGeneration: string;
     createId: () => string;
+    existingItems: readonly LocalJournalExistingMedia[];
   }) => LocalJournalMediaCoordinator;
   currentLocation?: () => string;
 }
@@ -105,6 +125,9 @@ export interface LocalJournalComposerController {
   publish(
     input: LocalJournalPublicationInput,
   ): Promise<AtomicJournalCreateResponse>;
+  publishEdit(
+    input: LocalJournalEditPublicationInput,
+  ): Promise<AtomicJournalEditResponse>;
   cancelPublishing(): void;
   abandon(): void;
 }
@@ -113,6 +136,7 @@ export function useLocalJournalComposer(input: {
   documentMutationGeneration: string | null | undefined;
   fallbackReturnTo: string;
   dirty: boolean;
+  existingMedia?: readonly LocalJournalExistingMedia[];
   enabled?: boolean;
   dependencies?: LocalJournalComposerDependencies;
 }): LocalJournalComposerController {
@@ -120,6 +144,9 @@ export function useLocalJournalComposer(input: {
   const [dependencies] = useState(() => input.dependencies);
   const [createId] = useState<() => string>(
     () => dependencies?.createId ?? (() => crypto.randomUUID()),
+  );
+  const [existingMedia] = useState<readonly LocalJournalExistingMedia[]>(
+    () => input.existingMedia ?? [],
   );
   const coordinator = useMemo(() => {
     if (!enabled || !input.documentMutationGeneration) return null;
@@ -130,6 +157,7 @@ export function useLocalJournalComposer(input: {
           stagingSessionId,
           documentMutationGeneration: input.documentMutationGeneration,
           createId,
+          existingItems: existingMedia,
         })
       : new LocalJournalMediaCoordinator({
           stagingSessionId,
@@ -138,8 +166,15 @@ export function useLocalJournalComposer(input: {
             documentMutationGeneration: input.documentMutationGeneration,
           }),
           createId,
+          existingItems: existingMedia,
         });
-  }, [createId, dependencies, enabled, input.documentMutationGeneration]);
+  }, [
+    createId,
+    dependencies,
+    enabled,
+    existingMedia,
+    input.documentMutationGeneration,
+  ]);
   const media = useSyncExternalStore(
     coordinator?.subscribe ?? subscribeEmpty,
     coordinator?.getSnapshot ?? getEmptySnapshot,
@@ -158,6 +193,12 @@ export function useLocalJournalComposer(input: {
   } | null>(null);
   const publicationFlightRef =
     useRef<Promise<AtomicJournalCreateResponse> | null>(null);
+  const editPublicationRef = useRef<{
+    semanticKey: string;
+    request: AtomicJournalEditRequest;
+  } | null>(null);
+  const editPublicationFlightRef =
+    useRef<Promise<AtomicJournalEditResponse> | null>(null);
 
   const updateState = useCallback((next: LocalJournalComposerState) => {
     if (mountedRef.current) setState(next);
@@ -210,6 +251,8 @@ export function useLocalJournalComposer(input: {
       // Marking the rejection observed prevents a failed block from becoming an
       // unhandled rejection while its state remains available for explicit retry.
       void selection.ready.catch(() => undefined);
+      publicationRef.current = null;
+      editPublicationRef.current = null;
       return selection;
     },
     [requireCoordinator],
@@ -220,6 +263,7 @@ export function useLocalJournalComposer(input: {
       const selection = requireCoordinator().replace(mediaAssetId, file);
       void selection.ready.catch(() => undefined);
       publicationRef.current = null;
+      editPublicationRef.current = null;
       return selection;
     },
     [requireCoordinator],
@@ -229,6 +273,8 @@ export function useLocalJournalComposer(input: {
     (mediaAssetId: string) => {
       const selection = requireCoordinator().retry(mediaAssetId);
       void selection.ready.catch(() => undefined);
+      publicationRef.current = null;
+      editPublicationRef.current = null;
       return selection;
     },
     [requireCoordinator],
@@ -238,6 +284,7 @@ export function useLocalJournalComposer(input: {
     async (mediaAssetId: string) => {
       await requireCoordinator().remove(mediaAssetId);
       publicationRef.current = null;
+      editPublicationRef.current = null;
     },
     [requireCoordinator],
   );
@@ -363,6 +410,150 @@ export function useLocalJournalComposer(input: {
     ],
   );
 
+  const publishEdit = useCallback(
+    (publicationInput: LocalJournalEditPublicationInput) => {
+      if (editPublicationFlightRef.current) {
+        return editPublicationFlightRef.current;
+      }
+      const flight = (async () => {
+        updateState({ status: "freezing", errorCode: null });
+        const document = normalizeJournalDocumentOrThrow(
+          JSON.parse(stableJson(publicationInput.document)),
+        );
+        const returnTo = normalizeJournalComposerReturnTo(
+          publicationInput.returnTo ?? currentLocation(dependencies),
+          input.fallbackReturnTo,
+          typeof location === "undefined"
+            ? "https://over.garden"
+            : location.origin,
+        );
+        const semanticInput = {
+          entryId: publicationInput.entryId,
+          expectedRevision: publicationInput.expectedRevision,
+          title: publicationInput.title,
+          entryDate: publicationInput.entryDate,
+          document,
+          coverMediaAssetId: publicationInput.coverMediaAssetId,
+          focalPoints: publicationInput.focalPoints,
+          returnTo,
+        };
+        const semanticKey = stableJson(semanticInput);
+        let request =
+          editPublicationRef.current?.semanticKey === semanticKey
+            ? editPublicationRef.current.request
+            : null;
+
+        try {
+          if (!request) {
+            updateState({ status: "waiting_media", errorCode: null });
+            const finalMediaAssetIds =
+              listJournalDocumentImageMediaIds(document);
+            if (
+              publicationInput.coverMediaAssetId &&
+              !finalMediaAssetIds.includes(publicationInput.coverMediaAssetId)
+            ) {
+              finalMediaAssetIds.push(publicationInput.coverMediaAssetId);
+            }
+            const controller = new AbortController();
+            publishControllerRef.current = controller;
+            const frozen = await abortable(
+              requireCoordinator().freeze(finalMediaAssetIds),
+              controller.signal,
+            );
+            const finalSet = new Set(finalMediaAssetIds);
+            request = {
+              publishId: publicationInput.entryId,
+              clientMutationId: createId(),
+              expectedRevision: publicationInput.expectedRevision,
+              title: publicationInput.title,
+              entryDate: publicationInput.entryDate,
+              document,
+              coverMediaAssetId: publicationInput.coverMediaAssetId,
+              newMediaClaimReceipts: frozen.mediaClaimReceipts,
+              retainedMediaAssetIds: existingMedia
+                .map((item) => item.mediaAssetId)
+                .filter((mediaAssetId) => finalSet.has(mediaAssetId)),
+              removedMediaAssetIds: existingMedia
+                .map((item) => item.mediaAssetId)
+                .filter((mediaAssetId) => !finalSet.has(mediaAssetId)),
+              focalPoints: publicationInput.focalPoints,
+              returnTo,
+            };
+            editPublicationRef.current = { semanticKey, request };
+          }
+
+          updateState({ status: "publishing", errorCode: null });
+          const controller =
+            publishControllerRef.current ?? new AbortController();
+          publishControllerRef.current = controller;
+          const { response, body: responseBody } = await deadlineJsonFetch(
+            dependencies?.fetcher ?? fetch,
+            `/api/garden/entries/${publicationInput.entryId}`,
+            {
+              method: "PATCH",
+              redirect: "error",
+              credentials: "same-origin",
+              cache: "no-store",
+              headers: {
+                "content-type": "application/json",
+                [DOCUMENT_MUTATION_GENERATION_HEADER]:
+                  input.documentMutationGeneration ?? "",
+                [ATOMIC_JOURNAL_EDIT_PROTOCOL_HEADER]:
+                  ATOMIC_JOURNAL_EDIT_PROTOCOL,
+              },
+              body: JSON.stringify(request),
+              signal: controller.signal,
+            },
+            128 * 1_024,
+            ATOMIC_PUBLICATION_DEADLINE_MS,
+          );
+          if (!response.ok) {
+            throw responseError(response, responseBody);
+          }
+          const result = parseAtomicEditResponse(
+            responseBody,
+            publicationInput.entryId,
+          );
+          publishedRef.current = true;
+          coordinator?.completePublication();
+          updateState({ status: "published", errorCode: null });
+          return result;
+        } catch (error) {
+          coordinator?.releasePublicationFreeze();
+          const normalized = normalizeComposerError(error);
+          updateState(
+            normalized.code === "publication_cancelled"
+              ? { status: "idle", errorCode: null }
+              : normalized.code === "journal_aggregate_conflict"
+                ? { status: "conflict", errorCode: normalized.code }
+                : { status: "failed", errorCode: normalized.code },
+          );
+          throw normalized;
+        } finally {
+          publishControllerRef.current = null;
+        }
+      })();
+      editPublicationFlightRef.current = flight;
+      const clear = () => {
+        if (editPublicationFlightRef.current === flight) {
+          editPublicationFlightRef.current = null;
+        }
+      };
+      void flight.then(clear, clear);
+      return flight;
+    },
+    [
+      coordinator,
+      createId,
+      dependencies,
+      existingMedia,
+      input.documentMutationGeneration,
+      input.fallbackReturnTo,
+      requireCoordinator,
+      updateState,
+    ],
+  );
+
   const cancelPublishing = useCallback(() => {
     coordinator?.cancelPublicationWait();
     publishControllerRef.current?.abort();
@@ -383,6 +574,7 @@ export function useLocalJournalComposer(input: {
     retryImage,
     removeImage,
     publish,
+    publishEdit,
     cancelPublishing,
     abandon,
   };
@@ -482,6 +674,11 @@ function responseError(response: Response, body: unknown) {
       typeof record.authIntentUrl === "string"
         ? record.authIntentUrl
         : undefined,
+    currentRevision:
+      Number.isSafeInteger(record.currentRevision) &&
+      Number(record.currentRevision) > 0
+        ? Number(record.currentRevision)
+        : undefined,
   });
 }
 
@@ -505,6 +702,20 @@ function parseAtomicResponse(value: unknown): AtomicJournalCreateResponse {
     throw new LocalJournalComposerError("publication_response_invalid");
   }
   return value as unknown as AtomicJournalCreateResponse;
+}
+
+function parseAtomicEditResponse(
+  value: unknown,
+  expectedEntryId: string,
+): AtomicJournalEditResponse {
+  const parsed = parseAtomicResponse(value);
+  if (
+    parsed.entryId !== expectedEntryId ||
+    parsed.card.entryId !== expectedEntryId
+  ) {
+    throw new LocalJournalComposerError("publication_response_invalid");
+  }
+  return parsed;
 }
 
 function normalizeComposerError(error: unknown) {

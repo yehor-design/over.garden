@@ -85,7 +85,6 @@ describe("site shell navigation contract", () => {
         label: "Нов запис",
         href: "/garden#first-entry-composer",
       },
-      { key: "drafts", label: "Чернови", href: "/garden#drafts" },
       {
         key: "followed-feed",
         label: "Следвани записи",

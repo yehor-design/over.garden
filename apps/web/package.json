@@ -119,6 +119,7 @@
     "verify:editorjs-retirement": "pnpm build && tsx scripts/verify-editorjs-retirement.ts",
     "smoke:inline-media-integrity": "tsx scripts/smoke-inline-media-integrity.ts",
     "smoke:atomic-journal-codecs": "tsx scripts/smoke-atomic-journal-codecs.ts",
+    "smoke:atomic-journal-edit": "tsx scripts/smoke-atomic-journal-edit.ts",
     "smoke:journal-cover-selection": "tsx scripts/smoke-journal-cover-selection.ts",
     "smoke:online-composer-cutover": "tsx scripts/smoke-online-composer-cutover.ts",
     "smoke:offline-runtime-absence": "tsx scripts/smoke-offline-runtime-absence.ts",

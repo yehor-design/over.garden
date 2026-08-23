@@ -66,7 +66,7 @@ export async function verifyEphemeralPublicationReceipts(
     ownerUserId: string;
     stagingSessionId?: string;
     stagingReceipts: readonly string[];
-    orderedMediaAssetIds: readonly string[];
+    orderedMediaAssetIds?: readonly string[];
   },
   dependencies: PublicationReceiptDependencies = {},
 ): Promise<{
@@ -78,9 +78,10 @@ export async function verifyEphemeralPublicationReceipts(
     (input.stagingSessionId !== undefined && !isUuid(input.stagingSessionId)) ||
     input.stagingReceipts.length < 1 ||
     input.stagingReceipts.length > EPHEMERAL_MEDIA_MAX_PER_SESSION ||
-    input.stagingReceipts.length !== input.orderedMediaAssetIds.length ||
-    new Set(input.orderedMediaAssetIds).size !==
-      input.orderedMediaAssetIds.length
+    (input.orderedMediaAssetIds !== undefined &&
+      (input.stagingReceipts.length !== input.orderedMediaAssetIds.length ||
+        new Set(input.orderedMediaAssetIds).size !==
+          input.orderedMediaAssetIds.length))
   ) {
     throw new EphemeralPublicationHandoffError("receipt_set_invalid");
   }
@@ -106,7 +107,8 @@ export async function verifyEphemeralPublicationReceipts(
       payload.ownerSubjectHash !== expectedOwnerHash ||
       (stagingSessionId !== null &&
         payload.stagingSessionId !== stagingSessionId) ||
-      payload.mediaAssetId !== input.orderedMediaAssetIds[index]
+      (input.orderedMediaAssetIds !== undefined &&
+        payload.mediaAssetId !== input.orderedMediaAssetIds[index])
     ) {
       throw new EphemeralPublicationHandoffError("receipt_mismatch");
     }
@@ -120,6 +122,9 @@ export async function verifyEphemeralPublicationReceipts(
       throw new EphemeralPublicationHandoffError("receipt_expired");
     }
     media.push(payload);
+  }
+  if (new Set(media.map((item) => item.mediaAssetId)).size !== media.length) {
+    throw new EphemeralPublicationHandoffError("receipt_set_invalid");
   }
   return {
     receiptSetDigest: await digestReceiptSet(input.stagingReceipts),

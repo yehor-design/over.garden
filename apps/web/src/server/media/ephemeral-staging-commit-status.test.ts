@@ -22,6 +22,7 @@ const OWNER_ID = "00000000-0000-4000-8000-000000000001";
 const PUBLISH_ID = "00000000-0000-4000-8000-000000000010";
 const SESSION_ID = "00000000-0000-4000-8000-000000000002";
 const MEDIA_ID = "00000000-0000-4000-8000-000000000003";
+const RETAINED_MEDIA_ID = "00000000-0000-4000-8000-000000000004";
 
 describe("ephemeral media commit-status boundary", () => {
   beforeEach(() => {
@@ -132,6 +133,31 @@ describe("ephemeral media commit-status boundary", () => {
 
     database.entry = null;
     await expect(readEphemeralMediaCommitStatus(input)).resolves.toBe("absent");
+  });
+
+  it("proves an edit claim as a committed subset while unrelated retained media stays attached", async () => {
+    database.media.push({
+      id: RETAINED_MEDIA_ID,
+      owner_user_id: OWNER_ID,
+      upload_generation: 1,
+      declared_size_bytes: "321",
+      intrinsic_width: 640,
+      intrinsic_height: 480,
+      declared_media_type: "image/webp",
+      admitted_media_type: "image/webp",
+      derivative_key: `derivatives/${RETAINED_MEDIA_ID}/1.webp`,
+      media_readiness_state: "public_ready",
+      revoked_at: null,
+    });
+
+    await expect(readEphemeralMediaCommitStatus(fixture())).resolves.toBe(
+      "committed",
+    );
+
+    database.media = database.media.filter((row) => row.id !== MEDIA_ID);
+    await expect(readEphemeralMediaCommitStatus(fixture())).resolves.toBe(
+      "indeterminate",
+    );
   });
 });
 
