@@ -123,7 +123,10 @@ pnpm exec tsx scripts/verify-legacy-quarantine-provider-retirement.ts \
   --plan-file /tmp/ove350-plan.json
 ```
 
-Success means two independent provider listings omit exactly
+The expected SHA may be the immutable plan baseline or a later documentation
+closeout SHA that contains that baseline; the verifier proves Git ancestry and
+requires the expected SHA itself to be READY in production. Success means two
+independent provider listings omit exactly
 `overgarden-quarantine`; the application credential is `public_only`; the
 public/staging buckets remain present; both domains remain healthy; retired env
 names remain absent; and the exact expected SHA is READY in production. The

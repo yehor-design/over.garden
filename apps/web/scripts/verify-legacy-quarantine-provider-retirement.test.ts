@@ -293,7 +293,11 @@ describe("OVE-350 legacy quarantine provider retirement", () => {
       approvalReceipt(plan),
       deps,
     );
-    expect(receipt).toMatchObject({ terminalState: "verified", replay: true });
+    expect(receipt).toMatchObject({
+      terminalState: "verified",
+      replay: true,
+      deploymentSha: plan.applicationBaseline.deploymentSha,
+    });
     expect(deps.deleteExactBucket).not.toHaveBeenCalled();
   });
 

@@ -203,6 +203,7 @@ export interface Ove350TerminalReceipt {
   accountId: typeof OVE350_ACCOUNT_ID;
   targetBucket: typeof OVE350_TARGET_BUCKET;
   planDigest: string;
+  deploymentSha: string;
   targetAbsentReads: 2;
   credentialAction: Ove350Plan["credentialAction"];
   preservedCanaries: "passed";
@@ -670,6 +671,7 @@ export async function executeOve350Retirement(
       accountId: OVE350_ACCOUNT_ID,
       targetBucket: OVE350_TARGET_BUCKET,
       planDigest: plan.planDigest,
+      deploymentSha: plan.applicationBaseline.deploymentSha,
       targetAbsentReads: 2 as const,
       credentialAction: plan.credentialAction,
       preservedCanaries: "passed" as const,
@@ -1715,9 +1717,17 @@ async function runOve350FinalReadback(
     "..",
   );
   const plan = await readOve350Plan(args.planFile);
-  if (plan.applicationBaseline.deploymentSha !== args.expectedGitSha) {
-    throw new Error("OVE-350 expected SHA differs from the immutable plan.");
-  }
+  await runCommand(
+    "git_plan_containment",
+    "git",
+    [
+      "merge-base",
+      "--is-ancestor",
+      plan.applicationBaseline.deploymentSha,
+      args.expectedGitSha,
+    ],
+    appRoot,
+  );
   const first = await collectBucketNames(appRoot);
   await new Promise((resolve) => setTimeout(resolve, 1_000));
   const second = await collectBucketNames(appRoot);
@@ -1742,6 +1752,7 @@ async function runOve350FinalReadback(
     accountId: OVE350_ACCOUNT_ID,
     targetBucket: OVE350_TARGET_BUCKET,
     planDigest: plan.planDigest,
+    deploymentSha: args.expectedGitSha,
     targetAbsentReads: 2 as const,
     credentialAction: plan.credentialAction,
     preservedCanaries: "passed" as const,
