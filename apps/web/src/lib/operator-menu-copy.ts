@@ -3,11 +3,11 @@ import type { InterfaceLocale } from "@/lib/interface-localization";
 export const OPERATOR_MENU_LINKS = [
   {
     key: "communities",
-    href: "/admin/communities",
+    href: "/account/communities",
   },
   {
     key: "comments",
-    href: "/admin/moderation/comments",
+    href: "/account/moderation/comments",
   },
   {
     key: "catalog",

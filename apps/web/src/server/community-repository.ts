@@ -29,6 +29,7 @@ import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-sur
 import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 import type { RequestScope } from "@/server/request-scope";
 import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
+import { assertAdminCapabilityForScope } from "@/server/admin-access";
 import {
   findPublicCommunitySearchCandidates,
   PUBLIC_COMMUNITY_SEARCH_CANDIDATE_LIMIT,
@@ -2385,7 +2386,13 @@ async function assertCommunityModerator(
     scope,
     communityId,
   ).executeTakeFirst();
-  if (!moderator) throw new Error("Community moderation is not available.");
+  if (moderator) return;
+
+  try {
+    await assertAdminCapabilityForScope(scope, "operator:mutate", executor);
+  } catch {
+    throw new Error("Community moderation is not available.");
+  }
 }
 
 function normalizeCommunitySlug(value: string) {

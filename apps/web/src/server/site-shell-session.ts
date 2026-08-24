@@ -6,7 +6,7 @@ import {
   getAuthoritativeCurrentSession,
   getSessionId,
 } from "@/server/auth-session";
-import { resolveAdminAccess } from "@/server/admin-access";
+import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
 import { isDocumentMutationAdmissionEnabled } from "@/server/document-mutation-admission-config";
 
 export interface SiteShellSessionState {
@@ -95,7 +95,10 @@ async function resolveShellOperatorAccess(
   sessionId: string | null,
 ) {
   try {
-    const access = await resolveAdminAccess({ userId, sessionId });
+    const access = await resolveAdminCapabilityAccessBounded(
+      { userId, sessionId },
+      "operator:mutate",
+    );
     return access.status === "allowed";
   } catch {
     return false;

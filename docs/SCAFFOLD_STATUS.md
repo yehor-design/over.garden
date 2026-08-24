@@ -1,8 +1,9 @@
 # Runtime Scaffold — Current Status and Verification
 
-Last reconciled: 2026-08-24 (OVE-349 retired server drafts, legacy journal-media
-processing, and private-then-publish after OVE-346/347/348 established the
-atomic final-WebP path)
+Last reconciled: 2026-08-25 (OVE-338 moved surviving moderation into the
+ordinary account shell and retired the complete `/admin` namespace; OVE-349
+retired server drafts, legacy journal-media processing, and private-then-publish
+after OVE-346/347/348 established the atomic final-WebP path)
 
 This file is the concise current-state mirror for the implemented OverGarden
 runtime. Authenticated Linear and the issue-specific execution contract remain
@@ -54,21 +55,22 @@ Every authenticated gardener uses the ordinary product navigation and avatar
 menu. The sealed credential-only owner receives one additional localized menu
 section containing exactly:
 
-- `/admin/communities`
-- `/admin/moderation/comments`
+- `/account/communities`
+- `/account/moderation/comments`
 - `/garden/catalog/curation`
 - `/garden/privacy/erasure-requests`
 
 The server sends only a boolean owner-capability projection to the client. Each
-destination repeats the authoritative sealed-owner capability check. An
-ordinary gardener, guest, session error, non-sealed role row, or owner lookup
-failure sees no owner section.
+destination repeats the authoritative sealed-owner `operator:mutate` check
+within the 250 ms bound. An ordinary gardener, guest, session error, non-sealed
+role row, owner lookup failure, timeout, or cancellation sees no owner section
+and reaches no private moderation read or mutation.
 
 These routes are completely retired and must return exact `404` for every
 session/locale class:
 
-- `/admin`
-- `/admin/users`
+- the complete `/admin` namespace, including all descendants and supported
+  localized/encoded/trailing/nested representations
 - `/garden/pilot-health`
 - `/garden/pilot-smoke`
 - `/garden/pilot-learning/interviews`

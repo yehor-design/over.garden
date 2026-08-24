@@ -4,7 +4,6 @@ import {
   MessageCircle,
   PawPrint,
   Search,
-  ShieldAlert,
   Sprout,
   UsersRound,
 } from "lucide-react";
@@ -249,18 +248,6 @@ export function PublicCommunityView({
                 resumeAction={resumeAction}
                 resumeControl={resumeControl}
               />
-              {community.viewer.isModerator ? (
-                <Link
-                  href={withVisualCommunity(
-                    `/admin/communities/${community.slug}`,
-                    visualScenarioId,
-                  )}
-                  className={buttonVariants({ variant: "outline" })}
-                >
-                  <ShieldAlert aria-hidden="true" />
-                  {copy.moderatorQueue}
-                </Link>
-              ) : null}
             </div>
           ) : null}
         </div>

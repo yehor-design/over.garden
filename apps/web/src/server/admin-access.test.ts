@@ -5,11 +5,13 @@ import { scopedToUser } from "@/server/request-scope";
 import type { Kysely } from "kysely";
 import {
   ADMIN_ACCESS_DENIED_MESSAGE,
+  ADMIN_ROLE_RESOLUTION_DEADLINE_MS,
   ADMIN_SEALED_OWNER_USER_ID_ENV,
   assertAdminAccess,
   assertAdminCapability,
   readAdminRoleForUser,
   resolveAdminAccess,
+  resolveAdminCapabilityAccessBounded,
 } from "./admin-access";
 
 const OWNER_ID = "00000000-0000-4000-8000-000000000001";
@@ -161,18 +163,123 @@ describe("admin access gate", () => {
       ),
     ).resolves.toBeNull();
   });
+
+  it("resolves operator capability inside the fixed deadline", async () => {
+    const access = await resolveAdminCapabilityAccessBounded(
+      scopedToUser(OWNER_ID),
+      "operator:mutate",
+      fakeAdminDb({ role: "owner" }),
+    );
+
+    expect(ADMIN_ROLE_RESOLUTION_DEADLINE_MS).toBe(250);
+    expect(access.status).toBe("allowed");
+  });
+
+  it("keeps concurrent decisions request-scoped and observes revocation on the next request", async () => {
+    const startedAt = performance.now();
+    const [ownerAccess, otherAccess] = await Promise.all([
+      resolveAdminCapabilityAccessBounded(
+        scopedToUser(OWNER_ID),
+        "operator:mutate",
+        fakeAdminDb({ role: "owner" }),
+      ),
+      resolveAdminCapabilityAccessBounded(
+        scopedToUser(OTHER_ID),
+        "operator:mutate",
+        fakeAdminDb({ role: "owner" }),
+      ),
+    ]);
+
+    expect(ownerAccess.status).toBe("allowed");
+    expect(otherAccess).toEqual({ status: "denied" });
+    expect(performance.now() - startedAt).toBeLessThanOrEqual(
+      ADMIN_ROLE_RESOLUTION_DEADLINE_MS,
+    );
+
+    let currentRole: string | null = "owner";
+    const revocableDatabase = fakeAdminDb({
+      role: null,
+      roleLookup: async () =>
+        currentRole === null ? undefined : { role: currentRole },
+    });
+    await expect(
+      resolveAdminCapabilityAccessBounded(
+        scopedToUser(OWNER_ID),
+        "operator:mutate",
+        revocableDatabase,
+      ),
+    ).resolves.toMatchObject({ status: "allowed" });
+
+    currentRole = null;
+    await expect(
+      resolveAdminCapabilityAccessBounded(
+        scopedToUser(OWNER_ID),
+        "operator:mutate",
+        revocableDatabase,
+      ),
+    ).resolves.toEqual({ status: "denied" });
+  });
+
+  it("times out without accepting a late role completion", async () => {
+    let releaseRole: (() => void) | undefined;
+    const roleLookup = vi.fn(
+      () =>
+        new Promise<{ role: string }>((resolve) => {
+          releaseRole = () => resolve({ role: "owner" });
+        }),
+    );
+
+    const result = await resolveAdminCapabilityAccessBounded(
+      scopedToUser(OWNER_ID),
+      "operator:mutate",
+      fakeAdminDb({ role: "owner", roleLookup }),
+      { timeoutMs: 5 },
+    );
+
+    expect(result).toEqual({ status: "timed_out" });
+    releaseRole?.();
+    await Promise.resolve();
+    expect(result).toEqual({ status: "timed_out" });
+  });
+
+  it("cancels an in-flight role decision and ignores late completion", async () => {
+    let releaseRole: (() => void) | undefined;
+    const controller = new AbortController();
+    const roleLookup = vi.fn(
+      () =>
+        new Promise<{ role: string }>((resolve) => {
+          releaseRole = () => resolve({ role: "owner" });
+        }),
+    );
+    const pending = resolveAdminCapabilityAccessBounded(
+      scopedToUser(OWNER_ID),
+      "operator:mutate",
+      fakeAdminDb({ role: "owner", roleLookup }),
+      { signal: controller.signal },
+    );
+
+    controller.abort();
+    await expect(pending).resolves.toEqual({ status: "cancelled" });
+    releaseRole?.();
+    await Promise.resolve();
+    await expect(pending).resolves.toEqual({ status: "cancelled" });
+  });
 });
 
 function fakeAdminDb(input: {
   role: string | null;
   emailVerified?: boolean;
   accounts?: Array<{ providerId: string; password: string | null }>;
+  roleLookup?: () => Promise<{ role: string } | undefined>;
 }): Kysely<Database> {
   const selectFrom = vi.fn((table: string) => {
     const builder = {
       select: vi.fn(() => builder),
       where: vi.fn(() => builder),
       executeTakeFirst: vi.fn(async () => {
+        if (table === "admin_user_roles" && input.roleLookup) {
+          return input.roleLookup();
+        }
         if (table === "admin_user_roles" && input.role) {
           return { role: input.role };
         }

@@ -23,12 +23,12 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ADMIN_SURFACE_EXPECTATIONS = [
   {
-    path: "/admin/communities",
+    path: "/account/communities",
     normalForbiddenMarker: "Open reports",
     normalAccessState: "unavailable",
   },
   {
-    path: "/admin/moderation/comments",
+    path: "/account/moderation/comments",
     normalForbiddenMarker: "Comment moderation",
     normalAccessState: "denied",
   },
@@ -46,6 +46,10 @@ const ADMIN_SURFACE_EXPECTATIONS = [
 const RETIRED_UI_ROUTES = [
   "/admin",
   "/admin/users",
+  "/admin/communities",
+  "/admin/communities/observation-and-care",
+  "/admin/moderation/comments",
+  "/admin%252Fcommunities",
   "/garden/pilot-health",
   "/garden/pilot-smoke",
   "/garden/pilot-learning/interviews",
@@ -182,7 +186,7 @@ async function main() {
       JSON.stringify(
         {
           ok: true,
-          issue: "OVE-113",
+          issue: "OVE-338",
           sealedOwnerEnvPresent: true,
           sealedOwnerRoleOnly: true,
           ...sealedOwnerEvidence,
@@ -218,9 +222,7 @@ async function readHydratedUserEvidence(baseUrl: string, jar: CookieJar) {
     page.setDefaultTimeout(20_000);
 
     await navigatePastSessionConvergence(page, baseUrl, "/garden");
-    await page
-      .locator('[data-site-shell-account-menu-trigger="true"]')
-      .click();
+    await page.locator('[data-site-shell-account-menu-trigger="true"]').click();
     const accountMenu = page.locator('[data-slot="sheet-content"]');
     await accountMenu.waitFor({ state: "visible" });
     const accountMenuHtml = await accountMenu.innerHTML();

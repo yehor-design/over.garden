@@ -183,7 +183,7 @@ describe("PublicCommunityView", () => {
     expect(html).toContain('name="journalEntryId"');
     expect(html).toContain("Следваща проверка");
     expect(html).toContain('action="/bg/communities/observation-and-care"');
-    expect(html).toContain('href="/admin/communities/observation-and-care"');
+    expect(html).not.toMatch(/href="\/admin|href="\/account\/communities/);
     expect(html).toContain('name="contributionId"');
     expect(html).toContain(
       'class="relative flex flex-wrap items-center gap-2"',

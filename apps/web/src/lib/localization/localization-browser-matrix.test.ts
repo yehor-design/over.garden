@@ -50,9 +50,9 @@ describe("OVE-205 localization browser matrix", () => {
       let path = probe.explicitPath
         ? browserSafeFixturePath(probe.explicitPath)
         : browserSafeFixturePath(scenario!.path);
-      if (probe.pathTransform === "community-moderation") {
+      if (probe.pathTransform === "account-community-moderation") {
         const parsed = new URL(path, "https://over.garden");
-        parsed.pathname = `/admin${parsed.pathname}`;
+        parsed.pathname = `/account${parsed.pathname}`;
         path = `${parsed.pathname}${parsed.search}${parsed.hash}`;
       }
       expect(

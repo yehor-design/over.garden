@@ -29,7 +29,8 @@ const EXPLICIT_GOOGLE_LINK_OWNER = "owned_by_ove_295" as const;
 // OVE-348 repins the published-edit route. OVE-351 removes external-photo
 // identification and adds the read-only unknown-API hard-404 owner. OVE-349
 // then removes the retired server-draft and quarantine mutation surfaces
-// instead of leaving phantom admission owners in the enforced graph.
+// instead of leaving phantom admission owners in the enforced graph. OVE-338
+// repins the unchanged account-owned moderation topology after its route move.
 const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 8;
 const BASELINE_HIGH_RISK_ENTRYPOINT_SET_DIGEST =
   "2e5a4515277bcd1de5ea5571b377427625e423b3270b420e66bfb416a370fcdd";
@@ -39,13 +40,13 @@ const BASELINE_HIGH_RISK_EDGE_BINDING_SET_DIGEST =
 const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 6;
 const BASELINE_REMAINING_ENTRYPOINT_COUNT = 117;
 const BASELINE_REMAINING_ENTRYPOINT_SET_DIGEST =
-  "14f2714015d78a8fb3f629742cdb71ab810d85297231480aa961985a39662d96";
+  "9fcc12e001d98e687b7919306185210606cd3656ee5ab4d3967a930722df963d";
 const BASELINE_REMAINING_CONSUMER_EDGE_COUNT = 290;
 const BASELINE_REMAINING_EDGE_BINDING_SET_DIGEST =
-  "988fb6f99bbc8b07d4889d89df5a332fc06084cd9e06250df3f2fc803a2cdf9f";
+  "d363f8e336a91a0184b95b2406c256d9c5ada99ae913d5d2e800ea58152307c0";
 const BASELINE_REMAINING_ADMISSION_BOUNDARY_COUNT = 61;
 const BASELINE_REMAINING_ADMISSION_BOUNDARY_SET_DIGEST =
-  "3e1c1e9ed81593f945195934af42dd69e5b83635e806ed875fa681e417d00ccf";
+  "bb815abc562c721232d5b027eb40fe064858f85ecbabb8a537440d6ec6789e2d";
 const BASELINE_EXPLICIT_GOOGLE_LINK_ENTRYPOINT_COUNT = 5;
 const BASELINE_EXPLICIT_GOOGLE_LINK_CONSUMER_EDGE_COUNT = 15;
 const BASELINE_EXPLICIT_GOOGLE_LINK_OWNERSHIP_DIGEST =

@@ -1,30 +1,11 @@
 import { stripLocalePrefix } from "@/lib/public-localization";
 
-const RETIRED_EXACT_PATHS = new Set(["/admin"]);
-
 const RETIRED_PATH_PREFIXES = [
-  "/admin/users",
   "/join",
   "/garden/pilot-smoke",
   "/garden/pilot-health",
   "/garden/pilot-learning",
 ] as const;
-
-function isPreservedAdminPath(pathname: string) {
-  if (
-    pathname === "/admin/communities" ||
-    pathname === "/admin/moderation/comments"
-  ) {
-    return true;
-  }
-
-  const communitySlug = pathname.slice("/admin/communities/".length);
-  return (
-    pathname.startsWith("/admin/communities/") &&
-    communitySlug.length > 0 &&
-    !communitySlug.includes("/")
-  );
-}
 
 function trimTrailingSlashes(pathname: string) {
   if (pathname === "/") return pathname;
@@ -36,16 +17,38 @@ function trimTrailingSlashes(pathname: string) {
  * public profile or a streamed App Router not-found response with HTTP 200.
  */
 export function isRetiredControlPlanePath(pathname: string) {
-  const strippedPath = stripLocalePrefix(pathname);
+  const normalizedPath = normalizeReservedPath(pathname);
+  const strippedPath = stripLocalePrefix(normalizedPath);
   const canonicalPath = trimTrailingSlashes(strippedPath.path);
 
-  if (RETIRED_EXACT_PATHS.has(canonicalPath)) return true;
-  if (canonicalPath.startsWith("/admin/")) {
-    return strippedPath.locale !== null || !isPreservedAdminPath(canonicalPath);
-  }
+  if (canonicalPath === "/admin" || canonicalPath.startsWith("/admin/"))
+    return true;
 
   return RETIRED_PATH_PREFIXES.some(
     (prefix) =>
       canonicalPath === prefix || canonicalPath.startsWith(`${prefix}/`),
   );
+}
+
+function normalizeReservedPath(pathname: string) {
+  let normalized = pathname;
+
+  // Decode a bounded number of times so double-encoded separators cannot
+  // bypass a reserved namespace while malformed input still fails closed.
+  for (let pass = 0; pass < 3; pass += 1) {
+    const slashNormalized = normalized.replace(/%2f|%5c/gi, "/");
+    try {
+      const decoded = decodeURIComponent(slashNormalized);
+      normalized = decoded;
+      if (decoded === slashNormalized) break;
+    } catch {
+      normalized = slashNormalized;
+      break;
+    }
+  }
+
+  return normalized
+    .replace(/%2f|%5c/gi, "/")
+    .replace(/\\/g, "/")
+    .replace(/\/{2,}/g, "/");
 }

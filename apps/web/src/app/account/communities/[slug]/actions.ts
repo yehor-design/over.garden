@@ -16,6 +16,7 @@ import {
   admitDocumentMutation,
   documentMutationGenerationFromFormData,
 } from "@/server/document-mutation-admission";
+import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
 import { scopedToUser } from "@/server/request-scope";
 import { resolveVisualCommunityMutationActor } from "@/server/visual-fixtures/community-actor";
 
@@ -40,6 +41,13 @@ export async function moderateCommunityContributionAction(formData: FormData) {
         });
   if (admission?.status === "rejected") {
     return { documentMutationAdmission: admission.transportResult };
+  }
+  if (admission && !(await hasOperatorMutationAccess(admission.scope))) {
+    return redirectToModerationStatus(
+      formData,
+      communitySlug(formData),
+      "unavailable",
+    );
   }
   const scope =
     visualActor?.scenario.actorRole === "moderator"
@@ -75,6 +83,13 @@ export async function moderateCommunityDiscussionAction(formData: FormData) {
   if (admission?.status === "rejected") {
     return { documentMutationAdmission: admission.transportResult };
   }
+  if (admission && !(await hasOperatorMutationAccess(admission.scope))) {
+    return redirectToModerationStatus(
+      formData,
+      communitySlug(formData),
+      "unavailable",
+    );
+  }
   const scope =
     visualActor?.scenario.actorRole === "moderator"
       ? scopedToUser(visualActor.actorId)
@@ -106,6 +121,13 @@ export async function moderateCommunityMembershipAction(formData: FormData) {
         });
   if (admission?.status === "rejected") {
     return { documentMutationAdmission: admission.transportResult };
+  }
+  if (admission && !(await hasOperatorMutationAccess(admission.scope))) {
+    return redirectToModerationStatus(
+      formData,
+      communitySlug(formData),
+      "unavailable",
+    );
   }
   const scope =
     visualActor?.scenario.actorRole === "moderator"
@@ -141,6 +163,13 @@ export async function resolveCommunityReportAction(formData: FormData) {
   if (admission?.status === "rejected") {
     return { documentMutationAdmission: admission.transportResult };
   }
+  if (admission && !(await hasOperatorMutationAccess(admission.scope))) {
+    return redirectToModerationStatus(
+      formData,
+      communitySlug(formData),
+      "unavailable",
+    );
+  }
   const scope =
     visualActor?.scenario.actorRole === "moderator"
       ? scopedToUser(visualActor.actorId)
@@ -175,6 +204,13 @@ export async function setCommunityParticipationAction(formData: FormData) {
   if (admission?.status === "rejected") {
     return { documentMutationAdmission: admission.transportResult };
   }
+  if (admission && !(await hasOperatorMutationAccess(admission.scope))) {
+    return redirectToModerationStatus(
+      formData,
+      communitySlug(formData),
+      "unavailable",
+    );
+  }
   const scope =
     visualActor?.scenario.actorRole === "moderator"
       ? scopedToUser(visualActor.actorId)
@@ -198,13 +234,31 @@ export async function setCommunityParticipationAction(formData: FormData) {
 }
 
 function finish(formData: FormData, slug: string, status: string): never {
-  revalidatePath(`/admin/communities/${slug}`);
-  revalidatePath("/admin/communities");
+  revalidatePath(`/account/communities/${slug}`);
+  revalidatePath("/account/communities");
   for (const locale of PUBLIC_LOCALES) {
     revalidatePath(localizedPath(locale, "/communities"));
     revalidatePath(localizedPath(locale, `/communities/${slug}`));
   }
   revalidatePath("/", "layout");
+  redirectToModerationStatus(formData, slug, status);
+}
+
+async function hasOperatorMutationAccess(
+  scope: Parameters<typeof resolveAdminCapabilityAccessBounded>[0],
+) {
+  const access = await resolveAdminCapabilityAccessBounded(
+    scope,
+    "operator:mutate",
+  );
+  return access.status === "allowed";
+}
+
+function redirectToModerationStatus(
+  formData: FormData,
+  slug: string,
+  status: string,
+): never {
   const query = new URLSearchParams({ moderationAction: status });
   const scenario = resolveVisualCommunityScenario(
     String(formData.get("visualCommunity") ?? ""),
@@ -212,7 +266,7 @@ function finish(formData: FormData, slug: string, status: string): never {
   if (scenario?.communitySlug === slug && scenario.actorRole === "moderator") {
     query.set("visualCommunity", scenario.id);
   }
-  redirect(`/admin/communities/${slug}?${query.toString()}#moderation-queue`);
+  redirect(`/account/communities/${slug}?${query.toString()}#moderation-queue`);
 }
 
 function communitySlug(formData: FormData) {

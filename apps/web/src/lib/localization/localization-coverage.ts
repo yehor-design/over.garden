@@ -919,7 +919,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
       "workspace",
     ),
     ...routes(
-      ["src/app/admin/layout.tsx"],
+      ["src/app/account/layout.tsx"],
       "explicit-operator-locale",
       "operator",
     ),
@@ -1096,9 +1096,9 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
     ),
     ...routes(
       [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/app/admin/communities/page.tsx",
-        "src/app/admin/moderation/comments/page.tsx",
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/app/account/communities/page.tsx",
+        "src/app/account/moderation/comments/page.tsx",
         "src/app/garden/catalog/curation/page.tsx",
         "src/app/garden/privacy/erasure-requests/page.tsx",
         "src/app/health/page.tsx",
@@ -1837,7 +1837,7 @@ export function buildLocalizationCoverage(
         errors.push(`${probe.id}:ambiguous-path-source`);
       }
       if (
-        probe.pathTransform === "community-moderation" &&
+        probe.pathTransform === "account-community-moderation" &&
         scenario?.archetype !== "community"
       ) {
         errors.push(`${probe.id}:invalid-community-transform`);

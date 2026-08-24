@@ -1,8 +1,8 @@
 # Production Verification Contract
 
-Status: current self-serve production contract after OVE-349
+Status: current self-serve production contract after OVE-349 and OVE-338
 Legacy filename retained only because earlier immutable receipts link to it.
-Last updated: 2026-08-24
+Last updated: 2026-08-25
 
 Connectivity addendum (2026-08-20): ADR-0017 makes journal writes
 network-required. Every former offline-retry proof is replaced by
@@ -36,14 +36,15 @@ The sealed owner uses the same avatar menu as every signed-in gardener. The
 server adds exactly these four links only after authoritative owner access
 passes:
 
-- `/admin/communities`
-- `/admin/moderation/comments`
+- `/account/communities`
+- `/account/moderation/comments`
 - `/garden/catalog/curation`
 - `/garden/privacy/erasure-requests`
 
-Menu visibility is not authorization. Every destination repeats the sealed
-owner capability check. Session or owner lookup failure renders the ordinary
-menu without an empty owner section.
+Menu visibility is not authorization. Every destination repeats the bounded
+sealed-owner capability check. Session or owner lookup failure, timeout, or
+cancellation renders the ordinary menu without an empty owner section. The
+complete retired `/admin` namespace returns exact `404` without redirects.
 
 ## Supported first-user journey
 

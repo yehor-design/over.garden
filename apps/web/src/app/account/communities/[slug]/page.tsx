@@ -12,6 +12,7 @@ import {
 } from "@/lib/operator-copy";
 import { resolveVisualCommunityScenario } from "@/lib/visual-fixtures/community-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { listCommunityModerationQueue } from "@/server/community-repository";
 import { scopedToUser } from "@/server/request-scope";
@@ -58,7 +59,7 @@ export default async function CommunityModerationPage({
         <ModerationHeader slug={slug} copy={copy} />
         <GardenAuthPanel
           locale={locale}
-          postAuthPath={`/admin/communities/${slug}`}
+          postAuthPath={`/account/communities/${slug}`}
         />
       </main>
     );
@@ -67,6 +68,22 @@ export default async function CommunityModerationPage({
   const scope = visualModeratorActorId
     ? scopedToUser(visualModeratorActorId)
     : scopedToUser(session!.user.id, getSessionId(session));
+  const access = visualModeratorActorId
+    ? { status: "allowed" as const }
+    : await resolveAdminCapabilityAccessBounded(scope, "operator:mutate");
+  if (access.status !== "allowed") {
+    return (
+      <main
+        data-operator-access-state="denied"
+        className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-8"
+      >
+        <ModerationHeader slug={slug} copy={copy} />
+        <p className="rounded-md border border-border p-4 text-sm" role="alert">
+          {copy.common.accessDenied}
+        </p>
+      </main>
+    );
+  }
   const moderation = await listCommunityModerationQueue(scope, slug).catch(
     () => null,
   );
@@ -137,7 +154,11 @@ export default async function CommunityModerationPage({
         </DocumentMutationActionForm>
       </section>
 
-      <section id="moderation-queue" className="grid gap-3">
+      <section
+        id="moderation-queue"
+        data-private-moderation-queue="true"
+        className="grid gap-3"
+      >
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xl font-semibold">
             {copy.community.openReports}
@@ -263,7 +284,7 @@ function ModerationHeader({
 }) {
   const backPath = visualScenarioId
     ? `/communities/${slug}?visualCommunity=${encodeURIComponent(visualScenarioId)}`
-    : "/admin/communities";
+    : "/account/communities";
   return (
     <header className="grid gap-4 border-b border-border pb-5">
       <Link
