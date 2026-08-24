@@ -116,9 +116,9 @@ export async function collectErasureDryRunCounts(
     countOwnedRows(executor, "journal_entry_catalog_mentions", requesterUserId),
     countJournalMutationReceipts(executor, requesterUserId),
     countMediaAssets(executor, requesterUserId),
-    countMediaAssets(executor, requesterUserId, "quarantined"),
-    countMediaAssets(executor, requesterUserId, "processed"),
-    countMediaAssets(executor, requesterUserId, "failed"),
+    Promise.resolve(0),
+    countMediaAssets(executor, requesterUserId),
+    Promise.resolve(0),
     countCoverOnlyMediaAssets(executor, requesterUserId),
     countExplicitJournalCovers(executor, requesterUserId),
     countProfileSocialEdges(executor, requesterUserId),
@@ -443,18 +443,11 @@ export function buildCountJournalEntriesWithPublicGoneQuery(
 export function buildCountMediaAssetsQuery(
   executor: QueryExecutor,
   requesterUserId: string,
-  status?: "quarantined" | "processed" | "failed",
 ) {
-  let query = executor
+  return executor
     .selectFrom("media_assets")
     .select(sql<number>`count(*)`.as("count"))
     .where("owner_user_id", "=", requesterUserId);
-
-  if (status) {
-    query = query.where("status", "=", status);
-  }
-
-  return query;
 }
 
 export function buildCountCatalogProvisionalItemsQuery(
@@ -872,12 +865,10 @@ async function countJournalEntriesWithPublicGone(
 async function countMediaAssets(
   executor: QueryExecutor,
   requesterUserId: string,
-  status?: "quarantined" | "processed" | "failed",
 ) {
   const row = await buildCountMediaAssetsQuery(
     executor,
     requesterUserId,
-    status,
   ).executeTakeFirst();
   return toCount(row?.count);
 }

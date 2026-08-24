@@ -207,17 +207,17 @@ reservation route first, then removes only synthetic objects and the newly
 created empty OVE-346 resources after read-back; it never mutates the legacy
 quarantine/public buckets or shared credentials.
 
-The existing `overgarden-quarantine` bucket and server conversion path below
-are transitional legacy runtime. OVE-349 owns their application/schema/package
-removal after a zero-use production gate; OVE-350 alone owns isolated provider
-and credential retirement after the full seven-day rollback/retention horizon.
+OVE-349 removed every application/schema/package owner of the former
+`overgarden-quarantine` and server-conversion path after the exact zero-use and
+approved test-residue gates. The empty bucket below is isolated rollback
+residue, not application configuration. OVE-350 alone owns its provider/CORS/
+lifecycle deletion and credential narrowing after the full seven-day window.
 
 Production S3-compatible client settings:
 
 ```env
 R2_ENDPOINT="https://cb03b15042adc74edfe2d8201636300a.r2.cloudflarestorage.com"
 R2_FORCE_PATH_STYLE="true"
-R2_QUARANTINE_BUCKET="overgarden-quarantine"
 R2_PUBLIC_BUCKET="overgarden-public"
 R2_PUBLIC_BASE_URL="https://media.over.garden"
 ```
@@ -259,7 +259,9 @@ Where secrets belong:
 R2 API token requirement:
 
 - Permission: Object Read and Write
-- Scope: `overgarden-quarantine` and `overgarden-public`
+- Current app use: `overgarden-public` only. The existing shared credential may
+  retain legacy-bucket scope solely until OVE-350 rotates/narrows it after the
+  rollback window; no app route may exercise that scope.
 - Prefer an account API token for production if available. A user API token is acceptable for local/dev continuity but is tied to the individual Cloudflare user.
 - Cloudflare R2 does not support S3 `PutBucketPolicy` on this endpoint. Public reads are controlled through R2 bucket/domain settings, not by committing or replaying S3 bucket policy JSON from the app bootstrap script.
 
@@ -270,12 +272,11 @@ OVE-216 lifecycle proof contract:
 - The production provider probe creates one random synthetic object, uses bounded requests and canonical polling, and proves deletion again in a mandatory `finally` cleanup. Its receipt is class-only and must not expose bucket names, object keys, object URLs, credentials, or user content.
 - Run the probe only through the Vercel production environment on the exact deployed SHA: `cd apps/web && vercel env run -e production -- pnpm exec tsx scripts/prove-r2-media-lifecycle-provider.ts`.
 
-OVE-244 safe media admission contract:
-
-- Quarantine keys are `quarantine/<random-generation-id>.<closed-extension>` and never contain an owner/account id. Public derivatives are `derivatives/<random-public-object-id>.webp` and never inherit quarantine identity.
-- Every S3-compatible Get/Put/Copy/Delete/Head call has a finite request timeout. Actual-byte admission precedes Sharp decode, and only token-fenced `public_ready` rows with provider-confirmed original absence are public-serializable.
-- Local proof: `../../infra/run-with-local-infra-env pnpm smoke:safe-media-admission -- --environment local --confirm-environment local`.
-- Production proof is allowed exactly once for the approved plan digest and exact READY deployment: `vercel env run -e production -- pnpm smoke:safe-media-admission -- --environment production --confirm-environment production --plan-digest 3585dce4442abdb93c108ef9908586a30888c7c0f3ba84097606d52f3c743a18`. It creates one random synthetic generation, proves one CAS winner, actual-byte admission, authoritative original absence and stale replay non-current, then invalidates and authoritatively removes all synthetic objects and the synthetic row in `finally`. It never selects real-user media and emits class-only evidence.
+Historical OVE-244 safe-media admission receipts remain provenance only.
+OVE-349 removed that runtime, its commands, claims, fields, and package owners.
+Current capability and byte-integrity authority is the OVE-346 edge-staging
+contract above plus the browser final-WebP policy; do not rerun or reconstruct
+the historical safe-media-admission command.
 
 OVE-290 document-generation media contract:
 
@@ -286,11 +287,11 @@ OVE-290 document-generation media contract:
 - Production closeout runs `scripts/smoke-document-mutation-admission.ts` in `reject-only` mode against the immutable exact-SHA deployment. Private A1/A2/B session cookies and the A1 document generation are supplied only through process environment, discarded after the run, and never printed or committed. The smoke performs read-only pre/post database counts and no successful product mutation.
 - On 2026-08-10, Git-backed deployment `dpl_Di1Mwcbtms8mQjjNxgZL9fr2WcwR` reached `READY` at `over-garden-fwg7ddk6a-yehors-projects-01221e2b.vercel.app` and served feature SHA `da38a2c2b5901426353e8d0a55a91a79b584863f` through the canonical aliases. Immutable and canonical read-back both reported enforcement enabled and the default `900`-second TTL. The exact-SHA reject-only smoke proved owner-change, same-owner session-refresh, and malformed-protocol rejection with zero journal-entry and mutation-receipt effects before and after; all three synthetic sessions were revoked and confirmed guest afterward.
 
-### Legacy transitional Quarantine Bucket
+### Isolated Legacy Quarantine Bucket (OVE-350 rollback residue)
 
 - Bucket name: `overgarden-quarantine`
 - Bucket ID: `13b1358d8ffb40d996c50aa7b089a792`
-- Purpose: transitional private original uploads for pre-ADR-0019 runtime only
+- Purpose: empty, non-application rollback residue pending OVE-350 deletion
 - Public development URL: disabled
 - Managed `r2.dev` domain: `pub-13b1358d8ffb40d996c50aa7b089a792.r2.dev` (disabled)
 
@@ -307,10 +308,9 @@ CORS:
 - Headers: `*`
 - Exposed headers: `ETag`
 - Max age: `3600`
-- Dynamic Vercel preview deployment origins are intentionally not listed here by default. A full browser upload smoke should use an allowed app origin or an explicitly approved temporary preview origin; Node/API smoke alone does not exercise browser CORS preflight.
-- The selected public pilot URL is now `https://over.garden` (OVE-51). Keep `https://over.garden` and `https://www.over.garden` in the quarantine CORS rule before any canonical-domain browser upload smoke. The current object-scoped R2 token can upload/read objects but cannot read or update bucket CORS configuration.
-- On 2026-06-27, the OVE-27 branch preview origin was explicitly added for the production pilot browser smoke. Remove or rotate temporary preview origins when the branch is closed or the pilot URL changes.
-- On 2026-06-28 (OVE-37), a live CORS preflight to the quarantine S3 host from `https://over-garden.vercel.app` returned `204` with `Access-Control-Allow-Origin` for that origin and `Access-Control-Allow-Methods: PUT, HEAD`. On 2026-06-29 (OVE-51), the canonical `https://over.garden` origin remained allowed with the same `PUT, HEAD` method class, confirming a real pilot gardener's browser upload from the canonical origin passes preflight.
+- These CORS entries are historical configuration awaiting OVE-350 deletion.
+  They must not be used for a browser upload smoke or restored to application
+  configuration. Earlier dated CORS receipts remain historical provenance.
 
 Lifecycle:
 
@@ -321,10 +321,11 @@ Lifecycle:
 
 Invariants:
 
-- Quarantine keys are server/internal and must not appear in public read models, public HTML, search documents, analytics events, or client-visible derivative URLs.
+- No application route, package, job, schema field, or deployed environment
+  owner may reference this bucket.
 - Public pages must never render this bucket or its `r2.dev` domain.
-- No new target flow may depend on this bucket; OVE-349/350 own its gated
-  application and provider retirement respectively.
+- OVE-350 alone may delete its bucket/CORS/lifecycle/credential surface after
+  the required observation window and two exact zero-object read-backs.
 
 ### Public Derivative Bucket
 

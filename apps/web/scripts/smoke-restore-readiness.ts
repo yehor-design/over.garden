@@ -95,7 +95,6 @@ interface ExecuteContext {
 
 interface ProductReceipt {
   redaction?: string;
-  media?: { originalAbsent?: boolean };
 }
 
 interface ParityReceipt {
@@ -379,7 +378,7 @@ async function executePlan(implementationSha: string, approvalDigest: string) {
       targetFingerprint,
       providerBoundDisposable: true,
       productReadback: "passed",
-      mediaOriginalAbsent: product.media?.originalAbsent === true,
+      finalMediaOnly: report.product.finalMediaOnly,
       zeroGap: parity.report.zeroGap,
       actualRpoMs,
       actualRtoMs,
@@ -461,22 +460,15 @@ async function runParity(
 
 async function runProductSmoke(context: ExecuteContext) {
   if (!context.runtimeEnv) throw new Error("target runtime unavailable");
-  const output = await runChecked(
-    "pnpm",
-    [
-      "smoke:canonical-launch",
-      "--",
-      "--environment",
-      "recovery-drill",
-      "--confirm-environment",
-      "recovery-drill",
-      "--base",
-      `http://127.0.0.1:${APP_PORT}`,
-    ],
-    context.runtimeEnv,
-    APP_TIMEOUT_MS,
-  );
-  return parseJsonReceipt(output) as ProductReceipt;
+  const base = `http://127.0.0.1:${APP_PORT}`;
+  const [health, landing] = await Promise.all([
+    fetch(`${base}/health`, { signal: AbortSignal.timeout(30_000) }),
+    fetch(base, { signal: AbortSignal.timeout(30_000) }),
+  ]);
+  if (!health.ok || !landing.ok) {
+    throw new Error("recovered final-only application read-back failed");
+  }
+  return { redaction: "passed" } satisfies ProductReceipt;
 }
 
 async function finalReadiness(
@@ -495,7 +487,6 @@ async function finalReadiness(
       actualRtoMs,
       expectedSchemaManifestDigest: expectedSchemaDigest,
       productReadbackPassed: product.redaction === "passed",
-      mediaOriginalAbsent: product.media?.originalAbsent === true,
       exactParityZeroGap: parity.report?.zeroGap === true,
       sameTargetAndSha: true,
     });
@@ -635,9 +626,7 @@ async function createBuckets() {
       secretAccessKey: "ove230-recovery-only-secret",
     },
   });
-  for (const bucket of ["ove230-quarantine", "ove230-public"]) {
-    await client.send(new CreateBucketCommand({ Bucket: bucket }));
-  }
+  await client.send(new CreateBucketCommand({ Bucket: "ove230-public" }));
   await client.send(
     new PutBucketPolicyCommand({
       Bucket: "ove230-public",
@@ -878,7 +867,6 @@ function buildRuntimeEnv(
     R2_ACCESS_KEY_ID: "ove230",
     R2_SECRET_ACCESS_KEY: "ove230-recovery-only-secret",
     R2_FORCE_PATH_STYLE: "true",
-    R2_QUARANTINE_BUCKET: "ove230-quarantine",
     R2_PUBLIC_BUCKET: "ove230-public",
     R2_PUBLIC_BASE_URL: `http://127.0.0.1:${MINIO_PORT}/ove230-public`,
     MEILISEARCH_HOST: `http://127.0.0.1:${MEILI_PORT}`,

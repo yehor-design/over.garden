@@ -47,12 +47,12 @@ describe("authenticated mutation enforcement receipt", () => {
       first.entrypointStates.filter(
         (state) => state.enforcementState === "enforced_ove_290",
       ),
-    ).toHaveLength(14);
+    ).toHaveLength(8);
     expect(
       first.consumerEdgeStates.filter(
         (state) => state.enforcementState === "enforced_ove_290",
       ),
-    ).toHaveLength(153);
+    ).toHaveLength(72);
     expect(JSON.stringify(first)).not.toMatch(/effectBoundaryId/);
   });
 
@@ -96,8 +96,8 @@ describe("authenticated mutation enforcement receipt", () => {
       },
       enforcement: {
         receiptDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
-        ove291EntrypointCount: 121,
-        ove291ConsumerEdgeCount: 321,
+        ove291EntrypointCount: 117,
+        ove291ConsumerEdgeCount: 290,
       },
       explicitGoogleLink: {
         ownershipDigest:
@@ -141,7 +141,7 @@ describe("authenticated mutation enforcement receipt", () => {
     );
   });
 
-  it("reads all 11 live high-risk admission bodies and proves their task-owned guards", async () => {
+  it("reads all 6 live high-risk admission bodies and proves their task-owned guards", async () => {
     await expect(
       assertHighRiskAdmissionBoundaryEvidence({
         registry,

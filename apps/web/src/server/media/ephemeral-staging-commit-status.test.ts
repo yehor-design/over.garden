@@ -43,10 +43,7 @@ describe("ephemeral media commit-status boundary", () => {
         declared_size_bytes: "123",
         intrinsic_width: 800,
         intrinsic_height: 600,
-        declared_media_type: "image/webp",
-        admitted_media_type: "image/webp",
         derivative_key: `derivatives/${MEDIA_ID}/2.webp`,
-        media_readiness_state: "public_ready",
         revoked_at: null,
       },
     ];
@@ -143,10 +140,7 @@ describe("ephemeral media commit-status boundary", () => {
       declared_size_bytes: "321",
       intrinsic_width: 640,
       intrinsic_height: 480,
-      declared_media_type: "image/webp",
-      admitted_media_type: "image/webp",
       derivative_key: `derivatives/${RETAINED_MEDIA_ID}/1.webp`,
-      media_readiness_state: "public_ready",
       revoked_at: null,
     });
 

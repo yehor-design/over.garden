@@ -1,7 +1,8 @@
 /**
  * OVE-193 local self-serve first-journal smoke.
- * Proves self-serve signup → first private entry → follow-up → actor attribution
- * without printing emails, handles, UUIDs, draft bodies, or media keys.
+ * Proves self-serve signup → first atomic public entry → follow-up → actor
+ * attribution without printing emails, handles, UUIDs, journal bodies, or
+ * media keys.
  */
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
@@ -33,10 +34,12 @@ import {
   resolveEffectiveJournalCover,
 } from "../src/lib/garden/journal-cover-contract";
 import {
-  ONLINE_JOURNAL_PROTOCOL,
-  ONLINE_JOURNAL_PROTOCOL_HEADER,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
+  type AtomicJournalCreateResponse,
 } from "../src/lib/garden/entry-contracts";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
+import { buildAtomicTextJournalCreateRequest } from "./atomic-journal-text-request";
 
 const require = createRequire(import.meta.url);
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -187,9 +190,8 @@ async function main() {
       {
         mediaAssetId: id,
         usageRole: JOURNAL_MEDIA_USAGE_INLINE,
-        status: "processed" as const,
         derivativeKey: `${id}.webp`,
-        originalDeletedAt: new Date(),
+        revokedAt: null,
       },
     ]),
   );
@@ -292,50 +294,51 @@ async function main() {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
+        [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
+          ATOMIC_JOURNAL_CREATE_PROTOCOL,
         cookie: jar.header(),
         origin: baseUrl,
       },
-      body: JSON.stringify({
-        target: "first_plant_entry",
-        spaceName: "OVE-193 synthetic space",
-        plantName: "OVE-193 synthetic object",
-        objectKind: "plant",
-        catalogItemId: null,
-        userAddedCatalogName: "OVE-193 synthetic plant",
-        varietyText: null,
-        title: "OVE-193 first note",
-        body: "Private self-serve first journal note.",
-        entryDate: "2026-07-23",
-        locationVisibility: "hidden",
-        coarseRegionCode: null,
-        clientMutationId: firstMutationId,
-        activationSource: "direct_garden",
-      }),
+      body: JSON.stringify(
+        buildAtomicTextJournalCreateRequest({
+          publishId: firstMutationId,
+          context: {
+            target: "first_plant_entry",
+            spaceName: "OVE-193 synthetic space",
+            plantName: "OVE-193 synthetic object",
+            objectKind: "plant",
+            catalogItemId: null,
+            userAddedCatalogName: "OVE-193 synthetic plant",
+            locationVisibility: "hidden",
+            coarseRegionCode: null,
+            entryDate: "2026-07-23",
+            activationSource: "direct_garden",
+          },
+          title: "OVE-193 first note",
+          text: "Public atomic self-serve first journal note.",
+        }),
+      ),
     });
     jar.addFromResponse(firstResponse);
     assert(
       firstResponse.ok,
       `first entry failed with status ${firstResponse.status}`,
     );
-    const firstBody = (await firstResponse.json()) as {
-      entry?: { id?: string };
-      plantObject?: { id?: string };
-    };
-    const entryId = firstBody.entry?.id;
-    const plantObjectId = firstBody.plantObject?.id;
+    const firstBody = (await firstResponse.json()) as AtomicJournalCreateResponse;
+    const entryId = firstBody.entryId;
     assert(typeof entryId === "string", "first entry id");
-    assert(typeof plantObjectId === "string", "plant object id");
 
     const entryRow = await database
       .selectFrom("journal_entries")
-      .select(["visibility", "owner_user_id"])
+      .select(["visibility", "owner_user_id", "plant_object_id"])
       .where("id", "=", entryId)
       .executeTakeFirstOrThrow();
+    const plantObjectId = entryRow.plant_object_id;
+    assert(typeof plantObjectId === "string", "plant object id");
     assertEqual(
       entryRow.visibility,
-      "private",
-      "first entry private by default",
+      "public",
+      "first entry publishes atomically",
     );
     assertEqual(entryRow.owner_user_id, userId, "owner continuity");
 
@@ -357,18 +360,23 @@ async function main() {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
+        [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
+          ATOMIC_JOURNAL_CREATE_PROTOCOL,
         cookie: jar.header(),
         origin: baseUrl,
       },
-      body: JSON.stringify({
-        target: "plant_object_entry",
-        plantObjectId,
-        title: "OVE-193 follow-up",
-        body: "Second dated self-serve note.",
-        entryDate: "2026-07-24",
-        clientMutationId: randomUUID(),
-      }),
+      body: JSON.stringify(
+        buildAtomicTextJournalCreateRequest({
+          publishId: randomUUID(),
+          context: {
+            target: "plant_object_entry",
+            plantObjectId,
+            entryDate: "2026-07-24",
+          },
+          title: "OVE-193 follow-up",
+          text: "Second dated atomic self-serve note.",
+        }),
+      ),
     });
     jar.addFromResponse(followUp);
     assert(followUp.ok, `follow-up failed with status ${followUp.status}`);
@@ -379,6 +387,19 @@ async function main() {
       .where("owner_user_id", "=", userId)
       .executeTakeFirstOrThrow();
     assertEqual(Number(entryCount.count), 2, "first + follow-up entries");
+    const entryStates = await database
+      .selectFrom("journal_entries")
+      .select(["visibility", "lifecycle_state"])
+      .where("owner_user_id", "=", userId)
+      .execute();
+    assert(
+      entryStates.length === 2 &&
+        entryStates.every(
+          (entry) =>
+            entry.visibility === "public" && entry.lifecycle_state === "active",
+        ),
+      "atomic self-serve journals must be active public entries",
+    );
 
     const spaces = await database
       .selectFrom("spaces")
@@ -395,7 +416,7 @@ async function main() {
           evidenceClass: "synthetic_local_self_serve_first_journal",
           runtimeClass: "local",
           accessMode: "self_serve",
-          firstEntryVisibility: "private",
+          firstEntryVisibility: "public",
           entryCount: 2,
           actorClass: SELF_SERVE_ACTOR_CLASS,
           retiredAccessGateAbsent: true,

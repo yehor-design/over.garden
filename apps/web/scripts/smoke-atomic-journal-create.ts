@@ -4,7 +4,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { config as loadEnv } from "dotenv";
-
 export const ATOMIC_JOURNAL_CREATE_RECEIPT_VERSION =
   "ove347.atomicJournalCreateSmoke.v1" as const;
 
@@ -304,11 +303,6 @@ async function runIntegrationFaultProof() {
       .select(({ fn }) => fn.countAll<number>().as("count"))
       .where("id", "=", fault.mediaAssetId)
       .executeTakeFirstOrThrow();
-    const draftCount = await db
-      .selectFrom("journal_entry_drafts")
-      .select(({ fn }) => fn.countAll<number>().as("count"))
-      .where("owner_user_id", "in", [ownerUserId, anotherUserId])
-      .executeTakeFirstOrThrow();
     const projectionCount = await db
       .selectFrom("public_projection_intents")
       .select(({ fn }) => fn.countAll<number>().as("count"))
@@ -352,8 +346,7 @@ async function runIntegrationFaultProof() {
       anotherOwnerEntryCount === 0 &&
       injectedDbFaultClass === "transaction_rolled_back" &&
       faultEntryCount === 0 &&
-      Number(faultMediaCount.count) === 0 &&
-      Number(draftCount.count) === 0;
+      Number(faultMediaCount.count) === 0;
 
     const receipt = Object.freeze({
       version: ATOMIC_JOURNAL_CREATE_RECEIPT_VERSION,
@@ -372,7 +365,6 @@ async function runIntegrationFaultProof() {
       injectedDbFaultClass,
       faultEntryCount,
       faultMediaCount: Number(faultMediaCount.count),
-      draftCount: Number(draftCount.count),
       projectionIntentCount: Number(projectionCount.count),
       evidenceHygiene: Object.freeze({
         identityAbsent: true,

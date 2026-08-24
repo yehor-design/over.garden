@@ -9,7 +9,6 @@ import type { Database } from "@/db/schema";
 import {
   MEDIA_DERIVATIVE_REVOKE_KIND,
   MEDIA_LIFECYCLE_QUEUE,
-  MEDIA_QUARANTINE_EXPIRE_KIND,
   MEDIA_STAGING_FINALIZE_KIND,
   maxAttemptsForKind,
 } from "@/server/job-queue-manifest";
@@ -167,10 +166,7 @@ async function processMediaLifecycleJob(job: ClaimedMediaLifecycleJob) {
     });
     return payload;
   }
-  if (
-    payload.kind !== MEDIA_DERIVATIVE_REVOKE_KIND &&
-    payload.kind !== MEDIA_QUARANTINE_EXPIRE_KIND
-  ) {
+  if (payload.kind !== MEDIA_DERIVATIVE_REVOKE_KIND) {
     throw new Error("Unsupported media lifecycle job kind.");
   }
 
@@ -192,9 +188,7 @@ type ParsedMediaLifecyclePayload =
       receiptSetDigest: string;
     }
   | {
-      kind:
-        | typeof MEDIA_DERIVATIVE_REVOKE_KIND
-        | typeof MEDIA_QUARANTINE_EXPIRE_KIND;
+      kind: typeof MEDIA_DERIVATIVE_REVOKE_KIND;
       bucket: MediaObjectReference["bucket"];
       objectKey: string;
       mediaAssetId?: string;
@@ -231,16 +225,13 @@ function parsePayload(raw: unknown): ParsedMediaLifecyclePayload {
     typeof payload.mediaAssetId === "string" ? payload.mediaAssetId : undefined;
 
   if (
-    (bucket !== "quarantine" && bucket !== "public_derivative") ||
+    bucket !== "public_derivative" ||
     objectKey.length === 0 ||
     kind.length === 0
   ) {
     throw new Error("Media lifecycle job payload is malformed.");
   }
-  if (
-    kind !== MEDIA_DERIVATIVE_REVOKE_KIND &&
-    kind !== MEDIA_QUARANTINE_EXPIRE_KIND
-  ) {
+  if (kind !== MEDIA_DERIVATIVE_REVOKE_KIND) {
     throw new Error("Unsupported media lifecycle job kind.");
   }
   return { kind, bucket, objectKey, mediaAssetId };
@@ -258,21 +249,12 @@ async function markJobDone(
     }
 
     const now = new Date();
-    if (payload.kind === MEDIA_DERIVATIVE_REVOKE_KIND) {
-      await trx
-        .updateTable("media_assets")
-        .set({ revoked_at: now, public_unreachable_at: now, updated_at: now })
-        .where("id", "=", payload.mediaAssetId)
-        .where("revoked_at", "is", null)
-        .execute();
-    } else {
-      await trx
-        .updateTable("media_assets")
-        .set({ original_deleted_at: now, updated_at: now })
-        .where("id", "=", payload.mediaAssetId)
-        .where("original_deleted_at", "is", null)
-        .execute();
-    }
+    await trx
+      .updateTable("media_assets")
+      .set({ revoked_at: now, public_unreachable_at: now, updated_at: now })
+      .where("id", "=", payload.mediaAssetId)
+      .where("revoked_at", "is", null)
+      .execute();
     return true;
   });
 }

@@ -4,7 +4,7 @@ import {
   ATOMIC_JOURNAL_EDIT_PROTOCOL,
   ATOMIC_JOURNAL_EDIT_PROTOCOL_HEADER,
   JOURNAL_ENTRY_PAYLOAD_MAX_BYTES,
-  legacyClientRetiredResponse,
+  atomicJournalProtocolRequiredResponse,
   type AtomicJournalEditRequest,
   type AtomicJournalEditResponse,
 } from "@/lib/garden/entry-contracts";
@@ -38,7 +38,6 @@ import {
   readAtomicJournalEditBaseline,
   readCommittedAtomicJournalEdit,
   updateAtomicJournalEntry,
-  updateJournalEntryAggregate,
 } from "@/server/journal-repository";
 import {
   journalRevisionNumber,
@@ -71,7 +70,7 @@ export async function PATCH(
     request.headers.get(ATOMIC_JOURNAL_EDIT_PROTOCOL_HEADER) !==
     ATOMIC_JOURNAL_EDIT_PROTOCOL
   ) {
-    return privateNoStore(legacyClientRetiredResponse());
+    return privateNoStore(atomicJournalProtocolRequiredResponse());
   }
 
   let raw: unknown;
@@ -265,34 +264,6 @@ export async function PATCH(
       Response.json({ code }, { status: atomicEditErrorStatus(code) }),
     );
   }
-}
-
-/** Dormant rollback-only edit implementation retained until OVE-349. */
-export async function updateLegacyEntryForRollback(
-  request: Request,
-  entryId: string,
-  scope: Parameters<typeof updateJournalEntryAggregate>[0],
-) {
-  const body = (await readBoundedJsonRequest(
-    request,
-    JOURNAL_ENTRY_PAYLOAD_MAX_BYTES,
-  )) as Record<string, unknown>;
-  return updateJournalEntryAggregate(scope, {
-    entryId,
-    title: typeof body.title === "string" ? body.title : "",
-    body: typeof body.body === "string" ? body.body : null,
-    contentDocument: body.contentDocument,
-    entryDate: typeof body.entryDate === "string" ? body.entryDate : null,
-    clientMutationId:
-      typeof body.clientMutationId === "string" ? body.clientMutationId : "",
-    expectedRevision:
-      typeof body.expectedRevision === "number" ? body.expectedRevision : 0,
-    cover: (body.cover ?? null) as never,
-    mentionSelections: Array.isArray(body.mentionSelections)
-      ? (body.mentionSelections as never[])
-      : [],
-    topicTags: body.topicTags,
-  });
 }
 
 function parseAtomicJournalEditRequest(

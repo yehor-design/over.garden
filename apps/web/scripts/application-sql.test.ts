@@ -31,6 +31,7 @@ describe("versioned application SQL bootstrap", () => {
       "0035_online_only_retirement.sql",
       "0036_ove347_atomic_journal_create.sql",
       "0037_ove351_retire_external_photo_identification.sql",
+      "0038_ove349_retire_legacy_journal_media.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });
@@ -90,25 +91,15 @@ describe("versioned application SQL bootstrap", () => {
     ).toHaveLength(4);
   });
 
-  it("installs the owner-scoped online journal draft CAS contract", async () => {
+  it("retires the historical server-draft table after a guarded zero-state gate", async () => {
     const migrations = await loadVersionedApplicationSql(path.resolve("sql"));
-    const journalDrafts = migrations.find(
-      ({ name }) => name === "0029_online_journal_drafts.sql",
+    const retirement = migrations.find(
+      ({ name }) => name === "0038_ove349_retire_legacy_journal_media.sql",
     )?.sql;
 
-    expect(journalDrafts).toContain(
-      "create table if not exists journal_entry_drafts",
-    );
-    expect(journalDrafts).toContain(
-      'foreign key (owner_user_id) references "user"(id) on delete cascade',
-    );
-    expect(journalDrafts).toContain("unique (owner_user_id, draft_key)");
-    expect(journalDrafts).toContain(
-      "draft_kind in ('first_entry', 'follow_up', 'space_entry', 'edit_entry')",
-    );
-    expect(journalDrafts).toContain("draft_generation > 0");
-    expect(journalDrafts).toContain("server_revision > 0");
-    expect(journalDrafts).toContain("payload_sha256 ~ '^[a-f0-9]{64}$'");
-    expect(journalDrafts).toContain("journal_entry_drafts_context_check");
+    expect(retirement).toContain("select count(*) from journal_entry_drafts");
+    expect(retirement).toContain("where visibility <> 'public'");
+    expect(retirement).toContain("drop table if exists journal_entry_drafts");
+    expect(retirement).toContain("alter column derivative_key set not null");
   });
 });

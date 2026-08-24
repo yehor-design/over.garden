@@ -51,7 +51,7 @@ Currently wired events:
 
 - `landing_page_view`: public routes only, after marketing consent; Pixel + CAPI can dedupe through the same event id.
 - `signup_started`: when a visitor starts email sign-up; CAPI only, no email or form values.
-- `first_entry_saved`: after the first private garden entry is saved; CAPI only, no journal text, plant name, catalog selection, media, location, account id, or route.
+- `first_entry_saved`: after the first atomic public journal publication succeeds; CAPI only, no journal text, plant name, catalog selection, media, location, account id, or route.
 
 `account_created` remains allowlisted but is intentionally unwired. With
 enumeration-resistant email sign-up, the client cannot distinguish a newly
@@ -82,7 +82,7 @@ Before enabling real campaign traffic:
 3. Deploy.
 4. Flip only the public kill switch to `true` for the smoke window.
 5. Open a public route, confirm no Pixel before consent, accept marketing measurement, and confirm the public event class appears in Meta Test Events.
-6. Save one first private entry as a smoke user and confirm only `first_entry_saved` appears by class.
+6. Atomically publish one first public entry as a smoke user and confirm only `first_entry_saved` appears by class.
 7. Turn the public kill switch back off unless the campaign is intentionally starting.
 
 Evidence may record only event class, route class, consent state, and success/failure class. Do not paste token values, test codes, Meta cookies, user ids, emails, IP/user-agent values, raw URLs, or event payloads with user-level data.

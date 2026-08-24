@@ -63,7 +63,6 @@ async function main() {
     await pool.query(migration.sql);
   }
 
-  await ensureBucket(requiredEnv("R2_QUARANTINE_BUCKET"));
   await ensureBucket(requiredEnv("R2_PUBLIC_BUCKET"));
   await allowPublicReads(requiredEnv("R2_PUBLIC_BUCKET"));
 

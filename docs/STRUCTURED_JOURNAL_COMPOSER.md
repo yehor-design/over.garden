@@ -13,7 +13,7 @@ compatibility layer. All twelve direct Lexical packages are pinned exactly to
 `0.49.0`, and the retirement verifier enforces one resolved Lexical build.
 
 The editor engine remains an authoring implementation detail. The only stored,
-API, server-draft, public, search, and read contract is normalized
+API, public, search, and read contract is normalized
 `JournalDocumentV1` schema version 1. Lexical JSON, node keys, DOM, and HTML
 never cross that boundary.
 
@@ -50,10 +50,10 @@ entry, space entry, object follow-up, and edit. Callers do not import Lexical or
 fork save, recovery, media, locale, or conflict behavior.
 
 One stable extension identity is created per mounted owner/document binding.
-All four flows finish their owner-scoped server-draft hydration before enabling
-that binding, so Lexical captures the restored canonical document rather than
-an empty pre-hydration snapshot. No active composer hydrates or writes durable
-browser journal state.
+Create flows start from transient tab-owned state; edit starts from the
+authoritative canonical document returned by its owner-scoped read. No
+composer writes a server draft or durable browser journal state. A durable
+change exists only after the atomic publication request is acknowledged.
 Semantic committed changes advance one monotonically increasing generation;
 selection-only and hydration updates do not emit canonical changes.
 `flushLatest` waits at most 1,500 ms through composition or reorder, then exports

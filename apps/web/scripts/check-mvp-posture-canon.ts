@@ -584,7 +584,7 @@ function readTrackedTextFiles(repositoryRoot: string): Record<string, string> {
     cwd: repositoryRoot,
     encoding: "buffer",
     timeout: MVP_POSTURE_CANON_DEADLINE_MS,
-    maxBuffer: 32 * 1024 * 1024,
+    maxBuffer: 128 * 1024 * 1024,
   });
   const relativePaths = output
     .toString("utf8")
@@ -623,7 +623,7 @@ function readTreeIdentity(repositoryRoot: string): {
     cwd: repositoryRoot,
     encoding: "buffer",
     timeout: MVP_POSTURE_CANON_DEADLINE_MS,
-    maxBuffer: 32 * 1024 * 1024,
+    maxBuffer: 128 * 1024 * 1024,
   });
   const trackedDiff = execFileSync(
     "git",
@@ -632,7 +632,7 @@ function readTreeIdentity(repositoryRoot: string): {
       cwd: repositoryRoot,
       encoding: "buffer",
       timeout: MVP_POSTURE_CANON_DEADLINE_MS,
-      maxBuffer: 32 * 1024 * 1024,
+      maxBuffer: 128 * 1024 * 1024,
     },
   );
   const untrackedOutput = execFileSync(
@@ -642,7 +642,7 @@ function readTreeIdentity(repositoryRoot: string): {
       cwd: repositoryRoot,
       encoding: "buffer",
       timeout: MVP_POSTURE_CANON_DEADLINE_MS,
-      maxBuffer: 32 * 1024 * 1024,
+      maxBuffer: 128 * 1024 * 1024,
     },
   );
   const untrackedPaths = untrackedOutput

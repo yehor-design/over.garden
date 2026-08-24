@@ -94,7 +94,6 @@ export function GardenWorkspaceView({
           }}
           recent={[]}
           inbox={null}
-          media={null}
         />
       </main>
     );
@@ -106,8 +105,6 @@ export function GardenWorkspaceView({
     workspace.recent.status === "ready" ? workspace.recent.value : [];
   const inbox =
     workspace.inbox.status === "ready" ? workspace.inbox.value : null;
-  const media =
-    workspace.media.status === "ready" ? workspace.media.value : null;
   const nextAction = inventory
     ? chooseNextAction(inventory.objects, today, workspaceCopy)
     : unavailableInventoryNextAction(workspaceCopy);
@@ -176,7 +173,6 @@ export function GardenWorkspaceView({
         nextAction={{ href: nextAction.href, label: nextAction.label }}
         recent={recent}
         inbox={inbox}
-        media={media}
       />
 
       <div className="flex flex-col gap-10 px-4 py-8 sm:px-6">

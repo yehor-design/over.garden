@@ -1,5 +1,3 @@
-import { LAUNCH_MEDIA_QUALITY_POLICY_VERSION } from "@/lib/media/launch-media-quality";
-
 export const PUBLIC_PROJECTION_QUALITY_CONTRACT_VERSION =
   "ove331.qualityClass.v1" as const;
 
@@ -67,14 +65,8 @@ export function analyticsDeliveryQuality(
 }
 
 export interface PublicMediaProjectionInput {
-  status: string;
   derivativeKey: string | null;
-  originalDeletedAt?: Date | string | null;
   revokedAt?: Date | string | null;
-  mediaReadinessState?: string | null;
-  publicObjectId?: string | null;
-  qualityPolicyVersion?: string | null;
-  qualityClass?: string | null;
 }
 
 export type PublicMediaProjectionDecision =
@@ -98,9 +90,7 @@ export function classifyPublicMediaProjection(
   row: PublicMediaProjectionInput,
 ): PublicMediaProjectionDecision {
   if (
-    row.status !== "processed" ||
-    !row.derivativeKey ||
-    Boolean(row.revokedAt)
+    !row.derivativeKey || Boolean(row.revokedAt)
   ) {
     return {
       state: "excluded",
@@ -108,34 +98,11 @@ export function classifyPublicMediaProjection(
       qualityReasons: ["media_projection_unresolved"],
     };
   }
-  if (isVerifiedTransitionalMediaState(row)) {
-    return {
-      state: "admitted_verified",
-      qualityClass: "verified",
-      qualityReasons: [],
-    };
-  }
   return {
-    state: "admitted_partial",
-    qualityClass: "partial",
-    qualityReasons: ["media_projection_unresolved"],
+    state: "admitted_verified",
+    qualityClass: "verified",
+    qualityReasons: [],
   };
-}
-
-export function isVerifiedTransitionalMediaState(
-  row: PublicMediaProjectionInput,
-): boolean {
-  return (
-    row.status === "processed" &&
-    Boolean(row.derivativeKey) &&
-    Boolean(row.originalDeletedAt) &&
-    !row.revokedAt &&
-    row.mediaReadinessState === "public_ready" &&
-    Boolean(row.publicObjectId) &&
-    (row.qualityPolicyVersion == null ||
-      (row.qualityPolicyVersion === LAUNCH_MEDIA_QUALITY_POLICY_VERSION &&
-        row.qualityClass === "accepted"))
-  );
 }
 
 export function isPublicProjectionQualityClass(

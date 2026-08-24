@@ -43,7 +43,6 @@ import { resolveVisualJournalCreationScenario } from "@/lib/visual-fixtures/jour
 import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
 import type {
   VisualFixtureCreationScenarioEvidence,
-  VisualFixtureWorkspaceScenarioEvidence,
 } from "@/lib/visual-fixtures/manifest";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
@@ -190,10 +189,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
         ? ("visual_fixture" as const)
         : ("real_self_serve" as const),
   };
-  const workspaceForView = applyVisualWorkspaceSummary(
-    workspace,
-    visualScenario,
-  );
+  const workspaceForView = workspace;
   const requestedSpaceId = uuidParam(params.space);
   const defaultSpaceId =
     workspaceForView.spaces.status === "ready"
@@ -282,24 +278,6 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
       </GardenWorkspaceView>
     </>
   );
-}
-
-function applyVisualWorkspaceSummary(
-  workspace: Awaited<ReturnType<typeof loadGardenWorkspace>>,
-  scenario: VisualFixtureWorkspaceScenarioEvidence | null,
-) {
-  if (!scenario || workspace.media.status !== "ready") return workspace;
-
-  return {
-    ...workspace,
-    media: {
-      status: "ready" as const,
-      value: {
-        processingCount: scenario.mediaProcessingCount,
-        failedCount: scenario.mediaFailedCount,
-      },
-    },
-  };
 }
 
 function GuestGardenEntry({
@@ -597,9 +575,7 @@ function SpaceJournalTools({
                   {entry.title}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {entry.visibility === "public"
-                    ? copy.page.spaceJournal.public
-                    : copy.page.spaceJournal.private}
+                  {copy.page.spaceJournal.public}
                   {entry.lifecycle_state === "archived"
                     ? ` · ${copy.page.spaceJournal.archived}`
                     : ""}

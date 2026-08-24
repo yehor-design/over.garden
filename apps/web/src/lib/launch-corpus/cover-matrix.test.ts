@@ -8,16 +8,15 @@ import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
 import { listLocalCoverMatrixBranchIds } from "@/lib/launch-corpus/cover-matrix";
 import { localizeCuratedTopicLabel } from "@/lib/launch-corpus/topic-labels";
 
-function processed(
+function finalMedia(
   id: string,
   usageRole: "inline" | "cover_only" = "inline",
 ): JournalCoverCandidate {
   return {
     mediaAssetId: id,
     usageRole,
-    status: "processed",
     derivativeKey: `der/${id}`,
-    originalDeletedAt: new Date().toISOString(),
+    revokedAt: null,
     altText: `alt-${id}`,
     focalX: 0.5,
     focalY: 0.5,
@@ -40,9 +39,9 @@ describe("OVE-199 local cover matrix", () => {
     });
     expect(none.source).toBe("none");
 
-    const a = processed("a");
-    const b = processed("b");
-    const coverOnly = processed("c", "cover_only");
+    const a = finalMedia("a");
+    const b = finalMedia("b");
+    const coverOnly = finalMedia("c", "cover_only");
     const multiDoc: JournalDocumentV1 = {
       schemaVersion: 1,
       blocks: [

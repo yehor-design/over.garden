@@ -920,10 +920,6 @@ function alignMultilinePosture(identifier: string, source: string) {
     if (identifier === "OVE-321") {
       description = description
         .replace(
-          "4. `apps/web/src/app/api/media/uploads/route.ts` creates an owner-scoped private",
-          "4. Historical runtime measurement (preserved verbatim): `apps/web/src/app/api/media/uploads/route.ts` creates an owner-scoped private",
-        )
-        .replace(
           "exposure, the client owner writes nothing durable",
           "exposure; the client owner writes nothing durable",
         )

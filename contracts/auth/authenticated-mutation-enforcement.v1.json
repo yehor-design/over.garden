@@ -1,7 +1,7 @@
 {
   "schemaVersion": "overgarden.authenticated-mutation-enforcement.v1",
-  "registryDigest": "bea53e1a51472159da04b9d9cf8c9c93d4c7169d40a1a785d870cac1a2d74b22",
-  "sourceRegistryReceiptDigest": "c52674b1c6e13ea30a652078df579384a740308ad07576188964f412556dd3ec",
+  "registryDigest": "8726043541f4c7918de16dca2c4bdbe2adf4b40d6e2536c23e1e81b43569eadd",
+  "sourceRegistryReceiptDigest": "68ead17b798e2b2c00a43cc6425c0acf7e77058672677e3d950208aa1acd3425",
   "entrypointStates": [
     {
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_account_session_mutation",
@@ -264,10 +264,6 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#OwnerEntryActions:action:publishJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#ProvenanceSection:action:createLineageInvitationAction",
       "enforcementState": "enforced_ove_291"
     },
@@ -376,6 +372,26 @@
       "enforcementState": "excluded_with_authority"
     },
     {
+      "entrypointId": "route_handler:src/app/api/[...notFound]/route.ts#DELETE",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
+      "entrypointId": "route_handler:src/app/api/[...notFound]/route.ts#GET",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
+      "entrypointId": "route_handler:src/app/api/[...notFound]/route.ts#PATCH",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
+      "entrypointId": "route_handler:src/app/api/[...notFound]/route.ts#POST",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
+      "entrypointId": "route_handler:src/app/api/[...notFound]/route.ts#PUT",
+      "enforcementState": "excluded_with_authority"
+    },
+    {
       "entrypointId": "route_handler:src/app/api/auth/[...all]/route.ts#DELETE",
       "enforcementState": "excluded_with_authority"
     },
@@ -476,18 +492,6 @@
       "enforcementState": "excluded_with_authority"
     },
     {
-      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#GET",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#PUT",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "entrypointId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "enforcementState": "enforced_ove_290"
     },
@@ -528,20 +532,12 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "entrypointId": "route_handler:src/app/api/media/staging/commit-status/route.ts#POST",
       "enforcementState": "excluded_with_authority"
     },
     {
       "entrypointId": "route_handler:src/app/api/media/staging/reservations/route.ts#POST",
       "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "route_handler:src/app/api/media/uploads/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "entrypointId": "route_handler:src/app/api/meta/conversions/route.ts#POST",
@@ -577,7 +573,7 @@
     },
     {
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
+      "enforcementState": "excluded_with_authority"
     },
     {
       "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:guest_auth_intent",
@@ -688,10 +684,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
       "enforcementState": "enforced_ove_291"
     },
@@ -776,16 +768,8 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createProvenanceEdgeAction:authority:authenticated_user",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#resolvePlantObjectCatalogAction:authority:authenticated_user",
@@ -1344,150 +1328,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:10:a6411b97b3677cd486eb",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:11:f357c7c482b419e1b53d",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:12:d49bd1631169d877721f",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:13:49b0ee451c6b7baa2d1e",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:14:d696323b46215033d1d9",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:15:ada0fab3fe283a872a98",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:16:3bd60f8274b61f4a9c48",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:17:dc0408f8d59dd9ef1415",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:18:77cf888dc06e9a01e7fa",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:19:790167dd99c192ace88a",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:1:2b96f89dd1a409b9295c",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:20:83cb0b36ac40ec081833",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:21:3cba31d4baad96aa60da",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:22:35758e85acd914507fc0",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:23:a541f110924bbe3819d1",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:24:bca7b996e15c0765d3bd",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:2:c06fc21e75a674ca999f",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:3:88468ccdcf388cca2cea",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:4:812c59a20b586947971f",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:5:081c66c6bca619f42631",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:6:477c0198234593213489",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:7:522683864f8f12b1cd0f",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:8:b2e3cd3a93bb78f0b500",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:3aadc02fe0be8c73e31a:9:2506836770d600a3a0ba",
-      "entrypointId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/skeleton/journal/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:3b720ceff4e54b0c34e4:1:33c7b234bc8dcaee33e6",
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#link_social_post_redirect",
       "admissionBoundaryId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#link_social_post_redirect",
@@ -1752,109 +1592,79 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:10:a6411b97b3677cd486eb",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:10:ada0fab3fe283a872a98",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:11:f357c7c482b419e1b53d",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:11:7f173ecc6a4dbcd0870d",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:12:d49bd1631169d877721f",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:12:47484ff842ec3e0e50a1",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:13:49b0ee451c6b7baa2d1e",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:13:d482e6d15ab18bd12386",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:14:d696323b46215033d1d9",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:1:c06fc21e75a674ca999f",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:15:ada0fab3fe283a872a98",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:2:522683864f8f12b1cd0f",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:16:7f173ecc6a4dbcd0870d",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:3:b2e3cd3a93bb78f0b500",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:17:47484ff842ec3e0e50a1",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:4:2506836770d600a3a0ba",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:18:d482e6d15ab18bd12386",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:5:a6411b97b3677cd486eb",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:1:2b96f89dd1a409b9295c",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:6:f357c7c482b419e1b53d",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:2:c06fc21e75a674ca999f",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:7:d49bd1631169d877721f",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:3:88468ccdcf388cca2cea",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:8:49b0ee451c6b7baa2d1e",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:4:812c59a20b586947971f",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:5:081c66c6bca619f42631",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:6:477c0198234593213489",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:7:522683864f8f12b1cd0f",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:8:b2e3cd3a93bb78f0b500",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:58d59fbd01f055fee315:9:2506836770d600a3a0ba",
+      "consumerEdgeId": "edge:58d59fbd01f055fee315:9:d696323b46215033d1d9",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
       "enforcementState": "enforced_ove_290"
@@ -1902,37 +1712,31 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:10:3cba31d4baad96aa60da",
+      "consumerEdgeId": "edge:67156c7216fa27dd3df2:10:35758e85acd914507fc0",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:11:35758e85acd914507fc0",
+      "consumerEdgeId": "edge:67156c7216fa27dd3df2:11:a541f110924bbe3819d1",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:12:a541f110924bbe3819d1",
+      "consumerEdgeId": "edge:67156c7216fa27dd3df2:12:bca7b996e15c0765d3bd",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:13:bca7b996e15c0765d3bd",
+      "consumerEdgeId": "edge:67156c7216fa27dd3df2:13:aec63c10be79f2e6f817",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:14:aec63c10be79f2e6f817",
-      "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
-      "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:15:200d376a9bcbfbc70d04",
+      "consumerEdgeId": "edge:67156c7216fa27dd3df2:14:200d376a9bcbfbc70d04",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
@@ -1956,37 +1760,37 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:4:dea3444fb388664106d2",
+      "consumerEdgeId": "edge:67156c7216fa27dd3df2:4:04f645b76f47f1150cdc",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:5:04f645b76f47f1150cdc",
+      "consumerEdgeId": "edge:67156c7216fa27dd3df2:5:278b4c20e4853b1430b8",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:6:278b4c20e4853b1430b8",
+      "consumerEdgeId": "edge:67156c7216fa27dd3df2:6:a879a5896fd3ff4e6b5c",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:7:a879a5896fd3ff4e6b5c",
+      "consumerEdgeId": "edge:67156c7216fa27dd3df2:7:1d071921966db969837d",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:8:1d071921966db969837d",
+      "consumerEdgeId": "edge:67156c7216fa27dd3df2:8:83cb0b36ac40ec081833",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:67156c7216fa27dd3df2:9:83cb0b36ac40ec081833",
+      "consumerEdgeId": "edge:67156c7216fa27dd3df2:9:3cba31d4baad96aa60da",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ApprovedErasureExecutionPanel:action:executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
@@ -2088,79 +1892,49 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:74919c23265529d457ae:10:c29a9bfe4c796b418f14",
+      "consumerEdgeId": "edge:74919c23265529d457ae:1:c06fc21e75a674ca999f",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:74919c23265529d457ae:11:47484ff842ec3e0e50a1",
+      "consumerEdgeId": "edge:74919c23265529d457ae:2:a6411b97b3677cd486eb",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:74919c23265529d457ae:12:7f173ecc6a4dbcd0870d",
+      "consumerEdgeId": "edge:74919c23265529d457ae:3:f88d084cc712c7e87b2e",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:74919c23265529d457ae:13:d482e6d15ab18bd12386",
+      "consumerEdgeId": "edge:74919c23265529d457ae:4:cf3b6b0379f6370b55e5",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:74919c23265529d457ae:1:2b96f89dd1a409b9295c",
+      "consumerEdgeId": "edge:74919c23265529d457ae:5:c29a9bfe4c796b418f14",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:74919c23265529d457ae:2:c06fc21e75a674ca999f",
+      "consumerEdgeId": "edge:74919c23265529d457ae:6:47484ff842ec3e0e50a1",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:74919c23265529d457ae:3:a6411b97b3677cd486eb",
+      "consumerEdgeId": "edge:74919c23265529d457ae:7:7f173ecc6a4dbcd0870d",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:74919c23265529d457ae:4:88468ccdcf388cca2cea",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:74919c23265529d457ae:5:812c59a20b586947971f",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:74919c23265529d457ae:6:081c66c6bca619f42631",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:74919c23265529d457ae:7:477c0198234593213489",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:74919c23265529d457ae:8:f88d084cc712c7e87b2e",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:74919c23265529d457ae:9:cf3b6b0379f6370b55e5",
+      "consumerEdgeId": "edge:74919c23265529d457ae:8:d482e6d15ab18bd12386",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:space_entry",
       "enforcementState": "enforced_ove_290"
@@ -2232,102 +2006,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:10:c29a9bfe4c796b418f14",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:11:dc0408f8d59dd9ef1415",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:12:77cf888dc06e9a01e7fa",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:13:790167dd99c192ace88a",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:14:47484ff842ec3e0e50a1",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:15:7f173ecc6a4dbcd0870d",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:16:d482e6d15ab18bd12386",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:1:2b96f89dd1a409b9295c",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:2:c06fc21e75a674ca999f",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:3:a6411b97b3677cd486eb",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:4:88468ccdcf388cca2cea",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:5:812c59a20b586947971f",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:6:081c66c6bca619f42631",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:7:477c0198234593213489",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:8:f88d084cc712c7e87b2e",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:7e6165a571f644e8c94f:9:cf3b6b0379f6370b55e5",
-      "entrypointId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/actions.ts#createSpaceJournalEntryAction",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:8003c6716e91b4e7b2a0:1:43373f91402d5ff0aab3",
       "entrypointId": "server_action:src/app/wishlist/actions.ts#removeCatalogPublicSlugFromWishlistAction:authority:authenticated_user",
       "admissionBoundaryId": "server_action:src/app/wishlist/actions.ts#removeCatalogPublicSlugFromWishlistAction:authority:authenticated_user",
@@ -2340,109 +2018,79 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:10:a6411b97b3677cd486eb",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:10:cef87e5dd8bc668e0528",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:11:f357c7c482b419e1b53d",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:11:47484ff842ec3e0e50a1",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:12:d49bd1631169d877721f",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:12:7f173ecc6a4dbcd0870d",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:13:49b0ee451c6b7baa2d1e",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:13:d482e6d15ab18bd12386",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:14:329a6f9a5476c3b4466f",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:1:c06fc21e75a674ca999f",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:15:cef87e5dd8bc668e0528",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:2:522683864f8f12b1cd0f",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:16:47484ff842ec3e0e50a1",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:3:b2e3cd3a93bb78f0b500",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:17:7f173ecc6a4dbcd0870d",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:4:2506836770d600a3a0ba",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:18:d482e6d15ab18bd12386",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:5:a6411b97b3677cd486eb",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:1:2b96f89dd1a409b9295c",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:6:f357c7c482b419e1b53d",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:2:c06fc21e75a674ca999f",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:7:d49bd1631169d877721f",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:3:88468ccdcf388cca2cea",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:8:49b0ee451c6b7baa2d1e",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:4:812c59a20b586947971f",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:5:081c66c6bca619f42631",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:6:477c0198234593213489",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:7:522683864f8f12b1cd0f",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:8:b2e3cd3a93bb78f0b500",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:9:2506836770d600a3a0ba",
+      "consumerEdgeId": "edge:80cbcd9b9471ff635a1e:9:329a6f9a5476c3b4466f",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:plant_object_entry",
       "enforcementState": "enforced_ove_290"
@@ -2499,72 +2147,6 @@
       "consumerEdgeId": "edge:872b6996270de0c341b0:1:94344f82fee4d2604d4a",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#markErasureRequestDryRunReviewedAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#markErasureRequestDryRunReviewedAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:87e048f16f8b6d387899:10:fff386b1a87bb211b863",
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:87e048f16f8b6d387899:1:1f74fbcf3a88937cb036",
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:87e048f16f8b6d387899:2:4fc1150e788e76d1c82a",
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:87e048f16f8b6d387899:3:c987599f9b246ad4f817",
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:87e048f16f8b6d387899:4:abcbb59954d96ec7f49b",
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:87e048f16f8b6d387899:5:dea3444fb388664106d2",
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:87e048f16f8b6d387899:6:04f645b76f47f1150cdc",
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:87e048f16f8b6d387899:7:278b4c20e4853b1430b8",
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:87e048f16f8b6d387899:8:5d7e5340a76fecabf300",
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:87e048f16f8b6d387899:9:d39f555d2c9d4b232afe",
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:883a9ecffe80c9d64561:1:af451516c0ee5156cdd2",
-      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#GET",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#GET",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2698,132 +2280,6 @@
       "entrypointId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#followProfileAction",
       "admissionBoundaryId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#followProfileAction",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:10:a6411b97b3677cd486eb",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:11:f357c7c482b419e1b53d",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:12:d49bd1631169d877721f",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:13:49b0ee451c6b7baa2d1e",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:14:329a6f9a5476c3b4466f",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:15:cef87e5dd8bc668e0528",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:16:dc0408f8d59dd9ef1415",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:17:77cf888dc06e9a01e7fa",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:18:790167dd99c192ace88a",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:19:47484ff842ec3e0e50a1",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:1:2b96f89dd1a409b9295c",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:20:7f173ecc6a4dbcd0870d",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:21:d482e6d15ab18bd12386",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:2:c06fc21e75a674ca999f",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:3:88468ccdcf388cca2cea",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:4:812c59a20b586947971f",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:5:081c66c6bca619f42631",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:6:477c0198234593213489",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:7:522683864f8f12b1cd0f",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:8:b2e3cd3a93bb78f0b500",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:a0e26d5a3a55edb77721:9:2506836770d600a3a0ba",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:a35d75db1eac3e7d0d2d:1:f7f730a6d2751f0ce598",
@@ -3004,12 +2460,6 @@
       "entrypointId": "native_form:src/app/garden/lineage/invitations/claim/page.tsx#LineageInvitationClaimCard:action:confirmLineageInvitationClaimAction",
       "admissionBoundaryId": "server_action:src/app/garden/lineage/invitations/claim/actions.ts#confirmLineageInvitationClaimAction:authority:authenticated_user",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:bbdbbab17180fd635e62:1:d83d1734dd7cbeefd6b2",
-      "entrypointId": "route_handler:src/app/api/media/uploads/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/media/uploads/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:bc0b6ec4292d756544f2:1:8c82bcc9683eedbedd61",
@@ -3204,76 +2654,10 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:c6dd9a31ed36aa2b0564:1:990e93855964f188cf42",
-      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#PUT",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#PUT",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:c6dd9a31ed36aa2b0564:2:add62d9f2f01e162374f",
-      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#PUT",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#PUT",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:c74457637e25e19a255b:1:06c622c691ab9d142d14",
       "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:mergeAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#mergeCatalogCandidateAction",
       "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:ca864c28e8769847b231:1:c06fc21e75a674ca999f",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:ca864c28e8769847b231:2:77e14156c5776bfc7101",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:ca864c28e8769847b231:3:fe2693c1a8020c347884",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:ca864c28e8769847b231:4:707a18a216ca1d5e7abd",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:ca864c28e8769847b231:5:83cb0b36ac40ec081833",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:ca864c28e8769847b231:6:3cba31d4baad96aa60da",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:ca864c28e8769847b231:7:35758e85acd914507fc0",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:ca864c28e8769847b231:8:a541f110924bbe3819d1",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:ca864c28e8769847b231:9:bca7b996e15c0765d3bd",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
     },
     {
       "consumerEdgeId": "edge:cd7e9102a65dd950d977:1:970a499c3870affe9016",
@@ -3345,18 +2729,6 @@
       "consumerEdgeId": "edge:d3c79dad4d319d2689e7:1:a9c2ee75a9cdafce3ae7",
       "entrypointId": "server_action:src/app/lineage/objects/[objectId]/actions.ts#followLineageNodeAction:authority:authenticated_user",
       "admissionBoundaryId": "server_action:src/app/lineage/objects/[objectId]/actions.ts#followLineageNodeAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:d4f7e2edf013a69f9203:1:180b5f806739f1759059",
-      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:d4f7e2edf013a69f9203:2:31c18a3a7ba52b1e24c7",
-      "entrypointId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/drafts/[draftKey]/route.ts#DELETE",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -3510,60 +2882,6 @@
       "enforcementState": "owned_by_ove_295"
     },
     {
-      "consumerEdgeId": "edge:f2e12ec284e602d89f1f:1:c06fc21e75a674ca999f",
-      "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#OwnerEntryActions:action:publishJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:f2e12ec284e602d89f1f:2:77e14156c5776bfc7101",
-      "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#OwnerEntryActions:action:publishJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:f2e12ec284e602d89f1f:3:fe2693c1a8020c347884",
-      "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#OwnerEntryActions:action:publishJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:f2e12ec284e602d89f1f:4:707a18a216ca1d5e7abd",
-      "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#OwnerEntryActions:action:publishJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:f2e12ec284e602d89f1f:5:83cb0b36ac40ec081833",
-      "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#OwnerEntryActions:action:publishJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:f2e12ec284e602d89f1f:6:3cba31d4baad96aa60da",
-      "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#OwnerEntryActions:action:publishJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:f2e12ec284e602d89f1f:7:35758e85acd914507fc0",
-      "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#OwnerEntryActions:action:publishJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:f2e12ec284e602d89f1f:8:a541f110924bbe3819d1",
-      "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#OwnerEntryActions:action:publishJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:f2e12ec284e602d89f1f:9:bca7b996e15c0765d3bd",
-      "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#OwnerEntryActions:action:publishJournalEntryAction",
-      "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_290"
-    },
-    {
       "consumerEdgeId": "edge:f402a40a7b3f14ac2901:1:d0a23c583aec75397683",
       "entrypointId": "server_action:src/app/lineage/objects/[objectId]/actions.ts#askLineageQuestionAction:authority:authenticated_user",
       "admissionBoundaryId": "server_action:src/app/lineage/objects/[objectId]/actions.ts#askLineageQuestionAction:authority:authenticated_user",
@@ -3588,37 +2906,31 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:10:3cba31d4baad96aa60da",
+      "consumerEdgeId": "edge:f70cccf1ee593092d939:10:35758e85acd914507fc0",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:11:35758e85acd914507fc0",
+      "consumerEdgeId": "edge:f70cccf1ee593092d939:11:a541f110924bbe3819d1",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:12:a541f110924bbe3819d1",
+      "consumerEdgeId": "edge:f70cccf1ee593092d939:12:bca7b996e15c0765d3bd",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:13:bca7b996e15c0765d3bd",
+      "consumerEdgeId": "edge:f70cccf1ee593092d939:13:aec63c10be79f2e6f817",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:14:aec63c10be79f2e6f817",
-      "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
-      "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:15:200d376a9bcbfbc70d04",
+      "consumerEdgeId": "edge:f70cccf1ee593092d939:14:200d376a9bcbfbc70d04",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
@@ -3642,37 +2954,37 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:4:dea3444fb388664106d2",
+      "consumerEdgeId": "edge:f70cccf1ee593092d939:4:04f645b76f47f1150cdc",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:5:04f645b76f47f1150cdc",
+      "consumerEdgeId": "edge:f70cccf1ee593092d939:5:278b4c20e4853b1430b8",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:6:278b4c20e4853b1430b8",
+      "consumerEdgeId": "edge:f70cccf1ee593092d939:6:a879a5896fd3ff4e6b5c",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:7:a879a5896fd3ff4e6b5c",
+      "consumerEdgeId": "edge:f70cccf1ee593092d939:7:1d071921966db969837d",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:8:1d071921966db969837d",
+      "consumerEdgeId": "edge:f70cccf1ee593092d939:8:83cb0b36ac40ec081833",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:f70cccf1ee593092d939:9:83cb0b36ac40ec081833",
+      "consumerEdgeId": "edge:f70cccf1ee593092d939:9:3cba31d4baad96aa60da",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "enforcementState": "enforced_ove_291"

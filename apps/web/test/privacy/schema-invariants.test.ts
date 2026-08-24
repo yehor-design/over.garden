@@ -68,10 +68,11 @@ describe("OVE-40 schema invariants — no precise location anywhere", () => {
 });
 
 describe("OVE-40 schema invariants — media privacy boundary", () => {
-  it("keeps quarantine and public derivative keys as separate columns", () => {
-    expect(schemaSql).toContain("quarantine_key text not null unique");
-    expect(schemaSql).toContain("derivative_key text unique");
-    expect(schemaSql).toContain("original_deleted_at timestamptz");
+  it("exposes only final derivative identity in the current generated shape", () => {
+    expect(generatedTypes).toContain("derivative_key: string");
+    expect(generatedTypes).not.toContain("quarantine_key:");
+    expect(generatedTypes).not.toContain("original_deleted_at:");
+    expect(generatedTypes).not.toContain("processing_claim_token:");
   });
 
   it("constrains analytics properties to a bounded jsonb object", () => {

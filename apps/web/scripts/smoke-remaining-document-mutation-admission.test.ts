@@ -27,11 +27,7 @@ describe("OVE-291 remaining document mutation production smoke", () => {
             protocol: "overgarden.document-mutation-generation.v1",
             deploymentSha: commit,
             enforcement: "enabled",
-            r2UploadUrlTtl: {
-              source: "default",
-              effectiveSeconds: 900,
-              maximumSeconds: 900,
-            },
+            ephemeralMediaCapabilityTtlSeconds: 900,
             authenticatedMutation: sourceReceipt,
           });
         }

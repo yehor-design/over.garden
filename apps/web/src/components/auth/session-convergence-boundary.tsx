@@ -49,16 +49,16 @@ import type {
   SessionRecheckMode,
 } from "@/lib/interface-route-policy";
 import {
-  abortOnlineJournalComposerParticipants,
-  admitOnlineJournalComposerSession,
-  pauseOnlineJournalComposerActivity,
-  finalizeOnlineJournalComposerParticipantsForSessionChange,
-  finalizeOnlineJournalComposerParticipantsForSignedOut,
-  prepareOnlineJournalComposerParticipants,
-  sealOnlineJournalComposerParticipantsForExit,
-  type OnlineJournalComposerPreparationHandle,
-  type OnlineJournalSessionFence,
-} from "@/lib/garden/online-journal-composer-participants";
+  abortLocalJournalComposerSession,
+  admitLocalJournalComposerSession,
+  pauseLocalJournalComposerActivity,
+  finalizeLocalJournalComposerForSessionChange,
+  finalizeLocalJournalComposerForSignedOut,
+  prepareLocalJournalComposerSession,
+  sealLocalJournalComposerForExit,
+  type LocalJournalComposerPreparationHandle,
+  type LocalJournalSessionFence,
+} from "@/lib/garden/local-journal-composer-session";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
 import { BlockedSessionAccountMethods } from "./blocked-session-account-methods";
@@ -80,8 +80,8 @@ const HARD_RELOAD_FINALIZATION_TIMEOUT_MS =
 type SessionRecheckFence = {
   epoch: number;
   ownerUserId: string;
-  pauseHandle: OnlineJournalSessionFence | null;
-  composerPreparation: OnlineJournalComposerPreparationHandle | null;
+  pauseHandle: LocalJournalSessionFence | null;
+  composerPreparation: LocalJournalComposerPreparationHandle | null;
   status: "preparing" | "ready" | "failed";
   terminal: "signed_out" | "changed" | null;
   ready: Promise<void>;
@@ -148,9 +148,9 @@ export function SessionConvergenceBoundary({
   });
   const retryAdmissionRef = useRef<() => void>(() => undefined);
   const reloadSessionGateRef = useRef<() => void>(() => undefined);
-  const pauseHandleRef = useRef<OnlineJournalSessionFence | null>(null);
+  const pauseHandleRef = useRef<LocalJournalSessionFence | null>(null);
   const composerPreparationRef =
-    useRef<OnlineJournalComposerPreparationHandle | null>(null);
+    useRef<LocalJournalComposerPreparationHandle | null>(null);
   const preparationPromiseRef = useRef<Promise<void> | null>(null);
   const preparationRoundTailRef = useRef<Promise<void>>(Promise.resolve());
   const preparationGenerationRef = useRef(0);
@@ -184,7 +184,7 @@ export function SessionConvergenceBoundary({
     if (bootstrapInvalidationMarker.kind === "local_exit") {
       terminalInvalidationObserved = true;
       localExitTransitionStarted = true;
-      sealOnlineJournalComposerParticipantsForExit();
+      sealLocalJournalComposerForExit();
       // The initial render is already payload-free (`checking`), so ordinary
       // effect state is sufficient here and avoids flushSync inside a lifecycle
       // method. Event-driven peer/BFCache transitions still flush synchronously.
@@ -315,7 +315,7 @@ export function SessionConvergenceBoundary({
     const abortTerminalParticipantActivity = () => {
       if (terminalParticipantActivityAborted || !baselineOwnerUserId) return;
       terminalParticipantActivityAborted = true;
-      abortOnlineJournalComposerParticipants(baselineOwnerUserId);
+      abortLocalJournalComposerSession(baselineOwnerUserId);
     };
     const beginLocalExitTransition = () => {
       if (disposed || localExitTransitionStarted) return;
@@ -323,7 +323,7 @@ export function SessionConvergenceBoundary({
       authoritativeNavigationStarted = true;
       terminalInvalidationObserved = true;
       const committed = commitLocalExitInvalidationMarker();
-      sealOnlineJournalComposerParticipantsForExit();
+      sealLocalJournalComposerForExit();
       flushSync(() => {
         authenticatedTreeAdmitted = false;
         setActivityGate("blocked");
@@ -369,7 +369,7 @@ export function SessionConvergenceBoundary({
         return;
       }
       if (baselinePreparedSession && baselineOwnerUserId && !disposed) {
-        const admission = await admitBoundedOnlineJournalSession(
+        const admission = await admitBoundedLocalJournalSession(
           baselineOwnerUserId,
           baselinePreparedSession.binding,
           {
@@ -448,7 +448,7 @@ export function SessionConvergenceBoundary({
             return false;
           }
 
-          const admission = await admitBoundedOnlineJournalSession(
+          const admission = await admitBoundedLocalJournalSession(
             freshOwnerUserId,
             freshPreparedSession.binding,
             establishesDocumentBaseline
@@ -692,10 +692,10 @@ export function SessionConvergenceBoundary({
       // Both calls acquire their in-memory safety fences before their first
       // await. Abort active participant requests first so no owner-A request can outlive the
       // transition into the payload-free React gate.
-      abortOnlineJournalComposerParticipants(ownerUserId);
+      abortLocalJournalComposerSession(ownerUserId);
       const composerPreparation =
-        prepareOnlineJournalComposerParticipants(ownerUserId);
-      const pauseHandle = pauseOnlineJournalComposerActivity(ownerUserId, {
+        prepareLocalJournalComposerSession(ownerUserId);
+      const pauseHandle = pauseLocalJournalComposerActivity(ownerUserId, {
         operationId: createSignOutOperationId(),
         sessionGeneration,
       });
@@ -723,7 +723,7 @@ export function SessionConvergenceBoundary({
           fence.pauseHandle = pauseResult.value;
           try {
             fence.composerPreparation.bindSessionFence(fence.pauseHandle);
-            abortOnlineJournalComposerParticipants(ownerUserId);
+            abortLocalJournalComposerSession(ownerUserId);
             await fence.pauseHandle.waitForParticipantDrain();
             fence.status = "ready";
             if (fence.terminal) {
@@ -754,7 +754,7 @@ export function SessionConvergenceBoundary({
         if (!baselineOwnerUserId || !baselinePreparedSession) {
           throw new Error("Signed-out owner activity cannot be fenced.");
         }
-        await finalizeOnlineJournalComposerParticipantsForSignedOut(
+        await finalizeLocalJournalComposerForSignedOut(
           baselineOwnerUserId,
           baselinePreparedSession.binding,
         );
@@ -775,7 +775,7 @@ export function SessionConvergenceBoundary({
       if (pauseHandle) {
         await pauseHandle.finalizeForSessionChange();
       } else {
-        await finalizeOnlineJournalComposerParticipantsForSessionChange(
+        await finalizeLocalJournalComposerForSessionChange(
           baselineOwnerUserId,
           baselinePreparedSession.binding,
         );
@@ -950,8 +950,8 @@ export function SessionConvergenceBoundary({
     fallbackExitRef.current = requestFallbackExit;
 
     const releasePartialPreparation = async (
-      pauseHandle: OnlineJournalSessionFence | null,
-      composerPreparation: OnlineJournalComposerPreparationHandle | null,
+      pauseHandle: LocalJournalSessionFence | null,
+      composerPreparation: LocalJournalComposerPreparationHandle | null,
     ) => {
       if (pauseHandle) {
         try {
@@ -988,9 +988,9 @@ export function SessionConvergenceBoundary({
         return;
       }
 
-      let composerPreparation: OnlineJournalComposerPreparationHandle | null =
+      let composerPreparation: LocalJournalComposerPreparationHandle | null =
         null;
-      let pauseHandle: OnlineJournalSessionFence | null = null;
+      let pauseHandle: LocalJournalSessionFence | null = null;
       try {
         const sessionResult = await readBoundedAuthoritativeSession(
           readAuthoritativeSession,
@@ -1026,11 +1026,11 @@ export function SessionConvergenceBoundary({
         // Freeze and durably flush current React composer state before the
         // participant pause or readiness acknowledgement.
         composerPreparation =
-          await prepareOnlineJournalComposerParticipants(ownerUserId);
+          await prepareLocalJournalComposerSession(ownerUserId);
         if (!baselinePreparedSession) {
           throw new Error("Cross-tab session generation is unavailable.");
         }
-        pauseHandle = await pauseOnlineJournalComposerActivity(ownerUserId, {
+        pauseHandle = await pauseLocalJournalComposerActivity(ownerUserId, {
           // Remote documents own a distinct bounded token. Reusing the shared
           // convergence id could let this tab delete the initiator's
           // commit_pending fence during unmount/cancellation.
@@ -1038,7 +1038,7 @@ export function SessionConvergenceBoundary({
           sessionGeneration: baselinePreparedSession.binding,
         });
         composerPreparation.bindSessionFence(pauseHandle);
-        abortOnlineJournalComposerParticipants(ownerUserId);
+        abortLocalJournalComposerSession(ownerUserId);
         await pauseHandle.waitForParticipantDrain();
 
         if (
@@ -1359,7 +1359,7 @@ export function SessionConvergenceBoundary({
               serveUnresolvedDocument();
               return;
             }
-            const admission = await admitBoundedOnlineJournalSession(
+            const admission = await admitBoundedLocalJournalSession(
               ownerUserId,
               baselinePreparedSession.binding,
               establishesDocumentBaseline
@@ -1890,7 +1890,7 @@ async function prepareBoundedSessionSignOut(sessionResult: unknown) {
   );
 }
 
-async function admitBoundedOnlineJournalSession(
+async function admitBoundedLocalJournalSession(
   ownerUserId: string,
   sessionGeneration: string,
   options?: {
@@ -1901,7 +1901,7 @@ async function admitBoundedOnlineJournalSession(
   try {
     return await requireSettledWithin(
       () =>
-        admitOnlineJournalComposerSession(
+        admitLocalJournalComposerSession(
           ownerUserId,
           sessionGeneration,
           options,

@@ -9,7 +9,6 @@ import type {
   CatalogKind,
   EntryLifecycleState,
   EntryScope,
-  EntryVisibility,
   JournalEntry,
   LocationVisibility,
   PlantObject,
@@ -48,7 +47,6 @@ import {
 } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { persistJournalEntryMentions } from "@/server/journal-mention-repository";
-import { deleteJournalDraftsForArchivedEntry } from "@/server/journal-draft-repository";
 import {
   persistJournalEntryTopicSignals,
   refreshJournalEntryTopicSignalsForPlantObject,
@@ -64,8 +62,6 @@ import {
   resolveJournalContentForWrite,
   writeJournalMutationReceipt,
   JournalAggregateConflictError,
-  findJournalMutationReceipt,
-  loadOwnedActiveJournalEntryForEdit,
   readJournalDocumentFromEntry,
   type JournalCoverClaimInput,
 } from "@/server/journal-document-persistence";
@@ -81,7 +77,6 @@ import {
 } from "@/server/media/media-repository";
 import type { ClaimedEphemeralPublicationMedia } from "@/server/media/ephemeral-publication-handoff";
 import {
-  ensurePublicProjectionIntent,
   recordPublicProjectionIntent,
   recordPublicProjectionIntentsForPlantObject,
 } from "@/server/search/public-projection-outbox";
@@ -115,7 +110,6 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const DEFAULT_LOCATION_VISIBILITY: LocationVisibility = "hidden";
-const DEFAULT_ENTRY_VISIBILITY: EntryVisibility = "private";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type NewJournalEntryRow = Insertable<Database["journal_entries"]>;
@@ -141,13 +135,11 @@ export interface CreateFirstPlantEntryInput {
   userAddedCatalogName?: string | null;
   varietyText?: string | null;
   title: string;
-  body?: string | null;
-  contentDocument?: unknown;
+  contentDocument: unknown;
   entryDate?: string | null;
   locationVisibility?: string | null;
   coarseRegionCode?: string | null;
   clientMutationId: string;
-  mediaAssetId?: string | null;
   cover?: JournalCoverClaimInput | null;
   mentionSelections?: JournalMentionSelection[];
   topicTags?: unknown;
@@ -156,58 +148,37 @@ export interface CreateFirstPlantEntryInput {
     plantObjectId: string;
     entryId: string;
   };
-  atomicPublication?: AtomicCreatePublicationInput;
-}
-
-export interface CreateJournalEntryInput {
-  body: string;
-  visibility: EntryVisibility;
-  clientMutationId: string;
+  atomicPublication: AtomicCreatePublicationInput;
 }
 
 export interface CreatePlantObjectJournalEntryInput {
   plantObjectId: string;
   title: string;
-  body?: string | null;
-  contentDocument?: unknown;
+  contentDocument: unknown;
   entryDate?: string | null;
   clientMutationId: string;
-  mediaAssetId?: string | null;
   cover?: JournalCoverClaimInput | null;
   mentionSelections?: JournalMentionSelection[];
   topicTags?: unknown;
   internalDeterministicIds?: {
     entryId: string;
   };
-  atomicPublication?: AtomicCreatePublicationInput;
+  atomicPublication: AtomicCreatePublicationInput;
 }
 
 export interface CreateSpaceJournalEntryInput {
   spaceId: string;
   mentionedPlantObjectIds: string[];
   title: string;
-  body?: string | null;
-  contentDocument?: unknown;
+  contentDocument: unknown;
   entryDate?: string | null;
   clientMutationId: string;
-  mediaAssetId?: string | null;
   cover?: JournalCoverClaimInput | null;
   topicTags?: unknown;
   internalDeterministicIds?: {
     entryId: string;
   };
-  atomicPublication?: AtomicCreatePublicationInput;
-}
-
-export interface PublishJournalEntryInput {
-  entryId: string;
-  disclosureAccepted: boolean;
-}
-
-export interface PublishJournalEntryResult {
-  entry: JournalEntry;
-  publicUrl: string;
-  disclosureLogged: boolean;
+  atomicPublication: AtomicCreatePublicationInput;
 }
 
 export interface ArchiveJournalEntryInput {
@@ -268,7 +239,6 @@ export interface PlantObjectSummary {
   createdAt: Date;
   entryCount: number;
   publicEntryCount: number;
-  privateEntryCount: number;
   archivedEntryCount: number;
   latestEntryDate: Date | string | null;
   coverMedia: {
@@ -669,7 +639,7 @@ export interface AtomicJournalEditInput {
 
 /**
  * Owner-scoped, public-only baseline for the OVE-348 atomic editor. A private,
- * archived, malformed, transitional, or partially ready aggregate is
+ * archived, malformed, revoked, or partially linked aggregate is
  * intentionally indistinguishable from a missing entry at this boundary.
  */
 export async function readAtomicJournalEditBaseline(
@@ -713,15 +683,8 @@ export async function readAtomicJournalEditBaseline(
     .selectFrom("media_assets")
     .select([
       "id",
-      "quarantine_key",
       "upload_generation",
       "derivative_key",
-      "admitted_media_type",
-      "status",
-      "media_readiness_state",
-      "original_deleted_at",
-      "processing_claim_token",
-      "processing_claimed_at",
       "revoked_at",
       "focal_x",
       "focal_y",
@@ -743,15 +706,8 @@ export async function readAtomicJournalEditBaseline(
     expectedIds.some((id) => !rowById.has(id)) ||
     rows.some(
       (row) =>
-        row.quarantine_key.startsWith("visual-fixtures/") ||
-        row.admitted_media_type !== "image/webp" ||
         !row.derivative_key ||
         !isAtomicJournalEditPublicPath(row.derivative_key) ||
-        row.status !== "processed" ||
-        row.media_readiness_state !== "public_ready" ||
-        row.original_deleted_at === null ||
-        row.processing_claim_token !== null ||
-        row.processing_claimed_at !== null ||
         row.revoked_at !== null ||
         (row.usage_role !== "inline" && row.usage_role !== "cover_only"),
     )
@@ -888,7 +844,13 @@ export async function updateAtomicJournalEntry(
   input: AtomicJournalEditInput,
 ): Promise<
   AtomicJournalEditReadback & {
-    learning?: UpdateJournalEntryAggregateResult["learning"];
+    learning?: {
+      priorBlockOrderHash: string;
+      nextBlockOrderHash: string;
+      priorCoverSource: JournalCoverSource;
+      nextCoverSource: JournalCoverSource;
+      document: JournalDocumentV1;
+    };
   }
 > {
   const entryId = normalizeRequiredText(input.entryId, "Entry id", 200);
@@ -1005,7 +967,6 @@ export async function updateAtomicJournalEntry(
       const replaced = await buildReplaceClaimedEphemeralMediaQuery(trx, {
         ownerUserId: scope.userId,
         journalEntryId: entryId,
-        stagingSessionId: input.handoff!.stagingSessionId,
         priorGeneration: replacement.priorGeneration,
         priorPublicPath: replacement.priorPublicPath,
         media: replacement,
@@ -1015,7 +976,7 @@ export async function updateAtomicJournalEntry(
     for (const addition of mediaPlan.additions) {
       const inserted = await buildInsertClaimedEphemeralEditMediaQuery(trx, {
         ownerUserId: scope.userId,
-        stagingSessionId: input.handoff!.stagingSessionId,
+        journalEntryId: entryId,
         media: addition,
       }).executeTakeFirst();
       if (!inserted) throw new Error("atomic_media_claim_mismatch");
@@ -1053,8 +1014,6 @@ export async function updateAtomicJournalEntry(
         .where("id", "=", focalPoint.mediaAssetId)
         .where("owner_user_id", "=", scope.userId)
         .where("journal_entry_id", "=", entryId)
-        .where("status", "=", "processed")
-        .where("media_readiness_state", "=", "public_ready")
         .where("derivative_key", "is not", null)
         .where("revoked_at", "is", null)
         .returning("id")
@@ -1174,15 +1133,8 @@ export async function readCommittedAtomicJournalCreate(
     .selectFrom("media_assets")
     .select([
       "id",
-      "declared_media_type",
-      "admitted_media_type",
       "derivative_key",
       "upload_generation",
-      "status",
-      "media_readiness_state",
-      "original_deleted_at",
-      "processing_claim_token",
-      "processing_claimed_at",
       "revoked_at",
       "usage_role",
       "document_position",
@@ -1199,15 +1151,8 @@ export async function readCommittedAtomicJournalCreate(
       const expectedRole = inlineIndex >= 0 ? "inline" : "cover_only";
       const expectedPosition = inlineIndex >= 0 ? inlineIndex + 1 : null;
       return (
-        row.declared_media_type !== "image/webp" ||
-        row.admitted_media_type !== "image/webp" ||
         row.derivative_key !==
           `derivatives/${row.id}/${Number(row.upload_generation)}.webp` ||
-        row.status !== "processed" ||
-        row.media_readiness_state !== "public_ready" ||
-        row.original_deleted_at === null ||
-        row.processing_claim_token !== null ||
-        row.processing_claimed_at !== null ||
         row.revoked_at !== null ||
         row.usage_role !== expectedRole ||
         row.document_position !== expectedPosition
@@ -1340,12 +1285,12 @@ export async function createFirstPlantEntry(
       db,
       scope,
       existing,
-      normalized.mediaAssetId,
+      normalized.orderedMediaAssetIds.length > 0,
     );
   }
 
   return db.transaction().execute(async (trx) => {
-    await prepareAtomicCreateTransaction(trx, scope, normalized);
+    await prepareAtomicCreateTransaction(trx, scope);
     await buildJournalMutationAdvisoryLockQuery(
       scope,
       atomicCreateLockKey(normalized),
@@ -1360,7 +1305,7 @@ export async function createFirstPlantEntry(
         trx,
         scope,
         existingAfterLock,
-        normalized.mediaAssetId,
+        normalized.orderedMediaAssetIds.length > 0,
       );
     }
 
@@ -1536,12 +1481,13 @@ export async function createFirstPlantEntry(
       );
     }
 
-    const mediaAttached = await attachMediaAssetToEntryIfPresent(
+    await assertAtomicPublicationReplayComplete(
       trx,
       scope,
-      normalized.mediaAssetId,
-      existingAfterConflict.id,
+      existingAfterConflict,
+      normalized,
     );
+    const mediaAttached = normalized.orderedMediaAssetIds.length > 0;
 
     const page = await getPlantObjectPage(
       scope,
@@ -1568,7 +1514,7 @@ async function readExistingFirstPlantEntryResult(
   executor: QueryExecutor,
   scope: RequestScope,
   existing: JournalEntry,
-  mediaAssetId: string | null,
+  mediaAttached: boolean,
 ): Promise<FirstPlantEntryResult> {
   if (existing.entry_scope !== "object" || !existing.plant_object_id) {
     throw new Error(
@@ -1576,12 +1522,6 @@ async function readExistingFirstPlantEntryResult(
     );
   }
 
-  const mediaAttached = await attachMediaAssetToEntryIfPresent(
-    executor,
-    scope,
-    mediaAssetId,
-    existing.id,
-  );
   const page = await getPlantObjectPage(
     scope,
     existing.plant_object_id,
@@ -1640,7 +1580,6 @@ export async function listMyPlantObjects(
       varietyState: row.varietyState as VarietyState,
       entryCount: normalizeCount(entrySummary?.entryCount),
       publicEntryCount: normalizeCount(entrySummary?.publicEntryCount),
-      privateEntryCount: normalizeCount(entrySummary?.privateEntryCount),
       archivedEntryCount: normalizeCount(entrySummary?.archivedEntryCount),
       latestEntryDate: entrySummary?.latestEntryDate ?? null,
       coverMedia: cover
@@ -1716,10 +1655,6 @@ export function buildMyPlantObjectEntrySummariesQuery(
         where ${sql.ref("journal_entries.visibility")} = 'public'
           and ${sql.ref("journal_entries.lifecycle_state")} = 'active'
       )::int`.as("publicEntryCount"),
-      sql<number>`count(*) filter (
-        where ${sql.ref("journal_entries.visibility")} = 'private'
-          and ${sql.ref("journal_entries.lifecycle_state")} = 'active'
-      )::int`.as("privateEntryCount"),
       sql<number>`count(*) filter (
         where ${sql.ref("journal_entries.lifecycle_state")} = 'archived'
       )::int`.as("archivedEntryCount"),
@@ -2032,12 +1967,7 @@ export async function createPlantObjectJournalEntry(
       );
     }
 
-    const mediaAttached = await attachMediaAssetToEntryIfPresent(
-      db,
-      scope,
-      normalized.mediaAssetId,
-      existing.id,
-    );
+    const mediaAttached = normalized.orderedMediaAssetIds.length > 0;
     const page = await getPlantObjectPage(scope, existing.plant_object_id);
     if (!page)
       throw new Error("Existing journal entry is outside the request scope.");
@@ -2053,7 +1983,7 @@ export async function createPlantObjectJournalEntry(
   }
 
   return db.transaction().execute(async (trx) => {
-    await prepareAtomicCreateTransaction(trx, scope, normalized);
+    await prepareAtomicCreateTransaction(trx, scope);
     await buildJournalMutationAdvisoryLockQuery(
       scope,
       atomicCreateLockKey(normalized),
@@ -2073,12 +2003,7 @@ export async function createPlantObjectJournalEntry(
         );
       }
 
-      const mediaAttached = await attachMediaAssetToEntryIfPresent(
-        trx,
-        scope,
-        normalized.mediaAssetId,
-        existingAfterLock.id,
-      );
+      const mediaAttached = normalized.orderedMediaAssetIds.length > 0;
       const page = await getPlantObjectPage(
         scope,
         existingAfterLock.plant_object_id,
@@ -2133,22 +2058,14 @@ export async function createPlantObjectJournalEntry(
 
     if (entry) {
       await insertAtomicPublicationMedia(trx, scope, entry.id, normalized);
-      const mediaAttached = await attachMediaAssetToEntryIfPresent(
-        trx,
-        scope,
-        normalized.mediaAssetId,
-        entry.id,
-        normalized.orderedMediaAssetIds,
-      );
+      const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
+        journalEntryId: entry.id,
+        orderedMediaAssetIds: normalized.orderedMediaAssetIds,
+      });
       await claimJournalEntryCover(trx, scope, {
         journalEntryId: entry.id,
         cover: normalized.cover,
-        orderedInlineMediaAssetIds:
-          normalized.orderedMediaAssetIds.length > 0
-            ? normalized.orderedMediaAssetIds
-            : normalized.mediaAssetId
-              ? [normalized.mediaAssetId]
-              : [],
+        orderedInlineMediaAssetIds: normalized.orderedMediaAssetIds,
       });
       await writeJournalMutationReceipt(trx, {
         ownerUserId: scope.userId,
@@ -2222,12 +2139,7 @@ export async function createPlantObjectJournalEntry(
       );
     }
 
-    const mediaAttached = await attachMediaAssetToEntryIfPresent(
-      trx,
-      scope,
-      normalized.mediaAssetId,
-      existingAfterConflict.id,
-    );
+    const mediaAttached = normalized.orderedMediaAssetIds.length > 0;
 
     return {
       space: {
@@ -2280,13 +2192,7 @@ export async function createSpaceJournalEntry(
       scope,
       existing.id,
     );
-    const mediaAttached = await attachMediaAssetToEntryIfPresent(
-      db,
-      scope,
-      normalized.mediaAssetId,
-      existing.id,
-      normalized.orderedMediaAssetIds,
-    );
+    const mediaAttached = normalized.orderedMediaAssetIds.length > 0;
     return {
       space: await requireSpaceInScope(db, scope, existing.space_id),
       entry: existing,
@@ -2297,7 +2203,7 @@ export async function createSpaceJournalEntry(
   }
 
   return db.transaction().execute(async (trx) => {
-    await prepareAtomicCreateTransaction(trx, scope, normalized);
+    await prepareAtomicCreateTransaction(trx, scope);
     await buildJournalMutationAdvisoryLockQuery(
       scope,
       atomicCreateLockKey(normalized),
@@ -2322,13 +2228,7 @@ export async function createSpaceJournalEntry(
         scope,
         existingAfterLock.id,
       );
-      const mediaAttached = await attachMediaAssetToEntryIfPresent(
-        trx,
-        scope,
-        normalized.mediaAssetId,
-        existingAfterLock.id,
-        normalized.orderedMediaAssetIds,
-      );
+      const mediaAttached = normalized.orderedMediaAssetIds.length > 0;
       return {
         space: await requireSpaceInScope(
           trx,
@@ -2372,22 +2272,14 @@ export async function createSpaceJournalEntry(
 
     if (entry) {
       await insertAtomicPublicationMedia(trx, scope, entry.id, normalized);
-      const mediaAttached = await attachMediaAssetToEntryIfPresent(
-        trx,
-        scope,
-        normalized.mediaAssetId,
-        entry.id,
-        normalized.orderedMediaAssetIds,
-      );
+      const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
+        journalEntryId: entry.id,
+        orderedMediaAssetIds: normalized.orderedMediaAssetIds,
+      });
       await claimJournalEntryCover(trx, scope, {
         journalEntryId: entry.id,
         cover: normalized.cover,
-        orderedInlineMediaAssetIds:
-          normalized.orderedMediaAssetIds.length > 0
-            ? normalized.orderedMediaAssetIds
-            : normalized.mediaAssetId
-              ? [normalized.mediaAssetId]
-              : [],
+        orderedInlineMediaAssetIds: normalized.orderedMediaAssetIds,
       });
       await writeJournalMutationReceipt(trx, {
         ownerUserId: scope.userId,
@@ -2440,13 +2332,7 @@ export async function createSpaceJournalEntry(
       scope,
       existingAfterConflict.id,
     );
-    const mediaAttached = await attachMediaAssetToEntryIfPresent(
-      trx,
-      scope,
-      normalized.mediaAssetId,
-      existingAfterConflict.id,
-      normalized.orderedMediaAssetIds,
-    );
+    const mediaAttached = normalized.orderedMediaAssetIds.length > 0;
 
     return {
       space,
@@ -2608,42 +2494,6 @@ export async function updatePlantObjectLocation(
   };
 }
 
-export async function createJournalEntry(
-  scope: RequestScope,
-  input: CreateJournalEntryInput,
-): Promise<JournalEntry> {
-  const result = await createFirstPlantEntry(scope, {
-    spaceName: "Local skeleton space",
-    plantName: "Skeleton plant",
-    title: "Skeleton journal entry",
-    body: input.body,
-    clientMutationId: input.clientMutationId,
-  });
-
-  if (input.visibility === "private") return result.entry;
-
-  // OVE-242: the skeleton path makes an entry public, so it owes the same
-  // atomic projection intent as the product publish path.
-  return db.transaction().execute(async (trx) => {
-    const entry = await trx
-      .updateTable("journal_entries")
-      .set({ visibility: input.visibility, updated_at: new Date() })
-      .where("id", "=", result.entry.id)
-      .where("owner_user_id", "=", scope.userId)
-      .returningAll()
-      .executeTakeFirstOrThrow();
-
-    await recordPublicProjectionIntent(trx, {
-      entityId: entry.id,
-      ownerUserId: scope.userId,
-      desiredState: "present",
-      reason: "publish",
-    });
-
-    return entry;
-  });
-}
-
 export async function listMyRecentJournalEntries(
   scope: RequestScope,
   limit = 10,
@@ -2657,223 +2507,6 @@ export async function listMyRecentJournalEntries(
     .orderBy("created_at", "desc")
     .limit(boundedLimit)
     .execute();
-}
-
-export interface UpdateJournalEntryAggregateInput {
-  entryId: string;
-  clientMutationId: string;
-  expectedRevision: number;
-  title: string;
-  entryDate?: string | null;
-  contentDocument?: unknown;
-  body?: string | null;
-  cover?: JournalCoverClaimInput | null;
-  mentionSelections?: JournalMentionSelection[];
-  topicTags?: unknown;
-}
-
-export interface UpdateJournalEntryAggregateResult {
-  entry: JournalEntry;
-  mediaAttached: boolean;
-  isReplay: boolean;
-  conflict?: never;
-  learning?: {
-    priorBlockOrderHash: string;
-    nextBlockOrderHash: string;
-    priorCoverSource: JournalCoverSource;
-    nextCoverSource: JournalCoverSource;
-    document: JournalDocumentV1;
-  };
-}
-
-export async function updateJournalEntryAggregate(
-  scope: RequestScope,
-  input: UpdateJournalEntryAggregateInput,
-): Promise<UpdateJournalEntryAggregateResult> {
-  const entryId = normalizeRequiredText(input.entryId, "Entry id", 200);
-  const clientMutationId = normalizeRequiredText(
-    input.clientMutationId,
-    "Client mutation id",
-    200,
-  );
-  const expectedRevision = Math.trunc(Number(input.expectedRevision));
-  if (!Number.isFinite(expectedRevision) || expectedRevision < 1) {
-    throw new Error("Expected revision is required.");
-  }
-
-  const existingReceipt = await findJournalMutationReceipt(db, scope, {
-    journalEntryId: entryId,
-    clientMutationId,
-  });
-  if (existingReceipt) {
-    const entry = await findJournalEntryById(scope, entryId);
-    if (!entry) {
-      throw new Error("Journal entry was not found in this garden.");
-    }
-    await repairPublicProjectionIntentForReplay(scope, entry);
-    return {
-      entry,
-      mediaAttached: false,
-      isReplay: true,
-    };
-  }
-
-  const title = normalizeJournalEntryTitle(input.title);
-  const entryDate = normalizeEntryDate(input.entryDate);
-  const content = resolveJournalContentForWrite({
-    contentDocument: input.contentDocument,
-    body: input.body,
-    requireStructured: false,
-  });
-
-  return db.transaction().execute(async (trx) => {
-    await buildJournalMutationAdvisoryLockQuery(
-      scope,
-      clientMutationId,
-    ).execute(trx);
-
-    const replay = await findJournalMutationReceipt(trx, scope, {
-      journalEntryId: entryId,
-      clientMutationId,
-    });
-    if (replay) {
-      const entry = await findJournalEntryById(scope, entryId, trx);
-      if (!entry) {
-        throw new Error("Journal entry was not found in this garden.");
-      }
-      if (entry.visibility === "public" && entry.public_slug) {
-        await ensurePublicProjectionIntent(trx, {
-          entityId: entry.id,
-          ownerUserId: scope.userId,
-          desiredState: "present",
-          reason: "edit",
-        });
-      }
-      return { entry, mediaAttached: false, isReplay: true };
-    }
-
-    const existing = await loadOwnedActiveJournalEntryForEdit(
-      trx,
-      scope,
-      entryId,
-    );
-    const currentRevision = journalRevisionNumber(existing.journal_revision);
-    if (currentRevision !== expectedRevision) {
-      throw new JournalAggregateConflictError(currentRevision);
-    }
-
-    const nextRevision = currentRevision + 1;
-    const updated = await trx
-      .updateTable("journal_entries")
-      .set({
-        title,
-        body: content.body,
-        content_document: journalDocumentAsJson(content.document),
-        content_schema_version: content.contentSchemaVersion,
-        journal_revision: nextRevision,
-        entry_date: entryDate,
-        updated_at: new Date(),
-      })
-      .where("id", "=", entryId)
-      .where("owner_user_id", "=", scope.userId)
-      .where("journal_revision", "=", String(expectedRevision))
-      .where("lifecycle_state", "=", "active")
-      .where("public_gone_at", "is", null)
-      .returningAll()
-      .executeTakeFirst();
-
-    if (!updated) {
-      const latest = await loadOwnedActiveJournalEntryForEdit(
-        trx,
-        scope,
-        entryId,
-      );
-      throw new JournalAggregateConflictError(
-        journalRevisionNumber(latest.journal_revision),
-      );
-    }
-
-    const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
-      journalEntryId: updated.id,
-      orderedMediaAssetIds: content.mediaAssetIds,
-    });
-    await claimJournalEntryCover(trx, scope, {
-      journalEntryId: updated.id,
-      cover: input.cover ?? { mode: "automatic" },
-      orderedInlineMediaAssetIds: content.mediaAssetIds,
-    });
-
-    if (updated.entry_scope === "object" && updated.plant_object_id) {
-      await persistJournalEntryMentions(trx, scope, {
-        journalEntryId: updated.id,
-        ownerUserId: scope.userId,
-        spaceId: updated.space_id,
-        subjectPlantObjectId: updated.plant_object_id,
-        clientMutationId,
-        mentionSelections: input.mentionSelections ?? [],
-      });
-    }
-
-    await persistJournalEntryTopicSignals(trx, scope, {
-      journalEntryId: updated.id,
-      explicitTagLabels: input.topicTags ?? [],
-    });
-
-    await writeJournalMutationReceipt(trx, {
-      ownerUserId: scope.userId,
-      journalEntryId: updated.id,
-      clientMutationId,
-      baseRevision: expectedRevision,
-      resultRevision: nextRevision,
-      mutationKind: "edit",
-    });
-
-    // OVE-242: an edit of a public entry records its projection intent in this
-    // same transaction. An edit that drops previously published text is
-    // treated as privacy-reducing and is applied before neutral work, because
-    // the removed sentence stays searchable until the index is rewritten.
-    if (updated.visibility === "public" && updated.public_slug) {
-      await recordPublicProjectionIntent(trx, {
-        entityId: updated.id,
-        ownerUserId: scope.userId,
-        desiredState: "present",
-        reason: "edit",
-        privacyReducing: isPublicTextReducingEdit(
-          { title: existing.title, body: existing.body },
-          { title, body: content.body },
-        ),
-      });
-    }
-
-    await enqueueLearningAttributionIntent(trx, scope);
-
-    const priorRead = readJournalDocumentFromEntry(existing);
-    const priorDocument =
-      priorRead.status === "unavailable"
-        ? content.document
-        : priorRead.document;
-    const priorCoverSource = inferCoverSourceFromEntryState({
-      document: priorDocument,
-      explicitCoverMediaAssetId: existing.cover_media_asset_id,
-    });
-    const nextCoverSource = inferCoverSourceFromClaim(
-      input.cover ?? { mode: "automatic" },
-      content.document,
-    );
-
-    return {
-      entry: updated,
-      mediaAttached,
-      isReplay: false,
-      learning: {
-        priorBlockOrderHash: blockOrderHashFromDocument(priorDocument),
-        nextBlockOrderHash: blockOrderHashFromDocument(content.document),
-        priorCoverSource,
-        nextCoverSource,
-        document: content.document,
-      },
-    };
-  });
 }
 
 /**
@@ -2892,100 +2525,6 @@ export function isPublicTextReducingEdit(
     !next.title.trim().includes(priorTitle) ||
     !next.body.trim().includes(priorBody)
   );
-}
-
-async function repairPublicProjectionIntentForReplay(
-  scope: RequestScope,
-  entry: JournalEntry,
-): Promise<void> {
-  if (entry.visibility !== "public" || !entry.public_slug) return;
-  await db.transaction().execute(async (trx) => {
-    await ensurePublicProjectionIntent(trx, {
-      entityId: entry.id,
-      ownerUserId: scope.userId,
-      desiredState: "present",
-      reason: "edit",
-    });
-  });
-}
-
-export async function publishJournalEntry(
-  scope: RequestScope,
-  input: PublishJournalEntryInput,
-): Promise<PublishJournalEntryResult> {
-  const entryId = normalizeRequiredText(input.entryId, "Entry id", 200);
-  const existing = await findJournalEntryById(scope, entryId);
-
-  if (!existing) {
-    throw new Error("Journal entry was not found in this garden.");
-  }
-
-  if (existing.lifecycle_state !== "active") {
-    throw new Error("Archived journal entries cannot be published.");
-  }
-
-  if (existing.visibility === "public" && existing.public_slug) {
-    // OVE-242: a replayed publish must still leave a durable projection intent
-    // behind, so an entry published before the outbox existed — or one whose
-    // intent was lost — is repaired instead of silently trusted.
-    await db.transaction().execute(async (trx) => {
-      await ensurePublicProjectionIntent(trx, {
-        entityId: existing.id,
-        ownerUserId: scope.userId,
-        desiredState: "present",
-        reason: "publish",
-      });
-    });
-    return {
-      entry: existing,
-      publicUrl: publicJournalEntryPath(existing.public_slug),
-      disclosureLogged: false,
-    };
-  }
-
-  const priorDisclosure = await buildPriorPublicationDisclosureQuery(
-    db,
-    scope,
-  ).executeTakeFirst();
-  const needsDisclosure = !priorDisclosure;
-
-  if (needsDisclosure && !input.disclosureAccepted) {
-    throw new Error("First-publication disclosure must be accepted.");
-  }
-
-  const now = new Date();
-  const publicSlug =
-    existing.public_slug ??
-    createPublicSlug(existing.title, MAX_PUBLIC_SLUG_LENGTH);
-  const publishedAt = existing.published_at ?? now;
-
-  // OVE-242: the canonical publish and its public-projection intent share one
-  // transaction. There is no window in which the entry is public but nothing
-  // durable records that the index owes a document.
-  const published = await db.transaction().execute(async (trx) => {
-    const row = await buildPublishJournalEntryQuery(trx, scope, {
-      entryId,
-      publicSlug,
-      publishedAt,
-      now,
-      disclosureLogged: needsDisclosure,
-    }).executeTakeFirstOrThrow();
-
-    await recordPublicProjectionIntent(trx, {
-      entityId: row.id,
-      ownerUserId: scope.userId,
-      desiredState: "present",
-      reason: "publish",
-    });
-
-    return row;
-  });
-
-  return {
-    entry: published,
-    publicUrl: publicJournalEntryPath(publicSlug),
-    disclosureLogged: needsDisclosure,
-  };
 }
 
 export async function getPublicJournalEntryPage(
@@ -3353,8 +2892,6 @@ export async function archiveJournalEntry(
       publicGoneAt: hadPublicUrl ? now : null,
     }).executeTakeFirstOrThrow();
 
-    await deleteJournalDraftsForArchivedEntry(trx, scope, entryId);
-
     await enqueueArchiveDerivativeRevokes(trx, {
       journalEntryId: entryId,
       ownerUserId: scope.userId,
@@ -3490,42 +3027,6 @@ export async function hasPriorPublicationDisclosure(
   );
 }
 
-export function buildPublishJournalEntryQuery(
-  executor: QueryExecutor,
-  scope: RequestScope,
-  input: {
-    entryId: string;
-    publicSlug: string;
-    publishedAt: Date;
-    now: Date;
-    disclosureLogged: boolean;
-  },
-) {
-  return executor
-    .updateTable("journal_entries")
-    .set({
-      lifecycle_state: "active",
-      visibility: "public",
-      public_slug: input.publicSlug,
-      public_noindex: true,
-      published_at: input.publishedAt,
-      archived_at: null,
-      public_gone_at: null,
-      first_publication_disclosure_version: input.disclosureLogged
-        ? FIRST_PUBLICATION_DISCLOSURE_VERSION
-        : undefined,
-      first_publication_disclosed_at: input.disclosureLogged
-        ? input.now
-        : undefined,
-      updated_at: input.now,
-    })
-    .where("id", "=", input.entryId)
-    .where("owner_user_id", "=", scope.userId)
-    .where("visibility", "=", "private")
-    .where("lifecycle_state", "=", "active")
-    .returningAll();
-}
-
 export function buildArchiveJournalEntryQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -3539,7 +3040,7 @@ export function buildArchiveJournalEntryQuery(
     .updateTable("journal_entries")
     .set({
       lifecycle_state: "archived",
-      visibility: "private",
+      visibility: "public",
       public_noindex: true,
       archived_at: input.now,
       public_gone_at: input.publicGoneAt ?? undefined,
@@ -4514,7 +4015,7 @@ type NormalizedAtomicCreate = {
   clientMutationId: string;
   title: string;
   orderedMediaAssetIds: readonly string[];
-  atomicPublication: AtomicCreatePublicationInput | null;
+  atomicPublication: AtomicCreatePublicationInput;
 };
 
 async function findExistingJournalEntryForCreate(
@@ -4523,13 +4024,6 @@ async function findExistingJournalEntryForCreate(
   executor: QueryExecutor = db,
 ): Promise<JournalEntry | undefined> {
   const atomic = input.atomicPublication;
-  if (!atomic) {
-    return findJournalEntryByClientMutation(
-      scope,
-      input.clientMutationId,
-      executor,
-    );
-  }
   assertAtomicClientMutation(input.clientMutationId, atomic);
   const existing = await findJournalEntryById(
     scope,
@@ -4542,15 +4036,13 @@ async function findExistingJournalEntryForCreate(
 }
 
 function atomicCreateLockKey(input: NormalizedAtomicCreate) {
-  return input.atomicPublication?.publishId ?? input.clientMutationId;
+  return input.atomicPublication.publishId;
 }
 
 async function prepareAtomicCreateTransaction(
   executor: Transaction<Database>,
   scope: RequestScope,
-  input: NormalizedAtomicCreate,
 ) {
-  if (!input.atomicPublication) return;
   await sql`set local statement_timeout = '3000ms'`.execute(executor);
   await sql`set local lock_timeout = '2750ms'`.execute(executor);
   await sql`select pg_advisory_xact_lock(hashtextextended(${`atomic-create-owner:${scope.userId}`}, 0))`.execute(
@@ -4564,7 +4056,6 @@ async function atomicJournalEntryValues(
   input: NormalizedAtomicCreate,
 ): Promise<Partial<NewJournalEntryRow>> {
   const atomic = input.atomicPublication;
-  if (!atomic) return { visibility: DEFAULT_ENTRY_VISIBILITY };
   assertAtomicClientMutation(input.clientMutationId, atomic);
   const priorDisclosure = await buildPriorPublicationDisclosureQuery(
     executor,
@@ -4596,11 +4087,10 @@ async function insertAtomicPublicationMedia(
   input: NormalizedAtomicCreate,
 ) {
   const atomic = input.atomicPublication;
-  if (!atomic?.handoff) return;
+  if (!atomic.handoff) return;
   await insertClaimedEphemeralMediaForEntry(executor, {
     ownerUserId: scope.userId,
     journalEntryId,
-    stagingSessionId: atomic.handoff.stagingSessionId,
     media: atomic.handoff.publicMedia,
     orderedInlineMediaAssetIds: input.orderedMediaAssetIds,
     coverMediaAssetId: atomic.coverMediaAssetId,
@@ -4614,7 +4104,6 @@ async function recordAtomicPublicationEffects(
   input: NormalizedAtomicCreate,
 ) {
   const atomic = input.atomicPublication;
-  if (!atomic) return;
   await recordPublicProjectionIntent(executor, {
     entityId: journalEntryId,
     ownerUserId: scope.userId,
@@ -4637,7 +4126,6 @@ async function assertAtomicPublicationReplayComplete(
   input: NormalizedAtomicCreate,
 ) {
   const atomic = input.atomicPublication;
-  if (!atomic) return;
   if (
     entry.id !== atomic.publishId ||
     entry.client_mutation_id !== atomicClientMutationId(atomic) ||
@@ -4659,8 +4147,7 @@ async function assertAtomicPublicationReplayComplete(
       "intrinsic_width",
       "intrinsic_height",
       "derivative_key",
-      "media_readiness_state",
-      "status",
+      "revoked_at",
     ])
     .where("owner_user_id", "=", scope.userId)
     .where("journal_entry_id", "=", entry.id)
@@ -4680,8 +4167,7 @@ async function assertAtomicPublicationReplayComplete(
         row.intrinsic_width !== media.width ||
         row.intrinsic_height !== media.height ||
         row.derivative_key !== media.publicPath ||
-        row.media_readiness_state !== "public_ready" ||
-        row.status !== "processed"
+        row.revoked_at !== null
       );
     })
   ) {
@@ -4713,18 +4199,6 @@ function createAtomicPublicSlug(title: string, publishId: string) {
     .replace(/^-+|-+$/g, "")
     .slice(0, Math.max(1, MAX_PUBLIC_SLUG_LENGTH - suffix.length - 1));
   return `${base || "entry"}-${suffix}`;
-}
-
-async function findJournalEntryByClientMutation(
-  scope: RequestScope,
-  clientMutationId: string,
-  executor: QueryExecutor = db,
-): Promise<JournalEntry | undefined> {
-  return buildFindExistingEntryByClientMutationQuery(
-    executor,
-    scope,
-    clientMutationId,
-  ).executeTakeFirst();
 }
 
 async function findJournalEntryById(
@@ -4869,12 +4343,6 @@ function normalizeCreateFirstPlantEntryInput(
     throw new Error("Choose either a catalog match or a missing catalog name.");
   }
 
-  const mediaAssetId = normalizeOptionalText(
-    input.mediaAssetId,
-    "Media asset id",
-    200,
-  );
-
   const spaceId = normalizeOptionalText(input.spaceId, "Space id", 200);
   const spaceName = normalizeOptionalText(
     input.spaceName,
@@ -4887,15 +4355,9 @@ function normalizeCreateFirstPlantEntryInput(
 
   const content = resolveJournalContentForWrite({
     contentDocument: input.contentDocument,
-    body: input.body,
-    requireStructured: false,
+    requireStructured: true,
   });
-  const orderedMediaAssetIds =
-    content.mediaAssetIds.length > 0
-      ? content.mediaAssetIds
-      : mediaAssetId
-        ? [mediaAssetId]
-        : [];
+  const orderedMediaAssetIds = content.mediaAssetIds;
 
   const cover = normalizeJournalCoverClaimInput(input.cover);
   return {
@@ -4930,7 +4392,6 @@ function normalizeCreateFirstPlantEntryInput(
       "Client mutation id",
       200,
     ),
-    mediaAssetId,
     cover,
     mentionSelections: input.mentionSelections ?? [],
     topicTags: input.topicTags ?? [],
@@ -4946,22 +4407,11 @@ function normalizeCreateFirstPlantEntryInput(
 function normalizeCreatePlantObjectJournalEntryInput(
   input: CreatePlantObjectJournalEntryInput,
 ) {
-  const mediaAssetId = normalizeOptionalText(
-    input.mediaAssetId,
-    "Media asset id",
-    200,
-  );
   const content = resolveJournalContentForWrite({
     contentDocument: input.contentDocument,
-    body: input.body,
-    requireStructured: false,
+    requireStructured: true,
   });
-  const orderedMediaAssetIds =
-    content.mediaAssetIds.length > 0
-      ? content.mediaAssetIds
-      : mediaAssetId
-        ? [mediaAssetId]
-        : [];
+  const orderedMediaAssetIds = content.mediaAssetIds;
 
   const cover = normalizeJournalCoverClaimInput(input.cover);
   return {
@@ -4981,7 +4431,6 @@ function normalizeCreatePlantObjectJournalEntryInput(
       "Client mutation id",
       200,
     ),
-    mediaAssetId,
     cover,
     mentionSelections: input.mentionSelections ?? [],
     topicTags: input.topicTags ?? [],
@@ -5010,22 +4459,11 @@ function normalizeCreateSpaceJournalEntryInput(
     throw new Error("Choose at least one object from this space.");
   }
 
-  const mediaAssetId = normalizeOptionalText(
-    input.mediaAssetId,
-    "Media asset id",
-    200,
-  );
   const content = resolveJournalContentForWrite({
     contentDocument: input.contentDocument,
-    body: input.body,
-    requireStructured: false,
+    requireStructured: true,
   });
-  const orderedMediaAssetIds =
-    content.mediaAssetIds.length > 0
-      ? content.mediaAssetIds
-      : mediaAssetId
-        ? [mediaAssetId]
-        : [];
+  const orderedMediaAssetIds = content.mediaAssetIds;
 
   const cover = normalizeJournalCoverClaimInput(input.cover);
   return {
@@ -5042,7 +4480,6 @@ function normalizeCreateSpaceJournalEntryInput(
       "Client mutation id",
       200,
     ),
-    mediaAssetId,
     cover,
     topicTags: input.topicTags ?? [],
     internalDeterministicIds: input.internalDeterministicIds ?? null,
@@ -5055,11 +4492,10 @@ function normalizeCreateSpaceJournalEntryInput(
 }
 
 function normalizeAtomicCreatePublication(
-  input: AtomicCreatePublicationInput | undefined,
+  input: AtomicCreatePublicationInput,
   orderedInlineMediaAssetIds: readonly string[],
   cover: JournalCoverClaimInput,
-): AtomicCreatePublicationInput | null {
-  if (!input) return null;
+): AtomicCreatePublicationInput {
   if (
     !UUID_PATTERN.test(input.publishId) ||
     !/^[A-Za-z0-9_-]{43}$/.test(input.requestDigest)
@@ -5260,18 +4696,6 @@ function isResolvableVarietyState(
   return value === "unknown" || value === "user_added";
 }
 
-function createPublicSlug(title: string, maxLength: number) {
-  const randomSuffix = crypto.randomUUID().replaceAll("-", "").slice(0, 10);
-  const base = title
-    .toLocaleLowerCase("en")
-    .normalize("NFKD")
-    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, Math.max(1, maxLength - randomSuffix.length - 1));
-
-  return `${base || "entry"}-${randomSuffix}`;
-}
-
 function isGonePublicEntry(row: {
   publicSlug: string | null;
   publicGoneAt: Date | string | null;
@@ -5288,27 +4712,6 @@ function isGonePublicEntry(row: {
     row.publicGoneAt !== null &&
     row.lifecycleState === "archived"
   );
-}
-
-async function attachMediaAssetToEntryIfPresent(
-  executor: QueryExecutor,
-  scope: RequestScope,
-  mediaAssetId: string | null,
-  journalEntryId: string,
-  orderedMediaAssetIds?: readonly string[],
-) {
-  const ordered =
-    orderedMediaAssetIds && orderedMediaAssetIds.length > 0
-      ? orderedMediaAssetIds
-      : mediaAssetId
-        ? [mediaAssetId]
-        : [];
-  if (ordered.length === 0) return false;
-
-  return claimOrderedInlineMediaForEntry(executor, scope, {
-    journalEntryId,
-    orderedMediaAssetIds: ordered,
-  });
 }
 
 async function getProcessedMediaByEntryId(
@@ -5385,28 +4788,4 @@ function inferCoverSourceFromEntryState(input: {
     return "automatic_inline";
   }
   return "none";
-}
-
-function inferCoverSourceFromClaim(
-  cover: JournalCoverClaimInput,
-  document: JournalDocumentV1,
-): JournalCoverSource {
-  switch (cover.mode) {
-    case "automatic":
-      return listJournalDocumentImageMediaIds(document).length > 0
-        ? "automatic_inline"
-        : "none";
-    case "none":
-      return "none";
-    case "explicit_inline":
-      return "explicit_inline";
-    case "separate":
-    case "keep_as_cover":
-      return "separate";
-    default: {
-      const _exhaustive: never = cover;
-      void _exhaustive;
-      return "none";
-    }
-  }
 }

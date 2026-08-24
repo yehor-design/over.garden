@@ -58,7 +58,7 @@ describe("mvp learning reconcile (OVE-200)", () => {
     const report = {
       policyVersion: MVP_LEARNING_POLICY_VERSION,
       policyDate: "2026-07-24",
-      retentionPolicyVersion: "ove195.retention.v1",
+      retentionPolicyVersion: "ove349.retention.v2",
       generatedAt: new Date(),
       windowDays: 30,
       since: new Date(),

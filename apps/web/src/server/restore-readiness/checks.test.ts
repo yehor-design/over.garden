@@ -20,7 +20,7 @@ const PASSING_SIGNALS: TerminalReadinessSignals = {
   rpoPass: true,
   rtoPass: true,
   productReadbackPassed: true,
-  mediaOriginalAbsent: true,
+  finalMediaOnly: true,
   exactParityZeroGap: true,
   sameTargetAndSha: true,
 };

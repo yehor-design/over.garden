@@ -3,7 +3,6 @@ import "server-only";
 import { sql, type RawBuilder, type SqlBool } from "kysely";
 import {
   classifyPublicMediaProjection,
-  isVerifiedTransitionalMediaState,
   type PublicMediaProjectionInput,
   type PublicProjectionQualityClass,
   type PublicProjectionQualityReason,
@@ -20,8 +19,7 @@ export function publicMediaEligibilityPredicate(
   alias = "media_assets",
 ): RawBuilder<SqlBool> {
   return sql<SqlBool>`
-    ${sql.ref(`${alias}.status`)} = ${"processed"}
-    and ${sql.ref(`${alias}.derivative_key`)} is not null
+    ${sql.ref(`${alias}.derivative_key`)} is not null
     and ${sql.ref(`${alias}.revoked_at`)} is null
   `;
 }
@@ -32,8 +30,7 @@ export function publicMediaEligibilitySqlText(alias = "media_assets"): string {
     throw new Error("Invalid media eligibility SQL alias.");
   }
   return `
-    ${alias}.status = 'processed'
-    and ${alias}.derivative_key is not null
+    ${alias}.derivative_key is not null
     and ${alias}.revoked_at is null
   `.trim();
 }
@@ -42,16 +39,6 @@ export function isPublicMediaEligible(
   row: PublicMediaProjectionInput,
 ): boolean {
   return classifyPublicMediaProjection(row).state !== "excluded";
-}
-
-/**
- * Transitional processing completion remains strict until OVE-333/OVE-334.
- * It must not be confused with ADR-0018 public projection eligibility.
- */
-export function isPublicMediaVerifiedForProcessing(
-  row: PublicMediaProjectionInput,
-): boolean {
-  return isVerifiedTransitionalMediaState(row);
 }
 
 export function publicMediaProjectionQuality(row: PublicMediaProjectionInput): {

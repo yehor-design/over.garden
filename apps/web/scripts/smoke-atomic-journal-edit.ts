@@ -4,7 +4,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { config as loadEnv } from "dotenv";
-
 export const ATOMIC_JOURNAL_EDIT_RECEIPT_VERSION =
   "ove348.atomicJournalEditSmoke.v1" as const;
 
@@ -325,7 +324,7 @@ async function runIntegrationFaultProof() {
     );
     const coverOnlyRow = await db
       .selectFrom("media_assets")
-      .select(["usage_role", "media_readiness_state", "journal_entry_id"])
+      .select(["usage_role", "journal_entry_id"])
       .where("id", "=", addedMediaId)
       .executeTakeFirstOrThrow();
     const forbiddenCoverRevoke = await db
@@ -427,39 +426,39 @@ async function runIntegrationFaultProof() {
       .where("client_mutation_id", "=", faultIdentity.mutationReceiptId)
       .executeTakeFirstOrThrow();
 
-    const privatePublication = atomicPublication([]);
-    trackedEntryIds.push(privatePublication.publishId);
+    const archivedPublication = atomicPublication([]);
+    trackedEntryIds.push(archivedPublication.publishId);
     await repository.createSpaceJournalEntry(scope, {
       spaceId,
       mentionedPlantObjectIds: [plantObjectIds[0]!],
-      title: "Private exclusion baseline",
-      contentDocument: journalDocument("Private entries stay excluded.", []),
+      title: "Archived exclusion baseline",
+      contentDocument: journalDocument("Archived entries stay immutable.", []),
       entryDate: "2026-08-23",
-      clientMutationId: repository.atomicClientMutationId(privatePublication),
+      clientMutationId: repository.atomicClientMutationId(archivedPublication),
       cover: { mode: "none" },
-      internalDeterministicIds: { entryId: privatePublication.publishId },
-      atomicPublication: privatePublication,
+      internalDeterministicIds: { entryId: archivedPublication.publishId },
+      atomicPublication: archivedPublication,
     });
+    const archivedAt = new Date();
     await db
       .updateTable("journal_entries")
-      .set({ visibility: "private", public_slug: null, published_at: null })
-      .where("id", "=", privatePublication.publishId)
+      .set({
+        lifecycle_state: "archived",
+        archived_at: archivedAt,
+        public_gone_at: archivedAt,
+      })
+      .where("id", "=", archivedPublication.publishId)
       .execute();
-    let privateEntryClass = "not_rejected";
+    let archivedEntryClass = "not_rejected";
     try {
       await repository.readAtomicJournalEditBaseline(
         scope,
-        privatePublication.publishId,
+        archivedPublication.publishId,
       );
     } catch (error) {
-      privateEntryClass = errorCode(error);
+      archivedEntryClass = errorCode(error);
     }
 
-    const draftCount = await db
-      .selectFrom("journal_entry_drafts")
-      .select(({ fn }) => fn.countAll<number>().as("count"))
-      .where("owner_user_id", "=", ownerUserId)
-      .executeTakeFirstOrThrow();
     const lifecycleJobs = await db
       .selectFrom("job_queue")
       .select(["idempotency_key", "payload"])
@@ -497,7 +496,7 @@ async function runIntegrationFaultProof() {
         `derivatives/${initialMediaIds[0]}/2.webp` &&
       replacementRow.caption === "Preserved caption" &&
       replacementRow.alt_text === "Preserved alt text" &&
-      removedRow.journal_entry_id === null &&
+      removedRow.journal_entry_id === initialPublication.publishId &&
       removedRow.document_position === null &&
       JSON.stringify(relationAfter) === JSON.stringify(relationBefore) &&
       JSON.stringify(topicsAfter) === JSON.stringify(topicsBefore);
@@ -513,7 +512,6 @@ async function runIntegrationFaultProof() {
       Number(coverOnlyEdit.entry.journal_revision) === 4 &&
       Number(afterCoverOnly.entry.journal_revision) === 4 &&
       coverOnlyRow.usage_role === "cover_only" &&
-      coverOnlyRow.media_readiness_state === "public_ready" &&
       coverOnlyRow.journal_entry_id === initialPublication.publishId &&
       forbiddenCoverRevoke === undefined;
     const jobWhole =
@@ -534,8 +532,7 @@ async function runIntegrationFaultProof() {
       injectedDbFaultClass === "transaction_rolled_back" &&
       mismatchClass === "idempotency_mismatch" &&
       anotherOwnerClass === "atomic_edit_unavailable" &&
-      privateEntryClass === "atomic_edit_unavailable" &&
-      Number(draftCount.count) === 0 &&
+      archivedEntryClass === "atomic_edit_unavailable" &&
       jobWhole;
 
     const receipt = Object.freeze({
@@ -551,7 +548,7 @@ async function runIntegrationFaultProof() {
         : "missing",
       mismatchClass,
       anotherOwnerClass,
-      privateEntryClass,
+      archivedEntryClass,
       concurrentWinnerCount: raceFulfilled,
       concurrentLoserClass: raceConflictClasses[0] ?? "missing",
       coverOnlyTransitionClass: coverOnlyWhole
@@ -564,7 +561,6 @@ async function runIntegrationFaultProof() {
       replacementGeneration: Number(replacementRow.upload_generation),
       preservedRelationCount: relationAfter.length,
       preservedTopicSignalCount: topicsAfter.length,
-      draftCount: Number(draftCount.count),
       lifecycleIntentCount: lifecycleJobs.length,
       evidenceHygiene: Object.freeze({
         identityAbsent: true,

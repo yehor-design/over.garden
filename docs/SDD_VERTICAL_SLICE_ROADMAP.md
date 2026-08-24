@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-08-23 (OVE-345 atomic journal-media canon; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-24 (OVE-349 legacy journal-media application/schema retirement; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md` as superseded for connectivity by `docs/adr/ADR-0017-online-only-product.md`, for MVP posture by `docs/adr/ADR-0018-mvp-posture.md`, and for atomic local journal authoring/client-final media by `docs/adr/ADR-0019-atomic-local-journal-media.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -23,8 +23,10 @@ their pre-cutover code and historical receipts are not competing authority.
 ADR-0019 is the current atomic journal-media authority. New journal authoring
 is transient in tab memory, the exact browser-created WebP is the only final
 media artifact, and only one acknowledged Publish creates durable journal
-state. Legacy server drafts, quarantine originals, and server conversion are
-transitional runtime until their declared child owners complete.
+state. OVE-349 removed legacy server drafts, quarantine originals, server
+conversion, media admission/quality processing, and private-then-publish from
+the active application and schema. OVE-350 owns only the isolated legacy
+provider resource after its full rollback observation window.
 
 From this point forward, product implementation work must be shipped as narrow vertical SDD slices that wire one user behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media if relevant -> tests -> docs. A task that only creates schema, only builds UI, only wires media, or only adds instrumentation is not a valid product execution slice unless it is embedded inside a user-visible path and proves integration through that path. Remediation, operator, decision, canon-correction, and coordination-container work uses the bounded issue-kind contracts in `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`; never invent fake product layers for those exceptions.
 

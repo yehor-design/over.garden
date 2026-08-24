@@ -136,7 +136,7 @@ describe("trust-sensitive interface copy", () => {
         .replaceAll("Meta Pixel", "")
         .replaceAll("Meta Conversions API", "")
         .replaceAll("support.overgarden@gmail.com", "")
-        .replaceAll("first-publication-v4", "")
+        .replaceAll("first-publication-v5", "")
         .replaceAll("erasure-request-mvp-v1", "");
 
       expect(authoredCopy).not.toMatch(forbidden);

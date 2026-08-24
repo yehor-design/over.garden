@@ -98,14 +98,6 @@ const consumedJobContracts = new Map<
       testedBy: "apps/web/src/server/media/media-lifecycle-consumer.test.ts",
     },
   ],
-  [
-    "media_lifecycle:media_quarantine_expire",
-    {
-      consumer: "apps/web/src/server/media/media-lifecycle-consumer.ts",
-      consumerToken: "MEDIA_QUARANTINE_EXPIRE_KIND",
-      testedBy: "apps/web/src/server/media/media-lifecycle-consumer.test.ts",
-    },
-  ],
 ]);
 
 describe("job queue producer/consumer contract", () => {
@@ -205,11 +197,6 @@ describe("job queue producer/consumer contract", () => {
         source: "server/media/media-lifecycle-enqueue.ts",
         queueName: "media_lifecycle",
         kind: "media_staging_finalize",
-      },
-      {
-        source: "server/media/retention-executor.ts",
-        queueName: "media_lifecycle",
-        kind: "media_quarantine_expire",
       },
       {
         source: "server/search/public-journal-parity.ts",

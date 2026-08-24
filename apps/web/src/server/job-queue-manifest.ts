@@ -5,7 +5,7 @@
  * Mirrored by services/matching/app/job_queue_manifest.py — drift fails tests.
  */
 
-export const JOB_QUEUE_MANIFEST_VERSION = "ove225.job-queue.v2" as const;
+export const JOB_QUEUE_MANIFEST_VERSION = "ove349.job-queue.v3" as const;
 
 export const MATCHING_DEFAULT_MAX_ATTEMPTS = 8 as const;
 
@@ -53,7 +53,6 @@ export interface JobQueueManifestEntry {
 
 export const MEDIA_LIFECYCLE_QUEUE = "media_lifecycle" as const;
 export const MEDIA_DERIVATIVE_REVOKE_KIND = "media_derivative_revoke" as const;
-export const MEDIA_QUARANTINE_EXPIRE_KIND = "media_quarantine_expire" as const;
 export const MEDIA_STAGING_FINALIZE_KIND = "media_staging_finalize" as const;
 
 export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
@@ -156,7 +155,7 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       uuidKeys: [],
     },
     notes:
-      "DB-first erasure outbox for quarantine/public object keys after cover refs cleared. Consumed in-process by erasure-execution via shared lifecycle revoke helper.",
+      "DB-first erasure outbox for final public object keys after cover refs are cleared. Consumed in-process by erasure-execution via the shared lifecycle revoke helper.",
   },
   {
     queueName: MEDIA_LIFECYCLE_QUEUE,
@@ -192,21 +191,6 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
     },
     notes:
       "Archive/unpublish revoke for processed public derivatives. Completes only after canonical custom-domain URL is non-2xx.",
-  },
-  {
-    queueName: MEDIA_LIFECYCLE_QUEUE,
-    kind: MEDIA_QUARANTINE_EXPIRE_KIND,
-    consumer: "web-media-lifecycle",
-    maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,
-    privacyClass: "identifiers_only",
-    coversStructuredJournalCover: true,
-    payloadContract: {
-      requiredKeys: ["kind", "mediaAssetId", "bucket", "objectKey"],
-      optionalKeys: [],
-      uuidKeys: ["mediaAssetId"],
-    },
-    notes:
-      "Failed/unprocessed quarantine originals older than 7 days. Retention executor enqueues; consumer deletes originals.",
   },
 ] as const;
 

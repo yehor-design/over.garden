@@ -16,7 +16,6 @@ import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
 import {
   buildGardenWorkspaceInventorySummaryQuery,
-  buildGardenWorkspaceMediaStatusQuery,
   buildGardenWorkspaceRecentEntriesQuery,
   buildGardenWorkspaceSpaceSummariesQuery,
   loadGardenWorkspace,
@@ -105,17 +104,6 @@ describe("garden workspace query contracts", () => {
     expect(compiled.sql).not.toMatch(/\."body"|client_mutation_id|email/i);
   });
 
-  it("counts media processing states only for the scoped owner", () => {
-    const compiled = buildGardenWorkspaceMediaStatusQuery(
-      testDb,
-      scope,
-    ).compile();
-
-    expect(compiled.sql).toContain('from "media_assets"');
-    expect(compiled.sql).toContain('"owner_user_id" = $1');
-    expect(compiled.sql).toContain('group by "status"');
-    expect(compiled.parameters).toEqual([OWNER_ID, "quarantined", "failed"]);
-  });
 });
 
 describe("garden workspace read model", () => {
@@ -229,16 +217,14 @@ describe("garden workspace read model", () => {
         inventoryExpanded: false,
         inventoryPage: 1,
         spacesExpanded: false,
-        faultSections: ["recent", "media"],
+        faultSections: ["recent"],
       },
       sources,
     );
 
     expect(workspace.inventory.status).toBe("ready");
     expect(workspace.recent.status).toBe("error");
-    expect(workspace.media.status).toBe("error");
     expect(sources.recent).not.toHaveBeenCalled();
-    expect(sources.media).not.toHaveBeenCalled();
     expect(workspace.allFailed).toBe(false);
   });
 
@@ -293,10 +279,6 @@ function workspaceSources({
     }),
     recent: vi.fn().mockResolvedValue([]),
     inbox: vi.fn().mockResolvedValue({ notificationCount: 0, claimCount: 0 }),
-    media: vi.fn().mockResolvedValue({
-      processingCount: 0,
-      failedCount: 0,
-    }),
   };
 }
 
@@ -320,8 +302,7 @@ function workspaceObject(index: number, ownerUserId: string) {
     varietyState: "unknown" as const,
     createdAt: new Date("2026-07-01T00:00:00.000Z"),
     entryCount: 1,
-    publicEntryCount: 0,
-    privateEntryCount: 1,
+    publicEntryCount: 1,
     archivedEntryCount: 0,
     latestEntryDate: new Date("2026-07-01T00:00:00.000Z"),
     coverMedia: null,

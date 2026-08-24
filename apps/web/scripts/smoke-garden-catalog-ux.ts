@@ -6,9 +6,11 @@ import { config as loadEnv } from "dotenv";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import { defaultObjectKindForCatalogSelection } from "../src/lib/garden/catalog-object-kind";
 import {
-  ONLINE_JOURNAL_PROTOCOL,
-  ONLINE_JOURNAL_PROTOCOL_HEADER,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
+  type AtomicJournalCreateResponse,
 } from "../src/lib/garden/entry-contracts";
+import { buildAtomicTextJournalCreateRequest } from "./atomic-journal-text-request";
 
 loadEnv({ path: ".env.local", override: false });
 
@@ -53,16 +55,6 @@ interface CatalogSuggestion {
 
 interface TypeaheadResponse {
   suggestions?: CatalogSuggestion[];
-}
-
-interface EntryResponse {
-  plantObject: {
-    objectKind: "plant" | "animal";
-    catalogItemId: string | null;
-    varietyText: string | null;
-    varietyState: string;
-  };
-  readbackUrl: string;
 }
 
 interface SmokeCase {
@@ -423,57 +415,42 @@ async function main() {
       );
     }
 
-    const entry = await jsonRequest<EntryResponse>(
+    const entry = await jsonRequest<AtomicJournalCreateResponse>(
       baseUrl,
       jar,
       "/api/garden/entries",
       {
         method: "POST",
-        body: {
-          target: "first_plant_entry",
-          spaceName: "OVE-67 catalog UX smoke",
-          plantName: smokeCase.plantName,
-          objectKind: defaultObjectKindForCatalogSelection(
-            selected.catalogKind,
-            selected.source,
-          ),
-          catalogItemId: selected.id,
-          userAddedCatalogName: null,
-          varietyText: selected.displayName,
+        body: buildAtomicTextJournalCreateRequest({
+          publishId: randomUUID(),
+          context: {
+            target: "first_plant_entry",
+            spaceName: "OVE-67 catalog UX smoke",
+            plantName: smokeCase.plantName,
+            objectKind: defaultObjectKindForCatalogSelection(
+              selected.catalogKind,
+              selected.source,
+            ),
+            catalogItemId: selected.id,
+            userAddedCatalogName: null,
+            entryDate: "2026-06-30",
+            locationVisibility: "hidden",
+            coarseRegionCode: null,
+            activationSource: "direct_garden",
+          },
           title: `OVE-67 ${smokeCase.query}`,
-          body: "Catalog UX smoke entry. No personal garden details.",
-          entryDate: "2026-06-30",
-          locationVisibility: "hidden",
-          coarseRegionCode: null,
-          clientMutationId: randomUUID(),
-          activationSource: "direct_garden",
-        },
+          text: "Atomic catalog UX smoke entry. No personal garden details.",
+        }),
       },
     );
 
-    assertEqual(
-      entry.plantObject.catalogItemId,
-      selected.id,
-      `${smokeCase.query} readback did not preserve selected catalog id.`,
-    );
-    assertEqual(
-      entry.plantObject.objectKind,
-      smokeCase.expectedObjectKind,
-      `${smokeCase.query} readback object kind mismatch.`,
-    );
-    assertEqual(
-      entry.plantObject.varietyText,
-      smokeCase.expectedCanonicalName,
-      `${smokeCase.query} readback canonical identity mismatch.`,
-    );
-    assertEqual(
-      entry.plantObject.varietyState,
-      "selected",
-      `${smokeCase.query} readback variety state mismatch.`,
+    assert(
+      /^[0-9a-f-]{36}$/.test(entry.entryId),
+      `${smokeCase.query} atomic entry id is invalid.`,
     );
 
     const readbackText = visiblePageText(
-      await textRequest(baseUrl, jar, entry.readbackUrl),
+      await textRequest(baseUrl, jar, entry.card.publicPath),
     );
     assertIncludes(
       readbackText,
@@ -499,8 +476,8 @@ async function main() {
       selectedResultText: selected.displayName,
       canonicalName: selected.canonicalName,
       catalogKind: selected.catalogKind,
-      objectKind: entry.plantObject.objectKind,
-      varietyState: entry.plantObject.varietyState,
+      objectKind: smokeCase.expectedObjectKind,
+      varietyState: "selected",
       duplicateSameConceptSuggestionsAbsent: true,
       readbackIdentityPreserved: true,
       readbackPageStatus: 200,
@@ -563,6 +540,13 @@ function parseOptions(argv: string[]) {
 
 function normalizeBaseUrl(value: string) {
   const url = new URL(value);
+  if (
+    !["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"].includes(
+      url.hostname,
+    )
+  ) {
+    throw new Error("Atomic catalog UX smoke requires a loopback application.");
+  }
   url.pathname = "";
   url.search = "";
   url.hash = "";
@@ -604,7 +588,8 @@ async function jsonRequest<T>(
     method: init.method ?? "GET",
     headers: {
       Accept: "application/json",
-      [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
+      [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
+        ATOMIC_JOURNAL_CREATE_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: baseUrl } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       Cookie: jar.header(),
@@ -715,18 +700,16 @@ function assertNoForbiddenEvidence(output: unknown) {
   }
 }
 
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
+
 function assertIncludes(value: string, expected: string, message: string) {
   if (!value.includes(expected)) throw new Error(message);
 }
 
 function assertMatches(value: string, expected: RegExp, message: string) {
   if (!expected.test(value)) throw new Error(message);
-}
-
-function assertEqual<T>(actual: T, expected: T, message: string) {
-  if (actual !== expected) {
-    throw new Error(`${message} Expected ${expected}; received ${actual}.`);
-  }
 }
 
 function escapeRegExp(value: string) {

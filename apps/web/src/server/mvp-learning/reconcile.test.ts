@@ -60,7 +60,7 @@ function buildDeferredH6Report(
   return {
     policyVersion: MVP_LEARNING_POLICY_VERSION,
     policyDate: "2026-07-24",
-    retentionPolicyVersion: "ove195.retention.v1",
+    retentionPolicyVersion: "ove349.retention.v2",
     generatedAt: new Date("2026-08-01T12:00:00.000Z"),
     windowDays: 30,
     since: new Date("2026-07-02T12:00:00.000Z"),

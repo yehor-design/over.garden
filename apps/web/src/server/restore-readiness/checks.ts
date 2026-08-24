@@ -38,7 +38,7 @@ export interface RestoreIntegrityCounts {
   danglingCoverPointers: number;
   duplicateCoverOnlyAssociations: number;
   crossOwnerCoverClaims: number;
-  quarantineOriginalStillPresent: number;
+  nonFinalMediaRows: number;
 }
 
 export interface RestoreReadinessReport {
@@ -87,7 +87,7 @@ export interface RestoreReadinessReport {
   };
   product: {
     readbackPassed: boolean;
-    mediaOriginalAbsent: boolean;
+    finalMediaOnly: boolean;
     exactParityZeroGap: boolean;
     sameTargetAndSha: boolean;
   };
@@ -243,7 +243,7 @@ export async function collectRestoreIntegrityCounts(
     dangling_cover_pointers: unknown;
     duplicate_cover_only: unknown;
     cross_owner_cover_claims: unknown;
-    quarantine_original_still_present: unknown;
+    non_final_media_rows: unknown;
   }>`
     select
       (select count(*)::bigint from journal_entries) as journal_entries,
@@ -260,7 +260,6 @@ export async function collectRestoreIntegrityCounts(
             where ma.id = je.cover_media_asset_id
               and ma.journal_entry_id = je.id
               and ma.owner_user_id = je.owner_user_id
-              and ma.status = 'processed'
               and ma.revoked_at is null
           )
       ) as dangling_cover_pointers,
@@ -284,11 +283,15 @@ export async function collectRestoreIntegrityCounts(
       ) as cross_owner_cover_claims,
       (
         select count(*)::bigint
-        from media_assets
-        where status = 'processed'
-          and derivative_key is not null
-          and original_deleted_at is null
-      ) as quarantine_original_still_present
+        from media_assets ma
+        left join journal_entries je
+          on je.id = ma.journal_entry_id
+         and je.owner_user_id = ma.owner_user_id
+        where ma.journal_entry_id is null
+           or ma.derivative_key is null
+           or je.id is null
+           or je.visibility <> 'public'
+      ) as non_final_media_rows
   `.execute(db);
 
   const row = counts.rows[0];
@@ -302,9 +305,7 @@ export async function collectRestoreIntegrityCounts(
     danglingCoverPointers: toCount(row.dangling_cover_pointers),
     duplicateCoverOnlyAssociations: toCount(row.duplicate_cover_only),
     crossOwnerCoverClaims: toCount(row.cross_owner_cover_claims),
-    quarantineOriginalStillPresent: toCount(
-      row.quarantine_original_still_present,
-    ),
+    nonFinalMediaRows: toCount(row.non_final_media_rows),
   };
 }
 
@@ -534,7 +535,6 @@ export interface RestoreAdmissionInput {
   actualRtoMs: number;
   expectedSchemaManifestDigest: string;
   productReadbackPassed: boolean;
-  mediaOriginalAbsent: boolean;
   exactParityZeroGap: boolean;
   sameTargetAndSha: boolean;
 }
@@ -548,7 +548,7 @@ export interface TerminalReadinessSignals {
   rpoPass: boolean;
   rtoPass: boolean;
   productReadbackPassed: boolean;
-  mediaOriginalAbsent: boolean;
+  finalMediaOnly: boolean;
   exactParityZeroGap: boolean;
   sameTargetAndSha: boolean;
 }
@@ -594,7 +594,7 @@ export async function buildRestoreReadinessReport(
     integrity.danglingCoverPointers === 0 &&
     integrity.duplicateCoverOnlyAssociations === 0 &&
     integrity.crossOwnerCoverClaims === 0 &&
-    integrity.quarantineOriginalStillPresent === 0;
+    integrity.nonFinalMediaRows === 0;
 
   const rpoPass = evaluateRpoPass(actualRpoMs);
   const rtoPass = evaluateRtoPass(actualRtoMs);
@@ -610,7 +610,7 @@ export async function buildRestoreReadinessReport(
     rpoPass,
     rtoPass,
     productReadbackPassed: admission.productReadbackPassed,
-    mediaOriginalAbsent: admission.mediaOriginalAbsent,
+    finalMediaOnly: integrity.nonFinalMediaRows === 0,
     exactParityZeroGap: admission.exactParityZeroGap,
     sameTargetAndSha: admission.sameTargetAndSha,
   };
@@ -647,7 +647,7 @@ export async function buildRestoreReadinessReport(
     },
     product: {
       readbackPassed: admission.productReadbackPassed,
-      mediaOriginalAbsent: admission.mediaOriginalAbsent,
+      finalMediaOnly: integrity.nonFinalMediaRows === 0,
       exactParityZeroGap: admission.exactParityZeroGap,
       sameTargetAndSha: admission.sameTargetAndSha,
     },

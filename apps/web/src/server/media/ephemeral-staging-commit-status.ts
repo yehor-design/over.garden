@@ -103,10 +103,7 @@ export async function readEphemeralMediaCommitStatus(
       "declared_size_bytes",
       "intrinsic_width",
       "intrinsic_height",
-      "declared_media_type",
-      "admitted_media_type",
       "derivative_key",
-      "media_readiness_state",
       "revoked_at",
     ])
     .where("journal_entry_id", "=", entry.id)
@@ -126,10 +123,7 @@ export async function readEphemeralMediaCommitStatus(
       Number(row.declared_size_bytes) === item.sizeBytes &&
       row.intrinsic_width === item.width &&
       row.intrinsic_height === item.height &&
-      row.declared_media_type === "image/webp" &&
-      row.admitted_media_type === "image/webp" &&
       row.derivative_key === item.publicKey &&
-      row.media_readiness_state === "public_ready" &&
       row.revoked_at === null
     );
   })

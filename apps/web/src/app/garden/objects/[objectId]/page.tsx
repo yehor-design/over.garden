@@ -18,10 +18,8 @@ import {
   getGardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
 import {
-  buildAuthIntentAnchor,
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
-  type AuthIntentAction,
 } from "@/lib/auth/auth-intent-contract";
 import {
   formatOwnerObjectTemplate,
@@ -41,7 +39,6 @@ import {
   resolveVisualJournalCreationScenario,
 } from "@/lib/visual-fixtures/journal-creation-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { resolveFollowUpValuePulsePrompt } from "@/server/follow-up-value-pulse";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
@@ -63,7 +60,6 @@ import {
   archiveJournalEntryAction,
   createLineageInvitationAction,
   createProvenanceEdgeAction,
-  publishJournalEntryAction,
   resolvePlantObjectCatalogAction,
   updatePlantObjectLocationAction,
 } from "./actions";
@@ -296,11 +292,6 @@ export default async function PlantObjectReadbackPage({
               entry={entry}
               objectId={objectId}
               objectPassportReadbackPath={objectPassportReadbackPath}
-              requiresFirstPublicationDisclosure={
-                !page.hasPriorPublicationDisclosure
-              }
-              resumeAction={resumeAction}
-              resumeControl={resumeControl}
               locale={locale}
               publicRemovalPending={pendingPublicRemovalEntryIds.has(entry.id)}
             />
@@ -378,18 +369,12 @@ function OwnerEntryActions({
   entry,
   objectId,
   objectPassportReadbackPath,
-  requiresFirstPublicationDisclosure,
-  resumeAction,
-  resumeControl,
   locale,
   publicRemovalPending,
 }: {
   entry: PlantObjectPage["entries"][number];
   objectId: string;
   objectPassportReadbackPath: string | null;
-  requiresFirstPublicationDisclosure: boolean;
-  resumeAction: AuthIntentAction | null;
-  resumeControl: string | null;
   locale: InterfaceLocale;
   publicRemovalPending: boolean;
 }) {
@@ -469,59 +454,7 @@ function OwnerEntryActions({
     );
   }
 
-  const publishControl = createAuthIntentControlRef("publish", entry.id);
-  const resumesThisPublish =
-    resumeAction === "publish" && resumeControl === publishControl;
-
-  return (
-    <DocumentMutationActionForm
-      data-owner-entry-controls="private"
-      action={publishJournalEntryAction}
-      className="flex flex-col gap-3"
-    >
-      <input type="hidden" name="entryId" value={entry.id} />
-      <input type="hidden" name="objectId" value={objectId} />
-      {requiresFirstPublicationDisclosure ? (
-        <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-          <input
-            type="checkbox"
-            name="publicationDisclosureAccepted"
-            required
-            className="mt-1 size-4 rounded border-border"
-          />
-          <span>
-            {actionCopy.publicationLead} {actionCopy.publicationMedia}{" "}
-            {actionCopy.publicationPilot}{" "}
-            <Link
-              href={localizedPath(locale, "/first-publication-disclosure")}
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              {actionCopy.readDisclosure}
-            </Link>
-            .
-          </span>
-        </label>
-      ) : (
-        <p className="text-xs leading-5 text-muted-foreground">
-          {actionCopy.reviewed}
-        </p>
-      )}
-      <button
-        id={
-          resumesThisPublish
-            ? buildAuthIntentAnchor("publish", publishControl)
-            : undefined
-        }
-        data-auth-intent-control="publish"
-        data-auth-intent-control-ref={publishControl}
-        autoFocus={resumesThisPublish}
-        type="submit"
-        className={buttonVariants({ size: "sm", className: "self-start" })}
-      >
-        {actionCopy.publishButton}
-      </button>
-    </DocumentMutationActionForm>
-  );
+  return null;
 }
 
 function ProvenanceSection({

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const SMOKE_FILES = ["smoke-admin-role.ts", "smoke-canonical-launch.ts"];
+const SMOKE_FILES = ["smoke-admin-role.ts"];
 
 describe("admin owner smoke identity contract", () => {
   it.each(SMOKE_FILES)(

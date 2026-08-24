@@ -113,7 +113,7 @@ On the admitted editor, one bounded no-cache read is coalesced across focus and
 visible-page signals. Exact-session success changes nothing. Timeout, malformed
 data, unknown classification, or network failure is a silent nonterminal
 `background_unavailable` observation: the private React tree, form controls,
-composer, and in-memory online participant state remain unchanged. The
+composer, and in-memory local participant state remain unchanged. The
 compatibility mode retains the eager `checking` gate, composer fence, request
 abort, and participant pause before the session await.
 
@@ -122,8 +122,8 @@ change. It writes no terminal marker, publishes no terminal signal, shows no
 owner-change message, and reloads once without pre-hiding the editor. Only the
 fresh bounded bootstrap may pass
 `allowAuthoritativeSessionRebind: true`; that path updates the same owner's
-in-memory session fence without moving, deleting, or reassigning a canonical
-server draft. Ordinary stale-document callers remain closed.
+in-memory session fence without moving, deleting, publishing, or persisting the
+transient composer. Ordinary stale-document callers remain closed.
 
 Terminal evidence is a confirmed local exit/account switch, peer committed
 signal, present or malformed marker, authoritative signed-out/different-owner
@@ -135,7 +135,7 @@ localStorage is the sleeping-tab and BFCache recovery path. The marker contains
 only a version and cryptographically random opaque generation. A fresh
 authoritative bootstrap captures the marker before asynchronous work and
 compare-clears only that byte-identical snapshot after session admission and
-online-composer participant preparation; a newer marker always wins.
+local-composer participant preparation; a newer marker always wins.
 
 The deterministic fixture remains local/isolated-preview only and contains
 synthetic markup. Production must return 404 for it. The browser matrix proves
@@ -156,10 +156,10 @@ After the single confirmation, sign-out no longer waits for a session read,
 browser-storage inspection, participant drain, peer acknowledgement, network
 response, cookie expiry, or adapter deletion. The initiating document synchronously
 commits the `local_exit` v2 variant under the existing
-`overgarden:session-invalidation:v1` key, seals every active online-composer participant,
+`overgarden:session-invalidation:v1` key, seals every active local-composer participant,
 publishes the payload-free `local_exit_committed` signal, removes the private
-React tree, and exposes the localized public-safe surface. Canonical server
-draft rows are retained without publication or deletion.
+React tree, and exposes the localized public-safe surface. No journal or media
+row is created, published, moved, or deleted by local exit.
 
 The marker value is exactly a schema version, bounded kind, and opaque random
 generation. The v1 generic terminal marker remains compatible. A v2 local-exit

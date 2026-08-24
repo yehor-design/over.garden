@@ -65,7 +65,7 @@ describe("shared sign-out control", () => {
       "const committed = commitLocalExitInvalidationMarker();",
     );
     const seal = source.indexOf(
-      "sealOnlineJournalComposerParticipantsForExit();",
+      "sealLocalJournalComposerForExit();",
       marker,
     );
     const publish = source.indexOf("publishLocalExitCommitted(", seal);

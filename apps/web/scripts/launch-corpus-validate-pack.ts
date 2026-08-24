@@ -13,7 +13,9 @@ async function main() {
     ok: errors.length === 0,
     issue: "OVE-199",
     environment,
-    mode: "validate_pack",
+    mode: "validate_frozen_v1_pack",
+    historicalEvidenceOnly: true,
+    mutationAuthority: false,
     redacted: true,
     contentPackDigest:
       errors.length === 0 ? validation.contentPackDigest : null,

@@ -7,13 +7,7 @@ const VERIFIED_MEDIA = {
   coverUsageRole: "cover_only",
   coverDerivativeKey: "derivatives/cover.webp",
   explicitCoverMediaAssetId: "00000000-0000-4000-8000-000000000011",
-  mediaStatus: "processed",
-  originalDeletedAt: new Date("2026-08-21T00:00:00.000Z"),
   revokedAt: null,
-  mediaReadinessState: "public_ready",
-  publicObjectId: "00000000-0000-4000-8000-000000000012",
-  qualityPolicyVersion: "ove231.launch-media-quality.v1",
-  mediaQualityClass: "accepted",
 } as const;
 
 describe("public journal cover projection quality", () => {
@@ -30,15 +24,16 @@ describe("public journal cover projection quality", () => {
     });
   });
 
-  it("admits a converted transitional cover as partial", () => {
+  it("omits a missing final derivative", () => {
     expect(
       resolveCoverPresentation(
-        { ...VERIFIED_MEDIA, originalDeletedAt: null },
+        { ...VERIFIED_MEDIA, coverDerivativeKey: null },
         (key) => `https://media.over.garden/${key}`,
       ),
-    ).toMatchObject({
-      coverSource: "separate",
-      coverProjectionQuality: "partial",
+    ).toEqual({
+      coverSource: "none",
+      coverPublicUrl: null,
+      coverProjectionQuality: "verified",
     });
   });
 

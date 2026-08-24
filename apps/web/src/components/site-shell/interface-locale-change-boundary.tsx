@@ -8,7 +8,6 @@ import {
   type InterfaceLocaleChangeCoordinator,
 } from "@/lib/interface-locale-change-coordinator";
 import { getInterfaceRoutePolicy } from "@/lib/interface-route-policy";
-import { createOnlineJournalComposerLocaleChangeParticipant } from "@/lib/garden/online-journal-composer-locale-participant";
 
 const STATIC_FORM_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,96}$/;
 
@@ -25,9 +24,6 @@ export function InterfaceLocaleChangeBoundary({
   useEffect(() => {
     if (!enabled) return;
 
-    const unregisterComposer = interfaceLocaleChangeCoordinator.register(
-      createOnlineJournalComposerLocaleChangeParticipant(),
-    );
     const stopObservingForms = observeInterfaceLocaleChangeForms(
       document,
       interfaceLocaleChangeCoordinator,
@@ -42,7 +38,6 @@ export function InterfaceLocaleChangeBoundary({
     return () => {
       stopObservingNetworkMutations();
       stopObservingForms();
-      unregisterComposer();
     };
   }, [enabled]);
 

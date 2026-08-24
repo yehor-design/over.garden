@@ -98,8 +98,8 @@ describe("visual journal creation evidence orchestration", () => {
     expect(result.duplicateStable).toBe(true);
   });
 
-  it("publishes only after the canonical private follow-up is created", async () => {
-    const scenario = scenarioFor("follow-up", "publish");
+  it("creates the follow-up atomically as the final public record", async () => {
+    const scenario = scenarioFor("follow-up", "atomic-publish");
     const before = snapshotFor(scenario, false);
     const after = snapshotFor(scenario, true);
     const dependencies = dependenciesFor([before, after]);
@@ -107,19 +107,21 @@ describe("visual journal creation evidence orchestration", () => {
     await executeVisualJournalCreationEvidence("run", scenario, dependencies);
 
     expect(dependencies.createFollowUp).toHaveBeenCalledOnce();
-    expect(dependencies.publish).toHaveBeenCalledWith(
+    expect(dependencies.createFollowUp).toHaveBeenCalledWith(
       { userId: scenario.ownerActorId, sessionId: null },
-      {
-        entryId: scenario.expectedEntryId,
-        disclosureAccepted: true,
-      },
+      expect.objectContaining({
+        atomicPublication: expect.objectContaining({
+          publishId: scenario.expectedEntryId,
+          disclosureAccepted: true,
+        }),
+      }),
     );
   });
 });
 
 function scenarioFor(
   flow: "first-entry" | "follow-up",
-  state: "connection-required" | "duplicate" | "publish",
+  state: "atomic-publish" | "connection-required" | "duplicate",
 ) {
   const scenario = VISUAL_FIXTURE_MANIFEST.creationEvidence.scenarios.find(
     (candidate) => candidate.flow === flow && candidate.state === state,
@@ -137,7 +139,6 @@ function dependenciesFor(snapshots: VisualJournalCreationSnapshot[]) {
     database: {} as JournalCreationDependencies["database"],
     createFirst: vi.fn(async (_scope, input) => canonicalResult(input)),
     createFollowUp: vi.fn(async (_scope, input) => canonicalResult(input)),
-    publish: vi.fn(async () => ({}) as never),
     readSnapshot,
     resetScenario: vi.fn(async () => undefined),
     seedMedia: vi.fn(async () => undefined),

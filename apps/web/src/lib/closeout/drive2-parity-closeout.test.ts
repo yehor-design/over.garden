@@ -14,17 +14,17 @@ import {
 } from "./drive2-parity-closeout";
 
 describe("OVE-186 Drive2-parity closeout coverage", () => {
-  it("produces a zero-gap report from the stable v9 fixture matrix", () => {
+  it("produces a zero-gap report from the stable v10 fixture matrix", () => {
     const report = buildDrive2ParityCloseoutCoverage();
 
     expect(() => assertDrive2ParityCloseoutCoverage(report)).not.toThrow();
     expect(report.issue).toBe("OVE-186");
     expect(report.evidenceClass).toBe("local-deterministic-fixture");
     expect(report.fixture).toEqual({
-      version: "ove187-v9",
+      version: "ove187-v10",
       manifestHash:
-        "1867792eaf04f5f4e582d8ca83b56b2345ccabdb61c262b248c28cbe1cfd378b",
-      namespace: "visual-fixtures/ove187-v9",
+        "3d7f3de71102ed9359fda0efb1659b2716f3221d7ec89d9caea07b61409fbf4b",
+      namespace: "visual-fixtures/ove187-v10",
     });
     expect(report.summary).toMatchObject({
       scenarioCount: 171,

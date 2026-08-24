@@ -50,9 +50,8 @@ export const OWNER_COMPOSER_COVER_UPLOAD_PARTICIPANT_ID =
 export interface JournalCoverCandidate {
   mediaAssetId: string;
   usageRole: JournalMediaUsageRole;
-  status: "quarantined" | "processed" | "failed" | string;
   derivativeKey: string | null;
-  originalDeletedAt: Date | string | null;
+  revokedAt: Date | string | null;
   altText?: string | null;
   focalX?: number | null;
   focalY?: number | null;
@@ -72,26 +71,23 @@ export interface ResolvedJournalCover {
   intrinsicHeight: number | null;
 }
 
-export function isEligibleProcessedCoverCandidate(
+export function isEligibleFinalCoverCandidate(
   candidate: JournalCoverCandidate | null | undefined,
 ): candidate is JournalCoverCandidate & {
-  status: "processed";
   derivativeKey: string;
 } {
   if (!candidate) return false;
-  // Processing success is status + derivative. originalDeletedAt is post-process
-  // cleanup and must not delay owner/public cover presentation.
   return (
-    candidate.status === "processed" &&
     typeof candidate.derivativeKey === "string" &&
-    candidate.derivativeKey.length > 0
+    candidate.derivativeKey.length > 0 &&
+    candidate.revokedAt === null
   );
 }
 
 /**
  * Resolve the single effective cover for presentation and metadata.
- * Explicit cover wins when still a valid claimed processed asset; otherwise
- * fall back to the first valid processed inline image in document order.
+ * Explicit cover wins when it is still a reachable final asset; otherwise
+ * fall back to the first reachable final inline image in document order.
  */
 export function resolveEffectiveJournalCover(input: {
   document: JournalDocumentV1 | null | undefined;
@@ -101,7 +97,7 @@ export function resolveEffectiveJournalCover(input: {
   const explicitId = input.explicitCoverMediaAssetId ?? null;
   if (explicitId) {
     const explicit = input.candidatesById.get(explicitId);
-    if (isEligibleProcessedCoverCandidate(explicit)) {
+    if (isEligibleFinalCoverCandidate(explicit)) {
       const mode: JournalCoverMode =
         explicit.usageRole === JOURNAL_MEDIA_USAGE_COVER_ONLY
           ? "separate"
@@ -129,7 +125,7 @@ export function resolveEffectiveJournalCover(input: {
     if (
       !candidate ||
       candidate.usageRole !== JOURNAL_MEDIA_USAGE_INLINE ||
-      !isEligibleProcessedCoverCandidate(candidate)
+      !isEligibleFinalCoverCandidate(candidate)
     ) {
       continue;
     }

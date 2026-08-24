@@ -42,8 +42,9 @@ describe("OVE-331 fail-open projection smoke", () => {
         expect.objectContaining({
           owner: "media_projection",
           scenario: "converted_transitional_media",
-          outcome: "admitted_partial",
-          qualityClass: "partial",
+          outcome: "excluded",
+          qualityClass: "unverified",
+          qualityReasons: ["media_projection_unresolved"],
         }),
       ]),
     );

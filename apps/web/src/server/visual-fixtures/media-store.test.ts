@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  VISUAL_FIXTURE_MANIFEST,
-  VISUAL_FIXTURE_NAMESPACE,
-} from "@/lib/visual-fixtures/manifest";
+import { VISUAL_FIXTURE_MANIFEST } from "@/lib/visual-fixtures/manifest";
 import {
   deleteVisualFixtureMedia,
   uploadVisualFixtureMedia,
@@ -13,7 +10,6 @@ import {
 class RecordingObjectStore implements VisualFixtureObjectStore {
   readonly puts: Parameters<VisualFixtureObjectStore["putObject"]>[0][] = [];
   readonly publicDeletes: string[] = [];
-  readonly quarantineDeletes: string[] = [];
 
   async putObject(
     input: Parameters<VisualFixtureObjectStore["putObject"]>[0],
@@ -25,17 +21,13 @@ class RecordingObjectStore implements VisualFixtureObjectStore {
     this.publicDeletes.push(key);
   }
 
-  async deleteQuarantineObject(key: string): Promise<void> {
-    this.quarantineDeletes.push(key);
-  }
-
   async hasPublicObject(): Promise<boolean> {
     return true;
   }
 }
 
 describe("visual fixture media store", () => {
-  it("uploads verified local PNGs to exact deterministic derivative keys", async () => {
+  it("uploads exact verified local WebPs to deterministic derivative keys", async () => {
     const store = new RecordingObjectStore();
 
     const uploaded = await uploadVisualFixtureMedia(
@@ -65,7 +57,7 @@ describe("visual fixture media store", () => {
     );
   });
 
-  it("deletes only exact current and retired manifest media keys", async () => {
+  it("deletes only exact current final derivative keys", async () => {
     const store = new RecordingObjectStore();
 
     const deleted = await deleteVisualFixtureMedia(
@@ -76,47 +68,7 @@ describe("visual fixture media store", () => {
     const expectedDerivativeKeys = VISUAL_FIXTURE_MANIFEST.media.map(
       ({ derivativeKey }) => derivativeKey,
     );
-    const expectedQuarantineKeys = VISUAL_FIXTURE_MANIFEST.media.map(
-      ({ quarantineKey }) => quarantineKey,
-    );
-    const retiredNamespaces = [
-      "visual-fixtures/ove187-v5",
-      "visual-fixtures/ove187-v6",
-      "visual-fixtures/ove187-v7",
-    ];
-    const retiredDerivativeKeys = retiredNamespaces.flatMap((namespace) =>
-      VISUAL_FIXTURE_MANIFEST.media.map(
-        ({ fileName }) => `${namespace}/${fileName}`,
-      ),
-    );
-    const retiredQuarantineKeys = retiredNamespaces.flatMap((namespace) =>
-      VISUAL_FIXTURE_MANIFEST.media.map(
-        ({ fileName }) => `${namespace}/quarantine/${fileName}`,
-      ),
-    );
-    expect(deleted).toBe(
-      expectedDerivativeKeys.length +
-        expectedQuarantineKeys.length +
-        retiredDerivativeKeys.length +
-        retiredQuarantineKeys.length,
-    );
-    expect(store.publicDeletes).toEqual([
-      ...expectedDerivativeKeys,
-      ...retiredDerivativeKeys,
-    ]);
-    expect(store.quarantineDeletes).toEqual([
-      ...expectedQuarantineKeys,
-      ...retiredQuarantineKeys,
-    ]);
-    expect(store.publicDeletes.slice(0, expectedDerivativeKeys.length)).toEqual(
-      expectedDerivativeKeys,
-    );
-    expect(
-      [...retiredDerivativeKeys, ...store.quarantineDeletes].every((key) =>
-        [VISUAL_FIXTURE_NAMESPACE, ...retiredNamespaces].some((namespace) =>
-          key.startsWith(`${namespace}/`),
-        ),
-      ),
-    ).toBe(true);
+    expect(deleted).toBe(expectedDerivativeKeys.length);
+    expect(store.publicDeletes).toEqual(expectedDerivativeKeys);
   });
 });

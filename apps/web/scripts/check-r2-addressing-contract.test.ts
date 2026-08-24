@@ -82,7 +82,7 @@ describe("check-r2-addressing-contract", () => {
     );
   });
 
-  it("wires the guard before production proof and into every build", () => {
+  it("wires the guard into every build without the retired media proof", () => {
     const packageJson = JSON.parse(
       readFileSync(new URL("../package.json", import.meta.url), "utf8"),
     ) as { scripts: Record<string, string> };
@@ -93,12 +93,7 @@ describe("check-r2-addressing-contract", () => {
     expect(packageJson.scripts.prebuild).toContain(
       "pnpm run check:r2-addressing",
     );
-    expect(packageJson.scripts["ove316:production-proof"]).toMatch(
-      /^pnpm run check:r2-addressing -- .*--read-back && /,
-    );
-    expect(packageJson.scripts["ove316:production-proof"]).toContain(
-      "scripts/recertify-final-main-media-proof.ts",
-    );
+    expect(packageJson.scripts["ove316:production-proof"]).toBeUndefined();
   });
 
   it("pins the immutable OVE-316 operation, digest, stop rule, and predecessor refusal", () => {

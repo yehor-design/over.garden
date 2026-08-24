@@ -133,9 +133,23 @@ async function main() {
     // 1. Publish: canonical state and intent land together.
     const publishedGeneration = await db.transaction().execute(async (trx) => {
       await trx
-        .updateTable("journal_entries")
-        .set({ visibility: "public", published_at: new Date() })
-        .where("id", "=", ENTRY_ID)
+        .insertInto("journal_entries")
+        .values({
+          id: ENTRY_ID,
+          owner_user_id: OWNER_ID,
+          space_id: SPACE_ID,
+          plant_object_id: OBJECT_ID,
+          title: "OVE-242 revocation smoke entry",
+          body: `The seedlings are doing well. ${SENSITIVE_SENTENCE}`,
+          entry_date: "2026-07-28",
+          visibility: "public",
+          lifecycle_state: "active",
+          content_class: "real_ugc",
+          public_slug: `ove-242-revocation-${OWNER_ID.slice(0, 8)}`,
+          public_noindex: true,
+          published_at: new Date(),
+          client_mutation_id: `ove-242-${OWNER_ID}`,
+        })
         .execute();
       return recordPublicProjectionIntent(trx, {
         entityId: ENTRY_ID,
@@ -452,26 +466,6 @@ async function seed(db: Db, sql: SqlTag) {
     })
     .execute();
 
-  await db
-    .insertInto("journal_entries")
-    .values({
-      id: ENTRY_ID,
-      owner_user_id: OWNER_ID,
-      space_id: SPACE_ID,
-      plant_object_id: OBJECT_ID,
-      title: "OVE-242 revocation smoke entry",
-      body: `The seedlings are doing well. ${SENSITIVE_SENTENCE}`,
-      entry_date: "2026-07-28",
-      visibility: "private",
-      lifecycle_state: "active",
-      content_class: "real_ugc",
-      public_slug: `ove-242-revocation-${OWNER_ID.slice(0, 8)}`,
-      public_noindex: true,
-      client_mutation_id: `ove-242-${OWNER_ID}`,
-      created_at: now,
-      updated_at: now,
-    })
-    .execute();
 }
 
 async function cleanup(db: Db) {

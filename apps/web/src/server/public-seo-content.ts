@@ -177,20 +177,20 @@ const BLOG_POSTS: BlogPostContent[] = [
     sections: [
       {
         heading: "Advice disappears. Records compound.",
-        body: "A chat answer can explain what should work. A dated plant record shows what changed, when it changed, and whether the gardener came back after the first fix. That history is the useful part OverGarden protects before anything becomes public.",
+        body: "A chat answer can explain what should work. A dated plant record shows what changed, when it changed, and whether the gardener came back after the first fix. That published history becomes the useful evidence gardeners can compare over time.",
       },
       {
         heading: "Public pages must earn trust before they earn traffic.",
-        body: "OverGarden will not index empty catalog stubs or private journals as search bait. Public discovery starts with authored pages, then expands only when real public entries and safe aggregation thresholds make a page useful on its own.",
+        body: "OverGarden will not index empty catalog stubs, transient composer text, or account-only data as search bait. Public discovery starts with authored pages, then expands only when real public entries and safe aggregation thresholds make a page useful on its own.",
       },
       {
-        heading: "The first product action is private.",
-        body: "The safest path for a gardener is simple: choose one living object, save one observation, and return to the same object when something changes. Publication is a later explicit choice, not the default cost of keeping a record.",
+        heading: "The first publication is intentional.",
+        body: "The path is simple: choose one living object, compose one observation in the current tab, review exactly what will be public, and publish it in one atomic action. Canceling creates no durable record; a successful Publish creates the dated public history.",
       },
     ],
     relatedLinks: [
       {
-        label: "Start a private plant record",
+        label: "Start a plant record",
         href: "/garden",
         description:
           "Open the gated workspace and save the first dated observation.",
@@ -313,7 +313,7 @@ const ANSWER_PAGES: AnswerPageContent[] = [
       {
         question: "Should I publish a problem photo immediately?",
         answer:
-          "No. Save the private record first. Publish later only if you choose, after the photo has a stripped public derivative and the note contains no private location or identity details.",
+          "No. First review the browser-created final WebP and the text that will be public. Publish creates both together only when you confirm; canceling leaves no durable journal record.",
       },
       {
         question: "What detail matters most for yellowing leaves?",

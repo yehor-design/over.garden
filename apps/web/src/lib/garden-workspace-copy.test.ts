@@ -23,15 +23,15 @@ describe("garden workspace copy", () => {
     }
   });
 
-  it("localizes representative inventory, creation, server-draft, and save states", () => {
+  it("localizes representative inventory, local authoring, and publication states", () => {
     expect(getGardenWorkspaceCopy("uk").workspace.summary.objects).toBe(
       "Об'єкти",
     );
     expect(getGardenWorkspaceCopy("bg").composer.actions.saveOnline).toBe(
       "Запазване на първия запис",
     );
-    expect(getGardenWorkspaceCopy("ru").composer.online.notSaved).toBe(
-      "Изменения ещё не сохранены",
+    expect(getGardenWorkspaceCopy("ru").composer.publicationNotice).toBe(
+      "До успешной публикации изменения остаются только в этой вкладке. Опубликованная запись будет публичной.",
     );
     expect(getGardenWorkspaceCopy("bg").saveProgress.firstEntry.title).toBe(
       "Записът за градината ви е започнат",

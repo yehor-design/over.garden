@@ -81,11 +81,6 @@ export interface GardenWorkspaceInboxSummary {
   claimCount: number;
 }
 
-export interface GardenWorkspaceMediaSummary {
-  processingCount: number;
-  failedCount: number;
-}
-
 export type GardenWorkspaceSection<T> =
   | { status: "ready"; value: T }
   | { status: "error" };
@@ -95,7 +90,6 @@ export interface GardenWorkspaceReadModel {
   spaces: GardenWorkspaceSection<GardenWorkspaceSpaces>;
   recent: GardenWorkspaceSection<GardenWorkspaceRecentEntry[]>;
   inbox: GardenWorkspaceSection<GardenWorkspaceInboxSummary>;
-  media: GardenWorkspaceSection<GardenWorkspaceMediaSummary>;
   allFailed: boolean;
 }
 
@@ -111,8 +105,7 @@ export type GardenWorkspaceSectionKey =
   | "inventory"
   | "spaces"
   | "recent"
-  | "inbox"
-  | "media";
+  | "inbox";
 
 export interface GardenWorkspaceSources {
   inventory(
@@ -128,7 +121,6 @@ export interface GardenWorkspaceSources {
     limit: number,
   ): Promise<GardenWorkspaceRecentEntry[]>;
   inbox(scope: RequestScope): Promise<GardenWorkspaceInboxSummary>;
-  media(scope: RequestScope): Promise<GardenWorkspaceMediaSummary>;
 }
 
 const defaultSources: GardenWorkspaceSources = {
@@ -187,19 +179,6 @@ const defaultSources: GardenWorkspaceSources = {
       ).length,
     };
   },
-  async media(scope) {
-    const rows = await buildGardenWorkspaceMediaStatusQuery(
-      db,
-      scope,
-    ).execute();
-    const counts = new Map(
-      rows.map((row) => [row.status, normalizeCount(row.count)]),
-    );
-    return {
-      processingCount: counts.get("quarantined") ?? 0,
-      failedCount: counts.get("failed") ?? 0,
-    };
-  },
 };
 
 export async function loadGardenWorkspace(
@@ -223,7 +202,7 @@ export async function loadGardenWorkspace(
     : 0;
   const faultSections = new Set(options.faultSections ?? []);
 
-  const [inventory, spaces, recent, inbox, media] = await Promise.allSettled([
+  const [inventory, spaces, recent, inbox] = await Promise.allSettled([
     runWorkspaceSource(faultSections, "inventory", () =>
       sources.inventory(scope, {
         limit: inventoryPageSize + 1,
@@ -240,7 +219,6 @@ export async function loadGardenWorkspace(
       sources.recent(scope, WORKSPACE_RECENT_LIMIT),
     ),
     runWorkspaceSource(faultSections, "inbox", () => sources.inbox(scope)),
-    runWorkspaceSource(faultSections, "media", () => sources.media(scope)),
   ]);
 
   const readModel: GardenWorkspaceReadModel = {
@@ -264,7 +242,6 @@ export async function loadGardenWorkspace(
     })),
     recent: resultSection(recent, (value) => value),
     inbox: resultSection(inbox, (value) => value),
-    media: resultSection(media, (value) => value),
     allFailed: false,
   };
 
@@ -273,7 +250,6 @@ export async function loadGardenWorkspace(
     readModel.spaces,
     readModel.recent,
     readModel.inbox,
-    readModel.media,
   ].every((section) => section.status === "error");
 
   return readModel;
@@ -432,18 +408,6 @@ export function buildGardenWorkspaceRecentEntriesQuery(
     .orderBy("journal_entries.created_at", "desc")
     .orderBy("journal_entries.id", "asc")
     .limit(normalizeLimit(limit));
-}
-
-export function buildGardenWorkspaceMediaStatusQuery(
-  executor: QueryExecutor,
-  scope: RequestScope,
-) {
-  return executor
-    .selectFrom("media_assets")
-    .select(({ fn }) => ["status", fn.count<number>("id").as("count")])
-    .where("owner_user_id", "=", scope.userId)
-    .where("status", "in", ["quarantined", "failed"])
-    .groupBy("status");
 }
 
 function resultSection<TInput, TOutput>(

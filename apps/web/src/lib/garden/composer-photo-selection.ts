@@ -17,8 +17,8 @@ const SUPPORTED_COMPOSER_PHOTO_TYPES = new Set([
 
 /**
  * A current-tab-only media selection. The Blob is never serialized or written
- * to browser storage; callers upload it through the canonical quarantine and
- * processing routes before a server draft can reference the resulting asset.
+ * to browser storage. The shared composer converts it into the sole final WebP
+ * and sends those exact bytes directly to bounded private edge staging.
  */
 export interface OnlineComposerPhotoIntent {
   fileName: string;

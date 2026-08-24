@@ -15,7 +15,6 @@ describe("GET /api/document-mutation-admission/readback", () => {
       "https://cb03b15042adc74edfe2d8201636300a.r2.cloudflarestorage.com",
     );
     vi.stubEnv("R2_FORCE_PATH_STYLE", "true");
-    vi.stubEnv("R2_UPLOAD_URL_TTL_SECONDS", "900");
 
     const response = GET();
 
@@ -25,11 +24,7 @@ describe("GET /api/document-mutation-admission/readback", () => {
       protocol: "overgarden.document-mutation-generation.v1",
       deploymentSha: "synthetic-deployment-sha",
       enforcement: "enabled",
-      r2UploadUrlTtl: {
-        source: "environment",
-        effectiveSeconds: 900,
-        maximumSeconds: 900,
-      },
+      ephemeralMediaCapabilityTtlSeconds: 900,
       r2Addressing: {
         schemaVersion: "overgarden.r2-addressing.v1",
         environmentClass: "production",
@@ -80,17 +75,6 @@ describe("GET /api/document-mutation-admission/readback", () => {
     expect(JSON.stringify(payload.r2Addressing)).not.toMatch(
       /cloudflarestorage|bucket|access|secret/i,
     );
-  });
-
-  it("fails closed without disclosing malformed environment input", async () => {
-    vi.stubEnv("R2_UPLOAD_URL_TTL_SECONDS", "901");
-
-    const response = GET();
-
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({
-      code: "MUTATION_ADMISSION_UNAVAILABLE",
-    });
   });
 
   it("reports only the bounded disabled rollback class", async () => {

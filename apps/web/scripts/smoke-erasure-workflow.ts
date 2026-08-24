@@ -23,7 +23,7 @@ const SPACE_ID = "10000000-0000-4000-8000-000000001097";
 const OBJECT_ID = "10000000-0000-4000-8000-000000002097";
 const CATALOG_ITEM_ID = "10000000-0000-4000-8000-000000003097";
 const PUBLIC_ENTRY_ID = "10000000-0000-4000-8000-000000004097";
-const PRIVATE_ENTRY_ID = "10000000-0000-4000-8000-000000005097";
+const SECOND_PUBLIC_ENTRY_ID = "10000000-0000-4000-8000-000000005097";
 const MEDIA_ID = "10000000-0000-4000-8000-000000006097";
 const COVER_MEDIA_ID = "10000000-0000-4000-8000-000000006197";
 const ANALYTICS_EVENT_ID = "10000000-0000-4000-8000-000000007097";
@@ -105,7 +105,7 @@ async function main() {
     2,
     "dry-run community moderation refs",
   );
-  assertEqual(before.publicSlugs, 1, "dry-run public slug");
+  assertEqual(before.publicSlugs, 2, "dry-run public slugs");
   assertEqual(before.analyticsEvents, 1, "dry-run analytics events");
   assertEqual(before.catalogProvisionalItems, 1, "dry-run catalog provisional");
   assertEqual(
@@ -339,7 +339,7 @@ async function main() {
     "This entry was erased by request.",
     "journal body erased",
   );
-  assertEqual(tombstone.visibility, "private", "journal visibility private");
+  assertEqual(tombstone.visibility, "public", "journal visibility public");
   assertEqual(tombstone.lifecycleState, "archived", "journal archived");
   assertEqual(tombstone.publicNoindex, true, "journal noindex");
   assertEqual(tombstone.coverMediaAssetId, null, "cover cleared");
@@ -560,17 +560,19 @@ async function seedSmokeRows() {
         updated_at: now,
       },
       {
-        id: PRIVATE_ENTRY_ID,
+        id: SECOND_PUBLIC_ENTRY_ID,
         owner_user_id: REQUESTER_USER_ID,
         space_id: SPACE_ID,
         plant_object_id: OBJECT_ID,
-        title: "OVE-97 private smoke title",
-        body: "OVE-97 private smoke body",
+        title: "OVE-97 second public smoke title",
+        body: "OVE-97 second public smoke body",
         entry_date: "2026-07-01",
-        visibility: "private",
+        visibility: "public",
         lifecycle_state: "active",
+        public_slug: `${PUBLIC_SLUG}-second`,
         public_noindex: true,
-        client_mutation_id: "ove-97-private-entry",
+        published_at: now,
+        client_mutation_id: "ove-97-second-public-entry",
         created_at: now,
         updated_at: now,
       },
@@ -584,11 +586,11 @@ async function seedSmokeRows() {
         id: MEDIA_ID,
         owner_user_id: REQUESTER_USER_ID,
         journal_entry_id: PUBLIC_ENTRY_ID,
-        quarantine_key: "quarantine/ove-192-smoke-private-original.jpg",
         derivative_key: "derivatives/ove-192-smoke-public.webp",
-        status: "processed",
         usage_role: "inline",
-        original_deleted_at: now,
+        document_position: 1,
+        upload_generation: 1,
+        declared_size_bytes: 1,
         created_at: now,
         updated_at: now,
       },
@@ -596,11 +598,11 @@ async function seedSmokeRows() {
         id: COVER_MEDIA_ID,
         owner_user_id: REQUESTER_USER_ID,
         journal_entry_id: PUBLIC_ENTRY_ID,
-        quarantine_key: "quarantine/ove-192-smoke-cover-original.jpg",
         derivative_key: "derivatives/ove-192-smoke-cover.webp",
-        status: "processed",
         usage_role: "cover_only",
-        original_deleted_at: now,
+        document_position: null,
+        upload_generation: 1,
+        declared_size_bytes: 1,
         created_at: now,
         updated_at: now,
       },
@@ -795,7 +797,7 @@ async function seedSmokeRows() {
         queue_name: "matching",
         payload: {
           kind: "journal_entry_index",
-          journalEntryId: PRIVATE_ENTRY_ID,
+          journalEntryId: SECOND_PUBLIC_ENTRY_ID,
           userId: REQUESTER_USER_ID,
         },
         status: "done",

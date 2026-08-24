@@ -1,6 +1,7 @@
 /**
- * OVE-199 production editorial seed shot-list (licensed pack after sign-off).
- * Stable IDs for manifest disposition — not product UUIDs.
+ * Frozen OVE-199 v1 validation evidence. This list is not a runtime seed plan:
+ * OVE-349 retired its mutator and its historical private slot cannot be
+ * applied to the current public-only journal schema.
  */
 
 export type LaunchCorpusShotVisibility = "public" | "private" | "archived_410";

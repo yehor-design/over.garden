@@ -34,8 +34,7 @@ describe("GardenWorkspaceView", () => {
     expect(html).toContain("Переглянути всі 9 об");
     expect(html).not.toContain("Приватні чернетки");
     expect(html).not.toContain("Локальна черга");
-    expect(html).toContain("Фото в обробці: 1");
-    expect(html).toContain("Фото, що потребують уваги: 1");
+    expect(html).toContain("До успішної публікації");
     expect(html).toContain("Останні події");
     expect(html).toContain("First flowers");
     expect(html).toContain('href="/privacy"');
@@ -74,7 +73,6 @@ describe("GardenWorkspaceView", () => {
           spaces: { status: "error" },
           recent: { status: "error" },
           inbox: { status: "error" },
-          media: { status: "error" },
           allFailed: true,
         }}
       />,
@@ -152,7 +150,6 @@ function readyWorkspace(): GardenWorkspaceReadModel {
             createdAt: new Date("2026-07-01T00:00:00.000Z"),
             entryCount: 3,
             publicEntryCount: 1,
-            privateEntryCount: 2,
             archivedEntryCount: 0,
             latestEntryDate: new Date("2026-06-01T00:00:00.000Z"),
             coverMedia: {
@@ -196,7 +193,7 @@ function readyWorkspace(): GardenWorkspaceReadModel {
           title: "First flowers",
           entryScope: "object",
           entryDate: new Date("2026-07-10T00:00:00.000Z"),
-          visibility: "private",
+          visibility: "public",
           lifecycleState: "active",
           objectId: "object-1",
           objectDisplayName: "Object 1",
@@ -208,10 +205,6 @@ function readyWorkspace(): GardenWorkspaceReadModel {
     inbox: {
       status: "ready",
       value: { notificationCount: 3, claimCount: 1 },
-    },
-    media: {
-      status: "ready",
-      value: { processingCount: 1, failedCount: 1 },
     },
     allFailed: false,
   };

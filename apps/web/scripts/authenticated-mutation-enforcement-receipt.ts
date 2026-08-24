@@ -26,26 +26,26 @@ const HIGH_RISK_OWNER = "high_risk_ove_290" as const;
 const REMAINING_OWNER = "remaining_ove_291" as const;
 const EXPLICIT_GOOGLE_LINK_OWNER = "owned_by_ove_295" as const;
 // OVE-323 removes every browser-offline mutation owner and replay edge.
-// OVE-348 repins the high-risk edge bindings after the published-edit route
-// converges on the same admitted atomic mutation owner as journal creation.
-// OVE-351 removes the retired external-photo identification mutations and
-// repins only the remaining authenticated mutation topology.
-const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 14;
+// OVE-348 repins the published-edit route. OVE-351 removes external-photo
+// identification and adds the read-only unknown-API hard-404 owner. OVE-349
+// then removes the retired server-draft and quarantine mutation surfaces
+// instead of leaving phantom admission owners in the enforced graph.
+const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 8;
 const BASELINE_HIGH_RISK_ENTRYPOINT_SET_DIGEST =
-  "bdbedb11c601d55116bb63b8a1f79d8d5fafee59f8013aa31ac5bd3791fe6571";
-const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 153;
+  "2e5a4515277bcd1de5ea5571b377427625e423b3270b420e66bfb416a370fcdd";
+const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 72;
 const BASELINE_HIGH_RISK_EDGE_BINDING_SET_DIGEST =
-  "ccc09e527415e523af19eed81ac3da40d68607b4e8382053b22fd5169aa986ec";
-const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 11;
-const BASELINE_REMAINING_ENTRYPOINT_COUNT = 121;
+  "e3150147c7c10d9eab862da9024130d88b85c04c127885fc2a6c2e7190ade346";
+const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 6;
+const BASELINE_REMAINING_ENTRYPOINT_COUNT = 117;
 const BASELINE_REMAINING_ENTRYPOINT_SET_DIGEST =
-  "2a644b9cf57f6306a399e1abb27eb828f3ff0a5e63e854ba743020edc25c0d59";
-const BASELINE_REMAINING_CONSUMER_EDGE_COUNT = 321;
+  "14f2714015d78a8fb3f629742cdb71ab810d85297231480aa961985a39662d96";
+const BASELINE_REMAINING_CONSUMER_EDGE_COUNT = 290;
 const BASELINE_REMAINING_EDGE_BINDING_SET_DIGEST =
-  "43f7fca331f72599648900223676af1a9fbc003d22176b4b6fead9cd919e6af0";
-const BASELINE_REMAINING_ADMISSION_BOUNDARY_COUNT = 65;
+  "988fb6f99bbc8b07d4889d89df5a332fc06084cd9e06250df3f2fc803a2cdf9f";
+const BASELINE_REMAINING_ADMISSION_BOUNDARY_COUNT = 61;
 const BASELINE_REMAINING_ADMISSION_BOUNDARY_SET_DIGEST =
-  "b8a6bbd17099514962c4c24621b957f067566277358f08e42db0d9cd07172e91";
+  "3e1c1e9ed81593f945195934af42dd69e5b83635e806ed875fa681e417d00ccf";
 const BASELINE_EXPLICIT_GOOGLE_LINK_ENTRYPOINT_COUNT = 5;
 const BASELINE_EXPLICIT_GOOGLE_LINK_CONSUMER_EDGE_COUNT = 15;
 const BASELINE_EXPLICIT_GOOGLE_LINK_OWNERSHIP_DIGEST =

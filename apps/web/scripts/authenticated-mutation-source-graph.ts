@@ -1028,17 +1028,6 @@ function classifyKnownOwnerEffect(
         ),
       ];
     }
-    if (owner.symbol === "deleteQuarantineObject") {
-      return [
-        effect(
-          owner,
-          "quarantine-delete",
-          "provider_operation",
-          ["external_call", "quarantine_object"],
-          order,
-        ),
-      ];
-    }
     if (owner.symbol === "deletePublicDerivativeObject") {
       return [
         effect(

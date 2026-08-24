@@ -344,7 +344,7 @@ export function FollowUpEntryComposer({
         return;
       }
 
-      if (scenario.state === "draft" || scenario.state === "cancel") {
+      if (scenario.state === "local-only" || scenario.state === "cancel") {
         setSubmitState("idle");
         setMessage(
           scenario.state === "cancel"
@@ -919,8 +919,8 @@ function localizedVisualScenarioMessage(
       objectName,
     });
   }
-  if (scenario.state === "draft") {
-    return workspaceCopy.composer.draftRestored;
+  if (scenario.state === "local-only") {
+    return workspaceCopy.composer.localScenarioRecovered;
   }
   if (scenario.state === "connection-required") {
     return workspaceCopy.composer.messages.fixtureConnectionRequired;
