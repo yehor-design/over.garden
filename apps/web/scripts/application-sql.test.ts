@@ -23,13 +23,14 @@ describe("versioned application SQL bootstrap", () => {
       "0016_ove235_comment_moderation.sql",
       "0017_ove237_interaction_admission.sql",
       "0018_ove219_learning_attribution_outbox.sql",
-      "0019_ove269_plantnet_identification.sql",
+      "0019_learning_attribution_outbox_compatibility.sql",
       "0020_ove299_remove_manual_pilot_learning.sql",
       "0021_ove314_retire_obsolete_control_plane.sql",
       "0022_ove295_google_account_uniqueness.sql",
       "0029_online_journal_drafts.sql",
       "0035_online_only_retirement.sql",
       "0036_ove347_atomic_journal_create.sql",
+      "0037_ove351_retire_external_photo_identification.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

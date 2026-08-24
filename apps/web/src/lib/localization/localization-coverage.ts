@@ -1179,8 +1179,6 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/api/garden/entries/route.ts",
         "src/app/api/garden/entries/[entryId]/route.ts",
         "src/app/api/garden/mentions/typeahead/route.ts",
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/app/api/garden/plant-identification/route.ts",
         "src/app/api/garden/value-pulse/route.ts",
         "src/app/api/interface/context/route.ts",
         "src/app/api/interface/locale/route.ts",

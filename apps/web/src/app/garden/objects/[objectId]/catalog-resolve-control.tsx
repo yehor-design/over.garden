@@ -32,6 +32,8 @@ type CatalogStatus = "idle" | "loading" | "ready" | "failed";
 
 type CatalogSuggestion = FirstEntryCatalogSelection;
 
+export const CATALOG_TYPEAHEAD_TIMEOUT_MS = 5_000;
+
 export function CatalogResolveControl({
   locale,
   objectId,
@@ -62,6 +64,11 @@ export function CatalogResolveControl({
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setStatus("loading");
+      let timedOut = false;
+      const requestTimeout = window.setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, CATALOG_TYPEAHEAD_TIMEOUT_MS);
 
       try {
         const response = await fetch(
@@ -74,13 +81,15 @@ export function CatalogResolveControl({
         const body = (await response.json()) as unknown;
         setSuggestions(parseCatalogTypeaheadResponse(body));
         setStatus("ready");
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
+      } catch {
+        if (controller.signal.aborted && !timedOut) {
           return;
         }
 
         setSuggestions([]);
         setStatus("failed");
+      } finally {
+        window.clearTimeout(requestTimeout);
       }
     }, 180);
 

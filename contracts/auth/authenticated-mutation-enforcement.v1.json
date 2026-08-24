@@ -1,7 +1,7 @@
 {
   "schemaVersion": "overgarden.authenticated-mutation-enforcement.v1",
-  "registryDigest": "8e5f75327dd3b16421ea51fd0342cb3be7352a2597dcb2517b50cc78e9c31740",
-  "sourceRegistryReceiptDigest": "532ded0926c7e074f058c5a795f1b26dfc8b4a83bcdfb1c57d2979ddb7f522c5",
+  "registryDigest": "bea53e1a51472159da04b9d9cf8c9c93d4c7169d40a1a785d870cac1a2d74b22",
+  "sourceRegistryReceiptDigest": "c52674b1c6e13ea30a652078df579384a740308ad07576188964f412556dd3ec",
   "entrypointStates": [
     {
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_account_session_mutation",
@@ -508,22 +508,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:guest_auth_intent",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:guest_auth_intent",
-      "enforcementState": "excluded_with_authority"
-    },
-    {
       "entrypointId": "route_handler:src/app/api/garden/value-pulse/route.ts#POST",
       "enforcementState": "enforced_ove_291"
     },
@@ -626,14 +610,6 @@
     {
       "entrypointId": "same_origin_fetch:src/components/auth/document-mutation-recovery.tsx#confirmDocumentMutationOwnerContinuity:POST:/api/document-mutation-admission/continuity",
       "enforcementState": "excluded_with_authority"
-    },
-    {
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#decide:POST:/api/garden/plant-identification/decision",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "enforcementState": "enforced_ove_291"
     },
     {
       "entrypointId": "same_origin_fetch:src/components/media/owner-media-focal-panel.tsx#OwnerMediaFocalPanel:PATCH:/api/media/:dynamic/focal",
@@ -2658,24 +2634,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:96113e20f416ffc8915c:1:2d44d7d624e5013c3c97",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:96113e20f416ffc8915c:2:0f50eb9eda63924732d6",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:96113e20f416ffc8915c:3:e17602c3d0906db60c5a",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:9656b7ab4382ea5416cf:1:03707a3b38302d566b9a",
       "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
       "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
@@ -2892,24 +2850,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:a730632cf888c7d6ed8b:1:2d44d7d624e5013c3c97",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#decide:POST:/api/garden/plant-identification/decision",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:a730632cf888c7d6ed8b:2:0f50eb9eda63924732d6",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#decide:POST:/api/garden/plant-identification/decision",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:a730632cf888c7d6ed8b:3:e17602c3d0906db60c5a",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#decide:POST:/api/garden/plant-identification/decision",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:a96d9fef83e993dca970:10:77cf888dc06e9a01e7fa",
       "entrypointId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
@@ -3051,78 +2991,6 @@
       "consumerEdgeId": "edge:b4497cabcd5750f0e956:1:be179329f7c551c61b8f",
       "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogMatchSuggestionAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogMatchSuggestionAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:10:2459dbd6a000297131f9",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:11:cb1bece88026ca117c49",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:12:276217627e06c2659e3c",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:1:522683864f8f12b1cd0f",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:2:b2e3cd3a93bb78f0b500",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:3:2506836770d600a3a0ba",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:4:a6411b97b3677cd486eb",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:5:f357c7c482b419e1b53d",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:6:d49bd1631169d877721f",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:7:49b0ee451c6b7baa2d1e",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:8:4d7189c690aa62b5f861",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:9:a7f03c4fd1a9c22b5598",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -3915,78 +3783,6 @@
       "consumerEdgeId": "edge:fb54955b889a49a2413c:9:36006ff850728fc24edf",
       "entrypointId": "native_form:src/app/engagement/public-engagement-panel.tsx#PublicEngagementPanel:POST:/api/engagement/comments",
       "admissionBoundaryId": "route_handler:src/app/api/engagement/comments/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:10:2459dbd6a000297131f9",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:11:cb1bece88026ca117c49",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:12:276217627e06c2659e3c",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:1:522683864f8f12b1cd0f",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:2:b2e3cd3a93bb78f0b500",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:3:2506836770d600a3a0ba",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:4:a6411b97b3677cd486eb",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:5:f357c7c482b419e1b53d",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:6:d49bd1631169d877721f",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:7:49b0ee451c6b7baa2d1e",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:8:4d7189c690aa62b5f861",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:9:a7f03c4fd1a9c22b5598",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
       "enforcementState": "enforced_ove_291"
     },
     {

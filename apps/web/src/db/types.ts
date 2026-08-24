@@ -45,10 +45,6 @@ import type {
   MediaAssets as MediaAssetsTable,
   NotificationPreferences as NotificationPreferencesTable,
   NotificationReceipts as NotificationReceiptsTable,
-  PlantIdentificationCandidates as PlantIdentificationCandidatesTable,
-  PlantIdentificationDecisions as PlantIdentificationDecisionsTable,
-  PlantIdentificationRequests as PlantIdentificationRequestsTable,
-  PlantIdentificationSubmissionSlots as PlantIdentificationSubmissionSlotsTable,
   PlantObjects as PlantObjectsTable,
   Spaces as SpacesTable,
   UserHandleRegistry as UserHandleRegistryTable,
@@ -333,22 +329,6 @@ export type LineageQuestion = Selectable<LineageQuestionsTable>;
 export type NewLineageQuestion = Insertable<LineageQuestionsTable>;
 export type MediaAsset = Selectable<MediaAssetsTable>;
 export type NewMediaAsset = Insertable<MediaAssetsTable>;
-export type PlantIdentificationRequest =
-  Selectable<PlantIdentificationRequestsTable>;
-export type NewPlantIdentificationRequest =
-  Insertable<PlantIdentificationRequestsTable>;
-export type PlantIdentificationCandidate =
-  Selectable<PlantIdentificationCandidatesTable>;
-export type NewPlantIdentificationCandidate =
-  Insertable<PlantIdentificationCandidatesTable>;
-export type PlantIdentificationDecision =
-  Selectable<PlantIdentificationDecisionsTable>;
-export type NewPlantIdentificationDecision =
-  Insertable<PlantIdentificationDecisionsTable>;
-export type PlantIdentificationSubmissionSlot =
-  Selectable<PlantIdentificationSubmissionSlotsTable>;
-export type NewPlantIdentificationSubmissionSlot =
-  Insertable<PlantIdentificationSubmissionSlotsTable>;
 export type UserPublicProfile = Selectable<UserPublicProfilesTable>;
 export type NewUserPublicProfile = Insertable<UserPublicProfilesTable>;
 export type UserHandleRegistryEntry = Selectable<UserHandleRegistryTable>;

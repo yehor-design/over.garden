@@ -758,60 +758,6 @@ export interface NotificationReceipts {
   updated_at: Generated<Timestamp>;
 }
 
-export interface PlantIdentificationCandidates {
-  catalog_item_id: string | null;
-  created_at: Generated<Timestamp>;
-  family: string | null;
-  genus: string | null;
-  id: Generated<string>;
-  mapping_status: string;
-  rank: number;
-  request_id: string;
-  scientific_name: string;
-  score: Numeric;
-}
-
-export interface PlantIdentificationDecisions {
-  created_at: Generated<Timestamp>;
-  decision: string;
-  id: Generated<string>;
-  owner_user_id: string;
-  request_id: string;
-  selected_candidate_rank: number | null;
-  selected_catalog_item_id: string | null;
-}
-
-export interface PlantIdentificationRequests {
-  capability: Generated<string>;
-  claim_expires_at: Timestamp | null;
-  claim_token: string | null;
-  completed_at: Timestamp | null;
-  created_at: Generated<Timestamp>;
-  error_class: string | null;
-  fingerprint: string;
-  id: Generated<string>;
-  media_manifest: Json;
-  model_version: string | null;
-  organs: string[];
-  owner_user_id: string;
-  plant_object_id: string | null;
-  policy_version: string;
-  project: Generated<string>;
-  provider: Generated<string>;
-  quota_remaining: number | null;
-  request_duration_ms: number | null;
-  state: Generated<string>;
-  submitted_at: Timestamp | null;
-  updated_at: Generated<Timestamp>;
-}
-
-export interface PlantIdentificationSubmissionSlots {
-  claim_expires_at: Timestamp | null;
-  claim_token: string | null;
-  request_id: string | null;
-  slot: number;
-}
-
 export interface PlantObjects {
   catalog_item_id: string | null;
   coarse_region_code: string | null;
@@ -1027,10 +973,6 @@ export interface DB {
   media_lifecycle_retention_runs: MediaLifecycleRetentionRuns;
   notification_preferences: NotificationPreferences;
   notification_receipts: NotificationReceipts;
-  plant_identification_candidates: PlantIdentificationCandidates;
-  plant_identification_decisions: PlantIdentificationDecisions;
-  plant_identification_requests: PlantIdentificationRequests;
-  plant_identification_submission_slots: PlantIdentificationSubmissionSlots;
   plant_objects: PlantObjects;
   profile_blocks: ProfileBlocks;
   profile_follows: ProfileFollows;
