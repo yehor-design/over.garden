@@ -114,6 +114,60 @@ describe("OVE-335 public surface discovery verifier", () => {
     );
   });
 
+  it("uses explicit locale paths for geography-independent live proof", async () => {
+    const requestedPaths: string[] = [];
+    const richPath = "/bg/blog/ai-garden-advice-vs-real-garden-proof";
+    const responseByPath = new Map([
+      [
+        "/robots.txt",
+        "User-agent: *\nSitemap: https://over.garden/sitemap.xml",
+      ],
+      [
+        "/sitemap.xml",
+        `<urlset><url><loc>https://over.garden${richPath}</loc></url></urlset>`,
+      ],
+      [
+        richPath,
+        `<html><head><meta name="robots" content="index, follow"><link rel="canonical" href="${richPath}"><script type="application/ld+json">{}</script></head></html>`,
+      ],
+      [
+        "/bg/blog",
+        '<html><head><meta name="robots" content="noindex, nofollow"></head></html>',
+      ],
+      [
+        "/bg/privacy",
+        '<html><head><meta name="robots" content="noindex, nofollow"></head></html>',
+      ],
+    ]);
+    const fetchImpl = (async (input: string | URL | Request) => {
+      const pathname = new URL(
+        typeof input === "string" || input instanceof URL
+          ? input
+          : input.url,
+      ).pathname;
+      requestedPaths.push(pathname);
+      const body = responseByPath.get(pathname);
+      return new Response(body ?? "missing", { status: body ? 200 : 404 });
+    }) as typeof fetch;
+
+    const report = await runPublicSurfaceDiscoveryVerification({
+      buildSha: BUILD_SHA,
+      baseUrl: "https://over.garden",
+      fetchImpl,
+    });
+
+    expect(requestedPaths.sort()).toEqual(
+      [
+        "/robots.txt",
+        "/sitemap.xml",
+        richPath,
+        "/bg/blog",
+        "/bg/privacy",
+      ].sort(),
+    );
+    expect(report.liveProbe).toMatchObject({ status: "aligned", probeCount: 5 });
+  });
+
   it("fails closed when the current inventory owner scan cannot prove coverage", () => {
     expect(() =>
       verifyPublicSurfaceDiscoveryInventory(

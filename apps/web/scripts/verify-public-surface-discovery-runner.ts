@@ -339,25 +339,23 @@ async function runLivePublicSurfaceProbe(
   NonNullable<PublicSurfaceDiscoveryVerificationReceipt["liveProbe"]>
 > {
   const baseUrl = normalizeBaseUrl(baseUrlInput);
+  const richPath = "/bg/blog/ai-garden-advice-vs-real-garden-proof";
+  const thinPath = "/bg/blog";
+  const privacyPath = "/bg/privacy";
   const [robots, sitemap, rich, thin, privacy] = await Promise.all([
     fetchText(baseUrl, "/robots.txt", fetchImpl),
     fetchText(baseUrl, "/sitemap.xml", fetchImpl),
-    fetchText(
-      baseUrl,
-      "/blog/ai-garden-advice-vs-real-garden-proof",
-      fetchImpl,
-    ),
-    fetchText(baseUrl, "/blog", fetchImpl),
-    fetchText(baseUrl, "/privacy", fetchImpl),
+    fetchText(baseUrl, richPath, fetchImpl),
+    fetchText(baseUrl, thinPath, fetchImpl),
+    fetchText(baseUrl, privacyPath, fetchImpl),
   ]);
 
   if (!robots.includes("Sitemap: https://over.garden/sitemap.xml")) {
     throw new Error("public_discovery_live_robots_mismatch");
   }
-  const richPath = "/blog/ai-garden-advice-vs-real-garden-proof";
   if (
     !sitemap.includes(`<loc>https://over.garden${richPath}</loc>`) ||
-    sitemap.includes("<loc>https://over.garden/blog</loc>") ||
+    sitemap.includes(`<loc>https://over.garden${thinPath}</loc>`) ||
     sitemap.includes("/privacy</loc>") ||
     sitemap.includes("__visual")
   ) {
@@ -365,11 +363,11 @@ async function runLivePublicSurfaceProbe(
   }
 
   const richOutput = classifyHtmlDiscoveryOutput(rich, baseUrl, richPath);
-  const thinOutput = classifyHtmlDiscoveryOutput(thin, baseUrl, "/blog");
+  const thinOutput = classifyHtmlDiscoveryOutput(thin, baseUrl, thinPath);
   const privacyOutput = classifyHtmlDiscoveryOutput(
     privacy,
     baseUrl,
-    "/privacy",
+    privacyPath,
   );
   if (
     richOutput.robotsClass !== "index" ||
