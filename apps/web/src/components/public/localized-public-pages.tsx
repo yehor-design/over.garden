@@ -29,13 +29,13 @@ import {
 } from "@/lib/public-knowledge-copy";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import {
-  buildAnswerPageJsonLd,
   type AnswerPageContent,
   type BlogPostContent,
   type GuideContent,
   type MarketLandingContent,
   type PublicContentLink,
 } from "@/server/public-seo-content";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import type {
   LocalizedBlogIndexContent,
   LocalizedHomeContent,
@@ -79,6 +79,7 @@ export function LocalizedHomePage({
   topics,
   isAuthenticated,
   state,
+  jsonLd,
 }: {
   locale: PublicLocale;
   content: LocalizedHomeContent;
@@ -87,17 +88,21 @@ export function LocalizedHomePage({
   topics: TrustedPublicFeedTopic[];
   isAuthenticated: boolean;
   state: PublicHomeFeedState;
+  jsonLd?: Record<string, unknown> | null;
 }) {
   return (
-    <PublicHomeFeed
-      locale={locale}
-      copy={content.feed}
-      feed={feed}
-      request={request}
-      topics={topics}
-      isAuthenticated={isAuthenticated}
-      state={state}
-    />
+    <>
+      <PublicSurfaceJsonLd value={jsonLd} />
+      <PublicHomeFeed
+        locale={locale}
+        copy={content.feed}
+        feed={feed}
+        request={request}
+        topics={topics}
+        isAuthenticated={isAuthenticated}
+        state={state}
+      />
+    </>
   );
 }
 
@@ -106,17 +111,20 @@ export function LocalizedBlogIndexPage({
   content,
   posts,
   availableLocales,
+  jsonLd,
 }: {
   locale: PublicLocale;
   content: LocalizedBlogIndexContent;
   posts: BlogPostContent[];
   availableLocales: readonly PublicLocale[];
+  jsonLd?: Record<string, unknown> | null;
 }) {
   return (
     <main
       lang={locale}
       className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
     >
+      <PublicSurfaceJsonLd value={jsonLd} />
       <header className="flex flex-col gap-5 border-b border-border pb-8">
         <PublicLocalizedHeader
           locale={locale}
@@ -189,17 +197,20 @@ export function LocalizedBlogPostPage({
   post,
   chrome,
   availableLocales,
+  jsonLd,
 }: {
   locale: PublicLocale;
   post: BlogPostContent;
   chrome: LocalizedRouteChrome;
   availableLocales: readonly PublicLocale[];
+  jsonLd?: Record<string, unknown> | null;
 }) {
   return (
     <main
       lang={locale}
       className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
     >
+      <PublicSurfaceJsonLd value={jsonLd} />
       <header className="flex flex-col gap-5 border-b border-border pb-8">
         <PublicLocalizedHeader
           locale={locale}
@@ -254,6 +265,7 @@ export function LocalizedGuidePage({
   evidence = emptyKnowledgeEvidence(locale),
   evidenceState = "empty",
   visualCorpus = false,
+  jsonLd,
 }: {
   locale: PublicLocale;
   guide: GuideContent;
@@ -263,6 +275,7 @@ export function LocalizedGuidePage({
   evidence?: PublicKnowledgeEvidence;
   evidenceState?: PublicKnowledgeEvidenceState;
   visualCorpus?: boolean;
+  jsonLd?: Record<string, unknown> | null;
 }) {
   const contextModules = knowledgeDetailContextModules(knowledgeCopy, evidence);
 
@@ -272,6 +285,7 @@ export function LocalizedGuidePage({
       data-trust-state="editorial"
       className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
     >
+      <PublicSurfaceJsonLd value={jsonLd} />
       <SiteShellContextRailRegistration modules={contextModules} />
       <header className="flex flex-col gap-5 border-b border-border pb-8">
         <PublicLocalizedHeader
@@ -369,6 +383,7 @@ export function LocalizedAnswerPage({
   evidence = emptyKnowledgeEvidence(locale),
   evidenceState = "empty",
   visualCorpus = false,
+  jsonLd,
 }: {
   locale: PublicLocale;
   page: AnswerPageContent;
@@ -378,8 +393,8 @@ export function LocalizedAnswerPage({
   evidence?: PublicKnowledgeEvidence;
   evidenceState?: PublicKnowledgeEvidenceState;
   visualCorpus?: boolean;
+  jsonLd?: Record<string, unknown> | null;
 }) {
-  const jsonLd = buildAnswerPageJsonLd(page, locale);
   const contextModules = knowledgeDetailContextModules(knowledgeCopy, evidence);
 
   return (
@@ -389,10 +404,7 @@ export function LocalizedAnswerPage({
       className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
     >
       <SiteShellContextRailRegistration modules={contextModules} />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <PublicSurfaceJsonLd value={jsonLd} />
       <header className="flex flex-col gap-5 border-b border-border pb-8">
         <PublicLocalizedHeader
           locale={locale}
@@ -488,6 +500,21 @@ export function LocalizedAnswerPage({
   );
 }
 
+function PublicSurfaceJsonLd({
+  value,
+}: {
+  value: Record<string, unknown> | null | undefined;
+}) {
+  const serialized = serializePublicSurfaceJsonLd(value ?? null);
+  if (!serialized) return null;
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: serialized }}
+    />
+  );
+}
+
 function EditorialMeta({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1">
@@ -552,17 +579,20 @@ export function LocalizedMarketLandingPage({
   landing,
   chrome,
   availableLocales,
+  jsonLd,
 }: {
   locale: PublicLocale;
   landing: MarketLandingContent;
   chrome: LocalizedRouteChrome;
   availableLocales: readonly PublicLocale[];
+  jsonLd?: Record<string, unknown> | null;
 }) {
   return (
     <main
       lang={locale}
       className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
     >
+      <PublicSurfaceJsonLd value={jsonLd} />
       <header className="flex flex-col gap-5 border-b border-border pb-8">
         <PublicLocalizedHeader
           locale={locale}

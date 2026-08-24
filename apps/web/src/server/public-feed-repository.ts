@@ -11,6 +11,10 @@ import {
 } from "@/lib/garden/public-paths";
 import { isCoarseRegionCode } from "@/lib/garden/regions";
 import type { PublicLocale } from "@/lib/public-localization";
+import {
+  searchProjectionQuality,
+  type PublicProjectionQualityClass,
+} from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { localizeCuratedTopicLabel } from "@/lib/launch-corpus/topic-labels";
@@ -78,6 +82,7 @@ export interface PublicFeedEntry {
   } | null;
   media: PublicFeedMedia[];
   topics: PublicFeedTopic[];
+  qualityClass?: PublicProjectionQualityClass;
 }
 
 export interface PublicFeedPage {
@@ -512,6 +517,9 @@ export function serializePublicFeedPage(input: {
 
   const entries = visibleRows.map((row): PublicFeedEntry => {
     const kind = normalizeObjectKind(row.objectKind);
+    const coarseRegionUnavailable =
+      row.objectLocationVisibility === "region" &&
+      !isCoarseRegionCode(row.objectCoarseRegionCode);
 
     return {
       id: row.entryId,
@@ -519,7 +527,10 @@ export function serializePublicFeedPage(input: {
       excerpt: buildPublicFeedExcerpt(row.body),
       entryDate: row.entryDate,
       publishedAt: row.publishedAt,
-      publicPath: localizedPublicJournalEvidencePath(input.locale, row.publicSlug),
+      publicPath: localizedPublicJournalEvidencePath(
+        input.locale,
+        row.publicSlug,
+      ),
       object: {
         id: row.objectId,
         displayName: row.objectDisplayName,
@@ -551,12 +562,11 @@ export function serializePublicFeedPage(input: {
         })),
       topics: (topicsByEntry[row.entryId] ?? []).map((topic) => ({
         slug: topic.slug,
-        label: localizeCuratedTopicLabel(
-          topic.slug,
-          topic.label,
-          input.locale,
-        ),
+        label: localizeCuratedTopicLabel(topic.slug, topic.label, input.locale),
       })),
+      qualityClass: searchProjectionQuality(
+        coarseRegionUnavailable ? ["coarse_region_unavailable"] : [],
+      ).qualityClass,
     };
   });
 
@@ -586,11 +596,7 @@ function firstValue(value: string | string[] | undefined) {
 }
 
 function isPublicFeedKind(value: string | undefined): value is PublicFeedKind {
-  return (
-    value === "all" ||
-    value === "plant" ||
-    value === "animal"
-  );
+  return value === "all" || value === "plant" || value === "animal";
 }
 
 function normalizeObjectKind(value: string): PlantObjectKind {

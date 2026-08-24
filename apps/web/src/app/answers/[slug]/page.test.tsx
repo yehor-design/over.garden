@@ -100,7 +100,7 @@ describe("/answers/[slug]", () => {
     expect(html).toContain("Синтетический материал OVE-177");
     expect(html).toContain("Не является экспертной рекомендацией");
     expect(html).toContain("8 публичных записей");
-    expect(html).toContain('"@type":"FAQPage"');
+    expect(html).not.toContain('"@type":"FAQPage"');
     await expect(
       generateMetadata({ params, searchParams }),
     ).resolves.toMatchObject({

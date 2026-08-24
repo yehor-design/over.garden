@@ -345,12 +345,11 @@ describe("OVE-40 privacy invariant sweep — public variety JSON-LD", () => {
     if (!jsonLd) return;
 
     expectPublicPayloadIsClean("variety JSON-LD", jsonLd);
-    expect(jsonLd.hasPart).toHaveLength(1);
-    expect(jsonLd.hasPart[0]).toMatchObject({
-      headline: JOURNEY.safeTitle,
-      datePublished: "2026-06-25",
-      url: `https://over.garden/journal/${JOURNEY.publicSlug}`,
-    });
+    const graph = jsonLd["@graph"] as Array<Record<string, unknown>>;
+    const collection = graph.find((node) => node["@type"] === "CollectionPage");
+    expect(collection?.hasPart).toEqual([
+      { "@type": "Thing", name: JOURNEY.safeTitle },
+    ]);
     expect(JSON.stringify(jsonLd)).not.toContain(JOURNEY.safeBody);
   });
 
@@ -359,6 +358,12 @@ describe("OVE-40 privacy invariant sweep — public variety JSON-LD", () => {
       buildPublicVarietyJsonLd(
         publicVarietyPage({ entryCount: 1, aggregateBodyLength: 50 }),
       ),
+    ).toBeNull();
+  });
+
+  it("refuses coordinate-bearing visible variety evidence", () => {
+    expect(
+      buildPublicVarietyJsonLd(publicVarietyPage({ poisonVisibleText: true })),
     ).toBeNull();
   });
 });

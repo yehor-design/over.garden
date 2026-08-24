@@ -58,15 +58,7 @@ describe("/knowledge", () => {
       generateMetadata({ params: Promise.resolve({ locale: "bg" }) }),
     ).resolves.toMatchObject({
       title: "Знания | OverGarden",
-      alternates: {
-        canonical: "/bg/knowledge",
-        languages: {
-          uk: "/knowledge",
-          bg: "/bg/knowledge",
-          ru: "/ru/knowledge",
-        },
-      },
-      robots: { index: true, follow: true },
+      robots: { index: false, follow: false },
     });
   });
 

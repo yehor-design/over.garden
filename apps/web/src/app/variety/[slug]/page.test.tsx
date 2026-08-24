@@ -3,19 +3,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getPublicVarietyPage: vi.fn(),
-  buildPublicVarietyJsonLd: vi.fn(),
   getEngagementSummary: vi.fn(),
   addCatalogPublicSlugToWishlistAction: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   getSiteShellSessionState: vi.fn(),
 }));
 
-vi.mock("@/server/public-variety-repository", () => ({
+vi.mock("@/server/public-variety-repository", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/server/public-variety-repository")
+  >()),
   getPublicVarietyPage: mocks.getPublicVarietyPage,
-}));
-
-vi.mock("@/server/public-variety-metadata", () => ({
-  buildPublicVarietyJsonLd: mocks.buildPublicVarietyJsonLd,
 }));
 
 vi.mock("@/server/engagement-repository", () => ({
@@ -43,7 +41,6 @@ describe("/variety/[slug]", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    mocks.buildPublicVarietyJsonLd.mockReturnValue(null);
     mocks.getEngagementSummary.mockResolvedValue({
       target: {
         kind: "variety",
@@ -64,6 +61,8 @@ describe("/variety/[slug]", () => {
       entryCount: 1,
       photoCount: 0,
       aggregateBodyLength: 200,
+      qualityClass: "verified",
+      latestMeaningfulAt: "2026-06-20T10:00:00.000Z",
       indexState: {
         value: "noindex",
         isIndexable: false,

@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getPublicVarietyPage: vi.fn(),
-  buildPublicVarietyJsonLd: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   getSiteShellSessionState: vi.fn(),
   notFound: vi.fn(() => {
@@ -12,11 +11,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
-vi.mock("@/server/public-variety-repository", () => ({
+vi.mock("@/server/public-variety-repository", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/server/public-variety-repository")
+  >()),
   getPublicVarietyPage: mocks.getPublicVarietyPage,
-}));
-vi.mock("@/server/public-variety-metadata", () => ({
-  buildPublicVarietyJsonLd: mocks.buildPublicVarietyJsonLd,
 }));
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
@@ -38,7 +37,6 @@ describe("species and breed catalog evidence routes", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    mocks.buildPublicVarietyJsonLd.mockReturnValue(null);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.getSiteShellSessionState.mockResolvedValue({
       isAuthenticated: false,
@@ -112,6 +110,8 @@ function page(kind: "species" | "breed", slug: string) {
     entryCount: 1,
     photoCount: 0,
     aggregateBodyLength: 200,
+    qualityClass: "verified",
+    latestMeaningfulAt: "2026-07-10T10:00:00.000Z",
     indexState: {
       value: "noindex",
       isIndexable: false,
@@ -126,7 +126,10 @@ function page(kind: "species" | "breed", slug: string) {
       {
         id: "entry-1",
         title: "Public evidence",
-        body: "Public journal evidence.",
+        body: Array.from(
+          { length: 120 },
+          (_, index) => `evidence${index}`,
+        ).join(" "),
         entryDate: "2026-07-10",
         publicPath: "/journal/public-evidence",
         plantObjectDisplayName: "Living object",

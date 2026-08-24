@@ -78,17 +78,9 @@ describe("/objects", () => {
     expect(html).toContain('lang="bg"');
     expect(html).toContain("Живи обекти");
     expect(metadata).toMatchObject({
-      alternates: {
-        canonical: "/bg/objects",
-        languages: {
-          uk: "/objects",
-          bg: "/bg/objects",
-          ru: "/ru/objects",
-          "x-default": "/objects",
-        },
-      },
       robots: { index: false, follow: false },
     });
+    expect(metadata.alternates).toBeUndefined();
   });
 
   it("renders a recoverable error without redirecting a guest to auth", async () => {

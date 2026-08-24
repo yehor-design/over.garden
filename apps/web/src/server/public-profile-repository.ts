@@ -23,6 +23,7 @@ import {
   DEFAULT_PUBLIC_LOCALE,
   type PublicLocale,
 } from "@/lib/public-localization";
+import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
   evaluatePublicIdentity,
@@ -155,6 +156,7 @@ export interface PublicProfileEvidencePage {
   journals: PublicProfileJournalEvidence[];
   hasMoreObjects: boolean;
   hasMoreJournals: boolean;
+  qualityClass?: PublicProjectionQualityClass;
 }
 
 export interface PublicHandleMentionTarget {
@@ -777,6 +779,11 @@ export function serializePublicProfileEvidencePage(input: {
     journals,
     hasMoreObjects: publicObjectCount > objects.length,
     hasMoreJournals: publicEntryCount > journals.length,
+    qualityClass:
+      input.profile.locationVisibility === "region" &&
+      !normalizeCoarseRegionCode(input.profile.coarseRegionCode)
+        ? "partial"
+        : "verified",
   };
 }
 
@@ -1387,9 +1394,7 @@ function normalizeCatalogKind(value: string | null): CatalogKind | null {
 function normalizePlantObjectKind(
   value: string | null,
 ): PlantObjectKind | null {
-  return value === "plant" || value === "animal"
-    ? value
-    : null;
+  return value === "plant" || value === "animal" ? value : null;
 }
 
 function normalizeProfileLanguages(values: readonly string[]) {

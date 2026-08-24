@@ -29,6 +29,7 @@ import type {
   PublicObjectCatalogPage,
   PublicObjectCatalogRequest,
 } from "@/server/public-object-catalog-repository";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { PublicObjectCatalogSearch } from "./public-object-catalog-search";
 
 export type PublicObjectCatalogState = "ready" | "empty" | "loading" | "error";
@@ -38,17 +39,20 @@ export function PublicObjectCatalog({
   copy,
   page,
   state,
+  jsonLd,
 }: {
   locale: PublicLocale;
   copy: PublicObjectCatalogCopy;
   page: PublicObjectCatalogPage;
   state: PublicObjectCatalogState;
+  jsonLd?: Record<string, unknown> | null;
 }) {
   const contextModules = buildPublicObjectCatalogContextModules(
     locale,
     copy,
     page,
   );
+  const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
 
   return (
     <main
@@ -57,6 +61,12 @@ export function PublicObjectCatalog({
       data-public-object-catalog-state={state}
       className="mx-auto flex w-full max-w-5xl flex-col px-4 py-4 sm:px-6 sm:py-5"
     >
+      {serializedJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
+        />
+      ) : null}
       <SiteShellContextRailRegistration modules={contextModules} />
 
       <header className="grid gap-2 border-b border-border pb-4">

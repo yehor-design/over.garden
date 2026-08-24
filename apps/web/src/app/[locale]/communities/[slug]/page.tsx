@@ -6,20 +6,33 @@ import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
 } from "@/lib/auth/auth-intent-contract";
-import { getCommunityCopy } from "@/lib/community-copy";
 import {
-  buildLanguageAlternates,
+  getCommunityContentCopy,
+  getCommunityCopy,
+} from "@/lib/community-copy";
+import {
   isPublicLocale,
   localizedPath,
+  type PublicLocale,
 } from "@/lib/public-localization";
 import { resolveVisualCommunityScenario } from "@/lib/visual-fixtures/community-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import {
   getPublicCommunityPage,
   type CommunityObjectKind,
+  type PublicCommunityPageModel,
 } from "@/server/community-repository";
 import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  latestMeaningfulContentTimestamp,
+  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+  resolvePublicSurfaceDiscoveryForRequest,
+  resolvePublicSurfaceDiscoveryWithDeadline,
+  resolveUnresolvedPublicSurfaceDiscovery,
+  type PublicSurfaceDiscoveryResult,
+  type PublicSurfaceDiscoverySource,
+} from "@/server/public-surface-discovery";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
 
 export const dynamic = "force-dynamic";
@@ -33,24 +46,31 @@ const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: CommunityDetailRouteProps): Promise<Metadata> {
   const { locale: localeParam, slug } = await params;
-  const locale = isPublicLocale(localeParam) ? localeParam : "uk";
-  const copy = getCommunityCopy(locale);
-  const indexState = evaluatePublicSurfaceIndexability({ kind: "community" });
-  const safeSlug = normalizeCommunitySlug(slug) ?? "unavailable";
-  const basePath = `/communities/${safeSlug}`;
-
-  return {
-    title: `${copy.name} | OverGarden`,
-    description: copy.description,
-    alternates: {
-      canonical: localizedPath(locale, basePath),
-      languages: buildLanguageAlternates(basePath),
+  const safeSlug = normalizeCommunitySlug(slug);
+  if (!isPublicLocale(localeParam) || !safeSlug) {
+    return missingCommunityMetadata();
+  }
+  const visualScenario = resolveVisualCommunityScenario(
+    (await searchParams)?.visualCommunity,
+  );
+  const discovery = await resolvePublicSurfaceDiscoveryWithDeadline({
+    consumerId: "localized_community",
+    evaluatedAt: new Date(),
+    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+    loadSource: async () => {
+      const community = await getPublicCommunityPage(safeSlug, localeParam);
+      if (!community) throw new Error("Public community unavailable.");
+      return buildCommunityDiscoverySource(
+        localeParam,
+        community,
+        Boolean(visualScenario),
+      );
     },
-    robots: indexState.robots,
-    openGraph: { locale },
-  };
+  });
+  return buildCommunitySurface(localeParam, safeSlug, null, discovery).metadata;
 }
 
 export default async function CommunityDetailRoute({
@@ -95,6 +115,19 @@ export default async function CommunityDetailRoute({
     cursor,
   });
   if (!community) return notFound();
+  const discovery = resolvePublicSurfaceDiscoveryForRequest(
+    buildCommunityDiscoverySource(
+      localeParam,
+      community,
+      Boolean(visualScenario),
+    ),
+  );
+  const surface = buildCommunitySurface(
+    localeParam,
+    slug,
+    community,
+    discovery,
+  );
 
   return (
     <PublicCommunityView
@@ -113,8 +146,84 @@ export default async function CommunityDetailRoute({
       visualScenarioId={visualScenario?.id}
       resumeAction={normalizeAuthIntentResumeAction(queryParams.authIntent)}
       resumeControl={normalizeAuthIntentResumeControl(queryParams.authControl)}
+      jsonLd={surface.jsonLd}
     />
   );
+}
+
+function missingCommunityMetadata(): Metadata {
+  return {
+    title: "OverGarden",
+    robots: resolveUnresolvedPublicSurfaceDiscovery("localized_community")
+      .decision.robots,
+  };
+}
+
+function buildCommunityDiscoverySource(
+  locale: PublicLocale,
+  community: PublicCommunityPageModel,
+  isVisualFixture: boolean,
+): PublicSurfaceDiscoverySource {
+  const copy = getCommunityContentCopy(locale, community.contentKey);
+  const contributions = community.contributions?.items ?? [];
+  const activeCandidate =
+    community.lifecycleState === "active" &&
+    community.participationState === "open" &&
+    community.navigationReady &&
+    !isVisualFixture;
+  return {
+    consumerId: "localized_community",
+    candidateState: activeCandidate ? "candidate" : "not_public_candidate",
+    qualityClass: community.qualityClass ?? "unverified",
+    visibleText: [
+      copy.name,
+      copy.description,
+      ...contributions.flatMap((item) => [
+        item.title,
+        item.excerpt,
+        item.object.displayName,
+      ]),
+    ],
+    distinctPublicEntityIds: [
+      community.id,
+      ...contributions.flatMap((item) => [item.id, item.object.id]),
+    ],
+    meaningfulContentAt: latestMeaningfulContentTimestamp([
+      community.updatedAt,
+      ...contributions.map((item) => item.publishedAt),
+    ]),
+    canonicalPath: localizedPath(locale, `/communities/${community.slug}`),
+    equivalentLocales: [locale],
+  };
+}
+
+function buildCommunitySurface(
+  locale: PublicLocale,
+  slug: string,
+  community: PublicCommunityPageModel | null,
+  discovery: PublicSurfaceDiscoveryResult,
+) {
+  const content = community
+    ? getCommunityContentCopy(locale, community.contentKey)
+    : getCommunityCopy(locale);
+  const name = content.name;
+  const description = content.description;
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    contentLocale: community ? null : locale,
+    title: `${name} | OverGarden`,
+    description,
+    visibleFacts: {
+      type: "CollectionPage",
+      name,
+      description,
+      itemNames: community?.contributions?.items.map((item) => item.title),
+      trustQualifier: community
+        ? "Moderated public OverGarden community"
+        : `Community ${slug}`,
+    },
+  });
 }
 
 function firstValue(value: string | string[] | undefined) {
@@ -122,9 +231,7 @@ function firstValue(value: string | string[] | undefined) {
 }
 
 function normalizeKind(value: string): CommunityObjectKind {
-  return value === "plant" || value === "animal"
-    ? value
-    : "all";
+  return value === "plant" || value === "animal" ? value : "all";
 }
 
 function normalizeCommunitySlug(value: string) {

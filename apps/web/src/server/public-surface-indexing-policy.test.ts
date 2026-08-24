@@ -4,210 +4,142 @@ import {
   evaluateNonDiscoveryRouteIndexability,
   evaluatePublicSurfaceIndexability,
   formatRobotsMetaContent,
-  listStaticIndexablePublicSurfaces,
-  PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD,
+  PUBLIC_SURFACE_INDEXABILITY_THRESHOLD,
+  type PublicSurfaceCandidateInput,
 } from "./public-surface-indexing-policy";
 
+const EVALUATED_AT = "2026-08-24T00:00:00.000Z";
+
+function candidate(
+  overrides: Partial<PublicSurfaceCandidateInput> = {},
+): PublicSurfaceCandidateInput {
+  return {
+    candidateState: "candidate",
+    qualityClass: "partial",
+    visibleWordCount: 120,
+    distinctPublicEntityIds: ["plant-1", "plant-1"],
+    meaningfulContentAt: "2025-03-02T00:00:00.000Z",
+    canonicalPath: "/journal/season-note",
+    equivalentLocales: ["uk"],
+    surfaceKind: "journal_entry",
+    ...overrides,
+  };
+}
+
 describe("public surface indexing policy", () => {
-  it("allows authored useful landing and SEO/AEO surfaces to be indexed", () => {
-    expect(
-      evaluatePublicSurfaceIndexability({ kind: "marketing_landing" }),
-    ).toMatchObject({
+  it("admits a candidate exactly on every inclusive threshold boundary", () => {
+    const state = evaluatePublicSurfaceIndexability(candidate(), {
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(PUBLIC_SURFACE_INDEXABILITY_THRESHOLD).toEqual({
+      minimumQualityClass: "partial",
+      minimumWordCount: 120,
+      minimumDistinctEntities: 1,
+      maximumStalenessDays: 540,
+    });
+    expect(state).toMatchObject({
       value: "indexable",
       isIndexable: true,
       sitemapEligible: true,
       robots: { index: true, follow: true },
-      reasons: ["authored_useful_surface"],
+      reasons: [],
     });
-
-    expect(
-      evaluatePublicSurfaceIndexability({ kind: "guide" }).isIndexable,
-    ).toBe(true);
-    expect(
-      evaluatePublicSurfaceIndexability({ kind: "knowledge_hub" }).isIndexable,
-    ).toBe(true);
-    expect(
-      evaluatePublicSurfaceIndexability({ kind: "aeo_answer" }).isIndexable,
-    ).toBe(true);
+    expect(formatRobotsMetaContent(state)).toBe("index, follow");
   });
 
-  it("keeps the read-first public UGC feed out of indexing and sitemaps", () => {
-    expect(
-      evaluatePublicSurfaceIndexability({ kind: "public_feed" }),
-    ).toMatchObject({
+  it("returns every failed measured member in deterministic order", () => {
+    const state = evaluatePublicSurfaceIndexability(
+      candidate({
+        qualityClass: "unverified",
+        visibleWordCount: 119,
+        distinctPublicEntityIds: [],
+        meaningfulContentAt: "2025-03-01T00:00:00.000Z",
+      }),
+      { evaluatedAt: EVALUATED_AT },
+    );
+
+    expect(state).toMatchObject({
       value: "noindex",
       isIndexable: false,
       sitemapEligible: false,
       robots: { index: false, follow: false },
-      reasons: ["public_feed_noindex"],
+      reasons: [
+        "quality_class_below_threshold",
+        "word_count_below_threshold",
+        "distinct_entity_count_below_threshold",
+        "surface_stale",
+      ],
     });
   });
 
-  it("keeps public catalog browse out of indexing while deep evidence uses its own quality gate", () => {
-    expect(
-      evaluatePublicSurfaceIndexability({ kind: "catalog_browse" }),
-    ).toMatchObject({
-      value: "noindex",
-      sitemapEligible: false,
-      robots: { index: false, follow: false },
-      reasons: ["catalog_browse_noindex"],
-    });
-  });
-
-  it("keeps public journal entries noindex until the entry is explicitly promoted", () => {
-    const noindex = evaluatePublicSurfaceIndexability({
-      kind: "journal_entry",
-      publicNoindex: true,
-    });
-    const indexable = evaluatePublicSurfaceIndexability({
-      kind: "journal_entry",
-      publicNoindex: false,
-    });
-
-    expect(noindex).toMatchObject({
-      value: "noindex",
-      sitemapEligible: false,
-      robots: { index: false, follow: false },
-      reasons: ["journal_marked_noindex"],
-    });
-    expect(formatRobotsMetaContent(noindex)).toBe("noindex, nofollow");
-    expect(indexable).toMatchObject({
-      value: "indexable",
-      sitemapEligible: true,
-      robots: { index: true, follow: true },
-    });
-  });
-
-  it("requires public aggregation pages to pass all content quality thresholds", () => {
-    const entryThin = evaluatePublicSurfaceIndexability({
-      kind: "variety_aggregation",
-      entryCount:
-        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount - 1,
-      aggregateBodyLength:
-        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
-      catalogStatus: "seeded",
-      catalogSource: "ua_state_register",
-    });
-    const bodyThin = evaluatePublicSurfaceIndexability({
-      kind: "topic_aggregation",
-      entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
-      aggregateBodyLength:
-        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength - 1,
-      topicTrust: "curated",
-    });
-    const indexable = evaluatePublicSurfaceIndexability({
-      kind: "variety_aggregation",
-      entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
-      aggregateBodyLength:
-        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
-      catalogStatus: "seeded",
-      catalogSource: "ua_state_register",
-    });
-
-    expect(entryThin.value).toBe("noindex");
-    expect(entryThin.reasons).toContain("entry_count_below_threshold");
-    expect(bodyThin.value).toBe("noindex");
-    expect(bodyThin.reasons).toContain("body_length_below_threshold");
-    expect(indexable).toMatchObject({
-      value: "indexable",
-      sitemapEligible: true,
-      reasons: [],
-    });
-  });
-
-  it("requires aggregation source and topic trust before promotion", () => {
-    const unsafeCatalog = evaluatePublicSurfaceIndexability({
-      kind: "variety_aggregation",
-      entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
-      aggregateBodyLength:
-        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
-      catalogStatus: "seeded",
-      catalogSource: "internal_seed",
-    });
-    const curatedCatalog = evaluatePublicSurfaceIndexability({
-      kind: "variety_aggregation",
-      entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
-      aggregateBodyLength:
-        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
-      catalogStatus: "confirmed",
-      catalogSource: "user_added",
-    });
-    const untrustedTopic = evaluatePublicSurfaceIndexability({
-      kind: "topic_aggregation",
-      entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
-      aggregateBodyLength:
-        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
-      topicTrust: "untrusted",
-    });
-
-    expect(unsafeCatalog).toMatchObject({
-      value: "noindex",
-      sitemapEligible: false,
-      reasons: ["catalog_trust_below_threshold"],
-    });
-    expect(curatedCatalog.value).toBe("indexable");
-    expect(untrustedTopic).toMatchObject({
-      value: "noindex",
-      sitemapEligible: false,
-      reasons: ["topic_trust_below_threshold"],
-    });
-  });
-
-  it("keeps localized UGC topic projections noindex without pretending the evidence was translated", () => {
-    const state = evaluatePublicSurfaceIndexability({
-      kind: "topic_aggregation",
-      entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
-      aggregateBodyLength:
-        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
-      topicTrust: "curated",
-      canonicalLocale: false,
-    });
-
-    expect(state).toMatchObject({
-      value: "noindex",
-      sitemapEligible: false,
-      reasons: ["localized_ugc_projection_noindex"],
-    });
-  });
-
-  it("keeps object passport, profile, community, lineage graph, and missing public surfaces out of the index and sitemap", () => {
-    for (const kind of [
-      "object_passport",
-      "profile",
-      "community",
-      "lineage_graph",
-      "missing",
-    ] as const) {
-      expect(evaluatePublicSurfaceIndexability({ kind })).toMatchObject({
+  it("treats invalid or missing measured input as one unresolved refusal", () => {
+    for (const input of [
+      candidate({ meaningfulContentAt: null }),
+      candidate({ meaningfulContentAt: "not-a-date" }),
+      candidate({ qualityClass: null }),
+      candidate({ visibleWordCount: Number.NaN }),
+      candidate({ canonicalPath: "" }),
+      candidate({ equivalentLocales: null }),
+    ]) {
+      expect(
+        evaluatePublicSurfaceIndexability(input, {
+          evaluatedAt: EVALUATED_AT,
+        }),
+      ).toMatchObject({
         value: "noindex",
-        isIndexable: false,
-        sitemapEligible: false,
-        robots: { index: false, follow: false },
+        reasons: ["candidate_input_unresolved"],
       });
     }
   });
 
-  it("keeps private workspace, auth, and operator routes out of organic discovery", () => {
-    expect(evaluateNonDiscoveryRouteIndexability("workspace")).toMatchObject({
+  it("keeps lifecycle refusals outside the measured threshold", () => {
+    expect(
+      evaluatePublicSurfaceIndexability(
+        candidate({
+          candidateState: "not_public_candidate",
+          qualityClass: null,
+          visibleWordCount: null,
+          distinctPublicEntityIds: null,
+          meaningfulContentAt: null,
+          canonicalPath: null,
+          equivalentLocales: null,
+        }),
+        { evaluatedAt: EVALUATED_AT },
+      ),
+    ).toMatchObject({
       value: "noindex",
-      isIndexable: false,
-      sitemapEligible: false,
-      robots: { index: false, follow: false },
-      reasons: ["workspace_route_noindex"],
+      reasons: ["not_public_candidate"],
     });
-    expect(evaluateNonDiscoveryRouteIndexability("auth")).toMatchObject({
+
+    expect(
+      evaluatePublicSurfaceIndexability(
+        candidate({
+          candidateState: "candidate_input_unresolved",
+          qualityClass: null,
+          visibleWordCount: null,
+          distinctPublicEntityIds: null,
+          meaningfulContentAt: null,
+          canonicalPath: null,
+          equivalentLocales: null,
+        }),
+        { evaluatedAt: EVALUATED_AT },
+      ),
+    ).toMatchObject({
       value: "noindex",
-      robots: { index: false, follow: false },
-      reasons: ["auth_route_noindex"],
-    });
-    expect(evaluateNonDiscoveryRouteIndexability("operator")).toMatchObject({
-      value: "noindex",
-      robots: { index: false, follow: false },
-      reasons: ["operator_route_noindex"],
+      reasons: ["candidate_input_unresolved"],
     });
   });
 
-  it("lists only static authored surfaces that the same policy marks sitemap-eligible", () => {
-    expect(listStaticIndexablePublicSurfaces()).toEqual([]);
+  it("preserves explicit non-discovery route controls", () => {
+    expect(evaluateNonDiscoveryRouteIndexability("workspace").reasons).toEqual([
+      "workspace_route_noindex",
+    ]);
+    expect(evaluateNonDiscoveryRouteIndexability("auth").reasons).toEqual([
+      "auth_route_noindex",
+    ]);
+    expect(evaluateNonDiscoveryRouteIndexability("operator").reasons).toEqual([
+      "operator_route_noindex",
+    ]);
   });
 });

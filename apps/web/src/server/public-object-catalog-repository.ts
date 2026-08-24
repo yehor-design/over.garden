@@ -16,6 +16,7 @@ import {
   publicLineageObjectPath,
 } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
+import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { buildFirstProcessedMediaPerEntryQuery } from "@/server/public-media-repository";
 
@@ -75,6 +76,7 @@ export interface PublicObjectCatalogPage {
   totalPages: number;
   hasPreviousPage: boolean;
   hasNextPage: boolean;
+  qualityClass?: PublicProjectionQualityClass;
 }
 
 export interface PublicObjectCatalogGroupRow {
@@ -297,6 +299,7 @@ export function serializePublicObjectCatalogPage(
     hasNextPage:
       rows.length > normalizedPageSize ||
       request.page * normalizedPageSize < totalCount,
+    qualityClass: "verified",
   };
 }
 

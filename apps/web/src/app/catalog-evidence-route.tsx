@@ -28,9 +28,17 @@ import {
 } from "@/lib/public-surface-localization";
 import { getEngagementSummary } from "@/server/engagement-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
-import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
-import { getPublicVarietyPage } from "@/server/public-variety-repository";
+import {
+  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+  resolvePublicSurfacePayloadWithDeadline,
+  resolveUnresolvedPublicSurfaceDiscovery,
+} from "@/server/public-surface-discovery";
+import { buildPublicVarietySurfaceMetadata } from "@/server/public-variety-metadata";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import {
+  buildPublicVarietyDiscoverySource,
+  getPublicVarietyPage,
+} from "@/server/public-variety-repository";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
 
 export interface PublicCatalogEvidenceRouteProps {
@@ -54,16 +62,28 @@ export async function generatePublicCatalogEvidenceMetadata(
     getRequestInterfaceLocale(),
   ]);
   const routeCopy = getCatalogEvidenceCopy(locale, catalogKind);
-  const page = await getCachedPublicCatalogEvidencePage(
-    slug,
-    catalogKind,
-    locale,
-  );
+  const bounded = await resolvePublicSurfacePayloadWithDeadline({
+    consumerId: "catalog_evidence",
+    evaluatedAt: new Date(),
+    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+    load: async () => {
+      const page = await getCachedPublicCatalogEvidencePage(
+        slug,
+        catalogKind,
+        locale,
+      );
+      if (!page) throw new Error("Public catalog evidence unavailable.");
+      return {
+        source: buildPublicVarietyDiscoverySource(page, "catalog_evidence"),
+        payload: page,
+      };
+    },
+  });
+  const page = bounded.payload;
 
   if (!page) {
-    const missingIndexState = evaluatePublicSurfaceIndexability({
-      kind: "missing",
-    });
+    const missingIndexState =
+      resolveUnresolvedPublicSurfaceDiscovery("catalog_evidence").decision;
 
     return {
       title: `${routeCopy.title} | OverGarden`,
@@ -71,16 +91,11 @@ export async function generatePublicCatalogEvidenceMetadata(
     };
   }
 
+  const surface = buildPublicVarietySurfaceMetadata(page, locale, bounded);
   return {
+    ...surface.metadata,
     title: `${page.catalog.canonicalName} · ${routeCopy.metadataSuffix} | OverGarden`,
     description: `${routeCopy.title}: ${page.catalog.canonicalName}.`,
-    alternates: {
-      canonical: publicCatalogEvidencePath(
-        page.catalog.catalogKind,
-        page.catalog.publicSlug,
-      ),
-    },
-    robots: page.indexState.robots,
   };
 }
 
@@ -108,7 +123,8 @@ export async function renderPublicCatalogEvidenceRoute(
     page.catalog.catalogKind,
     page.catalog.publicSlug,
   );
-  const jsonLd = buildPublicVarietyJsonLd(page, locale);
+  const surface = buildPublicVarietySurfaceMetadata(page, locale);
+  const serializedJsonLd = serializePublicSurfaceJsonLd(surface.jsonLd);
   const isPlantVariety = catalogKind === "plant_variety";
   const wishlistStatus = firstParam(query.wishlist);
   const engagementStatus = firstParam(query.engagement);
@@ -127,10 +143,10 @@ export async function renderPublicCatalogEvidenceRoute(
       lang={locale}
       className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8"
     >
-      {jsonLd ? (
+      {serializedJsonLd ? (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
         />
       ) : null}
       <header className="flex flex-col gap-5 border-b border-border pb-6">

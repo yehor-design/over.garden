@@ -20,6 +20,7 @@ import {
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
 import type { PublicLocale } from "@/lib/public-localization";
+import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import {
@@ -115,6 +116,7 @@ export interface PublicJournalDirectoryPage {
   hasNextPage: boolean;
   searchSource: "hybrid" | "bounded_fallback" | "database";
   searchFallbackReason: "timeout" | "unavailable" | "circuit_open" | null;
+  qualityClass?: PublicProjectionQualityClass;
 }
 
 export interface PublicJournalDirectorySearchScope {
@@ -216,16 +218,14 @@ export async function listPublicJournalDirectoryPage(
     ),
     searchSource: searchScope.source,
     searchFallbackReason: searchScope.reason,
+    qualityClass: searchScope.reason ? "partial" : "verified",
   };
 }
 
 export async function listPublicJournalDirectoryFacets(
   options: Pick<
     PublicJournalDirectoryListOptions,
-    | "executor"
-    | "restrictToEntryIds"
-    | "searchScope"
-    | "contentClassMode"
+    "executor" | "restrictToEntryIds" | "searchScope" | "contentClassMode"
   > = {},
 ): Promise<PublicJournalDirectoryFacets> {
   const executor = options.executor ?? db;
@@ -519,9 +519,7 @@ function seasonForDate(
 }
 
 function normalizeObjectKind(value: string | null | undefined) {
-  return value === "plant" || value === "animal"
-    ? value
-    : null;
+  return value === "plant" || value === "animal" ? value : null;
 }
 
 function normalizeCatalogKind(value: string | null | undefined) {

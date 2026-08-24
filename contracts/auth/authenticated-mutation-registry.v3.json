@@ -11653,18 +11653,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/catalog-evidence-route.tsx",
-        "src/server/public-variety-metadata.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/catalog-evidence-route.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/public-variety-metadata",
-      "sourceNodeId": "source:01b4881939a52d901ed7",
-      "symbol": "buildPublicVarietyJsonLd"
-    },
-    {
-      "evidencePaths": [
         "src/lib/privacy/disclosures.ts",
         "src/server/erasure-execution.ts"
       ],
@@ -11879,6 +11867,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/catalog-evidence-route.tsx",
+        "src/lib/public-surface-json-ld.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/catalog-evidence-route.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-surface-json-ld",
+      "sourceNodeId": "source:0372410226a9f6e29af0",
+      "symbol": "serializePublicSurfaceJsonLd"
+    },
+    {
+      "evidencePaths": [
         "src/lib/storage.ts",
         "src/server/public-profile-repository.ts"
       ],
@@ -11888,6 +11888,18 @@
       "semanticVariant": "from:@/lib/storage",
       "sourceNodeId": "source:0380a97210a8bffb823c",
       "symbol": "getPublicDerivativeUrl"
+    },
+    {
+      "evidencePaths": [
+        "src/app/lineage/objects/[objectId]/page.tsx",
+        "src/server/public-surface-discovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/lineage/objects/[objectId]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-surface-discovery",
+      "sourceNodeId": "source:03879200ddcb5c3540d6",
+      "symbol": "latestMeaningfulContentTimestamp"
     },
     {
       "evidencePaths": [
@@ -12018,6 +12030,18 @@
       "semanticVariant": "updatePlantObjectLocationAction:authenticated_user",
       "sourceNodeId": "source:04891c401a9597e3d6ce",
       "symbol": "updatePlantObjectLocationAction"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/public-projection-quality.ts",
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-projection-quality",
+      "sourceNodeId": "source:04a3df388edd682a9328",
+      "symbol": "PublicProjectionQualityClass"
     },
     {
       "evidencePaths": [
@@ -12544,6 +12568,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/public/public-journal-directory.tsx",
+        "src/lib/public-surface-json-ld.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-journal-directory.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-surface-json-ld",
+      "sourceNodeId": "source:08f0ff29ddde37008302",
+      "symbol": "serializePublicSurfaceJsonLd"
+    },
+    {
+      "evidencePaths": [
         "sql/0005_ove202_ove207_journal_document_cover.sql"
       ],
       "nodeKind": "sql_trigger",
@@ -12681,17 +12717,6 @@
       "semanticVariant": "canonical-row",
       "sourceNodeId": "source:0b0a4dbe01d267505f70",
       "symbol": "claimNextLearningAttributionOutboxRow"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_60716",
-      "sourceNodeId": "source:0b1e668386f0d3b6e78b",
-      "symbol": "createPlantObjectJournalEntry"
     },
     {
       "evidencePaths": [
@@ -13436,6 +13461,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_24671",
+      "sourceNodeId": "source:13c71f63a042a4f8653f",
+      "symbol": "moderateCommunityMembership"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/profile/actions.ts",
         "src/server/document-mutation-admission.ts"
       ],
@@ -13795,6 +13831,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_19451",
+      "sourceNodeId": "source:16e3322224f82adf64d3",
+      "symbol": "reportCommunityContribution"
+    },
+    {
+      "evidencePaths": [
         "src/app/auth/intent/resume/route.ts",
         "src/server/auth-intent-token.ts"
       ],
@@ -13862,6 +13909,18 @@
       "semanticVariant": "from:@/lib/owner-object-copy",
       "sourceNodeId": "source:17a6639e35c4398fb52a",
       "symbol": "OwnerObjectCopy"
+    },
+    {
+      "evidencePaths": [
+        "src/components/public/public-knowledge-hub.tsx",
+        "src/lib/public-surface-json-ld.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-knowledge-hub.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-surface-json-ld",
+      "sourceNodeId": "source:17b05ee5151136c40e5b",
+      "symbol": "serializePublicSurfaceJsonLd"
     },
     {
       "evidencePaths": [
@@ -15018,17 +15077,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_17737",
-      "sourceNodeId": "source:23a92e2c3e844c93230f",
-      "symbol": "contributePublicJournalToCommunity"
-    },
-    {
-      "evidencePaths": [
         "src/app/wishlist/actions.ts"
       ],
       "nodeKind": "server_action",
@@ -15858,17 +15906,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_38365",
-      "sourceNodeId": "source:2ac9cf608fcd67c06c56",
-      "symbol": "createFirstPlantEntry"
-    },
-    {
-      "evidencePaths": [
         "src/components/auth/session-convergence-boundary.tsx",
         "src/lib/garden/local-journal-composer-session.ts"
       ],
@@ -16211,6 +16248,18 @@
       "semanticVariant": "from:@/components/ui/alert-dialog",
       "sourceNodeId": "source:2e0945cd7fc3922b468e",
       "symbol": "AlertDialogClose"
+    },
+    {
+      "evidencePaths": [
+        "src/app/lineage/objects/[objectId]/page.tsx",
+        "src/server/public-surface-discovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/lineage/objects/[objectId]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-surface-discovery",
+      "sourceNodeId": "source:2e2a7e267d803d8bc63a",
+      "symbol": "resolveUnresolvedPublicSurfaceDiscovery"
     },
     {
       "evidencePaths": [
@@ -16705,18 +16754,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/lineage/objects/[objectId]/page.tsx",
-        "src/server/public-surface-indexing-policy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/lineage/objects/[objectId]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/public-surface-indexing-policy",
-      "sourceNodeId": "source:33aeee6a487dc698f000",
-      "symbol": "evaluatePublicSurfaceIndexability"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/garden-auth-panel.tsx",
         "src/lib/auth-client.ts"
       ],
@@ -16774,6 +16811,18 @@
       "semanticVariant": "from:@/lib/interface-localization",
       "sourceNodeId": "source:343dab3f6f03355332b7",
       "symbol": "InterfaceLocale"
+    },
+    {
+      "evidencePaths": [
+        "src/app/lineage/objects/[objectId]/page.tsx",
+        "src/server/public-surface-metadata.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/lineage/objects/[objectId]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-surface-metadata",
+      "sourceNodeId": "source:3461f5585bf2122d6724",
+      "symbol": "buildPublicSurfaceMetadata"
     },
     {
       "evidencePaths": [
@@ -16991,17 +17040,6 @@
       "semanticVariant": "from:@/db/generated",
       "sourceNodeId": "source:3811a1e27e550ac13d61",
       "symbol": "Json"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_76047",
-      "sourceNodeId": "source:382795c43d6b3d64fbf6",
-      "symbol": "updatePlantObjectLocation"
     },
     {
       "evidencePaths": [
@@ -18613,17 +18651,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_72509",
-      "sourceNodeId": "source:465c95288dfa562c4413",
-      "symbol": "resolvePlantObjectCatalog"
-    },
-    {
-      "evidencePaths": [
         "src/components/auth/auth-intent-focus.tsx",
         "src/components/public/public-profile.tsx"
       ],
@@ -18645,6 +18672,18 @@
       "semanticVariant": "action:createProvenanceEdgeAction",
       "sourceNodeId": "source:46861274faf4a0dc3f23",
       "symbol": "createProvenanceEdgeAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/catalog-evidence-route.tsx",
+        "src/server/public-variety-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/catalog-evidence-route.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-variety-repository",
+      "sourceNodeId": "source:4693009e00d5cfa7b6fb",
+      "symbol": "buildPublicVarietyDiscoverySource"
     },
     {
       "evidencePaths": [
@@ -18715,17 +18754,6 @@
       "semanticVariant": "canonical-row:buildJournalMutationAdvisoryLockQuery",
       "sourceNodeId": "source:472c64e90600a0ec8a8e",
       "symbol": "createPlantObjectJournalEntry"
-    },
-    {
-      "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_27556",
-      "sourceNodeId": "source:4769b27abfaed37bb680",
-      "symbol": "setCommunityParticipation"
     },
     {
       "evidencePaths": [
@@ -18978,6 +19006,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_89887",
+      "sourceNodeId": "source:4b72b834c0314d4e5588",
+      "symbol": "archiveJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/server/catalog-repository.ts",
         "src/server/variety-seed-proof-repository.ts"
       ],
@@ -19225,17 +19264,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_19043",
-      "sourceNodeId": "source:4d88b99486288e186694",
-      "symbol": "reportCommunityContribution"
-    },
-    {
-      "evidencePaths": [
         "src/lib/privacy/precise-location-text.ts",
         "src/server/journal-document-persistence.ts"
       ],
@@ -19304,6 +19332,17 @@
       "semanticVariant": "from:@/lib/auth-client",
       "sourceNodeId": "source:4df911e6e18963f047a9",
       "symbol": "authClient"
+    },
+    {
+      "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_18145",
+      "sourceNodeId": "source:4e11359f3580163cc5ee",
+      "symbol": "contributePublicJournalToCommunity"
     },
     {
       "evidencePaths": [
@@ -19699,17 +19738,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_24919",
-      "sourceNodeId": "source:52a3107a56dfdc968759",
-      "symbol": "updateAtomicJournalEntry"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/entries/[entryId]/route.ts",
         "src/lib/garden/journal-document.ts"
       ],
@@ -19959,6 +19987,18 @@
       "semanticVariant": "from:@/lib/garden/catalog-typeahead-contract",
       "sourceNodeId": "source:55213f754dd85755aac0",
       "symbol": "parseCatalogTypeaheadResponse"
+    },
+    {
+      "evidencePaths": [
+        "src/app/catalog-evidence-route.tsx",
+        "src/server/public-variety-metadata.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/catalog-evidence-route.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-variety-metadata",
+      "sourceNodeId": "source:5544427a8c3bbedc9758",
+      "symbol": "buildPublicVarietySurfaceMetadata"
     },
     {
       "evidencePaths": [
@@ -20645,18 +20685,6 @@
       "semanticVariant": "action:declineLineageInvitationClaimAction",
       "sourceNodeId": "source:5d9e2cb566bd5c35e06f",
       "symbol": "LineageInvitationClaimCard"
-    },
-    {
-      "evidencePaths": [
-        "src/app/catalog-evidence-route.tsx",
-        "src/server/public-surface-indexing-policy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/catalog-evidence-route.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/public-surface-indexing-policy",
-      "sourceNodeId": "source:5e046841b9162ebca488",
-      "symbol": "evaluatePublicSurfaceIndexability"
     },
     {
       "evidencePaths": [
@@ -21737,6 +21765,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_38497",
+      "sourceNodeId": "source:6b586c657523f7c79305",
+      "symbol": "createFirstPlantEntry"
+    },
+    {
+      "evidencePaths": [
         "src/app/catalog-evidence-route.tsx",
         "src/app/variety/[slug]/source-credits.tsx"
       ],
@@ -22399,6 +22438,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/lineage/objects/[objectId]/page.tsx",
+        "src/lib/public-surface-json-ld.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/lineage/objects/[objectId]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-surface-json-ld",
+      "sourceNodeId": "source:71afaf048d3520a4b348",
+      "symbol": "serializePublicSurfaceJsonLd"
+    },
+    {
+      "evidencePaths": [
         "src/components/auth/session-convergence-boundary.tsx",
         "src/lib/auth/browser-auth-mutation-coordinator.ts"
       ],
@@ -22627,6 +22678,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/lineage/objects/[objectId]/page.tsx",
+        "src/server/public-surface-discovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/lineage/objects/[objectId]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-surface-discovery",
+      "sourceNodeId": "source:748260f6acec1b328d34",
+      "symbol": "PublicSurfaceDiscoverySource"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/actions.ts",
         "src/server/journal-repository.ts"
       ],
@@ -22777,17 +22840,6 @@
       "semanticVariant": "canonical-row:buildJournalMutationAdvisoryLockQuery",
       "sourceNodeId": "source:75f8b6f8ae344a49bdaa",
       "symbol": "updateAtomicJournalEntry"
-    },
-    {
-      "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_25845",
-      "sourceNodeId": "source:76126da75ffbe8b88ec2",
-      "symbol": "resolveCommunityReport"
     },
     {
       "evidencePaths": [
@@ -22968,6 +23020,18 @@
       "semanticVariant": "from:@/server/request-scope",
       "sourceNodeId": "source:7816436cb312a33cf5d3",
       "symbol": "RequestScope"
+    },
+    {
+      "evidencePaths": [
+        "src/app/lineage/objects/[objectId]/page.tsx",
+        "src/server/public-surface-discovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/lineage/objects/[objectId]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-surface-discovery",
+      "sourceNodeId": "source:7822434c98d96417f495",
+      "symbol": "resolvePublicSurfacePayloadWithDeadline"
     },
     {
       "evidencePaths": [
@@ -23302,6 +23366,17 @@
       "semanticVariant": "from:@/server/lineage-repository",
       "sourceNodeId": "source:7bb77224a1bf86ff1c47",
       "symbol": "ObjectProvenancePanel"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_76179",
+      "sourceNodeId": "source:7bcf6e5d8cddbbc3a6b0",
+      "symbol": "updatePlantObjectLocation"
     },
     {
       "evidencePaths": [
@@ -23925,6 +24000,18 @@
       "semanticVariant": "from:@/lib/garden/public-paths",
       "sourceNodeId": "source:8277619efe4cc33dd6fd",
       "symbol": "gardenCatalogPreselectionPath"
+    },
+    {
+      "evidencePaths": [
+        "src/app/catalog-evidence-route.tsx",
+        "src/server/public-surface-discovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/catalog-evidence-route.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-surface-discovery",
+      "sourceNodeId": "source:8288fad45c544d5ec262",
+      "symbol": "resolveUnresolvedPublicSurfaceDiscovery"
     },
     {
       "evidencePaths": [
@@ -25313,6 +25400,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/public-projection-quality.ts",
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-projection-quality",
+      "sourceNodeId": "source:90f9fa957681d765251e",
+      "symbol": "PublicProjectionQualityClass"
+    },
+    {
+      "evidencePaths": [
         "src/app/admin/moderation/comments/actions.ts",
         "src/app/admin/moderation/comments/page.tsx"
       ],
@@ -25442,6 +25541,18 @@
       "semanticVariant": "from:@/lib/public-localization",
       "sourceNodeId": "source:91ce29846fbeeea420e4",
       "symbol": "localizedPath"
+    },
+    {
+      "evidencePaths": [
+        "src/app/lineage/objects/[objectId]/page.tsx",
+        "src/server/public-surface-discovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/lineage/objects/[objectId]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-surface-discovery",
+      "sourceNodeId": "source:91eaf5734aa175a734dc",
+      "symbol": "PublicSurfaceDiscoveryResult"
     },
     {
       "evidencePaths": [
@@ -25646,17 +25757,6 @@
       "semanticVariant": "from:@/server/lineage-repository",
       "sourceNodeId": "source:94f722da45405c91e107",
       "symbol": "normalizeLineageSourceReferenceLabel"
-    },
-    {
-      "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_22844",
-      "sourceNodeId": "source:9536128bd04a564495a6",
-      "symbol": "moderateCommunityDiscussion"
     },
     {
       "evidencePaths": [
@@ -26065,6 +26165,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_67997",
+      "sourceNodeId": "source:98a19f95cc9a5dc6a279",
+      "symbol": "createSpaceJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/app/admin/moderation/comments/actions.ts"
       ],
       "nodeKind": "server_action",
@@ -26096,6 +26207,18 @@
       "semanticVariant": "link_social_post_redirect",
       "sourceNodeId": "source:992a1a83d8ad11b40b17",
       "symbol": "POST"
+    },
+    {
+      "evidencePaths": [
+        "src/app/lineage/objects/[objectId]/page.tsx",
+        "src/server/public-surface-discovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/lineage/objects/[objectId]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-surface-discovery",
+      "sourceNodeId": "source:99598b555e7b923a3f29",
+      "symbol": "resolvePublicSurfaceDiscoveryForRequest"
     },
     {
       "evidencePaths": [
@@ -26305,6 +26428,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/public/public-community.tsx",
+        "src/lib/public-surface-json-ld.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-community.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-surface-json-ld",
+      "sourceNodeId": "source:9b139c941d15ca2e3424",
+      "symbol": "serializePublicSurfaceJsonLd"
+    },
+    {
+      "evidencePaths": [
         "src/lib/catalog/genebank-long-tail.ts",
         "src/server/catalog-source/candidate-review-repository.ts"
       ],
@@ -26350,6 +26485,17 @@
       "semanticVariant": "from:@/lib/garden/journal-cover-contract",
       "sourceNodeId": "source:9b81cc699e38a0d08f44",
       "symbol": "JournalCoverSource"
+    },
+    {
+      "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_23252",
+      "sourceNodeId": "source:9baa9c2914a20f0b9849",
+      "symbol": "moderateCommunityDiscussion"
     },
     {
       "evidencePaths": [
@@ -27051,6 +27197,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_17093",
+      "sourceNodeId": "source:a3c2fea08aaf8bf296bc",
+      "symbol": "setCommunityMembership"
+    },
+    {
+      "evidencePaths": [
         "src/lib/garden/journal-topics.ts",
         "src/server/journal-topic-repository.ts"
       ],
@@ -27202,6 +27359,17 @@
       "semanticVariant": "canonical-row:buildUpsertWishlistItemQuery",
       "sourceNodeId": "source:a555ecd00b6bf34d8b77",
       "symbol": "upsertWishlistCatalogItem"
+    },
+    {
+      "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_21801",
+      "sourceNodeId": "source:a56dc2b3503ff406007f",
+      "symbol": "moderateCommunityContribution"
     },
     {
       "evidencePaths": [
@@ -27467,6 +27635,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/catalog-evidence-route.tsx",
+        "src/server/public-surface-discovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/catalog-evidence-route.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-surface-discovery",
+      "sourceNodeId": "source:a83480b0e1e013cecbc6",
+      "symbol": "PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS"
+    },
+    {
+      "evidencePaths": [
         "src/app/admin/moderation/comments/actions.ts",
         "src/server/engagement-repository.ts"
       ],
@@ -27632,6 +27812,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_60848",
+      "sourceNodeId": "source:a9cb78473de178453e5c",
+      "symbol": "createPlantObjectJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/[profileHandle]/actions.ts",
         "src/components/public/public-profile.tsx"
       ],
@@ -27772,6 +27963,18 @@
       "semanticVariant": "POST",
       "sourceNodeId": "source:aaf13de213f9ce3cee95",
       "symbol": "POST"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/public-projection-quality.ts",
+        "src/server/public-profile-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/public-profile-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-projection-quality",
+      "sourceNodeId": "source:ab1418e5acf26dd4b153",
+      "symbol": "PublicProjectionQualityClass"
     },
     {
       "evidencePaths": [
@@ -28390,6 +28593,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_27964",
+      "sourceNodeId": "source:b20bf78c4fc0a4c0509a",
+      "symbol": "setCommunityParticipation"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/catalog/curation/actions.ts",
         "src/app/garden/catalog/curation/page.tsx"
       ],
@@ -28493,17 +28707,6 @@
       "semanticVariant": "from:./catalog-entity-resolution-report",
       "sourceNodeId": "source:b2ce5cdfbf3a3b1fdd9b",
       "symbol": "CatalogEntityResolutionReport"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_89411",
-      "sourceNodeId": "source:b2f38f40bd2b82555d6e",
-      "symbol": "archiveJournalEntry"
     },
     {
       "evidencePaths": [
@@ -29267,6 +29470,17 @@
       "semanticVariant": "from:@/server/journal-repository",
       "sourceNodeId": "source:b941fc0b5a3629f2d324",
       "symbol": "readCommittedAtomicJournalEdit"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_72641",
+      "sourceNodeId": "source:b946e0cca76dca4d6405",
+      "symbol": "resolvePlantObjectCatalog"
     },
     {
       "evidencePaths": [
@@ -30679,17 +30893,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_24263",
-      "sourceNodeId": "source:c8621756e23013839cb1",
-      "symbol": "moderateCommunityMembership"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/catalog/curation/variety-seed-proof-editor.tsx",
         "src/lib/operator-curation-copy.ts"
       ],
@@ -31253,9 +31456,9 @@
       "nodeKind": "contextual_transaction",
       "path": "src/server/community-repository.ts",
       "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_16685",
-      "sourceNodeId": "source:cfe92d1c5ff79f4e85b2",
-      "symbol": "setCommunityMembership"
+      "semanticVariant": "database_transaction_at_26253",
+      "sourceNodeId": "source:cfecd20d7f44a923f49a",
+      "symbol": "resolveCommunityReport"
     },
     {
       "evidencePaths": [
@@ -31634,17 +31837,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_58453",
-      "sourceNodeId": "source:d3e50326887164d53889",
-      "symbol": "executeCommunitySearchStatement"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/catalog/curation/actions.ts",
         "src/app/garden/catalog/curation/catalog-source-candidate-review-list.tsx",
         "src/app/garden/catalog/curation/page.tsx"
@@ -31907,6 +32099,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/catalog-evidence-route.tsx",
+        "src/server/public-surface-discovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/catalog-evidence-route.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-surface-discovery",
+      "sourceNodeId": "source:d68211a42bf6cfd8dd0a",
+      "symbol": "resolvePublicSurfacePayloadWithDeadline"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-profile.tsx",
         "src/lib/auth/auth-intent-contract.ts"
       ],
@@ -32061,6 +32265,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/lineage/objects/[objectId]/page.tsx",
+        "src/server/public-surface-discovery.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/lineage/objects/[objectId]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/public-surface-discovery",
+      "sourceNodeId": "source:d8a48d76cc1a19a938b4",
+      "symbol": "PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS"
+    },
+    {
+      "evidencePaths": [
         "src/app/catalog-evidence-route.tsx",
         "src/server/public-variety-repository.ts"
       ],
@@ -32201,6 +32417,17 @@
       "semanticVariant": "from:../shared",
       "sourceNodeId": "source:d9a942eaa85702fa8620",
       "symbol": "parseEngagementReturnTo"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_25051",
+      "sourceNodeId": "source:d9c107954cbdf119ded5",
+      "symbol": "updateAtomicJournalEntry"
     },
     {
       "evidencePaths": [
@@ -32500,17 +32727,6 @@
       "semanticVariant": "from:@/components/ui/button",
       "sourceNodeId": "source:dca9f713110f6466c794",
       "symbol": "Button"
-    },
-    {
-      "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_21393",
-      "sourceNodeId": "source:dce92739df8af7fb3334",
-      "symbol": "moderateCommunityContribution"
     },
     {
       "evidencePaths": [
@@ -35404,6 +35620,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_58861",
+      "sourceNodeId": "source:fbadee6afef732c5ab82",
+      "symbol": "executeCommunitySearchStatement"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/language-switcher.tsx",
         "src/lib/public-localization.ts"
       ],
@@ -35497,17 +35724,6 @@
       "semanticVariant": "from:@/components/ui/button",
       "sourceNodeId": "source:fc03438e4d45ab77ec4a",
       "symbol": "Button"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_67865",
-      "sourceNodeId": "source:fc0781b06019e2a6efd5",
-      "symbol": "createSpaceJournalEntry"
     },
     {
       "evidencePaths": [

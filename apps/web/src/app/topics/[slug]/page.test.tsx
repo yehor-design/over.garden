@@ -17,7 +17,10 @@ vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
-vi.mock("@/server/public-topic-repository", () => ({
+vi.mock("@/server/public-topic-repository", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/server/public-topic-repository")
+  >()),
   getPublicTopicAggregationPage: mocks.getPublicTopicAggregationPage,
 }));
 
@@ -45,7 +48,7 @@ afterEach(() => {
 });
 
 describe("/topics/[slug]", () => {
-  it("renders curated topic evidence and keeps localized UGC projections noindex", async () => {
+  it("renders rich curated topic evidence without inventing locale equivalence", async () => {
     const { default: TopicRoute, generateMetadata } =
       await import("../../[locale]/topics/[slug]/page");
     const html = renderToStaticMarkup(
@@ -58,22 +61,17 @@ describe("/topics/[slug]", () => {
     expect(html).toContain("Регулярні спостереження");
     expect(html).toContain("5 публичных записей");
     expect(html).not.toContain("/garden");
-    await expect(
-      generateMetadata({
-        params: Promise.resolve({ locale: "ru", slug: "care-checks" }),
-      }),
-    ).resolves.toMatchObject({
-      alternates: {
-        canonical: "/ru/topics/care-checks",
-        languages: {
-          uk: "/topics/care-checks",
-          bg: "/bg/topics/care-checks",
-          ru: "/ru/topics/care-checks",
-        },
-      },
-      openGraph: { locale: "ru", url: "/ru/topics/care-checks" },
-      robots: { index: false, follow: false },
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ locale: "ru", slug: "care-checks" }),
     });
+    expect(metadata).toMatchObject({
+      alternates: {
+        canonical: "/topics/care-checks",
+      },
+      openGraph: { locale: "ru", url: "/topics/care-checks" },
+      robots: { index: true, follow: true },
+    });
+    expect(metadata.alternates?.languages).toBeUndefined();
   });
 
   it("allows only the canonical Ukrainian topic route to inherit the quality gate", async () => {
@@ -143,8 +141,8 @@ describe("/topics/[slug]", () => {
         params: Promise.resolve({ slug: "care-checks" }),
       }),
     ).resolves.toMatchObject({
-      alternates: { canonical: "/bg/topics/care-checks" },
-      openGraph: { locale: "bg", url: "/bg/topics/care-checks" },
+      alternates: { canonical: "/topics/care-checks" },
+      openGraph: { locale: "bg", url: "/topics/care-checks" },
     });
   });
 });
@@ -155,8 +153,22 @@ function topicPage() {
     entryCount: 5,
     aggregateBodyLength: 900,
     latestPublishedAt: "2026-07-10T10:00:00.000Z",
+    qualityClass: "verified",
     indexState: { isIndexable: true },
-    entries: [],
+    entries: [
+      {
+        id: "topic-entry",
+        objectId: "topic-object",
+        title: "Регулярне спостереження",
+        bodyPreview: Array.from(
+          { length: 120 },
+          (_, index) => `спостереження${index}`,
+        ).join(" "),
+        entryDate: "2026-07-10",
+        publishedAt: "2026-07-10T10:00:00.000Z",
+        publicPath: "/journal/topic-entry",
+      },
+    ],
   };
 }
 

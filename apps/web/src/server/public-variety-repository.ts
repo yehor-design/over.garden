@@ -10,7 +10,11 @@ import type {
   LocationVisibility,
   VarietyState,
 } from "@/db/schema";
-import { localizedPublicJournalEvidencePath } from "@/lib/garden/public-paths";
+import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
+import {
+  localizedPublicJournalEvidencePath,
+  publicCatalogEvidencePath,
+} from "@/lib/garden/public-paths";
 import {
   DEFAULT_PUBLIC_LOCALE,
   type PublicLocale,
@@ -20,11 +24,12 @@ import { getPublicDerivativeUrl } from "@/lib/storage";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
+import type { PublicSurfaceIndexState } from "@/server/public-surface-indexing-policy";
 import {
-  evaluatePublicVarietyIndexState,
-  PUBLIC_VARIETY_INDEXABILITY_THRESHOLD,
-  type PublicVarietyIndexState,
-} from "@/server/public-variety-indexing";
+  resolvePublicSurfaceDiscoveryForRequest,
+  type PublicSurfaceDiscoveryConsumerId,
+  type PublicSurfaceDiscoverySource,
+} from "@/server/public-surface-discovery";
 import { buildFirstProcessedMediaPerEntryQuery } from "@/server/public-media-repository";
 import {
   buildPublishedVarietySeedProofByCatalogItemIdQuery,
@@ -48,7 +53,9 @@ export interface PublicVarietyPage {
   entryCount: number;
   photoCount: number;
   aggregateBodyLength: number;
-  indexState: PublicVarietyIndexState;
+  qualityClass?: PublicProjectionQualityClass;
+  latestMeaningfulAt?: Date | string | null;
+  indexState: PublicSurfaceIndexState;
   seedProof: PublicVarietySeedProof | null;
   sourceCredits: PublicCatalogSourceCredit[];
   entries: PublicVarietyEntry[];
@@ -124,8 +131,7 @@ export async function getPublicVarietyPage(
   ]);
   const entryCount = Number(summary.entryCount);
   const aggregateBodyLength = Number(summary.aggregateBodyLength);
-
-  return {
+  const page = {
     catalog: {
       catalogKind: summary.catalogKind,
       canonicalName: summary.catalogCanonicalName,
@@ -140,12 +146,8 @@ export async function getPublicVarietyPage(
     entryCount,
     photoCount: Number(summary.photoCount),
     aggregateBodyLength,
-    indexState: evaluatePublicVarietyIndexState({
-      entryCount,
-      aggregateBodyLength,
-      catalogStatus: summary.catalogStatus,
-      catalogSource: summary.catalogSource,
-    }),
+    qualityClass: "verified" as const,
+    latestMeaningfulAt: summary.latestMeaningfulAt,
     seedProof: seedProof ?? null,
     sourceCredits: sourceCredits.map((credit) => ({
       sourceSlug: credit.sourceSlug,
@@ -178,6 +180,57 @@ export async function getPublicVarietyPage(
             }
           : null,
     })),
+  } satisfies Omit<PublicVarietyPage, "indexState">;
+  return {
+    ...page,
+    indexState: resolvePublicSurfaceDiscoveryForRequest(
+      buildPublicVarietyDiscoverySource(page, "public_variety_repository"),
+    ).decision,
+  };
+}
+
+export function buildPublicVarietyDiscoverySource(
+  page: Omit<PublicVarietyPage, "indexState">,
+  consumerId: Extract<
+    PublicSurfaceDiscoveryConsumerId,
+    "catalog_evidence" | "variety_sitemap" | "public_variety_repository"
+  >,
+): PublicSurfaceDiscoverySource {
+  return {
+    consumerId,
+    candidateState: "candidate",
+    qualityClass: page.qualityClass ?? "unverified",
+    visibleText: [
+      page.catalog.canonicalName,
+      page.seedProof?.title ?? "",
+      page.seedProof?.summary ?? "",
+      page.seedProof?.body ?? "",
+      ...page.sourceCredits.flatMap((credit) => [
+        credit.sourceName,
+        credit.sourceVersion,
+        credit.license,
+        credit.attributionText ?? "",
+      ]),
+      ...page.entries.flatMap((entry) => [
+        entry.title,
+        entry.body,
+        entry.plantObjectDisplayName,
+        entry.varietyText ?? "",
+        entry.safeLocationLabel ?? "",
+      ]),
+    ],
+    distinctPublicEntityIds: [
+      `catalog:${page.catalog.catalogKind}:${page.catalog.publicSlug}`,
+      ...page.entries.map((entry) => entry.id),
+    ],
+    meaningfulContentAt: page.latestMeaningfulAt
+      ? toIsoTimestamp(page.latestMeaningfulAt)
+      : null,
+    canonicalPath: publicCatalogEvidencePath(
+      page.catalog.catalogKind,
+      page.catalog.publicSlug,
+    ),
+    equivalentLocales: [],
   };
 }
 
@@ -231,13 +284,32 @@ export async function listIndexablePublicVarietySitemapEntries(
   const rows =
     await buildIndexablePublicVarietySitemapRowsQuery(executor).execute();
 
-  return rows.map((row) => ({
-    catalogKind: row.catalogKind,
-    publicSlug: row.publicSlug,
-    lastModified: row.lastModified,
-    entryCount: Number(row.entryCount),
-    aggregateBodyLength: Number(row.aggregateBodyLength),
-  }));
+  const resolved = await Promise.all(
+    rows.map(async (row) => ({
+      row,
+      page: await getPublicVarietyPage(
+        row.publicSlug,
+        row.catalogKind,
+        executor,
+      ),
+    })),
+  );
+  return resolved.flatMap(({ row, page }) => {
+    if (!page) return [];
+    const decision = resolvePublicSurfaceDiscoveryForRequest(
+      buildPublicVarietyDiscoverySource(page, "variety_sitemap"),
+    ).decision;
+    if (!decision.sitemapEligible) return [];
+    return [
+      {
+        catalogKind: row.catalogKind,
+        publicSlug: row.publicSlug,
+        lastModified: row.lastModified,
+        entryCount: page.entryCount,
+        aggregateBodyLength: page.aggregateBodyLength,
+      },
+    ];
+  });
 }
 
 export function buildPublicVarietySummaryQuery(
@@ -277,6 +349,9 @@ export function buildPublicVarietySummaryQuery(
       sql<number>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0)`.as(
         "aggregateBodyLength",
       ),
+      fn
+        .max<Date | string>("journal_entries.updated_at")
+        .as("latestMeaningfulAt"),
     ])
     .where("catalog_items.public_slug", "=", publicSlug)
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
@@ -337,17 +412,6 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
     ])
     .where("catalog_items.public_slug", "is not", null)
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
-    .where(({ eb, or }) =>
-      or([
-        eb("catalog_items.status", "=", "confirmed"),
-        eb.and([
-          eb("catalog_items.status", "=", "seeded"),
-          eb("catalog_items.source", "in", [
-            ...PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.trustedSeededCatalogSources,
-          ]),
-        ]),
-      ]),
-    )
     .where("catalog_items.created_by_user_id", "is", null)
     .where("plant_objects.variety_state", "=", "selected")
     .whereRef(
@@ -362,14 +426,13 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
     .where("journal_entries.public_slug", "is not", null)
     .where(publicLaunchSurfacePredicates())
     .groupBy(["catalog_items.catalog_kind", "catalog_items.public_slug"])
-    .having(
-      sql<boolean>`count(${sql.ref("journal_entries.id")}) >= ${PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minPublicEntryCount}`,
-    )
-    .having(
-      sql<boolean>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0) >= ${PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minAggregateBodyLength}`,
-    )
     .orderBy("catalog_items.public_slug", "asc")
     .$narrowType<{ catalogKind: CatalogKind; publicSlug: string }>();
+}
+
+function toIsoTimestamp(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : "";
 }
 
 export function buildPublicVarietyEntriesQuery(

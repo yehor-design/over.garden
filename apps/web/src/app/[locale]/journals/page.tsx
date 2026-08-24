@@ -7,7 +7,6 @@ import {
 } from "@/components/public/public-journal-directory";
 import { getPublicJournalDirectoryCopy } from "@/lib/public-journal-directory-copy";
 import {
-  buildLanguageAlternates,
   isPublicLocale,
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
@@ -22,7 +21,17 @@ import {
   type PublicJournalDirectoryFacets,
   type PublicJournalDirectoryPage,
 } from "@/server/public-journal-directory-repository";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  latestMeaningfulContentTimestamp,
+  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+  resolvePublicSurfaceDiscoveryForRequest,
+  resolvePublicSurfaceDiscoveryWithDeadline,
+  resolveUnresolvedPublicSurfaceDiscovery,
+  type PublicSurfaceDiscoveryResult,
+  type PublicSurfaceDiscoverySource,
+} from "@/server/public-surface-discovery";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
+import { AUTHORED_PUBLIC_SURFACE_LASTMOD } from "@/server/public-surface-indexing-policy";
 
 interface PublicJournalsRouteProps {
   params: Promise<{ locale: string }>;
@@ -40,25 +49,35 @@ export async function generateMetadata({
   if (!isPublicLocale(localeParam)) {
     return {
       title: "OverGarden",
-      robots: evaluatePublicSurfaceIndexability({ kind: "missing" }).robots,
+      robots: resolveUnresolvedPublicSurfaceDiscovery(
+        "localized_journals_directory",
+      ).decision.robots,
     };
   }
 
-  const copy = getPublicJournalDirectoryCopy(localeParam);
-  const indexState = evaluatePublicSurfaceIndexability({
-    kind: "catalog_browse",
-  });
-
-  return {
-    title: copy.metadataTitle,
-    description: copy.metadataDescription,
-    alternates: {
-      canonical: localizedPath(localeParam, "/journals"),
-      languages: buildLanguageAlternates("/journals"),
+  const request = normalizePublicJournalDirectoryRequest({});
+  const discovery = await resolvePublicSurfaceDiscoveryWithDeadline({
+    consumerId: "localized_journals_directory",
+    evaluatedAt: new Date(),
+    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+    loadSource: async () => {
+      const [page, facets] = await Promise.all([
+        listPublicJournalDirectoryPage(request, localeParam),
+        listPublicJournalDirectoryFacets(),
+      ]);
+      return buildJournalDirectoryDiscoverySource(
+        localeParam,
+        page,
+        facets,
+        false,
+      );
     },
-    robots: indexState.robots,
-    openGraph: { locale: localeParam },
-  };
+  });
+  return buildJournalDirectorySurface(
+    localeParam,
+    emptyPublicJournalDirectoryPage(request),
+    discovery,
+  ).metadata;
 }
 
 export async function renderPublicJournalsPage(
@@ -137,6 +156,15 @@ export async function renderPublicJournalsPage(
     : page.cards.length === 0
       ? "empty"
       : "ready";
+  const discovery = resolvePublicSurfaceDiscoveryForRequest(
+    buildJournalDirectoryDiscoverySource(
+      locale,
+      page,
+      facets,
+      Boolean(visualMode),
+    ),
+  );
+  const surface = buildJournalDirectorySurface(locale, page, discovery);
 
   return (
     <PublicJournalDirectory
@@ -146,6 +174,7 @@ export async function renderPublicJournalsPage(
       facets={facets}
       state={state}
       visualCorpus={visualCorpus}
+      jsonLd={surface.jsonLd}
     />
   );
 }
@@ -172,7 +201,71 @@ export function emptyPublicJournalDirectoryPage(
     hasNextPage: false,
     searchSource: "database",
     searchFallbackReason: null,
+    qualityClass: "unverified",
   };
+}
+
+function buildJournalDirectoryDiscoverySource(
+  locale: PublicLocale,
+  page: PublicJournalDirectoryPage,
+  facets: PublicJournalDirectoryFacets,
+  isVisualFixture: boolean,
+): PublicSurfaceDiscoverySource {
+  const copy = getPublicJournalDirectoryCopy(locale);
+  return {
+    consumerId: "localized_journals_directory",
+    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+    qualityClass: page.qualityClass ?? "unverified",
+    visibleText: [
+      copy.metadataTitle,
+      copy.metadataDescription,
+      copy.heading,
+      copy.intro,
+      ...page.cards.flatMap((card) => [
+        card.title,
+        card.excerpt,
+        card.object.displayName,
+        card.object.identityLabel ?? "",
+        ...card.topics.map((topic) => topic.label),
+      ]),
+      ...facets.catalogs.map((facet) => facet.label),
+      ...facets.topics.map((facet) => facet.label),
+    ],
+    distinctPublicEntityIds: [
+      ...page.cards.flatMap((card) => [
+        card.publicPath,
+        card.object.publicPath,
+      ]),
+      ...facets.catalogs.map((facet) => `catalog:${facet.slug}`),
+      ...facets.topics.map((facet) => `topic:${facet.slug}`),
+    ],
+    meaningfulContentAt:
+      latestMeaningfulContentTimestamp(
+        page.cards.map((card) => card.publishedAt),
+      ) ?? AUTHORED_PUBLIC_SURFACE_LASTMOD,
+    canonicalPath: localizedPath(locale, "/journals"),
+    equivalentLocales: [locale],
+  };
+}
+
+function buildJournalDirectorySurface(
+  locale: PublicLocale,
+  page: PublicJournalDirectoryPage,
+  discovery: PublicSurfaceDiscoveryResult,
+) {
+  const copy = getPublicJournalDirectoryCopy(locale);
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    title: copy.metadataTitle,
+    description: copy.metadataDescription,
+    visibleFacts: {
+      type: "CollectionPage",
+      name: copy.heading,
+      description: copy.intro,
+      itemNames: page.cards.map((card) => card.title),
+    },
+  });
 }
 
 export function emptyPublicJournalDirectoryFacets(): PublicJournalDirectoryFacets {

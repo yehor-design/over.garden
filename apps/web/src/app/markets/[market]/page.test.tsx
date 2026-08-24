@@ -57,29 +57,17 @@ describe("/markets/[market]", () => {
       title: "OverGarden для садівників в Україні | OverGarden",
       alternates: {
         canonical: "/markets/ukraine",
-        languages: {
-          uk: "/markets/ukraine",
-          "x-default": "/markets/ukraine",
-        },
       },
       robots: { index: true, follow: true },
     });
 
-    await expect(
-      generateMetadata({
-        params: Promise.resolve({ locale: "bg", market: "bulgaria" }),
-      }),
-    ).resolves.toMatchObject({
-      title: "OverGarden за градинари в България | OverGarden",
-      alternates: {
-        canonical: "/bg/markets/bulgaria",
-        languages: {
-          bg: "/bg/markets/bulgaria",
-          ru: "/ru/markets/bulgaria",
-          "x-default": "/bg/markets/bulgaria",
-        },
-      },
-      robots: { index: true, follow: true },
+    const bulgariaMetadata = await generateMetadata({
+      params: Promise.resolve({ locale: "bg", market: "bulgaria" }),
     });
+    expect(bulgariaMetadata).toMatchObject({
+      title: "OverGarden за градинари в България | OverGarden",
+      robots: { index: false, follow: false },
+    });
+    expect(bulgariaMetadata.alternates).toBeUndefined();
   });
 });

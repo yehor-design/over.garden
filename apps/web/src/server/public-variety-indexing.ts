@@ -1,41 +1,20 @@
+import type { PublicSurfaceIndexState } from "./public-surface-indexing-policy";
+import { PUBLIC_SURFACE_INDEXABILITY_THRESHOLD } from "./public-surface-indexing-policy";
 import {
-  evaluatePublicSurfaceIndexability,
-  PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD,
-  type PublicSurfaceIndexReason,
-  type PublicSurfaceIndexState,
-  type PublicSurfaceIndexValue,
-  type PublicAggregationCatalogStatus,
-} from "./public-surface-indexing-policy";
+  resolvePublicSurfaceDiscoveryForRequest,
+  type PublicSurfaceDiscoverySource,
+} from "./public-surface-discovery";
 
 export const PUBLIC_VARIETY_INDEXABILITY_THRESHOLD =
-  PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD;
-
-export type PublicVarietyIndexValue = PublicSurfaceIndexValue;
+  PUBLIC_SURFACE_INDEXABILITY_THRESHOLD;
 
 export type PublicVarietyIndexState = PublicSurfaceIndexState;
 
-export type PublicVarietyIndexReason = Extract<
-  PublicSurfaceIndexReason,
-  | "entry_count_below_threshold"
-  | "body_length_below_threshold"
-  | "catalog_trust_below_threshold"
->;
-
-export interface PublicVarietyIndexInput {
-  entryCount: number;
-  aggregateBodyLength: number;
-  catalogStatus: PublicAggregationCatalogStatus | string;
-  catalogSource: string;
-}
-
 export function evaluatePublicVarietyIndexState(
-  input: PublicVarietyIndexInput,
+  source: PublicSurfaceDiscoverySource & {
+    consumerId: "public_variety_repository";
+  },
+  evaluatedAt?: string | Date,
 ): PublicVarietyIndexState {
-  return evaluatePublicSurfaceIndexability({
-    kind: "variety_aggregation",
-    entryCount: input.entryCount,
-    aggregateBodyLength: input.aggregateBodyLength,
-    catalogStatus: input.catalogStatus,
-    catalogSource: input.catalogSource,
-  });
+  return resolvePublicSurfaceDiscoveryForRequest(source, evaluatedAt).decision;
 }

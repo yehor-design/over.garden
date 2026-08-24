@@ -2,6 +2,13 @@ import "server-only";
 
 import {
   BLOG_INDEX_PATH,
+  answerVisibleText,
+  authoredContentEntityIds,
+  blogPostVisibleText,
+  guideVisibleText,
+  listAuthoredPublicContentSitemapCandidates,
+  marketLandingVisibleText,
+  resolveAuthoredPublicSurfaceDiscovery,
   type AnswerFaq,
   type AnswerPageContent,
   type BlogPostContent,
@@ -20,8 +27,12 @@ import {
   listGuides,
   listMarketLandings,
 } from "@/server/public-seo-content";
-import type { PublicLocale } from "@/lib/public-localization";
+import {
+  stripLocalePrefix,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import type { PublicHomeFeedCopy } from "@/components/public/public-home-feed";
+import { getPublicKnowledgeCopy } from "@/lib/public-knowledge-copy";
 
 export interface LocalizedHomeContent {
   title: string;
@@ -898,6 +909,144 @@ export function getContentAvailableLocales(basePath: string) {
   return marketLanding
     ? listAvailableMarketLandingLocales(marketLanding.market)
     : (["uk", "bg", "ru"] as const);
+}
+
+export function listIndexableLocalizedAuthoredSitemapEntries() {
+  return listAuthoredPublicContentSitemapCandidates().filter((entry) => {
+    const source = authoredSitemapSource(entry);
+    return source
+      ? resolveAuthoredPublicSurfaceDiscovery(source).decision.sitemapEligible
+      : false;
+  });
+}
+
+function authoredSitemapSource(
+  entry: ReturnType<typeof listAuthoredPublicContentSitemapCandidates>[number],
+) {
+  const basePath = stripLocalePrefix(entry.path).path;
+  const equivalentLocales = getContentAvailableLocales(basePath);
+  if (entry.kind === "knowledge_hub") {
+    const copy = getPublicKnowledgeSitemapCopy(entry.locale);
+    const items = [
+      ...listLocalizedGuides(entry.locale),
+      ...listLocalizedAnswerPages(entry.locale),
+    ];
+    return {
+      consumerId: "authored_sitemap" as const,
+      canonicalPath: entry.path,
+      equivalentLocales,
+      visibleText: [
+        copy.title,
+        copy.description,
+        ...items.flatMap((item) => [item.title, item.description]),
+      ],
+      distinctPublicEntityIds: authoredContentEntityIds(
+        basePath,
+        items.map((item) => item.path),
+      ),
+      meaningfulContentAt: entry.lastModified,
+    };
+  }
+  if (entry.kind === "editorial_blog" && basePath === BLOG_INDEX_PATH) {
+    const copy = getLocalizedBlogIndexContent(entry.locale);
+    const posts = listLocalizedBlogPosts(entry.locale);
+    return {
+      consumerId: "authored_sitemap" as const,
+      canonicalPath: entry.path,
+      equivalentLocales,
+      visibleText: [
+        copy.title,
+        copy.description,
+        copy.heading,
+        copy.intro,
+        copy.startTitle,
+        copy.startBody,
+        ...posts.flatMap((post) => [post.title, post.excerpt]),
+      ],
+      distinctPublicEntityIds: authoredContentEntityIds(
+        basePath,
+        posts.map((post) => post.path),
+      ),
+      meaningfulContentAt: entry.lastModified,
+    };
+  }
+  if (entry.kind === "editorial_blog") {
+    const post = listLocalizedBlogPosts(entry.locale).find(
+      (candidate) => candidate.path === basePath,
+    );
+    return post
+      ? {
+          consumerId: "authored_sitemap" as const,
+          canonicalPath: entry.path,
+          equivalentLocales,
+          visibleText: blogPostVisibleText(post),
+          distinctPublicEntityIds: authoredContentEntityIds(
+            basePath,
+            post.relatedLinks.map((link) => link.href),
+          ),
+          meaningfulContentAt: entry.lastModified,
+        }
+      : null;
+  }
+  if (entry.kind === "guide") {
+    const guide = listLocalizedGuides(entry.locale).find(
+      (candidate) => candidate.path === basePath,
+    );
+    return guide
+      ? {
+          consumerId: "authored_sitemap" as const,
+          canonicalPath: entry.path,
+          equivalentLocales,
+          visibleText: guideVisibleText(guide),
+          distinctPublicEntityIds: authoredContentEntityIds(basePath, [
+            ...guide.relatedLinks.map((link) => link.href),
+            ...guide.knowledge.evidence.topicSlugs.map(
+              (slug) => `/topics/${slug}`,
+            ),
+          ]),
+          meaningfulContentAt: entry.lastModified,
+        }
+      : null;
+  }
+  if (entry.kind === "aeo_answer") {
+    const answer = listLocalizedAnswerPages(entry.locale).find(
+      (candidate) => candidate.path === basePath,
+    );
+    return answer
+      ? {
+          consumerId: "authored_sitemap" as const,
+          canonicalPath: entry.path,
+          equivalentLocales,
+          visibleText: answerVisibleText(answer),
+          distinctPublicEntityIds: authoredContentEntityIds(basePath, [
+            ...answer.relatedVarieties.map((link) => link.href),
+            ...answer.relatedTopics.map((link) => link.href),
+          ]),
+          meaningfulContentAt: entry.lastModified,
+        }
+      : null;
+  }
+  const market = listLocalizedMarketLandings(entry.locale).find(
+    (candidate) => candidate.path === basePath,
+  );
+  return market
+    ? {
+        consumerId: "authored_sitemap" as const,
+        canonicalPath: entry.path,
+        equivalentLocales,
+        visibleText: marketLandingVisibleText(market),
+        distinctPublicEntityIds: authoredContentEntityIds(
+          basePath,
+          market.relatedLinks.map((link) => link.href),
+        ),
+        meaningfulContentAt: entry.lastModified,
+      }
+    : null;
+}
+
+function getPublicKnowledgeSitemapCopy(locale: PublicLocale) {
+  const copy = getPublicKnowledgeCopy(locale);
+  return { title: copy.metadataTitle, description: copy.metadataDescription };
 }
 
 function localizeBlogPost(

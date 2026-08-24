@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 
 import { LocalizedHomePage } from "@/components/public/localized-public-pages";
 import {
-  buildLanguageAlternates,
   isPublicLocale,
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
@@ -21,7 +20,17 @@ import {
   type TrustedPublicFeedTopic,
 } from "@/server/public-feed-repository";
 import { getLocalizedHomeContent } from "@/server/public-localized-content";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  combinePublicProjectionQualityClasses,
+  latestMeaningfulContentTimestamp,
+  resolvePublicSurfaceDiscoveryForRequest,
+  resolvePublicSurfaceDiscoveryWithDeadline,
+  resolveUnresolvedPublicSurfaceDiscovery,
+  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+  type PublicSurfaceDiscoverySource,
+} from "@/server/public-surface-discovery";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
+import { AUTHORED_PUBLIC_SURFACE_LASTMOD } from "@/server/public-surface-indexing-policy";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
 
 interface LocalizedHomeRouteProps {
@@ -39,9 +48,8 @@ export async function generateMetadata({
   const { locale: localeParam } = await params;
 
   if (!isPublicLocale(localeParam)) {
-    const missingState = evaluatePublicSurfaceIndexability({
-      kind: "missing",
-    });
+    const missingState =
+      resolveUnresolvedPublicSurfaceDiscovery("localized_home").decision;
 
     return {
       title: "OverGarden",
@@ -50,22 +58,25 @@ export async function generateMetadata({
   }
 
   const content = getLocalizedHomeContent(localeParam);
-  const indexState = evaluatePublicSurfaceIndexability({
-    kind: "public_feed",
+  const discovery = await resolvePublicSurfaceDiscoveryWithDeadline({
+    consumerId: "localized_home",
+    evaluatedAt: new Date(),
+    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+    loadSource: async () => {
+      const [feed, topics] = await Promise.all([
+        listPublicFeedPage(normalizePublicFeedRequest({}), localeParam),
+        listTrustedPublicFeedTopics(undefined, 6, localeParam),
+      ]);
+      return buildHomeDiscoverySource(
+        localeParam,
+        content,
+        feed,
+        topics,
+        false,
+      );
+    },
   });
-
-  return {
-    title: content.title,
-    description: content.description,
-    alternates: {
-      canonical: localizedPath(localeParam, "/"),
-      languages: buildLanguageAlternates("/"),
-    },
-    robots: indexState.robots,
-    openGraph: {
-      locale: localeParam,
-    },
-  };
+  return buildHomeSurface(localeParam, content, [], discovery).metadata;
 }
 
 export async function renderLocalizedHomePage(
@@ -103,6 +114,21 @@ export async function renderLocalizedHomePage(
         : feed.entries.length === 0
           ? "empty"
           : "ready";
+  const discovery = resolvePublicSurfaceDiscoveryForRequest(
+    buildHomeDiscoverySource(
+      locale,
+      getLocalizedHomeContent(locale),
+      feed,
+      topics,
+      Boolean(visualScenario),
+    ),
+  );
+  const surface = buildHomeSurface(
+    locale,
+    getLocalizedHomeContent(locale),
+    feed.entries,
+    discovery,
+  );
 
   return (
     <LocalizedHomePage
@@ -116,8 +142,74 @@ export async function renderLocalizedHomePage(
         sessionResult.value.isAuthenticated
       }
       state={state}
+      jsonLd={surface.jsonLd}
     />
   );
+}
+
+function buildHomeDiscoverySource(
+  locale: PublicLocale,
+  content: ReturnType<typeof getLocalizedHomeContent>,
+  feed: PublicFeedPage,
+  topics: readonly TrustedPublicFeedTopic[],
+  isVisualFixture: boolean,
+): PublicSurfaceDiscoverySource {
+  const feedCopyText = Object.values(content.feed).flatMap((value) =>
+    typeof value === "string"
+      ? [value]
+      : Object.values(value).filter(
+          (item): item is string => typeof item === "string",
+        ),
+  );
+  return {
+    consumerId: "localized_home",
+    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+    qualityClass: combinePublicProjectionQualityClasses(
+      feed.entries.map((entry) => entry.qualityClass),
+    ),
+    visibleText: [
+      content.title,
+      content.description,
+      ...feedCopyText,
+      ...feed.entries.flatMap((entry) => [
+        entry.title,
+        entry.excerpt,
+        entry.object.displayName,
+        ...entry.topics.map((topic) => topic.label),
+      ]),
+      ...topics.map((topic) => topic.label),
+    ],
+    distinctPublicEntityIds: [
+      ...feed.entries.flatMap((entry) => [entry.id, entry.object.id]),
+      ...topics.map((topic) => `topic:${topic.slug}`),
+    ],
+    meaningfulContentAt:
+      latestMeaningfulContentTimestamp(
+        feed.entries.map((entry) => entry.publishedAt),
+      ) ?? AUTHORED_PUBLIC_SURFACE_LASTMOD,
+    canonicalPath: localizedPath(locale, "/"),
+    equivalentLocales: [locale],
+  };
+}
+
+function buildHomeSurface(
+  locale: PublicLocale,
+  content: ReturnType<typeof getLocalizedHomeContent>,
+  entries: readonly PublicFeedPage["entries"][number][],
+  discovery: ReturnType<typeof resolvePublicSurfaceDiscoveryForRequest>,
+) {
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    title: content.title,
+    description: content.description,
+    visibleFacts: {
+      type: "CollectionPage",
+      name: content.feed.heading,
+      description: content.description,
+      itemNames: entries.map((entry) => entry.title),
+    },
+  });
 }
 
 export default async function HomeRoute({

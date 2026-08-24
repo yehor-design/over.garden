@@ -6,17 +6,27 @@ import { EngagementFollowControl } from "@/app/engagement/public-engagement-pane
 import { normalizeAuthIntentResumeAction } from "@/lib/auth/auth-intent-contract";
 import { getPublicKnowledgeCopy } from "@/lib/public-knowledge-copy";
 import {
-  buildLanguageAlternates,
-  DEFAULT_PUBLIC_LOCALE,
   isPublicLocale,
   localizedPath,
+  type PublicLocale,
 } from "@/lib/public-localization";
 import { resolveVisualFixturePublicKnowledgeMode } from "@/lib/visual-fixtures/public-knowledge-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getEngagementFollowState } from "@/server/engagement-repository";
 import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
-import { getPublicTopicAggregationPage } from "@/server/public-topic-repository";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  buildPublicTopicDiscoverySource,
+  getPublicTopicAggregationPage,
+  type PublicTopicAggregationPage,
+} from "@/server/public-topic-repository";
+import {
+  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+  resolvePublicSurfaceDiscoveryForRequest,
+  resolvePublicSurfacePayloadWithDeadline,
+  resolveUnresolvedPublicSurfaceDiscovery,
+  type PublicSurfaceDiscoveryResult,
+} from "@/server/public-surface-discovery";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser } from "@/server/request-scope";
 
 interface PublicTopicRouteProps {
@@ -38,37 +48,34 @@ export async function generateMetadata({
     (await searchParams) ?? {},
   );
   if (visual.mode === "unavailable") return missingTopicMetadata(localeParam);
-  const topic = await getPublicTopicAggregationPage(slug, {
-    locale: localeParam,
-    restrictToEntryIds: visual.publicEntryIds,
-  }).catch(() => null);
-  if (!topic) return missingTopicMetadata(localeParam);
-
-  const indexState = visual.mode
-    ? evaluatePublicSurfaceIndexability({ kind: "missing" })
-    : evaluatePublicSurfaceIndexability({
-        kind: "topic_aggregation",
-        entryCount: topic.entryCount,
-        aggregateBodyLength: topic.aggregateBodyLength,
-        topicTrust: "curated",
-        canonicalLocale: localeParam === DEFAULT_PUBLIC_LOCALE,
+  const bounded = await resolvePublicSurfacePayloadWithDeadline({
+    consumerId: "localized_topic",
+    evaluatedAt: new Date(),
+    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+    load: async () => {
+      const topic = await getPublicTopicAggregationPage(slug, {
+        locale: localeParam,
+        restrictToEntryIds: visual.publicEntryIds,
       });
-
-  const canonicalPath = localizedPath(
-    localeParam,
-    `/topics/${topic.topic.slug}`,
-  );
-
-  return {
-    title: `${topic.topic.label} | OverGarden`,
-    description: getPublicKnowledgeCopy(localeParam).metadataDescription,
-    alternates: {
-      canonical: canonicalPath,
-      languages: buildLanguageAlternates(`/topics/${topic.topic.slug}`),
+      if (!topic) throw new Error("Public topic unavailable.");
+      return {
+        source: buildPublicTopicDiscoverySource(
+          topic,
+          "localized_topic",
+          visual.mode ? "not_public_candidate" : "candidate",
+        ),
+        payload: topic,
+      };
     },
-    robots: indexState.robots,
-    openGraph: { locale: localeParam, url: canonicalPath },
-  };
+  });
+  if (!bounded.payload) return missingTopicMetadata(localeParam);
+
+  return buildTopicSurface(
+    localeParam,
+    bounded.payload,
+    Boolean(visual.mode),
+    bounded,
+  ).metadata;
 }
 
 export default async function TopicRoute({
@@ -99,6 +106,7 @@ export default async function TopicRoute({
     ? await getEngagementFollowState(scope, followTarget).catch(() => false)
     : false;
   const returnTo = localizedPath(localeParam, `/topics/${topic.topic.slug}`);
+  const surface = buildTopicSurface(localeParam, topic, Boolean(visual.mode));
 
   const evidenceResult =
     visual.mode === "loading" || visual.mode === "error"
@@ -142,6 +150,7 @@ export default async function TopicRoute({
           )}
         />
       }
+      jsonLd={surface.jsonLd}
     />
   );
 }
@@ -155,8 +164,39 @@ function missingTopicMetadata(locale?: "uk" | "bg" | "ru"): Metadata {
     title: locale
       ? `${getPublicKnowledgeCopy(locale).publicTopicLabel} | OverGarden`
       : "OverGarden",
-    robots: evaluatePublicSurfaceIndexability({ kind: "missing" }).robots,
+    robots:
+      resolveUnresolvedPublicSurfaceDiscovery("localized_topic").decision
+        .robots,
   };
+}
+
+function buildTopicSurface(
+  locale: PublicLocale,
+  topic: PublicTopicAggregationPage,
+  isVisualFixture: boolean,
+  discovery: PublicSurfaceDiscoveryResult = resolvePublicSurfaceDiscoveryForRequest(
+    buildPublicTopicDiscoverySource(
+      topic,
+      "localized_topic",
+      isVisualFixture ? "not_public_candidate" : "candidate",
+    ),
+  ),
+) {
+  const copy = getPublicKnowledgeCopy(locale);
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    contentLocale: null,
+    title: `${topic.topic.label} | OverGarden`,
+    description: copy.metadataDescription,
+    visibleFacts: {
+      type: "CollectionPage",
+      name: topic.topic.label,
+      description: copy.metadataDescription,
+      itemNames: topic.entries.map((entry) => entry.title),
+      trustQualifier: "Curated topic with public gardener evidence",
+    },
+  });
 }
 
 async function resolveVisualTopicRequest(

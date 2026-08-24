@@ -329,6 +329,10 @@ describe("OVE-205 executable localization browser contract", () => {
     expect(source).toContain(
       "interactionProofs.unsafeLocalizedStateRejected = true",
     );
+    expect(source).toContain(
+      "Mixed-locale visual topic leaked public discovery metadata.",
+    );
+    expect(source).toContain('"/blog/ai-garden-advice-vs-real-garden-proof"');
     expect(source).toContain('"accept-language": plan.acceptLanguage');
     for (const interaction of [
       "runInterfaceLanguageMenuKeyboardCheck",

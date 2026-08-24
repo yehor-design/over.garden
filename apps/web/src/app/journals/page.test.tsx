@@ -106,21 +106,13 @@ describe("/journals", () => {
       "bg",
       expect.objectContaining({ searchScope: expect.any(Object) }),
     );
-    expect(mocks.listFacets).toHaveBeenCalledTimes(1);
+    expect(mocks.listFacets).toHaveBeenCalledTimes(2);
     expect(html).toContain('lang="bg"');
     expect(html).toContain("Дневници");
     expect(metadata).toMatchObject({
-      alternates: {
-        canonical: "/bg/journals",
-        languages: {
-          uk: "/journals",
-          bg: "/bg/journals",
-          ru: "/ru/journals",
-          "x-default": "/journals",
-        },
-      },
       robots: { index: false, follow: false },
     });
+    expect(metadata.alternates).toBeUndefined();
   });
 
   it("renders a recoverable guest error if either canonical repository fails", async () => {

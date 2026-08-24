@@ -25,6 +25,7 @@ import {
 } from "@/lib/public-knowledge-copy";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import type { PlantObjectKind } from "@/db/schema";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 
 export type PublicKnowledgeHubState = "ready" | "empty" | "loading" | "error";
 
@@ -47,6 +48,7 @@ export function PublicKnowledgeHub({
   contextItems,
   state,
   visualCorpus = false,
+  jsonLd,
 }: {
   locale: PublicLocale;
   copy: PublicKnowledgeCopy;
@@ -55,6 +57,7 @@ export function PublicKnowledgeHub({
   contextItems: readonly PublicKnowledgeHubItem[];
   state: PublicKnowledgeHubState;
   visualCorpus?: boolean;
+  jsonLd?: Record<string, unknown> | null;
 }) {
   const contextModules = buildPublicKnowledgeContextModules(
     locale,
@@ -70,6 +73,14 @@ export function PublicKnowledgeHub({
       data-public-knowledge-state={state}
       className="mx-auto flex w-full max-w-5xl flex-col px-4 py-4 sm:px-6 sm:py-5"
     >
+      {serializePublicSurfaceJsonLd(jsonLd ?? null) ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: serializePublicSurfaceJsonLd(jsonLd ?? null) ?? "",
+          }}
+        />
+      ) : null}
       <SiteShellContextRailRegistration modules={contextModules} />
 
       <header className="grid gap-2 border-b border-border pb-4">

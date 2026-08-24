@@ -8,18 +8,26 @@ import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
 } from "@/lib/auth/auth-intent-contract";
-import {
-  buildLanguageAlternates,
-  isPublicLocale,
-} from "@/lib/public-localization";
+import { isPublicLocale, type PublicLocale } from "@/lib/public-localization";
 import { getPublicProfileCopy } from "@/lib/public-profile-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getProfileViewerState } from "@/server/profile-interaction-repository";
 import {
   getPublicProfileEvidencePageByHandle,
   getPublicProfileLifecycleLookup,
+  type PublicProfileEvidencePage,
 } from "@/server/public-profile-repository";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  latestMeaningfulContentTimestamp,
+  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+  resolvePublicSurfaceDiscoveryForRequest,
+  resolvePublicSurfacePayloadWithDeadline,
+  resolveUnresolvedPublicSurfaceDiscovery,
+  type PublicSurfaceDiscoveryResult,
+  type PublicSurfaceDiscoverySource,
+} from "@/server/public-surface-discovery";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser } from "@/server/request-scope";
 
 export const dynamic = "force-dynamic";
@@ -75,42 +83,42 @@ export async function generateMetadata({
   const locale = isPublicLocale(localeParam) ? localeParam : "uk";
   const copy = getPublicProfileCopy(locale);
   const routeHandle = routeHandleFromSegment(profileHandle);
-  const routeState =
+  const bounded =
     isPublicLocale(localeParam) && routeHandle
-      ? await getCachedPublicProfileRouteState(routeHandle, localeParam)
-      : UNAVAILABLE_PROFILE_ROUTE_STATE;
-  const page = routeState.kind === "available" ? routeState.profile : null;
-  const indexState = evaluatePublicSurfaceIndexability({
-    kind: page ? "profile" : "missing",
-  });
+      ? await resolvePublicSurfacePayloadWithDeadline({
+          consumerId: "localized_profile",
+          evaluatedAt: new Date(),
+          deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+          load: async () => {
+            const routeState = await getCachedPublicProfileRouteState(
+              routeHandle,
+              localeParam,
+            );
+            if (routeState.kind !== "available") {
+              throw new Error("Public profile unavailable.");
+            }
+            return {
+              source: buildProfileDiscoverySource(
+                localeParam,
+                routeState.profile,
+              ),
+              payload: routeState.profile,
+            };
+          },
+        })
+      : null;
+  const page = bounded?.payload ?? null;
+  const unresolved =
+    resolveUnresolvedPublicSurfaceDiscovery("localized_profile");
 
   if (!page) {
     return {
       title: `${copy.profileLabel} | OverGarden`,
-      robots: indexState.robots,
+      robots: unresolved.decision.robots,
     };
   }
 
-  const basePath = `/@${page.handle}`;
-  const description =
-    page.bio ??
-    `${copy.publicObjects}: ${page.summary.publicObjectCount}. ${copy.publicEntries}: ${page.summary.publicEntryCount}.`;
-
-  return {
-    title: `${page.displayName} (${page.mention}) · ${copy.metadataSuffix} | OverGarden`,
-    description,
-    alternates: {
-      canonical: publicProfilePath(locale, page.handle),
-      languages: buildLanguageAlternates(basePath),
-    },
-    robots: indexState.robots,
-    openGraph: {
-      locale,
-      ...(page.avatarUrl
-        ? { images: [{ url: page.avatarUrl, alt: page.avatarAlt }] }
-        : {}),
-    },
-  };
+  return buildProfileSurface(locale, page, bounded ?? undefined).metadata;
 }
 
 export default async function LocalizedPublicProfileRoute({
@@ -133,12 +141,20 @@ export default async function LocalizedPublicProfileRoute({
   if (routeState.kind === "unavailable") notFound();
   const { profile, viewer } = routeState;
   const resumeAction = profileResumeAction(query.authIntent);
+  const surface = buildProfileSurface(localeParam, profile);
+  const serializedJsonLd = serializePublicSurfaceJsonLd(surface.jsonLd);
 
   return (
     <main
       lang={localeParam}
       className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8"
     >
+      {serializedJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
+        />
+      ) : null}
       <PublicProfileView
         profile={profile}
         locale={localeParam}
@@ -149,6 +165,78 @@ export default async function LocalizedPublicProfileRoute({
       />
     </main>
   );
+}
+
+function buildProfileSurface(
+  locale: PublicLocale,
+  page: PublicProfileEvidencePage,
+  discovery: PublicSurfaceDiscoveryResult = resolvePublicSurfaceDiscoveryForRequest(
+    buildProfileDiscoverySource(locale, page),
+  ),
+) {
+  const copy = getPublicProfileCopy(locale);
+  const description =
+    page.bio ??
+    `${copy.publicObjects}: ${page.summary.publicObjectCount}. ${copy.publicEntries}: ${page.summary.publicEntryCount}.`;
+  const output = buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    title: `${page.displayName} (${page.mention}) · ${copy.metadataSuffix} | OverGarden`,
+    description,
+    visibleFacts: {
+      type: "ProfilePage",
+      name: page.displayName,
+      description,
+      trustQualifier: "Public active OverGarden profile",
+    },
+  });
+  if (page.avatarUrl) {
+    output.metadata.openGraph = {
+      ...output.metadata.openGraph,
+      images: [{ url: page.avatarUrl, alt: page.avatarAlt }],
+    };
+  }
+  return output;
+}
+
+function buildProfileDiscoverySource(
+  locale: PublicLocale,
+  page: PublicProfileEvidencePage,
+): PublicSurfaceDiscoverySource {
+  const copy = getPublicProfileCopy(locale);
+  const description =
+    page.bio ??
+    `${copy.publicObjects}: ${page.summary.publicObjectCount}. ${copy.publicEntries}: ${page.summary.publicEntryCount}.`;
+  return {
+    consumerId: "localized_profile",
+    candidateState: "candidate",
+    qualityClass: page.qualityClass ?? "unverified",
+    visibleText: [
+      page.displayName,
+      page.mention,
+      page.bio ?? "",
+      description,
+      ...page.objects.flatMap((object) => [
+        object.displayName,
+        object.identityLabel ?? "",
+      ]),
+      ...page.journals.flatMap((journal) => [
+        journal.title,
+        journal.bodyPreview,
+        journal.context.label,
+      ]),
+    ],
+    distinctPublicEntityIds: [
+      ...page.objects.map((object) => object.objectId),
+      ...page.journals.map((journal) => journal.entryId),
+    ],
+    meaningfulContentAt: latestMeaningfulContentTimestamp([
+      ...page.objects.map((object) => object.latestEntryDate),
+      ...page.journals.map((journal) => journal.publishedAt),
+    ]),
+    canonicalPath: publicProfilePath(locale, page.handle),
+    equivalentLocales: [locale],
+  };
 }
 
 function routeHandleFromSegment(segment: string) {

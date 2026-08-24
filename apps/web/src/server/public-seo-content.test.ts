@@ -1,19 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildAnswerPageJsonLd,
+  answerVisibleText,
+  authoredContentEntityIds,
   getAnswerPage,
   getMarketLanding,
   listAnswerPages,
   listBlogPosts,
   listGuides,
-  listIndexableAuthoredPublicContentSitemapEntries,
+  listAuthoredPublicContentSitemapCandidates,
   listMarketLandings,
+  resolveAuthoredPublicSurfaceDiscovery,
 } from "./public-seo-content";
+import { listIndexableLocalizedAuthoredSitemapEntries } from "./public-localized-content";
 
 describe("public SEO/AEO content foundation", () => {
-  it("exposes authored content surfaces that are eligible for the sitemap", () => {
-    const entries = listIndexableAuthoredPublicContentSitemapEntries();
+  it("measures every authored candidate before sitemap admission", () => {
+    const entries = listAuthoredPublicContentSitemapCandidates();
     const paths = entries.map((entry) => entry.path);
 
     expect(paths).toEqual([
@@ -52,6 +55,13 @@ describe("public SEO/AEO content foundation", () => {
       changeFrequency: "monthly",
       priority: 0.65,
     });
+
+    const admitted = listIndexableLocalizedAuthoredSitemapEntries();
+    expect(admitted.length).toBeGreaterThan(0);
+    expect(admitted.every((entry) => paths.includes(entry.path))).toBe(true);
+    expect(admitted.map((entry) => entry.path)).toContain(
+      "/answers/why-are-tomato-leaves-yellow",
+    );
     expect(entries).toContainEqual({
       kind: "editorial_blog",
       locale: "uk",
@@ -111,29 +121,23 @@ describe("public SEO/AEO content foundation", () => {
     });
   });
 
-  it("builds curated structured metadata for answer pages", () => {
+  it("registers rich answer facts with the shared measured decision", () => {
     const answerPage = getAnswerPage("why-are-tomato-leaves-yellow");
     expect(answerPage).not.toBeNull();
 
-    const jsonLd = buildAnswerPageJsonLd(answerPage!, "bg");
-
-    expect(jsonLd).toMatchObject({
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "WebPage",
-          name: "Why are tomato leaves turning yellow?",
-          inLanguage: "bg",
-          url: "https://over.garden/bg/answers/why-are-tomato-leaves-yellow",
-        },
-        {
-          "@type": "FAQPage",
-        },
-      ],
+    const discovery = resolveAuthoredPublicSurfaceDiscovery({
+      consumerId: "localized_answer",
+      canonicalPath: answerPage!.path,
+      equivalentLocales: ["uk", "bg", "ru"],
+      visibleText: answerVisibleText(answerPage!),
+      distinctPublicEntityIds: authoredContentEntityIds(answerPage!.path),
+      meaningfulContentAt: `${answerPage!.editorial.updatedDate}T00:00:00.000Z`,
+      evaluatedAt: "2026-08-24T00:00:00.000Z",
     });
-    expect(jsonLd["@graph"][1].mainEntity).toHaveLength(
-      answerPage!.faqs.length,
-    );
-    expect(JSON.stringify(jsonLd)).not.toMatch(/owner|quarantine|latitude/i);
+
+    expect(discovery.decision).toMatchObject({
+      value: "indexable",
+      reasons: [],
+    });
   });
 });

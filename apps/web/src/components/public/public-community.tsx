@@ -38,6 +38,7 @@ import type {
   PublicCommunityDirectoryItem,
   PublicCommunityPageModel,
 } from "@/server/community-repository";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 
 export type PublicCommunityState = "ready" | "loading" | "error";
 
@@ -45,12 +46,15 @@ export function PublicCommunityDirectory({
   locale,
   communities,
   state = "ready",
+  jsonLd,
 }: {
   locale: PublicLocale;
   communities: PublicCommunityDirectoryItem[];
   state?: PublicCommunityState;
+  jsonLd?: Record<string, unknown> | null;
 }) {
   const copy = getCommunityCopy(locale);
+  const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
 
   return (
     <main
@@ -58,6 +62,12 @@ export function PublicCommunityDirectory({
       data-public-community-directory={state}
       className="mx-auto flex w-full max-w-5xl flex-col px-4 py-5 sm:px-6"
     >
+      {serializedJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
+        />
+      ) : null}
       <header className="grid gap-2 border-b border-border pb-4">
         <h1 className="text-3xl font-semibold text-foreground">
           {copy.directoryTitle}
@@ -153,6 +163,7 @@ export function PublicCommunityView({
   visualScenarioId,
   resumeAction = null,
   resumeControl = null,
+  jsonLd,
 }: {
   locale: PublicLocale;
   community: PublicCommunityPageModel;
@@ -165,6 +176,7 @@ export function PublicCommunityView({
   visualScenarioId?: string | null;
   resumeAction?: AuthIntentAction | null;
   resumeControl?: string | null;
+  jsonLd?: Record<string, unknown> | null;
 }) {
   const copy = getCommunityCopy(locale);
   const contentCopy = getCommunityContentCopy(locale, community.contentKey);
@@ -186,6 +198,7 @@ export function PublicCommunityView({
     degradedReason: null,
     shortQuery: false,
   };
+  const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
   const contextModules = [
     {
       key: "community-rules",
@@ -211,6 +224,12 @@ export function PublicCommunityView({
       data-public-community-state={state}
       className="mx-auto flex w-full max-w-5xl flex-col px-4 py-4 sm:px-6 sm:py-5"
     >
+      {serializedJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
+        />
+      ) : null}
       <AuthIntentFocus action={resumeAction} control={resumeControl} />
       <SiteShellContextRailRegistration modules={contextModules} />
 

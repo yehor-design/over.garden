@@ -32,6 +32,7 @@ import type {
   PublicJournalDirectoryPage,
   PublicJournalDirectoryRequest,
 } from "@/server/public-journal-directory-repository";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 
 export { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 
@@ -48,6 +49,7 @@ export function PublicJournalDirectory({
   facets,
   state,
   visualCorpus = false,
+  jsonLd,
 }: {
   locale: PublicLocale;
   copy: PublicJournalDirectoryCopy;
@@ -55,6 +57,7 @@ export function PublicJournalDirectory({
   facets: PublicJournalDirectoryFacets;
   state: PublicJournalDirectoryState;
   visualCorpus?: boolean;
+  jsonLd?: Record<string, unknown> | null;
 }) {
   const contextModules = buildPublicJournalDirectoryContextModules(
     locale,
@@ -68,6 +71,7 @@ export function PublicJournalDirectory({
     page.request,
     visualCorpus,
   );
+  const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
 
   return (
     <main
@@ -77,6 +81,12 @@ export function PublicJournalDirectory({
       data-public-journal-search-source={page.searchSource}
       className="mx-auto flex w-full max-w-5xl flex-col px-4 py-4 sm:px-6 sm:py-5"
     >
+      {serializedJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
+        />
+      ) : null}
       <SiteShellContextRailRegistration modules={contextModules} />
 
       <header className="grid gap-2 border-b border-border pb-4">
