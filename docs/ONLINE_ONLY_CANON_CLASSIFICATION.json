@@ -195,6 +195,14 @@
       "reason": "Queue vocabulary belongs to Meilisearch task handling."
     },
     {
+      "path": "apps/web/scripts/verify-core-web-vitals-budget.ts",
+      "reason": "Service worker blocking belongs to the isolated Chromium cold-cache measurement harness, not browser-local journal state."
+    },
+    {
+      "path": "apps/web/src/lib/performance/public-surface-budget.ts",
+      "reason": "The service worker value pins the isolated Chromium cold-cache measurement profile, not an application runtime capability."
+    },
+    {
       "pathPrefix": "apps/web/src/app/garden/catalog/curation/",
       "reason": "Queue vocabulary belongs to authenticated server-side catalog curation jobs."
     },

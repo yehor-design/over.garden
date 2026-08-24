@@ -27,6 +27,17 @@ OVE-335 owns the threshold runtime and absorbed the canonical, structured-data,
 locale-equivalence, and coverage scope of canceled OVE-336. OVE-337 separately
 owns user-visible Core Web Vitals budgets and CI enforcement.
 
+OVE-337 measures every candidate consumer through eight user-visible journey
+classes: feed, journal directory, journal entry, profile, knowledge, catalog,
+community, and object passport. CI takes five cold-cache mobile Chromium runs
+per class and evaluates the nearest-rank p75 against the fixed good thresholds:
+LCP at most 2,500 ms, INP at most 200 ms, and CLS at most 0.1. The pinned lab
+profile is a 390 x 844 viewport, 4x CPU slowdown, 40 ms latency, 10 Mbps
+download, and 2 Mbps upload. A missing class, metric, interaction, or fifth run
+fails closed. Production closeout does not traverse fixture identities: it
+probes only the static allowlist `/bg`, `/bg/objects`, `/bg/journals`, and
+`/bg/knowledge`, while the full class matrix remains an exact-SHA CI artifact.
+
 ## Candidate boundary
 
 A page first has to be a public-surface candidate. Private workspace and auth
