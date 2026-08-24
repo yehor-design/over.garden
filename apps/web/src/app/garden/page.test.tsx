@@ -68,10 +68,6 @@ vi.mock("../wishlist/actions", () => ({
   addCatalogPublicSlugToWishlistAction: vi.fn(),
 }));
 
-vi.mock("./actions", () => ({
-  createSpaceJournalEntryAction: vi.fn(),
-}));
-
 vi.mock("./first-entry-composer", () => ({
   FirstEntryComposer: (props: {
     initialSpace?: { id: string; displayName: string } | null;
@@ -307,8 +303,9 @@ describe("/garden workspace V2", () => {
       expect.objectContaining({ faultSections: [] }),
     );
     expect(html).toContain('data-garden-workspace="operational-home"');
-    expect(html).toContain("Фото в обробці: 1");
-    expect(html).toContain("Фото, що потребують уваги: 1");
+    expect(html).not.toContain("Фото в обробці");
+    expect(html).not.toContain("Фото, що потребують уваги");
+    expect(html).toContain("First entry composer");
     expect(html).not.toMatch(/Офлайн|Synthetic draft|Очікує синхронізації/u);
     expect(html).not.toContain("Garden auth panel");
     expect(
@@ -385,7 +382,7 @@ function visualCreationScenario(flow: "first-entry" | "follow-up") {
     mediaFileName: null,
     serverAvailable: true,
     submitState: "idle",
-    message: "Private by default.",
+    message: "Published only after atomic confirmation.",
     detailsOpen: false,
     path: "/garden?visualCreate=ove182-c001",
     expectedStatus: 200,
@@ -408,8 +405,6 @@ function visualScenario(state: "connection-required" | "loading") {
     expectedObjectIds: ["object-1"],
     expectedRecentEntryIds: ["entry-1"],
     serverAvailable: state !== "connection-required",
-    mediaProcessingCount: state === "connection-required" ? 1 : 0,
-    mediaFailedCount: state === "connection-required" ? 1 : 0,
     faultSections: [],
     viewportTargets: ["desktop", "mobile-320"] as const,
   };
@@ -469,10 +464,6 @@ function workspaceModel(): GardenWorkspaceReadModel {
       status: "ready",
       value: { notificationCount: 2, claimCount: 1 },
     },
-    media: {
-      status: "ready",
-      value: { processingCount: 0, failedCount: 0 },
-    },
     allFailed: false,
   };
 }
@@ -507,10 +498,6 @@ function emptyWorkspaceModel(): GardenWorkspaceReadModel {
       status: "ready",
       value: { notificationCount: 0, claimCount: 0 },
     },
-    media: {
-      status: "ready",
-      value: { processingCount: 0, failedCount: 0 },
-    },
     allFailed: false,
   };
 }
@@ -527,8 +514,7 @@ function workspaceObject() {
     varietyState: "selected" as const,
     createdAt: new Date("2026-06-01T00:00:00.000Z"),
     entryCount: 3,
-    publicEntryCount: 1,
-    privateEntryCount: 2,
+    publicEntryCount: 3,
     archivedEntryCount: 0,
     latestEntryDate: new Date("2020-06-01T00:00:00.000Z"),
     coverMedia: null,
@@ -559,7 +545,7 @@ function spaceTimeline() {
         title: "Shared morning round",
         body: "Watered the shared balcony containers.",
         entry_date: new Date("2026-07-04T00:00:00.000Z"),
-        visibility: "private",
+        visibility: "public",
         lifecycle_state: "active",
         entry_scope: "space",
         media: null,

@@ -224,8 +224,8 @@ describe("public feed repository", () => {
 
     expect(media.sql).toContain('from "media_assets"');
     expect(media.sql).toContain('inner join "journal_entries"');
-    expect(media.sql).toContain('"media_assets"."status" =');
     expect(media.sql).toContain('"media_assets"."derivative_key" is not null');
+    expect(media.sql).not.toContain('"media_assets"."status"');
     expect(media.sql).toContain("row_number() over");
     expect(media.sql).toContain('"media_rank" <=');
     expect(media.sql).not.toContain("quarantine_key");
@@ -238,7 +238,7 @@ describe("public feed repository", () => {
         ...entryIds,
         "public",
         "active",
-        "processed",
+        "object",
         "inline",
         3,
       ]),

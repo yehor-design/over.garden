@@ -8,11 +8,9 @@ import { drainMediaLifecycleQueue } from "@/server/media/media-lifecycle-consume
 
 /** Local literals keep the job-queue producer scanner deterministic. */
 const MEDIA_LIFECYCLE_QUEUE = "media_lifecycle";
-const MEDIA_QUARANTINE_EXPIRE_KIND = "media_quarantine_expire";
 
-export const RETENTION_POLICY_VERSION = "ove195.retention.v1" as const;
+export const RETENTION_POLICY_VERSION = "ove349.retention.v2" as const;
 
-const QUARANTINE_EXPIRE_DAYS = 7;
 const ANALYTICS_EXPIRE_MONTHS = 13;
 const AUDIT_EXPIRE_YEARS = 1;
 const BATCH_LIMIT = 100;
@@ -22,7 +20,6 @@ export type RetentionMode = "dry_run" | "execute";
 export interface RetentionSelectionReport {
   policyVersion: typeof RETENTION_POLICY_VERSION;
   mode: RetentionMode;
-  quarantineExpireClass: CountClass;
   analyticsExpireClass: CountClass;
   adminAuditExpireClass: CountClass;
   communityAuditExpireClass: CountClass;
@@ -42,7 +39,6 @@ export interface RetentionSelectionReport {
 type CountClass = "empty" | "low" | "elevated" | "high";
 
 interface RetentionSelection {
-  quarantineExpireCount: number;
   analyticsExpireCount: number;
   adminAuditExpireCount: number;
   communityAuditExpireCount: number;
@@ -50,7 +46,6 @@ interface RetentionSelection {
   danglingCoverPointerCount: number;
   orphanCoverOnlyCount: number;
   pendingRevokeJobsCount: number;
-  quarantineExpireRows: Array<{ id: string; quarantineKey: string }>;
 }
 
 export async function runRetentionWorkflow(
@@ -81,7 +76,6 @@ export async function runRetentionWorkflow(
     const report: RetentionSelectionReport = {
       policyVersion: RETENTION_POLICY_VERSION,
       mode,
-      quarantineExpireClass: countClass(selection.quarantineExpireCount),
       analyticsExpireClass: countClass(selection.analyticsExpireCount),
       adminAuditExpireClass: countClass(selection.adminAuditExpireCount),
       communityAuditExpireClass: countClass(
@@ -112,7 +106,6 @@ export async function runRetentionWorkflow(
               : "failed",
         failure_class: failureClass === "none" ? null : failureClass,
         selection: {
-          quarantineExpireCount: selection.quarantineExpireCount,
           analyticsExpireCount: selection.analyticsExpireCount,
           adminAuditExpireCount: selection.adminAuditExpireCount,
           communityAuditExpireCount: selection.communityAuditExpireCount,
@@ -133,19 +126,8 @@ export async function runRetentionWorkflow(
 }
 
 async function collectRetentionSelection(): Promise<RetentionSelection> {
-  const quarantineCutoff = daysAgo(QUARANTINE_EXPIRE_DAYS);
   const analyticsCutoff = monthsAgo(ANALYTICS_EXPIRE_MONTHS);
   const auditCutoff = yearsAgo(AUDIT_EXPIRE_YEARS);
-
-  const quarantineExpireRows = await db
-    .selectFrom("media_assets")
-    .select(["id", "quarantine_key as quarantineKey"])
-    .where("status", "in", ["quarantined", "failed"])
-    .where("original_deleted_at", "is", null)
-    .where("created_at", "<", quarantineCutoff)
-    .orderBy("created_at", "asc")
-    .limit(BATCH_LIMIT)
-    .execute();
 
   const [
     analyticsExpireCount,
@@ -177,7 +159,6 @@ async function collectRetentionSelection(): Promise<RetentionSelection> {
           from media_assets ma
           where ma.id = je.cover_media_asset_id
             and ma.owner_user_id = je.owner_user_id
-            and ma.status = 'processed'
             and ma.derivative_key is not null
             and ma.revoked_at is null
         )
@@ -186,7 +167,6 @@ async function collectRetentionSelection(): Promise<RetentionSelection> {
       select count(*)::int as count
       from media_assets ma
       where ma.usage_role = 'cover_only'
-        and ma.status = 'processed'
         and ma.derivative_key is not null
         and ma.revoked_at is null
         and ma.journal_entry_id is not null
@@ -206,7 +186,6 @@ async function collectRetentionSelection(): Promise<RetentionSelection> {
   ]);
 
   return {
-    quarantineExpireCount: quarantineExpireRows.length,
     analyticsExpireCount,
     adminAuditExpireCount,
     communityAuditExpireCount,
@@ -214,46 +193,12 @@ async function collectRetentionSelection(): Promise<RetentionSelection> {
     danglingCoverPointerCount,
     orphanCoverOnlyCount,
     pendingRevokeJobsCount,
-    quarantineExpireRows,
   };
 }
 
 async function executeRetentionSelection(selection: RetentionSelection) {
   const analyticsCutoff = monthsAgo(ANALYTICS_EXPIRE_MONTHS);
   const auditCutoff = yearsAgo(AUDIT_EXPIRE_YEARS);
-
-  for (const row of selection.quarantineExpireRows) {
-    const payload = {
-      kind: MEDIA_QUARANTINE_EXPIRE_KIND,
-      mediaAssetId: row.id,
-      bucket: "quarantine",
-      objectKey: row.quarantineKey,
-    } satisfies JsonValue;
-
-    await db
-      .insertInto("job_queue")
-      .values({
-        queue_name: MEDIA_LIFECYCLE_QUEUE,
-        payload,
-        idempotency_key: `media_quarantine_expire:${row.id}`,
-      })
-      .onConflict((oc) =>
-        oc
-          .column("idempotency_key")
-          .where("idempotency_key", "is not", null)
-          .doUpdateSet({
-            payload,
-            status: "pending",
-            attempts: 0,
-            locked_at: null,
-            locked_by: null,
-            last_error: null,
-            available_at: sql`now()`,
-            updated_at: sql`now()`,
-          }),
-      )
-      .execute();
-  }
 
   if (selection.analyticsExpireCount > 0) {
     await db
@@ -292,7 +237,6 @@ async function executeRetentionSelection(selection: RetentionSelection) {
         from media_assets ma
         where ma.id = je.cover_media_asset_id
           and ma.owner_user_id = je.owner_user_id
-          and ma.status = 'processed'
           and ma.derivative_key is not null
           and ma.revoked_at is null
       )
@@ -300,13 +244,13 @@ async function executeRetentionSelection(selection: RetentionSelection) {
 }
 
 async function acquireRetentionLeaderLock() {
-  await sql`select pg_advisory_lock(hashtextextended('ove195.retention.v1', 0))`.execute(
+  await sql`select pg_advisory_lock(hashtextextended('ove349.retention.v2', 0))`.execute(
     db,
   );
 }
 
 async function releaseRetentionLeaderLock() {
-  await sql`select pg_advisory_unlock(hashtextextended('ove195.retention.v1', 0))`.execute(
+  await sql`select pg_advisory_unlock(hashtextextended('ove349.retention.v2', 0))`.execute(
     db,
   );
 }
@@ -323,10 +267,6 @@ function countClass(count: number): CountClass {
   if (count <= 10) return "low";
   if (count <= 100) return "elevated";
   return "high";
-}
-
-function daysAgo(days: number): Date {
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 }
 
 function monthsAgo(months: number): Date {

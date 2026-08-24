@@ -3,36 +3,13 @@ import "server-only";
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
-  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { requiredServerEnv } from "@/lib/env";
 import { resolveR2ForcePathStyle } from "@/lib/r2-addressing-contract";
-
-export const MAX_R2_PRESIGN_TTL_SECONDS = 900;
-
-export interface R2UploadUrlTtlConfiguration {
-  source: "environment" | "default";
-  effectiveSeconds: number;
-}
-
-export interface CreateQuarantineUploadUrlInput {
-  objectKey: string;
-  contentType: string;
-  contentLength: number;
-  expiresInSeconds?: number;
-}
-
-export interface QuarantineUploadUrl {
-  uploadUrl: string;
-  objectKey: string;
-  bucket: string;
-  expiresInSeconds: number;
-}
 
 export type MediaProviderObjectState =
   | "present"
@@ -49,9 +26,8 @@ function r2Client() {
     region: "auto",
     endpoint: requiredServerEnv("R2_ENDPOINT"),
     forcePathStyle: resolveR2ForcePathStyle(),
-    // Browser PUT capabilities are signed before their body exists. The SDK's
-    // WHEN_SUPPORTED default otherwise bakes the empty-body CRC32 into the URL,
-    // causing an authoritative provider rejection for every non-empty upload.
+    // Keep provider-side fixture PUTs compatible with R2 without adding an
+    // SDK-calculated body checksum contract that the app does not persist.
     requestChecksumCalculation: "WHEN_REQUIRED",
     credentials: {
       accessKeyId: requiredServerEnv("R2_ACCESS_KEY_ID"),
@@ -60,127 +36,6 @@ function r2Client() {
   });
 
   return cachedR2Client;
-}
-
-export async function createQuarantineUploadUrl({
-  objectKey,
-  contentType,
-  contentLength,
-  expiresInSeconds = resolveR2UploadUrlTtlConfiguration().effectiveSeconds,
-}: CreateQuarantineUploadUrlInput): Promise<QuarantineUploadUrl> {
-  const bucket = requiredServerEnv("R2_QUARANTINE_BUCKET");
-  const command = new PutObjectCommand({
-    Bucket: bucket,
-    Key: objectKey,
-    ContentType: contentType,
-    ContentLength: contentLength,
-    Metadata: {
-      privacy_state: "quarantine",
-    },
-  });
-
-  return {
-    uploadUrl: await getSignedUrl(r2Client(), command, {
-      expiresIn: expiresInSeconds,
-    }),
-    objectKey,
-    bucket,
-    expiresInSeconds,
-  };
-}
-
-export function resolveR2UploadUrlTtlConfiguration(
-  env: Record<string, string | undefined> = process.env,
-): R2UploadUrlTtlConfiguration {
-  const raw = env.R2_UPLOAD_URL_TTL_SECONDS;
-  if (raw === undefined || raw.trim() === "") {
-    return { source: "default", effectiveSeconds: MAX_R2_PRESIGN_TTL_SECONDS };
-  }
-  if (!/^[1-9]\d*$/.test(raw)) {
-    throw new Error("R2 upload URL TTL configuration is invalid.");
-  }
-  const effectiveSeconds = Number(raw);
-  if (
-    !Number.isSafeInteger(effectiveSeconds) ||
-    effectiveSeconds !== MAX_R2_PRESIGN_TTL_SECONDS
-  ) {
-    throw new Error("R2 upload URL TTL configuration is invalid.");
-  }
-  return { source: "environment", effectiveSeconds };
-}
-
-export function resolveEffectiveR2PresignTtlSeconds(input: {
-  configuration: R2UploadUrlTtlConfiguration;
-  envelopeExpiresAtSeconds: number;
-  nowSeconds: number;
-}): number {
-  const remainingEnvelopeSeconds = Math.floor(
-    input.envelopeExpiresAtSeconds - input.nowSeconds,
-  );
-  const effectiveSeconds = Math.min(
-    input.configuration.effectiveSeconds,
-    MAX_R2_PRESIGN_TTL_SECONDS,
-    remainingEnvelopeSeconds,
-  );
-  if (!Number.isSafeInteger(effectiveSeconds) || effectiveSeconds <= 0) {
-    throw new Error("R2 presign lifetime is unavailable.");
-  }
-  return effectiveSeconds;
-}
-
-export async function getQuarantineObjectBuffer(
-  objectKey: string,
-  maxBytes: number,
-  abortSignal?: AbortSignal,
-): Promise<Buffer> {
-  const response = await r2Client().send(
-    new GetObjectCommand({
-      Bucket: requiredServerEnv("R2_QUARANTINE_BUCKET"),
-      Key: objectKey,
-    }),
-    { abortSignal: boundedMediaProviderSignal(abortSignal) },
-  );
-
-  if ((response.ContentLength ?? 0) > maxBytes) {
-    throw new Error("Quarantine object exceeds the allowed image size.");
-  }
-
-  const bytes = await response.Body?.transformToByteArray();
-  if (!bytes) throw new Error(`Quarantine object ${objectKey} has no body.`);
-  if (bytes.byteLength > maxBytes) {
-    throw new Error("Quarantine object exceeds the allowed image size.");
-  }
-  return Buffer.from(bytes);
-}
-
-/**
- * Reads a processed derivative for a server-to-server transform. Callers must
- * prove the asset's owner, readiness and original-absence state before calling
- * this helper; object keys are never exposed to the browser or an external API.
- */
-export async function getPublicDerivativeObjectBuffer(
-  objectKey: string,
-  maxBytes: number,
-  abortSignal?: AbortSignal,
-): Promise<Buffer> {
-  const response = await r2Client().send(
-    new GetObjectCommand({
-      Bucket: requiredServerEnv("R2_PUBLIC_BUCKET"),
-      Key: objectKey,
-    }),
-    { abortSignal: boundedMediaProviderSignal(abortSignal) },
-  );
-
-  if ((response.ContentLength ?? 0) > maxBytes) {
-    throw new Error("Public derivative exceeds the allowed image size.");
-  }
-
-  const bytes = await response.Body?.transformToByteArray();
-  if (!bytes) throw new Error("Public derivative has no body.");
-  if (bytes.byteLength > maxBytes) {
-    throw new Error("Public derivative exceeds the allowed image size.");
-  }
-  return Buffer.from(bytes);
 }
 
 export async function putPublicDerivativeObject(
@@ -218,45 +73,9 @@ export async function copyPublicDerivativeObject(
       CopySource: `${bucket}/${sourceObjectKey}`,
       CacheControl: "public, max-age=31536000, immutable",
       MetadataDirective: "REPLACE",
-      ContentType: "image/png",
+      ContentType: "image/webp",
     }),
     { abortSignal: AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS) },
-  );
-}
-
-export async function deleteQuarantineObject(
-  objectKey: string,
-  abortSignal?: AbortSignal,
-): Promise<void> {
-  await r2Client().send(
-    new DeleteObjectCommand({
-      Bucket: requiredServerEnv("R2_QUARANTINE_BUCKET"),
-      Key: objectKey,
-    }),
-    {
-      abortSignal:
-        abortSignal ?? AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
-    },
-  );
-}
-
-export async function quarantineObjectExists(
-  objectKey: string,
-): Promise<boolean> {
-  const state = await probeQuarantineObjectState(objectKey);
-  if (state === "present") return true;
-  if (state === "not_found") return false;
-  throw new Error(`Quarantine provider proof was ${state}.`);
-}
-
-export async function probeQuarantineObjectState(
-  objectKey: string,
-  abortSignal?: AbortSignal,
-): Promise<MediaProviderObjectState> {
-  return probeObjectState(
-    requiredServerEnv("R2_QUARANTINE_BUCKET"),
-    objectKey,
-    abortSignal,
   );
 }
 

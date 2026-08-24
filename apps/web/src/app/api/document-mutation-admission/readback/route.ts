@@ -1,7 +1,4 @@
-import {
-  MAX_R2_PRESIGN_TTL_SECONDS,
-  resolveR2UploadUrlTtlConfiguration,
-} from "@/lib/storage";
+import { EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS } from "@/lib/media/ephemeral-staging-contract";
 import { resolveR2AddressingReceipt } from "@/lib/r2-addressing-contract";
 import { DOCUMENT_MUTATION_GENERATION_PROTOCOL } from "@/lib/auth/document-mutation-generation-contract";
 import { buildAuthenticatedMutationDeploymentReceipt } from "@/server/authenticated-mutation-deployment-receipt";
@@ -12,7 +9,6 @@ export const dynamic = "force-dynamic";
 
 export function GET() {
   try {
-    const ttl = resolveR2UploadUrlTtlConfiguration();
     return Response.json(
       {
         protocol: DOCUMENT_MUTATION_GENERATION_PROTOCOL,
@@ -20,11 +16,8 @@ export function GET() {
         enforcement: isDocumentMutationAdmissionEnabled()
           ? "enabled"
           : "disabled",
-        r2UploadUrlTtl: {
-          source: ttl.source,
-          effectiveSeconds: ttl.effectiveSeconds,
-          maximumSeconds: MAX_R2_PRESIGN_TTL_SECONDS,
-        },
+        ephemeralMediaCapabilityTtlSeconds:
+          EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS,
         r2Addressing: resolveR2AddressingReceipt(),
         authenticatedMutation: buildAuthenticatedMutationDeploymentReceipt(),
       },

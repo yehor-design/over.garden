@@ -1,8 +1,8 @@
 # Production Verification Contract
 
-Status: current self-serve production contract after OVE-314
+Status: current self-serve production contract after OVE-349
 Legacy filename retained only because earlier immutable receipts link to it.
-Last updated: 2026-08-11
+Last updated: 2026-08-24
 
 Connectivity addendum (2026-08-20): ADR-0017 makes journal writes
 network-required. Every former offline-retry proof is replaced by
@@ -53,9 +53,10 @@ The current production journey is:
 2. The visitor registers or signs in with email/password or Google.
 3. The gardener creates an object and first journal entry through the canonical
    garden mutation path without an invite, grant, or cohort prerequisite.
-4. Optional media goes to private quarantine, is re-encoded into a stripped
-   derivative, and the original is deleted after successful processing.
-5. The gardener can return to the same object, publish explicitly, archive,
+4. Optional media is converted once to the final WebP in the browser, uploaded
+   directly to short-lived edge staging, and committed with the public journal
+   by one atomic Publish. Image bytes do not cross a Vercel Function.
+5. The gardener can return to the same object, edit atomically, archive,
    receive `network_unavailable_save_refused` without false success when the
    server is unavailable, retry the server-authoritative request, and sign out
    through the shared convergence boundary.

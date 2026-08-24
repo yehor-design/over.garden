@@ -213,7 +213,6 @@ describe("erasure dry-run repository privacy contracts", () => {
     const mediaSql = buildCountMediaAssetsQuery(
       testDb,
       requesterUserId,
-      "processed",
     ).compile().sql;
 
     expect(journalSql).toContain('"journal_entries"');

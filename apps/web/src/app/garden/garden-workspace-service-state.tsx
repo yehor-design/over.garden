@@ -6,14 +6,12 @@ import { AlertCircle, ShieldCheck } from "lucide-react";
 import { SiteShellContextRailRegistration } from "@/components/site-shell/site-shell-context-rail";
 import {
   formatGardenWorkspaceDate,
-  formatGardenWorkspaceTemplate,
   getGardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { localizedPath } from "@/lib/public-localization";
 import type {
   GardenWorkspaceInboxSummary,
-  GardenWorkspaceMediaSummary,
   GardenWorkspaceRecentEntry,
 } from "@/server/garden-workspace-repository";
 
@@ -22,7 +20,6 @@ interface GardenWorkspaceServiceStateProps {
   nextAction: { href: string; label: string };
   recent: GardenWorkspaceRecentEntry[];
   inbox: GardenWorkspaceInboxSummary | null;
-  media: GardenWorkspaceMediaSummary | null;
 }
 
 /**
@@ -34,7 +31,6 @@ export function GardenWorkspaceServiceState({
   nextAction,
   recent,
   inbox,
-  media,
 }: GardenWorkspaceServiceStateProps) {
   const copy = getGardenWorkspaceCopy(locale);
   const modules = buildContextModules({
@@ -42,10 +38,7 @@ export function GardenWorkspaceServiceState({
     nextAction,
     recent,
     inbox,
-    media,
   });
-  const hasMediaWork =
-    Boolean(media?.processingCount) || Boolean(media?.failedCount);
 
   return (
     <>
@@ -55,32 +48,12 @@ export function GardenWorkspaceServiceState({
         data-garden-service-state="true"
         className="border-y border-border bg-muted/20 px-4 py-3 sm:px-6 xl:hidden"
       >
-        {hasMediaWork ? (
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
-            {media?.processingCount ? (
-              <span>
-                {formatGardenWorkspaceTemplate(
-                  copy.serviceState.media.processing,
-                  { count: media.processingCount },
-                )}
-              </span>
-            ) : null}
-            {media?.failedCount ? (
-              <span className="text-destructive">
-                {formatGardenWorkspaceTemplate(
-                  copy.serviceState.media.attention,
-                  { count: media.failedCount },
-                )}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
         <div
-          className={`flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground ${hasMediaWork ? "mt-3 border-t border-border pt-3" : ""}`}
+          className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground"
         >
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="size-4" aria-hidden="true" />
-            {copy.composer.privacyDefault}
+            {copy.composer.publicationNotice}
           </span>
           <Link
             href={localizedPath(locale, "/privacy")}
@@ -99,35 +72,13 @@ function buildContextModules({
   nextAction,
   recent,
   inbox,
-  media,
 }: {
   locale: InterfaceLocale;
   nextAction: { href: string; label: string };
   recent: GardenWorkspaceRecentEntry[];
   inbox: GardenWorkspaceInboxSummary | null;
-  media: GardenWorkspaceMediaSummary | null;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
-  const mediaItems = [
-    ...(media?.processingCount
-      ? [
-          {
-            href: "/garden#garden-service-state",
-            label: copy.serviceState.context.photosProcessing,
-            meta: String(media.processingCount),
-          },
-        ]
-      : []),
-    ...(media?.failedCount
-      ? [
-          {
-            href: "/garden#garden-service-state",
-            label: copy.serviceState.context.photosNeedAttention,
-            meta: String(media.failedCount),
-          },
-        ]
-      : []),
-  ];
 
   return [
     {
@@ -147,15 +98,6 @@ function buildContextModules({
       })),
       emptyLabel: copy.serviceState.context.noRecent,
     },
-    ...(mediaItems.length > 0
-      ? [
-          {
-            key: "garden-media",
-            title: copy.serviceState.context.photosProcessing,
-            items: mediaItems,
-          },
-        ]
-      : []),
     {
       key: "garden-inbox",
       title: copy.serviceState.context.inbox,

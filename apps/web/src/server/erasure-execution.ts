@@ -29,9 +29,10 @@ export { ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID } from "@/server/system-acto
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-export type ErasureMediaObjectReference =
-  | { bucket: "quarantine"; objectKey: string }
-  | { bucket: "public_derivative"; objectKey: string };
+export type ErasureMediaObjectReference = {
+  bucket: "public_derivative";
+  objectKey: string;
+};
 
 export interface ExecuteApprovedErasureRequestInput {
   requestId: string;
@@ -444,10 +445,7 @@ export function buildListMediaObjectsForErasureQuery(
 ) {
   return executor
     .selectFrom("media_assets")
-    .select([
-      "quarantine_key as quarantineKey",
-      "derivative_key as derivativeKey",
-    ])
+    .select("derivative_key as derivativeKey")
     .where("owner_user_id", "=", requesterUserId);
 }
 
@@ -881,10 +879,10 @@ export function buildAnonymizeJournalEntriesForErasureQuery(
       cover_media_asset_id: null,
       journal_revision: sql`journal_revision + 1`,
       entry_date: toDateOnly(input.now),
-      visibility: "private",
+      visibility: "public",
       lifecycle_state: "archived",
       public_noindex: true,
-      published_at: null,
+      published_at: sql<Date>`coalesce(published_at, ${input.now})`,
       archived_at: input.now,
       public_gone_at: sql<Date>`case
         when public_slug is not null then coalesce(public_gone_at, ${input.now})
@@ -1133,8 +1131,7 @@ async function processErasureMediaCleanupJobs(
       objectKey?: string;
     };
     if (
-      (payload.bucket !== "quarantine" &&
-        payload.bucket !== "public_derivative") ||
+      payload.bucket !== "public_derivative" ||
       typeof payload.objectKey !== "string" ||
       payload.objectKey.length === 0
     ) {
@@ -1172,20 +1169,10 @@ async function listMediaObjectReferencesForErasure(
     requesterUserId,
   ).execute();
 
-  return rows.flatMap((row) => {
-    const references: ErasureMediaObjectReference[] = [
-      { bucket: "quarantine", objectKey: row.quarantineKey },
-    ];
-
-    if (row.derivativeKey) {
-      references.push({
-        bucket: "public_derivative",
-        objectKey: row.derivativeKey,
-      });
-    }
-
-    return references;
-  });
+  return rows.map((row) => ({
+    bucket: "public_derivative" as const,
+    objectKey: row.derivativeKey,
+  }));
 }
 
 async function deleteR2MediaObject(reference: ErasureMediaObjectReference) {

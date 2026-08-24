@@ -18,7 +18,7 @@ import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity
 const DEFAULT_BASE_URL = "http://localhost:3000";
 const SYNTHETIC_EMAIL_PREFIX = "ove204-sign-out-";
 const SYNTHETIC_EMAIL_SUFFIX = "@over.garden";
-const PRIVATE_GARDEN_MARKER = "OVE 204 synthetic private garden";
+const CONTINUITY_GARDEN_MARKER = "OVE 204 synthetic continuity garden";
 const EVIDENCE_SAFETY =
   "bounded_counts_and_booleans_no_identifiers_or_private_content";
 
@@ -69,7 +69,7 @@ const ALLOWED_EVIDENCE_KEYS = new Set([
   "firstAccessRevoked",
   "secondAccessPreserved",
   "continuity",
-  "privateGardenReadbackPreserved",
+  "gardenReadbackPreserved",
   "serverAggregateUnchanged",
   "identityRecordsPreserved",
   "providerLinksPreserved",
@@ -211,7 +211,7 @@ export interface AccountSignOutEvidenceReport {
     secondAccessPreserved: true;
   };
   continuity: {
-    privateGardenReadbackPreserved: boolean;
+    gardenReadbackPreserved: boolean;
     serverAggregateUnchanged: boolean;
     identityRecordsPreserved: boolean;
     providerLinksPreserved: boolean;
@@ -316,7 +316,7 @@ export async function runAccountSignOutSmoke(
     );
 
     await linkSyntheticProviderAccounts(database, userId);
-    await createPrivateGardenRecord(database, userId);
+    await createContinuityGardenRecord(database, userId);
 
     const beforeAccessIds = await readAccessRowIds(database, userId);
     assertExactlyTwoConcurrentAccessRows(
@@ -396,13 +396,10 @@ export async function runAccountSignOutSmoke(
       redirect: "manual",
     });
     assertEqual(gardenReadback.status, 200, "other client garden readback");
-    const privateGardenReadbackPreserved = (
+    const gardenReadbackPreserved = (
       await gardenReadback.text()
-    ).includes(PRIVATE_GARDEN_MARKER);
-    assert(
-      privateGardenReadbackPreserved,
-      "other client private garden readback",
-    );
+    ).includes(CONTINUITY_GARDEN_MARKER);
+    assert(gardenReadbackPreserved, "other client garden continuity readback");
 
     await signIn(baseUrl, firstClient, state.email, password);
     const canonicalProofIdentity = await readAuthenticatedIdentity(
@@ -498,7 +495,7 @@ export async function runAccountSignOutSmoke(
         secondAccessPreserved: true,
       },
       continuity: {
-        privateGardenReadbackPreserved,
+        gardenReadbackPreserved,
         serverAggregateUnchanged,
         ...continuityComparison,
       },
@@ -610,7 +607,7 @@ export function assertAccountSignOutEvidenceSafe(value: unknown) {
     "sign-out evidence cannot contain UUIDs",
   );
   assert(
-    !/cookie|password|secret|bearer|private garden|quarantine|latitude|longitude|coordinates/i.test(
+    !/cookie|password|secret|bearer|garden marker|quarantine|latitude|longitude|coordinates/i.test(
       serialized,
     ),
     "sign-out evidence cannot contain secret or private payload markers",
@@ -721,7 +718,7 @@ async function linkSyntheticProviderAccounts(database: DB, userId: string) {
   );
 }
 
-async function createPrivateGardenRecord(database: DB, userId: string) {
+async function createContinuityGardenRecord(database: DB, userId: string) {
   const spaceId = randomUUID();
   const objectId = randomUUID();
   const entryId = randomUUID();
@@ -732,7 +729,7 @@ async function createPrivateGardenRecord(database: DB, userId: string) {
       .values({
         id: spaceId,
         owner_user_id: userId,
-        display_name: PRIVATE_GARDEN_MARKER,
+        display_name: CONTINUITY_GARDEN_MARKER,
         location_visibility: "hidden",
         coarse_region_code: null,
       })
@@ -743,7 +740,7 @@ async function createPrivateGardenRecord(database: DB, userId: string) {
         id: objectId,
         owner_user_id: userId,
         space_id: spaceId,
-        display_name: "OVE 204 synthetic private plant",
+        display_name: "OVE 204 synthetic continuity plant",
         object_kind: "plant",
         catalog_item_id: null,
         variety_text: null,
@@ -759,15 +756,17 @@ async function createPrivateGardenRecord(database: DB, userId: string) {
         owner_user_id: userId,
         space_id: spaceId,
         plant_object_id: objectId,
-        title: "OVE 204 synthetic private entry",
-        body: "Synthetic private continuity record for the OVE-204 smoke.",
+        title: "OVE 204 synthetic archived entry",
+        body: "Synthetic archived continuity record for the OVE-204 smoke.",
         entry_scope: "object",
         entry_date: "2026-07-18",
-        visibility: "private",
-        lifecycle_state: "active",
-        public_slug: null,
+        visibility: "public",
+        lifecycle_state: "archived",
+        public_slug: `ove-204-continuity-${entryId}`,
         public_noindex: true,
-        published_at: null,
+        published_at: new Date(),
+        archived_at: new Date(),
+        public_gone_at: new Date(),
         client_mutation_id: `ove204-${randomUUID()}`,
       })
       .execute();
@@ -993,8 +992,8 @@ export function assertOldSessionGuestRouteContract(
     `old session ${route} cannot render the authenticated session boundary`,
   );
   assert(
-    !html.includes(PRIVATE_GARDEN_MARKER),
-    `old session ${route} cannot render private garden content`,
+    !html.includes(CONTINUITY_GARDEN_MARKER),
+    `old session ${route} cannot render owner garden content`,
   );
 
   if (route === "profile") {
@@ -1296,7 +1295,7 @@ export function assertImmutableContinuityPreserved(
   assert(comparison.identityRecordsPreserved, "identity records changed");
   assert(comparison.providerLinksPreserved, "provider links changed");
   assert(comparison.roleRecordsPreserved, "owner role record changed");
-  assert(comparison.gardenRecordsPreserved, "private garden records changed");
+  assert(comparison.gardenRecordsPreserved, "garden continuity records changed");
   assertEqual(comparison.identityDuplicates, 0, "identity duplicate count");
 }
 
@@ -1385,7 +1384,7 @@ function assertExpectedSyntheticAggregate(aggregate: ServerAggregate) {
   );
   assertEqual(aggregate.syntheticRoles, 0, "synthetic role count");
   assertEqual(aggregate.ownerRoleRows, 1, "global owner role count");
-  assertEqual(aggregate.gardenRows, 3, "synthetic private garden row count");
+  assertEqual(aggregate.gardenRows, 3, "synthetic continuity garden row count");
 }
 
 async function countWhereUserId<

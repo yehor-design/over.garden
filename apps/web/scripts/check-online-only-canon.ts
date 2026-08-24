@@ -131,7 +131,6 @@ const REQUIRED_CURRENT_CONSUMERS = [
   "apps/web/scripts/check-linear-agent-task.test.ts",
   "apps/web/package.json",
   ".github/workflows/ci.yml",
-  "apps/web/src/lib/garden/use-online-journal-composer.ts",
   "apps/web/src/lib/retirement/known-client-storage.ts",
   "apps/web/src/app/garden/first-entry-composer.tsx",
   "apps/web/src/app/garden/space-entry-composer.tsx",

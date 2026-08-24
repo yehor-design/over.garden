@@ -13,9 +13,11 @@ import {
 import type { Database } from "../src/db/types";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import {
-  ONLINE_JOURNAL_PROTOCOL,
-  ONLINE_JOURNAL_PROTOCOL_HEADER,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
+  type AtomicJournalCreateResponse,
 } from "../src/lib/garden/entry-contracts";
+import { buildAtomicTextJournalCreateRequest } from "./atomic-journal-text-request";
 import {
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE,
@@ -156,30 +158,32 @@ async function main() {
       );
     }
 
-    const entry = await jsonRequest<EntryResponse>(
+    const created = await jsonRequest<AtomicJournalCreateResponse>(
       baseUrl,
       jar,
       "/api/garden/entries",
       {
         method: "POST",
-        body: {
-          target: "first_plant_entry",
-          spaceName: "OVE-104 EU OJ smoke",
-          plantName: smokeName,
-          objectKind: "plant",
-          catalogItemId: selected.id,
-          userAddedCatalogName: null,
-          varietyText: selected.displayName,
+        body: buildAtomicTextJournalCreateRequest({
+          publishId: randomUUID(),
+          context: {
+            target: "first_plant_entry",
+            spaceName: "OVE-104 EU OJ smoke",
+            plantName: smokeName,
+            objectKind: "plant",
+            catalogItemId: selected.id,
+            userAddedCatalogName: null,
+            entryDate: "2026-07-01",
+            locationVisibility: "hidden",
+            coarseRegionCode: null,
+            activationSource: "direct_garden",
+          },
           title: "OVE-104 EU OJ selected variety",
-          body: "Local smoke entry for source-backed catalog readback.",
-          entryDate: "2026-07-01",
-          locationVisibility: "hidden",
-          coarseRegionCode: null,
-          clientMutationId: randomUUID(),
-          activationSource: "direct_garden",
-        },
+          text: "Local atomic smoke entry for source-backed catalog readback.",
+        }),
       },
     );
+    const entry = await readEntryResponse(db, created.entryId);
 
     assertEqual(
       entry.plantObject.catalogItemId,
@@ -315,6 +319,36 @@ function createDb() {
   return new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
 }
 
+async function readEntryResponse(
+  db: Kysely<Database>,
+  entryId: string,
+): Promise<EntryResponse> {
+  const row = await db
+    .selectFrom("journal_entries as je")
+    .innerJoin("plant_objects as po", "po.id", "je.plant_object_id")
+    .select([
+      "po.id as objectId",
+      "po.object_kind as objectKind",
+      "po.catalog_item_id as catalogItemId",
+      "po.variety_text as varietyText",
+      "po.variety_state as varietyState",
+    ])
+    .where("je.id", "=", entryId)
+    .executeTakeFirstOrThrow();
+  if (row.objectKind !== "plant" && row.objectKind !== "animal") {
+    throw new Error(`Unexpected object kind: ${row.objectKind}.`);
+  }
+  return {
+    plantObject: {
+      objectKind: row.objectKind,
+      catalogItemId: row.catalogItemId,
+      varietyText: row.varietyText,
+      varietyState: row.varietyState,
+    },
+    readbackUrl: `/garden/objects/${row.objectId}`,
+  };
+}
+
 async function findSmokeTarget(db: Kysely<Database>): Promise<EuOjSmokeTarget> {
   const bulgariaTarget = await buildEuOjSmokeTargetQuery(
     db,
@@ -445,7 +479,8 @@ async function jsonRequest<T>(
     method: init.method ?? "GET",
     headers: {
       Accept: "application/json",
-      [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
+      [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
+        ATOMIC_JOURNAL_CREATE_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: baseUrl } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       Cookie: jar.header(),
@@ -485,6 +520,9 @@ async function textRequest(baseUrl: string, jar: CookieJar, path: string) {
 
 function normalizeBaseUrl(value: string) {
   const url = new URL(value);
+  if (!["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"].includes(url.hostname)) {
+    throw new Error("EU OJ atomic catalog smoke requires a loopback application.");
+  }
   url.pathname = "";
   url.search = "";
   url.hash = "";

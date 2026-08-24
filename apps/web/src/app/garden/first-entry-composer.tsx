@@ -92,7 +92,7 @@ interface FirstEntryComposerProps {
   visualScenario?: VisualFixtureCreationScenarioEvidence | null;
   /**
    * Visual workspace fixtures use in-memory presentation state only and must
-   * not call the authenticated server-draft protocol.
+   * not issue an authenticated publication request.
    */
   enableServerPersistence?: boolean;
 }
@@ -466,7 +466,7 @@ export function FirstEntryComposer({
         return;
       }
 
-      if (scenario.state === "draft" || scenario.state === "cancel") {
+      if (scenario.state === "local-only" || scenario.state === "cancel") {
         setSubmitState("idle");
         setMessage(
           scenario.state === "cancel"
@@ -1387,8 +1387,9 @@ function localizedVisualScenarioMessage(
   copy: GardenWorkspaceCopy,
   scenario: VisualFixtureCreationScenarioEvidence | null,
 ) {
-  if (!scenario) return copy.composer.privacyDefault;
-  if (scenario.state === "draft") return copy.composer.draftRestored;
+  if (!scenario) return copy.composer.publicationNotice;
+  if (scenario.state === "local-only")
+    return copy.composer.localScenarioRecovered;
   if (scenario.state === "connection-required")
     return copy.composer.messages.fixtureConnectionRequired;
   if (scenario.state === "error")
@@ -1397,7 +1398,7 @@ function localizedVisualScenarioMessage(
   if (scenario.state === "duplicate") {
     return copy.composer.messages.fixtureDuplicate;
   }
-  return copy.composer.privacyDefault;
+  return copy.composer.publicationNotice;
 }
 
 function selectedCoverMediaAssetId(

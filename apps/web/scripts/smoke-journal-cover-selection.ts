@@ -85,9 +85,8 @@ function main() {
     {
       mediaAssetId: string;
       usageRole: typeof JOURNAL_MEDIA_USAGE_INLINE | typeof JOURNAL_MEDIA_USAGE_COVER_ONLY;
-      status: "processed";
       derivativeKey: string;
-      originalDeletedAt: Date;
+      revokedAt: null;
     }
   >(
     tenInline.map((id) => [
@@ -95,18 +94,16 @@ function main() {
       {
         mediaAssetId: id,
         usageRole: JOURNAL_MEDIA_USAGE_INLINE,
-        status: "processed",
         derivativeKey: `${id}.webp`,
-        originalDeletedAt: new Date(),
+        revokedAt: null,
       },
     ]),
   );
   candidatesById.set("cover-only", {
     mediaAssetId: "cover-only",
     usageRole: JOURNAL_MEDIA_USAGE_COVER_ONLY,
-    status: "processed",
     derivativeKey: "cover.webp",
-    originalDeletedAt: new Date(),
+    revokedAt: null,
   });
 
   const automatic = resolveEffectiveJournalCover({

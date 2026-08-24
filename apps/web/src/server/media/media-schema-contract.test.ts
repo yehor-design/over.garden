@@ -38,16 +38,16 @@ describe("journal media schema contract", () => {
     );
   });
 
-  it("stores one closed OVE-231 quality receipt while preserving legacy nulls", () => {
+  it("contracts legacy processing and quality fields while preserving final-media identity", () => {
     const sql = readFileSync(
-      new URL("../../../sql/0014_ove231_launch_media_quality.sql", import.meta.url),
+      new URL("../../../sql/0038_ove349_retire_legacy_journal_media.sql", import.meta.url),
       "utf8",
     );
-    expect(sql).toContain("quality_policy_version text");
-    expect(sql).toContain("quality_reason_codes text[]");
-    expect(sql).toContain("quality_metrics jsonb");
-    expect(sql).toContain("media_assets_quality_receipt_shape_check");
-    expect(sql).toContain("'accepted', 'review_required', 'rejected'");
-    expect(sql).toContain("quality_policy_version is null");
+    expect(sql).toContain("drop column if exists quality_policy_version");
+    expect(sql).toContain("drop column if exists processing_claim_token");
+    expect(sql).toContain("drop column if exists quarantine_key");
+    expect(sql).toContain("alter column derivative_key set not null");
+    expect(sql).not.toMatch(/drop column if exists upload_generation\b/);
+    expect(sql).not.toMatch(/drop column if exists declared_size_bytes\b/);
   });
 });

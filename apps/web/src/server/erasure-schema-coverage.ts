@@ -26,7 +26,7 @@ export interface ErasureCoverageEntry {
   executionOwned: boolean;
 }
 
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove321.erasure-schema.v4";
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove349.erasure-schema.v5";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Auth / Better Auth
@@ -428,17 +428,6 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     executionOwned: true,
   },
   {
-    id: "journal_entry_drafts.owner_user_id",
-    table: "journal_entry_drafts",
-    columnOrPath: "owner_user_id",
-    kind: "fk",
-    disposition: "delete",
-    rationale:
-      "Private server drafts are deleted by the owner user ON DELETE CASCADE before account removal completes.",
-    dryRunOwned: true,
-    executionOwned: true,
-  },
-  {
     id: "journal_entries.cover_media_asset_id",
     table: "journal_entries",
     columnOrPath: "cover_media_asset_id",
@@ -834,13 +823,32 @@ export function discoverErasurePathsFromWalkingSkeletonSql(
   sqlText: string,
 ): string[] {
   const discovered = new Set<string>();
+  const normalizedSql = sqlText.toLowerCase();
+  const tableIsPresent = (table: string) => {
+    const normalizedTable = table.toLowerCase();
+    const lastCreate = Math.max(
+      normalizedSql.lastIndexOf("create table if not exists " + normalizedTable),
+      normalizedSql.lastIndexOf(
+        'create table if not exists "' + normalizedTable + '"',
+      ),
+    );
+    const lastDrop = Math.max(
+      normalizedSql.lastIndexOf("drop table if exists " + normalizedTable),
+      normalizedSql.lastIndexOf(
+        'drop table if exists "' + normalizedTable + '"',
+      ),
+    );
+    return lastCreate > lastDrop;
+  };
 
   // Read the owning table from the DDL, never from the constraint name. Several
   // historical constraints abbreviate the table name.
   for (const match of sqlText.matchAll(
     /alter table\s+"?(\w+)"?[^;]{0,600}?add constraint\s+\w+\s+foreign key \((\w+)\)\s+references\s+"user"\(id\)/gi,
   )) {
-    discovered.add(`${match[1]}.${match[2]}`);
+    if (match[1] && tableIsPresent(match[1])) {
+      discovered.add(`${match[1]}.${match[2]}`);
+    }
   }
 
   // Discover identity-shaped columns from CREATE TABLE bodies. This is broader
@@ -850,6 +858,7 @@ export function discoverErasurePathsFromWalkingSkeletonSql(
     /create table if not exists\s+"?(\w+)"?\s*\(([\s\S]*?)\n\);/gi,
   )) {
     const table = tableMatch[1] ?? "";
+    if (!tableIsPresent(table)) continue;
     const body = tableMatch[2] ?? "";
     for (const columnMatch of body.matchAll(/^\s*"?(\w+)"?\s+[^,\n]+/gm)) {
       const column = columnMatch[1] ?? "";
@@ -900,6 +909,7 @@ export function discoverErasurePathsFromWalkingSkeletonSql(
 
   for (const { table, column } of softColumns) {
     if (
+      tableIsPresent(table) &&
       sqlText.includes(column) &&
       (sqlText.includes(`create table if not exists ${table}`) ||
         sqlText.includes(`alter table ${table}`) ||

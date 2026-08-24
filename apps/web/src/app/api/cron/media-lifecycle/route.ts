@@ -39,7 +39,8 @@ export async function POST(request: Request) {
     retention: {
       policyVersion: retention.policyVersion,
       failureClass: retention.failureClass,
-      quarantineExpireClass: retention.quarantineExpireClass,
+      danglingCoverPointerClass: retention.danglingCoverPointerClass,
+      orphanCoverOnlyClass: retention.orphanCoverOnlyClass,
       pendingRevokeJobsClass: retention.pendingRevokeJobsClass,
     },
   });

@@ -7,10 +7,11 @@ Current stack in this package:
 - shadcn/ui for UI primitives.
 - Better Auth mounted at `/api/auth/[...all]`.
 - Kysely + `pg` for typed SQL access to Postgres.
-- Cloudflare R2 through the S3 SDK. ADR-0018 targets format-conversion-only
-  media; the current presigned quarantine path remains transitional runtime
-  until OVE-333 and OVE-334 land.
-- `sharp` for WebP format conversion.
+- Cloudflare R2 through the S3 SDK. The browser-generated WebP is the sole
+  final artifact and moves through short-lived private staging before atomic
+  journal publication; image bytes never traverse a Vercel Function.
+- Browser-owned WebP conversion under ADR-0019; the app has no server image
+  decoder or quarantine-processing runtime.
 - Network-required journal writes under ADR-0017. OVE-323 removed the Dexie,
   PWA, service-worker, offline-replay, and local-draft runtime. A dependency-free
   native boundary may delete only exact retired browser-storage names; it never

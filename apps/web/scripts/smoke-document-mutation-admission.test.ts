@@ -27,7 +27,7 @@ describe("document mutation admission production smoke", () => {
           "https://example.com",
           "--expected-sha",
           commit,
-          "--r2-ttl-readback",
+          "--capability-ttl-readback",
           "required",
           "--redacted",
         ],
@@ -42,7 +42,7 @@ describe("document mutation admission production smoke", () => {
     ).rejects.toThrow("OVE-290 base URL must be an immutable Vercel origin.");
   });
 
-  it("proves exact classes, closed TTL, and identical zero-effect counts", async () => {
+  it("proves exact classes, closed capability TTL, and identical zero-effect counts", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const fetchImpl = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -53,11 +53,7 @@ describe("document mutation admission production smoke", () => {
             protocol: "overgarden.document-mutation-generation.v1",
             deploymentSha: commit,
             enforcement: "enabled",
-            r2UploadUrlTtl: {
-              source: "default",
-              effectiveSeconds: 900,
-              maximumSeconds: 900,
-            },
+            ephemeralMediaCapabilityTtlSeconds: 900,
           });
         }
         if (url.endsWith("/garden")) {
@@ -103,7 +99,7 @@ describe("document mutation admission production smoke", () => {
         mode: "reject-only",
         baseUrl: "https://over-garden-immutable.vercel.app",
         expectedSha: commit,
-        r2TtlReadback: "required",
+        capabilityTtlReadback: "required",
         redacted: true,
         sessions,
         fetchImpl,
@@ -142,11 +138,7 @@ describe("document mutation admission production smoke", () => {
           protocol: "overgarden.document-mutation-generation.v1",
           deploymentSha: commit,
           enforcement: "enabled",
-          r2UploadUrlTtl: {
-            source: "environment",
-            effectiveSeconds: 899,
-            maximumSeconds: 900,
-          },
+          ephemeralMediaCapabilityTtlSeconds: 899,
         });
       }
       return new Response(null, { status: 200 });
@@ -158,12 +150,12 @@ describe("document mutation admission production smoke", () => {
         mode: "reject-only",
         baseUrl: "https://over-garden-immutable.vercel.app",
         expectedSha: commit,
-        r2TtlReadback: "required",
+        capabilityTtlReadback: "required",
         redacted: true,
         sessions,
         fetchImpl,
         readEffectCounts,
       }),
-    ).rejects.toThrow("exact-SHA or TTL");
+    ).rejects.toThrow("exact-SHA or capability TTL");
   });
 });

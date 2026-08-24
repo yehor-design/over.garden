@@ -873,8 +873,6 @@ const BASELINE_AUTHENTICATED_AUTHORITY_VARIANT_PATHS = new Set([
   "src/app/api/garden/entries/[entryId]/route.ts",
   "src/app/api/garden/entries/route.ts",
   "src/app/api/media/[mediaAssetId]/focal/route.ts",
-  "src/app/api/media/process/route.ts",
-  "src/app/api/media/uploads/route.ts",
   "src/app/garden/lineage/invitations/claim/actions.ts",
   "src/app/garden/objects/[objectId]/actions.ts",
   "src/app/lineage/objects/[objectId]/actions.ts",

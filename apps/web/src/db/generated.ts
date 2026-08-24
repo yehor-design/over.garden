@@ -531,23 +531,6 @@ export interface JournalEntryCatalogMentions {
   space_id: string;
 }
 
-export interface JournalEntryDrafts {
-  created_at: Generated<Timestamp>;
-  document_schema_version: Generated<number>;
-  draft_generation: Int8;
-  draft_key: string;
-  draft_kind: string;
-  id: Generated<string>;
-  journal_entry_id: string | null;
-  owner_user_id: string;
-  payload: Json;
-  payload_sha256: string;
-  plant_object_id: string | null;
-  server_revision: Generated<Int8>;
-  space_id: string | null;
-  updated_at: Generated<Timestamp>;
-}
-
 export interface JournalEntryMutationReceipts {
   base_revision: Int8;
   client_mutation_id: string;
@@ -689,38 +672,23 @@ export interface MatchingWorkerHeartbeats {
 }
 
 export interface MediaAssets {
-  admitted_media_type: string | null;
   alt_text: string | null;
   caption: string | null;
   created_at: Generated<Timestamp>;
-  declared_media_type: string | null;
   declared_size_bytes: Int8 | null;
-  derivative_key: string | null;
+  derivative_key: string;
   document_position: number | null;
   focal_x: Generated<number>;
   focal_y: Generated<number>;
   id: Generated<string>;
   intrinsic_height: number | null;
   intrinsic_width: number | null;
-  journal_entry_id: string | null;
-  media_readiness_state: Generated<string>;
-  original_deleted_at: Timestamp | null;
+  journal_entry_id: string;
   owner_user_id: string;
-  processing_claim_token: string | null;
-  processing_claimed_at: Timestamp | null;
-  public_object_id: string | null;
   public_unreachable_at: Timestamp | null;
-  quality_class: string | null;
-  quality_evaluated_at: Timestamp | null;
-  quality_metrics: Json | null;
-  quality_policy_version: string | null;
-  quality_reason_codes: string[] | null;
-  quarantine_key: string;
   revoked_at: Timestamp | null;
-  status: Generated<string>;
   updated_at: Generated<Timestamp>;
   upload_generation: number | null;
-  upload_generation_id: string | null;
   usage_role: Generated<string>;
 }
 
@@ -956,7 +924,6 @@ export interface DB {
   job_queue: JobQueue;
   journal_entries: JournalEntries;
   journal_entry_catalog_mentions: JournalEntryCatalogMentions;
-  journal_entry_drafts: JournalEntryDrafts;
   journal_entry_mutation_receipts: JournalEntryMutationReceipts;
   journal_entry_object_mentions: JournalEntryObjectMentions;
   journal_entry_topic_signals: JournalEntryTopicSignals;

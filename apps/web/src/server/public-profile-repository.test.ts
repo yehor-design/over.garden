@@ -266,7 +266,7 @@ describe("public profile handle contracts", () => {
     expect(compiled.sql).not.toMatch(/email|provider|quarantine|exact/i);
   });
 
-  it("loads processed public covers without serializing storage keys", () => {
+  it("loads final public covers without serializing storage keys", () => {
     const objectMedia = buildPublicProfileObjectMediaEvidenceQuery(
       testDb,
       userId,
@@ -280,10 +280,11 @@ describe("public profile handle contracts", () => {
     for (const compiled of [objectMedia, journalMedia]) {
       expect(compiled.sql).toContain('inner join "journal_entries"');
       expect(compiled.sql).toContain('from "media_assets"');
-      expect(compiled.sql).toContain('"media_assets"."status" =');
       expect(compiled.sql).toContain(
         '"media_assets"."derivative_key" is not null',
       );
+      expect(compiled.sql).toContain('"media_assets"."revoked_at" is null');
+      expect(compiled.sql).not.toContain('"media_assets"."status"');
       expect(compiled.sql).toContain('"journal_entries"."visibility" =');
       expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" =');
       expect(compiled.sql).not.toContain("quarantine_key");

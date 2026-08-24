@@ -75,7 +75,6 @@ const RECEIPT_SOURCE_PATHS = [
   "src/components/auth/blocked-session-account-methods.tsx",
   "src/server/auth/account-methods.ts",
   "scripts/smoke-account-sign-out.ts",
-  "scripts/smoke-canonical-launch.ts",
   "scripts/smoke-public-identity.ts",
   "scripts/smoke-restore-readiness.ts",
   "scripts/smoke-self-serve-providers.ts",

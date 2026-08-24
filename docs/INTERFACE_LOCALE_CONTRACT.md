@@ -177,10 +177,10 @@ product mutation. One shared coordinator owns it across all Bulgaria surfaces:
    copies a draft, token, upload, journal text, object data, or mutation payload
    into a URL, cookie, header, analytics event, or locale request.
 
-Existing server draft, media, auth-intent, and current-session exit
-boundaries must register with this coordinator where their current rendered
-state can be dirty or in flight. The coordinator must remain extensible; a
-future editor/photo/cover slice must extend it rather than fork language-change
+The local journal composer, edge-staging upload, auth-intent, and
+current-session exit boundaries register with this coordinator while their
+rendered state is dirty or in flight. The coordinator remains the single owner;
+future editor/photo/cover work must extend it rather than fork language-change
 behavior.
 
 ### Downstream real-UI proof ownership (founder-approved 2026-07-22)

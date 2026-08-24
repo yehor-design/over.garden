@@ -106,8 +106,35 @@ export function InterfaceLanguageControl({
   );
 
   useEffect(() => {
-    if (confirmationTarget && !confirmationCommitted)
+    if (!confirmationTarget || confirmationCommitted) return;
+
+    // The locale menu and the alert dialog close/open in the same interaction.
+    // Base UI restores menu-trigger focus after the dialog's initial-focus pass,
+    // so reassert the safe cancel target after that restoration has settled.
+    const requestFocusFrame = (callback: () => void) =>
+      typeof window.requestAnimationFrame === "function"
+        ? window.requestAnimationFrame(callback)
+        : window.setTimeout(callback, 0);
+    const cancelFocusFrame = (frame: number) => {
+      if (typeof window.cancelAnimationFrame === "function") {
+        window.cancelAnimationFrame(frame);
+      } else {
+        window.clearTimeout(frame);
+      }
+    };
+    cancelRef.current?.focus();
+    let settledFrame = 0;
+    const menuCloseFrame = requestFocusFrame(() => {
       cancelRef.current?.focus();
+      settledFrame = requestFocusFrame(() => {
+        cancelRef.current?.focus();
+      });
+    });
+
+    return () => {
+      cancelFocusFrame(menuCloseFrame);
+      if (settledFrame) cancelFocusFrame(settledFrame);
+    };
   }, [confirmationCommitted, confirmationTarget]);
 
   const copy = getInterfaceCopy(locale).shell;

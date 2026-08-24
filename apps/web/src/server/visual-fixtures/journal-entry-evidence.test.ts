@@ -92,8 +92,8 @@ describe("visual fixture journal-entry evidence verifier", () => {
     ).toThrow(/owner control/);
   });
 
-  it("accepts generic private 404 and removed 410 lifecycle results", () => {
-    for (const id of ["private-404", "gone-410", "missing-404"]) {
+  it("accepts generic nonexistent 404 and removed 410 lifecycle results", () => {
+    for (const id of ["nonexistent-404", "gone-410", "missing-404"]) {
       const expected =
         VISUAL_FIXTURE_MANIFEST.journalEntryEvidence.scenarios.find(
           (scenario) => scenario.id === id,

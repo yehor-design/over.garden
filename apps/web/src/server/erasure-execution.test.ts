@@ -321,7 +321,7 @@ describe("approved erasure execution SQL contracts", () => {
     const compiled = buildEnqueueErasureMediaDeleteJobQuery(testDb, {
       requestId,
       mediaObject: {
-        bucket: "quarantine",
+        bucket: "public_derivative",
         objectKey: "media/erasure-proof.webp",
       },
     }).compile();
@@ -336,11 +336,11 @@ describe("approved erasure execution SQL contracts", () => {
     expect(compiled.parameters).toContainEqual({
       kind: "erasure_media_object_delete",
       requestId,
-      bucket: "quarantine",
+      bucket: "public_derivative",
       objectKey: "media/erasure-proof.webp",
     });
     expect(compiled.parameters).toContain(
-      `erasure_media_delete:${requestId}:quarantine:media/erasure-proof.webp`,
+      `erasure_media_delete:${requestId}:public_derivative:media/erasure-proof.webp`,
     );
     expect(pending.sql).toContain('"handled_status" = $3');
     expect(pending.parameters).toContain("cleanup_pending");

@@ -8,10 +8,11 @@ import type { Kysely } from "kysely";
 import type { Database } from "../src/db/schema";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import {
-  ONLINE_JOURNAL_PROTOCOL,
-  ONLINE_JOURNAL_PROTOCOL_HEADER,
-  type FirstPlantEntryResponse,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
+  type AtomicJournalCreateResponse,
 } from "../src/lib/garden/entry-contracts";
+import { buildAtomicTextJournalCreateRequest } from "./atomic-journal-text-request";
 import type {
   searchCatalogSuggestions as searchCatalogFn,
   searchCatalogSuggestionsForTypeahead as searchTypeaheadFn,
@@ -68,6 +69,16 @@ interface CatalogSuggestion {
 
 interface TypeaheadResponse {
   suggestions?: unknown[];
+}
+
+interface CreatedEntry {
+  plantObject: {
+    id: string;
+    catalogItemId: string | null;
+    varietyText: string | null;
+    varietyState: string;
+  };
+  readbackUrl: string;
 }
 
 interface SmokeContext {
@@ -363,33 +374,54 @@ async function createEntry(
     userAddedCatalogName: string | null;
   },
 ) {
-  return jsonRequest<FirstPlantEntryResponse>(
+  const created = await jsonRequest<AtomicJournalCreateResponse>(
     context.baseUrl,
     context.jar,
     "/api/garden/entries",
     {
       method: "POST",
-      body: {
-        target: "first_plant_entry",
-        spaceName: `OVE161 ${input.label} space`,
-        plantName: `OVE161 ${input.label} object`,
-        objectKind: "plant",
-        catalogItemId: input.catalogItemId,
-        userAddedCatalogName: input.userAddedCatalogName,
-        varietyText: input.userAddedCatalogName,
+      body: buildAtomicTextJournalCreateRequest({
+        publishId: randomUUID(),
+        context: {
+          target: "first_plant_entry",
+          spaceName: `OVE161 ${input.label} space`,
+          plantName: `OVE161 ${input.label} object`,
+          objectKind: "plant",
+          catalogItemId: input.catalogItemId,
+          userAddedCatalogName: input.userAddedCatalogName,
+          entryDate: "2026-07-15",
+          locationVisibility: "hidden",
+          coarseRegionCode: null,
+          activationSource: "direct_garden",
+        },
         title: `OVE161 ${input.label} entry`,
-        body: "Synthetic catalog readback proof without personal garden data.",
-        entryDate: "2026-07-15",
-        locationVisibility: "hidden",
-        coarseRegionCode: null,
-        clientMutationId: randomUUID(),
-        activationSource: "direct_garden",
-      },
+        text: "Synthetic atomic catalog readback proof without personal garden data.",
+      }),
     },
   );
+  const row = await context.db
+    .selectFrom("journal_entries as je")
+    .innerJoin("plant_objects as po", "po.id", "je.plant_object_id")
+    .select([
+      "po.id as objectId",
+      "po.catalog_item_id as catalogItemId",
+      "po.variety_text as varietyText",
+      "po.variety_state as varietyState",
+    ])
+    .where("je.id", "=", created.entryId)
+    .executeTakeFirstOrThrow();
+  return {
+    plantObject: {
+      id: row.objectId,
+      catalogItemId: row.catalogItemId,
+      varietyText: row.varietyText,
+      varietyState: row.varietyState,
+    },
+    readbackUrl: `/garden/objects/${row.objectId}`,
+  };
 }
 
-function assertCanonicalEntry(entry: FirstPlantEntryResponse, label: string) {
+function assertCanonicalEntry(entry: CreatedEntry, label: string) {
   assertEqual(
     entry.plantObject.catalogItemId,
     FIXTURE_ITEM_ID,
@@ -619,7 +651,8 @@ async function jsonRequest<T>(
     method: init.method ?? "GET",
     headers: {
       Accept: "application/json",
-      [ONLINE_JOURNAL_PROTOCOL_HEADER]: ONLINE_JOURNAL_PROTOCOL,
+      [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
+        ATOMIC_JOURNAL_CREATE_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: baseUrl } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       Cookie: jar.header(),

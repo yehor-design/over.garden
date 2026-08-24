@@ -142,16 +142,16 @@ vi.mock("@/lib/auth/session-invalidation-marker", () => ({
   clearSessionInvalidationMarkerIfCurrent: mocks.clearMarker,
   subscribeToSessionInvalidationMarker: mocks.subscribeMarker,
 }));
-vi.mock("@/lib/garden/online-journal-composer-participants", () => ({
-  abortOnlineJournalComposerParticipants: mocks.abort,
-  admitOnlineJournalComposerSession: mocks.admit,
-  pauseOnlineJournalComposerActivity: mocks.pause,
-  finalizeOnlineJournalComposerParticipantsForSignedOut:
+vi.mock("@/lib/garden/local-journal-composer-session", () => ({
+  abortLocalJournalComposerSession: mocks.abort,
+  admitLocalJournalComposerSession: mocks.admit,
+  pauseLocalJournalComposerActivity: mocks.pause,
+  finalizeLocalJournalComposerForSignedOut:
     mocks.finalizeStandalone,
-  finalizeOnlineJournalComposerParticipantsForSessionChange:
+  finalizeLocalJournalComposerForSessionChange:
     mocks.finalizeSessionChangeStandalone,
-  prepareOnlineJournalComposerParticipants: mocks.prepareComposer,
-  sealOnlineJournalComposerParticipantsForExit:
+  prepareLocalJournalComposerSession: mocks.prepareComposer,
+  sealLocalJournalComposerForExit:
     mocks.sealParticipantsForLocalExit,
 }));
 

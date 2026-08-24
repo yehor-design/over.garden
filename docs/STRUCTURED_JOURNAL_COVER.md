@@ -1,48 +1,48 @@
-# Structured Journal Cover Selection (OVE-207)
+# Structured Journal Cover Selection
 
-Cover identity is aggregate state on `journal_entries.cover_media_asset_id`, not
-part of `JournalDocumentV1`. Media rows use `usage_role` (`inline` |
-`cover_only`). Cover-only assets do not consume one of the ten inline story
+Status: current after OVE-349
+Authority: ADR-0019 and `journal_entries.cover_media_asset_id`
+
+Cover identity is aggregate state on `journal_entries.cover_media_asset_id`,
+not part of `JournalDocumentV1`. Media rows use `usage_role` (`inline` or
+`cover_only`); cover-only media do not consume one of the ten inline story
 slots.
 
 ## Effective cover
 
 Shared resolver: `apps/web/src/lib/garden/journal-cover-contract.ts`
 
-1. Valid explicit `cover_media_asset_id` (inline or cover-only, processed with
-   derivative).
-2. Else first valid processed **inline** image in canonical document block
-   order (`document_position` kept in sync on claim).
-3. Else `null` (localized no-cover).
+1. A valid explicit final `cover_media_asset_id` (inline or cover-only).
+2. Otherwise, the first valid final inline image in canonical document order.
+3. Otherwise, `null` with localized no-cover presentation.
 
-SQL consumers use `buildFirstProcessedMediaPerEntryQuery` /
-`apps/web/src/server/journal-cover.ts` — never first-by-`created_at`.
+SQL consumers use `buildFirstProcessedMediaPerEntryQuery` and
+`apps/web/src/server/journal-cover.ts`; the historical function name remains a
+compatibility label, but eligibility is now exactly non-null final derivative
+plus non-revoked state. Never choose first-by-creation-time.
 
-## Composer
+## Composer and publication
 
-Progressive optional Cover controls on first / follow-up / space / edit
-composers. A selected file remains transient in the current tab, is uploaded
-through private quarantine and processing immediately, and only the processed
-media identity enters the owner-scoped server draft. Cover upload registers
-`owner-composer-cover-upload` as locale in-flight.
+Cover selection is transient in the shared local composer. A chosen source is
+converted to the final WebP in the browser, previewed from those exact bytes,
+and uploaded directly to short-lived edge staging. The media identity, order,
+and cover pointer become durable together with the public journal in one atomic
+Publish. No server draft, immediate source upload, process step, or later
+publish action exists.
 
-Removing an explicit-inline cover image prompts keep-as-cover /
-remove-everywhere / cancel.
+Removing an explicit inline cover still offers keep-as-cover,
+remove-everywhere, or cancel. Failed conversion/staging leaves canonical state
+unchanged and the transient image retryable/removable.
 
 ## Proof
 
-- `pnpm smoke:journal-cover-selection`
-- Contract tests + consumer SQL compile tests
-- Localization gate `separate-cover` is browser-backed with primary scenario
-  `locale-transition-with-cover`
-- Behavior SHA `ee666fbc7ac11e01c6b4018926cc3ee8ea113741` / Vercel
-  `dpl_DzaJocvLjED2dBrYzUEWZTp2bTA4` READY
+```bash
+cd apps/web
+pnpm smoke:journal-cover-selection
+pnpm smoke:inline-media-integrity
+pnpm smoke:atomic-journal-codecs
+pnpm exec tsx scripts/verify-retired-journal-media-runtime.ts
+```
 
-### Residual founder smoke
-
-Physical current-support iPhone Safari checklist (cover pick, separate upload
-in-flight locale block feel, keep-as-cover prompt) remains operator residual
-smoke, same pattern as OVE-206. Automated suite + Vercel READY are the Done
-gate under the Actions budget freeze.
-
-Do not treat this slice as final OVE-195/196/197 lifecycle/search/focal proof.
+Cover evidence never includes object keys, capabilities, original bytes,
+precise location, or account identity.

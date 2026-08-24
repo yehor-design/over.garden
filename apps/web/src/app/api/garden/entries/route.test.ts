@@ -135,7 +135,7 @@ describe("POST /api/garden/entries atomic create", () => {
 
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toEqual({
-      code: "legacy_client_retired",
+      code: "atomic_journal_protocol_required",
     });
     expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
   });

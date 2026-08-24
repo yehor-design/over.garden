@@ -19,9 +19,10 @@ blanket exclusion. The runtime predicate remains transitional until OVE-335.
 
 ADR-0019 is the current atomic journal-media authority. Authoring is
 local-only and non-durable before Publish, the browser-generated WebP is the
-sole final artifact, and image bytes never traverse a Vercel Function. The
-legacy server-draft, quarantine-original, and server-conversion runtime remains
-transitional until OVE-347 through OVE-350 complete.
+sole final artifact, and image bytes never traverse a Vercel Function. OVE-349
+removed the legacy server-draft, quarantine-original, server-conversion,
+admission/quality, and private-then-publish application runtime. The isolated
+empty legacy provider surface remains rollback-only until OVE-350 retires it.
 
 Current Stable Registry authority: ADR-0016 and `docs/STABLE_REGISTRY.md`.
 EPPO full-corpus inputs are OverGarden-owned observed captures, never official
@@ -44,8 +45,9 @@ acquisition gate.
 - Kysely as the typed SQL builder. SQL migrations are schema source of truth. No ORM.
 - Cloudflare R2 for media. Under ADR-0019 the browser-generated WebP is the sole
   final artifact and is uploaded directly to bounded private staging before an
-  atomic publication. The current quarantine-original/server-conversion
-  topology is transitional runtime owned by OVE-349 and OVE-350.
+  atomic publication. The application has no source-original quarantine or
+  server-conversion path; OVE-350 owns deletion of the isolated legacy provider
+  resource after its full rollback window.
 - Meilisearch as a derived public search/typeahead index.
 - Python worker for RapidFuzz/Splink/PyICU/CyrTranslit matching, dedup, and reindex work.
 - Plain Postgres `job_queue` table for TS -> Python background work. No Redis, no pgmq, no Python-only queue framework.
@@ -67,7 +69,7 @@ acquisition gate.
 ## Hard Rules
 
 1. User/product precise location remains locked in v0. Free-text coordinates are governed by `docs/PRECISE_LOCATION_TEXT_FIREWALL.md` (OVE-234): the authoritative detector is `apps/web/src/lib/privacy/precise-location-text.ts` with its Python mirror and shared corpus; never add a local coordinate regex. Do not collect, store, send, log, index, render, or infer precise coordinates for OverGarden users, journal entries, media, analytics, public/search documents, operator evidence, or product UI; region-level or hidden only. External catalog/source ingestion may store legally reusable occurrence/distribution coordinates only in isolated raw/source snapshot tables with provenance, license, and usage flags; those fields must stay out of user data, analytics, Meilisearch/public projections, logs, and product UI unless a later explicit ADR and SDD slice promote a safe aggregate projection.
-2. Public product media follows ADR-0019: the browser-generated WebP is the sole final artifact, and its exact bytes are previewed, staged, promoted, stored, and served. Image bytes never traverse a Vercel Function. Do not add source-original retention, server re-encoding, a durable pending-media card, or a second final artifact; OVE-347 through OVE-350 own convergence from the transitional runtime.
+2. Public product media follows ADR-0019: the browser-generated WebP is the sole final artifact, and its exact bytes are previewed, staged, promoted, stored, and served. Image bytes never traverse a Vercel Function. Do not add source-original retention, server re-encoding, a durable pending-media card, a private-then-publish state, or a second final artifact. The old provider resource is isolated rollback residue owned only by OVE-350, not an application capability.
 3. Metadata omission may remain an encoder property, but it is not a separate MVP admission promise. Client conversion establishes the final WebP itself; a failed client conversion is removable/retryable and must not fall back to server conversion.
 4. No browser-direct broad database access. All app data access goes through server APIs/server actions/repositories. Short-lived, object-specific Cloudflare staging capabilities are narrow exceptions and never authorize journal/database access.
 5. Kysely is allowed and expected. Do not introduce Prisma, Drizzle, TypeORM, or another ORM without a superseding ADR.

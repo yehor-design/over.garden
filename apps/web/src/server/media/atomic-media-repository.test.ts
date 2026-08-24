@@ -42,7 +42,6 @@ describe("atomic ready-media insert", () => {
     const compiled = buildInsertClaimedEphemeralMediaQuery(testDb, {
       ownerUserId: "2c732b1d-968c-4721-9a20-9e5495014bbc",
       journalEntryId: "0bcaa85b-34ad-4fda-b1df-8705892e5cb4",
-      stagingSessionId: "46045ba1-d1dc-465a-aea9-0240785e3aa0",
       media: {
         mediaAssetId,
         generation: 2,
@@ -57,19 +56,17 @@ describe("atomic ready-media insert", () => {
     }).compile();
 
     expect(compiled.sql).toContain('insert into "media_assets"');
-    expect(compiled.sql).toContain('"media_readiness_state"');
-    expect(compiled.parameters).toContain("public_ready");
-    expect(compiled.parameters).toContain("processed");
-    expect(compiled.parameters).toContain("image/webp");
+    expect(compiled.sql).toContain('"journal_entry_id"');
+    expect(compiled.sql).not.toMatch(/readiness|status|media_type/i);
     expect(compiled.parameters).toContain(`derivatives/${mediaAssetId}/2.webp`);
     expect(compiled.sql).not.toContain("on conflict");
   });
 
-  it("inserts a newly claimed edit generation unattached until the edit transaction validates the final document", () => {
+  it("inserts a newly claimed edit generation attached inside the edit transaction", () => {
     const mediaAssetId = "8f5fa87d-b94e-4217-b68d-28303827ad89";
     const compiled = buildInsertClaimedEphemeralEditMediaQuery(testDb, {
       ownerUserId: "2c732b1d-968c-4721-9a20-9e5495014bbc",
-      stagingSessionId: "46045ba1-d1dc-465a-aea9-0240785e3aa0",
+      journalEntryId: "0bcaa85b-34ad-4fda-b1df-8705892e5cb4",
       media: {
         mediaAssetId,
         generation: 1,
@@ -82,8 +79,9 @@ describe("atomic ready-media insert", () => {
     }).compile();
 
     expect(compiled.sql).toContain('insert into "media_assets"');
-    expect(compiled.parameters).toContain(null);
-    expect(compiled.parameters).toContain("public_ready");
+    expect(compiled.parameters).toContain(
+      "0bcaa85b-34ad-4fda-b1df-8705892e5cb4",
+    );
     expect(compiled.parameters).toContain(`derivatives/${mediaAssetId}/1.webp`);
   });
 
@@ -93,7 +91,6 @@ describe("atomic ready-media insert", () => {
     const compiled = buildReplaceClaimedEphemeralMediaQuery(testDb, {
       ownerUserId: "2c732b1d-968c-4721-9a20-9e5495014bbc",
       journalEntryId: "0bcaa85b-34ad-4fda-b1df-8705892e5cb4",
-      stagingSessionId: "46045ba1-d1dc-465a-aea9-0240785e3aa0",
       priorGeneration: 4,
       priorPublicPath: oldPath,
       media: {

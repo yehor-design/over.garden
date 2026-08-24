@@ -60,7 +60,6 @@ JOURNAL_PROJECTION_QUALITY_REASON_ORDER = [
     "coarse_region_unavailable",
     "media_projection_unresolved",
 ]
-LAUNCH_MEDIA_QUALITY_POLICY_VERSION = "ove231.launch-media-quality.v1"
 JOURNAL_ENTRY_UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
     re.IGNORECASE,
@@ -184,13 +183,7 @@ select
   cover_media.media_id::text as cover_media_id,
   cover_media.usage_role as cover_usage_role,
   cover_media.derivative_key as cover_derivative_key,
-  cover_media.status as cover_media_status,
-  cover_media.original_deleted_at as cover_original_deleted_at,
-  cover_media.revoked_at as cover_revoked_at,
-  cover_media.media_readiness_state as cover_media_readiness_state,
-  cover_media.public_object_id::text as cover_public_object_id,
-  cover_media.quality_policy_version as cover_quality_policy_version,
-  cover_media.quality_class as cover_quality_class
+  cover_media.revoked_at as cover_revoked_at
 from journal_entries
 left join plant_objects
   on plant_objects.id = journal_entries.plant_object_id
@@ -212,17 +205,10 @@ left join lateral (
     media_assets.id as media_id,
     media_assets.usage_role,
     media_assets.derivative_key,
-    media_assets.status,
-    media_assets.original_deleted_at,
-    media_assets.revoked_at,
-    media_assets.media_readiness_state,
-    media_assets.public_object_id,
-    media_assets.quality_policy_version,
-    media_assets.quality_class
+    media_assets.revoked_at
   from media_assets
   where media_assets.journal_entry_id = journal_entries.id
     and media_assets.owner_user_id = journal_entries.owner_user_id
-    and media_assets.status = 'processed'
     and media_assets.derivative_key is not null
     and media_assets.revoked_at is null
     and (
@@ -467,6 +453,8 @@ def _resolve_cover_presentation(
     cover_derivative_key = _text(row, "cover_derivative_key")
     if not cover_media_id or not cover_derivative_key:
         return "none", None
+    if not _is_cover_media_verified(row):
+        return "none", None
 
     cover_public_url = _public_derivative_url(cover_derivative_key)
     if cover_public_url is None:
@@ -484,20 +472,10 @@ def _resolve_cover_presentation(
 
 
 def _is_cover_media_verified(row: Mapping[str, Any]) -> bool:
-    quality_policy_version = _text(row, "cover_quality_policy_version")
-    quality_class = _text(row, "cover_quality_class")
     return bool(
-        row.get("cover_original_deleted_at") is not None
+        _text(row, "cover_media_id")
+        and _text(row, "cover_derivative_key")
         and row.get("cover_revoked_at") is None
-        and _text(row, "cover_media_readiness_state") == "public_ready"
-        and _text(row, "cover_public_object_id")
-        and (
-            not quality_policy_version
-            or (
-                quality_policy_version == LAUNCH_MEDIA_QUALITY_POLICY_VERSION
-                and quality_class == "accepted"
-            )
-        )
     )
 
 

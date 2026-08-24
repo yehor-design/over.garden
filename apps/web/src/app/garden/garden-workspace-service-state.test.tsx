@@ -19,20 +19,18 @@ vi.mock("@/components/site-shell/site-shell-context-rail", () => ({
 import { GardenWorkspaceServiceState } from "./garden-workspace-service-state";
 
 describe("GardenWorkspaceServiceState online-only boundary", () => {
-  it("renders server media and privacy support without device queue claims", () => {
+  it("renders publication and privacy support without server-media queue claims", () => {
     const html = renderToStaticMarkup(
       <GardenWorkspaceServiceState
         locale="uk"
         nextAction={{ href: "/garden", label: "Next" }}
         recent={[]}
         inbox={{ notificationCount: 1, claimCount: 0 }}
-        media={{ processingCount: 2, failedCount: 1 }}
       />,
     );
 
-    expect(html).toContain("Фото в обробці: 2");
-    expect(html).toContain("Фото, що потребують уваги: 1");
+    expect(html).toContain("До успішної публікації");
     expect(html).toContain('href="/privacy"');
-    expect(html).not.toMatch(/локальна черга|на цьому пристрої|офлайн/i);
+    expect(html).not.toMatch(/серверна чернетка|фото в обробці|офлайн/i);
   });
 });

@@ -18,7 +18,7 @@ import {
 
 describe("MVP privacy disclosure constants", () => {
   it("keeps first-publication disclosure version explicit and copy bounded", () => {
-    expect(FIRST_PUBLICATION_DISCLOSURE_VERSION).toBe("first-publication-v4");
+    expect(FIRST_PUBLICATION_DISCLOSURE_VERSION).toBe("first-publication-v5");
     expect(MVP_LEGAL_COPY_STATUS).toBe(
       "founder_approved_mvp_lawyer_review_deferred",
     );
@@ -26,10 +26,10 @@ describe("MVP privacy disclosure constants", () => {
       "thin or unsafe user-generated surfaces stay out of sitemaps",
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
-      "7 failed-processing days",
+      "short-lived private staging",
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
-      "server-cleaned copies",
+      "does not retain the selected source files",
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
       "queued for public search removal",
@@ -79,8 +79,8 @@ describe("MVP privacy disclosure constants", () => {
       "Lawyer review is deferred",
     );
     expect(MVP_RETENTION_RULES.map((rule) => rule.title)).toEqual([
-      "Original photo uploads",
-      "Public photo derivatives",
+      "Final photo staging",
+      "Public final WebPs",
       "Operator audit logs",
       "Erasure handling evidence",
       "Analytics events",
@@ -95,7 +95,7 @@ describe("MVP privacy disclosure constants", () => {
       "1 year",
     );
     expect(MVP_OPERATOR_EVIDENCE_FORBIDDEN_FIELDS).toContain(
-      "private journal text",
+      "journal text",
     );
   });
 

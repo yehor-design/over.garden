@@ -5,21 +5,11 @@ import { createInterfaceLocaleChangeCoordinator } from "@/lib/interface-locale-c
 
 const mocks = vi.hoisted(() => ({
   pathname: "/garden",
-  createComposerParticipant: vi.fn(() => ({
-    id: "owner-composer-drafts",
-    kind: "safe-flush" as const,
-    prepare: async () => ({ resume: async () => undefined }),
-  })),
 }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => mocks.pathname,
 }));
-vi.mock("@/lib/garden/online-journal-composer-locale-participant", () => ({
-  createOnlineJournalComposerLocaleChangeParticipant:
-    mocks.createComposerParticipant,
-}));
-
 import {
   InterfaceLocaleChangeBoundary,
   observeInterfaceLocaleChangeForms,
@@ -30,14 +20,13 @@ import {
 describe("interface locale change boundary", () => {
   beforeEach(() => {
     mocks.pathname = "/garden";
-    mocks.createComposerParticipant.mockClear();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("mounts exactly one global composer participant on rendered UI routes", async () => {
+  it("mounts payload-blind form and network observers on rendered UI routes", async () => {
     const root = eventRoot();
     vi.stubGlobal("document", root.target);
     let renderer: ReactTestRenderer;
@@ -50,7 +39,6 @@ describe("interface locale change boundary", () => {
       );
     });
 
-    expect(mocks.createComposerParticipant).toHaveBeenCalledOnce();
     expect(root.listenerCount()).toBe(4);
 
     await act(async () => renderer!.unmount());
@@ -71,7 +59,6 @@ describe("interface locale change boundary", () => {
       );
     });
 
-    expect(mocks.createComposerParticipant).not.toHaveBeenCalled();
     expect(root.listenerCount()).toBe(0);
     await act(async () => renderer!.unmount());
   });

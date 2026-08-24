@@ -2,23 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 
-import type { EntryScope, LocationVisibility, VarietyState } from "@/db/schema";
 import type { DocumentMutationActionStateV1 } from "@/lib/auth/document-mutation-generation-transport";
-import {
-  isBackdatedEntryDate,
-  recordAnalyticsEventSafely,
-  recordEntryLoggedEventSafely,
-} from "@/server/analytics-events";
-import { requireCurrentRequestScope } from "@/server/auth-session";
 import {
   admitDocumentMutation,
   documentMutationGenerationFromFormData,
 } from "@/server/document-mutation-admission";
 import {
   archiveJournalEntry,
-  createPlantObjectJournalEntry,
-  publishJournalEntry,
-  type PlantObjectJournalEntryResult,
   resolvePlantObjectCatalog,
   updatePlantObjectLocation,
 } from "@/server/journal-repository";
@@ -26,38 +16,7 @@ import {
   createLineageInvitation,
   createProvenanceEdge,
 } from "@/server/lineage-repository";
-import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
-
-export async function createPlantObjectJournalEntryAction(
-  formData: FormData,
-): Promise<DocumentMutationActionStateV1 | undefined> {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
-  });
-  if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
-  }
-  const scope = admission.scope;
-  const objectId = String(formData.get("objectId") ?? "");
-  const result = await createPlantObjectJournalEntry(scope, {
-    plantObjectId: objectId,
-    title: String(formData.get("title") ?? ""),
-    body: String(formData.get("body") ?? ""),
-    entryDate: String(formData.get("entryDate") ?? ""),
-    clientMutationId: String(formData.get("clientMutationId") ?? ""),
-    mediaAssetId: String(formData.get("mediaAssetId") ?? ""),
-  });
-
-  if (result.isNewEntry) {
-    scheduleLearningAttributionDrain(async () => {
-      await recordPlantObjectJournalEntryEvents(scope, result);
-    });
-  }
-
-  revalidatePath("/garden");
-  revalidatePath(`/garden/objects/${result.plantObject.id}`);
-}
 
 export async function resolvePlantObjectCatalogAction(formData: FormData) {
   const admission = await admitDocumentMutation({
@@ -142,33 +101,6 @@ export async function createLineageInvitationAction(formData: FormData) {
   revalidatePath(`/garden/objects/${result.subjectObject.id}`);
 }
 
-export async function publishJournalEntryAction(
-  formData: FormData,
-): Promise<DocumentMutationActionStateV1 | undefined> {
-  const entryId = String(formData.get("entryId") ?? "");
-  const objectId = String(formData.get("objectId") ?? "");
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
-  });
-  if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
-  }
-  const scope = admission.scope;
-  const disclosureAccepted =
-    formData.get("publicationDisclosureAccepted") === "on";
-
-  const result = await publishJournalEntry(scope, {
-    entryId,
-    disclosureAccepted,
-  });
-
-  await convergePublicProjectionsNow([result.entry.id]).catch(() => undefined);
-
-  revalidatePath("/garden");
-  if (objectId) revalidatePath(`/garden/objects/${objectId}`);
-  revalidatePath(result.publicUrl);
-}
-
 export async function archiveJournalEntryAction(
   formData: FormData,
 ): Promise<DocumentMutationActionStateV1 | undefined> {
@@ -197,36 +129,4 @@ export async function archiveJournalEntryAction(
   revalidatePath("/garden");
   if (objectId) revalidatePath(`/garden/objects/${objectId}`);
   if (result.publicUrl) revalidatePath(result.publicUrl);
-}
-
-async function recordPlantObjectJournalEntryEvents(
-  scope: Awaited<ReturnType<typeof requireCurrentRequestScope>>,
-  result: PlantObjectJournalEntryResult,
-) {
-  if (!result.isNewEntry) return;
-
-  const properties = {
-    entry_scope: result.entry.entry_scope as EntryScope,
-    has_photo: result.mediaAttached,
-    is_backdated: isBackdatedEntryDate(result.entry.entry_date),
-    location_visibility_level: result.plantObject
-      .location_visibility as LocationVisibility,
-    object_kind: result.plantObject.object_kind,
-    variety_state: result.plantObject.variety_state as VarietyState,
-  };
-  const eventTarget = {
-    spaceId: result.space.id,
-    plantObjectId: result.plantObject.id,
-    journalEntryId: result.entry.id,
-  };
-
-  await recordEntryLoggedEventSafely(scope, {
-    properties,
-    ...eventTarget,
-  });
-  await recordAnalyticsEventSafely(scope, {
-    eventName: "progress_screen_shown",
-    properties,
-    ...eventTarget,
-  });
 }

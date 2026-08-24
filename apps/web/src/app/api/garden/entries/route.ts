@@ -10,14 +10,12 @@ import type {
   ActivationSource,
   AtomicJournalCreateRequest,
   AtomicJournalCreateResponse,
-  FirstPlantEntryRequest,
-  FirstPlantEntryResponse,
 } from "@/lib/garden/entry-contracts";
 import {
   ATOMIC_JOURNAL_CREATE_PROTOCOL,
   ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
   JOURNAL_ENTRY_PAYLOAD_MAX_BYTES,
-  legacyClientRetiredResponse,
+  atomicJournalProtocolRequiredResponse,
 } from "@/lib/garden/entry-contracts";
 import {
   listJournalDocumentImageMediaIds,
@@ -27,14 +25,12 @@ import {
   journalCreateReturnFallback,
   normalizeJournalComposerReturnTo,
 } from "@/lib/garden/journal-composer-return";
-import { buildSaveProgressReadbackUrl } from "@/lib/garden/save-progress-moment";
 import { INTERFACE_LOCALE_REQUEST_HEADER } from "@/lib/interface-localization";
 import { preciseLocationRejectionMessage } from "@/lib/privacy/precise-location-copy";
 import { isPreciseLocationTextError } from "@/lib/privacy/precise-location-text";
 import type {
   EntryScope,
   LocationVisibility,
-  PlantObjectKind,
   VarietyState,
 } from "@/db/schema";
 import {
@@ -71,6 +67,16 @@ import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 
 export const runtime = "nodejs";
 
+class AtomicJournalCreateError extends Error {
+  constructor(
+    readonly code: string,
+    readonly statusCode: number,
+  ) {
+    super(code);
+    this.name = "AtomicJournalCreateError";
+  }
+}
+
 export async function POST(request: Request) {
   const admission = await admitDocumentMutation({
     transport: documentMutationGenerationFromRequest(request),
@@ -83,7 +89,7 @@ export async function POST(request: Request) {
     request.headers.get(ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER) !==
     ATOMIC_JOURNAL_CREATE_PROTOCOL
   ) {
-    return privateNoStore(legacyClientRetiredResponse());
+    return privateNoStore(atomicJournalProtocolRequiredResponse());
   }
   return privateNoStore(await createEntry(request, scope));
 }
@@ -291,222 +297,6 @@ async function createEntry(request: Request, scope: RequestScope) {
     }
     const code = safeAtomicErrorCode(error);
     return Response.json({ code }, { status: errorStatus(error, code) });
-  }
-}
-
-/** Dormant rollback-only create implementation retained until OVE-349. */
-export async function createLegacyEntryForRollback(
-  request: Request,
-  scope: RequestScope,
-) {
-  let body: Partial<FirstPlantEntryRequest> | null;
-  try {
-    body = (await readBoundedJsonRequest(
-      request,
-      JOURNAL_ENTRY_PAYLOAD_MAX_BYTES,
-    )) as Partial<FirstPlantEntryRequest>;
-  } catch (error) {
-    if (error instanceof BoundedJsonPayloadTooLargeError) {
-      return Response.json(
-        { code: "JOURNAL_ENTRY_TOO_LARGE" },
-        { status: 413 },
-      );
-    }
-    body = null;
-  }
-
-  if (!body) {
-    return Response.json(
-      { error: "Entry payload is required." },
-      { status: 400 },
-    );
-  }
-
-  try {
-    const activationSource = normalizeActivationSource(body.activationSource);
-    const target = normalizeTarget(body.target, body.plantObjectId);
-
-    if (target === "space_entry") {
-      const result = await createSpaceJournalEntry(scope, {
-        spaceId: body.spaceId ?? "",
-        mentionedPlantObjectIds: body.mentionedPlantObjectIds ?? [],
-        title: body.title ?? "",
-        body: body.body ?? "",
-        contentDocument: body.contentDocument,
-        entryDate: body.entryDate ?? "",
-        clientMutationId: body.clientMutationId ?? "",
-        mediaAssetId: body.mediaAssetId ?? "",
-        cover: body.cover ?? null,
-        topicTags: body.topicTags ?? [],
-      });
-
-      scheduleLearningAttributionDrain(async () => {
-        await recordSpaceEntryEvents(scope, result);
-      });
-
-      const anchorObject = result.mentionedObjects[0];
-      if (!anchorObject) {
-        return Response.json(
-          { error: "Space entry requires at least one mentioned object." },
-          { status: 400 },
-        );
-      }
-
-      revalidatePath("/garden");
-      for (const object of result.mentionedObjects) {
-        revalidatePath(`/garden/objects/${object.id}`);
-      }
-
-      const response: FirstPlantEntryResponse = {
-        space: {
-          id: result.space.id,
-          displayName: result.space.display_name,
-          locationVisibility: result.space.location_visibility,
-          coarseRegionCode: result.space.coarse_region_code,
-        },
-        plantObject: {
-          id: anchorObject.id,
-          displayName: anchorObject.displayName,
-          objectKind: "plant",
-          catalogItemId: null,
-          varietyText: null,
-          varietyState: "unknown",
-          locationVisibility: result.space.location_visibility,
-          coarseRegionCode: result.space.coarse_region_code,
-        },
-        entry: {
-          id: result.entry.id,
-          title: result.entry.title,
-          body: result.entry.body,
-          entryDate: normalizeResponseDate(result.entry.entry_date),
-          clientMutationId: result.entry.client_mutation_id,
-          journalRevision: Number(result.entry.journal_revision ?? 1),
-        },
-        readbackUrl: buildSaveProgressReadbackUrl("/garden", "space-entry"),
-      };
-      return Response.json(response);
-    }
-
-    const result =
-      target === "plant_object_entry"
-        ? await createPlantObjectJournalEntry(scope, {
-            plantObjectId: body.plantObjectId ?? "",
-            title: body.title ?? "",
-            body: body.body ?? "",
-            contentDocument: body.contentDocument,
-            entryDate: body.entryDate ?? "",
-            clientMutationId: body.clientMutationId ?? "",
-            mediaAssetId: body.mediaAssetId ?? "",
-            cover: body.cover ?? null,
-            mentionSelections: body.mentionSelections ?? [],
-            topicTags: body.topicTags ?? [],
-          })
-        : await createFirstPlantEntry(scope, {
-            spaceId: body.spaceId ?? "",
-            spaceName: body.spaceName ?? "",
-            plantName: body.plantName ?? "",
-            objectKind: body.objectKind ?? "",
-            catalogItemId: body.catalogItemId ?? "",
-            userAddedCatalogName: body.userAddedCatalogName ?? "",
-            varietyText: body.varietyText ?? "",
-            title: body.title ?? "",
-            body: body.body ?? "",
-            contentDocument: body.contentDocument,
-            entryDate: body.entryDate ?? "",
-            locationVisibility: body.locationVisibility ?? "",
-            coarseRegionCode: body.coarseRegionCode ?? "",
-            clientMutationId: body.clientMutationId ?? "",
-            mediaAssetId: body.mediaAssetId ?? "",
-            cover: body.cover ?? null,
-            mentionSelections: body.mentionSelections ?? [],
-            topicTags: body.topicTags ?? [],
-          });
-    const objectReadbackPath = `/garden/objects/${result.plantObject.id}`;
-    const readbackUrl = buildSaveProgressReadbackUrl(
-      objectReadbackPath,
-      target === "plant_object_entry" ? "follow-up" : "first-entry",
-    );
-    const followUpValuePulse =
-      target === "plant_object_entry" &&
-      result.isNewEntry &&
-      result.priorObjectEntryCount > 0
-        ? { journalEntryId: result.entry.id }
-        : null;
-
-    scheduleLearningAttributionDrain(async () => {
-      if (target === "plant_object_entry") {
-        await recordPlantObjectEntryEvents(scope, result);
-      } else {
-        await recordFirstPlantEntryEvents(scope, result, activationSource);
-      }
-    });
-
-    revalidatePath("/garden");
-    revalidatePath(objectReadbackPath);
-
-    const response: FirstPlantEntryResponse = {
-      space: {
-        id: result.space.id,
-        displayName: result.space.display_name,
-        locationVisibility: result.space.location_visibility,
-        coarseRegionCode: result.space.coarse_region_code,
-      },
-      plantObject: {
-        id: result.plantObject.id,
-        displayName: result.plantObject.display_name,
-        objectKind: result.plantObject.object_kind as PlantObjectKind,
-        catalogItemId: result.plantObject.catalog_item_id,
-        varietyText: result.plantObject.variety_text,
-        varietyState: result.plantObject.variety_state,
-        locationVisibility: result.plantObject.location_visibility,
-        coarseRegionCode: result.plantObject.coarse_region_code,
-      },
-      entry: {
-        id: result.entry.id,
-        title: result.entry.title,
-        body: result.entry.body,
-        entryDate: normalizeResponseDate(result.entry.entry_date),
-        clientMutationId: result.entry.client_mutation_id,
-        journalRevision: Number(result.entry.journal_revision ?? 1),
-      },
-      readbackUrl,
-      followUpValuePulse,
-    };
-
-    return Response.json(response);
-  } catch (error) {
-    // OVE-234: a precise-location refusal answers with a stable code plus
-    // localized guidance and never echoes the rejected text back.
-    if (isPreciseLocationTextError(error)) {
-      return Response.json(
-        {
-          error: preciseLocationRejectionMessage(
-            error.surface,
-            request.headers.get(INTERFACE_LOCALE_REQUEST_HEADER),
-          ),
-          code: error.code,
-          surface: error.surface,
-        },
-        { status: 400 },
-      );
-    }
-    return Response.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Entry could not be saved.",
-      },
-      { status: 400 },
-    );
-  }
-}
-
-class AtomicJournalCreateError extends Error {
-  constructor(
-    readonly code: string,
-    readonly statusCode: number,
-  ) {
-    super(code);
-    this.name = "AtomicJournalCreateError";
   }
 }
 
@@ -911,14 +701,6 @@ function normalizeResponseDate(value: Date | string) {
 
 function normalizeActivationSource(value: unknown): ActivationSource | null {
   return normalizeActivationSourceValue(value);
-}
-
-function normalizeTarget(target: unknown, plantObjectId: unknown) {
-  if (target === "space_entry") return "space_entry" as const;
-  if (target === "plant_object_entry" || typeof plantObjectId === "string") {
-    return "plant_object_entry" as const;
-  }
-  return "first_plant_entry" as const;
 }
 
 async function recordSpaceEntryEvents(

@@ -36,15 +36,14 @@ function candidate(
   return {
     mediaAssetId,
     usageRole,
-    status: "processed",
     derivativeKey: `deriv/${mediaAssetId}.webp`,
-    originalDeletedAt: new Date("2026-07-01T00:00:00.000Z"),
+    revokedAt: null,
     altText: null,
   };
 }
 
 describe("OVE-207 journal cover contract", () => {
-  it("falls back to first processed inline in document order", () => {
+  it("falls back to the first reachable final inline in document order", () => {
     const document = documentWithImages(["later", "earlier"]);
     const candidatesById = new Map([
       ["later", candidate("later")],
@@ -100,7 +99,7 @@ describe("OVE-207 journal cover contract", () => {
     });
   });
 
-  it("fails closed when explicit cover is unprocessed", () => {
+  it("fails closed when an explicit final cover is revoked", () => {
     const document = documentWithImages(["ok"]);
     const candidatesById = new Map([
       ["ok", candidate("ok")],
@@ -108,8 +107,7 @@ describe("OVE-207 journal cover contract", () => {
         "broken",
         {
           ...candidate("broken"),
-          status: "failed",
-          derivativeKey: null,
+          revokedAt: new Date("2026-08-24T00:00:00.000Z"),
         },
       ],
     ]);

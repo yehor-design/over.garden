@@ -41,14 +41,12 @@ describe("launch corpus inventory", () => {
   it("exposes only SELECT statements", () => {
     expect(listLaunchCorpusInventoryStatements().length).toBeGreaterThan(5);
     expect(() => assertLaunchCorpusInventorySqlIsSelectOnly()).not.toThrow();
-    const qualityStatement = listLaunchCorpusInventoryStatements().find(
-      (statement) => statement.includes('"qualityClass"'),
+    expect(listLaunchCorpusInventoryStatements().join("\n")).not.toMatch(
+      /quality_policy_version|quality_reason_codes|quarantine_key/,
     );
-    expect(qualityStatement).toMatch(/quality_policy_version/);
-    expect(qualityStatement).not.toMatch(/derivative_key\s+as|quarantine_key/);
   });
 
-  it("plans editorial seed slots and cover matrix without private content", () => {
+  it("reports frozen editorial evidence without granting seed authority", () => {
     const report = buildLaunchCorpusPlanReport({
       environment: "production",
       inventory: {
@@ -77,7 +75,10 @@ describe("launch corpus inventory", () => {
     ).toBe(true);
     expect(
       report.dispositionTargets.some(
-        (target) => target.disposition === "seed_after_signoff",
+        (target) =>
+          target.qualityClass === "editorial_seed_slot" &&
+          target.disposition === "no_action_pending_signoff" &&
+          target.notes.includes("grants no mutation authority"),
       ),
     ).toBe(true);
     expect(JSON.stringify(report)).not.toMatch(

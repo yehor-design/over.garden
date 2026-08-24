@@ -2,10 +2,8 @@ import "server-only";
 
 import {
   deletePublicDerivativeObject,
-  deleteQuarantineObject,
   getPublicDerivativeUrl,
   probePublicDerivativeObjectState,
-  probeQuarantineObjectState,
 } from "@/lib/storage";
 import { optionalServerEnv } from "@/lib/env";
 import type { MediaLifecycleBucket } from "@/server/media/media-lifecycle-enqueue";
@@ -34,21 +32,6 @@ export interface MediaUnreachabilityProof {
 export async function revokeMediaObjectBytes(
   reference: MediaObjectReference,
 ): Promise<MediaUnreachabilityProof> {
-  if (reference.bucket === "quarantine") {
-    await deleteQuarantineObject(
-      reference.objectKey,
-      AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
-    );
-    const providerState = await probeQuarantineObjectState(
-      reference.objectKey,
-      AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
-    );
-    return {
-      outcome: providerOutcome(providerState),
-      canonicalStatus: null,
-    };
-  }
-
   const canonicalUrl = getPublicDerivativeUrl(reference.objectKey);
   await purgeCloudflareCacheUrls([canonicalUrl]);
   await deletePublicDerivativeObject(
@@ -168,7 +151,7 @@ function classifyCanonicalStatus(status: number): MediaUnreachabilityProof {
 }
 
 function providerOutcome(
-  state: Awaited<ReturnType<typeof probeQuarantineObjectState>>,
+  state: Awaited<ReturnType<typeof probePublicDerivativeObjectState>>,
 ): MediaUnreachabilityOutcome {
   if (state === "not_found") return "confirmed_gone";
   if (state === "present") return "still_reachable";

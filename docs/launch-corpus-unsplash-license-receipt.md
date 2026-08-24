@@ -4,7 +4,7 @@ Captured: 2026-07-29
 
 License: https://unsplash.com/license
 
-These photographs are illustrative editorial media. They are not evidence of a real OverGarden gardener, place, event, testimonial, or chronology. Product text and evidence do not import source-page location metadata. Public delivery uses only the canonical stripped derivative; quarantine originals are deleted after successful processing.
+These photographs are illustrative editorial media. They are not evidence of a real OverGarden gardener, place, event, testimonial, or chronology. Product text and evidence do not import source-page location metadata. This receipt records source-license provenance for the fixture assets; current public delivery uses only the exact final WebP prepared before publication and retains no source original.
 
 | Slot file | Photographer | Exact photo page |
 | --- | --- | --- |

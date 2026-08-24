@@ -16,9 +16,6 @@ export const MAX_JOURNAL_BLOCK_ID_CHARS = 64;
 export const JOURNAL_BLOCK_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 export const MAX_JOURNAL_MEDIA_ALT_CHARS = 300;
 export const MAX_JOURNAL_MEDIA_CAPTION_CHARS = 500;
-export const MAX_JOURNAL_DRAFT_INLINE_MEDIA_BYTES =
-  MAX_JOURNAL_INLINE_IMAGES * 12 * 1024 * 1024;
-
 export type JournalInlineMarkType = "bold" | "italic" | "link";
 
 export interface JournalTextSpan {

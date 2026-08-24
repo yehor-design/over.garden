@@ -3,10 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MediaProviderObjectState } from "@/lib/storage";
 
 const deletePublicDerivativeObject = vi.fn();
-const deleteQuarantineObject = vi.fn();
-const probeQuarantineObjectState = vi.fn<
-  () => Promise<MediaProviderObjectState>
->(async () => "not_found");
 const probePublicDerivativeObjectState = vi.fn<
   () => Promise<MediaProviderObjectState>
 >(async () => "not_found");
@@ -16,9 +12,7 @@ const getPublicDerivativeUrl = vi.fn(
 
 vi.mock("@/lib/storage", () => ({
   deletePublicDerivativeObject,
-  deleteQuarantineObject,
   getPublicDerivativeUrl,
-  probeQuarantineObjectState,
   probePublicDerivativeObjectState,
 }));
 
@@ -30,44 +24,13 @@ describe("lifecycle revoke", () => {
   beforeEach(() => {
     vi.resetModules();
     deletePublicDerivativeObject.mockReset();
-    deleteQuarantineObject.mockReset();
     getPublicDerivativeUrl.mockClear();
-    probeQuarantineObjectState.mockReset();
-    probeQuarantineObjectState.mockResolvedValue("not_found");
     probePublicDerivativeObjectState.mockReset();
     probePublicDerivativeObjectState.mockResolvedValue("not_found");
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => ({ ok: true, status: 404, json: async () => ({}) })),
     );
-  });
-
-  it("deletes quarantine objects and proves actual-byte absence", async () => {
-    const { revokeMediaObjectBytes } = await import("./lifecycle-revoke");
-    const result = await revokeMediaObjectBytes({
-      bucket: "quarantine",
-      objectKey: "quarantine/a.jpg",
-    });
-    expect(deleteQuarantineObject).toHaveBeenCalledWith(
-      "quarantine/a.jpg",
-      expect.any(AbortSignal),
-    );
-    expect(probeQuarantineObjectState).toHaveBeenCalledWith(
-      "quarantine/a.jpg",
-      expect.any(AbortSignal),
-    );
-    expect(deletePublicDerivativeObject).not.toHaveBeenCalled();
-    expect(result.outcome).toBe("confirmed_gone");
-  });
-
-  it("fails closed when quarantine bytes remain after delete", async () => {
-    probeQuarantineObjectState.mockResolvedValueOnce("present");
-    const { revokeMediaObjectBytes } = await import("./lifecycle-revoke");
-    const result = await revokeMediaObjectBytes({
-      bucket: "quarantine",
-      objectKey: "quarantine/stale.jpg",
-    });
-    expect(result.outcome).toBe("still_reachable");
   });
 
   it("deletes public derivatives and proves canonical non-2xx", async () => {

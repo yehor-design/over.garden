@@ -21,8 +21,8 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 /**
  * Shared SQL projection: one effective cover media row per journal entry.
- * Prefer explicit cover_media_asset_id when still a valid claimed processed
- * asset; otherwise first processed inline by document_position (aligned with
+ * Prefer explicit cover_media_asset_id when still a reachable final
+ * asset; otherwise first final inline by document_position (aligned with
  * JournalDocumentV1 image order on claim). Never orders by created_at.
  */
 export function buildFirstProcessedMediaPerEntryQuery(executor: QueryExecutor) {
@@ -93,9 +93,8 @@ export function resolveEffectiveJournalCoverFromRows(input: {
   mediaRows: ReadonlyArray<{
     id: string;
     usageRole?: string | null;
-    status: string;
     derivativeKey: string | null;
-    originalDeletedAt?: Date | string | null;
+    revokedAt?: Date | string | null;
     altText?: string | null;
     focalX?: number | null;
     focalY?: number | null;
@@ -112,9 +111,8 @@ export function resolveEffectiveJournalCoverFromRows(input: {
     candidatesById.set(row.id, {
       mediaAssetId: row.id,
       usageRole,
-      status: row.status,
       derivativeKey: row.derivativeKey,
-      originalDeletedAt: row.originalDeletedAt ?? null,
+      revokedAt: row.revokedAt ?? null,
       altText: row.altText ?? null,
       focalX: row.focalX ?? 0.5,
       focalY: row.focalY ?? 0.5,

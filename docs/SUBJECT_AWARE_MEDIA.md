@@ -5,13 +5,14 @@ Authority: additive `media_assets` focal/intrinsic columns + shared presentation
 
 ## Contract
 
-- `media_assets.intrinsic_width` / `intrinsic_height` — processed derivative pixels (orientation baked by `sharp().rotate()`).
+- `media_assets.intrinsic_width` / `intrinsic_height` — final browser-generated WebP pixels with orientation already baked into the stored artifact.
 - `media_assets.focal_x` / `focal_y` — normalized subject point in `[0,1]`, default `0.5/0.5`.
 - Presentation modes (never raw CSS from clients):
   - `cover` → `object-fit: cover` + `object-position` from clamped focal
   - `contain` → full-image visibility; focal ignored for fit (position fail-closes to center)
 - Invalid/out-of-range focal → center fail-closed.
-- Launch quality gate: after derivative encode, reject when `min(width,height) < 64` or `width*height < 64*64`.
+- Browser codec policy rejects images outside the bounded final-WebP dimensions;
+  there is no separate server quality-admission gate.
 
 ## Surfaces
 

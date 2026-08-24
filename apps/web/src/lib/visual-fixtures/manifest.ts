@@ -7,7 +7,7 @@ import {
   type AuthIntentTarget,
 } from "@/lib/auth/auth-intent-contract";
 
-export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v9";
+export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v10";
 export const VISUAL_FIXTURE_NAMESPACE =
   `visual-fixtures/${VISUAL_FIXTURE_MANIFEST_VERSION}` as const;
 
@@ -26,7 +26,7 @@ export type VisualFixtureVarietyState =
   | "unknown"
   | "user_added"
   | "free_text";
-export type VisualFixtureVisibility = "private" | "public";
+export type VisualFixtureVisibility = "public";
 export type VisualFixtureLifecycleState = "active" | "archived";
 export type VisualFixtureMediaAspect =
   | "square"
@@ -133,7 +133,6 @@ export type VisualFixtureStateKind =
   | "empty-space"
   | "empty-object"
   | "today-journal"
-  | "owner-only-journal"
   | "archived-journal"
   | "maximum-copy"
   | "no-media-journal"
@@ -274,9 +273,8 @@ export interface VisualFixtureMedia {
   entryId: string;
   fileName: string;
   localPath: string;
-  quarantineKey: string;
   derivativeKey: string;
-  contentType: "image/png";
+  contentType: "image/webp";
   aspect: VisualFixtureMediaAspect;
   width: number;
   height: number;
@@ -542,8 +540,7 @@ export type VisualFixtureWorkspaceFaultSection =
   | "inventory"
   | "spaces"
   | "recent"
-  | "inbox"
-  | "media";
+  | "inbox";
 
 export interface VisualFixtureWorkspaceScenarioEvidence {
   id: string;
@@ -559,8 +556,6 @@ export interface VisualFixtureWorkspaceScenarioEvidence {
   expectedObjectIds: readonly string[];
   expectedRecentEntryIds: readonly string[];
   serverAvailable: boolean;
-  mediaProcessingCount: number;
-  mediaFailedCount: number;
   faultSections: readonly VisualFixtureWorkspaceFaultSection[];
   viewportTargets: readonly ["desktop", "mobile-320"];
 }
@@ -579,8 +574,8 @@ export type VisualFixtureCreationState =
   | "provisional"
   | "unknown-long"
   | "media"
-  | "draft"
-  | "publish"
+  | "local-only"
+  | "atomic-publish"
   | "backdated"
   | "privacy"
   | "connection-required"
@@ -622,7 +617,7 @@ export interface VisualFixtureCreationScenarioEvidence {
   expectedEntryId: string;
   expectedMediaAssetIds: readonly string[];
   expectedServerWrite: boolean;
-  expectedEntryVisibility: "private" | "public";
+  expectedEntryVisibility: "public";
   postSavePath: string | null;
   resetOwnedSpaceIds: readonly string[];
   resetOwnedObjectIds: readonly string[];
@@ -1885,11 +1880,11 @@ const creationEvidence: VisualFixtureCreationEvidence = {
     }),
     creationScenario(6, {
       flow: "first-entry",
-      state: "draft",
-      label: "First object · restored server draft",
-      objectName: "Чернетка лимона",
+      state: "local-only",
+      label: "First object · transient local authoring",
+      objectName: "Незавершений запис лимона",
       entryBody: "Листя відновило тургор після поливу.",
-      message: "Server draft restored for this account.",
+      message: "Current-tab work is not durable until atomic Publish succeeds.",
     }),
     creationScenario(7, {
       flow: "first-entry",
@@ -1924,10 +1919,10 @@ const creationEvidence: VisualFixtureCreationEvidence = {
     creationScenario(10, {
       flow: "first-entry",
       state: "cancel",
-      label: "First object · cancel with server draft retained",
-      objectName: "Чернетка перед виходом",
-      entryBody: "Незавершений запис уже підтверджено сервером як чернетку.",
-      message: "Cancel returns to the garden and keeps the server draft.",
+      label: "First object · cancel discards transient work",
+      objectName: "Незавершений запис перед виходом",
+      entryBody: "Незавершений запис існує лише в поточній вкладці.",
+      message: "Cancel returns to the garden without creating durable state.",
     }),
     creationScenario(11, {
       flow: "first-entry",
@@ -1953,19 +1948,18 @@ const creationEvidence: VisualFixtureCreationEvidence = {
     }),
     creationScenario(14, {
       flow: "follow-up",
-      state: "draft",
-      label: "Next update · restored server draft",
-      entryBody: "Чернетка порівнює стан із попереднім тижнем.",
-      message: "Server draft restored for this account.",
+      state: "local-only",
+      label: "Next update · transient local retry state",
+      entryBody: "Незавершений текст порівнює стан із попереднім тижнем.",
+      message: "Retry uses current-tab state; no server draft exists.",
     }),
     creationScenario(15, {
       flow: "follow-up",
-      state: "publish",
-      label: "Next update · private save before explicit publish",
-      entryBody: "Запис готовий до окремого підтвердження публікації.",
+      state: "atomic-publish",
+      label: "Next update · one atomic public publish",
+      entryBody: "Запис готовий до єдиної атомарної публікації.",
       submitState: "saved",
-      message:
-        "Saved privately. Publishing remains a separate explicit action.",
+      message: "Published atomically. No private intermediate record exists.",
     }),
     creationScenario(16, {
       flow: "follow-up",
@@ -1978,9 +1972,10 @@ const creationEvidence: VisualFixtureCreationEvidence = {
     creationScenario(17, {
       flow: "follow-up",
       state: "privacy",
-      label: "Next update · private by default",
-      entryBody: "Особисте спостереження без публічного розкриття.",
-      message: "Private by default. Publish only after reviewing the entry.",
+      label: "Next update · public disclosure reviewed",
+      entryBody: "Спостереження готове до публікації без точної локації.",
+      message:
+        "Publishing is public; precise location and selected source files are not included.",
     }),
     creationScenario(18, {
       flow: "follow-up",
@@ -1997,7 +1992,7 @@ const creationEvidence: VisualFixtureCreationEvidence = {
       label: "Next update · recoverable save error",
       entryBody: "Текст лишився у формі після помилки відправлення.",
       submitState: "failed",
-      message: "Save failed. The draft is still here and can be retried.",
+      message: "Publish failed. Current text is still in this tab and can be retried.",
     }),
     creationScenario(20, {
       flow: "follow-up",
@@ -2038,150 +2033,150 @@ interface MediaSeedSpec {
 
 const mediaSeedSpecs: readonly MediaSeedSpec[] = [
   {
-    fileName: "tomato-fruit-square.png",
+    fileName: "tomato-fruit-square.webp",
     objectIndex: 0,
     aspect: "square",
     width: 1254,
     height: 1254,
-    sha256: "60866d360740532e5af6d19b8d537351e654fef449d59b67bf161ad8de27515c",
+    sha256: "6006eac2e92f1a97f3994054f8d4a50a34e3899624bea77d0afd4fdaea3a961c",
     altText: "Стиглі червоні томати на здоровому кущі в теплиці",
     caption: "Стан плодів під час ранкового огляду",
   },
   {
-    fileName: "balcony-herbs-square.png",
+    fileName: "balcony-herbs-square.webp",
     objectIndex: 2,
     aspect: "square",
     width: 1254,
     height: 1254,
-    sha256: "37f63a9b43142e0d441da66958841f0b756ac0322e04ff80bf61778635ec6864",
+    sha256: "6e4cc8abdd4eda8af24367f1fbc486d3c70097c4a885d52069f4100f0f96793f",
     altText: "Гъсти подправки в отделни саксии на градски балкон",
   },
   {
-    fileName: "rescue-cat-square.png",
+    fileName: "rescue-cat-square.webp",
     objectIndex: 22,
     aspect: "square",
     width: 1254,
     height: 1254,
-    sha256: "410a03a396c6044a2bb61a8129a26e730d24251bd71431cfae4b30fa2d15e170",
+    sha256: "6c319f653eb402d1bd33a38de4589bc9fc48b5bd4d6300713c4ec72e4bc1180a",
     altText: "Спокійна кішка відпочиває біля дерев'яного ящика в саду",
   },
   {
-    fileName: "bee-frame-square.png",
+    fileName: "bee-frame-square.webp",
     objectIndex: 26,
     aspect: "square",
     width: 1254,
     height: 1254,
-    sha256: "3e5379c0f41e9b11162b7aa40a13abc05c9d5025791560e2e6d504bd63142807",
+    sha256: "cebf0d990c041600332962590957f5d978d4b214404123507f0a8ca1295ca757",
     altText: "Пчёлы спокойно работают на рамке во время осмотра семьи",
   },
   {
-    fileName: "greenhouse-cucumber-4x3.png",
+    fileName: "greenhouse-cucumber-4x3.webp",
     objectIndex: 0,
     aspect: "landscape_4_3",
     width: 1448,
     height: 1086,
-    sha256: "b26bd268b89415e2ed455fc0d063a3eea5757c258770cb1fccb399c96aa71821",
+    sha256: "f92ba8c4aed5abb76ae8148159c34ab409844a526e659c8b16957d4ddb7ac092",
     altText: "Огірки на вертикальній шпалері з ранковим м'яким світлом",
     caption: "Сусідня шпалера в тому самому просторі",
   },
   {
-    fileName: "indoor-monstera-4x3.png",
+    fileName: "indoor-monstera-4x3.webp",
     objectIndex: 7,
     aspect: "landscape_4_3",
     width: 1448,
     height: 1086,
-    sha256: "b7d293a789dc0ddc5dd6b1c939b5d1c965bc4fee8583cce01682102e0ddff5d4",
+    sha256: "1e472c87492bde5d35372a26d6300112aa7565ff50979b0ae73335d43a0ea9c3",
     altText: "Монстера и други стайни растения до светъл прозорец",
   },
   {
-    fileName: "goats-yard-4x3.png",
+    fileName: "goats-yard-4x3.webp",
     objectIndex: 18,
     aspect: "landscape_4_3",
     width: 1448,
     height: 1086,
-    sha256: "138d4eed8e154c0c5582dad018289419af401b6e7a9213afd3868ca94c3e0cfb",
+    sha256: "47521169318e8d6f80e2de748b85eb5e8e0fe31a42226450ef4ecd563761e437",
     altText: "Дві доглянуті кози у чистому затіненому подвір'ї",
   },
   {
-    fileName: "apiary-slope-4x3.png",
+    fileName: "apiary-slope-4x3.webp",
     objectIndex: 27,
     aspect: "landscape_4_3",
     width: 1448,
     height: 1086,
-    sha256: "70f7a728ceeed2fe5f2f3e73a0800cdf8206bbf53529928d081601fb03d47140",
+    sha256: "477cecbc108ae03bb5133bb8005b8bc64dd094e28e40d4b134d87fc427a506e3",
     altText: "Небольшая пасека на зелёном склоне без видимых людей",
   },
   {
-    fileName: "pepper-plant-portrait.png",
+    fileName: "pepper-plant-portrait.webp",
     objectIndex: 3,
     aspect: "portrait_3_4",
     width: 1086,
     height: 1448,
-    sha256: "04c5b85c3384de0f07188208d276b5bae2c2e5b520632528636dedf55a387919",
+    sha256: "9d5de48f9cb5b936893ca1d78adc03d019b2a1e9b8e6f4ca6d8ad8420cdd28e2",
     altText: "Вертикальний кущ перцю з плодами після прохолодної ночі",
   },
   {
-    fileName: "orchid-roots-portrait.png",
+    fileName: "orchid-roots-portrait.webp",
     objectIndex: 14,
     aspect: "portrait_3_4",
     width: 1086,
     height: 1448,
-    sha256: "e4668366c2e81729d0c4e918f1cdc8da9eb28c8d86c07ead652b05f2725fa82a",
+    sha256: "f68efed5a14736ed387789dcb4aae8ba60838bab90f51e71f380810c77d48678",
     altText: "Орхидея в прозрачна саксия с видими здрави корени",
   },
   {
-    fileName: "rehabilitated-dog-portrait.png",
+    fileName: "rehabilitated-dog-portrait.webp",
     objectIndex: 23,
     aspect: "portrait_3_4",
     width: 1086,
     height: 1448,
-    sha256: "377f70b85d1c8f49e20ec38789637c30796dc93f1e2e5c18e2ad1e11779b13ff",
+    sha256: "1b2ad2017101e202c2759cf5175d1f00273b93f3f9ff28bfe7330e21de7a963d",
     altText: "Спокійний пес стоїть на траві під час відновлення",
   },
   {
-    fileName: "young-queen-frame-portrait.png",
+    fileName: "young-queen-frame-portrait.webp",
     objectIndex: 29,
     aspect: "portrait_3_4",
     width: 1086,
     height: 1448,
-    sha256: "086e7eb0382ff88203edd078dbdfab70a23d054516c121c10a781a02e888466f",
+    sha256: "789d45ce9be4db392d3cf626a091e88f2b399612f8680ab1c67f8c2e4b7f86d9",
     altText: "Вертикальная рамка с молодой маткой и рабочими пчёлами",
   },
   {
-    fileName: "greenhouse-wide.png",
+    fileName: "greenhouse-wide.webp",
     objectIndex: 0,
     aspect: "wide_16_9",
     width: 1672,
     height: 941,
-    sha256: "d060d1a32a8168ae8b38367693bbac94efeb1a936bd93afb18fa29ef93ce177b",
+    sha256: "994933183ba690432a36b1e6279951b209fb8f8a16df086b09d6dafc7ccdaa8a",
     altText: "Широкий огляд теплиці з різними культурами та чистими проходами",
     caption: "Загальний вигляд простору для порівняння наступного тижня",
   },
   {
-    fileName: "urban-balcony-wide.png",
+    fileName: "urban-balcony-wide.webp",
     objectIndex: 6,
     aspect: "wide_16_9",
     width: 1672,
     height: 941,
-    sha256: "75768ed801c2244cb2c5c127bf1296311979013604d01fa9ca206dcd1e89c3d2",
+    sha256: "5247e2ccc75b2c633d3a13f77ddce6c68c419c0c400f84ff81f92f5c54876a28",
     altText: "Широк градски балкон с растения и място за ежедневна грижа",
   },
   {
-    fileName: "animal-yard-wide.png",
+    fileName: "animal-yard-wide.webp",
     objectIndex: 20,
     aspect: "wide_16_9",
     width: 1672,
     height: 941,
-    sha256: "1feb57cb8534583c963799a2ad73149cf9b194517e33b7bc6e4a7360fdc4df1d",
+    sha256: "009fa854ac8cdc5e2ab133edfe2cd3bc89f4a268d6a94af33c9ad9762d7ddac2",
     altText: "Широке подвір'я з козами, курми та окремими зонами догляду",
   },
   {
-    fileName: "hive-entrances-wide.png",
+    fileName: "hive-entrances-wide.webp",
     objectIndex: 28,
     aspect: "wide_16_9",
     width: 1672,
     height: 941,
-    sha256: "fdd2bc6b99118cee1b3f56ca8cfa955e771018378fc32bb0ad8c24462d60246f",
+    sha256: "7e0a7b51e67c358ccfe43ab5824b06b179cf08c0a9f8c6bb92d7caa65bb701d7",
     altText: "Ряд ульев с активными входами в тёплый ясный день",
   },
 ];
@@ -2212,9 +2207,8 @@ const media: readonly VisualFixtureMedia[] = mediaSeedSpecs.map(
       entryId: entry.id,
       fileName: spec.fileName,
       localPath: `test/visual-fixtures/media/${spec.fileName}`,
-      quarantineKey: `${VISUAL_FIXTURE_NAMESPACE}/quarantine/${spec.fileName}`,
       derivativeKey: `derivatives/${mediaId}.webp`,
-      contentType: "image/png",
+      contentType: "image/webp",
       aspect: spec.aspect,
       width: spec.width,
       height: spec.height,
@@ -2393,9 +2387,6 @@ const emptyObjects = objects.filter(
 const todayEntries = entries.filter(
   (entry) => entry.entryDate === "2026-07-10",
 );
-const ownerOnlyEntries = entries.filter(
-  (entry) => entry.visibility === "private",
-);
 const archivedEntries = entries.filter(
   (entry) => entry.lifecycleState === "archived",
 );
@@ -2439,14 +2430,6 @@ const stateCoverage: readonly VisualFixtureStateCoverage[] = [
     `/journal/${todayEntries[0].publicSlug}`,
   ),
   coverageState(
-    "owner-only-journal",
-    "Owner-only journals",
-    "Private records exist but have no public route or serialized preview.",
-    ownerOnlyEntries.length,
-    "owner",
-    null,
-  ),
-  coverageState(
     "archived-journal",
     "Archived journals",
     "Archived records exercise owner history and public suppression.",
@@ -2473,7 +2456,7 @@ const stateCoverage: readonly VisualFixtureStateCoverage[] = [
   coverageState(
     "one-media-journal",
     "Public journal with one image",
-    "Real published route backed by one stripped derivative.",
+    "Real published route backed by one browser-created final WebP.",
     oneMediaEntries.length,
     "public",
     `/journal/${oneMediaEntries[0].publicSlug}`,
@@ -4543,8 +4526,6 @@ function buildWorkspaceEvidence(): VisualFixtureWorkspaceEvidence {
       Pick<
         VisualFixtureWorkspaceScenarioEvidence,
         | "serverAvailable"
-        | "mediaProcessingCount"
-        | "mediaFailedCount"
         | "faultSections"
       >
     > = {},
@@ -4583,8 +4564,6 @@ function buildWorkspaceEvidence(): VisualFixtureWorkspaceEvidence {
       expectedObjectIds: ownerObjects.map((object) => object.id),
       expectedRecentEntryIds: ownerEntries.slice(0, 8).map((entry) => entry.id),
       serverAvailable: options.serverAvailable ?? true,
-      mediaProcessingCount: options.mediaProcessingCount ?? 0,
-      mediaFailedCount: options.mediaFailedCount ?? 0,
       faultSections: options.faultSections ?? [],
       viewportTargets: ["desktop", "mobile-320"],
     };
@@ -4599,17 +4578,13 @@ function buildWorkspaceEvidence(): VisualFixtureWorkspaceEvidence {
       scenarioFor("workspace-empty", "empty", actors[4]),
       scenarioFor("workspace-sparse", "sparse", actors[5]),
       scenarioFor("workspace-typical", "typical", actors[1]),
-      scenarioFor("workspace-dense", "dense", actors[0], {
-        mediaProcessingCount: 1,
-      }),
+      scenarioFor("workspace-dense", "dense", actors[0]),
       scenarioFor(
         "workspace-connection-required",
         "connection-required",
         actors[0],
         {
           serverAvailable: false,
-          mediaProcessingCount: 1,
-          mediaFailedCount: 1,
         },
       ),
       scenarioFor("workspace-loading", "loading", actors[0]),
@@ -4617,7 +4592,7 @@ function buildWorkspaceEvidence(): VisualFixtureWorkspaceEvidence {
         faultSections: ["recent"],
       }),
       scenarioFor("workspace-error", "error", actors[0], {
-        faultSections: ["inventory", "spaces", "recent", "inbox", "media"],
+        faultSections: ["inventory", "spaces", "recent", "inbox"],
       }),
     ],
   };
@@ -4714,28 +4689,18 @@ function buildEntries(): readonly VisualFixtureEntry[] {
     for (let ordinal = 1; ordinal <= count; ordinal += 1) {
       globalIndex += 1;
       const gone = globalIndex === 79;
-      const archived = gone || globalIndex === 71 || globalIndex === 75;
-      const isDenseObject = objectOffset === 0;
-      const isPrivate =
-        !gone && (isDenseObject ? ordinal > 10 : globalIndex % 9 === 0);
-      const visibility: VisualFixtureVisibility = isPrivate
-        ? "private"
-        : "public";
+      const archived =
+        gone || globalIndex === 71 || globalIndex === 72 || globalIndex === 75;
+      const visibility: VisualFixtureVisibility = "public";
       const feedRecencyRank =
         feedRecencyRankByObjectOffset.get(objectOffset) ?? objectOffset;
       const entryDate = dateDaysBefore(
         (ordinal - 1) * objects.length + feedRecencyRank,
       );
-      const publicSlug =
-        visibility === "public"
-          ? `visual-fixture-${slugPart(object.displayName)}-${String(globalIndex).padStart(3, "0")}`
-          : globalIndex === 11
-            ? "visual-fixture-private-entry"
-            : null;
+      const publicSlug = `visual-fixture-${slugPart(object.displayName)}-${String(globalIndex).padStart(3, "0")}`;
       const title = entryTitle(actor.locale, object, ordinal, globalIndex);
       const body = entryBody(actor.locale, object, ordinal, globalIndex);
-      const publishedAt =
-        visibility === "public" ? `${entryDate}T12:00:00.000Z` : null;
+      const publishedAt = `${entryDate}T12:00:00.000Z`;
 
       result.push({
         id: fixtureUuid(4, globalIndex),
@@ -4754,8 +4719,7 @@ function buildEntries(): readonly VisualFixtureEntry[] {
         publishedAt,
         archivedAt: archived ? "2026-07-08T16:00:00.000Z" : null,
         publicGoneAt: gone ? "2026-07-09T16:00:00.000Z" : null,
-        firstPublicationDisclosureVersion:
-          visibility === "public" ? "first-publication-v4" : null,
+        firstPublicationDisclosureVersion: "first-publication-v5",
         firstPublicationDisclosedAt: publishedAt,
         clientMutationId: `${VISUAL_FIXTURE_NAMESPACE}/entry-${String(globalIndex).padStart(3, "0")}`,
         createdAt: timestampForIndex(200 + globalIndex),
@@ -4788,7 +4752,7 @@ function buildEntries(): readonly VisualFixtureEntry[] {
     publishedAt: "2026-07-09T12:00:00.000Z",
     archivedAt: null,
     publicGoneAt: null,
-    firstPublicationDisclosureVersion: "first-publication-v4",
+    firstPublicationDisclosureVersion: "first-publication-v5",
     firstPublicationDisclosedAt: "2026-07-09T12:00:00.000Z",
     clientMutationId: `${VISUAL_FIXTURE_NAMESPACE}/entry-081`,
     createdAt: timestampForIndex(281),
@@ -6019,10 +5983,6 @@ function buildJournalEntryEvidence(): VisualFixtureJournalEntryEvidence {
       objects.find((object) => object.id === entry.objectId)
         ?.locationVisibility === "hidden",
   );
-  const privateEntry = requireEntry(
-    "private",
-    (entry) => entry.visibility === "private" && entry.publicSlug !== null,
-  );
   const removedEntry = requireEntry(
     "gone",
     (entry) => entry.publicGoneAt !== null,
@@ -6131,9 +6091,9 @@ function buildJournalEntryEvidence(): VisualFixtureJournalEntryEvidence {
       activeScenario("chronology-first", newestDense, "guest", "uk"),
       activeScenario("chronology-last", oldestDense, "guest", "uk"),
       unavailableScenario(
-        "private-404",
-        privateEntry,
-        privateEntry.publicSlug!,
+        "nonexistent-404",
+        null,
+        "visual-fixtures-nonexistent-journal",
         404,
         "bg",
       ),
@@ -7248,7 +7208,7 @@ function creationScenario(
   const expectedObjectId = fixtureObject?.id ?? fixtureUuid(18, index);
   const expectedEntryId = fixtureUuid(19, index);
   const expectedServerWrite = ![
-    "draft",
+    "local-only",
     "connection-required",
     "error",
     "cancel",
@@ -7294,12 +7254,14 @@ function creationScenario(
     submitState: input.submitState ?? "idle",
     message:
       input.message ??
-      "Private by default. You choose later whether an entry becomes public.",
+      "Changes stay in this tab until Publish succeeds; published entries are public.",
     detailsOpen: input.detailsOpen ?? false,
     path,
     startPath: path,
     payloadClass: `${input.flow}:${input.state}`,
-    clientMutationId: `${id}-mutation`,
+    clientMutationId: `atomic:${expectedEntryId}:${createHash("sha256")
+      .update(`${id}:publication`)
+      .digest("base64url")}`,
     preconditionEntryIds: fixtureObject
       ? entries
           .filter((entry) => entry.objectId === fixtureObject.id)
@@ -7310,7 +7272,7 @@ function creationScenario(
     expectedEntryId,
     expectedMediaAssetIds,
     expectedServerWrite,
-    expectedEntryVisibility: input.state === "publish" ? "public" : "private",
+    expectedEntryVisibility: "public",
     postSavePath,
     resetOwnedSpaceIds: input.flow === "first-entry" ? [expectedSpaceId] : [],
     resetOwnedObjectIds: input.flow === "first-entry" ? [expectedObjectId] : [],

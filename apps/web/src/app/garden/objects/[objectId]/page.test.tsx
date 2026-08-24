@@ -474,7 +474,7 @@ describe("/garden/objects/[objectId]", () => {
     },
   );
 
-  it("resumes publishing at only the exact private journal entry control", async () => {
+  it("does not resurrect a publish action for compatibility private rows", async () => {
     mocks.getPlantObjectPage.mockResolvedValue(
       plantObjectPage([
         {
@@ -503,14 +503,10 @@ describe("/garden/objects/[objectId]", () => {
       }),
     );
 
-    expect(html).toContain(
-      'id="entry-publish-publish-ref-entry-2" data-auth-intent-control="publish" data-auth-intent-control-ref="publish-ref-entry-2" autofocus=""',
-    );
-    expect(html).toContain(
-      'data-auth-intent-control-ref="publish-ref-entry-1"',
-    );
-    expect(html).not.toContain('id="entry-publish-publish-ref-entry-1"');
-    expect(html.match(/autofocus=""/g)).toHaveLength(1);
+    expect(html).toContain("Second private note");
+    expect(html).toContain("First private note");
+    expect(html).not.toContain('data-auth-intent-control="publish"');
+    expect(html).not.toContain("entry-publish-");
   });
 
   it("renders a credential-free follow-up fixture without analytics or write gating", async () => {
@@ -585,7 +581,7 @@ describe("/garden/objects/[objectId]", () => {
     expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();
   });
 
-  it("asks for the full publication disclosure only before the first publish", async () => {
+  it("keeps first-publication disclosure on atomic composition only", async () => {
     mocks.getPlantObjectPage.mockResolvedValueOnce(
       plantObjectPage(
         [
@@ -609,12 +605,10 @@ describe("/garden/objects/[objectId]", () => {
     );
 
     expect(html).toContain(
-      "параметрами публічного поширення, які ви вже переглянули",
-    );
-    expect(html).toContain(
       'data-requires-first-publication-disclosure="false"',
     );
     expect(html).not.toContain('name="publicationDisclosureAccepted"');
+    expect(html).not.toContain('data-auth-intent-control="publish"');
   });
 });
 

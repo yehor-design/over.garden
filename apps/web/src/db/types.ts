@@ -31,7 +31,6 @@ import type {
   Health as HealthTable,
   JobQueue as JobQueueTable,
   JournalEntries as JournalEntriesTable,
-  JournalEntryDrafts as JournalEntryDraftsTable,
   JournalEntryMutationReceipts as JournalEntryMutationReceiptsTable,
   JournalEntryObjectMentions as JournalEntryObjectMentionsTable,
   JournalEntryTopicSignals as JournalEntryTopicSignalsTable,
@@ -56,10 +55,7 @@ import type {
 export type Database = DB;
 export type { JsonValue };
 
-export type JournalEntryDraft = Selectable<JournalEntryDraftsTable>;
-export type NewJournalEntryDraft = Insertable<JournalEntryDraftsTable>;
-
-export type EntryVisibility = "private" | "public";
+export type EntryVisibility = "public";
 export type EntryLifecycleState = "active" | "archived";
 export type EntryScope = "object" | "space";
 export type JournalContentClass =
@@ -92,7 +88,6 @@ export type CatalogMatchType =
   | "transliteration_exact"
   | "fuzzy_name"
   | "no_safe_match";
-export type MediaAssetStatus = "quarantined" | "processed" | "failed";
 export type JobStatus = "pending" | "processing" | "done" | "failed";
 export type VarietySeedProofStatus = "draft" | "published";
 export type ErasureRequestStatus =

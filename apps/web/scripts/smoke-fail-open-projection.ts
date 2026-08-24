@@ -151,25 +151,14 @@ export async function runFailOpenProjectionSmoke(
   );
 
   const verifiedMedia = classifyPublicMediaProjection({
-    status: "processed",
     derivativeKey: "derivatives/opaque.webp",
-    originalDeletedAt: "confirmed",
     revokedAt: null,
-    mediaReadinessState: "public_ready",
-    publicObjectId: "present",
-    qualityPolicyVersion: "ove231.launch-media-quality.v1",
-    qualityClass: "accepted",
   });
   const transitionalMedia = classifyPublicMediaProjection({
-    status: "processed",
-    derivativeKey: "derivatives/opaque.webp",
-    originalDeletedAt: null,
+    derivativeKey: null,
     revokedAt: null,
-    mediaReadinessState: "derivative_written",
-    publicObjectId: null,
   });
   const revokedMedia = classifyPublicMediaProjection({
-    status: "processed",
     derivativeKey: "derivatives/opaque.webp",
     revokedAt: "revoked",
   });

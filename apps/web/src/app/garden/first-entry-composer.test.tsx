@@ -173,7 +173,7 @@ function visualScenario(): VisualFixtureCreationScenarioEvidence {
     expectedEntryId: "expected-entry",
     expectedMediaAssetIds: [],
     expectedServerWrite: false,
-    expectedEntryVisibility: "private",
+    expectedEntryVisibility: "public",
     postSavePath: null,
     resetOwnedSpaceIds: [],
     resetOwnedObjectIds: [],

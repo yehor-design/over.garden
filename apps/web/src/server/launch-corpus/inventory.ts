@@ -27,7 +27,6 @@ export type LaunchCorpusDisposition =
   | "revoke_via_ove195"
   | "reclassify_retain_lifecycle"
   | "reclassify_production_smoke"
-  | "seed_after_signoff"
   | "retain_ok"
   | "no_action_pending_signoff";
 
@@ -97,26 +96,6 @@ export interface LaunchCorpusCheckReport {
 
 /** Every statement the plan script may issue. Must be SELECT-only. */
 export const LAUNCH_CORPUS_INVENTORY_SQL = {
-  launchMediaQualityCounts: `
-select case
-         when ma.quality_policy_version is null then 'legacy_unassessed'
-         when ma.quality_policy_version <> 'ove231.launch-media-quality.v1' then 'stale_policy'
-         when ma.quality_class = 'accepted' then 'accepted_current'
-         when ma.quality_class = 'review_required' then 'review_required'
-         when ma.quality_class = 'rejected' then 'rejected'
-         else 'invalid_receipt'
-       end as "qualityClass",
-       count(*)::bigint as count
-from media_assets ma
-inner join journal_entries je on je.id = ma.journal_entry_id
-where je.visibility = 'public'
-  and je.lifecycle_state = 'active'
-  and je.public_slug is not null
-  and ma.revoked_at is null
-group by 1
-order by 1
-`.trim(),
-
   contentClassCounts: `
 select coalesce(content_class, 'unset') as "contentClass", count(*)::bigint as count
 from journal_entries
@@ -304,9 +283,9 @@ export function buildLaunchCorpusPlanReport(input: {
 
   dispositionTargets.push({
     qualityClass: "editorial_seed_slot",
-    disposition: "seed_after_signoff",
+    disposition: "no_action_pending_signoff",
     count: LAUNCH_CORPUS_SHOT_LIST.length,
-    notes: `Seed ${LAUNCH_CORPUS_TOPOLOGY.journals} clearly labelled editorial journals (${LAUNCH_CORPUS_TOPOLOGY.spaces} spaces / ${LAUNCH_CORPUS_TOPOLOGY.objects} objects) after explicit sign-off + licensed content pack.`,
+    notes: `Frozen OVE-199 v1 evidence covers ${LAUNCH_CORPUS_TOPOLOGY.journals} editorial slots (${LAUNCH_CORPUS_TOPOLOGY.spaces} spaces / ${LAUNCH_CORPUS_TOPOLOGY.objects} objects), but grants no mutation authority after OVE-349; a new public-only final-WebP vertical contract and exact sign-off are required.`,
   });
 
   const nonFounderPublic = countClass(

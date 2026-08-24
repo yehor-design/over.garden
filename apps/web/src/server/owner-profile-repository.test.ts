@@ -159,7 +159,9 @@ describe("owner profile repository", () => {
     expect(compiled.sql).not.toContain('"normalized_handle" =');
     expect(compiled.sql).toContain('from "media_assets"');
     expect(compiled.sql).toContain('"owner_user_id" =');
-    expect(compiled.sql).toContain('"status" =');
+    expect(compiled.sql).toContain('"derivative_key" is not null');
+    expect(compiled.sql).toContain('"revoked_at" is null');
+    expect(compiled.sql).not.toContain('"media_assets"."status"');
     expect(compiled.parameters).toContain(ownerUserId);
     expect(compiled.parameters).not.toContain("session-1");
   });
@@ -174,13 +176,13 @@ describe("owner profile repository", () => {
     expect(compiled.parameters).toContain(ownerUserId);
   });
 
-  it("offers only processed owner derivatives as avatar candidates", () => {
+  it("offers only final non-revoked owner derivatives as avatar candidates", () => {
     const compiled = buildOwnerAvatarOptionsQuery(testDb, scope).compile();
 
     expect(compiled.sql).toContain('from "media_assets"');
     expect(compiled.sql).toContain('"owner_user_id" =');
-    expect(compiled.sql).toContain('"status" =');
     expect(compiled.sql).toContain('"derivative_key" is not null');
+    expect(compiled.sql).not.toContain('"status" =');
     expect(compiled.parameters).toContain(ownerUserId);
     expect(compiled.sql).not.toMatch(/quarantine_key|latitude|longitude/i);
     expect(compiled.sql).not.toContain('"original_deleted_at" as');

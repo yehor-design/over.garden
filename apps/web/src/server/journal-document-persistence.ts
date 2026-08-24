@@ -21,7 +21,6 @@ import {
   listAbandonedCoverOnlyRevokeCandidates,
   listDetachedInlineRevokeCandidates,
 } from "@/server/media/media-lifecycle-enqueue";
-import { attachProcessedMediaAssetToEntry } from "@/server/media/media-repository";
 import type { RequestScope } from "@/server/request-scope";
 import { isStructuredJournalAuthoringEnabled } from "@/server/structured-journal-authoring";
 
@@ -172,20 +171,18 @@ export async function claimOrderedInlineMediaForEntry(
 
   const existing = await executor
     .selectFrom("media_assets")
-    .select(["id", "document_position", "quarantine_key", "usage_role"])
+    .select(["id", "document_position", "usage_role"])
     .where("owner_user_id", "=", scope.userId)
     .where("journal_entry_id", "=", input.journalEntryId)
     .execute();
 
   for (const row of existing) {
-    if (row.quarantine_key.startsWith("visual-fixtures/")) continue;
     // Cover-only assets are owned by claimJournalEntryCover, not document order.
     if (row.usage_role === "cover_only") continue;
     if (!keep.has(row.id)) {
       await executor
         .updateTable("media_assets")
         .set({
-          journal_entry_id: null,
           document_position: null,
           usage_role: "inline",
           updated_at: new Date(),
@@ -199,14 +196,7 @@ export async function claimOrderedInlineMediaForEntry(
   let attached = false;
   for (let index = 0; index < ordered.length; index += 1) {
     const mediaAssetId = ordered[index]!;
-    const mediaAsset = await attachProcessedMediaAssetToEntry(executor, scope, {
-      mediaAssetId,
-      journalEntryId: input.journalEntryId,
-    });
-    if (!mediaAsset) {
-      throw new Error("Processed media asset is unavailable for this entry.");
-    }
-    await executor
+    const mediaAsset = await executor
       .updateTable("media_assets")
       .set({
         document_position: index + 1,
@@ -215,7 +205,14 @@ export async function claimOrderedInlineMediaForEntry(
       })
       .where("id", "=", mediaAssetId)
       .where("owner_user_id", "=", scope.userId)
-      .execute();
+      .where("journal_entry_id", "=", input.journalEntryId)
+      .where("derivative_key", "is not", null)
+      .where("revoked_at", "is", null)
+      .returning("id")
+      .executeTakeFirst();
+    if (!mediaAsset) {
+      throw new Error("Final media asset is unavailable for this entry.");
+    }
     attached = true;
   }
 
@@ -267,7 +264,7 @@ export async function claimJournalEntryCover(
           "Cover photo must be one of this entry's story photos.",
         );
       }
-      await assertProcessedOwnedMediaForCover(executor, scope, {
+      await assertFinalOwnedMediaForCover(executor, scope, {
         mediaAssetId,
         journalEntryId: entryId,
       });
@@ -295,9 +292,9 @@ export async function claimJournalEntryCover(
     case "separate":
     case "keep_as_cover": {
       const mediaAssetId = input.cover.mediaAssetId.trim();
-      await assertProcessedOwnedMediaForCover(executor, scope, {
+      await assertFinalOwnedMediaForCover(executor, scope, {
         mediaAssetId,
-        journalEntryId: null,
+        journalEntryId: entryId,
       });
       await clearCoverOnlyAssetsForEntry(
         executor,
@@ -315,14 +312,9 @@ export async function claimJournalEntryCover(
         })
         .where("id", "=", mediaAssetId)
         .where("owner_user_id", "=", scope.userId)
-        .where("status", "=", "processed")
+        .where("journal_entry_id", "=", entryId)
         .where("derivative_key", "is not", null)
-        .where((eb) =>
-          eb.or([
-            eb("journal_entry_id", "is", null),
-            eb("journal_entry_id", "=", entryId),
-          ]),
-        )
+        .where("revoked_at", "is", null)
         .returning("id")
         .executeTakeFirst();
       if (!claimed) {
@@ -366,7 +358,6 @@ async function clearCoverOnlyAssetsForEntry(
   let query = executor
     .updateTable("media_assets")
     .set({
-      journal_entry_id: null,
       usage_role: "inline",
       document_position: null,
       updated_at: new Date(),
@@ -382,7 +373,7 @@ async function clearCoverOnlyAssetsForEntry(
   await query.execute();
 }
 
-async function assertProcessedOwnedMediaForCover(
+async function assertFinalOwnedMediaForCover(
   executor: QueryExecutor,
   scope: RequestScope,
   input: {
@@ -395,8 +386,8 @@ async function assertProcessedOwnedMediaForCover(
     .select("id")
     .where("id", "=", input.mediaAssetId)
     .where("owner_user_id", "=", scope.userId)
-    .where("status", "=", "processed")
-    .where("derivative_key", "is not", null);
+    .where("derivative_key", "is not", null)
+    .where("revoked_at", "is", null);
 
   if (input.journalEntryId) {
     query = query.where("journal_entry_id", "=", input.journalEntryId);
@@ -451,37 +442,4 @@ export async function findJournalMutationReceipt(
     .where("journal_entry_id", "=", input.journalEntryId)
     .where("client_mutation_id", "=", input.clientMutationId)
     .executeTakeFirst();
-}
-
-export interface UpdateJournalEntryAggregateInput {
-  entryId: string;
-  clientMutationId: string;
-  expectedRevision: number;
-  title: string;
-  entryDate?: string | null;
-  contentDocument?: unknown;
-  body?: string | null;
-  mentionSelections?: unknown;
-  topicTags?: unknown;
-}
-
-export async function loadOwnedActiveJournalEntryForEdit(
-  executor: QueryExecutor,
-  scope: RequestScope,
-  entryId: string,
-): Promise<JournalEntry> {
-  const entry = await executor
-    .selectFrom("journal_entries")
-    .selectAll()
-    .where("id", "=", entryId)
-    .where("owner_user_id", "=", scope.userId)
-    .executeTakeFirst();
-
-  if (!entry) {
-    throw new Error("Journal entry was not found.");
-  }
-  if (entry.lifecycle_state !== "active" || entry.public_gone_at !== null) {
-    throw new Error("Archived journal entries cannot be edited.");
-  }
-  return entry;
 }

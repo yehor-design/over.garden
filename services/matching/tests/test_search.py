@@ -92,12 +92,7 @@ def journal_row(**overrides):
         "cover_media_id": None,
         "cover_usage_role": None,
         "cover_derivative_key": None,
-        "cover_original_deleted_at": None,
         "cover_revoked_at": None,
-        "cover_media_readiness_state": None,
-        "cover_public_object_id": None,
-        "cover_quality_policy_version": None,
-        "cover_quality_class": None,
     }
     row.update(overrides)
     return row
@@ -202,11 +197,6 @@ def test_journal_entry_document_indexes_effective_cover_without_media_ids(monkey
             cover_media_id="00000000-0000-4000-8000-000000000099",
             cover_usage_role="cover_only",
             cover_derivative_key="derivatives/cover.webp",
-            cover_original_deleted_at=datetime(2026, 6, 26, tzinfo=timezone.utc),
-            cover_media_readiness_state="public_ready",
-            cover_public_object_id="00000000-0000-4000-8000-000000000099",
-            cover_quality_policy_version="ove231.launch-media-quality.v1",
-            cover_quality_class="accepted",
         )
     )
 
@@ -220,7 +210,7 @@ def test_journal_entry_document_indexes_effective_cover_without_media_ids(monkey
     assert document["qualityReasons"] == []
 
 
-def test_journal_entry_document_admits_transitional_converted_cover_as_partial(
+def test_journal_entry_document_refuses_revoked_cover_as_partial(
     monkeypatch,
 ):
     monkeypatch.setenv("R2_PUBLIC_BASE_URL", "https://media.example")
@@ -230,14 +220,13 @@ def test_journal_entry_document_admits_transitional_converted_cover_as_partial(
             cover_media_id="00000000-0000-4000-8000-000000000099",
             cover_usage_role="cover_only",
             cover_derivative_key="derivatives/cover.webp",
-            cover_original_deleted_at=None,
-            cover_media_readiness_state="derivative_written",
-            cover_public_object_id=None,
+            cover_revoked_at=datetime(2026, 6, 26, tzinfo=timezone.utc),
         )
     )
 
     assert document is not None
-    assert document["coverSource"] == "separate"
+    assert document["coverSource"] == "none"
+    assert "coverPublicUrl" not in document
     assert document["qualityClass"] == "partial"
     assert document["qualityReasons"] == ["media_projection_unresolved"]
 

@@ -1,6 +1,11 @@
 # Walking Skeleton
 
-Status: implemented and locally verified on 2026-06-26. The original walking-skeleton proof used Docker Compose; OVE-73 re-proved the supported-Mac fresh-checkout web bootstrap on 2026-06-30 against Apple Container Postgres, Meilisearch, and MinIO with Docker Desktop stopped. OVE-77 closes the local cleanup proof: supported Apple Silicon/macOS 26 development no longer requires Docker Desktop for local infra, bootstrap, type checks, tests, or matching pytest. OVE-95 aligns local and CI Postgres with the production major version, currently Postgres 18. OVE-189 adds the canonical local-media recovery and restart proof: a corrupt MinIO source is mounted read-only, copied into an explicit new target, retained for later bounded retirement, and accepted only after actual upload/process/readback plus Postgres/Meilisearch/MinIO persistence. OVE-191 converts the old user-facing scaffold into an explicit loopback-only diagnostic: production and preview refuse its page and API before auth or data access, shared identities are removed from source and build output, and local authentication uses the canonical product flow. OVE-203 makes public identity a provider-independent bootstrap invariant: every Better Auth account receives one generated pseudonymous profile/current claim, and CI proves registry consistency, rename cooldown, retired-handle reservation, policy provenance, duplicate-signup safety, and cascade erasure on a fresh database. CI repeats the fresh-checkout bootstrap contract by starting Postgres 18 plus MinIO, running `pnpm local:bootstrap`, and failing if generated Kysely types drift from the committed `src/db/generated.ts`. OVE-75 documents that CI keeps Docker only because GitHub-hosted Ubuntu does not run Apple Container service containers; that CI exception does not restore Docker Desktop as a local requirement. ADR-0017 is now the current online-only, network-required product authority; the local-capture proof below is historical and non-operative.
+Status: implemented and locally verified on 2026-06-26, with the current
+connectivity/media contract reconciled by OVE-323 and OVE-349. The original
+Docker, offline-capture, source-original quarantine, and server-conversion
+proofs are historical provenance only. Current local policy is Apple
+Container-first, Postgres 18, loopback diagnostics, atomic online-only journal
+publication, and browser-final WebP staging under ADR-0017/ADR-0019.
 
 This is not product UI. It is the first end-to-end proof that the selected stack works together before agents start building product slices.
 
@@ -10,7 +15,10 @@ This is not product UI. It is the first end-to-end proof that the selected stack
 2. **Local infra works.** The original walking-skeleton proof used Docker Compose to start Postgres, Meilisearch, and MinIO. Current runtime policy is Apple Container-first for supported local Macs: `infra/container-up` starts the same service trio on the same local ports, with Postgres 18 matching the production major version and Docker Compose retained as fallback for unsupported hosts or verified feature gaps. OVE-73 proves the normal web bootstrap and test path does not require Docker Desktop on a supported Mac. `pnpm local:bootstrap` applies app SQL, creates Better Auth tables through Better Auth's migration helper, creates R2/MinIO buckets, and applies local public-read policy to the derivative bucket.
 3. **Better Auth round-trip works.** The historical proof established the cookie-backed round trip. Current local diagnostics authenticate through `/garden`; they do not pre-fill, create, or advertise a shared identity. OVE-203 removes the user-entered signup name and proves supported credential/Google user creation converges on the same automatic pseudonymous profile/current-claim invariant. OVE-296 removes the former Meta social sign-in surface without changing that provider-independent provisioning boundary.
 4. **Vertical journal slice works.** In an explicitly enabled loopback-only environment, `/skeleton` provides scoped SSR readback and `/api/skeleton/journal` goes through auth -> authorization -> validation -> scoped repository -> Kysely -> Postgres -> queue. Production and preview return hard `404` before those layers.
-5. **Media quarantine pipeline works.** `/api/media/uploads` creates a presigned quarantine upload URL; `/api/media/process` reads the quarantine object, re-encodes a metadata-stripped WebP derivative with `sharp`, writes it to the public bucket, deletes the original, and marks the row processed.
+5. **Atomic final-media pipeline works.** The browser creates the sole final
+   WebP, uploads it directly to short-lived edge staging, and atomic journal
+   publication commits final identity/order/cover plus a recoverable finalize
+   job. No image bytes enter a Vercel Function.
 6. **Historical local-queue proof is recorded, not shipped.** The 2026-06-26
    skeleton proved Dexie/IndexedDB queued-mutation behavior. ADR-0017
    superseded that decision, and OVE-323 removed its complete active runtime,
@@ -96,12 +104,18 @@ The remaining database, public/auth origin, and object-storage values must all
 resolve to the matching loopback visual-fixture contract. Never set this gate
 in Vercel or another deployed runtime.
 
-- `POST /api/media/uploads` returns a presigned quarantine upload URL.
-- `POST /api/media/process` converts the quarantine original to a public stripped derivative and deletes the original.
+- The retired draft/upload/process endpoints are absent and cannot write.
+- Current codec, staging, atomic create/edit, final public readback, archive,
+  and erasure proofs are owned by the commands below.
 
 ## Guardrail Tests
 
-- `src/server/media/derivatives.test.ts` proves derivatives are WebP and do not retain EXIF.
+- `src/lib/media/browser-journal-image-encoder.test.ts` proves the browser
+  produces the bounded final WebP without a server fallback.
+- `cloudflare/media-staging/` tests prove direct upload, claim, finalize,
+  abandonment, alarm recovery, and exact capability scoping.
+- `scripts/verify-retired-journal-media-runtime.test.ts` proves the former
+  server-draft/process/schema/package owners stay absent.
 - `src/lib/retirement/known-client-storage.test.ts` proves the only surviving
   browser-storage boundary is dependency-free, exact-name, content-free, and
   fail-closed. `tests/offline-runtime-absence.spec.ts` proves fresh and

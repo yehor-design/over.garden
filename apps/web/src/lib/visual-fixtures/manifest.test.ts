@@ -2,8 +2,9 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import sharp from "sharp";
 import { describe, expect, it } from "vitest";
+
+import { parseClientImageHeader } from "@/lib/media/client-webp-policy";
 
 import {
   calculateVisualFixtureManifestHash,
@@ -14,10 +15,24 @@ import {
   VISUAL_FIXTURE_NAMESPACE,
 } from "./manifest";
 
+function webpChunkTypes(bytes: Uint8Array): string[] {
+  const types: string[] = [];
+  for (let offset = 12; offset + 8 <= bytes.byteLength; ) {
+    types.push(String.fromCharCode(...bytes.subarray(offset, offset + 4)));
+    const length =
+      bytes[offset + 4]! |
+      (bytes[offset + 5]! << 8) |
+      (bytes[offset + 6]! << 16) |
+      (bytes[offset + 7]! << 24);
+    offset += 8 + length + (length % 2);
+  }
+  return types;
+}
+
 describe("visual fixture manifest", () => {
   it("contains the complete deterministic baseline", () => {
-    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v9");
-    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v9");
+    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v10");
+    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v10");
     expect(VISUAL_FIXTURE_MANIFEST.actors).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profiles).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profileFollows).toHaveLength(9);
@@ -237,8 +252,8 @@ describe("visual fixture manifest", () => {
         "provisional",
         "unknown-long",
         "media",
-        "draft",
-        "publish",
+        "local-only",
+        "atomic-publish",
         "backdated",
         "privacy",
         "connection-required",
@@ -247,6 +262,16 @@ describe("visual fixture manifest", () => {
         "duplicate",
       ]),
     );
+    expect(
+      evidence.scenarios.find(
+        (scenario) =>
+          scenario.flow === "follow-up" && scenario.state === "privacy",
+      ),
+    ).toMatchObject({
+      label: "Next update · public disclosure reviewed",
+      message:
+        "Publishing is public; precise location and selected source files are not included.",
+    });
     expect(
       first.every((scenario) => scenario.path.startsWith("/garden?")),
     ).toBe(true);
@@ -261,7 +286,9 @@ describe("visual fixture manifest", () => {
       expect(scenario.viewportTargets).toEqual(["desktop", "mobile-320"]);
       expect(scenario.entryDate).toMatch(/^2026-\d{2}-\d{2}$/);
       expect(scenario.startPath).toBe(scenario.path);
-      expect(scenario.clientMutationId).toBe(`${scenario.id}-mutation`);
+      expect(scenario.clientMutationId).toMatch(
+        new RegExp(`^atomic:${scenario.expectedEntryId}:[A-Za-z0-9_-]{43}$`),
+      );
       expect(scenario.expectedSpaceId).toMatch(/^[0-9a-f-]{36}$/);
       expect(scenario.expectedObjectId).toMatch(/^[0-9a-f-]{36}$/);
       expect(scenario.expectedEntryId).toMatch(/^[0-9a-f-]{36}$/);
@@ -288,7 +315,7 @@ describe("visual fixture manifest", () => {
     }
 
     expect(JSON.stringify(evidence)).not.toMatch(
-      /email|password|token|latitude|longitude|coordinate|quarantine|household|property[_ -]?id/i,
+      /email|password|token|latitude|longitude|coordinate|quarantine|household|property[_ -]?id|private by default|saved privately|publish(?:ing)? remains a separate/i,
     );
   });
 
@@ -559,8 +586,8 @@ describe("visual fixture manifest", () => {
       new Set(VISUAL_FIXTURE_MANIFEST.entries.map((entry) => entry.locale)),
     ).toEqual(new Set(["uk", "bg", "ru"]));
     expect(
-      VISUAL_FIXTURE_MANIFEST.entries.some(
-        (entry) => entry.visibility === "private",
+      VISUAL_FIXTURE_MANIFEST.entries.every(
+        (entry) => entry.visibility === "public",
       ),
     ).toBe(true);
     expect(
@@ -809,7 +836,7 @@ describe("visual fixture manifest", () => {
 
     expect(emptyObject).toBeDefined();
     expect(denseObject).toBeDefined();
-    expect(densePublicEntries).toHaveLength(10);
+    expect(densePublicEntries).toHaveLength(12);
     expect(
       densePublicEntries.some(
         (entry) => entry.title.length > 100 && entry.body.includes("\n\n"),
@@ -940,7 +967,7 @@ describe("visual fixture manifest", () => {
     ).toEqual(new Set(["none", "cover", "gallery"]));
     expect(
       byId.get("public-plant-dense")?.expectedTimelineEntryIds,
-    ).toHaveLength(10);
+    ).toHaveLength(12);
     expect(byId.get("public-plant-long-name")?.path).toContain(
       "18700003-0000-4000-8000-000000000017",
     );
@@ -950,6 +977,17 @@ describe("visual fixture manifest", () => {
     expect(byId.get("owner-empty")?.expectedTimelineEntryIds).toEqual([]);
     expect(byId.get("public-unpublished")?.expectedStatus).toBe(404);
     expect(byId.get("public-gone")?.expectedStatus).toBe(410);
+    const goneObjectId = byId.get("public-gone")?.objectId;
+    const goneObjectEntries = VISUAL_FIXTURE_MANIFEST.entries.filter(
+      (entry) => entry.objectId === goneObjectId,
+    );
+    expect(goneObjectEntries.length).toBeGreaterThan(0);
+    expect(
+      goneObjectEntries.every(
+        (entry) =>
+          entry.lifecycleState === "archived" || entry.publicGoneAt !== null,
+      ),
+    ).toBe(true);
     expect(byId.get("public-bee-mixed-history")?.expectedTimelineCount).toBe(1);
 
     for (const scenario of evidence.scenarios) {
@@ -999,7 +1037,6 @@ describe("visual fixture manifest", () => {
         "empty-space",
         "empty-object",
         "today-journal",
-        "owner-only-journal",
         "archived-journal",
         "maximum-copy",
         "no-media-journal",
@@ -1015,11 +1052,6 @@ describe("visual fixture manifest", () => {
         "feed-context-empty",
       ]),
     );
-    expect(
-      VISUAL_FIXTURE_MANIFEST.stateCoverage.find(
-        (state) => state.kind === "owner-only-journal",
-      ),
-    ).toMatchObject({ access: "owner", path: null });
     expect(
       VISUAL_FIXTURE_MANIFEST.stateCoverage.find(
         (state) => state.kind === "maximum-copy",
@@ -1042,7 +1074,7 @@ describe("visual fixture manifest", () => {
         /^derivatives\/18700005-0000-4000-8000-[0-9]{12}\.webp$/,
       );
       expect(media.localPath).toMatch(
-        /^test\/visual-fixtures\/media\/[a-z0-9-]+\.png$/,
+        /^test\/visual-fixtures\/media\/[a-z0-9-]+\.webp$/,
       );
       expect(media.altText.length).toBeGreaterThan(20);
     }
@@ -1147,16 +1179,18 @@ describe("visual fixture manifest", () => {
     });
   });
 
-  it("binds every media row to an EXIF-free project raster with matching dimensions and digest", async () => {
+  it("binds every media row to an exact metadata-free final WebP with matching dimensions and digest", async () => {
     for (const media of VISUAL_FIXTURE_MANIFEST.media) {
       const buffer = await readFile(path.join(process.cwd(), media.localPath));
-      const metadata = await sharp(buffer).metadata();
+      const metadata = parseClientImageHeader(buffer);
       const digest = createHash("sha256").update(buffer).digest("hex");
 
-      expect(metadata.format).toBe("png");
+      expect(metadata.kind).toBe("webp");
       expect(metadata.width).toBe(media.width);
       expect(metadata.height).toBe(media.height);
-      expect(metadata.exif).toBeUndefined();
+      expect(webpChunkTypes(buffer)).not.toEqual(
+        expect.arrayContaining(["EXIF", "ICCP", "XMP "]),
+      );
       expect(digest).toBe(media.sha256);
     }
   });

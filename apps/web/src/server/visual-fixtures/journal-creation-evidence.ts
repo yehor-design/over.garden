@@ -1,9 +1,11 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import type { Kysely, Transaction } from "kysely";
 
 import { db } from "@/db";
-import type { Database, EntryVisibility } from "@/db/schema";
+import type { Database } from "@/db/schema";
 import {
   copyPublicDerivativeObject,
   deletePublicDerivativeObject,
@@ -11,14 +13,13 @@ import {
 import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
 import { normalizeCatalogQuery } from "@/server/catalog-repository";
 import {
+  atomicClientMutationId,
   createFirstPlantEntry,
   createPlantObjectJournalEntry,
-  publishJournalEntry,
 } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
 import {
   VISUAL_FIXTURE_MANIFEST,
-  VISUAL_FIXTURE_NAMESPACE,
   type VisualFixtureCreationScenarioEvidence,
 } from "@/lib/visual-fixtures/manifest";
 
@@ -69,7 +70,6 @@ export interface JournalCreationDependencies {
   database: Kysely<Database>;
   createFirst: typeof createFirstPlantEntry;
   createFollowUp: typeof createPlantObjectJournalEntry;
-  publish: typeof publishJournalEntry;
   readSnapshot: typeof readVisualJournalCreationSnapshot;
   resetScenario: typeof resetVisualJournalCreationScenario;
   seedMedia: typeof seedScenarioMediaAsset;
@@ -79,7 +79,6 @@ const defaultDependencies: JournalCreationDependencies = {
   database: db,
   createFirst: createFirstPlantEntry,
   createFollowUp: createPlantObjectJournalEntry,
-  publish: publishJournalEntry,
   readSnapshot: readVisualJournalCreationSnapshot,
   resetScenario: resetVisualJournalCreationScenario,
   seedMedia: seedScenarioMediaAsset,
@@ -306,7 +305,8 @@ export async function readVisualJournalCreationSnapshot(
           .where("owner_user_id", "=", scenario.ownerActorId)
           .where("id", "in", [...scenario.expectedMediaAssetIds])
           .where("journal_entry_id", "=", scenario.expectedEntryId)
-          .where("status", "=", "processed")
+          .where("derivative_key", "is not", null)
+          .where("revoked_at", "is", null)
           .orderBy("id", "asc")
           .execute()
       : Promise.resolve([]),
@@ -349,6 +349,52 @@ async function applyCanonicalCreation(
   const scope = scopedToUser(scenario.ownerActorId);
   const mediaAssetId = scenario.expectedMediaAssetIds[0] ?? null;
   const topicTags = normalizeJournalTopicTagLabels(scenario.topicTagInput);
+  const requestDigest = createHash("sha256")
+    .update(`${scenario.id}:publication`)
+    .digest("base64url");
+  const atomicPublication = {
+    publishId: scenario.expectedEntryId,
+    requestDigest,
+    disclosureAccepted: true,
+    coverMediaAssetId: null,
+    handoff: mediaAssetId
+      ? {
+          stagingSessionId: mediaAssetId,
+          receiptSetDigest: requestDigest,
+          publicMedia: [
+            {
+              mediaAssetId,
+              generation: 1,
+              sha256: requestDigest,
+              sizeBytes: 1,
+              width: 1,
+              height: 1,
+              publicPath: scenarioMediaDerivativeKey(scenario),
+            },
+          ],
+        }
+      : null,
+  };
+  const clientMutationId = atomicClientMutationId(atomicPublication);
+  const contentDocument = {
+    schemaVersion: 1 as const,
+    blocks: [
+      {
+        id: "fixture-text",
+        type: "paragraph" as const,
+        spans: [{ text: scenario.entryBody }],
+      },
+      ...(mediaAssetId
+        ? [
+            {
+              id: "fixture-photo",
+              type: "image" as const,
+              mediaAssetId,
+            },
+          ]
+        : []),
+    ],
+  };
 
   const result =
     scenario.flow === "first-entry"
@@ -360,30 +406,32 @@ async function applyCanonicalCreation(
           catalogItemId: null,
           userAddedCatalogName: scenario.userAddedCatalogName,
           title: scenario.entryTitle,
-          body: scenario.entryBody,
+          contentDocument,
           entryDate: scenario.entryDate,
           locationVisibility: scenario.locationVisibility,
           coarseRegionCode: scenario.coarseRegionCode,
-          clientMutationId: scenario.clientMutationId,
-          mediaAssetId,
+          clientMutationId,
+          cover: { mode: "automatic" },
           topicTags,
           internalDeterministicIds: {
             spaceId: scenario.expectedSpaceId,
             plantObjectId: scenario.expectedObjectId,
             entryId: scenario.expectedEntryId,
           },
+          atomicPublication,
         })
       : await dependencies.createFollowUp(scope, {
           plantObjectId: scenario.expectedObjectId,
           title: scenario.entryTitle,
-          body: scenario.entryBody,
+          contentDocument,
           entryDate: scenario.entryDate,
-          clientMutationId: scenario.clientMutationId,
-          mediaAssetId,
+          clientMutationId,
+          cover: { mode: "automatic" },
           topicTags,
           internalDeterministicIds: {
             entryId: scenario.expectedEntryId,
           },
+          atomicPublication,
         });
 
   if (
@@ -394,13 +442,6 @@ async function applyCanonicalCreation(
     throw new Error(
       "Canonical creation returned IDs outside the scenario contract.",
     );
-  }
-
-  if (scenario.state === "publish") {
-    await dependencies.publish(scope, {
-      entryId: scenario.expectedEntryId,
-      disclosureAccepted: true,
-    });
   }
 
   return result;
@@ -416,27 +457,6 @@ export async function seedScenarioMediaAsset(
   const source = VISUAL_FIXTURE_MANIFEST.media[0];
   const derivativeKey = scenarioMediaDerivativeKey(scenario);
   await copyPublicDerivativeObject(source.derivativeKey, derivativeKey);
-  await database
-    .insertInto("media_assets")
-    .values({
-      id: mediaAssetId,
-      owner_user_id: scenario.ownerActorId,
-      journal_entry_id: null,
-      quarantine_key: `${VISUAL_FIXTURE_NAMESPACE}/journal-creation/${scenario.id}/source`,
-      derivative_key: derivativeKey,
-      alt_text: `Placeholder evidence for ${scenario.objectName}`,
-      caption: scenario.mediaFileName,
-      status: "processed",
-      original_deleted_at: new Date("2026-07-12T12:00:00.000Z"),
-      upload_generation_id: mediaAssetId,
-      public_object_id: mediaAssetId,
-      upload_generation: 1,
-      declared_media_type: "image/png",
-      declared_size_bytes: 1,
-      admitted_media_type: "image/png",
-      media_readiness_state: "public_ready",
-    })
-    .execute();
 }
 
 function scenarioMediaDerivativeKey(
@@ -613,6 +633,6 @@ function normalizeDate(value: Date | string) {
 
 export function expectedVisualJournalEntryVisibility(
   scenario: VisualFixtureCreationScenarioEvidence,
-): EntryVisibility {
+): "public" {
   return scenario.expectedEntryVisibility;
 }

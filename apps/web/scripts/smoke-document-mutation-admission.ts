@@ -34,7 +34,7 @@ export interface DocumentMutationAdmissionSmokeOptions {
   mode: string;
   baseUrl: string;
   expectedSha: string;
-  r2TtlReadback: string;
+  capabilityTtlReadback: string;
   redacted: boolean;
   sessions: DocumentMutationSmokeSessionSet;
   fetchImpl?: typeof fetch;
@@ -49,11 +49,7 @@ export interface DocumentMutationAdmissionSmokeReport {
   evidenceClass: "exact-sha-reject-only-zero-effect";
   exactSha: true;
   enforcement: "enabled";
-  r2UploadUrlTtl: {
-    source: "default" | "environment";
-    effectiveSeconds: 900;
-    maximumSeconds: 900;
-  };
+  ephemeralMediaCapabilityTtlSeconds: 900;
   rejectionClasses: {
     ownerChanged: true;
     sameOwnerSessionRefresh: true;
@@ -77,8 +73,8 @@ export async function runDocumentMutationAdmissionSmoke(
   if (options.environment !== "production" || options.mode !== "reject-only") {
     throw new Error("OVE-290 smoke requires production reject-only execution.");
   }
-  if (options.r2TtlReadback !== "required" || !options.redacted) {
-    throw new Error("OVE-290 smoke requires redacted TTL read-back.");
+  if (options.capabilityTtlReadback !== "required" || !options.redacted) {
+    throw new Error("OVE-290 smoke requires redacted capability TTL read-back.");
   }
   const baseUrl = normalizeImmutableDeploymentBase(options.baseUrl);
   requireCommit(options.expectedSha);
@@ -94,7 +90,7 @@ export async function runDocumentMutationAdmissionSmoke(
   const readback = await fetchJson(fetchImpl, `${baseUrl}${READBACK_PATH}`, {
     headers: commonHeaders,
   });
-  const ttl = requireReadback(readback, options.expectedSha);
+  const capabilityTtlSeconds = requireReadback(readback, options.expectedSha);
   await proveDistinctAuthorities(fetchImpl, baseUrl, commonHeaders);
 
   const clientMutationIds = Array.from(
@@ -149,7 +145,7 @@ export async function runDocumentMutationAdmissionSmoke(
     evidenceClass: "exact-sha-reject-only-zero-effect",
     exactSha: true,
     enforcement: "enabled",
-    r2UploadUrlTtl: ttl,
+    ephemeralMediaCapabilityTtlSeconds: capabilityTtlSeconds,
     rejectionClasses: {
       ownerChanged: true,
       sameOwnerSessionRefresh: true,
@@ -249,7 +245,7 @@ async function fetchJson(
 function requireReadback(
   value: unknown,
   expectedSha: string,
-): DocumentMutationAdmissionSmokeReport["r2UploadUrlTtl"] {
+): 900 {
   if (!value || typeof value !== "object") {
     throw new Error("OVE-290 read-back was malformed.");
   }
@@ -257,28 +253,19 @@ function requireReadback(
     protocol?: unknown;
     deploymentSha?: unknown;
     enforcement?: unknown;
-    r2UploadUrlTtl?: {
-      source?: unknown;
-      effectiveSeconds?: unknown;
-      maximumSeconds?: unknown;
-    };
+    ephemeralMediaCapabilityTtlSeconds?: unknown;
   };
   if (
     readback.protocol !== "overgarden.document-mutation-generation.v1" ||
     readback.deploymentSha !== expectedSha ||
     readback.enforcement !== "enabled" ||
-    (readback.r2UploadUrlTtl?.source !== "default" &&
-      readback.r2UploadUrlTtl?.source !== "environment") ||
-    readback.r2UploadUrlTtl.effectiveSeconds !== 900 ||
-    readback.r2UploadUrlTtl.maximumSeconds !== 900
+    readback.ephemeralMediaCapabilityTtlSeconds !== 900
   ) {
-    throw new Error("OVE-290 exact-SHA or TTL read-back did not match.");
+    throw new Error(
+      "OVE-290 exact-SHA or capability TTL read-back did not match.",
+    );
   }
-  return {
-    source: readback.r2UploadUrlTtl.source,
-    effectiveSeconds: 900,
-    maximumSeconds: 900,
-  };
+  return 900;
 }
 
 function requireSessions(
@@ -403,7 +390,7 @@ function parseCliOptions(argv: string[]) {
     mode: required("--mode"),
     baseUrl: required("--base-url"),
     expectedSha: required("--expected-sha"),
-    r2TtlReadback: required("--r2-ttl-readback"),
+    capabilityTtlReadback: required("--capability-ttl-readback"),
     redacted,
   };
 }

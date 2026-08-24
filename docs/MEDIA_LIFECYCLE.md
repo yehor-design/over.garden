@@ -1,92 +1,59 @@
-# Media lifecycle (OVE-195)
+# Final Journal Media Lifecycle
 
-Archive and retention make old public derivatives and expired retention-class
-data unreachable on schedule. This is a privacy boundary: a `410` journal page
-is not enough if `https://media.over.garden/...` still returns bytes.
+Status: current after OVE-349
+Authority: ADR-0019, OVE-346 through OVE-349
 
-## Model
+The browser-generated WebP is the only final artifact. OverGarden does not
+retain a source original, decode or re-encode journal images on the server, or
+admit a second derivative.
 
-1. Archive (and cover/orphan detach) enqueues durable `media_lifecycle`
-   outbox jobs in the same DB transaction as the mutation.
-2. A TypeScript consumer deletes the R2/MinIO object, purges Cloudflare URL
-   cache when credentials are present, then proves the canonical custom-domain
-   URL is non-2xx before marking `media_assets.revoked_at` /
-   `public_unreachable_at`.
-3. Erasure media deletes reuse the same revoke helper
-   (`revokeMediaObjectBytes`).
-4. Retention executor `ove195.retention.v1` uses identical selection for
-   `dry_run` and `execute`:
-   - quarantine `quarantined|failed` older than 7 days
-   - analytics older than 13 months
-   - admin/community audit + handled erasure evidence older than 1 year
-   - dangling cover pointers / orphan cover-only classes (report + clear)
+## Publication lifecycle
 
-## Cover / 10+1 safety
+1. The browser converts a selected image into the bounded final WebP.
+2. The browser uploads those exact bytes directly to private edge staging using
+   one short-lived, object-specific capability.
+3. Atomic journal publication claims the signed staging receipts and commits
+   public journal/media rows in one database transaction.
+4. `media_staging_finalize` promotes the claimed bytes to their final public
+   identity. The Durable Object lease and alarm recover interrupted finalize or
+   abandonment idempotently.
+5. A journal card is visible only after the atomic contract has final media;
+   there is no durable pending-media state.
 
-- Archive revokes every processed public derivative on the archived entry.
-- Cover replace/remove and inline detach revoke only assets that are no longer
-  referenced by `cover_media_asset_id` or the current document image blocks.
-- Abandoned cover-only assets are enqueued **before** `journal_entry_id` is
-  cleared so they cannot become invisible orphans.
-- Still-referenced cover/inline assets must remain reachable.
+Normal abandoned staging is reclaimed after 15 minutes. The one-day staging
+bucket lifecycle is catastrophic fallback, not product state.
 
-## Operator surfaces
+## Public removal lifecycle
+
+Archive, orphan cleanup, and erasure enqueue `media_derivative_revoke`. The
+consumer deletes the exact final object and settles only after provider
+`HeadObject` confirms absence. Uncertainty remains retryable and never claims
+success. Canonical rows retain `revoked_at` and `public_unreachable_at` evidence
+needed by archive/erasure convergence.
+
+The only app-owned media lifecycle job kinds are:
+
+- `media_staging_finalize`
+- `media_derivative_revoke`
+- `erasure_media_object_delete` in the erasure consumer
+
+The former quarantine expiry, processing claim, quality receipt, and failed
+source-original retention states no longer exist in active schema or runtime.
+The isolated legacy provider resource is not an application capability and is
+owned only by OVE-350 for gated deletion after its rollback window.
+
+## Verification
 
 ```bash
 cd apps/web
-pnpm smoke:media-archive-retention -- --environment local --confirm-environment local
-pnpm smoke:retention-workflow -- --environment local --confirm-environment local
-pnpm retention:report -- --environment local --confirm-environment local
-pnpm prove:r2-media-lifecycle
-# production dry-run only:
-pnpm retention:report -- --environment production --confirm-environment production
+pnpm test:media-staging-worker
+pnpm media:staging:verify
+pnpm smoke:inline-media-integrity
+pnpm smoke:journal-cover-selection
+pnpm smoke:erasure-workflow
+pnpm exec tsx scripts/verify-retired-journal-media-runtime.ts
 ```
 
-Production revoke requires Vercel env:
-
-- `CLOUDFLARE_ZONE_ID=aa4ef4e26d4de961897f29555d20b662`
-- `CLOUDFLARE_CACHE_PURGE_API_TOKEN` — Zone **Cache Purge** scoped token (strongly
-  recommended once media.over.garden returns `cf-cache-status: HIT`; never commit)
-- `CRON_SECRET` — bearer for `POST /api/cron/media-lifecycle`
-
-Completion always requires canonical URL non-2xx after origin delete. Purge is
-attempted when credentials are present; purge request failures fail the job
-(never swallowed). Local MinIO omits purge credentials. Vercel Hobby cron is
-daily (`0 3 * * *`); operators can also drain via smokes/CLI.
-
-## Production proof gates
-
-- Synthetic journal only (no user-content sweeps).
-- After archive: page `410`/`noindex`, Meilisearch absent, canonical media URL
-  non-2xx within the declared window (poll ≤ 15 min; smoke target ≤ 2 min).
-- Public `r2.dev` for `overgarden-public` must be disabled after
-  `media.over.garden` proof; see `docs/INFRASTRUCTURE_REGISTRY.md`.
-- Evidence must stay aggregate/class-only (no object paths, identities, secrets).
-
-## OVE-290 stale-document media admission
-
-Upload initiation, processing, and focal mutation authenticate once and verify
-the rendered document generation before parsing the request body or touching a
-media row/provider effect. The same-origin generation header is never copied to
-the direct R2 PUT. A stale upload-initiation request creates neither a media row
-nor a presign; stale process/focal/publish creates no derivative, public
-eligibility change, projection, or another-owner effect.
-
-`R2_UPLOAD_URL_TTL_SECONDS` has a closed effective value of exactly 900 seconds.
-The actual presign TTL is
-`min(configured effective seconds, 900, floor(envelope expiry - now))` and must
-remain positive. A malformed, non-positive, or non-900 configured value blocks
-admission. An A presign issued before an account transition may still write one
-private A-quarantine original; it never becomes a B asset or public derivative
-and remains owned by the existing actual-byte cleanup lifecycle. Production
-read-back is the non-secret
-`/api/document-mutation-admission/readback` receipt plus the exact-SHA
-reject-only smoke; capability URLs and object keys are never evidence.
-
-## Fail gates
-
-- Page `410` but derivative still `200`
-- Cache purge / delete failure swallowed
-- Retention dry-run selection ≠ execute selection
-- Active/still-referenced cover or inline deleted
-- `r2.dev` bypass remains enabled
+Media evidence is identifier-minimal and redacted. Never log source bytes,
+object keys, capabilities, journal content, account data, request metadata, or
+precise location.

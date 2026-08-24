@@ -1,26 +1,23 @@
 # Runtime Scaffold — Current Status and Verification
 
-Last reconciled: 2026-08-21 (OVE-321 server-authoritative journal drafts,
-OVE-325 four-composer activation, OVE-322 returning-device transfer, and
-OVE-323 removed all offline/PWA runtime surfaces; OVE-326 retains only the bounded
-database/analytics compatibility cleanup)
+Last reconciled: 2026-08-24 (OVE-349 retired server drafts, legacy journal-media
+processing, and private-then-publish after OVE-346/347/348 established the
+atomic final-WebP path)
 
 This file is the concise current-state mirror for the implemented OverGarden
 runtime. Authenticated Linear and the issue-specific execution contract remain
 the queue authority; `docs/SDD_VERTICAL_SLICE_ROADMAP.md` remains the vertical
 slice/dependency authority; `docs/TECH_STACK_DECISIONS.md` plus ADR-0014 as
-superseded by ADR-0017 remain the stack authority. Every new or materially rewritten Linear task must follow
+superseded by ADR-0017 and ADR-0019 remain the stack authority. Every new or materially rewritten Linear task must follow
 `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`.
 
-ADR-0017 is the current connectivity authority: all new journal writes are
-network-required and server-authoritative. Implementation status (2026-08-21):
-the private owner-scoped server draft protocol is active in first-entry,
-follow-up, space-entry, and edit composers. OVE-323 deleted the historical
-offline writers, replay queue, foreground autosync, owner vault, PWA manifest,
-service worker, icons, dependencies, and runtime fixtures. New documents have
-no installable PWA surface. A dependency-free native retirement boundary
-enumerates and deletes only exact known legacy names, preserves unresolved or
-unrelated state, reads no journal content, and never becomes authoring storage.
+ADR-0017 and ADR-0019 are the current save authority. Authoring is transient in
+the active tab, image conversion produces the final WebP in the browser, and
+one acknowledged atomic Publish is the only durable boundary. There is no
+server draft, durable browser draft, offline replay, source-original
+quarantine, server image conversion, private journal state, or later publish
+action. The dependency-free browser-storage retirement boundary remains
+content-free and cannot become authoring storage.
 
 ## Current product model
 
@@ -36,11 +33,9 @@ Implemented user journeys include:
 - self-serve authentication, account-method continuity, recovery, and
   current-session sign-out convergence;
 - automatic pseudonymous public identity and owner profile management;
-- garden space, plant/animal object, structured journal entry, same-object
-  follow-up, publication, archive/`410`, and derivative-only media;
-- an active private server-authoritative draft protocol for first-entry,
-  follow-up, space-entry, and edit contexts, with request-result save states,
-  server timestamps, explicit retry, and owner-scoped workspace resume;
+- garden space, plant/animal object, transient structured authoring, atomic
+  public journal creation/editing, same-object follow-up, archive/`410`, and
+  browser-final WebP media through short-lived edge staging;
 - catalog typeahead, unknown/user-added identities, curation, canonical merge,
   official source provenance, and derived search indexing;
 - public journals, object passports, varieties, profiles, community/social
@@ -102,24 +97,20 @@ claim authority, not access to the product.
 ## Journal, online-only saves, media, and public lifecycle
 
 - Canonical journal mutations are owner/space/object scoped and idempotent.
-- `journal_entry_drafts` plus `GET|PUT|DELETE
-/api/garden/drafts/[draftKey]` own the private generation/hash/server-revision
-  compare-and-set protocol. All four authenticated composers call it through
-  the shared online owner.
-- ADR-0017 requires an acknowledged server response before a journal save is
-  successful. An actual request failure keeps current-tab text visible, makes
-  that composer read-only, and exposes retry, copy, cancel, and navigation; no
-  connectivity event replays it. There is no PWA queue, IndexedDB journal
-  owner, background replay, or synchronization-success state in the client.
+- All four composer contexts share local-only transient state. An acknowledged
+  atomic response creates or edits the public journal plus final media; failure
+  keeps current-tab work retryable and leaves canonical state unchanged.
+- The browser-created WebP is previewed and sent directly to bounded private
+  edge staging. Vercel receives signed receipts and JSON only, never image
+  bytes. Finalization and abandonment are idempotent and alarm-recoverable.
 - OVE-322's content transfer bridge is retired. The surviving localized banner
   reports only content-free exact-name cleanup failure or unresolved-binding
   state, never hydrates legacy records, and offers bounded retry/cancel plus a
   safe sign-out action when an authenticated shell is present. See
   `docs/LEGACY_DEVICE_DATA_RETIREMENT.md`.
-- Browser-side EXIF handling is only an optimization. Originals enter private
-  R2 quarantine; the server re-encodes/resizes/strips them, publishes only the
-  derivative, and deletes the original after successful processing.
-- Publication is explicit and logs the disclosure version. Archive removes the
+- The app has no original retention, server decoder/re-encoder, admission or
+  quality-processing state, private toggle, or separate publish control.
+- Atomic publication records the disclosure version. Archive removes the
   public projection transactionally and the public route converges to `410`.
 - Meilisearch contains public-safe derived documents only. Every canonical
   write that can change a public projection records outbox intent in the same
@@ -179,7 +170,9 @@ permission to weaken auth/privacy boundaries.
 - Production data is DigitalOcean Managed PostgreSQL.
 - Local containerized development prefers Apple Container; Docker is the
   documented fallback/CI/production exception where required.
-- Media uses Cloudflare R2 private quarantine plus public stripped derivatives.
+- Media uses Cloudflare private ephemeral staging plus immutable public final
+  WebPs. The isolated legacy provider resource has no application caller and is
+  owned only by OVE-350 for gated deletion.
 - Search uses Meilisearch as a derived public index.
 - Matching/reindex work uses the Python worker and Postgres `job_queue`.
 - Cloudflare owns DNS/edge/WAF/R2 and must not cache app HTML.
@@ -198,6 +191,7 @@ pnpm install --frozen-lockfile
 ../../infra/run-with-local-infra-env pnpm local:bootstrap
 ../../infra/run-with-local-infra-env pnpm db:types
 ../../infra/run-with-local-infra-env pnpm db:types:check
+../../infra/run-with-local-infra-env pnpm verify:retired-journal-media-migration
 ```
 
 Core gates:
@@ -210,6 +204,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm exec tsx scripts/verify-retired-journal-media-runtime.ts
 git diff --check
 ```
 

@@ -37,13 +37,8 @@ describe("locale routing config", () => {
     );
   });
 
-  it("keeps sharp external and traced only for the protected media route", () => {
-    expect(nextConfig.serverExternalPackages).toContain("sharp");
-    expect(nextConfig.outputFileTracingIncludes?.["/api/media/process"]).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("@img+sharp-linux-x64"),
-        expect.stringContaining("@img+sharp-libvips-linux-x64"),
-      ]),
-    );
+  it("does not package a server image decoder or retired processing route", () => {
+    expect(nextConfig.serverExternalPackages).toBeUndefined();
+    expect(nextConfig.outputFileTracingIncludes).toBeUndefined();
   });
 });

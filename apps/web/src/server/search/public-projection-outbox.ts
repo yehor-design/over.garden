@@ -622,13 +622,7 @@ export async function loadExpectedPublicJournalDocument(
     coverUsageRole: row.coverUsageRole,
     coverDerivativeKey: row.coverDerivativeKey,
     explicitCoverMediaAssetId: row.explicitCoverMediaAssetId,
-    mediaStatus: row.coverMediaStatus,
-    originalDeletedAt: row.coverOriginalDeletedAt,
     revokedAt: row.coverRevokedAt,
-    mediaReadinessState: row.coverMediaReadinessState,
-    publicObjectId: row.coverPublicObjectId,
-    qualityPolicyVersion: row.coverQualityPolicyVersion,
-    mediaQualityClass: row.coverMediaQualityClass,
   });
   const document = buildJournalEntrySearchDocumentContractFixture({
     id: row.id,

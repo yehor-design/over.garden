@@ -16,7 +16,7 @@ const MEDIA_STAGING_FINALIZE_KIND = "media_staging_finalize";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-export type MediaLifecycleBucket = "quarantine" | "public_derivative";
+export type MediaLifecycleBucket = "public_derivative";
 
 export interface MediaRevokeCandidate {
   mediaAssetId: string;
@@ -81,7 +81,6 @@ export async function listArchiveDerivativeRevokeCandidates(
     .select(["id", "derivative_key"])
     .where("journal_entry_id", "=", input.journalEntryId)
     .where("owner_user_id", "=", input.ownerUserId)
-    .where("status", "=", "processed")
     .where("derivative_key", "is not", null)
     .where("revoked_at", "is", null)
     .execute();
@@ -136,7 +135,6 @@ export async function listOrphanProcessedDerivativesForEntry(
     .select(["id", "derivative_key", "usage_role", "document_position"])
     .where("journal_entry_id", "=", input.journalEntryId)
     .where("owner_user_id", "=", input.ownerUserId)
-    .where("status", "=", "processed")
     .where("derivative_key", "is not", null)
     .where("revoked_at", "is", null)
     .execute();
@@ -168,9 +166,8 @@ export function buildEnqueueMediaDerivativeRevokeJobQuery(
     mediaAssetId?: string;
     bucket: MediaLifecycleBucket;
     objectKey: string;
-    reason: "archive" | "orphan" | "erasure" | "superseded_processing";
+    reason: "archive" | "orphan" | "erasure";
     journalEntryId?: string;
-    availableAt?: Date;
   },
 ) {
   const payload = {
@@ -188,7 +185,6 @@ export function buildEnqueueMediaDerivativeRevokeJobQuery(
       queue_name: MEDIA_LIFECYCLE_QUEUE,
       payload,
       idempotency_key: `media_derivative_revoke:${input.bucket}:${input.objectKey}`,
-      ...(input.availableAt ? { available_at: input.availableAt } : {}),
     })
     .onConflict((oc) =>
       oc
@@ -203,7 +199,7 @@ export function buildEnqueueMediaDerivativeRevokeJobQuery(
           last_error: null,
           terminal_error_code: null,
           terminalized_at: null,
-          available_at: input.availableAt ?? sql`now()`,
+          available_at: sql`now()`,
           updated_at: sql`now()`,
         }),
     )
@@ -249,24 +245,6 @@ export async function enqueueMediaDerivativeRevokes(
   },
 ): Promise<number> {
   for (const candidate of input.candidates) {
-    // OVE-244: invalidate the current generation before the external cleanup
-    // intent is recorded. Callers pass their existing transaction, so public
-    // eligibility and cleanup enqueue commit together.
-    await executor
-      .updateTable("media_assets")
-      .set({
-        media_readiness_state: "invalidated",
-        processing_claim_token: null,
-        processing_claimed_at: null,
-        updated_at: new Date(),
-      })
-      .where("id", "=", candidate.mediaAssetId)
-      // Pre-OVE-244 assets intentionally lack generation fields. The safe
-      // generation shape constraint therefore requires them to remain in the
-      // legacy state while the canonical archive still enqueues and proves
-      // byte revocation below.
-      .where("media_readiness_state", "!=", "legacy_non_ready")
-      .execute();
     await buildEnqueueMediaDerivativeRevokeJobQuery(executor, {
       ...candidate,
       reason: input.reason,
@@ -295,7 +273,6 @@ export async function listAbandonedCoverOnlyRevokeCandidates(
     .where("journal_entry_id", "=", input.journalEntryId)
     .where("owner_user_id", "=", input.ownerUserId)
     .where("usage_role", "=", "cover_only")
-    .where("status", "=", "processed")
     .where("derivative_key", "is not", null)
     .where("revoked_at", "is", null);
 
@@ -326,17 +303,15 @@ export async function listDetachedInlineRevokeCandidates(
 ): Promise<MediaRevokeCandidate[]> {
   const rows = await executor
     .selectFrom("media_assets")
-    .select(["id", "derivative_key", "usage_role", "quarantine_key"])
+    .select(["id", "derivative_key", "usage_role"])
     .where("journal_entry_id", "=", input.journalEntryId)
     .where("owner_user_id", "=", input.ownerUserId)
-    .where("status", "=", "processed")
     .where("derivative_key", "is not", null)
     .where("revoked_at", "is", null)
     .execute();
 
   return rows.flatMap((row) => {
     if (!row.derivative_key) return [];
-    if (row.quarantine_key.startsWith("visual-fixtures/")) return [];
     if (row.usage_role === "cover_only") return [];
     if (input.keepMediaAssetIds.has(row.id)) return [];
     return [

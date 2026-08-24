@@ -69,7 +69,7 @@ function safeReport(): AccountSignOutEvidenceReport {
       secondAccessPreserved: true,
     },
     continuity: {
-      privateGardenReadbackPreserved: true,
+      gardenReadbackPreserved: true,
       serverAggregateUnchanged: true,
       identityRecordsPreserved: true,
       providerLinksPreserved: true,
@@ -437,7 +437,7 @@ describe("OVE-204 account sign-out smoke", () => {
     expect(() =>
       assertAccountSignOutEvidenceSafe({
         ...safeReport(),
-        error: "private garden payload",
+        error: "garden marker payload",
       }),
     ).toThrow();
   });

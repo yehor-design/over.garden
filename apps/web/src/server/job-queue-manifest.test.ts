@@ -18,7 +18,7 @@ const repoRoot = path.resolve(
 
 describe("job queue manifest", () => {
   it("covers every matching, erasure, and media-lifecycle producer kind with attempt bounds", () => {
-    expect(JOB_QUEUE_MANIFEST_VERSION).toBe("ove225.job-queue.v2");
+    expect(JOB_QUEUE_MANIFEST_VERSION).toBe("ove349.job-queue.v3");
     expect(matchingSupportedKinds()).toEqual([
       "catalog_alias_suggestions_refresh",
       "catalog_fuzzy_duplicate_qa_refresh",
@@ -41,7 +41,6 @@ describe("job queue manifest", () => {
       "erasure:erasure_media_object_delete",
       "media_lifecycle:media_staging_finalize",
       "media_lifecycle:media_derivative_revoke",
-      "media_lifecycle:media_quarantine_expire",
     ]);
   });
 
@@ -60,7 +59,6 @@ describe("job queue manifest", () => {
     expect(python).toContain("erasure_media_object_delete");
     expect(python).toContain("web-erasure-execution");
     expect(python).toContain("media_derivative_revoke");
-    expect(python).toContain("media_quarantine_expire");
     expect(python).toContain("media_staging_finalize");
     expect(python).toContain("web-media-lifecycle");
     expect(python).toContain("matching-python-worker");

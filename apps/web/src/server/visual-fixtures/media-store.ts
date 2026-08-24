@@ -8,22 +8,15 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import sharp from "sharp";
 
 import { booleanServerEnv, requiredServerEnv } from "@/lib/env";
 import type { VisualFixtureManifest } from "@/lib/visual-fixtures/manifest";
 
 const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
-const RETIRED_VISUAL_FIXTURE_MEDIA_NAMESPACES = [
-  "visual-fixtures/ove187-v5",
-  "visual-fixtures/ove187-v6",
-  "visual-fixtures/ove187-v7",
-] as const;
-
 export interface VisualFixturePutObjectInput {
   key: string;
   body: Buffer;
-  contentType: "image/png" | "image/webp";
+  contentType: "image/webp";
   cacheControl: string;
   sha256: string;
 }
@@ -31,7 +24,6 @@ export interface VisualFixturePutObjectInput {
 export interface VisualFixtureObjectStore {
   putObject(input: VisualFixturePutObjectInput): Promise<void>;
   deletePublicObject(key: string): Promise<void>;
-  deleteQuarantineObject(key: string): Promise<void>;
   hasPublicObject(key: string): Promise<boolean>;
 }
 
@@ -52,10 +44,13 @@ export async function uploadVisualFixtureMedia(
           `Visual fixture media digest mismatch: ${item.fileName}`,
         );
       }
-      return {
-        item,
-        body: await sharp(source).rotate().webp({ quality: 88 }).toBuffer(),
-      };
+      if (
+        source.subarray(0, 4).toString("ascii") !== "RIFF" ||
+        source.subarray(8, 12).toString("ascii") !== "WEBP"
+      ) {
+        throw new Error(`Visual fixture is not a final WebP: ${item.fileName}`);
+      }
+      return { item, body: source };
     }),
   );
 
@@ -78,33 +73,12 @@ export async function deleteVisualFixtureMedia(
   store: VisualFixtureObjectStore,
   manifest: VisualFixtureManifest,
 ): Promise<number> {
-  const namespaces = [
-    manifest.namespace,
-    ...RETIRED_VISUAL_FIXTURE_MEDIA_NAMESPACES,
-  ];
-
-  for (const namespace of namespaces) {
-    for (const item of manifest.media) {
-      const derivativeKey =
-        namespace === manifest.namespace
-          ? item.derivativeKey
-          : `${namespace}/${item.fileName}`;
-      const quarantineKey =
-        namespace === manifest.namespace
-          ? item.quarantineKey
-          : `${namespace}/quarantine/${item.fileName}`;
-      if (namespace === manifest.namespace) {
-        assertCanonicalFixtureDerivativeKey(derivativeKey, item.id);
-      } else {
-        assertNamespaceKey(derivativeKey, namespace);
-      }
-      assertNamespaceKey(quarantineKey, namespace);
-      await store.deletePublicObject(derivativeKey);
-      await store.deleteQuarantineObject(quarantineKey);
-    }
+  for (const item of manifest.media) {
+    assertCanonicalFixtureDerivativeKey(item.derivativeKey, item.id);
+    await store.deletePublicObject(item.derivativeKey);
   }
 
-  return manifest.media.length * namespaces.length * 2;
+  return manifest.media.length;
 }
 
 export function createVisualFixtureObjectStore(
@@ -112,7 +86,6 @@ export function createVisualFixtureObjectStore(
 ): VisualFixtureObjectStore {
   const endpoint = requiredFrom(env, "R2_ENDPOINT");
   const publicBucket = requiredFrom(env, "R2_PUBLIC_BUCKET");
-  const quarantineBucket = requiredFrom(env, "R2_QUARANTINE_BUCKET");
   const client = new S3Client({
     region: "auto",
     endpoint,
@@ -149,14 +122,6 @@ export function createVisualFixtureObjectStore(
         }),
       );
     },
-    async deleteQuarantineObject(key) {
-      await client.send(
-        new DeleteObjectCommand({
-          Bucket: quarantineBucket,
-          Key: key,
-        }),
-      );
-    },
     async hasPublicObject(key) {
       try {
         await client.send(
@@ -172,14 +137,6 @@ export function createVisualFixtureObjectStore(
       }
     },
   };
-}
-
-function assertNamespaceKey(key: string, namespace: string) {
-  if (!key.startsWith(`${namespace}/`)) {
-    throw new Error(
-      "Refusing visual fixture media access outside its namespace.",
-    );
-  }
 }
 
 function assertCanonicalFixtureDerivativeKey(key: string, mediaId: string) {

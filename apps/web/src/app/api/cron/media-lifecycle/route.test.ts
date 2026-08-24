@@ -19,9 +19,9 @@ describe("media lifecycle cron readiness", () => {
     runRetentionWorkflow.mockImplementation(async () => {
       executionOrder.push("retention");
       return {
-        policyVersion: "ove195.retention.v1",
+        policyVersion: "ove349.retention.v2",
         failureClass: "none",
-        quarantineExpireClass: "empty",
+        danglingCoverPointerClass: "empty",
         pendingRevokeJobsClass: "empty",
       };
     });
@@ -97,9 +97,9 @@ describe("media lifecycle cron readiness", () => {
 
   it("fails readiness closed for partial retention", async () => {
     runRetentionWorkflow.mockResolvedValueOnce({
-      policyVersion: "ove195.retention.v1",
+      policyVersion: "ove349.retention.v2",
       failureClass: "partial",
-      quarantineExpireClass: "present",
+      danglingCoverPointerClass: "present",
       pendingRevokeJobsClass: "present",
     });
     const { POST } = await import("./route");

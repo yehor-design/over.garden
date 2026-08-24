@@ -303,7 +303,6 @@ export function poisonOperatorEnv(): Record<string, string> {
     DIRECT_URL: POISON.databaseUrl,
     CATALOG_CURATOR_USER_IDS: POISON.curatorUserId,
     R2_ENDPOINT: "https://r2.example.com",
-    R2_QUARANTINE_BUCKET: "over-garden-quarantine",
     R2_PUBLIC_BUCKET: "over-garden-public",
     R2_PUBLIC_BASE_URL: "https://media.over.garden",
     R2_ACCESS_KEY_ID: POISON.r2AccessKeyId,

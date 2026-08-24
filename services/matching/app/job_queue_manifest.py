@@ -16,7 +16,7 @@ from app.search import (
     JOURNAL_ENTRY_UNINDEX_KIND,
 )
 
-JOB_QUEUE_MANIFEST_VERSION: Final = "ove225.job-queue.v2"
+JOB_QUEUE_MANIFEST_VERSION: Final = "ove349.job-queue.v3"
 MATCHING_DEFAULT_MAX_ATTEMPTS: Final = 8
 TERMINAL_ERROR_CODES: Final = (
     "unsupported_kind",
@@ -67,11 +67,6 @@ JOB_QUEUE_PAYLOAD_CONTRACTS: Final = {
         "requiredKeys": ["kind", "mediaAssetId", "bucket", "objectKey", "reason"],
         "optionalKeys": ["journalEntryId"],
         "uuidKeys": ["mediaAssetId", "journalEntryId"],
-    },
-    "media_lifecycle:media_quarantine_expire": {
-        "requiredKeys": ["kind", "mediaAssetId", "bucket", "objectKey"],
-        "optionalKeys": [],
-        "uuidKeys": ["mediaAssetId"],
     },
     "media_lifecycle:media_staging_finalize": {
         "requiredKeys": [
@@ -157,14 +152,6 @@ WEB_OWNED_MANIFEST_ENTRIES: Final = (
     {
         "queueName": "media_lifecycle",
         "kind": "media_derivative_revoke",
-        "consumer": "web-media-lifecycle",
-        "maxAttempts": MATCHING_DEFAULT_MAX_ATTEMPTS,
-        "privacyClass": "identifiers_only",
-        "coversStructuredJournalCover": True,
-    },
-    {
-        "queueName": "media_lifecycle",
-        "kind": "media_quarantine_expire",
         "consumer": "web-media-lifecycle",
         "maxAttempts": MATCHING_DEFAULT_MAX_ATTEMPTS,
         "privacyClass": "identifiers_only",

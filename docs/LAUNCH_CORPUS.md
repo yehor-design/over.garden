@@ -1,6 +1,6 @@
 # Launch Corpus (OVE-199)
 
-Status: exact editorial manifest approved · production apply awaits exact-main deployment
+Status: OVE-199 v1 receipts frozen · production corpus mutation suspended after OVE-349
 Owner: maintainer
 Issue: [OVE-199](https://linear.app/overgarden/issue/OVE-199/launch-corpus-bulgarian-and-ukrainian-visitors-see-real-localized)
 
@@ -60,7 +60,7 @@ CI/visual harness without weakening launch eligibility in production.
 cd apps/web
 pnpm launch:corpus:plan -- --environment production --confirm-environment production
 pnpm launch:corpus:check -- --environment production --confirm-environment production --base-url https://over.garden
-# After Phase B seed, require readiness:
+# Read-only readiness report; no seed/apply mutator exists after OVE-349:
 pnpm launch:corpus:check -- --environment production --confirm-environment production --require-launch-ready --base-url https://over.garden
 ```
 
@@ -74,28 +74,21 @@ identifiers in evidence. The current redacted plan output digest is
 
 SQL used by plan/check is SELECT-only (`assertLaunchCorpusInventorySqlIsSelectOnly`).
 
-## Launch media quality policy
+## Retired v1 media/apply path
 
-OVE-231 owns `ove231.launch-media-quality.v1` in
-`apps/web/src/lib/media/launch-media-quality.ts` and the bounded server analyzer
-in `apps/web/src/server/media/launch-media-quality-analyzer.ts`. It classifies only the
-server-stripped derivative, never the quarantine original:
+OVE-349 removed the OVE-231 server analyzer, processing receipts, direct Sharp
+dependency, and `launch:corpus:apply` mutator because they depended on the
+retired source-original pipeline and private-then-publish state. Their earlier
+receipts remain historical evidence only.
 
-- `accepted` is the only class that a new processing claim may publish.
-- `rejected` covers corrupt/tiny, fully transparent, flat-color, and pinned
-  mechanical placeholder failures.
-- `review_required` is fail-closed for ambiguous darkness or low contrast;
-  it never auto-revokes existing real-user media.
+Current production corpus mutation is suspended until a fresh vertical task
+defines a v2 content pack made entirely of already-final WebPs, uses the
+OVE-346 direct staging/atomic-publication contract, re-runs rights and precise-
+location review, and receives exact maintainer approval. The existing
+SELECT-only plan/check may continue to inventory and classify current public
+state; it grants no mutation authority.
 
-`pnpm audit:launch-corpus-media-quality -- --environment production
---confirm-environment production --mode inventory` reuses the OVE-244 public
-eligibility state and reads only persisted receipt classes through aggregate
-SQL. It performs zero R2/provider-object reads and emits policy version plus
-aggregate classes only. Its SQL is part of the SELECT-only inventory manifest. Any archive,
-revoke, seed, reclassify, reindex, or other production mutation remains an
-OVE-199 exact-manifest sign-off action.
-
-## Shot-list (truthfully labelled editorial content pack)
+## Frozen historical v1 shot-list (not executable)
 
 Topology: **2 spaces**, **4 objects** (UA plant+animal, BG plant+animal), **14 journals**.
 
@@ -110,7 +103,9 @@ Topology: **2 spaces**, **4 objects** (UA plant+animal, BG plant+animal), **14 j
 | UA-J07 | uk | plant | archived→410 | 1 inline | 1 |
 | BG-J01…BG-J07 | bg | mirror | mirror | mirror | mirror |
 
-Photo budget ≈ 18–22 owned/licensed files. Pipeline: quarantine → stripped derivative. Never seed `test/visual-fixtures/media/` into production.
+Photo budget was approximately 18–22 owned/licensed files. The listed private
+slot and former conversion path are incompatible with the current public-only
+atomic contract. Never seed `test/visual-fixtures/media/` into production.
 
 Machine source of truth: `apps/web/src/lib/launch-corpus/shot-list.ts`.
 
@@ -126,21 +121,9 @@ only counts, closed error codes, and the content-pack digest:
 pnpm launch:corpus:validate-pack -- --environment local --confirm-environment local --pack-file "$OVE199_CONTENT_PACK"
 ```
 
-`launch:corpus:apply` validates the exact plan and content-pack digests before
-loading any mutating module. `--dry-run` performs zero mutations. `--apply`
-uses the sealed editorial owner, deterministic slot/media IDs, canonical
-quarantine and stripped-derivative processing, canonical journal publish/archive,
-OVE-242 outbox intents, exact legacy-target hashes, and a final topology/media
-read-back. Missing or drifted digests fail before mutation:
-
-```bash
-pnpm launch:corpus:apply -- \
-  --environment production --confirm-environment production \
-  --pack-file "$OVE199_CONTENT_PACK" \
-  --plan-digest "$OVE199_PLAN_DIGEST" \
-  --content-pack-digest "$OVE199_CONTENT_PACK_DIGEST" \
-  --apply
-```
+No `launch:corpus:apply` command exists after OVE-349. Do not reconstruct it
+from this frozen v1 pack or an earlier receipt. Any replacement must use the
+current final-WebP atomic path and a new signed plan/content-pack identity.
 
 The approved 2026-07-29 pack contains 14 OverGarden-authored editorial entries
 and 18 normalized Unsplash photographs. The official-license and exact source
@@ -148,7 +131,7 @@ receipt is [`docs/launch-corpus-unsplash-license-receipt.md`](launch-corpus-unsp
 
 ## Local cover matrix (fixtures / unit — not production photos)
 
-`apps/web/src/lib/launch-corpus/cover-matrix.ts` covers 10+1, eleventh reject, keep-as-cover, replace failure, removal fallback, aspects, lifecycle surfaces, and production fixture refusal **without** mutating the frozen `ove187-v9` visual fixture manifest hash.
+`apps/web/src/lib/launch-corpus/cover-matrix.ts` covers 10+1, eleventh reject, keep-as-cover, replace failure, removal fallback, aspects, lifecycle surfaces, and production fixture refusal without making the local visual-fixture manifest a production corpus dependency.
 
 ## Before → after disposition (exact classes)
 
@@ -158,11 +141,11 @@ receipt is [`docs/launch-corpus-unsplash-license-receipt.md`](launch-corpus-unsp
 | `tiny_or_placeholder_media` | Dimension-tiny legacy fast count; OVE-231 supplies byte-quality classes | `revoke_via_ove195` only after exact OVE-199 review |
 | `visual_fixture_namespace` (production) | Must be zero | Remove/reclassify; never seed |
 | `archived_public_slug` (incl. OVE-191 retired synthetic) | Lifecycle tombs | `reclassify_retain_lifecycle` — not real UGC; keep Gone/Meili parity |
-| `editorial_seed_slot` | Missing | `seed_after_signoff` via canonical operator path; `content_class=editorial`, an explicit OverGarden editorial byline, and licensed illustrative media attribution |
+| `editorial_seed_slot` | Frozen v1 evidence only | `no_action_pending_signoff`; OVE-349 removed its mutator. A fresh public-only final-WebP vertical contract, rights/location review, and exact sign-off are required before any corpus mutation. |
 
-No bulk delete. No production mutation until the maintainer approves the exact editorial content-pack and plan digests. Editorial seed must never be presented as independent gardener evidence, a testimonial, or first-hand chronology.
+No bulk delete. No production mutation is authorized by the v1 content-pack or plan digests. Editorial material must never be presented as independent gardener evidence, a testimonial, or first-hand chronology.
 
-## Current production plan snapshot (redacted)
+## Historical Phase A plan snapshot (redacted, non-executable)
 
 See checked-in [`docs/launch-corpus-plan-production-redacted.json`](launch-corpus-plan-production-redacted.json).
 
@@ -172,20 +155,19 @@ Observed aggregates at Phase A cut:
 - `archivedWithPublicSlug`: 23 (retain lifecycle; OVE-191 class)
 - `visualFixtureMutationHits`: 0 in production
 - `launchReady`: **false** — `insufficient_editorial_launch_public`
-- Disposition: review/reclassify the 4 legacy public `real_ugc` rows under sign-off; seed 14 explicitly labelled editorial shot-list journals from a licensed content pack
+- Historical disposition: review/reclassify the 4 legacy public `real_ugc` rows; the former 14-slot seed proposal is frozen evidence and cannot be applied to the current public-only final-WebP contract.
 
-Re-run `pnpm launch:corpus:plan -- --environment production --confirm-environment production` before signing off so counts stay current.
+Run `pnpm launch:corpus:plan -- --environment production --confirm-environment production` only for a current read-only inventory. It does not authorize archive, revoke, seed, media upload, or any other mutation.
 
+Any future production corpus work requires a new vertical issue and v2 plan that
+uses already-final WebPs through OVE-346 staging and atomic publication,
+contains no private journal target, repeats rights and precise-location review,
+and obtains a new exact approval. The historical OVE-199 sign-off phrase is not
+valid authority for that work.
 
-1. Run `launch:corpus:plan` against production; attach redacted JSON.
-2. Confirm disposition targets match the table above.
-3. Deliver the OverGarden-authored `uk`/`bg` editorial pack and exact Unsplash source/license receipts matching shot-list IDs.
-4. Reply: `SIGN-OFF OVE-199 manifest <report-id-or-sha> — proceed with archive/seed`.
-5. Phase B: seed → archive/revoke exact targets → parity → guest uk/bg proof → Linear Done.
-
-## Pre-production non-claims
+## Historical receipt non-claims
 
 - No production archive/seed in Phase A.
 - No OVE-186 Done.
 - No claim that H1/H4/H6 passed.
-- Visual fixture manifest remains `ove187-v9`.
+- No current visual-fixture manifest hash is asserted by this frozen receipt.

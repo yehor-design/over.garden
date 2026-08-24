@@ -337,7 +337,7 @@ async function upsertVerificationMediaSentinel(
   await store.putObject({
     key: SENTINEL_MEDIA_KEY,
     body,
-    contentType: "image/png",
+    contentType: "image/webp",
     cacheControl: "private, no-store",
     sha256: source.sha256,
   });

@@ -11,8 +11,8 @@ import { Pool } from "pg";
 
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import {
-  ONLINE_JOURNAL_PROTOCOL,
-  ONLINE_JOURNAL_PROTOCOL_HEADER,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
 } from "../src/lib/garden/entry-contracts";
 
 const TEST_PASSWORD = "OVE326-local-password-1!";
@@ -70,7 +70,7 @@ test.describe("OVE-326 online-only product", () => {
         page.on("requestfailed", onRequestFailed);
         await context.setOffline(true);
         const mutationResult = await page.evaluate(
-          async ({ header, protocol, mutationId }) => {
+          async ({ header, protocol, publishId }) => {
             try {
               await fetch("/api/garden/entries", {
                 method: "POST",
@@ -79,9 +79,27 @@ test.describe("OVE-326 online-only product", () => {
                   [header]: protocol,
                 },
                 body: JSON.stringify({
-                  target: "first_plant_entry",
+                  publishId,
+                  clientMutationId: publishId,
+                  context: {
+                    target: "first_plant_entry",
+                    plantName: "Synthetic network-down probe",
+                  },
                   title: "Synthetic network-down probe",
-                  clientMutationId: mutationId,
+                  document: {
+                    schemaVersion: 1,
+                    blocks: [
+                      {
+                        id: "network_down_probe",
+                        type: "paragraph",
+                        spans: [{ text: "Network-down atomic probe." }],
+                      },
+                    ],
+                  },
+                  coverMediaAssetId: null,
+                  mediaClaimReceipts: [],
+                  returnTo: "/garden",
+                  disclosureAccepted: true,
                 }),
               });
               return "unexpected_response";
@@ -90,9 +108,9 @@ test.describe("OVE-326 online-only product", () => {
             }
           },
           {
-            header: ONLINE_JOURNAL_PROTOCOL_HEADER,
-            protocol: ONLINE_JOURNAL_PROTOCOL,
-            mutationId: `ove326-${locale}-${randomUUID()}`,
+            header: ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
+            protocol: ATOMIC_JOURNAL_CREATE_PROTOCOL,
+            publishId: randomUUID(),
           },
         );
         expect(mutationResult).toBe("network_rejected");

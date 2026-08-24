@@ -212,7 +212,8 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("authIntent=comment");
     expect(html).toContain("authIntent=create_object");
     expect(html).not.toContain('name="targetRef"');
-    expect(html).toContain("Owner-only journals");
+    expect(html).toContain("Empty space");
+    expect(html).toContain("Owner-only boundary · no public route");
     expect(html).toContain("Archived journals");
     expect(html).toContain("Maximum-length copy");
     expect(html).toContain("Public journal without media");
