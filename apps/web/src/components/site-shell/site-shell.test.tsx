@@ -113,6 +113,9 @@ describe("production site shell", () => {
     expect(html).toContain('aria-label="Увійти"');
     expect(html).toContain("site-shell-header-icon");
     expect(html).toContain('aria-label="Відкрити навігацію"');
+    expect(html).toContain(
+      'data-cwv-interaction-target="site-menu"',
+    );
     expect(html).toContain('aria-current="page"');
     expect(html).not.toContain(">Моє<");
     expect(html).not.toMatch(/draftCount|owner_user_id|private-user/i);

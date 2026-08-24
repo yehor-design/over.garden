@@ -219,7 +219,7 @@ jobs:
           fc-match Arial
           fc-match "Liberation Sans"
 
-      - name: Install Playwright typography and accessibility browsers
+      - name: Install Playwright performance, typography, and accessibility browsers
         run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       - name: Verify responsive and accessibility matrix
@@ -244,6 +244,7 @@ jobs:
 
           for attempt in {1..60}; do
             if curl -fsS http://localhost:3000/__visual-fixtures >/dev/null 2>&1; then
+              pnpm cwv:check -- --base-url http://localhost:3000 --environment local --sha "$GITHUB_SHA" --output "$RUNNER_TEMP/ove337-core-web-vitals.json"
               TYPOGRAPHY_BASE_URL=http://localhost:3000 pnpm typography:browser -- --sha "$GITHUB_SHA" --output "$RUNNER_TEMP/ove208-typography-browser.json" --screenshot-dir "$RUNNER_TEMP/ove208-typography-screenshots"
               pnpm test:a11y
               exit 0
@@ -298,6 +299,17 @@ jobs:
           path: |
             ${{ runner.temp }}/ove208-typography-browser.json
             ${{ runner.temp }}/ove208-typography-screenshots
+          if-no-files-found: warn
+          compression-level: 9
+          retention-days: 14
+
+      - name: Upload exact-SHA Core Web Vitals evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: ove337-core-web-vitals-${{ github.sha }}
+          path: ${{ runner.temp }}/ove337-core-web-vitals.json
           if-no-files-found: warn
           compression-level: 9
           retention-days: 14

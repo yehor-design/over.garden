@@ -135,6 +135,7 @@
     "typography:browser": "tsx scripts/verify-typography-browser.ts",
     "test:typography-browser-local": "tsx scripts/run-typography-browser-local.ts",
     "typography:performance": "tsx scripts/verify-typography-performance.ts",
+    "cwv:check": "tsx scripts/verify-core-web-vitals-budget.ts",
     "linear:task:check": "tsx scripts/check-linear-agent-task.ts",
     "linear:task:standard:check": "vitest run scripts/check-linear-agent-task.test.ts scripts/check-mainline-closeout.test.ts --testTimeout 60000",
     "external-photo-identification:retirement:verify": "tsx scripts/verify-external-photo-identification-retirement.ts",

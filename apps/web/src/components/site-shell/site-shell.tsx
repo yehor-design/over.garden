@@ -238,6 +238,7 @@ export function SiteShell({
                         <Button
                           variant="ghost"
                           size="icon-lg"
+                          data-cwv-interaction-target="site-menu"
                           aria-label={navigation.labels.openMenu}
                           className="site-shell-header-icon text-background hover:bg-background/10 hover:text-background"
                         />
