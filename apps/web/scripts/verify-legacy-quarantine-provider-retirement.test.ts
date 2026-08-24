@@ -6,6 +6,7 @@ import {
   OVE350_TARGET_BUCKET,
   assertOve350ReceiptRedacted,
   buildOve350Plan,
+  classifyOve350BucketProbeError,
   classifyOve350Read,
   executeOve350Retirement,
   parseOve350Args,
@@ -153,6 +154,22 @@ describe("OVE-350 legacy quarantine provider retirement", () => {
       readReceipt({ observedAt: "2026-08-24T13:46:54.000Z" }),
     );
     expect(plan.credentialAction).toBe("narrow_shared_to_public_only_in_place");
+  });
+
+  it("treats an absent retired bucket as non-authority after deletion", () => {
+    expect(
+      classifyOve350BucketProbeError({
+        name: "NoSuchBucket",
+        $metadata: { httpStatusCode: 404 },
+      }),
+    ).toBe("denied");
+    expect(
+      classifyOve350BucketProbeError({
+        name: "AccessDenied",
+        $metadata: { httpStatusCode: 403 },
+      }),
+    ).toBe("denied");
+    expect(classifyOve350BucketProbeError(new Error("network"))).toBe("error");
   });
 
   it("requires two matching zero reads at least 60 seconds apart", () => {

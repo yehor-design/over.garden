@@ -1377,18 +1377,22 @@ async function probeBucketScope(client: S3Client, bucket: string) {
     );
     return "allowed" as const;
   } catch (error) {
-    const candidate = error as {
-      name?: string;
-      $metadata?: { httpStatusCode?: number };
-    };
-    if (
-      candidate.name === "AccessDenied" ||
-      candidate.$metadata?.httpStatusCode === 403
-    ) {
-      return "denied" as const;
-    }
-    return "error" as const;
+    return classifyOve350BucketProbeError(error);
   }
+}
+
+export function classifyOve350BucketProbeError(error: unknown) {
+  const candidate = error as {
+    name?: string;
+    $metadata?: { httpStatusCode?: number };
+  };
+  if (
+    ["AccessDenied", "NoSuchBucket"].includes(candidate.name ?? "") ||
+    [403, 404].includes(candidate.$metadata?.httpStatusCode ?? 0)
+  ) {
+    return "denied" as const;
+  }
+  return "error" as const;
 }
 
 function classifyCredentialScope(
