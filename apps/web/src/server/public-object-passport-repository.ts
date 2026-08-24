@@ -15,6 +15,7 @@ import {
   DEFAULT_PUBLIC_LOCALE,
   type PublicLocale,
 } from "@/lib/public-localization";
+import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import {
   localizedPublicJournalEvidencePath,
   publicProfilePath,
@@ -72,6 +73,7 @@ export interface PublicObjectPassportPage {
   /** @deprecated Prefer galleryMedia; kept for fixture/evidence URL lists. */
   galleryMediaPublicUrls: string[];
   timelineHasMore: boolean;
+  qualityClass?: PublicProjectionQualityClass;
 }
 
 export type PublicObjectPassportLookup =
@@ -576,6 +578,12 @@ export function serializePublicObjectPassportPage(
     galleryMedia,
     galleryMediaPublicUrls,
     timelineHasMore: Number(root.publicEntryCount) > serializedJournal.length,
+    qualityClass:
+      (root.objectLocationVisibility === "region" &&
+        !root.objectCoarseRegionCode) ||
+      (root.spaceLocationVisibility === "region" && !root.spaceCoarseRegionCode)
+        ? "partial"
+        : "verified",
   };
 }
 

@@ -2,8 +2,11 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
-import type { PublicVarietyPage } from "@/server/public-variety-repository";
-import { evaluatePublicVarietyIndexState } from "@/server/public-variety-indexing";
+import {
+  buildPublicVarietyDiscoverySource,
+  type PublicVarietyPage,
+} from "@/server/public-variety-repository";
+import { resolvePublicSurfaceDiscoveryForRequest } from "@/server/public-surface-discovery";
 import type { CatalogTypeaheadRow } from "@/server/search/catalog-documents";
 import type { JournalEntrySearchContractRow } from "@/server/search/documents";
 
@@ -236,12 +239,16 @@ export function markupJournalEntryPage(): PublicJournalEntryPage {
 }
 
 export function publicVarietyPage(
-  overrides: { entryCount?: number; aggregateBodyLength?: number } = {},
+  overrides: {
+    entryCount?: number;
+    aggregateBodyLength?: number;
+    poisonVisibleText?: boolean;
+  } = {},
 ): PublicVarietyPage {
   const entryCount = overrides.entryCount ?? 4;
   const aggregateBodyLength = overrides.aggregateBodyLength ?? 1200;
 
-  return {
+  const page = {
     catalog: {
       catalogKind: "plant_variety",
       canonicalName: JOURNEY.catalogCanonicalName,
@@ -253,26 +260,28 @@ export function publicVarietyPage(
     entryCount,
     photoCount: 2,
     aggregateBodyLength,
-    indexState: evaluatePublicVarietyIndexState({
-      entryCount,
-      aggregateBodyLength,
-      catalogStatus: "seeded",
-      catalogSource: "ua_state_register",
-    }),
+    latestMeaningfulAt: JOURNEY.publishedAt,
+    qualityClass: "verified",
     seedProof: null,
     sourceCredits: [],
     entries: [
       {
         id: JOURNEY.entryId,
         title: JOURNEY.safeTitle,
-        // body / location / variety / media are private to the source entry and
-        // must never appear in the bounded JSON-LD; poison proves exclusion.
-        body: `${POISON.streetAddress} ${POISON.preciseCoordinates}`,
+        body: overrides.poisonVisibleText
+          ? `${POISON.streetAddress} ${POISON.preciseCoordinates}`
+          : aggregateBodyLength < 120
+            ? "short"
+            : Array.from({ length: 10 }, () => JOURNEY.safeBody).join(" "),
         entryDate: JOURNEY.entryDate,
         publicPath: `/journal/${JOURNEY.publicSlug}`,
         plantObjectDisplayName: JOURNEY.plantDisplayName,
-        varietyText: POISON.email,
-        safeLocationLabel: POISON.exifGps,
+        varietyText: overrides.poisonVisibleText
+          ? POISON.email
+          : JOURNEY.catalogCanonicalName,
+        safeLocationLabel: overrides.poisonVisibleText
+          ? POISON.exifGps
+          : JOURNEY.regionLabel,
         media: {
           id: JOURNEY.mediaId,
           derivativeKey: POISON.quarantineKey,
@@ -280,6 +289,13 @@ export function publicVarietyPage(
         },
       },
     ],
+  } satisfies Omit<PublicVarietyPage, "indexState">;
+  return {
+    ...page,
+    indexState: resolvePublicSurfaceDiscoveryForRequest(
+      buildPublicVarietyDiscoverySource(page, "public_variety_repository"),
+      "2026-08-24T00:00:00.000Z",
+    ).decision,
   };
 }
 

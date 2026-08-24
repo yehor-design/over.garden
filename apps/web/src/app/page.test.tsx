@@ -94,7 +94,7 @@ describe("/", () => {
     ).toBe("uk");
   });
 
-  it("renders the Ukrainian read-first feed with canonical noindex metadata", async () => {
+  it("renders the Ukrainian read-first feed without admitting an unresolved projection", async () => {
     const html = renderToStaticMarkup(
       await HomeRoute({
         params: Promise.resolve({ locale: "uk" }),
@@ -106,15 +106,7 @@ describe("/", () => {
     });
 
     expect(metadata.robots).toMatchObject({ index: false, follow: false });
-    expect(metadata.alternates).toMatchObject({
-      canonical: "/",
-      languages: {
-        uk: "/",
-        bg: "/bg",
-        ru: "/ru",
-        "x-default": "/",
-      },
-    });
+    expect(metadata.alternates).toBeUndefined();
     expect(html).toContain('lang="uk"');
     expect(html).toContain(">Стрічка</h1>");
     expect(html).toContain("Ранкове спостереження");

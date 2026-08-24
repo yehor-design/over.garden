@@ -1,28 +1,31 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { evaluatePublicVarietyIndexState } from "./public-variety-indexing";
-import { buildPublicVarietyJsonLd } from "./public-variety-metadata";
-import type { PublicVarietyPage } from "./public-variety-repository";
+import { resolvePublicSurfaceDiscoveryForRequest } from "./public-surface-discovery";
+import {
+  buildPublicVarietyJsonLd,
+  buildPublicVarietySurfaceMetadata,
+} from "./public-variety-metadata";
+import {
+  buildPublicVarietyDiscoverySource,
+  type PublicVarietyPage,
+} from "./public-variety-repository";
 
 describe("public variety metadata", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it("omits JSON-LD for thin noindex pages", () => {
-    const page = buildPage({
-      entryCount: 1,
-      aggregateBodyLength: 200,
-    });
+  it("omits canonical admission and JSON-LD for measured thin pages", () => {
+    const page = buildPage({ rich: false });
+    const surface = buildPublicVarietySurfaceMetadata(page);
 
-    expect(buildPublicVarietyJsonLd(page)).toBeNull();
+    expect(surface.metadata.robots).toEqual({ index: false, follow: false });
+    expect(surface.metadata.alternates).toBeUndefined();
+    expect(surface.jsonLd).toBeNull();
   });
 
-  it("omits JSON-LD from thin pages even if a caller passes stale index state", () => {
-    const page = buildPage({
-      entryCount: 1,
-      aggregateBodyLength: 200,
-    });
+  it("recomputes from visible facts instead of trusting a stale page decision", () => {
+    const page = buildPage({ rich: false });
     page.indexState = {
       ...page.indexState,
       value: "indexable",
@@ -35,160 +38,103 @@ describe("public variety metadata", () => {
     expect(buildPublicVarietyJsonLd(page)).toBeNull();
   });
 
-  it("emits bounded JSON-LD for indexable pages without private fields", () => {
+  it("emits the shared visible-fact graph without private source fields", () => {
     vi.stubEnv("PUBLIC_SITE_URL", "https://example.test/base-path");
-    const page = buildPage({
-      entryCount: 3,
-      aggregateBodyLength: 900,
-    });
-
-    const jsonLd = buildPublicVarietyJsonLd(page);
+    const jsonLd = buildPublicVarietyJsonLd(buildPage({ rich: true }));
 
     expect(jsonLd).toMatchObject({
       "@context": "https://schema.org",
-      "@type": "CollectionPage",
-      name: "Pomidor Cheri · публічні записи саду",
-      url: "https://example.test/variety/pomidor-cheri-0000000101",
-      isPartOf: {
-        "@type": "WebSite",
-        name: "OverGarden",
-        url: "https://example.test/",
-      },
-      about: {
-        "@type": "Thing",
-        name: "Pomidor Cheri",
-      },
-      hasPart: [
+      "@graph": [
         {
-          "@type": "CreativeWork",
-          headline: "First ripe cluster",
-          datePublished: "2026-06-20",
-          url: "https://example.test/journal/entry-1",
+          "@type": "WebPage",
+          url: "https://example.test/variety/pomidor-cheri-0000000101",
+        },
+        {
+          "@type": "CollectionPage",
+          name: "Pomidor Cheri · публічні записи саду",
+          hasPart: [{ "@type": "Thing", name: "First ripe cluster" }],
+          about: "Catalog status: seeded",
         },
       ],
     });
-
     const serialized = JSON.stringify(jsonLd);
-    expect(serialized).not.toContain("Region");
-    expect(serialized).not.toContain("UA-30");
-    expect(serialized).not.toContain("fixture body");
-    expect(serialized).not.toContain("owner");
-    expect(serialized).not.toContain("quarantine");
-    expect(serialized).not.toContain("derivative");
-    expect(serialized).not.toContain("media");
-    expect(serialized).not.toContain("email");
-    expect(serialized).not.toContain("Ukraine State Register");
-    expect(serialized).not.toContain("Creative Commons Attribution");
-    expect(serialized).not.toContain("data.gov.ua");
-    expect(serialized).not.toContain("creativecommons.org");
+    expect(serialized).not.toMatch(
+      /owner|quarantine|derivative|media|email|latitude|longitude|data\.gov/i,
+    );
   });
 
-  it("localizes JSON-LD collection chrome without translating catalog or journal content", () => {
-    vi.stubEnv("PUBLIC_SITE_URL", "https://example.test");
-    const page = buildPage({
-      entryCount: 3,
-      aggregateBodyLength: 900,
+  it("localizes visible collection chrome without claiming a UGC language", () => {
+    const jsonLd = buildPublicVarietyJsonLd(buildPage({ rich: true }), "ru");
+    expect(jsonLd).toMatchObject({
+      "@graph": [
+        expect.not.objectContaining({ inLanguage: expect.anything() }),
+        expect.objectContaining({
+          name: "Pomidor Cheri · Публичные записи сада",
+        }),
+      ],
     });
-
-    const jsonLd = buildPublicVarietyJsonLd(page, "ru");
-
-    expect(jsonLd?.name).toBe("Pomidor Cheri · Публичные записи сада");
-    expect(jsonLd?.about.name).toBe("Pomidor Cheri");
-    expect(jsonLd?.hasPart[0]?.headline).toBe("First ripe cluster");
   });
 
-  it("uses the catalog kind canonical path for species JSON-LD", () => {
+  it("uses the catalog-kind canonical path", () => {
     vi.stubEnv("PUBLIC_SITE_URL", "https://example.test");
-    const page = buildPage({ entryCount: 3, aggregateBodyLength: 900 });
+    const page = buildPage({ rich: true });
     page.catalog.catalogKind = "species";
     page.catalog.publicSlug = "solanum-lycopersicum";
     page.catalog.canonicalName = "Solanum lycopersicum";
 
-    const jsonLd = buildPublicVarietyJsonLd(page, "uk");
-
-    expect(jsonLd?.url).toBe(
-      "https://example.test/species/solanum-lycopersicum",
-    );
-    expect(jsonLd?.name).toBe("Solanum lycopersicum · публічні записи про вид");
-  });
-
-  it("omits JSON-LD when catalog trust is below the promotion gate", () => {
-    const page = buildPage({
-      entryCount: 3,
-      aggregateBodyLength: 900,
-      catalogSource: "internal_seed",
+    expect(buildPublicVarietyJsonLd(page)).toMatchObject({
+      "@graph": [
+        {
+          url: "https://example.test/species/solanum-lycopersicum",
+        },
+        {
+          name: "Solanum lycopersicum · публічні записи про вид",
+        },
+      ],
     });
-
-    page.indexState = {
-      ...page.indexState,
-      value: "indexable",
-      isIndexable: true,
-      sitemapEligible: true,
-      robots: { index: true, follow: true },
-      reasons: [],
-    };
-
-    expect(buildPublicVarietyJsonLd(page)).toBeNull();
   });
 });
 
-function buildPage({
-  entryCount,
-  aggregateBodyLength,
-  catalogSource = "ua_state_register",
-}: {
-  entryCount: number;
-  aggregateBodyLength: number;
-  catalogSource?: string;
-}): PublicVarietyPage {
-  return {
+function buildPage({ rich }: { rich: boolean }): PublicVarietyPage {
+  const page = {
     catalog: {
-      catalogKind: "plant_variety",
+      catalogKind: "plant_variety" as const,
       canonicalName: "Pomidor Cheri",
       publicSlug: "pomidor-cheri-0000000101",
-      status: "seeded",
-      source: catalogSource,
+      status: "seeded" as const,
+      source: "internal_seed",
       locale: "uk",
     },
-    entryCount,
+    entryCount: 1,
     photoCount: 1,
-    aggregateBodyLength,
-    indexState: evaluatePublicVarietyIndexState({
-      entryCount,
-      aggregateBodyLength,
-      catalogStatus: "seeded",
-      catalogSource,
-    }),
+    aggregateBodyLength: rich ? 900 : 10,
+    qualityClass: "verified" as const,
+    latestMeaningfulAt: "2026-08-23T00:00:00.000Z",
     seedProof: null,
-    sourceCredits: [
-      {
-        sourceSlug: "ua-state-register",
-        sourceName: "Ukraine State Register of Plant Varieties",
-        sourceVersion: "2025-07-15",
-        sourceUrl: "https://data.gov.ua/example-register.csv",
-        license: "Creative Commons Attribution 4.0 International",
-        licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
-        attributionRequired: true,
-        attributionText:
-          "Ukraine State Register of Plant Varieties, Creative Commons Attribution 4.0 International.",
-      },
-    ],
+    sourceCredits: [],
     entries: [
       {
         id: "entry-1",
         title: "First ripe cluster",
-        body: "Private fixture body with UA-30 and owner email hidden@example.test.",
+        body: rich
+          ? Array.from({ length: 130 }, (_, index) => `visible${index}`).join(
+              " ",
+            )
+          : "short",
         entryDate: new Date("2026-06-20T12:00:00.000Z"),
         publicPath: "/journal/entry-1",
         plantObjectDisplayName: "Balcony tomato",
         varietyText: "Pomidor Cheri",
-        safeLocationLabel: "Region: Kyiv",
-        media: {
-          id: "media-1",
-          derivativeKey: "public/derivative.webp",
-          publicUrl: "https://media.example.test/public/derivative.webp",
-        },
+        safeLocationLabel: null,
+        media: null,
       },
     ],
+  } satisfies Omit<PublicVarietyPage, "indexState">;
+  return {
+    ...page,
+    indexState: resolvePublicSurfaceDiscoveryForRequest(
+      buildPublicVarietyDiscoverySource(page, "public_variety_repository"),
+      "2026-08-24T00:00:00.000Z",
+    ).decision,
   };
 }

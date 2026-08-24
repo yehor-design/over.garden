@@ -1392,7 +1392,10 @@ async function runLocaleContinuityCheck(
     const page = await context.newPage();
 
     try {
-      const publicPath = localizedPath(locale, "/blog");
+      const publicPath = localizedPath(
+        locale,
+        "/blog/ai-garden-advice-vs-real-garden-proof",
+      );
       const publicResponse = await page.goto(
         new URL(publicPath, baseUrl).toString(),
         { waitUntil: "domcontentloaded", timeout: 45_000 },
@@ -3207,14 +3210,21 @@ async function runMixedLocaleTopicCheck(browser: Browser, baseUrl: URL) {
         "Russian topic interface did not preserve the Ukrainian source label.",
       );
     }
-    const canonicalHref = await page
-      .locator('link[rel="canonical"]')
-      .getAttribute("href");
+    const canonicalCount = await page.locator('link[rel="canonical"]').count();
+    const robots = await page
+      .locator('meta[name="robots"]')
+      .getAttribute("content");
+    const jsonLdCount = await page
+      .locator('script[type="application/ld+json"]')
+      .count();
     if (
-      !canonicalHref ||
-      new URL(canonicalHref, baseUrl).pathname !== "/ru/topics/care-checks"
+      canonicalCount !== 0 ||
+      robots !== "noindex, nofollow" ||
+      jsonLdCount !== 0
     ) {
-      throw new Error("Mixed-locale topic emitted the wrong canonical URL.");
+      throw new Error(
+        "Mixed-locale visual topic leaked public discovery metadata.",
+      );
     }
   } finally {
     await context.close();

@@ -3,20 +3,28 @@ import { notFound } from "next/navigation";
 
 import { LocalizedGuidePage } from "@/components/public/localized-public-pages";
 import {
-  buildLanguageAlternates,
   getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
+  type PublicLocale,
 } from "@/lib/public-localization";
 import { resolveVisualFixturePublicKnowledgeMode } from "@/lib/visual-fixtures/public-knowledge-scenarios";
 import {
   getLocalizedGuide,
+  getContentAvailableLocales,
   getLocalizedRouteChrome,
 } from "@/server/public-localized-content";
 import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
-import { listGuides } from "@/server/public-seo-content";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  authoredContentEntityIds,
+  guideVisibleText,
+  listGuides,
+  resolveAuthoredPublicSurfaceDiscovery,
+  type GuideContent,
+} from "@/server/public-seo-content";
+import { resolveUnresolvedPublicSurfaceDiscovery } from "@/server/public-surface-discovery";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 
 interface LocalizedGuideRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -39,9 +47,8 @@ export async function generateMetadata({
   const { locale: localeParam, slug } = await params;
 
   if (!isPublicLocale(localeParam)) {
-    const missingState = evaluatePublicSurfaceIndexability({
-      kind: "missing",
-    });
+    const missingState =
+      resolveUnresolvedPublicSurfaceDiscovery("localized_guide").decision;
 
     return {
       title: "OverGarden",
@@ -57,9 +64,8 @@ export async function generateMetadata({
   const guide = resolved.guide;
 
   if (!guide) {
-    const missingState = evaluatePublicSurfaceIndexability({
-      kind: "missing",
-    });
+    const missingState =
+      resolveUnresolvedPublicSurfaceDiscovery("localized_guide").decision;
 
     return {
       title: `${getLocalizedRouteChrome(localeParam).guideEyebrow} | OverGarden`,
@@ -67,24 +73,8 @@ export async function generateMetadata({
     };
   }
 
-  const indexState = evaluatePublicSurfaceIndexability({
-    kind: resolved.visualMode ? "missing" : guide.kind,
-  });
-
-  return {
-    title: `${guide.title} | OverGarden`,
-    description: guide.description,
-    alternates: {
-      canonical: localizedPath(localeParam, guide.path),
-      ...(resolved.visualMode
-        ? {}
-        : { languages: buildLanguageAlternates(guide.path) }),
-    },
-    robots: indexState.robots,
-    openGraph: {
-      locale: localeParam,
-    },
-  };
+  return buildGuideSurface(localeParam, guide, Boolean(resolved.visualMode))
+    .metadata;
 }
 
 export default async function GuideRoute({
@@ -103,6 +93,12 @@ export default async function GuideRoute({
   const guide = resolved.guide;
 
   if (!guide) notFound();
+
+  const surface = buildGuideSurface(
+    localeParam,
+    guide,
+    Boolean(resolved.visualMode),
+  );
 
   const evidenceResult =
     resolved.visualMode === "loading" || resolved.visualMode === "error"
@@ -138,8 +134,44 @@ export default async function GuideRoute({
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
       visualCorpus={resolved.visualMode === "corpus"}
+      jsonLd={surface.jsonLd}
     />
   );
+}
+
+function buildGuideSurface(
+  locale: PublicLocale,
+  guide: GuideContent,
+  isVisualFixture: boolean,
+) {
+  const discovery = resolveAuthoredPublicSurfaceDiscovery({
+    consumerId: "localized_guide",
+    canonicalPath: localizedPath(locale, guide.path),
+    equivalentLocales: getContentAvailableLocales(guide.path),
+    visibleText: guideVisibleText(guide),
+    distinctPublicEntityIds: authoredContentEntityIds(guide.path, [
+      ...guide.relatedLinks.map((link) => link.href),
+      ...guide.knowledge.evidence.topicSlugs.map((slug) => `/topics/${slug}`),
+      ...guide.knowledge.evidence.catalogSlugs.map(
+        (slug) => `/catalog/${slug}`,
+      ),
+    ]),
+    meaningfulContentAt: `${guide.editorial.updatedDate}T00:00:00.000Z`,
+    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+  });
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    title: `${guide.title} | OverGarden`,
+    description: guide.description,
+    visibleFacts: {
+      type: "Article",
+      name: guide.title,
+      description: guide.description,
+      dateModified: `${guide.editorial.updatedDate}T00:00:00.000Z`,
+      trustQualifier: `${guide.editorial.author}; ${guide.editorial.source}`,
+    },
+  });
 }
 
 async function resolveGuide(

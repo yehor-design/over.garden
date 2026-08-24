@@ -1,16 +1,17 @@
 import "server-only";
 
-export const PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD = {
-  minPublicEntryCount: 3,
-  minAggregateBodyLength: 600,
-  trustedSeededCatalogSources: [
-    "ua_state_register",
-    "species_backbone",
-    "ua_official_bee_breed",
-    "vertebrate_breed_ontology",
-    "eu_common_catalogue_bg",
-    "eu_oj_eur_lex_common_catalogue",
-  ],
+import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
+import {
+  DEFAULT_PUBLIC_LOCALE,
+  stripLocalePrefix,
+  type PublicLocale,
+} from "@/lib/public-localization";
+
+export const PUBLIC_SURFACE_INDEXABILITY_THRESHOLD = {
+  minimumQualityClass: "partial",
+  minimumWordCount: 120,
+  minimumDistinctEntities: 1,
+  maximumStalenessDays: 540,
 } as const;
 
 export type PublicSurfaceKind =
@@ -31,30 +32,34 @@ export type PublicSurfaceKind =
   | "missing";
 
 export type NonDiscoveryRouteKind = "workspace" | "auth" | "operator";
-
 export type PublicSurfaceIndexValue = "noindex" | "indexable";
+export type PublicSurfaceCandidateState =
+  | "candidate"
+  | "not_public_candidate"
+  | "candidate_input_unresolved";
 
 export type PublicSurfaceIndexReason =
-  | "authored_useful_surface"
-  | "public_feed_noindex"
-  | "catalog_browse_noindex"
+  | "not_public_candidate"
+  | "quality_class_below_threshold"
+  | "word_count_below_threshold"
+  | "distinct_entity_count_below_threshold"
+  | "surface_stale"
+  | "candidate_input_unresolved"
+  | "non_equivalent_locale"
   | "workspace_route_noindex"
   | "auth_route_noindex"
-  | "operator_route_noindex"
-  | "journal_marked_noindex"
-  | "entry_count_below_threshold"
-  | "body_length_below_threshold"
-  | "catalog_trust_below_threshold"
-  | "topic_trust_below_threshold"
-  | "localized_ugc_projection_noindex"
-  | "object_passport_noindex"
-  | "public_profile_noindex"
-  | "community_noindex"
-  | "lineage_graph_noindex"
-  | "missing_public_surface";
+  | "operator_route_noindex";
 
-export type PublicAggregationCatalogStatus = "seeded" | "confirmed";
-export type PublicTopicTrustState = "curated" | "untrusted";
+export interface PublicSurfaceCandidateInput {
+  candidateState: PublicSurfaceCandidateState;
+  qualityClass: PublicProjectionQualityClass | null;
+  visibleWordCount: number | null;
+  distinctPublicEntityIds: readonly string[] | null;
+  meaningfulContentAt: string | null;
+  canonicalPath: string | null;
+  equivalentLocales: readonly PublicLocale[] | null;
+  surfaceKind: PublicSurfaceKind;
+}
 
 export interface PublicSurfaceIndexState {
   value: PublicSurfaceIndexValue;
@@ -65,114 +70,87 @@ export interface PublicSurfaceIndexState {
     follow: boolean;
   };
   reasons: PublicSurfaceIndexReason[];
-  threshold: typeof PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD;
+  threshold: typeof PUBLIC_SURFACE_INDEXABILITY_THRESHOLD;
 }
 
-export type PublicSurfaceIndexInput =
-  | {
-      kind: Extract<
-        PublicSurfaceKind,
-        | "marketing_landing"
-        | "knowledge_hub"
-        | "editorial_blog"
-        | "guide"
-        | "aeo_answer"
-      >;
-    }
-  | {
-      kind: "journal_entry";
-      publicNoindex: boolean;
-    }
-  | {
-      kind: "variety_aggregation";
-      entryCount: number;
-      aggregateBodyLength: number;
-      catalogStatus: PublicAggregationCatalogStatus | string;
-      catalogSource: string;
-    }
-  | {
-      kind: "topic_aggregation";
-      entryCount: number;
-      aggregateBodyLength: number;
-      topicTrust: PublicTopicTrustState;
-      canonicalLocale?: boolean;
-    }
-  | {
-      kind:
-        | "public_feed"
-        | "catalog_browse"
-        | "object_passport"
-        | "profile"
-        | "community"
-        | "lineage_graph"
-        | "missing";
-    };
-
-export interface StaticIndexablePublicSurface {
-  kind: Extract<
-    PublicSurfaceKind,
-    | "marketing_landing"
-    | "knowledge_hub"
-    | "editorial_blog"
-    | "guide"
-    | "aeo_answer"
-  >;
-  path: string;
-  lastModified: string;
-  changeFrequency: "weekly" | "monthly";
-  priority: number;
+export interface PublicSurfaceEvaluationOptions {
+  evaluatedAt: string | Date;
 }
 
 export const AUTHORED_PUBLIC_SURFACE_LASTMOD = "2026-07-03T00:00:00.000Z";
 
-const STATIC_PUBLIC_SURFACES: StaticIndexablePublicSurface[] = [];
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1_000;
+const QUALITY_RANK: Record<PublicProjectionQualityClass, number> = {
+  unverified: 0,
+  partial: 1,
+  verified: 2,
+};
+const VALID_LOCALES = new Set<PublicLocale>(["uk", "bg", "ru"]);
 
 export function evaluatePublicSurfaceIndexability(
-  input: PublicSurfaceIndexInput,
+  input: PublicSurfaceCandidateInput,
+  options: PublicSurfaceEvaluationOptions,
 ): PublicSurfaceIndexState {
-  switch (input.kind) {
-    case "marketing_landing":
-    case "knowledge_hub":
-    case "editorial_blog":
-    case "guide":
-    case "aeo_answer":
-      return indexable(["authored_useful_surface"]);
-
-    case "public_feed":
-      return noindex(["public_feed_noindex"]);
-
-    case "catalog_browse":
-      return noindex(["catalog_browse_noindex"]);
-
-    case "journal_entry":
-      return input.publicNoindex
-        ? noindex(["journal_marked_noindex"])
-        : indexable([]);
-
-    case "variety_aggregation":
-      return evaluateVarietyAggregationIndexability(input);
-
-    case "topic_aggregation":
-      if (input.canonicalLocale === false) {
-        return noindex(["localized_ugc_projection_noindex"]);
-      }
-      return evaluateTopicAggregationIndexability(input);
-
-    case "object_passport":
-      return noindex(["object_passport_noindex"]);
-
-    case "profile":
-      return noindex(["public_profile_noindex"]);
-
-    case "community":
-      return noindex(["community_noindex"]);
-
-    case "lineage_graph":
-      return noindex(["lineage_graph_noindex"]);
-
-    case "missing":
-      return noindex(["missing_public_surface"]);
+  if (input.candidateState === "not_public_candidate") {
+    return noindex(["not_public_candidate"]);
   }
+  if (input.candidateState === "candidate_input_unresolved") {
+    return noindex(["candidate_input_unresolved"]);
+  }
+
+  const evaluatedAt = toValidDate(options.evaluatedAt);
+  const meaningfulContentAt = toValidDate(input.meaningfulContentAt);
+  if (
+    !evaluatedAt ||
+    !meaningfulContentAt ||
+    meaningfulContentAt.getTime() > evaluatedAt.getTime() ||
+    !isQualityClass(input.qualityClass) ||
+    !isFiniteNonNegativeInteger(input.visibleWordCount) ||
+    !isEntityIdList(input.distinctPublicEntityIds) ||
+    !isCanonicalPath(input.canonicalPath) ||
+    !isEquivalentLocaleList(input.equivalentLocales)
+  ) {
+    return noindex(["candidate_input_unresolved"]);
+  }
+
+  const reasons: PublicSurfaceIndexReason[] = [];
+  const canonicalLocale =
+    stripLocalePrefix(input.canonicalPath).locale ?? DEFAULT_PUBLIC_LOCALE;
+  if (
+    input.equivalentLocales.length > 0 &&
+    !input.equivalentLocales.includes(canonicalLocale)
+  ) {
+    reasons.push("non_equivalent_locale");
+  }
+  if (
+    QUALITY_RANK[input.qualityClass] <
+    QUALITY_RANK[PUBLIC_SURFACE_INDEXABILITY_THRESHOLD.minimumQualityClass]
+  ) {
+    reasons.push("quality_class_below_threshold");
+  }
+  if (
+    input.visibleWordCount <
+    PUBLIC_SURFACE_INDEXABILITY_THRESHOLD.minimumWordCount
+  ) {
+    reasons.push("word_count_below_threshold");
+  }
+  if (
+    new Set(input.distinctPublicEntityIds).size <
+    PUBLIC_SURFACE_INDEXABILITY_THRESHOLD.minimumDistinctEntities
+  ) {
+    reasons.push("distinct_entity_count_below_threshold");
+  }
+
+  const stalenessDays =
+    (evaluatedAt.getTime() - meaningfulContentAt.getTime()) /
+    MILLISECONDS_PER_DAY;
+  if (
+    stalenessDays > PUBLIC_SURFACE_INDEXABILITY_THRESHOLD.maximumStalenessDays
+  ) {
+    reasons.push("surface_stale");
+  }
+
+  return reasons.length === 0 ? indexable() : noindex(reasons);
 }
 
 export function evaluateNonDiscoveryRouteIndexability(
@@ -188,109 +166,83 @@ export function evaluateNonDiscoveryRouteIndexability(
   }
 }
 
-export function listStaticIndexablePublicSurfaces() {
-  return STATIC_PUBLIC_SURFACES.filter(
-    (surface) =>
-      evaluatePublicSurfaceIndexability({ kind: surface.kind }).sitemapEligible,
-  );
-}
-
 export function formatRobotsMetaContent(state: PublicSurfaceIndexState) {
   return state.isIndexable ? "index, follow" : "noindex, nofollow";
 }
 
-export function isTrustedPublicAggregationCatalogSource(input: {
-  catalogStatus: PublicAggregationCatalogStatus | string;
-  catalogSource: string;
-}) {
-  if (input.catalogStatus === "confirmed") return true;
+function isQualityClass(
+  value: PublicProjectionQualityClass | null,
+): value is PublicProjectionQualityClass {
+  return value === "verified" || value === "partial" || value === "unverified";
+}
 
+function isFiniteNonNegativeInteger(value: number | null): value is number {
   return (
-    input.catalogStatus === "seeded" &&
-    (
-      PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.trustedSeededCatalogSources as readonly string[]
-    ).includes(input.catalogSource)
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= 0
   );
 }
 
-function evaluateVarietyAggregationIndexability(input: {
-  entryCount: number;
-  aggregateBodyLength: number;
-  catalogStatus: PublicAggregationCatalogStatus | string;
-  catalogSource: string;
-}): PublicSurfaceIndexState {
-  const reasons = publicAggregationContentReasons(input);
-
-  if (!isTrustedPublicAggregationCatalogSource(input)) {
-    reasons.push("catalog_trust_below_threshold");
-  }
-
-  return reasons.length === 0 ? indexable([]) : noindex(reasons);
+function isEntityIdList(
+  value: readonly string[] | null,
+): value is readonly string[] {
+  return (
+    Array.isArray(value) &&
+    value.every((entityId) =>
+      typeof entityId === "string" ? entityId.trim().length > 0 : false,
+    )
+  );
 }
 
-function evaluateTopicAggregationIndexability(input: {
-  entryCount: number;
-  aggregateBodyLength: number;
-  topicTrust: PublicTopicTrustState;
-}): PublicSurfaceIndexState {
-  const reasons = publicAggregationContentReasons(input);
-
-  if (input.topicTrust !== "curated") {
-    reasons.push("topic_trust_below_threshold");
-  }
-
-  return reasons.length === 0 ? indexable([]) : noindex(reasons);
+function isCanonicalPath(value: string | null): value is string {
+  return (
+    typeof value === "string" &&
+    value.startsWith("/") &&
+    value.trim() === value &&
+    !value.includes("?") &&
+    !value.includes("#")
+  );
 }
 
-function publicAggregationContentReasons(input: {
-  entryCount: number;
-  aggregateBodyLength: number;
-}) {
-  const reasons: PublicSurfaceIndexReason[] = [];
-
-  if (
-    input.entryCount <
-    PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount
-  ) {
-    reasons.push("entry_count_below_threshold");
-  }
-
-  if (
-    input.aggregateBodyLength <
-    PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength
-  ) {
-    reasons.push("body_length_below_threshold");
-  }
-
-  return reasons;
+function isEquivalentLocaleList(
+  value: readonly PublicLocale[] | null,
+): value is readonly PublicLocale[] {
+  return (
+    Array.isArray(value) &&
+    value.every((locale) => VALID_LOCALES.has(locale)) &&
+    new Set(value).size === value.length
+  );
 }
 
-function indexable(
-  reasons: PublicSurfaceIndexReason[],
-): PublicSurfaceIndexState {
+function toValidDate(value: string | Date | null) {
+  if (value === null) return null;
+  const date =
+    value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function indexable(): PublicSurfaceIndexState {
   return {
     value: "indexable",
     isIndexable: true,
     sitemapEligible: true,
-    robots: {
-      index: true,
-      follow: true,
-    },
-    reasons,
-    threshold: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD,
+    robots: { index: true, follow: true },
+    reasons: [],
+    threshold: PUBLIC_SURFACE_INDEXABILITY_THRESHOLD,
   };
 }
 
-function noindex(reasons: PublicSurfaceIndexReason[]): PublicSurfaceIndexState {
+function noindex(
+  reasons: readonly PublicSurfaceIndexReason[],
+): PublicSurfaceIndexState {
   return {
     value: "noindex",
     isIndexable: false,
     sitemapEligible: false,
-    robots: {
-      index: false,
-      follow: false,
-    },
-    reasons,
-    threshold: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD,
+    robots: { index: false, follow: false },
+    reasons: [...reasons],
+    threshold: PUBLIC_SURFACE_INDEXABILITY_THRESHOLD,
   };
 }

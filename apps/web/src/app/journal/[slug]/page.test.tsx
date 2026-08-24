@@ -159,7 +159,7 @@ describe("/journal/[slug] V2", () => {
     expect(html).toContain('data-authenticated="true"');
   });
 
-  it("publishes localized noindex metadata with language alternates", async () => {
+  it("publishes noindex metadata without fabricated language alternates", async () => {
     const { generateMetadata } =
       await import("../../[locale]/journal/[slug]/page");
     const metadata = await generateMetadata({
@@ -171,17 +171,40 @@ describe("/journal/[slug] V2", () => {
 
     expect(metadata).toMatchObject({
       title: "First public chapter · Запис в дневник | OverGarden",
-      alternates: {
-        canonical: `/journal/${page.entry.publicSlug}`,
-        languages: {
-          uk: `/journal/${page.entry.publicSlug}`,
-          bg: `/bg/journal/${page.entry.publicSlug}`,
-          ru: `/ru/journal/${page.entry.publicSlug}`,
-          "x-default": `/journal/${page.entry.publicSlug}`,
-        },
-      },
       robots: { index: false, follow: false },
     });
+    expect(metadata.alternates).toBeUndefined();
+  });
+
+  it("times out metadata source reads without blocking or admitting a late page", async () => {
+    const { generateMetadata } =
+      await import("../../[locale]/journal/[slug]/page");
+    vi.useFakeTimers();
+    mocks.getLookup.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve({ status: "active", page }), 500);
+        }),
+    );
+
+    try {
+      const pending = generateMetadata({
+        params: Promise.resolve({
+          locale: "bg",
+          slug: page.entry.publicSlug,
+        }),
+      });
+      await vi.advanceTimersByTimeAsync(150);
+      const metadata = await pending;
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(metadata).toMatchObject({
+        robots: { index: false, follow: false },
+      });
+      expect(metadata.alternates).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("fails closed for private, removed RSC, missing and invalid locale reads", async () => {

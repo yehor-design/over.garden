@@ -51,14 +51,20 @@ describe("public topic repository query contracts", () => {
         [
           {
             id: "00000000-0000-4000-8000-000000000101",
+            objectId: "00000000-0000-4000-8000-000000000201",
             title: "Care check",
+            body: "Visible care evidence",
             entryDate: "2026-07-30",
+            publishedAt: "2026-07-30T12:00:00.000Z",
             publicSlug: "care-check",
           },
           {
             id: "00000000-0000-4000-8000-000000000102",
+            objectId: "00000000-0000-4000-8000-000000000202",
             title: "Unavailable",
+            body: "Unavailable",
             entryDate: "2026-07-30",
+            publishedAt: null,
             publicSlug: null,
           },
         ],
@@ -67,8 +73,11 @@ describe("public topic repository query contracts", () => {
     ).toEqual([
       {
         id: "00000000-0000-4000-8000-000000000101",
+        objectId: "00000000-0000-4000-8000-000000000201",
         title: "Care check",
+        bodyPreview: "Visible care evidence",
         entryDate: "2026-07-30",
+        publishedAt: "2026-07-30T12:00:00.000Z",
         publicPath: "/bg/journal/care-check",
       },
     ]);
@@ -139,7 +148,7 @@ describe("public topic repository query contracts", () => {
     );
   });
 
-  it("projects only bounded entry cards for public topic pages", () => {
+  it("projects bounded visible evidence needed by the measured topic adapter", () => {
     const compiled = buildPublicTopicAggregationEntriesQuery(
       testDb,
       "plants",
@@ -155,7 +164,11 @@ describe("public topic repository query contracts", () => {
     );
     expect(compiled.sql).toContain('"journal_entries"."visibility" =');
     expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" =');
-    expect(compiled.sql).not.toContain('"journal_entries"."body"');
+    expect(compiled.sql).toContain('"journal_entries"."body" as "body"');
+    expect(compiled.sql).toContain('"plant_objects"."id" as "objectId"');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."published_at" as "publishedAt"',
+    );
     expect(compiled.sql).toContain(
       '"plant_objects"."owner_user_id" = "journal_entries"."owner_user_id"',
     );
@@ -236,11 +249,15 @@ describe("public topic repository query contracts", () => {
     expect(topics.map((topic) => topic.entryCount)).toEqual([0, 1, 11]);
     expect(topics[0]?.indexState.isIndexable).toBe(false);
     expect(topics[1]?.indexState.reasons).toContain(
-      "entry_count_below_threshold",
+      "word_count_below_threshold",
     );
     expect(topics[2]).toMatchObject({
       objectKinds: ["plant", "animal"],
-      indexState: { isIndexable: true, sitemapEligible: true },
+      indexState: {
+        isIndexable: false,
+        sitemapEligible: false,
+        reasons: ["word_count_below_threshold"],
+      },
     });
   });
 });

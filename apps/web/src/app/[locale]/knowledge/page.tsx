@@ -15,7 +15,6 @@ import {
   getPublicKnowledgeCopy,
 } from "@/lib/public-knowledge-copy";
 import {
-  buildLanguageAlternates,
   isPublicLocale,
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
@@ -24,11 +23,18 @@ import {
 import { resolveVisualFixturePublicKnowledgeMode } from "@/lib/visual-fixtures/public-knowledge-scenarios";
 import {
   listLocalizedAnswerPages,
+  getContentAvailableLocales,
   listLocalizedGuides,
 } from "@/server/public-localized-content";
 import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
 import { listPublicKnowledgeTopics } from "@/server/public-topic-repository";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  authoredContentEntityIds,
+  resolveAuthoredPublicSurfaceDiscovery,
+} from "@/server/public-seo-content";
+import { AUTHORED_PUBLIC_SURFACE_LASTMOD } from "@/server/public-surface-indexing-policy";
+import { resolveUnresolvedPublicSurfaceDiscovery } from "@/server/public-surface-discovery";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -49,31 +55,16 @@ export async function generateMetadata({
   if (!isPublicLocale(localeParam)) {
     return {
       title: "OverGarden",
-      robots: evaluatePublicSurfaceIndexability({ kind: "missing" }).robots,
+      robots: resolveUnresolvedPublicSurfaceDiscovery("localized_knowledge_hub")
+        .decision.robots,
     };
   }
 
-  const copy = getPublicKnowledgeCopy(localeParam);
   const visualMode = resolveVisualFixturePublicKnowledgeMode(
     (await searchParams) ?? {},
     process.env,
   );
-  const indexState = evaluatePublicSurfaceIndexability({
-    kind: visualMode ? "missing" : "knowledge_hub",
-  });
-
-  return {
-    title: copy.metadataTitle,
-    description: copy.metadataDescription,
-    alternates: {
-      canonical: localizedPath(localeParam, "/knowledge"),
-      ...(visualMode
-        ? {}
-        : { languages: buildLanguageAlternates("/knowledge") }),
-    },
-    robots: indexState.robots,
-    openGraph: { locale: localeParam },
-  };
+  return buildKnowledgeSurface(localeParam, Boolean(visualMode)).metadata;
 }
 
 export async function renderPublicKnowledgePage(
@@ -85,6 +76,7 @@ export async function renderPublicKnowledgePage(
     searchParams,
     process.env,
   );
+  const surface = buildKnowledgeSurface(locale, Boolean(visualMode));
   if (visualMode === "loading" || visualMode === "error") {
     return (
       <PublicKnowledgeHub
@@ -94,6 +86,7 @@ export async function renderPublicKnowledgePage(
         items={[]}
         contextItems={[]}
         state={visualMode}
+        jsonLd={surface.jsonLd}
       />
     );
   }
@@ -177,8 +170,47 @@ export async function renderPublicKnowledgePage(
       contextItems={items}
       state={state}
       visualCorpus={Boolean(visualCorpus)}
+      jsonLd={surface.jsonLd}
     />
   );
+}
+
+function buildKnowledgeSurface(locale: PublicLocale, isVisualFixture: boolean) {
+  const copy = getPublicKnowledgeCopy(locale);
+  const guides = listLocalizedGuides(locale);
+  const answers = listLocalizedAnswerPages(locale);
+  const items = [...guides, ...answers];
+  const discovery = resolveAuthoredPublicSurfaceDiscovery({
+    consumerId: "localized_knowledge_hub",
+    canonicalPath: localizedPath(locale, "/knowledge"),
+    equivalentLocales: getContentAvailableLocales("/knowledge"),
+    visibleText: [
+      copy.metadataTitle,
+      copy.metadataDescription,
+      copy.heading,
+      copy.intro,
+      ...items.flatMap((item) => [item.title, item.description]),
+    ],
+    distinctPublicEntityIds: authoredContentEntityIds(
+      "/knowledge",
+      items.map((item) => item.path),
+    ),
+    meaningfulContentAt: AUTHORED_PUBLIC_SURFACE_LASTMOD,
+    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+  });
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    title: copy.metadataTitle,
+    description: copy.metadataDescription,
+    visibleFacts: {
+      type: "CollectionPage",
+      name: copy.heading,
+      description: copy.intro,
+      itemNames: items.map((item) => item.title),
+      trustQualifier: "OverGarden editorial knowledge",
+    },
+  });
 }
 
 export default async function PublicKnowledgeRoute({

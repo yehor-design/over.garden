@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  getPublicTopicAggregationPage: vi.fn(),
   listIndexablePublicVarietySitemapEntries: vi.fn(),
   listPublicKnowledgeTopics: vi.fn(),
 }));
@@ -10,7 +11,11 @@ vi.mock("@/server/public-variety-repository", () => ({
     mocks.listIndexablePublicVarietySitemapEntries,
 }));
 
-vi.mock("@/server/public-topic-repository", () => ({
+vi.mock("@/server/public-topic-repository", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/server/public-topic-repository")
+  >()),
+  getPublicTopicAggregationPage: mocks.getPublicTopicAggregationPage,
   listPublicKnowledgeTopics: mocks.listPublicKnowledgeTopics,
 }));
 
@@ -59,18 +64,50 @@ describe("/sitemap.xml", () => {
         indexState: { sitemapEligible: false },
       },
     ]);
+    mocks.getPublicTopicAggregationPage.mockImplementation(
+      async (slug: string) =>
+        slug === "care-checks"
+          ? {
+              topic: {
+                slug: "care-checks",
+                label: "Регулярні спостереження",
+              },
+              entryCount: 1,
+              aggregateBodyLength: 1200,
+              latestPublishedAt: "2026-06-23T12:00:00.000Z",
+              qualityClass: "verified",
+              entries: [
+                {
+                  id: "topic-entry",
+                  objectId: "topic-object",
+                  title: "Спостереження",
+                  bodyPreview: Array.from(
+                    { length: 120 },
+                    (_, index) => `слово${index}`,
+                  ).join(" "),
+                  entryDate: "2026-06-23",
+                  publishedAt: "2026-06-23T12:00:00.000Z",
+                  publicPath: "/journal/care-checks-entry",
+                },
+              ],
+              indexState: { sitemapEligible: true },
+            }
+          : {
+              topic: { slug, label: "Тиха тема" },
+              entryCount: 0,
+              aggregateBodyLength: 0,
+              latestPublishedAt: null,
+              qualityClass: "verified",
+              entries: [],
+              indexState: { sitemapEligible: false },
+            },
+    );
 
     const { default: sitemap } = await import("./sitemap");
     const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
 
     expect(urls).toEqual([
-      "https://over.garden/knowledge",
-      "https://over.garden/bg/knowledge",
-      "https://over.garden/ru/knowledge",
-      "https://over.garden/blog",
-      "https://over.garden/bg/blog",
-      "https://over.garden/ru/blog",
       "https://over.garden/blog/ai-garden-advice-vs-real-garden-proof",
       "https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof",
       "https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof",
@@ -81,8 +118,6 @@ describe("/sitemap.xml", () => {
       "https://over.garden/bg/answers/why-are-tomato-leaves-yellow",
       "https://over.garden/ru/answers/why-are-tomato-leaves-yellow",
       "https://over.garden/markets/ukraine",
-      "https://over.garden/bg/markets/bulgaria",
-      "https://over.garden/ru/markets/bulgaria",
       "https://over.garden/variety/pomidor-cheri-0000000101",
       "https://over.garden/species/solanum-lycopersicum",
       "https://over.garden/breed/carpathian-bee",
@@ -98,12 +133,13 @@ describe("/sitemap.xml", () => {
       true,
     );
     expect(entries[0]).toMatchObject({
-      url: "https://over.garden/knowledge",
+      url: "https://over.garden/blog/ai-garden-advice-vs-real-garden-proof",
       lastModified: new Date("2026-07-03T00:00:00.000Z"),
     });
     expect(entries.at(-1)).toMatchObject({
       url: "https://over.garden/topics/care-checks",
       lastModified: new Date("2026-06-23T12:00:00.000Z"),
     });
+    expect(mocks.getPublicTopicAggregationPage).toHaveBeenCalledTimes(2);
   });
 });

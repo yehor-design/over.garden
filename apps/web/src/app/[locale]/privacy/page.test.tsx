@@ -16,16 +16,9 @@ describe("/{locale}/privacy", () => {
     });
 
     expect(metadata).toMatchObject({
-      alternates: {
-        canonical: "/bg/privacy",
-        languages: {
-          uk: "/privacy",
-          bg: "/bg/privacy",
-          ru: "/ru/privacy",
-        },
-      },
       robots: { index: false, follow: false },
     });
+    expect(metadata.alternates).toBeUndefined();
     expect(html).toContain('lang="bg"');
     expect(html).toContain("Уведомление за поверителност за MVP");
     expect(html).toContain("одобрен от основателя");

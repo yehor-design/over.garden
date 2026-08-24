@@ -103,7 +103,7 @@ describe("/{locale}/@:handle public profile route", () => {
     mocks.getPublicProfileEvidencePageByHandle.mockResolvedValue(PROFILE);
   });
 
-  it("keeps profile metadata noindex with localized canonical and safe evidence", async () => {
+  it("keeps a thin profile noindex without discovery metadata", async () => {
     const { generateMetadata } = await import("./page");
 
     const metadata = await generateMetadata({
@@ -116,14 +116,9 @@ describe("/{locale}/@:handle public profile route", () => {
     expect(metadata).toMatchObject({
       title: "Green Thumb (@green_thumb) · публічний профіль | OverGarden",
       description: "A public-safe profile biography.",
-      alternates: { canonical: "/@green_thumb" },
       robots: { index: false, follow: false },
     });
-    expect(metadata.alternates?.languages).toMatchObject({
-      uk: "/@green_thumb",
-      bg: "/bg/@green_thumb",
-      ru: "/ru/@green_thumb",
-    });
+    expect(metadata.alternates).toBeUndefined();
   });
 
   it("renders objects before journals and defers guest auth until interaction", async () => {

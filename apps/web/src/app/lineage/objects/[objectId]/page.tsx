@@ -44,7 +44,17 @@ import {
   type PublicObjectPassportPage,
 } from "@/server/public-object-passport-repository";
 import { buildPublicObjectPassportPresentation } from "@/server/public-object-passport-presentation";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  latestMeaningfulContentTimestamp,
+  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+  resolvePublicSurfaceDiscoveryForRequest,
+  resolvePublicSurfacePayloadWithDeadline,
+  resolveUnresolvedPublicSurfaceDiscovery,
+  type PublicSurfaceDiscoveryResult,
+  type PublicSurfaceDiscoverySource,
+} from "@/server/public-surface-discovery";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser } from "@/server/request-scope";
 import { askLineageQuestionAction, followLineageNodeAction } from "./actions";
 
@@ -77,26 +87,30 @@ export async function generateMetadata({
     getRequestInterfaceLocale(),
   ]);
   const copy = getPublicSurfaceCopy(locale);
-  const page = await getCachedPublicObjectPassportPage(objectId, locale);
-  const indexState = evaluatePublicSurfaceIndexability({
-    kind: page ? "object_passport" : "missing",
+  const bounded = await resolvePublicSurfacePayloadWithDeadline({
+    consumerId: "lineage_object",
+    evaluatedAt: new Date(),
+    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+    load: async () => {
+      const page = await getCachedPublicObjectPassportPage(objectId, locale);
+      if (!page) throw new Error("Public lineage object unavailable.");
+      return {
+        source: buildLineageObjectDiscoverySource(page),
+        payload: page,
+      };
+    },
   });
+  const page = bounded.payload;
+  const unresolved = resolveUnresolvedPublicSurfaceDiscovery("lineage_object");
 
   if (!page) {
     return {
       title: `${copy.passport.title} | OverGarden`,
-      robots: indexState.robots,
+      robots: unresolved.decision.robots,
     };
   }
 
-  return {
-    title: `${page.object.displayName} · ${copy.passport.metadataSuffix} | OverGarden`,
-    description: `${copy.passport.title}: ${page.object.displayName}.`,
-    alternates: {
-      canonical: publicLineageObjectPath(page.object.plantObjectId),
-    },
-    robots: indexState.robots,
-  };
+  return buildLineageObjectSurface(locale, page, bounded).metadata;
 }
 
 export default async function PublicLineageObjectRoute({
@@ -144,12 +158,20 @@ export default async function PublicLineageObjectRoute({
   const presentation = buildPublicObjectPassportPresentation(passport, locale, {
     confirmedProvenanceCount: edges.length,
   });
+  const surface = buildLineageObjectSurface(locale, passport);
+  const serializedJsonLd = serializePublicSurfaceJsonLd(surface.jsonLd);
 
   return (
     <main
       lang={locale}
       className="mx-auto flex w-full max-w-5xl flex-col gap-7 px-4 py-4 sm:px-6 sm:py-5"
     >
+      {serializedJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
+        />
+      ) : null}
       <LivingObjectPassportContextRail
         passport={presentation}
         locale={locale}
@@ -233,6 +255,56 @@ export default async function PublicLineageObjectRoute({
       />
     </main>
   );
+}
+
+function buildLineageObjectSurface(
+  locale: InterfaceLocale,
+  page: PublicObjectPassportPage,
+  discovery: PublicSurfaceDiscoveryResult = resolvePublicSurfaceDiscoveryForRequest(
+    buildLineageObjectDiscoverySource(page),
+  ),
+) {
+  const copy = getPublicSurfaceCopy(locale);
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    contentLocale: null,
+    title: `${page.object.displayName} · ${copy.passport.metadataSuffix} | OverGarden`,
+    description: `${copy.passport.title}: ${page.object.displayName}.`,
+    visibleFacts: {
+      type: "ItemPage",
+      name: page.object.displayName,
+      description: `${copy.passport.title}: ${page.object.displayName}.`,
+      trustQualifier: "Public object history with confirmed provenance only",
+    },
+  });
+}
+
+function buildLineageObjectDiscoverySource(
+  page: PublicObjectPassportPage,
+): PublicSurfaceDiscoverySource {
+  const journals = [...page.journalPreview, ...page.journalContinuation];
+  return {
+    consumerId: "lineage_object",
+    candidateState: "candidate",
+    qualityClass: page.qualityClass ?? "unverified",
+    visibleText: [
+      page.object.displayName,
+      page.object.catalogCanonicalName ?? "",
+      page.object.varietyText ?? "",
+      page.object.safeLocationLabel ?? "",
+      ...journals.flatMap((entry) => [entry.title, entry.bodyPreview]),
+    ],
+    distinctPublicEntityIds: [
+      page.object.plantObjectId,
+      ...journals.map((entry) => entry.id),
+    ],
+    meaningfulContentAt: latestMeaningfulContentTimestamp([
+      page.object.latestEntryDate,
+    ]),
+    canonicalPath: publicLineageObjectPath(page.object.plantObjectId),
+    equivalentLocales: [],
+  };
 }
 
 function PublicLineageEdgeCard({

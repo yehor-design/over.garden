@@ -5,24 +5,34 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { Database, PlantObjectKind } from "@/db/schema";
+import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
-import { localizedPublicJournalEvidencePath } from "@/lib/garden/public-paths";
+import {
+  localizedPublicJournalEvidencePath,
+  publicTopicPath,
+} from "@/lib/garden/public-paths";
 import {
   DEFAULT_PUBLIC_LOCALE,
+  localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
 import { normalizePublicJournalDirectoryEntryIds } from "@/server/public-journal-directory-query";
+import type { PublicSurfaceIndexState } from "@/server/public-surface-indexing-policy";
 import {
-  evaluatePublicSurfaceIndexability,
-  type PublicSurfaceIndexState,
-} from "@/server/public-surface-indexing-policy";
+  resolvePublicSurfaceDiscoveryForRequest,
+  type PublicSurfaceDiscoveryConsumerId,
+  type PublicSurfaceDiscoverySource,
+} from "@/server/public-surface-discovery";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 export interface PublicTopicEntry {
   id: string;
+  objectId: string;
   title: string;
+  bodyPreview: string;
   entryDate: Date | string;
+  publishedAt: Date | string;
   publicPath: string;
 }
 
@@ -31,6 +41,7 @@ export interface PublicTopicAggregationPage {
   entryCount: number;
   aggregateBodyLength: number;
   latestPublishedAt: Date | string | null;
+  qualityClass?: PublicProjectionQualityClass;
   indexState: PublicSurfaceIndexState;
   entries: PublicTopicEntry[];
 }
@@ -72,8 +83,11 @@ interface TopicKindRow {
 
 export interface PublicTopicEntryRow {
   id: string;
+  objectId: string;
   title: string;
+  body: string;
   entryDate: Date | string;
+  publishedAt: Date | string | null;
   publicSlug: string | null;
 }
 
@@ -103,21 +117,22 @@ export async function getPublicTopicAggregationPage(
     options.restrictToEntryIds,
   ).execute();
 
-  return {
+  const page = {
     topic: { slug: topic.slug, label: topic.label },
     entryCount,
     aggregateBodyLength,
     latestPublishedAt: stats?.latestPublishedAt ?? null,
-    indexState: evaluatePublicSurfaceIndexability({
-      kind: "topic_aggregation",
-      entryCount,
-      aggregateBodyLength,
-      topicTrust: "curated",
-    }),
+    qualityClass: "verified" as const,
     entries: serializePublicTopicEntries(
       entries,
       options.locale ?? DEFAULT_PUBLIC_LOCALE,
     ),
+  } satisfies Omit<PublicTopicAggregationPage, "indexState">;
+  return {
+    ...page,
+    indexState: resolvePublicSurfaceDiscoveryForRequest(
+      buildPublicTopicDiscoverySource(page, "public_topic_repository"),
+    ).decision,
   };
 }
 
@@ -232,8 +247,11 @@ export function buildPublicTopicAggregationEntriesQuery(
   return buildPublicTopicMembershipBaseQuery(executor, slug, restrictToEntryIds)
     .select([
       "journal_entries.id as id",
+      "plant_objects.id as objectId",
       "journal_entries.title as title",
+      "journal_entries.body as body",
       "journal_entries.entry_date as entryDate",
+      "journal_entries.published_at as publishedAt",
       "journal_entries.public_slug as publicSlug",
     ])
     .orderBy("journal_entries.published_at", "desc")
@@ -246,12 +264,15 @@ export function serializePublicTopicEntries(
   locale: PublicLocale,
 ): PublicTopicEntry[] {
   return rows.flatMap((entry) =>
-    entry.publicSlug
+    entry.publicSlug && entry.publishedAt
       ? [
           {
             id: entry.id,
+            objectId: entry.objectId,
             title: entry.title,
+            bodyPreview: publicTopicBodyPreview(entry.body),
             entryDate: entry.entryDate,
+            publishedAt: entry.publishedAt,
             publicPath: localizedPublicJournalEvidencePath(
               locale,
               entry.publicSlug,
@@ -290,14 +311,63 @@ export function serializePublicKnowledgeTopics(
       aggregateBodyLength,
       latestPublishedAt: stats?.latestPublishedAt ?? null,
       objectKinds,
-      indexState: evaluatePublicSurfaceIndexability({
-        kind: "topic_aggregation",
-        entryCount,
-        aggregateBodyLength,
-        topicTrust: "curated",
-      }),
+      indexState: resolvePublicSurfaceDiscoveryForRequest({
+        consumerId: "public_topic_repository",
+        candidateState: "candidate",
+        qualityClass: "verified",
+        visibleText: [topic.label],
+        distinctPublicEntityIds: [`topic:${topic.slug}`],
+        meaningfulContentAt: stats?.latestPublishedAt
+          ? toIsoTimestamp(stats.latestPublishedAt)
+          : null,
+        canonicalPath: publicTopicPath(topic.slug),
+        equivalentLocales: [],
+      }).decision,
     };
   });
+}
+
+export function buildPublicTopicDiscoverySource(
+  page: Omit<PublicTopicAggregationPage, "indexState">,
+  consumerId: Extract<
+    PublicSurfaceDiscoveryConsumerId,
+    "localized_topic" | "topic_sitemap" | "public_topic_repository"
+  >,
+  candidateState: "candidate" | "not_public_candidate" = "candidate",
+): PublicSurfaceDiscoverySource {
+  return {
+    consumerId,
+    candidateState,
+    qualityClass: page.qualityClass ?? "unverified",
+    visibleText: [
+      page.topic.label,
+      ...page.entries.flatMap((entry) => [entry.title, entry.bodyPreview]),
+    ],
+    distinctPublicEntityIds: [
+      `topic:${page.topic.slug}`,
+      ...page.entries.flatMap((entry) => [entry.id, entry.objectId]),
+    ],
+    meaningfulContentAt: page.latestPublishedAt
+      ? toIsoTimestamp(page.latestPublishedAt)
+      : null,
+    canonicalPath: localizedPath(
+      DEFAULT_PUBLIC_LOCALE,
+      publicTopicPath(page.topic.slug),
+    ),
+    equivalentLocales: [],
+  };
+}
+
+function publicTopicBodyPreview(body: string) {
+  const normalized = body.replace(/\s+/gu, " ").trim();
+  return normalized.length <= 360
+    ? normalized
+    : `${normalized.slice(0, 357).trimEnd()}...`;
+}
+
+function toIsoTimestamp(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : "";
 }
 
 function buildPublicTopicMembershipBaseQuery(

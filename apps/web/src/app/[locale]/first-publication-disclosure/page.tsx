@@ -3,15 +3,17 @@ import { notFound } from "next/navigation";
 
 import { PublicLocalizedHeader } from "@/components/public/localized-public-pages";
 import {
-  buildLanguageAlternates,
   getLanguageSwitcherLocales,
   isPublicLocale,
-  localizedPath,
   PREFIXED_PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  resolveNonCandidatePublicSurfaceDiscovery,
+  resolveUnresolvedPublicSurfaceDiscovery,
+} from "@/server/public-surface-discovery";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 
 interface LocalizedFirstPublicationDisclosureRouteProps {
   params: Promise<{ locale: string }>;
@@ -26,27 +28,20 @@ export async function generateMetadata({
 }: LocalizedFirstPublicationDisclosureRouteProps): Promise<Metadata> {
   const { locale: localeParam } = await params;
   const validLocale = isPublicLocale(localeParam);
-  const noindexState = evaluatePublicSurfaceIndexability({
-    kind: validLocale ? "profile" : "missing",
-  });
+  const discovery = validLocale
+    ? resolveNonCandidatePublicSurfaceDiscovery("first_publication_disclosure")
+    : resolveUnresolvedPublicSurfaceDiscovery("first_publication_disclosure");
   const copy = getTrustSurfaceCopy(
     validLocale ? localeParam : "uk",
   ).firstPublication;
 
-  return {
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale: validLocale ? localeParam : "uk",
     title: copy.metadataTitle,
     description: copy.metadataDescription,
-    alternates: validLocale
-      ? {
-          canonical: localizedPath(
-            localeParam,
-            "/first-publication-disclosure",
-          ),
-          languages: buildLanguageAlternates("/first-publication-disclosure"),
-        }
-      : undefined,
-    robots: noindexState.robots,
-  };
+    visibleFacts: { type: "WebPage", name: copy.metadataTitle },
+  }).metadata;
 }
 
 export default async function LocalizedFirstPublicationDisclosurePage({

@@ -39,6 +39,7 @@ import {
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
+import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
   SELECTABLE_CATALOG_STATUSES,
@@ -357,6 +358,7 @@ export interface PublicJournalEntryPage {
   };
   media: PublicJournalEntryMedia[];
   mentionedProfiles: PublicJournalEntryMentionedProfile[];
+  qualityClass?: PublicProjectionQualityClass;
 }
 
 export interface PublicJournalEntryMentionedProfile {
@@ -2733,6 +2735,13 @@ export function serializePublicJournalEntryPage(input: {
             varietyState: row.varietyState as VarietyState,
           })),
         };
+  const coarseRegionUnavailable = [
+    [root.spaceLocationVisibility, root.spaceCoarseRegionCode],
+    [root.objectLocationVisibility, root.objectCoarseRegionCode],
+  ].some(
+    ([visibility, code]) =>
+      visibility === "region" && !normalizeCoarseRegionCode(code),
+  );
 
   return {
     entry: {
@@ -2794,6 +2803,7 @@ export function serializePublicJournalEntryPage(input: {
       displayName: profile.displayName ?? `@${profile.handle}`,
       profilePath: publicProfilePath(locale, profile.handle),
     })),
+    qualityClass: coarseRegionUnavailable ? "partial" : "verified",
   };
 }
 

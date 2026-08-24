@@ -22,6 +22,7 @@ import {
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
+import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { blockProfile } from "@/server/profile-interaction-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
@@ -167,6 +168,8 @@ export interface PublicCommunityDirectoryItem {
   coverFocalY: number | null;
   coverIntrinsicWidth: number | null;
   coverIntrinsicHeight: number | null;
+  updatedAt?: Date | string;
+  qualityClass?: PublicProjectionQualityClass;
 }
 
 export interface PublicCommunityPageModel extends PublicCommunityDirectoryItem {
@@ -225,6 +228,7 @@ export async function listPublicCommunities(
       "communities.content_key as contentKey",
       "communities.lifecycle_state as lifecycleState",
       "communities.participation_state as participationState",
+      "communities.updated_at as updatedAt",
       "journal_topics.slug as topicSlug",
       communityCoverDerivativeKey(viewerScope).as("coverDerivativeKey"),
       communityCoverFocalColumn("focal_x", viewerScope).as("coverFocalX"),
@@ -269,6 +273,7 @@ export async function listPublicCommunities(
           : null,
         coverIntrinsicWidth: row.coverIntrinsicWidth ?? null,
         coverIntrinsicHeight: row.coverIntrinsicHeight ?? null,
+        qualityClass: "verified" as const,
       };
     }),
   );
@@ -428,6 +433,11 @@ export async function getPublicCommunityPage(
       : null,
     coverIntrinsicWidth: community.coverIntrinsicWidth ?? null,
     coverIntrinsicHeight: community.coverIntrinsicHeight ?? null,
+    updatedAt: community.updatedAt,
+    qualityClass:
+      resolvedSearch?.candidates.source === "bounded_fallback"
+        ? "partial"
+        : "verified",
     rules: rules.map((rule) => ({
       id: rule.id,
       key: rule.ruleKey,

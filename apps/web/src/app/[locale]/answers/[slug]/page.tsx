@@ -3,20 +3,28 @@ import { notFound } from "next/navigation";
 
 import { LocalizedAnswerPage } from "@/components/public/localized-public-pages";
 import {
-  buildLanguageAlternates,
   getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
+  type PublicLocale,
 } from "@/lib/public-localization";
 import { resolveVisualFixturePublicKnowledgeMode } from "@/lib/visual-fixtures/public-knowledge-scenarios";
 import {
   getLocalizedAnswerPage,
+  getContentAvailableLocales,
   getLocalizedRouteChrome,
 } from "@/server/public-localized-content";
 import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
-import { listAnswerPages } from "@/server/public-seo-content";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  answerVisibleText,
+  authoredContentEntityIds,
+  listAnswerPages,
+  resolveAuthoredPublicSurfaceDiscovery,
+  type AnswerPageContent,
+} from "@/server/public-seo-content";
+import { resolveUnresolvedPublicSurfaceDiscovery } from "@/server/public-surface-discovery";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 
 interface LocalizedAnswerRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -39,9 +47,8 @@ export async function generateMetadata({
   const { locale: localeParam, slug } = await params;
 
   if (!isPublicLocale(localeParam)) {
-    const missingState = evaluatePublicSurfaceIndexability({
-      kind: "missing",
-    });
+    const missingState =
+      resolveUnresolvedPublicSurfaceDiscovery("localized_answer").decision;
 
     return {
       title: "OverGarden",
@@ -57,9 +64,8 @@ export async function generateMetadata({
   const page = resolved.page;
 
   if (!page) {
-    const missingState = evaluatePublicSurfaceIndexability({
-      kind: "missing",
-    });
+    const missingState =
+      resolveUnresolvedPublicSurfaceDiscovery("localized_answer").decision;
 
     return {
       title: `${getLocalizedRouteChrome(localeParam).answerEyebrow} | OverGarden`,
@@ -67,24 +73,8 @@ export async function generateMetadata({
     };
   }
 
-  const indexState = evaluatePublicSurfaceIndexability({
-    kind: resolved.visualMode ? "missing" : page.kind,
-  });
-
-  return {
-    title: `${page.title} | OverGarden`,
-    description: page.description,
-    alternates: {
-      canonical: localizedPath(localeParam, page.path),
-      ...(resolved.visualMode
-        ? {}
-        : { languages: buildLanguageAlternates(page.path) }),
-    },
-    robots: indexState.robots,
-    openGraph: {
-      locale: localeParam,
-    },
-  };
+  return buildAnswerSurface(localeParam, page, Boolean(resolved.visualMode))
+    .metadata;
 }
 
 export default async function AnswerRoute({
@@ -103,6 +93,12 @@ export default async function AnswerRoute({
   const page = resolved.page;
 
   if (!page) notFound();
+
+  const surface = buildAnswerSurface(
+    localeParam,
+    page,
+    Boolean(resolved.visualMode),
+  );
 
   const evidenceResult =
     resolved.visualMode === "loading" || resolved.visualMode === "error"
@@ -138,8 +134,44 @@ export default async function AnswerRoute({
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
       visualCorpus={resolved.visualMode === "corpus"}
+      jsonLd={surface.jsonLd}
     />
   );
+}
+
+function buildAnswerSurface(
+  locale: PublicLocale,
+  page: AnswerPageContent,
+  isVisualFixture: boolean,
+) {
+  const discovery = resolveAuthoredPublicSurfaceDiscovery({
+    consumerId: "localized_answer",
+    canonicalPath: localizedPath(locale, page.path),
+    equivalentLocales: getContentAvailableLocales(page.path),
+    visibleText: answerVisibleText(page),
+    distinctPublicEntityIds: authoredContentEntityIds(page.path, [
+      ...page.relatedVarieties.map((link) => link.href),
+      ...page.relatedTopics.map((link) => link.href),
+      ...page.knowledge.evidence.topicSlugs.map((slug) => `/topics/${slug}`),
+      ...page.knowledge.evidence.catalogSlugs.map((slug) => `/catalog/${slug}`),
+    ]),
+    meaningfulContentAt: `${page.editorial.updatedDate}T00:00:00.000Z`,
+    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+  });
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    title: `${page.title} | OverGarden`,
+    description: page.description,
+    visibleFacts: {
+      type: "FAQPage",
+      name: page.title,
+      description: page.description,
+      dateModified: `${page.editorial.updatedDate}T00:00:00.000Z`,
+      trustQualifier: `${page.editorial.author}; ${page.editorial.source}`,
+      questions: page.faqs,
+    },
+  });
 }
 
 async function resolveAnswer(

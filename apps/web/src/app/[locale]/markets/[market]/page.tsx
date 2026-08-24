@@ -4,17 +4,25 @@ import { notFound } from "next/navigation";
 import { LocalizedMarketLandingPage } from "@/components/public/localized-public-pages";
 import {
   DEFAULT_PUBLIC_LOCALE,
-  buildLanguageAlternates,
   isPublicLocale,
   localizedPath,
+  type PublicLocale,
 } from "@/lib/public-localization";
 import {
   getLocalizedMarketLanding,
   getLocalizedRouteChrome,
   getMarketLandingLocales,
 } from "@/server/public-localized-content";
-import { listMarketLandings } from "@/server/public-seo-content";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  authoredContentEntityIds,
+  listMarketLandings,
+  marketLandingVisibleText,
+  resolveAuthoredPublicSurfaceDiscovery,
+  type MarketLandingContent,
+} from "@/server/public-seo-content";
+import { AUTHORED_PUBLIC_SURFACE_LASTMOD } from "@/server/public-surface-indexing-policy";
+import { resolveUnresolvedPublicSurfaceDiscovery } from "@/server/public-surface-discovery";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 
 interface LocalizedMarketRouteProps {
   params: Promise<{ locale: string; market: string }>;
@@ -37,9 +45,8 @@ export async function generateMetadata({
   const { locale: localeParam, market } = await params;
 
   if (!isPublicLocale(localeParam)) {
-    const missingState = evaluatePublicSurfaceIndexability({
-      kind: "missing",
-    });
+    const missingState =
+      resolveUnresolvedPublicSurfaceDiscovery("localized_market").decision;
 
     return {
       title: "OverGarden",
@@ -50,9 +57,8 @@ export async function generateMetadata({
   const landing = getLocalizedMarketLanding(localeParam, market);
 
   if (!landing) {
-    const missingState = evaluatePublicSurfaceIndexability({
-      kind: "missing",
-    });
+    const missingState =
+      resolveUnresolvedPublicSurfaceDiscovery("localized_market").decision;
 
     return {
       title: `${getLocalizedRouteChrome(localeParam).marketEyebrow} | OverGarden`,
@@ -60,23 +66,7 @@ export async function generateMetadata({
     };
   }
 
-  const indexState = evaluatePublicSurfaceIndexability({
-    kind: landing.kind,
-  });
-  const availableLocales = getMarketLandingLocales(landing.market);
-
-  return {
-    title: `${landing.title} | OverGarden`,
-    description: landing.description,
-    alternates: {
-      canonical: localizedPath(localeParam, landing.path),
-      languages: buildLanguageAlternates(landing.path, availableLocales),
-    },
-    robots: indexState.robots,
-    openGraph: {
-      locale: localeParam,
-    },
-  };
+  return buildMarketSurface(localeParam, landing).metadata;
 }
 
 export default async function MarketLandingRoute({
@@ -90,12 +80,45 @@ export default async function MarketLandingRoute({
 
   if (!landing) notFound();
 
+  const surface = buildMarketSurface(localeParam, landing);
+
   return (
     <LocalizedMarketLandingPage
       locale={localeParam}
       landing={landing}
       chrome={getLocalizedRouteChrome(localeParam)}
       availableLocales={getMarketLandingLocales(landing.market)}
+      jsonLd={surface.jsonLd}
     />
   );
+}
+
+function buildMarketSurface(
+  locale: PublicLocale,
+  landing: MarketLandingContent,
+) {
+  const discovery = resolveAuthoredPublicSurfaceDiscovery({
+    consumerId: "localized_market",
+    canonicalPath: localizedPath(locale, landing.path),
+    equivalentLocales: getMarketLandingLocales(landing.market),
+    visibleText: marketLandingVisibleText(landing),
+    distinctPublicEntityIds: authoredContentEntityIds(
+      landing.path,
+      landing.relatedLinks.map((link) => link.href),
+    ),
+    meaningfulContentAt: AUTHORED_PUBLIC_SURFACE_LASTMOD,
+  });
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    title: `${landing.title} | OverGarden`,
+    description: landing.description,
+    visibleFacts: {
+      type: "Article",
+      name: landing.title,
+      description: landing.description,
+      dateModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
+      trustQualifier: "OverGarden market guidance",
+    },
+  });
 }

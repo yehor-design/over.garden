@@ -7,7 +7,6 @@ import {
 } from "@/components/public/public-object-catalog";
 import { getPublicObjectCatalogCopy } from "@/lib/public-object-catalog-copy";
 import {
-  buildLanguageAlternates,
   isPublicLocale,
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
@@ -19,7 +18,16 @@ import {
   normalizePublicObjectCatalogRequest,
   type PublicObjectCatalogPage,
 } from "@/server/public-object-catalog-repository";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  latestMeaningfulContentTimestamp,
+  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+  resolvePublicSurfaceDiscoveryForRequest,
+  resolvePublicSurfaceDiscoveryWithDeadline,
+  resolveUnresolvedPublicSurfaceDiscovery,
+  type PublicSurfaceDiscoveryResult,
+  type PublicSurfaceDiscoverySource,
+} from "@/server/public-surface-discovery";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 
 interface PublicObjectsRouteProps {
   params: Promise<{ locale: string }>;
@@ -37,25 +45,29 @@ export async function generateMetadata({
   if (!isPublicLocale(localeParam)) {
     return {
       title: "OverGarden",
-      robots: evaluatePublicSurfaceIndexability({ kind: "missing" }).robots,
+      robots: resolveUnresolvedPublicSurfaceDiscovery(
+        "localized_catalog_browse",
+      ).decision.robots,
     };
   }
 
-  const copy = getPublicObjectCatalogCopy(localeParam);
-  const indexState = evaluatePublicSurfaceIndexability({
-    kind: "catalog_browse",
+  const request = normalizePublicObjectCatalogRequest({});
+  const discovery = await resolvePublicSurfaceDiscoveryWithDeadline({
+    consumerId: "localized_catalog_browse",
+    evaluatedAt: new Date(),
+    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+    loadSource: async () =>
+      buildObjectCatalogDiscoverySource(
+        localeParam,
+        await listPublicObjectCatalogPage(request, localeParam),
+        false,
+      ),
   });
-
-  return {
-    title: copy.metadataTitle,
-    description: copy.metadataDescription,
-    alternates: {
-      canonical: localizedPath(localeParam, "/objects"),
-      languages: buildLanguageAlternates("/objects"),
-    },
-    robots: indexState.robots,
-    openGraph: { locale: localeParam },
-  };
+  return buildObjectCatalogSurface(
+    localeParam,
+    emptyPublicObjectCatalogPage(request),
+    discovery,
+  ).metadata;
 }
 
 export async function renderPublicObjectsPage(
@@ -68,12 +80,18 @@ export async function renderPublicObjectsPage(
     process.env,
   );
   if (visualMode) {
+    const page = emptyPublicObjectCatalogPage(request);
+    const discovery = resolvePublicSurfaceDiscoveryForRequest(
+      buildObjectCatalogDiscoverySource(locale, page, true),
+    );
+    const surface = buildObjectCatalogSurface(locale, page, discovery);
     return (
       <PublicObjectCatalog
         locale={locale}
         copy={getPublicObjectCatalogCopy(locale)}
-        page={emptyPublicObjectCatalogPage(request)}
+        page={page}
         state={visualMode}
+        jsonLd={surface.jsonLd}
       />
     );
   }
@@ -91,6 +109,10 @@ export async function renderPublicObjectsPage(
       : page.cards.length === 0
         ? "empty"
         : "ready";
+  const discovery = resolvePublicSurfaceDiscoveryForRequest(
+    buildObjectCatalogDiscoverySource(locale, page, false),
+  );
+  const surface = buildObjectCatalogSurface(locale, page, discovery);
 
   return (
     <PublicObjectCatalog
@@ -98,6 +120,7 @@ export async function renderPublicObjectsPage(
       copy={getPublicObjectCatalogCopy(locale)}
       page={page}
       state={state}
+      jsonLd={surface.jsonLd}
     />
   );
 }
@@ -122,5 +145,63 @@ function emptyPublicObjectCatalogPage(
     totalPages: 1,
     hasPreviousPage: request.page > 1,
     hasNextPage: false,
+    qualityClass: "unverified",
   };
+}
+
+function buildObjectCatalogDiscoverySource(
+  locale: PublicLocale,
+  page: PublicObjectCatalogPage,
+  isVisualFixture: boolean,
+): PublicSurfaceDiscoverySource {
+  const copy = getPublicObjectCatalogCopy(locale);
+  return {
+    consumerId: "localized_catalog_browse",
+    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+    qualityClass: page.qualityClass ?? "unverified",
+    visibleText: [
+      copy.metadataTitle,
+      copy.metadataDescription,
+      copy.heading,
+      copy.intro,
+      ...page.cards.flatMap((card) => [
+        card.identityName ?? "",
+        card.representativeObject.displayName,
+        card.latestJournal.title,
+      ]),
+    ],
+    distinctPublicEntityIds: page.cards.flatMap((card) => [
+      card.key,
+      card.representativeObject.path,
+      card.latestJournal.path,
+    ]),
+    meaningfulContentAt: latestMeaningfulContentTimestamp(
+      page.cards.map((card) => card.latestJournal.entryDate),
+    ),
+    canonicalPath: localizedPath(locale, "/objects"),
+    equivalentLocales: [locale],
+  };
+}
+
+function buildObjectCatalogSurface(
+  locale: PublicLocale,
+  page: PublicObjectCatalogPage,
+  discovery: PublicSurfaceDiscoveryResult,
+) {
+  const copy = getPublicObjectCatalogCopy(locale);
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    contentLocale: null,
+    title: copy.metadataTitle,
+    description: copy.metadataDescription,
+    visibleFacts: {
+      type: "CollectionPage",
+      name: copy.heading,
+      description: copy.intro,
+      itemNames: page.cards.map(
+        (card) => card.identityName ?? card.representativeObject.displayName,
+      ),
+    },
+  });
 }

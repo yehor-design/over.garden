@@ -3,18 +3,20 @@ import "server-only";
 import type { MetadataRoute } from "next";
 
 import type { PlantObjectKind } from "@/db/schema";
-import { absolutePublicUrl } from "@/lib/garden/public-url";
 import {
-  DEFAULT_PUBLIC_LOCALE,
   localizedPath,
   PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
   AUTHORED_PUBLIC_SURFACE_LASTMOD,
-  evaluatePublicSurfaceIndexability,
   type PublicSurfaceKind,
 } from "@/server/public-surface-indexing-policy";
+import {
+  resolvePublicSurfaceDiscoveryForRequest,
+  type PublicSurfaceDiscoveryConsumerId,
+  type PublicSurfaceDiscoveryResult,
+} from "@/server/public-surface-discovery";
 
 type AuthoredPublicContentKind = Extract<
   PublicSurfaceKind,
@@ -150,6 +152,28 @@ interface AuthoredPublicContentSitemapTemplate {
   changeFrequency: SitemapFrequency;
   priority: number;
   locales: readonly PublicLocale[];
+}
+
+type AuthoredPublicSurfaceConsumerId = Extract<
+  PublicSurfaceDiscoveryConsumerId,
+  | "localized_blog_index"
+  | "localized_blog_post"
+  | "localized_guide"
+  | "localized_answer"
+  | "localized_knowledge_hub"
+  | "localized_market"
+  | "authored_sitemap"
+>;
+
+export interface AuthoredPublicSurfaceSourceInput {
+  consumerId: AuthoredPublicSurfaceConsumerId;
+  canonicalPath: string;
+  equivalentLocales: readonly PublicLocale[];
+  visibleText: readonly string[];
+  distinctPublicEntityIds: readonly string[];
+  meaningfulContentAt: string;
+  candidateState?: "candidate" | "not_public_candidate";
+  evaluatedAt?: string | Date;
 }
 
 export const BLOG_INDEX_PATH = "/blog";
@@ -464,7 +488,85 @@ export function isMarketLandingAvailableInLocale(
   return MARKET_LANDING_LOCALES[landing.market].includes(locale);
 }
 
-export function listIndexableAuthoredPublicContentSitemapEntries(): AuthoredPublicContentSitemapEntry[] {
+export function resolveAuthoredPublicSurfaceDiscovery(
+  input: AuthoredPublicSurfaceSourceInput,
+): PublicSurfaceDiscoveryResult {
+  return resolvePublicSurfaceDiscoveryForRequest(
+    {
+      consumerId: input.consumerId,
+      candidateState: input.candidateState ?? "candidate",
+      qualityClass: "verified",
+      visibleText: input.visibleText,
+      distinctPublicEntityIds: input.distinctPublicEntityIds,
+      meaningfulContentAt: input.meaningfulContentAt,
+      canonicalPath: input.canonicalPath,
+      equivalentLocales: input.equivalentLocales,
+    },
+    input.evaluatedAt,
+  );
+}
+
+export function authoredContentEntityIds(
+  path: string,
+  relatedPaths: readonly string[] = [],
+) {
+  return [
+    `authored:${path}`,
+    ...relatedPaths.map((relatedPath) => `public:${relatedPath}`),
+  ];
+}
+
+export function blogPostVisibleText(post: BlogPostContent) {
+  return [
+    post.title,
+    post.description,
+    post.excerpt,
+    ...post.sections.flatMap((section) => [section.heading, section.body]),
+    ...post.relatedLinks.flatMap((link) => [link.label, link.description]),
+  ];
+}
+
+export function guideVisibleText(guide: GuideContent) {
+  return [
+    guide.title,
+    guide.description,
+    guide.outcome,
+    guide.editorial.author,
+    guide.editorial.source,
+    ...guide.steps.flatMap((step) => [step.title, step.body]),
+    ...guide.relatedLinks.flatMap((link) => [link.label, link.description]),
+  ];
+}
+
+export function answerVisibleText(page: AnswerPageContent) {
+  return [
+    page.question,
+    page.title,
+    page.description,
+    page.conciseAnswer,
+    page.editorial.author,
+    page.editorial.source,
+    ...page.proofDetails,
+    ...page.faqs.flatMap((faq) => [faq.question, faq.answer]),
+    ...[...page.relatedVarieties, ...page.relatedTopics].flatMap((link) => [
+      link.label,
+      link.description,
+    ]),
+  ];
+}
+
+export function marketLandingVisibleText(landing: MarketLandingContent) {
+  return [
+    landing.title,
+    landing.description,
+    landing.localAudience,
+    landing.promise,
+    ...landing.proofPlan,
+    ...landing.relatedLinks.flatMap((link) => [link.label, link.description]),
+  ];
+}
+
+export function listAuthoredPublicContentSitemapCandidates(): AuthoredPublicContentSitemapEntry[] {
   const entries: AuthoredPublicContentSitemapTemplate[] = [
     {
       kind: "knowledge_hub",
@@ -517,12 +619,6 @@ export function listIndexableAuthoredPublicContentSitemapEntries(): AuthoredPubl
   ];
 
   return entries.flatMap((entry) => {
-    const isSitemapEligible = evaluatePublicSurfaceIndexability({
-      kind: entry.kind,
-    }).sitemapEligible;
-
-    if (!isSitemapEligible) return [];
-
     return entry.locales.map(
       (locale): AuthoredPublicContentSitemapEntry => ({
         kind: entry.kind,
@@ -538,41 +634,4 @@ export function listIndexableAuthoredPublicContentSitemapEntries(): AuthoredPubl
 
 function dateOnlyToUtcLastModified(date: string) {
   return `${date}T00:00:00.000Z`;
-}
-
-export function buildAnswerPageJsonLd(
-  page: AnswerPageContent,
-  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
-) {
-  const pageUrl = absolutePublicUrl(localizedPath(locale, page.path));
-
-  return {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        "@id": pageUrl,
-        url: pageUrl,
-        name: page.title,
-        description: page.description,
-        inLanguage: locale,
-        isPartOf: {
-          "@type": "WebSite",
-          name: "OverGarden",
-          url: absolutePublicUrl(localizedPath(locale, "/")),
-        },
-      },
-      {
-        "@type": "FAQPage",
-        mainEntity: page.faqs.map((faq) => ({
-          "@type": "Question",
-          name: faq.question,
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: faq.answer,
-          },
-        })),
-      },
-    ],
-  };
 }

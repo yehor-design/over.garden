@@ -106,23 +106,23 @@ describe("community public routes", () => {
         cursor: "eyJpZCI6IjEifQ",
       }),
     );
-    await expect(
-      directoryMetadata({ params: Promise.resolve({ locale: "bg" }) }),
-    ).resolves.toMatchObject({
-      alternates: { canonical: "/bg/communities" },
+    const directoryMeta = await directoryMetadata({
+      params: Promise.resolve({ locale: "bg" }),
+    });
+    expect(directoryMeta).toMatchObject({
       robots: { index: false, follow: false },
     });
-    await expect(
-      detailMetadata({
-        params: Promise.resolve({
-          locale: "bg",
-          slug: "observation-and-care",
-        }),
+    expect(directoryMeta.alternates).toBeUndefined();
+    const detailMeta = await detailMetadata({
+      params: Promise.resolve({
+        locale: "bg",
+        slug: "observation-and-care",
       }),
-    ).resolves.toMatchObject({
-      alternates: { canonical: "/bg/communities/observation-and-care" },
+    });
+    expect(detailMeta).toMatchObject({
       robots: { index: false, follow: false },
     });
+    expect(detailMeta.alternates).toBeUndefined();
   });
 
   it("redirects the unprefixed directory to the persisted locale", async () => {

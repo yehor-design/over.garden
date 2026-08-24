@@ -1222,6 +1222,8 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
       "src/app/[locale]/answers/[slug]/page.tsx",
       "src/app/[locale]/blog/[slug]/page.tsx",
       "src/app/[locale]/blog/page.tsx",
+      "src/app/[locale]/communities/[slug]/page.tsx",
+      "src/app/[locale]/communities/page.tsx",
       "src/app/[locale]/guides/[slug]/page.tsx",
       "src/app/[locale]/journals/page.tsx",
       "src/app/[locale]/knowledge/page.tsx",

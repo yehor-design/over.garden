@@ -2,17 +2,34 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PublicCommunityDirectory } from "@/components/public/public-community";
-import { getCommunityCopy } from "@/lib/community-copy";
 import {
-  buildLanguageAlternates,
+  getCommunityContentCopy,
+  getCommunityCopy,
+} from "@/lib/community-copy";
+import {
+  getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import { listPublicCommunities } from "@/server/community-repository";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  listPublicCommunities,
+  type PublicCommunityDirectoryItem,
+} from "@/server/community-repository";
+import {
+  combinePublicProjectionQualityClasses,
+  latestMeaningfulContentTimestamp,
+  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+  resolvePublicSurfaceDiscoveryForRequest,
+  resolvePublicSurfaceDiscoveryWithDeadline,
+  resolveUnresolvedPublicSurfaceDiscovery,
+  type PublicSurfaceDiscoveryResult,
+  type PublicSurfaceDiscoverySource,
+} from "@/server/public-surface-discovery";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
+import { AUTHORED_PUBLIC_SURFACE_LASTMOD } from "@/server/public-surface-indexing-policy";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
 
 export const dynamic = "force-dynamic";
@@ -29,31 +46,46 @@ export async function generateMetadata({
   params,
 }: CommunityDirectoryRouteProps): Promise<Metadata> {
   const { locale: localeParam } = await params;
-  const locale = isPublicLocale(localeParam) ? localeParam : "uk";
-  const copy = getCommunityCopy(locale);
-  const indexState = evaluatePublicSurfaceIndexability({ kind: "community" });
-
-  return {
-    title: `${copy.directoryTitle} | OverGarden`,
-    description: copy.directoryDescription,
-    alternates: {
-      canonical: localizedPath(locale, "/communities"),
-      languages: buildLanguageAlternates("/communities"),
-    },
-    robots: indexState.robots,
-    openGraph: { locale },
-  };
+  if (!isPublicLocale(localeParam)) {
+    return {
+      title: "OverGarden",
+      robots: resolveUnresolvedPublicSurfaceDiscovery(
+        "localized_community_directory",
+      ).decision.robots,
+    };
+  }
+  const locale = localeParam;
+  const discovery = await resolvePublicSurfaceDiscoveryWithDeadline({
+    consumerId: "localized_community_directory",
+    evaluatedAt: new Date(),
+    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+    loadSource: async () =>
+      buildCommunityDirectoryDiscoverySource(
+        locale,
+        await listPublicCommunities(null),
+      ),
+  });
+  return buildCommunityDirectorySurface(locale, [], discovery).metadata;
 }
 
 export async function renderCommunityDirectory(locale: PublicLocale) {
   const viewerScope = await currentViewerScope();
   try {
     const communities = await listPublicCommunities(viewerScope);
+    const discovery = resolvePublicSurfaceDiscoveryForRequest(
+      buildCommunityDirectoryDiscoverySource(locale, communities),
+    );
+    const surface = buildCommunityDirectorySurface(
+      locale,
+      communities,
+      discovery,
+    );
     return (
       <PublicCommunityDirectory
         locale={locale}
         communities={communities}
         state="ready"
+        jsonLd={surface.jsonLd}
       />
     );
   } catch {
@@ -65,6 +97,62 @@ export async function renderCommunityDirectory(locale: PublicLocale) {
       />
     );
   }
+}
+
+function buildCommunityDirectoryDiscoverySource(
+  locale: PublicLocale,
+  communities: readonly PublicCommunityDirectoryItem[],
+): PublicSurfaceDiscoverySource {
+  const copy = getCommunityCopy(locale);
+  const active = communities.filter(
+    (community) =>
+      community.lifecycleState === "active" && community.navigationReady,
+  );
+  return {
+    consumerId: "localized_community_directory",
+    candidateState: "candidate",
+    qualityClass: combinePublicProjectionQualityClasses(
+      active.map((community) => community.qualityClass),
+    ),
+    visibleText: [
+      copy.directoryTitle,
+      copy.directoryDescription,
+      ...active.flatMap((community) => {
+        const content = getCommunityContentCopy(locale, community.contentKey);
+        return [content.name, content.description];
+      }),
+    ],
+    distinctPublicEntityIds: active.map((community) => community.id),
+    meaningfulContentAt:
+      latestMeaningfulContentTimestamp(
+        active.map((community) => community.updatedAt),
+      ) ?? AUTHORED_PUBLIC_SURFACE_LASTMOD,
+    canonicalPath: localizedPath(locale, "/communities"),
+    equivalentLocales: getLanguageSwitcherLocales(locale),
+  };
+}
+
+function buildCommunityDirectorySurface(
+  locale: PublicLocale,
+  communities: readonly PublicCommunityDirectoryItem[],
+  discovery: PublicSurfaceDiscoveryResult,
+) {
+  const copy = getCommunityCopy(locale);
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    title: `${copy.directoryTitle} | OverGarden`,
+    description: copy.directoryDescription,
+    visibleFacts: {
+      type: "CollectionPage",
+      name: copy.directoryTitle,
+      description: copy.directoryDescription,
+      itemNames: communities.map(
+        (community) =>
+          getCommunityContentCopy(locale, community.contentKey).name,
+      ),
+    },
+  });
 }
 
 export default async function CommunityDirectoryRoute({

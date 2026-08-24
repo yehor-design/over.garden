@@ -9,7 +9,6 @@ import {
   SocialEmptyState,
 } from "@/components/social/my-social-layout";
 import {
-  buildLanguageAlternates,
   isPublicLocale,
   localizedPath,
   type PublicLocale,
@@ -24,6 +23,7 @@ import {
   type FollowedFeedObjectKind,
   type FollowedFeedSource,
 } from "@/server/social-return-repository";
+import { evaluateNonDiscoveryRouteIndexability } from "@/server/public-surface-indexing-policy";
 import { GardenAuthPanel } from "../../garden/garden-auth-panel";
 
 export const dynamic = "force-dynamic";
@@ -42,13 +42,7 @@ export async function generateMetadata({
   return {
     title: `${copy.feed.title} | OverGarden`,
     description: copy.feed.description,
-    alternates: isPublicLocale(localeParam)
-      ? {
-          canonical: localizedPath(locale, "/feed"),
-          languages: buildLanguageAlternates("/feed"),
-        }
-      : undefined,
-    robots: { index: false, follow: false },
+    robots: evaluateNonDiscoveryRouteIndexability("workspace").robots,
   };
 }
 
@@ -318,9 +312,7 @@ function parseSource(value: string | undefined): FollowedFeedSource {
 }
 
 function parseObjectKind(value: string | undefined): FollowedFeedObjectKind {
-  return value === "plant" || value === "animal"
-    ? value
-    : "all";
+  return value === "plant" || value === "animal" ? value : "all";
 }
 
 function firstParam(value: string | string[] | undefined) {

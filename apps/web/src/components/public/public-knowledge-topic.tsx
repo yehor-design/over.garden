@@ -19,6 +19,7 @@ import {
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import type { PublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
 import type { PublicTopicAggregationPage } from "@/server/public-topic-repository";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 
 export function PublicKnowledgeTopicPage({
   locale,
@@ -28,6 +29,7 @@ export function PublicKnowledgeTopicPage({
   evidenceState,
   visualCorpus = false,
   actions,
+  jsonLd,
 }: {
   locale: PublicLocale;
   copy: PublicKnowledgeCopy;
@@ -36,8 +38,10 @@ export function PublicKnowledgeTopicPage({
   evidenceState: PublicKnowledgeEvidenceState;
   visualCorpus?: boolean;
   actions?: ReactNode;
+  jsonLd?: Record<string, unknown> | null;
 }) {
   const contextModules = topicContextModules(copy, topic, evidence);
+  const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
 
   return (
     <main
@@ -46,6 +50,12 @@ export function PublicKnowledgeTopicPage({
       data-trust-state="user-evidence"
       className="mx-auto flex w-full max-w-5xl flex-col gap-7 px-4 py-4 sm:px-6 sm:py-5"
     >
+      {serializedJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
+        />
+      ) : null}
       <SiteShellContextRailRegistration modules={contextModules} />
 
       <header className="grid gap-4 border-b border-border pb-5">

@@ -10,18 +10,27 @@ import {
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
 import { normalizePublicJournalDirectoryReturnTo } from "@/lib/public-journal-directory-navigation";
-import {
-  buildLanguageAlternates,
-  isPublicLocale,
-  type PublicLocale,
-} from "@/lib/public-localization";
+import { isPublicLocale, type PublicLocale } from "@/lib/public-localization";
 import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
 import { resolveVisualSocialScenario } from "@/lib/visual-fixtures/social-return-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getEngagementSummary } from "@/server/engagement-repository";
-import { getPublicJournalEntryLookup } from "@/server/journal-repository";
+import {
+  getPublicJournalEntryLookup,
+  type PublicJournalEntryPage,
+} from "@/server/journal-repository";
 import { getOwnerJournalEntryControl } from "@/server/owner-journal-entry-control";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  latestMeaningfulContentTimestamp,
+  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+  resolvePublicSurfaceDiscoveryForRequest,
+  resolvePublicSurfacePayloadWithDeadline,
+  resolveUnresolvedPublicSurfaceDiscovery,
+  type PublicSurfaceDiscoveryResult,
+  type PublicSurfaceDiscoverySource,
+} from "@/server/public-surface-discovery";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser } from "@/server/request-scope";
 
 export const dynamic = "force-dynamic";
@@ -39,30 +48,28 @@ export async function generateMetadata({
   const { locale: localeParam, slug } = await params;
   if (!isPublicLocale(localeParam)) return missingMetadata();
 
-  const lookup = await getPublicJournalEntryLookup(
-    slug,
-    undefined,
-    localeParam,
-  ).catch(() => ({ status: "not_found" as const }));
-  if (lookup.status !== "active") return missingMetadata(localeParam);
-
-  const copy = getPublicJournalEntryCopy(localeParam);
-  const canonicalPath = publicJournalEntryPath(lookup.page.entry.publicSlug);
-  const indexState = evaluatePublicSurfaceIndexability({
-    kind: "journal_entry",
-    publicNoindex: lookup.page.entry.publicNoindex,
-  });
-
-  return {
-    title: `${lookup.page.entry.title} · ${copy.metadataTitleSuffix} | OverGarden`,
-    description: summarize(lookup.page.entry.body),
-    alternates: {
-      canonical: canonicalPath,
-      languages: buildLanguageAlternates(canonicalPath),
+  const bounded = await resolvePublicSurfacePayloadWithDeadline({
+    consumerId: "localized_journal_entry",
+    evaluatedAt: new Date(),
+    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
+    load: async () => {
+      const lookup = await getPublicJournalEntryLookup(
+        slug,
+        undefined,
+        localeParam,
+      );
+      if (lookup.status !== "active") {
+        throw new Error("Public journal entry unavailable.");
+      }
+      return {
+        source: buildJournalDiscoverySource(lookup.page),
+        payload: lookup.page,
+      };
     },
-    robots: indexState.robots,
-    openGraph: { locale: localeParam },
-  };
+  });
+  if (!bounded.payload) return missingMetadata(localeParam);
+
+  return buildJournalSurface(localeParam, bounded.payload, bounded).metadata;
 }
 
 export default async function PublicJournalEntryRoute({
@@ -115,30 +122,40 @@ export default async function PublicJournalEntryRoute({
         managePath: `/garden/entries/${encodeURIComponent(ownerControl.entryId)}/edit?returnTo=${encodeURIComponent(lookup.page.entry.publicPath)}`,
       }
     : null;
+  const surface = buildJournalSurface(locale, lookup.page);
+  const serializedJsonLd = serializePublicSurfaceJsonLd(surface.jsonLd);
 
   return (
-    <PublicJournalEntryView
-      locale={locale}
-      copy={getPublicJournalEntryCopy(locale)}
-      page={lookup.page}
-      directoryReturnTo={directoryReturnTo}
-      ownerControl={editOwnerControl}
-    >
-      <PublicEngagementPanel
-        isAuthenticated={Boolean(userId)}
+    <>
+      {serializedJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
+        />
+      ) : null}
+      <PublicJournalEntryView
         locale={locale}
-        target={engagementTarget}
-        summary={engagement}
-        returnTo={engagementReturnTo}
-        status={firstParam(query.engagement)}
-        resumeAction={normalizeAuthIntentResumeAction(
-          firstParam(query.authIntent) ?? undefined,
-        )}
-        resumeControl={normalizeAuthIntentResumeControl(
-          firstParam(query.authControl) ?? undefined,
-        )}
-      />
-    </PublicJournalEntryView>
+        copy={getPublicJournalEntryCopy(locale)}
+        page={lookup.page}
+        directoryReturnTo={directoryReturnTo}
+        ownerControl={editOwnerControl}
+      >
+        <PublicEngagementPanel
+          isAuthenticated={Boolean(userId)}
+          locale={locale}
+          target={engagementTarget}
+          summary={engagement}
+          returnTo={engagementReturnTo}
+          status={firstParam(query.engagement)}
+          resumeAction={normalizeAuthIntentResumeAction(
+            firstParam(query.authIntent) ?? undefined,
+          )}
+          resumeControl={normalizeAuthIntentResumeControl(
+            firstParam(query.authControl) ?? undefined,
+          )}
+        />
+      </PublicJournalEntryView>
+    </>
   );
 }
 
@@ -147,7 +164,87 @@ function missingMetadata(locale?: PublicLocale): Metadata {
     title: locale
       ? `${getPublicJournalEntryCopy(locale).metadataTitleSuffix} | OverGarden`
       : "OverGarden",
-    robots: evaluatePublicSurfaceIndexability({ kind: "missing" }).robots,
+    robots: resolveUnresolvedPublicSurfaceDiscovery("localized_journal_entry")
+      .decision.robots,
+  };
+}
+
+function buildJournalSurface(
+  locale: PublicLocale,
+  page: PublicJournalEntryPage,
+  discovery: PublicSurfaceDiscoveryResult = resolvePublicSurfaceDiscoveryForRequest(
+    buildJournalDiscoverySource(page),
+  ),
+) {
+  const copy = getPublicJournalEntryCopy(locale);
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    contentLocale: null,
+    title: `${page.entry.title} · ${copy.metadataTitleSuffix} | OverGarden`,
+    description: summarize(page.entry.body),
+    visibleFacts: {
+      type: "BlogPosting",
+      name: page.entry.title,
+      description: summarize(page.entry.body),
+      datePublished:
+        page.entry.publishedAt instanceof Date
+          ? page.entry.publishedAt.toISOString()
+          : (page.entry.publishedAt ?? undefined),
+    },
+  });
+}
+
+function buildJournalDiscoverySource(
+  page: PublicJournalEntryPage,
+): PublicSurfaceDiscoverySource {
+  const context = page.context;
+  const topics = page.topics ?? [];
+  const relatedEntries = page.relatedEntries ?? [];
+  const objectIds =
+    context?.kind === "object"
+      ? [context.object.plantObjectId]
+      : context?.kind === "space"
+        ? context.mentionedObjects.map((object) => object.plantObjectId)
+        : [];
+  const contextText =
+    context?.kind === "object"
+      ? [
+          context.object.displayName,
+          context.object.catalogCanonicalName ?? "",
+          context.object.varietyText ?? "",
+        ]
+      : context?.kind === "space"
+        ? context.mentionedObjects.flatMap((object) => [
+            object.displayName,
+            object.catalogCanonicalName ?? "",
+            object.varietyText ?? "",
+          ])
+        : [];
+  return {
+    consumerId: "localized_journal_entry",
+    candidateState: page.entry.publicNoindex
+      ? "not_public_candidate"
+      : "candidate",
+    qualityClass: page.qualityClass ?? "unverified",
+    visibleText: [
+      page.entry.title,
+      page.entry.body,
+      context?.space.displayName ?? "",
+      ...contextText,
+      ...topics.map((topic) => topic.label),
+      ...relatedEntries.flatMap((entry) => [entry.title, entry.bodyPreview]),
+    ],
+    distinctPublicEntityIds: [
+      page.entry.id,
+      ...objectIds,
+      ...topics.map((topic) => `topic:${topic.slug}`),
+    ],
+    meaningfulContentAt: latestMeaningfulContentTimestamp([
+      page.entry.publishedAt,
+    ]),
+    canonicalPath: publicJournalEntryPath(page.entry.publicSlug),
+    equivalentLocales: [],
   };
 }
 

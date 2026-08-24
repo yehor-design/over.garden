@@ -68,7 +68,7 @@ describe("/{locale}/feed", () => {
     });
   });
 
-  it("keeps followed feed metadata private and localized", async () => {
+  it("keeps followed feed metadata private without discovery admission", async () => {
     const { generateMetadata } = await import("./page");
 
     await expect(
@@ -79,9 +79,6 @@ describe("/{locale}/feed", () => {
       title: "Стрічка підписок | OverGarden",
       description:
         "Нові публічні записи від людей, об'єктів і тем, за якими ви стежите.",
-      alternates: {
-        canonical: "/feed",
-      },
       robots: {
         index: false,
         follow: false,
