@@ -33,27 +33,36 @@ const CURRENT_AUTHORITY_REQUIREMENTS = {
     "ADR-0019",
     "local-only and non-durable before Publish",
     "browser-generated WebP is the sole final artifact",
+    "OVE-350 then deleted the exact empty legacy provider",
   ],
   "docs/TECH_STACK_DECISIONS.md": [
     "ADR-0019",
     "local-only and non-durable before Publish",
     "browser-generated WebP is the sole final artifact",
+    "OVE-350 deleted its exact empty legacy provider resource",
   ],
   "docs/MVP_SCOPE_RECHECK_2026-07-03.md": [
     "ADR-0019",
     "local-only and non-durable before Publish",
     "browser-generated WebP is the sole final artifact",
+    "OVE-350 deleted the exact empty legacy provider resource",
   ],
   "docs/ONLINE_ONLY_CANON_CLASSIFICATION.json": [
     "docs/adr/ADR-0019-atomic-local-journal-media.md",
   ],
-  "docs/SDD_VERTICAL_SLICE_ROADMAP.md": ["ADR-0019", CHILD_DAG],
+  "docs/SDD_VERTICAL_SLICE_ROADMAP.md": [
+    "ADR-0019",
+    CHILD_DAG,
+    "OVE-350 deleted the exact empty isolated legacy provider",
+  ],
   "docs/INFRASTRUCTURE_REGISTRY.md": [
     "ADR-0019",
     "overgarden-media-staging",
     "media-stage.over.garden",
     "MEDIA_STAGING_SESSIONS",
     "provisioned by OVE-346",
+    "provider is now terminally absent",
+    "Current app use and exact bucket scope: overgarden-public only",
   ],
 } as const;
 

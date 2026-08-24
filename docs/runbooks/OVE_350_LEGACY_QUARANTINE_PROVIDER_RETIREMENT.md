@@ -1,7 +1,28 @@
 # OVE-350 — Legacy quarantine provider retirement
 
-Status: immediate execution authorized; provider mutation remains fail-closed
-until the immutable plan is approved.
+Status: complete. The exact empty legacy provider was deleted on 2026-08-24,
+the application credential is public-only, preserved canaries passed, and
+rollback was not required. Do not rerun the apply procedure or recreate the
+retired resource.
+
+## Terminal receipt
+
+- Plan digest:
+  `41d026cf8539d2f201ef3594c7bdf8d0dc1728a0fe5a2e05ac72aa5c8853074d`
+- Zero reads: `2026-08-24T15:08:31.999Z` and
+  `2026-08-24T15:10:08.972Z`, both `0 objects / 0 bytes / 0 multipart`
+- Provider delete completed: `2026-08-24T15:14:46.919Z`
+- Apply receipt digest:
+  `2206992541f1ab4283fdb18862e862f484780c0d7a6414b50748d99f439b7436`
+- Independent terminal read-back digest:
+  `9f57e25c4777e3221bebff19f86bc65cf44e29444fb9f867fc61b2512b7df4cf`
+- Result: target absent twice, app credential `public_only`, public/staging
+  buckets and domains healthy, exact-main deployment/env/DB/job checks green
+
+The remaining command blocks document the fail-closed procedure that produced
+this receipt. They are historical operational evidence, not an instruction to
+recreate or delete the resource again. Only `--final-readback` may be replayed
+for a later containing exact-main SHA.
 
 ## Exact scope
 
@@ -45,7 +66,7 @@ the complete bounded available log window instead of claiming unavailable
 seven-day log evidence. The repeated R2 reads, removal of every code/env/job
 writer, credential narrowing, and empty-only delete are the writer-race gate.
 
-## Read-only plan
+## Historical read-only plan
 
 Run from `apps/web` with the authenticated Vercel, Cloudflare, and production
 database sessions already configured. The verifier pulls exact Vercel
@@ -74,7 +95,7 @@ file and record its digest in Linear. Never copy production environment files,
 credential identifiers, token values, object keys, request rows, or private
 database rows into evidence.
 
-## Exact provider action
+## Completed provider action
 
 The current Cloudflare token is shared between the public and retired legacy
 buckets. Do not revoke it and do not create an unnecessary replacement. In the
@@ -132,8 +153,8 @@ public/staging buckets remain present; both domains remain healthy; retired env
 names remain absent; and the exact expected SHA is READY in production. The
 terminal receipt is aggregate-only and digest-bound.
 
-If deletion succeeds but a preserved canary fails, recreate only an empty,
-private `overgarden-quarantine` bucket with the exact recorded CORS and
-lifecycle shapes. Never restore object bytes, the legacy application env,
-routes, packages, schema, or worker. Record rollback failure as a manual
-incident; never claim completion from a partial receipt.
+The in-flight plan allowed exact empty-bucket recreation only if deletion had
+succeeded while a preserved canary failed. That condition did not occur:
+canaries passed and rollback is terminally `not_required`. Do not recreate the
+bucket, its CORS/lifecycle, legacy env, routes, packages, schema, or worker. A
+future change would require a new explicit ADR, production plan, and approval.
