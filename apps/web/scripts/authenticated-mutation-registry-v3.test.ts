@@ -7,6 +7,116 @@ import {
 } from "./authenticated-mutation-registry";
 
 describe("authenticated mutation registry v3 contract", () => {
+  it("prefers the most specific concrete route over dynamic and catch-all admissions", () => {
+    const concreteRouteId =
+      "route_handler:src/app/api/engagement/[kind]/route.ts#POST";
+    const formId =
+      "native_form:src/app/panel.tsx#EngagementButtonForm:action:action";
+    const registry = buildAuthenticatedMutationRegistry({
+      discoveries: [
+        {
+          entrypointId:
+            "route_handler:src/app/api/[...notFound]/route.ts#POST",
+          path: "src/app/api/[...notFound]/route.ts",
+          symbol: "POST",
+          variant: "POST",
+          transport: "route_handler",
+        },
+        {
+          entrypointId: concreteRouteId,
+          path: "src/app/api/engagement/[kind]/route.ts",
+          symbol: "POST",
+          variant: "POST",
+          transport: "route_handler",
+        },
+        {
+          entrypointId:
+            "route_handler:src/app/api/[section]/bookmarks/route.ts#POST",
+          path: "src/app/api/[section]/bookmarks/route.ts",
+          symbol: "POST",
+          variant: "POST",
+          transport: "route_handler",
+        },
+        {
+          entrypointId: formId,
+          path: "src/app/panel.tsx",
+          symbol: "EngagementButtonForm",
+          variant: "action:action",
+          transport: "native_form",
+        },
+      ],
+      sources: [
+        {
+          path: "src/app/api/[...notFound]/route.ts",
+          sourceText:
+            'export function POST() { return Response.json({ error: "not_found" }, { status: 404 }); }',
+        },
+        {
+          path: "src/app/api/engagement/[kind]/route.ts",
+          sourceText: `
+            import { commitBookmark } from "@/server/bookmark-repository";
+            export async function POST() { await commitBookmark(); }
+          `,
+        },
+        {
+          path: "src/app/api/[section]/bookmarks/route.ts",
+          sourceText: `
+            import { commitWrongRoute } from "@/server/wrong-route-repository";
+            export async function POST() { await commitWrongRoute(); }
+          `,
+        },
+        {
+          path: "src/server/wrong-route-repository.ts",
+          sourceText: `
+            export async function commitWrongRoute() {
+              await database.insertInto("wrong_route_effects").values({}).execute();
+            }
+          `,
+        },
+        {
+          path: "src/server/bookmark-repository.ts",
+          sourceText: `
+            export async function commitBookmark() {
+              await database.insertInto("engagement_bookmarks").values({}).execute();
+            }
+          `,
+        },
+        {
+          path: "src/app/panel.tsx",
+          sourceText: `
+            export function PublicPanel() {
+              return <EngagementButtonForm action="/api/engagement/bookmarks" />;
+            }
+            function EngagementButtonForm({ action }: { action: string }) {
+              return <form method="post" action={action} />;
+            }
+          `,
+        },
+      ],
+      toolchain: {
+        betterAuthVersion: "1.6.25",
+        typescriptVersion: "5.9.3",
+      },
+    });
+
+    expect(
+      registry.entrypoints.find(
+        (entrypoint) => entrypoint.entrypointId === formId,
+      ),
+    ).toMatchObject({
+      classification: "effectful",
+      evidencePaths: [
+        "src/app/api/engagement/[kind]/route.ts",
+        "src/app/panel.tsx",
+      ],
+    });
+    expect(
+      registry.consumerEdges
+        .filter((edge) => edge.entrypointId === formId)
+        .map((edge) => edge.admissionBoundaryId),
+    ).toEqual([concreteRouteId]);
+  });
+
   it("emits the closed source policy and resolved source nodes instead of a flat v2 caller list", () => {
     const registry = buildAuthenticatedMutationRegistry({
       discoveries: [

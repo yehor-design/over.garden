@@ -11972,6 +11972,81 @@
     },
     {
       "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/[...notFound]/route.ts#DELETE",
+      "evidencePaths": [
+        "src/app/api/[...notFound]/route.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/[...notFound]/route.ts",
+      "symbol": "DELETE",
+      "transport": "route_handler",
+      "variant": "DELETE"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/[...notFound]/route.ts#GET",
+      "evidencePaths": [
+        "src/app/api/[...notFound]/route.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/[...notFound]/route.ts",
+      "symbol": "GET",
+      "transport": "route_handler",
+      "variant": "GET"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/[...notFound]/route.ts#PATCH",
+      "evidencePaths": [
+        "src/app/api/[...notFound]/route.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/[...notFound]/route.ts",
+      "symbol": "PATCH",
+      "transport": "route_handler",
+      "variant": "PATCH"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/[...notFound]/route.ts#POST",
+      "evidencePaths": [
+        "src/app/api/[...notFound]/route.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/[...notFound]/route.ts",
+      "symbol": "POST",
+      "transport": "route_handler",
+      "variant": "POST"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/[...notFound]/route.ts#PUT",
+      "evidencePaths": [
+        "src/app/api/[...notFound]/route.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/[...notFound]/route.ts",
+      "symbol": "PUT",
+      "transport": "route_handler",
+      "variant": "PUT"
+    },
+    {
+      "authority": "authenticated_user",
       "classification": "excluded_distinct_authority",
       "entrypointId": "route_handler:src/app/api/auth/[...all]/route.ts#DELETE",
       "evidencePaths": [
@@ -16956,6 +17031,17 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/[...notFound]/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/[...notFound]/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "PUT",
+      "sourceNodeId": "source:1da5c4fb953083b1fb25",
+      "symbol": "PUT"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/auth/[...all]/route.ts"
       ],
       "nodeKind": "callback",
@@ -20836,6 +20922,17 @@
       "semanticVariant": "from:@/components/auth/document-mutation-recovery",
       "sourceNodeId": "source:41676b03ae9527db039a",
       "symbol": "DocumentMutationActionForm"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/[...notFound]/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/[...notFound]/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "PATCH",
+      "sourceNodeId": "source:41941b85fde52ada8736",
+      "symbol": "PATCH"
     },
     {
       "evidencePaths": [
@@ -27289,6 +27386,17 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/[...notFound]/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/[...notFound]/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "DELETE",
+      "sourceNodeId": "source:853e909ca04fc2f77160",
+      "symbol": "DELETE"
+    },
+    {
+      "evidencePaths": [
         "src/app/lineage/objects/[objectId]/actions.ts"
       ],
       "nodeKind": "server_action",
@@ -28280,6 +28388,17 @@
       "semanticVariant": "from:@/components/site-shell/site-shell-context-rail",
       "sourceNodeId": "source:8e2beaf526d5140dd2b3",
       "symbol": "SiteShellContextRailRegistration"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/[...notFound]/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/[...notFound]/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "GET",
+      "sourceNodeId": "source:8e409453deaef820791d",
+      "symbol": "GET"
     },
     {
       "evidencePaths": [
@@ -31260,6 +31379,17 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:aaecd2b86ae59c178c48",
       "symbol": "VarietyState"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/[...notFound]/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/[...notFound]/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "POST",
+      "sourceNodeId": "source:aaf13de213f9ce3cee95",
+      "symbol": "POST"
     },
     {
       "evidencePaths": [

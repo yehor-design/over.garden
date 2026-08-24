@@ -74,11 +74,11 @@ describe("OVE-205 market-first localization coverage", () => {
         ],
       },
       summary: {
-        routeModuleCount: 103,
-        classifiedRouteModuleCount: 103,
-        appSurfaceModuleCount: 137,
-        classifiedAppSurfaceModuleCount: 137,
-        registeredSurfaceCount: 141,
+        routeModuleCount: 104,
+        classifiedRouteModuleCount: 104,
+        appSurfaceModuleCount: 138,
+        classifiedAppSurfaceModuleCount: 138,
+        registeredSurfaceCount: 142,
         renderedRouteModuleCount: 62,
         renderedSurfaceCount: 100,
         renderedStateModuleCount: 34,
@@ -87,7 +87,7 @@ describe("OVE-205 market-first localization coverage", () => {
         copyNamespaceCount: LOCALIZATION_COPY_NAMESPACES.length,
         localeCount: 3,
         ownerBrowserProbeCount: 15,
-        preservedRouteModuleCount: 91,
+        preservedRouteModuleCount: 92,
         newlyClosedDeltaRouteModuleCount: 10,
         ove205CorrectiveSurfaceCount: 40,
         downstreamOwnedUiGateCount: 3,
@@ -248,9 +248,10 @@ describe("OVE-205 market-first localization coverage", () => {
     });
   });
 
-  it("registers both interface endpoints as non-UI and all raw renderer modules explicitly", () => {
+  it("registers machine API endpoints as non-UI and all raw renderer modules explicitly", () => {
     const report = buildLocalizationCoverage();
     const endpointSources = [
+      "src/app/api/[...notFound]/route.ts",
       "src/app/api/interface/context/route.ts",
       "src/app/api/interface/locale/route.ts",
     ];
