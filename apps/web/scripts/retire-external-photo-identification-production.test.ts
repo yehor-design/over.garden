@@ -204,7 +204,7 @@ describeDatabaseIntegration(
       const pool = requiredDisposablePool(disposablePool);
       await resetDisposableSchema(pool);
       await pool.query(
-        "insert into plant_identification_requests (id, state) values ($1, 'queued')",
+        "insert into plant_identification_requests (id, state) values ($1, 'ready_to_submit')",
         [randomUUID()],
       );
 
