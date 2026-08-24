@@ -97,6 +97,7 @@ export interface PublicSurfaceDiscoveryVerificationOptions {
   injectSourceTimeout?: boolean;
   baseUrl?: string;
   fetchImpl?: typeof fetch;
+  monotonicNow?: () => number;
 }
 
 export async function runPublicSurfaceDiscoveryVerification(
@@ -109,13 +110,23 @@ export async function runPublicSurfaceDiscoveryVerification(
     throw new Error("public_discovery_build_sha_unresolved");
   }
 
-  const startedAt = performance.now();
+  const monotonicNow = options.monotonicNow ?? (() => performance.now());
+  let maximumDecisionDurationMs = 0;
+  const resolveMeasured = (source: PublicSurfaceDiscoverySource) => {
+    const startedAt = monotonicNow();
+    const discovery = resolvePublicSurfaceDiscovery(source, {
+      evaluatedAt: EVALUATED_AT,
+    });
+    const durationMs = Math.max(0, monotonicNow() - startedAt);
+    maximumDecisionDurationMs = Math.max(
+      maximumDecisionDurationMs,
+      durationMs,
+    );
+    return { discovery, durationMs };
+  };
   const surfaceReceipts = PUBLIC_SURFACE_DISCOVERY_INVENTORY.map((entry) => {
-    const discovery = resolvePublicSurfaceDiscovery(
+    const { discovery, durationMs } = resolveMeasured(
       sourceFor(entry.consumerId),
-      {
-        evaluatedAt: EVALUATED_AT,
-      },
     );
     const metadata = buildPublicSurfaceMetadata({
       discovery,
@@ -144,21 +155,17 @@ export async function runPublicSurfaceDiscoveryVerification(
       reasonClass: discovery.decision.reasons[0] ?? "none",
       outputCoverageClass: candidate ? "complete" : "refused",
       localeEquivalenceClass: candidate ? "singleton_source" : "not_applicable",
-      timingClass: "within_150ms",
+      timingClass: timingClass(durationMs),
       cancellationClass: "not_required",
     } satisfies PublicSurfaceCoverageReceipt;
   });
 
-  const replay = PUBLIC_SURFACE_DISCOVERY_INVENTORY.map((entry) =>
-    resolvePublicSurfaceDiscovery(sourceFor(entry.consumerId), {
-      evaluatedAt: EVALUATED_AT,
-    }),
+  const replay = PUBLIC_SURFACE_DISCOVERY_INVENTORY.map(
+    (entry) => resolveMeasured(sourceFor(entry.consumerId)).discovery,
   );
   const concurrent = await Promise.all(
     PUBLIC_SURFACE_DISCOVERY_INVENTORY.map(async (entry) =>
-      resolvePublicSurfaceDiscovery(sourceFor(entry.consumerId), {
-        evaluatedAt: EVALUATED_AT,
-      }),
+      resolveMeasured(sourceFor(entry.consumerId)).discovery,
     ),
   );
   const firstDigest = decisionDigest(replay);
@@ -209,16 +216,13 @@ export async function runPublicSurfaceDiscoveryVerification(
     };
   }
 
-  const recovery = resolvePublicSurfaceDiscovery(
-    sourceFor("localized_journal_entry"),
-    { evaluatedAt: EVALUATED_AT },
-  );
+  const recovery = resolveMeasured(sourceFor("localized_journal_entry"))
+    .discovery;
   if (!recovery.decision.isIndexable) {
     throw new Error("public_discovery_recovery_not_independent");
   }
 
-  const duration = performance.now() - startedAt;
-  if (duration > PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS) {
+  if (maximumDecisionDurationMs > PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS) {
     throw new Error("public_discovery_decision_budget_exceeded");
   }
 
@@ -245,7 +249,7 @@ export async function runPublicSurfaceDiscoveryVerification(
     directPolicyBypassCount: 0,
     canonicalWriteCount: 0,
     performanceBudgetMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
-    decisionDurationClass: timingClass(duration),
+    decisionDurationClass: timingClass(maximumDecisionDurationMs),
     ...(timeoutReceipt ? { timeoutReceipt } : {}),
     cancellationReceipt: {
       terminalClass: "cancelled",
