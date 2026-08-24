@@ -33,6 +33,12 @@ function alignedInput(): AtomicJournalMediaCanonInput {
     "MEDIA_STAGING_SESSIONS",
     "provisioned by OVE-346",
     "OVE-333 -> OVE-345 -> OVE-346 -> OVE-347 -> OVE-348 -> OVE-349 -> OVE-350",
+    "OVE-350 then deleted the exact empty legacy provider",
+    "OVE-350 deleted its exact empty legacy provider resource",
+    "OVE-350 deleted the exact empty legacy provider resource",
+    "OVE-350 deleted the exact empty isolated legacy provider",
+    "provider is now terminally absent",
+    "Current app use and exact bucket scope: overgarden-public only",
   ].join("\n");
 
   return {

@@ -167,7 +167,9 @@ export class RetirementPreflightSession {
     timeoutMs: number,
   ): Promise<RetirementPreflightReceipt> {
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > 60_000) {
-      throw new TypeError("Retirement preflight timeout must be within 60000ms.");
+      throw new TypeError(
+        "Retirement preflight timeout must be within 60000ms.",
+      );
     }
     if (this.receipt.status === "waiting") {
       throw new Error("A retirement preflight is already running.");
@@ -412,6 +414,26 @@ export function collectRetiredJournalMediaRuntimeFindings(
     }
   }
 
+  // Shell wrappers are active runtime configuration too. They are not reached
+  // by the TypeScript/Python walker above, so keep this explicit negative
+  // inventory to prevent a retired provider env from surviving only in local
+  // startup plumbing.
+  for (const absolutePath of [
+    path.resolve(appRoot, "../../infra/run-with-local-infra-env"),
+  ]) {
+    if (!existsSync(absolutePath)) continue;
+    const source = readFileSync(absolutePath, "utf8");
+    for (const marker of RETIRED_RUNTIME_MARKERS) {
+      if (source.includes(marker)) {
+        findings.push({
+          kind: "marker",
+          owner: path.relative(appRoot, absolutePath),
+          marker,
+        });
+      }
+    }
+  }
+
   const packageJson = JSON.parse(
     readFileSync(path.join(appRoot, "package.json"), "utf8"),
   ) as {
@@ -423,7 +445,11 @@ export function collectRetiredJournalMediaRuntimeFindings(
       packageJson.dependencies?.[packageName] ||
       packageJson.devDependencies?.[packageName]
     ) {
-      findings.push({ kind: "package", owner: "package.json", marker: packageName });
+      findings.push({
+        kind: "package",
+        owner: "package.json",
+        marker: packageName,
+      });
     }
   }
 
@@ -432,10 +458,16 @@ export function collectRetiredJournalMediaRuntimeFindings(
     "sql/0038_ove349_retire_legacy_journal_media.sql",
   );
   if (!existsSync(migrationPath)) {
-    findings.push({ kind: "migration", owner: path.relative(appRoot, migrationPath) });
+    findings.push({
+      kind: "migration",
+      owner: path.relative(appRoot, migrationPath),
+    });
   }
 
-  const generated = readFileSync(path.join(appRoot, "src/db/generated.ts"), "utf8");
+  const generated = readFileSync(
+    path.join(appRoot, "src/db/generated.ts"),
+    "utf8",
+  );
   for (const marker of [
     "export interface JournalEntryDrafts",
     "journal_entry_drafts:",
@@ -491,7 +523,9 @@ async function main() {
     throw new Error("legacy_absence_scan_duration_exceeded");
   }
   if (findings.length > 0) {
-    process.stderr.write(`${JSON.stringify({ findings, durationMs }, null, 2)}\n`);
+    process.stderr.write(
+      `${JSON.stringify({ findings, durationMs }, null, 2)}\n`,
+    );
     process.exitCode = 1;
     return;
   }

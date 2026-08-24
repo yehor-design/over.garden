@@ -39,8 +39,8 @@ The only app-owned media lifecycle job kinds are:
 
 The former quarantine expiry, processing claim, quality receipt, and failed
 source-original retention states no longer exist in active schema or runtime.
-The isolated legacy provider resource is not an application capability and is
-owned only by OVE-350 for gated deletion after its rollback window.
+OVE-350 deleted the exact empty legacy provider resource. It is not an
+application capability and must not be recreated.
 
 ## Verification
 

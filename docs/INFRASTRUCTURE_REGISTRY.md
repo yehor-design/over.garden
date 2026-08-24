@@ -204,20 +204,20 @@ cannot be adopted or deleted. The Durable Object acquires a persisted
 alarms recover those states idempotently, and no stale cleanup may cross a
 successful finalization. Rollback disables the staging custom domain and
 reservation route first, then removes only synthetic objects and the newly
-created empty OVE-346 resources after read-back; it never mutates the legacy
-quarantine/public buckets or shared credentials.
+created empty OVE-346 resources after read-back; it never mutates the public
+bucket or shared credentials, and the deleted legacy provider must remain
+absent.
 
 OVE-349 removed every application/schema/package owner of the former
 `overgarden-quarantine` and server-conversion path after the exact zero-use and
-approved test-residue gates. The empty bucket below is isolated rollback
-residue, not application configuration. OVE-350 alone owns its provider/CORS/
-lifecycle deletion and credential narrowing. On 2026-08-24 the founder waived
-the former seven-day and 24-hour observation delays and required immediate
-retirement. The replacement destructive gate is two independent authenticated
-zero reads at least 60 seconds apart, an immediate pre-apply read, removal of
-all writer authority, exact-plan approval, empty-only provider deletion, and
-preserved-media canaries. See
-`docs/runbooks/OVE_350_LEGACY_QUARANTINE_PROVIDER_RETIREMENT.md`.
+approved test-residue gates. OVE-350 then completed the provider retirement on
+2026-08-24: the founder waived the former seven-day and 24-hour observation
+delays, two independent exact-main reads at least 60 seconds apart proved zero
+objects, zero bytes, zero multipart uploads and zero writers, the application
+token was narrowed in place to `overgarden-public`, and the exact empty bucket
+plus its bucket-owned CORS/lifecycle surface was deleted. The provider is now
+terminally absent and must not be recreated. See the redacted terminal receipt
+below and `docs/runbooks/OVE_350_LEGACY_QUARANTINE_PROVIDER_RETIREMENT.md`.
 
 Production S3-compatible client settings:
 
@@ -265,9 +265,9 @@ Where secrets belong:
 R2 API token requirement:
 
 - Permission: Object Read and Write
-- Current app use: `overgarden-public` only. The existing shared credential may
-  retain legacy-bucket scope solely until the immediate OVE-350 exact-plan
-  apply narrows it in place; no app route may exercise that scope.
+- Current app use and exact bucket scope: `overgarden-public` only. OVE-350
+  removed the legacy-bucket scope in place; no application credential may
+  regain it.
 - Prefer an account API token for production if available. A user API token is acceptable for local/dev continuity but is tied to the individual Cloudflare user.
 - Cloudflare R2 does not support S3 `PutBucketPolicy` on this endpoint. Public reads are controlled through R2 bucket/domain settings, not by committing or replaying S3 bucket policy JSON from the app bootstrap script.
 
@@ -293,46 +293,37 @@ OVE-290 document-generation media contract:
 - Production closeout runs `scripts/smoke-document-mutation-admission.ts` in `reject-only` mode against the immutable exact-SHA deployment. Private A1/A2/B session cookies and the A1 document generation are supplied only through process environment, discarded after the run, and never printed or committed. The smoke performs read-only pre/post database counts and no successful product mutation.
 - On 2026-08-10, Git-backed deployment `dpl_Di1Mwcbtms8mQjjNxgZL9fr2WcwR` reached `READY` at `over-garden-fwg7ddk6a-yehors-projects-01221e2b.vercel.app` and served feature SHA `da38a2c2b5901426353e8d0a55a91a79b584863f` through the canonical aliases. Immutable and canonical read-back both reported enforcement enabled and the default `900`-second TTL. The exact-SHA reject-only smoke proved owner-change, same-owner session-refresh, and malformed-protocol rejection with zero journal-entry and mutation-receipt effects before and after; all three synthetic sessions were revoked and confirmed guest afterward.
 
-### Isolated Legacy Quarantine Bucket (OVE-350 rollback residue)
+### Retired Legacy Quarantine Provider (OVE-350 terminal receipt)
 
-- Bucket name: `overgarden-quarantine`
-- Bucket ID: `13b1358d8ffb40d996c50aa7b089a792`
-- Purpose: empty, non-application rollback residue pending OVE-350 deletion
-- Public development URL: disabled
-- Managed `r2.dev` domain: `pub-13b1358d8ffb40d996c50aa7b089a792.r2.dev` (disabled)
-
-CORS:
-
-- Rule ID: `overgarden-quarantine-browser-upload`
-- Origins:
-  - `http://localhost:3000`
-  - `https://over-garden.vercel.app`
-  - `https://over-garden-git-codex-ove-27-pr-a698a5-yehors-projects-01221e2b.vercel.app`
-  - `https://over.garden`
-  - `https://www.over.garden`
-- Methods: `PUT`, `HEAD`
-- Headers: `*`
-- Exposed headers: `ETag`
-- Max age: `3600`
-- These CORS entries are historical configuration awaiting OVE-350 deletion.
-  They must not be used for a browser upload smoke or restored to application
-  configuration. Earlier dated CORS receipts remain historical provenance.
-
-Lifecycle:
-
-- Rule ID: `delete-quarantine-originals-after-1-day`
-- Prefix: `quarantine/`
-- Delete objects after: `86400` seconds
-- Abort multipart uploads after: `86400` seconds
-
-Invariants:
-
-- No application route, package, job, schema field, or deployed environment
-  owner may reference this bucket.
-- Public pages must never render this bucket or its `r2.dev` domain.
-- OVE-350 alone may delete its bucket/CORS/lifecycle/credential surface after
-  the founder-waived immediate gate, two exact zero-state read-backs at least
-  60 seconds apart, exact-plan approval, and an immediate pre-apply read.
+- Former bucket: `overgarden-quarantine`; provider state: absent.
+- Deletion completed: `2026-08-24T15:14:46.919Z` in production account
+  `cb03b15042adc74edfe2d8201636300a` by the exact empty-bucket delete.
+- Exact-main baseline: `7e84c520f0bfdba603d7ed79d85f851d840e6ae9`;
+  Vercel deployment `dpl_BmUcv42NLiePHtNdeV3WdM3qBdaq` was READY at
+  `2026-08-24T15:06:37.492Z`.
+- Independent zero reads: `2026-08-24T15:08:31.999Z` and
+  `2026-08-24T15:10:08.972Z`; receipt digests
+  `8eeb78bf198182d07c60f0c05d5788e16d719082450aea1dae18b4a76d3adcdb`
+  and `0ab58877ce3faba0a0ca2b97029a9d97bae5e0416896a3d5fe1943edfdeac1c9`.
+- Approved immutable plan digest:
+  `41d026cf8539d2f201ef3594c7bdf8d0dc1728a0fe5a2e05ac72aa5c8853074d`.
+- Deleted bucket-owned configuration digests: CORS
+  `f9b89ac073922cde7301f2bcd3dd1d402b084bb2dc64060e9bdc3109be05d1ff`;
+  lifecycle
+  `ecdebbe54d6a8415de3403a3ebd32e6d2e3caff358301b2b757f9afce5e64b0f`.
+- Apply receipt digest:
+  `2206992541f1ab4283fdb18862e862f484780c0d7a6414b50748d99f439b7436`;
+  independent terminal read-back digest:
+  `9f57e25c4777e3221bebff19f86bc65cf44e29444fb9f867fc61b2512b7df4cf`.
+- Terminal provider read-back: target absent twice; only
+  `overgarden-public` and `overgarden-media-staging` remain in the R2 bucket
+  inventory; the app token is active with Object Read and Write for
+  `overgarden-public` only; public/staging domains, exact-main deployment,
+  retired-env absence, contracted Postgres schema, and zero legacy jobs all
+  passed.
+- Rollback was not required. Recreating the former bucket, its CORS/lifecycle
+  rules, its env name, or any credential scope for it is forbidden unless a
+  new explicit ADR and executable SDD task supersede this terminal state.
 
 ### Public Derivative Bucket
 
@@ -361,7 +352,8 @@ Lifecycle:
 - Rule ID: `abort-public-multipart-uploads-after-7-days`
 - Prefix: empty
 - Abort multipart uploads after: `604800` seconds
-- OVE-195 note (2026-07-23): quarantine bucket still uses CF lifecycle delete after `1d` (`delete-quarantine-originals-after-1-day`) as defense-in-depth under the 7-day policy floor. App retention executor `ove195.retention.v1` owns the 7-day failed/unprocessed quarantine class independently of provider lifecycle.
+- Historical OVE-195 quarantine lifecycle notes are superseded by the OVE-349
+  runtime removal and OVE-350 terminal provider deletion above.
 
 Invariants:
 
@@ -763,7 +755,7 @@ Deployment env observation:
 - Historical runtime auth was fail-closed for production-like environments when `BETTER_AUTH_SECRET` was missing, placeholder-like, or equal to the local development fallback. OVE-240 supersedes this serving contract with a declared versioned current key; do not rely on local/test fallback behavior for any deployed production or preview app.
 - On 2026-07-18, the automatic Vercel Preview for release ref `codex/ove-203-release` and commit `1edffc351c1c3132f97608083b4b6ea6a63e9a12` failed during page-data collection because that branch had no Preview `BETTER_AUTH_SECRET`. A newly generated Sensitive secret was added only to that exact Preview branch; no value was printed, stored in git, or copied from production. Redeploy `dpl_9kg2jMn9QNem6NiKEpAuaLxYjNSJ` reached `READY`, compiled all `61` static pages, and replaced the branch alias without an auth-secret, page-collection, or terminal build error. Its public `noindex` health route reports auth configured and database unavailable by design: this release Preview has no production database, R2, email-provider, or other production credentials and is build-only evidence, not authenticated/data runtime proof. Canonical production remained `READY` on `dpl_5xQ7jAduBePLg77Z173ni2jyzKNM` throughout the repair.
 - On 2026-07-22, the OVE-188 closeout Preview for ref `codex/ove-188-closeout` and commit `15493e1ed00adda7216b7564a50725a7dcd04a25` failed closed during page-data collection because that branch had no Preview `BETTER_AUTH_SECRET`. A newly generated Sensitive secret was added only to that exact Preview branch; its value was not printed, stored in git, or copied from Production. Cache-free redeploy `dpl_AqByS7RdfFJQyL9beDAr6kC4dsXS` reached `READY`, generated all `61` static pages, passed the walking-skeleton postbuild boundary, and updated the GitHub Vercel check to success. The Preview remains build-only evidence with no production database or other production credentials; canonical Production was not promoted or mutated by this repair.
-- On 2026-06-27, the Vercel project had the R2 runtime env family installed for production, development, and the branch preview: `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_FORCE_PATH_STYLE`, `R2_QUARANTINE_BUCKET`, `R2_PUBLIC_BUCKET`, and `R2_PUBLIC_BASE_URL`.
+- On 2026-06-27, the Vercel project had the R2 runtime env family installed for production, development, and the branch preview: `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_FORCE_PATH_STYLE`, `R2_QUARANTINE_BUCKET`, `R2_PUBLIC_BUCKET`, and `R2_PUBLIC_BASE_URL`. This is historical inventory only: OVE-349 later removed `R2_QUARANTINE_BUCKET` from every active Vercel target, and OVE-350 deleted its provider resource.
 - On 2026-06-27, the Vercel project had `DATABASE_SSL=true` installed for production, development, and the branch preview.
 - On 2026-06-27, the Vercel project had `DATABASE_URL`, `DIRECT_URL`, and `DATABASE_SSL_CA` installed for production and the branch preview `codex/ove-27-production-pilot-smoke`.
 - On 2026-06-29 (OVE-51), production `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` were updated to the canonical origin `https://over.garden`. Future production readiness checks fail if Vercel production uses the legacy `.vercel.app` alias for either value.
@@ -869,9 +861,8 @@ Local storage emulator:
 
 - MinIO endpoint: `http://localhost:9000`
 - Local public base URL: `http://localhost:9000/overgarden-public`
-- Local buckets should mirror production names:
-  - `overgarden-quarantine`
-  - `overgarden-public`
+- Local persistent media bucket should mirror the active production name:
+  `overgarden-public`. Do not recreate the retired quarantine bucket locally.
 
 OVE-231 adds no provider, bucket, environment variable, or mutable production
 control. Additive migration `0014_ove231_launch_media_quality.sql` stores the

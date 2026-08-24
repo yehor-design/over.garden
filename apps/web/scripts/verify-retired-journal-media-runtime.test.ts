@@ -13,7 +13,7 @@ import {
 } from "./verify-retired-journal-media-runtime";
 
 describe("OVE-349 retired journal-media repository contract", () => {
-  it("reports zero active server-draft, quarantine-processing, quality, and obsolete-schema owners", () => {
+  it("reports zero active app or local-infra owners for the retired journal-media surface", () => {
     expect(collectRetiredJournalMediaRuntimeFindings()).toEqual([]);
   });
 
@@ -26,7 +26,10 @@ describe("OVE-349 retired journal-media repository contract", () => {
   it("proves migration guards, preserved final columns, and an empty-shape rollback", () => {
     const migration = readFileSync(
       fileURLToPath(
-        new URL("../sql/0038_ove349_retire_legacy_journal_media.sql", import.meta.url),
+        new URL(
+          "../sql/0038_ove349_retire_legacy_journal_media.sql",
+          import.meta.url,
+        ),
       ),
       "utf8",
     );
@@ -56,7 +59,9 @@ describe("OVE-349 retired journal-media repository contract", () => {
         new RegExp(`drop column if exists ${preserved}(?:\\s*[,;])`),
       );
     }
-    expect(rollback).toContain("create table if not exists journal_entry_drafts");
+    expect(rollback).toContain(
+      "create table if not exists journal_entry_drafts",
+    );
     expect(rollback).toContain("alter column visibility set default 'private'");
     expect(rollback).not.toMatch(/insert\s+into\s+journal_entry_drafts/i);
   });
@@ -162,7 +167,9 @@ describe("OVE-349 production preflight and fault contract", () => {
       },
       20,
     );
-    expect(session.inspectBlockingClassificationCommand().status).toBe("waiting");
+    expect(session.inspectBlockingClassificationCommand().status).toBe(
+      "waiting",
+    );
     await expect(pending).resolves.toMatchObject({
       status: "inconclusive",
       reason: "database_read_timeout",
@@ -181,7 +188,9 @@ describe("OVE-349 production preflight and fault contract", () => {
       },
       20,
     );
-    expect(session.inspectBlockingClassificationCommand().status).toBe("waiting");
+    expect(session.inspectBlockingClassificationCommand().status).toBe(
+      "waiting",
+    );
     await expect(pending).resolves.toMatchObject({
       status: "inconclusive",
       reason: "provider_log_timeout",

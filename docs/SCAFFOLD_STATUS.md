@@ -171,8 +171,8 @@ permission to weaken auth/privacy boundaries.
 - Local containerized development prefers Apple Container; Docker is the
   documented fallback/CI/production exception where required.
 - Media uses Cloudflare private ephemeral staging plus immutable public final
-  WebPs. The isolated legacy provider resource has no application caller and is
-  owned only by OVE-350 for gated deletion.
+  WebPs. OVE-350 deleted the exact empty legacy provider resource after proving
+  that it had no application caller; it must remain absent.
 - Search uses Meilisearch as a derived public index.
 - Matching/reindex work uses the Python worker and Postgres `job_queue`.
 - Cloudflare owns DNS/edge/WAF/R2 and must not cache app HTML.
