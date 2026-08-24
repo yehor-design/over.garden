@@ -122,6 +122,7 @@
     "walking-skeleton:boundary:check": "tsx scripts/check-walking-skeleton-boundary.ts",
     "smoke:protective-dns": "tsx scripts/check-protective-dns.ts",
     "verify:retired-journal-media-runtime": "tsx scripts/verify-retired-journal-media-runtime.ts",
+    "ove350:provider-retirement": "tsx scripts/verify-legacy-quarantine-provider-retirement.ts",
     "retire:legacy-journal-media": "tsx scripts/retire-legacy-journal-media-production.ts",
     "mainline:closeout:check": "tsx scripts/check-mainline-closeout.ts",
     "drive2:closeout:check": "tsx scripts/report-drive2-parity-closeout.ts --summary",
