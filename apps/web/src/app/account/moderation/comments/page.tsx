@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { moderateCommentReportAction } from "@/app/admin/moderation/comments/actions";
+import { moderateCommentReportAction } from "@/app/account/moderation/comments/actions";
 import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import { getOperatorCopy } from "@/lib/operator-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import { resolveAdminCapabilityAccess } from "@/server/admin-access";
+import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
 import { listEngagementCommentModerationQueue } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
@@ -29,7 +29,10 @@ export default async function CommentModerationPage() {
   const scope = session?.user?.id
     ? scopedToUser(session.user.id, getSessionId(session))
     : null;
-  const access = await resolveAdminCapabilityAccess(scope, "operator:mutate");
+  const access = await resolveAdminCapabilityAccessBounded(
+    scope,
+    "operator:mutate",
+  );
   if (access.status !== "allowed" || !scope) {
     return (
       <main
@@ -50,7 +53,7 @@ export default async function CommentModerationPage() {
         </p>
       </header>
       {queue.length ? (
-        <ul className="grid gap-3">
+        <ul data-private-moderation-queue="true" className="grid gap-3">
           {queue.map((item) => (
             <li
               key={item.reportId}

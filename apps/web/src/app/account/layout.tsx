@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 
 import { evaluateNonDiscoveryRouteIndexability } from "@/server/public-surface-indexing-policy";
 
-const operatorIndexState = evaluateNonDiscoveryRouteIndexability("operator");
+const accountIndexState = evaluateNonDiscoveryRouteIndexability("operator");
 
 export const metadata: Metadata = {
-  robots: operatorIndexState.robots,
+  robots: accountIndexState.robots,
 };
 
-export default function AdminLayout({
+export default function AccountLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;

@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   setCommunityParticipation: vi.fn(),
   revalidatePath: vi.fn(),
   redirect: vi.fn(),
+  resolveAdminCapabilityAccessBounded: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -20,6 +21,10 @@ vi.mock("@/server/auth-session", () => ({
 vi.mock("@/server/document-mutation-admission", () => ({
   admitDocumentMutation: mocks.admitDocumentMutation,
   documentMutationGenerationFromFormData: vi.fn(() => null),
+}));
+vi.mock("@/server/admin-access", () => ({
+  resolveAdminCapabilityAccessBounded:
+    mocks.resolveAdminCapabilityAccessBounded,
 }));
 vi.mock("@/server/community-repository", () => ({
   moderateCommunityContribution: mocks.moderateCommunityContribution,
@@ -43,6 +48,9 @@ describe("community moderator actions", () => {
       status: "admitted",
       scope: await mocks.requireCurrentRequestScope(),
     }));
+    mocks.resolveAdminCapabilityAccessBounded.mockResolvedValue({
+      status: "allowed",
+    });
     for (const operation of [
       mocks.moderateCommunityContribution,
       mocks.moderateCommunityDiscussion,
@@ -100,8 +108,9 @@ describe("community moderator actions", () => {
       reason: "privacy",
     });
     expect(mocks.redirect).toHaveBeenCalledWith(
-      "/admin/communities/observation-and-care?moderationAction=updated#moderation-queue",
+      "/account/communities/observation-and-care?moderationAction=updated#moderation-queue",
     );
+    expect(mocks.resolveAdminCapabilityAccessBounded).toHaveBeenCalledTimes(5);
   });
 
   it("does not convert the framework redirect into a false unavailable result", async () => {
@@ -117,7 +126,22 @@ describe("community moderator actions", () => {
 
     expect(mocks.redirect).toHaveBeenCalledTimes(1);
     expect(mocks.redirect).toHaveBeenCalledWith(
-      "/admin/communities/observation-and-care?moderationAction=updated#moderation-queue",
+      "/account/communities/observation-and-care?moderationAction=updated#moderation-queue",
+    );
+  });
+
+  it("denies an admitted ordinary actor before any moderation effect", async () => {
+    const { moderateCommunityContributionAction } = await import("./actions");
+    mocks.resolveAdminCapabilityAccessBounded.mockResolvedValue({
+      status: "timed_out",
+    });
+
+    await moderateCommunityContributionAction(moderatorFormData());
+
+    expect(mocks.moderateCommunityContribution).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/account/communities/observation-and-care?moderationAction=unavailable#moderation-queue",
     );
   });
 });

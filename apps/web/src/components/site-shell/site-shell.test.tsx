@@ -113,9 +113,7 @@ describe("production site shell", () => {
     expect(html).toContain('aria-label="Увійти"');
     expect(html).toContain("site-shell-header-icon");
     expect(html).toContain('aria-label="Відкрити навігацію"');
-    expect(html).toContain(
-      'data-cwv-interaction-target="site-menu"',
-    );
+    expect(html).toContain('data-cwv-interaction-target="site-menu"');
     expect(html).toContain('aria-current="page"');
     expect(html).not.toContain(">Моє<");
     expect(html).not.toMatch(/draftCount|owner_user_id|private-user/i);
@@ -178,8 +176,8 @@ describe("production site shell", () => {
       'data-current-session-binding="opaque-current-session-binding"',
     );
     expect(html).not.toContain('data-site-shell-operator-menu="true"');
-    expect(html).not.toContain('href="/admin/communities"');
-    expect(html).not.toContain('href="/admin/moderation/comments"');
+    expect(html).not.toContain('href="/account/communities"');
+    expect(html).not.toContain('href="/account/moderation/comments"');
     expect(html).not.toContain('href="/garden/catalog/curation"');
     expect(html).not.toContain('href="/garden/privacy/erasure-requests"');
     expect(mocks.currentSessionBinding).toBe("opaque-current-session-binding");
@@ -201,8 +199,8 @@ describe("production site shell", () => {
       <SiteShellOperatorMenu locale="uk" />,
     );
     expect(operatorMenuHtml).toContain('data-site-shell-operator-menu="true"');
-    expect(operatorMenuHtml).toContain('href="/admin/communities"');
-    expect(operatorMenuHtml).toContain('href="/admin/moderation/comments"');
+    expect(operatorMenuHtml).toContain('href="/account/communities"');
+    expect(operatorMenuHtml).toContain('href="/account/moderation/comments"');
     expect(operatorMenuHtml).toContain('href="/garden/catalog/curation"');
     expect(operatorMenuHtml).toContain(
       'href="/garden/privacy/erasure-requests"',
@@ -232,27 +230,25 @@ describe("production site shell", () => {
     );
   });
 
-  it("keeps internal operational pages outside the product shell", async () => {
-    mocks.pathname = "/admin/communities";
+  it("renders account moderation inside the product shell", async () => {
+    mocks.pathname = "/account/communities";
     const { SiteShell } = await import("./site-shell");
     const html = renderToStaticMarkup(
       <SiteShell locale="uk" market="ukraine" isAuthenticated={true}>
-        <main>Admin control plane</main>
+        <main>Account moderation</main>
       </SiteShell>,
     );
 
-    expect(html).toContain('data-site-shell="excluded"');
-    expect(html).toContain('data-authenticated-utility-region="true"');
-    expect(html).toContain('data-sign-out-control="utility"');
-    expect(html).toContain("Вийти з облікового запису");
-    expect(html).toContain("Admin control plane");
-    expect(html).not.toContain('data-site-shell-region="sidebar"');
-    expect(html).not.toContain('data-site-shell-region="mobile-navigation"');
+    expect(html).toContain('data-site-shell="root"');
+    expect(html).toContain("Account moderation");
+    expect(html).toContain('data-site-shell-region="sidebar"');
+    expect(html).toContain('data-site-shell-region="mobile-navigation"');
+    expect(html).not.toContain('data-authenticated-utility-region="true"');
     expect(html).toContain('data-retirement-banner="true"');
   });
 
-  it("keeps guest operator boundaries free of authenticated controls", async () => {
-    mocks.pathname = "/admin/communities";
+  it("keeps guest account moderation free of owner links", async () => {
+    mocks.pathname = "/account/communities";
     const { SiteShell } = await import("./site-shell");
     const html = renderToStaticMarkup(
       <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
@@ -260,9 +256,10 @@ describe("production site shell", () => {
       </SiteShell>,
     );
 
-    expect(html).toContain('data-site-shell="excluded"');
+    expect(html).toContain('data-site-shell="root"');
     expect(html).not.toContain('data-authenticated-utility-region="true"');
     expect(html).not.toContain("data-sign-out-control");
+    expect(html).not.toContain('href="/account/communities"');
   });
 
   it("keeps native erasure mutation-capable without mounting private navigation or the local session gate", async () => {
@@ -330,7 +327,7 @@ describe("production site shell", () => {
 
   it("renders the compact Bulgaria control on guest denied and health boundaries", async () => {
     const { SiteShell } = await import("./site-shell");
-    for (const pathname of ["/admin/communities", "/health"]) {
+    for (const pathname of ["/health"]) {
       mocks.pathname = pathname;
       const html = renderToStaticMarkup(
         <SiteShell locale="ru" market="bulgaria" isAuthenticated={false}>

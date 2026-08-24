@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   getAuthoritativeCurrentSession: vi.fn(),
   issueDocumentMutationGeneration: vi.fn(),
   deriveCurrentSessionBinding: vi.fn(),
-  resolveAdminAccess: vi.fn(),
+  resolveAdminCapabilityAccessBounded: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -25,7 +25,8 @@ vi.mock("@/lib/auth/sign-out-hardening", () => ({
 }));
 
 vi.mock("@/server/admin-access", () => ({
-  resolveAdminAccess: mocks.resolveAdminAccess,
+  resolveAdminCapabilityAccessBounded:
+    mocks.resolveAdminCapabilityAccessBounded,
 }));
 
 describe("site shell session boundary", () => {
@@ -35,7 +36,9 @@ describe("site shell session boundary", () => {
     mocks.deriveCurrentSessionBinding.mockReturnValue(
       "opaque-current-session-binding",
     );
-    mocks.resolveAdminAccess.mockResolvedValue({ status: "denied" });
+    mocks.resolveAdminCapabilityAccessBounded.mockResolvedValue({
+      status: "denied",
+    });
   });
 
   it("serializes only authentication state and the opaque signed generation", async () => {
@@ -139,7 +142,7 @@ describe("site shell session boundary", () => {
       user: { id: "private-owner-id" },
       session: { id: "private-session-id" },
     });
-    mocks.resolveAdminAccess.mockResolvedValue({
+    mocks.resolveAdminCapabilityAccessBounded.mockResolvedValue({
       status: "allowed",
       mode: "sealed_owner_credential_only",
       role: "owner",
@@ -158,10 +161,13 @@ describe("site shell session boundary", () => {
       currentSessionBinding: "opaque-current-session-binding",
       hasOperatorAccess: true,
     });
-    expect(mocks.resolveAdminAccess).toHaveBeenCalledWith({
-      userId: "private-owner-id",
-      sessionId: "private-session-id",
-    });
+    expect(mocks.resolveAdminCapabilityAccessBounded).toHaveBeenCalledWith(
+      {
+        userId: "private-owner-id",
+        sessionId: "private-session-id",
+      },
+      "operator:mutate",
+    );
     expect(JSON.stringify(result)).not.toMatch(
       /private-owner-id|private-session-id|sealed_owner|operator:mutate/,
     );
@@ -172,7 +178,7 @@ describe("site shell session boundary", () => {
       user: { id: "private-user-id" },
       session: { id: "private-session-id" },
     });
-    mocks.resolveAdminAccess.mockRejectedValue(
+    mocks.resolveAdminCapabilityAccessBounded.mockRejectedValue(
       new Error("database unavailable"),
     );
     mocks.issueDocumentMutationGeneration.mockReturnValue({

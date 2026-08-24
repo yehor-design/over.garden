@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import type { OperatorCopy } from "@/lib/operator-copy";
 import { formatOperatorTemplate, getOperatorCopy } from "@/lib/operator-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
 import { listCommunityModerationQueue } from "@/server/community-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { scopedToUser } from "@/server/request-scope";
@@ -24,23 +25,30 @@ export default async function CommunityModerationDirectory() {
     return (
       <main className="mx-auto grid w-full max-w-5xl gap-5 px-5 py-8">
         <AdminCommunityHeader copy={copy} />
-        <GardenAuthPanel locale={locale} postAuthPath="/admin/communities" />
+        <GardenAuthPanel locale={locale} postAuthPath="/account/communities" />
       </main>
     );
   }
 
   const scope = scopedToUser(session.user.id, getSessionId(session));
-  const moderation = await listCommunityModerationQueue(
+  const access = await resolveAdminCapabilityAccessBounded(
     scope,
-    FIRST_COMMUNITY_SLUG,
-  ).catch(() => null);
+    "operator:mutate",
+  );
+  const moderation =
+    access.status === "allowed"
+      ? await listCommunityModerationQueue(scope, FIRST_COMMUNITY_SLUG).catch(
+          () => null,
+        )
+      : null;
 
   return (
     <main className="mx-auto grid w-full max-w-5xl gap-5 px-5 py-8">
       <AdminCommunityHeader copy={copy} />
       {moderation ? (
         <Link
-          href={`/admin/communities/${FIRST_COMMUNITY_SLUG}`}
+          href={`/account/communities/${FIRST_COMMUNITY_SLUG}`}
+          data-private-moderation-queue="true"
           className="grid min-h-36 max-w-xl content-between gap-5 rounded-md border border-border p-4 transition-colors hover:border-primary/45 hover:bg-muted/30"
         >
           <span className="grid gap-2">

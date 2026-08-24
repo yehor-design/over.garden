@@ -37,7 +37,7 @@ describe("authenticated utility region", () => {
       <AuthenticatedUtilityRegion
         locale="bg"
         market="bulgaria"
-        pathname="/admin/communities"
+        pathname="/garden/catalog/curation"
         isAuthenticated
       />,
     );

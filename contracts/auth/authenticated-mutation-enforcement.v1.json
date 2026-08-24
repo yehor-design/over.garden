@@ -1,7 +1,7 @@
 {
   "schemaVersion": "overgarden.authenticated-mutation-enforcement.v1",
-  "registryDigest": "8726043541f4c7918de16dca2c4bdbe2adf4b40d6e2536c23e1e81b43569eadd",
-  "sourceRegistryReceiptDigest": "68ead17b798e2b2c00a43cc6425c0acf7e77058672677e3d950208aa1acd3425",
+  "registryDigest": "b52a9ce84a8dc15c9ad51f1bf73cc0eb96180dd3e55fb53da2a053396098f94e",
+  "sourceRegistryReceiptDigest": "d359607af3f4e44cadf26330d977e268cc2b274878a9f2eb875e27d8c46d8883",
   "entrypointStates": [
     {
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_account_session_mutation",
@@ -132,27 +132,27 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#CommunityModerationPage:action:setCommunityParticipationAction",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#CommunityModerationPage:action:setCommunityParticipationAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:1:088ed340300e5b0baf9d",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:1:2cb0c491fc50f11972d6",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:2:4cd1e54ab512d4b916e2",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:2:386fd4909b22a8a36f9f",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:3:132cb6d07672006dab93",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:3:10ffd4e117369175ace2",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:4:013fcda43441af96efbc",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:4:c587b2c25d4e84f94fea",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "native_form:src/app/admin/moderation/comments/page.tsx#CommentModerationPage:action:moderateCommentReportAction",
+      "entrypointId": "native_form:src/app/account/moderation/comments/page.tsx#CommentModerationPage:action:moderateCommentReportAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -656,27 +656,27 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityContributionAction",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityContributionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#resolveCommunityReportAction",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#resolveCommunityReportAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#setCommunityParticipationAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/admin/moderation/comments/actions.ts#moderateCommentReportAction",
+      "entrypointId": "server_action:src/app/account/moderation/comments/actions.ts#moderateCommentReportAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -854,12 +854,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:0ab98f4c16ac13fce80c:1:acea1f21faa935f11e77",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityContributionAction",
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityContributionAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:0c563e411c660875e384:1:33c7b234bc8dcaee33e6",
       "entrypointId": "browser_operator:src/app/garden/account-methods-panel.tsx#linkProvider:auth_client.linkSocial",
       "admissionBoundaryId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#link_social_post_redirect",
@@ -902,15 +896,15 @@
       "enforcementState": "owned_by_ove_295"
     },
     {
-      "consumerEdgeId": "edge:142690d6cbfb6b0b4250:1:08e41d6510c61403953e",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#resolveCommunityReportAction",
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#resolveCommunityReportAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:1442c707fb16a9000b8a:1:8c82bcc9683eedbedd61",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#markErasureRequestHandledAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#markErasureRequestHandledAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:14671cf4c54dce398195:1:236152af6438eade1f36",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:2:386fd4909b22a8a36f9f",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -959,12 +953,6 @@
       "consumerEdgeId": "edge:191b81746d43efa813a9:4:5ef90698448ca86aa73f",
       "entrypointId": "native_form:src/app/garden/profile/owner-profile-editor.tsx#OwnerProfileEditor:action:handleFormAction",
       "admissionBoundaryId": "server_action:src/app/garden/profile/actions.ts#updatePublicHandleAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:1af84486aa45f8e7730a:1:236152af6438eade1f36",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:2:4cd1e54ab512d4b916e2",
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1376,12 +1364,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:3eb80b7c46b7b979faa7:1:8753a2814be9a86786c1",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:3:132cb6d07672006dab93",
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:3f01b54f054f2f0b82b6:1:4de04c25c8140e8ebc39",
       "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rescanCatalogMatchSuggestionsAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rescanCatalogMatchSuggestionsAction",
@@ -1403,6 +1385,12 @@
       "consumerEdgeId": "edge:40db66f0b086ed6143e8:3:7c683b0b5c459cac9a41",
       "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#ProvenanceSection:action:createLineageInvitationAction",
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createLineageInvitationAction:authority:authenticated_user",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:42d0c6b13708c377825f:1:8753a2814be9a86786c1",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1670,9 +1658,9 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:5ab38cf210523ffa14d0:1:63d0f87edb4044b648b5",
-      "entrypointId": "server_action:src/app/admin/moderation/comments/actions.ts#moderateCommentReportAction",
-      "admissionBoundaryId": "server_action:src/app/admin/moderation/comments/actions.ts#moderateCommentReportAction",
+      "consumerEdgeId": "edge:5e47dcdf5eba4b26751b:1:08e41d6510c61403953e",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:4:c587b2c25d4e84f94fea",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#resolveCommunityReportAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1703,12 +1691,6 @@
       "consumerEdgeId": "edge:62fb48b314eaf199bfd8:1:06c622c691ab9d142d14",
       "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#mergeCatalogCandidateAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#mergeCatalogCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:659643de2b85cafa7003:1:236152af6438eade1f36",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1844,6 +1826,12 @@
       "enforcementState": "enforced_ove_291"
     },
     {
+      "consumerEdgeId": "edge:6eb8dfd608407dd93afe:1:03707a3b38302d566b9a",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#setCommunityParticipationAction",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#setCommunityParticipationAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
       "consumerEdgeId": "edge:6ecfdf675bba4e40ee24:1:b3e0d21528bb4fd73750",
       "entrypointId": "native_form:src/app/engagement/public-engagement-panel.tsx#EngagementButtonForm:action:action:binding:2:e4b08a23bfb2775bbd0d",
       "admissionBoundaryId": "route_handler:src/app/api/engagement/follows/route.ts#POST:authority:authenticated_user",
@@ -1877,6 +1865,12 @@
       "consumerEdgeId": "edge:6ecfdf675bba4e40ee24:6:ba1cc90352013bdb29d7",
       "entrypointId": "native_form:src/app/engagement/public-engagement-panel.tsx#EngagementButtonForm:action:action:binding:2:e4b08a23bfb2775bbd0d",
       "admissionBoundaryId": "route_handler:src/app/api/engagement/follows/route.ts#POST:authority:authenticated_user",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:7232077f7e99002c6526:1:236152af6438eade1f36",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1994,12 +1988,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:7c2945a7468c5b4aeac5:1:63d0f87edb4044b648b5",
-      "entrypointId": "native_form:src/app/admin/moderation/comments/page.tsx#CommentModerationPage:action:moderateCommentReportAction",
-      "admissionBoundaryId": "server_action:src/app/admin/moderation/comments/actions.ts#moderateCommentReportAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:7d649b6503557a6b55e9:1:2cf8f7ab23847e648764",
       "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogAliasSuggestionAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogAliasSuggestionAction",
@@ -2099,12 +2087,6 @@
       "consumerEdgeId": "edge:835d4c877c20af8f7e24:1:d0a23c583aec75397683",
       "entrypointId": "native_form:src/app/lineage/objects/[objectId]/page.tsx#LineageInteractionPanel:action:askLineageQuestionAction",
       "admissionBoundaryId": "server_action:src/app/lineage/objects/[objectId]/actions.ts#askLineageQuestionAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:84b20124c4d9e6e19446:1:03707a3b38302d566b9a",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#CommunityModerationPage:action:setCommunityParticipationAction",
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2216,9 +2198,9 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:9656b7ab4382ea5416cf:1:03707a3b38302d566b9a",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
+      "consumerEdgeId": "edge:8f5b3356d7706eafb790:1:acea1f21faa935f11e77",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityContributionAction",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityContributionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2279,6 +2261,12 @@
       "consumerEdgeId": "edge:9f00e17af2fcc3a50739:3:fff361fedf788b002cb2",
       "entrypointId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#followProfileAction",
       "admissionBoundaryId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#followProfileAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:a0815b79cf549c510a0e:1:08e41d6510c61403953e",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#resolveCommunityReportAction",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#resolveCommunityReportAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2378,9 +2366,9 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:ab3b53afd4aefa29c463:1:8753a2814be9a86786c1",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
+      "consumerEdgeId": "edge:aa2029ad3dde7cf89688:1:8753a2814be9a86786c1",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:3:10ffd4e117369175ace2",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2654,9 +2642,21 @@
       "enforcementState": "enforced_ove_291"
     },
     {
+      "consumerEdgeId": "edge:c6b4f8b6e3da86a9203e:1:acea1f21faa935f11e77",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:1:2cb0c491fc50f11972d6",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityContributionAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
       "consumerEdgeId": "edge:c74457637e25e19a255b:1:06c622c691ab9d142d14",
       "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:mergeAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#mergeCatalogCandidateAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:c744e46d7dd6bed82be2:1:03707a3b38302d566b9a",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#CommunityModerationPage:action:setCommunityParticipationAction",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#setCommunityParticipationAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2732,6 +2732,12 @@
       "enforcementState": "enforced_ove_291"
     },
     {
+      "consumerEdgeId": "edge:d44890f70aa4b9aaf9a8:1:63d0f87edb4044b648b5",
+      "entrypointId": "native_form:src/app/account/moderation/comments/page.tsx#CommentModerationPage:action:moderateCommentReportAction",
+      "admissionBoundaryId": "server_action:src/app/account/moderation/comments/actions.ts#moderateCommentReportAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
       "consumerEdgeId": "edge:d8d4e0b13ceb5508bdc0:1:43373f91402d5ff0aab3",
       "entrypointId": "native_form:src/app/catalog-evidence-route.tsx#renderPublicCatalogEvidenceRoute:action:addCatalogPublicSlugToWishlistAction",
       "admissionBoundaryId": "server_action:src/app/wishlist/actions.ts#addCatalogPublicSlugToWishlistAction:authority:authenticated_user",
@@ -2741,12 +2747,6 @@
       "consumerEdgeId": "edge:d8d4e0b13ceb5508bdc0:2:c56b4b1ca8826dc306f2",
       "entrypointId": "native_form:src/app/catalog-evidence-route.tsx#renderPublicCatalogEvidenceRoute:action:addCatalogPublicSlugToWishlistAction",
       "admissionBoundaryId": "server_action:src/app/wishlist/actions.ts#addCatalogPublicSlugToWishlistAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:d991325b4bddb39a8da2:1:acea1f21faa935f11e77",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:1:088ed340300e5b0baf9d",
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityContributionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2837,12 +2837,6 @@
       "consumerEdgeId": "edge:edaa1a4feb6de67a9716:1:c6956b9313aab7922575",
       "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#generateCatalogAliasSuggestionsAction",
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#generateCatalogAliasSuggestionsAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:ef57f933d8074714c4da:1:08e41d6510c61403953e",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:4:013fcda43441af96efbc",
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#resolveCommunityReportAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2987,6 +2981,12 @@
       "consumerEdgeId": "edge:f70cccf1ee593092d939:9:3cba31d4baad96aa60da",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#executeApprovedErasureRequestAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:f73d4ecf5fbe84b97201:1:63d0f87edb4044b648b5",
+      "entrypointId": "server_action:src/app/account/moderation/comments/actions.ts#moderateCommentReportAction",
+      "admissionBoundaryId": "server_action:src/app/account/moderation/comments/actions.ts#moderateCommentReportAction",
       "enforcementState": "enforced_ove_291"
     },
     {

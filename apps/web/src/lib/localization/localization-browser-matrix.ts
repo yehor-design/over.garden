@@ -36,7 +36,7 @@ export type LocalizationRequiredBrowserState =
 
 export type LocalizationBrowserPathTransform =
   | "identity"
-  | "community-moderation";
+  | "account-community-moderation";
 
 export type LocalizationBrowserMarketCase =
   | "ukraine-uk-zero-control"
@@ -279,7 +279,7 @@ export const LOCALIZATION_OWNER_BROWSER_PROBES: readonly LocalizationOwnerBrowse
       id: "operator-moderation",
       owner: "operator",
       scenarioId: "community:ove184-community-moderator",
-      pathTransform: "community-moderation",
+      pathTransform: "account-community-moderation",
       stateClasses: [],
       viewportIds: REQUIRED_VIEWPORTS,
       expectedStatus: 200,

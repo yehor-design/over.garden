@@ -543,18 +543,20 @@ function fixtureRoute(
   scenarioId: string,
   input: Omit<TypographyBrowserRoute, "target"> & {
     localize?: boolean;
-    pathTransform?: "identity" | "community-moderation";
+    pathTransform?: "identity" | "account-community-moderation";
   },
 ): TypographyBrowserRoute {
   const scenario = CORE_JOURNEY_SCENARIOS.find(({ id }) => id === scenarioId);
   if (!scenario) throw new Error("Typography fixture scenario is missing.");
   const safePath = browserSafeFixturePath(scenario.path);
   const parsed = new URL(safePath, "https://fixture.invalid");
-  if (input.pathTransform === "community-moderation") {
+  if (input.pathTransform === "account-community-moderation") {
     if (!parsed.pathname.startsWith("/communities/")) {
-      throw new Error("Typography operator fixture cannot derive admin path.");
+      throw new Error(
+        "Typography operator fixture cannot derive account moderation path.",
+      );
     }
-    parsed.pathname = `/admin${parsed.pathname}`;
+    parsed.pathname = `/account${parsed.pathname}`;
   }
   if (input.localize) {
     parsed.pathname = localizedPath(
@@ -593,7 +595,7 @@ function localOwnerSurfaceRoutes(): TypographyBrowserRoute[] {
     options: {
       locale?: TypographyBrowserRoute["locale"];
       localize?: boolean;
-      pathTransform?: "identity" | "community-moderation";
+      pathTransform?: "identity" | "account-community-moderation";
     } = {},
   ) =>
     fixtureRoute(scenarioId, {
@@ -640,7 +642,7 @@ function localOwnerSurfaceRoutes(): TypographyBrowserRoute[] {
     routeFor(
       "surface-operator-moderation",
       "community:ove184-community-moderator",
-      { locale: "ru", pathTransform: "community-moderation" },
+      { locale: "ru", pathTransform: "account-community-moderation" },
     ),
     explicitOwnerRoute(
       "surface-operator-unauthorized",

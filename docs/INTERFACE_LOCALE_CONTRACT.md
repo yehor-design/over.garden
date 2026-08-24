@@ -1,8 +1,8 @@
 # Interface Locale Contract
 
-Status: OVE-205 shipped; binding market/locale contract extended by OVE-208 typography ownership
-Issues: OVE-164 through OVE-171 (preserved baseline), OVE-205 (shipped authority), OVE-208 (typography extension), OVE-202/206/207 (downstream extension owners)
-Date: 2026-07-22
+Status: OVE-205 shipped; extended by OVE-208 typography ownership and OVE-338 account-route ownership
+Issues: OVE-164 through OVE-171 (preserved baseline), OVE-205 (shipped authority), OVE-208 (typography extension), OVE-338 (account-route extension), OVE-202/206/207 (downstream extension owners)
+Date: 2026-08-25
 
 ## Purpose
 
@@ -61,11 +61,11 @@ not create a second Ukraine language choice.
 
 Signed-in, authentication, garden, account, and operator routes remain
 canonical and unprefixed, including `/garden`, `/garden/objects/:id`,
-`/garden/profile`, `/admin/communities`, `/admin/moderation/comments`,
+`/garden/profile`, `/account/communities`, `/account/moderation/comments`,
 `/garden/catalog/curation`, and `/garden/privacy/erasure-requests`. The market
 and locale of those routes are request state, never query-string state. The
-retired `/admin` landing and `/admin/users` page are exact `404`, not locale
-entry points.
+retired `/admin` namespace and every descendant are exact `404`, not locale
+entry points or compatibility redirects.
 
 ## Language-Control Ownership
 

@@ -6,6 +6,7 @@ import {
   admitDocumentMutation,
   documentMutationGenerationFromFormData,
 } from "@/server/document-mutation-admission";
+import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
 import {
   moderateEngagementCommentReport,
   type EngagementModerationAction,
@@ -18,6 +19,11 @@ export async function moderateCommentReportAction(formData: FormData) {
   if (admission.status === "rejected") {
     return { documentMutationAdmission: admission.transportResult };
   }
+  const access = await resolveAdminCapabilityAccessBounded(
+    admission.scope,
+    "operator:mutate",
+  );
+  if (access.status !== "allowed") return;
   try {
     await moderateEngagementCommentReport(admission.scope, {
       reportId: String(formData.get("reportId") ?? ""),
@@ -25,7 +31,7 @@ export async function moderateCommentReportAction(formData: FormData) {
         formData.get("action") ?? "",
       ) as EngagementModerationAction,
     });
-    revalidatePath("/admin/moderation/comments");
+    revalidatePath("/account/moderation/comments");
     return;
   } catch {
     return;

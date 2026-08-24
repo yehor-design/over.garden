@@ -33,21 +33,6 @@
       "predecessorEdgeIds": []
     },
     {
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityContributionAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:0ab98f4c16ac13fce80c:always",
-      "consumerEdgeId": "edge:0ab98f4c16ac13fce80c:1:acea1f21faa935f11e77",
-      "effectBoundaryId": "effect:71ce3dba06af1eff7a1a:database-transaction-1",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityContributionAction",
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/community-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:0ab98f4c16ac13fce80c",
-      "predecessorEdgeIds": []
-    },
-    {
       "admissionBoundaryId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#link_social_post_redirect",
       "branchConditionClass": "success",
       "branchId": "branch:0c563e411c660875e384:success",
@@ -161,21 +146,6 @@
       ]
     },
     {
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#resolveCommunityReportAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:142690d6cbfb6b0b4250:always",
-      "consumerEdgeId": "edge:142690d6cbfb6b0b4250:1:08e41d6510c61403953e",
-      "effectBoundaryId": "effect:d1795593f83cdba5d6d1:database-transaction-1",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#resolveCommunityReportAction",
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/community-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:142690d6cbfb6b0b4250",
-      "predecessorEdgeIds": []
-    },
-    {
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#markErasureRequestHandledAction",
       "branchConditionClass": "always",
       "branchId": "branch:1442c707fb16a9000b8a:always",
@@ -188,6 +158,22 @@
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:1442c707fb16a9000b8a",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:14671cf4c54dce398195:always",
+      "consumerEdgeId": "edge:14671cf4c54dce398195:1:236152af6438eade1f36",
+      "effectBoundaryId": "effect:cdc2fc55361dcffe6fcd:database-transaction-1",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:2:386fd4909b22a8a36f9f",
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/server/community-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:14671cf4c54dce398195",
       "predecessorEdgeIds": []
     },
     {
@@ -322,22 +308,6 @@
       "predecessorEdgeIds": [
         "edge:191b81746d43efa813a9:3:eec4c3ca6e827fd57683"
       ]
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:1af84486aa45f8e7730a:always",
-      "consumerEdgeId": "edge:1af84486aa45f8e7730a:1:236152af6438eade1f36",
-      "effectBoundaryId": "effect:cdc2fc55361dcffe6fcd:database-transaction-1",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:2:4cd1e54ab512d4b916e2",
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/server/community-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:1af84486aa45f8e7730a",
-      "predecessorEdgeIds": []
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/garden/mentions/typeahead/route.ts#GET",
@@ -1476,22 +1446,6 @@
       ]
     },
     {
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:3eb80b7c46b7b979faa7:always",
-      "consumerEdgeId": "edge:3eb80b7c46b7b979faa7:1:8753a2814be9a86786c1",
-      "effectBoundaryId": "effect:82dd722ddc671b4e60b2:database-transaction-1",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:3:132cb6d07672006dab93",
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/server/community-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:3eb80b7c46b7b979faa7",
-      "predecessorEdgeIds": []
-    },
-    {
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rescanCatalogMatchSuggestionsAction",
       "branchConditionClass": "always",
       "branchId": "branch:3f01b54f054f2f0b82b6:always",
@@ -1557,6 +1511,21 @@
       "predecessorEdgeIds": [
         "edge:40db66f0b086ed6143e8:2:7b3651cb2882cfb9796b"
       ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:42d0c6b13708c377825f:always",
+      "consumerEdgeId": "edge:42d0c6b13708c377825f:1:8753a2814be9a86786c1",
+      "effectBoundaryId": "effect:82dd722ddc671b4e60b2:database-transaction-1",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/community-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:42d0c6b13708c377825f",
+      "predecessorEdgeIds": []
     },
     {
       "admissionBoundaryId": "route_handler:src/app/api/engagement/comments/block/route.ts#POST:authority:authenticated_user",
@@ -2300,18 +2269,19 @@
       ]
     },
     {
-      "admissionBoundaryId": "server_action:src/app/admin/moderation/comments/actions.ts#moderateCommentReportAction",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#resolveCommunityReportAction",
       "branchConditionClass": "always",
-      "branchId": "branch:5ab38cf210523ffa14d0:always",
-      "consumerEdgeId": "edge:5ab38cf210523ffa14d0:1:63d0f87edb4044b648b5",
-      "effectBoundaryId": "effect:8c26679954b84727b9f4:database-transaction-1",
-      "entrypointId": "server_action:src/app/admin/moderation/comments/actions.ts#moderateCommentReportAction",
+      "branchId": "branch:5e47dcdf5eba4b26751b:always",
+      "consumerEdgeId": "edge:5e47dcdf5eba4b26751b:1:08e41d6510c61403953e",
+      "effectBoundaryId": "effect:d1795593f83cdba5d6d1:database-transaction-1",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:4:c587b2c25d4e84f94fea",
       "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts",
-        "src/server/engagement-repository.ts"
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/server/community-repository.ts"
       ],
       "executionMode": "required",
-      "pipelineId": "pipeline:5ab38cf210523ffa14d0",
+      "pipelineId": "pipeline:5e47dcdf5eba4b26751b",
       "predecessorEdgeIds": []
     },
     {
@@ -2394,21 +2364,6 @@
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:62fb48b314eaf199bfd8",
-      "predecessorEdgeIds": []
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:659643de2b85cafa7003:always",
-      "consumerEdgeId": "edge:659643de2b85cafa7003:1:236152af6438eade1f36",
-      "effectBoundaryId": "effect:cdc2fc55361dcffe6fcd:database-transaction-1",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/community-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:659643de2b85cafa7003",
       "predecessorEdgeIds": []
     },
     {
@@ -2795,6 +2750,21 @@
       "predecessorEdgeIds": []
     },
     {
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#setCommunityParticipationAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:6eb8dfd608407dd93afe:always",
+      "consumerEdgeId": "edge:6eb8dfd608407dd93afe:1:03707a3b38302d566b9a",
+      "effectBoundaryId": "effect:269587beab2895720c4f:database-transaction-1",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#setCommunityParticipationAction",
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/community-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:6eb8dfd608407dd93afe",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "route_handler:src/app/api/engagement/follows/route.ts#POST:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:6ecfdf675bba4e40ee24:always",
@@ -2899,6 +2869,21 @@
       "predecessorEdgeIds": [
         "edge:6ecfdf675bba4e40ee24:5:451969ec87e193d911f4"
       ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:7232077f7e99002c6526:always",
+      "consumerEdgeId": "edge:7232077f7e99002c6526:1:236152af6438eade1f36",
+      "effectBoundaryId": "effect:cdc2fc55361dcffe6fcd:database-transaction-1",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/community-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:7232077f7e99002c6526",
+      "predecessorEdgeIds": []
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/lineage/invitations/claim/actions.ts#confirmLineageInvitationClaimAction:authority:authenticated_user",
@@ -3215,22 +3200,6 @@
       ]
     },
     {
-      "admissionBoundaryId": "server_action:src/app/admin/moderation/comments/actions.ts#moderateCommentReportAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:7c2945a7468c5b4aeac5:always",
-      "consumerEdgeId": "edge:7c2945a7468c5b4aeac5:1:63d0f87edb4044b648b5",
-      "effectBoundaryId": "effect:8c26679954b84727b9f4:database-transaction-1",
-      "entrypointId": "native_form:src/app/admin/moderation/comments/page.tsx#CommentModerationPage:action:moderateCommentReportAction",
-      "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts",
-        "src/app/admin/moderation/comments/page.tsx",
-        "src/server/engagement-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:7c2945a7468c5b4aeac5",
-      "predecessorEdgeIds": []
-    },
-    {
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogAliasSuggestionAction",
       "branchConditionClass": "always",
       "branchId": "branch:7d649b6503557a6b55e9:always",
@@ -3510,22 +3479,6 @@
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:835d4c877c20af8f7e24",
-      "predecessorEdgeIds": []
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:84b20124c4d9e6e19446:always",
-      "consumerEdgeId": "edge:84b20124c4d9e6e19446:1:03707a3b38302d566b9a",
-      "effectBoundaryId": "effect:269587beab2895720c4f:database-transaction-1",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#CommunityModerationPage:action:setCommunityParticipationAction",
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/server/community-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:84b20124c4d9e6e19446",
       "predecessorEdgeIds": []
     },
     {
@@ -3821,18 +3774,18 @@
       ]
     },
     {
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityContributionAction",
       "branchConditionClass": "always",
-      "branchId": "branch:9656b7ab4382ea5416cf:always",
-      "consumerEdgeId": "edge:9656b7ab4382ea5416cf:1:03707a3b38302d566b9a",
-      "effectBoundaryId": "effect:269587beab2895720c4f:database-transaction-1",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
+      "branchId": "branch:8f5b3356d7706eafb790:always",
+      "consumerEdgeId": "edge:8f5b3356d7706eafb790:1:acea1f21faa935f11e77",
+      "effectBoundaryId": "effect:71ce3dba06af1eff7a1a:database-transaction-1",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityContributionAction",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/actions.ts",
         "src/server/community-repository.ts"
       ],
       "executionMode": "required",
-      "pipelineId": "pipeline:9656b7ab4382ea5416cf",
+      "pipelineId": "pipeline:8f5b3356d7706eafb790",
       "predecessorEdgeIds": []
     },
     {
@@ -3999,6 +3952,21 @@
       "predecessorEdgeIds": [
         "edge:9f00e17af2fcc3a50739:2:88ef40df713114ebd7e8"
       ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#resolveCommunityReportAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:a0815b79cf549c510a0e:always",
+      "consumerEdgeId": "edge:a0815b79cf549c510a0e:1:08e41d6510c61403953e",
+      "effectBoundaryId": "effect:d1795593f83cdba5d6d1:database-transaction-1",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#resolveCommunityReportAction",
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/community-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:a0815b79cf549c510a0e",
+      "predecessorEdgeIds": []
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#promoteCatalogSourceCandidateAction",
@@ -4268,18 +4236,19 @@
       ]
     },
     {
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
       "branchConditionClass": "always",
-      "branchId": "branch:ab3b53afd4aefa29c463:always",
-      "consumerEdgeId": "edge:ab3b53afd4aefa29c463:1:8753a2814be9a86786c1",
+      "branchId": "branch:aa2029ad3dde7cf89688:always",
+      "consumerEdgeId": "edge:aa2029ad3dde7cf89688:1:8753a2814be9a86786c1",
       "effectBoundaryId": "effect:82dd722ddc671b4e60b2:database-transaction-1",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:3:10ffd4e117369175ace2",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx",
         "src/server/community-repository.ts"
       ],
       "executionMode": "required",
-      "pipelineId": "pipeline:ab3b53afd4aefa29c463",
+      "pipelineId": "pipeline:aa2029ad3dde7cf89688",
       "predecessorEdgeIds": []
     },
     {
@@ -5041,6 +5010,22 @@
       "predecessorEdgeIds": []
     },
     {
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityContributionAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:c6b4f8b6e3da86a9203e:always",
+      "consumerEdgeId": "edge:c6b4f8b6e3da86a9203e:1:acea1f21faa935f11e77",
+      "effectBoundaryId": "effect:71ce3dba06af1eff7a1a:database-transaction-1",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:1:2cb0c491fc50f11972d6",
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/server/community-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:c6b4f8b6e3da86a9203e",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#mergeCatalogCandidateAction",
       "branchConditionClass": "always",
       "branchId": "branch:c74457637e25e19a255b:always",
@@ -5054,6 +5039,22 @@
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:c74457637e25e19a255b",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#setCommunityParticipationAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:c744e46d7dd6bed82be2:always",
+      "consumerEdgeId": "edge:c744e46d7dd6bed82be2:1:03707a3b38302d566b9a",
+      "effectBoundaryId": "effect:269587beab2895720c4f:database-transaction-1",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#CommunityModerationPage:action:setCommunityParticipationAction",
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/server/community-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:c744e46d7dd6bed82be2",
       "predecessorEdgeIds": []
     },
     {
@@ -5249,6 +5250,22 @@
       "predecessorEdgeIds": []
     },
     {
+      "admissionBoundaryId": "server_action:src/app/account/moderation/comments/actions.ts#moderateCommentReportAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:d44890f70aa4b9aaf9a8:always",
+      "consumerEdgeId": "edge:d44890f70aa4b9aaf9a8:1:63d0f87edb4044b648b5",
+      "effectBoundaryId": "effect:8c26679954b84727b9f4:database-transaction-1",
+      "entrypointId": "native_form:src/app/account/moderation/comments/page.tsx#CommentModerationPage:action:moderateCommentReportAction",
+      "evidencePaths": [
+        "src/app/account/moderation/comments/actions.ts",
+        "src/app/account/moderation/comments/page.tsx",
+        "src/server/engagement-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:d44890f70aa4b9aaf9a8",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/wishlist/actions.ts#addCatalogPublicSlugToWishlistAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:d8d4e0b13ceb5508bdc0:always",
@@ -5281,22 +5298,6 @@
       "predecessorEdgeIds": [
         "edge:d8d4e0b13ceb5508bdc0:1:43373f91402d5ff0aab3"
       ]
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityContributionAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:d991325b4bddb39a8da2:always",
-      "consumerEdgeId": "edge:d991325b4bddb39a8da2:1:acea1f21faa935f11e77",
-      "effectBoundaryId": "effect:71ce3dba06af1eff7a1a:database-transaction-1",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:1:088ed340300e5b0baf9d",
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/server/community-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:d991325b4bddb39a8da2",
-      "predecessorEdgeIds": []
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#resolvePlantObjectCatalogAction:authority:authenticated_user",
@@ -5545,22 +5546,6 @@
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:edaa1a4feb6de67a9716",
-      "predecessorEdgeIds": []
-    },
-    {
-      "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#resolveCommunityReportAction",
-      "branchConditionClass": "always",
-      "branchId": "branch:ef57f933d8074714c4da:always",
-      "consumerEdgeId": "edge:ef57f933d8074714c4da:1:08e41d6510c61403953e",
-      "effectBoundaryId": "effect:d1795593f83cdba5d6d1:database-transaction-1",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:4:013fcda43441af96efbc",
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/server/community-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:ef57f933d8074714c4da",
       "predecessorEdgeIds": []
     },
     {
@@ -5956,6 +5941,21 @@
       "predecessorEdgeIds": [
         "edge:f70cccf1ee593092d939:8:83cb0b36ac40ec081833"
       ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/account/moderation/comments/actions.ts#moderateCommentReportAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:f73d4ecf5fbe84b97201:always",
+      "consumerEdgeId": "edge:f73d4ecf5fbe84b97201:1:63d0f87edb4044b648b5",
+      "effectBoundaryId": "effect:8c26679954b84727b9f4:database-transaction-1",
+      "entrypointId": "server_action:src/app/account/moderation/comments/actions.ts#moderateCommentReportAction",
+      "evidencePaths": [
+        "src/app/account/moderation/comments/actions.ts",
+        "src/server/engagement-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:f73d4ecf5fbe84b97201",
+      "predecessorEdgeIds": []
     },
     {
       "admissionBoundaryId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#reportProfileAction",
@@ -8766,15 +8766,15 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#CommunityModerationPage:action:setCommunityParticipationAction",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#CommunityModerationPage:action:setCommunityParticipationAction",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
+      "path": "src/app/account/communities/[slug]/page.tsx",
       "symbol": "CommunityModerationPage",
       "transport": "native_form",
       "variant": "action:setCommunityParticipationAction"
@@ -8782,15 +8782,15 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:1:088ed340300e5b0baf9d",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:1:2cb0c491fc50f11972d6",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
+      "path": "src/app/account/communities/[slug]/page.tsx",
       "symbol": "ModerationForm",
       "transport": "native_form",
       "variant": "action:action->moderateCommunityContributionAction"
@@ -8798,15 +8798,15 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:2:4cd1e54ab512d4b916e2",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:2:386fd4909b22a8a36f9f",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
+      "path": "src/app/account/communities/[slug]/page.tsx",
       "symbol": "ModerationForm",
       "transport": "native_form",
       "variant": "action:action->moderateCommunityDiscussionAction"
@@ -8814,15 +8814,15 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:3:132cb6d07672006dab93",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:3:10ffd4e117369175ace2",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
+      "path": "src/app/account/communities/[slug]/page.tsx",
       "symbol": "ModerationForm",
       "transport": "native_form",
       "variant": "action:action->moderateCommunityMembershipAction"
@@ -8830,15 +8830,15 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "native_form:src/app/admin/communities/[slug]/page.tsx#ModerationForm:action:action:binding:4:013fcda43441af96efbc",
+      "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:4:c587b2c25d4e84f94fea",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
+      "path": "src/app/account/communities/[slug]/page.tsx",
       "symbol": "ModerationForm",
       "transport": "native_form",
       "variant": "action:action->resolveCommunityReportAction"
@@ -8846,15 +8846,15 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "native_form:src/app/admin/moderation/comments/page.tsx#CommentModerationPage:action:moderateCommentReportAction",
+      "entrypointId": "native_form:src/app/account/moderation/comments/page.tsx#CommentModerationPage:action:moderateCommentReportAction",
       "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts",
-        "src/app/admin/moderation/comments/page.tsx"
+        "src/app/account/moderation/comments/actions.ts",
+        "src/app/account/moderation/comments/page.tsx"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/moderation/comments/page.tsx",
+      "path": "src/app/account/moderation/comments/page.tsx",
       "symbol": "CommentModerationPage",
       "transport": "native_form",
       "variant": "action:moderateCommentReportAction"
@@ -10803,14 +10803,14 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityContributionAction",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityContributionAction",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts"
+        "src/app/account/communities/[slug]/actions.ts"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
+      "path": "src/app/account/communities/[slug]/actions.ts",
       "symbol": "moderateCommunityContributionAction",
       "transport": "server_action",
       "variant": "moderateCommunityContributionAction"
@@ -10818,14 +10818,14 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityDiscussionAction",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts"
+        "src/app/account/communities/[slug]/actions.ts"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
+      "path": "src/app/account/communities/[slug]/actions.ts",
       "symbol": "moderateCommunityDiscussionAction",
       "transport": "server_action",
       "variant": "moderateCommunityDiscussionAction"
@@ -10833,14 +10833,14 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityMembershipAction",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts"
+        "src/app/account/communities/[slug]/actions.ts"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
+      "path": "src/app/account/communities/[slug]/actions.ts",
       "symbol": "moderateCommunityMembershipAction",
       "transport": "server_action",
       "variant": "moderateCommunityMembershipAction"
@@ -10848,14 +10848,14 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#resolveCommunityReportAction",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#resolveCommunityReportAction",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts"
+        "src/app/account/communities/[slug]/actions.ts"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
+      "path": "src/app/account/communities/[slug]/actions.ts",
       "symbol": "resolveCommunityReportAction",
       "transport": "server_action",
       "variant": "resolveCommunityReportAction"
@@ -10863,14 +10863,14 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
+      "entrypointId": "server_action:src/app/account/communities/[slug]/actions.ts#setCommunityParticipationAction",
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts"
+        "src/app/account/communities/[slug]/actions.ts"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
+      "path": "src/app/account/communities/[slug]/actions.ts",
       "symbol": "setCommunityParticipationAction",
       "transport": "server_action",
       "variant": "setCommunityParticipationAction"
@@ -10878,14 +10878,14 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "server_action:src/app/admin/moderation/comments/actions.ts#moderateCommentReportAction",
+      "entrypointId": "server_action:src/app/account/moderation/comments/actions.ts#moderateCommentReportAction",
       "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts"
+        "src/app/account/moderation/comments/actions.ts"
       ],
       "exclusionReason": null,
       "executionOwner": "remaining_ove_291",
       "generationRequirement": "required_before_first_effect",
-      "path": "src/app/admin/moderation/comments/actions.ts",
+      "path": "src/app/account/moderation/comments/actions.ts",
       "symbol": "moderateCommentReportAction",
       "transport": "server_action",
       "variant": "moderateCommentReportAction"
@@ -12033,6 +12033,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_28035",
+      "sourceNodeId": "source:048f4a643663ba24ba65",
+      "symbol": "setCommunityParticipation"
+    },
+    {
+      "evidencePaths": [
         "src/lib/public-projection-quality.ts",
         "src/server/journal-repository.ts"
       ],
@@ -12114,18 +12125,6 @@
       "semanticVariant": "from:@/lib/interface-request-guard",
       "sourceNodeId": "source:052f53df2540162bf66f",
       "symbol": "isSameOriginInterfaceRequest"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
-      ],
-      "nodeKind": "native_form",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:action->moderateCommunityMembershipAction",
-      "sourceNodeId": "source:05485e0548b990aef6cb",
-      "symbol": "ModerationForm"
     },
     {
       "evidencePaths": [
@@ -12256,6 +12255,18 @@
       "semanticVariant": "from:@/server/request-scope",
       "sourceNodeId": "source:06016634f1033066822f",
       "symbol": "RequestScope"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:action->resolveCommunityReportAction",
+      "sourceNodeId": "source:06125bd47b2557a56884",
+      "symbol": "ModerationForm"
     },
     {
       "evidencePaths": [
@@ -12544,6 +12555,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_21872",
+      "sourceNodeId": "source:08e9eb293d64d4cce903",
+      "symbol": "moderateCommunityContribution"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/language-switcher.tsx",
         "src/lib/interface-locale-change-coordinator.ts"
       ],
@@ -12591,18 +12613,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:094a8ea68b3028596b0f",
-      "symbol": "OperatorCopy"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/catalog/curation/actions.ts"
       ],
       "nodeKind": "server_action",
@@ -12611,6 +12621,18 @@
       "semanticVariant": "refreshCatalogFuzzyDuplicateQaAction",
       "sourceNodeId": "source:098a1f73ce5de7000c07",
       "symbol": "refreshCatalogFuzzyDuplicateQaAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/server/admin-access.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/admin-access",
+      "sourceNodeId": "source:0995dd5ebaf22b20df3d",
+      "symbol": "resolveAdminCapabilityAccessBounded"
     },
     {
       "evidencePaths": [
@@ -12635,6 +12657,18 @@
       "semanticVariant": "from:@/server/interface-localization",
       "sourceNodeId": "source:09e98a6d60c8fd934d94",
       "symbol": "getRequestInterfaceLocale"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:action->moderateCommunityDiscussionAction",
+      "sourceNodeId": "source:0a020bff4d7d793fb370",
+      "symbol": "ModerationForm"
     },
     {
       "evidencePaths": [
@@ -12685,15 +12719,27 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/server/community-repository.ts"
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
       ],
       "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
+      "path": "src/app/account/communities/[slug]/page.tsx",
       "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/community-repository",
-      "sourceNodeId": "source:0a94791781d20d97dd49",
-      "symbol": "listCommunityModerationQueue"
+      "semanticVariant": "from:./actions",
+      "sourceNodeId": "source:0a8dafcdc96e0b6b5251",
+      "symbol": "moderateCommunityMembershipAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:setCommunityParticipationAction",
+      "sourceNodeId": "source:0a9e46b26e8f990c6a1e",
+      "symbol": "CommunityModerationPage"
     },
     {
       "evidencePaths": [
@@ -12802,17 +12848,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "resolveCommunityReportAction",
-      "sourceNodeId": "source:0bfd0064b6f5a85376ac",
-      "symbol": "resolveCommunityReportAction"
-    },
-    {
-      "evidencePaths": [
         "src/server/launch-corpus/public-surface.ts",
         "src/server/search/public-journal-eligibility.ts"
       ],
@@ -12848,6 +12883,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:action->moderateCommunityMembershipAction",
+      "sourceNodeId": "source:0c5f5ec0c043b1b322de",
+      "symbol": "ModerationForm"
+    },
+    {
+      "evidencePaths": [
         "src/server/journal-mention-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -12868,18 +12915,6 @@
       "semanticVariant": "from:@/server/lineage-repository",
       "sourceNodeId": "source:0cae680055964208470d",
       "symbol": "LineageClaimInboxItem"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
-      ],
-      "nodeKind": "native_form",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:action->resolveCommunityReportAction",
-      "sourceNodeId": "source:0cb558576e13351c6eaf",
-      "symbol": "ModerationForm"
     },
     {
       "evidencePaths": [
@@ -13047,6 +13082,17 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "moderateCommunityContributionAction",
+      "sourceNodeId": "source:0fa9ce701ca481d19382",
+      "symbol": "moderateCommunityContributionAction"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/journal-document-persistence.ts"
       ],
@@ -13127,6 +13173,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_24742",
+      "sourceNodeId": "source:1071e56c6eff91b29be9",
+      "symbol": "moderateCommunityMembership"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/garden-auth-panel.tsx",
         "src/app/garden/objects/[objectId]/page.tsx"
       ],
@@ -13148,6 +13205,18 @@
       "semanticVariant": "from:@/server/journal-repository",
       "sourceNodeId": "source:10a8de759f05037b8958",
       "symbol": "PlantObjectPage"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/community-repository",
+      "sourceNodeId": "source:10b8f0b1d04b718d45ad",
+      "symbol": "resolveCommunityReport"
     },
     {
       "evidencePaths": [
@@ -13461,17 +13530,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_24671",
-      "sourceNodeId": "source:13c71f63a042a4f8653f",
-      "symbol": "moderateCommunityMembership"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/profile/actions.ts",
         "src/server/document-mutation-admission.ts"
       ],
@@ -13531,18 +13589,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/lib/public-localization.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/public-localization",
-      "sourceNodeId": "source:1450e51d3dc25d3d359c",
-      "symbol": "PUBLIC_LOCALES"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/interface/locale/route.ts",
         "src/lib/interface-market.ts"
       ],
@@ -13552,6 +13598,18 @@
       "semanticVariant": "from:@/lib/interface-market",
       "sourceNodeId": "source:14649fd3a412d00dce2d",
       "symbol": "normalizeInterfaceMarket"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/lib/operator-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-copy",
+      "sourceNodeId": "source:14748f8b4fb994d932d8",
+      "symbol": "OperatorCopy"
     },
     {
       "evidencePaths": [
@@ -13636,6 +13694,17 @@
       "semanticVariant": "from:@/server/catalog-repository",
       "sourceNodeId": "source:14f8a8ee496ad93f48e0",
       "symbol": "findSelectableCatalogItem"
+    },
+    {
+      "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_18216",
+      "sourceNodeId": "source:150b59dedbc18f588016",
+      "symbol": "contributePublicJournalToCommunity"
     },
     {
       "evidencePaths": [
@@ -13735,18 +13804,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:./actions",
-      "sourceNodeId": "source:166db2d75226b141b8bf",
-      "symbol": "moderateCommunityContributionAction"
-    },
-    {
-      "evidencePaths": [
         "src/lib/auth.ts",
         "src/lib/auth/google-oauth.ts"
       ],
@@ -13816,29 +13873,6 @@
       "semanticVariant": "from:@/lib/public-localization",
       "sourceNodeId": "source:16dd62f2f2ac2dec1d41",
       "symbol": "PublicLocale"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:16df45fa32bbf90b9a6b",
-      "symbol": "operatorCommunityStateLabel"
-    },
-    {
-      "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_19451",
-      "sourceNodeId": "source:16e3322224f82adf64d3",
-      "symbol": "reportCommunityContribution"
     },
     {
       "evidencePaths": [
@@ -14493,6 +14527,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/server/auth-session.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/auth-session",
+      "sourceNodeId": "source:1d7355e0278b3d4b7974",
+      "symbol": "getCurrentSession"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/page.tsx",
         "src/lib/owner-object-copy.ts"
       ],
@@ -14728,6 +14774,17 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:1fd82ef1e4b19053a3b5",
       "symbol": "JsonValue"
+    },
+    {
+      "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_26324",
+      "sourceNodeId": "source:1ffff84e19f6deb3cd8a",
+      "symbol": "resolveCommunityReport"
     },
     {
       "evidencePaths": [
@@ -15231,6 +15288,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/moderation/comments/actions.ts",
+        "src/server/engagement-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/engagement-repository",
+      "sourceNodeId": "source:24d12e5947871301105f",
+      "symbol": "moderateEngagementCommentReport"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/community-repository.ts"
       ],
@@ -15276,18 +15345,6 @@
       "semanticVariant": "from:@/lib/garden/public-paths",
       "sourceNodeId": "source:2544a12c5f36b0e4e495",
       "symbol": "localizedPublicJournalEvidencePath"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/moderation/comments/page.tsx",
-        "src/server/engagement-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/engagement-repository",
-      "sourceNodeId": "source:254a95cae2faf99003ee",
-      "symbol": "listEngagementCommentModerationQueue"
     },
     {
       "evidencePaths": [
@@ -15359,6 +15416,18 @@
       "semanticVariant": "from:@/server/document-mutation-admission",
       "sourceNodeId": "source:26117cc6eb00a6a2deff",
       "symbol": "admitDocumentMutation"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:265764f2299befbce12d",
+      "symbol": "documentMutationGenerationFromFormData"
     },
     {
       "evidencePaths": [
@@ -15454,18 +15523,6 @@
       "semanticVariant": "canonical-row:buildPlantObjectPageObjectQuery",
       "sourceNodeId": "source:26cf45d07215c2ee1821",
       "symbol": "getPlantObjectPage"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
-      ],
-      "nodeKind": "native_form",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:action->moderateCommunityContributionAction",
-      "sourceNodeId": "source:27081a87ce9f2448714e",
-      "symbol": "ModerationForm"
     },
     {
       "evidencePaths": [
@@ -15609,18 +15666,6 @@
       "semanticVariant": "from:@/server/visual-fixtures/social-actor",
       "sourceNodeId": "source:27f35601234a214a9dc6",
       "symbol": "resolveVisualSocialMutationActor"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:./actions",
-      "sourceNodeId": "source:28062e3943c67b7a2395",
-      "symbol": "resolveCommunityReportAction"
     },
     {
       "evidencePaths": [
@@ -15846,6 +15891,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/lib/operator-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-copy",
+      "sourceNodeId": "source:29e6a0b4bdba37cca49f",
+      "symbol": "getOperatorCopy"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/catalog/curation/catalog-entity-resolution-report.tsx",
         "src/server/catalog-source/entity-resolution-qa-repository.ts"
       ],
@@ -15855,6 +15912,29 @@
       "semanticVariant": "from:@/server/catalog-source/entity-resolution-qa-repository",
       "sourceNodeId": "source:2a132e9e65450103f837",
       "symbol": "CatalogEntityResolutionCluster"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/app/garden/garden-auth-panel.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/app/garden/garden-auth-panel",
+      "sourceNodeId": "source:2a14f811facd0424738d",
+      "symbol": "GardenAuthPanel"
+    },
+    {
+      "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_17164",
+      "sourceNodeId": "source:2a4f04636c0b2af8a67d",
+      "symbol": "setCommunityMembership"
     },
     {
       "evidencePaths": [
@@ -15868,18 +15948,6 @@
       "semanticVariant": "action:rejectAction",
       "sourceNodeId": "source:2a6c64e6339b11047afe",
       "symbol": "CatalogSourceCandidateCard"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
-      ],
-      "nodeKind": "native_form",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:action->moderateCommunityDiscussionAction",
-      "sourceNodeId": "source:2a77c764c31c144f9382",
-      "symbol": "ModerationForm"
     },
     {
       "evidencePaths": [
@@ -16458,6 +16526,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/moderation/comments/actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:308ad98a3bc2ea725e8f",
+      "symbol": "documentMutationGenerationFromFormData"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/catalog/curation/actions.ts",
         "src/server/variety-seed-proof-repository.ts"
       ],
@@ -16540,6 +16620,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/moderation/comments/actions.ts",
+        "src/app/account/moderation/comments/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/account/moderation/comments/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:moderateCommentReportAction",
+      "sourceNodeId": "source:318d28bdfe4db6568a32",
+      "symbol": "CommentModerationPage"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/page.tsx",
         "src/server/lineage-repository.ts"
       ],
@@ -16549,18 +16641,6 @@
       "semanticVariant": "from:@/server/lineage-repository",
       "sourceNodeId": "source:31952aa46e5be67fe2dc",
       "symbol": "LineagePlantObjectOption"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:./actions",
-      "sourceNodeId": "source:3197a70536815c2a824b",
-      "symbol": "moderateCommunityDiscussionAction"
     },
     {
       "evidencePaths": [
@@ -16680,18 +16760,6 @@
       "semanticVariant": "from:@/lib/garden/public-paths",
       "sourceNodeId": "source:3338565cda36bd133580",
       "symbol": "lineageInvitationClaimPath"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/community-repository",
-      "sourceNodeId": "source:333f107e2228aad1b6c3",
-      "symbol": "moderateCommunityMembership"
     },
     {
       "evidencePaths": [
@@ -16898,18 +16966,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/server/request-scope.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/request-scope",
-      "sourceNodeId": "source:364079a4b0cd7084d560",
-      "symbol": "scopedToUser"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/auth/local-exit-reconcile/route.ts",
         "src/lib/auth/sign-out-hardening.ts"
       ],
@@ -17007,30 +17063,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:37dc5474d45e58927af7",
-      "symbol": "getCurrentSession"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/request-scope.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/request-scope",
-      "sourceNodeId": "source:37e2eb0afef88c7aa4ea",
-      "symbol": "scopedToUser"
-    },
-    {
-      "evidencePaths": [
         "src/db/generated.ts",
         "src/server/journal-repository.ts"
       ],
@@ -17101,6 +17133,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./actions",
+      "sourceNodeId": "source:3933cb53ad84d36ac60e",
+      "symbol": "setCommunityParticipationAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/account-methods-panel.tsx",
         "src/lib/trust-surface-copy.ts"
       ],
@@ -17146,18 +17190,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:3a1a802ce7225ae01fab",
       "symbol": "Database"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/moderation/comments/page.tsx",
-        "src/components/ui/button.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/components/ui/button",
-      "sourceNodeId": "source:3a6020228ab0d8f79cb7",
-      "symbol": "buttonVariants"
     },
     {
       "evidencePaths": [
@@ -17327,17 +17359,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "moderateCommunityDiscussionAction",
-      "sourceNodeId": "source:3b672e1a998adf829a45",
-      "symbol": "moderateCommunityDiscussionAction"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/profile/owner-profile-editor.tsx",
         "src/server/owner-profile-repository.ts"
       ],
@@ -17456,18 +17477,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:3c1cfea81763d5776e5e",
-      "symbol": "admitDocumentMutation"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/profile/account-method-actions.ts"
       ],
       "nodeKind": "server_action",
@@ -17547,18 +17556,6 @@
       "semanticVariant": "from:@/lib/catalog/genebank-long-tail",
       "sourceNodeId": "source:3ca0d1d76db0d7220702",
       "symbol": "genebankLongTailPromotionProjection"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/moderation/comments/page.tsx",
-        "src/server/admin-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/admin-access",
-      "sourceNodeId": "source:3cb4c79fe9cf9347562b",
-      "symbol": "resolveAdminCapabilityAccess"
     },
     {
       "evidencePaths": [
@@ -18084,18 +18081,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:41d2475fdd396938f574",
-      "symbol": "documentMutationGenerationFromFormData"
-    },
-    {
-      "evidencePaths": [
         "src/components/public/public-knowledge-hub.tsx",
         "src/lib/public-localization.ts"
       ],
@@ -18117,6 +18102,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:41ef9d20361ddf3907d3",
       "symbol": "JournalEntryTopicReviewState"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/moderation/comments/page.tsx",
+        "src/server/request-scope.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/request-scope",
+      "sourceNodeId": "source:41fd816f59b896b6d182",
+      "symbol": "scopedToUser"
     },
     {
       "evidencePaths": [
@@ -18192,15 +18189,15 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/visual-fixtures/community-actor.ts"
+        "src/app/account/moderation/comments/page.tsx",
+        "src/components/auth/document-mutation-recovery.tsx"
       ],
       "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
+      "path": "src/app/account/moderation/comments/page.tsx",
       "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/visual-fixtures/community-actor",
-      "sourceNodeId": "source:42ad13da5a473cfe5e75",
-      "symbol": "resolveVisualCommunityMutationActor"
+      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
+      "sourceNodeId": "source:42a8b40cf420300efbf8",
+      "symbol": "DocumentMutationActionForm"
     },
     {
       "evidencePaths": [
@@ -18358,6 +18355,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/server/auth-session.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/auth-session",
+      "sourceNodeId": "source:4447e82d324d6d61d07c",
+      "symbol": "getSessionId"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/account-methods-panel.tsx",
         "src/components/auth/document-mutation-recovery.tsx"
       ],
@@ -18496,17 +18505,6 @@
       "semanticVariant": "from:@/lib/owner-object-copy",
       "sourceNodeId": "source:450d36d014b5d9bd4a0e",
       "symbol": "getOwnerObjectCopy"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "setCommunityParticipationAction",
-      "sourceNodeId": "source:4537d78a1915255a3fd2",
-      "symbol": "setCommunityParticipationAction"
     },
     {
       "evidencePaths": [
@@ -18754,6 +18752,18 @@
       "semanticVariant": "canonical-row:buildJournalMutationAdvisoryLockQuery",
       "sourceNodeId": "source:472c64e90600a0ec8a8e",
       "symbol": "createPlantObjectJournalEntry"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/moderation/comments/page.tsx",
+        "src/server/admin-access.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/admin-access",
+      "sourceNodeId": "source:477270614284218aca3a",
+      "symbol": "resolveAdminCapabilityAccessBounded"
     },
     {
       "evidencePaths": [
@@ -19157,6 +19167,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/server/request-scope.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/request-scope",
+      "sourceNodeId": "source:4cc07510c302ab981a66",
+      "symbol": "scopedToUser"
+    },
+    {
+      "evidencePaths": [
         "src/lib/auth/session-invalidation-marker.ts",
         "src/lib/auth/sign-out-contract.ts"
       ],
@@ -19190,6 +19212,18 @@
       "semanticVariant": "from:@/server/public-profile-repository",
       "sourceNodeId": "source:4d30b6f58dece8f447d2",
       "symbol": "getPublicProfileEvidencePreviewByUserId"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:action->moderateCommunityContributionAction",
+      "sourceNodeId": "source:4d32df56fbddc1cae4a5",
+      "symbol": "ModerationForm"
     },
     {
       "evidencePaths": [
@@ -19335,17 +19369,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_18145",
-      "sourceNodeId": "source:4e11359f3580163cc5ee",
-      "symbol": "contributePublicJournalToCommunity"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
         "src/server/journal-repository.ts"
       ],
@@ -19442,18 +19465,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/moderation/comments/page.tsx",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:4f390688dc9e678ea25e",
-      "symbol": "getSessionId"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/meta/conversions/route.ts"
       ],
       "nodeKind": "route_handler",
@@ -19544,18 +19555,6 @@
       "semanticVariant": "from:@/server/media/media-lifecycle-enqueue",
       "sourceNodeId": "source:508de376616bea465941",
       "symbol": "listDetachedInlineRevokeCandidates"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/app/garden/garden-auth-panel.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/app/garden/garden-auth-panel",
-      "sourceNodeId": "source:50a4264cdab9508c28d9",
-      "symbol": "GardenAuthPanel"
     },
     {
       "evidencePaths": [
@@ -19651,18 +19650,6 @@
       "semanticVariant": "from:@/lib/auth/unresolved-authorization",
       "sourceNodeId": "source:519cd339dcc544cadaa5",
       "symbol": "recordUnresolvedAuthorizationServe"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
-      ],
-      "nodeKind": "typed_action_prop",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:setCommunityParticipationAction",
-      "sourceNodeId": "source:51abaa575a0b0edffb3c",
-      "symbol": "setCommunityParticipationAction"
     },
     {
       "evidencePaths": [
@@ -19807,6 +19794,18 @@
       "semanticVariant": "from:./events",
       "sourceNodeId": "source:533245f3fa0678adc4b4",
       "symbol": "resolveMetaMarketingPublicConfig"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/server/interface-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/interface-localization",
+      "sourceNodeId": "source:537034430b3c69bd7687",
+      "symbol": "getRequestInterfaceLocale"
     },
     {
       "evidencePaths": [
@@ -20145,6 +20144,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/visual-fixtures/community-actor.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/visual-fixtures/community-actor",
+      "sourceNodeId": "source:56f968c5c0a08c3cd1dc",
+      "symbol": "resolveVisualCommunityMutationActor"
+    },
+    {
+      "evidencePaths": [
         "src/server/engagement-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -20273,6 +20284,17 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "moderateCommunityDiscussionAction",
+      "sourceNodeId": "source:5885da00ddfc48f066e0",
+      "symbol": "moderateCommunityDiscussionAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/engagement/bookmarks/route.ts",
         "src/app/api/engagement/shared.ts"
       ],
@@ -20353,6 +20375,18 @@
       "semanticVariant": "from:@/server/public-profile-repository",
       "sourceNodeId": "source:5941d6ee6914b282f9ff",
       "symbol": "PublicProfileLanguage"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/lib/operator-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-copy",
+      "sourceNodeId": "source:5947f8927e2ef457ba93",
+      "symbol": "operatorCommunityStateLabel"
     },
     {
       "evidencePaths": [
@@ -20640,6 +20674,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./actions",
+      "sourceNodeId": "source:5cbc48e67eb1018ce864",
+      "symbol": "moderateCommunityDiscussionAction"
+    },
+    {
+      "evidencePaths": [
         "src/lib/garden/catalog-availability.ts",
         "src/server/catalog-repository.ts"
       ],
@@ -20649,18 +20695,6 @@
       "semanticVariant": "from:@/lib/garden/catalog-availability",
       "sourceNodeId": "source:5cc34244d9b398596d06",
       "symbol": "classifyHomonymousCatalogSuggestions"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/lib/visual-fixtures/community-scenarios.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/visual-fixtures/community-scenarios",
-      "sourceNodeId": "source:5cf1bc85c18c6b565352",
-      "symbol": "resolveVisualCommunityScenario"
     },
     {
       "evidencePaths": [
@@ -20685,6 +20719,18 @@
       "semanticVariant": "action:declineLineageInvitationClaimAction",
       "sourceNodeId": "source:5d9e2cb566bd5c35e06f",
       "symbol": "LineageInvitationClaimCard"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/community-repository",
+      "sourceNodeId": "source:5e7160ca6dd8062b39a5",
+      "symbol": "moderateCommunityMembership"
     },
     {
       "evidencePaths": [
@@ -21056,6 +21102,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/community-repository",
+      "sourceNodeId": "source:62b24a218834c2099605",
+      "symbol": "moderateCommunityDiscussion"
+    },
+    {
+      "evidencePaths": [
         "src/server/engagement-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -21360,6 +21418,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/moderation/comments/page.tsx",
+        "src/components/ui/button.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/ui/button",
+      "sourceNodeId": "source:65c2bed6af0e38656efa",
+      "symbol": "buttonVariants"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
         "src/lib/garden/journal-composer-return.ts"
       ],
@@ -21396,6 +21466,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_23323",
+      "sourceNodeId": "source:65dc6b6757cd458f89b1",
+      "symbol": "moderateCommunityDiscussion"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/lineage/claims/page.tsx",
         "src/server/request-scope.ts"
       ],
@@ -21405,18 +21486,6 @@
       "semanticVariant": "from:@/server/request-scope",
       "sourceNodeId": "source:6600a13b6613d73785a8",
       "symbol": "scopedToUser"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:660d2d31e6f4a8c605fb",
-      "symbol": "admitDocumentMutation"
     },
     {
       "evidencePaths": [
@@ -21523,6 +21592,18 @@
       "semanticVariant": "from:@/server/catalog-source/entity-resolution-qa-repository",
       "sourceNodeId": "source:66ea6ff34b4963d922b3",
       "symbol": "CatalogEntityResolutionQaReport"
+    },
+    {
+      "evidencePaths": [
+        "src/server/admin-access.ts",
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/admin-access",
+      "sourceNodeId": "source:6708001d6e7f47a8ab10",
+      "symbol": "assertAdminCapabilityForScope"
     },
     {
       "evidencePaths": [
@@ -21634,18 +21715,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/moderation/comments/page.tsx",
-        "src/server/interface-localization.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/interface-localization",
-      "sourceNodeId": "source:690cb421a615fdc6c68f",
-      "symbol": "getRequestInterfaceLocale"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/catalog/curation/catalog-source-candidate-review-list.tsx",
         "src/components/auth/document-mutation-recovery.tsx"
       ],
@@ -21690,6 +21759,30 @@
       "semanticVariant": "from:./variety-seed-proof-editor",
       "sourceNodeId": "source:6a532e4b30251d380eaf",
       "symbol": "VarietySeedProofEditor"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./actions",
+      "sourceNodeId": "source:6a754a4fc9989dbf5b78",
+      "symbol": "resolveCommunityReportAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/lib/public-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-localization",
+      "sourceNodeId": "source:6ab9c8db27793f1452bb",
+      "symbol": "localizedPath"
     },
     {
       "evidencePaths": [
@@ -21915,6 +22008,18 @@
       "semanticVariant": "from:@/lib/auth/sign-out-contract",
       "sourceNodeId": "source:6c008a57aaf25d614cf7",
       "symbol": "AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/moderation/comments/actions.ts",
+        "src/server/admin-access.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/admin-access",
+      "sourceNodeId": "source:6c20ec0177802d4b8ae4",
+      "symbol": "resolveAdminCapabilityAccessBounded"
     },
     {
       "evidencePaths": [
@@ -23164,18 +23269,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/community-repository",
-      "sourceNodeId": "source:797c6ddc7979ef57440d",
-      "symbol": "setCommunityParticipation"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/engagement/follows/route.ts",
         "src/server/visual-fixtures/social-actor.ts"
       ],
@@ -23197,6 +23290,18 @@
       "semanticVariant": "action:reportCommunityContributionAction",
       "sourceNodeId": "source:79a8417ca5117997d583",
       "symbol": "reportCommunityContributionAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/community-repository",
+      "sourceNodeId": "source:79bca08bfb23f21981c7",
+      "symbol": "listCommunityModerationQueue"
     },
     {
       "evidencePaths": [
@@ -23236,18 +23341,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/moderation/comments/page.tsx",
-        "src/server/request-scope.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/request-scope",
-      "sourceNodeId": "source:7a299938a61c5ee2d464",
-      "symbol": "scopedToUser"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/catalog/curation/actions.ts",
         "src/app/garden/catalog/curation/catalog-source-candidate-review-list.tsx",
         "src/app/garden/catalog/curation/page.tsx"
@@ -23283,18 +23376,6 @@
       "semanticVariant": "from:@/server/owner-profile-repository",
       "sourceNodeId": "source:7a5514e40f179fc18dce",
       "symbol": "OwnerPublicProfileEditor"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:./actions",
-      "sourceNodeId": "source:7a5e5f0dee5dc543e47e",
-      "symbol": "moderateCommunityMembershipAction"
     },
     {
       "evidencePaths": [
@@ -23535,6 +23616,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/lib/visual-fixtures/community-scenarios.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/visual-fixtures/community-scenarios",
+      "sourceNodeId": "source:7e529dcf5362f97822a5",
+      "symbol": "resolveVisualCommunityScenario"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-profile.tsx",
         "src/server/public-profile-repository.ts"
       ],
@@ -23655,15 +23748,15 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/community-repository.ts"
+        "src/app/account/moderation/comments/page.tsx",
+        "src/server/auth-session.ts"
       ],
       "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
+      "path": "src/app/account/moderation/comments/page.tsx",
       "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/community-repository",
-      "sourceNodeId": "source:7f2bcaceafc8a08e14a3",
-      "symbol": "moderateCommunityDiscussion"
+      "semanticVariant": "from:@/server/auth-session",
+      "sourceNodeId": "source:7f34797e8918b354ef53",
+      "symbol": "getSessionId"
     },
     {
       "evidencePaths": [
@@ -23688,6 +23781,18 @@
       "semanticVariant": "from:@/lib/operator-erasure-copy",
       "sourceNodeId": "source:7f9833d6ea01742fd2c4",
       "symbol": "OperatorErasureCopy"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./actions",
+      "sourceNodeId": "source:7fc83b589add901a3361",
+      "symbol": "moderateCommunityContributionAction"
     },
     {
       "evidencePaths": [
@@ -23760,17 +23865,6 @@
       "semanticVariant": "from:@/components/auth/document-mutation-recovery",
       "sourceNodeId": "source:80571d6f74352786647b",
       "symbol": "DocumentMutationActionForm"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "moderateCommunityContributionAction",
-      "sourceNodeId": "source:805b4426795517f4b84b",
-      "symbol": "moderateCommunityContributionAction"
     },
     {
       "evidencePaths": [
@@ -23907,18 +24001,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/community-repository",
-      "sourceNodeId": "source:81ddd238119282e8cc48",
-      "symbol": "resolveCommunityReport"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/notifications/preferences/route.ts",
         "src/server/document-mutation-admission.ts"
       ],
@@ -23964,6 +24046,18 @@
       "semanticVariant": "from:@/lib/auth/sign-out-hardening",
       "sourceNodeId": "source:82209a2ed222f8434eef",
       "symbol": "executeCurrentSessionExit"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/lib/visual-fixtures/community-scenarios.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/visual-fixtures/community-scenarios",
+      "sourceNodeId": "source:82274538bbd4faa580d3",
+      "symbol": "resolveVisualCommunityScenario"
     },
     {
       "evidencePaths": [
@@ -24036,6 +24130,17 @@
       "semanticVariant": "from:@/server/visual-fixtures/social-actor",
       "sourceNodeId": "source:82a97339b102a78a860d",
       "symbol": "resolveVisualSocialMutationActor"
+    },
+    {
+      "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_58932",
+      "sourceNodeId": "source:82ace3c78e80db72c8e8",
+      "symbol": "executeCommunitySearchStatement"
     },
     {
       "evidencePaths": [
@@ -24296,6 +24401,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/moderation/comments/page.tsx",
+        "src/lib/operator-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-copy",
+      "sourceNodeId": "source:85fe33d6df17856b8e30",
+      "symbol": "getOperatorCopy"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/wishlist/page.tsx",
         "src/server/request-scope.ts"
       ],
@@ -24449,18 +24566,6 @@
       "semanticVariant": "from:@/components/auth/auth-intent-focus",
       "sourceNodeId": "source:873c5406dc3baa27fbeb",
       "symbol": "AuthIntentFocus"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/moderation/comments/page.tsx",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:874fead1aacff8cc7dee",
-      "symbol": "getCurrentSession"
     },
     {
       "evidencePaths": [
@@ -24783,18 +24888,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:8b32619145578919c2bd",
-      "symbol": "formatOperatorDate"
-    },
-    {
-      "evidencePaths": [
         "src/app/catalog-evidence-route.tsx",
         "src/app/wishlist/actions.ts"
       ],
@@ -24885,6 +24978,18 @@
       "semanticVariant": "from:@/lib/public-surface-localization",
       "sourceNodeId": "source:8bb010f19ea410423a94",
       "symbol": "getPublicSurfaceCopy"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/lib/public-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-localization",
+      "sourceNodeId": "source:8bedee6c4346a0ffa975",
+      "symbol": "PUBLIC_LOCALES"
     },
     {
       "evidencePaths": [
@@ -25020,6 +25125,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/admin-access.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/admin-access",
+      "sourceNodeId": "source:8ccdf018986ddf10eda4",
+      "symbol": "resolveAdminCapabilityAccessBounded"
+    },
+    {
+      "evidencePaths": [
         "src/app/lineage/objects/[objectId]/page.tsx",
         "src/components/auth/document-mutation-recovery.tsx"
       ],
@@ -25077,6 +25194,18 @@
       "semanticVariant": "from:@/lib/interface-route-policy",
       "sourceNodeId": "source:8d5f3dca81d1b6d31e74",
       "symbol": "getInterfaceRoutePolicy"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/moderation/comments/page.tsx",
+        "src/server/engagement-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/engagement-repository",
+      "sourceNodeId": "source:8d64759d2aeba47cbc11",
+      "symbol": "listEngagementCommentModerationQueue"
     },
     {
       "evidencePaths": [
@@ -25412,18 +25541,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts",
-        "src/app/admin/moderation/comments/page.tsx"
-      ],
-      "nodeKind": "typed_action_prop",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:moderateCommentReportAction",
-      "sourceNodeId": "source:90ff25a8d2effb5ac4a5",
-      "symbol": "moderateCommentReportAction"
-    },
-    {
-      "evidencePaths": [
         "src/components/public/public-object-catalog-search.tsx",
         "src/server/public-object-catalog-repository.ts"
       ],
@@ -25733,6 +25850,18 @@
       "semanticVariant": "from:@/lib/interface-localization",
       "sourceNodeId": "source:94be85d91549519c1800",
       "symbol": "InterfaceLocale"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/moderation/comments/page.tsx",
+        "src/server/interface-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/interface-localization",
+      "sourceNodeId": "source:94cdf0f79db517500865",
+      "symbol": "getRequestInterfaceLocale"
     },
     {
       "evidencePaths": [
@@ -26082,18 +26211,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:97ee5c4c747d0fa45a05",
-      "symbol": "getOperatorCopy"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/actions.ts"
       ],
       "nodeKind": "effect_owner",
@@ -26173,17 +26290,6 @@
       "semanticVariant": "database_transaction_at_67997",
       "sourceNodeId": "source:98a19f95cc9a5dc6a279",
       "symbol": "createSpaceJournalEntry"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/admin/moderation/comments/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "moderateCommentReportAction",
-      "sourceNodeId": "source:98b1815271040bb5537a",
-      "symbol": "moderateCommentReportAction"
     },
     {
       "evidencePaths": [
@@ -26488,29 +26594,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_23252",
-      "sourceNodeId": "source:9baa9c2914a20f0b9849",
-      "symbol": "moderateCommunityDiscussion"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:9bb143dc0e3ff07de5aa",
-      "symbol": "getSessionId"
-    },
-    {
-      "evidencePaths": [
         "src/components/auth/session-convergence-boundary.tsx",
         "src/lib/garden/local-journal-composer-session.ts"
       ],
@@ -26771,6 +26854,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/moderation/comments/actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:9f5287dcd18d205dcd75",
+      "symbol": "admitDocumentMutation"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/privacy/erasure-requests/actions.ts"
       ],
       "nodeKind": "server_action",
@@ -26885,18 +26980,6 @@
       "semanticVariant": "from:@/lib/visual-fixtures/environment",
       "sourceNodeId": "source:a06bdf7cd9509055bfae",
       "symbol": "VisualFixtureEnvironment"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/lib/visual-fixtures/community-scenarios.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/visual-fixtures/community-scenarios",
-      "sourceNodeId": "source:a07d160a386a385faff5",
-      "symbol": "resolveVisualCommunityScenario"
     },
     {
       "evidencePaths": [
@@ -27197,17 +27280,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_17093",
-      "sourceNodeId": "source:a3c2fea08aaf8bf296bc",
-      "symbol": "setCommunityMembership"
-    },
-    {
-      "evidencePaths": [
         "src/lib/garden/journal-topics.ts",
         "src/server/journal-topic-repository.ts"
       ],
@@ -27362,17 +27434,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_21801",
-      "sourceNodeId": "source:a56dc2b3503ff406007f",
-      "symbol": "moderateCommunityContribution"
-    },
-    {
-      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/social-return-repository.ts"
       ],
@@ -27504,18 +27565,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/components/ui/button.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/components/ui/button",
-      "sourceNodeId": "source:a78ebf428b78be361b43",
-      "symbol": "buttonVariants"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/account-methods-panel.tsx",
         "src/components/ui/alert-dialog.tsx"
       ],
@@ -27644,18 +27693,6 @@
       "semanticVariant": "from:@/server/public-surface-discovery",
       "sourceNodeId": "source:a83480b0e1e013cecbc6",
       "symbol": "PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts",
-        "src/server/engagement-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/engagement-repository",
-      "sourceNodeId": "source:a83ad19ffb644edf1eb7",
-      "symbol": "EngagementModerationAction"
     },
     {
       "evidencePaths": [
@@ -28083,6 +28120,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/moderation/comments/actions.ts",
+        "src/app/account/moderation/comments/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/app/account/moderation/comments/actions",
+      "sourceNodeId": "source:accc68dd017ed21040b1",
+      "symbol": "moderateCommentReportAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/privacy/erasure-requests/actions.ts",
         "src/server/erasure-request-repository.ts"
       ],
@@ -28200,6 +28249,18 @@
       "semanticVariant": "action:confirmLineageClaimAction",
       "sourceNodeId": "source:adfbc1263db5c63aaae4",
       "symbol": "LineageClaimCard"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/community-repository",
+      "sourceNodeId": "source:ae40345d9da5e61c3618",
+      "symbol": "setCommunityParticipation"
     },
     {
       "evidencePaths": [
@@ -28356,18 +28417,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/moderation/comments/page.tsx",
-        "src/components/auth/document-mutation-recovery.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
-      "sourceNodeId": "source:b013ae36689f231cd265",
-      "symbol": "DocumentMutationActionForm"
-    },
-    {
-      "evidencePaths": [
         "src/app/engagement/public-engagement-panel.tsx",
         "src/components/auth/auth-intent-trigger.tsx"
       ],
@@ -28389,6 +28438,17 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:b06b110081b5811e6922",
       "symbol": "CatalogKind"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "setCommunityParticipationAction",
+      "sourceNodeId": "source:b06d32d4035027565665",
+      "symbol": "setCommunityParticipationAction"
     },
     {
       "evidencePaths": [
@@ -28582,6 +28642,17 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "moderateCommunityMembershipAction",
+      "sourceNodeId": "source:b1d5dbe11ec53ead2dff",
+      "symbol": "moderateCommunityMembershipAction"
+    },
+    {
+      "evidencePaths": [
         "src/components/auth/auth-intent-trigger.tsx"
       ],
       "nodeKind": "native_form",
@@ -28590,17 +28661,6 @@
       "semanticVariant": "POST:/auth/intent/start",
       "sourceNodeId": "source:b1df26aec8bd92a85af3",
       "symbol": "AuthIntentTrigger"
-    },
-    {
-      "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_27964",
-      "sourceNodeId": "source:b20bf78c4fc0a4c0509a",
-      "symbol": "setCommunityParticipation"
     },
     {
       "evidencePaths": [
@@ -28863,6 +28923,18 @@
       "semanticVariant": "from:@/lib/garden/public-paths",
       "sourceNodeId": "source:b44dadb43cae13f2eec8",
       "symbol": "publicVarietyPath"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/lib/operator-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-copy",
+      "sourceNodeId": "source:b457149bf9cb10553e00",
+      "symbol": "formatOperatorDate"
     },
     {
       "evidencePaths": [
@@ -29673,18 +29745,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts",
-        "src/app/admin/moderation/comments/page.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/app/admin/moderation/comments/actions",
-      "sourceNodeId": "source:bc0554b9772827f40d0b",
-      "symbol": "moderateCommentReportAction"
-    },
-    {
-      "evidencePaths": [
         "src/app/[locale]/bookmarks/page.tsx",
         "src/components/social/my-social-layout.tsx"
       ],
@@ -29768,6 +29828,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/app/account/communities/[slug]/page.tsx"
+      ],
+      "nodeKind": "typed_action_prop",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:setCommunityParticipationAction",
+      "sourceNodeId": "source:bcbfbd73c4e3a94cdafc",
+      "symbol": "setCommunityParticipationAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/lineage/claims/page.tsx",
         "src/components/auth/document-mutation-recovery.tsx"
       ],
@@ -29801,6 +29873,18 @@
       "semanticVariant": "from:@/server/auth-session",
       "sourceNodeId": "source:bcddb05cc5b779777f9f",
       "symbol": "getSessionId"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/components/auth/document-mutation-recovery.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
+      "sourceNodeId": "source:bce69eda06669250eff4",
+      "symbol": "DocumentMutationActionForm"
     },
     {
       "evidencePaths": [
@@ -29970,6 +30054,17 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/moderation/comments/actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/account/moderation/comments/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "moderateCommentReportAction",
+      "sourceNodeId": "source:bf9eb087d5349125817f",
+      "symbol": "moderateCommentReportAction"
+    },
+    {
+      "evidencePaths": [
         "src/components/auth/document-mutation-recovery.tsx",
         "src/lib/auth/document-mutation-generation-transport.ts"
       ],
@@ -29979,6 +30074,17 @@
       "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
       "sourceNodeId": "source:bfc05c0e459b181a9b74",
       "symbol": "isDocumentMutationAdmissionTransportResult"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "resolveCommunityReportAction",
+      "sourceNodeId": "source:bfe04f5a864e6d693373",
+      "symbol": "resolveCommunityReportAction"
     },
     {
       "evidencePaths": [
@@ -30346,18 +30452,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts",
-        "src/app/admin/moderation/comments/page.tsx"
-      ],
-      "nodeKind": "native_form",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:moderateCommentReportAction",
-      "sourceNodeId": "source:c39f1db1233b8cca2a32",
-      "symbol": "CommentModerationPage"
-    },
-    {
-      "evidencePaths": [
         "src/app/[locale]/bookmarks/page.tsx",
         "src/app/api/engagement/bookmarks/route.ts"
       ],
@@ -30632,6 +30726,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/community-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_19522",
+      "sourceNodeId": "source:c614794341d0a2998857",
+      "symbol": "reportCommunityContribution"
+    },
+    {
+      "evidencePaths": [
         "src/server/catalog-curation-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -30727,18 +30832,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/server/interface-localization.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/interface-localization",
-      "sourceNodeId": "source:c6dc06539d157e5763b5",
-      "symbol": "getRequestInterfaceLocale"
-    },
-    {
-      "evidencePaths": [
         "src/server/engagement-repository.ts",
         "src/server/interaction-admission.ts"
       ],
@@ -30760,6 +30853,18 @@
       "semanticVariant": "from:@/components/media/subject-aware-media-image",
       "sourceNodeId": "source:c706531681eb73528dcf",
       "symbol": "SubjectAwareHtmlImage"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/page.tsx",
+        "src/components/ui/button.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/ui/button",
+      "sourceNodeId": "source:c709659398218fbe7592",
+      "symbol": "buttonVariants"
     },
     {
       "evidencePaths": [
@@ -30795,6 +30900,18 @@
       "semanticVariant": "from:@/server/public-object-catalog-repository",
       "sourceNodeId": "source:c73381db027e9c63db1e",
       "symbol": "listPublicObjectCatalogPage"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/moderation/comments/page.tsx",
+        "src/server/auth-session.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/auth-session",
+      "sourceNodeId": "source:c73dcd4b749a87cd9e93",
+      "symbol": "getCurrentSession"
     },
     {
       "evidencePaths": [
@@ -31320,18 +31437,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
-      ],
-      "nodeKind": "native_form",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "action:setCommunityParticipationAction",
-      "sourceNodeId": "source:ce792e881c056dd99db5",
-      "symbol": "CommunityModerationPage"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/entries/[entryId]/route.ts",
         "src/lib/garden/entry-contracts.ts"
       ],
@@ -31353,6 +31458,18 @@
       "semanticVariant": "from:@/server/request-scope",
       "sourceNodeId": "source:ce8b7a6bf1bf8e8a320c",
       "symbol": "RequestScope"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:ced375cb162b3c38a50f",
+      "symbol": "admitDocumentMutation"
     },
     {
       "evidencePaths": [
@@ -31448,17 +31565,6 @@
       "semanticVariant": "from:@/lib/lineage/claim-handoff",
       "sourceNodeId": "source:cfa1e8cf9835cf2fb834",
       "symbol": "LINEAGE_CLAIM_COOKIE_NAME"
-    },
-    {
-      "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_26253",
-      "sourceNodeId": "source:cfecd20d7f44a923f49a",
-      "symbol": "resolveCommunityReport"
     },
     {
       "evidencePaths": [
@@ -31801,6 +31907,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/community-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/community-repository",
+      "sourceNodeId": "source:d3b929fbf1eeea033012",
+      "symbol": "moderateCommunityContribution"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-profile.tsx",
         "src/server/profile-interaction-repository.ts"
       ],
@@ -32028,6 +32146,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/moderation/comments/actions.ts",
+        "src/app/account/moderation/comments/page.tsx"
+      ],
+      "nodeKind": "typed_action_prop",
+      "path": "src/app/account/moderation/comments/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:moderateCommentReportAction",
+      "sourceNodeId": "source:d5ef7fc38d3b90b8a55f",
+      "symbol": "moderateCommentReportAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx",
         "src/components/auth/document-mutation-recovery.tsx"
       ],
@@ -32227,6 +32357,18 @@
       "semanticVariant": "from:@/lib/catalog/genebank-long-tail",
       "sourceNodeId": "source:d826c0de46891d7b97bf",
       "symbol": "genebankLongTailDefinition"
+    },
+    {
+      "evidencePaths": [
+        "src/app/account/communities/[slug]/actions.ts",
+        "src/server/request-scope.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/communities/[slug]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/request-scope",
+      "sourceNodeId": "source:d8755add01a5c7099ba2",
+      "symbol": "scopedToUser"
     },
     {
       "evidencePaths": [
@@ -33229,18 +33371,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/lib/public-localization.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/public-localization",
-      "sourceNodeId": "source:e2a4fff2e95f760f24bb",
-      "symbol": "localizedPath"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
         "src/lib/media/ephemeral-staging-crypto.ts"
       ],
@@ -33567,18 +33697,6 @@
       "semanticVariant": "from:@/server/auth-intent-control",
       "sourceNodeId": "source:e60bdcbca88dbad0b9ea",
       "symbol": "createAuthIntentControlRef"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/page.tsx",
-        "src/components/auth/document-mutation-recovery.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
-      "sourceNodeId": "source:e61755a7307a71b0dd76",
-      "symbol": "DocumentMutationActionForm"
     },
     {
       "evidencePaths": [
@@ -34467,18 +34585,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/moderation/comments/actions.ts",
-        "src/server/engagement-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/engagement-repository",
-      "sourceNodeId": "source:ef3777811689ca56fb4c",
-      "symbol": "moderateEngagementCommentReport"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/actions.ts",
         "src/lib/lineage/claim-handoff.ts"
       ],
@@ -35109,6 +35215,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/account/moderation/comments/actions.ts",
+        "src/server/engagement-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/account/moderation/comments/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/engagement-repository",
+      "sourceNodeId": "source:f611040ad367ddabc042",
+      "symbol": "EngagementModerationAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/catalog-resolve-control.tsx",
         "src/lib/interface-localization.ts"
       ],
@@ -35168,17 +35286,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "moderateCommunityMembershipAction",
-      "sourceNodeId": "source:f6f44f09c70dc860f0b7",
-      "symbol": "moderateCommunityMembershipAction"
-    },
-    {
-      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/analytics-events.ts"
       ],
@@ -35212,18 +35319,6 @@
       "semanticVariant": "from:@/lib/operator-curation-copy",
       "sourceNodeId": "source:f70a8e9066cfdf7130ce",
       "symbol": "operatorCurationMapLabel"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/moderation/comments/page.tsx",
-        "src/lib/operator-copy.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/moderation/comments/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/operator-copy",
-      "sourceNodeId": "source:f74dbd3c9593f9185d98",
-      "symbol": "getOperatorCopy"
     },
     {
       "evidencePaths": [
@@ -35572,30 +35667,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:fafb633a0f5d6c5c4324",
-      "symbol": "documentMutationGenerationFromFormData"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/app/admin/communities/[slug]/page.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:./actions",
-      "sourceNodeId": "source:fb17571d7a227e4ad7c2",
-      "symbol": "setCommunityParticipationAction"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/claim-handoff.tsx",
         "src/lib/owner-lineage-copy.ts"
       ],
@@ -35617,17 +35688,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:fb3b9ec75be0f348e1f5",
       "symbol": "CatalogMatchConfidenceBucket"
-    },
-    {
-      "evidencePaths": [
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/community-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_58861",
-      "sourceNodeId": "source:fbadee6afef732c5ab82",
-      "symbol": "executeCommunitySearchStatement"
     },
     {
       "evidencePaths": [
@@ -35832,18 +35892,6 @@
       "semanticVariant": "from:@/components/ui/button",
       "sourceNodeId": "source:fda0d63e61dd335551b2",
       "symbol": "buttonVariants"
-    },
-    {
-      "evidencePaths": [
-        "src/app/admin/communities/[slug]/actions.ts",
-        "src/server/community-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/admin/communities/[slug]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/community-repository",
-      "sourceNodeId": "source:fdd06379f77a123df8ef",
-      "symbol": "moderateCommunityContribution"
     },
     {
       "evidencePaths": [

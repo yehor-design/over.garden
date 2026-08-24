@@ -51,8 +51,14 @@ function toRepositoryRelativePath(filePath: string): string {
 }
 
 const retiredRouteOwners = [
+  "src/app/admin/layout.tsx",
   "src/app/admin/page.tsx",
   "src/app/admin/users/page.tsx",
+  "src/app/admin/communities/page.tsx",
+  "src/app/admin/communities/[slug]/page.tsx",
+  "src/app/admin/communities/[slug]/actions.ts",
+  "src/app/admin/moderation/comments/page.tsx",
+  "src/app/admin/moderation/comments/actions.ts",
   "src/app/garden/pilot-health/page.tsx",
   "src/app/garden/pilot-smoke/page.tsx",
   "src/app/garden/pilot-learning/interviews/page.tsx",
@@ -486,8 +492,8 @@ describe("OVE-314 active caller and schema retirement", () => {
 
   it("keeps the owner avatar menu field-exact and excludes retired destinations", () => {
     expect(OPERATOR_MENU_LINKS.map(({ href }) => href)).toEqual([
-      "/admin/communities",
-      "/admin/moderation/comments",
+      "/account/communities",
+      "/account/moderation/comments",
       "/garden/catalog/curation",
       "/garden/privacy/erasure-requests",
     ]);

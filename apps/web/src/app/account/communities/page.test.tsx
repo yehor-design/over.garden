@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   listCommunityModerationQueue: vi.fn(),
+  resolveAdminCapabilityAccessBounded: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -27,11 +28,16 @@ vi.mock("@/server/community-repository", () => ({
   listCommunityModerationQueue: mocks.listCommunityModerationQueue,
 }));
 
+vi.mock("@/server/admin-access", () => ({
+  resolveAdminCapabilityAccessBounded:
+    mocks.resolveAdminCapabilityAccessBounded,
+}));
+
 vi.mock("@/app/garden/garden-auth-panel", () => ({
   GardenAuthPanel: () => "community-auth-panel",
 }));
 
-describe("/admin/communities", () => {
+describe("/account/communities", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getCurrentSession.mockResolvedValue({
@@ -39,6 +45,9 @@ describe("/admin/communities", () => {
     });
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.listCommunityModerationQueue.mockResolvedValue({ items: [] });
+    mocks.resolveAdminCapabilityAccessBounded.mockResolvedValue({
+      status: "allowed",
+    });
   });
 
   it("keeps the signed-out boundary localized without reading moderation", async () => {
@@ -49,6 +58,7 @@ describe("/admin/communities", () => {
     expect(html).toContain("Модерація спільнот");
     expect(html).toContain("community-auth-panel");
     expect(mocks.listCommunityModerationQueue).not.toHaveBeenCalled();
+    expect(mocks.resolveAdminCapabilityAccessBounded).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -65,17 +75,29 @@ describe("/admin/communities", () => {
       expect(html).toContain(title);
       expect(html).toContain(countLabel);
       expect(html).toContain("observation-and-care");
+      expect(html).toContain('data-private-moderation-queue="true"');
     },
   );
 
   it("marks a fail-closed moderation lookup without exposing the queue", async () => {
-    mocks.listCommunityModerationQueue.mockRejectedValue(
-      new Error("denied"),
-    );
+    mocks.listCommunityModerationQueue.mockRejectedValue(new Error("denied"));
     const { default: CommunityModerationDirectory } = await import("./page");
     const html = renderToStaticMarkup(await CommunityModerationDirectory());
 
     expect(html).toContain('data-operator-access-state="unavailable"');
     expect(html).not.toContain("відкритих скарг:");
+    expect(html).not.toContain("data-private-moderation-queue");
+  });
+
+  it("denies an authenticated ordinary user before reading moderation", async () => {
+    mocks.resolveAdminCapabilityAccessBounded.mockResolvedValue({
+      status: "denied",
+    });
+    const { default: CommunityModerationDirectory } = await import("./page");
+    const html = renderToStaticMarkup(await CommunityModerationDirectory());
+
+    expect(html).toContain('data-operator-access-state="unavailable"');
+    expect(html).not.toContain("data-private-moderation-queue");
+    expect(mocks.listCommunityModerationQueue).not.toHaveBeenCalled();
   });
 });

@@ -27,8 +27,6 @@ export type SessionOwnershipUncertaintyMode =
   | "preserve_payload_free_exit";
 
 export const INTERFACE_UTILITY_CONTROL_PREFIXES = [
-  "/admin/communities",
-  "/admin/moderation/comments",
   "/health",
   "/garden/catalog/curation",
   "/garden/privacy/erasure-requests",

@@ -47,7 +47,7 @@ describe("interface route policy", () => {
     expect(getInterfaceRoutePolicy("/garden/profile").mode).toBe(
       "same-path-preference",
     );
-    expect(getInterfaceRoutePolicy("/admin/communities").mode).toBe(
+    expect(getInterfaceRoutePolicy("/account/communities").mode).toBe(
       "same-path-preference",
     );
     expect(getInterfaceRoutePolicy("/markets/ukraine").mode).toBe(
@@ -98,6 +98,9 @@ describe("interface route policy", () => {
       );
     }
     expect(getInterfaceLanguageControlPlacement("/garden/profile")).toBe(
+      "site-shell",
+    );
+    expect(getInterfaceLanguageControlPlacement("/account/communities")).toBe(
       "site-shell",
     );
     expect(

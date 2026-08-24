@@ -1,7 +1,7 @@
 # Sealed Owner Bootstrap
 
-Status: current after OVE-314
-Last updated: 2026-08-11
+Status: current after OVE-338
+Last updated: 2026-08-25
 
 OverGarden keeps a durable, server-authoritative sealed-owner boundary for the
 few operations that must not be available to ordinary gardeners. It does not
@@ -23,8 +23,8 @@ Every authenticated user receives the ordinary avatar menu. After a
 server-side sealed-owner check, the same menu conditionally adds exactly these
 four localized links:
 
-- `/admin/communities`
-- `/admin/moderation/comments`
+- `/account/communities`
+- `/account/moderation/comments`
 - `/garden/catalog/curation`
 - `/garden/privacy/erasure-requests`
 
@@ -33,14 +33,18 @@ or owner lookup failure receives no owner links and no empty owner section. The
 client receives only a boolean capability projection—never a role row, owner
 identifier, credential-provider detail, or denial reason.
 
-Menu visibility is not authorization. Each destination repeats the sealed
-owner check and the capability required for its read or mutation. Direct access
-by an ordinary gardener fails generically without mutation or private data.
+Menu visibility is not authorization. Each destination repeats a bounded
+sealed-owner `operator:mutate` check before any private read or real mutation.
+The decision resolves within 250 ms; failure, timeout, or cancellation denies
+generically without mutation or private data. Community membership moderation
+remains a separate domain-level authorization and never grants access to these
+owner account pages.
 
-The following retired pages must remain exact `404` for every role:
+The complete `/admin` namespace, including every descendant and localized,
+encoded, nested, or trailing-slash representation covered by the proxy
+contract, must remain exact `404` for every role. It has no compatibility
+redirect. These other retired control-plane routes also remain exact `404`:
 
-- `/admin`
-- `/admin/users`
 - `/garden/pilot-health`
 - `/garden/pilot-smoke`
 

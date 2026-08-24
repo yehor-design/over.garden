@@ -21,6 +21,7 @@ import type { RequestScope } from "@/server/request-scope";
 export const ADMIN_ACCESS_DENIED_MESSAGE = "Admin access denied.";
 export const ADMIN_CREDENTIAL_PROVIDER_ID = OWNER_CREDENTIAL_PROVIDER_ID;
 export const ADMIN_SEALED_OWNER_USER_ID_ENV = SEALED_OWNER_USER_ID_ENV;
+export const ADMIN_ROLE_RESOLUTION_DEADLINE_MS = 250;
 
 export interface AdminAccess {
   mode: "sealed_owner_credential_only";
@@ -32,6 +33,16 @@ export type AdminEntryAccess =
   | { status: "sign_in_required" }
   | { status: "denied" }
   | ({ status: "allowed" } & AdminAccess);
+
+export type BoundedAdminEntryAccess =
+  | AdminEntryAccess
+  | { status: "timed_out" }
+  | { status: "cancelled" };
+
+export interface AdminRoleResolutionOptions {
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
 
 export async function readAdminRoleForUser(
   database: Kysely<Database>,
@@ -124,6 +135,44 @@ export async function resolveAdminCapabilityAccess(
   } catch {
     return { status: "denied" };
   }
+}
+
+export async function resolveAdminCapabilityAccessBounded(
+  scope: RequestScope | null,
+  capability: AdminCapability,
+  database: Kysely<Database> = defaultDb,
+  options: AdminRoleResolutionOptions = {},
+): Promise<BoundedAdminEntryAccess> {
+  if (options.signal?.aborted) return { status: "cancelled" };
+
+  const timeoutMs = Math.min(
+    Math.max(options.timeoutMs ?? ADMIN_ROLE_RESOLUTION_DEADLINE_MS, 1),
+    ADMIN_ROLE_RESOLUTION_DEADLINE_MS,
+  );
+
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const finish = (result: BoundedAdminEntryAccess) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      options.signal?.removeEventListener("abort", cancel);
+      resolve(result);
+    };
+    const cancel = () => finish({ status: "cancelled" });
+
+    const timer = setTimeout(() => finish({ status: "timed_out" }), timeoutMs);
+    options.signal?.addEventListener("abort", cancel, { once: true });
+    if (options.signal?.aborted) {
+      cancel();
+      return;
+    }
+    void resolveAdminCapabilityAccess(scope, capability, database).then(
+      finish,
+      () => finish({ status: "denied" }),
+    );
+  });
 }
 
 export async function assertCredentialOnlyAdminAccount(
