@@ -57,6 +57,8 @@ const TASK_OPERATOR_EXCEPTIONS = new Set([
   "scripts/verify-retired-journal-media-migration.ts",
   "scripts/verify-retired-journal-media-runtime.ts",
   "scripts/verify-retired-journal-media-runtime.test.ts",
+  "scripts/verify-legacy-quarantine-provider-retirement.ts",
+  "scripts/verify-legacy-quarantine-provider-retirement.test.ts",
 ]);
 
 const RETIRED_RUNTIME_MARKERS = [

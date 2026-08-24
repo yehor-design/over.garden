@@ -211,7 +211,13 @@ OVE-349 removed every application/schema/package owner of the former
 `overgarden-quarantine` and server-conversion path after the exact zero-use and
 approved test-residue gates. The empty bucket below is isolated rollback
 residue, not application configuration. OVE-350 alone owns its provider/CORS/
-lifecycle deletion and credential narrowing after the full seven-day window.
+lifecycle deletion and credential narrowing. On 2026-08-24 the founder waived
+the former seven-day and 24-hour observation delays and required immediate
+retirement. The replacement destructive gate is two independent authenticated
+zero reads at least 60 seconds apart, an immediate pre-apply read, removal of
+all writer authority, exact-plan approval, empty-only provider deletion, and
+preserved-media canaries. See
+`docs/runbooks/OVE_350_LEGACY_QUARANTINE_PROVIDER_RETIREMENT.md`.
 
 Production S3-compatible client settings:
 
@@ -260,8 +266,8 @@ R2 API token requirement:
 
 - Permission: Object Read and Write
 - Current app use: `overgarden-public` only. The existing shared credential may
-  retain legacy-bucket scope solely until OVE-350 rotates/narrows it after the
-  rollback window; no app route may exercise that scope.
+  retain legacy-bucket scope solely until the immediate OVE-350 exact-plan
+  apply narrows it in place; no app route may exercise that scope.
 - Prefer an account API token for production if available. A user API token is acceptable for local/dev continuity but is tied to the individual Cloudflare user.
 - Cloudflare R2 does not support S3 `PutBucketPolicy` on this endpoint. Public reads are controlled through R2 bucket/domain settings, not by committing or replaying S3 bucket policy JSON from the app bootstrap script.
 
@@ -325,7 +331,8 @@ Invariants:
   owner may reference this bucket.
 - Public pages must never render this bucket or its `r2.dev` domain.
 - OVE-350 alone may delete its bucket/CORS/lifecycle/credential surface after
-  the required observation window and two exact zero-object read-backs.
+  the founder-waived immediate gate, two exact zero-state read-backs at least
+  60 seconds apart, exact-plan approval, and an immediate pre-apply read.
 
 ### Public Derivative Bucket
 
