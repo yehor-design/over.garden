@@ -53,13 +53,13 @@ Production values to a mode-0600 file in a private temporary directory, never
 prints them, and deletes the file in `finally`.
 
 ```bash
-pnpm ove350:provider-retirement -- \
+pnpm exec tsx scripts/verify-legacy-quarantine-provider-retirement.ts \
   --read-only-plan \
   --environment production \
   --confirm-environment production > /tmp/ove350-read-1.json
 
 # Run only after at least 60 seconds have elapsed.
-pnpm ove350:provider-retirement -- \
+pnpm exec tsx scripts/verify-legacy-quarantine-provider-retirement.ts \
   --read-only-plan \
   --environment production \
   --confirm-environment production \
@@ -90,7 +90,7 @@ The approved apply command requires the exact immutable plan, exact approval
 receipt, exact digest, and literal production confirmation:
 
 ```bash
-pnpm ove350:provider-retirement -- \
+pnpm exec tsx scripts/verify-legacy-quarantine-provider-retirement.ts \
   --apply \
   --environment production \
   --confirm-environment production \
@@ -115,7 +115,7 @@ No wildcard, scripted bulk deletion, or object-emptying command is permitted.
 Terminal read-back requires the implementation SHA from current `origin/main`:
 
 ```bash
-pnpm ove350:provider-retirement -- \
+pnpm exec tsx scripts/verify-legacy-quarantine-provider-retirement.ts \
   --final-readback \
   --environment production \
   --confirm-environment production \
