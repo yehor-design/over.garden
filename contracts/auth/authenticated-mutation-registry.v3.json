@@ -4953,55 +4953,6 @@
       ]
     },
     {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:96113e20f416ffc8915c:always",
-      "consumerEdgeId": "edge:96113e20f416ffc8915c:1:2d44d7d624e5013c3c97",
-      "effectBoundaryId": "effect:a42fee602a15b04549e8:database-transaction-1",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:96113e20f416ffc8915c",
-      "predecessorEdgeIds": []
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:96113e20f416ffc8915c:always",
-      "consumerEdgeId": "edge:96113e20f416ffc8915c:2:0f50eb9eda63924732d6",
-      "effectBoundaryId": "effect:208eec0033db0e018a5e:canonical-row",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:96113e20f416ffc8915c",
-      "predecessorEdgeIds": [
-        "edge:96113e20f416ffc8915c:1:2d44d7d624e5013c3c97"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:96113e20f416ffc8915c:always",
-      "consumerEdgeId": "edge:96113e20f416ffc8915c:3:e17602c3d0906db60c5a",
-      "effectBoundaryId": "effect:9414fd8af2a142833a16:database-transaction-1",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:96113e20f416ffc8915c",
-      "predecessorEdgeIds": [
-        "edge:96113e20f416ffc8915c:2:0f50eb9eda63924732d6"
-      ]
-    },
-    {
       "admissionBoundaryId": "server_action:src/app/admin/communities/[slug]/actions.ts#setCommunityParticipationAction",
       "branchConditionClass": "always",
       "branchId": "branch:9656b7ab4382ea5416cf:always",
@@ -5602,58 +5553,6 @@
       "predecessorEdgeIds": []
     },
     {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:a730632cf888c7d6ed8b:always",
-      "consumerEdgeId": "edge:a730632cf888c7d6ed8b:1:2d44d7d624e5013c3c97",
-      "effectBoundaryId": "effect:a42fee602a15b04549e8:database-transaction-1",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#decide:POST:/api/garden/plant-identification/decision",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:a730632cf888c7d6ed8b",
-      "predecessorEdgeIds": []
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:a730632cf888c7d6ed8b:always",
-      "consumerEdgeId": "edge:a730632cf888c7d6ed8b:2:0f50eb9eda63924732d6",
-      "effectBoundaryId": "effect:208eec0033db0e018a5e:canonical-row",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#decide:POST:/api/garden/plant-identification/decision",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:a730632cf888c7d6ed8b",
-      "predecessorEdgeIds": [
-        "edge:a730632cf888c7d6ed8b:1:2d44d7d624e5013c3c97"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:a730632cf888c7d6ed8b:always",
-      "consumerEdgeId": "edge:a730632cf888c7d6ed8b:3:e17602c3d0906db60c5a",
-      "effectBoundaryId": "effect:9414fd8af2a142833a16:database-transaction-1",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#decide:POST:/api/garden/plant-identification/decision",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:a730632cf888c7d6ed8b",
-      "predecessorEdgeIds": [
-        "edge:a730632cf888c7d6ed8b:2:0f50eb9eda63924732d6"
-      ]
-    },
-    {
       "admissionBoundaryId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:a96d9fef83e993dca970:always",
@@ -6056,220 +5955,6 @@
       "executionMode": "required",
       "pipelineId": "pipeline:b4497cabcd5750f0e956",
       "predecessorEdgeIds": []
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:10:2459dbd6a000297131f9",
-      "effectBoundaryId": "effect:b4dfccf0aad8f0bb6713:canonical-row-buildfindexactselectablespeciesbyscientificnamequery",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/catalog-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": [
-        "edge:b59a5434ba1200e29883:9:a7f03c4fd1a9c22b5598"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:11:cb1bece88026ca117c49",
-      "effectBoundaryId": "effect:caee84b1cbcc1e8c93c6:database-transaction-1",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": [
-        "edge:b59a5434ba1200e29883:10:2459dbd6a000297131f9"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:12:276217627e06c2659e3c",
-      "effectBoundaryId": "effect:ab7898c1675edf8f3f4b:database-transaction-1",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": [
-        "edge:b59a5434ba1200e29883:11:cb1bece88026ca117c49"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:1:522683864f8f12b1cd0f",
-      "effectBoundaryId": "effect:613cba4b73892888b73b:canonical-row-buildplantobjectpageobjectquery",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": []
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:2:b2e3cd3a93bb78f0b500",
-      "effectBoundaryId": "effect:7d94998d88faec904041:canonical-row-buildobjecttimelineentriesquery",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": [
-        "edge:b59a5434ba1200e29883:1:522683864f8f12b1cd0f"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:3:2506836770d600a3a0ba",
-      "effectBoundaryId": "effect:ef13bce9b2a47fc6aff4:canonical-row-buildprocessedmediaforentriesquery",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": [
-        "edge:b59a5434ba1200e29883:2:b2e3cd3a93bb78f0b500"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:4:a6411b97b3677cd486eb",
-      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": [
-        "edge:b59a5434ba1200e29883:3:2506836770d600a3a0ba"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:5:f357c7c482b419e1b53d",
-      "effectBoundaryId": "effect:05f9ab89e52ea96113d4:canonical-row-buildprocessedobjectmediagalleryquery",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": [
-        "edge:b59a5434ba1200e29883:4:a6411b97b3677cd486eb"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:6:d49bd1631169d877721f",
-      "effectBoundaryId": "effect:69bdeb2e74b347c27f30:canonical-row-buildplantobjectcatalogsourcecreditquery",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": [
-        "edge:b59a5434ba1200e29883:5:f357c7c482b419e1b53d"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:7:49b0ee451c6b7baa2d1e",
-      "effectBoundaryId": "effect:3e321084e2a12511f9a3:canonical-row-buildpriorpublicationdisclosurequery",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": [
-        "edge:b59a5434ba1200e29883:6:d49bd1631169d877721f"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:8:4d7189c690aa62b5f861",
-      "effectBoundaryId": "effect:aeeca4c4a6e76f323f6b:database-transaction-1",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": [
-        "edge:b59a5434ba1200e29883:7:49b0ee451c6b7baa2d1e"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:b59a5434ba1200e29883:always",
-      "consumerEdgeId": "edge:b59a5434ba1200e29883:9:a7f03c4fd1a9c22b5598",
-      "effectBoundaryId": "effect:1704c085b1d9d8a80034:database-transaction-1",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:b59a5434ba1200e29883",
-      "predecessorEdgeIds": [
-        "edge:b59a5434ba1200e29883:8:4d7189c690aa62b5f861"
-      ]
     },
     {
       "admissionBoundaryId": "server_action:src/app/garden/lineage/invitations/claim/actions.ts#confirmLineageInvitationClaimAction:authority:authenticated_user",
@@ -8482,208 +8167,6 @@
       ]
     },
     {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:10:2459dbd6a000297131f9",
-      "effectBoundaryId": "effect:b4dfccf0aad8f0bb6713:canonical-row-buildfindexactselectablespeciesbyscientificnamequery",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/catalog-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": [
-        "edge:fe459c7457cae4415e68:9:a7f03c4fd1a9c22b5598"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:11:cb1bece88026ca117c49",
-      "effectBoundaryId": "effect:caee84b1cbcc1e8c93c6:database-transaction-1",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": [
-        "edge:fe459c7457cae4415e68:10:2459dbd6a000297131f9"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:12:276217627e06c2659e3c",
-      "effectBoundaryId": "effect:ab7898c1675edf8f3f4b:database-transaction-1",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": [
-        "edge:fe459c7457cae4415e68:11:cb1bece88026ca117c49"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:1:522683864f8f12b1cd0f",
-      "effectBoundaryId": "effect:613cba4b73892888b73b:canonical-row-buildplantobjectpageobjectquery",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": []
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:2:b2e3cd3a93bb78f0b500",
-      "effectBoundaryId": "effect:7d94998d88faec904041:canonical-row-buildobjecttimelineentriesquery",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": [
-        "edge:fe459c7457cae4415e68:1:522683864f8f12b1cd0f"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:3:2506836770d600a3a0ba",
-      "effectBoundaryId": "effect:ef13bce9b2a47fc6aff4:canonical-row-buildprocessedmediaforentriesquery",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": [
-        "edge:fe459c7457cae4415e68:2:b2e3cd3a93bb78f0b500"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:4:a6411b97b3677cd486eb",
-      "effectBoundaryId": "effect:52e3721e03078c008fc7:canonical-row-buildmentionedobjectsforentriesquery",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": [
-        "edge:fe459c7457cae4415e68:3:2506836770d600a3a0ba"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:5:f357c7c482b419e1b53d",
-      "effectBoundaryId": "effect:05f9ab89e52ea96113d4:canonical-row-buildprocessedobjectmediagalleryquery",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": [
-        "edge:fe459c7457cae4415e68:4:a6411b97b3677cd486eb"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:6:d49bd1631169d877721f",
-      "effectBoundaryId": "effect:69bdeb2e74b347c27f30:canonical-row-buildplantobjectcatalogsourcecreditquery",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": [
-        "edge:fe459c7457cae4415e68:5:f357c7c482b419e1b53d"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:7:49b0ee451c6b7baa2d1e",
-      "effectBoundaryId": "effect:3e321084e2a12511f9a3:canonical-row-buildpriorpublicationdisclosurequery",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": [
-        "edge:fe459c7457cae4415e68:6:d49bd1631169d877721f"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:8:4d7189c690aa62b5f861",
-      "effectBoundaryId": "effect:aeeca4c4a6e76f323f6b:database-transaction-1",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": [
-        "edge:fe459c7457cae4415e68:7:49b0ee451c6b7baa2d1e"
-      ]
-    },
-    {
-      "admissionBoundaryId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "branchConditionClass": "always",
-      "branchId": "branch:fe459c7457cae4415e68:always",
-      "consumerEdgeId": "edge:fe459c7457cae4415e68:9:a7f03c4fd1a9c22b5598",
-      "effectBoundaryId": "effect:1704c085b1d9d8a80034:database-transaction-1",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "executionMode": "required",
-      "pipelineId": "pipeline:fe459c7457cae4415e68",
-      "predecessorEdgeIds": [
-        "edge:fe459c7457cae4415e68:8:4d7189c690aa62b5f861"
-      ]
-    },
-    {
       "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#holdCatalogSourceCandidateAction",
       "branchConditionClass": "always",
       "branchId": "branch:ff76228fa3be170ad435:always",
@@ -8819,20 +8302,6 @@
       "ownerSymbol": "betterAuth:provider"
     },
     {
-      "atomicity": "database_transaction",
-      "commitLabel": "database-transaction-1",
-      "effectBoundaryId": "effect:1704c085b1d9d8a80034:database-transaction-1",
-      "effectFamilies": [
-        "canonical_row"
-      ],
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "idempotencyOwner": "src/server/plant-identification-repository.ts#claimPlantIdentificationSubmission",
-      "ownerPath": "src/server/plant-identification-repository.ts",
-      "ownerSymbol": "claimPlantIdentificationSubmission"
-    },
-    {
       "atomicity": "provider_operation",
       "commitLabel": "public-derivative-write",
       "effectBoundaryId": "effect:19dc0912ad49f63ef386:public-derivative-write",
@@ -8876,20 +8345,6 @@
       "idempotencyOwner": "src/server/erasure-execution.ts#processErasureMediaCleanupJobs",
       "ownerPath": "src/server/erasure-execution.ts",
       "ownerSymbol": "processErasureMediaCleanupJobs"
-    },
-    {
-      "atomicity": "database_transaction",
-      "commitLabel": "canonical-row",
-      "effectBoundaryId": "effect:208eec0033db0e018a5e:canonical-row",
-      "effectFamilies": [
-        "canonical_row"
-      ],
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "idempotencyOwner": "src/server/plant-identification-repository.ts#recordPlantIdentificationDecisionInTransaction",
-      "ownerPath": "src/server/plant-identification-repository.ts",
-      "ownerSymbol": "recordPlantIdentificationDecisionInTransaction"
     },
     {
       "atomicity": "database_transaction",
@@ -10067,20 +9522,6 @@
     {
       "atomicity": "database_transaction",
       "commitLabel": "database-transaction-1",
-      "effectBoundaryId": "effect:9414fd8af2a142833a16:database-transaction-1",
-      "effectFamilies": [
-        "canonical_row"
-      ],
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "idempotencyOwner": "src/server/plant-identification-repository.ts#recordPlantIdentificationDecision",
-      "ownerPath": "src/server/plant-identification-repository.ts",
-      "ownerSymbol": "recordPlantIdentificationDecision"
-    },
-    {
-      "atomicity": "database_transaction",
-      "commitLabel": "database-transaction-1",
       "effectBoundaryId": "effect:9556164355897c38d4da:database-transaction-1",
       "effectFamilies": [
         "canonical_row"
@@ -10366,20 +9807,6 @@
     },
     {
       "atomicity": "database_transaction",
-      "commitLabel": "database-transaction-1",
-      "effectBoundaryId": "effect:ab7898c1675edf8f3f4b:database-transaction-1",
-      "effectFamilies": [
-        "canonical_row"
-      ],
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "idempotencyOwner": "src/server/plant-identification-repository.ts#settlePlantIdentificationFailure",
-      "ownerPath": "src/server/plant-identification-repository.ts",
-      "ownerSymbol": "settlePlantIdentificationFailure"
-    },
-    {
-      "atomicity": "database_transaction",
       "commitLabel": "canonical-row:buildUserPublicProfileByUserIdQuery",
       "effectBoundaryId": "effect:ac9610284c1aded03cb4:canonical-row-builduserpublicprofilebyuseridquery",
       "effectFamilies": [
@@ -10459,20 +9886,6 @@
     {
       "atomicity": "database_transaction",
       "commitLabel": "database-transaction-1",
-      "effectBoundaryId": "effect:aeeca4c4a6e76f323f6b:database-transaction-1",
-      "effectFamilies": [
-        "canonical_row"
-      ],
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "idempotencyOwner": "src/server/plant-identification-repository.ts#createOrReadPlantIdentificationRequest",
-      "ownerPath": "src/server/plant-identification-repository.ts",
-      "ownerSymbol": "createOrReadPlantIdentificationRequest"
-    },
-    {
-      "atomicity": "database_transaction",
-      "commitLabel": "database-transaction-1",
       "effectBoundaryId": "effect:b0f9419fa4d09fd4501b:database-transaction-1",
       "effectFamilies": [
         "canonical_row"
@@ -10498,20 +9911,6 @@
       "idempotencyOwner": "src/server/catalog-alias-curation-repository.ts#enqueueCatalogAliasSuggestionsRefresh",
       "ownerPath": "src/server/catalog-alias-curation-repository.ts",
       "ownerSymbol": "enqueueCatalogAliasSuggestionsRefresh"
-    },
-    {
-      "atomicity": "database_transaction",
-      "commitLabel": "canonical-row:buildFindExactSelectableSpeciesByScientificNameQuery",
-      "effectBoundaryId": "effect:b4dfccf0aad8f0bb6713:canonical-row-buildfindexactselectablespeciesbyscientificnamequery",
-      "effectFamilies": [
-        "canonical_row"
-      ],
-      "evidencePaths": [
-        "src/server/catalog-repository.ts"
-      ],
-      "idempotencyOwner": "src/server/catalog-repository.ts#findExactSelectableSpeciesByScientificName",
-      "ownerPath": "src/server/catalog-repository.ts",
-      "ownerSymbol": "findExactSelectableSpeciesByScientificName"
     },
     {
       "atomicity": "database_transaction",
@@ -10625,20 +10024,6 @@
       "idempotencyOwner": "src/server/journal-draft-repository.ts#deleteJournalDraft",
       "ownerPath": "src/server/journal-draft-repository.ts",
       "ownerSymbol": "deleteJournalDraft"
-    },
-    {
-      "atomicity": "database_transaction",
-      "commitLabel": "database-transaction-1",
-      "effectBoundaryId": "effect:caee84b1cbcc1e8c93c6:database-transaction-1",
-      "effectFamilies": [
-        "canonical_row"
-      ],
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "idempotencyOwner": "src/server/plant-identification-repository.ts#settlePlantIdentificationCandidates",
-      "ownerPath": "src/server/plant-identification-repository.ts",
-      "ownerSymbol": "settlePlantIdentificationCandidates"
     },
     {
       "atomicity": "database_transaction",
@@ -13086,66 +12471,6 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts"
-      ],
-      "exclusionReason": null,
-      "executionOwner": "remaining_ove_291",
-      "generationRequirement": "required_before_first_effect",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "symbol": "POST",
-      "transport": "route_handler",
-      "variant": "POST:authenticated_user"
-    },
-    {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/decision/route.ts#POST:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "symbol": "POST",
-      "transport": "route_handler",
-      "variant": "POST:guest_auth_intent"
-    },
-    {
-      "authority": "authenticated_user",
-      "classification": "effectful",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:authenticated_user",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts"
-      ],
-      "exclusionReason": null,
-      "executionOwner": "remaining_ove_291",
-      "generationRequirement": "required_before_first_effect",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "symbol": "POST",
-      "transport": "route_handler",
-      "variant": "POST:authenticated_user"
-    },
-    {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "route_handler:src/app/api/garden/plant-identification/route.ts#POST:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "symbol": "POST",
-      "transport": "route_handler",
-      "variant": "POST:guest_auth_intent"
-    },
-    {
-      "authority": "authenticated_user",
-      "classification": "effectful",
       "entrypointId": "route_handler:src/app/api/garden/value-pulse/route.ts#POST",
       "evidencePaths": [
         "src/app/api/garden/value-pulse/route.ts"
@@ -13533,38 +12858,6 @@
       "symbol": "confirmDocumentMutationOwnerContinuity",
       "transport": "same_origin_fetch",
       "variant": "POST:/api/document-mutation-admission/continuity"
-    },
-    {
-      "authority": "authenticated_user",
-      "classification": "effectful",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#decide:POST:/api/garden/plant-identification/decision",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/components/garden/plant-identification-panel.tsx"
-      ],
-      "exclusionReason": null,
-      "executionOwner": "remaining_ove_291",
-      "generationRequirement": "required_before_first_effect",
-      "path": "src/components/garden/plant-identification-panel.tsx",
-      "symbol": "decide",
-      "transport": "same_origin_fetch",
-      "variant": "POST:/api/garden/plant-identification/decision"
-    },
-    {
-      "authority": "authenticated_user",
-      "classification": "effectful",
-      "entrypointId": "same_origin_fetch:src/components/garden/plant-identification-panel.tsx#identify:POST:/api/garden/plant-identification",
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx"
-      ],
-      "exclusionReason": null,
-      "executionOwner": "remaining_ove_291",
-      "generationRequirement": "required_before_first_effect",
-      "path": "src/components/garden/plant-identification-panel.tsx",
-      "symbol": "identify",
-      "transport": "same_origin_fetch",
-      "variant": "POST:/api/garden/plant-identification"
     },
     {
       "authority": "authenticated_user",
@@ -14610,18 +13903,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:011cb135a266abf0b6ea",
-      "symbol": "documentMutationAdmissionResponse"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/objects/[objectId]/actions.ts",
         "src/app/garden/objects/[objectId]/page.tsx"
       ],
@@ -15431,17 +14712,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_1921",
-      "sourceNodeId": "source:07420e0e295f61f9e17f",
-      "symbol": "createOrReadPlantIdentificationRequest"
-    },
-    {
-      "evidencePaths": [
         "src/lib/auth.ts",
         "src/lib/runtime-url.ts"
       ],
@@ -15521,18 +14791,6 @@
       "semanticVariant": "from:@/server/erasure-request-repository",
       "sourceNodeId": "source:0848a3c952078849b729",
       "symbol": "markErasureRequestHandled"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plantnet-species-adapter.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plantnet-species-adapter",
-      "sourceNodeId": "source:084998bde6d43c8596b0",
-      "symbol": "PLANTNET_MAX_IMAGES"
     },
     {
       "evidencePaths": [
@@ -15899,18 +15157,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/journal-repository",
-      "sourceNodeId": "source:0c750cfbce1753c53a8e",
-      "symbol": "resolvePlantObjectCatalog"
-    },
-    {
-      "evidencePaths": [
         "src/server/journal-mention-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -16013,18 +15259,6 @@
       "semanticVariant": "from:@/server/search/public-journal-document-contract",
       "sourceNodeId": "source:0d3fe54f414f9782fc28",
       "symbol": "fingerprintJournalSearchDocument"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:0d7d11578efa4b5374eb",
-      "symbol": "admitDocumentMutation"
     },
     {
       "evidencePaths": [
@@ -16686,17 +15920,6 @@
       "semanticVariant": "from:@/lib/public-localization",
       "sourceNodeId": "source:1450e51d3dc25d3d359c",
       "symbol": "PUBLIC_LOCALES"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts"
-      ],
-      "nodeKind": "route_handler",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "POST:authenticated_user",
-      "sourceNodeId": "source:145822626f3c713a4feb",
-      "symbol": "POST"
     },
     {
       "evidencePaths": [
@@ -17601,17 +16824,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts"
-      ],
-      "nodeKind": "route_handler",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "POST:authenticated_user",
-      "sourceNodeId": "source:1bf7b0b1c211afbff380",
-      "symbol": "POST"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/objects/[objectId]/actions.ts",
         "src/app/garden/objects/[objectId]/catalog-resolve-control.tsx",
         "src/app/garden/objects/[objectId]/page.tsx"
@@ -17779,18 +16991,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plantnet-species-adapter.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plantnet-species-adapter",
-      "sourceNodeId": "source:1e0c28ef353f236b8995",
-      "symbol": "PLANTNET_POLICY_VERSION"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/handoff/route.ts",
         "src/lib/lineage/claim-handoff.ts"
       ],
@@ -17824,18 +17024,6 @@
       "semanticVariant": "from:@/lib/garden/public-paths",
       "sourceNodeId": "source:1e29ccd34c0a9f78f3a0",
       "symbol": "publicLineageObjectPath"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/lib/storage.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/storage",
-      "sourceNodeId": "source:1e4f8dada732a51dfe45",
-      "symbol": "getPublicDerivativeObjectBuffer"
     },
     {
       "evidencePaths": [
@@ -17919,29 +17107,6 @@
       "semanticVariant": "public-derivative-delete",
       "sourceNodeId": "source:1f6307e70f6f2c4ec518",
       "symbol": "deletePublicDerivativeObject"
-    },
-    {
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "effect_owner",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database-transaction-1",
-      "sourceNodeId": "source:1f7e25747be9767276ee",
-      "symbol": "recordPlantIdentificationDecision"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plant-identification-repository",
-      "sourceNodeId": "source:1f91f07fe3a924f09c67",
-      "symbol": "createOrReadPlantIdentificationRequest"
     },
     {
       "evidencePaths": [
@@ -18363,18 +17528,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plantnet-species-adapter.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plantnet-species-adapter",
-      "sourceNodeId": "source:239138189360f0964556",
-      "symbol": "reencodePlantNetImage"
-    },
-    {
-      "evidencePaths": [
         "src/app/auth/intent/start/route.ts",
         "src/lib/auth/auth-intent-contract.ts"
       ],
@@ -18407,18 +17560,6 @@
       "semanticVariant": "database_transaction_at_17737",
       "sourceNodeId": "source:23a92e2c3e844c93230f",
       "symbol": "contributePublicJournalToCommunity"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plant-identification-repository",
-      "sourceNodeId": "source:23adc5568fd2638201d7",
-      "symbol": "claimPlantIdentificationSubmission"
     },
     {
       "evidencePaths": [
@@ -19273,17 +18414,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_12023",
-      "sourceNodeId": "source:2a53129538ac2240df24",
-      "symbol": "recordPlantIdentificationDecision"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/catalog/curation/actions.ts",
         "src/app/garden/catalog/curation/catalog-source-candidate-review-list.tsx",
         "src/app/garden/catalog/curation/page.tsx"
@@ -19768,17 +18898,6 @@
       "semanticVariant": "from:@/lib/garden/entry-contracts",
       "sourceNodeId": "source:2e77787d6ee7ab32ea83",
       "symbol": "legacyClientRetiredResponse"
-    },
-    {
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "effect_owner",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database-transaction-1",
-      "sourceNodeId": "source:2e9e8c799ebaec86ad69",
-      "symbol": "createOrReadPlantIdentificationRequest"
     },
     {
       "evidencePaths": [
@@ -20341,18 +19460,6 @@
       "semanticVariant": "from:@/server/public-surface-indexing-policy",
       "sourceNodeId": "source:33aeee6a487dc698f000",
       "symbol": "evaluatePublicSurfaceIndexability"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:33b8ba62c9f2256d2b4b",
-      "symbol": "documentMutationGenerationFromRequest"
     },
     {
       "evidencePaths": [
@@ -21208,18 +20315,6 @@
     },
     {
       "evidencePaths": [
-        "src/components/garden/plant-identification-panel.tsx",
-        "src/lib/interface-localization.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/components/garden/plant-identification-panel.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/interface-localization",
-      "sourceNodeId": "source:3c567098f501b9091833",
-      "symbol": "InterfaceLocale"
-    },
-    {
-      "evidencePaths": [
         "src/app/auth/help/password-reset-request-form.tsx",
         "src/lib/auth/auth-recovery.ts"
       ],
@@ -21602,18 +20697,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plantnet-species-adapter.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plantnet-species-adapter",
-      "sourceNodeId": "source:4030d20d27b871e6d59e",
-      "symbol": "identifyPlantSpecies"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/document-mutation-admission/readback/route.ts",
         "src/lib/r2-addressing-contract.ts"
       ],
@@ -21860,17 +20943,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:4246d5ad821f3dd95fe0",
       "symbol": "Database"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts"
-      ],
-      "nodeKind": "route_handler",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "POST:guest_auth_intent",
-      "sourceNodeId": "source:4271bf8c011f45c20b6d",
-      "symbol": "POST"
     },
     {
       "evidencePaths": [
@@ -22676,40 +21748,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "effect_owner",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database-transaction-1",
-      "sourceNodeId": "source:4a18056b8f48b3e9ccaa",
-      "symbol": "settlePlantIdentificationCandidates"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plantnet-species-adapter.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plantnet-species-adapter",
-      "sourceNodeId": "source:4a1ca0e35333886ae144",
-      "symbol": "PlantNetAdapterError"
-    },
-    {
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_8948",
-      "sourceNodeId": "source:4a6787b512684c5b58ee",
-      "symbol": "settlePlantIdentificationFailure"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/actions.ts",
         "src/server/document-mutation-admission.ts"
       ],
@@ -23025,18 +22063,6 @@
       "semanticVariant": "from:@/server/document-mutation-admission",
       "sourceNodeId": "source:4d3fdca4dfd506f58117",
       "symbol": "admitDocumentMutation"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plant-identification-repository",
-      "sourceNodeId": "source:4d46cb12a2129cfe0615",
-      "symbol": "settlePlantIdentificationFailure"
     },
     {
       "evidencePaths": [
@@ -23537,18 +22563,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/objects/[objectId]/page.tsx",
-        "src/components/garden/plant-identification-panel.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/objects/[objectId]/page.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/components/garden/plant-identification-panel",
-      "sourceNodeId": "source:51aebde513b70fbe7c68",
-      "symbol": "PlantIdentificationPanel"
-    },
-    {
-      "evidencePaths": [
         "src/components/public/public-profile.tsx",
         "src/lib/public-profile-copy.ts"
       ],
@@ -23570,18 +22584,6 @@
       "semanticVariant": "from:@/lib/privacy/disclosures",
       "sourceNodeId": "source:523c6eef85550247bc37",
       "symbol": "ERASURE_REQUEST_HANDLED_STATUS_OPTIONS"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plant-identification-repository",
-      "sourceNodeId": "source:527a8bfb82a26e06f22a",
-      "symbol": "recordPlantIdentificationDecision"
     },
     {
       "evidencePaths": [
@@ -24016,18 +23018,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plant-identification-repository",
-      "sourceNodeId": "source:56e223f3af303582971a",
-      "symbol": "recordPlantIdentificationDecisionInTransaction"
-    },
-    {
-      "evidencePaths": [
         "src/server/engagement-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -24401,18 +23391,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:5a31d53e898f01f8f1b7",
       "symbol": "JsonValue"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/journal-repository",
-      "sourceNodeId": "source:5a4cfd3f3694d0175b8a",
-      "symbol": "getPlantObjectPage"
     },
     {
       "evidencePaths": [
@@ -25552,18 +24530,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:67b0b508cd79448d20a5",
-      "symbol": "documentMutationGenerationFromRequest"
-    },
-    {
-      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/social-return-repository.ts"
       ],
@@ -26036,18 +25002,6 @@
       "semanticVariant": "from:@/components/ui/button",
       "sourceNodeId": "source:6d4d3bab77ff1ae4aa54",
       "symbol": "buttonVariants"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plant-identification-repository",
-      "sourceNodeId": "source:6d5e3eb8b1930e8a3129",
-      "symbol": "readPlantIdentificationTarget"
     },
     {
       "evidencePaths": [
@@ -26751,18 +25705,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plant-identification-repository",
-      "sourceNodeId": "source:74d76f95cd0bd0480fa9",
-      "symbol": "settlePlantIdentificationCandidates"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/catalog/curation/actions.ts"
       ],
       "nodeKind": "server_action",
@@ -26771,17 +25713,6 @@
       "semanticVariant": "promoteCatalogSourceCandidateAction",
       "sourceNodeId": "source:74da8aeea6aaaf2e748d",
       "symbol": "promoteCatalogSourceCandidateAction"
-    },
-    {
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_6558",
-      "sourceNodeId": "source:74e376143a7669be7c04",
-      "symbol": "settlePlantIdentificationCandidates"
     },
     {
       "evidencePaths": [
@@ -27117,18 +26048,6 @@
     },
     {
       "evidencePaths": [
-        "src/db/schema.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/db/schema",
-      "sourceNodeId": "source:77fdf919e3fded21748e",
-      "symbol": "JsonValue"
-    },
-    {
-      "evidencePaths": [
         "src/server/request-scope.ts",
         "src/server/variety-seed-proof-repository.ts"
       ],
@@ -27339,18 +26258,6 @@
       "semanticVariant": "from:@/server/public-object-passport-presentation",
       "sourceNodeId": "source:79e93e7bb48c1b2089f6",
       "symbol": "buildPublicObjectPassportPresentation"
-    },
-    {
-      "evidencePaths": [
-        "src/db/index.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/db",
-      "sourceNodeId": "source:7a03b2f75c4b9a82ddc6",
-      "symbol": "db"
     },
     {
       "evidencePaths": [
@@ -28892,17 +27799,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "effect_owner",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database-transaction-1",
-      "sourceNodeId": "source:89f1c4ba0870052ade5d",
-      "symbol": "claimPlantIdentificationSubmission"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/drafts/[draftKey]/route.ts",
         "src/lib/garden/entry-contracts.ts"
       ],
@@ -29399,17 +28295,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/catalog-repository.ts"
-      ],
-      "nodeKind": "effect_owner",
-      "path": "src/server/catalog-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "canonical-row:buildFindExactSelectableSpeciesByScientificNameQuery",
-      "sourceNodeId": "source:8e7d944a2f9fd7d350e5",
-      "symbol": "findExactSelectableSpeciesByScientificName"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/skeleton/journal/route.ts"
       ],
       "nodeKind": "route_handler",
@@ -29550,18 +28435,6 @@
       "semanticVariant": "canonical-row:buildEngagementBlockStateQuery",
       "sourceNodeId": "source:8f694c7a531b99378bbe",
       "symbol": "engagementActorIsVisible"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:8f9d769240d134b46896",
-      "symbol": "admitDocumentMutation"
     },
     {
       "evidencePaths": [
@@ -30098,18 +28971,6 @@
       "semanticVariant": "from:@/server/mvp-learning/attribution-outbox",
       "sourceNodeId": "source:95686c1f990e0b36a2a2",
       "symbol": "enqueueLearningAttributionIntent"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/media/media-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/media/media-repository",
-      "sourceNodeId": "source:95897250fd58a9227de8",
-      "symbol": "findMediaAssetForOwner"
     },
     {
       "evidencePaths": [
@@ -31089,18 +29950,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/auth-intent-http.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-intent-http",
-      "sourceNodeId": "source:9f010c914aaeb57c2a09",
-      "symbol": "authIntentRequiredResponse"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/engagement/bookmarks/route.ts",
         "src/server/visual-fixtures/social-actor.ts"
       ],
@@ -31856,18 +30705,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/plant-identification-repository.ts",
-        "src/server/request-scope.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/request-scope",
-      "sourceNodeId": "source:a5d1ade805b34e3f2be1",
-      "symbol": "RequestScope"
-    },
-    {
-      "evidencePaths": [
         "src/server/catalog-source/candidate-review-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -31888,17 +30725,6 @@
       "semanticVariant": "from:@/server/community-repository",
       "sourceNodeId": "source:a64f345ffbb945bf011b",
       "symbol": "contributePublicJournalToCommunity"
-    },
-    {
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "effect_owner",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "canonical-row",
-      "sourceNodeId": "source:a6759f9fd0054574cf17",
-      "symbol": "recordPlantIdentificationDecisionInTransaction"
     },
     {
       "evidencePaths": [
@@ -32114,18 +30940,6 @@
       "semanticVariant": "from:./profile/account-method-actions",
       "sourceNodeId": "source:a81ec0143a7b5d0ddd25",
       "symbol": "AccountMethodPasswordActionResult"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plant-identification-repository",
-      "sourceNodeId": "source:a834ef0c253601757bbd",
-      "symbol": "PlantIdentificationErrorClass"
     },
     {
       "evidencePaths": [
@@ -32519,18 +31333,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/auth-intent-http.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-intent-http",
-      "sourceNodeId": "source:ac4caf9141e441e24979",
-      "symbol": "authIntentRequiredResponse"
-    },
-    {
-      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/analytics-events.ts"
       ],
@@ -32551,18 +31353,6 @@
       "semanticVariant": "canonical-row:buildCommunityLookupQuery",
       "sourceNodeId": "source:ac5bc268cc34f7da5003",
       "symbol": "requireExistingCommunity"
-    },
-    {
-      "evidencePaths": [
-        "src/db/schema.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/db/schema",
-      "sourceNodeId": "source:ac64c7f2aeaddb074b18",
-      "symbol": "Database"
     },
     {
       "evidencePaths": [
@@ -34253,18 +33043,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/components/garden/plant-identification-panel.tsx"
-      ],
-      "nodeKind": "same_origin_call",
-      "path": "src/components/garden/plant-identification-panel.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "POST:/api/garden/plant-identification",
-      "sourceNodeId": "source:bc3d809321c84e134342",
-      "symbol": "identify"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
         "src/lib/garden/journal-document.ts"
       ],
@@ -34396,17 +33174,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "effect_owner",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database-transaction-1",
-      "sourceNodeId": "source:bdac2d592189095137f6",
-      "symbol": "settlePlantIdentificationFailure"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/page.tsx",
         "src/lib/garden/activation.ts"
       ],
@@ -34463,17 +33230,6 @@
       "semanticVariant": "from:@/server/search/public-projection-outbox",
       "sourceNodeId": "source:bddae378bb05e8c8c686",
       "symbol": "recordPublicProjectionIntent"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts"
-      ],
-      "nodeKind": "route_handler",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "POST:guest_auth_intent",
-      "sourceNodeId": "source:bde2f8c1428d4c38a7ad",
-      "symbol": "POST"
     },
     {
       "evidencePaths": [
@@ -35448,18 +34204,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/document-mutation-admission.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/document-mutation-admission",
-      "sourceNodeId": "source:c79cc360640b21f82b26",
-      "symbol": "documentMutationAdmissionResponse"
-    },
-    {
-      "evidencePaths": [
         "src/server/journal-document-persistence.ts",
         "src/server/media/media-lifecycle-enqueue.ts"
       ],
@@ -35871,18 +34615,6 @@
       "semanticVariant": "database-transaction-1",
       "sourceNodeId": "source:cc1506ab19ebe7da1008",
       "symbol": "publishJournalEntry"
-    },
-    {
-      "evidencePaths": [
-        "src/components/auth/document-mutation-recovery.tsx",
-        "src/components/garden/plant-identification-panel.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/components/garden/plant-identification-panel.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
-      "sourceNodeId": "source:cc25355387447dd875b3",
-      "symbol": "useOptionalDocumentMutationGeneration"
     },
     {
       "evidencePaths": [
@@ -36746,18 +35478,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/decision/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plant-identification-repository",
-      "sourceNodeId": "source:d50a4ff27e3ce3a35a4e",
-      "symbol": "readPlantIdentificationReceipt"
-    },
-    {
-      "evidencePaths": [
         "src/lib/privacy/precise-location-text.ts",
         "src/server/engagement-repository.ts"
       ],
@@ -36814,17 +35534,6 @@
       "semanticVariant": "from:@/server/search/public-community-search",
       "sourceNodeId": "source:d579c9d874c286299aaf",
       "symbol": "PublicCommunitySearchCandidates"
-    },
-    {
-      "evidencePaths": [
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/plant-identification-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_3257",
-      "sourceNodeId": "source:d5a3c88d2020350e48a2",
-      "symbol": "claimPlantIdentificationSubmission"
     },
     {
       "evidencePaths": [
@@ -37852,18 +36561,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/catalog-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/catalog-repository",
-      "sourceNodeId": "source:df74f71afbbb0467d4bd",
-      "symbol": "findExactSelectableSpeciesByScientificName"
-    },
-    {
-      "evidencePaths": [
         "src/server/journal-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -37883,18 +36580,6 @@
       "semanticVariant": "POST:authenticated_user",
       "sourceNodeId": "source:dfcf7fe21bbd2e610648",
       "symbol": "POST"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plantnet-species-adapter.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plantnet-species-adapter",
-      "sourceNodeId": "source:dfdaef18c03a4bfb4f48",
-      "symbol": "PlantNetOrgan"
     },
     {
       "evidencePaths": [
@@ -38277,18 +36962,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plant-identification-repository",
-      "sourceNodeId": "source:e3e78bdf52c570a2384b",
-      "symbol": "IdentificationCandidateInput"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/drafts/[draftKey]/route.ts",
         "src/lib/garden/journal-document.ts"
       ],
@@ -38439,18 +37112,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:e4caeaae22c6c015be9e",
       "symbol": "JsonValue"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plantnet-species-adapter.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plantnet-species-adapter",
-      "sourceNodeId": "source:e4e4572086fbc27a2e91",
-      "symbol": "buildPlantNetFingerprint"
     },
     {
       "evidencePaths": [
@@ -39408,18 +38069,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/decision/route.ts",
-        "src/components/garden/plant-identification-panel.tsx"
-      ],
-      "nodeKind": "same_origin_call",
-      "path": "src/components/garden/plant-identification-panel.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "POST:/api/garden/plant-identification/decision",
-      "sourceNodeId": "source:ee0072879b4473e1c6ed",
-      "symbol": "decide"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/page.tsx",
         "src/lib/navigation/internal-return-path.ts"
       ],
@@ -40277,18 +38926,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plantnet-species-adapter.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plantnet-species-adapter",
-      "sourceNodeId": "source:f64c307b09430b6c876a",
-      "symbol": "isPlantNetSpeciesIdentificationEnabled"
-    },
-    {
-      "evidencePaths": [
         "src/server/community-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -40297,18 +38934,6 @@
       "semanticVariant": "canonical-row:buildCommunityReportTargetQuery",
       "sourceNodeId": "source:f650ed927518202e123a",
       "symbol": "blockCommunityContributionAuthor"
-    },
-    {
-      "evidencePaths": [
-        "src/components/auth/document-mutation-recovery.tsx",
-        "src/components/garden/plant-identification-panel.tsx"
-      ],
-      "nodeKind": "import",
-      "path": "src/components/garden/plant-identification-panel.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
-      "sourceNodeId": "source:f6690d7f3354d3b6a485",
-      "symbol": "createDocumentMutationRequestHeaders"
     },
     {
       "evidencePaths": [
@@ -40617,18 +39242,6 @@
       "semanticVariant": "from:@/lib/catalog/genebank-long-tail",
       "sourceNodeId": "source:f8f46b4a93adecd58662",
       "symbol": "genebankLongTailProjectionForRecord"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plantnet-species-adapter.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plantnet-species-adapter",
-      "sourceNodeId": "source:f8fe4a5886cfd042f0c3",
-      "symbol": "PLANTNET_ORGANS"
     },
     {
       "evidencePaths": [
@@ -41083,18 +39696,6 @@
       "semanticVariant": "from:@/lib/public-knowledge-content",
       "sourceNodeId": "source:fcb55d5243bfea6f9a64",
       "symbol": "buildPublicKnowledgeHref"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/plant-identification/route.ts",
-        "src/server/plant-identification-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/plant-identification/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/plant-identification-repository",
-      "sourceNodeId": "source:fcbd7b876fdc73c62e39",
-      "symbol": "readPlantIdentificationReceipt"
     },
     {
       "evidencePaths": [

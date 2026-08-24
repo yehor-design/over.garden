@@ -139,7 +139,10 @@ export class AuthenticatedMutationSourceGraph {
   }
 
   sourceText(repositoryPath: string): string {
-    return this.#models.get(normalizeRepositoryPath(repositoryPath))?.sourceText ?? "";
+    return (
+      this.#models.get(normalizeRepositoryPath(repositoryPath))?.sourceText ??
+      ""
+    );
   }
 
   resolveRef(ref: MutationSourceRef): MutationSourceRef | null {
@@ -174,7 +177,8 @@ export class AuthenticatedMutationSourceGraph {
         return current;
       }
       const forwarded =
-        model.reexports.get(current.symbol) ?? model.imports.get(current.symbol);
+        model.reexports.get(current.symbol) ??
+        model.imports.get(current.symbol);
       if (!forwarded) return null;
       current = forwarded;
     }
@@ -318,7 +322,10 @@ export class AuthenticatedMutationSourceGraph {
     return null;
   }
 
-  #resolveTextRef(fromPath: string, expressionText: string): MutationSourceRef | null {
+  #resolveTextRef(
+    fromPath: string,
+    expressionText: string,
+  ): MutationSourceRef | null {
     const trimmed = expressionText.trim();
     const bindMatch = /^([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?)\.bind\b/.exec(
       trimmed,
@@ -361,7 +368,10 @@ export class AuthenticatedMutationSourceGraph {
       ts.isPropertyAccessExpression(current.expression) &&
       current.expression.name.text === "bind"
     ) {
-      return this.#resolveExpressionRef(fromPath, current.expression.expression);
+      return this.#resolveExpressionRef(
+        fromPath,
+        current.expression.expression,
+      );
     }
     if (ts.isIdentifier(current)) {
       const actionStateRef = this.#resolveActionStateBinding(
@@ -422,7 +432,8 @@ export class AuthenticatedMutationSourceGraph {
                 property.name.getText(model.sourceFile) === propName,
             );
             const expression =
-              attribute?.initializer && ts.isJsxExpression(attribute.initializer)
+              attribute?.initializer &&
+              ts.isJsxExpression(attribute.initializer)
                 ? attribute.initializer.expression
                 : undefined;
             if (expression) {
@@ -578,7 +589,8 @@ export class AuthenticatedMutationSourceGraph {
           action?.initializer && ts.isJsxExpression(action.initializer)
             ? action.initializer.expression
             : null;
-        if (expression?.getText(model.sourceFile).trim() !== expressionText) return;
+        if (expression?.getText(model.sourceFile).trim() !== expressionText)
+          return;
         const methodAttribute = node.attributes.properties.find(
           (property): property is ts.JsxAttribute =>
             ts.isJsxAttribute(property) && property.name.getText() === "method",
@@ -677,7 +689,10 @@ export class AuthenticatedMutationSourceGraph {
         );
       }
 
-      const executedQueryBuilder = this.#resolveExecutedQueryBuilder(model, call);
+      const executedQueryBuilder = this.#resolveExecutedQueryBuilder(
+        model,
+        call,
+      );
       if (executedQueryBuilder) {
         const family = databaseFamily(executedQueryBuilder);
         const queryEffect = effect(
@@ -690,9 +705,7 @@ export class AuthenticatedMutationSourceGraph {
         );
         effects.push({
           ...queryEffect,
-          evidencePaths: sorted(
-            new Set([ref.path, executedQueryBuilder.path]),
-          ),
+          evidencePaths: sorted(new Set([ref.path, executedQueryBuilder.path])),
           ...(transactionScope &&
           isTransactionExecutorCall(
             call,
@@ -755,7 +768,9 @@ export class AuthenticatedMutationSourceGraph {
     };
     collectTaggedSql(body);
 
-    effects.push(...classifyKnownOwnerEffect(ref, text, body.getStart(model.sourceFile)));
+    effects.push(
+      ...classifyKnownOwnerEffect(ref, text, body.getStart(model.sourceFile)),
+    );
 
     for (const scope of transactionScopes) {
       const coCommitted = effects.filter(
@@ -881,7 +896,8 @@ function collectDefinitions(sourceFile: ts.SourceFile): Map<string, ts.Node> {
       definitions.set(node.name.text, node);
     } else if (
       ts.isExportAssignment(node) &&
-      (ts.isFunctionExpression(node.expression) || ts.isArrowFunction(node.expression))
+      (ts.isFunctionExpression(node.expression) ||
+        ts.isArrowFunction(node.expression))
     ) {
       definitions.set("default", node.expression);
     } else if (
@@ -923,7 +939,13 @@ function classifyDirectCall(
   if (DATABASE_MUTATION_METHODS.has(method)) {
     if (/^build[A-Z].*Query$/.test(owner.symbol)) return null;
     const family = databaseFamily(owner);
-    return effect(owner, databaseCommitLabel(family), "database_transaction", [family], order);
+    return effect(
+      owner,
+      databaseCommitLabel(family),
+      "database_transaction",
+      [family],
+      order,
+    );
   }
   if (
     /^(?:setPassword|changePassword|updateUser|deleteUser)$/.test(method) &&
@@ -1030,7 +1052,7 @@ function classifyKnownOwnerEffect(
     }
   }
   if (
-    /(?:sendEmail|sendVerification|sendAuth|callPlantNet|identifyPlant|purgeCloudflare)/i.test(
+    /(?:sendEmail|sendVerification|sendAuth|purgeCloudflare)/i.test(
       owner.symbol,
     ) &&
     /(?:fetch\s*\(|\.send\s*\()/.test(text)
@@ -1058,7 +1080,9 @@ function databaseFamily(owner: MutationSourceRef): MutationEffectFamily {
   ) {
     return "transactional_outbox";
   }
-  if (/analytics|learning-(?:event|signal)|record.*(?:Analytics|Event)/i.test(key)) {
+  if (
+    /analytics|learning-(?:event|signal)|record.*(?:Analytics|Event)/i.test(key)
+  ) {
     return "analytics_event";
   }
   return "canonical_row";
@@ -1103,7 +1127,9 @@ function effect(
   };
 }
 
-function terminalCallName(expression: ts.LeftHandSideExpression): string | null {
+function terminalCallName(
+  expression: ts.LeftHandSideExpression,
+): string | null {
   if (ts.isIdentifier(expression)) return expression.text;
   if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
   return null;
@@ -1236,7 +1262,8 @@ function escapeRegExp(value: string): string {
 function enclosingFunctionSymbol(node: ts.Node): string | null {
   let current: ts.Node | undefined = node.parent;
   while (current) {
-    if (ts.isFunctionDeclaration(current) && current.name) return current.name.text;
+    if (ts.isFunctionDeclaration(current) && current.name)
+      return current.name.text;
     if (
       (ts.isFunctionExpression(current) || ts.isArrowFunction(current)) &&
       current.parent &&
@@ -1252,7 +1279,8 @@ function enclosingFunctionSymbol(node: ts.Node): string | null {
 
 function hasDefaultModifier(node: ts.Node): boolean {
   return Boolean(
-    ts.getCombinedModifierFlags(node as ts.Declaration) & ts.ModifierFlags.Default,
+    ts.getCombinedModifierFlags(node as ts.Declaration) &
+    ts.ModifierFlags.Default,
   );
 }
 
@@ -1266,7 +1294,9 @@ function mergeEffects(
     if (!existing) {
       merged.set(key, {
         ...candidate,
-        effectFamilies: sorted(new Set(candidate.effectFamilies)) as MutationEffectFamily[],
+        effectFamilies: sorted(
+          new Set(candidate.effectFamilies),
+        ) as MutationEffectFamily[],
         evidencePaths: sorted(new Set(candidate.evidencePaths)),
       });
       continue;
@@ -1308,10 +1338,7 @@ function deduplicateBindings(
       admission: binding.admission,
       route: binding.route,
       evidencePaths: sorted(
-        new Set([
-          ...(current?.evidencePaths ?? []),
-          ...binding.evidencePaths,
-        ]),
+        new Set([...(current?.evidencePaths ?? []), ...binding.evidencePaths]),
       ),
     });
   }
@@ -1322,7 +1349,8 @@ function deduplicateBindings(
 
 function bindingKey(binding: MutationAdmissionBinding): string {
   if (binding.admission) return `ref:${refKey(binding.admission)}`;
-  if (binding.route) return `route:${binding.route.method}:${binding.route.url}`;
+  if (binding.route)
+    return `route:${binding.route.method}:${binding.route.url}`;
   return "invalid";
 }
 

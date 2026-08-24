@@ -86,10 +86,6 @@ export interface SelectableCatalogItem {
   source: string;
 }
 
-export type ExactSpeciesMapping =
-  | { status: "mapped"; item: SelectableCatalogItem }
-  | { status: "unmapped" | "ambiguous" };
-
 export interface UserAddedCatalogCandidate {
   id: string;
   displayName: string;
@@ -287,85 +283,6 @@ export async function findSelectableCatalogItemByPublicSlug(
     status: row.status as SelectableCatalogStatus,
     source: row.source,
   };
-}
-
-/**
- * Pl@ntNet names are evidence, not catalog authority. Only one global,
- * selectable species with an exact normalized canonical name or an exact
- * accepted scientific-name alias is eligible for confirmation. Vernacular,
- * fuzzy, generated and homonymous matches deliberately fail closed.
- */
-export async function findExactSelectableSpeciesByScientificName(
-  scientificName: string,
-  executor: QueryExecutor = db,
-): Promise<ExactSpeciesMapping> {
-  const normalizedName = normalizeCatalogQuery(scientificName);
-  if (!normalizedName) return { status: "unmapped" };
-
-  const rows = await buildFindExactSelectableSpeciesByScientificNameQuery(
-    executor,
-    normalizedName,
-  ).execute();
-
-  if (rows.length === 0) return { status: "unmapped" };
-  if (rows.length !== 1) return { status: "ambiguous" };
-  const item = rows[0]!;
-  return {
-    status: "mapped",
-    item: {
-      id: item.id,
-      canonicalName: item.canonicalName,
-      publicSlug: item.publicSlug,
-      catalogKind: "species",
-      locale: item.locale,
-      status: item.status as SelectableCatalogStatus,
-      source: item.source,
-    },
-  };
-}
-
-export function buildFindExactSelectableSpeciesByScientificNameQuery(
-  executor: QueryExecutor,
-  normalizedScientificName: string,
-) {
-  return executor
-    .selectFrom("catalog_items")
-    .leftJoin(
-      "catalog_alias_projections",
-      "catalog_alias_projections.catalog_item_id",
-      "catalog_items.id",
-    )
-    .select([
-      "catalog_items.id",
-      "catalog_items.canonical_name as canonicalName",
-      "catalog_items.public_slug as publicSlug",
-      "catalog_items.locale",
-      "catalog_items.status",
-      "catalog_items.source",
-    ])
-    .distinct()
-    .where("catalog_items.catalog_kind", "=", "species")
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
-    .where("catalog_items.created_by_user_id", "is", null)
-    .where((eb) =>
-      eb.or([
-        eb("catalog_items.normalized_name", "=", normalizedScientificName),
-        eb.and([
-          eb(
-            "catalog_alias_projections.normalized_name",
-            "=",
-            normalizedScientificName,
-          ),
-          eb("catalog_alias_projections.status", "=", "accepted"),
-          eb(
-            "catalog_alias_projections.alias_kind",
-            "=",
-            "accepted_scientific_name",
-          ),
-        ]),
-      ]),
-    )
-    .limit(2);
 }
 
 export async function createUserAddedCatalogCandidate(

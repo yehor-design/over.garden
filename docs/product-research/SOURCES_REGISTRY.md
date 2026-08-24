@@ -20,6 +20,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 ## Група A. Офіційні реєстри сортів рослин (L2 — канонічний посів)
 
 ### A1. Державний реєстр сортів рослин, придатних для поширення в Україні
+
 - **URL:** https://data.gov.ua/dataset/ccf95f4a-8238-4b18-a4d3-002444876325 · дзеркало XLSX https://minagro.gov.ua/file-storage/reyestr-sortiv-roslin · точковий пошук http://service.ukragroexpert.com.ua/ · розпорядник sops.gov.ua.
 - **Шар(и):** L2 (канонічне ядро UA) + частково L1 (ботанічний таксон укр/лат/англ).
 - **ВЕРДИКТ — UA: USE** (канонічне ядро). BG: н/д.
@@ -35,6 +36,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** наявність повного актуального CSV (оспорено); поле синонімів відсутнє; точна кількість записів; robots.txt для автоскачування не перевірено.
 
 ### A2. Официална сортова листа на Република България (ИАСАС / IASAS)
+
 - **URL:** https://iasas.government.bg/cms/официална-сортова-листа · приклади PDF https://iasas.government.bg/att/OSL 1 - 2024.pdf , https://iasas.government.bg/att/OSL 2 - 2025 Jan 1.pdf · контакт bistra.pavlovska@iasas.government.bg.
 - **Шар(и):** L2 (канонічне ядро BG); двомовність BG/EN на рівні виду → дрібний L3; псевдо-синоніми в дужках → L3.
 - **ВЕРДИКТ — BG: USE-WITH-CONDITIONS** (парсинг PDF + з'ясувати права в IASAS перед комерцією). UA: н/д.
@@ -49,6 +51,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** машиночитний експорт; явна ліцензія reuse; повний обсяг овочевих/плодових; синоніми на рівні сорту.
 
 ### A3. EU Common Catalogue / EU Plant Variety Portal (DG SANTE)
+
 - **URL:** https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en · портал https://ec.europa.eu/food/plant-variety-portal/ · (оспорено) API https://developer.datalake.sante.service.ec.europa.eu/apis
 - **Шар(и):** L2 (канонічні назви ЄС, вкл. BG-зареєстровані) + L1 (Species List: видові синоніми + UPOV-код).
 - **ВЕРДИКТ — BG (EU): USE-WITH-CONDITIONS.** UA: лише через реєстрацію сорту в ЄС-країні (не системно).
@@ -63,6 +66,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** наявність API (оспорено); ліцензія датасету прямим текстом; синоніми на рівні сорту в дампі.
 
 ### A4. UPOV PLUTO (Plant Variety Database)
+
 - **URL:** https://www.upov.int/pluto/en/ · Terms https://www.upov.int/pluto/en/termsuse.html
 - **Шар(и):** L2 + L3 (деномінації + синоніми, з 2013 в оригінальному алфавіті).
 - **ВЕРДИКТ — UA та BG: REJECT** (для масового/комерційного вбудовування).
@@ -76,6 +80,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** можливість окремої комерційної угоди з UPOV; формат Premium-експорту.
 
 ### A5. CPVO Variety Finder
+
 - **URL:** https://cpvo.europa.eu/en/applications-and-examinations/cpvo-variety-finder · Copyright Notice https://cpvo.europa.eu/en/copyright-notice
 - **Шар(и):** L2 (деномінації) + L3 (найпотужніший шар синонімів/торгових марок кл.31).
 - **ВЕРДИКТ — UA та BG: REJECT для комерційного вбудовування** (USE-WITH-CONDITIONS лише як внутрішній інструмент валідації/similarity).
@@ -93,6 +98,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 ## Група B. Генбанки й генетичні ресурси (L4 — довгий хвіст лендрейсів, +L3)
 
 ### B-genebank-1. EURISCO (ECPGR, хост IPK Gatersleben)
+
 - **URL:** https://eurisco.ipk-gatersleben.de · bulk-дамп .../apex/eurisco/r/eurisco/eurisco-full-dump · Terms .../terms-of-use
 - **Шар(и):** L4 (лендрейси/традиційні сорти UA+BG — головна цінність) + L3 (`ACCENAME` з кількома назвами) + L2 (офіційні назви accession).
 - **ВЕРДИКТ — UA та BG: USE-WITH-CONDITIONS** (юрперевірка anti-compete + flow-down перед комерційним вбудовуванням — блокуючий поріг).
@@ -107,6 +113,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** немає API; структуровані народні назви відсутні (MCPD); точне поточне покриття UA; комерційна ліцензія потребує юриста.
 
 ### B-genebank-2. Genesys-PGR (Crop Trust)
+
 - **URL:** https://www.genesys-pgr.org · API https://api.genesys-pgr.org · Terms .../content/legal/terms · BrAPI/`genesysr`/`@genesys-pgr/ui-embedded`
 - **Шар(и):** L4 + L3 (accession-рівень народних назв `ACCENAME`).
 - **ВЕРДИКТ — UA та BG: USE-WITH-CONDITIONS** (бекенд валідації/доповнення, НЕ редистрибуція в публічний каталог без угоди) — схиляється до REJECT для прямого вбудовування.
@@ -121,6 +128,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** межа «допустиме використання» vs «redistribution»; чи можна кешувати; per-dataset CC vs Terms.
 
 ### B-genebank-3. Національні генбанки UA (НЦГРРУ, Харків) та BG (IPGR Sadovo)
+
 - **URL:** UA — https://yuriev.com.ua (НЦГРРУ, Інститут ім. Юр'єва) · BG — https://ipgrbg.com та цифровий каталог https://plantsdigcatalog.agriacad.bg
 - **Шар(и):** L4 (лендрейси) + L3 (місцеві назви); **НЦГРРУ має поле «синонім назви accession»** (потенційно цінне для UA-синонімів, B7).
 - **ВЕРДИКТ — UA: USE-WITH-CONDITIONS** (через EURISCO/Genesys або прямий запит). **BG: USE-WITH-CONDITIONS** (прямий запит — найцінніший шар недоступний публічно).
@@ -134,6 +142,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** немає прямого машинного доступу; ліцензія; чи передається поле «синонім»/folk-names у EURISCO (для BG — підтверджено, що НІ).
 
 ### B-genebank-4. National Fruit Collection (UK)
+
 - **URL:** https://www.nationalfruitcollection.org.uk · приклад https://www.nationalfruitcollection.org.uk/full2.php?id=2662&fruit=apple
 - **Шар(и):** L2 (канонічні назви сортів плодових) + L3 (ДУЖЕ багаті синоніми кількома мовами — DE/FR/чеська/польська).
 - **ВЕРДИКТ — UA та BG: USE** (топ-джерело історичних/регіональних синонімів плодових під відкритою ліцензією).
@@ -148,6 +157,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** немає API (лише scrape); немає uk/bg напряму; фокус UK/Європа.
 
 ### B-genebank-5. VIVC — Vitis International Variety Catalogue (виноград)
+
 - **URL:** vivc.de (робочий URL у файлах не наведено дослівно — частковa ПРОГАЛИНА; число з Wikipedia «Vitis International Variety Catalogue»).
 - **Шар(и):** L2 (рівень сорту винограду, «prime name») + L3 (всі відомі синоніми, численні).
 - **ВЕРДИКТ — UA та BG: USE-WITH-CONDITIONS** (виноград; комерція потребує письмового дозволу JKI).
@@ -163,6 +173,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 ## Група C. Таксономічний/видовий кістяк + видовий вернакуляр (L1, +L3)
 
 ### C1. GBIF Backbone Taxonomy + Species API
+
 - **URL:** https://www.gbif.org/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c · API https://api.gbif.org/v1/ · bulk https://hosted-datasets.gbif.org/datasets/backbone/
 - **Шар(и):** L1 (видовий кістяк) + слабкий L3 (`vernacularNames`, але uk/bg по культурах майже порожньо).
 - **ВЕРДИКТ — UA та BG: USE** (видовий кістяк + наукові/EN назви); для uk/bg вернакулярів на рівні виду — **REJECT** (даних майже немає).
@@ -177,6 +188,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** uk/bg vernacular на рівні виду майже порожньо; cultivar відсутній; загальні RPS rate-limits.
 
 ### C2. Catalogue of Life (COL / ChecklistBank)
+
 - **URL:** https://www.catalogueoflife.org/ · API https://api.checklistbank.org/ · download .../data/download
 - **Шар(и):** L1 (видовий кістяк).
 - **ВЕРДИКТ — UA та BG: USE** (видовий кістяк).
@@ -190,6 +202,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** багатомовний vernacular відсутній; cultivar відсутній; legacy-портал мав обмеження комерції (для нової інфраструктури — CC-BY).
 
 ### C3. World Flora Online (WFO)
+
 - **URL:** https://www.worldfloraonline.org/ · API https://list.worldfloraonline.org/ · дампи на Zenodo
 - **Шар(и):** L1 (кістяк рослин).
 - **ВЕРДИКТ — UA та BG: USE** (найчистіша ліцензія для кістяка рослин).
@@ -201,6 +214,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** uk/bg vernacular не підтверджено в масиві 15 933; cultivar відсутній.
 
 ### C4. GRIN / GRIN-Global Taxonomy (USDA)
+
 - **URL:** https://npgsweb.ars-grin.gov/gringlobal/taxon/taxonomy · https://www.grin-global.org/ · https://www.ars-grin.gov/
 - **Шар(и):** L1 (економічні рослини) + **L2 (інфравидові культивари/лендрейси/комерційні сорти)** + L3 (багатомовні common names) + A-GRIN (тварини).
 - **ВЕРДИКТ — UA та BG: USE** (генеалогія сортів + багатомовні назви; найкраще покриття агросектора з public-domain ліцензією).
@@ -213,6 +227,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** відсутній сучасний REST API (SQL-дампи); uk/bg покриття оспорено.
 
 ### C5. POWO (Plants of the World Online, Kew / WCVP)
+
 - **URL:** https://powo.science.kew.org/
 - **Шар(и):** L1 (запасний референс судинних рослин).
 - **ВЕРДИКТ — UA та BG: USE-WITH-CONDITIONS / запасний** (REJECT для прямої інтеграції через відсутність стабільного API).
@@ -224,6 +239,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** надійність ендпоінтів; uk/bg локалізація.
 
 ### C6. EPPO Global Database / EPPO Data Services
+
 - **URL:** https://gd.eppo.int · https://data.eppo.int · Open Data Licence https://data.eppo.int/documentation/opendata
 - **Шар(и):** L1 (канонічні наукові назви ~55 000 видів рослин) + L3 (мультимовні синоніми + народні назви видового рівня) — «мовний хребет каталогу».
 - **ВЕРДИКТ — UA та BG: USE** (найкраще нове джерело канонічних назв + синонімів з відкритою комерційною ліцензією).
@@ -236,6 +252,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** обсяг саме uk/bg народних назв; немає рівня сорту; зміна API-режиму 05.2026.
 
 ### C7. PESI / Euro+Med PlantBase (EU-Nomen) — `[потенційно новий метод; ключове для uk/bg L3]`
+
 - **URL:** Euro+Med https://europlusmed.org/ (та http://ww2.bgbm.org/EuroPlusMed/) · PESI http://www.eu-nomen.eu/portal/
 - **Шар(и):** L1 + **L3 (народні назви багатьма мовами вкл. UA/BG)** + L5 (TAXAMATCH нечіткий мепінг).
 - **ВЕРДИКТ — UA та BG: USE-WITH-CONDITIONS** (перевірити фактичне uk/bg-покриття вибіркою + з'ясувати ліцензію) — **але найвищий потенціал закрити прогалину видового вернакуляру UA/BG.**
@@ -248,6 +265,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** фактичний обсяг uk/bg вернакуляру (не виміряно); ліцензія на комерцію (відсутня); стабільність SOAP/REST.
 
 ### C8. EOL — Encyclopedia of Life
+
 - **URL:** https://eol.org/ · дамп vernacular https://zenodo.org/records/13223288
 - **Шар(и):** L3 (найбагатший вернакуляр) + L1 (вкл. тварин).
 - **ВЕРДИКТ — UA та BG: USE-WITH-CONDITIONS** (обов'язковий license-filtering pipeline — відкидати CC BY-NC рядки).
@@ -259,6 +277,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** точний uk/bg-обсяг до парсингу; ліцензія саме vernacular-датасету (B7: невизначена).
 
 ### C9. iNaturalist API (taxa / vernacular)
+
 - **URL:** https://api.inaturalist.org/v1/ · https://www.inaturalist.org/pages/developers
 - **Шар(и):** L3/L4 (динамічний краудсорс-словник народних назв).
 - **ВЕРДИКТ — UA: USE-WITH-CONDITIONS** (сильний UA-вернакуляр); **BG: USE-WITH-CONDITIONS / слабше** (BG-локаль слабка).
@@ -271,6 +290,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** BG-локаль слабка; немає bulk лише-словника; ліцензія DarwinCore dump.
 
 ### C10. Інші видові backbone-довідники (стисло)
+
 - **IPNI** (International Plant Names Index) — L1, номенклатура рослин; Additional (F3-5). **USE-WITH-CONDITIONS.**
 - **Tropicos** (Missouri BG) — L1; Additional (F5-7). Довідник.
 - **USDA PLANTS Database** — https://plants.usda.gov/ — L1/L2, **public domain** (комерція ОК); географія US; Additional (F5-29). **USE** (ознаки/crop info).
@@ -285,6 +305,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 ## Група D. Багатомовний шар аліасів (L3 — overlay)
 
 ### D1. Wikidata / Wikispecies
+
 - **URL:** https://www.wikidata.org · SPARQL https://query.wikidata.org/sparql · Wikispecies https://species.wikimedia.org/
 - **Шар(и):** L3 (нативні мультимовні labels+aliases на елемент) + L1 (види/таксони/породи).
 - **ВЕРДИКТ — UA та BG: USE** (основний легально безпечний шар аліасів-overlay; спершу виміряти покриття).
@@ -302,6 +323,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 ## Група E. Породи тварин (L1/L2/L3) — критично для bee-wedge
 
 ### E1. FAO DAD-IS (Domestic Animal Diversity Information System)
+
 - **URL:** https://www.fao.org/dad-is/en/ · дані .../data/en/ · Terms https://www.fao.org/contact-us/terms/db-terms-of-use/en/
 - **Шар(и):** L1 (видовий бекбон ~40 видів) + L2 (канонічний посів порід); структурно L3 (поля MostCommonName+Language).
 - **ВЕРДИКТ — UA та BG: USE-WITH-CONDITIONS** (як довідник для звірки; **НЕ робити load-bearing** — пункт про заборону комерційного промо).
@@ -314,6 +336,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** офіційний API (оспорено); перелік бджіл UA/BG; наповнення uk/bg alias-полів.
 
 ### E2. VBO — Vertebrate Breed Ontology — `[потенційно новий метод; ключове для породного L2/L3/L5]`
+
 - **URL:** https://github.com/monarch-initiative/vertebrate-breed-ontology · BioPortal https://bioportal.bioontology.org/ontologies/VBO · `vbo-full.json` / `vbo-base.obo`
 - **Шар(и):** L2 (канонічні породи) + L3 (синоніми/історичні назви/транслітерації) + L5 (семантичне ядро / entity resolution, UUID на породу).
 - **ВЕРДИКТ — UA та BG: USE-WITH-CONDITIONS** (сильний кандидат на семантичне ядро каталогу порід; перевірити наявність uk/bg міток).
@@ -326,6 +349,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** наявність uk/bg міток; покриття саме UA/BG-порід; глибина проти ручного hardcode B3.
 
 ### E3. UA — офіційні породи бджіл/тварин (Закон №1492-III + Реєстр селекційних досягнень + Інститут Прокоповича)
+
 - **URL:** Закон «Про бджільництво» №1492-III https://zakon.rada.gov.ua/go/1492-14 · Реєстр селекційних досягнень у тваринництві (відкриті дані) https://data.gov.ua/dataset/78789a20-307c-46cd-b3c5-7079198e2571 · Інститут Прокоповича http://prokopovich.com.ua · ВУЕ http://vue.gov.ua/Бджола_медоносна
 - **Шар(и):** L2 (офіційні канонічні породи) + L1 (латина, оспорена) + L3 (аліаси UA/RU/EN) + L4 (внутрішньопородні типи/лінії).
 - **ВЕРДИКТ — UA: USE** (хардкодити малий канонічний набір; латина оспорена — нести обидві версії). BG: н/д.
@@ -336,9 +360,10 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **Ліцензія/комерційне:** Реєстр селекційних досягнень — **публічна інформація у формі відкритих даних, «вільний і безоплатний доступ»** → комерція ОК з атрибуцією (A1). Закон — публічний, фактичні назви вільні.
 - **Провенанс:** B3 (Ф1/Ф2/Ф3), Additional (F6-8); URL вище.
 - **corroboration: ~4**. **Тир:** A1 (закон/Реєстр) + A2/A3 (типи).
-- **ПРОГАЛИНИ:** **латина ОСПОРЕНА** (carnica/carpatica; sossimai/acervorum/macedonica) — нести обидві; Реєстр як машинний словник назв порід (орієнтований на досягнення/суб'єктів); *Apis mellifera ukrainica* Prokopovych — лише пропозиція, НЕ вживати.
+- **ПРОГАЛИНИ:** **латина ОСПОРЕНА** (carnica/carpatica; sossimai/acervorum/macedonica) — нести обидві; Реєстр як машинний словник назв порід (орієнтований на досягнення/суб'єктів); _Apis mellifera ukrainica_ Prokopovych — лише пропозиція, НЕ вживати.
 
 ### E4. BG — офіційні породи (ИАСРЖ/IASRJ + Закон за пчеларството + НРАП)
+
 - **URL:** ИАСРЖ https://www.iasrj.eu/ · Закон за пчеларството (mzh.government.bg) · НРАП (URL ПРОГАЛИНА)
 - **Шар(и):** L2 (канонічна порода) + L4 (родословні книги, автохтонні породи).
 - **ВЕРДИКТ — BG: USE-WITH-CONDITIONS** (ручний збір / запит за ЗДОІ; хардкодити малий набір). UA: н/д.
@@ -351,6 +376,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** машинний доступ (немає API); ліцензія закрита; латина оспорена (macedonica/rodopica/carnica-type) — нести обидві; робочий URL НРАП.
 
 ### E5. Інші породні джерела (стисло)
+
 - **EFABIS** (європейський вузол DAD-IS) — https://www.fao.org/dad-is/regional-national-nodes/efabis/en/ — L2; ~7 000 порід / 47 країн (вкл. UA/BG); **CC BY 4.0 через FAO** (ті самі обмеження комерц-промо); дублює DAD-IS. **USE-WITH-CONDITIONS.**
 - **OSU «Breeds of Livestock»** — https://breeds.okstate.edu/ — L2 описи; **`КОНФЛІКТ`:** Additional-FILE1 трактує як комерційно-придатне з атрибуцією; Additional-FILE6 + B7 — ToS «may not be reproduced … without prior written permission» → **REJECT для копіювання** (лише орієнтир). Несуче A1-першоджерело (ToS) → REJECT-copy.
 - **The Livestock Conservancy** (US heritage) — без відкритої ліцензії, орієнтир, фокус США. **USE-WITH-CONDITIONS / орієнтир.**
@@ -364,12 +390,14 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 ## Група F. Корпус назв від продавців/маркетплейсів (L4 довгий хвіст + L3 народні аліаси) — ПРАВО окремо від ТЕХНІКИ
 
 > **Рамкове право (обов'язкова преамбула):**
+>
 > - **EU/BG (Дир. 96/9/EC sui generis):** окремі назви сортів = факти, **не охороняються**; ризик створюють (1) вилучення **суттєвої частини** структурованого вендорського каталогу та (2) **порушення ToS** — і ToS-заборона чинна **навіть для неохоронюваної бази фактів** (Ryanair v PR Aviation, C-30/14). Продукт, **спрямований на BG/ЄС**, підпадає під EU-режим (Football Dataco, «intended target»). Термін sui generis — 15 років. `[single-source-critical щодо тлумачення ECJ]`.
 > - **UA (Закон №2811-IX від 01.12.2022):** оновлений режим баз даних, sui generis за зразком ЄС, **АЛЕ усталеної судової практики щодо «істотних інвестицій» у каталоги інтернет-магазинів НЕМАЄ** — `[single-source-critical]`, переважно A3.
 > - **Висновок по юрисдикціях (B4):** BG-EU — **потребує дозволу**; UA — **потребує дозволу**; безпечніше спиратися на офіційні реєстри + легальні партнерські фіди, а продавців — лише як джерело аліасів **після письмового дозволу**.
 > - **⚠ Зафіксований tech=legal trap (B4-Ф3):** один із вхідних файлів (B4-Ф3) пропонує технічний прийом — «знищувати лістинги в оперативній пам'яті, зберігати лише ізольовані токени-назви» — як ЮРИДИЧНИЙ захист від sui generis/ToS. Це **конфляція «технічно можливо» з «юридично дозволено»** і НЕ є правовою позицією (автор-дослідник, тир A3-міркування, не юрист і не ToS). Синтез цей прийом **не приймає**; фіксує як хибну тезу. Юридичну достатність такого підходу може підтвердити лише юрист — `ВІДКРИТЕ РІШЕННЯ`, не доказ.
 
 ### F1. Florium.ua [UA продавець]
+
 - **URL:** https://florium.ua · sitemap https://florium.ua/sitemap.xml
 - **Шар(и):** L4 (корпус сортів) + L3 (народні аліаси в описах). **ВЕРДИКТ — UA: USE-WITH-CONDITIONS** (дозвіл / партнерський фід; обережний парсинг).
 - **ТЕХНІКА:** Magento 1.5+, HTML, sitemap; структура «категорія→сорт» парсинг-дружня; API/фід не виявлено. → технічно скрейп можливий.
@@ -379,6 +407,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** ToS/robots не перевірено повністю; частка саме сортів; ліцензія reuse.
 
 ### F2. Яскрава Клумба (yaskravaklumba.com.ua) [UA продавець]
+
 - **Шар(и):** L4 + L3. **ВЕРДИКТ — UA: `КОНФЛІКТ`** — B4-Ф1 = **REJECT** (технічно закрито: robots.txt + Cloudflare блокують 05.06.2026); B4-Ф3 = **USE-WITH-CONDITIONS**. Несено обидва.
 - **ТЕХНІКА:** OpenCart, sitemap заявлений, але robots.txt блокує параметри + Cloudflare → ускладнено.
 - **ПРАВО (UA):** ToS не знайдено, «правово непрозоро».
@@ -386,6 +415,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** доступ до вмісту sitemap; підтвердження сортових назв.
 
 ### F3. eMAG.bg [BG маркетплейс]
+
 - **URL:** https://www.emag.bg · ToS https://www.emag.bg/help/usloviza-za-polzvane/
 - **Шар(и):** L4 + L3. **ВЕРДИКТ — BG: `КОНФЛІКТ`** — B4-Ф1 = **REJECT** (дослівна заборона ToS розд.7.2: «използването на всеки робот … за извличане на данни … е забранено»); B4-Ф2 = **USE-WITH-CONDITIONS** (повний текст ToS не вдалося розкрити — заборону не підтверджено). Пряма фактична суперечність про наявність явної заборони.
 - **ТЕХНІКА:** для продавців — XML/CSV через Mergado; для покупців API немає; публічний парсинг технічно існує.
@@ -394,6 +424,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** дослівний пункт про скрейп (оспорено); обсяг сортових назв.
 
 ### F4. OLX.bg [BG майданчик]
+
 - **URL:** https://www.olx.bg · Developer API https://developer.olx.bg/bg/terms-and-conditions
 - **Шар(и):** L4 + L3. **ВЕРДИКТ — BG: REJECT для скрейпу** (легальний шлях — офіційний OLX Developer API).
 - **ТЕХНІКА:** скрейп фронтенду можливий; **є офіційний OLX Developer Portal API** — санкціонований канал.
@@ -402,6 +433,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** умови/вартість OLX Developer API.
 
 ### F5. bazar.bg [BG майданчик]
+
 - **URL:** https://bazar.bg · ОУ https://bazar.bg/help/общи-условия
 - **Шар(и):** L4 + L3. **ВЕРДИКТ — BG: `КОНФЛІКТ`** — B4-Ф1 = USE-WITH-CONDITIONS (низька якість); B4-Ф2 = USE-WITH-CONDITIONS/схиляється REJECT (чл.18 п.14 забороняє копіювання чужих оголошень; явної заборони scraping у ОУ дослівно немає); B4-Ф3 = REJECT/строгий. Несено всі.
 - **ТЕХНІКА:** DOM-скрейп можливий.
@@ -410,6 +442,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** явна заборона scraping (оспорено); обсяг/якість назв.
 
 ### F6. Легальні альтернативи скрейпу (L3/L4)
+
 - **Партнерський XML-фід рітейлера** (Florium/Яскрава як Magento/OpenCart технічно можуть надати фід) — «чистіше за скрейп, бо дає ліцензію»; потребує договору. **USE-WITH-CONDITIONS.**
 - **Садові форуми** (forum.vinograd.info, sadiba.com.ua) — витяг **лише назв** (факти), не повних постів. **USE-WITH-CONDITIONS — UA.**
 - **Провенанс:** B4 (Ф1-D/Ф1-E).
@@ -419,12 +452,14 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 ## Група G. Двигун матчингу/дедупу (L5, +L6 folding) — переважно self-host OSS
 
 ### G1. Meilisearch
+
 - **URL:** meilisearch.com · Charabia (токенізація). **Шар(и):** L5 (рекомендований ПЕРВИННИЙ typeahead). **ВЕРДИКТ — UA та BG: USE.**
 - **Метод:** self-host (безкоштовно) / Cloud ($30/міс — 100k док + 50k пошуків). Кирилиця з коробки (Charabia: явно Russian+Ukrainian+Bulgarian); typo-tolerance (1 помилка ≥5 символів, 2 ≥9). Транслітерації немає — латинські аліаси/synonyms вручну.
 - **Ліцензія/комерційне:** **MIT** — вільне комерційне вбудовування (ключове). **Провенанс:** B6 (ФАЙЛ-1/2/3). **corroboration: 3.** **Тир:** A1/A2.
 - **Що ОБМЕЖУЄ:** менший контроль над токенізацією/діакритикою ніж Typesense ICU; немає транслітерації.
 
 ### G2. Typesense
+
 - **URL:** typesense.org. **Шар(и):** L5. **ВЕРДИКТ — UA та BG: USE-WITH-CONDITIONS** (GPLv3-застереження для пропрієтарного продукту).
 - **Метод:** self-host / Cloud (~$7/міс); C++ in-memory <50ms; ICU-локалі **ru/uk/bg/sr/be**, збереження укр. діакритики; `min_len_1typo` захищає короткі назви; багатонаправлені synonyms (UA/RU/BG/EN).
 - **Ліцензія/комерційне:** **GPLv3 — copyleft, ризик для пропрієтарних похідних** `[single-source-critical]`. **КОНФЛІКТ:** B6-Ф3 рекомендує як ПЕРВИННИЙ (найкращий ICU-контроль кирилиці) і **не згадує GPLv3**; B6-Ф2 фіксує GPLv3 як вбивчий фактор + історичну Cyrillic case-sensitivity (issue #438). Несено: технічно найкращий, юридично ризикований.
@@ -432,24 +467,28 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **ПРОГАЛИНИ:** чи виправлено case-sensitivity (перевірити з `locale`); сумісність GPLv3 з архітектурою.
 
 ### G3. PostgreSQL pg_trgm
+
 - **URL:** https://www.postgresql.org/docs/current/pgtrgm.html. **Шар(и):** L5/L6. **ВЕРДИКТ — UA та BG: `КОНФЛІКТ`** — B6-Ф1 = **USE для MVP typeahead**; B6-Ф3 = **REJECT для клієнтського typeahead** (категорично непридатний на коротких кириличних назвах 3-5 літер + проблема Latin/Cyrillic розкладок → false negatives), USE лише для внутрішньої аналітики; B6-Ф2 = середнє («найдешевший fallback, слабший за Jaro-Winkler на коротких»).
 - **Метод:** self-host DB-extension; потребує `unaccent` + власна UA↔RU нормалізація (не авто).
 - **Ліцензія/комерційне:** PostgreSQL License (permissive, комерція ОК). **Провенанс:** B6 (Ф1/Ф2/Ф3). **Тир:** A1/A2.
 - **ПРОГАЛИНИ:** деградація на коротких назвах (узгоджено Ф2/Ф3, заперечено Ф1).
 
 ### G4. Splink (UK Ministry of Justice)
+
 - **Шар(и):** L5 (dedup / record linkage — рекомендований). **ВЕРДИКТ — UA та BG: USE.**
 - **Метод:** OSS; Fellegi-Sunter + Jaro-Winkler/Levenshtein; backends DuckDB/Spark/Postgres; Unicode/кирилиця через SQL-функції; ~1М записів/хв; масштаб з запасом.
 - **Ліцензія/комерційне:** OSS (конкретна ліцензія не названа — ПРОГАЛИНА; комерція імовірно ОК). **Провенанс:** B6 (Ф1/Ф2). **corroboration: 2.** **Тир:** A1/A2.
 - **ПРОГАЛИНИ:** точна ліцензія/репо; помірна setup-складність (EM).
 
 ### G5. dedupe (Python, OSS)
+
 - **Шар(и):** L5 (ER, ML з активним навчанням). **ВЕРДИКТ — UA та BG: USE-WITH-CONDITIONS** (УНИКАТИ unidecode).
 - **Метод:** self-host; тренування 200–300 пар. **КАВЕРЗА:** приклади використовують `unidecode` → ASCII-фолдинг **ЗНИЩУЄ кирилицю** (B6-Ф2) → для UA/RU/BG уникати.
 - **Ліцензія:** OSS (не названо). **Провенанс:** B6 (Ф1/Ф2). **КОНФЛІКТ:** Ф1 рекомендує для MVP; Ф2 каже Splink легший і зберігає кирилицю. **Тир:** A2.
 - **ПРОГАЛИНИ:** ліцензія; потреба людських пар; ризик unidecode.
 
 ### G6. Elastic / OpenSearch + алгоритми + folding
+
 - **Elastic/OpenSearch** — L5; ICU-плагін для кирилиці/транслітерації, але **overkill для MVP** (2-4GB RAM, Java JVM; `icu_transform` -10.7% швидкості, крихкі rules) → USE-WITH-CONDITIONS лише при масштабі (>кількасот тис. записів / >20-50 RPS).
 - **RapidFuzz** (MIT) — L5 core fuzzy (Levenshtein, any Unicode). **USE.** (python-Levenshtein — GPLv2, уникати.)
 - **Алгоритми:** Jaro-Winkler — еталон для коротких назв (транспозиції + префіксна вага); trigram — для довших; Levenshtein — точний для 1-2 помилок.
@@ -463,6 +502,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 > **Наскрізна знахідка B5:** найбільша реальна прогалина — **UA та BG фонетика** (готових MIT-бібліотек немає; RU має `fonetika`; UA частково через ML `ukrainian-tts-preprocessing` Apache-2.0; **BG — фактично нічого готового → будувати**). Жодна constrained-decoding-бібліотека не робить edit-distance нативно. UA ≠ BG: UA = КМУ-2010/ДСТУ + ЙЦУКЕН; BG = Streamlined Act 2009/BDS 1596:2009 + BDS 5237-78/Phonetic.
 
 ### H1. Транслітерація (L6)
+
 - **cyrtranslit** (PyPI/GitHub OpenDataKosovo) — bi-dir Cyrillic↔Latin, **uk+ru+bg**, **MIT** (комерція ОК); ISO-9-like (НЕ КМУ/BG-2009). **USE.** `КОНФЛІКТ ліцензії:` B5-F3 = ПРОГАЛИНА; B5-F1/F2 + B6 = MIT. corroboration: 4 (B5×3, B6).
 - **translitua** (dchaplinsky/translit-ua) — UA+RU офіційні стандарти (**КМУ-2010**), **немає BG**; ліцензія **ПРОГАЛИНА/неперевірена** (F1 ПРОГАЛИНА; F2 «permissive, confirm»). **USE-WITH-CONDITIONS** (перевірити ліцензію).
 - **ICU / PyICU** — script-to-script + SpoofChecker (homoglyphs, L5); permissive (ICU/MIT — обидва комерц-ОК); **BGN-based** (не точний КМУ/BG-2009). **USE.** corroboration: 3.
@@ -471,6 +511,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **Стандарти:** UA КМУ-2010/ДСТУ; BG Streamlined Act 2009 / BDS 1596:2009 (у translitua/ICU/Lingua::Translit частково).
 
 ### H2. Фонетика (L6/L5)
+
 - **fonetika** (roddar92/russian_soundex) — RU Soundex/Metaphone **прямо на кирилиці**, **MIT**; **UA/BG НЕ підтримує** (субкласувати). `КОНФЛІКТ статусу:` F2 = Inactive; F3 = ~2025/stable. **USE-WITH-CONDITIONS — RU.**
 - **abydos / Beider-Morse** — мультигіпотезні фонетичні аліаси; підтримує russian (кирилиця); **GPLv3 copyleft**. `КОНФЛІКТ вердикту:` F2 = REJECT (GPL-3+Inactive); F3 = USE (найкомплексніше). **USE-WITH-CONDITIONS / SaaS-ізоляція.**
 - **ukrainian-tts-preprocessing** (lang-uk, ByT5) — UA G2P/фонемізація, **Apache-2.0** (комерція ОК), **лише UA**; ML-вартість (кешувати). **USE — UA.**
@@ -478,6 +519,7 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 - **BG фонетика = ПРОГАЛИНА** (готового нема → будувати).
 
 ### H3. Клавіатурні опечатки + LLM-генерація (L6, +L3)
+
 - **multypo** (cisnlp) — replace/insert/delete/transpose; **RU built-in**, **UA/BG — реєструвати розкладку вручну**; **MIT**. **USE-WITH-CONDITIONS.**
 - **nlpaug KeyboardAug** — **UA (`lang='uk'`) built-in**, **RU/BG — кастомний JSON**; **MIT**. **USE-WITH-CONDITIONS.**
 - **LLM constrained-decoding:** Outlines (**Apache-2.0** / `КОНФЛІКТ`: F3 ПРОГАЛИНА), Guidance/llguidance (MIT), XGrammar (Apache-2.0), LM Format Enforcer (MIT), llama.cpp GBNF (MIT) — кандидат-генерація аліасів + пост-фільтр RapidFuzz; **жоден не робить edit-distance нативно** (компілювати Schulz-Mihov FSA або пост-фільтр). **USE-WITH-CONDITIONS** (потрібен зовнішній валідатор).
@@ -486,11 +528,11 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 ---
 
 ## Група I. Мертві / REJECT (зафіксувати, щоб не марнувати ресурс)
+
 - **Trefle API** — **МЕРТВИЙ** (сервери вимкнено), REJECT. `КОНФЛІКТ`: B7 = мертвий; Additional-FILE3/FILE5 ще згадують як «нестабільний» — статусна розбіжність.
 - **OpenFarm** — **МЕРТВИЙ** (квітень 2025), REJECT (хоч контент був CC BY 4.0).
 - **Perenual API** — народні назви бідні, англомовні, **немає uk/bg**; ліцензія даних не чітка → **REJECT для наших цілей.**
 - **Permapeople API** — **CC BY-SA 4.0 share-alike** (несумісно з пропрієтарним) → **USE-WITH-CONDITIONS лише якщо копілефт прийнятний**; немає uk/bg.
-- **Pl@ntNet / plant.id (Kindwise)** — ідентифікація + народні назви (54–60 мов, uk/bg не підтверджено); **комерція платна** (Pl@ntNet Pro ~€1000/рік). **USE-WITH-CONDITIONS / L6-ідентифікація, не каталог.**
 - **PFAF, RHS, Useful Tropical Plants** — CC BY-NC / пропрієтарні / тропіки → REJECT або лише платна/довідка.
 
 ---
@@ -499,25 +541,25 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 
 Кожен конфлікт несе обидві/всі версії з джерелами; розв'язання — на стадії рішення/operator'ом, не тут.
 
-1. **UA Держреєстр — чи існує машиночитний CSV/XLSX.** B1-FILE1 + FILE2 (`compass…5ee004a9`) + FILE3 (`Офіційні реєстри…`) + B4-Ф2 + B6 + Additional: **Є** CSV/XLSX на data.gov.ua (ccf95f4a) під CC-BY. B1-FILE4 (`Оцінка джерел…`): **немає** підтвердженого CSV — лише PDF-накази + точковий пошук → потрібен OCR/скрейп. *Несуче для UA-L2: всередині B1 — 3 файли підтверджують (FILE1/FILE2/FILE3) проти 1 (FILE4), плюс крос-блокове підтвердження B4/B6/Additional.*
+1. **UA Держреєстр — чи існує машиночитний CSV/XLSX.** B1-FILE1 + FILE2 (`compass…5ee004a9`) + FILE3 (`Офіційні реєстри…`) + B4-Ф2 + B6 + Additional: **Є** CSV/XLSX на data.gov.ua (ccf95f4a) під CC-BY. B1-FILE4 (`Оцінка джерел…`): **немає** підтвердженого CSV — лише PDF-накази + точковий пошук → потрібен OCR/скрейп. _Несуче для UA-L2: всередині B1 — 3 файли підтверджують (FILE1/FILE2/FILE3) проти 1 (FILE4), плюс крос-блокове підтвердження B4/B6/Additional._
 2. **UA Держреєстр — частота оновлення.** Щомісяця (FILE2, з метаданих) / щоквартально (FILE1) / не задокументовано (FILE3).
 3. **UA Держреєстр — обсяг.** ~13 790 сортів / 375 таксонів (FILE3, Additional) vs 14 776 (FILE4).
 4. **BG ИАСАС — ліцензія/право на вбудовування.** «Нормативні документи не є об'єктом комерційного авторського права → можна вільно парсити й вбудовувати» (B1-FILE4) vs «явної ліцензії немає → обережно, запит IASAS» (B1-FILE2, B4-Ф2) `[single-source-critical]`.
 5. **EU Plant Variety Portal — чи є офіційний API.** Є REST API через DG SANTE Datalake (B1-FILE4, Additional-FILE4) vs API/дампу немає, лише веб-пошук/PDF (B1-FILE1/2/3, Additional-FILE3/5).
-6. **CPVO — комерційний вердикт.** Дослівний REJECT-commercial («except for commercial purposes») несуть **лише B4-Ф2 + B1-FILE4** (A1) `[single-source-critical]`; B4-Ф1 = USE (конфляція «офіційні дані ЄС = комерційно ОК»); B1-FILE2 = USE-WITH-CONDITIONS/ймовірно-REJECT (через GAP); B6 = USE-WITH-CONDITIONS (ліцензія не підтверджена). *Дослівне A1-першоджерело переважає → REJECT-commercial.* (Окремо: обсяги CPVO теж різняться — ~1,2 млн сортів / >1,3 млн деномінацій / 147 реєстрів / 70 країн (FILE2, B4-Ф2) vs 1 558 000 деномінацій / 159 реєстрів / 74 країни (B1-FILE4) — несено.)
+6. **CPVO — комерційний вердикт.** Дослівний REJECT-commercial («except for commercial purposes») несуть **лише B4-Ф2 + B1-FILE4** (A1) `[single-source-critical]`; B4-Ф1 = USE (конфляція «офіційні дані ЄС = комерційно ОК»); B1-FILE2 = USE-WITH-CONDITIONS/ймовірно-REJECT (через GAP); B6 = USE-WITH-CONDITIONS (ліцензія не підтверджена). _Дослівне A1-першоджерело переважає → REJECT-commercial._ (Окремо: обсяги CPVO теж різняться — ~1,2 млн сортів / >1,3 млн деномінацій / 147 реєстрів / 70 країн (FILE2, B4-Ф2) vs 1 558 000 деномінацій / 159 реєстрів / 74 країни (B1-FILE4) — несено.)
 7. **EURISCO — ліцензія.** CC BY 4.0 (B1-FILE1, оптимістично) vs кастомні Terms з anti-compete + flow-down, НЕ CC-BY (B1-FILE3/FILE4, B7) `[single-source-critical]`.
-8. **Genesys-PGR — вердикт.** USE (B1-FILE1, «заборони редистрибуції не знайдено») / USE-WITH-CONDITIONS (B1-FILE2/FILE3, B7 — дослівна заборона «cannot redistribute») / REJECT (B1-FILE4). *A1-заборона редистрибуції переважає.*
-9. **GRIN — наявність uk/bg вернакуляру.** ПІДТВЕРДЖЕНО (B2-FILE2: «Пажитниця»/«Райграс», перевірено проти gbif.org/species/2706217) vs «uk/bg не знайдено» (B2-FILE1, B2-FILE3). *Несено обидві; ймовірно покриття часткове/нерівномірне.*
+8. **Genesys-PGR — вердикт.** USE (B1-FILE1, «заборони редистрибуції не знайдено») / USE-WITH-CONDITIONS (B1-FILE2/FILE3, B7 — дослівна заборона «cannot redistribute») / REJECT (B1-FILE4). _A1-заборона редистрибуції переважає._
+9. **GRIN — наявність uk/bg вернакуляру.** ПІДТВЕРДЖЕНО (B2-FILE2: «Пажитниця»/«Райграс», перевірено проти gbif.org/species/2706217) vs «uk/bg не знайдено» (B2-FILE1, B2-FILE3). _Несено обидві; ймовірно покриття часткове/нерівномірне._
 10. **POWO — вердикт.** REJECT для прямої інтеграції (B2-FILE2, немає стабільного API) vs USE-WITH-CONDITIONS (B2-FILE1/FILE3, через WCVP-дамп).
 11. **iNaturalist — вердикт + якість UA/BG.** USE «абсолютний лідер UA/BG» (B2-FILE2) vs REJECT для кістяка / критика якості «вигаданих» вернакулярів (B2-FILE1/FILE3).
 12. **DAD-IS — офіційний REST API.** Є девелоперський `*-dev.cloudfunctions.net` (Additional-FILE2, з GitHub VBO issue #85) `[single-source-critical]` vs офіційного публічного API немає (B3, Additional-FILE1/FILE6).
 13. **DAD-IS — обсяг порід.** 8 800+ (B3-Ф1, Additional-FILE1) vs 8 859 на 09.2022 (Additional-FILE6, B3-Ф2).
-14. **OSU «Breeds of Livestock» — комерційне копіювання.** Умовно-придатне з атрибуцією (Additional-FILE1) vs REJECT-copy «may not be reproduced without written permission» (Additional-FILE6, B7) `[single-source-critical]`. *ToS A1 → REJECT-copy.*
+14. **OSU «Breeds of Livestock» — комерційне копіювання.** Умовно-придатне з атрибуцією (Additional-FILE1) vs REJECT-copy «may not be reproduced without written permission» (Additional-FILE6, B7) `[single-source-critical]`. _ToS A1 → REJECT-copy._
 15. **Внутрішня схема каталогу порід.** BrAPI/DeltaBreed (Additional-FILE1) vs Vertebrate Breed Ontology / VBO (Additional-FILE2). Несено обидві як два кандидати-стандарти.
-16. **Латина порід бджіл — оспорена (carry both).** Карпатська: *carnica* (екотип) vs *carpatica* (молодший синонім). Українська степова: *sossimai* Engel 1999 vs *acervorum* Skorikov (недійсна/преокупована) vs «екотип *macedonica*» (mtDNA-2011). BG: *macedonica* vs *rodopica* vs «carnica-type». Жоден варіант не обрано (B3).
+16. **Латина порід бджіл — оспорена (carry both).** Карпатська: _carnica_ (екотип) vs _carpatica_ (молодший синонім). Українська степова: _sossimai_ Engel 1999 vs _acervorum_ Skorikov (недійсна/преокупована) vs «екотип _macedonica_» (mtDNA-2011). BG: _macedonica_ vs _rodopica_ vs «carnica-type». Жоден варіант не обрано (B3).
 17. **pg_trgm — придатність для клієнтського typeahead.** USE для MVP typeahead (B6-Ф1) vs REJECT для клієнтського typeahead, USE лише внутрішньо (B6-Ф3: деградація на коротких кириличних назвах + Latin/Cyrillic homoglyphs) `[single-source-critical]`; B6-Ф2 — середнє.
 18. **Typesense — ліцензія vs технічна перевага.** Рекомендований ПЕРВИННИЙ за ICU-контролем кирилиці, GPLv3 НЕ згадано (B6-Ф3) vs GPLv3 = вбивчий фактор для пропрієтарного коду (B6-Ф2).
-19. **Первинний typeahead-двигун.** Meilisearch (B6-Ф1/Ф2 — MIT) vs Typesense (B6-Ф3 — ICU). *Несуче для L5; MIT vs GPLv3 — вирішальне для комерції.*
+19. **Первинний typeahead-двигун.** Meilisearch (B6-Ф1/Ф2 — MIT) vs Typesense (B6-Ф3 — ICU). _Несуче для L5; MIT vs GPLv3 — вирішальне для комерції._
 20. **cyrtranslit — ліцензія.** MIT (B5-F1/F2, B6-Ф2) vs ПРОГАЛИНА (B5-F3).
 21. **transliterate — покриття/ліцензія/вердикт.** Тільки-ru / REJECT / ліцензія ПРОГАЛИНА (B5-F1) vs UA+BG-beta / GPL-2.0-LGPL-2.1 / USE-WITH-CONDITIONS (B5-F2/F3).
 22. **abydos — вердикт.** USE «найкомплексніше» (B5-F3) vs REJECT «GPL-3 + Inactive» (B5-F2). Обидва: GPLv3.
@@ -530,9 +572,6 @@ As of 2026-06-29, the approved first ingestion sources are: UA State Register, C
 29. **Яскрава Клумба — вердикт скрейпу.** REJECT (B4-Ф1, технічно закрито Cloudflare/robots) vs USE-WITH-CONDITIONS (B4-Ф3).
 30. **eMAG.bg — заборона скрейпу в ToS.** Дослівна заборона розд.7.2 (B4-Ф1) vs не підтверджено (B4-Ф2, текст не розкрито). Фактична розбіжність про наявність явної заборони.
 31. **bazar.bg — вердикт.** USE-WITH-CONDITIONS (B4-Ф1) vs USE-WITH-CONDITIONS/схиляється REJECT (B4-Ф2) vs REJECT/строгий (B4-Ф3).
-32. **OLX.bg — заборона в ToS.** Підтверджено дослівно (B4-Ф2) vs припущено, не підтверджено (B4-Ф1). *Ф2 також знайшов легальний OLX Developer API.*
+32. **OLX.bg — заборона в ToS.** Підтверджено дослівно (B4-Ф2) vs припущено, не підтверджено (B4-Ф1). _Ф2 також знайшов легальний OLX Developer API._
 
 **Кінець SOURCES_REGISTRY.**
-
-
-

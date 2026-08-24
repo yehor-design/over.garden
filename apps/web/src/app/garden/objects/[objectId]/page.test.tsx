@@ -126,6 +126,24 @@ describe("/garden/objects/[objectId]", () => {
     mocks.resolveVisualJournalCreationResultScenario.mockReturnValue(null);
   });
 
+  it("preserves manual catalog resolution without rendering external photo identification", async () => {
+    const page = plantObjectPage([]);
+    page.plantObject.variety_state = "unknown";
+    mocks.getPlantObjectPage.mockResolvedValue(page);
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = renderToStaticMarkup(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain("Catalog resolve");
+    expect(html).toContain("Follow-up composer");
+    expect(html).not.toContain("passport-photo-identification");
+  });
+
   it("keeps Ukrainian chrome on deep object readback without translating user content", async () => {
     mocks.getPlantObjectPage.mockResolvedValue(
       plantObjectPage([
