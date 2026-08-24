@@ -20,6 +20,7 @@
     "db:bootstrap": "tsx scripts/bootstrap-db.ts",
     "db:types": "kysely-codegen --dialect postgres --env-file .env.local --out-file src/db/generated.ts",
     "db:types:check": "tsx scripts/check-generated-types.ts",
+    "ove349:schema-bridge": "tsx scripts/prepare-ove349-schema-compatibility.ts",
     "catalog:sources:import-sample": "tsx scripts/import-catalog-source-sample.ts",
     "catalog:sources:import-ua-register-variety": "tsx scripts/import-ua-state-register-variety.ts",
     "catalog:sources:import-species-backbone": "tsx scripts/import-species-backbone-seed.ts",
