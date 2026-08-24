@@ -1403,16 +1403,13 @@ function resolveAdmissionBoundary(
     );
   }
   if (discovery.admissionBinding?.route) {
+    const route = discovery.admissionBinding.route;
     return (
-      entrypoints.find(
-        (candidate) =>
-          candidate.transport === "route_handler" &&
-          routePathMatchesUrl(
-            candidate.path,
-            discovery.admissionBinding!.route!.url,
-          ) &&
-          candidate.symbol === discovery.admissionBinding!.route!.method &&
-          candidate.authority !== "visual_fixture",
+      findBestRouteEntrypoint(
+        entrypoints,
+        route.url,
+        route.method,
+        (candidate) => candidate.authority !== "visual_fixture",
       )?.entrypointId ?? null
     );
   }
@@ -1438,12 +1435,11 @@ function resolveAdmissionBoundary(
     if (!url.startsWith("/")) return null;
     const method = rawMethod === "BEACON" ? "POST" : rawMethod;
     return (
-      entrypoints.find(
+      findBestRouteEntrypoint(
+        entrypoints,
+        url,
+        method,
         (candidate) =>
-          candidate.transport === "route_handler" &&
-          routePathMatchesUrl(candidate.path, url) &&
-          candidate.symbol === method &&
-          candidate.classification === "effectful" &&
           candidate.authority !== "visual_fixture" &&
           behaviorVariantsMatch(discovery, candidate),
       )?.entrypointId ?? null
@@ -1677,6 +1673,47 @@ function routePathMatchesUrl(routePath: string, url: string): boolean {
     if (routeSegment !== urlSegment) return false;
   }
   return routeSegments.length === urlSegments.length;
+}
+
+function findBestRouteEntrypoint(
+  entrypoints: readonly AuthenticatedMutationEntrypointV2[],
+  url: string,
+  method: string,
+  predicate: (candidate: AuthenticatedMutationEntrypointV2) => boolean,
+): AuthenticatedMutationEntrypointV2 | undefined {
+  return entrypoints
+    .filter(
+      (candidate) =>
+        candidate.transport === "route_handler" &&
+        candidate.symbol === method &&
+        routePathMatchesUrl(candidate.path, url) &&
+        predicate(candidate),
+    )
+    .sort((left, right) => compareRouteSpecificity(left.path, right.path))[0];
+}
+
+function compareRouteSpecificity(leftPath: string, rightPath: string): number {
+  const left = routeSegmentSpecificities(leftPath);
+  const right = routeSegmentSpecificities(rightPath);
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const leftSpecificity = left[index] ?? -1;
+    const rightSpecificity = right[index] ?? -1;
+    if (leftSpecificity !== rightSpecificity) {
+      return rightSpecificity - leftSpecificity;
+    }
+  }
+  return right.length - left.length || byteCompare(leftPath, rightPath);
+}
+
+function routeSegmentSpecificities(routePath: string): number[] {
+  return routePath
+    .slice("src/app/".length, -"/route.ts".length)
+    .split("/")
+    .map((segment) => {
+      if (/^\[\.\.\.[^\]]+\]$/.test(segment)) return 0;
+      if (/^\[[^\]]+\]$/.test(segment)) return 1;
+      return 2;
+    });
 }
 
 function stableId(value: string): string {
