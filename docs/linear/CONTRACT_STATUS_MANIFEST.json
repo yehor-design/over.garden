@@ -1,6 +1,6 @@
 {
   "schema": "overgarden.contract-status-manifest.v1",
-  "capturedAt": "2026-08-24T06:53:32.887Z",
+  "capturedAt": "2026-08-25T04:02:38.919Z",
   "maxAgeHours": 24,
   "contracts": {
     "OVE-10": {
@@ -1032,28 +1032,28 @@
       "statusType": "completed"
     },
     "OVE-333": {
-      "status": "Backlog",
-      "statusType": "backlog"
+      "status": "Done",
+      "statusType": "completed"
     },
     "OVE-334": {
       "status": "Canceled",
       "statusType": "canceled"
     },
     "OVE-335": {
-      "status": "Backlog",
-      "statusType": "backlog"
+      "status": "Done",
+      "statusType": "completed"
     },
     "OVE-336": {
       "status": "Canceled",
       "statusType": "canceled"
     },
     "OVE-337": {
-      "status": "Backlog",
-      "statusType": "backlog"
+      "status": "Done",
+      "statusType": "completed"
     },
     "OVE-338": {
-      "status": "Backlog",
-      "statusType": "backlog"
+      "status": "Done",
+      "statusType": "completed"
     },
     "OVE-339": {
       "status": "Backlog",
@@ -1100,20 +1100,20 @@
       "statusType": "completed"
     },
     "OVE-349": {
-      "status": "Todo",
-      "statusType": "unstarted"
+      "status": "Done",
+      "statusType": "completed"
     },
     "OVE-35": {
       "status": "Done",
       "statusType": "completed"
     },
     "OVE-350": {
-      "status": "Backlog",
-      "statusType": "backlog"
+      "status": "Done",
+      "statusType": "completed"
     },
     "OVE-351": {
-      "status": "In Progress",
-      "statusType": "started"
+      "status": "Done",
+      "statusType": "completed"
     },
     "OVE-36": {
       "status": "Done",

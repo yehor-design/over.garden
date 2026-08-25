@@ -9,7 +9,11 @@ import type {
   buildCatalogMatchFingerprint as buildFingerprintFn,
   rejectCatalogMatchSuggestion as rejectSuggestionFn,
 } from "../src/server/catalog-curation-repository";
-import type { createUserAddedCatalogCandidate as createCandidateFn } from "../src/server/catalog-repository";
+import type {
+  createUserAddedCatalogCandidate as createCandidateFn,
+  searchCatalogSuggestions as searchCatalogFn,
+  searchCatalogSuggestionsForTypeahead as searchTypeaheadFn,
+} from "../src/server/catalog-repository";
 
 type DB = Kysely<Database>;
 
@@ -18,6 +22,8 @@ let approveCatalogMatchSuggestion: typeof approveSuggestionFn;
 let buildCatalogMatchFingerprint: typeof buildFingerprintFn;
 let rejectCatalogMatchSuggestion: typeof rejectSuggestionFn;
 let createUserAddedCatalogCandidate: typeof createCandidateFn;
+let searchCatalogSuggestions: typeof searchCatalogFn;
+let searchCatalogSuggestionsForTypeahead: typeof searchTypeaheadFn;
 let isolatedSmokeDatabase: { adminUrl: string; databaseName: string } | null =
   null;
 
@@ -88,8 +94,11 @@ async function main() {
     buildCatalogMatchFingerprint,
     rejectCatalogMatchSuggestion,
   } = await import("../src/server/catalog-curation-repository"));
-  ({ createUserAddedCatalogCandidate } =
-    await import("../src/server/catalog-repository"));
+  ({
+    createUserAddedCatalogCandidate,
+    searchCatalogSuggestions,
+    searchCatalogSuggestionsForTypeahead,
+  } = await import("../src/server/catalog-repository"));
 
   if (mode === "--seed-ui") {
     await seedCurationUiFixtures();
@@ -140,7 +149,8 @@ async function main() {
           auditMetadataRecorded: true,
           completedReindexJobRequeuedOnlyForApproval: true,
           concurrentObjectCreationSerialized: true,
-          legacyWorkerRowsAcceptedFailClosed: true,
+          approvedCanonicalServeClass: "exact",
+          legacyWorkerCompatibilityPreservesSuggestionOnly: true,
           productionDataTouched: false,
         },
         null,
@@ -354,6 +364,24 @@ async function verifyApprovalMergesIdentityAndKeepsJournalHistory() {
       afterReindex.updatedAt !== null &&
       afterReindex.updatedAt.getTime() >= beforeReindex.updatedAt.getTime(),
     "approval did not refresh catalog reindex job",
+  );
+
+  const typeahead = await searchCatalogSuggestionsForTypeahead(
+    "OVE-159 approved canonical target",
+    8,
+    {
+      searchWithMeili: async () => [],
+      searchWithPostgres: searchCatalogSuggestions,
+    },
+  );
+  const approvedCanonical = typeahead.find(
+    (suggestion) => suggestion.id === APPROVE.targetId,
+  );
+  assert(approvedCanonical, "approved canonical result was not served");
+  assertEqual(
+    approvedCanonical.serveClass,
+    "exact",
+    "approved canonical served class",
   );
 }
 

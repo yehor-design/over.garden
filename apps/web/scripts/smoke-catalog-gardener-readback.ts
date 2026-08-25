@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { config as loadEnv } from "dotenv";
 import type { Kysely } from "kysely";
@@ -8,10 +9,18 @@ import type { Kysely } from "kysely";
 import type { Database } from "../src/db/schema";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import {
+  DOCUMENT_MUTATION_GENERATION_FORM_FIELD,
+  DOCUMENT_MUTATION_GENERATION_HEADER,
+} from "../src/lib/auth/document-mutation-generation-transport";
+import {
   ATOMIC_JOURNAL_CREATE_PROTOCOL,
   ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
   type AtomicJournalCreateResponse,
 } from "../src/lib/garden/entry-contracts";
+import {
+  isOve330ServeClass,
+  type Ove330ServeClass,
+} from "../src/lib/media/presentation-contract";
 import { buildAtomicTextJournalCreateRequest } from "./atomic-journal-text-request";
 import type {
   searchCatalogSuggestions as searchCatalogFn,
@@ -22,6 +31,7 @@ import type { resolvePlantObjectCatalog as resolveCatalogFn } from "../src/serve
 type DB = Kysely<Database>;
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
+const REQUEST_TIMEOUT_MS = 10_000;
 const FIXTURE_ITEM_ID = "16100000-0000-4000-8000-000000000001";
 const PRIMARY_NAME_ID = "16100000-0000-4000-8000-000000000101";
 const GENERATED_NAME_ID = "16100000-0000-4000-8000-000000000102";
@@ -48,6 +58,7 @@ const ALLOWED_SUGGESTION_KEYS = new Set([
   "sourceLabel",
   "sourceCaveat",
   "disambiguationLabel",
+  "serveClass",
 ]);
 
 const SEARCH_CASES = [
@@ -65,6 +76,7 @@ interface CatalogSuggestion {
   locale: string;
   status: "seeded" | "confirmed";
   source: string;
+  serveClass: Ove330ServeClass;
 }
 
 interface TypeaheadResponse {
@@ -90,6 +102,7 @@ interface SmokeContext {
   email: string;
   userId: string;
   jar: CookieJar;
+  documentMutationGeneration: string;
 }
 
 class CookieJar {
@@ -170,6 +183,8 @@ async function main() {
     .executeTakeFirstOrThrow();
   await seedApprovedAliasFixtures(db, user.id);
   runCatalogTypeaheadReindex();
+  const documentMutationGeneration =
+    await readRenderedDocumentMutationGeneration(baseUrl, jar);
 
   const context: SmokeContext = {
     db,
@@ -180,6 +195,7 @@ async function main() {
     email,
     userId: user.id,
     jar,
+    documentMutationGeneration,
   };
   const proof = await proveGardenerFlow(context);
 
@@ -204,9 +220,11 @@ async function main() {
 
 async function proveGardenerFlow(context: SmokeContext) {
   const gardenHtml = await textRequest(context.baseUrl, context.jar, "/garden");
-  for (const marker of ["Catalog match", "Keep without match"]) {
-    assert(gardenHtml.includes(marker), `Garden picker is missing ${marker}.`);
-  }
+  const gardenSurface = classifyGardenSurface(gardenHtml);
+  assert(
+    gardenSurface === "operational_home",
+    `Garden readback reached ${gardenSurface} instead of the authenticated operational surface.`,
+  );
 
   const searchEvidence: Array<{ kind: string; suggestionCount: number }> = [];
   for (const searchCase of SEARCH_CASES) {
@@ -226,12 +244,12 @@ async function proveGardenerFlow(context: SmokeContext) {
       userAddedCatalogName: null,
     });
     assertCanonicalEntry(entry, searchCase.kind);
-    const readback = visiblePageText(
-      await textRequest(context.baseUrl, context.jar, entry.readbackUrl),
-    );
-    assert(
-      readback.includes(CANONICAL_NAME),
-      `${searchCase.kind} readback omitted the canonical identity.`,
+    await proveRenderedCanonicalIdentity(
+      context.baseUrl,
+      context.jar,
+      entry.readbackUrl,
+      CANONICAL_NAME,
+      searchCase.kind,
     );
     searchEvidence.push({
       kind: searchCase.kind,
@@ -305,6 +323,7 @@ async function proveGardenerFlow(context: SmokeContext) {
   assertEqual(Number(attached.count), 5, "Canonical object attachment count");
 
   return {
+    gardenSurface,
     searchCases: searchEvidence,
     postgresFallbackAliases,
     firstEntryCanonicalReadback: true,
@@ -316,6 +335,26 @@ async function proveGardenerFlow(context: SmokeContext) {
     journalHistoryPreserved: true,
     leakCheck: "passed",
   };
+}
+
+export function classifyGardenSurface(
+  html: string,
+): "operational_home" | "guest" | "error" | "loading" | "unknown" {
+  for (const [marker, classification] of [
+    ["operational-home", "operational_home"],
+    ["guest", "guest"],
+    ["unexpected-error", "error"],
+    ["error", "error"],
+    ["loading", "loading"],
+  ] as const) {
+    if (
+      html.includes(`data-garden-workspace="${marker}"`) ||
+      html.includes(`data-garden-workspace\\":\\"${marker}`)
+    ) {
+      return classification;
+    }
+  }
+  return "unknown";
 }
 
 async function provePostgresFallback(context: SmokeContext) {
@@ -349,6 +388,12 @@ async function queryTypeahead(context: SmokeContext, query: string) {
     context.jar,
     `/api/garden/catalog/typeahead?q=${encodeURIComponent(query)}`,
   );
+  return parseGardenerTypeaheadSuggestions(response);
+}
+
+export function parseGardenerTypeaheadSuggestions(
+  response: TypeaheadResponse,
+): CatalogSuggestion[] {
   const rawSuggestions = Array.isArray(response.suggestions)
     ? response.suggestions
     : [];
@@ -361,6 +406,10 @@ async function queryTypeahead(context: SmokeContext, query: string) {
         `Typeahead leaked a non-contract field: ${key}.`,
       );
     }
+    assert(
+      isOve330ServeClass(suggestion.serveClass),
+      "Typeahead served class is missing or invalid.",
+    );
   }
 
   return rawSuggestions as CatalogSuggestion[];
@@ -397,6 +446,7 @@ async function createEntry(
         title: `OVE161 ${input.label} entry`,
         text: "Synthetic atomic catalog readback proof without personal garden data.",
       }),
+      documentMutationGeneration: context.documentMutationGeneration,
     },
   );
   const row = await context.db
@@ -645,7 +695,11 @@ async function jsonRequest<T>(
   baseUrl: string,
   jar: CookieJar,
   path: string,
-  init: { method?: string; body?: unknown } = {},
+  init: {
+    method?: string;
+    body?: unknown;
+    documentMutationGeneration?: string;
+  } = {},
 ): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, {
     method: init.method ?? "GET",
@@ -655,6 +709,12 @@ async function jsonRequest<T>(
         ATOMIC_JOURNAL_CREATE_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: baseUrl } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
+      ...(init.documentMutationGeneration
+        ? {
+            [DOCUMENT_MUTATION_GENERATION_HEADER]:
+              init.documentMutationGeneration,
+          }
+        : {}),
       Cookie: jar.header(),
     },
     body: init.body ? JSON.stringify(init.body) : undefined,
@@ -667,6 +727,120 @@ async function jsonRequest<T>(
     );
   }
   return (await response.json()) as T;
+}
+
+export function requireRenderedDocumentMutationGeneration(
+  generation: string,
+): string {
+  if (
+    !generation ||
+    generation.length > 1_024 ||
+    !/^[A-Za-z0-9_-]+$/u.test(generation)
+  ) {
+    throw new Error(
+      "The authenticated owner document omitted a bounded rendered mutation generation.",
+    );
+  }
+  return generation;
+}
+
+async function readRenderedDocumentMutationGeneration(
+  baseUrl: string,
+  jar: CookieJar,
+): Promise<string> {
+  const { chromium } = await import("playwright");
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext();
+    await context.addCookies(
+      cookieHeaderToPlaywrightCookies(jar.header(), baseUrl),
+    );
+    const page = await context.newPage();
+    const navigation = await page.goto(`${baseUrl}/garden/profile`, {
+      waitUntil: "domcontentloaded",
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+    if (!navigation?.ok()) {
+      throw new Error(
+        "The authenticated owner document was unavailable for the gardener proof.",
+      );
+    }
+    const generationFields = page.locator(
+      `input[name="${DOCUMENT_MUTATION_GENERATION_FORM_FIELD}"]`,
+    );
+    try {
+      await generationFields.first().waitFor({
+        state: "attached",
+        timeout: REQUEST_TIMEOUT_MS,
+      });
+    } catch {
+      throw new Error(
+        "The authenticated owner document omitted a rendered mutation generation.",
+      );
+    }
+    const generation = requireRenderedDocumentMutationGeneration(
+      await generationFields.first().inputValue(),
+    );
+    await context.close();
+    return generation;
+  } finally {
+    await browser.close();
+  }
+}
+
+async function proveRenderedCanonicalIdentity(
+  baseUrl: string,
+  jar: CookieJar,
+  pathname: string,
+  canonicalName: string,
+  label: string,
+): Promise<void> {
+  const { chromium } = await import("playwright");
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext();
+    await context.addCookies(
+      cookieHeaderToPlaywrightCookies(jar.header(), baseUrl),
+    );
+    const page = await context.newPage();
+    const navigation = await page.goto(`${baseUrl}${pathname}`, {
+      waitUntil: "domcontentloaded",
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+    if (!navigation?.ok()) {
+      throw new Error(`${label} rendered readback was unavailable.`);
+    }
+    try {
+      await page.getByText(canonicalName, { exact: false }).first().waitFor({
+        state: "visible",
+        timeout: REQUEST_TIMEOUT_MS,
+      });
+    } catch {
+      throw new Error(`${label} readback omitted the canonical identity.`);
+    }
+    await context.close();
+  } finally {
+    await browser.close();
+  }
+}
+
+function cookieHeaderToPlaywrightCookies(
+  cookieHeader: string,
+  baseUrl: string,
+) {
+  const cookies = cookieHeader.split(";").flatMap((part) => {
+    const separator = part.indexOf("=");
+    if (separator <= 0) return [];
+    const name = part.slice(0, separator).trim();
+    const value = part.slice(separator + 1).trim();
+    return name && value ? [{ name, value, url: baseUrl }] : [];
+  });
+  if (cookies.length === 0) {
+    throw new Error(
+      "The authenticated owner document requires a bounded private session.",
+    );
+  }
+  return cookies;
 }
 
 async function textRequest(baseUrl: string, jar: CookieJar, path: string) {
@@ -685,16 +859,6 @@ async function textRequest(baseUrl: string, jar: CookieJar, path: string) {
 
 function normalizeName(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
-}
-
-function visiblePageText(html: string) {
-  return html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
-    .replace(/<!--[^]*?-->/g, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function getSetCookieHeaders(headers: Headers): string[] {
@@ -800,15 +964,20 @@ function printEvidence(details: Record<string, unknown>) {
   console.log(JSON.stringify(evidence, null, 2));
 }
 
-main()
-  .finally(async () => {
-    if (db && shouldRunFinalCleanup) {
-      await cleanupFixtureState(db);
-      runCatalogTypeaheadReindex();
-    }
-    await db?.destroy();
-  })
-  .catch((error: unknown) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 1;
-  });
+const isDirectExecution =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (isDirectExecution) {
+  void main()
+    .finally(async () => {
+      if (db && shouldRunFinalCleanup) {
+        await cleanupFixtureState(db);
+        runCatalogTypeaheadReindex();
+      }
+      await db?.destroy();
+    })
+    .catch((error: unknown) => {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+    });
+}

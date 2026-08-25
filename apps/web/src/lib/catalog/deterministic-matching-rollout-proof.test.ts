@@ -44,7 +44,8 @@ function localProofInput() {
       auditMetadataRecorded: true,
       completedReindexJobRequeuedOnlyForApproval: true,
       concurrentObjectCreationSerialized: true,
-      legacyWorkerRowsAcceptedFailClosed: true,
+      approvedCanonicalServeClass: "exact",
+      legacyWorkerCompatibilityPreservesSuggestionOnly: true,
       productionDataTouched: false,
     },
     aliasReview: {
@@ -56,7 +57,8 @@ function localProofInput() {
       rejectionLeavesTypeaheadUntouched: true,
       approvalProjectsAliasAtomically: true,
       approvedAliasFoundThroughTypeahead: true,
-      staleSourceEligibilityFailsClosed: true,
+      approvedAliasServeClass: "generated",
+      staleSourceApprovalPreservesCanonicalState: true,
       replayPreservesAcceptedAndRejectedDecisions: true,
       productionDataTouched: false,
     },
@@ -64,6 +66,7 @@ function localProofInput() {
       ok: true,
       schemaVersion: "ove161.catalogGardenerReadbackSmoke.v1",
       issue: "OVE-161",
+      gardenSurface: "operational_home",
       searchCases: [
         { kind: "typo", suggestionCount: 1 },
         { kind: "transliteration", suggestionCount: 1 },
@@ -176,13 +179,18 @@ describe("local deterministic matching rollout evidence", () => {
           approval: "passed",
           rejection: "passed",
           staleEvidence: "passed",
+          servedClass: "exact",
+          legacyWorkerCompatibility: "suggestion_only",
         },
         aliases: {
           approval: "passed",
           rejection: "passed",
           collisionHold: "passed",
+          servedClass: "generated",
+          staleSourceApproval: "canonical_state_preserved",
         },
         gardenerReadback: {
+          authenticatedSurface: "operational_home",
           typeahead: "passed",
           firstEntry: "passed",
           existingObject: "passed",
@@ -206,6 +214,12 @@ describe("local deterministic matching rollout evidence", () => {
     expect(() =>
       buildLocalDeterministicMatchingRolloutEvidence(unsafeTypeahead),
     ).toThrow(/leak check/i);
+
+    const guestSurface = localProofInput();
+    guestSurface.gardenerReadback.gardenSurface = "guest";
+    expect(() =>
+      buildLocalDeterministicMatchingRolloutEvidence(guestSurface),
+    ).toThrow(/authenticated gardener surface/i);
   });
 });
 
