@@ -158,6 +158,27 @@
       "reason": "OVE-339 owns remaining live documentation and historical labels."
     }
   ],
+  "terminalAlignedOwners": [
+    "OVE-330",
+    "OVE-331",
+    "OVE-332",
+    "OVE-333",
+    "OVE-334",
+    "OVE-335",
+    "OVE-336",
+    "OVE-337",
+    "OVE-338"
+  ],
+  "terminalAlignedRules": [
+    {
+      "pathPrefix": "apps/web/scripts/",
+      "reason": "OVE-342 and OVE-339 classify shipped operator verification evidence; remaining strict terms are current controls or explicit provenance."
+    },
+    {
+      "pathPrefix": "docs/",
+      "reason": "OVE-339 owns the exact final live-authority and immutable historical-receipt ledger."
+    }
+  ],
   "activeUnrelatedRules": [
     {
       "pathPrefix": ".agents/",
@@ -201,15 +222,15 @@
     }
   ],
   "ownerStates": {
-    "OVE-330": "Backlog",
-    "OVE-331": "Backlog",
-    "OVE-332": "Backlog",
-    "OVE-333": "Backlog",
-    "OVE-334": "Backlog",
-    "OVE-335": "Backlog",
-    "OVE-336": "Backlog",
-    "OVE-337": "Backlog",
-    "OVE-338": "Backlog",
-    "OVE-339": "Backlog"
+    "OVE-330": "Done",
+    "OVE-331": "Done",
+    "OVE-332": "Done",
+    "OVE-333": "Done",
+    "OVE-334": "Canceled",
+    "OVE-335": "Done",
+    "OVE-336": "Canceled",
+    "OVE-337": "Done",
+    "OVE-338": "Done",
+    "OVE-339": "In Progress"
   }
 }

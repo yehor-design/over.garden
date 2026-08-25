@@ -56,6 +56,8 @@ export interface MvpPostureClassificationManifest {
   historicalDigests: Record<string, string>;
   productResearchPrefix: string;
   runtimeRules: RuntimeRule[];
+  terminalAlignedOwners?: MvpPostureOwner[];
+  terminalAlignedRules?: PathRule[];
   activeUnrelatedRules: PathRule[];
   ownerStates: Record<MvpPostureOwner, string>;
 }
@@ -392,10 +394,30 @@ function classifyCandidate(
       normalizeReason(unrelatedRule.reason),
     );
   }
+  const terminalAlignmentRule = manifest.terminalAlignedRules?.find((rule) =>
+    matchesRule(span.path, rule),
+  );
+  if (terminalAlignmentRule) {
+    return entry(
+      span,
+      "active_required_guardrail",
+      normalizeReason(terminalAlignmentRule.reason),
+    );
+  }
   const runtimeRule = manifest.runtimeRules.find((rule) =>
     matchesRule(span.path, rule),
   );
   if (runtimeRule) {
+    if (
+      isTerminalState(manifest.ownerStates[runtimeRule.owner] ?? "") &&
+      manifest.terminalAlignedOwners?.includes(runtimeRule.owner)
+    ) {
+      return entry(
+        span,
+        "active_required_guardrail",
+        `terminal_${runtimeRule.owner.toLowerCase().replace("-", "_")}_aligned`,
+      );
+    }
     return {
       ...entry(
         span,
@@ -681,6 +703,12 @@ function findDuplicateRules(
     ...manifest.activeAuthorityPaths.map((value) => `authority:${value}`),
     ...(manifest.requiredGuardrailPaths ?? []).map(
       (value) => `guardrail:${value}`,
+    ),
+    ...(manifest.terminalAlignedRules ?? []).map(
+      (rule) => `terminal-aligned:${JSON.stringify(rule)}`,
+    ),
+    ...(manifest.terminalAlignedOwners ?? []).map(
+      (owner) => `terminal-owner:${owner}`,
     ),
     ...manifest.runtimeRules.map((rule) => `runtime:${JSON.stringify(rule)}`),
     ...manifest.activeUnrelatedRules.map(

@@ -51,6 +51,7 @@
     "apps/web/scripts/check-linear-agent-task.test.ts",
     "apps/web/scripts/check-online-only-canon.ts",
     "apps/web/scripts/check-online-only-canon.test.ts",
+    "apps/web/scripts/verify-posture-canon-alignment.ts",
     "apps/web/src/lib/retirement/known-client-storage.ts",
     "apps/web/src/lib/retirement/known-client-storage.test.ts",
     "apps/web/src/proxy.ts",
@@ -98,6 +99,7 @@
     "docs/LEGACY_DEVICE_DATA_RETIREMENT.md",
     "docs/MAINLINE_CLOSEOUT.md",
     "docs/ONLINE_ONLY_JOURNAL.md",
+    "docs/MVP_POSTURE_CONTRACT_ALIGNMENT.md",
     "docs/SESSION_LOCALE_CONVERGENCE.md",
     "apps/web/package.json",
     ".github/workflows/ci.yml"

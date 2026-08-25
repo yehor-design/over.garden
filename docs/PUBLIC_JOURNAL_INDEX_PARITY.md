@@ -4,6 +4,14 @@ Status: active operator contract
 Policy version: `ove242.publicIndexParity.v3` (supersedes
 `ove227.publicIndexParity.v2`, which superseded `ove196.publicIndexParity.v1`)
 
+## OVE-339 posture classification
+
+The queue and document checks below are an operator consistency gate over
+resolved canonical/index state. They do not deny an unresolved product read
+and do not replace ADR-0018 quality-class admission or
+`PUBLIC_SURFACE_INDEXABILITY_THRESHOLD`. Precise-location exclusion remains
+an unconditional product-data boundary.
+
 ## What changed in v3 (OVE-242)
 
 `v2` compared the index against Postgres exactly, but it could still report

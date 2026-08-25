@@ -4,6 +4,14 @@ Status: OVE-285 registry, OVE-290 high-risk enforcement, OVE-286 bounded browser
 Baseline: `b53157a559c3a1087e8c53c142028ba0d9bcd5c2`
 Prerequisite: OVE-296 receipt `d05c0124f59c95b1db6db4d6e444c95d125218355b27ee87a793a7d31a08e152`
 
+## OVE-339 posture classification
+
+This contract governs write authorization and effect admission. OVE-332
+relaxed its exact named unresolved read owners; it explicitly preserved
+mutation authorization. An exact owner/session mismatch or missing mutation
+generation remains a positively resolved write boundary, not the unresolved
+cross-account-read exposure accepted by ADR-0018.
+
 ## Decision
 
 Every authenticated mutation surface is represented by one byte-exact,

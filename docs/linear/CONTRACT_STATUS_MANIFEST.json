@@ -1,6 +1,6 @@
 {
   "schema": "overgarden.contract-status-manifest.v1",
-  "capturedAt": "2026-08-25T04:02:38.919Z",
+  "capturedAt": "2026-08-25T05:46:04.000Z",
   "maxAgeHours": 24,
   "contracts": {
     "OVE-10": {
@@ -1056,8 +1056,8 @@
       "statusType": "completed"
     },
     "OVE-339": {
-      "status": "Backlog",
-      "statusType": "backlog"
+      "status": "In Progress",
+      "statusType": "started"
     },
     "OVE-34": {
       "status": "Done",
@@ -1072,8 +1072,8 @@
       "statusType": "completed"
     },
     "OVE-342": {
-      "status": "Backlog",
-      "statusType": "backlog"
+      "status": "Done",
+      "statusType": "completed"
     },
     "OVE-343": {
       "status": "Done",
