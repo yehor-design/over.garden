@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-08-24 (OVE-350 exact empty legacy-provider retirement; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-25 (OVE-342 instrument alignment and OVE-339 final posture-canon sweep; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md` as superseded for connectivity by `docs/adr/ADR-0017-online-only-product.md`, for MVP posture by `docs/adr/ADR-0018-mvp-posture.md`, and for atomic local journal authoring/client-final media by `docs/adr/ADR-0019-atomic-local-journal-media.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -11,14 +11,16 @@ This is not the full product backlog. It is the living execution roadmap for the
 ADR-0017 is the current online-only authority. New work must use
 network-required, server-authoritative saves and must not extend the historical
 PWA, Dexie, IndexedDB, local-draft, queued/synced, or offline-capture behavior
-recorded later in this file. Those matches are implementation provenance or
-named `runtime_pending_child` residue until OVE-321 through OVE-326 close.
+recorded later in this file. OVE-321 through OVE-326 are terminal; those later
+matches are explicit historical provenance and no longer describe pending
+runtime.
 
 ADR-0018 is the current MVP-posture authority. New contracts serve unresolved
 authorization/ownership/session conditions, target format-conversion-only media,
 use `PUBLIC_SURFACE_INDEXABILITY_THRESHOLD`, and keep admin inside the account
-product. OVE-330 through OVE-339 own runtime and final document convergence;
-their pre-cutover code and historical receipts are not competing authority.
+product. OVE-330 through OVE-338 shipped the runtime and instrument posture;
+OVE-339 owns only the final live-document and immutable-receipt convergence.
+Their pre-cutover code and historical receipts are not competing authority.
 
 ADR-0019 is the current atomic journal-media authority. New journal authoring
 is transient in tab memory, the exact browser-created WebP is the only final
@@ -28,6 +30,15 @@ conversion, media admission/quality processing, and private-then-publish from
 the active application and schema. OVE-350 deleted the exact empty isolated
 legacy provider, removed its CORS/lifecycle surface, and narrowed the app R2
 credential to the public bucket only.
+
+## OVE-339 posture classification
+
+The OVE-330 through OVE-339 program now has terminal runtime and instrument
+owners; this repository sweep is the final documentation/receipt convergence.
+Current strict controls elsewhere in this roadmap remain active when they
+protect resolved state, mutation integrity, evidence, accessibility, or
+precise location. Dated implementation paragraphs remain historical receipts
+and cannot override ADR-0018 or ADR-0019.
 
 From this point forward, product implementation work must be shipped as narrow vertical SDD slices that wire one user behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media if relevant -> tests -> docs. A task that only creates schema, only builds UI, only wires media, or only adds instrumentation is not a valid product execution slice unless it is embedded inside a user-visible path and proves integration through that path. Remediation, operator, decision, canon-correction, and coordination-container work uses the bounded issue-kind contracts in `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`; never invent fake product layers for those exceptions.
 

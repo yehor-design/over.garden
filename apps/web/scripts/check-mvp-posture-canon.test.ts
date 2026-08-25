@@ -44,6 +44,8 @@ function fixtureManifest(): MvpPostureClassificationManifest {
         reason: "OVE-333 owns the media runtime transition.",
       },
     ],
+    terminalAlignedOwners: [],
+    terminalAlignedRules: [],
     activeUnrelatedRules: [
       {
         path: "docs/ROBOTS_STANDARD.md",
@@ -152,7 +154,7 @@ describe("check-mvp-posture-canon", () => {
     );
   });
 
-  it("rejects duplicate rules, two current owners, and a terminal runtime owner", () => {
+  it("rejects duplicate rules, two current owners, and an unacknowledged terminal runtime owner", () => {
     const manifest = fixtureManifest();
     manifest.runtimeRules.push({ ...manifest.runtimeRules[0] });
     manifest.ownerStates["OVE-333"] = "Done";
@@ -164,6 +166,7 @@ describe("check-mvp-posture-canon", () => {
     const receipt = evaluateMvpPostureCanon(files, { manifest });
 
     expect(receipt.status).toBe("posture_drift");
+    expect(receipt.counts.runtime_pending_child).toBeGreaterThan(0);
     expect(receipt.violations).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "duplicate_manifest_rule" }),
@@ -172,6 +175,23 @@ describe("check-mvp-posture-canon", () => {
           code: "terminal_runtime_owner",
           owner: "OVE-333",
         }),
+      ]),
+    );
+  });
+
+  it("converges a terminal runtime owner only after explicit manifest acknowledgement", () => {
+    const manifest = fixtureManifest();
+    manifest.ownerStates["OVE-333"] = "Done";
+    manifest.terminalAlignedOwners = ["OVE-333"];
+
+    const receipt = evaluateMvpPostureCanon(alignedFixture(), { manifest });
+
+    expect(receipt.status).toBe("aligned");
+    expect(receipt.counts.runtime_pending_child).toBe(0);
+    expect(receipt.counts.active_required_guardrail).toBeGreaterThan(0);
+    expect(receipt.violations).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "terminal_runtime_owner" }),
       ]),
     );
   });
@@ -240,6 +260,7 @@ describe("check-mvp-posture-canon", () => {
     const formatted = JSON.parse(formatMvpPostureCanonReceipt(receipt));
 
     expect(receipt.status).toBe("aligned");
+    expect(receipt.counts.runtime_pending_child).toBe(0);
     expect(receipt.durationMs).toBeLessThanOrEqual(
       MVP_POSTURE_CANON_DEADLINE_MS,
     );

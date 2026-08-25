@@ -4,6 +4,14 @@ Status: OVE-199 v1 receipts frozen · production corpus mutation suspended after
 Owner: maintainer
 Issue: [OVE-199](https://linear.app/overgarden/issue/OVE-199/launch-corpus-bulgarian-and-ukrainian-visitors-see-real-localized)
 
+## OVE-339 posture classification
+
+The content-class and visual-fixture eligibility rules below classify resolved
+corpus state; they are not an unresolved authorization or ownership decision.
+Current journal media follows ADR-0019: the browser-generated WebP is the sole
+final artifact, and historical source-original processing receipts remain
+provenance only.
+
 ## Purpose
 
 Bulgarian and Ukrainian guests must see useful, locale-coherent first-party living journals — never `OVE-*` smoke labels, 10×10 placeholders, visual fixtures, or English enum stubs pretending to be gardeners.
@@ -12,14 +20,14 @@ Bulgarian and Ukrainian guests must see useful, locale-coherent first-party livi
 
 Persisted on `journal_entries.content_class`:
 
-| Class | Guest presentation |
-|-------|--------------------|
-| `real_ugc` | Real gardener (default for ordinary creates) |
-| `founder_first_hand` | Honest founder journal label; requires `source_language` |
-| `editorial` | Editorial; not an independent gardener; requires `source_language` |
-| `catalog_fact` | Catalog/source fact; not a gardener |
-| `production_smoke` | Never guest-launch; archive after sign-off |
-| `visual_fixture` | Local/preview only; production refused |
+| Class                | Guest presentation                                                 |
+| -------------------- | ------------------------------------------------------------------ |
+| `real_ugc`           | Real gardener (default for ordinary creates)                       |
+| `founder_first_hand` | Honest founder journal label; requires `source_language`           |
+| `editorial`          | Editorial; not an independent gardener; requires `source_language` |
+| `catalog_fact`       | Catalog/source fact; not a gardener                                |
+| `production_smoke`   | Never guest-launch; archive after sign-off                         |
+| `visual_fixture`     | Local/preview only; production refused                             |
 
 `source_language` is nullable `uk|bg`. Required for public founder/editorial rows.
 
@@ -92,16 +100,16 @@ state; it grants no mutation authority.
 
 Topology: **2 spaces**, **4 objects** (UA plant+animal, BG plant+animal), **14 journals**.
 
-| ID | Lang | Kind | Visibility | Cover branch | Photos |
-|----|------|------|------------|--------------|--------|
-| UA-J01 | uk | plant | public | no-media | 0 |
-| UA-J02 | uk | plant | public | 1 inline + auto (landscape) | 1 |
-| UA-J03 | uk | plant | public | multi + explicit non-first (portrait) | 3 |
-| UA-J04 | uk | animal(hive) | public | cover-only square | 1–3 |
-| UA-J05 | uk | plant | public | explicit stable after reorder | 2 |
-| UA-J06 | uk | plant | private | 1 inline | 1 |
-| UA-J07 | uk | plant | archived→410 | 1 inline | 1 |
-| BG-J01…BG-J07 | bg | mirror | mirror | mirror | mirror |
+| ID            | Lang | Kind         | Visibility   | Cover branch                          | Photos |
+| ------------- | ---- | ------------ | ------------ | ------------------------------------- | ------ |
+| UA-J01        | uk   | plant        | public       | no-media                              | 0      |
+| UA-J02        | uk   | plant        | public       | 1 inline + auto (landscape)           | 1      |
+| UA-J03        | uk   | plant        | public       | multi + explicit non-first (portrait) | 3      |
+| UA-J04        | uk   | animal(hive) | public       | cover-only square                     | 1–3    |
+| UA-J05        | uk   | plant        | public       | explicit stable after reorder         | 2      |
+| UA-J06        | uk   | plant        | private      | 1 inline                              | 1      |
+| UA-J07        | uk   | plant        | archived→410 | 1 inline                              | 1      |
+| BG-J01…BG-J07 | bg   | mirror       | mirror       | mirror                                | mirror |
 
 Photo budget was approximately 18–22 owned/licensed files. The listed private
 slot and former conversion path are incompatible with the current public-only
@@ -135,13 +143,13 @@ receipt is [`docs/launch-corpus-unsplash-license-receipt.md`](launch-corpus-unsp
 
 ## Before → after disposition (exact classes)
 
-| Quality class | Before | After (only with sign-off) |
-|---------------|--------|----------------------------|
-| `production_smoke_suspect` / technical-label public | Visible smoke | `archive` (lifecycle archived; out of feed/search) |
-| `tiny_or_placeholder_media` | Dimension-tiny legacy fast count; OVE-231 supplies byte-quality classes | `revoke_via_ove195` only after exact OVE-199 review |
-| `visual_fixture_namespace` (production) | Must be zero | Remove/reclassify; never seed |
-| `archived_public_slug` (incl. OVE-191 retired synthetic) | Lifecycle tombs | `reclassify_retain_lifecycle` — not real UGC; keep Gone/Meili parity |
-| `editorial_seed_slot` | Frozen v1 evidence only | `no_action_pending_signoff`; OVE-349 removed its mutator. A fresh public-only final-WebP vertical contract, rights/location review, and exact sign-off are required before any corpus mutation. |
+| Quality class                                            | Before                                                                  | After (only with sign-off)                                                                                                                                                                      |
+| -------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `production_smoke_suspect` / technical-label public      | Visible smoke                                                           | `archive` (lifecycle archived; out of feed/search)                                                                                                                                              |
+| `tiny_or_placeholder_media`                              | Dimension-tiny legacy fast count; OVE-231 supplies byte-quality classes | `revoke_via_ove195` only after exact OVE-199 review                                                                                                                                             |
+| `visual_fixture_namespace` (production)                  | Must be zero                                                            | Remove/reclassify; never seed                                                                                                                                                                   |
+| `archived_public_slug` (incl. OVE-191 retired synthetic) | Lifecycle tombs                                                         | `reclassify_retain_lifecycle` — not real UGC; keep Gone/Meili parity                                                                                                                            |
+| `editorial_seed_slot`                                    | Frozen v1 evidence only                                                 | `no_action_pending_signoff`; OVE-349 removed its mutator. A fresh public-only final-WebP vertical contract, rights/location review, and exact sign-off are required before any corpus mutation. |
 
 No bulk delete. No production mutation is authorized by the v1 content-pack or plan digests. Editorial material must never be presented as independent gardener evidence, a testimonial, or first-hand chronology.
 
