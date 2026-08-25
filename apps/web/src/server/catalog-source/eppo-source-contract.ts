@@ -190,15 +190,27 @@ function deadlineRemaining(
   return remaining;
 }
 
-async function boundedFetch(
+type BoundedFetchResult<Body> =
+  | {
+      response: EppoFetchResponse;
+      bodyRead: true;
+      body: Body;
+    }
+  | {
+      response: EppoFetchResponse;
+      bodyRead: false;
+    };
+
+async function boundedFetch<Body>(
   fetcher: EppoFetch,
   input: string,
   init: RequestInit,
   startedAt: number,
   timeoutMs: number,
   now: () => number,
+  readBody: (response: EppoFetchResponse) => Promise<Body>,
   externalSignal?: AbortSignal,
-): Promise<EppoFetchResponse> {
+): Promise<BoundedFetchResult<Body>> {
   if (externalSignal?.aborted) fail("request_timeout");
   const controller = new AbortController();
   const abortForCancellation = () => controller.abort();
@@ -214,16 +226,25 @@ async function boundedFetch(
   );
 
   try {
-    return await fetcher(input, { ...init, signal: controller.signal });
-  } catch {
-    throw new EppoSourceContractError("request_timeout");
+    const response = await fetcher(input, {
+      ...init,
+      signal: controller.signal,
+    });
+    if (!response.ok) return { response, bodyRead: false };
+    const body = await readBody(response);
+    if (controller.signal.aborted) fail("request_timeout");
+    return { response, bodyRead: true, body };
+  } catch (error) {
+    if (error instanceof EppoSourceContractError) throw error;
+    if (controller.signal.aborted) fail("request_timeout");
+    throw error;
   } finally {
     clearTimeout(timeout);
     externalSignal?.removeEventListener("abort", abortForCancellation);
   }
 }
 
-async function readWithRetry(
+async function readWithRetry<Body>(
   fetcher: EppoFetch,
   input: string,
   init: RequestInit,
@@ -231,23 +252,35 @@ async function readWithRetry(
   options: EppoSourceContractOptions,
   now: () => number,
   sleep: (milliseconds: number) => Promise<void>,
+  readBody: (response: EppoFetchResponse) => Promise<Body>,
   failureCode:
     | "openapi_fetch_failed"
     | "license_fetch_failed"
     | "api_unavailable",
   signal?: AbortSignal,
-): Promise<EppoFetchResponse> {
+): Promise<{ response: EppoFetchResponse; body: Body }> {
   for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
-    const response = await boundedFetch(
-      fetcher,
-      input,
-      init,
-      startedAt,
-      options.timeoutMs,
-      now,
-      signal,
-    );
-    if (response.ok) return response;
+    let result: BoundedFetchResult<Body>;
+    try {
+      result = await boundedFetch(
+        fetcher,
+        input,
+        init,
+        startedAt,
+        options.timeoutMs,
+        now,
+        readBody,
+        signal,
+      );
+    } catch (error) {
+      if (error instanceof EppoSourceContractError) throw error;
+      fail(failureCode);
+    }
+    const { response } = result;
+    if (response.ok) {
+      if (!result.bodyRead) fail(failureCode);
+      return { response, body: result.body };
+    }
     if (response.status === 429) {
       if (attempt < options.maxAttempts) {
         await sleep(
@@ -445,50 +478,52 @@ export async function inspectEppoSourceContract(
 
   try {
     const candidate = assertValidEppoCredential(credential);
-    const openApiResponse = await readWithRetry(
-      fetcher,
-      EPPO_OPENAPI_URL,
-      {
-        method: "GET",
-        headers: { Accept: "application/yaml, text/yaml;q=0.9" },
-        redirect: "error",
-      },
-      startedAt,
-      options,
-      now,
-      sleep,
-      "openapi_fetch_failed",
-      dependencies.signal,
-    );
+    const { response: openApiResponse, body: openApiSource } =
+      await readWithRetry(
+        fetcher,
+        EPPO_OPENAPI_URL,
+        {
+          method: "GET",
+          headers: { Accept: "application/yaml, text/yaml;q=0.9" },
+          redirect: "error",
+        },
+        startedAt,
+        options,
+        now,
+        sleep,
+        (response) => response.text(),
+        "openapi_fetch_failed",
+        dependencies.signal,
+      );
     attempts += 1;
     if (openApiResponse.status !== 200) fail("openapi_fetch_failed");
-    const openApiSource = await openApiResponse.text();
     if (!openApiSource || openApiSource.length > 2_000_000) {
       fail("openapi_fetch_failed");
     }
     openApiDigest = parseOfficialEppoOpenApi(openApiSource).openApiDigest;
     assertDocumentedOperations(openApiSource);
 
-    const licenceResponse = await readWithRetry(
-      fetcher,
-      EPPO_OPEN_LICENCE_URL,
-      {
-        method: "GET",
-        headers: { Accept: "application/pdf" },
-        redirect: "error",
-      },
-      startedAt,
-      options,
-      now,
-      sleep,
-      "license_fetch_failed",
-      dependencies.signal,
-    );
+    const { response: licenceResponse, body: licenceDocument } =
+      await readWithRetry(
+        fetcher,
+        EPPO_OPEN_LICENCE_URL,
+        {
+          method: "GET",
+          headers: { Accept: "application/pdf" },
+          redirect: "error",
+        },
+        startedAt,
+        options,
+        now,
+        sleep,
+        (response) => response.text(),
+        "license_fetch_failed",
+        dependencies.signal,
+      );
     attempts += 1;
     if (licenceResponse.status !== 200 || !responseIsPdf(licenceResponse)) {
       fail("license_schema_mismatch");
     }
-    const licenceDocument = await licenceResponse.text();
     if (!licenceDocument || licenceDocument.length > 2_000_000) {
       fail("license_schema_mismatch");
     }
@@ -501,7 +536,7 @@ export async function inspectEppoSourceContract(
       verify: (body: unknown) => void,
       sourceClass: EppoSourceClass,
     ) => {
-      const response = await readWithRetry(
+      const { body } = await readWithRetry(
         fetcher,
         `${EPPO_API_BASE_URL}${path}`,
         {
@@ -516,17 +551,18 @@ export async function inspectEppoSourceContract(
         options,
         now,
         sleep,
+        async (response) => {
+          if (!responseIsJson(response)) fail("response_schema_mismatch");
+          try {
+            return await response.json();
+          } catch {
+            fail("response_schema_mismatch");
+          }
+        },
         "api_unavailable",
         dependencies.signal,
       );
       attempts += 1;
-      if (!responseIsJson(response)) fail("response_schema_mismatch");
-      let body: unknown;
-      try {
-        body = await response.json();
-      } catch {
-        fail("response_schema_mismatch");
-      }
       verify(body);
       sourceClasses[sourceClass] = "supported";
       return body;

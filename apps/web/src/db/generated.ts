@@ -207,6 +207,69 @@ export interface CatalogMatchSuggestions {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CatalogSourceCaptureRuns {
+  capture_schema_version: string;
+  capture_tool_revision: string;
+  created_at: Generated<Timestamp>;
+  endpoint_family: string;
+  id: Generated<string>;
+  inventory_end_sha256: string | null;
+  inventory_end_total: Int8 | null;
+  inventory_page_count: number | null;
+  inventory_start_sha256: string | null;
+  inventory_start_total: Int8 | null;
+  inventory_unique_codes: Int8 | null;
+  last_error_class: string | null;
+  license_sha256: string;
+  manifest_sha256: string | null;
+  observed_ended_at: Timestamp | null;
+  observed_started_at: Timestamp;
+  openapi_sha256: string;
+  preflight_receipt: Generated<Json>;
+  request_schema_version: string;
+  retry_count: Generated<number>;
+  rights_counts: Generated<Json>;
+  source_host: string;
+  source_slug: Generated<string>;
+  source_snapshot_id: string | null;
+  state: Generated<string>;
+  superseded_by_capture_id: string | null;
+  terminal_counts: Generated<Json>;
+  updated_at: Generated<Timestamp>;
+  upstream_authority_class: Generated<string>;
+  zero_product_baseline: Generated<Json>;
+  zero_product_receipt: Json | null;
+}
+
+export interface CatalogSourceCaptureUnits {
+  allowed_projection: Generated<Json>;
+  attempt_count: Generated<number>;
+  capture_id: string;
+  claim_token: string | null;
+  claimed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  endpoint_class: string;
+  eppo_code: string | null;
+  field_rights: Generated<Json>;
+  http_status_class: string | null;
+  id: Generated<string>;
+  identifier_class: Generated<string>;
+  inventory_limit: number | null;
+  inventory_offset: number | null;
+  inventory_ordinal: Int8 | null;
+  last_error_class: string | null;
+  observed_at: Timestamp | null;
+  raw_payload: Json | null;
+  request_schema_version: string;
+  response_sha256: string | null;
+  rights_counts: Generated<Json>;
+  source_only_fields: Generated<Json>;
+  state: Generated<string>;
+  unit_key: string;
+  unit_kind: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface CatalogSourceLinks {
   catalog_item_id: string;
   created_at: Generated<Timestamp>;
@@ -899,6 +962,8 @@ export interface DB {
   catalog_item_names: CatalogItemNames;
   catalog_items: CatalogItems;
   catalog_match_suggestions: CatalogMatchSuggestions;
+  catalog_source_capture_runs: CatalogSourceCaptureRuns;
+  catalog_source_capture_units: CatalogSourceCaptureUnits;
   catalog_source_links: CatalogSourceLinks;
   catalog_source_records: CatalogSourceRecords;
   catalog_source_refresh_events: CatalogSourceRefreshEvents;
