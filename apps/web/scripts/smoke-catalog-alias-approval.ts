@@ -183,9 +183,14 @@ async function proveReviewAndTypeaheadFlow() {
   assertEqual(approved.outcome, "approved", "approval outcome");
   assert(approved.catalogItemNameId, "approval did not project an alias name");
 
-  await assertCatalogPresentInTypeahead(
+  const approvedAlias = await assertCatalogPresentInTypeahead(
     approvedCandidate.displayName,
     BG_APPROVE_ITEM_ID,
+  );
+  assertEqual(
+    approvedAlias.serveClass,
+    "generated",
+    "approved alias served class",
   );
   await assertCatalogAbsentFromTypeahead(
     rejectedCandidate.displayName,
@@ -257,7 +262,8 @@ async function proveReviewAndTypeaheadFlow() {
     rejectionLeavesTypeaheadUntouched: true,
     approvalProjectsAliasAtomically: true,
     approvedAliasFoundThroughTypeahead: true,
-    staleSourceEligibilityFailsClosed: true,
+    approvedAliasServeClass: "generated",
+    staleSourceApprovalPreservesCanonicalState: true,
     replayPreservesAcceptedAndRejectedDecisions: true,
   });
 }
@@ -407,10 +413,9 @@ async function assertCatalogPresentInTypeahead(
   catalogItemId: string,
 ) {
   const results = await catalogTypeahead(query);
-  assert(
-    results.some((result) => result.id === catalogItemId),
-    `typeahead did not return approved alias ${query}`,
-  );
+  const approved = results.find((result) => result.id === catalogItemId);
+  assert(approved, `typeahead did not return approved alias ${query}`);
+  return approved;
 }
 
 async function assertCatalogAbsentFromTypeahead(

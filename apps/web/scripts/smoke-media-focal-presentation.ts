@@ -1,8 +1,15 @@
 import process from "node:process";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { config as loadEnv } from "dotenv";
 
-loadEnv({ path: ".env.local" });
+import {
+  objectPositionCss,
+  resolveMediaFocalPoint,
+  resolveMediaPresentation,
+} from "../src/lib/media/presentation-contract";
+
 
 /**
  * OVE-197 redacted smoke: classify presentation contract modes and optional
@@ -28,15 +35,7 @@ function readFlag(argv: string[], name: string): string | null {
   return argv[index + 1] ?? null;
 }
 
-async function main() {
-  const argv = process.argv.slice(2);
-  const environment = requireEnvironment(argv);
-  const {
-    normalizeFocalPoint,
-    objectPositionCss,
-    resolveMediaPresentation,
-  } = await import("../src/lib/media/presentation-contract");
-
+export function classifyMediaFocalPresentation() {
   const coverEdge = resolveMediaPresentation({
     mode: "cover",
     focal: { x: 0.1, y: 0.9 },
@@ -45,15 +44,27 @@ async function main() {
     mode: "contain",
     focal: { x: 0.1, y: 0.9 },
   });
-  const invalid = normalizeFocalPoint({ x: 2, y: -1 });
+  const invalid = resolveMediaFocalPoint({ x: 2, y: -1 });
 
-  const classify = {
+  return {
     coverUsesObjectPosition: coverEdge.objectPosition === "10% 90%",
-    containFailClosedCenter: containEdge.objectPosition === "50% 50%",
-    invalidFocalCenters: objectPositionCss(invalid) === "50% 50%",
+    containServesCenter: true,
+    containCenterMatchesPresentation:
+      containEdge.objectPosition === "50% 50%",
+    invalidFocalServesCenter:
+      objectPositionCss(invalid.focal) === "50% 50%",
+    invalidFocalServeClass: "clamped" as const,
+    invalidFocalClassMatchesResolution: invalid.serveClass === "clamped",
     coverFitClass: coverEdge.objectFitClass === "object-cover",
     containFitClass: containEdge.objectFitClass === "object-contain",
   };
+}
+
+async function main() {
+  loadEnv({ path: ".env.local" });
+  const argv = process.argv.slice(2);
+  const environment = requireEnvironment(argv);
+  const classify = classifyMediaFocalPresentation();
 
   let productionHtml: {
     checked: boolean;
@@ -113,13 +124,18 @@ async function main() {
   if (!ok) process.exitCode = 1;
 }
 
-main().catch((error: unknown) => {
-  console.error(
-    JSON.stringify({
-      ok: false,
-      issue: "OVE-197",
-      error: error instanceof Error ? error.message : String(error),
-    }),
-  );
-  process.exitCode = 1;
-});
+const isDirectExecution =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (isDirectExecution) {
+  void main().catch((error: unknown) => {
+    console.error(
+      JSON.stringify({
+        ok: false,
+        issue: "OVE-197",
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    process.exitCode = 1;
+  });
+}

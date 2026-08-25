@@ -24,6 +24,8 @@ const localeExpectations = [
       saveOnline: "Опублікувати",
       region: "Київ",
       choosePhoto: "Обрати фото",
+      catalogMatch: "Відповідність каталогу",
+      keepWithoutMatch: "Залишити без відповідності",
     },
   ],
   [
@@ -34,6 +36,8 @@ const localeExpectations = [
       saveOnline: "Публикувай",
       region: "Киев",
       choosePhoto: "Избор на снимка",
+      catalogMatch: "Съответствие в каталога",
+      keepWithoutMatch: "Запазване без съответствие",
     },
   ],
   [
@@ -44,6 +48,8 @@ const localeExpectations = [
       saveOnline: "Опубликовать",
       region: "Киев",
       choosePhoto: "Выбрать фото",
+      catalogMatch: "Соответствие каталогу",
+      keepWithoutMatch: "Оставить без соответствия",
     },
   ],
 ] as const satisfies readonly [
@@ -54,6 +60,8 @@ const localeExpectations = [
     saveOnline: string;
     region: string;
     choosePhoto: string;
+    catalogMatch: string;
+    keepWithoutMatch: string;
   },
 ][];
 
@@ -99,6 +107,8 @@ describe("first entry composer localization", () => {
       expect(html).toContain(expected.saveOnline);
       expect(html).toContain(expected.region);
       expect(html).toContain(expected.choosePhoto);
+      expect(html).toContain(expected.catalogMatch);
+      expect(html).toContain(expected.keepWithoutMatch);
       expect(html).toContain('type="file"');
       expect(html).toContain('class="hidden"');
       expect(html).toContain('data-photo-picker-control="true"');

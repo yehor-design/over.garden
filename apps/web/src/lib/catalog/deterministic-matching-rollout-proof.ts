@@ -221,10 +221,19 @@ export function buildLocalDeterministicMatchingRolloutEvidence(input: {
       "canonical approval reindex",
     ],
     ["concurrentObjectCreationSerialized", "canonical approval serialization"],
-    ["legacyWorkerRowsAcceptedFailClosed", "legacy canonical worker row"],
+    [
+      "legacyWorkerCompatibilityPreservesSuggestionOnly",
+      "legacy canonical worker compatibility",
+    ],
   ] as const) {
     requireTrue(canonicalMatch, key, label);
   }
+  requireExactString(
+    canonicalMatch,
+    "approvedCanonicalServeClass",
+    "exact",
+    "approved canonical served class",
+  );
   requireNoProductionMutation(canonicalMatch, "canonical match proof");
 
   const aliasReview = requireRecord(input.aliasReview, "alias review proof");
@@ -236,11 +245,20 @@ export function buildLocalDeterministicMatchingRolloutEvidence(input: {
     ["rejectionLeavesTypeaheadUntouched", "alias rejection"],
     ["approvalProjectsAliasAtomically", "alias approval"],
     ["approvedAliasFoundThroughTypeahead", "approved alias typeahead"],
-    ["staleSourceEligibilityFailsClosed", "stale alias evidence"],
+    [
+      "staleSourceApprovalPreservesCanonicalState",
+      "stale alias approval state",
+    ],
     ["replayPreservesAcceptedAndRejectedDecisions", "alias decision replay"],
   ] as const) {
     requireTrue(aliasReview, key, label);
   }
+  requireExactString(
+    aliasReview,
+    "approvedAliasServeClass",
+    "generated",
+    "approved alias served class",
+  );
   requireNoProductionMutation(aliasReview, "alias review proof");
 
   const gardener = requireRecord(
@@ -248,6 +266,12 @@ export function buildLocalDeterministicMatchingRolloutEvidence(input: {
     "gardener readback proof",
   );
   requireIssue(gardener, "OVE-161", "gardener readback proof");
+  requireExactString(
+    gardener,
+    "gardenSurface",
+    "operational_home",
+    "authenticated gardener surface",
+  );
   for (const [key, label] of [
     ["firstEntryCanonicalReadback", "first-entry canonical readback"],
     ["existingObjectCanonicalReadback", "existing-object canonical readback"],
@@ -344,6 +368,8 @@ export function buildLocalDeterministicMatchingRolloutEvidence(input: {
         approval: "passed" as const,
         rejection: "passed" as const,
         staleEvidence: "passed" as const,
+        servedClass: "exact" as const,
+        legacyWorkerCompatibility: "suggestion_only" as const,
         journalHistory: "preserved" as const,
         reindexAfterApprovalOnly: true,
         concurrentSaveSerialized: true,
@@ -353,9 +379,12 @@ export function buildLocalDeterministicMatchingRolloutEvidence(input: {
         approval: "passed" as const,
         rejection: "passed" as const,
         collisionHold: "passed" as const,
+        servedClass: "generated" as const,
+        staleSourceApproval: "canonical_state_preserved" as const,
         acceptedAndRejectedReplayStable: true,
       },
       gardenerReadback: {
+        authenticatedSurface: "operational_home" as const,
         typeahead: "passed" as const,
         searchKinds: [...REQUIRED_SEARCH_KINDS],
         postgresFallbackKinds: [...REQUIRED_POSTGRES_FALLBACK_KINDS],
@@ -612,6 +641,19 @@ function requireString(
     throw new Error(`${label} is missing ${key}.`);
   }
   return value;
+}
+
+function requireExactString(
+  record: Record<string, unknown>,
+  key: string,
+  expected: string,
+  label: string,
+) {
+  const actual = requireString(record, key, label);
+  if (actual !== expected) {
+    throw new Error(`${label} must be ${expected}.`);
+  }
+  return actual;
 }
 
 function requireTrue(
