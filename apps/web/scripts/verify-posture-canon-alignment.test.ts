@@ -315,20 +315,20 @@ describe("verify-posture-canon-alignment", () => {
     );
   });
 
-  it("checks the checked-in 50-document repository ledger inside the declared deadline", () => {
+  it("checks the checked-in 51-document repository ledger inside the declared deadline", () => {
     const receipt = runPostureCanonAlignmentCheck({
       repositoryRoot: REPOSITORY_ROOT,
       allowDirty: true,
     });
 
-    expect(POSTURE_DOCUMENT_LEDGER).toHaveLength(50);
+    expect(POSTURE_DOCUMENT_LEDGER).toHaveLength(51);
     expect(receipt).toMatchObject({
       version: POSTURE_CANON_ALIGNMENT_VERSION,
       status: "aligned",
       counts: {
-        liveAuthority: 34,
+        liveAuthority: 35,
         historicalReceipt: 16,
-        reconciled: 34,
+        reconciled: 35,
         ledgerLabelled: 16,
         unclassified: 0,
         runtimePendingChild: 0,

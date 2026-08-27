@@ -8,13 +8,12 @@ Reconciled on: 2026-08-25
 
 ## Outcome
 
-The final posture sweep measured exactly 49 current repository documents in its
-declared documentation surface: 33 live authorities or preserved guardrails and
-16 immutable historical receipts. OVE-353 later added ADR-0021 as a 34th live
-authority, bringing the ledger to 50; every other classification is unchanged. Each path is classified exactly once below.
-The six high-reach live authorities received an applicability clarification;
-the other 27 live documents retain their current control text, and every
-historical receipt retains its exact pre-sweep SHA-256.
+The current posture sweep measures exactly 51 repository documents in its
+declared documentation surface: 35 live authorities or preserved guardrails
+and 16 immutable historical receipts. Each path is classified exactly once
+below. The six high-reach live authorities received an applicability
+clarification; the other 29 live documents retain their current control text,
+and every historical receipt retains its exact pre-sweep SHA-256.
 
 ADR-0018 remains the sole request-posture authority: its named unresolved reads
 serve with the accepted cross-account-read exposure, public candidates use
@@ -55,12 +54,13 @@ cancellation, and uses a 600,000 ms maximum deadline. Its aggregate receipt
 contains only schema/status, paths, classes, reason codes, counts, digests,
 duration, repository SHA, and violation codes.
 
-The reconciled local receipt reports 33 live authorities, 16 historical
+The terminal OVE-339 local receipt reported 33 live authorities, 16 historical
 receipts, 33 reconciled paths, 16 ledger labels, zero unclassified paths, zero
 pending runtime spans, and semantic digest
 `c00dd488572b7af6029810ebbf26c5a2043498dd174293961bd39b14ea0e143f`.
 Deterministic replay matched, and the injected dependency timeout reached the
-bounded `timed_out` terminal state.
+bounded `timed_out` terminal state. OVE-254 later adds the classified live EPPO
+capture runbook without rewriting that terminal receipt.
 
 ## Document ledger
 
@@ -82,6 +82,7 @@ bounded `timed_out` terminal state.
 | `docs/CATALOG_SEED_ROLLOUT_PROOF.md`                                | `live_authority`     | `current_catalog_release_guardrail`     | current control preserved                                                                                   |
 | `docs/CURRENT_SCHEMA_ERASURE.md`                                    | `live_authority`     | `current_erasure_guardrail`             | current control preserved                                                                                   |
 | `docs/DRIVE2_PARITY_PRODUCTION_CLOSEOUT.md`                         | `live_authority`     | `current_release_guardrail`             | current control preserved                                                                                   |
+| `docs/EPPO_OBSERVED_CAPTURE.md`                                     | `live_authority`     | `current_source_capture_guardrail`      | current control preserved                                                                                   |
 | `docs/IDENTITY_POLICY.md`                                           | `live_authority`     | `current_identity_guardrail`            | current control preserved                                                                                   |
 | `docs/INFRASTRUCTURE_REGISTRY.md`                                   | `live_authority`     | `current_infrastructure_guardrail`      | current control preserved                                                                                   |
 | `docs/INTERFACE_LOCALE_CONTRACT.md`                                 | `live_authority`     | `current_locale_guardrail`              | current control preserved                                                                                   |

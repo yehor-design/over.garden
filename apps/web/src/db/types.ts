@@ -10,6 +10,8 @@ import type {
   CatalogItemNames as CatalogItemNamesTable,
   CatalogItems as CatalogItemsTable,
   CatalogMatchSuggestions as CatalogMatchSuggestionsTable,
+  CatalogSourceCaptureRuns as CatalogSourceCaptureRunsTable,
+  CatalogSourceCaptureUnits as CatalogSourceCaptureUnitsTable,
   CatalogSourceLinks as CatalogSourceLinksTable,
   CatalogSourceRecords as CatalogSourceRecordsTable,
   CatalogSourceRefreshEvents as CatalogSourceRefreshEventsTable,
@@ -249,6 +251,10 @@ export type CatalogMatchSuggestion = Selectable<CatalogMatchSuggestionsTable>;
 export type NewCatalogMatchSuggestion =
   Insertable<CatalogMatchSuggestionsTable>;
 export type CatalogSourceLink = Selectable<CatalogSourceLinksTable>;
+export type CatalogSourceCaptureRun = Selectable<CatalogSourceCaptureRunsTable>;
+export type NewCatalogSourceCaptureRun = Insertable<CatalogSourceCaptureRunsTable>;
+export type CatalogSourceCaptureUnit = Selectable<CatalogSourceCaptureUnitsTable>;
+export type NewCatalogSourceCaptureUnit = Insertable<CatalogSourceCaptureUnitsTable>;
 export type CatalogSourceRecord = Selectable<CatalogSourceRecordsTable>;
 export type CatalogSourceRefreshEvent =
   Selectable<CatalogSourceRefreshEventsTable>;

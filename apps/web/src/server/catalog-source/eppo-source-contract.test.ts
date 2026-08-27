@@ -249,6 +249,40 @@ describe("EPPO source contract decision", () => {
     });
   });
 
+  it("keeps the request deadline active until the provider body is consumed", async () => {
+    let nowCalls = 0;
+    const receipt = await inspectEppoSourceContract(
+      FIXTURE_CREDENTIAL,
+      options,
+      {
+        fetch: async (input, init) => {
+          const fixture = await fixtureFetcher()(input, init);
+          if (input !== EPPO_OPENAPI_URL) return fixture;
+          return {
+            ...fixture,
+            text: () =>
+              new Promise<string>((resolve, reject) => {
+                const lateBody = setTimeout(() => resolve(OPENAPI_FIXTURE), 25);
+                init.signal?.addEventListener(
+                  "abort",
+                  () => {
+                    clearTimeout(lateBody);
+                    reject(new DOMException("aborted", "AbortError"));
+                  },
+                  { once: true },
+                );
+              }),
+          };
+        },
+        baselineSha: FIXTURE_BASELINE,
+        now: () => (nowCalls++ === 0 ? 0 : 14_999),
+      },
+    );
+
+    expect(receipt.terminalState).toBe("blocked_timeout");
+    expect(receipt.sourceClasses.taxon_list).toBe("not_checked");
+  });
+
   it("fences an explicit terminal cancellation before contacting an official endpoint", async () => {
     const cancellation = new AbortController();
     cancellation.abort();

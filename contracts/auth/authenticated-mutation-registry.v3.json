@@ -21512,6 +21512,17 @@
     },
     {
       "evidencePaths": [
+        "sql/0023_ove254_eppo_observed_capture.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0023_ove254_eppo_observed_capture.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:enforce_catalog_source_capture_unit_immutability",
+      "sourceNodeId": "source:67a0a9b48a534eb6e48d",
+      "symbol": "catalog_source_capture_units_immutable_terminal"
+    },
+    {
+      "evidencePaths": [
         "src/server/journal-repository.ts",
         "src/server/search/public-projection-outbox.ts"
       ],
@@ -21545,6 +21556,17 @@
       "semanticVariant": "from:./fuzzy-duplicate-refresh-form",
       "sourceNodeId": "source:68332964614b374e9328",
       "symbol": "FuzzyDuplicateRefreshForm"
+    },
+    {
+      "evidencePaths": [
+        "sql/0023_ove254_eppo_observed_capture.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0023_ove254_eppo_observed_capture.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:enforce_catalog_source_capture_run_immutability",
+      "sourceNodeId": "source:683796e9c6443111638d",
+      "symbol": "catalog_source_capture_runs_immutable_terminal"
     },
     {
       "evidencePaths": [
