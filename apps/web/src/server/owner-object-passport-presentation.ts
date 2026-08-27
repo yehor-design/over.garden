@@ -47,27 +47,15 @@ export function buildOwnerObjectPassportPresentation(
       mediaFocalY: entry.media?.focalY ?? null,
       mediaIntrinsicWidth: entry.media?.intrinsicWidth ?? null,
       mediaIntrinsicHeight: entry.media?.intrinsicHeight ?? null,
-      stateLabel:
-        entry.lifecycle_state === "archived"
-          ? copy.archivedEntry
-          : entry.visibility === "public"
-            ? copy.publicEntry
-            : copy.privateEntry,
+      stateLabel: copy.publicEntry,
       relationLabel:
         entry.timelineRelation === "mentioned_space"
           ? copy.spaceMention
           : copy.directObjectUpdate,
     })),
   );
-  const activeEntryCount = page.entries.filter(
-    (entry) => entry.lifecycle_state === "active",
-  ).length;
   const statusLabel =
-    page.entries.length === 0
-      ? copy.newPassport
-      : activeEntryCount > 0
-        ? copy.journalActive
-        : copy.archivedHistory;
+    page.entries.length === 0 ? copy.newPassport : copy.journalActive;
   const latestEntry = timelineEntries[0] ?? null;
   const oldestEntry = timelineEntries.at(-1) ?? null;
   const locationLabel = ownerLocationLabel(page, locale);

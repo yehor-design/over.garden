@@ -8,7 +8,7 @@ import {
   documentMutationGenerationFromFormData,
 } from "@/server/document-mutation-admission";
 import {
-  archiveJournalEntry,
+  deleteJournalEntry,
   resolvePlantObjectCatalog,
   updatePlantObjectLocation,
 } from "@/server/journal-repository";
@@ -16,7 +16,6 @@ import {
   createLineageInvitation,
   createProvenanceEdge,
 } from "@/server/lineage-repository";
-import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 
 export async function resolvePlantObjectCatalogAction(formData: FormData) {
   const admission = await admitDocumentMutation({
@@ -101,7 +100,7 @@ export async function createLineageInvitationAction(formData: FormData) {
   revalidatePath(`/garden/objects/${result.subjectObject.id}`);
 }
 
-export async function archiveJournalEntryAction(
+export async function deleteJournalEntryAction(
   formData: FormData,
 ): Promise<DocumentMutationActionStateV1 | undefined> {
   const admission = await admitDocumentMutation({
@@ -113,18 +112,17 @@ export async function archiveJournalEntryAction(
   const scope = admission.scope;
   const entryId = String(formData.get("entryId") ?? "");
   const objectId = String(formData.get("objectId") ?? "");
-  const archiveAccepted = formData.get("archiveAccepted") === "on";
+  const deleteAccepted = formData.get("deleteAccepted") === "on";
 
-  if (!archiveAccepted) {
-    throw new Error("Archive confirmation is required.");
+  if (!deleteAccepted) {
+    throw new Error("Deletion confirmation is required.");
   }
 
-  const result = await archiveJournalEntry(scope, { entryId });
+  const result = await deleteJournalEntry(scope, { entryId });
 
-  // OVE-242: the removal intent already committed with the archive. Converge
-  // it now; the owner object page then reports the verified convergence state
-  // from the durable outbox rather than claiming "a job was scheduled".
-  await convergePublicProjectionsNow([result.entry.id]).catch(() => undefined);
+  // The canonical deletion transaction writes the durable search-removal
+  // intent and media revocation jobs. Do not make the user's destructive
+  // action wait for external providers; retryable workers prove convergence.
 
   revalidatePath("/garden");
   if (objectId) revalidatePath(`/garden/objects/${objectId}`);

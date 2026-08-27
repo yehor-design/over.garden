@@ -32,13 +32,13 @@ async function main() {
     "../src/server/media/media-lifecycle-consumer"
   );
   const {
-    listArchiveDerivativeRevokeCandidates,
+    listJournalDeletionDerivativeRevokeCandidates,
   } = await import("../src/server/media/media-lifecycle-enqueue");
 
   // Contract smoke: archive candidate selection and drain are invocable.
   // Full local MinIO archive→byte proof is covered by unit tests plus optional
   // operator synthetic production run documented in MEDIA_LIFECYCLE.md.
-  const candidates = await listArchiveDerivativeRevokeCandidates(
+  const candidates = await listJournalDeletionDerivativeRevokeCandidates(
     (
       await import("../src/db")
     ).db,

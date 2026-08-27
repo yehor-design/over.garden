@@ -387,7 +387,7 @@ describe("OVE-225 payload contract", () => {
       mediaAssetId: ENTRY_ID,
       bucket: "public",
       objectKey: "derivatives/a.jpg",
-      reason: "archived",
+      reason: "journal_delete",
     };
     expect(validateJobQueuePayload("media_lifecycle", revoke)).toBeNull();
     expect(

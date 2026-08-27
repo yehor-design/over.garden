@@ -136,7 +136,6 @@ function readyWorkspace(): GardenWorkspaceReadModel {
         totalCount: 9,
         plantCount: 5,
         animalCount: 2,
-        archivedEntryCount: 1,
         objects: [
           {
             id: "object-1",
@@ -150,7 +149,6 @@ function readyWorkspace(): GardenWorkspaceReadModel {
             createdAt: new Date("2026-07-01T00:00:00.000Z"),
             entryCount: 3,
             publicEntryCount: 1,
-            archivedEntryCount: 0,
             latestEntryDate: new Date("2026-06-01T00:00:00.000Z"),
             coverMedia: {
               publicUrl: "http://localhost:9000/fixture/object-1.png",

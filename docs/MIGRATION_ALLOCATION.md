@@ -26,6 +26,10 @@ another issue's number.
 | `0033` | OVE-333      | MVP posture            | simplified media-ingest state when required                       |
 | `0034` | OVE-334      | MVP posture            | quarantine-retirement state when required                         |
 | `0035` | OVE-326      | Online-only retirement | final analytics-event constraint closure                          |
+| `0036` | OVE-347      | Atomic journal         | atomic journal creation state                                     |
+| `0037` | OVE-351      | Online-only retirement | external photo-identification retirement                          |
+| `0038` | OVE-349      | Online-only retirement | legacy journal-media schema contraction                           |
+| `0039` | OVE-353      | Journal deletion       | deletion retention timestamps, closed lifecycle enum, purge index  |
 
 Compact range receipt:
 
@@ -33,6 +37,12 @@ Compact range receipt:
 - `0029-0030: online-only retirement children`
 - `0031-0034: MVP posture children`
 - `0035: online-only steady-state enforcement`
+- `0036-0038: atomic-journal and online-only retirement landings`
+- `0039: journal deletion-retention lifecycle`
+
+Rows `0036`-`0038` are reconciled after the fact under rule 4: those migrations
+landed before the ledger recorded them, and renaming a landed file to restore
+the appearance of a prior reservation is forbidden by rule 5.
 
 ## Explicit no-SQL Stable Registry owners
 

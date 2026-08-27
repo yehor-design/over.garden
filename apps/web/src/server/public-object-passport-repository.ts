@@ -261,7 +261,11 @@ export function buildPublicObjectPassportLifecycleQuery(
           .filterWhere((gone) =>
             gone.or([
               gone("journal_entries.public_gone_at", "is not", null),
-              gone("journal_entries.lifecycle_state", "=", "archived"),
+              gone(
+                "journal_entries.lifecycle_state",
+                "=",
+                "deleted_retention",
+              ),
               gone("journal_entries.visibility", "!=", "public"),
             ]),
           )

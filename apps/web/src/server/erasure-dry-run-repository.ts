@@ -54,7 +54,7 @@ export async function collectErasureDryRunCounts(
     journalEntriesTotal,
     journalEntriesPrivateActive,
     journalEntriesPublicActive,
-    journalEntriesArchived,
+    journalEntriesDeletionPending,
     journalEntryObjectMentions,
     journalEntryCatalogMentions,
     journalMutationReceipts,
@@ -110,7 +110,7 @@ export async function collectErasureDryRunCounts(
       lifecycleState: "active",
     }),
     countJournalEntries(executor, requesterUserId, {
-      lifecycleState: "archived",
+      lifecycleState: "deleted_retention",
     }),
     countOwnedRows(executor, "journal_entry_object_mentions", requesterUserId),
     countOwnedRows(executor, "journal_entry_catalog_mentions", requesterUserId),
@@ -173,7 +173,7 @@ export async function collectErasureDryRunCounts(
     journalEntriesTotal,
     journalEntriesPrivateActive,
     journalEntriesPublicActive,
-    journalEntriesArchived,
+    journalEntriesDeletionPending,
     journalEntryObjectMentions,
     journalEntryCatalogMentions,
     journalMutationReceipts,
@@ -399,7 +399,7 @@ export function buildCountJournalEntriesQuery(
   requesterUserId: string,
   filters: {
     visibility?: "private" | "public";
-    lifecycleState?: "active" | "archived";
+    lifecycleState?: "active" | "deleted_retention";
   } = {},
 ) {
   let query = executor
@@ -829,7 +829,7 @@ async function countJournalEntries(
   requesterUserId: string,
   filters: {
     visibility?: "private" | "public";
-    lifecycleState?: "active" | "archived";
+    lifecycleState?: "active" | "deleted_retention";
   } = {},
 ) {
   const row = await buildCountJournalEntriesQuery(

@@ -64,7 +64,7 @@ export function buildEnqueueMediaStagingFinalizeJobQuery(
 }
 
 /**
- * Archive/unpublish: every processed public derivative on the entry becomes
+ * Journal deletion: every processed public derivative on the entry becomes
  * unreachable. Active cover/inline references do not protect derivatives once
  * the owning publication is gone — the page is 410 and direct URLs must die.
  *
@@ -72,7 +72,7 @@ export function buildEnqueueMediaStagingFinalizeJobQuery(
  * `listOrphanProcessedDerivativesForEntry` instead so still-referenced assets
  * stay reachable.
  */
-export async function listArchiveDerivativeRevokeCandidates(
+export async function listJournalDeletionDerivativeRevokeCandidates(
   executor: QueryExecutor,
   input: { journalEntryId: string; ownerUserId: string },
 ): Promise<MediaRevokeCandidate[]> {
@@ -166,7 +166,7 @@ export function buildEnqueueMediaDerivativeRevokeJobQuery(
     mediaAssetId?: string;
     bucket: MediaLifecycleBucket;
     objectKey: string;
-    reason: "archive" | "orphan" | "erasure";
+    reason: "journal_delete" | "orphan" | "erasure";
     journalEntryId?: string;
   },
 ) {
@@ -206,17 +206,17 @@ export function buildEnqueueMediaDerivativeRevokeJobQuery(
     .returning("id");
 }
 
-export async function enqueueArchiveDerivativeRevokes(
+export async function enqueueJournalDeletionDerivativeRevokes(
   executor: QueryExecutor,
   input: { journalEntryId: string; ownerUserId: string },
 ): Promise<number> {
-  const candidates = await listArchiveDerivativeRevokeCandidates(
+  const candidates = await listJournalDeletionDerivativeRevokeCandidates(
     executor,
     input,
   );
   return enqueueMediaDerivativeRevokes(executor, {
     candidates,
-    reason: "archive",
+    reason: "journal_delete",
     journalEntryId: input.journalEntryId,
   });
 }
@@ -240,7 +240,7 @@ export async function enqueueMediaDerivativeRevokes(
   executor: QueryExecutor,
   input: {
     candidates: readonly MediaRevokeCandidate[];
-    reason: "archive" | "orphan" | "erasure";
+    reason: "journal_delete" | "orphan" | "erasure";
     journalEntryId?: string;
   },
 ): Promise<number> {

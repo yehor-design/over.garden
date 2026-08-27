@@ -13,10 +13,14 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
+import {
+  DELETED_JOURNAL_ENTRY_BODY,
+  DELETED_JOURNAL_ENTRY_TITLE,
+} from "@/server/journal-deletion-retention";
 import { scopedToUser } from "@/server/request-scope";
 import {
   buildAdjacentPublicJournalEntryQuery,
-  buildArchiveJournalEntryQuery,
+  buildDeleteJournalEntryQuery,
   buildFindJournalEntryByIdQuery,
   buildFindExistingEntryByClientMutationQuery,
   buildInsertJournalEntryObjectMentionsQuery,
@@ -247,38 +251,44 @@ describe("journal repository query contracts", () => {
     ]);
   });
 
-  it("archives entries only inside owner scope and records public gone state", () => {
-    const now = new Date("2026-06-26T12:00:00.000Z");
-    const compiled = buildArchiveJournalEntryQuery(
+  it("deletes entries only inside owner scope and scrubs the row in one statement", () => {
+    const compiled = buildDeleteJournalEntryQuery(
       testDb,
       scopedToUser("00000000-0000-0000-0000-000000000001"),
-      {
-        entryId: "00000000-0000-0000-0000-000000000020",
-        now,
-        publicGoneAt: now,
-      },
+      { entryId: "00000000-0000-0000-0000-000000000020" },
     ).compile();
 
     expect(compiled.sql).toContain('update "journal_entries"');
-    expect(compiled.sql).toContain('"lifecycle_state" = $1');
-    expect(compiled.sql).toContain('"visibility" = $2');
-    expect(compiled.sql).toContain('"public_noindex" = $3');
-    expect(compiled.sql).toContain('"archived_at" = $4');
-    expect(compiled.sql).toContain('"public_gone_at" = $5');
-    expect(compiled.sql).toContain('"id" = $7');
-    expect(compiled.sql).toContain('"owner_user_id" = $8');
-    expect(compiled.sql).toContain('"lifecycle_state" = $9');
-    expect(compiled.parameters).toEqual([
-      "archived",
-      "public",
-      true,
-      now,
-      now,
-      now,
+    // INV-02: raw journal content leaves the row in the same statement that
+    // changes the lifecycle. There is no window where a deleted entry still
+    // holds its title, body, document or cover.
+    expect(compiled.sql).toContain('"content_document" = ');
+    expect(compiled.sql).toContain('"cover_media_asset_id" = ');
+    expect(compiled.sql).toContain('"published_at" = ');
+    expect(compiled.parameters).toContain(DELETED_JOURNAL_ENTRY_TITLE);
+    expect(compiled.parameters).toContain(DELETED_JOURNAL_ENTRY_BODY);
+
+    // INV-04: both timestamps come from one PostgreSQL `now()`, never from
+    // application time, so the seven-day horizon cannot drift across a
+    // daylight-saving boundary and trip the retention check constraint.
+    expect(compiled.sql).toContain("\"deleted_at\" = now()");
+    expect(compiled.sql).toContain(
+      "\"purge_after\" = now() + interval '7 days'",
+    );
+    expect(compiled.parameters).not.toContain("archived");
+
+    // INV-01: owner scope and the active precondition are both in the WHERE,
+    // so a non-owner or an already-deleted row matches nothing.
+    expect(compiled.sql).toContain('"id" = $');
+    expect(compiled.sql).toContain('"owner_user_id" = $');
+    expect(compiled.parameters).toContain(
       "00000000-0000-0000-0000-000000000020",
+    );
+    expect(compiled.parameters).toContain(
       "00000000-0000-0000-0000-000000000001",
-      "active",
-    ]);
+    );
+    expect(compiled.parameters).toContain("active");
+    expect(compiled.parameters).toContain("deleted_retention");
   });
 
   it("requires owner scope on object and space readback", () => {
@@ -367,18 +377,22 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $2');
     expect(compiled.sql).toContain('"journal_entries"."entry_scope" = $3');
     expect(compiled.sql).toContain(
-      '"journal_entries"."plant_object_id" in ($4, $5)',
+      '"journal_entries"."plant_object_id" in ($5, $6)',
     );
     expect(compiled.sql).toContain(
       'group by "journal_entries"."plant_object_id"',
     );
-    expect(compiled.sql).toContain('as "archivedEntryCount"');
+    // OVE-353: a deleted entry is gone from the owner's own counts, not
+    // counted separately. There is no archived tally to render any more.
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
+    expect(compiled.sql).not.toContain('as "archivedEntryCount"');
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("body");
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000001",
       "object",
+      "active",
       "00000000-0000-0000-0000-000000000003",
       "00000000-0000-0000-0000-000000000004",
     ]);
@@ -477,14 +491,17 @@ describe("journal repository query contracts", () => {
     ).compile();
 
     expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $3');
-    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $6');
     expect(compiled.sql).toContain(
-      '"journal_entry_object_mentions"."plant_object_id" = $7',
+      '"journal_entry_object_mentions"."plant_object_id" = $8',
     );
+    // OVE-353: a deleted entry leaves the owner's own count immediately.
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000003",
       "00000000-0000-0000-0000-000000000001",
+      "active",
       "object",
       "00000000-0000-0000-0000-000000000003",
       "space",
@@ -499,17 +516,21 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000003",
     ).compile();
 
-    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = $4');
-    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $6');
     expect(compiled.sql).toContain(
-      '"journal_entry_object_mentions"."plant_object_id" = $7',
+      '"journal_entry_object_mentions"."plant_object_id" = $8',
     );
     expect(compiled.sql).toContain("mentioned_space");
     expect(compiled.sql).toContain("direct_object");
+    // OVE-353: the owner timeline is the active journal. A deleted entry is
+    // filtered in the canonical query, not hidden by the presentation layer.
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000003",
       "00000000-0000-0000-0000-000000000001",
+      "active",
       "object",
       "00000000-0000-0000-0000-000000000003",
       "space",
@@ -530,11 +551,13 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $1');
     expect(compiled.sql).toContain('"journal_entries"."entry_scope" = $2');
     expect(compiled.sql).toContain('"journal_entries"."space_id" in ($3, $4)');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "space",
       "00000000-0000-0000-0000-000000000002",
       "00000000-0000-0000-0000-000000000022",
+      "active",
     ]);
   });
 

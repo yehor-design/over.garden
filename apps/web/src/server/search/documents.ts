@@ -38,8 +38,8 @@ export interface JournalEntrySearchContractRow {
   entry_date: Date | string;
   entry_scope: "object" | "space" | string;
   created_at: Date | string;
-  visibility: "private" | "public" | string;
-  lifecycle_state: "active" | "archived" | string;
+  visibility: "public" | string;
+  lifecycle_state: "active" | "deleted_retention" | string;
   location_visibility: "region" | "hidden" | string;
   coarse_region_code?: string | null;
   owner_profile_public_safe: boolean;

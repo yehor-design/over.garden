@@ -28,14 +28,14 @@ describe("owner object passport presentation", () => {
     expect(presentation.identity.label).toBe("Вид або порода");
   });
 
-  it("preserves private and archived owner chronology while keeping newest first", () => {
+  it("preserves active owner chronology while keeping newest first", () => {
     const presentation = buildOwnerObjectPassportPresentation(
       ownerPage({
         objectKind: "animal",
         entries: [
-          ownerEntry("entry-3", "2026-07-12", "private", "active"),
+          ownerEntry("entry-3", "2026-07-12", "public", "active"),
           ownerEntry("entry-2", "2026-06-01", "public", "active"),
-          ownerEntry("entry-1", "2025-12-10", "public", "archived"),
+          ownerEntry("entry-1", "2025-12-10", "public", "active"),
         ],
       }),
       {
@@ -66,12 +66,15 @@ describe("owner object passport presentation", () => {
       "entry-1",
     ]);
     expect(presentation.timeline.entries[0]).toMatchObject({
-      stateLabel: "Приватний запис",
+      stateLabel: "Публічний запис",
       older: { id: "entry-2", href: "/journal/entry-2-slug" },
     });
-    expect(presentation.timeline.entries[2].stateLabel).toBe(
-      "Архівовано приватно",
-    );
+    // OVE-353: an owner timeline holds active public entries only. A deleted
+    // entry is absent, so there is no archived or private state label left to
+    // render for one.
+    expect(
+      presentation.timeline.entries.map((entry) => entry.stateLabel),
+    ).toEqual(["Публічний запис", "Публічний запис", "Публічний запис"]);
     expect(presentation.provenance.count).toBe(1);
   });
 
@@ -139,8 +142,8 @@ function ownerPage({
 function ownerEntry(
   id: string,
   entryDate: string,
-  visibility: "private" | "public",
-  lifecycleState: "active" | "archived",
+  visibility: "public",
+  lifecycleState: "active" | "deleted_retention",
 ): PlantObjectPage["entries"][number] {
   return {
     id,
@@ -163,12 +166,17 @@ function ownerEntry(
     public_noindex: true,
     published_at:
       visibility === "public" ? new Date(`${entryDate}T12:00:00.000Z`) : null,
-    archived_at:
-      lifecycleState === "archived"
+    archived_at: null,
+    deleted_at:
+      lifecycleState === "deleted_retention"
+        ? new Date(`${entryDate}T12:00:00.000Z`)
+        : null,
+    purge_after:
+      lifecycleState === "deleted_retention"
         ? new Date(`${entryDate}T12:00:00.000Z`)
         : null,
     public_gone_at:
-      lifecycleState === "archived"
+      lifecycleState === "deleted_retention"
         ? new Date(`${entryDate}T12:00:00.000Z`)
         : null,
     first_publication_disclosure_version: null,

@@ -503,6 +503,7 @@ export interface JournalEntries {
   content_schema_version: number | null;
   cover_media_asset_id: string | null;
   created_at: Generated<Timestamp>;
+  deleted_at: Timestamp | null;
   entry_date: Generated<Timestamp>;
   entry_scope: Generated<string>;
   first_publication_disclosed_at: Timestamp | null;
@@ -516,6 +517,7 @@ export interface JournalEntries {
   public_noindex: Generated<boolean>;
   public_slug: string | null;
   published_at: Timestamp | null;
+  purge_after: Timestamp | null;
   source_language: string | null;
   space_id: string;
   title: string;

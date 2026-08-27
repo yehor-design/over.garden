@@ -31,12 +31,15 @@ const EXPLICIT_GOOGLE_LINK_OWNER = "owned_by_ove_295" as const;
 // then removes the retired server-draft and quarantine mutation surfaces
 // instead of leaving phantom admission owners in the enforced graph. OVE-338
 // repins the unchanged account-owned moderation topology after its route move.
+// OVE-353 renames the archive owner to `deleteJournalEntryAction` and drops the
+// synchronous public-projection convergence fan-out from it, so the entrypoint
+// count is unchanged while its edge set shrinks from 72 to 60.
 const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 8;
 const BASELINE_HIGH_RISK_ENTRYPOINT_SET_DIGEST =
-  "2e5a4515277bcd1de5ea5571b377427625e423b3270b420e66bfb416a370fcdd";
-const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 72;
+  "e32c298cff64f36469fd75333c7b884a8b43821c6003b9836e204d90fb3a4d5e";
+const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 60;
 const BASELINE_HIGH_RISK_EDGE_BINDING_SET_DIGEST =
-  "e3150147c7c10d9eab862da9024130d88b85c04c127885fc2a6c2e7190ade346";
+  "927c139614e8e76815acf252cc499157961b76d5799070b1a300b2418243a04d";
 const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 6;
 const BASELINE_REMAINING_ENTRYPOINT_COUNT = 117;
 const BASELINE_REMAINING_ENTRYPOINT_SET_DIGEST =

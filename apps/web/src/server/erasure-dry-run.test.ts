@@ -81,7 +81,7 @@ describe("erasure dry-run preview assembly", () => {
         journalEntriesTotal: 3,
         journalEntriesPrivateActive: 2,
         journalEntriesPublicActive: 1,
-        journalEntriesArchived: 0,
+        journalEntriesDeletionPending: 0,
         journalEntryObjectMentions: 2,
         journalEntryCatalogMentions: 1,
         journalMutationReceipts: 1,

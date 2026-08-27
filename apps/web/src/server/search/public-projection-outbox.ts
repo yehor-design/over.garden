@@ -65,7 +65,7 @@ export type PublicProjectionState = "present" | "absent";
 export type PublicProjectionReason =
   | "publish"
   | "edit"
-  | "archive"
+  | "journal_delete"
   | "erasure"
   | "moderation"
   | "location_change"
@@ -80,7 +80,7 @@ export type PublicProjectionReason =
  * one of them has verifiably converged.
  */
 const PRIVACY_REDUCING_REASONS: ReadonlySet<PublicProjectionReason> = new Set([
-  "archive",
+  "journal_delete",
   "erasure",
   "moderation",
   "location_change",

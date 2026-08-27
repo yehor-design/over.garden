@@ -136,7 +136,6 @@ export interface LivingObjectPassportCopy {
   currentState: string;
   journalActive: string;
   newPassport: string;
-  archivedHistory: string;
   catalogConfirmed: string;
   catalogPilot: string;
   catalogProvisional: string;
@@ -159,8 +158,6 @@ export interface LivingObjectPassportCopy {
   openCatalog: string;
   openProfile: string;
   publicEntry: string;
-  privateEntry: string;
-  archivedEntry: string;
   directObjectUpdate: string;
   spaceMention: string;
   newer: string;
@@ -192,7 +189,6 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     currentState: "Поточний стан",
     journalActive: "Журнал активний",
     newPassport: "Новий паспорт",
-    archivedHistory: "Історію архівовано",
     catalogConfirmed: "Підтверджено каталогом",
     catalogPilot: "Попередній збіг каталогу",
     catalogProvisional: "Вказано користувачем",
@@ -215,8 +211,6 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     openCatalog: "Відкрити каталог",
     openProfile: "Відкрити профіль",
     publicEntry: "Публічний запис",
-    privateEntry: "Приватний запис",
-    archivedEntry: "Архівовано приватно",
     directObjectUpdate: "Запис об'єкта",
     spaceMention: "Згадка у просторі",
     newer: "Новіший запис",
@@ -248,7 +242,6 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     currentState: "Текущо състояние",
     journalActive: "Дневникът е активен",
     newPassport: "Нов паспорт",
-    archivedHistory: "Историята е архивирана",
     catalogConfirmed: "Потвърдено от каталога",
     catalogPilot: "Предварително каталожно съвпадение",
     catalogProvisional: "Посочено от потребителя",
@@ -271,8 +264,6 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     openCatalog: "Отворете каталога",
     openProfile: "Отворете профила",
     publicEntry: "Публичен запис",
-    privateEntry: "Личен запис",
-    archivedEntry: "Архивирано лично",
     directObjectUpdate: "Запис за обекта",
     spaceMention: "Споменаване в пространство",
     newer: "По-нов запис",
@@ -304,7 +295,6 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     currentState: "Текущее состояние",
     journalActive: "Журнал активен",
     newPassport: "Новый паспорт",
-    archivedHistory: "История архивирована",
     catalogConfirmed: "Подтверждено каталогом",
     catalogPilot: "Предварительное совпадение каталога",
     catalogProvisional: "Указано пользователем",
@@ -327,8 +317,6 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     openCatalog: "Открыть каталог",
     openProfile: "Открыть профиль",
     publicEntry: "Публичная запись",
-    privateEntry: "Приватная запись",
-    archivedEntry: "Архивировано приватно",
     directObjectUpdate: "Запись объекта",
     spaceMention: "Упоминание в пространстве",
     newer: "Более новая запись",

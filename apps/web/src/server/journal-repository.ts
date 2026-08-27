@@ -69,7 +69,7 @@ import {
 import {
   buildEnqueueMediaDerivativeRevokeJobQuery,
   buildEnqueueMediaStagingFinalizeJobQuery,
-  enqueueArchiveDerivativeRevokes,
+  enqueueJournalDeletionDerivativeRevokes,
 } from "@/server/media/media-lifecycle-enqueue";
 import {
   buildInsertClaimedEphemeralEditMediaQuery,
@@ -94,6 +94,10 @@ import {
   isAtomicJournalEditPublicPath,
   validateAtomicJournalEditMediaPlan,
 } from "@/server/atomic-journal-edit-contract";
+import {
+  DELETED_JOURNAL_ENTRY_BODY,
+  DELETED_JOURNAL_ENTRY_TITLE,
+} from "@/server/journal-deletion-retention";
 
 export { JournalAggregateConflictError, readJournalDocumentFromEntry };
 
@@ -182,14 +186,16 @@ export interface CreateSpaceJournalEntryInput {
   atomicPublication: AtomicCreatePublicationInput;
 }
 
-export interface ArchiveJournalEntryInput {
+export interface DeleteJournalEntryInput {
   entryId: string;
 }
 
-export interface ArchiveJournalEntryResult {
-  entry: JournalEntry;
+export interface DeleteJournalEntryResult {
+  entryId: string;
   publicUrl: string | null;
   publicGone: boolean;
+  deletedAt: Date | string;
+  purgeAfter: Date | string;
 }
 
 export interface ResolvePlantObjectCatalogInput {
@@ -240,7 +246,6 @@ export interface PlantObjectSummary {
   createdAt: Date;
   entryCount: number;
   publicEntryCount: number;
-  archivedEntryCount: number;
   latestEntryDate: Date | string | null;
   coverMedia: {
     publicUrl: string;
@@ -640,8 +645,8 @@ export interface AtomicJournalEditInput {
 }
 
 /**
- * Owner-scoped, public-only baseline for the OVE-348 atomic editor. A private,
- * archived, malformed, revoked, or partially linked aggregate is
+ * Owner-scoped, public-only baseline for the OVE-348 atomic editor. A deleted,
+ * malformed, revoked, or partially linked aggregate is
  * intentionally indistinguishable from a missing entry at this boundary.
  */
 export async function readAtomicJournalEditBaseline(
@@ -1582,7 +1587,6 @@ export async function listMyPlantObjects(
       varietyState: row.varietyState as VarietyState,
       entryCount: normalizeCount(entrySummary?.entryCount),
       publicEntryCount: normalizeCount(entrySummary?.publicEntryCount),
-      archivedEntryCount: normalizeCount(entrySummary?.archivedEntryCount),
       latestEntryDate: entrySummary?.latestEntryDate ?? null,
       coverMedia: cover
         ? {
@@ -1657,14 +1661,12 @@ export function buildMyPlantObjectEntrySummariesQuery(
         where ${sql.ref("journal_entries.visibility")} = 'public'
           and ${sql.ref("journal_entries.lifecycle_state")} = 'active'
       )::int`.as("publicEntryCount"),
-      sql<number>`count(*) filter (
-        where ${sql.ref("journal_entries.lifecycle_state")} = 'archived'
-      )::int`.as("archivedEntryCount"),
       fn.max<Date | string>("journal_entries.entry_date").as("latestEntryDate"),
     ])
     .where("journal_entries.owner_user_id", "=", scope.userId)
     .where("plant_objects.owner_user_id", "=", scope.userId)
     .where("journal_entries.entry_scope", "=", "object")
+    .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.plant_object_id", "in", [...plantObjectIds])
     .groupBy("journal_entries.plant_object_id")
     .$narrowType<{ plantObjectId: string }>();
@@ -2506,6 +2508,7 @@ export async function listMyRecentJournalEntries(
     .selectFrom("journal_entries")
     .selectAll()
     .where("owner_user_id", "=", scope.userId)
+    .where("lifecycle_state", "=", "active")
     .orderBy("created_at", "desc")
     .limit(boundedLimit)
     .execute();
@@ -2555,7 +2558,11 @@ export async function getPublicJournalEntryLifecycleLookup(
   ).executeTakeFirst()) as PublicJournalEntryLifecycleRow | undefined;
   if (!row?.publicSlug) return { status: "not_found" };
 
-  if (row.publicGoneAt !== null && row.lifecycleState === "archived") {
+  if (
+    row.publicGoneAt !== null &&
+    (row.lifecycleState === "deleted_retention" ||
+      row.lifecycleState === "archived")
+  ) {
     return { status: "gone", publicSlug: row.publicSlug };
   }
 
@@ -2870,65 +2877,168 @@ function normalizeRelatedPublicJournalEntryLimit(limit: number) {
   );
 }
 
-export async function archiveJournalEntry(
+/**
+ * Deletes an entry from the product immediately. The row becomes a scrubbed
+ * technical tombstone for exactly seven days so the independently retryable
+ * search and media workers have a canonical record to converge against.
+ *
+ * This is intentionally not an archive: it never preserves a user-readable
+ * copy and there is no restore path.
+ */
+export async function deleteJournalEntry(
   scope: RequestScope,
-  input: ArchiveJournalEntryInput,
-): Promise<ArchiveJournalEntryResult> {
+  input: DeleteJournalEntryInput,
+): Promise<DeleteJournalEntryResult> {
   const entryId = normalizeRequiredText(input.entryId, "Entry id", 200);
-  const existing = await findJournalEntryById(scope, entryId);
-
-  if (!existing) {
-    throw new Error("Journal entry was not found in this garden.");
-  }
-
-  if (existing.lifecycle_state === "archived") {
-    return {
-      entry: existing,
-      publicUrl: existing.public_slug
-        ? publicJournalEntryPath(existing.public_slug)
-        : null,
-      publicGone: existing.public_gone_at !== null,
-    };
-  }
-
   const now = new Date();
-  const hadPublicUrl =
-    existing.visibility === "public" && existing.public_slug !== null;
 
-  const archived = await db.transaction().execute(async (trx) => {
-    const row = await buildArchiveJournalEntryQuery(trx, scope, {
+  return db.transaction().execute(async (trx) => {
+    const existing = await buildFindJournalEntryByIdQuery(
+      trx,
+      scope,
       entryId,
-      now,
-      publicGoneAt: hadPublicUrl ? now : null,
+    )
+      .forUpdate()
+      .executeTakeFirst();
+
+    if (!existing) {
+      throw new Error("Journal entry was not found in this garden.");
+    }
+
+    if (existing.lifecycle_state === "deleted_retention") {
+      if (!existing.deleted_at || !existing.purge_after) {
+        throw new Error("Deleted journal entry retention metadata is invalid.");
+      }
+      return {
+        entryId: existing.id,
+        publicUrl: existing.public_slug
+          ? publicJournalEntryPath(existing.public_slug)
+          : null,
+        publicGone: existing.public_gone_at !== null,
+        deletedAt: existing.deleted_at,
+        purgeAfter: existing.purge_after,
+      };
+    }
+
+    // `archived` is a migration-only compatibility value. It must never be
+    // presented as a recoverable user state or rewritten by a normal request.
+    if (existing.lifecycle_state !== "active") {
+      throw new Error("Journal entry is not available for deletion.");
+    }
+
+    const row = await buildDeleteJournalEntryQuery(trx, scope, {
+      entryId,
     }).executeTakeFirstOrThrow();
 
-    await enqueueArchiveDerivativeRevokes(trx, {
+    if (!row.deleted_at || !row.purge_after) {
+      throw new Error("Deleted journal entry retention metadata is invalid.");
+    }
+
+    await enqueueJournalDeletionDerivativeRevokes(trx, {
       journalEntryId: entryId,
       ownerUserId: scope.userId,
     });
+    await scrubDeletedJournalEntryRelations(trx, {
+      entryId,
+      publicSlug: existing.public_slug,
+      now,
+    });
 
-    // OVE-242: archive commits the removal intent atomically. Previously the
-    // unindex job was scheduled by the action after this transaction, so a
-    // failure there left archived content searchable with nothing recording it.
+    // The desired absence is part of the same transaction as the canonical
+    // deletion. A crashed action therefore cannot leave a deleted entry in
+    // Meilisearch with no durable convergence obligation.
     if (existing.public_slug !== null) {
       await recordPublicProjectionIntent(trx, {
         entityId: row.id,
         ownerUserId: scope.userId,
         desiredState: "absent",
-        reason: "archive",
+        reason: "journal_delete",
       });
     }
 
-    return row;
+    return {
+      entryId: row.id,
+      publicUrl: row.public_slug ? publicJournalEntryPath(row.public_slug) : null,
+      publicGone: row.public_gone_at !== null,
+      deletedAt: row.deleted_at,
+      purgeAfter: row.purge_after,
+    };
   });
+}
 
-  return {
-    entry: archived,
-    publicUrl: archived.public_slug
-      ? publicJournalEntryPath(archived.public_slug)
-      : null,
-    publicGone: archived.public_gone_at !== null,
-  };
+async function scrubDeletedJournalEntryRelations(
+  executor: Transaction<Database>,
+  input: { entryId: string; publicSlug: string | null; now: Date },
+) {
+  // Derived structured content has no purpose during the technical retention
+  // window. Remove it before the final physical delete rather than retaining a
+  // second recoverable representation of the deleted journal.
+  await executor
+    .deleteFrom("journal_entry_object_mentions")
+    .where("journal_entry_id", "=", input.entryId)
+    .execute();
+  await executor
+    .deleteFrom("journal_entry_catalog_mentions")
+    .where("journal_entry_id", "=", input.entryId)
+    .execute();
+  await executor
+    .deleteFrom("journal_entry_topic_signals")
+    .where("journal_entry_id", "=", input.entryId)
+    .execute();
+  await executor
+    .deleteFrom("journal_entry_mutation_receipts")
+    .where("journal_entry_id", "=", input.entryId)
+    .execute();
+  await executor
+    .deleteFrom("community_contributions")
+    .where("journal_entry_id", "=", input.entryId)
+    .execute();
+  await executor
+    .deleteFrom("analytics_events")
+    .where("journal_entry_id", "=", input.entryId)
+    .execute();
+  await executor
+    .updateTable("media_assets")
+    .set({
+      alt_text: null,
+      caption: null,
+      document_position: null,
+      updated_at: input.now,
+    })
+    .where("journal_entry_id", "=", input.entryId)
+    .execute();
+
+  if (!input.publicSlug) return;
+
+  const comments = executor
+    .selectFrom("engagement_comments")
+    .select("id")
+    .where("target_kind", "=", "journal_entry")
+    .where("target_ref", "=", input.publicSlug);
+  await executor
+    .deleteFrom("engagement_comment_reports")
+    .where("comment_id", "in", comments)
+    .execute();
+  await executor
+    .deleteFrom("engagement_comments")
+    .where("target_kind", "=", "journal_entry")
+    .where("target_ref", "=", input.publicSlug)
+    .execute();
+  await executor
+    .deleteFrom("engagement_bookmarks")
+    .where("target_kind", "=", "journal_entry")
+    .where("target_ref", "=", input.publicSlug)
+    .execute();
+  await executor
+    .deleteFrom("engagement_likes")
+    .where("target_kind", "=", "journal_entry")
+    .where("target_ref", "=", input.publicSlug)
+    .execute();
+  await executor
+    .deleteFrom("engagement_like_target_budgets")
+    .where("target_kind", "=", "journal_entry")
+    .where("target_ref", "=", input.publicSlug)
+    .execute();
 }
 
 export function buildFindExistingEntryByClientMutationQuery(
@@ -2986,6 +3096,7 @@ export function buildObjectJournalEntryCountQuery(
     )
     .select(({ fn }) => fn.countAll<number>().as("entryCount"))
     .where("journal_entries.owner_user_id", "=", scope.userId)
+    .where("journal_entries.lifecycle_state", "=", "active")
     .where((eb) =>
       eb.or([
         eb.and([
@@ -3037,24 +3148,43 @@ export async function hasPriorPublicationDisclosure(
   );
 }
 
-export function buildArchiveJournalEntryQuery(
+/**
+ * INV-04: `deleted_at` and `purge_after` are both PostgreSQL time, taken from
+ * one `now()` inside the deleting transaction. Computing the horizon in
+ * application time would drift from `deleted_at + interval '7 days'` across a
+ * daylight-saving boundary and trip
+ * `journal_entries_deletion_retention_check`.
+ */
+export function buildDeleteJournalEntryQuery(
   executor: QueryExecutor,
   scope: RequestScope,
   input: {
     entryId: string;
-    now: Date;
-    publicGoneAt: Date | null;
   },
 ) {
   return executor
     .updateTable("journal_entries")
     .set({
-      lifecycle_state: "archived",
+      title: DELETED_JOURNAL_ENTRY_TITLE,
+      body: DELETED_JOURNAL_ENTRY_BODY,
+      content_document: null,
+      content_schema_version: null,
+      cover_media_asset_id: null,
+      journal_revision: sql`journal_revision + 1`,
+      entry_date: sql<Date>`current_date`,
+      lifecycle_state: "deleted_retention",
       visibility: "public",
       public_noindex: true,
-      archived_at: input.now,
-      public_gone_at: input.publicGoneAt ?? undefined,
-      updated_at: input.now,
+      archived_at: null,
+      deleted_at: sql<Date>`now()`,
+      purge_after: sql<Date>`now() + interval '7 days'`,
+      public_gone_at: sql<Date>`now()`,
+      published_at: null,
+      first_publication_disclosure_version: null,
+      first_publication_disclosed_at: null,
+      source_language: null,
+      client_mutation_id: sql<string>`'deleted:' || "journal_entries"."id"::text`,
+      updated_at: sql<Date>`now()`,
     })
     .where("id", "=", input.entryId)
     .where("owner_user_id", "=", scope.userId)
@@ -3250,6 +3380,7 @@ export function buildSpaceTimelineEntriesQuery(
     .where("journal_entries.owner_user_id", "=", scope.userId)
     .where("journal_entries.entry_scope", "=", "space")
     .where("journal_entries.space_id", "in", [...spaceIds])
+    .where("journal_entries.lifecycle_state", "=", "active")
     .orderBy("journal_entries.entry_date", "desc")
     .orderBy("journal_entries.created_at", "desc")
     .orderBy("journal_entries.id", "asc");
@@ -3285,6 +3416,7 @@ export function buildObjectTimelineEntriesQuery(
       end`.as("timelineRelation"),
     )
     .where("journal_entries.owner_user_id", "=", scope.userId)
+    .where("journal_entries.lifecycle_state", "=", "active")
     .where((eb) =>
       eb.or([
         eb.and([
@@ -4714,13 +4846,16 @@ function isGonePublicEntry(row: {
 }): row is {
   publicSlug: string;
   publicGoneAt: Date | string;
-  lifecycleState: "archived";
+  lifecycleState: "deleted_retention" | "archived";
   publicNoindex: boolean;
 } {
   return (
     row.publicSlug !== null &&
     row.publicGoneAt !== null &&
-    row.lifecycleState === "archived"
+    (row.lifecycleState === "deleted_retention" ||
+      // Compatibility only while the production migration rewrites historic
+      // rows. No runtime writer can produce this state.
+      row.lifecycleState === "archived")
   );
 }
 
