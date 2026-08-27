@@ -535,6 +535,8 @@ export function buildVisualFixtureSeedQueries(
         public_noindex: entry.publicNoindex,
         published_at: entry.publishedAt,
         archived_at: entry.archivedAt,
+        deleted_at: entry.deletedAt,
+        purge_after: entry.purgeAfter,
         public_gone_at: entry.publicGoneAt,
         first_publication_disclosure_version:
           entry.firstPublicationDisclosureVersion,
@@ -561,6 +563,8 @@ export function buildVisualFixtureSeedQueries(
         public_noindex: sql`excluded.public_noindex`,
         published_at: sql`excluded.published_at`,
         archived_at: sql`excluded.archived_at`,
+        deleted_at: sql`excluded.deleted_at`,
+        purge_after: sql`excluded.purge_after`,
         public_gone_at: sql`excluded.public_gone_at`,
         first_publication_disclosure_version: sql`excluded.first_publication_disclosure_version`,
         first_publication_disclosed_at: sql`excluded.first_publication_disclosed_at`,

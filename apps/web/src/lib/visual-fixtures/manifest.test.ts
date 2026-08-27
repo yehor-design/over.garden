@@ -592,14 +592,21 @@ describe("visual fixture manifest", () => {
     ).toBe(true);
     expect(
       VISUAL_FIXTURE_MANIFEST.entries.some(
-        (entry) => entry.lifecycleState === "archived",
+        (entry) => entry.lifecycleState === "deleted_retention",
       ),
     ).toBe(true);
+    // OVE-353: public absence is not a separate slot from deletion. Every
+    // deleted entry is gone from public surfaces the moment it is deleted,
+    // so the gone set is exactly the deletion-pending set.
+    const goneEntries = VISUAL_FIXTURE_MANIFEST.entries.filter(
+      (entry) => entry.publicGoneAt !== null,
+    );
+    expect(goneEntries).toHaveLength(4);
     expect(
-      VISUAL_FIXTURE_MANIFEST.entries.filter(
-        (entry) => entry.publicGoneAt !== null,
+      goneEntries.every(
+        (entry) => entry.lifecycleState === "deleted_retention",
       ),
-    ).toHaveLength(1);
+    ).toBe(true);
   });
 
   it("backs OVE-175 catalog thresholds with real synthetic taxonomy rows", () => {
@@ -985,7 +992,8 @@ describe("visual fixture manifest", () => {
     expect(
       goneObjectEntries.every(
         (entry) =>
-          entry.lifecycleState === "archived" || entry.publicGoneAt !== null,
+          entry.lifecycleState === "deleted_retention" ||
+          entry.publicGoneAt !== null,
       ),
     ).toBe(true);
     expect(byId.get("public-bee-mixed-history")?.expectedTimelineCount).toBe(1);
@@ -1037,7 +1045,7 @@ describe("visual fixture manifest", () => {
         "empty-space",
         "empty-object",
         "today-journal",
-        "archived-journal",
+        "deleted-journal",
         "maximum-copy",
         "no-media-journal",
         "one-media-journal",

@@ -214,7 +214,7 @@ describe("/__visual-fixtures", () => {
     expect(html).not.toContain('name="targetRef"');
     expect(html).toContain("Empty space");
     expect(html).toContain("Owner-only boundary · no public route");
-    expect(html).toContain("Archived journals");
+    expect(html).toContain("Deleted journals in retention");
     expect(html).toContain("Maximum-length copy");
     expect(html).toContain("Public journal without media");
     expect(html).toContain("Public journal with one image");

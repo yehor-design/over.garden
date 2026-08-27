@@ -27,7 +27,7 @@ export type VisualFixtureVarietyState =
   | "user_added"
   | "free_text";
 export type VisualFixtureVisibility = "public";
-export type VisualFixtureLifecycleState = "active" | "archived";
+export type VisualFixtureLifecycleState = "active" | "deleted_retention";
 export type VisualFixtureMediaAspect =
   | "square"
   | "landscape_4_3"
@@ -133,7 +133,7 @@ export type VisualFixtureStateKind =
   | "empty-space"
   | "empty-object"
   | "today-journal"
-  | "archived-journal"
+  | "deleted-journal"
   | "maximum-copy"
   | "no-media-journal"
   | "one-media-journal"
@@ -259,7 +259,9 @@ export interface VisualFixtureEntry {
   publicSlug: string | null;
   publicNoindex: true;
   publishedAt: string | null;
-  archivedAt: string | null;
+  archivedAt: null;
+  deletedAt: string | null;
+  purgeAfter: string | null;
   publicGoneAt: string | null;
   firstPublicationDisclosureVersion: string | null;
   firstPublicationDisclosedAt: string | null;
@@ -2387,8 +2389,8 @@ const emptyObjects = objects.filter(
 const todayEntries = entries.filter(
   (entry) => entry.entryDate === "2026-07-10",
 );
-const archivedEntries = entries.filter(
-  (entry) => entry.lifecycleState === "archived",
+const deletedEntries = entries.filter(
+  (entry) => entry.lifecycleState === "deleted_retention",
 );
 const maximumCopyEntries = entries.filter(
   (entry) => entry.title.length === 140 || entry.body.length === 2000,
@@ -2430,10 +2432,10 @@ const stateCoverage: readonly VisualFixtureStateCoverage[] = [
     `/journal/${todayEntries[0].publicSlug}`,
   ),
   coverageState(
-    "archived-journal",
-    "Archived journals",
-    "Archived records exercise owner history and public suppression.",
-    archivedEntries.length,
+    "deleted-journal",
+    "Deleted journals in retention",
+    "Deleted records prove owner-timeline absence and the public 410 tombstone before purge.",
+    deletedEntries.length,
     "owner",
     null,
   ),
@@ -4688,9 +4690,14 @@ function buildEntries(): readonly VisualFixtureEntry[] {
 
     for (let ordinal = 1; ordinal <= count; ordinal += 1) {
       globalIndex += 1;
-      const gone = globalIndex === 79;
-      const archived =
-        gone || globalIndex === 71 || globalIndex === 72 || globalIndex === 75;
+      // OVE-353: these slots are deleted entries inside their seven-day
+      // technical retention window. A deleted entry is gone from public
+      // surfaces the moment it is deleted, so `gone` is not a separate slot.
+      const deleted =
+        globalIndex === 71 ||
+        globalIndex === 72 ||
+        globalIndex === 75 ||
+        globalIndex === 79;
       const visibility: VisualFixtureVisibility = "public";
       const feedRecencyRank =
         feedRecencyRankByObjectOffset.get(objectOffset) ?? objectOffset;
@@ -4713,12 +4720,14 @@ function buildEntries(): readonly VisualFixtureEntry[] {
         body,
         entryDate,
         visibility,
-        lifecycleState: archived ? "archived" : "active",
+        lifecycleState: deleted ? "deleted_retention" : "active",
         publicSlug,
         publicNoindex: true,
         publishedAt,
-        archivedAt: archived ? "2026-07-08T16:00:00.000Z" : null,
-        publicGoneAt: gone ? "2026-07-09T16:00:00.000Z" : null,
+        archivedAt: null,
+        deletedAt: deleted ? "2026-07-08T16:00:00.000Z" : null,
+        purgeAfter: deleted ? "2026-07-15T16:00:00.000Z" : null,
+        publicGoneAt: deleted ? "2026-07-08T16:00:00.000Z" : null,
         firstPublicationDisclosureVersion: "first-publication-v5",
         firstPublicationDisclosedAt: publishedAt,
         clientMutationId: `${VISUAL_FIXTURE_NAMESPACE}/entry-${String(globalIndex).padStart(3, "0")}`,
@@ -4751,6 +4760,8 @@ function buildEntries(): readonly VisualFixtureEntry[] {
     publicNoindex: true,
     publishedAt: "2026-07-09T12:00:00.000Z",
     archivedAt: null,
+    deletedAt: null,
+    purgeAfter: null,
     publicGoneAt: null,
     firstPublicationDisclosureVersion: "first-publication-v5",
     firstPublicationDisclosedAt: "2026-07-09T12:00:00.000Z",
