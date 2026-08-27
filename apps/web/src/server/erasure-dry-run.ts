@@ -66,7 +66,6 @@ export interface ErasureDryRunCounts {
   lineageNodeFollows: number;
   lineageQuestions: number;
   journalEntriesTotal: number;
-  journalEntriesPrivateActive: number;
   journalEntriesPublicActive: number;
   journalEntriesDeletionPending: number;
   journalEntryObjectMentions: number;
@@ -158,7 +157,6 @@ function buildErasureDryRunDataClasses(
         "Public entry rows grouped by lifecycle, including entries the owner already deleted whose seven-day technical retention has not elapsed. Titles and bodies are never selected into this preview.",
       counts: {
         total: counts.journalEntriesTotal,
-        private_active: counts.journalEntriesPrivateActive,
         public_active: counts.journalEntriesPublicActive,
         deletion_pending: counts.journalEntriesDeletionPending,
         object_mentions: counts.journalEntryObjectMentions,

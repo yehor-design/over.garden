@@ -102,7 +102,6 @@ describe("/garden/privacy/erasure-requests", () => {
           description: "Private and public entry rows grouped by lifecycle.",
           counts: {
             total: 2,
-            private_active: 1,
             public_active: 1,
             archived: 0,
           },

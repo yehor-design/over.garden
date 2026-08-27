@@ -79,7 +79,6 @@ describe("erasure dry-run preview assembly", () => {
         lineageNodeFollows: 3,
         lineageQuestions: 2,
         journalEntriesTotal: 3,
-        journalEntriesPrivateActive: 2,
         journalEntriesPublicActive: 1,
         journalEntriesDeletionPending: 0,
         journalEntryObjectMentions: 2,
@@ -205,10 +204,10 @@ describe("erasure dry-run repository privacy contracts", () => {
     }
   });
 
-  it("counts journal and media rows without selecting private content or keys", () => {
+  it("counts journal and media rows without selecting deleted content or keys", () => {
     const journalSql = buildCountJournalEntriesQuery(testDb, requesterUserId, {
-      visibility: "private",
-      lifecycleState: "active",
+      visibility: "public",
+      lifecycleState: "deleted_retention",
     }).compile().sql;
     const mediaSql = buildCountMediaAssetsQuery(
       testDb,

@@ -52,7 +52,6 @@ export async function collectErasureDryRunCounts(
     lineageNodeFollows,
     lineageQuestions,
     journalEntriesTotal,
-    journalEntriesPrivateActive,
     journalEntriesPublicActive,
     journalEntriesDeletionPending,
     journalEntryObjectMentions,
@@ -101,10 +100,6 @@ export async function collectErasureDryRunCounts(
     countLineageNodeFollows(executor, requesterUserId),
     countLineageQuestions(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId),
-    countJournalEntries(executor, requesterUserId, {
-      visibility: "private",
-      lifecycleState: "active",
-    }),
     countJournalEntries(executor, requesterUserId, {
       visibility: "public",
       lifecycleState: "active",
@@ -171,7 +166,6 @@ export async function collectErasureDryRunCounts(
     lineageNodeFollows,
     lineageQuestions,
     journalEntriesTotal,
-    journalEntriesPrivateActive,
     journalEntriesPublicActive,
     journalEntriesDeletionPending,
     journalEntryObjectMentions,
@@ -398,7 +392,7 @@ export function buildCountJournalEntriesQuery(
   executor: QueryExecutor,
   requesterUserId: string,
   filters: {
-    visibility?: "private" | "public";
+    visibility?: "public";
     lifecycleState?: "active" | "deleted_retention";
   } = {},
 ) {
@@ -828,7 +822,7 @@ async function countJournalEntries(
   executor: QueryExecutor,
   requesterUserId: string,
   filters: {
-    visibility?: "private" | "public";
+    visibility?: "public";
     lifecycleState?: "active" | "deleted_retention";
   } = {},
 ) {
