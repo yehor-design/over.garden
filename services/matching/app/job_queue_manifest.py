@@ -15,8 +15,9 @@ from app.search import (
     JOURNAL_ENTRY_INDEX_KIND,
     JOURNAL_ENTRY_UNINDEX_KIND,
 )
+from app.stable_registry_foundation import STABLE_REGISTRY_FOUNDATION_BUILD_KIND
 
-JOB_QUEUE_MANIFEST_VERSION: Final = "ove349.job-queue.v3"
+JOB_QUEUE_MANIFEST_VERSION: Final = "ove255.job-queue.v4"
 MATCHING_DEFAULT_MAX_ATTEMPTS: Final = 8
 TERMINAL_ERROR_CODES: Final = (
     "unsupported_kind",
@@ -28,6 +29,11 @@ TERMINAL_ERROR_CODES: Final = (
 # apps/web/src/server/job-queue-manifest.ts, keyed by "<queueName>:<kind>".
 # The TypeScript owner is authoritative; drift fails job-queue-manifest.test.ts.
 JOB_QUEUE_PAYLOAD_CONTRACTS: Final = {
+    "matching:stable_registry_foundation_build": {
+        "requiredKeys": ["kind", "releaseId"],
+        "optionalKeys": [],
+        "uuidKeys": ["releaseId"],
+    },
     "matching:catalog_alias_suggestions_refresh": {
         "requiredKeys": ["kind", "catalogItemId"],
         "optionalKeys": [],
@@ -81,6 +87,14 @@ JOB_QUEUE_PAYLOAD_CONTRACTS: Final = {
 }
 
 MATCHING_MANIFEST_ENTRIES: Final = (
+    {
+        "queueName": "matching",
+        "kind": STABLE_REGISTRY_FOUNDATION_BUILD_KIND,
+        "consumer": "matching-python-worker",
+        "maxAttempts": 3,
+        "privacyClass": "catalog_ids_only",
+        "coversStructuredJournalCover": False,
+    },
     {
         "queueName": "matching",
         "kind": CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,

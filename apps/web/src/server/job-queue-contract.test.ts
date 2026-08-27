@@ -27,6 +27,14 @@ const consumedJobContracts = new Map<
   { consumer: string; consumerToken: string; testedBy: string }
 >([
   [
+    "matching:stable_registry_foundation_build",
+    {
+      consumer: "services/matching/app/worker.py",
+      consumerToken: "STABLE_REGISTRY_FOUNDATION_BUILD_KIND",
+      testedBy: "services/matching/tests/test_worker.py",
+    },
+  ],
+  [
     "media_lifecycle:media_staging_finalize",
     {
       consumer: "apps/web/src/server/media/media-lifecycle-consumer.ts",
@@ -106,9 +114,7 @@ describe("job queue producer/consumer contract", () => {
       expect(consumedJobContracts.has(jobQueueManifestKey(entry))).toBe(true);
       expect(entry.maxAttempts).toBeGreaterThanOrEqual(1);
     }
-    expect(
-      [...consumedJobContracts.keys()].sort(),
-    ).toEqual(
+    expect([...consumedJobContracts.keys()].sort()).toEqual(
       [...JOB_QUEUE_MANIFEST.map((entry) => jobQueueManifestKey(entry))].sort(),
     );
   });
@@ -207,6 +213,11 @@ describe("job queue producer/consumer contract", () => {
         source: "server/search/public-journal-parity.ts",
         queueName: "matching",
         kind: "journal_entry_unindex",
+      },
+      {
+        source: "server/stable-registry/release-repository.ts",
+        queueName: "matching",
+        kind: "stable_registry_foundation_build",
       },
     ]);
   });
@@ -375,10 +386,12 @@ describe("OVE-225 payload contract", () => {
   });
 
   it("scopes a contract to its own queue name", () => {
-    expect(payloadContractFor("matching", "media_derivative_revoke")).toBeNull();
-    expect(validateJobQueuePayload("erasure", journalPayload())?.ruleClass).toBe(
-      "unknown_kind",
-    );
+    expect(
+      payloadContractFor("matching", "media_derivative_revoke"),
+    ).toBeNull();
+    expect(
+      validateJobQueuePayload("erasure", journalPayload())?.ruleClass,
+    ).toBe("unknown_kind");
   });
 
   it("honours declared optional keys", () => {

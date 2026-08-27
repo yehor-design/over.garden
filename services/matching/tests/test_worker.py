@@ -3,6 +3,41 @@ import pytest
 from app import worker
 
 
+def test_worker_handles_stable_registry_foundation_build(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        worker,
+        "build_foundation_release",
+        lambda conn, release_id: calls.append((conn, release_id)),
+    )
+
+    worker._handle(
+        "conn",
+        {
+            "kind": "stable_registry_foundation_build",
+            "releaseId": "00000000-0000-4000-8000-000000000255",
+        },
+    )
+
+    assert calls == [("conn", "00000000-0000-4000-8000-000000000255")]
+
+
+def test_worker_refuses_extra_stable_registry_foundation_payload_keys(monkeypatch):
+    monkeypatch.setattr(worker, "build_foundation_release", lambda *_args: None)
+
+    with pytest.raises(ValueError, match="unsupported payload shape") as error:
+        worker._handle(
+            "conn",
+            {
+                "kind": "stable_registry_foundation_build",
+                "releaseId": "00000000-0000-4000-8000-000000000255",
+                "rawPayload": "do-not-leak",
+            },
+        )
+
+    assert "do-not-leak" not in str(error.value)
+
+
 def test_worker_handles_catalog_reindex(monkeypatch):
     calls = []
     monkeypatch.setattr(
@@ -389,12 +424,8 @@ def test_run_uses_autocommit_for_long_lived_connection(monkeypatch):
 
     monkeypatch.setenv("DIRECT_URL", "postgresql://example.invalid/app")
     monkeypatch.setenv("OVERGARDEN_MATCHING_COMMIT_SHA", "a" * 40)
-    monkeypatch.setenv(
-        "OVERGARDEN_MATCHING_IMAGE_DIGEST", f"sha256:{'b' * 64}"
-    )
-    monkeypatch.setenv(
-        "OVERGARDEN_MATCHING_BUILD_TIMESTAMP", "2026-07-18T12:34:56Z"
-    )
+    monkeypatch.setenv("OVERGARDEN_MATCHING_IMAGE_DIGEST", f"sha256:{'b' * 64}")
+    monkeypatch.setenv("OVERGARDEN_MATCHING_BUILD_TIMESTAMP", "2026-07-18T12:34:56Z")
     monkeypatch.setenv(
         "OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY",
         "ove190.matching-schema.v1",

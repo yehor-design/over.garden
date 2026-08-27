@@ -26,7 +26,9 @@ export interface ErasureCoverageEntry {
   executionOwned: boolean;
 }
 
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove353.erasure-schema.v6";
+// OVE-255 and OVE-353 each extended the manifest independently from v5, so the
+// merged coverage is a new version rather than either side's v6.
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove353.erasure-schema.v7";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Auth / Better Auth
@@ -686,6 +688,61 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     dryRunOwned: true,
     executionOwned: true,
   },
+  {
+    id: "catalog_registry_releases.created_by_user_id",
+    table: "catalog_registry_releases",
+    columnOrPath: "created_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale:
+      "Immutable release receipt actor is rekeyed transactionally to the non-human erasure tombstone.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "catalog_registry_releases.approved_by_user_id",
+    table: "catalog_registry_releases",
+    columnOrPath: "approved_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale:
+      "Immutable release approval actor is rekeyed transactionally to the non-human erasure tombstone.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "catalog_registry_releases.activated_by_user_id",
+    table: "catalog_registry_releases",
+    columnOrPath: "activated_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale:
+      "Immutable release activation actor is rekeyed transactionally to the non-human erasure tombstone.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "catalog_registry_decisions.decided_by_user_id",
+    table: "catalog_registry_decisions",
+    columnOrPath: "decided_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale:
+      "Append-only decision actor is rekeyed transactionally to the non-human erasure tombstone.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "catalog_registry_activations.activated_by_user_id",
+    table: "catalog_registry_activations",
+    columnOrPath: "activated_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale:
+      "Append-only activation actor is rekeyed transactionally to the non-human erasure tombstone.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
   // Erasure request bookkeeping
   {
     id: "erasure_requests.requester_user_id",
@@ -840,6 +897,11 @@ export const ERASURE_SQL_DISCOVERY_REQUIRED_IDS = [
   "catalog_alias_projections.reviewed_by_user_id",
   "catalog_match_suggestions.reviewed_by_user_id",
   "variety_seed_proofs.author_user_id",
+  "catalog_registry_releases.created_by_user_id",
+  "catalog_registry_releases.approved_by_user_id",
+  "catalog_registry_releases.activated_by_user_id",
+  "catalog_registry_decisions.decided_by_user_id",
+  "catalog_registry_activations.activated_by_user_id",
   "erasure_requests.handled_by_user_id",
   "erasure_requests.dry_run_reviewed_by_user_id",
   "journal_entries.cover_media_asset_id",
@@ -860,7 +922,9 @@ export function discoverErasurePathsFromWalkingSkeletonSql(
   const tableIsPresent = (table: string) => {
     const normalizedTable = table.toLowerCase();
     const lastCreate = Math.max(
-      normalizedSql.lastIndexOf("create table if not exists " + normalizedTable),
+      normalizedSql.lastIndexOf(
+        "create table if not exists " + normalizedTable,
+      ),
       normalizedSql.lastIndexOf(
         'create table if not exists "' + normalizedTable + '"',
       ),

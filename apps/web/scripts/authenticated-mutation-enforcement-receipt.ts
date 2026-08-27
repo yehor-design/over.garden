@@ -31,9 +31,12 @@ const EXPLICIT_GOOGLE_LINK_OWNER = "owned_by_ove_295" as const;
 // then removes the retired server-draft and quarantine mutation surfaces
 // instead of leaving phantom admission owners in the enforced graph. OVE-338
 // repins the unchanged account-owned moderation topology after its route move.
-// OVE-353 renames the archive owner to `deleteJournalEntryAction` and drops the
-// synchronous public-projection convergence fan-out from it, so the entrypoint
-// count is unchanged while its edge set shrinks from 72 to 60.
+// OVE-255 retires the legacy Curation mutation surface in favour of the
+// immutable Registry release center, so the OVE-291 remainder is deliberately
+// smaller and is re-pinned below. OVE-353 renames the archive owner to
+// `deleteJournalEntryAction` and drops the synchronous public-projection
+// convergence fan-out from it, so the high-risk entrypoint count is unchanged
+// while its edge set shrinks.
 const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 8;
 const BASELINE_HIGH_RISK_ENTRYPOINT_SET_DIGEST =
   "e32c298cff64f36469fd75333c7b884a8b43821c6003b9836e204d90fb3a4d5e";
@@ -41,15 +44,15 @@ const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 60;
 const BASELINE_HIGH_RISK_EDGE_BINDING_SET_DIGEST =
   "927c139614e8e76815acf252cc499157961b76d5799070b1a300b2418243a04d";
 const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 6;
-const BASELINE_REMAINING_ENTRYPOINT_COUNT = 117;
+const BASELINE_REMAINING_ENTRYPOINT_COUNT = 103;
 const BASELINE_REMAINING_ENTRYPOINT_SET_DIGEST =
-  "9fcc12e001d98e687b7919306185210606cd3656ee5ab4d3967a930722df963d";
-const BASELINE_REMAINING_CONSUMER_EDGE_COUNT = 290;
+  "4350a0c23a5c0b5e2da3c7661ee36b11c38b61e3e967a5ca4a48ab1e4055036d";
+const BASELINE_REMAINING_CONSUMER_EDGE_COUNT = 271;
 const BASELINE_REMAINING_EDGE_BINDING_SET_DIGEST =
-  "d363f8e336a91a0184b95b2406c256d9c5ada99ae913d5d2e800ea58152307c0";
-const BASELINE_REMAINING_ADMISSION_BOUNDARY_COUNT = 61;
+  "a88e378aa4f5098f0b47348b7375ff1868a2e018b993561a0a2f9c673b7d15e7";
+const BASELINE_REMAINING_ADMISSION_BOUNDARY_COUNT = 52;
 const BASELINE_REMAINING_ADMISSION_BOUNDARY_SET_DIGEST =
-  "bb815abc562c721232d5b027eb40fe064858f85ecbabb8a537440d6ec6789e2d";
+  "a22a6df49b281e87b3f2adcad0c1c4da52d2eb957cc20cc4540d2ff244a51abb";
 const BASELINE_EXPLICIT_GOOGLE_LINK_ENTRYPOINT_COUNT = 5;
 const BASELINE_EXPLICIT_GOOGLE_LINK_CONSUMER_EDGE_COUNT = 15;
 const BASELINE_EXPLICIT_GOOGLE_LINK_OWNERSHIP_DIGEST =

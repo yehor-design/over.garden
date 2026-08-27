@@ -209,6 +209,14 @@
       "reason": "Queue vocabulary belongs to authenticated server-side catalog curation jobs."
     },
     {
+      "path": "apps/web/src/app/garden/catalog/registry/release-center.tsx",
+      "reason": "Queue copy describes server-side Stable Registry foundation jobs and projection-outbox work; it never creates browser-local durable state."
+    },
+    {
+      "path": "apps/web/src/server/stable-registry/release-repository.ts",
+      "reason": "Queued vocabulary belongs to the server-side Stable Registry Postgres job queue and transactional search-projection outbox."
+    },
+    {
       "path": "apps/web/src/lib/matching-runtime-proof.ts",
       "reason": "Queue vocabulary belongs to the server-side matching worker readiness contract."
     },
@@ -267,6 +275,10 @@
     {
       "path": "docs/PUBLIC_PROJECTION_REVOCATION.md",
       "reason": "Queue vocabulary describes the server-side projection durability boundary."
+    },
+    {
+      "path": "docs/STABLE_REGISTRY_OPERATOR_RUNBOOK.md",
+      "reason": "Queue vocabulary documents server-side Stable Registry matching jobs and projection-outbox recovery, not browser-local journal state."
     }
   ],
   "ownerStates": {

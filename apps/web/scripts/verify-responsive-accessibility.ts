@@ -1549,6 +1549,23 @@ async function openInterfaceLanguageMenu(page: Page): Promise<{
   await page.keyboard.press("Enter");
   const popup = page.locator('[data-slot="menu-content"]:visible').first();
   await popup.waitFor({ state: "visible", timeout: 5_000 });
+  await page.waitForFunction(
+    () => {
+      const focused = document.activeElement;
+      return [...document.querySelectorAll<HTMLElement>(
+        '[data-slot="menu-content"]',
+      )].some((element) => {
+        const style = getComputedStyle(element);
+        return (
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          element.contains(focused)
+        );
+      });
+    },
+    undefined,
+    { timeout: 5_000 },
+  );
   const items = popup.locator('[data-slot="menu-radio-item"]');
   if ((await items.count()) !== 2) {
     throw new Error("Bulgaria language menu must expose exactly bg and ru.");

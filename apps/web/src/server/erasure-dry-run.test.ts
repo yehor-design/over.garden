@@ -105,6 +105,7 @@ describe("erasure dry-run preview assembly", () => {
         catalogProvisionalItems: 1,
         plantObjectsUserAdded: 1,
         catalogReviewerLinks: 1,
+        catalogRegistryActorAttributions: 5,
         searchPublicActiveEntries: 1,
         searchPendingIndexJobs: 0,
         searchPendingUnindexJobs: 0,
@@ -150,6 +151,14 @@ describe("erasure dry-run preview assembly", () => {
     ).not.toMatch(
       /quarantine_key|derivative_key|token|password|coordinate|latitude|longitude/i,
     );
+    expect(
+      preview.dataClasses.find(
+        (dataClass) => dataClass.key === "catalog_operator_links",
+      )?.counts,
+    ).toEqual({
+      reviewer_or_author_links: 1,
+      registry_actor_attributions: 5,
+    });
   });
 });
 
