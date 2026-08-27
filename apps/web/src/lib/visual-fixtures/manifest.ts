@@ -3143,7 +3143,7 @@ const scenarios: readonly VisualFixtureScenario[] = [
   scenario(
     "object-mixed-history",
     "public-object-mixed-history",
-    "Public passport suppressing archived history",
+    "Public passport suppressing deleted history",
     passportEvidenceCase("public-bee-mixed-history").path,
     200,
   ),
@@ -3185,7 +3185,7 @@ const scenarios: readonly VisualFixtureScenario[] = [
   scenario(
     "owner-object-archived",
     "owner-object-archived",
-    "Signed-in owner archived passport history",
+    "Signed-in owner passport with deleted entries suppressed",
     passportEvidenceCase("owner-bee-archived").path,
     200,
   ),

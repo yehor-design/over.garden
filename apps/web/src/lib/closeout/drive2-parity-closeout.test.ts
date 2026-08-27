@@ -23,7 +23,7 @@ describe("OVE-186 Drive2-parity closeout coverage", () => {
     expect(report.fixture).toEqual({
       version: "ove187-v10",
       manifestHash:
-        "6fceebf7673536581a75c33a9296c4175399c304f079c4ac1542f116cefea7cd",
+        "0a3a86667b9fd1bbb19a43edcd5704e9cc39d0cd11c64864691e871d7aab6d36",
       namespace: "visual-fixtures/ove187-v10",
     });
     expect(report.summary).toMatchObject({
