@@ -8,8 +8,16 @@ import type {
   CatalogAliasProjections as CatalogAliasProjectionsTable,
   CatalogFuzzyDuplicateSuggestions as CatalogFuzzyDuplicateSuggestionsTable,
   CatalogItemNames as CatalogItemNamesTable,
+  CatalogItemRevisions as CatalogItemRevisionsTable,
   CatalogItems as CatalogItemsTable,
   CatalogMatchSuggestions as CatalogMatchSuggestionsTable,
+  CatalogRegistryActivations as CatalogRegistryActivationsTable,
+  CatalogRegistryActivePointers as CatalogRegistryActivePointersTable,
+  CatalogRegistryDecisions as CatalogRegistryDecisionsTable,
+  CatalogRegistryExceptionGroups as CatalogRegistryExceptionGroupsTable,
+  CatalogRegistryReleaseMembers as CatalogRegistryReleaseMembersTable,
+  CatalogRegistryReleases as CatalogRegistryReleasesTable,
+  CatalogRegistrySearchOutbox as CatalogRegistrySearchOutboxTable,
   CatalogSourceCaptureRuns as CatalogSourceCaptureRunsTable,
   CatalogSourceCaptureUnits as CatalogSourceCaptureUnitsTable,
   CatalogSourceLinks as CatalogSourceLinksTable,
@@ -247,14 +255,30 @@ export type NewCatalogFuzzyDuplicateSuggestion =
   Insertable<CatalogFuzzyDuplicateSuggestionsTable>;
 export type CatalogItem = Selectable<CatalogItemsTable>;
 export type CatalogItemName = Selectable<CatalogItemNamesTable>;
+export type CatalogItemRevision = Selectable<CatalogItemRevisionsTable>;
 export type CatalogMatchSuggestion = Selectable<CatalogMatchSuggestionsTable>;
+export type CatalogRegistryActivation =
+  Selectable<CatalogRegistryActivationsTable>;
+export type CatalogRegistryActivePointer =
+  Selectable<CatalogRegistryActivePointersTable>;
+export type CatalogRegistryDecision = Selectable<CatalogRegistryDecisionsTable>;
+export type CatalogRegistryExceptionGroup =
+  Selectable<CatalogRegistryExceptionGroupsTable>;
+export type CatalogRegistryReleaseMember =
+  Selectable<CatalogRegistryReleaseMembersTable>;
+export type CatalogRegistryRelease = Selectable<CatalogRegistryReleasesTable>;
+export type CatalogRegistrySearchOutbox =
+  Selectable<CatalogRegistrySearchOutboxTable>;
 export type NewCatalogMatchSuggestion =
   Insertable<CatalogMatchSuggestionsTable>;
 export type CatalogSourceLink = Selectable<CatalogSourceLinksTable>;
 export type CatalogSourceCaptureRun = Selectable<CatalogSourceCaptureRunsTable>;
-export type NewCatalogSourceCaptureRun = Insertable<CatalogSourceCaptureRunsTable>;
-export type CatalogSourceCaptureUnit = Selectable<CatalogSourceCaptureUnitsTable>;
-export type NewCatalogSourceCaptureUnit = Insertable<CatalogSourceCaptureUnitsTable>;
+export type NewCatalogSourceCaptureRun =
+  Insertable<CatalogSourceCaptureRunsTable>;
+export type CatalogSourceCaptureUnit =
+  Selectable<CatalogSourceCaptureUnitsTable>;
+export type NewCatalogSourceCaptureUnit =
+  Insertable<CatalogSourceCaptureUnitsTable>;
 export type CatalogSourceRecord = Selectable<CatalogSourceRecordsTable>;
 export type CatalogSourceRefreshEvent =
   Selectable<CatalogSourceRefreshEventsTable>;
@@ -284,6 +308,21 @@ export type NewCatalogAliasProjection =
   Insertable<CatalogAliasProjectionsTable>;
 export type NewCatalogItem = Insertable<CatalogItemsTable>;
 export type NewCatalogItemName = Insertable<CatalogItemNamesTable>;
+export type NewCatalogItemRevision = Insertable<CatalogItemRevisionsTable>;
+export type NewCatalogRegistryActivation =
+  Insertable<CatalogRegistryActivationsTable>;
+export type NewCatalogRegistryActivePointer =
+  Insertable<CatalogRegistryActivePointersTable>;
+export type NewCatalogRegistryDecision =
+  Insertable<CatalogRegistryDecisionsTable>;
+export type NewCatalogRegistryExceptionGroup =
+  Insertable<CatalogRegistryExceptionGroupsTable>;
+export type NewCatalogRegistryReleaseMember =
+  Insertable<CatalogRegistryReleaseMembersTable>;
+export type NewCatalogRegistryRelease =
+  Insertable<CatalogRegistryReleasesTable>;
+export type NewCatalogRegistrySearchOutbox =
+  Insertable<CatalogRegistrySearchOutboxTable>;
 export type NewCatalogSourceLink = Insertable<CatalogSourceLinksTable>;
 export type NewCatalogSourceRecord = Insertable<CatalogSourceRecordsTable>;
 export type NewCatalogSourceRefreshEvent =

@@ -552,7 +552,10 @@ const LOCALIZATION_OWNER_CONTRACTS: Record<
     ],
     copyNamespaces: ["operator", "operator-erasure", "operator-curation"],
     scenarioIds: ["community:ove184-community-moderator"],
-    focusedTests: ["src/app/garden/catalog/curation/page.test.tsx"],
+    focusedTests: [
+      "src/app/garden/catalog/curation/page.test.tsx",
+      "src/app/garden/catalog/registry/page.test.tsx",
+    ],
   },
   "internal-fixture": {
     rendered: false,
@@ -1100,6 +1103,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/account/communities/page.tsx",
         "src/app/account/moderation/comments/page.tsx",
         "src/app/garden/catalog/curation/page.tsx",
+        "src/app/garden/catalog/registry/page.tsx",
         "src/app/garden/privacy/erasure-requests/page.tsx",
         "src/app/health/page.tsx",
       ],

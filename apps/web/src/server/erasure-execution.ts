@@ -201,6 +201,10 @@ export async function executeApprovedErasureRequest(
         erasedSubjectUserId,
         now,
       }).execute();
+      await buildRekeyStableRegistryActorsForErasureQuery(trx, {
+        requesterUserId,
+        erasedSubjectUserId: ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID,
+      }).execute();
       await buildAnonymizeLineageProvenanceEdgesForErasureQuery(trx, {
         requesterUserId,
         now,
@@ -1082,6 +1086,69 @@ export function buildAnonymizeVarietySeedProofAuthorsForErasureQuery(
       updated_at: input.now,
     })
     .where("author_user_id", "=", input.requesterUserId);
+}
+
+/**
+ * Stable Registry releases and decisions are deliberately append-only. During
+ * account erasure, their actor fields are therefore rekeyed to the one
+ * non-human tombstone identity rather than deleted or historically rewritten.
+ * The migration trigger accepts only these exact field changes while the
+ * transaction-local guard is enabled.
+ */
+export function buildRekeyStableRegistryActorsForErasureQuery(
+  executor: QueryExecutor,
+  input: {
+    requesterUserId: string;
+    erasedSubjectUserId: string;
+  },
+) {
+  return {
+    execute: async () => {
+      await sql`
+        select set_config('overgarden.registry_actor_erasure_rekey', 'on', true)
+      `.execute(executor);
+
+      await executor
+        .updateTable("catalog_registry_releases")
+        .set({
+          created_by_user_id: sql<string>`case
+            when created_by_user_id = ${input.requesterUserId}::uuid
+              then ${input.erasedSubjectUserId}::uuid
+            else created_by_user_id
+          end`,
+          approved_by_user_id: sql<string | null>`case
+            when approved_by_user_id = ${input.requesterUserId}::uuid
+              then ${input.erasedSubjectUserId}::uuid
+            else approved_by_user_id
+          end`,
+          activated_by_user_id: sql<string | null>`case
+            when activated_by_user_id = ${input.requesterUserId}::uuid
+              then ${input.erasedSubjectUserId}::uuid
+            else activated_by_user_id
+          end`,
+        })
+        .where((eb) =>
+          eb.or([
+            eb("created_by_user_id", "=", input.requesterUserId),
+            eb("approved_by_user_id", "=", input.requesterUserId),
+            eb("activated_by_user_id", "=", input.requesterUserId),
+          ]),
+        )
+        .execute();
+
+      await executor
+        .updateTable("catalog_registry_decisions")
+        .set({ decided_by_user_id: input.erasedSubjectUserId })
+        .where("decided_by_user_id", "=", input.requesterUserId)
+        .execute();
+
+      await executor
+        .updateTable("catalog_registry_activations")
+        .set({ activated_by_user_id: input.erasedSubjectUserId })
+        .where("activated_by_user_id", "=", input.requesterUserId)
+        .execute();
+    },
+  };
 }
 
 export function buildNullErasureOperatorLinksForErasureQuery(

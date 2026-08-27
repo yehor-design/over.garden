@@ -27,9 +27,7 @@ def release() -> runtime.RuntimeRelease:
 def set_release_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OVERGARDEN_MATCHING_COMMIT_SHA", COMMIT_SHA)
     monkeypatch.setenv("OVERGARDEN_MATCHING_IMAGE_DIGEST", IMAGE_DIGEST)
-    monkeypatch.setenv(
-        "OVERGARDEN_MATCHING_BUILD_TIMESTAMP", BUILD_TIMESTAMP
-    )
+    monkeypatch.setenv("OVERGARDEN_MATCHING_BUILD_TIMESTAMP", BUILD_TIMESTAMP)
     monkeypatch.setenv(
         "OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY",
         runtime.SCHEMA_COMPATIBILITY_CLASS,
@@ -68,10 +66,9 @@ def response_json(response: Any) -> dict[str, object]:
 
 def walk_keys(value: object) -> set[str]:
     if isinstance(value, dict):
-        return {
-            str(key)
-            for key in value
-        } | set().union(*(walk_keys(child) for child in value.values()))
+        return {str(key) for key in value} | set().union(
+            *(walk_keys(child) for child in value.values())
+        )
     if isinstance(value, list):
         return set().union(*(walk_keys(child) for child in value))
     return set()
@@ -131,6 +128,7 @@ def test_capabilities_are_exact_sorted_and_redacted() -> None:
                 "catalog_typeahead_reindex",
                 "journal_entry_index",
                 "journal_entry_unindex",
+                "stable_registry_foundation_build",
             ],
         },
     }
@@ -232,9 +230,7 @@ def test_readiness_fails_closed_for_worker_lease_classes(
 
     assert is_ready is False
     assert manifest["status"] == "degraded"
-    assert manifest["dependencies"]["worker"] == {
-        "status": expected_worker_status
-    }
+    assert manifest["dependencies"]["worker"] == {"status": expected_worker_status}
 
 
 def test_preflight_requires_schema_but_not_an_existing_worker_heartbeat(
@@ -299,7 +295,14 @@ def test_production_preflight_accepts_the_canonical_public_media_origin(
 
 @pytest.mark.parametrize(
     ("depth", "expected"),
-    [(-1, "empty"), (0, "empty"), (1, "low"), (10, "low"), (11, "medium"), (101, "high")],
+    [
+        (-1, "empty"),
+        (0, "empty"),
+        (1, "low"),
+        (10, "low"),
+        (11, "medium"),
+        (101, "high"),
+    ],
 )
 def test_queue_depth_is_bounded(depth: int, expected: str) -> None:
     assert runtime._queue_depth_class(depth) == expected

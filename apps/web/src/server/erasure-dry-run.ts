@@ -93,6 +93,7 @@ export interface ErasureDryRunCounts {
   catalogProvisionalItems: number;
   plantObjectsUserAdded: number;
   catalogReviewerLinks: number;
+  catalogRegistryActorAttributions: number;
   searchPublicActiveEntries: number;
   searchPendingIndexJobs: number;
   searchPendingUnindexJobs: number;
@@ -238,9 +239,10 @@ function buildErasureDryRunDataClasses(
       key: "catalog_operator_links",
       label: "Catalog operator attribution links",
       description:
-        "Reviewer and author soft links on catalog suggestions, aliases, and seed proofs.",
+        "Reviewer and author links on catalog rows, plus immutable Stable Registry release, decision, and activation actor attributions that are rekeyed to a non-human tombstone during erasure.",
       counts: {
         reviewer_or_author_links: counts.catalogReviewerLinks,
+        registry_actor_attributions: counts.catalogRegistryActorAttributions,
       },
     },
     {
