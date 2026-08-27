@@ -6266,9 +6266,12 @@ function passportTimelineEntries(
                 mention.journalEntryId === entry.id &&
                 mention.objectId === objectId,
             ))) &&
+        // OVE-353: a deleted entry leaves the owner's own timeline too, not
+        // just the public one. The owner-scoped repository filters it in the
+        // canonical query, so the manifest may not expect it back.
+        entry.lifecycleState === "active" &&
         (access === "signed-in-owner" ||
           (entry.visibility === "public" &&
-            entry.lifecycleState === "active" &&
             entry.publicGoneAt === null &&
             entry.publicSlug !== null)),
     )
