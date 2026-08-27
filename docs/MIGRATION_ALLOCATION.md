@@ -2,7 +2,8 @@
 
 Status: binding reservation ledger
 Owner: repository canon; introduced by OVE-318
-Current Stable Registry authority: ADR-0016 and `docs/STABLE_REGISTRY.md`
+Current Stable Registry authority: ADR-0016, ADR-0020, and
+`docs/STABLE_REGISTRY.md`
 Current highest landed migration at creation: `0022`
 
 This file is the single reservation authority for concurrent future programs.
@@ -16,8 +17,8 @@ another issue's number.
 | `0024` | OVE-255      | Stable Registry        | Foundation release construction and activation                    |
 | `0025` | OVE-256      | Stable Registry        | public source-archive versus approved-release read model          |
 | `0026` | OVE-257      | Stable Registry        | active-release product selection/readback                         |
-| `0027` | OVE-258      | Stable Registry        | editions, corrections, supersession, rollback                     |
-| `0028` | OVE-259      | Stable Registry        | production landing/parity support when a schema delta is required |
+| `0027` | OVE-328      | Stable Registry        | separately versioned extension-pack foundations                   |
+| `0028` | OVE-258      | Stable Registry        | editions, corrections, supersession, and rollback                 |
 | `0029` | OVE-321      | Online-only retirement | server-authoritative draft protocol                               |
 | `0030` | OVE-322      | Online-only retirement | returning-device retirement bridge and cleanup state              |
 | `0031` | OVE-331      | MVP posture            | public-projection quality/admission state when required           |
@@ -33,6 +34,17 @@ Compact range receipt:
 - `0031-0034: MVP posture children`
 - `0035: online-only steady-state enforcement`
 
+## Explicit no-SQL Stable Registry owners
+
+ADR-0020 amends only the future migration-allocation clauses of historical
+ADR-0016. OVE-327 and OVE-259 have no SQL migration: they must not consume,
+rename, transfer, or imply a migration number.
+
+| Owning issue | SQL migration allocation | Intended boundary |
+| ------------ | ------------------------ | ----------------- |
+| OVE-327      | No SQL migration         | pure artifact-adapter packs and their safe runtime boundary |
+| OVE-259      | No SQL migration         | production plan/apply, parity, and final program proof |
+
 The unused OVE-322 reservation at `0030` remains historical and
 non-transferable. OVE-326 uses the next free number, `0035`; it does not inherit
 or repurpose `0030`.
@@ -43,8 +55,9 @@ or repurpose `0030`.
    inventory before creating its migration.
 2. A number may be used only by its owner and only when that issue's validated
    vertical/bounded contract actually requires SQL.
-3. An owner that needs no SQL leaves the reservation unused; it does not hand
-   the number to another task implicitly.
+3. An owner that needs no SQL has no migration allocation; it does not hand a
+   number to another task implicitly. OVE-327 and OVE-259 are the explicit
+   Stable Registry no-SQL owners under ADR-0020.
 4. Any landed migration that conflicts with this ledger stops implementation.
    Reconcile the ledger in a dedicated canon change before renumbering a child.
 5. Existing migration files and historical receipts are never renamed to make

@@ -104,3 +104,6 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
 - ADR-0019 — Atomic local journal authoring and client-final WebP publication.
   Binding for transient pre-Publish state, exact browser-final bytes, bounded
   Cloudflare staging, and atomic create/edit publication.
+- ADR-0020 — Stable Registry migration allocation amendment. Binding for the
+  future allocation of `0027` to OVE-328 and `0028` to OVE-258.
+  OVE-327 and OVE-259 have no SQL migration.
