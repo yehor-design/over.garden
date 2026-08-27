@@ -331,7 +331,7 @@ export async function proveUaStateRegisterGardenReadback(
           body: "Official UA State Register projection can be selected and read back without raw source fields.",
           entry_scope: "object",
           entry_date: "2026-06-29",
-          visibility: "private",
+          visibility: "public",
           client_mutation_id: "ove-57-ua-register-official-variety-proof",
         })
         .executeTakeFirstOrThrow();

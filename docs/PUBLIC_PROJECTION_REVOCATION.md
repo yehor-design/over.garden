@@ -23,8 +23,10 @@ not the posture new work should restate.
 
 Every declassification event used to be "commit, then enqueue":
 
-- Archive committed in `journal-repository.ts`, and only afterwards the action
-  enqueued an unindex job on the global connection.
+- The archive transition committed in `journal-repository.ts`, and only
+  afterwards the action enqueued an unindex job on the global connection.
+  ADR-0021 replaced that transition with deletion; the outbox contract below is
+  what it inherited.
 - A public edit committed, and the route enqueued afterwards, swallowed the
   failure, and skipped the enqueue entirely on an idempotent replay.
 - A location change only revalidated Next paths, so the previously public
@@ -72,7 +74,7 @@ the same transaction:
 | --------------------------- | ------------------------------------------------------------------- | ---------------------------- |
 | publish, skeleton publish   | `journal-repository.ts` `publishJournalEntry`, `createJournalEntry` | `present`                    |
 | edit                        | `journal-repository.ts` `updateJournalEntryAggregate`               | `present`                    |
-| archive                     | `journal-repository.ts` `archiveJournalEntry`                       | `absent`                     |
+| journal delete              | `journal-repository.ts` `deleteJournalEntry`                        | `absent` (privacy-reducing)  |
 | location visibility/region  | `journal-repository.ts` `updatePlantObjectLocation`                 | `present` (privacy-reducing) |
 | catalog identity            | `journal-repository.ts` `resolvePlantObjectCatalog`                 | `present`                    |
 | cover/focal presentation    | `media/media-repository.ts` `updateMediaAssetFocalForOwner`         | `present`                    |
@@ -107,9 +109,12 @@ quality-class admission successor.
 
 A product surface may report removal only from verified convergence:
 
-- The owner's object page shows `archivedGonePending` until
-  `loadPublicProjectionConvergence` says the entry converged; only then does it
-  claim the entry is out of public search.
+- Under ADR-0021 the owner's object page no longer reports a per-entry
+  convergence state, because a deleted entry has already left every owner
+  surface and there is nothing left to qualify. The convergence receipt instead
+  gates the terminal step that is still pending: `runRetentionWorkflow` refuses
+  to physically purge a tombstone until its intent has converged to `absent`
+  and every attached derivative carries a terminal revoke receipt.
 - `executeApprovedErasureRequest` stays `cleanup_pending` — it does not become
   `completed` — until every erasure intent it owes has converged to `absent`.
 

@@ -196,6 +196,11 @@ export interface DeleteJournalEntryResult {
   publicGone: boolean;
   deletedAt: Date | string;
   purgeAfter: Date | string;
+  /**
+   * True when this call found the entry already deleted. The receipt is the
+   * original one — a replay never re-stamps the retention horizon.
+   */
+  alreadyDeleted: boolean;
 }
 
 export interface ResolvePlantObjectCatalogInput {
@@ -2917,6 +2922,7 @@ export async function deleteJournalEntry(
         publicGone: existing.public_gone_at !== null,
         deletedAt: existing.deleted_at,
         purgeAfter: existing.purge_after,
+        alreadyDeleted: true,
       };
     }
 
@@ -2962,6 +2968,7 @@ export async function deleteJournalEntry(
       publicGone: row.public_gone_at !== null,
       deletedAt: row.deleted_at,
       purgeAfter: row.purge_after,
+      alreadyDeleted: false,
     };
   });
 }

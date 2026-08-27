@@ -412,7 +412,7 @@ export async function proveSpeciesBackboneGardenReadback(
           body: "Species selection reads back the canonical catalog identity without raw source fields.",
           entry_scope: "object",
           entry_date: "2026-06-30",
-          visibility: "private",
+          visibility: "public",
           client_mutation_id: "ove-59-alias-promotion-proof",
         })
         .executeTakeFirstOrThrow();

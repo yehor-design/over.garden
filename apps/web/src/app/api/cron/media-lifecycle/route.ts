@@ -42,6 +42,13 @@ export async function POST(request: Request) {
       danglingCoverPointerClass: retention.danglingCoverPointerClass,
       orphanCoverOnlyClass: retention.orphanCoverOnlyClass,
       pendingRevokeJobsClass: retention.pendingRevokeJobsClass,
+      // OVE-353. `due` counts tombstones past their seven-day horizon;
+      // `purged` counts the subset this pass could actually remove. A due
+      // class that stays elevated while purged stays empty is the visible
+      // signal that some derived effect is not reaching a terminal receipt.
+      journalTombstoneDueClass: retention.journalTombstoneDueClass,
+      journalTombstonePurgedClass:
+        retention.journalTombstonePurgedClass ?? "empty",
     },
   });
 }

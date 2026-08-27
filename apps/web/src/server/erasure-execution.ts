@@ -449,6 +449,13 @@ export function buildListMediaObjectsForErasureQuery(
     .where("owner_user_id", "=", requesterUserId);
 }
 
+/**
+ * OVE-353: deletion-pending entries are erasure candidates too, not just
+ * active ones. The owner's own delete already recorded an absent intent, but
+ * that intent can reach `dead` after its bounded attempts and nothing would
+ * retry it. Erasure is exactly where that has to be repaired, so it re-asserts
+ * absence under its own stronger reason rather than trusting the earlier one.
+ */
 export function buildListPublicJournalEntriesForErasureQuery(
   executor: QueryExecutor,
   requesterUserId: string,
@@ -458,7 +465,7 @@ export function buildListPublicJournalEntriesForErasureQuery(
     .select(["id", "public_slug as publicSlug"])
     .where("owner_user_id", "=", requesterUserId)
     .where("visibility", "=", "public")
-    .where("lifecycle_state", "=", "active")
+    .where("lifecycle_state", "in", ["active", "deleted_retention"])
     .where("public_slug", "is not", null);
 }
 

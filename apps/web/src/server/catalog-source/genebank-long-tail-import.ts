@@ -489,7 +489,7 @@ export async function proveGenebankGardenReadback(
           body: "Promoted genebank candidate can be selected and read back without exposing accession source-only fields.",
           entry_scope: "object",
           entry_date: "2026-06-30",
-          visibility: "private",
+          visibility: "public",
           client_mutation_id: "ove-62-genebank-candidate-proof",
         })
         .executeTakeFirstOrThrow();

@@ -310,7 +310,7 @@ export async function proveBgOfficialVarietyGardenReadback(
           body: "Verified Bulgarian official variety proof can be selected and read back without exposing raw source or parser-only fields.",
           entry_scope: "object",
           entry_date: "2026-06-30",
-          visibility: "private",
+          visibility: "public",
           client_mutation_id: "ove-61-bg-official-variety-proof",
         })
         .executeTakeFirstOrThrow();

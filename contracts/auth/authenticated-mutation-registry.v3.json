@@ -12226,17 +12226,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_89794",
-      "sourceNodeId": "source:07a3e8803cacffddb0cc",
-      "symbol": "deleteJournalEntry"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/notifications/preferences/route.ts"
       ],
       "nodeKind": "route_handler",
@@ -12460,17 +12449,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_25186",
-      "sourceNodeId": "source:0a32f17a03f791b6ba13",
-      "symbol": "updateAtomicJournalEntry"
-    },
-    {
-      "evidencePaths": [
         "src/server/catalog-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -12539,6 +12517,17 @@
       "semanticVariant": "action:setCommunityParticipationAction",
       "sourceNodeId": "source:0a9e46b26e8f990c6a1e",
       "symbol": "CommunityModerationPage"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_68152",
+      "sourceNodeId": "source:0aafa96becba946f2965",
+      "symbol": "createSpaceJournalEntry"
     },
     {
       "evidencePaths": [
@@ -13054,6 +13043,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_72796",
+      "sourceNodeId": "source:1102417db0e8d1276843",
+      "symbol": "resolvePlantObjectCatalog"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/[profileHandle]/actions.ts"
       ],
       "nodeKind": "server_action",
@@ -13362,6 +13362,17 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:14003f557b2673abf627",
       "symbol": "LineageNodeFollow"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_89978",
+      "sourceNodeId": "source:143fbba0293e22cd7232",
+      "symbol": "deleteJournalEntry"
     },
     {
       "evidencePaths": [
@@ -15063,17 +15074,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_76150",
-      "sourceNodeId": "source:2483018d76e795964456",
-      "symbol": "updatePlantObjectLocation"
-    },
-    {
-      "evidencePaths": [
         "src/app/[locale]/[profileHandle]/actions.ts",
         "src/components/public/public-profile.tsx"
       ],
@@ -16502,6 +16502,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_38816",
+      "sourceNodeId": "source:3222d4a84890be645b77",
+      "symbol": "createFirstPlantEntry"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/journal-repository.ts"
       ],
@@ -16630,6 +16641,17 @@
       "semanticVariant": "from:@/server/lineage-repository",
       "sourceNodeId": "source:3367ee8df882cb09dd8f",
       "symbol": "createProvenanceEdge"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_76334",
+      "sourceNodeId": "source:33738138c7d94ed851c6",
+      "symbol": "updatePlantObjectLocation"
     },
     {
       "evidencePaths": [
@@ -19358,6 +19380,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_25370",
+      "sourceNodeId": "source:50404cc59a61d0d518ee",
+      "symbol": "updateAtomicJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/server/lineage-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -19893,17 +19926,6 @@
       "semanticVariant": "action:declineLineageClaimAction",
       "sourceNodeId": "source:55a8215ad9e6ccc5d4bf",
       "symbol": "declineLineageClaimAction"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_72612",
-      "sourceNodeId": "source:55d5e9d41aba15cdfe2f",
-      "symbol": "resolvePlantObjectCatalog"
     },
     {
       "evidencePaths": [
@@ -20912,17 +20934,6 @@
       "semanticVariant": "from:@/lib/garden/public-paths",
       "sourceNodeId": "source:61c5be32d2271ffb58ce",
       "symbol": "publicProfilePath"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_38632",
-      "sourceNodeId": "source:62136edb94d13cd5faa7",
-      "symbol": "createFirstPlantEntry"
     },
     {
       "evidencePaths": [
@@ -22664,17 +22675,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_60819",
-      "sourceNodeId": "source:7549e3734a1f1961c4cd",
-      "symbol": "createPlantObjectJournalEntry"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/privacy/erasure-requests/actions.ts",
         "src/app/garden/privacy/erasure-requests/page.tsx"
       ],
@@ -23555,17 +23555,6 @@
       "semanticVariant": "from:@/server/search/catalog-documents",
       "sourceNodeId": "source:7eb730415b4e6fbad8ca",
       "symbol": "dedupeCatalogTypeaheadSuggestions"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_67968",
-      "sourceNodeId": "source:7ec6c15a40832ed33ea5",
-      "symbol": "createSpaceJournalEntry"
     },
     {
       "evidencePaths": [
@@ -25098,6 +25087,17 @@
       "semanticVariant": "from:@/lib/auth/social-oauth",
       "sourceNodeId": "source:8dc6b69e56c91cb93b9e",
       "symbol": "GOOGLE_PROVIDER_ID"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_61003",
+      "sourceNodeId": "source:8dfcd9cbb3d1a1ce2a63",
+      "symbol": "createPlantObjectJournalEntry"
     },
     {
       "evidencePaths": [

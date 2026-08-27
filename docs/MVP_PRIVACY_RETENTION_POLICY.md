@@ -26,7 +26,8 @@ A gardener is more likely to publish and keep journaling when OverGarden explain
 | Data class | MVP retention rule | Developer boundary |
 | --- | --- | --- |
 | Transient final-WebP staging | Normally reclaim after 15 minutes; one-day provider lifecycle is catastrophic fallback. Source originals are never retained. | Capabilities, staging keys, and object keys stay out of public HTML, search, analytics, support evidence, and operator readouts. |
-| Public final WebPs | Stay while the related public entry is active; remove from public surfaces after archive or erasure. | Public pages may render final media URLs only. Erasure removes OverGarden-controlled objects when their keys are still known. |
+| Public final WebPs | Stay while the related public entry is active; become unreachable after entry deletion or erasure. | Public pages may render final media URLs only. Erasure removes OverGarden-controlled objects when their keys are still known. |
+| Deleted journal tombstone | Keep at most 7 days (`purge_after = deleted_at + interval '7 days'`, PostgreSQL time). Holds no user-readable content: title, body, document, cover, mentions, topics, and media caption/alt text are scrubbed in the deleting transaction. There is no archive and no restore. | The tombstone exists only so the search and media workers have a canonical record to converge against. Physical purge runs at or after the horizon and only once every derivative carries a terminal revoke receipt and the public-projection intent has converged to absent. Account erasure coalesces rather than extends the horizon. |
 | Operator audit logs | Keep for 1 year. | Evidence may include bounded ids, roles, actions, reasons, and timestamps only. |
 | Erasure handling evidence | Keep for 1 year. | Evidence may include status, request reference, data-class counts, dry-run review, approval checkpoint, and handled outcome only. |
 | Analytics events | Keep active first-party product analytics events for up to 13 months. Retired connectivity-event rows, if any, remain untouched historical records under `docs/OFFLINE_RETIREMENT_PROVENANCE.md` and are excluded from current learning. Consented Google Tag Manager / Google Analytics page measurement and Microsoft Clarity session insights can run only on authored public, legal, and support pages; consented Meta Ads measurement uses a separate marketing opt-in. | Payloads and evidence must remain enum/bounded and must not include journal text, exact location, raw URLs, referrers, contact data, private route paths, media keys, account identifiers, IP/user-agent values, provider cookies, Clarity recordings, or Clarity session identifiers. |
@@ -38,7 +39,7 @@ The public `/erasure` form records an operator-reviewed request. It does not aut
 1. User submits an erasure/anonymization request.
 2. Operator reviews a non-destructive dry-run preview of affected data classes.
 3. Maintainer-approved operator executes irreversible erasure or anonymization only after dry-run review and request-specific approval.
-4. Archive removes public OverGarden surfaces first.
+4. Entry deletion removes public OverGarden surfaces first, and erasure does not wait out a pending seven-day deletion window.
 5. Approved erasure deletes or anonymizes current-schema account, garden, journal, media, analytics, catalog-provisional, and search-job references where OverGarden controls them.
 6. The request remains `cleanup_pending` while any request-bound media job is pending, processing, failed, dead, or otherwise unverifiable, or while any OVE-242 public-projection intent has not verified absence from Meilisearch. `completed` is a verified terminal claim, not an enqueue receipt.
 7. The versioned erasure schema gate independently discovers user foreign keys, identity-shaped soft columns, and explicit JSON identity paths from SQL and compares them with the disposition manifest. A manifest-to-itself comparison is invalid proof; every newly discovered path fails CI until dry-run and execution ownership are explicit.
@@ -56,7 +57,7 @@ The public `/erasure` form records an operator-reviewed request. It does not aut
   or oversized input stays transient and cannot fall back to server decode or
   source-original retention.
 - Public media serialization requires a final object identity and no
-  revocation. Archive, erasure, and orphan cleanup enqueue exact final-object
+  revocation. Deletion, erasure, and orphan cleanup enqueue exact final-object
   revocation and settle only after authoritative absence.
 - One cron invocation is capped at 45 seconds with bounded provider calls and polling. Failed, dead, remaining, or deadline-truncated work reports non-ready using class-only evidence.
 - Verification uses synthetic objects only. Receipts must not expose bucket names, object keys, canonical object URLs, credentials, or user content.

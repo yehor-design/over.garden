@@ -26,7 +26,7 @@ export interface ErasureCoverageEntry {
   executionOwned: boolean;
 }
 
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove349.erasure-schema.v5";
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove353.erasure-schema.v6";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Auth / Better Auth
@@ -445,6 +445,39 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     kind: "json_payload",
     disposition: "anonymize",
     rationale: "Structured document including inline media refs is nulled.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "journal_entries.deleted_at",
+    table: "journal_entries",
+    columnOrPath: "deleted_at",
+    kind: "aggregate_field",
+    disposition: "anonymize",
+    rationale:
+      "OVE-353 retention stamp. Erasure coalesces rather than overwrites it, so an already-deleted entry keeps its original horizon and cannot have its purge postponed by the erasure request.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "journal_entries.purge_after",
+    table: "journal_entries",
+    columnOrPath: "purge_after",
+    kind: "aggregate_field",
+    disposition: "anonymize",
+    rationale:
+      "OVE-353 purge horizon, coalesced with deleted_at. The retention executor owns the physical delete once every derived receipt is terminal.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "community_contributions.journal_entry_id",
+    table: "community_contributions",
+    columnOrPath: "journal_entry_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale:
+      "ON DELETE RESTRICT against journal_entries. The owner delete removes these rows inside its transaction and the retention purge re-proves the closure, so neither erasure nor purge can be blocked by a surviving contribution.",
     dryRunOwned: true,
     executionOwned: true,
   },

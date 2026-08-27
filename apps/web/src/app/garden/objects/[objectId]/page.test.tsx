@@ -480,6 +480,41 @@ describe("/garden/objects/[objectId]", () => {
     },
   );
 
+  it("keeps both WAIT-01 controls enabled alongside the delete form", async () => {
+    // WAIT-01: the owner must stay able to leave while a delete is in flight.
+    // Both named controls are plain links rendered outside the form, so a
+    // pending submission cannot disable them and no overlay covers them.
+    mocks.getPlantObjectPage.mockResolvedValue(
+      plantObjectPage([
+        {
+          id: "entry-active",
+          title: "Winter pruning note",
+          body: "Owner-visible active history.",
+          entryDate: "2026-07-04",
+          visibility: "public",
+          publicSlug: "winter-pruning-note",
+          lifecycleState: "active",
+        },
+      ]),
+    );
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = renderToStaticMarkup(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    // "return to active journal link" and "object navigation link".
+    expect(html).toContain('href="/garden"');
+    expect(html).toContain('href="/journal/winter-pruning-note"');
+    expect(html).toContain('name="deleteAccepted"');
+    // No blocking alert, global wait overlay, or pointer trap around them.
+    expect(html).not.toMatch(/aria-modal|role="alertdialog"|\binert\b/);
+    expect(html).not.toContain("<a disabled");
+  });
+
   it("does not resurrect a publish action for compatibility private rows", async () => {
     mocks.getPlantObjectPage.mockResolvedValue(
       plantObjectPage([
