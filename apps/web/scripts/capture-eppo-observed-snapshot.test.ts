@@ -6,6 +6,7 @@ import {
   parseEppoCaptureOptions,
   requestEppoJson,
   runEppoTimeoutFixture,
+  staleClaimRecoveryIsDue,
 } from "./capture-eppo-observed-snapshot";
 
 const baseArgs = [
@@ -73,9 +74,9 @@ describe("EPPO observed capture command", () => {
     expect(() =>
       buildEppoEndpointUrl("../../secret", "taxon_overview"),
     ).toThrow("invalid_eppo_code");
-    expect(() =>
-      buildEppoEndpointUrl("A/A:A/A", "taxon_overview"),
-    ).toThrow("invalid_eppo_code");
+    expect(() => buildEppoEndpointUrl("A/A:A/A", "taxon_overview")).toThrow(
+      "invalid_eppo_code",
+    );
   });
 
   it("classifies a timed-out request without accepting its late payload", async () => {
@@ -126,5 +127,10 @@ describe("EPPO observed capture command", () => {
     expect(receipt.durationMs).toBeLessThan(1_000);
     expect(serialized).not.toContain("fixture-secret");
     expect(serialized).not.toContain("raw_payload");
+  });
+
+  it("recovers stale claims on a bounded timer without changing provider concurrency", () => {
+    expect(staleClaimRecoveryIsDue(299_999, 300_000)).toBe(false);
+    expect(staleClaimRecoveryIsDue(300_000, 300_000)).toBe(true);
   });
 });

@@ -457,7 +457,15 @@ export async function runEppoTimeoutFixture(input: { timeoutMs: number }) {
 
 const INVENTORY_PAGE_LIMIT = 1_000;
 const STALE_CLAIM_SECONDS = 300;
+const STALE_CLAIM_RECOVERY_INTERVAL_MS = STALE_CLAIM_SECONDS * 1_000;
 const MAX_JOB_DURATION_MS = 86_400_000;
+
+export function staleClaimRecoveryIsDue(
+  nowMs: number,
+  nextRecoveryAtMs: number,
+): boolean {
+  return nowMs >= nextRecoveryAtMs;
+}
 
 type SafeEppoPlanReceipt = {
   class: "observed_capture_plan";
@@ -738,10 +746,23 @@ async function hydrateOfficialEndpoints(input: {
     input.executor,
   );
   let processed = 0;
+  let nextStaleClaimRecoveryAt = Date.now() + STALE_CLAIM_RECOVERY_INTERVAL_MS;
 
   while (!input.signal.aborted) {
     if (performance.now() - input.jobStartedAt >= MAX_JOB_DURATION_MS) {
       throw new Error("capture_job_deadline");
+    }
+    const nowMs = Date.now();
+    if (staleClaimRecoveryIsDue(nowMs, nextStaleClaimRecoveryAt)) {
+      await recoverStaleEppoCaptureClaims(
+        {
+          captureId: input.captureId,
+          staleBefore: new Date(nowMs - STALE_CLAIM_SECONDS * 1_000),
+          maxAttempts: input.options.maxAttempts,
+        },
+        input.executor,
+      );
+      nextStaleClaimRecoveryAt = nowMs + STALE_CLAIM_RECOVERY_INTERVAL_MS;
     }
     const claim = await claimNextEppoCaptureUnit(
       {
@@ -1487,6 +1508,7 @@ export async function runEppoObservedCapture(options: EppoCaptureOptions) {
     controller.abort();
   };
   process.once("SIGINT", cancel);
+  process.once("SIGTERM", cancel);
   const jobStartedAt = performance.now();
   try {
     const plan = await runOfficialPlan(options, credential, controller.signal);
@@ -1512,6 +1534,7 @@ export async function runEppoObservedCapture(options: EppoCaptureOptions) {
     );
   } finally {
     process.removeListener("SIGINT", cancel);
+    process.removeListener("SIGTERM", cancel);
     if (cancelled) process.exitCode = 130;
   }
 }
