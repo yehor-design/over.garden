@@ -61,4 +61,34 @@ create index if not exists journal_entries_due_purge_idx
   on journal_entries (purge_after)
   where lifecycle_state = 'deleted_retention';
 
+-- The public-projection reason enum is a database constraint, not only a
+-- TypeScript union. Renaming `archive` to `journal_delete` in the application
+-- without this would make every delete fail on the intent insert, because the
+-- absent intent is written inside the same transaction as the deletion.
+--
+-- `archive` is retained here for exactly as long as the lifecycle compatibility
+-- window: historic intent rows still carry it, and dropping it would orphan
+-- them mid-drain. It is removed with the decoder once conversion reports zero
+-- legacy rows.
+alter table public_projection_intents
+  drop constraint if exists public_projection_intents_reason_check;
+
+alter table public_projection_intents
+  add constraint public_projection_intents_reason_check
+  check (
+    desired_reason in (
+      'publish',
+      'edit',
+      'journal_delete',
+      'archive',
+      'erasure',
+      'moderation',
+      'location_change',
+      'catalog_identity',
+      'media_presentation',
+      'profile_visibility',
+      'repair'
+    )
+  );
+
 commit;
