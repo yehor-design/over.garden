@@ -233,8 +233,8 @@ async function collectRetentionSelection(): Promise<RetentionSelection> {
  * from this delete, which is exactly why the revoke receipt must already be
  * terminal — otherwise the purge would destroy the record of what to revoke.
  */
-async function purgeDueJournalTombstones(limit: number): Promise<number> {
-  const purged = await sql<{ id: string }>`
+export function buildDueJournalTombstonePurgeQuery(limit: number) {
+  return sql<{ id: string }>`
     with due as (
       select je.id
       from journal_entries je
@@ -273,7 +273,11 @@ async function purgeDueJournalTombstones(limit: number): Promise<number> {
     using due
     where victim.id = due.id
     returning victim.id as id
-  `.execute(db);
+  `;
+}
+
+async function purgeDueJournalTombstones(limit: number): Promise<number> {
+  const purged = await buildDueJournalTombstonePurgeQuery(limit).execute(db);
 
   const purgedIds = purged.rows.map((row) => row.id);
   if (purgedIds.length === 0) return 0;
