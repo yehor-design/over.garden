@@ -1,7 +1,7 @@
 {
   "schemaVersion": "overgarden.authenticated-mutation-enforcement.v1",
-  "registryDigest": "b52a9ce84a8dc15c9ad51f1bf73cc0eb96180dd3e55fb53da2a053396098f94e",
-  "sourceRegistryReceiptDigest": "d359607af3f4e44cadf26330d977e268cc2b274878a9f2eb875e27d8c46d8883",
+  "registryDigest": "904bc29eabe1739703c42a3d9e0f461ce141d0e9851ca350625aa528f14e8d42",
+  "sourceRegistryReceiptDigest": "f43d217a3f0a3d212b03e4be3e3f992466222382d4774dff5d79da6644c4fb25",
   "entrypointStates": [
     {
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_account_session_mutation",
@@ -192,43 +192,23 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:confirmAction",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/release-center.tsx#ActionForm:action:submit:binding:1:b9470023f24850be354b",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:mergeAction",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/release-center.tsx#ActionForm:action:submit:binding:2:be77985b3d804df1a2b1",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:rejectAction",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/release-center.tsx#ActionForm:action:submit:binding:3:9b0a835eb76eb3413d12",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:rescanAction",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/release-center.tsx#ActionForm:action:submit:binding:4:7fbd64168c2f6ea7b512",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-source-candidate-review-list.tsx#CatalogSourceCandidateCard:action:holdAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-source-candidate-review-list.tsx#CatalogSourceCandidateCard:action:promoteAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-source-candidate-review-list.tsx#CatalogSourceCandidateCard:action:rejectAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "native_form:src/app/garden/catalog/curation/fuzzy-duplicate-refresh-form.tsx#FuzzyDuplicateRefreshForm:action:queueRefresh",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "native_form:src/app/garden/catalog/curation/variety-seed-proof-editor.tsx#ExistingSeedProofForm:action:upsertAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "native_form:src/app/garden/catalog/curation/variety-seed-proof-editor.tsx#VarietySeedProofEditor:action:upsertAction",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/release-center.tsx#ActionForm:action:submit:binding:5:8d5f5f4ed6202f0c56b3",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -684,59 +664,23 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/actions.ts#abandonFoundationReleaseAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogMatchSuggestionAction",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/actions.ts#activateFoundationReleaseAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#confirmCatalogCandidateAction",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/actions.ts#approveFoundationPreviewAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#generateCatalogAliasSuggestionsAction",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/actions.ts#buildFoundationReleaseAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#holdCatalogSourceCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#mergeCatalogCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#promoteCatalogSourceCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#refreshCatalogFuzzyDuplicateQaAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogAliasSuggestionAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogMatchSuggestionAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogSourceCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rescanCatalogMatchSuggestionsAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#upsertVarietySeedProofAction",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/actions.ts#decideFoundationExceptionGroupAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1052,12 +996,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:25b103a378cc096f488a:1:0706029ce5456a342fed",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogSourceCandidateAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogSourceCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:27f2be88f252c2685b7a:1:047b476defb3c72a6518",
       "entrypointId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#reportProfileAction",
       "admissionBoundaryId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#reportProfileAction",
@@ -1067,12 +1005,6 @@
       "consumerEdgeId": "edge:27f2be88f252c2685b7a:2:e9a235675597762ac47c",
       "entrypointId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#reportProfileAction",
       "admissionBoundaryId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#reportProfileAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:28de3410efada27249ef:1:ed15ba7e27dde79c2af1",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#holdCatalogSourceCandidateAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#holdCatalogSourceCandidateAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1157,54 +1089,6 @@
       "consumerEdgeId": "edge:2ec420f9007065c48103:2:41c35cc275f817b808c4",
       "entrypointId": "browser_operator:src/app/garden/account-methods-panel.tsx#requestProviderUnlink:auth_client.unlinkAccount",
       "admissionBoundaryId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_unlink_account",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:2f8edc2dd27de391801d:1:b93dd9c17856a9ed9e8d",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:2f8edc2dd27de391801d:2:342a4a1e6006e94bc77d",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:2f8edc2dd27de391801d:3:14bb3c2b6969437a81ba",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:2f8edc2dd27de391801d:4:5231b2d2bf6d63dc3157",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:2f8edc2dd27de391801d:5:2862bc63d4d35ae6bf79",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:2f8edc2dd27de391801d:6:b7627efb7832310ced7f",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:2f8edc2dd27de391801d:7:97621082721ddd993746",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:2f8edc2dd27de391801d:8:84339f42264f75a1fabd",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogAliasSuggestionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1310,12 +1194,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:38c25a68d33e2748ebd6:1:970a499c3870affe9016",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#confirmCatalogCandidateAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#confirmCatalogCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:3b720ceff4e54b0c34e4:1:33c7b234bc8dcaee33e6",
       "entrypointId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#link_social_post_redirect",
       "admissionBoundaryId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#link_social_post_redirect",
@@ -1364,12 +1242,6 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:3f01b54f054f2f0b82b6:1:4de04c25c8140e8ebc39",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rescanCatalogMatchSuggestionsAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rescanCatalogMatchSuggestionsAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:40db66f0b086ed6143e8:1:6a482a919fe9b57f4f01",
       "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#ProvenanceSection:action:createLineageInvitationAction",
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createLineageInvitationAction:authority:authenticated_user",
@@ -1385,6 +1257,12 @@
       "consumerEdgeId": "edge:40db66f0b086ed6143e8:3:7c683b0b5c459cac9a41",
       "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#ProvenanceSection:action:createLineageInvitationAction",
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createLineageInvitationAction:authority:authenticated_user",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:42402628bff5a8a831f4:1:39499a7f2ecdf3ba3ab6",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/actions.ts#approveFoundationPreviewAction",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#approveFoundationPreviewAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1448,9 +1326,9 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:4a450ff72a6b62da3432:1:279337991324b2dfc907",
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:rejectAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogCandidateAction",
+      "consumerEdgeId": "edge:4a8af1bdc6d6c5d3b668:1:60fa1cdd712119c24fad",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/actions.ts#abandonFoundationReleaseAction",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#abandonFoundationReleaseAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1460,9 +1338,9 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:53352c6f69e5294a8e1a:1:9a15a196e97f1a569a41",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#upsertVarietySeedProofAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#upsertVarietySeedProofAction",
+      "consumerEdgeId": "edge:53015978b65aa2491c0f:1:6e3d78bc105a9f9dc275",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/release-center.tsx#ActionForm:action:submit:binding:4:7fbd64168c2f6ea7b512",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#buildFoundationReleaseAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1523,6 +1401,12 @@
       "consumerEdgeId": "edge:54b4621375d9e0e8df7f:1:e398ea8dcb92c81317e5",
       "entrypointId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#markErasureRequestReviewingAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#markErasureRequestReviewingAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:5526b9d39e9bbf45585a:1:60fa1cdd712119c24fad",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/release-center.tsx#ActionForm:action:submit:binding:1:b9470023f24850be354b",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#abandonFoundationReleaseAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1685,12 +1569,6 @@
       "consumerEdgeId": "edge:61659fc48b6b7d0055ae:3:fff361fedf788b002cb2",
       "entrypointId": "native_form:src/components/public/public-profile.tsx#ProfileActions:action:followProfileAction",
       "admissionBoundaryId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#followProfileAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:62fb48b314eaf199bfd8:1:06c622c691ab9d142d14",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#mergeCatalogCandidateAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#mergeCatalogCandidateAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -1934,12 +1812,6 @@
       "enforcementState": "enforced_ove_290"
     },
     {
-      "consumerEdgeId": "edge:757b08d22695b60a3d2b:1:279337991324b2dfc907",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogCandidateAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:780a979e00770d75bfb0:1:b3e0d21528bb4fd73750",
       "entrypointId": "route_handler:src/app/api/engagement/bookmarks/route.ts#POST:authority:authenticated_user",
       "admissionBoundaryId": "route_handler:src/app/api/engagement/bookmarks/route.ts#POST:authority:authenticated_user",
@@ -1985,12 +1857,6 @@
       "consumerEdgeId": "edge:7add5e6a0021564776bb:2:1a875e24129cc94e3af4",
       "entrypointId": "native_form:src/components/public/public-profile.tsx#ProfileActions:action:unfollowProfileAction",
       "admissionBoundaryId": "server_action:src/app/[locale]/[profileHandle]/actions.ts#unfollowProfileAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:7d649b6503557a6b55e9:1:2cf8f7ab23847e648764",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogAliasSuggestionAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogAliasSuggestionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2090,6 +1956,12 @@
       "enforcementState": "enforced_ove_291"
     },
     {
+      "consumerEdgeId": "edge:83beb78d1b28ae868eed:1:6e3d78bc105a9f9dc275",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/actions.ts#buildFoundationReleaseAction",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#buildFoundationReleaseAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
       "consumerEdgeId": "edge:85a6c5ad74a8e987b677:1:0481ade6ff99d03e463f",
       "entrypointId": "server_action:src/app/garden/profile/actions.ts#updatePublicHandleAction",
       "admissionBoundaryId": "server_action:src/app/garden/profile/actions.ts#updatePublicHandleAction",
@@ -2111,12 +1983,6 @@
       "consumerEdgeId": "edge:85a6c5ad74a8e987b677:4:5ef90698448ca86aa73f",
       "entrypointId": "server_action:src/app/garden/profile/actions.ts#updatePublicHandleAction",
       "admissionBoundaryId": "server_action:src/app/garden/profile/actions.ts#updatePublicHandleAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:86df662cf9bb06e16ee9:1:9a15a196e97f1a569a41",
-      "entrypointId": "native_form:src/app/garden/catalog/curation/variety-seed-proof-editor.tsx#ExistingSeedProofForm:action:upsertAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#upsertVarietySeedProofAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2204,6 +2070,12 @@
       "enforcementState": "enforced_ove_291"
     },
     {
+      "consumerEdgeId": "edge:940142a833f8c61894f0:1:ead79a896c8290673869",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/actions.ts#decideFoundationExceptionGroupAction",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#decideFoundationExceptionGroupAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
       "consumerEdgeId": "edge:999deae9324643aaaf06:1:7f173ecc6a4dbcd0870d",
       "entrypointId": "same_origin_fetch:src/app/garden/objects/[objectId]/follow-up-value-pulse.tsx#submitResponse:POST:/api/garden/value-pulse",
       "admissionBoundaryId": "route_handler:src/app/api/garden/value-pulse/route.ts#POST",
@@ -2270,9 +2142,9 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:a35d75db1eac3e7d0d2d:1:f7f730a6d2751f0ce598",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#promoteCatalogSourceCandidateAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#promoteCatalogSourceCandidateAction",
+      "consumerEdgeId": "edge:a140312fdb07beee7f12:1:ead79a896c8290673869",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/release-center.tsx#ActionForm:action:submit:binding:5:8d5f5f4ed6202f0c56b3",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#decideFoundationExceptionGroupAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2372,9 +2244,15 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:ab60a59b055aff04ecdc:1:0706029ce5456a342fed",
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-source-candidate-review-list.tsx#CatalogSourceCandidateCard:action:rejectAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogSourceCandidateAction",
+      "consumerEdgeId": "edge:b07584ec36565eec637a:1:8ec322f3dcc585372f8f",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/release-center.tsx#ActionForm:action:submit:binding:2:be77985b3d804df1a2b1",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#activateFoundationReleaseAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
+      "consumerEdgeId": "edge:b07584ec36565eec637a:2:b9e477b0e13532a1e428",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/release-center.tsx#ActionForm:action:submit:binding:2:be77985b3d804df1a2b1",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#activateFoundationReleaseAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2430,12 +2308,6 @@
       "entrypointId": "native_form:src/app/garden/objects/[objectId]/page.tsx#OwnerEntryActions:action:archiveJournalEntryAction",
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#archiveJournalEntryAction:authority:authenticated_user",
       "enforcementState": "enforced_ove_290"
-    },
-    {
-      "consumerEdgeId": "edge:b4497cabcd5750f0e956:1:be179329f7c551c61b8f",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogMatchSuggestionAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#approveCatalogMatchSuggestionAction",
-      "enforcementState": "enforced_ove_291"
     },
     {
       "consumerEdgeId": "edge:b8c775e790228fa69c29:1:fb356767ee3645b25fc0",
@@ -2636,39 +2508,15 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:c66dffe199c7baab98b1:1:b4a73de6881a1fb04c2f",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#refreshCatalogFuzzyDuplicateQaAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#refreshCatalogFuzzyDuplicateQaAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:c6b4f8b6e3da86a9203e:1:acea1f21faa935f11e77",
       "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#ModerationForm:action:action:binding:1:2cb0c491fc50f11972d6",
       "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#moderateCommunityContributionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:c74457637e25e19a255b:1:06c622c691ab9d142d14",
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:mergeAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#mergeCatalogCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
       "consumerEdgeId": "edge:c744e46d7dd6bed82be2:1:03707a3b38302d566b9a",
       "entrypointId": "native_form:src/app/account/communities/[slug]/page.tsx#CommunityModerationPage:action:setCommunityParticipationAction",
       "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#setCommunityParticipationAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:cd7e9102a65dd950d977:1:970a499c3870affe9016",
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:confirmAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#confirmCatalogCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:ce2276a06a18acd552bc:1:4de04c25c8140e8ebc39",
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx#CatalogCurationCandidateCard:action:rescanAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rescanCatalogMatchSuggestionsAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2738,6 +2586,12 @@
       "enforcementState": "enforced_ove_291"
     },
     {
+      "consumerEdgeId": "edge:d8c3e90ad116c0fcf80a:1:39499a7f2ecdf3ba3ab6",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/release-center.tsx#ActionForm:action:submit:binding:3:9b0a835eb76eb3413d12",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#approveFoundationPreviewAction",
+      "enforcementState": "enforced_ove_291"
+    },
+    {
       "consumerEdgeId": "edge:d8d4e0b13ceb5508bdc0:1:43373f91402d5ff0aab3",
       "entrypointId": "native_form:src/app/catalog-evidence-route.tsx#renderPublicCatalogEvidenceRoute:action:addCatalogPublicSlugToWishlistAction",
       "admissionBoundaryId": "server_action:src/app/wishlist/actions.ts#addCatalogPublicSlugToWishlistAction:authority:authenticated_user",
@@ -2753,12 +2607,6 @@
       "consumerEdgeId": "edge:e06bf10cd774fec08fb3:1:2d44d7d624e5013c3c97",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#resolvePlantObjectCatalogAction:authority:authenticated_user",
       "admissionBoundaryId": "server_action:src/app/garden/objects/[objectId]/actions.ts#resolvePlantObjectCatalogAction:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:e0f167795efc45cef3ba:1:b4a73de6881a1fb04c2f",
-      "entrypointId": "native_form:src/app/garden/catalog/curation/fuzzy-duplicate-refresh-form.tsx#FuzzyDuplicateRefreshForm:action:queueRefresh",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#refreshCatalogFuzzyDuplicateQaAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2822,21 +2670,15 @@
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:ebda18295b81b7ec2f42:1:9a15a196e97f1a569a41",
-      "entrypointId": "native_form:src/app/garden/catalog/curation/variety-seed-proof-editor.tsx#VarietySeedProofEditor:action:upsertAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#upsertVarietySeedProofAction",
+      "consumerEdgeId": "edge:e89c867f5be81f767b75:1:8ec322f3dcc585372f8f",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/actions.ts#activateFoundationReleaseAction",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#activateFoundationReleaseAction",
       "enforcementState": "enforced_ove_291"
     },
     {
-      "consumerEdgeId": "edge:ecdbebf1a0de1c7d0feb:1:f7f730a6d2751f0ce598",
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-source-candidate-review-list.tsx#CatalogSourceCandidateCard:action:promoteAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#promoteCatalogSourceCandidateAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:edaa1a4feb6de67a9716:1:c6956b9313aab7922575",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#generateCatalogAliasSuggestionsAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#generateCatalogAliasSuggestionsAction",
+      "consumerEdgeId": "edge:e89c867f5be81f767b75:2:b9e477b0e13532a1e428",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/actions.ts#activateFoundationReleaseAction",
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#activateFoundationReleaseAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -2891,12 +2733,6 @@
       "consumerEdgeId": "edge:f53c5991c4129133a470:1:e398ea8dcb92c81317e5",
       "entrypointId": "native_form:src/app/garden/privacy/erasure-requests/page.tsx#ErasureRequestCard:action:markErasureRequestReviewingAction",
       "admissionBoundaryId": "server_action:src/app/garden/privacy/erasure-requests/actions.ts#markErasureRequestReviewingAction",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:f55340efa81502b6f83b:1:d37dab9b886371ae08e2",
-      "entrypointId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogMatchSuggestionAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#rejectCatalogMatchSuggestionAction",
       "enforcementState": "enforced_ove_291"
     },
     {
@@ -3095,12 +2931,6 @@
       "consumerEdgeId": "edge:fb54955b889a49a2413c:9:36006ff850728fc24edf",
       "entrypointId": "native_form:src/app/engagement/public-engagement-panel.tsx#PublicEngagementPanel:POST:/api/engagement/comments",
       "admissionBoundaryId": "route_handler:src/app/api/engagement/comments/route.ts#POST:authority:authenticated_user",
-      "enforcementState": "enforced_ove_291"
-    },
-    {
-      "consumerEdgeId": "edge:ff76228fa3be170ad435:1:ed15ba7e27dde79c2af1",
-      "entrypointId": "native_form:src/app/garden/catalog/curation/catalog-source-candidate-review-list.tsx#CatalogSourceCandidateCard:action:holdAction",
-      "admissionBoundaryId": "server_action:src/app/garden/catalog/curation/actions.ts#holdCatalogSourceCandidateAction",
       "enforcementState": "enforced_ove_291"
     }
   ]

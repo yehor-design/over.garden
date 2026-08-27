@@ -5,7 +5,7 @@
  * Mirrored by services/matching/app/job_queue_manifest.py — drift fails tests.
  */
 
-export const JOB_QUEUE_MANIFEST_VERSION = "ove349.job-queue.v3" as const;
+export const JOB_QUEUE_MANIFEST_VERSION = "ove255.job-queue.v4" as const;
 
 export const MATCHING_DEFAULT_MAX_ATTEMPTS = 8 as const;
 
@@ -56,6 +56,21 @@ export const MEDIA_DERIVATIVE_REVOKE_KIND = "media_derivative_revoke" as const;
 export const MEDIA_STAGING_FINALIZE_KIND = "media_staging_finalize" as const;
 
 export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
+  {
+    queueName: "matching",
+    kind: "stable_registry_foundation_build",
+    consumer: "matching-python-worker",
+    maxAttempts: 3,
+    privacyClass: "catalog_ids_only",
+    coversStructuredJournalCover: false,
+    payloadContract: {
+      requiredKeys: ["kind", "releaseId"],
+      optionalKeys: [],
+      uuidKeys: ["releaseId"],
+    },
+    notes:
+      "Foundation build receives only one opaque release UUID; worker reads bounded, rights-cleared aggregate source facts from Postgres.",
+  },
   {
     queueName: "matching",
     kind: "catalog_alias_suggestions_refresh",
@@ -209,8 +224,7 @@ export function matchingSupportedKinds(): string[] {
 
 export function maxAttemptsForKind(queueName: string, kind: string): number {
   const entry = JOB_QUEUE_MANIFEST.find(
-    (candidate) =>
-      candidate.queueName === queueName && candidate.kind === kind,
+    (candidate) => candidate.queueName === queueName && candidate.kind === kind,
   );
   return entry?.maxAttempts ?? MATCHING_DEFAULT_MAX_ATTEMPTS;
 }

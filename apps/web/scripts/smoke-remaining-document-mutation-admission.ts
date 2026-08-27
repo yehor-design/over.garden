@@ -459,8 +459,8 @@ function requireReadback(
     throw new Error("OVE-291 deployment artifact receipt did not match.");
   }
   if (
-    sourceReceipt.enforcement.ove291EntrypointCount !== 117 ||
-    sourceReceipt.enforcement.ove291ConsumerEdgeCount !== 290 ||
+    sourceReceipt.enforcement.ove291EntrypointCount !== 103 ||
+    sourceReceipt.enforcement.ove291ConsumerEdgeCount !== 271 ||
     sourceReceipt.explicitGoogleLink.entrypointCount !== 5 ||
     sourceReceipt.explicitGoogleLink.consumerEdgeCount !== 15 ||
     sourceReceipt.explicitGoogleLink.ownershipDigest !==

@@ -18,8 +18,9 @@ const repoRoot = path.resolve(
 
 describe("job queue manifest", () => {
   it("covers every matching, erasure, and media-lifecycle producer kind with attempt bounds", () => {
-    expect(JOB_QUEUE_MANIFEST_VERSION).toBe("ove349.job-queue.v3");
+    expect(JOB_QUEUE_MANIFEST_VERSION).toBe("ove255.job-queue.v4");
     expect(matchingSupportedKinds()).toEqual([
+      "stable_registry_foundation_build",
       "catalog_alias_suggestions_refresh",
       "catalog_fuzzy_duplicate_qa_refresh",
       "catalog_match_suggestions_refresh",
@@ -32,9 +33,9 @@ describe("job queue manifest", () => {
       expect(entry.maxAttempts).toBeLessThanOrEqual(32);
     }
     expect(
-      JOB_QUEUE_MANIFEST.filter((entry) => entry.coversStructuredJournalCover).map(
-        (entry) => jobQueueManifestKey(entry),
-      ),
+      JOB_QUEUE_MANIFEST.filter(
+        (entry) => entry.coversStructuredJournalCover,
+      ).map((entry) => jobQueueManifestKey(entry)),
     ).toEqual([
       "matching:journal_entry_index",
       "matching:journal_entry_unindex",
@@ -46,10 +47,7 @@ describe("job queue manifest", () => {
 
   it("stays aligned with the Python matching manifest mirror", () => {
     const python = readFileSync(
-      path.join(
-        repoRoot,
-        "services/matching/app/job_queue_manifest.py",
-      ),
+      path.join(repoRoot, "services/matching/app/job_queue_manifest.py"),
       "utf8",
     );
     expect(python).toContain(
@@ -64,7 +62,7 @@ describe("job queue manifest", () => {
     expect(python).toContain("matching-python-worker");
     expect(python).toContain("JOURNAL_ENTRY_INDEX_KIND");
     expect(python).toContain("JOURNAL_ENTRY_UNINDEX_KIND");
-    expect(python).toContain("coversStructuredJournalCover\": True");
+    expect(python).toContain('coversStructuredJournalCover": True');
   });
 
   it("mirrors every per-kind payload contract in the Python manifest", () => {
@@ -95,9 +93,8 @@ describe("job queue manifest", () => {
  * while still failing closed when either side declares a different key set.
  */
 function parsePythonPayloadContracts(python: string) {
-  const block = /JOB_QUEUE_PAYLOAD_CONTRACTS:\s*Final\s*=\s*\{([\s\S]*?)\n\}/.exec(
-    python,
-  );
+  const block =
+    /JOB_QUEUE_PAYLOAD_CONTRACTS:\s*Final\s*=\s*\{([\s\S]*?)\n\}/.exec(python);
   expect(block, "JOB_QUEUE_PAYLOAD_CONTRACTS is missing").not.toBeNull();
 
   const entries = new Map<

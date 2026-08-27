@@ -34,9 +34,7 @@ PRODUCTION_PUBLIC_MEDIA_ORIGIN = "https://media.over.garden"
 
 _COMMIT_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 _IMAGE_DIGEST_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
-_BUILD_TIMESTAMP_PATTERN = re.compile(
-    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
-)
+_BUILD_TIMESTAMP_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
 _REQUIRED_JOB_QUEUE_COLUMNS = frozenset(
     {
@@ -59,6 +57,7 @@ _REQUIRED_QUEUE_CONSTRAINTS = frozenset(
         "job_queue_catalog_alias_payload_check",
         "job_queue_catalog_fuzzy_duplicate_payload_check",
         "job_queue_catalog_match_payload_check",
+        "job_queue_stable_registry_foundation_build_payload_check",
         "job_queue_status_check",
         "job_queue_terminal_error_code_check",
     }
@@ -110,9 +109,7 @@ class RuntimeRelease:
         require_public_projection_runtime_configuration()
         commit_sha = os.environ.get("OVERGARDEN_MATCHING_COMMIT_SHA", "")
         image_digest = os.environ.get("OVERGARDEN_MATCHING_IMAGE_DIGEST", "")
-        build_timestamp = os.environ.get(
-            "OVERGARDEN_MATCHING_BUILD_TIMESTAMP", ""
-        )
+        build_timestamp = os.environ.get("OVERGARDEN_MATCHING_BUILD_TIMESTAMP", "")
         schema_compatibility_class = os.environ.get(
             "OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY", ""
         )
@@ -373,9 +370,7 @@ def _read_postgres_state(release: RuntimeRelease) -> dict[str, object]:
                 _REQUIRED_JOB_QUEUE_COLUMNS.issubset(columns)
                 and _REQUIRED_QUEUE_CONSTRAINTS.issubset(constraints)
                 and _REQUIRED_HEARTBEAT_COLUMNS.issubset(heartbeat_columns)
-                and _REQUIRED_HEARTBEAT_CONSTRAINTS.issubset(
-                    heartbeat_constraints
-                )
+                and _REQUIRED_HEARTBEAT_CONSTRAINTS.issubset(heartbeat_constraints)
             )
             if not schema_ready:
                 return {

@@ -13,7 +13,7 @@ import {
 
 describe("OVE-215 erasure schema coverage", () => {
   it("exposes a versioned owned coverage manifest", () => {
-    expect(ERASURE_SCHEMA_COVERAGE_VERSION).toBe("ove349.erasure-schema.v5");
+    expect(ERASURE_SCHEMA_COVERAGE_VERSION).toBe("ove255.erasure-schema.v6");
     expect(listErasureCoverageEntries().length).toBeGreaterThan(40);
     const sql = readCurrentSchemaSql();
     assertErasureCoverageCompleteness({
@@ -66,6 +66,20 @@ describe("OVE-215 erasure schema coverage", () => {
       (candidate) => candidate.id === "engagement_likes.anonymous_device_hash",
     );
     expect(entry?.disposition).toBe("not-account-linkable");
+  });
+
+  it("rekeys immutable Stable Registry actor attributions during erasure", () => {
+    for (const id of [
+      "catalog_registry_releases.created_by_user_id",
+      "catalog_registry_releases.approved_by_user_id",
+      "catalog_registry_releases.activated_by_user_id",
+      "catalog_registry_decisions.decided_by_user_id",
+      "catalog_registry_activations.activated_by_user_id",
+    ]) {
+      expect(
+        ERASURE_SCHEMA_COVERAGE.find((candidate) => candidate.id === id),
+      ).toMatchObject({ kind: "soft_column", disposition: "anonymize" });
+    }
   });
 
   it("deletes bounded admission counters with their account", () => {

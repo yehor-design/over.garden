@@ -309,6 +309,262 @@ const UK_COPY = {
 
 export type OperatorCurationCopy = WidenCopy<typeof UK_COPY>;
 
+const REGISTRY_UK_COPY = {
+  metadataTitle: "Реєстр каталогу | OverGarden",
+  metadataDescription:
+    "Захищений операторський центр випусків для незмінного Stable Registry OverGarden.",
+  title: "Stable Registry — Foundation",
+  description:
+    "Побудуйте один незмінний випуск із завершеного захоплення. Рішення приймаються лише для груп винятків; source-only дані не стають продуктом автоматично.",
+  signInRequired: "Увійдіть, щоб відкрити центр випусків.",
+  accessDenied: "Доступ до центру випусків заборонено.",
+  releaseCenterDisabled:
+    "Центр випусків ще не активований у цьому середовищі. Поточний каталог не змінено.",
+  returnToCatalog: "Повернутися до поточного каталогу",
+  summaryTitle: "Безпечне зведення",
+  summaryDescription:
+    "Показано лише агрегати класифікації. Не показуються raw source-поля, точні координати чи приватні ідентифікатори.",
+  completedCaptures: "Завершені захоплення",
+  releaseMembers: "Учасники випуску",
+  exceptionGroups: "Групи винятків",
+  productEligible: "Продуктово придатні",
+  blockingGroups: "Блокувальні групи",
+  releaseState: "Стан випуску",
+  records: "Записів",
+  buildFoundation: "Побудувати Foundation",
+  buildQueued: "Побудову Foundation додано в чергу.",
+  cancelBuild: "Скасувати побудову",
+  cancelled: "Побудову скасовано. Поточний каталог не змінено.",
+  noExceptionGroups: "Немає відкритих груп винятків.",
+  decision: "Рішення для групи",
+  saveDecision: "Зберегти рішення",
+  decisionSaved: "Рішення збережено. Перегляньте оновлене зведення.",
+  approvePreview: "Схвалити незмінний preview",
+  previewApproved: "Preview схвалено. Він прив’язаний до поточних рішень.",
+  activationConfirmation:
+    "Активація перемикає лише локальний pointer випуску й ставить derived search у чергу. Публічний каталог не оголошується готовим тут.",
+  activateFoundation: "Активувати локально",
+  activated: "Локальний Foundation активовано; search intent додано в чергу.",
+  releaseStates: {
+    draft: "Чернетка",
+    building: "Побудова",
+    review_ready: "Готово до перевірки",
+    approved: "Preview схвалено",
+    active: "Локально активно",
+    retired: "Замінено",
+    failed: "Не завершено",
+    abandoned: "Скасовано",
+  },
+  groupStates: {
+    open: "Потрібне рішення",
+    decided: "Рішення збережено",
+    deferred: "Відкладено поза Foundation",
+    blocked: "Заблоковано правилом",
+  },
+  outcomeLabels: {
+    stale: "Стан змінився. Оновіть сторінку перед повторною дією.",
+    blocked: "Дія заблокована поточним безпечним станом.",
+    forbidden: "Доступ заборонено.",
+    not_found: "Випуск або групу не знайдено.",
+  },
+  decisionLabels: {
+    same_concept: "Це той самий концепт",
+    different_concept: "Це різні концепти",
+    add_alias: "Додати псевдонім",
+    keep_current: "Залишити поточне",
+    create_successor: "Створити наступника",
+    defer: "Відкласти поза Foundation",
+    block_rule: "Заблокувати правилом",
+  },
+  reasonLabels: {
+    accepted_name_conflict: "Конфлікт прийнятої назви",
+    rank_conflict: "Конфлікт рангу",
+    ambiguous_identity: "Неоднозначна ідентичність",
+    merge_candidate: "Кандидат на об’єднання",
+    split_candidate: "Кандидат на поділ",
+    rights_ambiguity: "Неясність прав",
+    unsupported_field: "Непідтримуване поле",
+    authority_corroboration_required: "Потрібне підтвердження authority",
+    source_only_or_ineligible: "Лише source / не придатне до продукту",
+  },
+} as const;
+
+export type StableRegistryCopy = WidenCopy<typeof REGISTRY_UK_COPY>;
+
+const REGISTRY_BG_COPY = {
+  metadataTitle: "Регистър на каталога | OverGarden",
+  metadataDescription:
+    "Защитен операторски център за издания на неизменяемия Stable Registry на OverGarden.",
+  title: "Stable Registry — Foundation",
+  description:
+    "Създайте едно неизменяемо издание от завършено заснемане. Решенията са само за групи изключения; source-only данните не стават продукт автоматично.",
+  signInRequired: "Влезте, за да отворите центъра за издания.",
+  accessDenied: "Достъпът до центъра за издания е отказан.",
+  releaseCenterDisabled:
+    "Центърът за издания още не е включен в тази среда. Текущият каталог не е променен.",
+  returnToCatalog: "Към текущия каталог",
+  summaryTitle: "Безопасно обобщение",
+  summaryDescription:
+    "Показани са само агрегати на класификацията. Raw source полета, точни координати и лични идентификатори не се показват.",
+  completedCaptures: "Завършени заснемания",
+  releaseMembers: "Членове на изданието",
+  exceptionGroups: "Групи изключения",
+  productEligible: "Допустими за продукта",
+  blockingGroups: "Блокиращи групи",
+  releaseState: "Състояние на изданието",
+  records: "Записи",
+  buildFoundation: "Създай Foundation",
+  buildQueued: "Създаването на Foundation е добавено в опашката.",
+  cancelBuild: "Откажи създаването",
+  cancelled: "Създаването е отменено. Текущият каталог не е променен.",
+  noExceptionGroups: "Няма отворени групи изключения.",
+  decision: "Решение за групата",
+  saveDecision: "Запази решението",
+  decisionSaved: "Решението е запазено. Прегледайте обновеното обобщение.",
+  approvePreview: "Одобри неизменяем preview",
+  previewApproved: "Preview е одобрен и е обвързан с текущите решения.",
+  activationConfirmation:
+    "Активирането сменя само локалния pointer на изданието и добавя derived search в опашката. Публичният каталог не се обявява за готов тук.",
+  activateFoundation: "Активирай локално",
+  activated:
+    "Локалният Foundation е активиран; search intent е добавен в опашката.",
+  releaseStates: {
+    draft: "Чернова",
+    building: "Създаване",
+    review_ready: "Готово за проверка",
+    approved: "Preview е одобрен",
+    active: "Локално активно",
+    retired: "Заменено",
+    failed: "Неуспешно",
+    abandoned: "Отменено",
+  },
+  groupStates: {
+    open: "Нужно е решение",
+    decided: "Решението е запазено",
+    deferred: "Отложено извън Foundation",
+    blocked: "Блокирано от правило",
+  },
+  outcomeLabels: {
+    stale: "Състоянието е променено. Обновете страницата преди нов опит.",
+    blocked: "Действието е блокирано от текущото безопасно състояние.",
+    forbidden: "Достъпът е отказан.",
+    not_found: "Изданието или групата не е намерена.",
+  },
+  decisionLabels: {
+    same_concept: "Същият концепт",
+    different_concept: "Различни концепти",
+    add_alias: "Добави псевдоним",
+    keep_current: "Запази текущото",
+    create_successor: "Създай наследник",
+    defer: "Отложи извън Foundation",
+    block_rule: "Блокирай с правило",
+  },
+  reasonLabels: {
+    accepted_name_conflict: "Конфликт на прието име",
+    rank_conflict: "Конфликт на ранг",
+    ambiguous_identity: "Нееднозначна идентичност",
+    merge_candidate: "Кандидат за обединяване",
+    split_candidate: "Кандидат за разделяне",
+    rights_ambiguity: "Неясни права",
+    unsupported_field: "Неподдържано поле",
+    authority_corroboration_required: "Нужно е потвърждение на authority",
+    source_only_or_ineligible: "Само source / недопустимо за продукта",
+  },
+} as const satisfies StableRegistryCopy;
+
+const REGISTRY_RU_COPY = {
+  metadataTitle: "Реестр каталога | OverGarden",
+  metadataDescription:
+    "Защищённый операторский центр выпусков неизменяемого Stable Registry OverGarden.",
+  title: "Stable Registry — Foundation",
+  description:
+    "Соберите один неизменяемый выпуск из завершённого захвата. Решения нужны только для групп исключений; source-only данные не становятся продуктом автоматически.",
+  signInRequired: "Войдите, чтобы открыть центр выпусков.",
+  accessDenied: "Доступ к центру выпусков запрещён.",
+  releaseCenterDisabled:
+    "Центр выпусков ещё не включён в этой среде. Текущий каталог не изменён.",
+  returnToCatalog: "Вернуться к текущему каталогу",
+  summaryTitle: "Безопасная сводка",
+  summaryDescription:
+    "Показаны только агрегаты классификации. Raw source поля, точные координаты и личные идентификаторы не выводятся.",
+  completedCaptures: "Завершённые захваты",
+  releaseMembers: "Участники выпуска",
+  exceptionGroups: "Группы исключений",
+  productEligible: "Допустимые для продукта",
+  blockingGroups: "Блокирующие группы",
+  releaseState: "Состояние выпуска",
+  records: "Записей",
+  buildFoundation: "Собрать Foundation",
+  buildQueued: "Сборка Foundation добавлена в очередь.",
+  cancelBuild: "Отменить сборку",
+  cancelled: "Сборка отменена. Текущий каталог не изменён.",
+  noExceptionGroups: "Открытых групп исключений нет.",
+  decision: "Решение по группе",
+  saveDecision: "Сохранить решение",
+  decisionSaved: "Решение сохранено. Проверьте обновлённую сводку.",
+  approvePreview: "Одобрить неизменяемый preview",
+  previewApproved: "Preview одобрен и привязан к текущим решениям.",
+  activationConfirmation:
+    "Активация переключает только локальный pointer выпуска и добавляет derived search в очередь. Публичный каталог здесь не объявляется готовым.",
+  activateFoundation: "Активировать локально",
+  activated:
+    "Локальный Foundation активирован; search intent добавлен в очередь.",
+  releaseStates: {
+    draft: "Черновик",
+    building: "Сборка",
+    review_ready: "Готово к проверке",
+    approved: "Preview одобрен",
+    active: "Локально активно",
+    retired: "Заменено",
+    failed: "Не завершено",
+    abandoned: "Отменено",
+  },
+  groupStates: {
+    open: "Нужно решение",
+    decided: "Решение сохранено",
+    deferred: "Отложено вне Foundation",
+    blocked: "Заблокировано правилом",
+  },
+  outcomeLabels: {
+    stale: "Состояние изменилось. Обновите страницу перед повторной попыткой.",
+    blocked: "Действие заблокировано текущим безопасным состоянием.",
+    forbidden: "Доступ запрещён.",
+    not_found: "Выпуск или группа не найдены.",
+  },
+  decisionLabels: {
+    same_concept: "Тот же концепт",
+    different_concept: "Разные концепты",
+    add_alias: "Добавить псевдоним",
+    keep_current: "Оставить текущее",
+    create_successor: "Создать преемника",
+    defer: "Отложить вне Foundation",
+    block_rule: "Заблокировать правилом",
+  },
+  reasonLabels: {
+    accepted_name_conflict: "Конфликт принятого имени",
+    rank_conflict: "Конфликт ранга",
+    ambiguous_identity: "Неоднозначная идентичность",
+    merge_candidate: "Кандидат на объединение",
+    split_candidate: "Кандидат на разделение",
+    rights_ambiguity: "Неясность прав",
+    unsupported_field: "Неподдерживаемое поле",
+    authority_corroboration_required: "Нужно подтверждение authority",
+    source_only_or_ineligible: "Только source / не подходит для продукта",
+  },
+} as const satisfies StableRegistryCopy;
+
+const REGISTRY_COPY_BY_LOCALE = {
+  uk: REGISTRY_UK_COPY,
+  bg: REGISTRY_BG_COPY,
+  ru: REGISTRY_RU_COPY,
+} satisfies Record<InterfaceLocale, StableRegistryCopy>;
+
+export function getStableRegistryCopy(
+  locale: InterfaceLocale,
+): StableRegistryCopy {
+  return REGISTRY_COPY_BY_LOCALE[locale];
+}
+
 const BG_COPY = {
   page: {
     metadataTitle: "Куриране на каталога | OverGarden",

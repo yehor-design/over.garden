@@ -43,6 +43,11 @@ from app.search import (
     reindex_catalog_typeahead,
     unindex_journal_entry_for_owner,
 )
+from app.stable_registry_foundation import (
+    STABLE_REGISTRY_FOUNDATION_BUILD_KIND,
+    build_foundation_release,
+    mark_foundation_release_failed,
+)
 from app.runtime import (
     WORKER_HEARTBEAT_MAX_AGE_SECONDS,
     RuntimeRelease,
@@ -112,7 +117,8 @@ where queue_name = %s
           when payload->>'kind' in (
             '{CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND}',
             '{CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND}',
-            '{CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND}'
+            '{CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND}',
+            '{STABLE_REGISTRY_FOUNDATION_BUILD_KIND}'
           ) then %s
           else %s
         end || ' seconds'
@@ -208,6 +214,18 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
     if kind == CATALOG_TYPEAHEAD_REINDEX_KIND:
         _require_exact_payload_shape(payload, CATALOG_TYPEAHEAD_REINDEX_KIND)
         reindex_catalog_typeahead(conn)
+        return
+
+    if kind == STABLE_REGISTRY_FOUNDATION_BUILD_KIND:
+        _require_exact_payload_shape(payload, STABLE_REGISTRY_FOUNDATION_BUILD_KIND)
+        build_foundation_release(
+            conn,
+            _payload_uuid_text(
+                payload,
+                "releaseId",
+                STABLE_REGISTRY_FOUNDATION_BUILD_KIND,
+            ),
+        )
         return
 
     if kind == CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND:
@@ -456,6 +474,7 @@ def _process_claimed_job(
             _handle(conn, payload)
         except TerminalJobError as error:
             _mark_dead(conn, job["id"], job["claimToken"], error.code)
+            _mark_foundation_release_failed(conn, payload)
         except Exception:
             max_attempts = max_attempts_for_kind(str(kind))
             if attempts >= max_attempts:
@@ -465,6 +484,7 @@ def _process_claimed_job(
                     job["claimToken"],
                     "max_attempts_exceeded",
                 )
+                _mark_foundation_release_failed(conn, payload)
             else:
                 _mark_failed(
                     conn,
@@ -477,6 +497,24 @@ def _process_claimed_job(
             _mark_done(conn, job["id"], job["claimToken"])
     finally:
         active_claim.clear()
+
+
+def _mark_foundation_release_failed(
+    conn: psycopg.Connection, payload: dict[str, Any]
+) -> None:
+    """Synchronize only a terminal Foundation job failure to its safe state."""
+    if payload.get("kind") != STABLE_REGISTRY_FOUNDATION_BUILD_KIND:
+        return
+    try:
+        release_id = _payload_uuid_text(
+            payload,
+            "releaseId",
+            STABLE_REGISTRY_FOUNDATION_BUILD_KIND,
+        )
+    except TerminalJobError:
+        return
+    with conn.transaction():
+        mark_foundation_release_failed(conn, release_id)
 
 
 def _heartbeat_loop(

@@ -152,6 +152,19 @@ export interface CatalogItemNames {
   normalized_name: string;
 }
 
+export interface CatalogItemRevisions {
+  canonical_name: string;
+  catalog_item_id: string;
+  catalog_kind: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  identity_relation: Generated<string>;
+  normalized_name: string;
+  revision_digest: string;
+  revision_number: number;
+  source_evidence_digest: string;
+}
+
 export interface CatalogItems {
   canonical_name: string;
   catalog_kind: Generated<string>;
@@ -204,6 +217,95 @@ export interface CatalogMatchSuggestions {
   target_matching_fingerprint: string | null;
   target_script: string | null;
   target_updated_at_snapshot: Timestamp | null;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface CatalogRegistryActivations {
+  activated_by_user_id: string;
+  activation_digest: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  prior_release_id: string | null;
+  release_id: string;
+}
+
+export interface CatalogRegistryActivePointers {
+  active_release_id: string | null;
+  release_family: string;
+  updated_at: Generated<Timestamp>;
+  version: Generated<number>;
+}
+
+export interface CatalogRegistryDecisions {
+  action: string;
+  created_at: Generated<Timestamp>;
+  decided_by_user_id: string;
+  decision_digest: string;
+  exception_group_id: string;
+  expected_version: number;
+  id: Generated<string>;
+  release_id: string;
+}
+
+export interface CatalogRegistryExceptionGroups {
+  created_at: Generated<Timestamp>;
+  expected_version: Generated<number>;
+  group_key: string;
+  id: Generated<string>;
+  member_count: number;
+  reason_class: string;
+  release_id: string;
+  safe_summary: Generated<Json>;
+  state: Generated<string>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface CatalogRegistryReleaseMembers {
+  catalog_item_id: string;
+  catalog_item_revision_id: string;
+  created_at: Generated<Timestamp>;
+  eligibility: string;
+  id: Generated<string>;
+  membership_digest: string;
+  release_id: string;
+}
+
+export interface CatalogRegistryReleases {
+  activated_at: Timestamp | null;
+  activated_by_user_id: string | null;
+  approved_at: Timestamp | null;
+  approved_by_user_id: string | null;
+  build_digest: string;
+  build_started_at: Timestamp | null;
+  capture_id: string | null;
+  created_at: Generated<Timestamp>;
+  created_by_user_id: string;
+  id: Generated<string>;
+  policy_version: string;
+  predecessor_release_id: string | null;
+  preview_digest: string | null;
+  release_kind: string;
+  retired_at: Timestamp | null;
+  review_ready_at: Timestamp | null;
+  safe_summary: Generated<Json>;
+  source_snapshot_id: string | null;
+  state: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  version: Generated<number>;
+}
+
+export interface CatalogRegistrySearchOutbox {
+  applied_at: Timestamp | null;
+  attempts: Generated<number>;
+  available_at: Generated<Timestamp>;
+  created_at: Generated<Timestamp>;
+  desired_state: string;
+  intent_digest: string;
+  last_error_class: string | null;
+  lease_expires_at: Timestamp | null;
+  lease_token: string | null;
+  release_id: string;
+  state: Generated<string>;
   updated_at: Generated<Timestamp>;
 }
 
@@ -960,8 +1062,16 @@ export interface DB {
   catalog_alias_projections: CatalogAliasProjections;
   catalog_fuzzy_duplicate_suggestions: CatalogFuzzyDuplicateSuggestions;
   catalog_item_names: CatalogItemNames;
+  catalog_item_revisions: CatalogItemRevisions;
   catalog_items: CatalogItems;
   catalog_match_suggestions: CatalogMatchSuggestions;
+  catalog_registry_activations: CatalogRegistryActivations;
+  catalog_registry_active_pointers: CatalogRegistryActivePointers;
+  catalog_registry_decisions: CatalogRegistryDecisions;
+  catalog_registry_exception_groups: CatalogRegistryExceptionGroups;
+  catalog_registry_release_members: CatalogRegistryReleaseMembers;
+  catalog_registry_releases: CatalogRegistryReleases;
+  catalog_registry_search_outbox: CatalogRegistrySearchOutbox;
   catalog_source_capture_runs: CatalogSourceCaptureRuns;
   catalog_source_capture_units: CatalogSourceCaptureUnits;
   catalog_source_links: CatalogSourceLinks;
