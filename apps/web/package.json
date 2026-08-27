@@ -38,6 +38,7 @@
     "eppo:credentials:setup": "NODE_OPTIONS=--conditions=react-server tsx scripts/setup-eppo-credentials.ts",
     "eppo:credentials:verify": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-eppo-api-access.ts",
     "eppo:source-contract:verify": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-eppo-source-contract.ts",
+    "eppo:observed-capture": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/capture-eppo-observed-snapshot.ts",
     "stable-registry:canon:check": "tsx scripts/check-stable-registry-canon.ts",
     "online-only:canon:check": "tsx scripts/check-online-only-canon.ts",
     "verify:online-only-retirement": "tsx scripts/verify-online-only-retirement.ts",

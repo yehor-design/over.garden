@@ -8,13 +8,23 @@ import {
   eppoCredentialFingerprintPrefix,
   resolveEppoCredential,
 } from "../src/server/catalog-source/eppo-credentials";
+import {
+  EPPO_API_BASE_URL,
+  EPPO_API_KEY_HEADER,
+  EPPO_LYPES_CODE,
+  EPPO_LYPES_OPERATION_ID,
+  EPPO_LYPES_PATH,
+  EPPO_OPENAPI_URL,
+} from "../src/server/catalog-source/eppo-api-constants";
 
-export const EPPO_OPENAPI_URL = "https://api.eppo.int/gd/v2/eppo_api_gd_v2.yml";
-export const EPPO_API_BASE_URL = "https://api.eppo.int/gd/v2";
-export const EPPO_LYPES_CODE = "LYPES";
-export const EPPO_LYPES_OPERATION_ID = "getGDTaxon";
-export const EPPO_LYPES_PATH = `/taxons/taxon/${EPPO_LYPES_CODE}/overview`;
-export const EPPO_API_KEY_HEADER = "X-Api-Key";
+export {
+  EPPO_API_BASE_URL,
+  EPPO_API_KEY_HEADER,
+  EPPO_LYPES_CODE,
+  EPPO_LYPES_OPERATION_ID,
+  EPPO_LYPES_PATH,
+  EPPO_OPENAPI_URL,
+};
 export const EPPO_REQUEST_TIMEOUT_MS = 15_000;
 export const EPPO_MAX_REQUEST_ATTEMPTS = 3;
 

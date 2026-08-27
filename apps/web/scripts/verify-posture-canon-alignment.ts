@@ -73,6 +73,7 @@ const LIVE_DOCUMENT_REASONS: Record<string, string> = {
   "docs/CATALOG_SEED_ROLLOUT_PROOF.md": "current_catalog_release_guardrail",
   "docs/CURRENT_SCHEMA_ERASURE.md": "current_erasure_guardrail",
   "docs/DRIVE2_PARITY_PRODUCTION_CLOSEOUT.md": "current_release_guardrail",
+  "docs/EPPO_OBSERVED_CAPTURE.md": "current_source_capture_guardrail",
   "docs/IDENTITY_POLICY.md": "current_identity_guardrail",
   "docs/INFRASTRUCTURE_REGISTRY.md": "current_infrastructure_guardrail",
   "docs/INTERFACE_LOCALE_CONTRACT.md": "current_locale_guardrail",

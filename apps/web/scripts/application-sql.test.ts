@@ -27,6 +27,7 @@ describe("versioned application SQL bootstrap", () => {
       "0020_ove299_remove_manual_pilot_learning.sql",
       "0021_ove314_retire_obsolete_control_plane.sql",
       "0022_ove295_google_account_uniqueness.sql",
+      "0023_ove254_eppo_observed_capture.sql",
       "0029_online_journal_drafts.sql",
       "0035_online_only_retirement.sql",
       "0036_ove347_atomic_journal_create.sql",
