@@ -4475,7 +4475,9 @@ export function validateVisualFixtureManifest(
       (object) => object.ownerUserId === workspace.ownerActorId,
     );
     const ownerEntries = manifest.entries.filter(
-      (entry) => entry.ownerUserId === workspace.ownerActorId,
+      (entry) =>
+        entry.ownerUserId === workspace.ownerActorId &&
+        entry.lifecycleState === "active",
     );
     if (
       workspace.expectedSpaceCount !== ownerSpaces.length ||
@@ -4542,9 +4544,16 @@ function buildWorkspaceEvidence(): VisualFixtureWorkspaceEvidence {
           .filter((object) => object.ownerUserId === actor.id)
           .toSorted(compareCreatedDescending)
       : [];
+    // OVE-353: the workspace continuity strip reads the canonical
+    // owner query, which returns active entries only. A deleted entry is
+    // gone from the owner's own recent list, not merely from public surfaces.
     const ownerEntries = actor
       ? entries
-          .filter((entry) => entry.ownerUserId === actor.id)
+          .filter(
+            (entry) =>
+              entry.ownerUserId === actor.id &&
+              entry.lifecycleState === "active",
+          )
           .toSorted(compareWorkspaceEntries)
       : [];
 
