@@ -326,9 +326,9 @@ describe("verify-posture-canon-alignment", () => {
       version: POSTURE_CANON_ALIGNMENT_VERSION,
       status: "aligned",
       counts: {
-        liveAuthority: 33,
+        liveAuthority: 34,
         historicalReceipt: 16,
-        reconciled: 33,
+        reconciled: 34,
         ledgerLabelled: 16,
         unclassified: 0,
         runtimePendingChild: 0,
