@@ -68,9 +68,11 @@ OVE-333 is the non-executable, unassigned coordination container that closes
 last from the terminal child receipts. Linear status and relation read-back
 remains authoritative over this dated mirror.
 
-Current Stable Registry authority: ADR-0016 and
-`docs/STABLE_REGISTRY.md`. OVE-253 remains a historical `blocked_manifest`
-receipt proving that no official EPPO release/checksum manifest was available;
+Current Stable Registry authority: ADR-0016, its ADR-0020 migration-allocation
+amendment, and `docs/STABLE_REGISTRY.md`. ADR-0020 assigns migration `0027` to
+OVE-328 and migration `0028` to OVE-258.
+OVE-327 and OVE-259 have no SQL migration. OVE-253 remains a historical
+`blocked_manifest` receipt proving that no official EPPO release/checksum manifest was available;
 it is not the current future-work gate. OVE-254 may create an immutable,
 separately labelled OverGarden observed capture after OVE-318 terminal
 closeout. OVE-255 and later children independently own rights/identity/release,

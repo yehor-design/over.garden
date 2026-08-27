@@ -1,13 +1,16 @@
 # Stable Registry
 
-Status: binding canon under ADR-0016
+Status: binding canon under ADR-0016, with migration allocation amended by
+ADR-0020
 Decision owner: OVE-318
-Implementation owners: OVE-254 through OVE-259 and their explicitly related
-extension-pack successors
+Implementation owners: OVE-254 through OVE-259, OVE-327, OVE-328, and their
+explicitly related extension-pack successors
 
-`docs/adr/ADR-0016-stable-registry-observed-capture.md` owns the decision. This
-document owns its executable vocabulary and invariants. Historical OVE-253
-evidence remains evidence; it is not the current acquisition gate.
+`docs/adr/ADR-0016-stable-registry-observed-capture.md` owns the observed-capture
+decision. `docs/adr/ADR-0020-stable-registry-migration-allocation.md` is the
+binding amendment for future Stable Registry migration allocation. This document
+owns its executable vocabulary and invariants. Historical OVE-253 evidence
+remains evidence; it is not the current acquisition gate.
 
 ## Canon constants
 
@@ -186,13 +189,16 @@ metadata, or provider capability token.
 - OVE-256 / migration `0025`: source archive versus approved-release public
   disclosure.
 - OVE-257 / migration `0026`: active-release picker/search/save/readback.
-- OVE-258 / migration `0027`: editions, corrections, supersession, and rollback.
-- OVE-259 / migration `0028`: production landing, parity, and final program
+- OVE-327 / no SQL migration: pure artifact-adapter packs and their safe
+  runtime boundary.
+- OVE-328 / migration `0027`: separately versioned extension-pack foundations.
+- OVE-258 / migration `0028`: editions, corrections, supersession, and rollback.
+- OVE-259 / no SQL migration: production plan/apply, parity, and final program
   proof.
 
-The reservation authority is `docs/MIGRATION_ALLOCATION.md`. This canon creates
-no SQL file, database row, capture, release, search document, provider effect,
-or deployment.
+The reservation authority is `docs/MIGRATION_ALLOCATION.md`, under ADR-0020's
+allocation amendment. This canon creates no SQL file, database row, capture,
+release, search document, provider effect, or deployment.
 
 ## Machine enforcement
 
@@ -203,8 +209,9 @@ pnpm stable-registry:canon:check
 pnpm exec vitest run scripts/check-stable-registry-canon.test.ts
 ```
 
-The checker owns the closed consumer inventory, requires ADR-0016 and this
-specification, verifies migration allocation and source/product separation,
+The checker owns the closed consumer inventory, requires ADR-0016, ADR-0020,
+and this specification, verifies migration allocation and source/product
+separation,
 classifies OVE-253 wording as historical evidence, rejects a duplicate current
 authority, stale official-manifest future gate, raw-to-product projection,
 mutable identity/release wording, missing consumer, unknown authority consumer,

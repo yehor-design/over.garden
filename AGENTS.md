@@ -25,9 +25,12 @@ admission/quality, and private-then-publish application runtime. OVE-350 then
 deleted the exact empty legacy provider and narrowed the app credential to the
 public bucket; that provider surface must remain absent.
 
-Current Stable Registry authority: ADR-0016 and `docs/STABLE_REGISTRY.md`.
-EPPO full-corpus inputs are OverGarden-owned observed captures, never official
-EPPO releases. Source capture, rights clearance, identity resolution, immutable
+Current Stable Registry authority: ADR-0016, its ADR-0020 migration-allocation
+amendment, and `docs/STABLE_REGISTRY.md`. ADR-0020 assigns migration `0027` to
+OVE-328 and migration `0028` to OVE-258.
+OVE-327 and OVE-259 have no SQL migration. EPPO full-corpus inputs are
+OverGarden-owned observed captures, never official EPPO releases. Source
+capture, rights clearance, identity resolution, immutable
 release approval, and product eligibility are separate evidence states. Stable
 OverGarden UUIDs and published release membership must not be rewritten in
 place; OVE-253 remains historical `blocked_manifest` evidence, not the current
@@ -83,8 +86,9 @@ acquisition gate.
 12. Do not make product decisions from implementation convenience alone. Before shaping a feature, UI flow, public page, analytics event, onboarding step, or user-facing Linear issue, run the Product Thinking Gate in `docs/product-research/README.md`. Every `User-facing: no` issue, including remediation, operator, security, migration, decision, canon, and coordination work, must still state its protected product/trust/reliability outcome, load-bearing assumption, and falsification signal under `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`; it must choose exactly one branch: identical non-empty sets of genuinely constraining non-README research paths in both its Product Thinking rationale and Required context, or a specific task-local no-direct-research conclusion with zero research paths. A `coordination_container` names the protected integration outcome and child evidence while owning zero implementation.
 13. Launch guest corpus hygiene is governed by `docs/LAUNCH_CORPUS.md` (OVE-199): never present production smoke/visual fixtures as real gardeners; production archive/seed requires explicit maintainer sign-off on the exact plan report.
 14. MVP learning for H1/H4/H6 is governed by `docs/MVP_LEARNING_SIGNALS.md` (OVE-200, reconciled by OVE-314): `real_self_serve` is the single decision-eligible cohort; production-smoke/visual-fixture/editorial/bot actors are exclusions only; unclassified activity fails the decision gate closed. Product-access invites, closed-pilot/founder-rehearsal cohorts, and their UI/storage are retired; lineage invitations remain a separate provenance feature.
-15. Stable Registry work is governed by ADR-0016,
-    `docs/STABLE_REGISTRY.md`, and `docs/MIGRATION_ALLOCATION.md`. An observed
+15. Stable Registry work is governed by ADR-0016, its ADR-0020
+    migration-allocation amendment, `docs/STABLE_REGISTRY.md`, and
+    `docs/MIGRATION_ALLOCATION.md`. An observed
     source capture may enter only the isolated source layer owned by OVE-254;
     it cannot reach product UI or search until rights, stable identity,
     immutable release, and product-eligibility gates independently pass.

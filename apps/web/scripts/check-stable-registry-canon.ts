@@ -5,12 +5,33 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const STABLE_REGISTRY_OBSERVED_CORPUS_SCALE = 129_188;
-export const STABLE_REGISTRY_CANON_VERSION = "ove318.stableRegistryCanon.v1";
+export const STABLE_REGISTRY_CANON_VERSION = "ove352.stableRegistryCanon.v2";
 export const STABLE_REGISTRY_CANON_DEADLINE_MS = 30_000;
+
+const STABLE_REGISTRY_MIGRATION_ALLOCATIONS = [
+  ["0023", "OVE-254"],
+  ["0024", "OVE-255"],
+  ["0025", "OVE-256"],
+  ["0026", "OVE-257"],
+  ["0027", "OVE-328"],
+  ["0028", "OVE-258"],
+] as const;
+
+const STABLE_REGISTRY_NO_SQL_MIGRATION_OWNERS = ["OVE-327", "OVE-259"] as const;
+
+const ACTIVE_MIGRATION_ALLOCATION_CONSUMERS = new Set([
+  "AGENTS.md",
+  "docs/adr/ADR-0020-stable-registry-migration-allocation.md",
+  "docs/STABLE_REGISTRY.md",
+  "docs/MIGRATION_ALLOCATION.md",
+  "docs/SDD_VERTICAL_SLICE_ROADMAP.md",
+  "docs/TECH_STACK_DECISIONS.md",
+]);
 
 export const REQUIRED_STABLE_REGISTRY_CONSUMERS = [
   "AGENTS.md",
   "docs/adr/ADR-0016-stable-registry-observed-capture.md",
+  "docs/adr/ADR-0020-stable-registry-migration-allocation.md",
   "docs/STABLE_REGISTRY.md",
   "docs/MIGRATION_ALLOCATION.md",
   "docs/product-research/CATALOG_SOURCE_READINESS.md",
@@ -18,6 +39,7 @@ export const REQUIRED_STABLE_REGISTRY_CONSUMERS = [
   "docs/product-research/SPECIES_BACKBONE_POLICY.md",
   "docs/SDD_VERTICAL_SLICE_ROADMAP.md",
   "docs/SCAFFOLD_STATUS.md",
+  "docs/TECH_STACK_DECISIONS.md",
   "apps/web/src/server/catalog-source/eppo-source-contract.ts",
 ] as const;
 
@@ -51,9 +73,7 @@ export function evaluateStableRegistryCanon(
   const startedAt = now();
   const baselineSha = _options.baselineSha ?? "0".repeat(40);
   const violations: StableRegistryCanonViolation[] = [];
-  const requiredConsumers = new Set<string>(
-    REQUIRED_STABLE_REGISTRY_CONSUMERS,
-  );
+  const requiredConsumers = new Set<string>(REQUIRED_STABLE_REGISTRY_CONSUMERS);
 
   if (_options.signal?.aborted) {
     return receipt({
@@ -184,7 +204,9 @@ export function formatStableRegistryCanonReceipt(
 export function parseStableRegistryCanonArguments(
   arguments_: readonly string[],
 ): { injectConsumerTimeout: boolean } {
-  const normalizedArguments = arguments_.filter((argument) => argument !== "--");
+  const normalizedArguments = arguments_.filter(
+    (argument) => argument !== "--",
+  );
   const allowedArguments = new Set(["--inject-consumer-timeout"]);
   const unknownArgument = normalizedArguments.find(
     (argument) => !allowedArguments.has(argument),
@@ -232,28 +254,41 @@ function classifyContent(
   }
 
   if (path === "docs/MIGRATION_ALLOCATION.md") {
-    const allocations = [
-      ["0023", "OVE-254"],
-      ["0024", "OVE-255"],
-      ["0025", "OVE-256"],
-      ["0026", "OVE-257"],
-      ["0027", "OVE-258"],
-      ["0028", "OVE-259"],
-    ] as const;
     if (
-      allocations.some(
+      STABLE_REGISTRY_MIGRATION_ALLOCATIONS.some(
         ([migration, issue]) =>
-          !new RegExp(`${migration}[^\\n]*${issue}`).test(content),
+          !new RegExp(`${migration}[^\\r\\n]*${issue}`).test(content),
       )
     ) {
       violations.push({ code: "migration_allocation_drift", path });
     }
+    if (
+      STABLE_REGISTRY_NO_SQL_MIGRATION_OWNERS.some(
+        (issue) =>
+          !new RegExp(
+            `(?:no sql migration[^\\r\\n]*${issue}|${issue}[^\\r\\n]*no sql migration)`,
+            "i",
+          ).test(content),
+      )
+    ) {
+      violations.push({ code: "no_sql_migration_owner_drift", path });
+    }
   }
 
   if (
-    path ===
-    "docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json"
+    path === "docs/adr/ADR-0020-stable-registry-migration-allocation.md" &&
+    (!/status:\s*accepted/i.test(content) ||
+      !/0027[^\r\n]*OVE-328/i.test(content) ||
+      !/0028[^\r\n]*OVE-258/i.test(content) ||
+      STABLE_REGISTRY_NO_SQL_MIGRATION_OWNERS.some(
+        (issue) =>
+          !new RegExp(`${issue}[^\\r\\n]*no sql migration`, "i").test(content),
+      ))
   ) {
+    violations.push({ code: "migration_allocation_authority_drift", path });
+  }
+
+  if (path === "docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json") {
     let manifest: Record<string, unknown> | undefined;
     try {
       manifest = asRecord(JSON.parse(content));
@@ -298,22 +333,18 @@ function classifyContent(
   }
 
   if (
-    activeLines.some(
-      (line) =>
-        /current (?:stable registry )?authority\s*:\s*ADR-(?!0016\b)/i.test(
-          line,
-        ),
+    activeLines.some((line) =>
+      /current (?:stable registry )?authority\s*:\s*ADR-(?!0016\b)/i.test(line),
     )
   ) {
     violations.push({ code: "duplicate_decision_owner", path });
   }
 
   if (
-    activeLines.some(
-      (line) =>
-        /raw source records?.*(?:directly|straight).*(?:picker|product)/i.test(
-          line,
-        ),
+    activeLines.some((line) =>
+      /raw source records?.*(?:directly|straight).*(?:picker|product)/i.test(
+        line,
+      ),
     )
   ) {
     violations.push({ code: "raw_to_product_projection", path });
@@ -341,7 +372,40 @@ function classifyContent(
     violations.push({ code: "unsafe_location_projection", path });
   }
 
+  if (
+    ACTIVE_MIGRATION_ALLOCATION_CONSUMERS.has(path) &&
+    activeLines.some(isStaleMigrationAllocationLine)
+  ) {
+    violations.push({ code: "stale_migration_allocation", path });
+  }
+
+  if (
+    ACTIVE_MIGRATION_ALLOCATION_CONSUMERS.has(path) &&
+    activeLines.some(assignsNoSqlMigrationOwner)
+  ) {
+    violations.push({ code: "no_sql_migration_owner_drift", path });
+  }
+
   return violations;
+}
+
+function isStaleMigrationAllocationLine(line: string): boolean {
+  return [
+    /0027\b(?:(?!\b0028\b).)*\bOVE-258\b/i,
+    /\bOVE-258\b(?:(?!\b0027\b).)*0027\b/i,
+    /0028\b(?:(?!\b0029\b).)*\bOVE-259\b/i,
+    /\bOVE-259\b(?:(?!\b0028\b).)*0028\b/i,
+  ].some((pattern) => pattern.test(line));
+}
+
+function assignsNoSqlMigrationOwner(line: string): boolean {
+  if (/no sql migration/i.test(line)) return false;
+  return [
+    /\b\d{4}\b.*\bOVE-327\b/i,
+    /\bOVE-327\b.*\b\d{4}\b/i,
+    /\b\d{4}\b.*\bOVE-259\b/i,
+    /\bOVE-259\b.*\b\d{4}\b/i,
+  ].some((pattern) => pattern.test(line));
 }
 
 function isHistoricalLine(line: string): boolean {
@@ -411,7 +475,8 @@ function listTrackedTextFiles(repositoryRoot: string): string[] {
     .split("\0")
     .filter(
       (candidate) =>
-        candidate.length > 0 && /\.(?:md|json|ts|tsx|yml|yaml)$/.test(candidate),
+        candidate.length > 0 &&
+        /\.(?:md|json|ts|tsx|yml|yaml)$/.test(candidate),
     );
 }
 
@@ -437,8 +502,7 @@ if (isDirectExecution()) {
     process.stderr.write(
       `${JSON.stringify({
         status: "failed",
-        reason:
-          error instanceof Error ? error.message : "invalid_arguments",
+        reason: error instanceof Error ? error.message : "invalid_arguments",
       })}\n`,
     );
     process.exitCode = 1;
