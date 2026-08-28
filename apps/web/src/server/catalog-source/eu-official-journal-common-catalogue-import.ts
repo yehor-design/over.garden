@@ -12,6 +12,12 @@ import {
   type EuOfficialJournalCommonCatalogueSnapshotDefinition,
   type EuOfficialJournalCommonCatalogueSourceRecordDefinition,
 } from "@/lib/catalog/eu-official-journal-common-catalogue";
+import {
+  buildPackArtifact,
+  packDigest,
+  readPackSourceString,
+  type PackAdapterResult,
+} from "./pack-artifact-contract";
 import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -651,4 +657,71 @@ function assertEuOfficialJournalCommonCatalogueProjectionAllowed(
 
 function jsonbParam(value: JsonValue) {
   return sql<JsonValue>`${JSON.stringify(value)}::jsonb`;
+}
+
+/**
+ * OVE-327 — EU Official Journal / EUR-Lex Common Catalogue pack adapter.
+ *
+ * EUR-Lex is cleared USE, so an approved row can reach `clean`. The existing
+ * quarantined and rejected projection states are carried through as explicit
+ * holds; the adapter never re-decides a row the parser already refused.
+ */
+export const EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PACK_ADAPTER_VERSION =
+  "ove327.euOfficialJournalCommonCatalogueAdapter.v1";
+
+export function adaptEuOfficialJournalCommonCataloguePack(
+  definition: EuOfficialJournalCommonCatalogueImportDefinition,
+): PackAdapterResult {
+  const records = definition.snapshots.flatMap((snapshot) => snapshot.records);
+  const declaredVersion =
+    definition.snapshots[0]?.source.version ?? definition.extractionVersion;
+
+  return buildPackArtifact({
+    adapterVersion: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PACK_ADAPTER_VERSION,
+    sourceSlug: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE.slug,
+    declaredSourceVersion: declaredVersion,
+    packKind: "plant_variety",
+    artifactByteDigest: packDigest(records.map((record) => record.rawPayload)),
+    allowsProductProjection: [
+      ...EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE.allowedUsage,
+    ].includes("canonical_product_projection"),
+    rows: records.map((record) => {
+      const denomination =
+        record.projection?.canonicalName ??
+        readPackSourceString(record.rawPayload, "row", "varietyDenomination") ??
+        record.id;
+      const declaredParent = readPackSourceString(
+        record.rawPayload,
+        "row",
+        "speciesOrCrop",
+      );
+      return {
+        sourceRecordKey: record.id,
+        officialDenomination: denomination,
+        normalizedDenomination:
+          record.projection?.normalizedName ??
+          denomination.toLocaleLowerCase("en"),
+        locale: record.projection?.locale ?? "en",
+        publicSlug: record.projection?.publicSlug ?? "",
+        parentCandidate: declaredParent
+          ? {
+              scientificName: declaredParent,
+              evidenceClass: "declared_by_source" as const,
+            }
+          : { scientificName: null, evidenceClass: "absent" as const },
+        aliases: (record.projection?.aliases ?? [])
+          .filter((alias) => alias.displayName !== denomination)
+          .map((alias) => ({
+            displayName: alias.displayName,
+            normalizedName: alias.normalizedName,
+            locale: alias.locale,
+            nameClass: "local_name" as const,
+          })),
+        declaredHold:
+          record.projectionStatus === "projected"
+            ? undefined
+            : ("review_needed" as const),
+      };
+    }),
+  });
 }

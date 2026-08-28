@@ -12,6 +12,12 @@ import {
   type BgOfficialVarietyImportDefinition,
   type BgOfficialVarietySourceRecordDefinition,
 } from "@/lib/catalog/bg-official-variety";
+import {
+  buildPackArtifact,
+  packDigest,
+  readPackSourceString,
+  type PackAdapterResult,
+} from "./pack-artifact-contract";
 import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -703,4 +709,78 @@ class RollbackReadbackProof extends Error {
 
 function jsonbParam(value: JsonValue) {
   return sql<JsonValue>`${JSON.stringify(value)}::jsonb`;
+}
+
+/**
+ * OVE-327 — Bulgarian official variety pack adapter.
+ *
+ * The EU Plant Variety Portal is cleared USE-WITH-CONDITIONS, so its rows stay
+ * `review_needed` inside the artifact rather than becoming product evidence on
+ * their own. That preserves the conditional-rights branch this importer already
+ * enforces; the adapter re-expresses it, it does not relax it.
+ */
+export const BG_OFFICIAL_VARIETY_PACK_ADAPTER_VERSION =
+  "ove327.bgOfficialVarietyAdapter.v1";
+
+export function adaptBgOfficialVarietyPack(
+  definition: BgOfficialVarietyImportDefinition,
+): PackAdapterResult {
+  const projected = definition.records.filter(
+    (record) => record.projectionStatus === "projected",
+  );
+
+  return buildPackArtifact({
+    adapterVersion: BG_OFFICIAL_VARIETY_PACK_ADAPTER_VERSION,
+    sourceSlug: EU_COMMON_CATALOGUE_BG_SOURCE.slug,
+    declaredSourceVersion: EU_COMMON_CATALOGUE_BG_SOURCE.version,
+    packKind: "plant_variety",
+    artifactByteDigest: packDigest(
+      definition.records.map((record) => record.rawPayload),
+    ),
+    allowsProductProjection: [
+      ...EU_COMMON_CATALOGUE_BG_SOURCE.allowedUsage,
+    ].includes("canonical_product_projection"),
+    rows: definition.records.map((record) => {
+      const isProjected = projected.includes(record);
+      const declaredParent = readPackSourceString(
+        record.rawPayload,
+        "row",
+        "speciesName",
+      );
+      const denomination =
+        readPackSourceString(record.rawPayload, "row", "denomination") ??
+        definition.projection.canonicalName;
+      return {
+        sourceRecordKey: record.id,
+        officialDenomination: denomination,
+        normalizedDenomination: denomination.toLocaleLowerCase("bg"),
+        locale: definition.projection.locale,
+        publicSlug: definition.projection.publicSlug,
+        parentCandidate: declaredParent
+          ? {
+              scientificName: declaredParent,
+              evidenceClass: "declared_by_source" as const,
+            }
+          : { scientificName: null, evidenceClass: "absent" as const },
+        aliases: isProjected
+          ? definition.projection.aliases
+              .filter((alias) => alias.displayName !== denomination)
+              .map((alias) => ({
+                displayName: alias.displayName,
+                normalizedName: alias.normalizedName,
+                locale: alias.locale,
+                // `euDenomination` is the Latin-script official form of the
+                // same denomination, not a trade name.
+                nameClass:
+                  alias.locale === "en"
+                    ? ("transliteration" as const)
+                    : ("local_name" as const),
+              }))
+          : [],
+        // A quarantined row keeps its existing hold rather than being promoted
+        // by the shared classifier.
+        declaredHold: isProjected ? undefined : ("review_needed" as const),
+      };
+    }),
+  });
 }
