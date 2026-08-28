@@ -48,6 +48,7 @@ import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
 import { getPublicKnowledgeCopy } from "@/lib/public-knowledge-copy";
 import { getPublicObjectCatalogCopy } from "@/lib/public-object-catalog-copy";
 import { getPublicProfileCopy } from "@/lib/public-profile-copy";
+import { getPublicStableRegistryExplorerCopy } from "@/lib/stable-registry/public-explorer-copy";
 import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 import { PUBLIC_LOCALES, type PublicLocale } from "@/lib/public-localization";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
@@ -403,7 +404,11 @@ const LOCALIZATION_OWNER_CONTRACTS: Record<
       "not-found",
       "gone",
     ],
-    copyNamespaces: ["public-object-catalog", "living-object-passport"],
+    copyNamespaces: [
+      "public-object-catalog",
+      "public-stable-registry-explorer",
+      "living-object-passport",
+    ],
     scenarioIds: [
       "main:ove187-catalog-page-size-plus-one",
       "passport:public-plant-dense",
@@ -593,6 +598,11 @@ export const LOCALIZATION_COPY_NAMESPACES: readonly LocalizationCopyNamespace[] 
       id: "public-object-catalog",
       sourceFile: "src/lib/public-object-catalog-copy.ts",
       load: getPublicObjectCatalogCopy,
+    },
+    {
+      id: "public-stable-registry-explorer",
+      sourceFile: "src/lib/stable-registry/public-explorer-copy.ts",
+      load: getPublicStableRegistryExplorerCopy,
     },
     {
       id: "public-journal-directory",
@@ -997,6 +1007,24 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
     ),
     ...routes(
       [
+        "src/app/[locale]/catalog/[stableTaxon]/not-found.tsx",
+        "src/app/[locale]/catalog/[stableTaxon]/page.tsx",
+        "src/app/[locale]/catalog/page.tsx",
+        "src/app/[locale]/sources/eppo/[code]/not-found.tsx",
+        "src/app/[locale]/sources/eppo/[code]/page.tsx",
+        "src/app/[locale]/sources/eppo/page.tsx",
+        "src/app/catalog/[stableTaxon]/not-found.tsx",
+        "src/app/catalog/[stableTaxon]/page.tsx",
+        "src/app/catalog/page.tsx",
+        "src/app/sources/eppo/[code]/not-found.tsx",
+        "src/app/sources/eppo/[code]/page.tsx",
+        "src/app/sources/eppo/page.tsx",
+      ],
+      "public-localized",
+      "public-catalog",
+    ),
+    ...routes(
+      [
         "src/app/[locale]/journal/[slug]/page.tsx",
         "src/app/[locale]/journals/page.tsx",
         "src/app/[locale]/topics/[slug]/page.tsx",
@@ -1192,7 +1220,9 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/api/meta/conversions/route.ts",
         "src/app/api/notifications/preferences/route.ts",
         "src/app/api/notifications/receipts/route.ts",
+        "src/app/api/public/catalog/suggestions/route.ts",
         "src/app/api/public/objects/suggestions/route.ts",
+        "src/app/api/public/sources/eppo/suggestions/route.ts",
         "src/app/api/skeleton/journal/route.ts",
       ],
       "api-non-ui",
@@ -1226,6 +1256,8 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
       "src/app/[locale]/answers/[slug]/page.tsx",
       "src/app/[locale]/blog/[slug]/page.tsx",
       "src/app/[locale]/blog/page.tsx",
+      "src/app/[locale]/catalog/[stableTaxon]/page.tsx",
+      "src/app/[locale]/catalog/page.tsx",
       "src/app/[locale]/communities/[slug]/page.tsx",
       "src/app/[locale]/communities/page.tsx",
       "src/app/[locale]/guides/[slug]/page.tsx",
@@ -1234,6 +1266,9 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
       "src/app/[locale]/markets/[market]/page.tsx",
       "src/app/[locale]/objects/page.tsx",
       "src/app/[locale]/page.tsx",
+      "src/app/[locale]/sources/eppo/[code]/page.tsx",
+      "src/app/[locale]/sources/eppo/page.tsx",
+      "src/app/stable-registry-public-pages.tsx",
     ].flatMap((sourceFile) =>
       allowExactLiterals(sourceFile, "brand", BRAND_RATIONALE, [
         ["metadata-title", "OverGarden"],

@@ -1258,6 +1258,9 @@ function exclusionFor(
     discovery.transport === "route_handler" &&
     discovery.symbol === "GET" &&
     (discovery.path === "src/app/api/public/objects/suggestions/route.ts" ||
+      discovery.path === "src/app/api/public/catalog/suggestions/route.ts" ||
+      discovery.path ===
+        "src/app/api/public/sources/eppo/suggestions/route.ts" ||
       discovery.path === "src/app/api/garden/catalog/typeahead/route.ts" ||
       discovery.path === "src/app/api/garden/entries/route.ts")
   ) {

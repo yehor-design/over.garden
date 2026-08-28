@@ -2,6 +2,10 @@
 export const STABLE_REGISTRY_RELEASE_CENTER_FLAG =
   "stable_registry_release_center" as const;
 
+/** Guest read models are separately gated from the operator Release Center. */
+export const STABLE_REGISTRY_PUBLIC_DISCOVERY_FLAG =
+  "stable_registry_public_discovery" as const;
+
 export function isStableRegistryReleaseCenterEnabled(
   env: Record<string, string | undefined> = process.env,
 ): boolean {
@@ -10,4 +14,10 @@ export function isStableRegistryReleaseCenterEnabled(
     env.VERCEL_ENV === "production" ||
     env.VERCEL_ENV === "preview";
   return env.STABLE_REGISTRY_RELEASE_CENTER === "true" && !isVercelDeployment;
+}
+
+export function isStableRegistryPublicDiscoveryEnabled(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  return env.STABLE_REGISTRY_PUBLIC_DISCOVERY === "true";
 }
