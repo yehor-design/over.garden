@@ -229,6 +229,21 @@ export interface CatalogRegistryActivations {
   release_id: string;
 }
 
+export interface CatalogRegistryActivationSequence {
+  actor_user_id: string;
+  affected_object_count: Generated<number>;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  preview_digest: string;
+  prior_release_id: string | null;
+  receipt_digest: string;
+  release_family: string;
+  release_id: string;
+  sequence_number: number;
+  state: Generated<string>;
+  transition: string;
+}
+
 export interface CatalogRegistryActivePointers {
   active_release_id: string | null;
   release_family: string;
@@ -245,6 +260,22 @@ export interface CatalogRegistryDecisions {
   expected_version: number;
   id: Generated<string>;
   release_id: string;
+}
+
+export interface CatalogRegistryEditionDiffs {
+  affected_object_count: Generated<number>;
+  affected_object_digest: string;
+  created_at: Generated<Timestamp>;
+  diff_class: string;
+  expected_version: Generated<number>;
+  group_key: string;
+  id: Generated<string>;
+  member_count: number;
+  prior_release_id: string | null;
+  release_id: string;
+  safe_summary: Generated<Json>;
+  state: Generated<string>;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface CatalogRegistryExceptionGroups {
@@ -320,6 +351,17 @@ export interface CatalogRegistryExtensionPackUserNames {
   pack_row_id: string | null;
   state: Generated<string>;
   updated_at: Generated<Timestamp>;
+}
+
+export interface CatalogRegistryItemRelations {
+  created_at: Generated<Timestamp>;
+  decided_by_user_id: string;
+  from_catalog_item_id: string;
+  id: Generated<string>;
+  relation_digest: string;
+  relation_kind: string;
+  release_id: string;
+  to_catalog_item_id: string | null;
 }
 
 export interface CatalogRegistryReleaseMembers {
@@ -1217,14 +1259,17 @@ export interface DB {
   catalog_item_revisions: CatalogItemRevisions;
   catalog_items: CatalogItems;
   catalog_match_suggestions: CatalogMatchSuggestions;
+  catalog_registry_activation_sequence: CatalogRegistryActivationSequence;
   catalog_registry_activations: CatalogRegistryActivations;
   catalog_registry_active_pointers: CatalogRegistryActivePointers;
   catalog_registry_decisions: CatalogRegistryDecisions;
+  catalog_registry_edition_diffs: CatalogRegistryEditionDiffs;
   catalog_registry_exception_groups: CatalogRegistryExceptionGroups;
   catalog_registry_extension_pack_names: CatalogRegistryExtensionPackNames;
   catalog_registry_extension_pack_rows: CatalogRegistryExtensionPackRows;
   catalog_registry_extension_pack_user_names: CatalogRegistryExtensionPackUserNames;
   catalog_registry_extension_packs: CatalogRegistryExtensionPacks;
+  catalog_registry_item_relations: CatalogRegistryItemRelations;
   catalog_registry_release_members: CatalogRegistryReleaseMembers;
   catalog_registry_releases: CatalogRegistryReleases;
   catalog_registry_search_outbox: CatalogRegistrySearchOutbox;

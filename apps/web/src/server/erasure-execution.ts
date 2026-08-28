@@ -1184,6 +1184,20 @@ export function buildRekeyStableRegistryActorsForErasureQuery(
         .where("decided_by_user_id", "=", input.requesterUserId)
         .execute();
 
+      // Identity relations and activation receipts are append-only evidence
+      // for the same reason as releases, so their actors are rekeyed too.
+      await executor
+        .updateTable("catalog_registry_item_relations")
+        .set({ decided_by_user_id: input.erasedSubjectUserId })
+        .where("decided_by_user_id", "=", input.requesterUserId)
+        .execute();
+
+      await executor
+        .updateTable("catalog_registry_activation_sequence")
+        .set({ actor_user_id: input.erasedSubjectUserId })
+        .where("actor_user_id", "=", input.requesterUserId)
+        .execute();
+
       await executor
         .updateTable("catalog_registry_activations")
         .set({ activated_by_user_id: input.erasedSubjectUserId })

@@ -837,6 +837,301 @@ export function getStableRegistryExtensionPackCopy(
   return EXTENSION_PACK_COPY_BY_LOCALE[locale];
 }
 
+const EDITION_UK_COPY = {
+  metadataTitle: "Видання реєстру | OverGarden",
+  metadataDescription:
+    "Операторська смуга для наступних видань, виправлень і відкату.",
+  title: "Stable Registry — видання",
+  description:
+    "Переглядайте лише те, що змінилося. Незмінені записи не потребують рішень, а відкат — це новий чек, а не перезапис історії.",
+  signInRequired: "Увійдіть, щоб відкрити видання.",
+  accessDenied: "Доступ до видань заборонено.",
+  disabled:
+    "Видання ще не активовані в цьому середовищі. Поточний випуск не змінено.",
+  keepCurrentRelease: "Залишити поточний випуск",
+  cancelEdition: "Скасувати видання",
+  noEdition: "Немає підготовлених видань.",
+  editionSummary: "Зведення видання",
+  editionSummaryDescription:
+    "Показано лише агрегати. Не показуються назви, ідентифікатори обʼєктів чи вміст журналів.",
+  editionState: "Стан видання",
+  unchangedRecords: "Незмінені записи",
+  reviewableGroups: "Групи до перегляду",
+  blockingGroups: "Блокувальні групи",
+  affectedObjects: "Задіяні обʼєкти",
+  activeRelease: "Активний випуск",
+  diffGroupsTitle: "Групи змін",
+  noDiffGroups: "Змін для перегляду немає.",
+  decision: "Рішення для групи",
+  saveDecision: "Зберегти рішення",
+  fromCatalogItemId: "Ідентифікатор поточного концепту",
+  toCatalogItemId: "Ідентифікатор цільового концепту",
+  approvePreview: "Схвалити незмінний preview",
+  activateEdition: "Активувати видання",
+  rollbackEdition: "Відкотити до попереднього випуску",
+  forwardEdition: "Повернутися вперед",
+  activationHistoryTitle: "Історія активацій",
+  noActivationHistory: "Активацій ще не було.",
+  activationConfirmation:
+    "Активація й відкат переміщують один вказівник і додають один чек. Жоден обʼєкт саду не переприв’язується, і жодна історія не переписується.",
+  diffClasses: {
+    unchanged: "Без змін",
+    addition: "Додано",
+    alias: "Псевдонім",
+    correction: "Виправлення",
+    supersession: "Заміщення",
+    split: "Поділ",
+    rights_change: "Зміна прав",
+  },
+  groupStates: {
+    open: "Потрібне рішення",
+    decided: "Рішення збережено",
+    deferred: "Відкладено",
+    blocked: "Заблоковано правилом",
+  },
+  editionStates: {
+    draft: "Чернетка",
+    building: "Побудова",
+    review_ready: "Готово до перевірки",
+    approved: "Preview схвалено",
+    active: "Активно",
+    retired: "Замінено",
+    failed: "Не завершено",
+    abandoned: "Скасовано",
+  },
+  transitions: {
+    activate: "Активація",
+    rollback: "Відкат",
+    forward: "Повернення вперед",
+  },
+  receiptStates: {
+    prepared: "Підготовлено",
+    applied: "Застосовано",
+    verified: "Перевірено",
+    rolled_back: "Відкочено",
+    failed: "Не завершено",
+  },
+  decisionLabels: {
+    keep_current: "Залишити поточне",
+    add_alias: "Додати псевдонім",
+    same_concept: "Це той самий концепт",
+    different_concept: "Це різні концепти",
+    create_successor: "Створити наступника",
+    record_equivalence: "Зафіксувати еквівалентність",
+    record_split: "Зафіксувати поділ",
+    defer: "Відкласти",
+    block_rule: "Заблокувати правилом",
+  },
+  outcomeLabels: {
+    stale: "Стан або кількість задіяних обʼєктів змінилися. Оновіть сторінку.",
+    blocked: "Дію заблоковано поточним безпечним станом.",
+    forbidden: "Доступ заборонено.",
+    not_found: "Видання або групу не знайдено.",
+  },
+} as const;
+
+export type StableRegistryEditionCopy = WidenCopy<typeof EDITION_UK_COPY>;
+
+const EDITION_BG_COPY = {
+  metadataTitle: "Издания на регистъра | OverGarden",
+  metadataDescription:
+    "Операторска лента за следващи издания, корекции и връщане назад.",
+  title: "Stable Registry — издания",
+  description:
+    "Преглеждайте само промененото. Непроменените записи не изискват решения, а връщането назад е нов документ, не пренаписване на историята.",
+  signInRequired: "Влезте, за да отворите изданията.",
+  accessDenied: "Достъпът до изданията е отказан.",
+  disabled:
+    "Изданията още не са активирани в тази среда. Текущото издание е непроменено.",
+  keepCurrentRelease: "Запази текущото издание",
+  cancelEdition: "Отказ на изданието",
+  noEdition: "Няма подготвени издания.",
+  editionSummary: "Обобщение на изданието",
+  editionSummaryDescription:
+    "Показват се само агрегати. Не се показват имена, идентификатори на обекти или съдържание на дневници.",
+  editionState: "Състояние на изданието",
+  unchangedRecords: "Непроменени записи",
+  reviewableGroups: "Групи за преглед",
+  blockingGroups: "Блокиращи групи",
+  affectedObjects: "Засегнати обекти",
+  activeRelease: "Активно издание",
+  diffGroupsTitle: "Групи промени",
+  noDiffGroups: "Няма промени за преглед.",
+  decision: "Решение за групата",
+  saveDecision: "Запазване на решението",
+  fromCatalogItemId: "Идентификатор на текущия концепт",
+  toCatalogItemId: "Идентификатор на целевия концепт",
+  approvePreview: "Одобряване на непроменимия preview",
+  activateEdition: "Активиране на изданието",
+  rollbackEdition: "Връщане към предишното издание",
+  forwardEdition: "Връщане напред",
+  activationHistoryTitle: "История на активациите",
+  noActivationHistory: "Още няма активации.",
+  activationConfirmation:
+    "Активирането и връщането преместват един указател и добавят един документ. Нито един обект в градината не се преназначава и никаква история не се пренаписва.",
+  diffClasses: {
+    unchanged: "Без промяна",
+    addition: "Добавено",
+    alias: "Псевдоним",
+    correction: "Корекция",
+    supersession: "Заместване",
+    split: "Разделяне",
+    rights_change: "Промяна на права",
+  },
+  groupStates: {
+    open: "Нужно е решение",
+    decided: "Решението е запазено",
+    deferred: "Отложено",
+    blocked: "Блокирано от правило",
+  },
+  editionStates: {
+    draft: "Чернова",
+    building: "Изграждане",
+    review_ready: "Готово за преглед",
+    approved: "Preview одобрен",
+    active: "Активно",
+    retired: "Заменено",
+    failed: "Незавършено",
+    abandoned: "Отказано",
+  },
+  transitions: {
+    activate: "Активиране",
+    rollback: "Връщане назад",
+    forward: "Връщане напред",
+  },
+  receiptStates: {
+    prepared: "Подготвено",
+    applied: "Приложено",
+    verified: "Проверено",
+    rolled_back: "Върнато назад",
+    failed: "Незавършено",
+  },
+  decisionLabels: {
+    keep_current: "Запазване на текущото",
+    add_alias: "Добавяне на псевдоним",
+    same_concept: "Това е същият концепт",
+    different_concept: "Това са различни концепти",
+    create_successor: "Създаване на наследник",
+    record_equivalence: "Записване на еквивалентност",
+    record_split: "Записване на разделяне",
+    defer: "Отлагане",
+    block_rule: "Блокиране с правило",
+  },
+  outcomeLabels: {
+    stale:
+      "Състоянието или броят засегнати обекти се промени. Опреснете страницата.",
+    blocked: "Действието е блокирано от текущото безопасно състояние.",
+    forbidden: "Достъпът е отказан.",
+    not_found: "Изданието или групата не са намерени.",
+  },
+} as const satisfies StableRegistryEditionCopy;
+
+const EDITION_RU_COPY = {
+  metadataTitle: "Издания реестра | OverGarden",
+  metadataDescription:
+    "Операторская полоса для следующих изданий, исправлений и отката.",
+  title: "Stable Registry — издания",
+  description:
+    "Просматривайте только изменившееся. Неизменённые записи не требуют решений, а откат — это новый чек, а не перезапись истории.",
+  signInRequired: "Войдите, чтобы открыть издания.",
+  accessDenied: "Доступ к изданиям запрещён.",
+  disabled:
+    "Издания ещё не активированы в этой среде. Текущий выпуск не изменён.",
+  keepCurrentRelease: "Оставить текущий выпуск",
+  cancelEdition: "Отменить издание",
+  noEdition: "Подготовленных изданий нет.",
+  editionSummary: "Сводка издания",
+  editionSummaryDescription:
+    "Показаны только агрегаты. Не показываются названия, идентификаторы объектов и содержимое журналов.",
+  editionState: "Состояние издания",
+  unchangedRecords: "Неизменённые записи",
+  reviewableGroups: "Группы к просмотру",
+  blockingGroups: "Блокирующие группы",
+  affectedObjects: "Затронутые объекты",
+  activeRelease: "Активный выпуск",
+  diffGroupsTitle: "Группы изменений",
+  noDiffGroups: "Изменений для просмотра нет.",
+  decision: "Решение для группы",
+  saveDecision: "Сохранить решение",
+  fromCatalogItemId: "Идентификатор текущего концепта",
+  toCatalogItemId: "Идентификатор целевого концепта",
+  approvePreview: "Одобрить неизменяемый preview",
+  activateEdition: "Активировать издание",
+  rollbackEdition: "Откатить к предыдущему выпуску",
+  forwardEdition: "Вернуться вперёд",
+  activationHistoryTitle: "История активаций",
+  noActivationHistory: "Активаций ещё не было.",
+  activationConfirmation:
+    "Активация и откат перемещают один указатель и добавляют один чек. Ни один объект сада не переназначается, и никакая история не переписывается.",
+  diffClasses: {
+    unchanged: "Без изменений",
+    addition: "Добавлено",
+    alias: "Псевдоним",
+    correction: "Исправление",
+    supersession: "Замещение",
+    split: "Разделение",
+    rights_change: "Изменение прав",
+  },
+  groupStates: {
+    open: "Нужно решение",
+    decided: "Решение сохранено",
+    deferred: "Отложено",
+    blocked: "Заблокировано правилом",
+  },
+  editionStates: {
+    draft: "Черновик",
+    building: "Построение",
+    review_ready: "Готово к проверке",
+    approved: "Preview одобрен",
+    active: "Активно",
+    retired: "Заменено",
+    failed: "Не завершено",
+    abandoned: "Отменено",
+  },
+  transitions: {
+    activate: "Активация",
+    rollback: "Откат",
+    forward: "Возврат вперёд",
+  },
+  receiptStates: {
+    prepared: "Подготовлено",
+    applied: "Применено",
+    verified: "Проверено",
+    rolled_back: "Откачено",
+    failed: "Не завершено",
+  },
+  decisionLabels: {
+    keep_current: "Оставить текущее",
+    add_alias: "Добавить псевдоним",
+    same_concept: "Это тот же концепт",
+    different_concept: "Это разные концепты",
+    create_successor: "Создать преемника",
+    record_equivalence: "Зафиксировать эквивалентность",
+    record_split: "Зафиксировать разделение",
+    defer: "Отложить",
+    block_rule: "Заблокировать правилом",
+  },
+  outcomeLabels: {
+    stale:
+      "Состояние или число затронутых объектов изменились. Обновите страницу.",
+    blocked: "Действие заблокировано текущим безопасным состоянием.",
+    forbidden: "Доступ запрещён.",
+    not_found: "Издание или группа не найдены.",
+  },
+} as const satisfies StableRegistryEditionCopy;
+
+const EDITION_COPY_BY_LOCALE = {
+  uk: EDITION_UK_COPY,
+  bg: EDITION_BG_COPY,
+  ru: EDITION_RU_COPY,
+} satisfies Record<InterfaceLocale, StableRegistryEditionCopy>;
+
+export function getStableRegistryEditionCopy(
+  locale: InterfaceLocale,
+): StableRegistryEditionCopy {
+  return EDITION_COPY_BY_LOCALE[locale];
+}
+
 const BG_COPY = {
   page: {
     metadataTitle: "Куриране на каталога | OverGarden",

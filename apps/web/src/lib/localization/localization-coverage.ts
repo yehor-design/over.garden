@@ -1133,6 +1133,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/garden/catalog/curation/page.tsx",
         "src/app/garden/catalog/registry/page.tsx",
         "src/app/garden/catalog/registry/extensions/page.tsx",
+        "src/app/garden/catalog/registry/editions/page.tsx",
         "src/app/garden/privacy/erasure-requests/page.tsx",
         "src/app/health/page.tsx",
       ],

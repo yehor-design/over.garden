@@ -53,3 +53,21 @@ export function isStableRegistryExtensionPacksEnabled(
     env.VERCEL_ENV === "preview";
   return env.STABLE_REGISTRY_EXTENSION_PACKS === "true" && !isVercelDeployment;
 }
+
+/**
+ * The edition lifecycle is gated separately again: preparing and rolling back a
+ * later edition is a distinct decision from activating the Foundation or
+ * importing an extension pack.
+ */
+export const STABLE_REGISTRY_EDITIONS_FLAG =
+  "stable_registry_editions" as const;
+
+export function isStableRegistryEditionsEnabled(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  const isVercelDeployment =
+    env.VERCEL === "1" ||
+    env.VERCEL_ENV === "production" ||
+    env.VERCEL_ENV === "preview";
+  return env.STABLE_REGISTRY_EDITIONS === "true" && !isVercelDeployment;
+}

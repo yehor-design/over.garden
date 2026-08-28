@@ -1,6 +1,53 @@
 {
   "consumerEdges": [
     {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#moveEditionPointerAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:031ada9eb867c1a6f741:always",
+      "consumerEdgeId": "edge:031ada9eb867c1a6f741:1:40e48dc389836e001d4b",
+      "effectBoundaryId": "effect:0bc48e278bdd11b34fee:database-transaction-1",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#moveEditionPointerAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:031ada9eb867c1a6f741",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#moveEditionPointerAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:031ada9eb867c1a6f741:always",
+      "consumerEdgeId": "edge:031ada9eb867c1a6f741:2:bbc0df19f09c7f037c1f",
+      "effectBoundaryId": "effect:af35ecbcfb47bae3c550:canonical-row",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#moveEditionPointerAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:031ada9eb867c1a6f741",
+      "predecessorEdgeIds": [
+        "edge:031ada9eb867c1a6f741:1:40e48dc389836e001d4b"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#decideEditionDiffGroupAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:05292e8a916e9db82171:always",
+      "consumerEdgeId": "edge:05292e8a916e9db82171:1:9b1b041ce5ef3f0180c4",
+      "effectBoundaryId": "effect:f811d8189e4a4f64f910:canonical-row",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#decideEditionDiffGroupAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:05292e8a916e9db82171",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/garden/lineage/claims/actions.ts#declineLineageClaimAction",
       "branchConditionClass": "always",
       "branchId": "branch:071c32fe3d8c8df0e603:always",
@@ -2285,6 +2332,40 @@
       "pipelineId": "pipeline:61659fc48b6b7d0055ae",
       "predecessorEdgeIds": [
         "edge:61659fc48b6b7d0055ae:2:88ef40df713114ebd7e8"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#moveEditionPointerAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:65153a82eced450ee424:always",
+      "consumerEdgeId": "edge:65153a82eced450ee424:1:40e48dc389836e001d4b",
+      "effectBoundaryId": "effect:0bc48e278bdd11b34fee:database-transaction-1",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/editions/edition-lane.tsx#PointerForm:action:action",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:65153a82eced450ee424",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#moveEditionPointerAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:65153a82eced450ee424:always",
+      "consumerEdgeId": "edge:65153a82eced450ee424:2:bbc0df19f09c7f037c1f",
+      "effectBoundaryId": "effect:af35ecbcfb47bae3c550:canonical-row",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/editions/edition-lane.tsx#PointerForm:action:action",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:65153a82eced450ee424",
+      "predecessorEdgeIds": [
+        "edge:65153a82eced450ee424:1:40e48dc389836e001d4b"
       ]
     },
     {
@@ -4805,6 +4886,22 @@
       "predecessorEdgeIds": []
     },
     {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#decideEditionDiffGroupAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:cb9369ef219ecef9b4c4:always",
+      "consumerEdgeId": "edge:cb9369ef219ecef9b4c4:1:9b1b041ce5ef3f0180c4",
+      "effectBoundaryId": "effect:f811d8189e4a4f64f910:canonical-row",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/editions/edition-lane.tsx#DecisionForm:action:action",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:cb9369ef219ecef9b4c4",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#authenticated_account_session_mutation",
       "branchConditionClass": "success",
       "branchId": "branch:ce3413309ec541bc630f:success",
@@ -5217,6 +5314,22 @@
       "predecessorEdgeIds": []
     },
     {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#approveEditionPreviewAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:e687d44c770746692660:always",
+      "consumerEdgeId": "edge:e687d44c770746692660:1:3ab01e4c6244e01fa6c9",
+      "effectBoundaryId": "effect:9946c6a2074a5b5fea61:canonical-row",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/editions/edition-lane.tsx#StableRegistryEditionLane:action:approveAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:e687d44c770746692660",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/actions.ts#activateFoundationReleaseAction",
       "branchConditionClass": "always",
       "branchId": "branch:e89c867f5be81f767b75:always",
@@ -5262,6 +5375,21 @@
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:e8de2ad087f628d38a5c",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#approveEditionPreviewAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:ea5b1fffaa88f94f1969:always",
+      "consumerEdgeId": "edge:ea5b1fffaa88f94f1969:1:3ab01e4c6244e01fa6c9",
+      "effectBoundaryId": "effect:9946c6a2074a5b5fea61:canonical-row",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#approveEditionPreviewAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:ea5b1fffaa88f94f1969",
       "predecessorEdgeIds": []
     },
     {
@@ -6018,6 +6146,21 @@
       "idempotencyOwner": "src/server/mvp-learning/attribution-outbox.ts#drainLearningAttributionOutbox",
       "ownerPath": "src/server/mvp-learning/attribution-outbox.ts",
       "ownerSymbol": "drainLearningAttributionOutbox"
+    },
+    {
+      "atomicity": "database_transaction",
+      "commitLabel": "database-transaction-1",
+      "effectBoundaryId": "effect:0bc48e278bdd11b34fee:database-transaction-1",
+      "effectFamilies": [
+        "transactional_outbox"
+      ],
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "idempotencyOwner": "src/server/stable-registry/edition-repository.ts#moveEditionPointer",
+      "ownerPath": "src/server/stable-registry/edition-repository.ts",
+      "ownerSymbol": "moveEditionPointer"
     },
     {
       "atomicity": "database_transaction",
@@ -7149,6 +7292,20 @@
       "ownerSymbol": "setEngagementFollow"
     },
     {
+      "atomicity": "database_transaction",
+      "commitLabel": "canonical-row",
+      "effectBoundaryId": "effect:9946c6a2074a5b5fea61:canonical-row",
+      "effectFamilies": [
+        "canonical_row"
+      ],
+      "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "idempotencyOwner": "src/server/stable-registry/edition-repository.ts#approveEditionPreview",
+      "ownerPath": "src/server/stable-registry/edition-repository.ts",
+      "ownerSymbol": "approveEditionPreview"
+    },
+    {
       "atomicity": "single_best_effort_attempt",
       "commitLabel": "public-projection",
       "effectBoundaryId": "effect:9af9bf8d776f6cc3230d:public-projection",
@@ -7367,6 +7524,20 @@
       "idempotencyOwner": "src/server/lineage-repository.ts#resolveLineageClaim",
       "ownerPath": "src/server/lineage-repository.ts",
       "ownerSymbol": "resolveLineageClaim"
+    },
+    {
+      "atomicity": "database_transaction",
+      "commitLabel": "canonical-row",
+      "effectBoundaryId": "effect:af35ecbcfb47bae3c550:canonical-row",
+      "effectFamilies": [
+        "canonical_row"
+      ],
+      "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "idempotencyOwner": "src/server/stable-registry/edition-repository.ts#moveEditionPointer",
+      "ownerPath": "src/server/stable-registry/edition-repository.ts",
+      "ownerSymbol": "moveEditionPointer"
     },
     {
       "atomicity": "database_transaction",
@@ -7779,6 +7950,20 @@
       "idempotencyOwner": "src/server/social-return-repository.ts#updateNotificationPreferences",
       "ownerPath": "src/server/social-return-repository.ts",
       "ownerSymbol": "updateNotificationPreferences"
+    },
+    {
+      "atomicity": "database_transaction",
+      "commitLabel": "canonical-row",
+      "effectBoundaryId": "effect:f811d8189e4a4f64f910:canonical-row",
+      "effectFamilies": [
+        "canonical_row"
+      ],
+      "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "idempotencyOwner": "src/server/stable-registry/edition-repository.ts#decideEditionDiffGroup",
+      "ownerPath": "src/server/stable-registry/edition-repository.ts",
+      "ownerSymbol": "decideEditionDiffGroup"
     },
     {
       "atomicity": "database_transaction",
@@ -8549,6 +8734,57 @@
       "symbol": "ErasureRequestPage",
       "transport": "native_form",
       "variant": "action:submitErasureRequestAction"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/editions/edition-lane.tsx#DecisionForm:action:action",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "symbol": "DecisionForm",
+      "transport": "native_form",
+      "variant": "action:action"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/editions/edition-lane.tsx#PointerForm:action:action",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "symbol": "PointerForm",
+      "transport": "native_form",
+      "variant": "action:action"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/editions/edition-lane.tsx#StableRegistryEditionLane:action:approveAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "symbol": "StableRegistryEditionLane",
+      "transport": "native_form",
+      "variant": "action:approveAction"
     },
     {
       "authority": "authenticated_user",
@@ -10557,6 +10793,51 @@
     {
       "authority": "authenticated_user",
       "classification": "effectful",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#approveEditionPreviewAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "symbol": "approveEditionPreviewAction",
+      "transport": "server_action",
+      "variant": "approveEditionPreviewAction"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#decideEditionDiffGroupAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "symbol": "decideEditionDiffGroupAction",
+      "transport": "server_action",
+      "variant": "decideEditionDiffGroupAction"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/edition-actions.ts#moveEditionPointerAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "symbol": "moveEditionPointerAction",
+      "transport": "server_action",
+      "variant": "moveEditionPointerAction"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
       "entrypointId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#abandonExtensionPackAction",
       "evidencePaths": [
         "src/app/garden/catalog/registry/extension-actions.ts"
@@ -11188,6 +11469,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/page.tsx",
+        "src/lib/operator-curation-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-curation-copy",
+      "sourceNodeId": "source:01fcbf23824d7b30cfd0",
+      "symbol": "getStableRegistryEditionCopy"
+    },
+    {
+      "evidencePaths": [
         "src/app/catalog-evidence-route.tsx",
         "src/app/engagement/public-engagement-panel.tsx"
       ],
@@ -11280,6 +11573,18 @@
       "semanticVariant": "from:@/components/ui/button",
       "sourceNodeId": "source:02ed0e3ee8bd27e08cca",
       "symbol": "buttonVariants"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/lib/stable-registry/edition-actions.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:02f56a765e0a29163790",
+      "symbol": "EditionCenterReadModel"
     },
     {
       "evidencePaths": [
@@ -11520,6 +11825,19 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:approveAction",
+      "sourceNodeId": "source:048d8cd8e639a1b23038",
+      "symbol": "StableRegistryEditionLane"
+    },
+    {
+      "evidencePaths": [
         "src/server/community-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -11624,6 +11942,18 @@
       "semanticVariant": "from:@/lib/interface-request-guard",
       "sourceNodeId": "source:052f53df2540162bf66f",
       "symbol": "isSameOriginInterfaceRequest"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/page.tsx",
+        "src/lib/operator-curation-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-curation-copy",
+      "sourceNodeId": "source:053067302cb31e05ecfd",
+      "symbol": "getStableRegistryEditionCopy"
     },
     {
       "evidencePaths": [
@@ -12078,6 +12408,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/page.tsx",
+        "src/server/auth-session.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/auth-session",
+      "sourceNodeId": "source:091c7c44c75b66476804",
+      "symbol": "getCurrentSession"
+    },
+    {
+      "evidencePaths": [
         "sql/0005_ove202_ove207_journal_document_cover.sql"
       ],
       "nodeKind": "sql_trigger",
@@ -12254,6 +12596,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "canonical-row",
+      "sourceNodeId": "source:0bb3258702abf9c3f519",
+      "symbol": "approveEditionPreview"
+    },
+    {
+      "evidencePaths": [
         "src/server/journal-repository.ts",
         "src/server/search/public-projection-outbox.ts"
       ],
@@ -12298,6 +12651,18 @@
       "semanticVariant": "canonical-row:buildPublicHandleMentionSuggestionsQuery",
       "sourceNodeId": "source:0c35eb66ae83ca548069",
       "symbol": "searchJournalMentionSuggestions"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/page.tsx",
+        "src/lib/stable-registry/feature-gate.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/feature-gate",
+      "sourceNodeId": "source:0c3a6b00074bb63cd137",
+      "symbol": "isStableRegistryEditionsEnabled"
     },
     {
       "evidencePaths": [
@@ -12673,6 +13038,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:../edition-actions",
+      "sourceNodeId": "source:1076837ff754d113eb83",
+      "symbol": "EditionActionState"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/garden-auth-panel.tsx",
         "src/app/garden/objects/[objectId]/page.tsx"
       ],
@@ -12764,6 +13141,18 @@
       "semanticVariant": "reportProfileAction",
       "sourceNodeId": "source:1121a1a0688c0a27deda",
       "symbol": "reportProfileAction"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database-transaction-1",
+      "sourceNodeId": "source:112939cb3dcedff09cb1",
+      "symbol": "moveEditionPointer"
     },
     {
       "evidencePaths": [
@@ -13007,6 +13396,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/page.tsx",
+        "src/server/request-scope.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/request-scope",
+      "sourceNodeId": "source:13f0c6a33eaeba895aca",
+      "symbol": "scopedToUser"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/privacy/erasure-requests/actions.ts",
         "src/app/garden/privacy/erasure-requests/page.tsx"
       ],
@@ -13209,6 +13610,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/edition-repository",
+      "sourceNodeId": "source:1593188be3f19044aa41",
+      "symbol": "EditionOutcome"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/lineage-repository.ts"
       ],
@@ -13326,6 +13739,18 @@
       "semanticVariant": "from:@/app/garden/space-entry-composer",
       "sourceNodeId": "source:167c7457349534d02e5c",
       "symbol": "SpaceEntryComposer"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:../edition-actions",
+      "sourceNodeId": "source:1690e9f8470cd74c59a2",
+      "symbol": "moveEditionPointerAction"
     },
     {
       "evidencePaths": [
@@ -13923,6 +14348,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./edition-lane",
+      "sourceNodeId": "source:1c242f6bf01c9bdad2c4",
+      "symbol": "StableRegistryEditionLane"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/profile/page.tsx",
         "src/lib/interface-localization.ts"
       ],
@@ -14409,6 +14846,17 @@
     },
     {
       "evidencePaths": [
+        "sql/0028_ove258_stable_registry_editions.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0028_ove258_stable_registry_editions.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:enforce_catalog_registry_release_rollback_transition",
+      "sourceNodeId": "source:21ff74ac6a5a35b305f4",
+      "symbol": "catalog_registry_releases_state_transition"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/engagement/comments/block/route.ts",
         "src/app/engagement/public-engagement-panel.tsx"
       ],
@@ -14514,6 +14962,18 @@
       "semanticVariant": "from:./actions",
       "sourceNodeId": "source:22d6b979cdfc4249c3e1",
       "symbol": "confirmLineageInvitationClaimAction"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/stable-registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:2315e84448b4a69fce91",
+      "symbol": "EditionDiffClass"
     },
     {
       "evidencePaths": [
@@ -15521,6 +15981,29 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/lib/stable-registry/edition-actions.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:2b8aed565772615c0848",
+      "symbol": "EditionTransition"
+    },
+    {
+      "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_3491",
+      "sourceNodeId": "source:2bc52db36f819bec4872",
+      "symbol": "decideEditionDiffGroup"
+    },
+    {
+      "evidencePaths": [
         "src/app/erasure/page.tsx",
         "src/server/auth-session.ts"
       ],
@@ -15744,6 +16227,18 @@
       "semanticVariant": "from:@/components/ui/menu",
       "sourceNodeId": "source:2dd6f47045feca345f57",
       "symbol": "Menu"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/components/ui/button.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/ui/button",
+      "sourceNodeId": "source:2dde371099cce9c01dc0",
+      "symbol": "buttonVariants"
     },
     {
       "evidencePaths": [
@@ -16257,6 +16752,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/edition-repository",
+      "sourceNodeId": "source:33929103edd1942375ec",
+      "symbol": "moveEditionPointer"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/garden-auth-panel.tsx",
         "src/lib/auth-client.ts"
       ],
@@ -16341,6 +16848,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:35756cfbedeeac4a3139",
+      "symbol": "EditionRelationKind"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/page.tsx",
         "src/lib/visual-fixtures/environment.ts"
       ],
@@ -16398,6 +16917,18 @@
       "semanticVariant": "from:@/lib/auth/sign-out-hardening",
       "sourceNodeId": "source:364864a8050c07532b0d",
       "symbol": "readSetCookieHeaders"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/lib/stable-registry/edition-actions.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:36ac90f34721a6bd46d7",
+      "symbol": "EditionDiffGroupSummary"
     },
     {
       "evidencePaths": [
@@ -16960,6 +17491,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_6614",
+      "sourceNodeId": "source:3cbf6e8b8517dbf86eb9",
+      "symbol": "approveEditionPreview"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/handoff/route.ts",
         "src/lib/lineage/claim-handoff.ts"
       ],
@@ -16969,6 +17511,18 @@
       "semanticVariant": "from:@/lib/lineage/claim-handoff",
       "sourceNodeId": "source:3cded26c2396b5a7f22b",
       "symbol": "LINEAGE_CLAIM_COOKIE_MAX_AGE_SECONDS"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/stable-registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:3d1652842930ef7718dc",
+      "symbol": "EditionDiffGroupSummary"
     },
     {
       "evidencePaths": [
@@ -17163,6 +17717,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "canonical-row",
+      "sourceNodeId": "source:3f0a1e714c22415363bc",
+      "symbol": "moveEditionPointer"
+    },
+    {
+      "evidencePaths": [
         "src/app/lineage/objects/[objectId]/page.tsx",
         "src/server/interface-localization.ts"
       ],
@@ -17267,6 +17832,18 @@
       "semanticVariant": "from:../../garden/garden-auth-panel",
       "sourceNodeId": "source:3fc8ec9903c06020e105",
       "symbol": "GardenAuthPanel"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/edition-repository",
+      "sourceNodeId": "source:3fcc0fb2ab89736ead1e",
+      "symbol": "approveEditionPreview"
     },
     {
       "evidencePaths": [
@@ -17695,6 +18272,17 @@
     },
     {
       "evidencePaths": [
+        "sql/0028_ove258_stable_registry_editions.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0028_ove258_stable_registry_editions.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:prevent_catalog_registry_activation_sequence_mutation",
+      "sourceNodeId": "source:432e7275123e7d2cf726",
+      "symbol": "catalog_registry_activation_sequence_append_only"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/communities/[slug]/actions.ts",
         "src/lib/public-localization.ts"
       ],
@@ -17776,6 +18364,19 @@
       "semanticVariant": "from:@/server/interaction-admission",
       "sourceNodeId": "source:43f8f486d6af6f8225a8",
       "symbol": "removeExpiredInteractionQuotaWindows"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "nodeKind": "typed_action_prop",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:action",
+      "sourceNodeId": "source:43fbb0e16ebeff9a411a",
+      "symbol": "action"
     },
     {
       "evidencePaths": [
@@ -18180,6 +18781,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_1815",
+      "sourceNodeId": "source:46e8ce3debc4065f7178",
+      "symbol": "readEditionCenter"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/page.tsx",
         "src/app/wishlist/actions.ts"
       ],
@@ -18322,6 +18934,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:48bc11b2e89e3fc204ad",
+      "symbol": "isEditionBlockingDiffClass"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/garden-workspace-view.tsx",
         "src/app/garden/page.tsx"
       ],
@@ -18331,6 +18955,18 @@
       "semanticVariant": "from:./garden-workspace-view",
       "sourceNodeId": "source:48edcead21c91aa79fcb",
       "symbol": "GardenWorkspaceView"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/page.tsx",
+        "src/server/auth-session.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/auth-session",
+      "sourceNodeId": "source:48fcacdb65c779004b83",
+      "symbol": "getSessionId"
     },
     {
       "evidencePaths": [
@@ -18439,6 +19075,18 @@
       "semanticVariant": "from:@/lib/public-localization",
       "sourceNodeId": "source:4a9512cac8d2c5adaf84",
       "symbol": "PublicLocale"
+    },
+    {
+      "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts",
+        "src/server/stable-registry/release-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./release-repository",
+      "sourceNodeId": "source:4acb90ceb236b70758f5",
+      "symbol": "STABLE_REGISTRY_INTERACTIVE_DEADLINE_MS"
     },
     {
       "evidencePaths": [
@@ -18923,6 +19571,17 @@
       "semanticVariant": "from:@/lib/operator-erasure-copy",
       "sourceNodeId": "source:4f181c73678f8b60ab23",
       "symbol": "operatorErasureCountLabel"
+    },
+    {
+      "evidencePaths": [
+        "sql/0028_ove258_stable_registry_editions.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0028_ove258_stable_registry_editions.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:prevent_catalog_registry_item_relation_mutation",
+      "sourceNodeId": "source:4f272e4237639202e9c0",
+      "symbol": "catalog_registry_item_relations_append_only"
     },
     {
       "evidencePaths": [
@@ -19989,6 +20648,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/page.tsx",
+        "src/components/ui/button.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/ui/button",
+      "sourceNodeId": "source:5ab22cd2b111c5a40366",
+      "symbol": "buttonVariants"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/profile/page.tsx",
         "src/server/interface-localization.ts"
       ],
@@ -20477,6 +21148,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:61b854503f768db1ac79",
+      "symbol": "isEditionReviewableDiffClass"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/notifications/page.tsx",
         "src/lib/public-localization.ts"
       ],
@@ -20510,6 +21193,18 @@
       "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
       "sourceNodeId": "source:622113727fccef9df30e",
       "symbol": "STABLE_REGISTRY_PRODUCT_QUERY_DEADLINE_MS"
+    },
+    {
+      "evidencePaths": [
+        "src/db/schema.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/db/schema",
+      "sourceNodeId": "source:6234fa14c8357c08dc6a",
+      "symbol": "Database"
     },
     {
       "evidencePaths": [
@@ -20568,6 +21263,18 @@
       "semanticVariant": "from:@/server/community-repository",
       "sourceNodeId": "source:62b24a218834c2099605",
       "symbol": "moderateCommunityDiscussion"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/page.tsx",
+        "src/server/interface-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/interface-localization",
+      "sourceNodeId": "source:62c177b1820fac03793b",
+      "symbol": "getRequestInterfaceLocale"
     },
     {
       "evidencePaths": [
@@ -21026,6 +21733,17 @@
       "semanticVariant": "from:@/components/ui/button",
       "sourceNodeId": "source:6728e1549af9268c3471",
       "symbol": "Button"
+    },
+    {
+      "evidencePaths": [
+        "sql/0028_ove258_stable_registry_editions.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0028_ove258_stable_registry_editions.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:prevent_approved_edition_diff_mutation",
+      "sourceNodeId": "source:675cb3d37a08fc992b4a",
+      "symbol": "catalog_registry_edition_diffs_immutable"
     },
     {
       "evidencePaths": [
@@ -22728,6 +23446,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/edition-repository",
+      "sourceNodeId": "source:7a147591c05b319b6b91",
+      "symbol": "decideEditionDiffGroup"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/language-switcher.tsx",
         "src/components/ui/button.tsx"
       ],
@@ -22750,6 +23480,18 @@
       "semanticVariant": "action:action",
       "sourceNodeId": "source:7a471650a04dc8b543e4",
       "symbol": "action"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/stable-registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:7a54ede3522ef3c49676",
+      "symbol": "EditionDecisionAction"
     },
     {
       "evidencePaths": [
@@ -23589,6 +24331,29 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "decideEditionDiffGroupAction",
+      "sourceNodeId": "source:8469f8a9c90d428bcd03",
+      "symbol": "decideEditionDiffGroupAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/lib/operator-curation-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-curation-copy",
+      "sourceNodeId": "source:8477d9cd7b605c043960",
+      "symbol": "getStableRegistryEditionCopy"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/profile/page.tsx",
         "src/server/request-scope.ts"
       ],
@@ -23690,6 +24455,19 @@
       "semanticVariant": "from:@/components/ui/menu",
       "sourceNodeId": "source:8584d826e74c6228b682",
       "symbol": "MenuRadioItem"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:action",
+      "sourceNodeId": "source:85ab432e252672730b62",
+      "symbol": "DecisionForm"
     },
     {
       "evidencePaths": [
@@ -23809,6 +24587,19 @@
       "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
       "sourceNodeId": "source:86ca18d077f153ae3ad2",
       "symbol": "ActiveStableRegistryProductCatalogItem"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:action",
+      "sourceNodeId": "source:86d3aa0fdb2784975453",
+      "symbol": "PointerForm"
     },
     {
       "evidencePaths": [
@@ -24498,6 +25289,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/page.tsx",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/edition-repository",
+      "sourceNodeId": "source:8d21e8d0e1f7c135cc7e",
+      "symbol": "readEditionCenter"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/[profileHandle]/actions.ts",
         "src/server/profile-interaction-repository.ts"
       ],
@@ -25067,6 +25870,18 @@
       "semanticVariant": "from:@/lib/public-localization",
       "sourceNodeId": "source:9335de116ba83bbabc68",
       "symbol": "PublicLocale"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/stable-registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:93408bead8f94be53213",
+      "symbol": "EditionTransition"
     },
     {
       "evidencePaths": [
@@ -26011,6 +26826,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:9d482aa688d1fe368ca7",
+      "symbol": "EditionCenterReadModel"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/profile/page.tsx",
         "src/lib/garden/public-paths.ts"
       ],
@@ -26092,6 +26919,19 @@
       "semanticVariant": "from:@/lib/garden/follow-up-value-pulse",
       "sourceNodeId": "source:9e20cad7f2584c0ab83f",
       "symbol": "FOLLOW_UP_USEFULNESS_OPTIONS"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "nodeKind": "typed_action_prop",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:approveAction",
+      "sourceNodeId": "source:9e4a424bbda0f1465216",
+      "symbol": "approveAction"
     },
     {
       "evidencePaths": [
@@ -26877,6 +27717,17 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "approveEditionPreviewAction",
+      "sourceNodeId": "source:a5af64ac23d77575a1d2",
+      "symbol": "approveEditionPreviewAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/public/sources/eppo/suggestions/route.ts",
         "src/server/interface-localization.ts"
       ],
@@ -27148,6 +27999,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/page.tsx",
+        "src/server/catalog-curator-auth.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-curator-auth",
+      "sourceNodeId": "source:a888e19d8665db99e5c4",
+      "symbol": "assertCatalogCuratorAccess"
+    },
+    {
+      "evidencePaths": [
         "src/app/%5F%5Fvisual-fixtures/visual-journal-creation-controls.tsx",
         "src/components/ui/button.tsx"
       ],
@@ -27289,6 +28152,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/lib/auth/document-mutation-generation-transport.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:a9ff041c7378446d07d6",
+      "symbol": "DocumentMutationActionStateV1"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-community.tsx",
         "src/lib/community-copy.ts"
       ],
@@ -27405,6 +28280,18 @@
       "semanticVariant": "from:@/lib/public-projection-quality",
       "sourceNodeId": "source:ab1418e5acf26dd4b153",
       "symbol": "PublicProjectionQualityClass"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/request-scope.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/request-scope",
+      "sourceNodeId": "source:ab6e1b5c994e5fe40b7f",
+      "symbol": "RequestScope"
     },
     {
       "evidencePaths": [
@@ -27996,6 +28883,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:b23d21a07c72762003d5",
+      "symbol": "admitDocumentMutation"
+    },
+    {
+      "evidencePaths": [
         "src/server/profile-interaction-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -28327,6 +29226,30 @@
       "semanticVariant": "canonical-row:buildMarkErasureRequestReviewingQuery",
       "sourceNodeId": "source:b50c37b774ce7466b9bc",
       "symbol": "markErasureRequestReviewing"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/lib/stable-registry/edition-actions.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:b55dc3e490f1a1706158",
+      "symbol": "EditionDecisionAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:../edition-actions",
+      "sourceNodeId": "source:b57fbf3e05e341ca7c22",
+      "symbol": "decideEditionDiffGroupAction"
     },
     {
       "evidencePaths": [
@@ -28842,6 +29765,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/lib/stable-registry/feature-gate.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/feature-gate",
+      "sourceNodeId": "source:b9ba5d5b00d06789c6cf",
+      "symbol": "isStableRegistryEditionsEnabled"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/lineage/claims/page.tsx",
         "src/server/lineage-repository.ts"
       ],
@@ -29302,6 +30237,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:be9a6af052cf7244e893",
+      "symbol": "EditionActivationReceiptSummary"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
         "src/lib/garden/entry-contracts.ts"
       ],
@@ -29690,6 +30637,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:c2c86ed0f895823af3ae",
+      "symbol": "EditionSummary"
+    },
+    {
+      "evidencePaths": [
         "src/server/journal-mention-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -29720,6 +30679,17 @@
       "semanticVariant": "database_transaction_at_35749",
       "sourceNodeId": "source:c34a7d55c91fe7899d9f",
       "symbol": "markNotificationEventsRead"
+    },
+    {
+      "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "canonical-row",
+      "sourceNodeId": "source:c36311d913dffa73f70a",
+      "symbol": "decideEditionDiffGroup"
     },
     {
       "evidencePaths": [
@@ -29851,6 +30821,18 @@
       "semanticVariant": "from:@/lib/auth/auth-intent-contract",
       "sourceNodeId": "source:c450467c8617b0456858",
       "symbol": "normalizeAuthIntentResumeControl"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-repository",
+      "sourceNodeId": "source:c4531d5fe531d2ee0128",
+      "symbol": "buildEnqueueCatalogTypeaheadReindexJobQuery"
     },
     {
       "evidencePaths": [
@@ -30028,6 +31010,18 @@
       "semanticVariant": "database_transaction_at_19522",
       "sourceNodeId": "source:c614794341d0a2998857",
       "symbol": "reportCommunityContribution"
+    },
+    {
+      "evidencePaths": [
+        "src/db/index.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/db",
+      "sourceNodeId": "source:c61bcc170f47b2910bca",
+      "symbol": "db"
     },
     {
       "evidencePaths": [
@@ -30495,6 +31489,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/app/garden/catalog/registry/editions/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:../edition-actions",
+      "sourceNodeId": "source:cbabf14e9ee0e7ce7e3c",
+      "symbol": "approveEditionPreviewAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/mentions/typeahead/route.ts",
         "src/server/document-mutation-admission.ts"
       ],
@@ -30707,6 +31713,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/lib/interface-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/interface-localization",
+      "sourceNodeId": "source:ce3cff7b260e26910e40",
+      "symbol": "InterfaceLocale"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/notifications/page.tsx",
         "src/server/social-return-repository.ts"
       ],
@@ -30740,6 +31758,18 @@
       "semanticVariant": "from:@/server/request-scope",
       "sourceNodeId": "source:ce8b7a6bf1bf8e8a320c",
       "symbol": "RequestScope"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/lib/stable-registry/edition-actions.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:cecfefb150c18d51d158",
+      "symbol": "EDITION_DECISION_ACTIONS"
     },
     {
       "evidencePaths": [
@@ -32128,6 +33158,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/lib/operator-curation-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-curation-copy",
+      "sourceNodeId": "source:ddccd5d73e87b472a58e",
+      "symbol": "StableRegistryEditionCopy"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/public-profile-repository.ts"
       ],
@@ -32314,6 +33356,18 @@
       "semanticVariant": "canonical-row:buildPlantObjectCatalogSourceCreditQuery",
       "sourceNodeId": "source:df7f975f4c2d473190bc",
       "symbol": "readPlantObjectCatalogSourceCredit"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+        "src/components/auth/document-mutation-recovery.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/editions/edition-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
+      "sourceNodeId": "source:df808590d839df49c9bb",
+      "symbol": "DocumentMutationActionForm"
     },
     {
       "evidencePaths": [
@@ -33167,6 +34221,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/edition-actions.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/edition-actions",
+      "sourceNodeId": "source:e9087465ec8df7252f09",
+      "symbol": "EDITION_DECISION_ACTIONS"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-journal-directory.tsx",
         "src/components/site-shell/site-shell-context-rail.tsx"
       ],
@@ -33224,6 +34290,17 @@
       "semanticVariant": "from:@/server/catalog-repository",
       "sourceNodeId": "source:e9efb3644caf9a99c279",
       "symbol": "SelectableCatalogItem"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "moveEditionPointerAction",
+      "sourceNodeId": "source:e9fbfb42a8d4b17f6bf9",
+      "symbol": "moveEditionPointerAction"
     },
     {
       "evidencePaths": [
@@ -33789,6 +34866,17 @@
       "semanticVariant": "from:@/components/ui/button",
       "sourceNodeId": "source:ef9ec01ca865ce24f490",
       "symbol": "buttonVariants"
+    },
+    {
+      "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_9145",
+      "sourceNodeId": "source:efb15cdbb72f59febc92",
+      "symbol": "moveEditionPointer"
     },
     {
       "evidencePaths": [
@@ -34637,6 +35725,30 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/catalog-curator-auth.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-curator-auth",
+      "sourceNodeId": "source:fb630de97038c1ba4695",
+      "symbol": "assertCatalogCuratorAccess"
+    },
+    {
+      "evidencePaths": [
+        "src/server/request-scope.ts",
+        "src/server/stable-registry/edition-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/request-scope",
+      "sourceNodeId": "source:fb7e412768047cc6985f",
+      "symbol": "RequestScope"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/language-switcher.tsx",
         "src/lib/public-localization.ts"
       ],
@@ -34742,6 +35854,18 @@
       "semanticVariant": "from:@/server/lineage-repository",
       "sourceNodeId": "source:fc2cf87b866994233902",
       "symbol": "normalizeRequiredText"
+    },
+    {
+      "evidencePaths": [
+        "src/server/stable-registry/edition-repository.ts",
+        "src/server/stable-registry/foundation-builder.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/edition-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./foundation-builder",
+      "sourceNodeId": "source:fc34e626fd68e6e111df",
+      "symbol": "stableRegistryDigest"
     },
     {
       "evidencePaths": [
@@ -34887,6 +36011,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:fe76ae80ec2be819feb6",
       "symbol": "EngagementCommentReportReason"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/edition-actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/edition-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:fe806174f5dafe6f14f1",
+      "symbol": "documentMutationGenerationFromFormData"
     },
     {
       "evidencePaths": [
