@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   isStableRegistryPublicDiscoveryEnabled,
+  isStableRegistryProductSelectionEnabled,
   isStableRegistryReleaseCenterEnabled,
 } from "./feature-gate";
 
@@ -43,6 +44,23 @@ describe("Stable Registry public discovery feature gate", () => {
     expect(
       isStableRegistryPublicDiscoveryEnabled({
         STABLE_REGISTRY_PUBLIC_DISCOVERY: "true",
+        VERCEL_ENV: "production",
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("Stable Registry product selection feature gate", () => {
+  it("requires its own explicit enablement", () => {
+    expect(isStableRegistryProductSelectionEnabled({})).toBe(false);
+    expect(
+      isStableRegistryProductSelectionEnabled({
+        STABLE_REGISTRY_PUBLIC_DISCOVERY: "true",
+      }),
+    ).toBe(false);
+    expect(
+      isStableRegistryProductSelectionEnabled({
+        STABLE_REGISTRY_PRODUCT_SELECTION: "true",
         VERCEL_ENV: "production",
       }),
     ).toBe(true);

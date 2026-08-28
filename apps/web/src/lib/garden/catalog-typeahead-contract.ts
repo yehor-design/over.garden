@@ -37,6 +37,7 @@ export function parseCatalogTypeaheadResponse(
       serveClass: isOve330ServeClass(candidate.serveClass)
         ? candidate.serveClass
         : "exact",
+      ...stableRegistrySelectionFields(candidate),
     } satisfies FirstEntryCatalogSelection;
 
     return [
@@ -46,6 +47,51 @@ export function parseCatalogTypeaheadResponse(
       },
     ];
   });
+}
+
+function stableRegistrySelectionFields(
+  candidate: Partial<FirstEntryCatalogSelection>,
+) {
+  if (candidate.source !== "stable_registry") return {};
+  if (
+    !isPlantObjectKind(candidate.objectKind) ||
+    !isPublicSlug(candidate.publicSlug) ||
+    !isUuid(candidate.registryReleaseId) ||
+    !isUuid(candidate.revisionId) ||
+    !isStableRegistryNameClass(candidate.nameClass)
+  ) {
+    return {};
+  }
+  return {
+    objectKind: candidate.objectKind,
+    publicSlug: candidate.publicSlug,
+    registryReleaseId: candidate.registryReleaseId,
+    revisionId: candidate.revisionId,
+    nameClass: candidate.nameClass,
+  };
+}
+
+export type CatalogTypeaheadClientState =
+  | "ready"
+  | "empty"
+  | "degraded"
+  | "failed";
+
+/**
+ * The picker must never infer availability from an empty suggestion list: an
+ * empty ready response and an unavailable derived index look identical there.
+ * The server states which one it is, and anything unrecognised degrades rather
+ * than claiming the catalog is genuinely empty.
+ */
+export function parseCatalogTypeaheadState(
+  value: unknown,
+): CatalogTypeaheadClientState {
+  if (!value || typeof value !== "object") return "degraded";
+  const state = (value as { state?: unknown }).state;
+  if (state === "ready" || state === "empty" || state === "degraded") {
+    return state;
+  }
+  return "degraded";
 }
 
 export function catalogItemIdForSelection(
@@ -72,5 +118,28 @@ function isUuid(value: unknown): value is string {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       value,
     )
+  );
+}
+
+function isPlantObjectKind(value: unknown): value is "plant" | "animal" {
+  return value === "plant" || value === "animal";
+}
+
+function isPublicSlug(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length <= 96 &&
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(value)
+  );
+}
+
+function isStableRegistryNameClass(
+  value: unknown,
+): value is NonNullable<FirstEntryCatalogSelection["nameClass"]> {
+  return (
+    value === "canonical" ||
+    value === "scientific" ||
+    value === "localized" ||
+    value === "accepted_alias"
   );
 }

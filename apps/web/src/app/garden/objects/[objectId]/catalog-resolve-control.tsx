@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
-import type { VarietyState } from "@/db/schema";
+import type { PlantObjectKind, VarietyState } from "@/db/schema";
 import {
   catalogItemIdForSelection,
   parseCatalogTypeaheadResponse,
@@ -23,6 +23,7 @@ import { getOwnerObjectCopy } from "@/lib/owner-object-copy";
 interface CatalogResolveControlProps {
   locale: InterfaceLocale;
   objectId: string;
+  objectKind: PlantObjectKind;
   currentVarietyText: string | null;
   currentVarietyState: VarietyState;
   action: (formData: FormData) => Promise<unknown>;
@@ -37,6 +38,7 @@ export const CATALOG_TYPEAHEAD_TIMEOUT_MS = 5_000;
 export function CatalogResolveControl({
   locale,
   objectId,
+  objectKind,
   currentVarietyText,
   currentVarietyState,
   action,
@@ -72,7 +74,7 @@ export function CatalogResolveControl({
 
       try {
         const response = await fetch(
-          `/api/garden/catalog/typeahead?q=${encodeURIComponent(normalizedQuery)}`,
+          `/api/garden/catalog/typeahead?q=${encodeURIComponent(normalizedQuery)}&kind=${objectKind}`,
           { signal: controller.signal },
         );
 
@@ -97,7 +99,7 @@ export function CatalogResolveControl({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, selected]);
+  }, [objectKind, query, selected]);
 
   function updateQuery(value: string) {
     setQuery(value);

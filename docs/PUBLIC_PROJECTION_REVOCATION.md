@@ -159,3 +159,29 @@ cd services/matching
   durable and the historical gate refused completion. ADR-0018 supersedes that
   refusal posture for unresolved derived state. Dropping the table would restore the
   pre-OVE-242 silent-loss window and must never be done to "clear" a backlog.
+
+## Catalog projection convergence (OVE-257)
+
+The journal outbox above stays the canonical owner of journal-entry projection
+intent. The Stable Registry product projection is a second, separate derived
+surface with its own durable intent, because it converges on release identity
+rather than on one owner's entry:
+
+- `catalog_registry_search_outbox` (OVE-255) records one intent per activated
+  release.
+- `stable_registry_product_projection_outbox` (OVE-257) records one intent per
+  projected identity, keyed by `(release, catalog item, revision)`. A rebuild
+  that succeeds marks every due identity applied; a replay is idempotent.
+
+Both are derived. Postgres remains the source of truth, and
+`fetch_catalog_typeahead_rows` rebuilds the `catalog_typeahead` index from the
+active-release projection plus the compatibility rows in one pass, so a
+release activation and the pre-registry catalog converge to a single index
+without a second search owner.
+
+Revocation shape: retiring or rolling back a release moves the `foundation`
+active pointer. Every product read joins that pointer, so the identities leave
+the picker, the canonical fallback, and the next rebuild together, while
+membership, revisions, decisions, and source evidence stay intact. A rollback
+never resurrects a rights-blocked, source-only, or superseded identity, and it
+never rewrites a stored `catalog_item_id` on a garden object.

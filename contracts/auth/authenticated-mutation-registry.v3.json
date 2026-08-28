@@ -11742,17 +11742,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_68152",
-      "sourceNodeId": "source:0aafa96becba946f2965",
-      "symbol": "createSpaceJournalEntry"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/interface-server-action-pending-fixture.tsx",
         "src/app/garden/page.tsx"
       ],
@@ -12034,6 +12023,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_90410",
+      "sourceNodeId": "source:0ee4517ff153decb2255",
+      "symbol": "deleteJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/stable-registry/release-repository.ts"
       ],
@@ -12240,17 +12240,6 @@
       "semanticVariant": "database_transaction_at_9596",
       "sourceNodeId": "source:10f56e9d65489b47fb2e",
       "symbol": "updateOwnerPublicProfile"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_72796",
-      "sourceNodeId": "source:1102417db0e8d1276843",
-      "symbol": "resolvePlantObjectCatalog"
     },
     {
       "evidencePaths": [
@@ -12526,17 +12515,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:14003f557b2673abf627",
       "symbol": "LineageNodeFollow"
-    },
-    {
-      "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_89978",
-      "sourceNodeId": "source:143fbba0293e22cd7232",
-      "symbol": "deleteJournalEntry"
     },
     {
       "evidencePaths": [
@@ -15613,17 +15591,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_76334",
-      "sourceNodeId": "source:33738138c7d94ed851c6",
-      "symbol": "updatePlantObjectLocation"
-    },
-    {
-      "evidencePaths": [
         "src/server/community-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -15752,6 +15719,18 @@
       "semanticVariant": "from:@/app/[locale]/communities/[slug]/actions",
       "sourceNodeId": "source:3619e25a67ae605241f0",
       "symbol": "blockCommunityContributionAuthorAction"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/product-projection-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
+      "sourceNodeId": "source:363daeccbfe7677b0975",
+      "symbol": "findActiveStableRegistryProductCatalogItem"
     },
     {
       "evidencePaths": [
@@ -16609,6 +16588,18 @@
       "semanticVariant": "from:@/server/document-mutation-admission",
       "sourceNodeId": "source:3fe6771bdfdb49534696",
       "symbol": "admitDocumentMutation"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/product-projection-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
+      "sourceNodeId": "source:401da5847e0eabc8ea3e",
+      "symbol": "buildActiveStableRegistryProductTypeaheadReindexRowsQuery"
     },
     {
       "evidencePaths": [
@@ -17541,6 +17532,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:47dfebdd25a88a6080e7",
       "symbol": "JournalEntryTopicPublicMembershipState"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/search/catalog-documents.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/search/catalog-documents",
+      "sourceNodeId": "source:47f633900c6cf354bfca",
+      "symbol": "catalogTypeaheadObjectKindScopeMatches"
     },
     {
       "evidencePaths": [
@@ -19343,6 +19346,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_76766",
+      "sourceNodeId": "source:5e7ea064e502414c96e3",
+      "symbol": "updatePlantObjectLocation"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/page.tsx",
         "src/lib/localization/localization-visual-fixture.ts"
       ],
@@ -19364,6 +19378,18 @@
       "semanticVariant": "from:@/server/engagement-repository",
       "sourceNodeId": "source:5e91505a7feb9021b56e",
       "symbol": "toggleAnonymousEngagementLike"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/catalog/typeahead/route.ts",
+        "src/server/catalog-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/catalog/typeahead/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-repository",
+      "sourceNodeId": "source:5eabc386befd9cfc1be1",
+      "symbol": "searchCatalogSuggestionsForTypeaheadResult"
     },
     {
       "evidencePaths": [
@@ -19638,6 +19664,18 @@
       "semanticVariant": "from:@/lib/garden/public-paths",
       "sourceNodeId": "source:61c5be32d2271ffb58ce",
       "symbol": "publicProfilePath"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/product-projection-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
+      "sourceNodeId": "source:622113727fccef9df30e",
+      "symbol": "STABLE_REGISTRY_PRODUCT_QUERY_DEADLINE_MS"
     },
     {
       "evidencePaths": [
@@ -21439,6 +21477,18 @@
     },
     {
       "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/product-projection-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
+      "sourceNodeId": "source:7695d28fa88d549179fb",
+      "symbol": "searchActiveStableRegistryProductSuggestions"
+    },
+    {
+      "evidencePaths": [
         "src/components/media/owner-media-focal-panel.tsx",
         "src/components/ui/button.tsx"
       ],
@@ -21878,6 +21928,18 @@
       "semanticVariant": "from:@/lib/public-journal-directory-navigation",
       "sourceNodeId": "source:7c616bbe6f77e18194fa",
       "symbol": "buildPublicJournalDirectoryHref"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/product-projection-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
+      "sourceNodeId": "source:7cacf0fce0352e82855c",
+      "symbol": "filterActiveStableRegistryProductIds"
     },
     {
       "evidencePaths": [
@@ -22656,6 +22718,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/feature-gate.ts",
+        "src/server/catalog-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/feature-gate",
+      "sourceNodeId": "source:852a5744da1183286afd",
+      "symbol": "isStableRegistryProductSelectionEnabled"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/[...notFound]/route.ts"
       ],
       "nodeKind": "route_handler",
@@ -22797,6 +22871,18 @@
     },
     {
       "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/product-projection-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
+      "sourceNodeId": "source:86ca18d077f153ae3ad2",
+      "symbol": "ActiveStableRegistryProductCatalogItem"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/journal-repository.ts"
       ],
@@ -22926,6 +23012,18 @@
       "semanticVariant": "from:./actions",
       "sourceNodeId": "source:87c02c3eb90d2ec3d531",
       "symbol": "confirmLineageClaimAction"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/product-projection-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
+      "sourceNodeId": "source:87d7a4646eea06c10edb",
+      "symbol": "findActiveStableRegistryProductCatalogItemByPublicSlug"
     },
     {
       "evidencePaths": [
@@ -23218,6 +23316,17 @@
       "semanticVariant": "POST",
       "sourceNodeId": "source:8b7fdcc174758259ec6b",
       "symbol": "POST"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_73160",
+      "sourceNodeId": "source:8b8534badbb80518c9ac",
+      "symbol": "resolvePlantObjectCatalog"
     },
     {
       "evidencePaths": [
@@ -23533,17 +23642,6 @@
     },
     {
       "evidencePaths": [
-        "src/server/journal-repository.ts"
-      ],
-      "nodeKind": "contextual_transaction",
-      "path": "src/server/journal-repository.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "database_transaction_at_61003",
-      "sourceNodeId": "source:8dfcd9cbb3d1a1ce2a63",
-      "symbol": "createPlantObjectJournalEntry"
-    },
-    {
-      "evidencePaths": [
         "src/components/public/public-journal-directory.tsx",
         "src/components/site-shell/site-shell-context-rail.tsx"
       ],
@@ -23682,6 +23780,17 @@
       "semanticVariant": "canonical-row:buildEngagementBlockStateQuery",
       "sourceNodeId": "source:8f694c7a531b99378bbe",
       "symbol": "engagementActorIsVisible"
+    },
+    {
+      "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_61367",
+      "sourceNodeId": "source:8f90668f8032fbdcd752",
+      "symbol": "createPlantObjectJournalEntry"
     },
     {
       "evidencePaths": [
@@ -23826,18 +23935,6 @@
       "semanticVariant": "from:@/lib/garden/activation",
       "sourceNodeId": "source:911945289b2c343ca99f",
       "symbol": "activationSurfaceKindForSource"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/catalog/typeahead/route.ts",
-        "src/server/catalog-repository.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/catalog/typeahead/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/catalog-repository",
-      "sourceNodeId": "source:911bb58617abd383d043",
-      "symbol": "searchCatalogSuggestionsForTypeahead"
     },
     {
       "evidencePaths": [
@@ -29719,6 +29816,18 @@
     },
     {
       "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/product-projection-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
+      "sourceNodeId": "source:d1b329a4233e46222f7a",
+      "symbol": "STABLE_REGISTRY_PRODUCT_MAX_SUGGESTIONS"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/claim-handoff.tsx",
         "src/app/garden/lineage/invitations/claim/page.tsx"
       ],
@@ -31680,6 +31789,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/journal-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/journal-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_68516",
+      "sourceNodeId": "source:e7effb0f9db0d8d1a737",
+      "symbol": "createSpaceJournalEntry"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/bookmarks/page.tsx",
         "src/server/auth-session.ts"
       ],
@@ -32593,6 +32713,17 @@
     },
     {
       "evidencePaths": [
+        "sql/0026_ove257_stable_registry_product_projection.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0026_ove257_stable_registry_product_projection.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:materialize_stable_registry_product_projection",
+      "sourceNodeId": "source:f2429cbca67b693f8b04",
+      "symbol": "catalog_registry_product_projection_materialize"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/garden-auth-panel.tsx",
         "src/lib/auth/social-oauth.ts"
       ],
@@ -33207,6 +33338,18 @@
       "semanticVariant": "from:@/lib/owner-lineage-copy",
       "sourceNodeId": "source:fb2b5651d27ba2dd7544",
       "symbol": "getOwnerLineageCopy"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/objects/[objectId]/catalog-resolve-control.tsx",
+        "src/db/schema.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/objects/[objectId]/catalog-resolve-control.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/db/schema",
+      "sourceNodeId": "source:fb324891fcd1eb3e9767",
+      "symbol": "PlantObjectKind"
     },
     {
       "evidencePaths": [

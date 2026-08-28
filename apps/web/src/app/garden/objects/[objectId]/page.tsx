@@ -319,6 +319,7 @@ export default async function PlantObjectReadbackPage({
             <CatalogResolveControl
               locale={locale}
               objectId={page.plantObject.id}
+              objectKind={page.plantObject.object_kind}
               currentVarietyText={page.plantObject.variety_text}
               currentVarietyState={
                 page.plantObject.variety_state as VarietyState
