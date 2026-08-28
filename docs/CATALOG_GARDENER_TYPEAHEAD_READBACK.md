@@ -1,6 +1,7 @@
 # Catalog Gardener Typeahead And Readback
 
-Status: implemented by OVE-161
+Status: implemented by OVE-161; extended by OVE-257 (active Stable Registry
+product selection)
 Owner surfaces: `/garden`, `/garden/objects/[objectId]`
 API: `/api/garden/catalog/typeahead`
 Derived index: `catalog_typeahead`
@@ -51,6 +52,58 @@ require an explicit selection, and preserve both escape hatches.
    source, and recomputed OVE-129 trust/disambiguation fields. Meilisearch
    ranking internals are never returned to the browser.
 
+## Active Stable Registry Product Selection (OVE-257)
+
+Migration `0026` adds `stable_registry_product_catalog_records`, its
+`stable_registry_product_catalog_names` name set, and a per-identity projection
+outbox. Only an **active** Foundation release whose immutable membership marks
+an identity `product_eligible` can produce a projection row; the activation
+trigger is the sole writer, and a retired release disappears from product reads
+the moment the `foundation` active pointer moves, without deleting membership,
+revisions, or source evidence.
+
+Two independent predicates therefore exist, selected by the reversible
+`STABLE_REGISTRY_PRODUCT_SELECTION` flag:
+
+- **compatibility** (flag off, the current default): the pre-registry
+  `catalog_items.status in ('seeded','confirmed')` predicate, unchanged.
+- **stable_registry** (flag on): the active-release projection only. A
+  Meilisearch hit is additionally re-validated against the canonical projection
+  before it can be offered, so a stale derived document cannot promote an
+  inactive, source-only, or superseded identity.
+
+Object kind is a three-valued **scope**, not a guess:
+
+| `catalog_kind`  | `object_kind_scope` | selectable by                      |
+| --------------- | ------------------- | ---------------------------------- |
+| `plant_variety` | `plant`             | a plant object                     |
+| `breed`         | `animal`            | an animal object                   |
+| `species`       | `either`            | a plant object or an animal object |
+
+`species` stays selectable by both kinds because a seeded bee species and a
+seeded plant species are both legitimate identities. Collapsing it to one kind
+would make animal species unselectable and would regress the compatibility
+behavior the picker has today.
+
+The name set always carries the Latin scientific name as its own
+`name_class = 'scientific'` row beside the localized `uk`, `bg`, and `ru` names,
+so typing a Latin binomial resolves the same concept in every locale. The names
+primary key includes `name_class` precisely so a spelling that is both the
+canonical release name and the scientific name keeps both rows instead of one
+silently displacing the other.
+
+`GET /api/garden/catalog/typeahead` requires `kind=plant|animal`. A missing or
+malformed kind returns a bounded `400` with `{ suggestions: [], state: "empty" }`
+and never reaches search. The response carries an explicit
+`state` of `ready`, `empty`, or `degraded`: the picker must not infer
+availability from an empty list, because an empty result and an unavailable
+derived index look identical there.
+
+Save validation passes the object's kind into the same predicate. An inactive,
+source-only, superseded, or wrong-kind selection resolves to null and fails with
+the existing generic message, so a stale suggestion can never attach an
+identity the active release does not own.
+
 ## Selection And Readback Contract
 
 The first-entry composer and existing-object resolver use the same response
@@ -92,8 +145,14 @@ account and realistic objects for browser QA;
 cd apps/web
 pnpm test -- catalog-repository catalog-documents first-entry-composer \
   catalog-resolve-control catalog-typeahead-contract \
-  api/garden/catalog/typeahead/route
+  api/garden/catalog/typeahead/route \
+  stable-registry/product-projection-repository
 pnpm smoke:catalog-gardener-readback
+
+# OVE-257 no-wedge and budget proof, then the executed-SQL projection proof.
+pnpm exec tsx scripts/smoke-stable-registry-product-selection.ts \
+  --fixture meilisearch-timeout --records 129188 --locales uk,bg,ru
+pnpm exec tsx scripts/smoke-stable-registry-product-selection.ts --database
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -114,6 +173,15 @@ pnpm smoke:catalog-gardener-readback:seed-ui
 pnpm smoke:catalog-gardener-readback:reset-ui
 unset OVE161_SMOKE_UI_PASSWORD
 ```
+
+`--database` runs inside one transaction that always rolls back. It exists
+because the repository's Kysely tests compile queries without executing them, so
+a CHECK constraint or trigger defect stays invisible until the first real
+activation; that mode inserts real rows, activates a real release, and reads the
+materialized projection back.
+
+OVE-259 owns enabling `STABLE_REGISTRY_PRODUCT_SELECTION` in production, after
+an activated release, zero-gap parity, and a rehearsed rollback.
 
 OVE-163 owns the later non-local matching rollout gate. OVE-167 and OVE-168 may
 localize this final picker/readback contract; they must not fork its selection,

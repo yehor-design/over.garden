@@ -329,3 +329,93 @@ def test_catalog_typeahead_document_uses_meili_safe_id_for_cyrillic_alias():
     assert document["catalogKind"] == "plant_variety"
     assert document["normalizedName"] == "помідор чері"
     assert re.fullmatch(r"[A-Za-z0-9_-]+", str(document["id"]))
+
+
+OVE257_REGISTRY_ROW = {
+    "catalog_item_id": "00000000-0000-4000-8000-000000257001",
+    "canonical_name": "Solanum lycopersicum",
+    "catalog_kind": "species",
+    "status": "confirmed",
+    "source": "stable_registry",
+    "created_by_user_id": None,
+    "item_locale": "la",
+    "display_name": "Solanum lycopersicum",
+    "alias_normalized_name": "solanum lycopersicum",
+    "alias_locale": "la",
+    "is_primary": True,
+    "eligibility_scope": "stable_registry",
+    "object_kind_scope": "either",
+    "public_slug": "solanum-lycopersicum",
+    "registry_release_id": "00000000-0000-4000-8000-000000257900",
+    "revision_id": "00000000-0000-4000-8000-000000257901",
+    "name_class": "scientific",
+}
+
+
+def test_stable_registry_typeahead_document_carries_active_release_facets():
+    document = search.catalog_typeahead_document_from_row(dict(OVE257_REGISTRY_ROW))
+
+    assert document is not None
+    assert document["eligibilityScope"] == "stable_registry"
+    assert document["objectKindScope"] == "either"
+    assert document["publicSlug"] == "solanum-lycopersicum"
+    assert document["registryReleaseId"] == OVE257_REGISTRY_ROW["registry_release_id"]
+    assert document["revisionId"] == OVE257_REGISTRY_ROW["revision_id"]
+    assert document["nameClass"] == "scientific"
+
+
+def test_stable_registry_typeahead_document_id_is_release_scoped():
+    first = search.catalog_typeahead_document_from_row(dict(OVE257_REGISTRY_ROW))
+    later_release = dict(OVE257_REGISTRY_ROW)
+    later_release["registry_release_id"] = "00000000-0000-4000-8000-000000257902"
+    second = search.catalog_typeahead_document_from_row(later_release)
+
+    assert first is not None and second is not None
+    # A later release must not silently overwrite the previous release's
+    # document under the same primary key.
+    assert first["id"] != second["id"]
+
+
+def test_stable_registry_typeahead_document_refuses_incomplete_release_facets():
+    for missing in (
+        "public_slug",
+        "registry_release_id",
+        "revision_id",
+        "name_class",
+        "object_kind_scope",
+    ):
+        row = dict(OVE257_REGISTRY_ROW)
+        row[missing] = ""
+        assert search.catalog_typeahead_document_from_row(row) is None
+
+
+def test_stable_registry_typeahead_document_refuses_mislabelled_source():
+    row = dict(OVE257_REGISTRY_ROW)
+    row["source"] = "internal_seed"
+    assert search.catalog_typeahead_document_from_row(row) is None
+
+    row = dict(OVE257_REGISTRY_ROW)
+    row["status"] = "seeded"
+    assert search.catalog_typeahead_document_from_row(row) is None
+
+
+def test_compatibility_typeahead_document_keeps_its_unscoped_identity():
+    document = search.catalog_typeahead_document_from_row(
+        {
+            "catalog_item_id": "00000000-0000-4000-8000-000000257010",
+            "canonical_name": "Sadovo 1",
+            "catalog_kind": "plant_variety",
+            "status": "seeded",
+            "source": "internal_seed",
+            "created_by_user_id": None,
+            "item_locale": "bg",
+            "display_name": "Sadovo 1",
+            "alias_normalized_name": "sadovo 1",
+            "alias_locale": "bg",
+            "is_primary": True,
+        }
+    )
+
+    assert document is not None
+    assert "eligibilityScope" not in document
+    assert "registryReleaseId" not in document

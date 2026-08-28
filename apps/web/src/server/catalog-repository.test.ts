@@ -414,7 +414,41 @@ describe("catalog repository query contracts", () => {
         },
       }),
     ).resolves.toEqual(fallback);
-    expect(calls).toEqual(["meili", "postgres"]);
+    // OVE-257: both sources are consulted, but the canonical read no longer
+    // waits behind the derived index. Sequencing them would add Meilisearch's
+    // latency to every response and blow the 500 ms interaction budget the
+    // moment the derived index is slow rather than merely empty.
+    expect([...calls].sort()).toEqual(["meili", "postgres"]);
+  });
+
+  it("starts the canonical read without waiting for the derived index", async () => {
+    const fallback = [
+      catalogSuggestion({
+        id: "00000000-0000-4000-8000-000000000302",
+        displayName: "помідор",
+        canonicalName: "Solanum lycopersicum L.",
+        catalogKind: "species" as const,
+        locale: "uk",
+        status: "seeded" as const,
+        source: "species_backbone",
+      }),
+    ];
+    let meiliSettled = false;
+    let postgresStartedBeforeMeiliSettled = false;
+
+    await searchCatalogSuggestionsForTypeahead("помідор", 8, {
+      searchWithMeili: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        meiliSettled = true;
+        return [];
+      },
+      searchWithPostgres: async () => {
+        postgresStartedBeforeMeiliSettled = !meiliSettled;
+        return fallback;
+      },
+    });
+
+    expect(postgresStartedBeforeMeiliSettled).toBe(true);
   });
 
   it("falls back to canonical catalog rows when the derived Meili index is unavailable", async () => {

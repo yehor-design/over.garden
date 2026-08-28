@@ -179,6 +179,23 @@ const FORBIDDEN_TYPEAHEAD_HIT_KEYS = [
 export type CatalogTypeaheadStatus =
   (typeof SELECTABLE_CATALOG_STATUSES)[number];
 export type CatalogTypeaheadCatalogKind = "plant_variety" | "species" | "breed";
+export type CatalogTypeaheadObjectKind = "plant" | "animal";
+/**
+ * `either` records that a species identity is selectable by a plant object and
+ * an animal object alike. It is a real, narrower-than-unknown claim, so the
+ * derived document keeps it rather than collapsing species to one kind.
+ */
+export type CatalogTypeaheadObjectKindScope =
+  | CatalogTypeaheadObjectKind
+  | "either";
+export type CatalogTypeaheadEligibilityScope =
+  | "compatibility"
+  | "stable_registry";
+export type CatalogTypeaheadNameClass =
+  | "canonical"
+  | "scientific"
+  | "localized"
+  | "accepted_alias";
 
 export interface CatalogTypeaheadRow {
   id: string;
@@ -194,6 +211,12 @@ export interface CatalogTypeaheadRow {
   aliasLocale: string;
   isPrimary: boolean;
   isGeneratedAlias?: boolean;
+  eligibilityScope?: string;
+  objectKindScope?: string;
+  publicSlug?: string;
+  registryReleaseId?: string;
+  revisionId?: string;
+  nameClass?: string;
 }
 
 export interface CatalogTypeaheadDocument {
@@ -211,6 +234,12 @@ export interface CatalogTypeaheadDocument {
   rank: number;
   kind: "catalog_item";
   serveClass: "exact" | "generated";
+  eligibilityScope?: CatalogTypeaheadEligibilityScope;
+  objectKindScope?: CatalogTypeaheadObjectKindScope;
+  publicSlug?: string;
+  registryReleaseId?: string;
+  revisionId?: string;
+  nameClass?: CatalogTypeaheadNameClass;
 }
 
 export interface CatalogTypeaheadSuggestion extends Partial<CatalogTrustMetadata> {
@@ -222,6 +251,11 @@ export interface CatalogTypeaheadSuggestion extends Partial<CatalogTrustMetadata
   source: string;
   catalogKind: CatalogTypeaheadCatalogKind;
   serveClass?: Ove330ServeClass;
+  objectKindScope?: CatalogTypeaheadObjectKindScope;
+  publicSlug?: string;
+  registryReleaseId?: string;
+  revisionId?: string;
+  nameClass?: CatalogTypeaheadNameClass;
 }
 
 export const SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES = [
@@ -245,6 +279,25 @@ export function toCatalogTypeaheadDocument(
   if (!isCatalogTypeaheadCatalogKind(row.catalogKind)) return null;
   if (row.createdByUserId !== null) return null;
 
+  const eligibilityScope = isCatalogTypeaheadEligibilityScope(
+    row.eligibilityScope,
+  )
+    ? row.eligibilityScope
+    : "compatibility";
+  const objectKindScope = isCatalogTypeaheadObjectKindScope(row.objectKindScope)
+    ? row.objectKindScope
+    : defaultObjectKindScope(row.catalogKind);
+  const stableRegistryFields = stableRegistryFieldsFromRow(row);
+  if (eligibilityScope === "stable_registry" && !stableRegistryFields) {
+    return null;
+  }
+  if (
+    eligibilityScope === "stable_registry" &&
+    (row.source !== "stable_registry" || row.status !== "confirmed")
+  ) {
+    return null;
+  }
+
   const normalizedName = normalizeTypeaheadText(
     row.aliasNormalizedName || row.displayName,
   );
@@ -253,7 +306,14 @@ export function toCatalogTypeaheadDocument(
   }
 
   return {
-    id: catalogTypeaheadDocumentId(row.id, row.aliasLocale, normalizedName),
+    id: catalogTypeaheadDocumentId(
+      row.id,
+      row.aliasLocale,
+      normalizedName,
+      eligibilityScope === "stable_registry"
+        ? stableRegistryFields!.registryReleaseId
+        : "",
+    ),
     catalogItemId: row.id,
     displayName: row.displayName,
     canonicalName: row.canonicalName,
@@ -267,6 +327,9 @@ export function toCatalogTypeaheadDocument(
     rank: row.isPrimary ? 0 : 10,
     kind: "catalog_item",
     serveClass: row.isGeneratedAlias ? "generated" : "exact",
+    ...(eligibilityScope === "stable_registry"
+      ? { eligibilityScope, objectKindScope, ...stableRegistryFields! }
+      : {}),
   };
 }
 
@@ -283,6 +346,12 @@ export function catalogTypeaheadHitToSuggestion(
   const status = stringValue(hit.status);
   const source = stringValue(hit.source);
   const catalogKind = stringValue(hit.catalogKind);
+  const eligibilityScope = stringValue(hit.eligibilityScope);
+  const objectKindScope = stringValue(hit.objectKindScope);
+  const publicSlug = stringValue(hit.publicSlug);
+  const registryReleaseId = stringValue(hit.registryReleaseId);
+  const revisionId = stringValue(hit.revisionId);
+  const nameClass = stringValue(hit.nameClass);
   const serveClass = isOve330ServeClass(hit.serveClass)
     ? hit.serveClass
     : "exact";
@@ -301,7 +370,28 @@ export function catalogTypeaheadHitToSuggestion(
     return null;
   }
 
-  return {
+  const safeObjectKindScope = isCatalogTypeaheadObjectKindScope(objectKindScope)
+    ? objectKindScope
+    : defaultObjectKindScope(catalogKind);
+  const scope = isCatalogTypeaheadEligibilityScope(eligibilityScope)
+    ? eligibilityScope
+    : "compatibility";
+  const stableRegistryFields = stableRegistryFieldsFromValues({
+    publicSlug,
+    registryReleaseId,
+    revisionId,
+    nameClass,
+  });
+  if (
+    scope === "stable_registry" &&
+    (!stableRegistryFields ||
+      source !== "stable_registry" ||
+      status !== "confirmed")
+  ) {
+    return null;
+  }
+
+  const suggestion = {
     id: catalogItemId,
     displayName,
     canonicalName,
@@ -316,6 +406,12 @@ export function catalogTypeaheadHitToSuggestion(
       catalogKind,
       locale,
     }),
+  };
+  return {
+    ...suggestion,
+    ...(scope === "stable_registry"
+      ? { objectKindScope: safeObjectKindScope, ...stableRegistryFields! }
+      : {}),
   };
 }
 
@@ -358,9 +454,13 @@ function catalogTypeaheadDocumentId(
   catalogItemId: string,
   locale: string,
   normalizedName: string,
+  identityScope: string,
 ) {
+  const aliasKey = identityScope
+    ? `${identityScope}\0${locale}\0${normalizedName}`
+    : `${locale}\0${normalizedName}`;
   const aliasDigest = createHash("sha256")
-    .update(`${locale}\0${normalizedName}`)
+    .update(aliasKey)
     .digest("hex")
     .slice(0, 24);
   return `${catalogItemId}-${aliasDigest}`;
@@ -380,6 +480,87 @@ function isCatalogTypeaheadCatalogKind(
   value: string,
 ): value is CatalogTypeaheadCatalogKind {
   return value === "plant_variety" || value === "species" || value === "breed";
+}
+
+export function isCatalogTypeaheadObjectKindScope(
+  value: unknown,
+): value is CatalogTypeaheadObjectKindScope {
+  return value === "plant" || value === "animal" || value === "either";
+}
+
+export function catalogTypeaheadObjectKindScopeMatches(
+  scope: CatalogTypeaheadObjectKindScope | undefined,
+  objectKind: CatalogTypeaheadObjectKind | undefined,
+): boolean {
+  if (!objectKind) return true;
+  if (!scope) return true;
+  return scope === "either" || scope === objectKind;
+}
+
+function isCatalogTypeaheadEligibilityScope(
+  value: unknown,
+): value is CatalogTypeaheadEligibilityScope {
+  return value === "compatibility" || value === "stable_registry";
+}
+
+function isCatalogTypeaheadNameClass(
+  value: unknown,
+): value is CatalogTypeaheadNameClass {
+  return (
+    value === "canonical" ||
+    value === "scientific" ||
+    value === "localized" ||
+    value === "accepted_alias"
+  );
+}
+
+function defaultObjectKindScope(
+  catalogKind: CatalogTypeaheadCatalogKind,
+): CatalogTypeaheadObjectKindScope {
+  if (catalogKind === "breed") return "animal";
+  if (catalogKind === "plant_variety") return "plant";
+  return "either";
+}
+
+function stableRegistryFieldsFromRow(row: CatalogTypeaheadRow) {
+  return stableRegistryFieldsFromValues({
+    publicSlug: row.publicSlug ?? null,
+    registryReleaseId: row.registryReleaseId ?? null,
+    revisionId: row.revisionId ?? null,
+    nameClass: row.nameClass ?? null,
+  });
+}
+
+function stableRegistryFieldsFromValues(input: {
+  publicSlug: string | null;
+  registryReleaseId: string | null;
+  revisionId: string | null;
+  nameClass: string | null;
+}) {
+  if (
+    !input.publicSlug ||
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(input.publicSlug) ||
+    !isUuid(input.registryReleaseId) ||
+    !isUuid(input.revisionId) ||
+    !isCatalogTypeaheadNameClass(input.nameClass)
+  ) {
+    return null;
+  }
+  return {
+    publicSlug: input.publicSlug,
+    registryReleaseId: input.registryReleaseId,
+    revisionId: input.revisionId,
+    nameClass: input.nameClass,
+  };
+}
+
+function isUuid(value: string | null): value is string {
+  return Boolean(
+    value &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      value,
+    ),
+  );
 }
 
 function hasForbiddenTypeaheadKeys(hit: Record<string, unknown>) {

@@ -1,6 +1,6 @@
 import { parseCatalogTypeaheadResponse } from "@/lib/garden/catalog-typeahead-contract";
 import { requireCurrentRequestScope } from "@/server/auth-session";
-import { searchCatalogSuggestionsForTypeahead } from "@/server/catalog-repository";
+import { searchCatalogSuggestionsForTypeaheadResult } from "@/server/catalog-repository";
 
 export const runtime = "nodejs";
 
@@ -9,9 +9,21 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const query = url.searchParams.get("q") ?? "";
-  const suggestions = await searchCatalogSuggestionsForTypeahead(query);
+  const kind = url.searchParams.get("kind");
+  if (kind !== "plant" && kind !== "animal") {
+    return Response.json(
+      { suggestions: [], state: "empty" },
+      { status: 400, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
+  const result = await searchCatalogSuggestionsForTypeaheadResult(query, {
+    objectKind: kind,
+  });
 
   return Response.json({
-    suggestions: parseCatalogTypeaheadResponse({ suggestions }),
+    suggestions: parseCatalogTypeaheadResponse({
+      suggestions: result.suggestions,
+    }),
+    state: result.state,
   });
 }

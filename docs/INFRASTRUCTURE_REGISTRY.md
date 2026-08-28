@@ -847,6 +847,20 @@ Vercel invariants:
   do not install it as true in any deployed environment. Exact-production proof
   belongs to the credential-free `smoke:drive2-production` result, which records
   only status classes and redaction booleans.
+- Stable Registry rollout is gated by three independent, reversible non-secret
+  flags. All three ship absent/false and only the approved OVE-259 production
+  rollout plan may set one in production; no environment default, sibling issue,
+  or manual toggle may. `STABLE_REGISTRY_RELEASE_CENTER` enables the operator
+  Release Center writes and additionally refuses to enable on any Vercel
+  deployment. `STABLE_REGISTRY_PUBLIC_DISCOVERY` enables the guest catalog and
+  EPPO source explorer reads. `STABLE_REGISTRY_PRODUCT_SELECTION` (OVE-257)
+  switches the authenticated picker, canonical fallback, and save validation
+  from the compatibility predicate to the active-release product projection;
+  turning it off returns to the compatibility predicate without changing any
+  stored `catalog_item_id`. Evidence may record only the flag name, its
+  present/absent/effective class, the active-release digest class, aggregate
+  eligibility counts, and index parity booleans. Never record catalog identity
+  names, source rows, release payloads, or user/object identifiers.
 - Do not commit Vercel tokens, protected preview URLs with nonce/share tokens, build logs containing secrets, or environment variable values.
 - Do not document or paste auth secret values. Evidence may say only whether the legacy `BETTER_AUTH_SECRET` fallback is present/blocked/local-fallback, whether the versioned policy is `versioned_current_vN`/`legacy_transition`/`local_fallback`/`closed`, and the Vercel target/name/sensitivity class. Never record secret-derived values, hashes, prefixes, or sizes.
 - Do not document or paste Google OAuth client secrets, OAuth tokens, callback query parameters, provider token responses, or signed cookies. Evidence may say only whether `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are present and whether the exact redirect URI is authorized.

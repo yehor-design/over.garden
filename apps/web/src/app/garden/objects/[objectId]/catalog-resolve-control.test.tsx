@@ -25,6 +25,7 @@ describe("CatalogResolveControl localization", () => {
         <CatalogResolveControl
           locale={locale}
           objectId="object-1"
+          objectKind="plant"
           currentVarietyText={catalogValue}
           currentVarietyState="user_added"
           action={vi.fn()}
@@ -116,6 +117,7 @@ async function renderInteractiveControl() {
       <CatalogResolveControl
         locale="uk"
         objectId="object-1"
+        objectKind="plant"
         currentVarietyText="Cherry tomato"
         currentVarietyState="user_added"
         action={vi.fn()}

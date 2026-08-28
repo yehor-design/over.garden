@@ -1,7 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { config as loadEnv } from "dotenv";
@@ -25,7 +24,14 @@ if (!process.env.DATABASE_URL) {
 }
 
 async function main() {
-  const tempDir = await mkdtemp(path.join(tmpdir(), "overgarden-db-types-"));
+  // The comparison copy must live inside the repository. kysely-codegen formats
+  // its output with the Prettier config it can resolve from the output path, so
+  // generating into the OS temp directory produced unformatted output and made
+  // this gate fail against a correct, committed, repo-formatted file.
+  // `node_modules/.cache` is inside the project and already git-ignored.
+  const cacheRoot = path.join(process.cwd(), "node_modules", ".cache");
+  await mkdir(cacheRoot, { recursive: true });
+  const tempDir = await mkdtemp(path.join(cacheRoot, "overgarden-db-types-"));
   const generatedPath = path.join(process.cwd(), "src/db/generated.ts");
   const tempGeneratedPath = path.join(tempDir, "generated.ts");
 

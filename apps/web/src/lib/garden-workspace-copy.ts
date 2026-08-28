@@ -213,6 +213,8 @@ const UK_COPY = {
       noCatalogMatch:
         "Відповідності каталогу ще немає · Можна безпечно зберегти й зіставити пізніше",
       keepWithoutMatch: "Залишити без відповідності",
+      continueWithUnknown: "Продовжити з «Невідомо»",
+      retrySearch: "Повторити пошук",
       useThisName: "Використати цю назву",
       searching: "Пошук…",
       suggestionsUnavailable:
@@ -588,7 +590,8 @@ const BG_COPY = {
   composer: {
     publicationNotice:
       "До успешното публикуване промените остават само в този раздел. Публикуваният запис ще бъде публичен.",
-    localScenarioRecovered: "Локалното съдържание на този раздел е възстановено.",
+    localScenarioRecovered:
+      "Локалното съдържание на този раздел е възстановено.",
     objectKind: {
       legend: "Вид жив обект",
       plant: {
@@ -632,6 +635,8 @@ const BG_COPY = {
       noCatalogMatch:
         "Все още няма съответствие · Може безопасно да запазите и да съпоставите по-късно",
       keepWithoutMatch: "Запазване без съответствие",
+      continueWithUnknown: "Продължи с „Неизвестно“",
+      retrySearch: "Повтори търсенето",
       useThisName: "Използване на това име",
       searching: "Търсене…",
       suggestionsUnavailable:
@@ -1049,6 +1054,8 @@ const RU_COPY = {
       noCatalogMatch:
         "Соответствия каталогу пока нет · Можно безопасно сохранить и сопоставить позже",
       keepWithoutMatch: "Оставить без соответствия",
+      continueWithUnknown: "Продолжить с «Неизвестно»",
+      retrySearch: "Повторить поиск",
       useThisName: "Использовать это название",
       searching: "Поиск…",
       suggestionsUnavailable:

@@ -979,6 +979,44 @@ export interface Spaces {
   updated_at: Generated<Timestamp>;
 }
 
+export interface StableRegistryProductCatalogNames {
+  catalog_item_id: string;
+  created_at: Generated<Timestamp>;
+  display_name: string;
+  is_primary: Generated<boolean>;
+  locale: string;
+  name_class: string;
+  normalized_name: string;
+  object_kind_scope: string;
+  registry_release_id: string;
+}
+
+export interface StableRegistryProductCatalogRecords {
+  activated_at: Timestamp;
+  canonical_name: string;
+  catalog_item_id: string;
+  catalog_item_revision_id: string;
+  catalog_kind: string;
+  created_at: Generated<Timestamp>;
+  item_locale: string;
+  object_kind_scope: string;
+  public_slug: string;
+  registry_release_id: string;
+}
+
+export interface StableRegistryProductProjectionOutbox {
+  attempts: Generated<number>;
+  catalog_item_id: string;
+  catalog_item_revision_id: string;
+  created_at: Generated<Timestamp>;
+  desired_state: Generated<string>;
+  done_at: Timestamp | null;
+  last_error_class: string | null;
+  registry_release_id: string;
+  state: Generated<string>;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface StableRegistryPublicCatalogRecords {
   activated_at: Timestamp;
   canonical_name: string;
@@ -1174,6 +1212,9 @@ export interface DB {
   public_projection_intents: PublicProjectionIntents;
   session: Session;
   spaces: Spaces;
+  stable_registry_product_catalog_names: StableRegistryProductCatalogNames;
+  stable_registry_product_catalog_records: StableRegistryProductCatalogRecords;
+  stable_registry_product_projection_outbox: StableRegistryProductProjectionOutbox;
   stable_registry_public_catalog_records: StableRegistryPublicCatalogRecords;
   stable_registry_public_catalog_search_terms: StableRegistryPublicCatalogSearchTerms;
   stable_registry_public_eppo_records: StableRegistryPublicEppoRecords;

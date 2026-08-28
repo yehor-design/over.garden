@@ -1345,8 +1345,14 @@ export async function createFirstPlantEntry(
       throw new Error("Selected space was not found.");
     }
 
+    // OVE-257: the picker's object kind is part of the save contract. An
+    // inactive, source-only, superseded, or wrong-kind selection resolves to
+    // null here and fails with the same generic message, so a stale suggestion
+    // cannot attach an identity the active release does not own.
     const selectedCatalogItem = normalized.catalogItemId
-      ? await findSelectableCatalogItem(trx, normalized.catalogItemId)
+      ? await findSelectableCatalogItem(trx, normalized.catalogItemId, {
+          expectedObjectKind: normalized.objectKind,
+        })
       : null;
 
     if (normalized.catalogItemId && !selectedCatalogItem) {
@@ -2378,6 +2384,7 @@ export async function resolvePlantObjectCatalog(
     const selectedCatalogItem = await findSelectableCatalogItem(
       trx,
       normalized.catalogItemId,
+      { expectedObjectKind: target.objectKind as PlantObjectKind },
     );
 
     if (!selectedCatalogItem) {
@@ -2898,11 +2905,7 @@ export async function deleteJournalEntry(
   const now = new Date();
 
   return db.transaction().execute(async (trx) => {
-    const existing = await buildFindJournalEntryByIdQuery(
-      trx,
-      scope,
-      entryId,
-    )
+    const existing = await buildFindJournalEntryByIdQuery(trx, scope, entryId)
       .forUpdate()
       .executeTakeFirst();
 
@@ -2964,7 +2967,9 @@ export async function deleteJournalEntry(
 
     return {
       entryId: row.id,
-      publicUrl: row.public_slug ? publicJournalEntryPath(row.public_slug) : null,
+      publicUrl: row.public_slug
+        ? publicJournalEntryPath(row.public_slug)
+        : null,
       publicGone: row.public_gone_at !== null,
       deletedAt: row.deleted_at,
       purgeAfter: row.purge_after,

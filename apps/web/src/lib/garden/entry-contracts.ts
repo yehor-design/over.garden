@@ -136,4 +136,9 @@ export interface FirstEntryCatalogSelection {
   sourceLabel?: string;
   sourceCaveat?: string;
   disambiguationLabel?: string;
+  objectKind?: PlantObjectKind;
+  publicSlug?: string;
+  registryReleaseId?: string;
+  revisionId?: string;
+  nameClass?: "canonical" | "scientific" | "localized" | "accepted_alias";
 }

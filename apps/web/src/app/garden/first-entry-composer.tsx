@@ -57,6 +57,7 @@ import {
 import {
   catalogItemIdForSelection,
   parseCatalogTypeaheadResponse,
+  parseCatalogTypeaheadState,
 } from "@/lib/garden/catalog-typeahead-contract";
 import {
   nextJournalTitleValue,
@@ -98,7 +99,16 @@ interface FirstEntryComposerProps {
 }
 
 type SubmitState = "idle" | "publishing" | "published" | "failed";
-type CatalogStatus = "idle" | "loading" | "ready" | "failed";
+type CatalogStatus =
+  | "idle"
+  | "searching"
+  | "ready"
+  | "empty"
+  | "degraded"
+  | "selected"
+  | "saving"
+  | "saved"
+  | "failed";
 
 type CatalogSuggestion = FirstEntryCatalogSelection;
 
@@ -176,6 +186,7 @@ export function FirstEntryComposer({
     string | null
   >(visualScenario?.userAddedCatalogName ?? null);
   const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("idle");
+  const [catalogSearchRevision, setCatalogSearchRevision] = useState(0);
   const [activeMentionToken, setActiveMentionToken] =
     useState<ActiveMentionToken | null>(null);
   const [mentionSelections, setMentionSelections] = useState<
@@ -267,11 +278,11 @@ export function FirstEntryComposer({
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
-      setCatalogStatus("loading");
+      setCatalogStatus("searching");
 
       try {
         const response = await fetch(
-          `/api/garden/catalog/typeahead?q=${encodeURIComponent(query)}`,
+          `/api/garden/catalog/typeahead?q=${encodeURIComponent(query)}&kind=${draft.objectKind}`,
           { signal: controller.signal },
         );
 
@@ -279,7 +290,7 @@ export function FirstEntryComposer({
 
         const body = (await response.json()) as unknown;
         setCatalogSuggestions(parseCatalogTypeaheadResponse(body));
-        setCatalogStatus("ready");
+        setCatalogStatus(parseCatalogTypeaheadState(body));
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
@@ -294,7 +305,14 @@ export function FirstEntryComposer({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [catalogQuery, selectedCatalogItem, userAddedCatalogName, visualScenario]);
+  }, [
+    catalogQuery,
+    catalogSearchRevision,
+    draft.objectKind,
+    selectedCatalogItem,
+    userAddedCatalogName,
+    visualScenario,
+  ]);
 
   useEffect(() => {
     if (!activeMentionToken) {
@@ -674,17 +692,19 @@ export function FirstEntryComposer({
       withSuggestedTitle(
         {
           ...current,
-          objectKind: objectKindAfterCatalogSelection(
-            current.objectKind,
-            suggestion.catalogKind,
-            suggestion.source,
-          ),
+          objectKind:
+            suggestion.objectKind ??
+            objectKindAfterCatalogSelection(
+              current.objectKind,
+              suggestion.catalogKind,
+              suggestion.source,
+            ),
         },
         { catalogLabel: suggestion.displayName },
       ),
     );
     setCatalogSuggestions([]);
-    setCatalogStatus("idle");
+    setCatalogStatus("selected");
   }
 
   function addMissingCatalogName() {
@@ -710,6 +730,11 @@ export function FirstEntryComposer({
     setDraft((current) => withSuggestedTitle(current, { catalogLabel: null }));
     setCatalogSuggestions([]);
     setCatalogStatus("idle");
+  }
+
+  function retryCatalogSearch() {
+    if (isComposerPersistenceFrozen() || catalogQuery.trim().length < 2) return;
+    setCatalogSearchRevision((current) => current + 1);
   }
 
   function handlePhotoChange(file: File | undefined) {
@@ -1214,16 +1239,39 @@ export function FirstEntryComposer({
                     {copy.composer.fields.useThisName}
                   </button>
                 ) : null}
-                {catalogStatus === "loading" ? (
-                  <span className="text-muted-foreground">
-                    {copy.composer.fields.searching}
-                  </span>
+                {catalogStatus === "degraded" || catalogStatus === "failed" ? (
+                  <button
+                    type="button"
+                    onClick={retryCatalogSearch}
+                    data-catalog-retry="true"
+                    className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
+                  >
+                    {copy.composer.fields.retrySearch}
+                  </button>
                 ) : null}
-                {catalogStatus === "failed" ? (
-                  <span className="text-destructive">
-                    {copy.composer.fields.suggestionsUnavailable}
-                  </span>
-                ) : null}
+                <button
+                  type="button"
+                  onClick={chooseUnknownCatalog}
+                  data-catalog-continue-unknown="true"
+                  className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
+                >
+                  {copy.composer.fields.continueWithUnknown}
+                </button>
+                <span
+                  aria-live="polite"
+                  data-catalog-status={catalogStatus}
+                  className={
+                    catalogStatus === "failed"
+                      ? "text-destructive"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {catalogStatus === "searching"
+                    ? copy.composer.fields.searching
+                    : catalogStatus === "degraded" || catalogStatus === "failed"
+                      ? copy.composer.fields.suggestionsUnavailable
+                      : ""}
+                </span>
               </div>
 
               {catalogSuggestions.length > 0 ? (
