@@ -437,24 +437,27 @@ describe("/garden/objects/[objectId]", () => {
     expect(html).not.toMatch(/@renamed_gardener|source_owner_user_id|email/i);
   });
 
+  // OVE-353 / AC-03: the owner control is an irreversible delete in every
+  // market. It must state the seven-day technical window, require an explicit
+  // acknowledgement, and offer no archive or restore affordance anywhere.
   it.each([
-    ["uk", "Заархівовано приватно"],
-    ["bg", "Архивирано като частно"],
-    ["ru", "Архивировано как приватное"],
+    ["uk", "Видалити запис назавжди"],
+    ["bg", "Изтриване на записа окончателно"],
+    ["ru", "Удалить запись навсегда"],
   ] as const)(
-    "localizes archived owner lifecycle copy in %s without hiding private UGC",
-    async (locale, archivedLabel) => {
+    "localizes the irreversible delete control in %s",
+    async (locale, deleteLabel) => {
       mocks.getRequestInterfaceLocale.mockResolvedValueOnce(locale);
       mocks.getPlantObjectPage.mockResolvedValue(
         plantObjectPage([
           {
-            id: "entry-archived",
-            title: "Winter archive note",
-            body: "Owner-only archived history.",
+            id: "entry-active",
+            title: "Winter pruning note",
+            body: "Owner-visible active history.",
             entryDate: "2026-07-04",
-            visibility: "private",
-            lifecycleState: "archived",
-            publicGoneAt: "2026-07-05T12:00:00.000Z",
+            visibility: "public",
+            publicSlug: "winter-pruning-note",
+            lifecycleState: "active",
           },
         ]),
       );
@@ -467,12 +470,50 @@ describe("/garden/objects/[objectId]", () => {
         }),
       );
 
-      expect(html).toContain(archivedLabel);
-      expect(html).toContain("Winter archive note");
-      expect(html).toContain("Owner-only archived history.");
-      expect(html).not.toContain("Archived privately");
+      expect(html).toContain(deleteLabel);
+      expect(html).toContain('name="deleteAccepted"');
+      expect(html).toContain("7");
+      // Active history stays readable; deletion is the only way it leaves.
+      expect(html).toContain("Winter pruning note");
+      expect(html).toContain("Owner-visible active history.");
+      expect(html).not.toContain('data-owner-entry-controls="archived"');
     },
   );
+
+  it("keeps both WAIT-01 controls enabled alongside the delete form", async () => {
+    // WAIT-01: the owner must stay able to leave while a delete is in flight.
+    // Both named controls are plain links rendered outside the form, so a
+    // pending submission cannot disable them and no overlay covers them.
+    mocks.getPlantObjectPage.mockResolvedValue(
+      plantObjectPage([
+        {
+          id: "entry-active",
+          title: "Winter pruning note",
+          body: "Owner-visible active history.",
+          entryDate: "2026-07-04",
+          visibility: "public",
+          publicSlug: "winter-pruning-note",
+          lifecycleState: "active",
+        },
+      ]),
+    );
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = renderToStaticMarkup(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    // "return to active journal link" and "object navigation link".
+    expect(html).toContain('href="/garden"');
+    expect(html).toContain('href="/journal/winter-pruning-note"');
+    expect(html).toContain('name="deleteAccepted"');
+    // No blocking alert, global wait overlay, or pointer trap around them.
+    expect(html).not.toMatch(/aria-modal|role="alertdialog"|\binert\b/);
+    expect(html).not.toContain("<a disabled");
+  });
 
   it("does not resurrect a publish action for compatibility private rows", async () => {
     mocks.getPlantObjectPage.mockResolvedValue(
@@ -620,7 +661,7 @@ function plantObjectPage(
     entryDate: string;
     visibility?: "private" | "public";
     publicSlug?: string | null;
-    lifecycleState?: "active" | "archived";
+    lifecycleState?: "active" | "deleted_retention";
     publicGoneAt?: string | null;
   }>,
   hasPriorPublicationDisclosure = false,

@@ -348,7 +348,7 @@ async function runIntegrationFaultProof() {
     });
     const archiveEditIdentity = editIdentity();
     const archiveRace = await Promise.allSettled([
-      repository.archiveJournalEntry(scope, {
+      repository.deleteJournalEntry(scope, {
         entryId: archivePublication.publishId,
       }),
       repository.updateAtomicJournalEntry(scope, {

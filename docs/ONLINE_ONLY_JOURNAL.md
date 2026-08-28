@@ -28,8 +28,10 @@ durability boundary.
 
 Create routes accept only public final state. Edit routes update an already
 public entry atomically. There is no private toggle or later publish action.
-Archive and erasure remain separate canonical transitions and revoke public
-media through the retained lifecycle owner.
+Deletion and erasure remain separate canonical transitions and revoke public
+media through the retained lifecycle owner. Under ADR-0021 there is no archive:
+an owner delete removes the entry from every product surface at once and leaves
+only a scrubbed technical tombstone for at most seven days.
 
 ## Retired compatibility boundary
 

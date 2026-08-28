@@ -32,7 +32,6 @@ export interface GardenWorkspaceInventorySource {
   totalCount: number;
   plantCount: number;
   animalCount: number;
-  archivedEntryCount: number;
   objects: PlantObjectSummary[];
 }
 
@@ -134,7 +133,6 @@ const defaultSources: GardenWorkspaceSources = {
       totalCount: normalizeCount(summary?.totalCount),
       plantCount: normalizeCount(summary?.plantCount),
       animalCount: normalizeCount(summary?.animalCount),
-      archivedEntryCount: normalizeCount(summary?.archivedEntryCount),
       objects,
     };
   },
@@ -328,9 +326,6 @@ export function buildGardenWorkspaceInventorySummaryQuery(
       sql<number>`count(distinct ${sql.ref("plant_objects.id")}) filter (
         where ${sql.ref("plant_objects.object_kind")} = 'animal'
       )::int`.as("animalCount"),
-      sql<number>`count(${sql.ref("journal_entries.id")}) filter (
-        where ${sql.ref("journal_entries.lifecycle_state")} = 'archived'
-      )::int`.as("archivedEntryCount"),
     ])
     .where("plant_objects.owner_user_id", "=", scope.userId);
 }
@@ -403,6 +398,7 @@ export function buildGardenWorkspaceRecentEntriesQuery(
       "spaces.display_name as spaceDisplayName",
     ])
     .where("journal_entries.owner_user_id", "=", scope.userId)
+    .where("journal_entries.lifecycle_state", "=", "active")
     .where("spaces.owner_user_id", "=", scope.userId)
     .orderBy("journal_entries.entry_date", "desc")
     .orderBy("journal_entries.created_at", "desc")

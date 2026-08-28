@@ -110,7 +110,7 @@ describe("OVE-242 public projection outbox contract", () => {
       entityId: ENTITY_ID,
       ownerUserId: OWNER_ID,
       desiredState: "absent",
-      reason: "archive",
+      reason: "journal_delete",
     });
 
     expect(generation).toBe("7");
@@ -126,7 +126,7 @@ describe("OVE-242 public projection outbox contract", () => {
     expect(statement.parameters).toContain(ENTITY_ID);
     expect(statement.parameters).toContain(OWNER_ID);
     expect(statement.parameters).toContain("absent");
-    expect(statement.parameters).toContain("archive");
+    expect(statement.parameters).toContain("journal_delete");
   });
 
   it("keeps an unconverged privacy-reducing intent prioritized across a later neutral write", async () => {
@@ -150,7 +150,7 @@ describe("OVE-242 public projection outbox contract", () => {
   });
 
   it.each<[PublicProjectionReason, boolean]>([
-    ["archive", true],
+    ["journal_delete", true],
     ["erasure", true],
     ["moderation", true],
     ["location_change", true],
@@ -168,7 +168,7 @@ describe("OVE-242 public projection outbox contract", () => {
     await recordPublicProjectionIntent(executor, {
       entityId: ENTITY_ID,
       ownerUserId: OWNER_ID,
-      desiredState: reason === "archive" ? "absent" : "present",
+      desiredState: reason === "journal_delete" ? "absent" : "present",
       reason,
     });
 
@@ -202,7 +202,7 @@ describe("OVE-242 public projection outbox contract", () => {
         entityId: "not-a-uuid",
         ownerUserId: OWNER_ID,
         desiredState: "absent",
-        reason: "archive",
+        reason: "journal_delete",
       }),
     ).rejects.toThrow(/invalid_journal_search_document_id/);
     expect(captured).toHaveLength(0);

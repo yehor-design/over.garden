@@ -453,6 +453,13 @@ export function buildListMediaObjectsForErasureQuery(
     .where("owner_user_id", "=", requesterUserId);
 }
 
+/**
+ * OVE-353: deletion-pending entries are erasure candidates too, not just
+ * active ones. The owner's own delete already recorded an absent intent, but
+ * that intent can reach `dead` after its bounded attempts and nothing would
+ * retry it. Erasure is exactly where that has to be repaired, so it re-asserts
+ * absence under its own stronger reason rather than trusting the earlier one.
+ */
 export function buildListPublicJournalEntriesForErasureQuery(
   executor: QueryExecutor,
   requesterUserId: string,
@@ -462,7 +469,7 @@ export function buildListPublicJournalEntriesForErasureQuery(
     .select(["id", "public_slug as publicSlug"])
     .where("owner_user_id", "=", requesterUserId)
     .where("visibility", "=", "public")
-    .where("lifecycle_state", "=", "active")
+    .where("lifecycle_state", "in", ["active", "deleted_retention"])
     .where("public_slug", "is not", null);
 }
 
@@ -884,10 +891,15 @@ export function buildAnonymizeJournalEntriesForErasureQuery(
       journal_revision: sql`journal_revision + 1`,
       entry_date: toDateOnly(input.now),
       visibility: "public",
-      lifecycle_state: "archived",
+      lifecycle_state: "deleted_retention",
       public_noindex: true,
       published_at: sql<Date>`coalesce(published_at, ${input.now})`,
-      archived_at: input.now,
+      archived_at: null,
+      // OVE-353: erasure never *extends* a retention horizon. A journal the
+      // owner had already deleted keeps the timestamps it was given, so an
+      // erasure request cannot postpone its physical purge by seven more days.
+      deleted_at: sql<Date>`coalesce(deleted_at, now())`,
+      purge_after: sql<Date>`coalesce(purge_after, now() + interval '7 days')`,
       public_gone_at: sql<Date>`case
         when public_slug is not null then coalesce(public_gone_at, ${input.now})
         else public_gone_at

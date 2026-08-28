@@ -195,7 +195,7 @@ export async function proveCatalogSourceRefreshStableUserReadback(
           body: "A source refresh that requires curator review must not rewrite user-linked catalog identity.",
           entry_scope: "object",
           entry_date: "2026-06-30",
-          visibility: "private",
+          visibility: "public",
           client_mutation_id: "ove-64-source-refresh-stable-readback-proof",
         })
         .executeTakeFirstOrThrow();

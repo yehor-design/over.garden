@@ -66,9 +66,8 @@ export interface ErasureDryRunCounts {
   lineageNodeFollows: number;
   lineageQuestions: number;
   journalEntriesTotal: number;
-  journalEntriesPrivateActive: number;
   journalEntriesPublicActive: number;
-  journalEntriesArchived: number;
+  journalEntriesDeletionPending: number;
   journalEntryObjectMentions: number;
   journalEntryCatalogMentions: number;
   journalMutationReceipts: number;
@@ -156,12 +155,11 @@ function buildErasureDryRunDataClasses(
       key: "journal_entries",
       label: "Journal entries",
       description:
-        "Private and public entry rows grouped by lifecycle. Titles and bodies are never selected into this preview.",
+        "Public entry rows grouped by lifecycle, including entries the owner already deleted whose seven-day technical retention has not elapsed. Titles and bodies are never selected into this preview.",
       counts: {
         total: counts.journalEntriesTotal,
-        private_active: counts.journalEntriesPrivateActive,
         public_active: counts.journalEntriesPublicActive,
-        archived: counts.journalEntriesArchived,
+        deletion_pending: counts.journalEntriesDeletionPending,
         object_mentions: counts.journalEntryObjectMentions,
         catalog_mentions: counts.journalEntryCatalogMentions,
         mutation_receipts: counts.journalMutationReceipts,
@@ -210,7 +208,7 @@ function buildErasureDryRunDataClasses(
       key: "public_exposure",
       label: "Public slugs and tombstones",
       description:
-        "Published public URLs and archived entries that return 410 Gone on the old slug.",
+        "Published public URLs and deletion-pending entries that return 410 Gone on the old slug.",
       counts: {
         public_slugs: counts.publicSlugs,
         gone_tombstones: counts.publicGoneTombstones,

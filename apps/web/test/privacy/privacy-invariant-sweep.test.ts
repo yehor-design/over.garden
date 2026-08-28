@@ -452,10 +452,10 @@ describe("OVE-40 privacy invariant sweep — operator readbacks", () => {
     }
   });
 
-  it("erasure dry-run counts journal rows without selecting private content", () => {
+  it("erasure dry-run counts journal rows without selecting deleted content", () => {
     const { sql } = buildCountJournalEntriesQuery(testDb, POISON.ownerUserId, {
-      visibility: "private",
-      lifecycleState: "active",
+      visibility: "public",
+      lifecycleState: "deleted_retention",
     }).compile();
 
     expect(sql).toContain('"journal_entries"');

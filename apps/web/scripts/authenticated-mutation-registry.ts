@@ -1381,7 +1381,7 @@ function executionOwnerFor(
     discovery.transport === "offline_replay" ||
     /\/api\/(?:garden\/entries|media)\//.test(discovery.path) ||
     /\/(?:api\/garden\/entries|api\/media)\b/.test(discovery.variant) ||
-    /(?:create(?:Space|PlantObject)?JournalEntry|archiveJournalEntry|publishJournalEntry)/.test(
+    /(?:create(?:Space|PlantObject)?JournalEntry|deleteJournalEntry|publishJournalEntry)/.test(
       key,
     )
   ) {

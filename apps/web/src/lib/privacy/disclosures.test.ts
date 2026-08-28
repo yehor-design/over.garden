@@ -31,8 +31,14 @@ describe("MVP privacy disclosure constants", () => {
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
       "does not retain the selected source files",
     );
+    // OVE-353 / AC-03: the publish disclosure must state the deletion contract
+    // the gardener is agreeing to before publishing — final, no restore, and a
+    // bounded technical retention window.
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
-      "queued for public search removal",
+      "there is no archive and no restore",
+    );
+    expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
+      "at most seven days",
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
       SUPPORT_EMAIL,

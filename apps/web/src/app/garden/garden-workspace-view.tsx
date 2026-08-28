@@ -604,9 +604,6 @@ function InventoryRow({
             object.entryCount,
             copy.workspace.inventory.entries,
           )}
-          {object.archivedEntryCount > 0
-            ? ` · ${object.archivedEntryCount} ${copy.workspace.inventory.archived}`
-            : ""}
         </p>
       </div>
 
@@ -709,9 +706,6 @@ function RecentRow({
           {entry.entryScope === "object"
             ? copy.workspace.recent.objectJournal
             : copy.workspace.recent.spaceJournal}
-          {entry.lifecycleState === "archived"
-            ? ` · ${copy.workspace.recent.archived}`
-            : ""}
         </p>
       </div>
       <time className="text-xs text-muted-foreground">

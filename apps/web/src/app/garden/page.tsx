@@ -576,9 +576,6 @@ function SpaceJournalTools({
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {copy.page.spaceJournal.public}
-                  {entry.lifecycle_state === "archived"
-                    ? ` · ${copy.page.spaceJournal.archived}`
-                    : ""}
                 </p>
               </div>
               <time className="shrink-0 text-xs text-muted-foreground">

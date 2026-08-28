@@ -1,7 +1,10 @@
 /**
  * Frozen OVE-199 v1 validation evidence. This list is not a runtime seed plan:
  * OVE-349 retired its mutator and its historical private slot cannot be
- * applied to the current public-only journal schema.
+ * applied to the current public-only journal schema. OVE-353 likewise retired
+ * the archive lifecycle, so the `archived_410` slot below records what the old
+ * corpus captured, not a state the product can still produce — a 410 now means
+ * a deleted entry inside its seven-day retention window.
  */
 
 export type LaunchCorpusShotVisibility = "public" | "private" | "archived_410";

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   listAbandonedCoverOnlyRevokeCandidates,
-  listArchiveDerivativeRevokeCandidates,
+  listJournalDeletionDerivativeRevokeCandidates,
   listDetachedInlineRevokeCandidates,
   listOrphanProcessedDerivativesForEntry,
   MediaLifecycleDocumentError,
@@ -46,7 +46,7 @@ function mockExecutor(
 
 describe("media lifecycle cover/10+1 reference safety", () => {
   it("archives revoke every processed derivative regardless of cover role", async () => {
-    const candidates = await listArchiveDerivativeRevokeCandidates(
+    const candidates = await listJournalDeletionDerivativeRevokeCandidates(
       mockExecutor([
         [
           { id: "inline-1", derivative_key: "derivatives/a.webp" },

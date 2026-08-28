@@ -64,8 +64,8 @@ export interface RestoreReadinessReport {
   effectiveCoverFingerprint: string;
   appReadClasses: {
     publicJournalCandidates: number;
-    archivedJournalCandidates: number;
-    privateJournalCandidates: number;
+    deletionPendingJournalCandidates: number;
+    legacyLifecycleJournalCandidates: number;
   };
   queueCompatibility: {
     pendingOrProcessing: number;
@@ -379,40 +379,44 @@ export async function collectEffectiveCoverFingerprint(
 
 export async function collectAppReadClasses(db: Kysely<Database>): Promise<{
   publicJournalCandidates: number;
-  archivedJournalCandidates: number;
-  privateJournalCandidates: number;
+  deletionPendingJournalCandidates: number;
+  legacyLifecycleJournalCandidates: number;
 }> {
   const row = await sql<{
     public_candidates: unknown;
-    archived_candidates: unknown;
-    private_candidates: unknown;
+    deletion_pending_candidates: unknown;
+    legacy_candidates: unknown;
   }>`
+    -- OVE-353: lifecycle_state is the canonical class. archived_at is a
+    -- compatibility column the deletion lifecycle always clears, so reading it
+    -- would report every deletion-pending tombstone as a live public row.
     select
       (
         select count(*)::bigint
         from journal_entries
         where visibility = 'public'
-          and archived_at is null
+          and lifecycle_state = 'active'
       ) as public_candidates,
       (
         select count(*)::bigint
         from journal_entries
-        where archived_at is not null
-      ) as archived_candidates,
+        where lifecycle_state = 'deleted_retention'
+      ) as deletion_pending_candidates,
       (
         select count(*)::bigint
         from journal_entries
-        where visibility = 'private'
-          and archived_at is null
-      ) as private_candidates
+        where lifecycle_state not in ('active', 'deleted_retention')
+      ) as legacy_candidates
   `.execute(db);
 
   const first = row.rows[0];
   if (!first) throw new Error("App read class counts unavailable.");
   return {
     publicJournalCandidates: toCount(first.public_candidates),
-    archivedJournalCandidates: toCount(first.archived_candidates),
-    privateJournalCandidates: toCount(first.private_candidates),
+    deletionPendingJournalCandidates: toCount(
+      first.deletion_pending_candidates,
+    ),
+    legacyLifecycleJournalCandidates: toCount(first.legacy_candidates),
   };
 }
 

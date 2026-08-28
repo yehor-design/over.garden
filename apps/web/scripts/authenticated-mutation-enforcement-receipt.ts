@@ -33,13 +33,16 @@ const EXPLICIT_GOOGLE_LINK_OWNER = "owned_by_ove_295" as const;
 // repins the unchanged account-owned moderation topology after its route move.
 // OVE-255 retires the legacy Curation mutation surface in favour of the
 // immutable Registry release center, so the OVE-291 remainder is deliberately
-// smaller and is re-pinned below.
+// smaller and is re-pinned below. OVE-353 renames the archive owner to
+// `deleteJournalEntryAction` and drops the synchronous public-projection
+// convergence fan-out from it, so the high-risk entrypoint count is unchanged
+// while its edge set shrinks.
 const BASELINE_HIGH_RISK_ENTRYPOINT_COUNT = 8;
 const BASELINE_HIGH_RISK_ENTRYPOINT_SET_DIGEST =
-  "2e5a4515277bcd1de5ea5571b377427625e423b3270b420e66bfb416a370fcdd";
-const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 72;
+  "e32c298cff64f36469fd75333c7b884a8b43821c6003b9836e204d90fb3a4d5e";
+const BASELINE_HIGH_RISK_CONSUMER_EDGE_COUNT = 60;
 const BASELINE_HIGH_RISK_EDGE_BINDING_SET_DIGEST =
-  "e3150147c7c10d9eab862da9024130d88b85c04c127885fc2a6c2e7190ade346";
+  "927c139614e8e76815acf252cc499157961b76d5799070b1a300b2418243a04d";
 const BASELINE_HIGH_RISK_ADMISSION_BOUNDARY_COUNT = 6;
 const BASELINE_REMAINING_ENTRYPOINT_COUNT = 103;
 const BASELINE_REMAINING_ENTRYPOINT_SET_DIGEST =

@@ -446,7 +446,7 @@ export async function proveBreedSeedGardenReadback(
           body: "Approved breed seed can be selected and read back without exposing raw validation-only source fields.",
           entry_scope: "object",
           entry_date: "2026-07-02",
-          visibility: "private",
+          visibility: "public",
           client_mutation_id: `ove-86-breed-proof-${catalogItemId}`,
         })
         .executeTakeFirstOrThrow();

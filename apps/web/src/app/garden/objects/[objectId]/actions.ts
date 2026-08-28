@@ -8,7 +8,7 @@ import {
   documentMutationGenerationFromFormData,
 } from "@/server/document-mutation-admission";
 import {
-  archiveJournalEntry,
+  deleteJournalEntry,
   resolvePlantObjectCatalog,
   updatePlantObjectLocation,
 } from "@/server/journal-repository";
@@ -16,7 +16,6 @@ import {
   createLineageInvitation,
   createProvenanceEdge,
 } from "@/server/lineage-repository";
-import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 
 export async function resolvePlantObjectCatalogAction(formData: FormData) {
   const admission = await admitDocumentMutation({
@@ -101,9 +100,23 @@ export async function createLineageInvitationAction(formData: FormData) {
   revalidatePath(`/garden/objects/${result.subjectObject.id}`);
 }
 
-export async function archiveJournalEntryAction(
+/**
+ * OVE-353 owner deletion receipt. Deliberately carries no body, title, media
+ * key, stable identity, or location field — only the state the owner UI needs
+ * to announce what happened and the two timestamps that describe the technical
+ * retention window.
+ */
+export interface DeleteJournalEntryActionStateV1 {
+  status: "deleted" | "already_deleted" | "acknowledgement_required";
+  deletedAt: string;
+  purgeAfter: string;
+}
+
+export async function deleteJournalEntryAction(
   formData: FormData,
-): Promise<DocumentMutationActionStateV1 | undefined> {
+): Promise<
+  DocumentMutationActionStateV1 | DeleteJournalEntryActionStateV1 | undefined
+> {
   const admission = await admitDocumentMutation({
     transport: documentMutationGenerationFromFormData(formData),
   });
@@ -113,20 +126,34 @@ export async function archiveJournalEntryAction(
   const scope = admission.scope;
   const entryId = String(formData.get("entryId") ?? "");
   const objectId = String(formData.get("objectId") ?? "");
-  const archiveAccepted = formData.get("archiveAccepted") === "on";
+  const deleteAccepted = formData.get("deleteAccepted") === "on";
 
-  if (!archiveAccepted) {
-    throw new Error("Archive confirmation is required.");
+  // A missing acknowledgement is an ordinary finite state, not an exception:
+  // the owner simply has not confirmed yet, and nothing has been mutated.
+  if (!deleteAccepted) {
+    return {
+      status: "acknowledgement_required",
+      deletedAt: "",
+      purgeAfter: "",
+    };
   }
 
-  const result = await archiveJournalEntry(scope, { entryId });
+  const before = await deleteJournalEntry(scope, { entryId });
 
-  // OVE-242: the removal intent already committed with the archive. Converge
-  // it now; the owner object page then reports the verified convergence state
-  // from the durable outbox rather than claiming "a job was scheduled".
-  await convergePublicProjectionsNow([result.entry.id]).catch(() => undefined);
-
+  // The canonical deletion transaction already wrote the durable search-removal
+  // intent and the media revocation jobs. Do not make the owner's destructive
+  // action wait for external providers; retryable workers prove convergence.
   revalidatePath("/garden");
   if (objectId) revalidatePath(`/garden/objects/${objectId}`);
-  if (result.publicUrl) revalidatePath(result.publicUrl);
+  if (before.publicUrl) revalidatePath(before.publicUrl);
+
+  return {
+    status: before.alreadyDeleted ? "already_deleted" : "deleted",
+    deletedAt: toIsoTimestamp(before.deletedAt),
+    purgeAfter: toIsoTimestamp(before.purgeAfter),
+  };
+}
+
+function toIsoTimestamp(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }

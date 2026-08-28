@@ -70,7 +70,7 @@ export type Database = DB;
 export type { JsonValue };
 
 export type EntryVisibility = "public";
-export type EntryLifecycleState = "active" | "archived";
+export type EntryLifecycleState = "active" | "deleted_retention";
 export type EntryScope = "object" | "space";
 export type JournalContentClass =
   | "real_ugc"

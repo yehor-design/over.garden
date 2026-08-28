@@ -100,6 +100,8 @@ const LIVE_DOCUMENT_REASONS: Record<string, string> = {
     "current_editor_adr_guardrail",
   "docs/adr/ADR-0017-online-only-product.md":
     "current_connectivity_adr_guardrail",
+  "docs/adr/ADR-0021-journal-deletion-retention.md":
+    "current_journal_deletion_retention_authority",
   "docs/architecture/AUTHENTICATED_ARCHITECTURE_INTEGRATION_PROOF.md":
     "current_architecture_proof_guardrail",
   "docs/architecture/AUTHENTICATED_MUTATION_ADMISSION.md":

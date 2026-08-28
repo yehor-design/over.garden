@@ -108,7 +108,6 @@ const UK_COPY = {
         many: "записів",
         other: "запису",
       },
-      archived: "в архіві",
       addUpdate: "Додати оновлення",
       open: "Відкрити",
     },
@@ -121,7 +120,6 @@ const UK_COPY = {
       empty: "Датованих подій ще немає. Перший збережений запис з'явиться тут.",
       objectJournal: "Журнал об'єкта",
       spaceJournal: "Журнал простору",
-      archived: "В архіві",
     },
     sectionError: {
       description:
@@ -418,7 +416,6 @@ const UK_COPY = {
       unknownIdentity: "Ідентичність невідома",
       save: "Зберегти запис простору",
       public: "Публічний",
-      archived: "В архіві",
       empty: "Записів на рівні простору ще немає.",
     },
     pendingWishlist: {
@@ -530,7 +527,6 @@ const BG_COPY = {
         many: "записа",
         other: "записа",
       },
-      archived: "архивирани",
       addUpdate: "Добавяне на обновяване",
       open: "Отваряне",
     },
@@ -544,7 +540,6 @@ const BG_COPY = {
         "Все още няма датирана активност. Първият запазен запис ще се появи тук.",
       objectJournal: "Дневник на обекта",
       spaceJournal: "Дневник на пространството",
-      archived: "Архивиран",
     },
     sectionError: {
       description:
@@ -840,7 +835,6 @@ const BG_COPY = {
       unknownIdentity: "Неизвестна идентичност",
       save: "Запазване на запис за пространството",
       public: "Публичен",
-      archived: "Архивиран",
       empty: "Все още няма записи на ниво пространство.",
     },
     pendingWishlist: {
@@ -949,7 +943,6 @@ const RU_COPY = {
         many: "записей",
         other: "записи",
       },
-      archived: "в архиве",
       addUpdate: "Добавить обновление",
       open: "Открыть",
     },
@@ -963,7 +956,6 @@ const RU_COPY = {
         "Датированных событий пока нет. Первая сохранённая запись появится здесь.",
       objectJournal: "Журнал объекта",
       spaceJournal: "Журнал пространства",
-      archived: "В архиве",
     },
     sectionError: {
       description:
@@ -1260,7 +1252,6 @@ const RU_COPY = {
       unknownIdentity: "Идентичность неизвестна",
       save: "Сохранить запись пространства",
       public: "Публичный",
-      archived: "В архиве",
       empty: "Записей на уровне пространства пока нет.",
     },
     pendingWishlist: {

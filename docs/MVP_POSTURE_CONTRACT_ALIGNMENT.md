@@ -8,11 +8,11 @@ Reconciled on: 2026-08-25
 
 ## Outcome
 
-The current posture sweep measures exactly 50 repository documents in its
-declared documentation surface: 34 live authorities or preserved guardrails
+The current posture sweep measures exactly 51 repository documents in its
+declared documentation surface: 35 live authorities or preserved guardrails
 and 16 immutable historical receipts. Each path is classified exactly once
 below. The six high-reach live authorities received an applicability
-clarification; the other 28 live documents retain their current control text,
+clarification; the other 29 live documents retain their current control text,
 and every historical receipt retains its exact pre-sweep SHA-256.
 
 ADR-0018 remains the sole request-posture authority: its named unresolved reads
@@ -68,6 +68,7 @@ capture runbook without rewriting that terminal receipt.
 | ------------------------------------------------------------------- | -------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `docs/adr/ADR-0015-lexical-structured-journal-editor.md`            | `live_authority`     | `current_editor_adr_guardrail`          | current control preserved                                                                                   |
 | `docs/adr/ADR-0017-online-only-product.md`                          | `live_authority`     | `current_connectivity_adr_guardrail`    | current control preserved                                                                                   |
+| `docs/adr/ADR-0021-journal-deletion-retention.md`                   | `live_authority`     | `current_journal_deletion_retention_authority` | added by OVE-353; supersedes only the named journal archive clauses                     |
 | `docs/architecture/AUTHENTICATED_ARCHITECTURE_INTEGRATION_PROOF.md` | `live_authority`     | `current_architecture_proof_guardrail`  | current control preserved                                                                                   |
 | `docs/architecture/AUTHENTICATED_MUTATION_ADMISSION.md`             | `live_authority`     | `current_mutation_guardrail`            | ADR applicability clarified                                                                                 |
 | `docs/audit-inbox/AGENT_GOVERNANCE_REDESIGN_2026-08-15.md`          | `historical_receipt` | `dated_audit_receipt`                   | immutable bytes ledger-labelled; SHA-256 `910e6c4126d77b976b71bceca7cba18ef4fc23208f8a20e22a6ca04f848e245a` |

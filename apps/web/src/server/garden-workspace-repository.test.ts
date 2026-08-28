@@ -91,13 +91,17 @@ describe("garden workspace query contracts", () => {
     ).compile();
 
     expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $1');
-    expect(compiled.sql).toContain('"spaces"."owner_user_id" = $2');
+    expect(compiled.sql).toContain('"spaces"."owner_user_id" = $3');
     expect(compiled.sql).toContain(
       '"plant_objects"."owner_user_id" = "journal_entries"."owner_user_id"',
     );
-    expect(compiled.sql).toContain("limit $3");
+    // OVE-353: a deleted entry leaves the workspace continuity strip at once,
+    // filtered canonically rather than hidden by the view.
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $2');
+    expect(compiled.sql).toContain("limit $4");
     expect(compiled.parameters).toEqual([
       OWNER_ID,
+      "active",
       OWNER_ID,
       WORKSPACE_RECENT_LIMIT,
     ]);
@@ -262,7 +266,6 @@ function workspaceSources({
       animalCount: inventoryObjects.filter(
         (item) => item.objectKind === "animal",
       ).length,
-      archivedEntryCount: 0,
       objects: inventoryObjects,
     }),
     spaces: vi.fn().mockResolvedValue({
@@ -303,7 +306,6 @@ function workspaceObject(index: number, ownerUserId: string) {
     createdAt: new Date("2026-07-01T00:00:00.000Z"),
     entryCount: 1,
     publicEntryCount: 1,
-    archivedEntryCount: 0,
     latestEntryDate: new Date("2026-07-01T00:00:00.000Z"),
     coverMedia: null,
   };

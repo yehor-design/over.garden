@@ -52,9 +52,8 @@ export async function collectErasureDryRunCounts(
     lineageNodeFollows,
     lineageQuestions,
     journalEntriesTotal,
-    journalEntriesPrivateActive,
     journalEntriesPublicActive,
-    journalEntriesArchived,
+    journalEntriesDeletionPending,
     journalEntryObjectMentions,
     journalEntryCatalogMentions,
     journalMutationReceipts,
@@ -103,15 +102,11 @@ export async function collectErasureDryRunCounts(
     countLineageQuestions(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId, {
-      visibility: "private",
-      lifecycleState: "active",
-    }),
-    countJournalEntries(executor, requesterUserId, {
       visibility: "public",
       lifecycleState: "active",
     }),
     countJournalEntries(executor, requesterUserId, {
-      lifecycleState: "archived",
+      lifecycleState: "deleted_retention",
     }),
     countOwnedRows(executor, "journal_entry_object_mentions", requesterUserId),
     countOwnedRows(executor, "journal_entry_catalog_mentions", requesterUserId),
@@ -173,9 +168,8 @@ export async function collectErasureDryRunCounts(
     lineageNodeFollows,
     lineageQuestions,
     journalEntriesTotal,
-    journalEntriesPrivateActive,
     journalEntriesPublicActive,
-    journalEntriesArchived,
+    journalEntriesDeletionPending,
     journalEntryObjectMentions,
     journalEntryCatalogMentions,
     journalMutationReceipts,
@@ -401,8 +395,8 @@ export function buildCountJournalEntriesQuery(
   executor: QueryExecutor,
   requesterUserId: string,
   filters: {
-    visibility?: "private" | "public";
-    lifecycleState?: "active" | "archived";
+    visibility?: "public";
+    lifecycleState?: "active" | "deleted_retention";
   } = {},
 ) {
   let query = executor
@@ -849,8 +843,8 @@ async function countJournalEntries(
   executor: QueryExecutor,
   requesterUserId: string,
   filters: {
-    visibility?: "private" | "public";
-    lifecycleState?: "active" | "archived";
+    visibility?: "public";
+    lifecycleState?: "active" | "deleted_retention";
   } = {},
 ) {
   const row = await buildCountJournalEntriesQuery(

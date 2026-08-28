@@ -42,7 +42,6 @@ import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { resolveFollowUpValuePulsePrompt } from "@/server/follow-up-value-pulse";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
-import { loadPublicProjectionConvergence } from "@/server/search/public-projection-outbox";
 import {
   getPlantObjectPage,
   type PlantObjectPage,
@@ -57,7 +56,7 @@ import { buildOwnerObjectPassportPresentation } from "@/server/owner-object-pass
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
-  archiveJournalEntryAction,
+  deleteJournalEntryAction,
   createLineageInvitationAction,
   createProvenanceEdgeAction,
   resolvePlantObjectCatalogAction,
@@ -194,12 +193,6 @@ export default async function PlantObjectReadbackPage({
     locale,
   );
   const entriesById = new Map(page.entries.map((entry) => [entry.id, entry]));
-  // OVE-242: an archived entry may claim public removal only after the public
-  // projection has verifiably converged. Until then the owner is told the
-  // removal is still finishing rather than that it is already done.
-  const pendingPublicRemovalEntryIds = await listPendingPublicRemovalEntryIds(
-    page.entries,
-  );
 
   return (
     <main
@@ -293,7 +286,6 @@ export default async function PlantObjectReadbackPage({
               objectId={objectId}
               objectPassportReadbackPath={objectPassportReadbackPath}
               locale={locale}
-              publicRemovalPending={pendingPublicRemovalEntryIds.has(entry.id)}
             />
           ) : null;
         }}
@@ -370,36 +362,13 @@ function OwnerEntryActions({
   objectId,
   objectPassportReadbackPath,
   locale,
-  publicRemovalPending,
 }: {
   entry: PlantObjectPage["entries"][number];
   objectId: string;
   objectPassportReadbackPath: string | null;
   locale: InterfaceLocale;
-  publicRemovalPending: boolean;
 }) {
   const actionCopy = getOwnerObjectCopy(locale).entryActions;
-
-  if (entry.lifecycle_state === "archived") {
-    return (
-      <div data-owner-entry-controls="archived" className="grid gap-1">
-        <span className="text-sm font-medium text-muted-foreground">
-          {actionCopy.archivedTitle}
-        </span>
-        {entry.public_gone_at ? (
-          <span
-            data-public-removal={publicRemovalPending ? "pending" : "converged"}
-            className="text-xs text-muted-foreground"
-            aria-live="polite"
-          >
-            {publicRemovalPending
-              ? actionCopy.archivedGonePending
-              : actionCopy.archivedGone}
-          </span>
-        ) : null}
-      </div>
-    );
-  }
 
   if (entry.visibility === "public" && entry.public_slug) {
     return (
@@ -425,7 +394,7 @@ function OwnerEntryActions({
           {actionCopy.openPage}
         </Link>
         <DocumentMutationActionForm
-          action={archiveJournalEntryAction}
+          action={deleteJournalEntryAction}
           className="flex w-full flex-col gap-3 pt-1"
         >
           <input type="hidden" name="entryId" value={entry.id} />
@@ -433,11 +402,11 @@ function OwnerEntryActions({
           <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
             <input
               type="checkbox"
-              name="archiveAccepted"
+              name="deleteAccepted"
               required
               className="mt-1 size-4 rounded border-border"
             />
-            <span>{actionCopy.archiveDisclosure}</span>
+            <span>{actionCopy.deleteDisclosure}</span>
           </label>
           <button
             type="submit"
@@ -447,7 +416,7 @@ function OwnerEntryActions({
               className: "self-start",
             })}
           >
-            {actionCopy.archiveButton}
+            {actionCopy.deleteButton}
           </button>
         </DocumentMutationActionForm>
       </div>
@@ -677,28 +646,6 @@ function ProvenanceSection({
       ) : null}
     </section>
   );
-}
-
-/**
- * OVE-242. Entry ids whose public removal is committed but not yet proved gone
- * from the public projection. Returns ids only; no titles, slugs or text.
- */
-async function listPendingPublicRemovalEntryIds(
-  entries: PlantObjectPage["entries"],
-): Promise<Set<string>> {
-  const archivedPublicIds = entries
-    .filter(
-      (entry) =>
-        entry.lifecycle_state === "archived" && entry.public_gone_at !== null,
-    )
-    .map((entry) => entry.id);
-  if (archivedPublicIds.length === 0) return new Set();
-
-  const statuses = await loadPublicProjectionConvergence(archivedPublicIds);
-  const converged = new Set(
-    statuses.filter((status) => status.converged).map((s) => s.entityId),
-  );
-  return new Set(archivedPublicIds.filter((id) => !converged.has(id)));
 }
 
 async function recordOwnRecordRevisited(

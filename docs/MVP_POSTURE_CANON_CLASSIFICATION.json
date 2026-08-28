@@ -219,6 +219,10 @@
     {
       "path": "pnpm-lock.yaml",
       "reason": "The dependency lock is not a product posture instruction."
+    },
+    {
+      "pathPrefix": "apps/web/tests/",
+      "reason": "Browser proofs assert the HTTP status and headers a real response carries; they record observed product behavior, not a posture instruction."
     }
   ],
   "ownerStates": {

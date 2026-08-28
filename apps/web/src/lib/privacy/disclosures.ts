@@ -23,7 +23,7 @@ export const MVP_RETENTION_RULES = [
   {
     title: "Public final WebPs",
     summary:
-      "The exact browser-created final WebP stays available while the related public entry is active and is removed from public surfaces after archive or erasure.",
+      "The exact browser-created final WebP stays available while the related public entry is active and is made unreachable after entry deletion or erasure.",
     developerBoundary:
       "Public pages may render final media URLs only; erasure removes OverGarden-controlled objects when their keys are still known.",
   },
@@ -72,7 +72,7 @@ export const FIRST_PUBLICATION_DISCLOSURE_LINES = [
   "Useful first-party editorial, guide, answer, and landing pages can be indexed for the MVP; thin or unsafe user-generated surfaces stay out of sitemaps unless explicit promotion rules allow indexing.",
   "Precise location is not collected or shown; only supported coarse regions can appear when you choose region visibility.",
   "Selected photos are converted in the browser into final WebPs. Their exact bytes use short-lived private staging and become public only with a successful atomic Publish; OverGarden does not retain the selected source files.",
-  "You can archive a public entry so its old public page stops showing journal text, leaves public discovery surfaces, and is queued for public search removal.",
+  "You can delete a public entry permanently. It disappears at once from your journal and from public pages, there is no archive and no restore, and a scrubbed technical record is kept for at most seven days only to finish removing it from search and to make its photos unreachable.",
   "Search-engine, crawler, or AI copies outside OverGarden are removal best-effort only.",
   `For privacy or support questions, contact ${SUPPORT_EMAIL}.`,
 ] as const;
@@ -83,7 +83,7 @@ export const ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES = [
   "An operator can review a non-destructive dry-run preview of affected data classes before any maintainer-approved destructive workflow.",
   "An operator can move the request through submitted, reviewing, and handled statuses without reading journal text.",
   "A maintainer-approved operator can execute irreversible erasure or anonymization only after dry-run review and request-specific approval.",
-  "Archive removes public OverGarden surfaces first; approved erasure then deletes or anonymizes current-schema account, garden, journal, media, analytics, catalog-provisional, and search-job references where OverGarden controls them.",
+  "Entry deletion removes public OverGarden surfaces first; approved erasure then deletes or anonymizes current-schema account, garden, journal, media, analytics, catalog-provisional, and search-job references where OverGarden controls them, without waiting for a pending entry-deletion retention window.",
   "Search-engine, crawler, or AI copies outside OverGarden are removal best-effort only.",
   `For privacy or support questions, contact ${SUPPORT_EMAIL}.`,
 ] as const;

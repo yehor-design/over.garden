@@ -344,7 +344,7 @@ async function main() {
         entityId: ENTRY_ID,
         ownerUserId: OWNER_ID,
         desiredState: "absent",
-        reason: "archive",
+        reason: "journal_delete",
       });
     });
     await sql`

@@ -1,6 +1,6 @@
 # OverGarden — Technology Stack & Decisions
 
-> **Current status:** consolidated by ADR-0014, superseded for connectivity and browser-local journal persistence by ADR-0017, for the MVP refusal, media, indexability, and operator-surface posture by ADR-0018, and for atomic local journal authoring and client-final media publication by ADR-0019. Older ADRs remain historical records; this document plus the latest explicit superseding ADR is the current stack surface for new work.
+> **Current status:** consolidated by ADR-0014, superseded for connectivity and browser-local journal persistence by ADR-0017, for the MVP refusal, media, indexability, and operator-surface posture by ADR-0018, for atomic local journal authoring and client-final media publication by ADR-0019, and for the journal deletion-retention lifecycle by ADR-0021. Older ADRs remain historical records; this document plus the latest explicit superseding ADR is the current stack surface for new work.
 
 ## Product frame
 

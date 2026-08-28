@@ -418,7 +418,6 @@ function workspaceModel(): GardenWorkspaceReadModel {
         totalCount: 3,
         plantCount: 1,
         animalCount: 1,
-        archivedEntryCount: 0,
         objects: [workspaceObject()],
         hasMore: false,
         page: 1,
@@ -476,7 +475,6 @@ function emptyWorkspaceModel(): GardenWorkspaceReadModel {
         totalCount: 0,
         plantCount: 0,
         animalCount: 0,
-        archivedEntryCount: 0,
         objects: [],
         hasMore: false,
         page: 1,
@@ -515,7 +513,6 @@ function workspaceObject() {
     createdAt: new Date("2026-06-01T00:00:00.000Z"),
     entryCount: 3,
     publicEntryCount: 3,
-    archivedEntryCount: 0,
     latestEntryDate: new Date("2020-06-01T00:00:00.000Z"),
     coverMedia: null,
   };
