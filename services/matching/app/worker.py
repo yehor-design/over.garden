@@ -43,6 +43,10 @@ from app.search import (
     reindex_catalog_typeahead,
     unindex_journal_entry_for_owner,
 )
+from app.stable_registry_extension_pack import (
+    STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND,
+    review_extension_pack,
+)
 from app.stable_registry_foundation import (
     STABLE_REGISTRY_FOUNDATION_BUILD_KIND,
     build_foundation_release,
@@ -118,7 +122,8 @@ where queue_name = %s
             '{CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND}',
             '{CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND}',
             '{CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND}',
-            '{STABLE_REGISTRY_FOUNDATION_BUILD_KIND}'
+            '{STABLE_REGISTRY_FOUNDATION_BUILD_KIND}',
+            '{STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND}'
           ) then %s
           else %s
         end || ' seconds'
@@ -224,6 +229,21 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
                 payload,
                 "releaseId",
                 STABLE_REGISTRY_FOUNDATION_BUILD_KIND,
+            ),
+        )
+        return
+
+    if kind == STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND:
+        _require_exact_payload_shape(
+            payload,
+            STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND,
+        )
+        review_extension_pack(
+            conn,
+            _payload_uuid_text(
+                payload,
+                "packId",
+                STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND,
             ),
         )
         return

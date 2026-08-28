@@ -260,6 +260,68 @@ export interface CatalogRegistryExceptionGroups {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CatalogRegistryExtensionPackNames {
+  created_at: Generated<Timestamp>;
+  display_name: string;
+  locale: string;
+  name_class: string;
+  normalized_name: string;
+  pack_row_id: string;
+}
+
+export interface CatalogRegistryExtensionPackRows {
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  locale: string;
+  normalized_denomination: string;
+  official_denomination: string;
+  pack_id: string;
+  parent_catalog_item_id: string | null;
+  parent_evidence_class: string;
+  parent_scientific_name: string | null;
+  public_slug: string | null;
+  row_class: string;
+  source_record_key: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface CatalogRegistryExtensionPacks {
+  activated_at: Timestamp | null;
+  activated_by_user_id: string | null;
+  adapter_version: string;
+  approved_at: Timestamp | null;
+  approved_by_user_id: string | null;
+  artifact_byte_digest: string;
+  artifact_digest: string;
+  artifact_schema_version: string;
+  created_at: Generated<Timestamp>;
+  created_by_user_id: string;
+  declared_source_version: string;
+  id: Generated<string>;
+  pack_kind: string;
+  preview_digest: string | null;
+  release_id: string | null;
+  retired_at: Timestamp | null;
+  safe_summary: Generated<Json>;
+  source_rights: string;
+  source_slug: string;
+  state: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  version: Generated<number>;
+}
+
+export interface CatalogRegistryExtensionPackUserNames {
+  created_at: Generated<Timestamp>;
+  expected_version: Generated<number>;
+  id: Generated<string>;
+  locale: string;
+  normalized_name: string;
+  pack_id: string;
+  pack_row_id: string | null;
+  state: Generated<string>;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface CatalogRegistryReleaseMembers {
   catalog_item_id: string;
   catalog_item_revision_id: string;
@@ -1159,6 +1221,10 @@ export interface DB {
   catalog_registry_active_pointers: CatalogRegistryActivePointers;
   catalog_registry_decisions: CatalogRegistryDecisions;
   catalog_registry_exception_groups: CatalogRegistryExceptionGroups;
+  catalog_registry_extension_pack_names: CatalogRegistryExtensionPackNames;
+  catalog_registry_extension_pack_rows: CatalogRegistryExtensionPackRows;
+  catalog_registry_extension_pack_user_names: CatalogRegistryExtensionPackUserNames;
+  catalog_registry_extension_packs: CatalogRegistryExtensionPacks;
   catalog_registry_release_members: CatalogRegistryReleaseMembers;
   catalog_registry_releases: CatalogRegistryReleases;
   catalog_registry_search_outbox: CatalogRegistrySearchOutbox;

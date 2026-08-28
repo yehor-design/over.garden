@@ -31,6 +31,7 @@ describe("versioned application SQL bootstrap", () => {
       "0024_ove255_stable_registry_foundation.sql",
       "0025_ove256_stable_registry_public_reads.sql",
       "0026_ove257_stable_registry_product_projection.sql",
+      "0027_ove328_stable_registry_extension_packs.sql",
       "0029_online_journal_drafts.sql",
       "0035_online_only_retirement.sql",
       "0036_ove347_atomic_journal_create.sql",

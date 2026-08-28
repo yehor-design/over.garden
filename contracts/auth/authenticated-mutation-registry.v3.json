@@ -33,6 +33,22 @@
       "predecessorEdgeIds": []
     },
     {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#abandonExtensionPackAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:0ac419915badf1470095:always",
+      "consumerEdgeId": "edge:0ac419915badf1470095:1:443e8c57cfa14f798e14",
+      "effectBoundaryId": "effect:1a6c2ccdf7cdee0adf33:canonical-row",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx#StableRegistryExtensionPackLane:action:abandonAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:0ac419915badf1470095",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "better_auth_callback:src/app/api/auth/[...all]/route.ts#link_social_post_redirect",
       "branchConditionClass": "success",
       "branchId": "branch:0c563e411c660875e384:success",
@@ -541,6 +557,40 @@
       ]
     },
     {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#decideExtensionPackGroupAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:224fafae539a4feb9e08:always",
+      "consumerEdgeId": "edge:224fafae539a4feb9e08:1:91d0bb46805aaf099281",
+      "effectBoundaryId": "effect:96e66df4054353615eca:database-transaction-1",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx#DecisionForm:action:action",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:224fafae539a4feb9e08",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#decideExtensionPackGroupAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:224fafae539a4feb9e08:always",
+      "consumerEdgeId": "edge:224fafae539a4feb9e08:2:3e64d0f2793834448a88",
+      "effectBoundaryId": "effect:fba8c96b8746d168ab42:canonical-row",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx#DecisionForm:action:action",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:224fafae539a4feb9e08",
+      "predecessorEdgeIds": [
+        "edge:224fafae539a4feb9e08:1:91d0bb46805aaf099281"
+      ]
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/garden/profile/actions.ts#unblockProfileAction",
       "branchConditionClass": "always",
       "branchId": "branch:2573df848f56e4aaac99:always",
@@ -842,6 +892,40 @@
       "pipelineId": "pipeline:2ec420f9007065c48103",
       "predecessorEdgeIds": [
         "edge:2ec420f9007065c48103:1:6215af1b3078185d859e"
+      ]
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#activateExtensionPackAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:2edb50feccfb8138168a:always",
+      "consumerEdgeId": "edge:2edb50feccfb8138168a:1:dbd2dd6cd655f14a19bc",
+      "effectBoundaryId": "effect:306f64b6a8cf77b362db:database-transaction-1",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx#StableRegistryExtensionPackLane:action:activateAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:2edb50feccfb8138168a",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#activateExtensionPackAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:2edb50feccfb8138168a:always",
+      "consumerEdgeId": "edge:2edb50feccfb8138168a:2:3d7bd56795d49c2a2be9",
+      "effectBoundaryId": "effect:4f841a31894b195279a8:canonical-row",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx#StableRegistryExtensionPackLane:action:activateAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:2edb50feccfb8138168a",
+      "predecessorEdgeIds": [
+        "edge:2edb50feccfb8138168a:1:dbd2dd6cd655f14a19bc"
       ]
     },
     {
@@ -2470,6 +2554,38 @@
       "predecessorEdgeIds": []
     },
     {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#activateExtensionPackAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:6d1c3d8b65722841d9a9:always",
+      "consumerEdgeId": "edge:6d1c3d8b65722841d9a9:1:dbd2dd6cd655f14a19bc",
+      "effectBoundaryId": "effect:306f64b6a8cf77b362db:database-transaction-1",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#activateExtensionPackAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:6d1c3d8b65722841d9a9",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#activateExtensionPackAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:6d1c3d8b65722841d9a9:always",
+      "consumerEdgeId": "edge:6d1c3d8b65722841d9a9:2:3d7bd56795d49c2a2be9",
+      "effectBoundaryId": "effect:4f841a31894b195279a8:canonical-row",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#activateExtensionPackAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:6d1c3d8b65722841d9a9",
+      "predecessorEdgeIds": [
+        "edge:6d1c3d8b65722841d9a9:1:dbd2dd6cd655f14a19bc"
+      ]
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/account/communities/[slug]/actions.ts#setCommunityParticipationAction",
       "branchConditionClass": "always",
       "branchId": "branch:6eb8dfd608407dd93afe:always",
@@ -3493,6 +3609,38 @@
       "predecessorEdgeIds": []
     },
     {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#decideExtensionPackGroupAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:993c9685a5eafe1e0467:always",
+      "consumerEdgeId": "edge:993c9685a5eafe1e0467:1:91d0bb46805aaf099281",
+      "effectBoundaryId": "effect:96e66df4054353615eca:database-transaction-1",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#decideExtensionPackGroupAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:993c9685a5eafe1e0467",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#decideExtensionPackGroupAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:993c9685a5eafe1e0467:always",
+      "consumerEdgeId": "edge:993c9685a5eafe1e0467:2:3e64d0f2793834448a88",
+      "effectBoundaryId": "effect:fba8c96b8746d168ab42:canonical-row",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#decideExtensionPackGroupAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:993c9685a5eafe1e0467",
+      "predecessorEdgeIds": [
+        "edge:993c9685a5eafe1e0467:1:91d0bb46805aaf099281"
+      ]
+    },
+    {
       "admissionBoundaryId": "route_handler:src/app/api/garden/value-pulse/route.ts#POST",
       "branchConditionClass": "success",
       "branchId": "branch:999deae9324643aaaf06:success",
@@ -3686,6 +3834,21 @@
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:a140312fdb07beee7f12",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#abandonExtensionPackAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:a30c8fbfc63c30d02a80:always",
+      "consumerEdgeId": "edge:a30c8fbfc63c30d02a80:1:443e8c57cfa14f798e14",
+      "effectBoundaryId": "effect:1a6c2ccdf7cdee0adf33:canonical-row",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#abandonExtensionPackAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:a30c8fbfc63c30d02a80",
       "predecessorEdgeIds": []
     },
     {
@@ -4023,6 +4186,22 @@
       ]
     },
     {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#approveExtensionPackPreviewAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:b3b8447ed20090a65cc1:always",
+      "consumerEdgeId": "edge:b3b8447ed20090a65cc1:1:4302f02327eceb59b35c",
+      "effectBoundaryId": "effect:b60c250bed49cc43c65e:canonical-row",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx#StableRegistryExtensionPackLane:action:approveAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:b3b8447ed20090a65cc1",
+      "predecessorEdgeIds": []
+    },
+    {
       "admissionBoundaryId": "server_action:src/app/garden/lineage/invitations/claim/actions.ts#confirmLineageInvitationClaimAction:authority:authenticated_user",
       "branchConditionClass": "always",
       "branchId": "branch:b8c775e790228fa69c29:always",
@@ -4069,6 +4248,21 @@
       ],
       "executionMode": "required",
       "pipelineId": "pipeline:bc0b6ec4292d756544f2",
+      "predecessorEdgeIds": []
+    },
+    {
+      "admissionBoundaryId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#approveExtensionPackPreviewAction",
+      "branchConditionClass": "always",
+      "branchId": "branch:bc29a3c7780025dfc22d:always",
+      "consumerEdgeId": "edge:bc29a3c7780025dfc22d:1:4302f02327eceb59b35c",
+      "effectBoundaryId": "effect:b60c250bed49cc43c65e:canonical-row",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#approveExtensionPackPreviewAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "executionMode": "required",
+      "pipelineId": "pipeline:bc29a3c7780025dfc22d",
       "predecessorEdgeIds": []
     },
     {
@@ -5884,6 +6078,20 @@
     },
     {
       "atomicity": "database_transaction",
+      "commitLabel": "canonical-row",
+      "effectBoundaryId": "effect:1a6c2ccdf7cdee0adf33:canonical-row",
+      "effectFamilies": [
+        "canonical_row"
+      ],
+      "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "idempotencyOwner": "src/server/stable-registry/extension-pack-repository.ts#abandonExtensionPack",
+      "ownerPath": "src/server/stable-registry/extension-pack-repository.ts",
+      "ownerSymbol": "abandonExtensionPack"
+    },
+    {
+      "atomicity": "database_transaction",
       "commitLabel": "database-transaction-1",
       "effectBoundaryId": "effect:1e4b88cbbd8c00e09346:database-transaction-1",
       "effectFamilies": [
@@ -6023,6 +6231,21 @@
       "idempotencyOwner": "src/server/lineage-interactions-repository.ts#followLineageNode",
       "ownerPath": "src/server/lineage-interactions-repository.ts",
       "ownerSymbol": "followLineageNode"
+    },
+    {
+      "atomicity": "database_transaction",
+      "commitLabel": "database-transaction-1",
+      "effectBoundaryId": "effect:306f64b6a8cf77b362db:database-transaction-1",
+      "effectFamilies": [
+        "transactional_outbox"
+      ],
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "idempotencyOwner": "src/server/stable-registry/extension-pack-repository.ts#activateExtensionPack",
+      "ownerPath": "src/server/stable-registry/extension-pack-repository.ts",
+      "ownerSymbol": "activateExtensionPack"
     },
     {
       "atomicity": "database_transaction",
@@ -6204,6 +6427,20 @@
       "idempotencyOwner": "src/server/engagement-repository.ts#engagementActorIsVisible",
       "ownerPath": "src/server/engagement-repository.ts",
       "ownerSymbol": "engagementActorIsVisible"
+    },
+    {
+      "atomicity": "database_transaction",
+      "commitLabel": "canonical-row",
+      "effectBoundaryId": "effect:4f841a31894b195279a8:canonical-row",
+      "effectFamilies": [
+        "canonical_row"
+      ],
+      "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "idempotencyOwner": "src/server/stable-registry/extension-pack-repository.ts#activateExtensionPack",
+      "ownerPath": "src/server/stable-registry/extension-pack-repository.ts",
+      "ownerSymbol": "activateExtensionPack"
     },
     {
       "atomicity": "database_transaction",
@@ -6870,6 +7107,20 @@
     },
     {
       "atomicity": "database_transaction",
+      "commitLabel": "database-transaction-1",
+      "effectBoundaryId": "effect:96e66df4054353615eca:database-transaction-1",
+      "effectFamilies": [
+        "canonical_row"
+      ],
+      "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "idempotencyOwner": "src/server/stable-registry/extension-pack-repository.ts#decideExtensionPackGroup",
+      "ownerPath": "src/server/stable-registry/extension-pack-repository.ts",
+      "ownerSymbol": "decideExtensionPackGroup"
+    },
+    {
+      "atomicity": "database_transaction",
       "commitLabel": "canonical-row:buildGloballyEligibleJournalSearchRowsQuery",
       "effectBoundaryId": "effect:974eb98cf27bcd29a7ba:canonical-row-buildgloballyeligiblejournalsearchrowsquery",
       "effectFamilies": [
@@ -7130,6 +7381,20 @@
       "idempotencyOwner": "src/server/community-repository.ts#reportCommunityContribution",
       "ownerPath": "src/server/community-repository.ts",
       "ownerSymbol": "reportCommunityContribution"
+    },
+    {
+      "atomicity": "database_transaction",
+      "commitLabel": "canonical-row",
+      "effectBoundaryId": "effect:b60c250bed49cc43c65e:canonical-row",
+      "effectFamilies": [
+        "canonical_row"
+      ],
+      "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "idempotencyOwner": "src/server/stable-registry/extension-pack-repository.ts#approveExtensionPackPreview",
+      "ownerPath": "src/server/stable-registry/extension-pack-repository.ts",
+      "ownerSymbol": "approveExtensionPackPreview"
     },
     {
       "atomicity": "database_transaction",
@@ -7528,6 +7793,20 @@
       "idempotencyOwner": "src/server/erasure-request-repository.ts#markErasureRequestDryRunReviewed",
       "ownerPath": "src/server/erasure-request-repository.ts",
       "ownerSymbol": "markErasureRequestDryRunReviewed"
+    },
+    {
+      "atomicity": "database_transaction",
+      "commitLabel": "canonical-row",
+      "effectBoundaryId": "effect:fba8c96b8746d168ab42:canonical-row",
+      "effectFamilies": [
+        "canonical_row"
+      ],
+      "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "idempotencyOwner": "src/server/stable-registry/extension-pack-repository.ts#decideExtensionPackGroup",
+      "ownerPath": "src/server/stable-registry/extension-pack-repository.ts",
+      "ownerSymbol": "decideExtensionPackGroup"
     },
     {
       "atomicity": "database_transaction",
@@ -8270,6 +8549,74 @@
       "symbol": "ErasureRequestPage",
       "transport": "native_form",
       "variant": "action:submitErasureRequestAction"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx#DecisionForm:action:action",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "symbol": "DecisionForm",
+      "transport": "native_form",
+      "variant": "action:action"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx#StableRegistryExtensionPackLane:action:abandonAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "symbol": "StableRegistryExtensionPackLane",
+      "transport": "native_form",
+      "variant": "action:abandonAction"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx#StableRegistryExtensionPackLane:action:activateAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "symbol": "StableRegistryExtensionPackLane",
+      "transport": "native_form",
+      "variant": "action:activateAction"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "native_form:src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx#StableRegistryExtensionPackLane:action:approveAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "symbol": "StableRegistryExtensionPackLane",
+      "transport": "native_form",
+      "variant": "action:approveAction"
     },
     {
       "authority": "authenticated_user",
@@ -10209,6 +10556,66 @@
     },
     {
       "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#abandonExtensionPackAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "symbol": "abandonExtensionPackAction",
+      "transport": "server_action",
+      "variant": "abandonExtensionPackAction"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#activateExtensionPackAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "symbol": "activateExtensionPackAction",
+      "transport": "server_action",
+      "variant": "activateExtensionPackAction"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#approveExtensionPackPreviewAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "symbol": "approveExtensionPackPreviewAction",
+      "transport": "server_action",
+      "variant": "approveExtensionPackPreviewAction"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "effectful",
+      "entrypointId": "server_action:src/app/garden/catalog/registry/extension-actions.ts#decideExtensionPackGroupAction",
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts"
+      ],
+      "exclusionReason": null,
+      "executionOwner": "remaining_ove_291",
+      "generationRequirement": "required_before_first_effect",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "symbol": "decideExtensionPackGroupAction",
+      "transport": "server_action",
+      "variant": "decideExtensionPackGroupAction"
+    },
+    {
+      "authority": "authenticated_user",
       "classification": "excluded_distinct_authority",
       "entrypointId": "server_action:src/app/garden/interface-server-action-pending-fixture-action.ts#holdInterfaceServerActionPendingVisualFixtureAction",
       "evidencePaths": [
@@ -11136,6 +11543,18 @@
     },
     {
       "evidencePaths": [
+        "src/db/schema.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/db/schema",
+      "sourceNodeId": "source:04a420b10ab78cb2d2e4",
+      "symbol": "Database"
+    },
+    {
+      "evidencePaths": [
         "src/db/index.ts",
         "src/server/public-profile-repository.ts"
       ],
@@ -11181,6 +11600,18 @@
       "semanticVariant": "from:@/server/request-scope",
       "sourceNodeId": "source:050040ee6605a8ea37a8",
       "symbol": "RequestScope"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/stable-registry/extension-pack-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/extension-pack-actions",
+      "sourceNodeId": "source:0521c559a611c6db2ae4",
+      "symbol": "ExtensionPackRowClass"
     },
     {
       "evidencePaths": [
@@ -11351,6 +11782,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:../extension-actions",
+      "sourceNodeId": "source:06d79fcc3227cd8b7004",
+      "symbol": "abandonExtensionPackAction"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-profile.tsx",
         "src/components/site-shell/site-shell-context-rail.tsx"
       ],
@@ -11468,6 +11911,17 @@
       "semanticVariant": "from:@/lib/runtime-url",
       "sourceNodeId": "source:079860304e378c3cefb8",
       "symbol": "getAuthBaseUrl"
+    },
+    {
+      "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_11799",
+      "sourceNodeId": "source:07ab93769f44473511cc",
+      "symbol": "approveExtensionPackPreview"
     },
     {
       "evidencePaths": [
@@ -11812,6 +12266,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/page.tsx",
+        "src/server/auth-session.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/auth-session",
+      "sourceNodeId": "source:0bf3785fbcee499afd3c",
+      "symbol": "getCurrentSession"
+    },
+    {
+      "evidencePaths": [
         "src/server/launch-corpus/public-surface.ts",
         "src/server/search/public-journal-eligibility.ts"
       ],
@@ -11856,6 +12322,18 @@
       "semanticVariant": "from:@/lib/stable-registry/decision-actions",
       "sourceNodeId": "source:0c6cb9e3c34829b09978",
       "symbol": "StableRegistryReleaseCenterReadModel"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/stable-registry/extension-pack-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/extension-pack-actions",
+      "sourceNodeId": "source:0c778f519e5c533bb5df",
+      "symbol": "ExtensionPackUserNameGroupSummary"
     },
     {
       "evidencePaths": [
@@ -12058,6 +12536,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_8407",
+      "sourceNodeId": "source:0f64b8244269230b7c8d",
+      "symbol": "decideExtensionPackGroup"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/engagement-repository.ts"
       ],
@@ -12125,6 +12614,18 @@
       "semanticVariant": "from:../../shared",
       "sourceNodeId": "source:100fd759ba78a7e3a7de",
       "symbol": "redirectToEngagementAuth"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/page.tsx",
+        "src/lib/stable-registry/feature-gate.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/feature-gate",
+      "sourceNodeId": "source:101744a4d1103351255d",
+      "symbol": "isStableRegistryExtensionPacksEnabled"
     },
     {
       "evidencePaths": [
@@ -12217,6 +12718,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:10c4c7a36046a1735541",
       "symbol": "Database"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/lib/stable-registry/extension-pack-actions.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/extension-pack-actions",
+      "sourceNodeId": "source:10d2e74a238a491d0819",
+      "symbol": "ExtensionPackDecisionAction"
     },
     {
       "evidencePaths": [
@@ -12876,6 +13389,18 @@
     },
     {
       "evidencePaths": [
+        "src/db/index.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/db",
+      "sourceNodeId": "source:174efc7923b84974b2c2",
+      "symbol": "db"
+    },
+    {
+      "evidencePaths": [
         "src/server/community-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -13111,6 +13636,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_14631",
+      "sourceNodeId": "source:18f43394211dca9d7140",
+      "symbol": "activateExtensionPack"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/interface-safe-flush-timeout-fixture.tsx",
         "src/app/garden/page.tsx"
       ],
@@ -13156,6 +13692,18 @@
       "semanticVariant": "from:@/server/meta-marketing/conversions-api",
       "sourceNodeId": "source:19611d6707f720a7ce7b",
       "symbol": "sendMetaConversionsApiEvent"
+    },
+    {
+      "evidencePaths": [
+        "src/db/schema.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/db/schema",
+      "sourceNodeId": "source:19a7c1a8390c58a5fc7e",
+      "symbol": "JsonValue"
     },
     {
       "evidencePaths": [
@@ -14146,6 +14694,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/page.tsx",
+        "src/server/interface-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/interface-localization",
+      "sourceNodeId": "source:2472db1bff486305384f",
+      "symbol": "getRequestInterfaceLocale"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/media/[mediaAssetId]/focal/route.ts",
         "src/server/document-mutation-admission.ts"
       ],
@@ -14514,6 +15074,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/extension-pack-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/extension-pack-actions",
+      "sourceNodeId": "source:279ca33a5c0e3f052644",
+      "symbol": "ExtensionPackCenterReadModel"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/privacy/erasure-requests/page.tsx",
         "src/lib/privacy/disclosures.ts"
       ],
@@ -14633,6 +15205,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:../extension-actions",
+      "sourceNodeId": "source:28868e30ce76da9d6842",
+      "symbol": "ExtensionPackActionState"
+    },
+    {
+      "evidencePaths": [
         "src/components/auth/session-convergence-boundary.tsx",
         "src/lib/garden/local-journal-composer-session.ts"
       ],
@@ -14653,6 +15237,17 @@
       "semanticVariant": "canonical-row:buildActionableEngagementCommentQuery",
       "sourceNodeId": "source:28bf8e02315c6529c8e3",
       "symbol": "reportEngagementComment"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "decideExtensionPackGroupAction",
+      "sourceNodeId": "source:28c2f1c5cddf2b40d685",
+      "symbol": "decideExtensionPackGroupAction"
     },
     {
       "evidencePaths": [
@@ -14784,6 +15379,19 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "typed_action_prop",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:approveAction",
+      "sourceNodeId": "source:29d8de9f8b936eb2d644",
+      "symbol": "approveAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/account/communities/[slug]/page.tsx",
         "src/lib/operator-copy.ts"
       ],
@@ -14863,6 +15471,18 @@
       "semanticVariant": "from:@/server/auth-intent-token",
       "sourceNodeId": "source:2af8281e0faf49d05f62",
       "symbol": "createAuthIntentToken"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database-transaction-1",
+      "sourceNodeId": "source:2b06175ec2b59cbb33b6",
+      "symbol": "activateExtensionPack"
     },
     {
       "evidencePaths": [
@@ -15199,6 +15819,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/components/auth/document-mutation-recovery.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
+      "sourceNodeId": "source:2eb95143656268da187a",
+      "symbol": "DocumentMutationActionForm"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-knowledge-hub.tsx",
         "src/components/ui/skeleton.tsx"
       ],
@@ -15484,6 +16116,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "canonical-row",
+      "sourceNodeId": "source:3248737cf9ef4aefe6e9",
+      "symbol": "decideExtensionPackGroup"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/wishlist-repository.ts"
       ],
@@ -15710,6 +16353,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/extension-pack-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/extension-pack-actions",
+      "sourceNodeId": "source:35e7d6462db67973e871",
+      "symbol": "EXTENSION_PACK_DECISION_ACTIONS"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/communities/[slug]/actions.ts",
         "src/components/public/public-community.tsx"
       ],
@@ -15743,6 +16398,17 @@
       "semanticVariant": "from:@/lib/auth/sign-out-hardening",
       "sourceNodeId": "source:364864a8050c07532b0d",
       "symbol": "readSetCookieHeaders"
+    },
+    {
+      "evidencePaths": [
+        "sql/0027_ove328_stable_registry_extension_packs.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0027_ove328_stable_registry_extension_packs.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:enforce_catalog_registry_extension_pack_transition",
+      "sourceNodeId": "source:36aebc1ba50e08e6ebe6",
+      "symbol": "catalog_registry_extension_packs_transition"
     },
     {
       "evidencePaths": [
@@ -15830,6 +16496,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/lib/stable-registry/extension-pack-actions.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/extension-pack-actions",
+      "sourceNodeId": "source:38c5e79235922b1f2acc",
+      "symbol": "EXTENSION_PACK_DECISION_ACTIONS"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/follow-up-value-pulse.tsx",
         "src/components/auth/document-mutation-recovery.tsx"
       ],
@@ -15874,6 +16552,19 @@
       "semanticVariant": "from:./actions",
       "sourceNodeId": "source:3933cb53ad84d36ac60e",
       "symbol": "setCommunityParticipationAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "typed_action_prop",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:activateAction",
+      "sourceNodeId": "source:39351009bb1526397a8a",
+      "symbol": "activateAction"
     },
     {
       "evidencePaths": [
@@ -16675,6 +17366,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/page.tsx",
+        "src/server/catalog-curator-auth.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-curator-auth",
+      "sourceNodeId": "source:4056e23c81d7ea8770c7",
+      "symbol": "assertCatalogCuratorAccess"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/account-methods-panel.tsx",
         "src/components/ui/alert-dialog.tsx"
       ],
@@ -16789,6 +17492,18 @@
       "semanticVariant": "from:@/components/auth/document-mutation-recovery",
       "sourceNodeId": "source:41676b03ae9527db039a",
       "symbol": "DocumentMutationActionForm"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/lib/operator-curation-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-curation-copy",
+      "sourceNodeId": "source:418231806bc1d28a6b5f",
+      "symbol": "StableRegistryExtensionPackCopy"
     },
     {
       "evidencePaths": [
@@ -17296,6 +18011,18 @@
       "semanticVariant": "from:@/lib/privacy/disclosures",
       "sourceNodeId": "source:458ae27afe41a1ddd44d",
       "symbol": "ERASURE_REQUEST_INTAKE_VERSION"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/catalog-curator-auth.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-curator-auth",
+      "sourceNodeId": "source:45c806c21f2101809c2b",
+      "symbol": "assertCatalogCuratorAccess"
     },
     {
       "evidencePaths": [
@@ -18164,6 +18891,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_6859",
+      "sourceNodeId": "source:4ef619633461f97f4a73",
+      "symbol": "readExtensionPackCenter"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/lineage/invitations/claim/page.tsx",
         "src/components/auth/document-mutation-recovery.tsx"
       ],
@@ -18265,6 +19003,18 @@
       "semanticVariant": "database_transaction_at_11446",
       "sourceNodeId": "source:504cc4546ae29e5043d7",
       "symbol": "createLineageInvitation"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/extension-pack-repository",
+      "sourceNodeId": "source:504fded2692505a182b5",
+      "symbol": "approveExtensionPackPreview"
     },
     {
       "evidencePaths": [
@@ -18443,6 +19193,18 @@
       "semanticVariant": "from:@/lib/privacy/disclosures",
       "sourceNodeId": "source:523c6eef85550247bc37",
       "symbol": "ERASURE_REQUEST_HANDLED_STATUS_OPTIONS"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/lib/stable-registry/feature-gate.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/feature-gate",
+      "sourceNodeId": "source:52473571d58229ae9581",
+      "symbol": "isStableRegistryExtensionPacksEnabled"
     },
     {
       "evidencePaths": [
@@ -18979,6 +19741,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/lib/interface-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/interface-localization",
+      "sourceNodeId": "source:58a40e1e9c4284016ea2",
+      "symbol": "InterfaceLocale"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/engagement/bookmarks/route.ts",
         "src/app/api/engagement/shared.ts"
       ],
@@ -19251,6 +20025,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/page.tsx",
+        "src/server/request-scope.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/request-scope",
+      "sourceNodeId": "source:5b010bb21237d7638219",
+      "symbol": "scopedToUser"
+    },
+    {
+      "evidencePaths": [
         "src/server/engagement-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -19259,6 +20045,17 @@
       "semanticVariant": "canonical-row:buildReportEngagementCommentQuery",
       "sourceNodeId": "source:5b11197369b44f4994e3",
       "symbol": "reportEngagementComment"
+    },
+    {
+      "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_17112",
+      "sourceNodeId": "source:5b28b93eaeceeb315bd7",
+      "symbol": "abandonExtensionPack"
     },
     {
       "evidencePaths": [
@@ -19331,6 +20128,18 @@
       "semanticVariant": "action:declineLineageInvitationClaimAction",
       "sourceNodeId": "source:5d9e2cb566bd5c35e06f",
       "symbol": "LineageInvitationClaimCard"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/lib/operator-curation-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-curation-copy",
+      "sourceNodeId": "source:5de2772c3df281c98bbc",
+      "symbol": "getStableRegistryExtensionPackCopy"
     },
     {
       "evidencePaths": [
@@ -19428,6 +20237,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:../extension-actions",
+      "sourceNodeId": "source:5f3b6d3a4e0ef95761e4",
+      "symbol": "decideExtensionPackGroupAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/auth/local-exit-reconcile/route.ts",
         "src/lib/auth.ts"
       ],
@@ -19509,6 +20330,19 @@
       "semanticVariant": "holdInterfaceServerActionPendingVisualFixtureAction",
       "sourceNodeId": "source:6029472a5fb8b8a345f3",
       "symbol": "holdInterfaceServerActionPendingVisualFixtureAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:abandonAction",
+      "sourceNodeId": "source:6077d798211b9425a334",
+      "symbol": "StableRegistryExtensionPackLane"
     },
     {
       "evidencePaths": [
@@ -20312,6 +21146,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/page.tsx",
+        "src/lib/operator-curation-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-curation-copy",
+      "sourceNodeId": "source:6a0854f54bc70b3fa3d8",
+      "symbol": "getStableRegistryExtensionPackCopy"
+    },
+    {
+      "evidencePaths": [
         "src/app/account/communities/[slug]/actions.ts",
         "src/app/account/communities/[slug]/page.tsx"
       ],
@@ -20561,6 +21407,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/extension-pack-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/extension-pack-actions",
+      "sourceNodeId": "source:6c162560f972ecfdd6cb",
+      "symbol": "ExtensionPackExceptionGroupSummary"
+    },
+    {
+      "evidencePaths": [
         "src/app/account/moderation/comments/actions.ts",
         "src/server/admin-access.ts"
       ],
@@ -20747,6 +21605,18 @@
       "semanticVariant": "from:@/server/mvp-learning/attribution-after-response",
       "sourceNodeId": "source:6e1fd8717a31a25c3dda",
       "symbol": "scheduleLearningAttributionDrain"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/request-scope.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/request-scope",
+      "sourceNodeId": "source:6e3b0caab07d5a31efdf",
+      "symbol": "RequestScope"
     },
     {
       "evidencePaths": [
@@ -21009,6 +21879,17 @@
       "semanticVariant": "from:@/components/auth/document-mutation-recovery",
       "sourceNodeId": "source:7144da9d1f9c61cc9d65",
       "symbol": "DocumentMutationActionForm"
+    },
+    {
+      "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database-transaction-1",
+      "sourceNodeId": "source:7161195974feb3ab47a6",
+      "symbol": "decideExtensionPackGroup"
     },
     {
       "evidencePaths": [
@@ -21489,6 +22370,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/lib/stable-registry/extension-pack-actions.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/extension-pack-actions",
+      "sourceNodeId": "source:76bdd42c91d0e4ca4c87",
+      "symbol": "ExtensionPackCenterReadModel"
+    },
+    {
+      "evidencePaths": [
         "src/components/media/owner-media-focal-panel.tsx",
         "src/components/ui/button.tsx"
       ],
@@ -21522,6 +22415,18 @@
       "semanticVariant": "from:@/db",
       "sourceNodeId": "source:76f5797819e10a403565",
       "symbol": "db"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/stable-registry/extension-pack-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/extension-pack-actions",
+      "sourceNodeId": "source:77230bfe408bbccfff28",
+      "symbol": "ExtensionPackDecisionAction"
     },
     {
       "evidencePaths": [
@@ -21629,6 +22534,18 @@
       "semanticVariant": "canonical-row",
       "sourceNodeId": "source:78323f2057456f85daf6",
       "symbol": "activateFoundationRelease"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/extension-pack-repository",
+      "sourceNodeId": "source:78699c5bc08fb05ea55e",
+      "symbol": "abandonExtensionPack"
     },
     {
       "evidencePaths": [
@@ -22435,6 +23352,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/extension-pack-repository",
+      "sourceNodeId": "source:8225dd7e8f01864df0a8",
+      "symbol": "ExtensionPackOutcome"
+    },
+    {
+      "evidencePaths": [
         "src/app/account/communities/[slug]/actions.ts",
         "src/lib/visual-fixtures/community-scenarios.ts"
       ],
@@ -23121,6 +24050,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:../extension-actions",
+      "sourceNodeId": "source:89755772070692ba270f",
+      "symbol": "activateExtensionPackAction"
+    },
+    {
+      "evidencePaths": [
         "src/server/social-return-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -23248,6 +24189,17 @@
       "semanticVariant": "from:@/db",
       "sourceNodeId": "source:8ab96f2890a6c2c673ef",
       "symbol": "db"
+    },
+    {
+      "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "canonical-row",
+      "sourceNodeId": "source:8ad2abdc4a03cf063f81",
+      "symbol": "activateExtensionPack"
     },
     {
       "evidencePaths": [
@@ -24153,6 +25105,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./extension-pack-lane",
+      "sourceNodeId": "source:93e495904f9afc617f61",
+      "symbol": "StableRegistryExtensionPackLane"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/account-methods-panel.tsx",
         "src/app/garden/profile/page.tsx"
       ],
@@ -24174,6 +25138,18 @@
       "semanticVariant": "from:@/lib/auth/unresolved-authorization",
       "sourceNodeId": "source:9473fc69d1021c8a1255",
       "symbol": "recordUnresolvedAuthorizationServe"
+    },
+    {
+      "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts",
+        "src/server/stable-registry/foundation-builder.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./foundation-builder",
+      "sourceNodeId": "source:94b15bf525955b04fed1",
+      "symbol": "stableRegistryDigest"
     },
     {
       "evidencePaths": [
@@ -24699,6 +25675,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:99b573feeef02a67d5c9",
+      "symbol": "documentMutationGenerationFromFormData"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/wishlist/page.tsx",
         "src/app/wishlist/actions.ts"
       ],
@@ -24846,6 +25834,28 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "activateExtensionPackAction",
+      "sourceNodeId": "source:9ae831174060f3eb63be",
+      "symbol": "activateExtensionPackAction"
+    },
+    {
+      "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "canonical-row",
+      "sourceNodeId": "source:9affb0e64d5e0bae4ff0",
+      "symbol": "approveExtensionPackPreview"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-community.tsx",
         "src/lib/public-surface-json-ld.ts"
       ],
@@ -24950,6 +25960,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:9c581fac16fff03b6c08",
       "symbol": "PlantObjectKind"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/page.tsx",
+        "src/server/auth-session.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/auth-session",
+      "sourceNodeId": "source:9c925addd7c906b46ece",
+      "symbol": "getSessionId"
     },
     {
       "evidencePaths": [
@@ -25082,6 +26104,19 @@
       "semanticVariant": "from:@/components/social/my-social-layout",
       "sourceNodeId": "source:9e588e4e509b74109157",
       "symbol": "MySocialLayout"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "typed_action_prop",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:action",
+      "sourceNodeId": "source:9e5c0fc52253248e4c29",
+      "symbol": "action"
     },
     {
       "evidencePaths": [
@@ -25528,6 +26563,18 @@
       "semanticVariant": "from:@/lib/garden/journal-document",
       "sourceNodeId": "source:a285923bcfeaeaeeb273",
       "symbol": "legacyBodyToJournalDocumentV1"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-source/pack-artifact-contract.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-source/pack-artifact-contract",
+      "sourceNodeId": "source:a28d99811e7be2bf74b9",
+      "symbol": "PackArtifact"
     },
     {
       "evidencePaths": [
@@ -26090,6 +27137,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "effect_owner",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "canonical-row",
+      "sourceNodeId": "source:a865033cc0ed26cd181c",
+      "symbol": "abandonExtensionPack"
+    },
+    {
+      "evidencePaths": [
         "src/app/%5F%5Fvisual-fixtures/visual-journal-creation-controls.tsx",
         "src/components/ui/button.tsx"
       ],
@@ -26606,6 +27664,18 @@
       "semanticVariant": "from:@/server/search/catalog-documents",
       "sourceNodeId": "source:af2578e13f610ad0c154",
       "symbol": "CatalogTypeaheadRow"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/page.tsx",
+        "src/components/ui/button.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/ui/button",
+      "sourceNodeId": "source:af4734bf0307dd5785ea",
+      "symbol": "buttonVariants"
     },
     {
       "evidencePaths": [
@@ -27201,6 +28271,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/lib/auth/document-mutation-generation-transport.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:b4c43b669a660d7e98bc",
+      "symbol": "DocumentMutationActionStateV1"
+    },
+    {
+      "evidencePaths": [
         "src/components/auth/session-convergence-boundary.tsx",
         "src/lib/auth/session-convergence.ts"
       ],
@@ -27245,6 +28327,18 @@
       "semanticVariant": "canonical-row:buildMarkErasureRequestReviewingQuery",
       "sourceNodeId": "source:b50c37b774ce7466b9bc",
       "symbol": "markErasureRequestReviewing"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/extension-pack-repository",
+      "sourceNodeId": "source:b57ff178b03af13267e3",
+      "symbol": "activateExtensionPack"
     },
     {
       "evidencePaths": [
@@ -27911,6 +29005,18 @@
     },
     {
       "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-repository",
+      "sourceNodeId": "source:bc3c6ba566f2e6f26a65",
+      "symbol": "buildEnqueueCatalogTypeaheadReindexJobQuery"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/entries/route.ts",
         "src/lib/garden/journal-document.ts"
       ],
@@ -28548,6 +29654,18 @@
     },
     {
       "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts",
+        "src/server/stable-registry/release-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./release-repository",
+      "sourceNodeId": "source:c28be7815c8740294bf9",
+      "symbol": "STABLE_REGISTRY_INTERACTIVE_DEADLINE_MS"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/profile/actions.ts",
         "src/app/garden/profile/owner-profile-editor.tsx"
       ],
@@ -28997,6 +30115,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/stable-registry/extension-pack-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/extension-pack-actions",
+      "sourceNodeId": "source:c6c88a1ff34f4c413e8f",
+      "symbol": "ExtensionPackSummary"
+    },
+    {
+      "evidencePaths": [
         "src/server/engagement-repository.ts",
         "src/server/interaction-admission.ts"
       ],
@@ -29164,6 +30294,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:c99c5f5b2b6d16dbe8ef",
+      "symbol": "admitDocumentMutation"
+    },
+    {
+      "evidencePaths": [
         "src/lib/garden/journal-document.ts",
         "src/server/media/media-lifecycle-enqueue.ts"
       ],
@@ -29196,6 +30338,17 @@
       "semanticVariant": "from:@/lib/public-localization",
       "sourceNodeId": "source:c9d1cfd44943b656ef73",
       "symbol": "PublicLocale"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "approveExtensionPackPreviewAction",
+      "sourceNodeId": "source:ca030cc13e3b714e2833",
+      "symbol": "approveExtensionPackPreviewAction"
     },
     {
       "evidencePaths": [
@@ -29480,6 +30633,17 @@
       "semanticVariant": "from:@/lib/garden-workspace-copy",
       "sourceNodeId": "source:cd9c56e8d0f5df9555e8",
       "symbol": "formatGardenWorkspaceDate"
+    },
+    {
+      "evidencePaths": [
+        "sql/0027_ove328_stable_registry_extension_packs.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0027_ove328_stable_registry_extension_packs.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:prevent_approved_extension_pack_row_mutation",
+      "sourceNodeId": "source:cdc36d228eebf439d9fc",
+      "symbol": "catalog_registry_extension_pack_rows_immutable"
     },
     {
       "evidencePaths": [
@@ -30083,6 +31247,17 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts"
+      ],
+      "nodeKind": "server_action",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "abandonExtensionPackAction",
+      "sourceNodeId": "source:d3f378161ea89009ea24",
+      "symbol": "abandonExtensionPackAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/lineage/objects/[objectId]/page.tsx",
         "src/components/living-object-passport/living-object-passport.tsx"
       ],
@@ -30237,6 +31412,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:../extension-actions",
+      "sourceNodeId": "source:d5bb420d5e94a47b5e88",
+      "symbol": "approveExtensionPackPreviewAction"
+    },
+    {
+      "evidencePaths": [
         "src/app/account/moderation/comments/actions.ts",
         "src/app/account/moderation/comments/page.tsx"
       ],
@@ -30388,6 +31575,18 @@
       "semanticVariant": "from:@/lib/utils",
       "sourceNodeId": "source:d7660edb56a4230fbf7c",
       "symbol": "cn"
+    },
+    {
+      "evidencePaths": [
+        "src/server/request-scope.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/request-scope",
+      "sourceNodeId": "source:d7ae4886fb79781f5a4d",
+      "symbol": "RequestScope"
     },
     {
       "evidencePaths": [
@@ -30566,6 +31765,19 @@
       "semanticVariant": "from:@/lib/trust-surface-copy",
       "sourceNodeId": "source:d91420e77600874a24bc",
       "symbol": "interfaceLocaleDateTag"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "typed_action_prop",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:abandonAction",
+      "sourceNodeId": "source:d938be6f596d408802d7",
+      "symbol": "abandonAction"
     },
     {
       "evidencePaths": [
@@ -30904,6 +32116,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/components/ui/button.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/ui/button",
+      "sourceNodeId": "source:dd7005f6a7ad590b8afe",
+      "symbol": "buttonVariants"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/public-profile-repository.ts"
       ],
@@ -30961,6 +32185,18 @@
       "semanticVariant": "from:@/components/public/public-profile",
       "sourceNodeId": "source:de84846e100c3486cb7f",
       "symbol": "PublicProfileView"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extension-actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/extension-pack-repository",
+      "sourceNodeId": "source:dea28719ffa69a2d547d",
+      "symbol": "decideExtensionPackGroup"
     },
     {
       "evidencePaths": [
@@ -31729,6 +32965,17 @@
     },
     {
       "evidencePaths": [
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "contextual_transaction",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "database_transaction_at_2913",
+      "sourceNodeId": "source:e75d2969cb2b724e9be0",
+      "symbol": "importExtensionPackDraft"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/garden-auth-panel.tsx",
         "src/app/garden/page.tsx"
       ],
@@ -31833,6 +33080,18 @@
       "semanticVariant": "from:@/components/ui/button",
       "sourceNodeId": "source:e81ceea7e0f6a84ba0ee",
       "symbol": "buttonVariants"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/page.tsx",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/extension-pack-repository",
+      "sourceNodeId": "source:e84ab4428de2e1efc0c9",
+      "symbol": "readExtensionPackCenter"
     },
     {
       "evidencePaths": [
@@ -32736,6 +33995,19 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:approveAction",
+      "sourceNodeId": "source:f263a76f605b0298fb96",
+      "symbol": "StableRegistryExtensionPackLane"
+    },
+    {
+      "evidencePaths": [
         "src/server/mvp-learning/attribution-outbox.ts"
       ],
       "nodeKind": "effect_owner",
@@ -33557,6 +34829,19 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:activateAction",
+      "sourceNodeId": "source:fd78709a7aa909fa4d45",
+      "symbol": "StableRegistryExtensionPackLane"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/page.tsx",
         "src/components/ui/button.tsx"
       ],
@@ -33686,6 +34971,19 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/catalog/registry/extension-actions.ts",
+        "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+        "src/app/garden/catalog/registry/extensions/page.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/app/garden/catalog/registry/extensions/extension-pack-lane.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:action",
+      "sourceNodeId": "source:ff658c0aaeece51320e2",
+      "symbol": "DecisionForm"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/mvp-learning/attribution-outbox.ts"
       ],
@@ -33695,6 +34993,30 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:ff662baaea76767ec859",
       "symbol": "Database"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/catalog/registry/extensions/page.tsx",
+        "src/lib/operator-curation-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/catalog/registry/extensions/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/operator-curation-copy",
+      "sourceNodeId": "source:ffa2df1fb4b0a586251c",
+      "symbol": "getStableRegistryExtensionPackCopy"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/stable-registry/extension-pack-actions.ts",
+        "src/server/stable-registry/extension-pack-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/stable-registry/extension-pack-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/extension-pack-actions",
+      "sourceNodeId": "source:ffaa94828f01d9cffcc4",
+      "symbol": "isExtensionPackExceptionClass"
     },
     {
       "evidencePaths": [

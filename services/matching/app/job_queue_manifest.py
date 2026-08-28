@@ -15,6 +15,9 @@ from app.search import (
     JOURNAL_ENTRY_INDEX_KIND,
     JOURNAL_ENTRY_UNINDEX_KIND,
 )
+from app.stable_registry_extension_pack import (
+    STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND,
+)
 from app.stable_registry_foundation import STABLE_REGISTRY_FOUNDATION_BUILD_KIND
 
 JOB_QUEUE_MANIFEST_VERSION: Final = "ove255.job-queue.v4"
@@ -33,6 +36,11 @@ JOB_QUEUE_PAYLOAD_CONTRACTS: Final = {
         "requiredKeys": ["kind", "releaseId"],
         "optionalKeys": [],
         "uuidKeys": ["releaseId"],
+    },
+    "matching:stable_registry_extension_pack_build": {
+        "requiredKeys": ["kind", "packId"],
+        "optionalKeys": [],
+        "uuidKeys": ["packId"],
     },
     "matching:catalog_alias_suggestions_refresh": {
         "requiredKeys": ["kind", "catalogItemId"],
@@ -90,6 +98,14 @@ MATCHING_MANIFEST_ENTRIES: Final = (
     {
         "queueName": "matching",
         "kind": STABLE_REGISTRY_FOUNDATION_BUILD_KIND,
+        "consumer": "matching-python-worker",
+        "maxAttempts": 3,
+        "privacyClass": "catalog_ids_only",
+        "coversStructuredJournalCover": False,
+    },
+    {
+        "queueName": "matching",
+        "kind": STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND,
         "consumer": "matching-python-worker",
         "maxAttempts": 3,
         "privacyClass": "catalog_ids_only",

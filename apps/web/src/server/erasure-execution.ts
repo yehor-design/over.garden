@@ -1148,6 +1148,36 @@ export function buildRekeyStableRegistryActorsForErasureQuery(
         )
         .execute();
 
+      // Extension packs are append-only evidence for the same reason as
+      // releases, so their actors are rekeyed rather than deleted.
+      await executor
+        .updateTable("catalog_registry_extension_packs")
+        .set({
+          created_by_user_id: sql<string>`case
+            when created_by_user_id = ${input.requesterUserId}::uuid
+              then ${input.erasedSubjectUserId}::uuid
+            else created_by_user_id
+          end`,
+          approved_by_user_id: sql<string | null>`case
+            when approved_by_user_id = ${input.requesterUserId}::uuid
+              then ${input.erasedSubjectUserId}::uuid
+            else approved_by_user_id
+          end`,
+          activated_by_user_id: sql<string | null>`case
+            when activated_by_user_id = ${input.requesterUserId}::uuid
+              then ${input.erasedSubjectUserId}::uuid
+            else activated_by_user_id
+          end`,
+        })
+        .where((eb) =>
+          eb.or([
+            eb("created_by_user_id", "=", input.requesterUserId),
+            eb("approved_by_user_id", "=", input.requesterUserId),
+            eb("activated_by_user_id", "=", input.requesterUserId),
+          ]),
+        )
+        .execute();
+
       await executor
         .updateTable("catalog_registry_decisions")
         .set({ decided_by_user_id: input.erasedSubjectUserId })

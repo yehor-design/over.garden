@@ -14,6 +14,14 @@ export const STABLE_REGISTRY_PUBLIC_DISCOVERY_FLAG =
 export const STABLE_REGISTRY_PRODUCT_SELECTION_FLAG =
   "stable_registry_product_selection" as const;
 
+/**
+ * Extension-pack writes are gated separately from the Foundation Release
+ * Center: importing and activating a variety or breed pack is a distinct
+ * decision from activating the Foundation itself.
+ */
+export const STABLE_REGISTRY_EXTENSION_PACKS_FLAG =
+  "stable_registry_extension_packs" as const;
+
 export function isStableRegistryReleaseCenterEnabled(
   env: Record<string, string | undefined> = process.env,
 ): boolean {
@@ -34,4 +42,14 @@ export function isStableRegistryProductSelectionEnabled(
   env: Record<string, string | undefined> = process.env,
 ): boolean {
   return env.STABLE_REGISTRY_PRODUCT_SELECTION === "true";
+}
+
+export function isStableRegistryExtensionPacksEnabled(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  const isVercelDeployment =
+    env.VERCEL === "1" ||
+    env.VERCEL_ENV === "production" ||
+    env.VERCEL_ENV === "preview";
+  return env.STABLE_REGISTRY_EXTENSION_PACKS === "true" && !isVercelDeployment;
 }
