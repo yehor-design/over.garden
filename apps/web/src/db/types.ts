@@ -25,6 +25,10 @@ import type {
   CatalogSourceRefreshEvents as CatalogSourceRefreshEventsTable,
   CatalogSourceRefreshRecords as CatalogSourceRefreshRecordsTable,
   CatalogSourceSnapshots as CatalogSourceSnapshotsTable,
+  StableRegistryPublicCatalogRecords as StableRegistryPublicCatalogRecordsTable,
+  StableRegistryPublicCatalogSearchTerms as StableRegistryPublicCatalogSearchTermsTable,
+  StableRegistryPublicEppoRecords as StableRegistryPublicEppoRecordsTable,
+  StableRegistryPublicEppoSearchTerms as StableRegistryPublicEppoSearchTermsTable,
   Communities as CommunitiesTable,
   CommunityContributionReports as CommunityContributionReportsTable,
   CommunityContributions as CommunityContributionsTable,
@@ -285,6 +289,14 @@ export type CatalogSourceRefreshEvent =
 export type CatalogSourceRefreshRecord =
   Selectable<CatalogSourceRefreshRecordsTable>;
 export type CatalogSourceSnapshot = Selectable<CatalogSourceSnapshotsTable>;
+export type StableRegistryPublicCatalogRecord =
+  Selectable<StableRegistryPublicCatalogRecordsTable>;
+export type StableRegistryPublicCatalogSearchTerm =
+  Selectable<StableRegistryPublicCatalogSearchTermsTable>;
+export type StableRegistryPublicEppoRecord =
+  Selectable<StableRegistryPublicEppoRecordsTable>;
+export type StableRegistryPublicEppoSearchTerm =
+  Selectable<StableRegistryPublicEppoSearchTermsTable>;
 export type Community = Selectable<CommunitiesTable>;
 export type NewCommunity = Insertable<CommunitiesTable>;
 export type CommunityRule = Selectable<CommunityRulesTable>;
@@ -330,6 +342,14 @@ export type NewCatalogSourceRefreshEvent =
 export type NewCatalogSourceRefreshRecord =
   Insertable<CatalogSourceRefreshRecordsTable>;
 export type NewCatalogSourceSnapshot = Insertable<CatalogSourceSnapshotsTable>;
+export type NewStableRegistryPublicCatalogRecord =
+  Insertable<StableRegistryPublicCatalogRecordsTable>;
+export type NewStableRegistryPublicCatalogSearchTerm =
+  Insertable<StableRegistryPublicCatalogSearchTermsTable>;
+export type NewStableRegistryPublicEppoRecord =
+  Insertable<StableRegistryPublicEppoRecordsTable>;
+export type NewStableRegistryPublicEppoSearchTerm =
+  Insertable<StableRegistryPublicEppoSearchTermsTable>;
 export type ErasureRequest = Selectable<ErasureRequestsTable>;
 export type NewErasureRequest = Insertable<ErasureRequestsTable>;
 export type Health = Selectable<HealthTable>;

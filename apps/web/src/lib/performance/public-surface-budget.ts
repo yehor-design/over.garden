@@ -73,6 +73,10 @@ export const PUBLIC_SURFACE_PERFORMANCE_CONSUMER_CLASS = {
   localized_knowledge_hub: "knowledge",
   localized_market: "knowledge",
   localized_catalog_browse: "catalog",
+  stable_registry_catalog_browse: "catalog",
+  stable_registry_catalog_detail: "catalog",
+  stable_registry_eppo_browse: "catalog",
+  stable_registry_eppo_detail: "catalog",
   localized_topic: "knowledge",
   localized_community_directory: "community",
   localized_community: "community",
@@ -129,4 +133,3 @@ export const PUBLIC_SURFACE_CWV_PROFILE = {
 } as const;
 
 export const PUBLIC_SURFACE_CWV_CLASS_DEADLINE_MS = 120_000;
-

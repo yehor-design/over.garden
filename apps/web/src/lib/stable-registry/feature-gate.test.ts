@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { isStableRegistryReleaseCenterEnabled } from "./feature-gate";
+import {
+  isStableRegistryPublicDiscoveryEnabled,
+  isStableRegistryReleaseCenterEnabled,
+} from "./feature-gate";
 
 describe("Stable Registry Release Center feature gate", () => {
   it("stays dark by default and in every Vercel deployment", () => {
@@ -24,6 +27,23 @@ describe("Stable Registry Release Center feature gate", () => {
     expect(
       isStableRegistryReleaseCenterEnabled({
         STABLE_REGISTRY_RELEASE_CENTER: "true",
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("Stable Registry public discovery feature gate", () => {
+  it("requires a separate explicit enablement", () => {
+    expect(isStableRegistryPublicDiscoveryEnabled({})).toBe(false);
+    expect(
+      isStableRegistryPublicDiscoveryEnabled({
+        STABLE_REGISTRY_RELEASE_CENTER: "true",
+      }),
+    ).toBe(false);
+    expect(
+      isStableRegistryPublicDiscoveryEnabled({
+        STABLE_REGISTRY_PUBLIC_DISCOVERY: "true",
+        VERCEL_ENV: "production",
       }),
     ).toBe(true);
   });

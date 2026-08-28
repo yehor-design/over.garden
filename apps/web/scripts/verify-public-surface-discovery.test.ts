@@ -18,8 +18,8 @@ describe("OVE-335 public surface discovery verifier", () => {
       schemaVersion: "ove335.publicSurfaceDiscoveryReceipt.v1",
       issue: "OVE-335",
       status: "aligned",
-      inventoryCount: 23,
-      candidateCount: 21,
+      inventoryCount: 27,
+      candidateCount: 25,
       nonCandidateCount: 2,
       callerCoverageClass: "complete",
       directPolicyBypassCount: 0,
@@ -28,12 +28,12 @@ describe("OVE-335 public surface discovery verifier", () => {
       decisionDurationClass: "within_150ms",
       preciseLocationAbsent: true,
     });
-    expect(report.surfaceReceipts).toHaveLength(23);
+    expect(report.surfaceReceipts).toHaveLength(27);
     expect(
       report.surfaceReceipts.filter(
         (receipt) => receipt.outputCoverageClass === "complete",
       ),
-    ).toHaveLength(21);
+    ).toHaveLength(25);
     expect(
       report.surfaceReceipts.filter(
         (receipt) => receipt.outputCoverageClass === "refused",

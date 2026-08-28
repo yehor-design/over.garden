@@ -118,6 +118,8 @@ describe("OVE-291 strict authenticated mutation enforcement", () => {
   it("keeps public/global catalog reads outside document admission", () => {
     const exclusions = [
       ["src/app/api/public/objects/suggestions/route.ts", "GET"],
+      ["src/app/api/public/catalog/suggestions/route.ts", "GET"],
+      ["src/app/api/public/sources/eppo/suggestions/route.ts", "GET"],
       ["src/app/api/garden/catalog/typeahead/route.ts", "GET"],
     ] as const;
 

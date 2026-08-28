@@ -79,6 +79,30 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "src/app/[locale]/objects/page.tsx",
   ),
   inventory(
+    "stable_registry_catalog_browse",
+    "catalog_browse",
+    "candidate",
+    "src/app/stable-registry-public-pages.tsx",
+  ),
+  inventory(
+    "stable_registry_catalog_detail",
+    "variety_aggregation",
+    "candidate",
+    "src/app/stable-registry-public-pages.tsx",
+  ),
+  inventory(
+    "stable_registry_eppo_browse",
+    "catalog_browse",
+    "candidate",
+    "src/app/stable-registry-public-pages.tsx",
+  ),
+  inventory(
+    "stable_registry_eppo_detail",
+    "variety_aggregation",
+    "candidate",
+    "src/app/stable-registry-public-pages.tsx",
+  ),
+  inventory(
     "localized_topic",
     "topic_aggregation",
     "candidate",
