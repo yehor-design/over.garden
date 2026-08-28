@@ -14,6 +14,12 @@ import {
   type GenebankLongTailProjection,
   type GenebankLongTailSourceRecordDefinition,
 } from "@/lib/catalog/genebank-long-tail";
+import {
+  buildPackArtifact,
+  packDigest,
+  readPackSourceString,
+  type PackAdapterResult,
+} from "./pack-artifact-contract";
 import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -922,4 +928,83 @@ class RollbackReadbackProof extends Error {
 
 function jsonbParam(value: JsonValue) {
   return sql<JsonValue>`${JSON.stringify(value)}::jsonb`;
+}
+
+/**
+ * OVE-327 — genebank long-tail pack adapter.
+ *
+ * Every genebank record arrives quarantined or rejected: a GRIN accession is a
+ * candidate, not an approved identity. The adapter preserves the four states
+ * this importer already distinguishes — promotable, held, review-needed, and
+ * blocked — instead of flattening them into one "imported" outcome.
+ */
+export const GENEBANK_LONG_TAIL_PACK_ADAPTER_VERSION =
+  "ove327.genebankLongTailAdapter.v1";
+
+export function adaptGenebankLongTailPack(
+  definition: GenebankLongTailImportDefinition,
+): PackAdapterResult {
+  const promotable = new Set(definition.promotableRecordKeys);
+  const blocked = new Set(definition.blockedRecordKeys);
+  const reviewNeeded = new Set(definition.reviewNeededRecordKeys);
+  const promotionBySourceId = new Map(
+    definition.promotions.map((projection) => [
+      projection.sourceId,
+      projection,
+    ]),
+  );
+
+  return buildPackArtifact({
+    adapterVersion: GENEBANK_LONG_TAIL_PACK_ADAPTER_VERSION,
+    sourceSlug: GRIN_GENEBANK_SOURCE.slug,
+    declaredSourceVersion: GRIN_GENEBANK_SOURCE.version,
+    packKind: "plant_variety",
+    artifactByteDigest: packDigest(
+      definition.records.map((record) => record.rawPayload),
+    ),
+    allowsProductProjection: [...GRIN_GENEBANK_SOURCE.allowedUsage].includes(
+      "canonical_product_projection",
+    ),
+    rows: definition.records.map((record) => {
+      const projection = promotionBySourceId.get(record.id) ?? null;
+      const declaredParent = readPackSourceString(
+        record.rawPayload,
+        "row",
+        "speciesName",
+      );
+      const denomination =
+        projection?.canonicalName ??
+        readPackSourceString(record.rawPayload, "row", "candidateName") ??
+        record.id;
+      return {
+        sourceRecordKey: record.id,
+        officialDenomination: denomination,
+        normalizedDenomination:
+          projection?.normalizedName ?? denomination.toLocaleLowerCase("en"),
+        locale: projection?.locale ?? "en",
+        publicSlug: projection?.publicSlug ?? "",
+        parentCandidate: declaredParent
+          ? {
+              scientificName: declaredParent,
+              evidenceClass: "declared_by_source" as const,
+            }
+          : { scientificName: null, evidenceClass: "absent" as const },
+        aliases: (projection?.aliases ?? [])
+          .filter((alias) => alias.displayName !== denomination)
+          .map((alias) => ({
+            displayName: alias.displayName,
+            normalizedName: alias.normalizedName,
+            locale: alias.locale,
+            nameClass: "local_name" as const,
+          })),
+        declaredHold: blocked.has(record.id)
+          ? ("rights_blocked" as const)
+          : promotable.has(record.id)
+            ? undefined
+            : reviewNeeded.has(record.id)
+              ? ("review_needed" as const)
+              : ("review_needed" as const),
+      };
+    }),
+  });
 }
