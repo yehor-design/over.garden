@@ -979,6 +979,56 @@ export interface Spaces {
   updated_at: Generated<Timestamp>;
 }
 
+export interface StableRegistryPublicCatalogRecords {
+  activated_at: Timestamp;
+  canonical_name: string;
+  catalog_item_id: string;
+  created_at: Generated<Timestamp>;
+  object_kind: string;
+  parent_display_name: string | null;
+  registry_release_id: string;
+  safe_aliases: Generated<string[]>;
+  scientific_name: string | null;
+  search_normalized: string;
+  stable_taxon: string;
+  taxonomic_rank: string | null;
+}
+
+export interface StableRegistryPublicCatalogSearchTerms {
+  normalized_term: string;
+  object_kind: string;
+  registry_release_id: string;
+  stable_taxon: string;
+}
+
+export interface StableRegistryPublicEppoRecords {
+  attribution_text: string | null;
+  capture_id: string;
+  created_at: Generated<Timestamp>;
+  display_name: string;
+  eppo_code: string;
+  evidence_state: string;
+  license: string;
+  license_url: string | null;
+  object_kind: string;
+  observed_at: Timestamp;
+  parent_display_name: string | null;
+  safe_aliases: Generated<string[]>;
+  scientific_name: string | null;
+  search_normalized: string;
+  source_name: string;
+  source_snapshot_id: string;
+  source_url: string;
+  taxonomic_rank: string | null;
+}
+
+export interface StableRegistryPublicEppoSearchTerms {
+  capture_id: string;
+  eppo_code: string;
+  normalized_term: string;
+  object_kind: string;
+}
+
 export interface User {
   createdAt: Generated<Timestamp>;
   email: string;
@@ -1124,6 +1174,10 @@ export interface DB {
   public_projection_intents: PublicProjectionIntents;
   session: Session;
   spaces: Spaces;
+  stable_registry_public_catalog_records: StableRegistryPublicCatalogRecords;
+  stable_registry_public_catalog_search_terms: StableRegistryPublicCatalogSearchTerms;
+  stable_registry_public_eppo_records: StableRegistryPublicEppoRecords;
+  stable_registry_public_eppo_search_terms: StableRegistryPublicEppoSearchTerms;
   user: User;
   user_handle_registry: UserHandleRegistry;
   user_public_profiles: UserPublicProfiles;

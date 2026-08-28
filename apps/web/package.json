@@ -72,6 +72,7 @@
     "smoke:catalog-fuzzy-duplicate-qa:seed-ui": "tsx scripts/smoke-catalog-fuzzy-duplicate-qa.ts --seed-ui",
     "smoke:catalog-fuzzy-duplicate-qa:reset-ui": "tsx scripts/smoke-catalog-fuzzy-duplicate-qa.ts --reset-ui",
     "smoke:stable-registry-foundation": "tsx scripts/smoke-stable-registry-foundation.ts",
+    "smoke:stable-registry-public-catalog": "tsx scripts/smoke-stable-registry-public-catalog.ts",
     "verify:stable-registry-foundation:local": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-stable-registry-foundation-local.ts",
     "smoke:catalog-matching-rollout": "tsx scripts/prove-deterministic-matching-rollout.ts",
     "smoke:matching-runtime-capabilities": "tsx scripts/prove-matching-runtime-capabilities.ts",

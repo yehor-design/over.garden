@@ -33,8 +33,9 @@ function passingRun(overrides: Partial<CoreWebVitalsRun> = {}) {
 }
 
 function fiveRuns(overrides: Partial<CoreWebVitalsRun> = {}) {
-  return Array.from({ length: PUBLIC_SURFACE_CWV_PROFILE.runsPerClass }, (_, index) =>
-    passingRun({ run: index + 1, ...overrides }),
+  return Array.from(
+    { length: PUBLIC_SURFACE_CWV_PROFILE.runsPerClass },
+    (_, index) => passingRun({ run: index + 1, ...overrides }),
   );
 }
 
@@ -56,13 +57,13 @@ describe("OVE-337 public-surface Core Web Vitals contract", () => {
       ({ candidateClass }) => candidateClass === "non_candidate",
     ).map(({ consumerId }) => consumerId);
 
-    expect(Object.keys(PUBLIC_SURFACE_PERFORMANCE_CONSUMER_CLASS).sort()).toEqual(
-      [...candidates].sort(),
-    );
+    expect(
+      Object.keys(PUBLIC_SURFACE_PERFORMANCE_CONSUMER_CLASS).sort(),
+    ).toEqual([...candidates].sort());
     expect(PUBLIC_SURFACE_NON_CANDIDATE_CONSUMERS).toEqual(nonCandidates);
-    expect(new Set(Object.keys(PUBLIC_SURFACE_PERFORMANCE_CONSUMER_CLASS)).size).toBe(
-      21,
-    );
+    expect(
+      new Set(Object.keys(PUBLIC_SURFACE_PERFORMANCE_CONSUMER_CLASS)).size,
+    ).toBe(25);
     expect(
       PUBLIC_SURFACE_NON_CANDIDATE_CONSUMERS.some(
         (consumerId) => consumerId in PUBLIC_SURFACE_PERFORMANCE_CONSUMER_CLASS,
@@ -74,9 +75,11 @@ describe("OVE-337 public-surface Core Web Vitals contract", () => {
     expect(Object.keys(PUBLIC_SURFACE_BUDGET).sort()).toEqual(
       [...PUBLIC_SURFACE_PERFORMANCE_CLASSES].sort(),
     );
-    expect(PUBLIC_SURFACE_PERFORMANCE_TARGETS.map(({ surfaceClass }) => surfaceClass).sort()).toEqual(
-      [...PUBLIC_SURFACE_PERFORMANCE_CLASSES].sort(),
-    );
+    expect(
+      PUBLIC_SURFACE_PERFORMANCE_TARGETS.map(
+        ({ surfaceClass }) => surfaceClass,
+      ).sort(),
+    ).toEqual([...PUBLIC_SURFACE_PERFORMANCE_CLASSES].sort());
     expect(PUBLIC_SURFACE_CWV_PROFILE).toMatchObject({
       browser: "chromium",
       viewport: { width: 390, height: 844 },
@@ -110,19 +113,28 @@ describe("OVE-337 public-surface Core Web Vitals contract", () => {
         surfaceClass: "feed",
         runs: fiveRuns({ lcpMs: 2_501 }),
       }),
-    ).toMatchObject({ status: "over_budget", reasonClasses: ["lcp_over_budget"] });
+    ).toMatchObject({
+      status: "over_budget",
+      reasonClasses: ["lcp_over_budget"],
+    });
     expect(
       evaluateCoreWebVitalsClass({
         surfaceClass: "feed",
         runs: fiveRuns({ inpMs: 201 }),
       }),
-    ).toMatchObject({ status: "over_budget", reasonClasses: ["inp_over_budget"] });
+    ).toMatchObject({
+      status: "over_budget",
+      reasonClasses: ["inp_over_budget"],
+    });
     expect(
       evaluateCoreWebVitalsClass({
         surfaceClass: "feed",
         runs: fiveRuns({ cls: 0.101 }),
       }),
-    ).toMatchObject({ status: "over_budget", reasonClasses: ["cls_over_budget"] });
+    ).toMatchObject({
+      status: "over_budget",
+      reasonClasses: ["cls_over_budget"],
+    });
   });
 
   it("interaction and LCP absence fail as not_measured instead of becoming zero", () => {
@@ -137,13 +149,19 @@ describe("OVE-337 public-surface Core Web Vitals contract", () => {
         surfaceClass: "journal_entry",
         runs: fiveRuns({ inpMs: null, interactionClass: "missing" }),
       }),
-    ).toMatchObject({ status: "not_measured", reasonClasses: ["interaction_missing"] });
+    ).toMatchObject({
+      status: "not_measured",
+      reasonClasses: ["interaction_missing"],
+    });
     expect(
       evaluateCoreWebVitalsClass({
         surfaceClass: "journal_entry",
         runs: fiveRuns().slice(0, 4),
       }),
-    ).toMatchObject({ status: "not_measured", reasonClasses: ["run_count_mismatch"] });
+    ).toMatchObject({
+      status: "not_measured",
+      reasonClasses: ["run_count_mismatch"],
+    });
   });
 
   it("uses deterministic nearest-rank p75 rather than a best run", () => {
@@ -175,7 +193,7 @@ describe("OVE-337 public-surface Core Web Vitals contract", () => {
     expect(complete).toMatchObject({
       status: "pass",
       classCount: 8,
-      candidateConsumerCount: 21,
+      candidateConsumerCount: 25,
       nonCandidateConsumerCount: 2,
       preciseLocationAbsent: true,
       controls: {
@@ -183,7 +201,9 @@ describe("OVE-337 public-surface Core Web Vitals contract", () => {
         budgetReportCommand: "usable",
       },
     });
-    expect(JSON.stringify(complete)).not.toMatch(/latitude|longitude|coordinates|userId|mediaKey/i);
+    expect(JSON.stringify(complete)).not.toMatch(
+      /latitude|longitude|coordinates|userId|mediaKey/i,
+    );
 
     const partial = buildCoreWebVitalsAggregateReceipt({
       buildSha: SHA,
@@ -200,10 +220,18 @@ describe("OVE-337 public-surface Core Web Vitals contract", () => {
     expect(isSafeProductionStaticControlPath("/bg/objects")).toBe(true);
     expect(isSafeProductionStaticControlPath("/bg/journals")).toBe(true);
     expect(isSafeProductionStaticControlPath("/bg/knowledge")).toBe(true);
-    expect(isSafeProductionStaticControlPath("/bg/journal/private-slug")).toBe(false);
-    expect(isSafeProductionStaticControlPath("/lineage/objects/18700003-0000-4000-8000-000000000001")).toBe(false);
+    expect(isSafeProductionStaticControlPath("/bg/journal/private-slug")).toBe(
+      false,
+    );
+    expect(
+      isSafeProductionStaticControlPath(
+        "/lineage/objects/18700003-0000-4000-8000-000000000001",
+      ),
+    ).toBe(false);
     expect(isSafeProductionStaticControlPath("/bg/@someone")).toBe(false);
-    expect(isSafeProductionStaticControlPath("/bg/communities/member-derived")).toBe(false);
+    expect(
+      isSafeProductionStaticControlPath("/bg/communities/member-derived"),
+    ).toBe(false);
   });
 
   it("timeout is bounded, controls stay usable, and late completion is ignored", async () => {

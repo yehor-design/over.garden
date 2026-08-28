@@ -8883,6 +8883,21 @@
       "variant": "action:unfollowProfileAction"
     },
     {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "native_form:src/components/public/public-stable-registry-explorer.tsx#ExplorerSearch:action:localizedPath(\n        locale,\n        surface === \"catalog\" ? \"/catalog\" : \"/sources/eppo\",\n      )",
+      "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx"
+      ],
+      "exclusionReason": "native_form_submits_a_get_navigation",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "symbol": "ExplorerSearch",
+      "transport": "native_form",
+      "variant": "action:localizedPath(\n        locale,\n        surface === \"catalog\" ? \"/catalog\" : \"/sources/eppo\",\n      )"
+    },
+    {
       "authority": "visual_fixture",
       "classification": "excluded_distinct_authority",
       "entrypointId": "route_handler:src/app/%5F%5Fvisual-fixtures/intent/[scenarioId]/route.ts#GET",
@@ -9623,6 +9638,21 @@
     {
       "authority": "guest",
       "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/public/catalog/suggestions/route.ts#GET",
+      "evidencePaths": [
+        "src/app/api/public/catalog/suggestions/route.ts"
+      ],
+      "exclusionReason": "catalog_lookup_has_no_owner_scoped_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/public/catalog/suggestions/route.ts",
+      "symbol": "GET",
+      "transport": "route_handler",
+      "variant": "GET"
+    },
+    {
+      "authority": "guest",
+      "classification": "read_only",
       "entrypointId": "route_handler:src/app/api/public/objects/suggestions/route.ts#GET",
       "evidencePaths": [
         "src/app/api/public/objects/suggestions/route.ts"
@@ -9631,6 +9661,21 @@
       "executionOwner": "excluded_with_reason",
       "generationRequirement": "not_applicable",
       "path": "src/app/api/public/objects/suggestions/route.ts",
+      "symbol": "GET",
+      "transport": "route_handler",
+      "variant": "GET"
+    },
+    {
+      "authority": "guest",
+      "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/public/sources/eppo/suggestions/route.ts#GET",
+      "evidencePaths": [
+        "src/app/api/public/sources/eppo/suggestions/route.ts"
+      ],
+      "exclusionReason": "catalog_lookup_has_no_owner_scoped_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/public/sources/eppo/suggestions/route.ts",
       "symbol": "GET",
       "transport": "route_handler",
       "variant": "GET"
@@ -10619,6 +10664,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx",
+        "src/lib/public-surface-json-ld.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-surface-json-ld",
+      "sourceNodeId": "source:00a48a14ad7c9a58d53a",
+      "symbol": "serializePublicSurfaceJsonLd"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/cron/learning-attribution/route.ts"
       ],
       "nodeKind": "route_handler",
@@ -11493,6 +11550,18 @@
       "semanticVariant": "from:@/server/search/catalog-documents",
       "sourceNodeId": "source:089f15c5c3a792d4e8f7",
       "symbol": "catalogTypeaheadHitToSuggestion"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/public/catalog/suggestions/route.ts",
+        "src/server/stable-registry/public-catalog-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/public/catalog/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/public-catalog-repository",
+      "sourceNodeId": "source:08d2547183f713b9d99b",
+      "symbol": "listPublicStableCatalogPage"
     },
     {
       "evidencePaths": [
@@ -13148,6 +13217,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx",
+        "src/lib/public-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-localization",
+      "sourceNodeId": "source:1a4d91c55abc6e49daa1",
+      "symbol": "PublicLocale"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/engagement/likes/route.ts",
         "src/server/anonymous-like-capability.ts"
       ],
@@ -14159,6 +14240,17 @@
     },
     {
       "evidencePaths": [
+        "sql/0025_ove256_stable_registry_public_reads.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0025_ove256_stable_registry_public_reads.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:materialize_stable_registry_public_read_models",
+      "sourceNodeId": "source:24dc28d84750202a59aa",
+      "symbol": "catalog_registry_public_catalog_materialize"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/community-repository.ts"
       ],
@@ -14651,6 +14743,18 @@
       "semanticVariant": "from:@/lib/interface-localization",
       "sourceNodeId": "source:291ed55f0747b33ebbb3",
       "symbol": "INTERFACE_LOCALE_REQUEST_HEADER"
+    },
+    {
+      "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx",
+        "src/lib/stable-registry/public-explorer-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/public-explorer-copy",
+      "sourceNodeId": "source:2938af149e0ab84320a0",
+      "symbol": "getPublicStableRegistryExplorerCopy"
     },
     {
       "evidencePaths": [
@@ -15842,6 +15946,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/public/catalog/suggestions/route.ts",
+        "src/lib/stable-registry/feature-gate.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/public/catalog/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/feature-gate",
+      "sourceNodeId": "source:3a46ebb366e2cde65d09",
+      "symbol": "isStableRegistryPublicDiscoveryEnabled"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/catalog/registry/release-center.tsx",
         "src/lib/interface-localization.ts"
       ],
@@ -16198,6 +16314,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx",
+        "src/server/catalog-source/public-eppo-explorer-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-source/public-eppo-explorer-repository",
+      "sourceNodeId": "source:3d422fb9f997227ddeed",
+      "symbol": "PublicStableCatalogRecord"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/notifications/preferences/route.ts",
         "src/server/document-mutation-admission.ts"
       ],
@@ -16398,6 +16526,17 @@
       "semanticVariant": "from:@/lib/interface-localization",
       "sourceNodeId": "source:3f54740b52181050bf09",
       "symbol": "InterfaceLocale"
+    },
+    {
+      "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx"
+      ],
+      "nodeKind": "native_form",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "action:localizedPath(\n        locale,\n        surface === \"catalog\" ? \"/catalog\" : \"/sources/eppo\",\n      )",
+      "sourceNodeId": "source:3f607cde317019a987c4",
+      "symbol": "ExplorerSearch"
     },
     {
       "evidencePaths": [
@@ -16967,6 +17106,17 @@
       "semanticVariant": "from:@/components/auth/document-mutation-recovery",
       "sourceNodeId": "source:4450afa157b9d7c3549a",
       "symbol": "useOptionalDocumentMutationGeneration"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/public/catalog/suggestions/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/public/catalog/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "GET",
+      "sourceNodeId": "source:447c48855f87b5fc0ae8",
+      "symbol": "GET"
     },
     {
       "evidencePaths": [
@@ -18210,6 +18360,17 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/public/sources/eppo/suggestions/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/public/sources/eppo/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "GET",
+      "sourceNodeId": "source:5128a26e18956765e01c",
+      "symbol": "GET"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/entries/[entryId]/route.ts",
         "src/server/journal-document-persistence.ts"
       ],
@@ -18614,6 +18775,18 @@
       "semanticVariant": "action:declineLineageClaimAction",
       "sourceNodeId": "source:55a8215ad9e6ccc5d4bf",
       "symbol": "declineLineageClaimAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/public/sources/eppo/suggestions/route.ts",
+        "src/server/catalog-source/public-eppo-explorer-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/public/sources/eppo/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-source/public-eppo-explorer-repository",
+      "sourceNodeId": "source:55a823c2b0949f3a46b2",
+      "symbol": "parsePublicStableRegistryRequest"
     },
     {
       "evidencePaths": [
@@ -20160,6 +20333,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx",
+        "src/lib/stable-registry/public-explorer-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/public-explorer-copy",
+      "sourceNodeId": "source:6afd29e0d57ffd5838ef",
+      "symbol": "publicStableRegistrySurfaceCopy"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/wishlist/page.tsx",
         "src/components/social/my-social-layout.tsx"
       ],
@@ -20347,6 +20532,18 @@
       "semanticVariant": "from:@/server/admin-access",
       "sourceNodeId": "source:6c20ec0177802d4b8ae4",
       "symbol": "resolveAdminCapabilityAccessBounded"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/public/catalog/suggestions/route.ts",
+        "src/server/catalog-source/public-eppo-explorer-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/public/catalog/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-source/public-eppo-explorer-repository",
+      "sourceNodeId": "source:6c3c93574b93c58531cf",
+      "symbol": "isPublicStableRegistryDeadlineError"
     },
     {
       "evidencePaths": [
@@ -20658,6 +20855,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx",
+        "src/server/catalog-source/public-eppo-explorer-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-source/public-eppo-explorer-repository",
+      "sourceNodeId": "source:70375678872944c2831b",
+      "symbol": "PublicStableRegistrySurface"
+    },
+    {
+      "evidencePaths": [
         "src/components/public/public-profile.tsx",
         "src/lib/utils.ts"
       ],
@@ -20944,6 +21153,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx",
+        "src/server/catalog-source/public-eppo-explorer-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-source/public-eppo-explorer-repository",
+      "sourceNodeId": "source:72ef9a11c4e84d25d7dd",
+      "symbol": "PublicEppoSourceRecord"
+    },
+    {
+      "evidencePaths": [
         "src/server/search/public-journal-document-contract.ts",
         "src/server/search/public-projection-outbox.ts"
       ],
@@ -21085,6 +21306,18 @@
       "semanticVariant": "from:@/server/search/documents",
       "sourceNodeId": "source:7554fbb94c9158ee326b",
       "symbol": "buildJournalEntrySearchDocumentContractFixture"
+    },
+    {
+      "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx",
+        "src/server/catalog-source/public-eppo-explorer-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-source/public-eppo-explorer-repository",
+      "sourceNodeId": "source:7570579159d37c5fdeef",
+      "symbol": "PublicStableRegistryPage"
     },
     {
       "evidencePaths": [
@@ -22268,6 +22501,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:833c2badba31b91202a4",
       "symbol": "Database"
+    },
+    {
+      "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx",
+        "src/lib/stable-registry/public-explorer-copy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/public-explorer-copy",
+      "sourceNodeId": "source:836e75c166858a930497",
+      "symbol": "PublicStableRegistryExplorerCopy"
     },
     {
       "evidencePaths": [
@@ -24516,6 +24761,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/public/sources/eppo/suggestions/route.ts",
+        "src/server/catalog-source/public-eppo-explorer-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/public/sources/eppo/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-source/public-eppo-explorer-repository",
+      "sourceNodeId": "source:9b30377067fee2cf7f31",
+      "symbol": "listPublicEppoSourcePage"
+    },
+    {
+      "evidencePaths": [
         "src/lib/garden/public-paths.ts",
         "src/server/engagement-repository.ts"
       ],
@@ -25473,6 +25730,18 @@
       "semanticVariant": "database_transaction_at_15177",
       "sourceNodeId": "source:a59c7db94c1020ac8118",
       "symbol": "abandonFoundationRelease"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/public/sources/eppo/suggestions/route.ts",
+        "src/server/interface-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/public/sources/eppo/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/interface-localization",
+      "sourceNodeId": "source:a5e01d5ec65a6c80f5c1",
+      "symbol": "getRequestInterfaceLocale"
     },
     {
       "evidencePaths": [
@@ -27204,6 +27473,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx",
+        "src/components/ui/button.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/ui/button",
+      "sourceNodeId": "source:b848e015abda45fc89e2",
+      "symbol": "buttonVariants"
+    },
+    {
+      "evidencePaths": [
         "src/server/search/public-projection-outbox.ts"
       ],
       "nodeKind": "effect_owner",
@@ -27425,6 +27706,17 @@
       "semanticVariant": "from:@/components/site-shell/interface-locale-change-boundary",
       "sourceNodeId": "source:badc1761505cd906ffed",
       "symbol": "useInterfaceLocaleChangeFormState"
+    },
+    {
+      "evidencePaths": [
+        "sql/0025_ove256_stable_registry_public_reads.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0025_ove256_stable_registry_public_reads.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:materialize_stable_registry_public_read_models",
+      "sourceNodeId": "source:bb08e1ee4b0715a1c1d0",
+      "symbol": "catalog_registry_public_eppo_materialize"
     },
     {
       "evidencePaths": [
@@ -27650,6 +27942,18 @@
       "semanticVariant": "from:@/app/[locale]/[profileHandle]/actions",
       "sourceNodeId": "source:bcfa30a54e36145728c2",
       "symbol": "reportProfileAction"
+    },
+    {
+      "evidencePaths": [
+        "src/components/public/public-stable-registry-explorer.tsx",
+        "src/lib/public-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/public/public-stable-registry-explorer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/public-localization",
+      "sourceNodeId": "source:bcff9b61d50a57d4a369",
+      "symbol": "localizedPath"
     },
     {
       "evidencePaths": [
@@ -29331,6 +29635,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/public/sources/eppo/suggestions/route.ts",
+        "src/lib/stable-registry/feature-gate.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/public/sources/eppo/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/stable-registry/feature-gate",
+      "sourceNodeId": "source:d0b28c118c044da395ef",
+      "symbol": "isStableRegistryPublicDiscoveryEnabled"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/profile/account-method-actions.ts",
         "src/server/document-mutation-admission.ts"
       ],
@@ -29939,6 +30255,18 @@
       "semanticVariant": "from:@/server/auth-intent-token",
       "sourceNodeId": "source:d72897efefe3c1f39eea",
       "symbol": "createAuthIntentToken"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/public/catalog/suggestions/route.ts",
+        "src/server/catalog-source/public-eppo-explorer-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/public/catalog/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-source/public-eppo-explorer-repository",
+      "sourceNodeId": "source:d7384ae4224abfecd4ac",
+      "symbol": "parsePublicStableRegistryRequest"
     },
     {
       "evidencePaths": [
@@ -30846,6 +31174,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/public/sources/eppo/suggestions/route.ts",
+        "src/server/catalog-source/public-eppo-explorer-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/public/sources/eppo/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/catalog-source/public-eppo-explorer-repository",
+      "sourceNodeId": "source:e1b4f6dcfacdb5dccce0",
+      "symbol": "isPublicStableRegistryDeadlineError"
+    },
+    {
+      "evidencePaths": [
         "src/components/auth/document-mutation-recovery.tsx",
         "src/components/auth/remaining-document-mutation-recovery.tsx"
       ],
@@ -31397,6 +31737,18 @@
       "semanticVariant": "from:@/lib/public-localization",
       "sourceNodeId": "source:e8672203fe8f936533a4",
       "symbol": "PublicLocale"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/public/catalog/suggestions/route.ts",
+        "src/server/interface-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/public/catalog/suggestions/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/interface-localization",
+      "sourceNodeId": "source:e884a99f1779c51fa2b6",
+      "symbol": "getRequestInterfaceLocale"
     },
     {
       "evidencePaths": [

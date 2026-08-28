@@ -50,6 +50,10 @@ describe("public surface discovery adapter", () => {
       "localized_knowledge_hub",
       "localized_market",
       "localized_catalog_browse",
+      "stable_registry_catalog_browse",
+      "stable_registry_catalog_detail",
+      "stable_registry_eppo_browse",
+      "stable_registry_eppo_detail",
       "localized_topic",
       "localized_community_directory",
       "localized_community",
@@ -91,6 +95,24 @@ describe("public surface discovery adapter", () => {
     expect(result.decision).toMatchObject({
       value: "noindex",
       reasons: ["not_public_candidate"],
+    });
+  });
+
+  it("keeps thin Stable Registry catalog and source pages behind the shared threshold", () => {
+    const result = resolvePublicSurfaceDiscovery(
+      richSource({
+        consumerId: "stable_registry_eppo_detail",
+        qualityClass: "partial",
+        visibleText: ["source evidence"],
+        distinctPublicEntityIds: ["SOLLC"],
+        canonicalPath: "/sources/eppo/SOLLC",
+      }),
+      { evaluatedAt: EVALUATED_AT },
+    );
+
+    expect(result.decision).toMatchObject({
+      value: "noindex",
+      reasons: ["word_count_below_threshold"],
     });
   });
 
