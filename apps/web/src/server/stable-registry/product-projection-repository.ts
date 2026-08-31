@@ -14,6 +14,17 @@ import type { CatalogTypeaheadRow } from "@/server/search/catalog-documents";
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 export const STABLE_REGISTRY_PRODUCT_QUERY_DEADLINE_MS = 500;
+
+/**
+ * The trigram similarity floor, pinned in the predicate rather than inherited
+ * from `pg_trgm.similarity_threshold`.
+ *
+ * `%` is what reaches the GIN index; the explicit comparison beside it is what
+ * makes the result independent of a session GUC nobody in this path sets. At
+ * this floor `помідор` still matches `помдор` and `lycopersicum` still matches
+ * `lycopersicm`, which are the misspellings this source exists for.
+ */
+export const STABLE_REGISTRY_PRODUCT_TRIGRAM_THRESHOLD = 0.3;
 export const STABLE_REGISTRY_PRODUCT_MAX_SUGGESTIONS = 8;
 export const STABLE_REGISTRY_PRODUCT_MIN_QUERY_LENGTH = 2;
 export const STABLE_REGISTRY_PRODUCT_MAX_QUERY_LENGTH = 120;
@@ -217,6 +228,99 @@ export function buildActiveStableRegistryProductTypeaheadQuery(
     .orderBy("names.display_name", "asc")
     .limit(normalizeStableRegistryProductRowLimit(limit))
     .$castTo<ActiveProductNameRow>();
+}
+
+/**
+ * The same release-scoped picker, ranked by trigram similarity instead of
+ * substring containment.
+ *
+ * It is a second query rather than a widened predicate on purpose: the existing
+ * substring source keeps its exact ranking, and a gardener who spells the name
+ * correctly sees the same list they saw before. This one only ever adds the
+ * rows a typo would otherwise have hidden, and the caller's dedupe owner
+ * decides what survives the merge.
+ *
+ * Every guard the substring query applies applies here too — the active-release
+ * projection, the object-kind scope, and the row limit — so a trigram hit can
+ * never reach a gardener through a weaker predicate than an exact hit.
+ */
+export function buildActiveStableRegistryProductTrigramTypeaheadQuery(
+  executor: QueryExecutor,
+  normalizedQuery: string,
+  objectKind: PlantObjectKind,
+  limit = STABLE_REGISTRY_PRODUCT_MAX_SUGGESTIONS,
+) {
+  const query = normalizeStableRegistryProductQuery(normalizedQuery);
+  const similarity = sql<number>`similarity(lower(${sql.ref("names.normalized_name")}), ${query})`;
+
+  return activeProductProjectionFrom(executor)
+    .innerJoin("stable_registry_product_catalog_names as names", (join) =>
+      join
+        .onRef("names.registry_release_id", "=", "records.registry_release_id")
+        .onRef("names.catalog_item_id", "=", "records.catalog_item_id"),
+    )
+    .select([
+      "records.catalog_item_id as id",
+      "names.display_name as displayName",
+      "records.canonical_name as canonicalName",
+      "records.catalog_kind as catalogKind",
+      "names.locale as locale",
+      "records.object_kind_scope as objectKindScope",
+      "records.public_slug as publicSlug",
+      "records.registry_release_id as registryReleaseId",
+      "records.catalog_item_revision_id as revisionId",
+      "names.name_class as nameClass",
+      "names.is_primary as isPrimary",
+    ])
+    .where((eb) =>
+      eb.or([
+        eb("records.object_kind_scope", "=", objectKind),
+        eb("records.object_kind_scope", "=", "either"),
+      ]),
+    )
+    // `%` reaches the GIN trigram index; the comparison beside it pins the
+    // floor so a session GUC cannot quietly widen or narrow the result.
+    .where(sql<boolean>`lower(${sql.ref("names.normalized_name")}) % ${query}`)
+    .where(
+      sql<boolean>`${similarity} >= ${STABLE_REGISTRY_PRODUCT_TRIGRAM_THRESHOLD}`,
+    )
+    .orderBy(similarity, "desc")
+    .orderBy("names.is_primary", "desc")
+    .orderBy("names.display_name", "asc")
+    .limit(normalizeStableRegistryProductRowLimit(limit))
+    .$castTo<ActiveProductNameRow>();
+}
+
+/** Trigram counterpart of `searchActiveStableRegistryProductSuggestions`. */
+export async function searchActiveStableRegistryProductTrigramSuggestions(
+  query: string,
+  objectKind: PlantObjectKind,
+  limit = STABLE_REGISTRY_PRODUCT_MAX_SUGGESTIONS,
+  executor: QueryExecutor = db,
+): Promise<ActiveStableRegistryProductSuggestion[]> {
+  const normalizedQuery = normalizeStableRegistryProductQuery(query);
+  if (normalizedQuery.length < STABLE_REGISTRY_PRODUCT_MIN_QUERY_LENGTH) {
+    return [];
+  }
+
+  const rows = await buildActiveStableRegistryProductTrigramTypeaheadQuery(
+    executor,
+    normalizedQuery,
+    objectKind,
+    normalizeStableRegistryProductRowLimit(limit),
+  ).execute();
+
+  const deduped = new Map<string, ActiveStableRegistryProductSuggestion>();
+  for (const row of rows) {
+    const suggestion = serializeActiveProductSuggestion(row, objectKind);
+    if (suggestion && !deduped.has(suggestion.id)) {
+      deduped.set(suggestion.id, suggestion);
+    }
+  }
+  return [...deduped.values()].slice(
+    0,
+    normalizeStableRegistryProductLimit(limit),
+  );
 }
 
 /**

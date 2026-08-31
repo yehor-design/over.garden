@@ -42,6 +42,7 @@ describe("versioned application SQL bootstrap", () => {
       "0040_ove256_public_catalog_object_kind_evidence.sql",
       "0041_ove328_extension_pack_product_projection.sql",
       "0042_ove354_source_payload_single_home.sql",
+      "0043_ove355_catalog_trigram_typeahead.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });
