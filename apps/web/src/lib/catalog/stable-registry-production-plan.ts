@@ -226,6 +226,60 @@ export function evaluateApproval(input: {
   return { status: "approved" };
 }
 
+export type DatabaseHostClass = "loopback" | "remote";
+
+/**
+ * Which kind of database a connection string actually points at.
+ *
+ * A class, never a host: it can be printed in a receipt without redaction.
+ * An unparseable value is `remote`, because the safe reading of "I cannot tell"
+ * is not "this is the local one".
+ */
+export function databaseHostClass(
+  connectionString: string | undefined,
+): DatabaseHostClass {
+  if (!connectionString) return "remote";
+  let hostname: string;
+  try {
+    hostname = new URL(connectionString).hostname.toLowerCase();
+  } catch {
+    return "remote";
+  }
+  return ["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"].includes(
+    hostname,
+  )
+    ? "loopback"
+    : "remote";
+}
+
+/**
+ * Whether the database actually reached matches the environment declared.
+ *
+ * `--environment production` is an operator's claim, not evidence. Env
+ * resolution can disagree with it in both directions — a local `.env.local`
+ * `DATABASE_URL` takes priority over an injected production value, so a
+ * "production" command can silently read localhost, and a stray production
+ * connection string can just as silently make a "fixture" run touch the real
+ * database. Either way a receipt would carry an `environmentClass` that its
+ * numbers do not support, which is worse than no receipt at all: it is evidence
+ * that reads as proof.
+ */
+export function environmentIdentityMatches(input: {
+  environment: string;
+  hostClass: DatabaseHostClass;
+}): { matches: boolean; reason?: string } {
+  const expected: DatabaseHostClass =
+    input.environment === "production" ? "remote" : "loopback";
+  if (input.hostClass === expected) return { matches: true };
+  return {
+    matches: false,
+    reason:
+      input.environment === "production"
+        ? "declared_production_reached_loopback_database"
+        : "declared_non_production_reached_remote_database",
+  };
+}
+
 /**
  * A mutating phase requires an exact environment match plus an approved digest.
  * A read-only phase requires neither, which is what makes classify and plan

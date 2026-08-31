@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildStableRegistryProductionPlan,
   canRunPhase,
+  databaseHostClass,
+  environmentIdentityMatches,
   evaluateApproval,
   nextPhase,
   PRODUCTION_ACTIVATION_TO_PICKER_BUDGET_MS,
@@ -224,5 +226,71 @@ describe("phase ordering", () => {
 
   it("declares the activation-to-picker budget", () => {
     expect(PRODUCTION_ACTIVATION_TO_PICKER_BUDGET_MS).toBe(5000);
+  });
+});
+
+
+describe("environment identity", () => {
+  it("classifies a connection by host rather than by what was declared", () => {
+    expect(databaseHostClass("postgres://u:p@localhost:5432/db")).toBe(
+      "loopback",
+    );
+    expect(databaseHostClass("postgres://u:p@127.0.0.1:5432/db")).toBe(
+      "loopback",
+    );
+    expect(
+      databaseHostClass("postgres://u:p@db.example-managed.com:25060/db"),
+    ).toBe("remote");
+  });
+
+  it("treats an unreadable or absent connection as remote", () => {
+    // "I cannot tell" must not resolve to "this is the safe local one",
+    // because that is the reading that lets a real database be written to
+    // under a fixture label.
+    expect(databaseHostClass(undefined)).toBe("remote");
+    expect(databaseHostClass("")).toBe("remote");
+    expect(databaseHostClass("not a url")).toBe("remote");
+  });
+
+  it("refuses a production claim that reached a local database", () => {
+    // The exact failure this guard exists for: `.env.local` outranks an
+    // injected production value, so the command reads localhost and would
+    // otherwise report `environmentClass: "production"` over local numbers.
+    expect(
+      environmentIdentityMatches({
+        environment: "production",
+        hostClass: "loopback",
+      }),
+    ).toEqual({
+      matches: false,
+      reason: "declared_production_reached_loopback_database",
+    });
+  });
+
+  it("refuses a fixture claim that reached a real database", () => {
+    expect(
+      environmentIdentityMatches({
+        environment: "fixture",
+        hostClass: "remote",
+      }),
+    ).toEqual({
+      matches: false,
+      reason: "declared_non_production_reached_remote_database",
+    });
+  });
+
+  it("admits each environment against the database it names", () => {
+    expect(
+      environmentIdentityMatches({
+        environment: "production",
+        hostClass: "remote",
+      }),
+    ).toEqual({ matches: true });
+    expect(
+      environmentIdentityMatches({
+        environment: "fixture",
+        hostClass: "loopback",
+      }),
+    ).toEqual({ matches: true });
   });
 });
