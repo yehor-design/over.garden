@@ -39,6 +39,7 @@ describe("versioned application SQL bootstrap", () => {
       "0037_ove351_retire_external_photo_identification.sql",
       "0038_ove349_retire_legacy_journal_media.sql",
       "0039_ove353_journal_delete_retention.sql",
+      "0040_ove256_public_catalog_object_kind_evidence.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

@@ -278,16 +278,22 @@ async function main() {
     ? await runRepositoryTimeoutFixture(
         positiveInteger(argumentValue("--records")),
       )
-    : process.argv.includes("--read-only")
-      ? await runLiveReadOnlySmoke({
-          baseUrl: argumentValue("--base-url") ?? "",
-          locales: parseLocales(argumentValue("--locales")),
-        })
-      : (() => {
-          throw new Error(
-            "Use --fixture repository-timeout --records 129188 or --read-only with --base-url and --locales.",
-          );
-        })();
+    : process.argv.includes("--database")
+      ? // The fixture mode never executes SQL, so the projection's own
+        // constraints and kind derivation need a real database to be proven.
+        await (
+          await import("./smoke-stable-registry-public-catalog-database")
+        ).runPublicCatalogDatabaseProof()
+      : process.argv.includes("--read-only")
+        ? await runLiveReadOnlySmoke({
+            baseUrl: argumentValue("--base-url") ?? "",
+            locales: parseLocales(argumentValue("--locales")),
+          })
+        : (() => {
+            throw new Error(
+              "Use --fixture repository-timeout --records 129188, --database, or --read-only with --base-url and --locales.",
+            );
+          })();
   process.stdout.write(`${JSON.stringify(receipt)}\n`);
 }
 

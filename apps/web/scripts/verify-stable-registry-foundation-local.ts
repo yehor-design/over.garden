@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 
+import { config as loadEnv } from "dotenv";
 import { sql } from "kysely";
 
 import { db } from "../src/db";
@@ -24,6 +25,10 @@ const OPERATOR_ID = "00000000-0000-4000-8000-000000000255";
 
 async function main() {
   assertArguments();
+  // Every sibling proof script loads the local file itself. Without this the
+  // command in this issue's runbook fails on its own loopback assertion before
+  // it reaches a database, because nothing else populates the process env.
+  loadEnv({ path: ".env.local", quiet: true });
   assertLoopbackLocalRuntimeEnvironment(process.env);
   assertDisposableDatabase();
 

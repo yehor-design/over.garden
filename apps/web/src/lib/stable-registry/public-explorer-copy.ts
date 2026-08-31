@@ -24,7 +24,9 @@ export interface PublicStableRegistryExplorerCopy {
   searchButton: string;
   reset: string;
   kindLabel: string;
-  kinds: Record<PublicStableRegistryKind, string>;
+  // `either` is not a filter option — it labels one record whose kingdom the
+  // approved catalog has never established. The filter tabs stay all/plant/animal.
+  kinds: Record<PublicStableRegistryKind | "either", string>;
   invalidQuery: string;
   empty: string;
   resultsCount: string;
@@ -69,7 +71,12 @@ const COPY: Record<PublicLocale, PublicStableRegistryExplorerCopy> = {
     searchButton: "Шукати",
     reset: "Скинути пошук",
     kindLabel: "Тип",
-    kinds: { all: "Усі", plant: "Рослини", animal: "Тварини" },
+    kinds: {
+      all: "Усі",
+      plant: "Рослини",
+      animal: "Тварини",
+      either: "Рослина або тварина",
+    },
     invalidQuery:
       "Використайте від 2 до 120 звичайних символів без службових знаків.",
     empty: "За цим запитом безпечних публічних записів немає.",
@@ -125,7 +132,12 @@ const COPY: Record<PublicLocale, PublicStableRegistryExplorerCopy> = {
     searchButton: "Търсене",
     reset: "Изчистване на търсенето",
     kindLabel: "Тип",
-    kinds: { all: "Всички", plant: "Растения", animal: "Животни" },
+    kinds: {
+      all: "Всички",
+      plant: "Растения",
+      animal: "Животни",
+      either: "Растение или животно",
+    },
     invalidQuery:
       "Използвайте от 2 до 120 обикновени знака без служебни символи.",
     empty: "Няма безопасни публични записи за това търсене.",
@@ -181,7 +193,12 @@ const COPY: Record<PublicLocale, PublicStableRegistryExplorerCopy> = {
     searchButton: "Найти",
     reset: "Сбросить поиск",
     kindLabel: "Тип",
-    kinds: { all: "Все", plant: "Растения", animal: "Животные" },
+    kinds: {
+      all: "Все",
+      plant: "Растения",
+      animal: "Животные",
+      either: "Растение или животное",
+    },
     invalidQuery:
       "Используйте от 2 до 120 обычных символов без служебных знаков.",
     empty: "По этому запросу нет безопасных публичных записей.",
