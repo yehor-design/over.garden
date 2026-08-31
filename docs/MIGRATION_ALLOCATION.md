@@ -33,6 +33,7 @@ another issue's number.
 | `0040` | OVE-256      | Stable Registry        | public catalog object-kind correction over its own `0025` read model |
 | `0041` | OVE-328      | Stable Registry        | extension-pack activation actually publishes its rows                |
 | `0042` | OVE-354      | Source layer           | explicit raw-payload home so a captured payload has exactly one copy |
+| `0043` | OVE-355      | Catalog search         | trigram extensions and expression indexes for typo-tolerant typeahead |
 
 Compact range receipt:
 
@@ -45,6 +46,7 @@ Compact range receipt:
 - `0040: Stable Registry public-read correction`
 - `0041: Stable Registry extension-pack activation correction`
 - `0042: source-layer raw-payload home`
+- `0043: catalog trigram typeahead indexes`
 
 Rows `0036`-`0038` are reconciled after the fact under rule 4: those migrations
 landed before the ledger recorded them, and renaming a landed file to restore

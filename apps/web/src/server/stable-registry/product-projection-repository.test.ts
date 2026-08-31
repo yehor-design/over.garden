@@ -22,6 +22,7 @@ import {
   catalogTypeaheadHitToSuggestion,
 } from "@/server/search/catalog-documents";
 import {
+  buildActiveStableRegistryProductTrigramTypeaheadQuery,
   buildActiveStableRegistryProductTypeaheadQuery,
   buildActiveStableRegistryProductTypeaheadReindexRowsQuery,
   isStableRegistryObjectKindScope,
@@ -29,6 +30,7 @@ import {
   STABLE_REGISTRY_OBJECT_KIND_SCOPES,
   STABLE_REGISTRY_PRODUCT_MAX_SUGGESTIONS,
   STABLE_REGISTRY_PRODUCT_QUERY_DEADLINE_MS,
+  STABLE_REGISTRY_PRODUCT_TRIGRAM_THRESHOLD,
   normalizeStableRegistryProductQuery,
 } from "./product-projection-repository";
 
@@ -354,5 +356,68 @@ describe("derived document boundary for active release identities", () => {
     expect(suggestion?.objectKindScope).toBe("either");
     expect(suggestion?.registryReleaseId).toBe(releaseId);
     expect(suggestion?.nameClass).toBe("scientific");
+  });
+});
+
+describe("trigram typeahead", () => {
+  it("reaches the trigram index and pins the similarity floor in the predicate", () => {
+    const compiled = buildActiveStableRegistryProductTrigramTypeaheadQuery(
+      testDb,
+      "помдор",
+      "plant",
+    ).compile();
+
+    // `%` is what reaches the GIN index; the explicit comparison beside it is
+    // what makes the result independent of `pg_trgm.similarity_threshold`.
+    expect(compiled.sql).toContain("%");
+    expect(compiled.sql).toContain("similarity(lower(");
+    expect(compiled.parameters).toContain(
+      STABLE_REGISTRY_PRODUCT_TRIGRAM_THRESHOLD,
+    );
+    expect(compiled.parameters).toContain("помдор");
+  });
+
+  it("applies every guard the substring query applies", () => {
+    const trigram = buildActiveStableRegistryProductTrigramTypeaheadQuery(
+      testDb,
+      "помдор",
+      "plant",
+    ).compile();
+    const substring = buildActiveStableRegistryProductTypeaheadQuery(
+      testDb,
+      "помідор",
+      "plant",
+    ).compile();
+
+    // The active-release projection, the release family, and the object-kind
+    // scope must all be present, so a fuzzy hit cannot reach a gardener
+    // through a weaker predicate than an exact hit.
+    for (const guard of [
+      "catalog_registry_active_pointers",
+      "catalog_registry_releases",
+      "stable_registry_product_catalog_records",
+    ]) {
+      expect(trigram.sql).toContain(guard);
+      expect(substring.sql).toContain(guard);
+    }
+    for (const parameter of ["foundation", "active", "plant", "either"]) {
+      expect(trigram.parameters).toContain(parameter);
+      expect(substring.parameters).toContain(parameter);
+    }
+  });
+
+  it("ranks by similarity instead of the substring case ladder", () => {
+    const compiled = buildActiveStableRegistryProductTrigramTypeaheadQuery(
+      testDb,
+      "помдор",
+      "plant",
+    ).compile();
+
+    expect(compiled.sql).toContain("order by similarity(lower(");
+    expect(compiled.sql).not.toContain("like");
+  });
+
+  it("keeps the interactive deadline unchanged", () => {
+    expect(STABLE_REGISTRY_PRODUCT_QUERY_DEADLINE_MS).toBe(500);
   });
 });

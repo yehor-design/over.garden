@@ -31,10 +31,13 @@ import {
   findActiveStableRegistryProductCatalogItem,
   findActiveStableRegistryProductCatalogItemByPublicSlug,
   searchActiveStableRegistryProductSuggestions,
+  searchActiveStableRegistryProductTrigramSuggestions,
   STABLE_REGISTRY_PRODUCT_MAX_SUGGESTIONS,
   STABLE_REGISTRY_PRODUCT_QUERY_DEADLINE_MS,
+  STABLE_REGISTRY_PRODUCT_TRIGRAM_THRESHOLD,
   type ActiveStableRegistryProductCatalogItem,
 } from "@/server/stable-registry/product-projection-repository";
+import { booleanServerEnv } from "@/lib/env";
 import {
   catalogTypeaheadObjectKindScopeMatches,
   CATALOG_TYPEAHEAD_INDEX,
@@ -50,6 +53,16 @@ const MAX_CATALOG_PUBLIC_SLUG_LENGTH = 96;
 const MAX_CATALOG_SUGGESTIONS = 8;
 const MAX_CATALOG_TYPEAHEAD_ROWS = MAX_CATALOG_SUGGESTIONS * 3;
 const MIN_CATALOG_QUERY_LENGTH = 2;
+
+/**
+ * The trigram similarity floor for the legacy catalog fallback.
+ *
+ * It matches the release-scoped picker's floor deliberately: a gardener should
+ * not get a different tolerance for the same typo depending on which source
+ * happens to hold the identity.
+ */
+const CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD =
+  STABLE_REGISTRY_PRODUCT_TRIGRAM_THRESHOLD;
 const DEFAULT_USER_ADDED_LOCALE = "und";
 const MATCHING_QUEUE = "matching";
 const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
@@ -127,6 +140,94 @@ interface CatalogTypeaheadSearchDeps {
     query: string,
     limit?: number,
   ) => Promise<CatalogSuggestion[]>;
+  searchWithTrigram?: (
+    query: string,
+    limit?: number,
+  ) => Promise<CatalogSuggestion[]>;
+  recordDivergence?: (sample: CatalogTypeaheadDivergenceSample) => void;
+}
+
+/**
+ * How far the canonical source still depends on the derived index, in counts.
+ *
+ * The number that decides whether Meilisearch is still load-bearing for
+ * correctness is `unrecoveredDerivedOnlyCount`: identities the derived index
+ * found that neither canonical source did. It is a count, never a query, a
+ * name, or an identifier — a divergence receipt that carried the query text
+ * would be a search log of what gardeners typed.
+ */
+export interface CatalogTypeaheadDivergenceSample {
+  sourceClass: "two_source" | "three_source";
+  canonicalCount: number;
+  derivedCount: number;
+  trigramCount: number;
+  mergedCount: number;
+  canonicalOnlyCount: number;
+  derivedOnlyCount: number;
+  trigramOnlyCount: number;
+  trigramRecoveredDerivedOnlyCount: number;
+  unrecoveredDerivedOnlyCount: number;
+}
+
+export function measureCatalogTypeaheadDivergence(input: {
+  canonical: readonly CatalogSuggestion[];
+  derived: readonly CatalogSuggestion[];
+  approximate: readonly CatalogSuggestion[];
+  merged: readonly CatalogSuggestion[];
+}): CatalogTypeaheadDivergenceSample {
+  const canonicalIds = new Set(input.canonical.map((row) => row.id));
+  const derivedIds = new Set(input.derived.map((row) => row.id));
+  const trigramIds = new Set(input.approximate.map((row) => row.id));
+
+  const derivedOnly = [...derivedIds].filter((id) => !canonicalIds.has(id));
+
+  return {
+    sourceClass: input.approximate.length > 0 ? "three_source" : "two_source",
+    canonicalCount: canonicalIds.size,
+    derivedCount: derivedIds.size,
+    trigramCount: trigramIds.size,
+    mergedCount: input.merged.length,
+    canonicalOnlyCount: [...canonicalIds].filter((id) => !derivedIds.has(id))
+      .length,
+    derivedOnlyCount: derivedOnly.length,
+    trigramOnlyCount: [...trigramIds].filter(
+      (id) => !canonicalIds.has(id) && !derivedIds.has(id),
+    ).length,
+    trigramRecoveredDerivedOnlyCount: derivedOnly.filter((id) =>
+      trigramIds.has(id),
+    ).length,
+    unrecoveredDerivedOnlyCount: derivedOnly.filter((id) => !trigramIds.has(id))
+      .length,
+  };
+}
+
+export const CATALOG_TRIGRAM_TYPEAHEAD_FLAG = "CATALOG_TRIGRAM_TYPEAHEAD_ENABLED";
+
+function catalogTrigramTypeaheadEnabled(): boolean {
+  return booleanServerEnv(CATALOG_TRIGRAM_TYPEAHEAD_FLAG, false);
+}
+
+/**
+ * Trigram counterpart of `searchCatalogSuggestionsWithCanonicalFallback`.
+ *
+ * It follows the same selection mode, so the approximate source always reads
+ * the same table the exact source read and can never surface an identity from
+ * a projection the caller is not entitled to.
+ */
+async function searchCatalogSuggestionsWithTrigram(
+  query: string,
+  limit: number,
+  options: CatalogTypeaheadSearchOptions,
+): Promise<CatalogSuggestion[]> {
+  if (options.selectionMode === "stable_registry") {
+    if (!options.objectKind) return [];
+    return searchActiveStableRegistryProductTrigramSuggestions(
+      query,
+      options.objectKind,
+      Math.min(limit, STABLE_REGISTRY_PRODUCT_MAX_SUGGESTIONS),
+    );
+  }
+  return searchCatalogSuggestions(query, limit, db, options.objectKind, "trigram");
 }
 
 export type CatalogSelectionMode = "compatibility" | "stable_registry";
@@ -197,10 +298,24 @@ export async function searchCatalogSuggestionsForTypeaheadResult(
         normalizedLimit,
         effectiveOptions,
       );
+  // Ships disabled. The flag is turned on only after a divergence receipt is
+  // recorded, so the source is measured before it is trusted.
+  const trigramSearch = deps.searchWithTrigram
+    ? deps.searchWithTrigram(normalizedQuery, normalizedLimit)
+    : catalogTrigramTypeaheadEnabled()
+      ? searchCatalogSuggestionsWithTrigram(
+          normalizedQuery,
+          normalizedLimit,
+          effectiveOptions,
+        )
+      : Promise.resolve<CatalogSuggestion[]>([]);
 
-  const [meili, postgres] = await Promise.all([
+  // All three start together, so a slow source can never add a second wait
+  // after the ones that already answered.
+  const [meili, postgres, trigram] = await Promise.all([
     settleWithinCatalogDeadline(meiliSearch),
     settleWithinCatalogDeadline(postgresSearch),
+    settleWithinCatalogDeadline(trigramSearch),
   ]);
 
   if (postgres.status !== "fulfilled") {
@@ -209,11 +324,25 @@ export async function searchCatalogSuggestionsForTypeaheadResult(
 
   const canonical = postgres.value;
   const derived = meili.status === "fulfilled" ? meili.value : [];
+  // Approximate hits go last: dedupe keeps the first occurrence, so an exact or
+  // substring match always outranks a fuzzy one for the same identity.
+  const approximate = trigram.status === "fulfilled" ? trigram.value : [];
   const suggestions = classifyHomonymousCatalogSuggestions(
     dedupeCatalogTypeaheadSuggestions(
-      [...derived, ...canonical].map(ensureCatalogSuggestionServeClass),
+      [...derived, ...canonical, ...approximate].map(
+        ensureCatalogSuggestionServeClass,
+      ),
     ),
   ).slice(0, normalizedLimit);
+
+  deps.recordDivergence?.(
+    measureCatalogTypeaheadDivergence({
+      canonical,
+      derived,
+      approximate,
+      merged: suggestions,
+    }),
+  );
 
   return {
     suggestions,
@@ -333,6 +462,7 @@ export async function searchCatalogSuggestions(
   limit = MAX_CATALOG_SUGGESTIONS,
   executor: QueryExecutor = db,
   objectKind?: PlantObjectKind,
+  matchMode: CatalogTypeaheadMatchMode = "substring",
 ): Promise<CatalogSuggestion[]> {
   const normalizedQuery = normalizeCatalogQuery(query);
   if (normalizedQuery.length < MIN_CATALOG_QUERY_LENGTH) return [];
@@ -343,6 +473,7 @@ export async function searchCatalogSuggestions(
     normalizedQuery,
     normalizedLimit * 3,
     objectKind,
+    matchMode,
   ).execute();
 
   return classifyHomonymousCatalogSuggestions(
@@ -517,15 +648,29 @@ export async function createUserAddedCatalogCandidate(
   };
 }
 
+/**
+ * How a name is compared with the typed query.
+ *
+ * `trigram` is a mode on the one query rather than a second query, so a
+ * misspelled search inherits every guard an exact search already passes —
+ * selectable status, no user-added row, and the object-kind exclusions — and
+ * cannot reach a gardener through a weaker predicate.
+ */
+export type CatalogTypeaheadMatchMode = "substring" | "trigram";
+
 export function buildCatalogTypeaheadQuery(
   executor: QueryExecutor,
   normalizedQuery: string,
   limit = MAX_CATALOG_SUGGESTIONS,
   objectKind?: PlantObjectKind,
+  matchMode: CatalogTypeaheadMatchMode = "substring",
 ) {
   const normalizedSearch = normalizeCatalogQuery(normalizedQuery);
   const pattern = `%${normalizedSearch}%`;
   const prefixPattern = `${normalizedSearch}%`;
+  // The legacy path searches `display_name`, not `normalized_name`, so this is
+  // the expression the trigram index is built on.
+  const similarity = sql<number>`similarity(lower(${sql.ref("catalog_item_names.display_name")}), ${normalizedSearch})`;
 
   let builder = executor
     .selectFrom("catalog_item_names")
@@ -551,10 +696,22 @@ export function buildCatalogTypeaheadQuery(
       )`.as("isGeneratedAlias"),
     ])
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
-    .where("catalog_items.created_by_user_id", "is", null)
-    .where(
-      sql<boolean>`lower(${sql.ref("catalog_item_names.display_name")}) like ${pattern}`,
-    );
+    .where("catalog_items.created_by_user_id", "is", null);
+
+  builder =
+    matchMode === "trigram"
+      ? builder
+          // `%` reaches the GIN trigram index; the comparison beside it pins
+          // the floor so a session GUC cannot quietly widen the result.
+          .where(
+            sql<boolean>`lower(${sql.ref("catalog_item_names.display_name")}) % ${normalizedSearch}`,
+          )
+          .where(
+            sql<boolean>`${similarity} >= ${CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD}`,
+          )
+      : builder.where(
+          sql<boolean>`lower(${sql.ref("catalog_item_names.display_name")}) like ${pattern}`,
+        );
 
   // Compatibility rows predate the explicit product object-kind projection.
   // Keep generic species visible while still excluding impossible variety/breed
@@ -568,6 +725,15 @@ export function buildCatalogTypeaheadQuery(
       "!=",
       "plant_variety",
     );
+  }
+
+  if (matchMode === "trigram") {
+    return builder
+      .orderBy(similarity, "desc")
+      .orderBy("catalog_item_names.is_primary", "desc")
+      .orderBy("catalog_items.updated_at", "desc")
+      .orderBy("catalog_item_names.display_name", "asc")
+      .limit(normalizeCatalogTypeaheadRowLimit(limit));
   }
 
   return builder

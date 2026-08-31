@@ -16997,6 +16997,18 @@
     },
     {
       "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/product-projection-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
+      "sourceNodeId": "source:34ab1ee94e99ffd9c4b9",
+      "symbol": "searchActiveStableRegistryProductTrigramSuggestions"
+    },
+    {
+      "evidencePaths": [
         "src/server/learning-actor-attribution.ts",
         "src/server/mvp-learning/attribution-outbox.ts"
       ],
@@ -21331,6 +21343,18 @@
       "semanticVariant": "from:@/lib/garden/public-paths",
       "sourceNodeId": "source:61c5be32d2271ffb58ce",
       "symbol": "publicProfilePath"
+    },
+    {
+      "evidencePaths": [
+        "src/server/catalog-repository.ts",
+        "src/server/stable-registry/product-projection-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/stable-registry/product-projection-repository",
+      "sourceNodeId": "source:620180b0d705cf8bd59b",
+      "symbol": "STABLE_REGISTRY_PRODUCT_TRIGRAM_THRESHOLD"
     },
     {
       "evidencePaths": [
@@ -26189,6 +26213,18 @@
       "semanticVariant": "from:@/server/lineage-repository",
       "sourceNodeId": "source:94f722da45405c91e107",
       "symbol": "normalizeLineageSourceReferenceLabel"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/env.ts",
+        "src/server/catalog-repository.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/server/catalog-repository.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/env",
+      "sourceNodeId": "source:95462f0b16d9506c89a7",
+      "symbol": "booleanServerEnv"
     },
     {
       "evidencePaths": [
