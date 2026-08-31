@@ -755,6 +755,28 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     executionOwned: true,
   },
   {
+    id: "catalog_registry_item_relations.decided_by_user_id",
+    table: "catalog_registry_item_relations",
+    columnOrPath: "decided_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale:
+      "Immutable identity-relation actor is rekeyed transactionally to the non-human erasure tombstone.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "catalog_registry_activation_sequence.actor_user_id",
+    table: "catalog_registry_activation_sequence",
+    columnOrPath: "actor_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale:
+      "Immutable activation/rollback receipt actor is rekeyed transactionally to the non-human erasure tombstone.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
     id: "catalog_registry_decisions.decided_by_user_id",
     table: "catalog_registry_decisions",
     columnOrPath: "decided_by_user_id",

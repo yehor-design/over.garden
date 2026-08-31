@@ -2,31 +2,25 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
-import { isStableRegistryReleaseCenterEnabled } from "@/lib/stable-registry/feature-gate";
-import {
-  getStableRegistryCopy,
-  getStableRegistryEditionCopy,
-  getStableRegistryExtensionPackCopy,
-} from "@/lib/operator-curation-copy";
+import { getStableRegistryEditionCopy } from "@/lib/operator-curation-copy";
+import { isStableRegistryEditionsEnabled } from "@/lib/stable-registry/feature-gate";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { scopedToUser } from "@/server/request-scope";
-import { readStableRegistryReleaseCenter } from "@/server/stable-registry/release-repository";
+import { readEditionCenter } from "@/server/stable-registry/edition-repository";
 
 import {
-  abandonFoundationReleaseAction,
-  activateFoundationReleaseAction,
-  approveFoundationPreviewAction,
-  buildFoundationReleaseAction,
-  decideFoundationExceptionGroupAction,
-} from "./actions";
-import { StableRegistryReleaseCenter } from "./release-center";
+  approveEditionPreviewAction,
+  decideEditionDiffGroupAction,
+  moveEditionPointerAction,
+} from "../edition-actions";
+import { StableRegistryEditionLane } from "./edition-lane";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const copy = getStableRegistryCopy(await getRequestInterfaceLocale());
+  const copy = getStableRegistryEditionCopy(await getRequestInterfaceLocale());
   return {
     title: copy.metadataTitle,
     description: copy.metadataDescription,
@@ -34,14 +28,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function StableRegistryPage() {
+export default async function StableRegistryEditionsPage() {
   const [locale, session] = await Promise.all([
     getRequestInterfaceLocale(),
     getCurrentSession(),
   ]);
-  const copy = getStableRegistryCopy(locale);
-  const extensionCopy = getStableRegistryExtensionPackCopy(locale);
-  const editionCopy = getStableRegistryEditionCopy(locale);
+  const copy = getStableRegistryEditionCopy(locale);
   const userId = session?.user?.id;
   if (!userId) {
     return <AccessPanel localeCopy={copy} state="sign-in-required" />;
@@ -55,44 +47,24 @@ export default async function StableRegistryPage() {
     return <AccessPanel localeCopy={copy} state="denied" />;
   }
 
-  const writesEnabled = isStableRegistryReleaseCenterEnabled();
+  const writesEnabled = isStableRegistryEditionsEnabled();
   if (!writesEnabled) {
     return <AccessPanel localeCopy={copy} state="disabled" />;
   }
 
-  const model = await readStableRegistryReleaseCenter({ writesEnabled });
+  const model = await readEditionCenter({ writesEnabled });
   return (
     <main className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-6 px-5 py-8 sm:px-8 [&>*]:min-w-0">
       <header className="flex flex-col gap-3 border-b border-border pb-5">
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href="/garden"
-            className={buttonVariants({
-              variant: "outline",
-              className: "self-start",
-            })}
-          >
-            {copy.returnToCatalog}
-          </Link>
-          <Link
-            href="/garden/catalog/registry/extensions"
-            className={buttonVariants({
-              variant: "outline",
-              className: "self-start",
-            })}
-          >
-            {extensionCopy.title}
-          </Link>
-          <Link
-            href="/garden/catalog/registry/editions"
-            className={buttonVariants({
-              variant: "outline",
-              className: "self-start",
-            })}
-          >
-            {editionCopy.title}
-          </Link>
-        </div>
+        <Link
+          href="/garden/catalog/registry"
+          className={buttonVariants({
+            variant: "outline",
+            className: "self-start",
+          })}
+        >
+          {copy.keepCurrentRelease}
+        </Link>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           {copy.title}
         </h1>
@@ -100,14 +72,12 @@ export default async function StableRegistryPage() {
           {copy.description}
         </p>
       </header>
-      <StableRegistryReleaseCenter
+      <StableRegistryEditionLane
         locale={locale}
         model={model}
-        buildAction={buildFoundationReleaseAction}
-        decideAction={decideFoundationExceptionGroupAction}
-        approveAction={approveFoundationPreviewAction}
-        activateAction={activateFoundationReleaseAction}
-        abandonAction={abandonFoundationReleaseAction}
+        decideAction={decideEditionDiffGroupAction}
+        approveAction={approveEditionPreviewAction}
+        pointerAction={moveEditionPointerAction}
       />
     </main>
   );
@@ -117,7 +87,7 @@ function AccessPanel({
   localeCopy: copy,
   state,
 }: {
-  localeCopy: ReturnType<typeof getStableRegistryCopy>;
+  localeCopy: ReturnType<typeof getStableRegistryEditionCopy>;
   state: "sign-in-required" | "denied" | "disabled";
 }) {
   const message =
@@ -125,21 +95,21 @@ function AccessPanel({
       ? copy.signInRequired
       : state === "denied"
         ? copy.accessDenied
-        : copy.releaseCenterDisabled;
+        : copy.disabled;
   return (
     <main
-      data-release-center-state={state}
+      data-edition-state={state}
       className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
     >
       <header className="flex flex-col gap-3 border-b border-border pb-5">
         <Link
-          href="/garden"
+          href="/garden/catalog/registry"
           className={buttonVariants({
             variant: "outline",
             className: "self-start",
           })}
         >
-          {copy.returnToCatalog}
+          {copy.keepCurrentRelease}
         </Link>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           {copy.title}

@@ -221,6 +221,10 @@
       "reason": "Queued vocabulary belongs to the server-side Stable Registry Postgres job queue and transactional search-projection outbox."
     },
     {
+      "path": "apps/web/src/server/stable-registry/edition-repository.ts",
+      "reason": "Queued vocabulary belongs to the server-side Stable Registry Postgres job queue and transactional search-projection outbox."
+    },
+    {
       "path": "apps/web/src/lib/matching-runtime-proof.ts",
       "reason": "Queue vocabulary belongs to the server-side matching worker readiness contract."
     },
