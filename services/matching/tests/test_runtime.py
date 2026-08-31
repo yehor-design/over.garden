@@ -5,7 +5,6 @@ from typing import Any
 
 import pytest
 
-from app import main as api
 from app import runtime
 from app.job_handlers import SUPPORTED_JOB_KINDS
 
@@ -388,9 +387,15 @@ def test_worker_heartbeat_writes_only_release_capabilities() -> None:
     assert "payload" not in sql.lower()
 
 
-def test_http_keeps_liveness_separate_from_fail_closed_readiness(
+def test_capability_and_readiness_stay_separate_without_an_http_surface(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """The distinction the retired endpoints carried, kept in the manifests.
+
+    Capability is about the release this process *is*; readiness is about the
+    dependencies it needs. A missing worker heartbeat must degrade readiness
+    without making the release unknowable.
+    """
     set_release_environment(monkeypatch)
     monkeypatch.setattr(
         runtime,
@@ -399,20 +404,18 @@ def test_http_keeps_liveness_separate_from_fail_closed_readiness(
     )
     monkeypatch.setattr(runtime, "_read_meilisearch_status", lambda: "available")
 
-    assert api.health()["status"] == "available"
-    capability_response = api.capabilities()
-    readiness_response = api.ready()
+    capabilities = runtime.capabilities_manifest()
+    manifest, is_ready = runtime.readiness_manifest()
 
-    assert capability_response.status_code == 200
-    assert response_json(capability_response)["release"]["commitSha"] == COMMIT_SHA
-    assert readiness_response.status_code == 503
-    assert response_json(readiness_response)["dependencies"]["worker"] == {
+    assert capabilities["release"]["commitSha"] == COMMIT_SHA
+    assert is_ready is False
+    assert manifest["dependencies"]["worker"] == {
         "status": "missing",
         "drainClass": "unknown",
     }
 
 
-def test_http_and_cli_fail_closed_without_release_identity(
+def test_cli_fails_closed_without_release_identity(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     for name in (
@@ -423,13 +426,10 @@ def test_http_and_cli_fail_closed_without_release_identity(
     ):
         monkeypatch.delenv(name, raising=False)
 
-    capability_response = api.capabilities()
-    readiness_response = api.ready()
+    with pytest.raises(runtime.RuntimeConfigurationError):
+        runtime.capabilities_manifest()
     exit_code = runtime.main(["capabilities"])
 
-    assert capability_response.status_code == 503
-    assert readiness_response.status_code == 503
-    assert response_json(capability_response) == runtime.unavailable_manifest()
     assert exit_code == 1
     assert json.loads(capsys.readouterr().out) == runtime.unavailable_manifest()
 

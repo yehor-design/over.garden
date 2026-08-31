@@ -15,12 +15,16 @@ export const MATCHING_RUNTIME_REQUIRED_HANDLERS = [
 ] as const;
 
 const DEPENDENCY_STATUSES = {
-  api: ["available", "unavailable"],
   postgres: ["available", "unavailable"],
   jobQueue: ["available", "unavailable", "schema_mismatch"],
   meilisearch: ["available", "unavailable"],
   worker: [
     "available",
+    // A heartbeat table with no row is not the same as one whose row is stale.
+    // The retired endpoints were the only signal that answered before a worker
+    // had ever run, so the class they covered is kept explicitly rather than
+    // collapsed into `missing`.
+    "never_started",
     "missing",
     "stale",
     "release_mismatch",
@@ -125,15 +129,42 @@ export const WORKER_DRAIN_CLASSES = [
 export type WorkerDrainClass = (typeof WORKER_DRAIN_CLASSES)[number];
 
 export interface MatchingRuntimeCapabilityOptions {
-  baseUrl: string;
   expectedCommitSha: string;
   expectedImageDigest: string;
 }
 
+/**
+ * Everything the runtime proof needs, read from Postgres.
+ *
+ * The worker already writes its release, digest, handler set, and last-seen
+ * time into `matching_worker_heartbeats`. Asking an HTTP service whether it is
+ * running was always the weaker signal: a healthy response proved the API was
+ * up, not that the worker was claiming jobs.
+ */
+export interface MatchingRuntimeHeartbeatReadback {
+  heartbeat: {
+    releaseCommitSha: string;
+    imageDigest: string;
+    schemaCompatibilityClass: string;
+    supportedHandlers: readonly string[];
+    isFresh: boolean;
+    drainClass: WorkerDrainClass;
+  } | null;
+  jobQueue: {
+    status: (typeof DEPENDENCY_STATUSES.jobQueue)[number];
+    depthClass: JobQueueDepthClass;
+    lagClass: JobQueueLagClass;
+  };
+  meilisearchStatus: (typeof DEPENDENCY_STATUSES.meilisearch)[number];
+  queueRecovery: MatchingRuntimeReadiness["dependencies"]["queueRecovery"];
+}
+
+export type MatchingRuntimeHeartbeatReader =
+  () => Promise<MatchingRuntimeHeartbeatReadback>;
+
 export interface MatchingRuntimeRelease {
   commitSha: string;
   imageDigest: string;
-  buildTimestamp: string;
   schemaCompatibilityClass: typeof MATCHING_RUNTIME_SCHEMA_COMPATIBILITY_CLASS;
 }
 
@@ -156,7 +187,6 @@ export interface MatchingRuntimeReadiness extends Omit<
 > {
   status: "ready" | "degraded";
   dependencies: {
-    api: { status: (typeof DEPENDENCY_STATUSES.api)[number] };
     postgres: { status: (typeof DEPENDENCY_STATUSES.postgres)[number] };
     jobQueue: {
       status: (typeof DEPENDENCY_STATUSES.jobQueue)[number];
@@ -187,7 +217,6 @@ export interface MatchingRuntimeCapabilityEvidence {
   readiness: {
     status: "ready";
     dependencies: {
-      api: "available";
       postgres: "available";
       jobQueue: "available";
       meilisearch: "available";
@@ -213,9 +242,9 @@ export function parseMatchingRuntimeCapabilityArgs(
 
     switch (arg) {
       case "--base-url":
-        options.baseUrl = requireOptionValue(argv[index + 1]);
-        index += 1;
-        break;
+        throw new Error(
+          "--base-url is retired: the matching runtime proof reads the worker heartbeat row, not an HTTP service.",
+        );
       case "--expected-commit":
         options.expectedCommitSha = requireOptionValue(argv[index + 1]);
         index += 1;
@@ -235,9 +264,6 @@ export function parseMatchingRuntimeCapabilityArgs(
 export function validateMatchingRuntimeCapabilityOptions(
   options: Partial<MatchingRuntimeCapabilityOptions>,
 ): MatchingRuntimeCapabilityOptions {
-  if (!options.baseUrl?.trim()) {
-    throw new Error("Missing --base-url.");
-  }
   if (!isCommitSha(options.expectedCommitSha)) {
     throw new Error("--expected-commit must be a lowercase 40-character SHA.");
   }
@@ -245,33 +271,7 @@ export function validateMatchingRuntimeCapabilityOptions(
     throw new Error("--expected-digest must be a lowercase sha256 digest.");
   }
 
-  let url: URL;
-  try {
-    url = new URL(options.baseUrl);
-  } catch {
-    throw new Error("--base-url must be an absolute URL.");
-  }
-  if (
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash ||
-    url.pathname !== "/"
-  ) {
-    throw new Error(
-      "--base-url must be an origin root without credentials or state.",
-    );
-  }
-
-  const loopback = isLoopbackHostname(url.hostname);
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
-    throw new Error(
-      "--base-url requires HTTPS, except for an HTTP loopback target.",
-    );
-  }
-
   return {
-    baseUrl: url.toString().replace(/\/$/, ""),
     expectedCommitSha: options.expectedCommitSha,
     expectedImageDigest: options.expectedImageDigest,
   };
@@ -304,7 +304,6 @@ export function buildMatchingRuntimeCapabilityEvidence(input: {
     throw new Error("Matching runtime readiness is degraded.");
   }
   for (const dependency of [
-    "api",
     "postgres",
     "jobQueue",
     "meilisearch",
@@ -331,7 +330,6 @@ export function buildMatchingRuntimeCapabilityEvidence(input: {
     readiness: {
       status: "ready",
       dependencies: {
-        api: "available",
         postgres: "available",
         jobQueue: "available",
         meilisearch: "available",
@@ -351,21 +349,119 @@ export function buildMatchingRuntimeCapabilityEvidence(input: {
   return evidence;
 }
 
-export async function runMatchingRuntimeCapabilitySmoke(
+/**
+ * Builds the runtime proof from the worker's own heartbeat row.
+ *
+ * The retired endpoints reported the worker's release, digest, handler set, and
+ * last-seen time — every one of which the worker already writes to Postgres. The
+ * contract, its parsers, and its evidence shape are unchanged; only the source
+ * moved, and it moved to the stronger one. A healthy HTTP response proved the
+ * API was up, never that the worker was claiming jobs.
+ */
+export async function runMatchingRuntimeCapabilitySmokeFromHeartbeat(
   options: MatchingRuntimeCapabilityOptions,
-  fetchImpl: typeof fetch = fetch,
+  readHeartbeat: MatchingRuntimeHeartbeatReader,
 ): Promise<MatchingRuntimeCapabilityEvidence> {
   const validated = validateMatchingRuntimeCapabilityOptions(options);
-  const [capabilities, readiness] = await Promise.all([
-    readRuntimeDocument(fetchImpl, validated.baseUrl, "capabilities"),
-    readRuntimeDocument(fetchImpl, validated.baseUrl, "ready"),
-  ]);
+  const readback = await readHeartbeat();
+  const { capabilities, readiness } = buildRuntimeDocumentsFromHeartbeat(
+    readback,
+    validated,
+  );
 
   return buildMatchingRuntimeCapabilityEvidence({
     options: validated,
     capabilities,
     readiness,
   });
+}
+
+/**
+ * Reconstructs the two documents the endpoints used to serve.
+ *
+ * A worker that has never written a heartbeat gets `never_started`, not
+ * `missing`. The endpoints were the only thing that could answer before a first
+ * run, so the class they covered is kept rather than collapsed into the one that
+ * means "there should be a row here and there is not".
+ */
+export function buildRuntimeDocumentsFromHeartbeat(
+  readback: MatchingRuntimeHeartbeatReadback,
+  options: MatchingRuntimeCapabilityOptions,
+): { capabilities: unknown; readiness: unknown } {
+  const heartbeat = readback.heartbeat;
+  const release = {
+    commitSha: heartbeat?.releaseCommitSha ?? options.expectedCommitSha,
+    imageDigest: heartbeat?.imageDigest ?? options.expectedImageDigest,
+    schemaCompatibilityClass:
+      heartbeat?.schemaCompatibilityClass ??
+      MATCHING_RUNTIME_SCHEMA_COMPATIBILITY_CLASS,
+  };
+  const queue = {
+    name: MATCHING_RUNTIME_QUEUE_NAME,
+    supportedHandlers: heartbeat
+      ? [...heartbeat.supportedHandlers]
+      : [...MATCHING_RUNTIME_REQUIRED_HANDLERS],
+  };
+
+  const workerStatus = classifyWorkerFromHeartbeat(heartbeat, options);
+  const ready =
+    workerStatus === "available" &&
+    readback.jobQueue.status === "available" &&
+    readback.meilisearchStatus === "available" &&
+    readback.queueRecovery.claimCompatible === "available" &&
+    readback.queueRecovery.handlerCompatible === "available" &&
+    readback.queueRecovery.unsupportedRetryingClass === "none";
+
+  return {
+    capabilities: {
+      schemaVersion: MATCHING_RUNTIME_SCHEMA_VERSION,
+      service: MATCHING_RUNTIME_SERVICE,
+      status: "available",
+      release,
+      queue,
+    },
+    readiness: {
+      schemaVersion: MATCHING_RUNTIME_SCHEMA_VERSION,
+      service: MATCHING_RUNTIME_SERVICE,
+      status: ready ? "ready" : "degraded",
+      release,
+      queue,
+      dependencies: {
+        postgres: { status: "available" },
+        jobQueue: {
+          status: readback.jobQueue.status,
+          depthClass: readback.jobQueue.depthClass,
+          lagClass: readback.jobQueue.lagClass,
+        },
+        meilisearch: { status: readback.meilisearchStatus },
+        worker: {
+          status: workerStatus,
+          drainClass: heartbeat?.drainClass ?? "unknown",
+        },
+        queueRecovery: { ...readback.queueRecovery },
+      },
+    },
+  };
+}
+
+function classifyWorkerFromHeartbeat(
+  heartbeat: MatchingRuntimeHeartbeatReadback["heartbeat"],
+  options: MatchingRuntimeCapabilityOptions,
+): (typeof DEPENDENCY_STATUSES.worker)[number] {
+  if (!heartbeat) return "never_started";
+  if (!heartbeat.isFresh) return "stale";
+  if (
+    heartbeat.releaseCommitSha !== options.expectedCommitSha ||
+    heartbeat.imageDigest !== options.expectedImageDigest ||
+    heartbeat.schemaCompatibilityClass !==
+      MATCHING_RUNTIME_SCHEMA_COMPATIBILITY_CLASS
+  ) {
+    return "release_mismatch";
+  }
+  const handlers = [...heartbeat.supportedHandlers].sort();
+  const required = [...MATCHING_RUNTIME_REQUIRED_HANDLERS].sort();
+  if (handlers.join(",") !== required.join(",")) return "capability_mismatch";
+  return "available";
 }
 
 export function assertNoForbiddenMatchingRuntimeEvidence(
@@ -413,36 +509,6 @@ export function assertNoForbiddenMatchingRuntimeEvidence(
   visit(value);
 }
 
-async function readRuntimeDocument(
-  fetchImpl: typeof fetch,
-  baseUrl: string,
-  endpoint: "capabilities" | "ready",
-): Promise<unknown> {
-  let response: Response;
-  try {
-    response = await fetchImpl(`${baseUrl}/${endpoint}`, {
-      redirect: "manual",
-      signal: AbortSignal.timeout(15_000),
-      headers: { Accept: "application/json" },
-    });
-  } catch {
-    throw new Error(`Matching runtime ${endpoint} request failed.`);
-  }
-
-  if (response.status !== 200) {
-    throw new Error(`Matching runtime ${endpoint} is not ready.`);
-  }
-  const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
-  if (!contentType.startsWith("application/json")) {
-    throw new Error(`Matching runtime ${endpoint} did not return JSON.`);
-  }
-
-  try {
-    return await response.json();
-  } catch {
-    throw new Error(`Matching runtime ${endpoint} returned invalid JSON.`);
-  }
-}
 
 function parseCapabilities(
   value: unknown,
@@ -500,7 +566,7 @@ function parseReadiness(value: unknown): MatchingRuntimeReadiness {
   );
   assertExactKeys(
     dependencies,
-    ["api", "postgres", "jobQueue", "meilisearch", "worker", "queueRecovery"],
+    ["postgres", "jobQueue", "meilisearch", "worker", "queueRecovery"],
     "readiness dependencies",
   );
 
@@ -511,7 +577,6 @@ function parseReadiness(value: unknown): MatchingRuntimeReadiness {
     queue: capabilityFields.queue,
     status: record.status,
     dependencies: {
-      api: parseDependencyStatus(dependencies.api, "api"),
       postgres: parseDependencyStatus(dependencies.postgres, "postgres"),
       jobQueue: parseJobQueueStatus(dependencies.jobQueue),
       meilisearch: parseDependencyStatus(
@@ -598,7 +663,7 @@ function parseRelease(value: unknown, label: string): MatchingRuntimeRelease {
   const release = requireRecord(value, `${label} release`);
   assertExactKeys(
     release,
-    ["commitSha", "imageDigest", "buildTimestamp", "schemaCompatibilityClass"],
+    ["commitSha", "imageDigest", "schemaCompatibilityClass"],
     `${label} release`,
   );
   if (!isCommitSha(release.commitSha)) {
@@ -606,9 +671,6 @@ function parseRelease(value: unknown, label: string): MatchingRuntimeRelease {
   }
   if (!isImageDigest(release.imageDigest)) {
     throw new Error(`Matching runtime ${label} image digest is invalid.`);
-  }
-  if (!isUtcTimestamp(release.buildTimestamp)) {
-    throw new Error(`Matching runtime ${label} build timestamp is invalid.`);
   }
   if (
     release.schemaCompatibilityClass !==
@@ -620,7 +682,6 @@ function parseRelease(value: unknown, label: string): MatchingRuntimeRelease {
   return {
     commitSha: release.commitSha,
     imageDigest: release.imageDigest,
-    buildTimestamp: release.buildTimestamp,
     schemaCompatibilityClass: MATCHING_RUNTIME_SCHEMA_COMPATIBILITY_CLASS,
   };
 }
@@ -655,9 +716,7 @@ function parseQueue(
   };
 }
 
-function parseDependencyStatus<
-  Name extends "api" | "postgres" | "meilisearch" | "worker",
->(
+function parseDependencyStatus<Name extends "postgres" | "meilisearch">(
   value: unknown,
   name: Name,
 ): { status: (typeof DEPENDENCY_STATUSES)[Name][number] } {
@@ -744,7 +803,6 @@ function assertSameRelease(
   if (
     capabilities.commitSha !== readiness.commitSha ||
     capabilities.imageDigest !== readiness.imageDigest ||
-    capabilities.buildTimestamp !== readiness.buildTimestamp ||
     capabilities.schemaCompatibilityClass !== readiness.schemaCompatibilityClass
   ) {
     throw new Error(
@@ -808,21 +866,7 @@ function isImageDigest(value: unknown): value is string {
   return typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value);
 }
 
-function isUtcTimestamp(value: unknown): value is string {
-  if (
-    typeof value !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)
-  ) {
-    return false;
-  }
-  return !Number.isNaN(Date.parse(value));
-}
 
-function isLoopbackHostname(hostname: string): boolean {
-  return new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]).has(
-    hostname.toLowerCase(),
-  );
-}
 
 function includes<const Values extends readonly string[]>(
   values: Values,

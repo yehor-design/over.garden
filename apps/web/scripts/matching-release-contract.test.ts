@@ -77,18 +77,22 @@ describe("OVE-190 immutable matching release contract", () => {
     expect(workflow).toContain("actions/upload-artifact");
   });
 
-  it("uses one no-latest image for API and worker with dependency readiness", async () => {
+  it("uses one no-latest image for the worker with dependency readiness", async () => {
     const compose = await readFile(COMPOSE_PATH, "utf8");
 
     expect(compose).toContain("x-matching-release: &matching-release");
-    expect(compose.match(/<<: \*matching-release/g)).toHaveLength(2);
+    // One service, not two: OVE-357 retired `matching-api`, whose three
+    // endpoints reported on the service itself. The immutable-release anchor is
+    // unchanged; there is simply one consumer of it now.
+    expect(compose.match(/<<: \*matching-release/g)).toHaveLength(1);
+    expect(compose).not.toMatch(/^\s{2}matching-api:/mu);
     expect(compose).toContain("pull_policy: never");
     expect(compose).toContain("OVERGARDEN_MATCHING_COMMIT_SHA");
     expect(compose).toContain("OVERGARDEN_MATCHING_IMAGE_DIGEST");
     expect(compose).toContain("OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY");
     expect(
       compose.match(/python\n\s+- -m\n\s+- app\.runtime\n\s+- ready/g),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     expect(compose).not.toMatch(/^\s*build:/m);
     expect(compose).not.toMatch(/latest/i);
   });

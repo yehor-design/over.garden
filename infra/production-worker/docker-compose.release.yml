@@ -26,26 +26,16 @@ x-matching-release: &matching-release
     garden.over.matching.image-digest: ${OVERGARDEN_MATCHING_IMAGE_DIGEST}
     garden.over.matching.schema-compatibility: ${OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY}
 
+# OVE-357 retired `matching-api`. Its three endpoints reported on the service
+# itself, and the worker already writes its release, digest, handler set, and
+# last-seen time into `matching_worker_heartbeats`. Asking a process whether it
+# is running was also the weaker signal: a healthy HTTP response proved the API
+# was up, never that the worker was claiming jobs.
+#
+# The container, its reverse-proxy route, and its DNS record are removed from
+# the host under a separate maintainer-approved teardown; this file stops
+# defining the service.
 services:
-  matching-api:
-    <<: *matching-release
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-    healthcheck:
-      test:
-        - CMD
-        - python
-        - -m
-        - app.runtime
-        - ready
-      interval: 10s
-      timeout: 8s
-      retries: 12
-      start_period: 10s
-    networks:
-      default:
-        aliases:
-          - matching-api
-
   matching-worker:
     <<: *matching-release
     command: ["python", "-m", "app.worker"]
