@@ -14,6 +14,16 @@ export const PUBLIC_STABLE_REGISTRY_QUERY_DEADLINE_MS = 750;
 export const PUBLIC_STABLE_REGISTRY_PAGE_SIZE = 20;
 
 export type PublicStableRegistryKind = "all" | "plant" | "animal";
+
+/**
+ * What the approved catalog can say about one record's kingdom.
+ *
+ * A `species` identity in this product is legitimately a plant or an animal,
+ * and nothing in the catalog layer establishes which. `either` states that
+ * honestly instead of defaulting to `plant`, and matches the vocabulary the
+ * product projection already uses for the same release members.
+ */
+export type PublicStableCatalogObjectKind = "plant" | "animal" | "either";
 export type PublicStableRegistrySurface = "catalog" | "eppo";
 export type PublicStableRegistryEvidenceState =
   | "approved_stable_registry"
@@ -38,7 +48,7 @@ export interface PublicStableRegistryCursor {
 
 export interface PublicStableCatalogRecord {
   stableTaxon: string;
-  objectKind: Exclude<PublicStableRegistryKind, "all">;
+  objectKind: PublicStableCatalogObjectKind;
   displayName: string;
   scientificName: string | null;
   taxonomicRank: string | null;
@@ -340,7 +350,16 @@ export function buildPublicStableCatalogQuery(
     .where("pointers.release_family", "=", "foundation");
 
   if (request.kind !== "all") {
-    query = query.where("records.object_kind", "=", request.kind);
+    // A record whose kingdom is unresolved belongs under both filters. Dropping
+    // it from one of them would hide an approved identity from the guest who
+    // filtered for exactly the kingdom it may belong to.
+    const requestedKind = request.kind;
+    query = query.where((eb) =>
+      eb.or([
+        eb("records.object_kind", "=", requestedKind),
+        eb("records.object_kind", "=", "either"),
+      ]),
+    );
   }
   if (request.query) {
     const normalizedQuery = request.query.toLocaleLowerCase("en");
@@ -444,7 +463,7 @@ export function serializePublicStableCatalogRecord(
   const scientificName = sanitizeOptionalPublicLabel(row.scientificName);
   const taxonomicRank = sanitizeOptionalPublicLabel(row.taxonomicRank);
   const parentDisplayName = sanitizeOptionalPublicLabel(row.parentDisplayName);
-  const objectKind = normalizeObjectKind(row.objectKind);
+  const objectKind = normalizeCatalogObjectKind(row.objectKind);
   if (!isStableTaxon(stableTaxon) || !displayName || !objectKind) return null;
 
   return {
@@ -580,6 +599,16 @@ function normalizeObjectKind(
   value: string,
 ): Exclude<PublicStableRegistryKind, "all"> | null {
   return value === "plant" || value === "animal" ? value : null;
+}
+
+// The source archive keeps the two-valued vocabulary: its kind comes from the
+// observed `datatype` field, which is evidence rather than inference.
+function normalizeCatalogObjectKind(
+  value: string,
+): PublicStableCatalogObjectKind | null {
+  return value === "plant" || value === "animal" || value === "either"
+    ? value
+    : null;
 }
 
 function normalizeSourceEvidenceState(

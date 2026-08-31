@@ -112,6 +112,35 @@ describe("Stable Registry public explorer queries", () => {
     );
   });
 
+  it("admits a record of unresolved kingdom under both kind filters", () => {
+    for (const kind of ["plant", "animal"] as const) {
+      const compiled = buildPublicStableCatalogQuery(testDb, {
+        kind,
+        query: "",
+        cursor: null,
+      }).compile();
+
+      // A `species` identity is legitimately a plant or an animal, and nothing
+      // in the catalog layer establishes which. Filtering it out of one
+      // kingdom would hide an approved identity from the guest who asked for
+      // exactly the kingdom it may belong to.
+      expect(compiled.sql).toContain('"records"."object_kind" =');
+      expect(compiled.parameters).toContain(kind);
+      expect(compiled.parameters).toContain("either");
+    }
+  });
+
+  it("keeps the source archive two-valued, because its kind is real evidence", () => {
+    const compiled = buildPublicEppoSourceQuery(testDb, {
+      kind: "animal",
+      query: "",
+      cursor: null,
+    }).compile();
+
+    expect(compiled.parameters).toContain("animal");
+    expect(compiled.parameters).not.toContain("either");
+  });
+
   it("reads only a completed derived EPPO projection and never selects raw source fields", () => {
     const compiled = buildPublicEppoSourceQuery(testDb, {
       kind: "all",

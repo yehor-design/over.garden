@@ -4,10 +4,10 @@ OVE-256 adds two read-only, unauthenticated guest surfaces. They are not an
 alternative catalog pipeline and they do not promote source evidence into a
 product identity.
 
-| Surface | URL | Read model | Meaning of a visible record |
-| --- | --- | --- | --- |
-| Stable Catalog | `/catalog`, `/catalog/[stableTaxon]` | `stable_registry_public_catalog_records` joined to the active Foundation pointer | An active immutable release member with `product_eligible` membership. |
-| EPPO source archive | `/sources/eppo`, `/sources/eppo/[code]` | `stable_registry_public_eppo_records` joined to a completed observed capture | A source-public observed EPPO record, never an approved OverGarden catalog identity. |
+| Surface             | URL                                     | Read model                                                                       | Meaning of a visible record                                                          |
+| ------------------- | --------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Stable Catalog      | `/catalog`, `/catalog/[stableTaxon]`    | `stable_registry_public_catalog_records` joined to the active Foundation pointer | An active immutable release member with `product_eligible` membership.               |
+| EPPO source archive | `/sources/eppo`, `/sources/eppo/[code]` | `stable_registry_public_eppo_records` joined to a completed observed capture     | A source-public observed EPPO record, never an approved OverGarden catalog identity. |
 
 The prefixed Bulgarian and Russian equivalents are available under `/bg` and
 `/ru`. `uk` uses the unprefixed canonical path. Both surfaces are read-only,
@@ -21,8 +21,8 @@ additive read tables. The projection has an explicit output allowlist:
 
 - Stable Catalog: Stable Registry release membership, product-owned stable
   slug, accepted/scientific/approved alias names, derived rank and parent
-  display, normalized search terms, `{plant, animal}` kind, and activation
-  time.
+  display, normalized search terms, `{plant, animal, either}` kind, and
+  activation time.
 - EPPO archive: source-public EPPO code, accepted/scientific/alias names,
   derived rank and parent display, normalized search terms, kind, observed
   time, inactive/replaced evidence state, and the source's required
@@ -63,13 +63,44 @@ as `superseded_source_evidence`. Stable Catalog reads also join
 `catalog_registry_active_pointers`, so retired releases cannot remain visible
 after the pointer changes.
 
+## What the catalog can say about a kingdom
+
+`catalog_kind` is one of `plant_variety`, `species`, `breed`. A `species`
+identity in this product is legitimately a plant or an animal — the observed
+EPPO corpus contains both — and nothing in the catalog layer records which.
+
+Migration `0025` projected `breed -> animal` and _everything else_ `-> plant`.
+Every approved animal species therefore reached guests as a plant: returned
+under the `plant` filter, and absent from the `animal` filter that should have
+found it. Migration `0026` had already established the honest three-valued
+vocabulary for the same release members, so the two projections of one release
+contradicted each other and the public one was the wrong half.
+
+`0040_ove256_public_catalog_object_kind_evidence.sql` adopts the landed
+vocabulary: `breed -> animal`, `plant_variety -> plant`, `species -> either`.
+`either` is a stored value and a rendered label, never a request value: the
+filter tabs stay `all`/`plant`/`animal`, and a record of unresolved kingdom is
+admitted under both, because dropping it from one would hide an approved
+identity from the guest who asked for exactly the kingdom it may belong to.
+
+The source archive is untouched and stays two-valued. Its kind comes from the
+observed `datatype` field, which is evidence rather than inference.
+
+`pnpm smoke:stable-registry-public-catalog -- --database` executes this against
+a loopback Postgres in a transaction that always rolls back: it activates a
+release holding one identity of each kind, asserts the three projected kinds
+and the search-term vocabulary, checks both guest filters, proves no forbidden
+marker reaches a public column, and proves retiring the release removes the
+whole projection from guest reads while immutable membership survives. Against
+the pre-correction function it fails with `ove256-species:plant`.
+
 ## Request contract
 
 The list pages and `/api/public/catalog/suggestions` plus
 `/api/public/sources/eppo/suggestions` accept only:
 
 - `q`: blank for browse pages, otherwise 2–120 normalized characters;
-- `kind`: `all`, `plant`, or `animal`;
+- `kind`: `all`, `plant`, or `animal` — `either` is never a request value;
 - opaque base64url keyset `cursor`.
 
 The public API requires a non-empty two-character query and returns `400` for

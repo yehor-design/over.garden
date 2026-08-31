@@ -11,25 +11,26 @@ A reservation prevents two tasks from choosing the same number. It does not
 create a migration, authorize a schema change, or allow one issue to use
 another issue's number.
 
-| Number | Owning issue | Program                | Intended boundary                                                 |
-| ------ | ------------ | ---------------------- | ----------------------------------------------------------------- |
-| `0023` | OVE-254      | Stable Registry        | immutable observed capture/source snapshot                        |
-| `0024` | OVE-255      | Stable Registry        | Foundation release construction and activation                    |
-| `0025` | OVE-256      | Stable Registry        | public source-archive versus approved-release read model          |
-| `0026` | OVE-257      | Stable Registry        | active-release product selection/readback                         |
-| `0027` | OVE-328      | Stable Registry        | separately versioned extension-pack foundations                   |
-| `0028` | OVE-258      | Stable Registry        | editions, corrections, supersession, and rollback                 |
-| `0029` | OVE-321      | Online-only retirement | server-authoritative draft protocol                               |
-| `0030` | OVE-322      | Online-only retirement | returning-device retirement bridge and cleanup state              |
-| `0031` | OVE-331      | MVP posture            | public-projection quality/admission state when required           |
-| `0032` | OVE-332      | MVP posture            | authorization/session posture state when required                 |
-| `0033` | OVE-333      | MVP posture            | simplified media-ingest state when required                       |
-| `0034` | OVE-334      | MVP posture            | quarantine-retirement state when required                         |
-| `0035` | OVE-326      | Online-only retirement | final analytics-event constraint closure                          |
-| `0036` | OVE-347      | Atomic journal         | atomic journal creation state                                     |
-| `0037` | OVE-351      | Online-only retirement | external photo-identification retirement                          |
-| `0038` | OVE-349      | Online-only retirement | legacy journal-media schema contraction                           |
-| `0039` | OVE-353      | Journal deletion       | deletion retention timestamps, closed lifecycle enum, purge index  |
+| Number | Owning issue | Program                | Intended boundary                                                    |
+| ------ | ------------ | ---------------------- | -------------------------------------------------------------------- |
+| `0023` | OVE-254      | Stable Registry        | immutable observed capture/source snapshot                           |
+| `0024` | OVE-255      | Stable Registry        | Foundation release construction and activation                       |
+| `0025` | OVE-256      | Stable Registry        | public source-archive versus approved-release read model             |
+| `0026` | OVE-257      | Stable Registry        | active-release product selection/readback                            |
+| `0027` | OVE-328      | Stable Registry        | separately versioned extension-pack foundations                      |
+| `0028` | OVE-258      | Stable Registry        | editions, corrections, supersession, and rollback                    |
+| `0029` | OVE-321      | Online-only retirement | server-authoritative draft protocol                                  |
+| `0030` | OVE-322      | Online-only retirement | returning-device retirement bridge and cleanup state                 |
+| `0031` | OVE-331      | MVP posture            | public-projection quality/admission state when required              |
+| `0032` | OVE-332      | MVP posture            | authorization/session posture state when required                    |
+| `0033` | OVE-333      | MVP posture            | simplified media-ingest state when required                          |
+| `0034` | OVE-334      | MVP posture            | quarantine-retirement state when required                            |
+| `0035` | OVE-326      | Online-only retirement | final analytics-event constraint closure                             |
+| `0036` | OVE-347      | Atomic journal         | atomic journal creation state                                        |
+| `0037` | OVE-351      | Online-only retirement | external photo-identification retirement                             |
+| `0038` | OVE-349      | Online-only retirement | legacy journal-media schema contraction                              |
+| `0039` | OVE-353      | Journal deletion       | deletion retention timestamps, closed lifecycle enum, purge index    |
+| `0040` | OVE-256      | Stable Registry        | public catalog object-kind correction over its own `0025` read model |
 
 Compact range receipt:
 
@@ -39,10 +40,17 @@ Compact range receipt:
 - `0035: online-only steady-state enforcement`
 - `0036-0038: atomic-journal and online-only retirement landings`
 - `0039: journal deletion-retention lifecycle`
+- `0040: Stable Registry public-read correction`
 
 Rows `0036`-`0038` are reconciled after the fact under rule 4: those migrations
 landed before the ledger recorded them, and renaming a landed file to restore
 the appearance of a prior reservation is forbidden by rule 5.
+
+Row `0040` is a second allocation to an owner that already holds `0025`. Rule 2
+permits it: the number is used by its owner, for that owner's own contract, and
+the correction is additive over the read model `0025` created. It is a new
+reservation at the next free number rather than a reuse or rename of `0025`,
+which rule 5 forbids.
 
 ## Explicit no-SQL Stable Registry owners
 
@@ -50,10 +58,10 @@ ADR-0020 amends only the future migration-allocation clauses of historical
 ADR-0016. OVE-327 and OVE-259 have no SQL migration: they must not consume,
 rename, transfer, or imply a migration number.
 
-| Owning issue | SQL migration allocation | Intended boundary |
-| ------------ | ------------------------ | ----------------- |
+| Owning issue | SQL migration allocation | Intended boundary                                           |
+| ------------ | ------------------------ | ----------------------------------------------------------- |
 | OVE-327      | No SQL migration         | pure artifact-adapter packs and their safe runtime boundary |
-| OVE-259      | No SQL migration         | production plan/apply, parity, and final program proof |
+| OVE-259      | No SQL migration         | production plan/apply, parity, and final program proof      |
 
 The unused OVE-322 reservation at `0030` remains historical and
 non-transferable. OVE-326 uses the next free number, `0035`; it does not inherit
