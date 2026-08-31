@@ -27,6 +27,12 @@ export interface ExtensionPackSmokeReceipt {
   maxInteractionDelayMs: number;
   interactionBudgetMs: number;
   productEligibleRowCount?: number;
+  /**
+   * Product identities the activated packs actually published. A row class
+   * proves classification, not publication; this is the number that says the
+   * gardener can find the variety.
+   */
+  publishedIdentityCount?: number;
   heldRowCount?: number;
   preciseLocationAbsent: true;
   forbiddenMarkersAbsent: true;

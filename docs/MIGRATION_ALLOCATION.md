@@ -31,6 +31,7 @@ another issue's number.
 | `0038` | OVE-349      | Online-only retirement | legacy journal-media schema contraction                              |
 | `0039` | OVE-353      | Journal deletion       | deletion retention timestamps, closed lifecycle enum, purge index    |
 | `0040` | OVE-256      | Stable Registry        | public catalog object-kind correction over its own `0025` read model |
+| `0041` | OVE-328      | Stable Registry        | extension-pack activation actually publishes its rows                |
 
 Compact range receipt:
 
@@ -41,16 +42,17 @@ Compact range receipt:
 - `0036-0038: atomic-journal and online-only retirement landings`
 - `0039: journal deletion-retention lifecycle`
 - `0040: Stable Registry public-read correction`
+- `0041: Stable Registry extension-pack activation correction`
 
 Rows `0036`-`0038` are reconciled after the fact under rule 4: those migrations
 landed before the ledger recorded them, and renaming a landed file to restore
 the appearance of a prior reservation is forbidden by rule 5.
 
-Row `0040` is a second allocation to an owner that already holds `0025`. Rule 2
-permits it: the number is used by its owner, for that owner's own contract, and
-the correction is additive over the read model `0025` created. It is a new
-reservation at the next free number rather than a reuse or rename of `0025`,
-which rule 5 forbids.
+Rows `0040` and `0041` are second allocations to owners that already hold `0025`
+and `0027`. Rule 2 permits them: each number is used by its own owner, for that
+owner's own contract, and each correction is additive over the read model that
+owner created. They are new reservations at the next free numbers rather than a
+reuse or rename of `0025` or `0027`, which rule 5 forbids.
 
 ## Explicit no-SQL Stable Registry owners
 
