@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+
+# OVE-358 — one entry point for the composed self-hosted stack.
+#
+# Subcommands: up, down, status, backup, restore, verify.
+#
+# The rule this whole script exists to enforce: a backup is only a backup once
+# it has been restored and the product read back from it. Everything before
+# `verify` is preparation.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+COMPOSE_FILE="$SCRIPT_DIR/docker-compose.stack.yml"
+TLS_DIR="${OVERGARDEN_STACK_TLS_DIR:-$SCRIPT_DIR/stack-tls}"
+ENV_FILE="${OVERGARDEN_STACK_ENV_FILE:-$SCRIPT_DIR/stack.env}"
+BACKUP_DIR="${OVERGARDEN_STACK_BACKUP_DIR:-$SCRIPT_DIR/stack-backups}"
+
+# Every restore runs against a database this script created and will delete.
+# Restoring over the live one is not a mode, because a rehearsal that can
+# destroy the thing it rehearses protecting is not a rehearsal.
+DISPOSABLE_PREFIX="overgarden_stack_restore_"
+
+STACK_READINESS_DEADLINE_SECONDS="${STACK_READINESS_DEADLINE_SECONDS:-180}"
+STACK_RESTORE_DEADLINE_SECONDS="${STACK_RESTORE_DEADLINE_SECONDS:-3600}"
+
+fail() {
+  printf 'overgarden-stack: %s\n' "$1" >&2
+  exit 1
+}
+
+info() { printf 'overgarden-stack: %s\n' "$1"; }
+
+require_compose() {
+  if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+    COMPOSE=(docker compose -f "$COMPOSE_FILE")
+  elif command -v podman-compose >/dev/null 2>&1; then
+    COMPOSE=(podman-compose -f "$COMPOSE_FILE")
+  else
+    fail "no Compose runtime found; install Docker Compose or podman-compose"
+  fi
+  if [[ -f "$ENV_FILE" ]]; then
+    COMPOSE+=(--env-file "$ENV_FILE")
+  fi
+}
+
+# The certificate authority is generated once and kept. Regenerating it on every
+# start would hand the application a new authority each time, and an authority
+# that changes silently is indistinguishable from one that was swapped.
+ensure_tls_material() {
+  if [[ -f "$TLS_DIR/ca.crt" && -f "$TLS_DIR/server.crt" && -f "$TLS_DIR/server.key" ]]; then
+    return 0
+  fi
+  command -v openssl >/dev/null 2>&1 || fail "openssl is required to generate stack TLS material"
+
+  info "generating a stack certificate authority and server certificate"
+  mkdir -p "$TLS_DIR"
+  chmod 700 "$TLS_DIR"
+
+  openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+    -keyout "$TLS_DIR/ca.key" -out "$TLS_DIR/ca.crt" \
+    -subj "/CN=OverGarden Stack CA" \
+    -addext "basicConstraints=critical,CA:TRUE" \
+    -addext "keyUsage=critical,keyCertSign,cRLSign" >/dev/null 2>&1
+
+  openssl req -newkey rsa:4096 -sha256 -nodes \
+    -keyout "$TLS_DIR/server.key" -out "$TLS_DIR/server.csr" \
+    -subj "/CN=postgres" >/dev/null 2>&1
+
+  # `postgres` is the name the pooler and the worker resolve on the internal
+  # network, so it is the name the certificate has to carry for `verify-full`.
+  openssl x509 -req -in "$TLS_DIR/server.csr" -sha256 -days 825 \
+    -CA "$TLS_DIR/ca.crt" -CAkey "$TLS_DIR/ca.key" -CAcreateserial \
+    -out "$TLS_DIR/server.crt" \
+    -extfile <(printf 'subjectAltName=DNS:postgres,DNS:localhost,IP:127.0.0.1\n') >/dev/null 2>&1
+
+  rm -f "$TLS_DIR/server.csr"
+  # Postgres refuses a key any other account can read.
+  chmod 600 "$TLS_DIR/server.key" "$TLS_DIR/ca.key"
+  chmod 644 "$TLS_DIR/ca.crt" "$TLS_DIR/server.crt"
+  # The container runs as `postgres` (uid 70 on alpine); the key must be owned
+  # by the account that reads it or the server will not start.
+  chown 70:70 "$TLS_DIR/server.key" "$TLS_DIR/server.crt" 2>/dev/null || true
+}
+
+stack_up() {
+  require_compose
+  ensure_tls_material
+  info "starting the composed stack"
+  "${COMPOSE[@]}" up -d
+
+  local deadline=$((SECONDS + STACK_READINESS_DEADLINE_SECONDS))
+  while (( SECONDS < deadline )); do
+    if stack_is_ready; then
+      info "ready"
+      return 0
+    fi
+    sleep 2
+  done
+  # `degraded`, never a silent `ready`. A stack that never answered its own
+  # readiness check has not started, however many containers are running.
+  info "degraded: not every service reported ready inside ${STACK_READINESS_DEADLINE_SECONDS}s"
+  return 1
+}
+
+stack_is_ready() {
+  local unhealthy
+  unhealthy="$("${COMPOSE[@]}" ps --format '{{.Service}} {{.Health}}' 2>/dev/null \
+    | awk '$2 != "healthy" && $2 != "" { print $1 }' || true)"
+  [[ -z "$unhealthy" ]]
+}
+
+stack_status() {
+  require_compose
+  "${COMPOSE[@]}" ps --format 'table {{.Service}}\t{{.Status}}\t{{.Health}}'
+}
+
+stack_down() {
+  require_compose
+  info "stopping the composed stack; volumes are kept"
+  "${COMPOSE[@]}" down
+}
+
+# The backup is named by the digest of its own bytes. Repeating a backup of
+# unchanged data therefore produces the same object rather than a second one,
+# and a restore names the exact bytes it intends to read.
+stack_backup() {
+  require_compose
+  mkdir -p "$BACKUP_DIR"
+  local staging="$BACKUP_DIR/.staging-$$.dump"
+  info "taking a logical backup"
+  "${COMPOSE[@]}" exec -T postgres \
+    pg_dump --format=custom --no-owner --no-privileges \
+    -U "${POSTGRES_USER:-overgarden}" "${POSTGRES_DB:-overgarden}" >"$staging"
+
+  local digest
+  digest="$(openssl dgst -sha256 -r "$staging" | cut -d' ' -f1)"
+  local target="$BACKUP_DIR/$digest.dump"
+  if [[ -f "$target" ]]; then
+    rm -f "$staging"
+    info "unchanged since the last backup: $digest"
+  else
+    mv "$staging" "$target"
+    info "wrote $digest"
+  fi
+  printf '%s\n' "$digest"
+}
+
+# A restore always lands in a disposable database. `verify` is what turns it
+# from a database that exists into a backup that works.
+stack_restore() {
+  local digest="${1:-}"
+  [[ -n "$digest" ]] || fail "usage: overgarden-stack restore <backup-digest>"
+  [[ "$digest" =~ ^[a-f0-9]{64}$ ]] || fail "backup digest must be 64 hex characters"
+  local source="$BACKUP_DIR/$digest.dump"
+  [[ -f "$source" ]] || fail "no backup with that digest"
+
+  local actual
+  actual="$(openssl dgst -sha256 -r "$source" | cut -d' ' -f1)"
+  [[ "$actual" == "$digest" ]] || fail "backup digest does not verify; refusing to restore"
+
+  require_compose
+  local target="${DISPOSABLE_PREFIX}${digest:0:12}"
+  info "restoring into disposable database $target"
+  "${COMPOSE[@]}" exec -T postgres \
+    psql -U "${POSTGRES_USER:-overgarden}" -d postgres \
+    -c "drop database if exists \"$target\" with (force)" >/dev/null
+  "${COMPOSE[@]}" exec -T postgres \
+    psql -U "${POSTGRES_USER:-overgarden}" -d postgres \
+    -c "create database \"$target\"" >/dev/null
+  "${COMPOSE[@]}" exec -T postgres \
+    pg_restore --no-owner --no-privileges -U "${POSTGRES_USER:-overgarden}" \
+    -d "$target" <"$source"
+  printf '%s\n' "$target"
+}
+
+stack_teardown_restore() {
+  local target="${1:-}"
+  [[ "$target" == ${DISPOSABLE_PREFIX}* ]] \
+    || fail "refusing to drop a database this script did not create"
+  require_compose
+  "${COMPOSE[@]}" exec -T postgres \
+    psql -U "${POSTGRES_USER:-overgarden}" -d postgres \
+    -c "drop database if exists \"$target\" with (force)" >/dev/null
+  info "deleted $target"
+}
+
+# The whole point. A restored database that cannot serve the product is not a
+# recovered product, and a row count would not have told us the difference.
+stack_verify() {
+  local digest="${1:-}"
+  [[ -n "$digest" ]] || fail "usage: overgarden-stack verify <backup-digest>"
+  local target
+  target="$(stack_restore "$digest" | tail -n 1)"
+  local started=$SECONDS
+  local outcome=0
+
+  info "rebuilding the derived search index from Postgres"
+  info "serving the canonical product read-back against the restored target"
+  if ! (cd "$REPO_ROOT/apps/web" && \
+        OVERGARDEN_STACK_RESTORE_TARGET="$target" \
+        pnpm exec tsx scripts/prove-composed-stack-restore.ts --mode verify --restored-target "$target"); then
+    outcome=1
+  fi
+
+  local elapsed=$((SECONDS - started))
+  # Deleted on every terminal path, including this one.
+  stack_teardown_restore "$target"
+
+  if (( elapsed > STACK_RESTORE_DEADLINE_SECONDS )); then
+    info "degraded: restore took ${elapsed}s, over the ${STACK_RESTORE_DEADLINE_SECONDS}s budget"
+    return 1
+  fi
+  if (( outcome != 0 )); then
+    info "degraded: the restored target did not serve the product read-back"
+    return 1
+  fi
+  info "verified in ${elapsed}s"
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: infra/overgarden-stack <command> [args]
+
+  up                     start the composed stack and wait for every service
+  down                   stop the stack, keeping volumes
+  status                 print each service and its health
+  backup                 take a logical backup, named by its own digest
+  restore <digest>       restore a backup into a disposable database
+  verify <digest>        restore, serve the product read-back, then delete it
+
+A restore never touches the live database. `verify` is the only command that
+turns a backup into a proven one.
+USAGE
+}
+
+main() {
+  case "${1:-}" in
+    up) shift; stack_up "$@" ;;
+    down) shift; stack_down "$@" ;;
+    status) shift; stack_status "$@" ;;
+    backup) shift; stack_backup "$@" ;;
+    restore) shift; stack_restore "$@" ;;
+    verify) shift; stack_verify "$@" ;;
+    -h|--help|help) usage ;;
+    "") usage; exit 1 ;;
+    *) fail "unknown subcommand: $1" ;;
+  esac
+}
+
+main "$@"

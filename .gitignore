@@ -68,3 +68,9 @@ apps/web/.runtime/
 .superpowers/
 apps/web/test-results/
 apps/web/playwright-report/
+
+# OVE-358 composed stack: generated TLS material, its environment, and local
+# backups. A certificate key and a backup are both the thing they protect.
+infra/stack-tls/
+infra/stack.env
+infra/stack-backups/

@@ -518,3 +518,70 @@ describe("container-recover-minio contract", () => {
     ).toBeGreaterThan(0);
   });
 });
+
+
+describe("composed self-hosted stack contract", () => {
+  const stackScript = path.join(REPOSITORY_ROOT, "infra/overgarden-stack");
+  const stackCompose = path.join(
+    REPOSITORY_ROOT,
+    "infra/docker-compose.stack.yml",
+  );
+
+  async function readStack(file: string) {
+    return readFile(file, "utf8");
+  }
+
+  it("parses as a shell script and refuses an unknown subcommand", () => {
+    const syntax = spawnSync("bash", ["-n", stackScript], { encoding: "utf8" });
+    expect(syntax.status).toBe(0);
+
+    const unknown = spawnSync("bash", [stackScript, "obliterate"], {
+      encoding: "utf8",
+    });
+    expect(unknown.status).not.toBe(0);
+    expect(unknown.stderr).toMatch(/unknown subcommand/u);
+  });
+
+  it("prints its closed subcommand set instead of doing anything on no argument", () => {
+    const bare = spawnSync("bash", [stackScript], { encoding: "utf8" });
+    expect(bare.status).toBe(1);
+    for (const subcommand of ["up", "down", "status", "backup", "restore", "verify"]) {
+      expect(bare.stdout).toContain(subcommand);
+    }
+  });
+
+  it("refuses a restore digest that is not a digest", async () => {
+    // Anything reaching `psql` from here would be interpolated into a database
+    // name, so the shape is checked before a connection is opened.
+    for (const argument of ["not-a-digest", "'; drop database overgarden; --", "abc"]) {
+      const refused = spawnSync("bash", [stackScript, "restore", argument], {
+        encoding: "utf8",
+      });
+      expect(refused.status).not.toBe(0);
+      expect(refused.stderr).toMatch(/64 hex characters|usage/u);
+    }
+  });
+
+  it("keeps the worker off the pooler, because transaction pooling has no session", async () => {
+    // `LISTEN`/`NOTIFY` needs a session that outlives a transaction. A worker
+    // routed through the pooler would stop waking and its bounded fallback poll
+    // would quietly cover for it.
+    const compose = await readStack(stackCompose);
+    expect(compose).toContain("POOL_MODE: transaction");
+    expect(compose).toMatch(/DIRECT_URL:[\s\S]*@postgres:5432/u);
+    expect(compose).not.toMatch(/DIRECT_URL:[\s\S]*@pgbouncer/u);
+  });
+
+  it("serves Postgres over TLS and verifies it from the pooler", async () => {
+    const compose = await readStack(stackCompose);
+    expect(compose).toContain("ssl=on");
+    expect(compose).toContain("SERVER_TLS_SSLMODE: verify-full");
+  });
+
+  it("publishes exactly one service to the host", async () => {
+    // Postgres, the pooler, the search index, and the worker are reachable on
+    // the internal network alone. Only the proxy has a public port.
+    const compose = await readStack(stackCompose);
+    expect((compose.match(/^\s{4}ports:/gmu) ?? []).length).toBe(1);
+  });
+});

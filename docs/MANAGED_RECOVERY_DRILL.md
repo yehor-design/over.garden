@@ -4,6 +4,21 @@ Status: strict v2 executable contract
 Policy: ove230.managedRecovery.v2 / ove230.restore-readiness.v2
 Targets: RPO at most 1 hour; RTO at most 4 hours
 
+## Scope while a self-hosted stack exists (OVE-358)
+
+This drill remains the owner of managed-provider recovery for as long as the
+managed database is live, and nothing here changes.
+
+It is worth naming what it cannot do. This contract proves recovery by forking
+one managed cluster — `apps/web/src/server/restore-readiness/provider.ts`
+executes that provider's command line directly. Leaving managed hosting
+therefore removes not only the backups but the proof that recovery works.
+
+`docs/SELF_HOSTED_STACK.md` owns the other half: a backup and restore that need
+no provider fork at all. The two are complementary and neither supersedes the
+other. A cutover may only retire this drill once the composed stack's restore has
+been proven on the host that will actually hold the data.
+
 OVE-230 restores production PostgreSQL into one new DigitalOcean fork, runs the exact contained main application against it with fresh loopback-only MinIO and Meilisearch, proves the synthetic gardener/public/archive path, and deletes the exact fork. It never fails over, restores over, bootstraps, reconfigures, or writes production.
 
 ## Safety model
