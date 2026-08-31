@@ -14,6 +14,11 @@ import type {
   StableRegistryProductionPhase,
 } from "../src/lib/catalog/stable-registry-production-plan";
 import {
+  databaseHostClass,
+  environmentIdentityMatches,
+  PRODUCTION_ACTIVATION_TO_PICKER_BUDGET_MS,
+} from "../src/lib/catalog/stable-registry-production-plan";
+import {
   classifyStableRegistryProduction,
   toPlanInputs,
   verifyStableRegistryProduction,
@@ -21,6 +26,7 @@ import {
 
 import {
   isMutatingPhase,
+  PRODUCTION_ROLLOUT_SCHEMA_VERSION,
   runProductionPhase,
   type ProductionRolloutReceipt,
 } from "./prove-stable-registry-production";
@@ -38,11 +44,50 @@ export async function runLiveProductionPhase(input: {
   confirmEnvironment: string;
   approvedPlanDigest: string | null;
 }): Promise<ProductionRolloutReceipt> {
-  loadEnv({ path: ".env.local", quiet: true });
+  // A developer's local env file has no business in a production command. It is
+  // loaded only for a non-production run; for production the operator supplies
+  // the credentials, and the identity guard below refuses whatever disagrees
+  // with the declared environment.
+  if (input.environment !== "production") {
+    loadEnv({ path: ".env.local", quiet: true });
+  }
 
   // Reuse the app's own connection resolution so a managed production
   // instance's TLS/CA contract is honoured rather than re-derived here.
   const resolution = resolveDatabaseConnection(process.env);
+
+  // The declared environment must match the database actually reached, and this
+  // is checked before a connection is opened rather than after: a receipt whose
+  // `environmentClass` disagrees with the rows behind it is worse than no
+  // receipt, because it reads as proof. `.env.local` outranks an injected
+  // production value in env resolution, so a `--environment production` command
+  // run from a developer checkout otherwise reads localhost and says
+  // "production".
+  const hostClass = databaseHostClass(resolution.connectionString);
+  const identity = environmentIdentityMatches({
+    environment: input.environment,
+    hostClass,
+  });
+  if (!identity.matches) {
+    return {
+      schemaVersion: PRODUCTION_ROLLOUT_SCHEMA_VERSION,
+      phase: input.phase,
+      status: "blocked",
+      terminalClass: "blocked",
+      environmentClass:
+        input.environment === "production" ? "production" : "fixture",
+      databaseHostClass: hostClass,
+      approvalStatus: "pending",
+      approvalReason: "no_approval_recorded",
+      blockedReasons: [identity.reason ?? "environment_identity_mismatch"],
+      activationToPickerBudgetMs: PRODUCTION_ACTIVATION_TO_PICKER_BUDGET_MS,
+      controls: {
+        abortBeforeApplyEnabled: true,
+        productionStatusCommandEnabled: true,
+      },
+    };
+  }
+
   const pool = new Pool({
     connectionString: resolvePgConnectionString(process.env, resolution),
     ssl: resolveDatabaseSslConfig(process.env, resolution),
@@ -62,13 +107,18 @@ export async function runLiveProductionPhase(input: {
       backupFreshnessClass: readBackupClass(),
     });
 
-    const receipt = runProductionPhase({
-      phase: input.phase,
-      environment: input.environment,
-      confirmEnvironment: input.confirmEnvironment,
-      planInputs,
-      approvedPlanDigest: input.approvedPlanDigest,
-    });
+    // Every live receipt names the database it actually read, so a reader never
+    // has to trust the declared environment alone.
+    const receipt = {
+      ...runProductionPhase({
+        phase: input.phase,
+        environment: input.environment,
+        confirmEnvironment: input.confirmEnvironment,
+        planInputs,
+        approvedPlanDigest: input.approvedPlanDigest,
+      }),
+      databaseHostClass: hostClass,
+    };
 
     if (isMutatingPhase(input.phase) && receipt.status === "pass") {
       // Belt and braces. The pure admission check already refuses an

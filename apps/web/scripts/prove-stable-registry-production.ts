@@ -9,6 +9,7 @@ import {
   STABLE_REGISTRY_MUTATING_PHASES,
   STABLE_REGISTRY_PRODUCTION_PHASES,
   type ApprovalState,
+  type DatabaseHostClass,
   type StableRegistryProductionPhase,
   type StableRegistryProductionPlan,
   type StableRegistryProductionPlanInputs,
@@ -43,6 +44,14 @@ export interface ProductionRolloutReceipt {
     | "rolled back"
     | "completed";
   environmentClass: "fixture" | "production";
+  /**
+   * Which kind of database the receipt's numbers actually came from.
+   *
+   * `environmentClass` is what the operator declared; this is what was reached.
+   * A receipt without it cannot be told apart from one produced against the
+   * wrong database, so live phases always carry it.
+   */
+  databaseHostClass?: DatabaseHostClass;
   approvalStatus: ApprovalState["status"];
   approvalReason?: string;
   planDigest?: string;

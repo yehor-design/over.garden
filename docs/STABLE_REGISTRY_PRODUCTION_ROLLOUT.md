@@ -1,6 +1,7 @@
 # Stable Registry Production Rollout
 
 Status: harness implemented by OVE-259; **production apply not authorized**
+Production state: **unmeasured** — see "Measured production state" below
 Harness: `apps/web/scripts/prove-stable-registry-production.ts`
 Plan contract: `apps/web/src/lib/catalog/stable-registry-production-plan.ts`
 Read-back: `apps/web/src/server/stable-registry/production-rollout-repository.ts`
@@ -140,32 +141,91 @@ during verification ends in a bounded `rolled back` receipt with
 never a half-applied rollout. Measured 50.7 ms against a 5000 ms
 `production_activation_to_picker_latency` budget.
 
-## Measured production state (read-only, 2026-08-31)
+## Environment identity: the declared environment is not evidence
 
-A read-only `classify` and `plan` were run against production on the exact
-`origin/main` deployment SHA. **No plan could be produced**, and the four
-closed gates are the honest reason:
+`--environment production` is a claim. What matters is the database actually
+reached, and the two can disagree in a way that produces a receipt reading as
+proof of something that never happened.
 
-| Blocked reason | What it means |
-| -- | -- |
-| `source_inventory_empty` | production has no completed OVE-254 observed capture |
-| `source_inventory_digest_invalid` | consequently there is no manifest digest to plan against |
-| `insufficient_storage_headroom` | `STABLE_REGISTRY_STORAGE_HEADROOM_CLASS` is unset, so headroom is unmeasured |
-| `backup_not_fresh` | `STABLE_REGISTRY_BACKUP_FRESHNESS_CLASS` is unset, so backup freshness is unmeasured |
+`vercel env run -e production` loads the checkout's `.env.local` and that value
+**wins** over the downloaded production one. Measured on 2026-08-31 by comparing
+digests: the `DATABASE_URL` resolved under `vercel env run -e production` was
+byte-identical to the local `.env.local` value. A `--environment production`
+command run that way reads **localhost**.
 
-`deployment_sha_missing` did **not** fire: the deployment SHA resolved. None of
-migrations `0023`–`0028` exists in production, which `classify` reports rather
-than crashing on — discovering that is its job.
+The shadowing is per-variable, which is what makes it easy to miss: in the same
+run, `DATABASE_SSL_CA` and `EPPO_DATA_PORTAL_API_KEY` came through from
+production, because `.env.local` does not define them. Only the names it does
+define fall back to local, silently.
 
-Phase B therefore cannot begin on approval alone. Its preconditions have to be
-created first, in this order:
+The harness therefore does two things:
+
+1. It no longer loads `.env.local` at all when the declared environment is
+   `production`. A production command uses credentials the operator supplied.
+2. Before opening a connection it compares the declared environment against the
+   host class of the resolved connection string, and refuses a mismatch in
+   either direction:
+
+   | Declared | Reached | Result |
+   | -- | -- | -- |
+   | `production` | loopback | `declared_production_reached_loopback_database` |
+   | anything else | remote | `declared_non_production_reached_remote_database` |
+
+Every live receipt now carries `databaseHostClass` next to `environmentClass`:
+what was reached, beside what was claimed. An unparseable or absent connection
+string classifies as `remote`, because the safe reading of "I cannot tell" is
+not "this is the local one".
+
+### Running a real production read
+
+`vercel env run -e production` is **not** sufficient from a checkout that has an
+`.env.local` with a `DATABASE_URL`. Supply the production connection explicitly,
+or run from a checkout without that file. If the guard reports
+`declared_production_reached_loopback_database`, the command read your local
+database and its numbers mean nothing about production.
+
+## Measured production state
+
+**Withdrawn as unverifiable.** An earlier revision of this document recorded a
+"measured production state" dated 2026-08-31 listing `source_inventory_empty`,
+`source_inventory_digest_invalid`, `insufficient_storage_headroom`, and
+`backup_not_fresh`.
+
+It is withdrawn because it cannot be told apart from a local read, not because
+it has been shown to be one. The receipt of the day carried no evidence of which
+database produced it, and the documented command demonstrably reads localhost
+from a checkout with an `.env.local`. Whether that particular run reached
+production is now unknowable.
+
+One detail argues it may have reached production: it reported that none of
+`0023`–`0028` existed, whereas the local database on this machine has the
+`0023`–`0026` sentinels and lacks only `0027`/`0028`. That is also consistent
+with the local database having gained those tables afterwards, during the
+implementation of the upstream children. The point is precisely that the
+evidence cannot settle it — which is the reason for the guard, and the reason a
+finding that cannot name its own source is not a finding.
+
+The first trustworthy measurement is the first one whose receipt carries
+`databaseHostClass: "remote"`. Until then this document asserts no production
+state.
+
+### Order Phase B must follow, once production is actually measured
+
+Independent of what the measurement turns out to be, approval alone cannot start
+Phase B. Its preconditions have to exist first, in this order:
 
 1. run the OVE-254 observed capture against production so a completed capture
    and its manifest digest exist;
-2. measure and publish storage headroom and backup freshness as the two
-   declared classes;
+2. measure and publish storage headroom and backup freshness as the two declared
+   classes — a plan must never be approved against a number nobody measured;
 3. regenerate the plan, which will then produce a digest;
 4. obtain maintainer approval of that exact digest.
+
+A change of managed-Postgres provider invalidates every one of these: the plan
+digest binds environment identity, capacity class, and backup class, so a
+provider move returns authorization to pending and the capture has to be redone
+against the new instance. Landing before the provider is settled would be work
+thrown away, and worse, a `Done` that quietly stops being true.
 
 ## Open maintainer authorization gate
 
