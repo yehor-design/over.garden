@@ -935,6 +935,8 @@ export interface LineageQuestions {
 
 export interface MatchingWorkerHeartbeats {
   image_digest: string;
+  last_drain_error_at: Timestamp | null;
+  last_drain_error_class: string | null;
   queue_name: string;
   release_commit_sha: string;
   schema_compatibility_class: string;

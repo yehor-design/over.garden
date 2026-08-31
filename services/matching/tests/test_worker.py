@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from app import worker
@@ -391,12 +393,22 @@ def test_completion_updates_are_claim_scoped_and_preserve_requested_reruns():
 
 
 def test_run_uses_autocommit_for_long_lived_connection(monkeypatch):
+    statements = []
+
     class FakeConnection:
         def __enter__(self):
             return self
 
         def __exit__(self, exc_type, exc, traceback):
             return False
+
+        def execute(self, statement, parameters=None):
+            statements.append(statement)
+            return self
+
+        def notifies(self, *, timeout, stop_after=None):
+            # An idle worker blocks here instead of sleeping through a poll.
+            raise KeyboardInterrupt
 
     calls = []
     threads = []
@@ -433,8 +445,9 @@ def test_run_uses_autocommit_for_long_lived_connection(monkeypatch):
     monkeypatch.setattr(worker.psycopg, "connect", fake_connect)
     monkeypatch.setattr(worker.threading, "Thread", FakeThread)
     monkeypatch.setattr(worker, "_claim", lambda conn: None)
+    monkeypatch.setattr(worker, "_drain_public_projections", lambda conn, release: None)
     monkeypatch.setattr(
-        worker.time, "sleep", lambda seconds: (_ for _ in ()).throw(KeyboardInterrupt)
+        worker.time, "sleep", lambda seconds: (_ for _ in ()).throw(AssertionError)
     )
 
     with pytest.raises(KeyboardInterrupt):
@@ -444,6 +457,9 @@ def test_run_uses_autocommit_for_long_lived_connection(monkeypatch):
     assert calls[0]["connect_timeout"] == 5
     assert threads[0]["target"] is worker._heartbeat_loop
     assert threads[0]["daemon"] is True
+    # The listener is registered before the loop starts; without it the worker
+    # would wait on a channel nothing ever delivers to.
+    assert statements == [f"listen {worker.WORKER_NOTIFY_CHANNEL}"]
 
 
 def test_heartbeat_loop_renews_release_and_active_claim_lease(monkeypatch):
@@ -692,3 +708,147 @@ def test_completion_updates_include_dead_letter_contract():
     assert "status = 'processing'" in normalized_dead
     assert "locked_by = %s" in normalized_dead
     assert "dead" not in worker.CLAIM_JOB_SQL.split("status in")[1].split(")")[0]
+
+
+def test_wait_for_wake_returns_true_when_a_notification_arrives():
+    class Notified:
+        def notifies(self, *, timeout, stop_after=None):
+            assert stop_after == 1
+            yield object()
+
+    assert worker._wait_for_wake(Notified(), 30.0) is True
+
+
+def test_wait_for_wake_returns_false_when_the_bound_expires():
+    """A lost notification costs at most the bound, never a job.
+
+    The expiry is the fallback poll the contract requires, so the caller drains
+    and claims either way — which is why an empty wait is not a failure.
+    """
+
+    class Silent:
+        def notifies(self, *, timeout, stop_after=None):
+            assert timeout == 30.0
+            return iter(())
+
+    assert worker._wait_for_wake(Silent(), 30.0) is False
+
+
+def test_wait_for_wake_falls_back_to_the_same_bound_when_listening_fails(monkeypatch):
+    """A listener that cannot wait must not turn into a spin loop."""
+    slept = []
+
+    class Broken:
+        def notifies(self, *, timeout, stop_after=None):
+            raise OSError("connection lost")
+
+    monkeypatch.setattr(worker.time, "sleep", lambda seconds: slept.append(seconds))
+    assert worker._wait_for_wake(Broken(), 30.0) is False
+    assert slept == [30.0]
+
+
+def test_listen_refuses_a_channel_that_is_not_an_identifier(monkeypatch):
+    class Recorder:
+        def __init__(self):
+            self.statements = []
+
+        def execute(self, statement, parameters=None):
+            self.statements.append(statement)
+
+    monkeypatch.setattr(worker, "WORKER_NOTIFY_CHANNEL", "wake; drop table job_queue")
+    conn = Recorder()
+    with pytest.raises(RuntimeError, match="plain identifier"):
+        worker._listen_for_wake(conn)
+    assert conn.statements == []
+
+
+def test_drain_error_class_is_a_bounded_lowercase_token():
+    assert worker._drain_error_class(OSError("boom")) == "os_error"
+    assert worker._drain_error_class(ValueError("x")) == "value_error"
+    assert worker._drain_error_class(KeyboardInterrupt()) == "keyboard_interrupt"
+
+    class QuiteALongOperationalErrorNameThatKeepsGoingAndGoingForever(Exception):
+        pass
+
+    token = worker._drain_error_class(
+        QuiteALongOperationalErrorNameThatKeepsGoingAndGoingForever()
+    )
+    assert len(token) <= 80
+    assert re.fullmatch(r"[a-z0-9]+(?:_[a-z0-9]+)*", token)
+
+
+def test_drain_records_its_failure_class_instead_of_swallowing_it(monkeypatch):
+    """A failing drain used to be indistinguishable from an idle one."""
+    recorded = []
+    release = worker.RuntimeRelease(
+        queue_name="matching",
+        commit_sha="a" * 40,
+        image_digest=f"sha256:{'b' * 64}",
+        schema_compatibility_class="ove190.matching-schema.v1",
+        build_timestamp="2026-07-18T12:34:56Z",
+    )
+
+    def failing_drain(conn, batch):
+        raise OSError("meilisearch unreachable")
+
+    monkeypatch.setattr(worker, "drain_public_projection_intents", failing_drain)
+    monkeypatch.setattr(
+        worker,
+        "record_drain_outcome",
+        lambda conn, rel, error_class: recorded.append(error_class),
+    )
+
+    # The loop must survive the failure; a worker that died here would stop
+    # converging everything else too.
+    worker._drain_public_projections(object(), release)
+    assert recorded == ["os_error"]
+
+    # And a later success must clear it, so the row describes the latest
+    # attempt rather than the worst one ever seen.
+    recorded.clear()
+    monkeypatch.setattr(
+        worker, "drain_public_projection_intents", lambda conn, batch: None
+    )
+    worker._drain_public_projections(object(), release)
+    assert recorded == [None]
+
+
+def test_drain_receipt_never_carries_the_exception_message(monkeypatch):
+    """An exception message can carry a slug, a media URL, or an owner id."""
+    recorded = []
+
+    def leaking_drain(conn, batch):
+        raise RuntimeError(
+            "failed for /journal/tomato-2026 owned by 3f1c2a44-0000-4000-8000-00000000aaaa"
+        )
+
+    release = worker.RuntimeRelease(
+        queue_name="matching",
+        commit_sha="a" * 40,
+        image_digest=f"sha256:{'b' * 64}",
+        schema_compatibility_class="ove190.matching-schema.v1",
+        build_timestamp="2026-07-18T12:34:56Z",
+    )
+    monkeypatch.setattr(worker, "drain_public_projection_intents", leaking_drain)
+    monkeypatch.setattr(
+        worker,
+        "record_drain_outcome",
+        lambda conn, rel, error_class: recorded.append(error_class),
+    )
+
+    worker._drain_public_projections(object(), release)
+    assert recorded == ["runtime_error"]
+    assert "tomato" not in recorded[0]
+    assert "3f1c2a44" not in recorded[0]
+
+
+def test_the_fallback_bound_is_large_enough_to_be_worth_the_change():
+    """The point of the listener is that an idle worker stops asking.
+
+    A fallback as short as the old poll would keep every one of the ~173,000
+    idle queries a day, so the bound is asserted rather than left to drift.
+    """
+    assert worker.POLL_INTERVAL_SECONDS >= 15.0
+    # The heartbeat's reconnect backoff must stay short: stretching it would
+    # make readiness slower to recover, which is the opposite of the goal.
+    assert worker.HEARTBEAT_RECONNECT_BACKOFF_SECONDS <= 1.0

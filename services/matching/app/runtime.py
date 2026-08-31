@@ -220,7 +220,13 @@ def readiness_manifest(
                 "lagClass": postgres_state["lagClass"],
             },
             "meilisearch": {"status": meilisearch_status},
-            "worker": {"status": worker_status},
+            "worker": {
+                "status": worker_status,
+                # An operator reading a healthy worker used to have no way to
+                # tell whether its projection drain was converging or failing
+                # on every attempt. Now the row says so.
+                "drainClass": _drain_class(postgres_state),
+            },
             "queueRecovery": dict(queue_recovery),
         },
     }
@@ -305,6 +311,35 @@ def record_worker_heartbeat(
             resolved_release.schema_compatibility_class,
             list(SUPPORTED_JOB_KINDS),
         ),
+    )
+
+
+def record_drain_outcome(
+    conn: psycopg.Connection,
+    release: RuntimeRelease,
+    error_class: str | None,
+) -> None:
+    """Write down whether the projection drain succeeded.
+
+    A failing drain used to be indistinguishable from an idle one, which is the
+    worst possible ambiguity for the surface it converges: a drain that never
+    succeeds leaves erased and revoked content in the public index.
+
+    Only the class is written. The database refuses anything that is not a
+    bounded lowercase token, which keeps an exception message — and the slug,
+    media URL, or owner identifier it may carry — out of the column. A success
+    clears both fields, so the row always describes the latest attempt rather
+    than the worst one ever seen.
+    """
+    conn.execute(
+        """
+        update matching_worker_heartbeats
+           set last_drain_error_class = %s,
+               last_drain_error_at = case when %s is null then null else now() end,
+               updated_at = now()
+         where queue_name = %s
+        """,
+        (error_class, error_class, release.queue_name),
     )
 
 
@@ -419,6 +454,7 @@ def _read_postgres_state(release: RuntimeRelease) -> dict[str, object]:
                   image_digest,
                   schema_compatibility_class,
                   supported_handlers,
+                  last_drain_error_class,
                   seen_at >= now() - (%s || ' seconds')::interval as is_fresh
                 from matching_worker_heartbeats
                 where queue_name = %s
@@ -493,6 +529,20 @@ def _table_constraints(conn: psycopg.Connection, table_name: str) -> set[str]:
         (table_name,),
     ).fetchall()
     return {str(row["conname"]) for row in rows}
+
+
+def _drain_class(postgres_state: Mapping[str, object]) -> str:
+    """Report whether the projection drain is converging, in three closed values.
+
+    `unknown` is honest rather than optimistic: no heartbeat row means nobody
+    has told us, and reporting `converging` there would turn missing evidence
+    into a health claim.
+    """
+    heartbeat = postgres_state.get("heartbeat")
+    if not isinstance(heartbeat, Mapping):
+        return "unknown"
+    error_class = heartbeat.get("last_drain_error_class")
+    return "failing" if error_class else "converging"
 
 
 def _worker_status(
