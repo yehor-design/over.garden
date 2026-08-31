@@ -722,6 +722,39 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     executionOwned: true,
   },
   {
+    id: "catalog_registry_extension_packs.created_by_user_id",
+    table: "catalog_registry_extension_packs",
+    columnOrPath: "created_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale:
+      "Immutable extension-pack import actor is rekeyed transactionally to the non-human erasure tombstone.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "catalog_registry_extension_packs.approved_by_user_id",
+    table: "catalog_registry_extension_packs",
+    columnOrPath: "approved_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale:
+      "Immutable extension-pack approval actor is rekeyed transactionally to the non-human erasure tombstone.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "catalog_registry_extension_packs.activated_by_user_id",
+    table: "catalog_registry_extension_packs",
+    columnOrPath: "activated_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale:
+      "Immutable extension-pack activation actor is rekeyed transactionally to the non-human erasure tombstone.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
     id: "catalog_registry_decisions.decided_by_user_id",
     table: "catalog_registry_decisions",
     columnOrPath: "decided_by_user_id",

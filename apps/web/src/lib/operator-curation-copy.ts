@@ -565,6 +565,278 @@ export function getStableRegistryCopy(
   return REGISTRY_COPY_BY_LOCALE[locale];
 }
 
+const EXTENSION_PACK_UK_COPY = {
+  metadataTitle: "Розширення реєстру | OverGarden",
+  metadataDescription:
+    "Операторська смуга для офіційних пакетів сортів рослин і порід тварин.",
+  title: "Stable Registry — пакети розширень",
+  description:
+    "Схваліть чисті рядки одним рішенням і розберіть лише групи винятків. Заблокований правами рядок ніколи не стає продуктом.",
+  signInRequired: "Увійдіть, щоб відкрити пакети розширень.",
+  accessDenied: "Доступ до пакетів розширень заборонено.",
+  disabled:
+    "Пакети розширень ще не активовані в цьому середовищі. Активний каталог не змінено.",
+  returnToActiveCatalog: "Повернутися до активного каталогу",
+  cancelPackImport: "Скасувати імпорт пакета",
+  noPacks: "Немає імпортованих пакетів.",
+  packSummary: "Зведення пакета",
+  packSummaryDescription:
+    "Показано лише агрегати. Не показуються назви сортів, ідентифікатори джерельних рядків чи raw-поля.",
+  sourceFamily: "Джерельна родина",
+  packKindLabel: "Тип пакета",
+  totalRows: "Усього рядків",
+  cleanRows: "Чисті рядки",
+  productEligibleRows: "Продуктово придатні",
+  exceptionRows: "Рядки-винятки",
+  packState: "Стан пакета",
+  exceptionGroupsTitle: "Групи винятків",
+  noExceptionGroups: "Груп винятків немає — пакет можна схвалити.",
+  parentBound: "Зі звʼязаним батьківським видом",
+  decision: "Рішення для групи",
+  saveDecision: "Зберегти рішення",
+  parentCatalogItemId: "Ідентифікатор активного батьківського виду",
+  approvePreview: "Схвалити незмінний preview",
+  activatePack: "Активувати пакет локально",
+  activationConfirmation:
+    "Активація використовує наявну проєкцію продукту й наявний rebuild пошуку. Другого власника пошуку не створюється.",
+  userNamesTitle: "Назви, додані користувачами",
+  noUserNames: "Немає назв, доданих користувачами.",
+  packKinds: {
+    plant_variety: "Сорти рослин",
+    breed: "Породи тварин",
+  },
+  packStates: {
+    draft: "Чернетка",
+    parsing: "Розбір",
+    classified: "Класифіковано",
+    review_ready: "Готово до перевірки",
+    approved: "Preview схвалено",
+    active: "Локально активно",
+    retired: "Замінено",
+    failed: "Не завершено",
+    abandoned: "Скасовано",
+  },
+  rowClasses: {
+    clean: "Чисті",
+    needs_parent: "Потрібен батьківський вид",
+    collision: "Колізія найменування",
+    duplicate: "Дублікат джерельного рядка",
+    rights_blocked: "Заблоковано правами",
+    review_needed: "Потрібна перевірка",
+    rejected: "Відхилено",
+    product_eligible: "Продуктово придатні",
+  },
+  decisionLabels: {
+    bind_parent: "Звʼязати з батьківським видом",
+    same_item: "Це той самий обʼєкт",
+    different_item: "Це різні обʼєкти",
+    add_alias: "Додати псевдонім",
+    defer: "Відкласти",
+    reject: "Відхилити",
+  },
+  userNameStates: {
+    provisional: "Попередня",
+    grouped: "Згрупована",
+    alias_approved: "Схвалена як псевдонім",
+    new_item_approved: "Схвалена як новий обʼєкт",
+    deferred: "Відкладена",
+    rejected: "Відхилена",
+  },
+  outcomeLabels: {
+    stale: "Стан змінився. Оновіть сторінку перед повторною дією.",
+    blocked: "Дію заблоковано поточним безпечним станом.",
+    forbidden: "Доступ заборонено.",
+    not_found: "Пакет або групу не знайдено.",
+  },
+} as const;
+
+export type StableRegistryExtensionPackCopy = WidenCopy<
+  typeof EXTENSION_PACK_UK_COPY
+>;
+
+const EXTENSION_PACK_BG_COPY = {
+  metadataTitle: "Разширения на регистъра | OverGarden",
+  metadataDescription:
+    "Операторска лента за официални пакети със сортове растения и породи животни.",
+  title: "Stable Registry — пакети разширения",
+  description:
+    "Одобрете чистите редове с едно решение и разгледайте само групите изключения. Ред, блокиран по права, никога не става продукт.",
+  signInRequired: "Влезте, за да отворите пакетите разширения.",
+  accessDenied: "Достъпът до пакетите разширения е отказан.",
+  disabled:
+    "Пакетите разширения още не са активирани в тази среда. Активният каталог е непроменен.",
+  returnToActiveCatalog: "Към активния каталог",
+  cancelPackImport: "Отказ на импорта на пакета",
+  noPacks: "Няма импортирани пакети.",
+  packSummary: "Обобщение на пакета",
+  packSummaryDescription:
+    "Показват се само агрегати. Не се показват имена на сортове, идентификатори на изходни редове или raw полета.",
+  sourceFamily: "Изходно семейство",
+  packKindLabel: "Вид пакет",
+  totalRows: "Общо редове",
+  cleanRows: "Чисти редове",
+  productEligibleRows: "Подходящи за продукт",
+  exceptionRows: "Редове изключения",
+  packState: "Състояние на пакета",
+  exceptionGroupsTitle: "Групи изключения",
+  noExceptionGroups: "Няма групи изключения — пакетът може да се одобри.",
+  parentBound: "Със свързан родителски вид",
+  decision: "Решение за групата",
+  saveDecision: "Запазване на решението",
+  parentCatalogItemId: "Идентификатор на активния родителски вид",
+  approvePreview: "Одобряване на непроменимия preview",
+  activatePack: "Активиране на пакета локално",
+  activationConfirmation:
+    "Активирането използва съществуващата продуктова проекция и съществуващия rebuild на търсенето. Не се създава втори собственик на търсенето.",
+  userNamesTitle: "Имена, добавени от потребители",
+  noUserNames: "Няма имена, добавени от потребители.",
+  packKinds: {
+    plant_variety: "Сортове растения",
+    breed: "Породи животни",
+  },
+  packStates: {
+    draft: "Чернова",
+    parsing: "Анализ",
+    classified: "Класифициран",
+    review_ready: "Готов за преглед",
+    approved: "Preview одобрен",
+    active: "Локално активен",
+    retired: "Заменен",
+    failed: "Незавършен",
+    abandoned: "Отказан",
+  },
+  rowClasses: {
+    clean: "Чисти",
+    needs_parent: "Нужен родителски вид",
+    collision: "Колизия на наименование",
+    duplicate: "Дубликат на изходен ред",
+    rights_blocked: "Блокирано по права",
+    review_needed: "Нужен преглед",
+    rejected: "Отхвърлени",
+    product_eligible: "Подходящи за продукт",
+  },
+  decisionLabels: {
+    bind_parent: "Свързване с родителски вид",
+    same_item: "Това е същият обект",
+    different_item: "Това са различни обекти",
+    add_alias: "Добавяне на псевдоним",
+    defer: "Отлагане",
+    reject: "Отхвърляне",
+  },
+  userNameStates: {
+    provisional: "Предварително",
+    grouped: "Групирано",
+    alias_approved: "Одобрено като псевдоним",
+    new_item_approved: "Одобрено като нов обект",
+    deferred: "Отложено",
+    rejected: "Отхвърлено",
+  },
+  outcomeLabels: {
+    stale:
+      "Състоянието се промени. Опреснете страницата преди повторно действие.",
+    blocked: "Действието е блокирано от текущото безопасно състояние.",
+    forbidden: "Достъпът е отказан.",
+    not_found: "Пакетът или групата не са намерени.",
+  },
+} as const satisfies StableRegistryExtensionPackCopy;
+
+const EXTENSION_PACK_RU_COPY = {
+  metadataTitle: "Расширения реестра | OverGarden",
+  metadataDescription:
+    "Операторская полоса для официальных пакетов сортов растений и пород животных.",
+  title: "Stable Registry — пакеты расширений",
+  description:
+    "Одобрите чистые строки одним решением и разберите только группы исключений. Строка, заблокированная правами, никогда не становится продуктом.",
+  signInRequired: "Войдите, чтобы открыть пакеты расширений.",
+  accessDenied: "Доступ к пакетам расширений запрещён.",
+  disabled:
+    "Пакеты расширений ещё не активированы в этой среде. Активный каталог не изменён.",
+  returnToActiveCatalog: "Вернуться к активному каталогу",
+  cancelPackImport: "Отменить импорт пакета",
+  noPacks: "Нет импортированных пакетов.",
+  packSummary: "Сводка пакета",
+  packSummaryDescription:
+    "Показаны только агрегаты. Не показываются названия сортов, идентификаторы исходных строк и raw-поля.",
+  sourceFamily: "Исходное семейство",
+  packKindLabel: "Тип пакета",
+  totalRows: "Всего строк",
+  cleanRows: "Чистые строки",
+  productEligibleRows: "Пригодные для продукта",
+  exceptionRows: "Строки-исключения",
+  packState: "Состояние пакета",
+  exceptionGroupsTitle: "Группы исключений",
+  noExceptionGroups: "Групп исключений нет — пакет можно одобрить.",
+  parentBound: "Со связанным родительским видом",
+  decision: "Решение для группы",
+  saveDecision: "Сохранить решение",
+  parentCatalogItemId: "Идентификатор активного родительского вида",
+  approvePreview: "Одобрить неизменяемый preview",
+  activatePack: "Активировать пакет локально",
+  activationConfirmation:
+    "Активация использует существующую продуктовую проекцию и существующий rebuild поиска. Второй владелец поиска не создаётся.",
+  userNamesTitle: "Названия, добавленные пользователями",
+  noUserNames: "Нет названий, добавленных пользователями.",
+  packKinds: {
+    plant_variety: "Сорта растений",
+    breed: "Породы животных",
+  },
+  packStates: {
+    draft: "Черновик",
+    parsing: "Разбор",
+    classified: "Классифицирован",
+    review_ready: "Готов к проверке",
+    approved: "Preview одобрен",
+    active: "Локально активен",
+    retired: "Заменён",
+    failed: "Не завершён",
+    abandoned: "Отменён",
+  },
+  rowClasses: {
+    clean: "Чистые",
+    needs_parent: "Нужен родительский вид",
+    collision: "Коллизия наименования",
+    duplicate: "Дубликат исходной строки",
+    rights_blocked: "Заблокировано правами",
+    review_needed: "Нужна проверка",
+    rejected: "Отклонённые",
+    product_eligible: "Пригодные для продукта",
+  },
+  decisionLabels: {
+    bind_parent: "Связать с родительским видом",
+    same_item: "Это тот же объект",
+    different_item: "Это разные объекты",
+    add_alias: "Добавить псевдоним",
+    defer: "Отложить",
+    reject: "Отклонить",
+  },
+  userNameStates: {
+    provisional: "Предварительное",
+    grouped: "Сгруппировано",
+    alias_approved: "Одобрено как псевдоним",
+    new_item_approved: "Одобрено как новый объект",
+    deferred: "Отложено",
+    rejected: "Отклонено",
+  },
+  outcomeLabels: {
+    stale: "Состояние изменилось. Обновите страницу перед повторным действием.",
+    blocked: "Действие заблокировано текущим безопасным состоянием.",
+    forbidden: "Доступ запрещён.",
+    not_found: "Пакет или группа не найдены.",
+  },
+} as const satisfies StableRegistryExtensionPackCopy;
+
+const EXTENSION_PACK_COPY_BY_LOCALE = {
+  uk: EXTENSION_PACK_UK_COPY,
+  bg: EXTENSION_PACK_BG_COPY,
+  ru: EXTENSION_PACK_RU_COPY,
+} satisfies Record<InterfaceLocale, StableRegistryExtensionPackCopy>;
+
+export function getStableRegistryExtensionPackCopy(
+  locale: InterfaceLocale,
+): StableRegistryExtensionPackCopy {
+  return EXTENSION_PACK_COPY_BY_LOCALE[locale];
+}
+
 const BG_COPY = {
   page: {
     metadataTitle: "Куриране на каталога | OverGarden",

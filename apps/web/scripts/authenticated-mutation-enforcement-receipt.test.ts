@@ -96,8 +96,8 @@ describe("authenticated mutation enforcement receipt", () => {
       },
       enforcement: {
         receiptDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
-        ove291EntrypointCount: 103,
-        ove291ConsumerEdgeCount: 271,
+        ove291EntrypointCount: 111,
+        ove291ConsumerEdgeCount: 283,
       },
       explicitGoogleLink: {
         ownershipDigest:

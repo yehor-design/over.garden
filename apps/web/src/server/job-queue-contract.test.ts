@@ -35,6 +35,15 @@ const consumedJobContracts = new Map<
     },
   ],
   [
+    "matching:stable_registry_extension_pack_build",
+    {
+      consumer: "services/matching/app/worker.py",
+      consumerToken: "STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND",
+      testedBy:
+        "services/matching/tests/test_stable_registry_extension_pack.py",
+    },
+  ],
+  [
     "media_lifecycle:media_staging_finalize",
     {
       consumer: "apps/web/src/server/media/media-lifecycle-consumer.ts",
@@ -213,6 +222,11 @@ describe("job queue producer/consumer contract", () => {
         source: "server/search/public-journal-parity.ts",
         queueName: "matching",
         kind: "journal_entry_unindex",
+      },
+      {
+        source: "server/stable-registry/extension-pack-repository.ts",
+        queueName: "matching",
+        kind: "stable_registry_extension_pack_build",
       },
       {
         source: "server/stable-registry/release-repository.ts",

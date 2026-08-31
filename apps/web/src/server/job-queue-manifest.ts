@@ -73,6 +73,21 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
   },
   {
     queueName: "matching",
+    kind: "stable_registry_extension_pack_build",
+    consumer: "matching-python-worker",
+    maxAttempts: 3,
+    privacyClass: "catalog_ids_only",
+    coversStructuredJournalCover: false,
+    payloadContract: {
+      requiredKeys: ["kind", "packId"],
+      optionalKeys: [],
+      uuidKeys: ["packId"],
+    },
+    notes:
+      "Extension pack review receives only one opaque pack UUID; the worker reads aggregate row classes and advances a fully resolved pack to review_ready off-request.",
+  },
+  {
+    queueName: "matching",
     kind: "catalog_alias_suggestions_refresh",
     consumer: "matching-python-worker",
     maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,
