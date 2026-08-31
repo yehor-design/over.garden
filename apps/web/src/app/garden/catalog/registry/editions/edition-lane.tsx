@@ -31,12 +31,14 @@ const RELATION_DECISIONS = new Set([
 export function StableRegistryEditionLane({
   locale,
   model,
+  prepareAction,
   decideAction,
   approveAction,
   pointerAction,
 }: {
   locale: InterfaceLocale;
   model: EditionCenterReadModel;
+  prepareAction: EditionAction;
   decideAction: EditionAction;
   approveAction: EditionAction;
   pointerAction: EditionAction;
@@ -88,6 +90,44 @@ export function StableRegistryEditionLane({
           </dl>
         ) : (
           <p className="mt-4 text-sm text-muted-foreground">{copy.noEdition}</p>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <h2 className="text-xl font-semibold text-foreground">
+          {copy.prepareEdition}
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {copy.prepareEditionDescription}
+        </p>
+        {model.availableCaptures.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            {copy.noCaptureAvailable}
+          </p>
+        ) : (
+          <DocumentMutationActionForm action={prepareAction}>
+            <div className="mt-3 flex flex-col gap-2">
+              <label
+                className="text-sm font-medium text-foreground"
+                htmlFor="edition-capture"
+              >
+                {copy.prepareEditionCapture}
+              </label>
+              <select
+                id="edition-capture"
+                name="captureId"
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                disabled={!model.writesEnabled}
+              >
+                {model.availableCaptures.map((capture) => (
+                  <option key={capture.captureId} value={capture.captureId}>
+                    {capture.observedEndedAt}
+                  </option>
+                ))}
+              </select>
+              <SubmitButton label={copy.prepareEditionSubmit} />
+            </div>
+          </DocumentMutationActionForm>
         )}
       </div>
 

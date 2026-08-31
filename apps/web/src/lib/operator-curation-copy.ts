@@ -851,6 +851,12 @@ const EDITION_UK_COPY = {
   keepCurrentRelease: "Залишити поточний випуск",
   cancelEdition: "Скасувати видання",
   noEdition: "Немає підготовлених видань.",
+  prepareEdition: "Підготувати видання",
+  prepareEditionDescription:
+    "Порівняти обраний знімок джерела з активним випуском. Порівняння нічого не змінює: воно лише показує, що змінилося.",
+  prepareEditionCapture: "Знімок джерела",
+  prepareEditionSubmit: "Порівняти з активним випуском",
+  noCaptureAvailable: "Немає завершених знімків джерела для порівняння.",
   editionSummary: "Зведення видання",
   editionSummaryDescription:
     "Показано лише агрегати. Не показуються назви, ідентифікатори обʼєктів чи вміст журналів.",
@@ -946,6 +952,12 @@ const EDITION_BG_COPY = {
   keepCurrentRelease: "Запази текущото издание",
   cancelEdition: "Отказ на изданието",
   noEdition: "Няма подготвени издания.",
+  prepareEdition: "Подготви издание",
+  prepareEditionDescription:
+    "Сравнете избрания снимков на източника с активния релийз. Сравнението не променя нищо: то само показва какво се е променило.",
+  prepareEditionCapture: "Снимка на източника",
+  prepareEditionSubmit: "Сравни с активния релийз",
+  noCaptureAvailable: "Няма завършени снимки на източника за сравнение.",
   editionSummary: "Обобщение на изданието",
   editionSummaryDescription:
     "Показват се само агрегати. Не се показват имена, идентификатори на обекти или съдържание на дневници.",
@@ -1040,6 +1052,12 @@ const EDITION_RU_COPY = {
   keepCurrentRelease: "Оставить текущий выпуск",
   cancelEdition: "Отменить издание",
   noEdition: "Подготовленных изданий нет.",
+  prepareEdition: "Подготовить издание",
+  prepareEditionDescription:
+    "Сравнить выбранный снимок источника с активным релизом. Сравнение ничего не меняет: оно только показывает, что изменилось.",
+  prepareEditionCapture: "Снимок источника",
+  prepareEditionSubmit: "Сравнить с активным релизом",
+  noCaptureAvailable: "Нет завершённых снимков источника для сравнения.",
   editionSummary: "Сводка издания",
   editionSummaryDescription:
     "Показаны только агрегаты. Не показываются названия, идентификаторы объектов и содержимое журналов.",

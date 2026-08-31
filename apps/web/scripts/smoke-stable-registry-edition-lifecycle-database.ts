@@ -1,10 +1,12 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import path from "node:path";
 import { performance } from "node:perf_hooks";
 
 import { config as loadEnv } from "dotenv";
 import { Pool, type PoolClient } from "pg";
 
 import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
+import { loadVersionedApplicationSql } from "./application-sql";
 import {
   assertNoForbiddenEditionMarkers,
   EDITION_INTERACTION_BUDGET_MS,
@@ -13,7 +15,8 @@ import {
 } from "./smoke-stable-registry-edition-lifecycle";
 
 /**
- * Executes migration 0028 inside one transaction that always rolls back.
+ * Applies the Stable Registry migrations and exercises them inside one
+ * transaction that always rolls back.
  *
  * It proves the whole lifecycle with real rows: activate a later edition, roll
  * the pointer back to the prior release, and move forward again — while the
@@ -33,7 +36,19 @@ export async function runEditionLifecycleDatabaseProof(): Promise<EditionSmokeRe
 
   try {
     await client.query("begin");
+    // The proof owns the schema it asserts against. Applying the Stable
+    // Registry migrations here — inside the transaction that always rolls back
+    // — means this runs against current `main`'s schema rather than whatever a
+    // developer's local database happens to have replayed, and it mutates
+    // nothing permanently.
+    await applyStableRegistryMigrations(client);
     const ids = await seedTwoReleasesAndOneObject(client);
+
+    // Preparing and building an edition is the step that creates the release
+    // the pointer later moves onto. It runs before the pointer proof because a
+    // lifecycle that cannot produce a reviewable edition has nothing to
+    // activate.
+    await proveOneEditionIsPreparedAndBuilt(client, ids);
 
     const startedAt = performance.now();
     const pointerSequence: string[] = [];
@@ -239,6 +254,228 @@ async function movePointer(
   );
 }
 
+/**
+ * Replays exactly the migrations this proof asserts against.
+ *
+ * `0023` owns the source capture, `0024` the release model and its transition
+ * guard, and `0028` the edition diffs, relations, and activation sequence.
+ * `0028` reads nothing from the public, product, or extension-pack projections,
+ * so those are deliberately not replayed here — this proof owns the edition
+ * lifecycle and should fail only for edition reasons.
+ *
+ * All three are additive and idempotent, so replaying them over an
+ * already-migrated database is a no-op, and the surrounding rollback discards
+ * everything either way.
+ */
+const EDITION_LIFECYCLE_MIGRATIONS = /^(0023|0024|0028)_/u;
+
+/**
+ * Every table those three migrations own, in dependency order.
+ *
+ * They are recreated rather than replayed over, because each migration creates
+ * its tables `if not exists`: replaying alone would silently keep an older
+ * shape a developer's database happens to hold and prove nothing about current
+ * `main`. All of them are capture, release, and edition evidence with no
+ * external referent, and the emptiness check below is what makes recreating
+ * them safe.
+ */
+const EDITION_LIFECYCLE_TABLES = [
+  "catalog_registry_activation_sequence",
+  "catalog_registry_item_relations",
+  "catalog_registry_edition_diffs",
+  "catalog_registry_search_outbox",
+  "catalog_registry_activations",
+  "catalog_registry_active_pointers",
+  "catalog_registry_decisions",
+  "catalog_registry_exception_groups",
+  "catalog_registry_release_members",
+  "catalog_registry_releases",
+  "catalog_item_revisions",
+  "catalog_source_capture_units",
+  "catalog_source_capture_runs",
+] as const;
+
+async function applyStableRegistryMigrations(client: PoolClient) {
+  // Refuse to recreate anything that holds rows. A populated table here means
+  // this database is not the disposable local one this proof is written for,
+  // and the proof stops rather than discarding evidence — even inside a
+  // transaction that would roll it back.
+  for (const table of EDITION_LIFECYCLE_TABLES) {
+    const existing = await client.query<{ count: string }>(
+      `select count(*)::text as count from information_schema.tables
+        where table_schema = 'public' and table_name = $1`,
+      [table],
+    );
+    if (existing.rows[0]?.count === "0") continue;
+    const rows = await client.query<{ count: string }>(
+      `select count(*)::text as count from "${table}"`,
+    );
+    if (rows.rows[0]?.count !== "0") {
+      throw new Error(`edition_lifecycle_table_not_disposable:${table}`);
+    }
+  }
+  await client.query(
+    `drop table if exists ${EDITION_LIFECYCLE_TABLES.map(
+      (table) => `"${table}"`,
+    ).join(", ")} cascade`,
+  );
+
+  const migrations = await loadVersionedApplicationSql(
+    path.join(process.cwd(), "sql"),
+  );
+  const applied = migrations.filter((migration) =>
+    EDITION_LIFECYCLE_MIGRATIONS.test(migration.name),
+  );
+  if (applied.length !== 3) {
+    throw new Error("edition_lifecycle_migrations_missing");
+  }
+  for (const migration of applied) {
+    await client.query(migration.sql);
+  }
+}
+
+/**
+ * Proves the prepare-and-build path against the real schema and its guards.
+ *
+ * The worker's statements are exercised here rather than asserted in the
+ * abstract, because both halves of this transition are enforced by objects a
+ * fake connection cannot see: the column set of `catalog_registry_releases`,
+ * and the OVE-255 trigger that holds a release's identity immutable while
+ * admitting `draft -> building -> review_ready`. A statement that writes a
+ * column the schema does not define, or that rewrites `build_digest` on
+ * completion, fails here and only here.
+ */
+async function proveOneEditionIsPreparedAndBuilt(
+  client: PoolClient,
+  ids: SeedIds,
+) {
+  const releaseId = randomUUID();
+  const identityDigest = sha256(`prepare|${releaseId}`);
+
+  // prepareEdition: one draft edition succeeding the active release.
+  await client.query(
+    `insert into catalog_registry_releases (
+       id, release_kind, state, capture_id, source_snapshot_id,
+       predecessor_release_id, policy_version, build_digest, created_by_user_id
+     ) values ($1,'edition','draft',$2,$3,$4,'ove258.edition.v1',$5,$6)`,
+    [
+      releaseId,
+      ids.capture,
+      ids.snapshot,
+      ids.foundation,
+      identityDigest,
+      ids.owner,
+    ],
+  );
+
+  // Worker, first transaction: draft -> building.
+  const started = await client.query(
+    `update catalog_registry_releases
+        set state = 'building', build_started_at = now(),
+            version = version + 1, updated_at = now()
+      where id = $1 and state = 'draft'
+      returning id`,
+    [releaseId],
+  );
+  if (started.rowCount !== 1) {
+    throw new Error("edition_build_could_not_start");
+  }
+
+  // Worker: one grouped, aggregate-only row per derived class.
+  for (const [diffClass, memberCount] of [
+    ["unchanged", 2],
+    ["addition", 1],
+    ["correction", 1],
+    ["supersession", 1],
+    ["rights_change", 1],
+  ] as const) {
+    await client.query(
+      `insert into catalog_registry_edition_diffs (
+         release_id, prior_release_id, diff_class, group_key, member_count,
+         affected_object_count, affected_object_digest, state, safe_summary
+       ) values ($1,$2,$3,$4,$5,$6,$7,'open',
+         jsonb_build_object('memberCount', $5::int, 'affectedObjectCount', $6::int))
+       on conflict (release_id, group_key) do nothing`,
+      [
+        releaseId,
+        ids.foundation,
+        diffClass,
+        sha256(`group|${releaseId}|${diffClass}`),
+        memberCount,
+        0,
+        sha256(`affected|${releaseId}|${diffClass}`),
+      ],
+    );
+  }
+
+  // Worker, completion: building -> review_ready carrying the aggregate
+  // summary. `build_digest` is release identity and is never rewritten here.
+  const completed = await client.query(
+    `update catalog_registry_releases
+        set state = 'review_ready', safe_summary = $1::jsonb,
+            review_ready_at = now(), version = version + 1, updated_at = now()
+      where id = $2 and state = 'building'
+      returning id`,
+    [
+      JSON.stringify({
+        policyVersion: "ove258.edition.v1",
+        diffDigest: sha256(`diff|${releaseId}`),
+        counts: {
+          unchanged: 2,
+          addition: 1,
+          correction: 1,
+          supersession: 1,
+          rights_change: 1,
+        },
+      }),
+      releaseId,
+    ],
+  );
+  if (completed.rowCount !== 1) {
+    throw new Error("edition_build_could_not_complete");
+  }
+
+  // The identity the draft was opened with survived the build.
+  const identity = await client.query<{
+    build_digest: string;
+    state: string;
+    review_ready_at: Date | null;
+  }>(
+    `select build_digest, state, review_ready_at
+       from catalog_registry_releases where id = $1`,
+    [releaseId],
+  );
+  if (identity.rows[0]?.build_digest !== identityDigest) {
+    throw new Error("edition_build_rewrote_release_identity");
+  }
+  if (identity.rows[0]?.state !== "review_ready") {
+    throw new Error("edition_build_did_not_reach_review_ready");
+  }
+  if (!identity.rows[0]?.review_ready_at) {
+    throw new Error("edition_build_left_no_review_receipt");
+  }
+
+  // Five groups, and the owner's review has real work in it.
+  const groups = await client.query<{ count: string }>(
+    `select count(*)::text as count
+       from catalog_registry_edition_diffs where release_id = $1`,
+    [releaseId],
+  );
+  if (Number(groups.rows[0]?.count ?? 0) !== 5) {
+    throw new Error("edition_build_did_not_group_every_class");
+  }
+
+  // A built edition must not touch the active pointer: preparing is a
+  // comparison, and only a receipted activation moves what gardeners read.
+  const pointer = await client.query<{ active_release_id: string | null }>(
+    `select active_release_id from catalog_registry_active_pointers
+      where release_family = 'foundation'`,
+  );
+  if (pointer.rows[0]?.active_release_id !== ids.foundation) {
+    throw new Error("edition_build_moved_the_active_pointer");
+  }
+}
+
 async function seedTwoReleasesAndOneObject(
   client: PoolClient,
 ): Promise<SeedIds> {
@@ -356,6 +593,17 @@ async function seedTwoReleasesAndOneObject(
   );
 
   return ids;
+}
+
+/**
+ * A real digest, because these values are unique keys.
+ *
+ * `sha256Like` hex-encodes its seed, so only the seed's first 32 characters
+ * survive the 64-character slice. Seeds that share a UUID prefix collapse to
+ * one value, which silently turns five diff groups into one.
+ */
+function sha256(seed: string) {
+  return createHash("sha256").update(seed).digest("hex");
 }
 
 function sha256Like(seed: string) {

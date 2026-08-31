@@ -18,6 +18,7 @@ import {
   approveEditionPreview,
   decideEditionDiffGroup,
   moveEditionPointer,
+  prepareEdition,
   type EditionOutcome,
 } from "@/server/stable-registry/edition-repository";
 
@@ -26,6 +27,26 @@ const EDITIONS_PATH = "/garden/catalog/registry/editions";
 export type EditionActionState =
   | { outcome: EditionOutcome }
   | DocumentMutationActionStateV1;
+
+export async function prepareEditionAction(
+  formData: FormData,
+): Promise<EditionActionState> {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const owner = await requireCatalogOwner(admission.scope);
+  if (!owner.ok) return owner.result;
+
+  const result = await prepareEdition(owner.scope, {
+    captureId: formString(formData, "captureId"),
+    writesEnabled: isStableRegistryEditionsEnabled(),
+  });
+  revalidatePath(EDITIONS_PATH);
+  return { outcome: result.outcome };
+}
 
 export async function decideEditionDiffGroupAction(
   formData: FormData,

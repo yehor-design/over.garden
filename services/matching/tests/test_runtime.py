@@ -128,6 +128,7 @@ def test_capabilities_are_exact_sorted_and_redacted() -> None:
                 "catalog_typeahead_reindex",
                 "journal_entry_index",
                 "journal_entry_unindex",
+                "stable_registry_edition_build",
                 "stable_registry_extension_pack_build",
                 "stable_registry_foundation_build",
             ],

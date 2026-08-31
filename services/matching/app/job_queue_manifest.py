@@ -15,6 +15,7 @@ from app.search import (
     JOURNAL_ENTRY_INDEX_KIND,
     JOURNAL_ENTRY_UNINDEX_KIND,
 )
+from app.stable_registry_edition import STABLE_REGISTRY_EDITION_BUILD_KIND
 from app.stable_registry_extension_pack import (
     STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND,
 )
@@ -41,6 +42,11 @@ JOB_QUEUE_PAYLOAD_CONTRACTS: Final = {
         "requiredKeys": ["kind", "packId"],
         "optionalKeys": [],
         "uuidKeys": ["packId"],
+    },
+    "matching:stable_registry_edition_build": {
+        "requiredKeys": ["kind", "releaseId"],
+        "optionalKeys": [],
+        "uuidKeys": ["releaseId"],
     },
     "matching:catalog_alias_suggestions_refresh": {
         "requiredKeys": ["kind", "catalogItemId"],
@@ -106,6 +112,14 @@ MATCHING_MANIFEST_ENTRIES: Final = (
     {
         "queueName": "matching",
         "kind": STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND,
+        "consumer": "matching-python-worker",
+        "maxAttempts": 3,
+        "privacyClass": "catalog_ids_only",
+        "coversStructuredJournalCover": False,
+    },
+    {
+        "queueName": "matching",
+        "kind": STABLE_REGISTRY_EDITION_BUILD_KIND,
         "consumer": "matching-python-worker",
         "maxAttempts": 3,
         "privacyClass": "catalog_ids_only",

@@ -28,6 +28,9 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 export const STABLE_REGISTRY_EDITION_POLICY_VERSION =
   "ove258.edition.v1" as const;
 
+export const STABLE_REGISTRY_EDITION_BUILD_KIND =
+  "stable_registry_edition_build" as const;
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
@@ -73,6 +76,7 @@ export async function readEditionCenter(
       activeReleaseId,
       diffGroups: edition ? await readDiffGroups(transaction, edition.id) : [],
       activationHistory: await readActivationHistory(transaction),
+      availableCaptures: await readAvailableCaptures(transaction),
       writesEnabled: input.writesEnabled,
     };
   });
@@ -179,6 +183,155 @@ export async function decideEditionDiffGroup(
       edition: await readEdition(transaction, releaseId),
     };
   });
+}
+
+/**
+ * The completed captures an edition may be prepared from. Ids and observed
+ * times only — a capture's rows are source evidence and stay out of here.
+ */
+async function readAvailableCaptures(executor: QueryExecutor) {
+  const result = await sql<{
+    captureId: string;
+    observedEndedAt: Date | string | null;
+  }>`
+    select id as "captureId", observed_ended_at as "observedEndedAt"
+    from catalog_source_capture_runs
+    where state in ('completed', 'superseded_by_new_capture')
+    order by observed_ended_at desc nulls last
+    limit 20
+  `.execute(executor);
+  return result.rows.map((row) => ({
+    captureId: row.captureId,
+    observedEndedAt: new Date(row.observedEndedAt ?? 0).toISOString(),
+  }));
+}
+
+/**
+ * Opens one edition draft against the currently active release and hands the
+ * comparison to the worker.
+ *
+ * The owner decides to refresh; nothing else may. A source capture supplies the
+ * input for a draft and never the decision, so this action is the only entry
+ * point and it is explicitly invoked. Preparing edits no active release, mints
+ * no identity, and moves no garden object — it only asks what changed.
+ */
+export async function prepareEdition(
+  scope: RequestScope,
+  input: { captureId: string; writesEnabled: boolean },
+  database: Kysely<Database> = db,
+): Promise<EditionActionResult> {
+  if (!input.writesEnabled) return { outcome: "blocked", edition: null };
+  const captureId = normalizeUuid(input.captureId);
+  if (!captureId) return { outcome: "not_found", edition: null };
+
+  return database.transaction().execute(async (transaction) => {
+    await setInteractiveDeadline(transaction);
+
+    const capture = await sql<{
+      id: string;
+      sourceSnapshotId: string | null;
+    }>`
+      select id, source_snapshot_id as "sourceSnapshotId"
+      from catalog_source_capture_runs
+      where id = ${captureId}::uuid
+        and state in ('completed', 'superseded_by_new_capture')
+    `.execute(transaction);
+    const captureRow = capture.rows[0];
+    if (!captureRow?.sourceSnapshotId) {
+      return { outcome: "not_found" as const, edition: null };
+    }
+
+    // An edition succeeds something. Without an active release there is nothing
+    // to compare against, and the Foundation build owns that first release.
+    const active = await sql<{ activeReleaseId: string | null }>`
+      select active_release_id as "activeReleaseId"
+      from catalog_registry_active_pointers
+      where release_family = 'foundation'
+    `.execute(transaction);
+    const priorReleaseId = active.rows[0]?.activeReleaseId ?? null;
+    if (!priorReleaseId) return { outcome: "blocked" as const, edition: null };
+
+    // One unfinished edition at a time: a second draft would compare against
+    // the same active release and split the owner's attention across two
+    // previews of the same change.
+    const inFlight = await sql<{ id: string }>`
+      select id
+      from catalog_registry_releases
+      where release_kind = 'edition'
+        and state in ('draft', 'building', 'review_ready', 'approved')
+      limit 1
+    `.execute(transaction);
+    if (inFlight.rows[0]) {
+      const existing = await readEdition(transaction, inFlight.rows[0].id);
+      return { outcome: "blocked" as const, edition: existing };
+    }
+
+    const buildDigest = stableRegistryDigest({
+      captureId,
+      priorReleaseId,
+      policyVersion: STABLE_REGISTRY_EDITION_POLICY_VERSION,
+    });
+    const created = await sql<{ id: string }>`
+      insert into catalog_registry_releases (
+        release_kind,
+        state,
+        capture_id,
+        source_snapshot_id,
+        predecessor_release_id,
+        policy_version,
+        build_digest,
+        created_by_user_id
+      ) values (
+        'edition',
+        'draft',
+        ${captureId}::uuid,
+        ${captureRow.sourceSnapshotId}::uuid,
+        ${priorReleaseId}::uuid,
+        ${STABLE_REGISTRY_EDITION_POLICY_VERSION},
+        ${buildDigest},
+        ${requireUuid(scope.userId, "owner")}::uuid
+      )
+      returning id
+    `.execute(transaction);
+    const releaseId = created.rows[0]?.id;
+    if (!releaseId) return { outcome: "blocked" as const, edition: null };
+
+    await buildEnqueueEditionBuildJobQuery(transaction, releaseId).execute();
+
+    return {
+      outcome: "accepted" as const,
+      edition: await readEdition(transaction, releaseId),
+    };
+  });
+}
+
+/**
+ * The diff runs off-request: comparing a full corpus is not interactive work,
+ * and the owner's controls must stay responsive while it runs.
+ */
+export function buildEnqueueEditionBuildJobQuery(
+  executor: QueryExecutor,
+  releaseId: string,
+) {
+  const payload = {
+    kind: STABLE_REGISTRY_EDITION_BUILD_KIND,
+    releaseId,
+  };
+
+  return executor
+    .insertInto("job_queue")
+    .values({
+      queue_name: "matching",
+      payload,
+      idempotency_key: `stable-registry-edition:${releaseId}`,
+    })
+    .onConflict((conflict) =>
+      conflict
+        .column("idempotency_key")
+        .where("idempotency_key", "is not", null)
+        .doNothing(),
+    )
+    .returning("id");
 }
 
 /**

@@ -88,6 +88,21 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
   },
   {
     queueName: "matching",
+    kind: "stable_registry_edition_build",
+    consumer: "matching-python-worker",
+    maxAttempts: 3,
+    privacyClass: "catalog_ids_only",
+    coversStructuredJournalCover: false,
+    payloadContract: {
+      requiredKeys: ["kind", "releaseId"],
+      optionalKeys: [],
+      uuidKeys: ["releaseId"],
+    },
+    notes:
+      "Edition diff receives only one opaque release UUID; the worker compares it with the release it succeeds and writes grouped aggregate counts, never an object id, owner id, or name.",
+  },
+  {
+    queueName: "matching",
     kind: "catalog_alias_suggestions_refresh",
     consumer: "matching-python-worker",
     maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,

@@ -15,6 +15,44 @@ Refresh is deliberately manual. No cron, source webhook, worker, or AI event can
 create, approve, activate, or roll back an edition. A source capture can supply
 the input for a draft; it can never supply the decision.
 
+## Preparing one
+
+The owner picks a completed source capture and asks for a comparison against the
+active release. That is the only entry point, and it is explicitly invoked:
+`prepareEdition` opens one `edition` release in `draft` whose predecessor is the
+current active pointer, then enqueues `stable_registry_edition_build`. The queue
+payload is one opaque release id; the worker reads everything else from Postgres
+and never selects a raw payload, a source-only field, an object id, an owner id,
+or a coordinate.
+
+Preparing changes nothing. It mints no product identity, edits no active
+release, and moves no garden object — it only answers what changed. There is no
+first edition: an edition succeeds something, so without an active Foundation
+the action is refused rather than silently creating one.
+
+One unfinished edition at a time. A second draft would compare against the same
+active release and split the owner's attention across two previews of one
+change, so `prepareEdition` returns the in-flight edition instead.
+
+### Which classes the comparison derives
+
+The worker derives five classes from immutable release evidence — which
+identities each release admits, at which revision digest, under which
+eligibility:
+
+| Derived         | How it is decided                                  |
+| --------------- | -------------------------------------------------- |
+| `unchanged`     | in both, same revision digest, same eligibility    |
+| `addition`      | in the edition, absent from the prior release      |
+| `correction`    | in both, revision digest differs                   |
+| `supersession`  | in the prior release, absent from the edition      |
+| `rights_change` | in both, same revision digest, eligibility differs |
+
+`alias` and `split` are deliberately **not** derived. The release layer versions
+membership and revisions, not name sets, and a split is an owner judgement
+recorded through `record_split`. Guessing either would put a decision in front of
+the owner that no evidence supports.
+
 ## The owner reviews change, not corpus
 
 Diffs are grouped by class, and `unchanged` is never shown as work:

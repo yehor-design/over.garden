@@ -26,7 +26,9 @@ import {
 
 import {
   buildEditionDiffGroupsQuery,
+  buildEnqueueEditionBuildJobQuery,
   relationKindForDecision,
+  STABLE_REGISTRY_EDITION_BUILD_KIND,
 } from "./edition-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -186,5 +188,42 @@ describe("diff group reads", () => {
     // Aggregate columns only: no denomination and no object identity.
     expect(compiled.sql).not.toContain("canonical_name");
     expect(compiled.sql).not.toContain("plant_object");
+  });
+});
+
+describe("preparing an edition", () => {
+  it("hands the comparison to the worker under one idempotent key", () => {
+    const releaseId = "00000000-0000-4000-8000-000000000258";
+    const compiled = buildEnqueueEditionBuildJobQuery(
+      testDb,
+      releaseId,
+    ).compile();
+
+    expect(compiled.sql).toContain('insert into "job_queue"');
+    expect(compiled.parameters).toContain("matching");
+    // A second prepare of the same draft must not queue a second comparison.
+    expect(compiled.parameters).toContain(
+      `stable-registry-edition:${releaseId}`,
+    );
+    expect(compiled.sql).toContain("on conflict");
+
+    // The payload carries one opaque release id and nothing else: the worker
+    // reads what it needs from Postgres rather than from the queue.
+    const payload = compiled.parameters.find(
+      (parameter) =>
+        typeof parameter === "object" &&
+        parameter !== null &&
+        "kind" in parameter,
+    );
+    expect(payload).toEqual({
+      kind: STABLE_REGISTRY_EDITION_BUILD_KIND,
+      releaseId,
+    });
+  });
+
+  it("names the kind the worker manifest consumes", () => {
+    expect(STABLE_REGISTRY_EDITION_BUILD_KIND).toBe(
+      "stable_registry_edition_build",
+    );
   });
 });

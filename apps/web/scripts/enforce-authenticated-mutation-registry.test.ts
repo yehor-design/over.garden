@@ -56,9 +56,9 @@ describe("OVE-291 strict authenticated mutation enforcement", () => {
       partition.consumerEdges.map((edge) => edge.admissionBoundaryId),
     );
 
-    expect(partition.entrypointIds).toHaveLength(117);
-    expect(partition.consumerEdges).toHaveLength(291);
-    expect(admissionBoundaryIds.size).toBe(59);
+    expect(partition.entrypointIds).toHaveLength(119);
+    expect(partition.consumerEdges).toHaveLength(295);
+    expect(admissionBoundaryIds.size).toBe(60);
     await expect(
       assertRemainingAdmissionBoundaryEvidence({ registry, appRoot }),
     ).resolves.toBeUndefined();
@@ -72,12 +72,12 @@ describe("OVE-291 strict authenticated mutation enforcement", () => {
       receipt.entrypointStates.filter(
         (state) => state.enforcementState === "enforced_ove_291",
       ),
-    ).toHaveLength(117);
+    ).toHaveLength(119);
     expect(
       receipt.consumerEdgeStates.filter(
         (state) => state.enforcementState === "enforced_ove_291",
       ),
-    ).toHaveLength(291);
+    ).toHaveLength(295);
   });
 
   it("preserves the frozen explicit-Google-link partition exactly", () => {
