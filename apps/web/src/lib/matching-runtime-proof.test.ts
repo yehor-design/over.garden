@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   MATCHING_RUNTIME_REQUIRED_HANDLERS,
   assertNoForbiddenMatchingRuntimeEvidence,
   buildMatchingRuntimeCapabilityEvidence,
   parseMatchingRuntimeCapabilityArgs,
-  runMatchingRuntimeCapabilitySmoke,
+  runMatchingRuntimeCapabilitySmokeFromHeartbeat,
   validateMatchingRuntimeCapabilityOptions,
 } from "./matching-runtime-proof";
 
@@ -13,7 +13,6 @@ const expectedCommitSha = "a".repeat(40);
 const expectedImageDigest = `sha256:${"b".repeat(64)}`;
 
 const options = {
-  baseUrl: "https://matching.over.garden",
   expectedCommitSha,
   expectedImageDigest,
 };
@@ -26,7 +25,6 @@ function runtimeIdentity() {
     release: {
       commitSha: expectedCommitSha,
       imageDigest: expectedImageDigest,
-      buildTimestamp: "2026-07-18T08:30:00Z",
       schemaCompatibilityClass: "ove190.matching-schema.v1",
     },
     queue: {
@@ -41,7 +39,6 @@ function readyResponse() {
     ...runtimeIdentity(),
     status: "ready",
     dependencies: {
-      api: { status: "available" },
       postgres: { status: "available" },
       jobQueue: {
         status: "available",
@@ -61,13 +58,37 @@ function readyResponse() {
   };
 }
 
+function heartbeatReadback() {
+  return {
+    heartbeat: {
+      releaseCommitSha: expectedCommitSha,
+      imageDigest: expectedImageDigest,
+      schemaCompatibilityClass: "ove190.matching-schema.v1",
+      supportedHandlers: [...MATCHING_RUNTIME_REQUIRED_HANDLERS],
+      isFresh: true,
+      drainClass: "converging" as const,
+    },
+    jobQueue: {
+      status: "available" as const,
+      depthClass: "low" as const,
+      lagClass: "fresh" as const,
+    },
+    meilisearchStatus: "available" as const,
+    queueRecovery: {
+      claimCompatible: "available" as const,
+      handlerCompatible: "available" as const,
+      unsupportedRetryingClass: "none" as const,
+      terminalCountClass: "empty" as const,
+      oldestDueAgeClass: "fresh" as const,
+    },
+  };
+}
+
 describe("matching runtime smoke options", () => {
   it("parses and validates an exact release target", () => {
     expect(
       validateMatchingRuntimeCapabilityOptions(
         parseMatchingRuntimeCapabilityArgs([
-          "--base-url",
-          "https://matching.over.garden/",
           "--expected-commit",
           expectedCommitSha,
           "--expected-digest",
@@ -77,19 +98,18 @@ describe("matching runtime smoke options", () => {
     ).toEqual(options);
   });
 
-  it("rejects ambiguous or unsafe targets and release identifiers", () => {
+  it("refuses a base URL instead of silently ignoring it", () => {
+    // Accepting a dead flag would let an operator runbook keep naming a service
+    // that no longer exists and believe it was checked.
     expect(() =>
-      validateMatchingRuntimeCapabilityOptions({
-        ...options,
-        baseUrl: "http://matching.over.garden",
-      }),
-    ).toThrow(/HTTPS/);
-    expect(() =>
-      validateMatchingRuntimeCapabilityOptions({
-        ...options,
-        baseUrl: "https://matching.over.garden/health",
-      }),
-    ).toThrow(/origin root/);
+      parseMatchingRuntimeCapabilityArgs([
+        "--base-url",
+        "https://matching.over.garden",
+      ]),
+    ).toThrow(/--base-url is retired/);
+  });
+
+  it("rejects unsafe release identifiers", () => {
     expect(() =>
       validateMatchingRuntimeCapabilityOptions({
         ...options,
@@ -125,7 +145,6 @@ describe("matching runtime capability evidence", () => {
       readiness: {
         status: "ready",
         dependencies: {
-          api: "available",
           postgres: "available",
           jobQueue: "available",
           meilisearch: "available",
@@ -153,14 +172,14 @@ describe("matching runtime capability evidence", () => {
     ).toThrow(/expected SHA/);
 
     const readiness = readyResponse();
-    readiness.release.buildTimestamp = "2026-07-18T08:31:00Z";
+    readiness.release.imageDigest = `sha256:${"c".repeat(64)}`;
     expect(() =>
       buildMatchingRuntimeCapabilityEvidence({
         options,
         capabilities: runtimeIdentity(),
         readiness,
       }),
-    ).toThrow(/releases differ/);
+    ).toThrow(/does not match the expected digest|releases differ/);
   });
 
   it("requires the exact sorted set of all six worker handlers", () => {
@@ -257,50 +276,52 @@ describe("matching runtime evidence privacy boundary", () => {
 });
 
 describe("matching runtime HTTP smoke", () => {
-  it("requests only the capability and readiness endpoints and returns redacted proof", async () => {
-    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
-      const url = String(input);
-      const body = url.endsWith("/capabilities")
-        ? runtimeIdentity()
-        : readyResponse();
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "content-type": "application/json; charset=utf-8" },
-      });
-    });
-
-    const evidence = await runMatchingRuntimeCapabilitySmoke(
+  it("builds redacted proof from the heartbeat row without any HTTP call", async () => {
+    const evidence = await runMatchingRuntimeCapabilitySmokeFromHeartbeat(
       options,
-      fetchImpl,
+      async () => heartbeatReadback(),
     );
 
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
-    expect(fetchImpl.mock.calls.map(([input]) => String(input)).sort()).toEqual(
-      [
-        "https://matching.over.garden/capabilities",
-        "https://matching.over.garden/ready",
-      ],
-    );
     expect(evidence.leakCheck).toBe("passed");
+    expect(evidence.release.commitSha).toBe(expectedCommitSha);
+    expect(evidence.readiness.dependencies).not.toHaveProperty("api");
   });
 
-  it("fails closed on non-JSON or non-ready responses", async () => {
-    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
-      if (String(input).endsWith("/ready")) {
-        return new Response("degraded", {
-          status: 503,
-          headers: { "content-type": "text/plain" },
-        });
-      }
-      return new Response(JSON.stringify(runtimeIdentity()), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    });
-
+  it("reports a worker that has never written a heartbeat as never started", async () => {
+    // The retired endpoints were the only signal that answered before a first
+    // run. Collapsing that into `missing` would lose the distinction between
+    // "no worker yet" and "a worker that should be here and is not".
     await expect(
-      runMatchingRuntimeCapabilitySmoke(options, fetchImpl),
-    ).rejects.toThrow(/ready is not ready/);
+      runMatchingRuntimeCapabilitySmokeFromHeartbeat(options, async () => ({
+        ...heartbeatReadback(),
+        heartbeat: null,
+      })),
+    ).rejects.toThrow(/dependency is unavailable|degraded/);
+
+    const { buildRuntimeDocumentsFromHeartbeat } = await import(
+      "./matching-runtime-proof"
+    );
+    const documents = buildRuntimeDocumentsFromHeartbeat(
+      { ...heartbeatReadback(), heartbeat: null },
+      options,
+    );
+    const readiness = documents.readiness as {
+      dependencies: { worker: { status: string; drainClass: string } };
+    };
+    expect(readiness.dependencies.worker.status).toBe("never_started");
+    expect(readiness.dependencies.worker.drainClass).toBe("unknown");
+  });
+
+  it("fails closed on a stale heartbeat rather than reporting ready", async () => {
+    await expect(
+      runMatchingRuntimeCapabilitySmokeFromHeartbeat(options, async () => {
+        const readback = heartbeatReadback();
+        return {
+          ...readback,
+          heartbeat: { ...readback.heartbeat!, isFresh: false },
+        };
+      }),
+    ).rejects.toThrow(/dependency is unavailable|degraded/);
   });
 });
 

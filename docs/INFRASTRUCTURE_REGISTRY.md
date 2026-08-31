@@ -580,7 +580,9 @@ Immutable matching release contract (OVE-190):
   restores the prior release.
 - Binding host commands and redaction rules are in
   `infra/production-worker/README.md`. External proof command:
-  `cd apps/web && pnpm smoke:matching-runtime-capabilities -- --base-url https://matching.over.garden --expected-commit <full-main-sha> --expected-digest sha256:<digest>`.
+  `cd apps/web && pnpm smoke:matching-runtime-capabilities -- --expected-commit <full-main-sha> --expected-digest sha256:<digest>`.
+  `--base-url` was retired with the matching API under OVE-357 and is now
+  refused rather than ignored; the proof reads the worker heartbeat row.
 - All-handler production proof uses `python -m app.canary` inside the active
   `matching-worker` and refuses to execute unless
   `OVERGARDEN_MATCHING_CANARY_APPROVED=true` is supplied for that command. It
@@ -911,6 +913,32 @@ performs zero R2 GetObject calls. Evidence may contain only policy version,
 aggregate class counts, SELECT-only status, and duration; never derivative
 keys/URLs, image bytes, identity, EXIF, request metadata, credentials, or
 location.
+
+## Matching API retirement (OVE-357)
+
+The repository no longer defines the `matching-api` service. `app/main.py` and
+its three endpoints are deleted, `fastapi` and `uvicorn` are removed from the
+dependency set, the image runs the worker instead of a server, and
+`infra/production-worker/docker-compose.release.yml` defines only
+`matching-worker`.
+
+Both operator proofs now read `matching_worker_heartbeats` directly. The
+endpoints reported the release, digest, schema class, and handler set — every
+one of which the worker already writes to Postgres — and a healthy HTTP response
+proved the API was up, never that the worker was claiming jobs.
+
+**Pending teardown obligation.** The live container, its Caddy route, and the
+public matching DNS record still exist on the host. Removing them is a
+maintainer-approved provider effect and has **not** been performed. Until it is:
+
+- the `matching-api` container may still be running and answering;
+- `https://matching.over.garden/*` may still resolve and serve;
+- the live-state entries above remain accurate and are not rewritten as though
+  the teardown had happened.
+
+The terminal absence receipt belongs to that separate step. Record only class
+names and absence booleans; never a token, certificate body, connection string,
+or provider credential.
 
 ## Composed self-hosted stack (OVE-358)
 

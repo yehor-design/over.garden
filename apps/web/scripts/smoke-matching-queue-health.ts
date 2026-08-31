@@ -31,9 +31,12 @@ async function main() {
   if (environment === "production") {
     const {
       parseMatchingRuntimeCapabilityArgs,
-      runMatchingRuntimeCapabilitySmoke,
+      runMatchingRuntimeCapabilitySmokeFromHeartbeat,
       validateMatchingRuntimeCapabilityOptions,
     } = await import("../src/lib/matching-runtime-proof");
+    const { readMatchingRuntimeHeartbeat } = await import(
+      "./matching-runtime-heartbeat-reader"
+    );
     const capabilityArgv = argv.filter(
       (arg, index, all) =>
         arg !== "--environment" &&
@@ -43,10 +46,6 @@ async function main() {
     );
     const parsed = parseMatchingRuntimeCapabilityArgs(capabilityArgv);
     const options = validateMatchingRuntimeCapabilityOptions({
-      baseUrl:
-        parsed.baseUrl ??
-        process.env.MATCHING_RUNTIME_BASE_URL ??
-        "https://matching.over.garden",
       expectedCommitSha:
         parsed.expectedCommitSha ??
         process.env.MATCHING_RUNTIME_EXPECTED_COMMIT_SHA,
@@ -54,7 +53,10 @@ async function main() {
         parsed.expectedImageDigest ??
         process.env.MATCHING_RUNTIME_EXPECTED_IMAGE_DIGEST,
     });
-    const evidence = await runMatchingRuntimeCapabilitySmoke(options);
+    const evidence = await runMatchingRuntimeCapabilitySmokeFromHeartbeat(
+      options,
+      () => readMatchingRuntimeHeartbeat("available"),
+    );
     if (evidence.readiness.unsupportedRetryingClass !== "none") {
       throw new Error("Production matching queue still has unsupported retries.");
     }

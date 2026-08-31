@@ -38,6 +38,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY . .
 ENV PATH="/app/.venv/bin:$PATH"
 
-EXPOSE 8000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# No port. The worker takes work from Postgres and answers to nobody over HTTP.
+# The worker is the service. There is no HTTP surface to serve.
+CMD ["python", "-m", "app.worker"]
