@@ -8,11 +8,20 @@
 -- The unit rows are immutable once terminal, so the surviving copy cannot drift.
 --
 -- The second copy was mandatory only because `raw_payload` was `not null`: the
--- column could not express that the bytes live one join away. On 2026-08-31 a
--- local database held 266 MB of `catalog_source_records` across 17,393 rows —
--- 16,062 bytes per row, 72 percent of the whole database, at roughly one eighth
--- of the declared 129,188-record corpus. No reader consumes the aggregated body;
--- only its digest is read.
+-- column could not express that the bytes live one join away.
+--
+-- Measured on 2026-09-01 against the database that actually holds the observed
+-- capture (129,214 source records, 387,773 terminal capture units): the records'
+-- `raw_payload` is 98 MB of live compressed bytes and the units' is 118 MB. The
+-- deduplication removes the 98 MB — the copy reproducible from the units.
+--
+-- An earlier version of this comment claimed "266 MB across 17,393 rows, 16,062
+-- bytes per row, 72 percent of the whole database". That was measured on the
+-- developer database, which holds no observed capture at all, and it divided
+-- relation size by row count: 172 MB of that 267 MB was TOAST free space a single
+-- `vacuum full` reclaimed. See docs/SOURCE_PAYLOAD_SINGLE_HOME.md.
+--
+-- No reader consumes the aggregated body; only its digest is read.
 --
 -- This migration does not drop a single byte. It adds an explicit home so a row
 -- can say where its payload lives, and it re-tightens the nullability it relaxes
