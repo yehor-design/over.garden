@@ -850,6 +850,41 @@ export function buildInsertEppoObservedSnapshotQuery(
     .returning("id");
 }
 
+/**
+ * The capture-unit states in which a unit's `raw_payload` is guaranteed present
+ * by `catalog_source_capture_units_terminal_shape_check` and frozen by
+ * `catalog_source_capture_units_immutable_terminal`. A payload may only be
+ * treated as durably stored one join away while its unit is in one of these.
+ */
+export const EPPO_TERMINAL_CAPTURE_UNIT_STATES = [
+  "captured",
+  "source_only",
+  "forbidden",
+  "not_applicable",
+] as const;
+
+/** Where a `catalog_source_records` row keeps the only copy of its payload. */
+export type SourcePayloadHome = "inline" | "capture_units";
+
+/**
+ * The single definition of what an EPPO source record's raw payload is.
+ *
+ * The digest a record is created with, the digest a deduplication compares
+ * against before dropping a copy, and the payload a rollback restores all read
+ * from here. Two definitions would let a record be checked against a different
+ * reading of its own bytes than the one that produced it, and that mismatch
+ * would be indistinguishable from real corruption.
+ *
+ * Every caller must expose the capture units under the alias `units`.
+ */
+function aggregatedEppoRawPayload() {
+  return sql<JsonValue>`jsonb_object_agg(${sql.ref("units.endpoint_class")}, ${sql.ref("units.raw_payload")} order by ${sql.ref("units.endpoint_class")})`;
+}
+
+function aggregatedEppoRawPayloadDigest() {
+  return sql<string>`encode(digest(convert_to((${aggregatedEppoRawPayload()})::text, 'utf8'), 'sha256'), 'hex')`;
+}
+
 type MaterializeEppoSourceRecordsInput = {
   captureId: string;
   sourceSnapshotId: string;
@@ -864,7 +899,7 @@ export function buildMaterializeEppoSourceRecordsQuery(
     .columns([
       "source_snapshot_id",
       "source_record_id",
-      "raw_payload",
+      "raw_payload_home",
       "raw_payload_sha256",
       "source_only_fields",
       "allowed_projection",
@@ -876,12 +911,11 @@ export function buildMaterializeEppoSourceRecordsQuery(
         .select([
           sql<string>`${input.sourceSnapshotId}::uuid`.as("source_snapshot_id"),
           "units.eppo_code as source_record_id",
-          sql<JsonValue>`jsonb_object_agg(${sql.ref("units.endpoint_class")}, ${sql.ref("units.raw_payload")} order by ${sql.ref("units.endpoint_class")})`.as(
-            "raw_payload",
-          ),
-          sql<string>`encode(digest(convert_to(jsonb_object_agg(${sql.ref("units.endpoint_class")}, ${sql.ref("units.raw_payload")} order by ${sql.ref("units.endpoint_class")})::text, 'utf8'), 'sha256'), 'hex')`.as(
-            "raw_payload_sha256",
-          ),
+          // The units already hold these bytes, immutably and digest-covered.
+          // Writing them a second time here is what made this table cost
+          // ~16 KB per taxon for provenance nobody reads.
+          sql<string>`${"capture_units"}`.as("raw_payload_home"),
+          aggregatedEppoRawPayloadDigest().as("raw_payload_sha256"),
           sql<JsonValue>`jsonb_build_object(
             'payloads', jsonb_object_agg(${sql.ref("units.endpoint_class")}, ${sql.ref("units.source_only_fields")} order by ${sql.ref("units.endpoint_class")}),
             'field_rights', jsonb_object_agg(${sql.ref("units.endpoint_class")}, ${sql.ref("units.field_rights")} order by ${sql.ref("units.endpoint_class")}),
@@ -897,12 +931,7 @@ export function buildMaterializeEppoSourceRecordsQuery(
         ])
         .where("units.capture_id", "=", input.captureId)
         .where("units.unit_kind", "=", "taxon_endpoint")
-        .where("units.state", "in", [
-          "captured",
-          "source_only",
-          "forbidden",
-          "not_applicable",
-        ])
+        .where("units.state", "in", EPPO_TERMINAL_CAPTURE_UNIT_STATES)
         .groupBy("units.eppo_code")
         .having(
           sql<number>`count(distinct ${sql.ref("units.endpoint_class")})`,
@@ -910,6 +939,190 @@ export function buildMaterializeEppoSourceRecordsQuery(
           EPPO_DETAIL_ENDPOINT_CLASSES.length,
         ),
     );
+}
+
+/**
+ * Rebuilds one source record's raw payload from the capture units that produced
+ * it, together with the digest those units reproduce.
+ *
+ * This is the reader for anything that needs the aggregated body of a record
+ * whose payload lives in its units. It is also the safety check: a caller that
+ * compares the returned digest against the record's stored
+ * `raw_payload_sha256` learns whether the surviving copy still reproduces the
+ * bytes the record was created with.
+ */
+export function buildReconstructEppoSourceRecordPayloadQuery(
+  executor: QueryExecutor,
+  input: { sourceSnapshotId: string; sourceRecordId: string },
+) {
+  return executor
+    .selectFrom("catalog_source_capture_units as units")
+    .innerJoin(
+      "catalog_source_capture_runs as runs",
+      "runs.id",
+      "units.capture_id",
+    )
+    .select([
+      aggregatedEppoRawPayload().as("raw_payload"),
+      aggregatedEppoRawPayloadDigest().as("raw_payload_sha256"),
+    ])
+    .where("runs.source_snapshot_id", "=", input.sourceSnapshotId)
+    .where("units.eppo_code", "=", input.sourceRecordId)
+    .where("units.unit_kind", "=", "taxon_endpoint")
+    .where("units.state", "in", EPPO_TERMINAL_CAPTURE_UNIT_STATES)
+    .groupBy("units.eppo_code")
+    .having(
+      sql<number>`count(distinct ${sql.ref("units.endpoint_class")})`,
+      "=",
+      EPPO_DETAIL_ENDPOINT_CLASSES.length,
+    );
+}
+
+/**
+ * Takes one bounded batch of records at the given payload home.
+ *
+ * `for update skip locked` is what makes two runs safe together: each takes a
+ * disjoint set and neither waits on the other, so a second run never observes a
+ * record mid-transition.
+ */
+export function buildClaimEppoSourceRecordBatchQuery(
+  executor: QueryExecutor,
+  input: {
+    sourceSnapshotId: string;
+    payloadHome: SourcePayloadHome;
+    batchSize: number;
+  },
+) {
+  return executor
+    .selectFrom("catalog_source_records")
+    .select(["id", "source_record_id", "raw_payload_sha256"])
+    .where("source_snapshot_id", "=", input.sourceSnapshotId)
+    .where("raw_payload_home", "=", input.payloadHome)
+    .orderBy("id", "asc")
+    .forUpdate()
+    .skipLocked()
+    .limit(input.batchSize);
+}
+
+/**
+ * Drops the reproducible copy for exactly those claimed records whose capture
+ * units reproduce their stored digest.
+ *
+ * The comparison and the write are one statement, so a record can never be
+ * emptied on the strength of a digest that was true a moment earlier. A record
+ * whose units are missing, incomplete, or no longer reproduce its digest simply
+ * does not appear in the CTE, keeps its payload, and is reported as held.
+ */
+export function buildDeduplicateEppoSourceRecordPayloadsQuery(
+  executor: QueryExecutor,
+  input: { recordIds: readonly string[] },
+) {
+  return executor
+    .with("reconstructed", (query) =>
+      query
+        .selectFrom("catalog_source_records as records")
+        .innerJoin(
+          "catalog_source_capture_runs as runs",
+          "runs.source_snapshot_id",
+          "records.source_snapshot_id",
+        )
+        .innerJoin("catalog_source_capture_units as units", (join) =>
+          join
+            .onRef("units.capture_id", "=", "runs.id")
+            .onRef("units.eppo_code", "=", "records.source_record_id")
+            .on("units.unit_kind", "=", "taxon_endpoint")
+            .on("units.state", "in", EPPO_TERMINAL_CAPTURE_UNIT_STATES),
+        )
+        .select([
+          "records.id as record_id",
+          "records.raw_payload_sha256 as stored_digest",
+          aggregatedEppoRawPayloadDigest().as("unit_digest"),
+        ])
+        .where("records.id", "in", input.recordIds)
+        .where("records.raw_payload_home", "=", "inline")
+        .groupBy(["records.id", "records.raw_payload_sha256"])
+        .having(
+          sql<number>`count(distinct ${sql.ref("units.endpoint_class")})`,
+          "=",
+          EPPO_DETAIL_ENDPOINT_CLASSES.length,
+        ),
+    )
+    .updateTable("catalog_source_records as target")
+    .set({
+      raw_payload: null,
+      raw_payload_home: "capture_units",
+      updated_at: sql<Date>`now()`,
+    })
+    .from("reconstructed")
+    .whereRef("target.id", "=", "reconstructed.record_id")
+    .whereRef("reconstructed.unit_digest", "=", "reconstructed.stored_digest")
+    .returning("target.id");
+}
+
+/**
+ * Restores the inline payload for claimed records, from the same aggregate
+ * expression that produced their digest.
+ *
+ * This is the bounded recovery for the whole slice: nothing was deleted, so
+ * rolling a record forward is a rebuild rather than a data recovery.
+ */
+export function buildRestoreEppoSourceRecordPayloadsQuery(
+  executor: QueryExecutor,
+  input: { recordIds: readonly string[] },
+) {
+  return executor
+    .with("rebuilt", (query) =>
+      query
+        .selectFrom("catalog_source_records as records")
+        .innerJoin(
+          "catalog_source_capture_runs as runs",
+          "runs.source_snapshot_id",
+          "records.source_snapshot_id",
+        )
+        .innerJoin("catalog_source_capture_units as units", (join) =>
+          join
+            .onRef("units.capture_id", "=", "runs.id")
+            .onRef("units.eppo_code", "=", "records.source_record_id")
+            .on("units.unit_kind", "=", "taxon_endpoint")
+            .on("units.state", "in", EPPO_TERMINAL_CAPTURE_UNIT_STATES),
+        )
+        .select([
+          "records.id as record_id",
+          aggregatedEppoRawPayload().as("payload"),
+        ])
+        .where("records.id", "in", input.recordIds)
+        .where("records.raw_payload_home", "=", "capture_units")
+        .groupBy("records.id")
+        .having(
+          sql<number>`count(distinct ${sql.ref("units.endpoint_class")})`,
+          "=",
+          EPPO_DETAIL_ENDPOINT_CLASSES.length,
+        ),
+    )
+    .updateTable("catalog_source_records as target")
+    .set({
+      raw_payload: sql<JsonValue>`${sql.ref("rebuilt.payload")}`,
+      raw_payload_home: "inline",
+      updated_at: sql<Date>`now()`,
+    })
+    .from("rebuilt")
+    .whereRef("target.id", "=", "rebuilt.record_id")
+    .returning("target.id");
+}
+
+/**
+ * Lists the snapshots an observed capture actually produced.
+ *
+ * Only these snapshots have capture units, so only their records can ever have
+ * a second home; every other source family keeps its single inline copy.
+ */
+export function buildListEppoCapturedSnapshotsQuery(executor: QueryExecutor) {
+  return executor
+    .selectFrom("catalog_source_capture_runs")
+    .select("source_snapshot_id")
+    .where("source_snapshot_id", "is not", null)
+    .where("state", "=", "completed")
+    .orderBy("source_snapshot_id", "asc");
 }
 
 export type EppoZeroProductFingerprint = {
