@@ -172,7 +172,10 @@ def test_readiness_distinguishes_each_dependency_without_raw_details(
             "lagClass": "fresh",
         },
         "meilisearch": {"status": "available"},
-        "worker": {"status": "available"},
+        # A fresh heartbeat with no recorded drain error means the projection
+        # drain is converging; the readiness manifest now says so instead of
+        # leaving an operator to infer it from silence.
+        "worker": {"status": "available", "drainClass": "converging"},
         "queueRecovery": {
             "claimCompatible": "available",
             "handlerCompatible": "available",
@@ -232,7 +235,17 @@ def test_readiness_fails_closed_for_worker_lease_classes(
 
     assert is_ready is False
     assert manifest["status"] == "degraded"
-    assert manifest["dependencies"]["worker"] == {"status": expected_worker_status}
+    # The drain class is independent of the lease class. A stale or mismatched
+    # worker still left a drain outcome behind; only a missing heartbeat leaves
+    # nobody having said either way, and `unknown` is honest there rather than
+    # turning missing evidence into a health claim.
+    expected_drain_class = (
+        "unknown" if expected_worker_status == "missing" else "converging"
+    )
+    assert manifest["dependencies"]["worker"] == {
+        "status": expected_worker_status,
+        "drainClass": expected_drain_class,
+    }
 
 
 def test_preflight_requires_schema_but_not_an_existing_worker_heartbeat(
@@ -394,7 +407,8 @@ def test_http_keeps_liveness_separate_from_fail_closed_readiness(
     assert response_json(capability_response)["release"]["commitSha"] == COMMIT_SHA
     assert readiness_response.status_code == 503
     assert response_json(readiness_response)["dependencies"]["worker"] == {
-        "status": "missing"
+        "status": "missing",
+        "drainClass": "unknown",
     }
 
 
@@ -418,3 +432,33 @@ def test_http_and_cli_fail_closed_without_release_identity(
     assert response_json(capability_response) == runtime.unavailable_manifest()
     assert exit_code == 1
     assert json.loads(capsys.readouterr().out) == runtime.unavailable_manifest()
+
+
+def test_readiness_reports_a_failing_drain_on_an_otherwise_healthy_worker(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The case the whole column exists for.
+
+    Everything else is green — fresh heartbeat, matching release, full handler
+    set — and the projection drain has failed on every attempt. Before this
+    column that worker was indistinguishable from an idle one, and a failed
+    drain is exactly what leaves erased and revoked content in the public index.
+    """
+    monkeypatch.setattr(
+        runtime,
+        "_read_postgres_state",
+        lambda _release: ready_postgres_state(
+            heartbeat={
+                **ready_postgres_state()["heartbeat"],
+                "last_drain_error_class": "os_error",
+            }
+        ),
+    )
+    monkeypatch.setattr(runtime, "_read_meilisearch_status", lambda: "available")
+
+    manifest, _is_ready = runtime.readiness_manifest(release())
+
+    assert manifest["dependencies"]["worker"] == {
+        "status": "available",
+        "drainClass": "failing",
+    }

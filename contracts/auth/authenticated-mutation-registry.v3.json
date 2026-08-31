@@ -13365,6 +13365,17 @@
     },
     {
       "evidencePaths": [
+        "sql/0044_ove356_worker_idle_contract.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0044_ove356_worker_idle_contract.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:matching_worker_wake_notify",
+      "sourceNodeId": "source:125e697ed626f52cebbf",
+      "symbol": "public_projection_intents_wake_matching_worker"
+    },
+    {
+      "evidencePaths": [
         "src/lib/garden/follow-up-value-pulse.ts",
         "src/server/analytics-events.ts"
       ],
@@ -22513,6 +22524,17 @@
     },
     {
       "evidencePaths": [
+        "sql/0044_ove356_worker_idle_contract.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0044_ove356_worker_idle_contract.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:matching_worker_wake_notify",
+      "sourceNodeId": "source:6e24d49a828b31acd076",
+      "symbol": "job_queue_wake_matching_worker"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/catalog/registry/extension-actions.ts",
         "src/server/request-scope.ts"
       ],
@@ -26070,6 +26092,17 @@
       "semanticVariant": "from:@/lib/public-localization",
       "sourceNodeId": "source:9335de116ba83bbabc68",
       "symbol": "PublicLocale"
+    },
+    {
+      "evidencePaths": [
+        "sql/0044_ove356_worker_idle_contract.sql"
+      ],
+      "nodeKind": "sql_trigger",
+      "path": "sql/0044_ove356_worker_idle_contract.sql",
+      "resolutionState": "resolved",
+      "semanticVariant": "executes:matching_worker_wake_notify",
+      "sourceNodeId": "source:933b8ff08db4bd185d01",
+      "symbol": "public_projection_intents_desired_wake_matching_worker"
     },
     {
       "evidencePaths": [

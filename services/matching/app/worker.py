@@ -2,7 +2,7 @@
 
 The TypeScript app enqueues rows into `job_queue`; this worker claims due rows
 with `FOR UPDATE SKIP LOCKED`. It is worker-first and off the request path: no
-product feature should synchronously depend on Splink/RapidFuzz work in v0.
+product feature should synchronously depend on RapidFuzz work in v0.
 
 OVE-194: unsupported kinds and exhausted retries enter terminal `dead` and are
 never reclaimable. Transient failures stay `failed` with bounded backoff.
@@ -11,6 +11,7 @@ never reclaimable. Transient failures stay `failed` with bounded backoff.
 from __future__ import annotations
 
 import os
+import re
 import socket
 import threading
 import time
@@ -59,15 +60,32 @@ from app.stable_registry_foundation import (
 from app.runtime import (
     WORKER_HEARTBEAT_MAX_AGE_SECONDS,
     RuntimeRelease,
+    record_drain_outcome,
     record_worker_heartbeat,
 )
+
+# `LISTEN` takes no parameters, so the channel is validated as an identifier
+# rather than interpolated blindly.
+_NOTIFY_CHANNEL_PATTERN = re.compile(r"[a-z_][a-z0-9_]{0,62}")
 
 QUEUE_NAME = os.environ.get("QUEUE_NAME", "matching")
 WORKER_ID = os.environ.get(
     "WORKER_ID",
     f"matching-worker-{socket.gethostname()}-{os.getpid()}",
 )
-POLL_INTERVAL_SECONDS = float(os.environ.get("WORKER_POLL_SECONDS", "1.0"))
+# The worker is told about work now, so this bounds the *fallback* rather than
+# the primary loop. At the measured rate of about five jobs a day the old
+# one-second loop ran roughly 17,000 polls per unit of work; a notification and
+# a 30-second backstop cover the same ground for about one query per 30 seconds
+# while a lost notification still cannot delay a job by more than this bound.
+POLL_INTERVAL_SECONDS = float(os.environ.get("WORKER_POLL_SECONDS", "30.0"))
+# The heartbeat's reconnect backoff is deliberately not the fallback interval.
+# Stretching this to the fallback would make readiness slower to recover from a
+# dropped connection, which is the opposite of what this change is for.
+HEARTBEAT_RECONNECT_BACKOFF_SECONDS = 1.0
+WORKER_NOTIFY_CHANNEL = os.environ.get(
+    "WORKER_NOTIFY_CHANNEL", "matching_worker_wake"
+)
 VISIBILITY_TIMEOUT_SECONDS = int(os.environ.get("WORKER_VT_SECONDS", "30"))
 CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS = int(
     os.environ.get("CATALOG_MATCH_WORKER_VT_SECONDS", "300")
@@ -464,15 +482,20 @@ def run() -> None:
         connect_timeout=5,
     ) as conn:
         heartbeat_thread.start()
+        _listen_for_wake(conn)
         try:
             while True:
                 # OVE-242: the durable public-projection outbox is drained
                 # first. A revocation that the request path could not converge
                 # must not wait behind ordinary matching work.
-                _drain_public_projections(conn)
+                _drain_public_projections(conn, release)
                 job = _claim(conn)
                 if job is None:
-                    time.sleep(POLL_INTERVAL_SECONDS)
+                    # Block on the notification instead of sleeping through it.
+                    # A wake is advisory: whatever arrives, the next iteration
+                    # drains and claims, so a spurious or duplicate wake costs
+                    # one claim attempt and nothing else.
+                    _wait_for_wake(conn, POLL_INTERVAL_SECONDS)
                     continue
                 _process_claimed_job(conn, job, active_claim)
         finally:
@@ -480,13 +503,73 @@ def run() -> None:
             heartbeat_thread.join(timeout=WORKER_HEARTBEAT_INTERVAL_SECONDS + 1)
 
 
-def _drain_public_projections(conn: psycopg.Connection) -> None:
-    """Converge outstanding revocations without ever failing the worker loop."""
+def _listen_for_wake(conn: psycopg.Connection) -> None:
+    """Register interest in the wake channel.
+
+    Registered once per connection, before the loop starts. `LISTEN` cannot be
+    parameterised, so the channel is validated as an identifier rather than
+    interpolated blindly.
+    """
+    if not _NOTIFY_CHANNEL_PATTERN.fullmatch(WORKER_NOTIFY_CHANNEL):
+        raise RuntimeError("worker notify channel must be a plain identifier")
+    conn.execute(f"listen {WORKER_NOTIFY_CHANNEL}")
+
+
+def _wait_for_wake(conn: psycopg.Connection, timeout: float) -> bool:
+    """Sleep until something gives the worker work, or until the bound expires.
+
+    Returns whether a notification arrived. Either way the caller drains and
+    claims, so a lost notification costs at most `timeout` and never a job: the
+    expiry is the fallback poll the contract requires, not a failure.
+    """
+    try:
+        for _ in conn.notifies(timeout=timeout, stop_after=1):
+            return True
+    except Exception:
+        # A listener that cannot wait is not a reason to spin. Fall back to the
+        # same bound the notification would have honoured, and let the next
+        # iteration re-establish the connection through its own error path.
+        time.sleep(timeout)
+    return False
+
+
+def _drain_public_projections(
+    conn: psycopg.Connection,
+    release: RuntimeRelease,
+) -> None:
+    """Converge outstanding revocations without ever failing the worker loop.
+
+    The loop still never fails on a drain error — a worker that dies here would
+    stop converging everything else too. What changed is that the failure is now
+    written down. A drain that fails on every attempt used to be indistinguishable
+    from an idle one, and a failed drain is exactly what leaves removed content
+    in the public index.
+    """
     try:
         drain_public_projection_intents(conn, PUBLIC_PROJECTION_DRAIN_BATCH)
-    except Exception:
-        # The intents stay durable and claimable; the next poll retries them.
+    except Exception as error:
+        # The intents stay durable and claimable; the next wake retries them.
+        # Only the class is recorded: an exception message can carry a slug, a
+        # media URL, or an owner identifier, and none of those belong here.
+        record_drain_outcome(conn, release, _drain_error_class(error))
         return
+    record_drain_outcome(conn, release, None)
+
+
+def _drain_error_class(error: BaseException) -> str:
+    """Reduce an exception to a bounded lowercase token.
+
+    The database refuses anything else, which is the point: the column cannot
+    become a place where a raw operational error is stored.
+    """
+    name = type(error).__name__
+    # Split on case boundaries, but keep acronyms whole: a naive split turns
+    # `OSError` into `o_s_error`, which is a class nobody would recognise.
+    token = re.sub(
+        r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", "_", name
+    ).lower()
+    token = re.sub(r"[^a-z0-9]+", "_", token).strip("_")
+    return (token or "unknown_error")[:80]
 
 
 def _process_claimed_job(
@@ -575,7 +658,7 @@ def _heartbeat_loop(
                     if stop.wait(WORKER_HEARTBEAT_INTERVAL_SECONDS):
                         return
         except Exception:
-            if stop.wait(POLL_INTERVAL_SECONDS):
+            if stop.wait(HEARTBEAT_RECONNECT_BACKOFF_SECONDS):
                 return
 
 

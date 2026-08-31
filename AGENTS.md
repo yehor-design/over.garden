@@ -53,7 +53,7 @@ acquisition gate.
   server-conversion path, and OVE-350 deleted the isolated empty legacy provider
   resource after exact-plan zero-state proof.
 - Meilisearch as a derived public search/typeahead index.
-- Python worker for RapidFuzz/Splink/PyICU/CyrTranslit matching, dedup, and reindex work.
+- Python worker for RapidFuzz/PyICU/CyrTranslit matching, dedup, and reindex work.
 - Plain Postgres `job_queue` table for TS -> Python background work. No Redis, no pgmq, no Python-only queue framework.
 - Network-required journal publication governed by ADR-0017 and ADR-0019: no
   new durable browser journal state, PWA shell, offline mutation queue, server

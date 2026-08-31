@@ -108,6 +108,22 @@ type RequiredHandler = (typeof MATCHING_RUNTIME_REQUIRED_HANDLERS)[number];
 type JobQueueDepthClass = (typeof JOB_QUEUE_DEPTH_CLASSES)[number];
 type JobQueueLagClass = (typeof JOB_QUEUE_LAG_CLASSES)[number];
 
+/**
+ * Whether the worker's public-projection drain is converging.
+ *
+ * `unknown` is deliberate and is not a synonym for healthy: it means no
+ * heartbeat row said either way. A drain that fails on every attempt used to be
+ * indistinguishable from an idle one, and a failed drain is exactly what leaves
+ * erased and revoked content in the public index.
+ */
+export const WORKER_DRAIN_CLASSES = [
+  "converging",
+  "failing",
+  "unknown",
+] as const;
+
+export type WorkerDrainClass = (typeof WORKER_DRAIN_CLASSES)[number];
+
 export interface MatchingRuntimeCapabilityOptions {
   baseUrl: string;
   expectedCommitSha: string;
@@ -148,7 +164,10 @@ export interface MatchingRuntimeReadiness extends Omit<
       lagClass: JobQueueLagClass;
     };
     meilisearch: { status: (typeof DEPENDENCY_STATUSES.meilisearch)[number] };
-    worker: { status: (typeof DEPENDENCY_STATUSES.worker)[number] };
+    worker: {
+      status: (typeof DEPENDENCY_STATUSES.worker)[number];
+      drainClass: WorkerDrainClass;
+    };
     queueRecovery: {
       claimCompatible: (typeof CLAIM_COMPATIBLE_STATUSES)[number];
       handlerCompatible: (typeof HANDLER_COMPATIBLE_STATUSES)[number];
@@ -499,7 +518,7 @@ function parseReadiness(value: unknown): MatchingRuntimeReadiness {
         dependencies.meilisearch,
         "meilisearch",
       ),
-      worker: parseDependencyStatus(dependencies.worker, "worker"),
+      worker: parseWorkerDependency(dependencies.worker),
       queueRecovery: parseQueueRecovery(dependencies.queueRecovery),
     },
   };
@@ -650,6 +669,31 @@ function parseDependencyStatus<
   }
   return {
     status: dependency.status as (typeof DEPENDENCY_STATUSES)[Name][number],
+  };
+}
+
+/**
+ * The worker dependency carries one field the others do not.
+ *
+ * It is parsed separately rather than made optional: an absent `drainClass`
+ * would read as healthy, and the whole reason the field exists is that silence
+ * used to be indistinguishable from a drain failing on every attempt.
+ */
+function parseWorkerDependency(
+  value: unknown,
+): MatchingRuntimeReadiness["dependencies"]["worker"] {
+  const dependency = requireRecord(value, "worker dependency");
+  assertExactKeys(dependency, ["status", "drainClass"], "worker dependency");
+  const allowed = DEPENDENCY_STATUSES.worker as readonly unknown[];
+  if (!allowed.includes(dependency.status)) {
+    throw new Error("Matching runtime dependency status is not bounded.");
+  }
+  if (!(WORKER_DRAIN_CLASSES as readonly unknown[]).includes(dependency.drainClass)) {
+    throw new Error("Matching runtime worker drain class is not bounded.");
+  }
+  return {
+    status: dependency.status as (typeof DEPENDENCY_STATUSES.worker)[number],
+    drainClass: dependency.drainClass as WorkerDrainClass,
   };
 }
 

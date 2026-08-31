@@ -49,7 +49,7 @@ function readyResponse() {
         lagClass: "fresh",
       },
       meilisearch: { status: "available" },
-      worker: { status: "available" },
+      worker: { status: "available", drainClass: "converging" },
       queueRecovery: {
         claimCompatible: "available",
         handlerCompatible: "available",
@@ -301,5 +301,53 @@ describe("matching runtime HTTP smoke", () => {
     await expect(
       runMatchingRuntimeCapabilitySmoke(options, fetchImpl),
     ).rejects.toThrow(/ready is not ready/);
+  });
+});
+
+describe("worker drain class", () => {
+  it("refuses a readiness payload that omits the drain class", () => {
+    // An absent field would read as healthy, and the whole reason the field
+    // exists is that silence used to be indistinguishable from a drain failing
+    // on every attempt.
+    const readiness = readyResponse();
+    delete (readiness.dependencies.worker as Record<string, unknown>).drainClass;
+
+    expect(() =>
+      buildMatchingRuntimeCapabilityEvidence({
+        options,
+        capabilities: runtimeIdentity(),
+        readiness,
+      }),
+    ).toThrow(/incompatible field set/);
+  });
+
+  it("refuses a drain class outside the closed set", () => {
+    const readiness = readyResponse();
+    (readiness.dependencies.worker as Record<string, unknown>).drainClass =
+      "available";
+
+    expect(() =>
+      buildMatchingRuntimeCapabilityEvidence({
+        options,
+        capabilities: runtimeIdentity(),
+        readiness,
+      }),
+    ).toThrow(/drain class is not bounded/);
+  });
+
+  it("carries a failing drain through on an otherwise available worker", () => {
+    // This is the case the column exists for: everything green except the one
+    // thing that converges erasure and revocation.
+    const readiness = readyResponse();
+    (readiness.dependencies.worker as Record<string, unknown>).drainClass =
+      "failing";
+
+    expect(() =>
+      buildMatchingRuntimeCapabilityEvidence({
+        options,
+        capabilities: runtimeIdentity(),
+        readiness,
+      }),
+    ).not.toThrow();
   });
 });
