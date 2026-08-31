@@ -82,6 +82,31 @@ one to extend. It sets the pack active against that release, calls
 `materialize_stable_registry_extension_pack`, and enqueues the existing catalog
 typeahead rebuild. Blocked and held rows are not projected.
 
+A variety and a breed become **their own selectable catalog identities**: a
+gardener records that they planted `San Marzano`, not merely
+`Solanum lycopersicum`. Activation therefore appends, per product-eligible row,
+one `catalog_items` identity keyed on the pack row id, its revision 1, a release
+member, a projection record carrying the pack's resolved kind
+(`plant_variety -> plant`, `breed -> animal`), a canonical name, its alias
+names, and one outbox row for the index rebuild. Keying the identity on the pack
+row id makes re-activation idempotent.
+
+Appending is legitimate: release membership is append-only rather than frozen —
+its guard fires on update and delete, never on insert — and extending an active
+Foundation is what a pack is for. Nothing existing is rewritten.
+
+`0027` did none of this. Its materialization joined each pack row to its
+_parent_ release member and inserted that parent, which is already projected —
+that is why the join could succeed — so every row hit `on conflict do nothing`
+and the function was a guaranteed no-op that never wrote a single name.
+Activating a pack published nothing. `0041_ove328_extension_pack_product_projection.sql`
+is the correction, and it re-runs every already-active pack.
+
+Because `official_denomination` allows 240 characters while a catalog identity's
+canonical name allows 120, a row that cannot become an identity can no longer be
+classified `product_eligible`. An over-long denomination stays an exception the
+owner can see rather than a variety that silently vanishes at activation.
+
 ## Verification
 
 ```bash
@@ -99,6 +124,13 @@ active Foundation, imports one variety pack and one breed pack, proves a
 plant-only parent is refused for a breed, proves a rights-blocked row survives
 an approval unpromoted, activates both packs into the product projection, and
 proves approved rows are immutable and pack state cannot move backward.
+
+It then reads the projection back the way the picker does: every eligible row
+became one selectable identity with the right resolved kind, each is findable by
+its own canonical name, and no held row became an identity. `publishedIdentityCount`
+carries that number in the receipt, because a row class proves classification
+and not publication. Against the pre-correction function the proof fails with
+`activated_pack_rows_never_reached_the_picker`.
 
 `--fixture worker-timeout` proves the no-wedge contract: a stalled pack worker
 holds only its own pack, both recovery controls stay usable, and the reported

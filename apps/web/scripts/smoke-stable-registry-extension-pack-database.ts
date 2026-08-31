@@ -133,6 +133,70 @@ export async function runExtensionPackDatabaseProof(): Promise<ExtensionPackSmok
       );
     }
 
+    // The point of a pack is that its denominations become findable. Counting
+    // row classes proves classification, not publication, so read the product
+    // projection back the way the picker does.
+    // Each eligible row must become its own selectable identity: a member of
+    // the active release, a projected record carrying the pack's resolved kind,
+    // and a canonical name the picker can match.
+    const published = await client.query<{
+      catalog_kind: string;
+      object_kind_scope: string;
+      canonical_name: string;
+    }>(
+      `select records.catalog_kind, records.object_kind_scope, records.canonical_name
+         from stable_registry_product_catalog_records as records
+         join catalog_items as items on items.id = records.catalog_item_id
+         join catalog_registry_extension_pack_rows as pack_rows
+           on pack_rows.id::text = items.source_id
+        where pack_rows.pack_id = any($1::uuid[])
+          and pack_rows.row_class = 'product_eligible'
+          and records.registry_release_id = $2
+        order by records.catalog_kind, records.canonical_name`,
+      [[variety.packId, breed.packId], ids.release],
+    );
+    if (published.rowCount === 0) {
+      throw new Error("activated_pack_rows_never_reached_the_picker");
+    }
+    for (const row of published.rows) {
+      const expectedScope = row.catalog_kind === "breed" ? "animal" : "plant";
+      if (row.object_kind_scope !== expectedScope) {
+        throw new Error(
+          `published_pack_identity_kind_mismatch:${row.catalog_kind}:${row.object_kind_scope}`,
+        );
+      }
+    }
+    const searchable = await client.query<{ count: string }>(
+      `select count(distinct names.catalog_item_id)::text as count
+         from stable_registry_product_catalog_names as names
+         join catalog_items as items on items.id = names.catalog_item_id
+         join catalog_registry_extension_pack_rows as pack_rows
+           on pack_rows.id::text = items.source_id
+        where pack_rows.pack_id = any($1::uuid[])
+          and pack_rows.row_class = 'product_eligible'
+          and names.registry_release_id = $2
+          and names.name_class = 'canonical'`,
+      [[variety.packId, breed.packId], ids.release],
+    );
+    const publishedIdentityCount = published.rowCount ?? 0;
+    if (Number(searchable.rows[0]?.count ?? 0) !== publishedIdentityCount) {
+      throw new Error("published_pack_identity_is_not_searchable");
+    }
+
+    // A held row must never become an identity.
+    const heldPublished = await client.query(
+      `select 1
+         from catalog_items as items
+         join catalog_registry_extension_pack_rows as pack_rows
+           on pack_rows.id::text = items.source_id
+        where pack_rows.pack_id = any($1::uuid[])
+          and pack_rows.row_class <> 'product_eligible'`,
+      [[variety.packId, breed.packId]],
+    );
+    if (heldPublished.rowCount !== 0) {
+      throw new Error("held_pack_row_became_a_product_identity");
+    }
+
     // An approved pack's rows are immutable evidence.
     let immutabilityEnforced = false;
     try {
@@ -192,6 +256,7 @@ export async function runExtensionPackDatabaseProof(): Promise<ExtensionPackSmok
       maxInteractionDelayMs: roundMs(interactionDelayMs),
       interactionBudgetMs: EXTENSION_PACK_INTERACTION_BUDGET_MS,
       productEligibleRowCount: Number(eligible.rows[0]?.count ?? 0),
+      publishedIdentityCount,
       heldRowCount: Number(held.rows[0]?.count ?? 0),
       preciseLocationAbsent: true,
       forbiddenMarkersAbsent: true,
