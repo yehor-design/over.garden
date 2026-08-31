@@ -153,6 +153,11 @@ digests: the `DATABASE_URL` resolved under `vercel env run -e production` was
 byte-identical to the local `.env.local` value. A `--environment production`
 command run that way reads **localhost**.
 
+The shadowing is per-variable, which is what makes it easy to miss: in the same
+run, `DATABASE_SSL_CA` and `EPPO_DATA_PORTAL_API_KEY` came through from
+production, because `.env.local` does not define them. Only the names it does
+define fall back to local, silently.
+
 The harness therefore does two things:
 
 1. It no longer loads `.env.local` at all when the declared environment is
@@ -181,14 +186,24 @@ database and its numbers mean nothing about production.
 
 ## Measured production state
 
-**Superseded.** An earlier revision of this document recorded a "measured
-production state" dated 2026-08-31 listing `source_inventory_empty`,
+**Withdrawn as unverifiable.** An earlier revision of this document recorded a
+"measured production state" dated 2026-08-31 listing `source_inventory_empty`,
 `source_inventory_digest_invalid`, `insufficient_storage_headroom`, and
-`backup_not_fresh`. That measurement was taken through
-`vercel env run -e production`, which — as shown above — resolved to the local
-database. Those numbers describe a developer machine, not production, and are
-withdrawn rather than corrected: nothing is currently known about production's
-Stable Registry state from this harness.
+`backup_not_fresh`.
+
+It is withdrawn because it cannot be told apart from a local read, not because
+it has been shown to be one. The receipt of the day carried no evidence of which
+database produced it, and the documented command demonstrably reads localhost
+from a checkout with an `.env.local`. Whether that particular run reached
+production is now unknowable.
+
+One detail argues it may have reached production: it reported that none of
+`0023`–`0028` existed, whereas the local database on this machine has the
+`0023`–`0026` sentinels and lacks only `0027`/`0028`. That is also consistent
+with the local database having gained those tables afterwards, during the
+implementation of the upstream children. The point is precisely that the
+evidence cannot settle it — which is the reason for the guard, and the reason a
+finding that cannot name its own source is not a finding.
 
 The first trustworthy measurement is the first one whose receipt carries
 `databaseHostClass: "remote"`. Until then this document asserts no production
