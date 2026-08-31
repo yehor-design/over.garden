@@ -912,6 +912,40 @@ aggregate class counts, SELECT-only status, and duration; never derivative
 keys/URLs, image bytes, identity, EXIF, request metadata, credentials, or
 location.
 
+## Composed self-hosted stack (OVE-358)
+
+Non-secret values only. This stack is **not provisioned anywhere**: it is a
+definition and a proven restore, and no provider account holds it. It is
+deliberately provider-neutral — nothing in `infra/docker-compose.stack.yml`
+names a hosting company, and every host-specific value arrives through the
+environment.
+
+- Definition: `infra/docker-compose.stack.yml`. Entry point:
+  `infra/overgarden-stack`. Runbook: `docs/SELF_HOSTED_STACK.md`.
+- Services: Postgres 18 (TLS on), PgBouncer (`transaction` pooling),
+  Meilisearch v1.48.1, the matching worker, and Caddy. Caddy publishes the only
+  host port; every other service is reachable on the internal network alone.
+- Search image pin: the OCI **index** digest
+  `sha256:ad98ec0ab2a387da5c140fe9d935eadc6e3a42aee185b4249dfafd985fb49e1c`.
+  The production Meilisearch file pins `sha256:93ea15e3…`, which is the
+  linux/amd64 manifest alone and cannot be pulled on an ARM host. The arm64
+  manifest is `sha256:24896770…`. The index digest is equally immutable and
+  resolves per architecture.
+- Connection split: the application uses `DATABASE_URL` through the pooler; the
+  matching worker uses `DIRECT_URL` straight to Postgres, because
+  `LISTEN`/`NOTIFY` needs a session that transaction pooling does not provide.
+- TLS material is generated on first `up` into `infra/stack-tls/` and is
+  git-ignored. The private key is `chmod 600` and owned by uid 70; Postgres
+  refuses to start otherwise. Never copy a key, a certificate body, or a
+  connection string into this file, Linear, or chat.
+- Restore rehearsal: `infra/overgarden-stack verify <digest>` restores into a
+  disposable `overgarden_stack_restore_*` database, serves the canonical product
+  read model against it, and deletes the target on every terminal path. Declared
+  budget one hour; the local rehearsal completes in about one second against a
+  small corpus, which bounds nothing about the full corpus on a real host.
+- Record only: service list, pin digests, budget class, pass/fail class, and the
+  check date.
+
 ## Open Operational Items
 
 - Codify the current Droplet Docker Compose deployment as repeatable infra if the pilot continues beyond the first controlled user, or create a separate production process-manager migration with the OVE-76 live-proof gate before replacing it.

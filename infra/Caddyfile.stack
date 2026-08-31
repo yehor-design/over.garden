@@ -1,0 +1,44 @@
+# OVE-358 — the composed stack's only public surface.
+#
+# Everything else in the stack is reachable on the internal network alone.
+# Postgres, the pooler, Meilisearch, and the worker publish no port; if this
+# file does not name a path, nothing outside the host can reach it.
+#
+# The hostname arrives through the environment so the same file serves a
+# laptop rehearsal and a real host without editing.
+
+{$OVERGARDEN_STACK_HOSTNAME:localhost} {
+	# Automatic HTTPS is Caddy's default for a real hostname and is a no-op for
+	# `localhost`, which gets a locally-trusted certificate instead. Rehearsal
+	# and production therefore differ in the certificate authority, not in the
+	# configuration.
+
+	encode zstd gzip
+
+	# Meilisearch is a derived projection with its own master key. It is exposed
+	# through the proxy only for operator search debugging, and only for reads:
+	# a write reaching it from outside would put the derived index ahead of the
+	# canonical Postgres read model, which is exactly backwards.
+	handle_path /_search/* {
+		@writes not method GET HEAD OPTIONS
+		respond @writes "search is read-only through this proxy" 405
+
+		reverse_proxy meilisearch:7700
+	}
+
+	# The stack serves no application here yet. The web application deploys
+	# separately and connects to this stack's pooler; adding an app upstream is
+	# a later, separate decision rather than something to leave half-wired.
+	handle {
+		respond "overgarden stack" 200
+	}
+
+	log {
+		# Aggregate access logging only. A request line carries a slug, and a
+		# slug carries a journal entry: the stack's logs are not a place to
+		# accumulate what people looked at.
+		output stderr
+		format console
+		level WARN
+	}
+}
