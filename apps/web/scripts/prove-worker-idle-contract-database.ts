@@ -63,7 +63,7 @@ export async function runWorkerIdleContractDatabaseProof(input: {
     await listener.query(`listen ${WAKE_CHANNEL}`);
     const wakes = collectWakes(listener);
 
-    // An enqueued job that is already available must wake the worker.
+    // A newly inserted job that is already available must wake the worker.
     wakes.reset();
     const startedAt = performance.now();
     await pool.query(

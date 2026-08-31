@@ -22,7 +22,7 @@
 --
 -- Two things wake the worker, because two things give it work:
 --
---   * a newly enqueued job that is already available
+--   * a newly inserted job that is already available
 --   * a projection intent whose *desired* state changed
 --
 -- The second matters as much as the first. Without it, a revocation would wait
