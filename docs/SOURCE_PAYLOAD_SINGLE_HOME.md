@@ -16,11 +16,43 @@ from one another, and the unit copy is already guaranteed present by
 `catalog_source_capture_units_immutable_terminal`.
 
 The second copy was mandatory only because `raw_payload` was `not null` — the
-column had no way to say the bytes live one join away. Measured on 2026-08-31, a
-local database held 266 MB of `catalog_source_records` across 17,393 rows: 16,062
-bytes per row, 72 percent of the whole database, at roughly one eighth of the
-declared 129,188-record corpus. No reader consumes the aggregated body. Only its
-digest is read.
+column had no way to say the bytes live one join away.
+
+Measured on 2026-09-01 against the database that actually holds the observed
+capture — 129,214 source records and 387,773 terminal capture units:
+
+| | Live compressed bytes |
+| -- | -- |
+| `catalog_source_records.raw_payload` | **98 MB** (34% of that table's live bytes) |
+| `catalog_source_capture_units.raw_payload` | 118 MB |
+| Whole database | 1690 MB before `vacuum full`, 1299 MB after |
+
+The deduplication removes the 98 MB — the copy that is reproducible from the
+118 MB the units hold. That is 5.8% of that database.
+
+No reader consumes the aggregated body. Only its digest is read.
+
+### An earlier figure in this document was wrong
+
+Until 2026-09-01 this runbook, migration `0042`, and the OVE-354 receipt all
+claimed "266 MB across 17,393 rows, 16,062 bytes per row, 72 percent of the whole
+database". Two mistakes were compounded there.
+
+That measurement came from the **developer** database, which holds no observed
+capture at all: only 8 of its 17,393 source records are EPPO, the rest are
+`ua-state-register` and `eu-oj-eur-lex-common-catalogue`, and its
+`catalog_source_capture_units` table is empty. Nothing there was duplicated, and
+the backfill would correctly have moved zero rows.
+
+And "16,062 bytes per row" divided the *relation* size by the row count. The
+relation was 267 MB, but its live column bytes were 81 MB; the remaining 172 MB
+was TOAST free space that a single `vacuum full` returned to the operating
+system. The payload was never 16 KB per row — it averaged 2.6 KB.
+
+The change itself is unaffected: the duplication is a property of
+`buildMaterializeEppoSourceRecordsQuery`, verified by reading it, and the
+deduplication is proven against a seeded database with real capture units. Only
+the sizing evidence was wrong, and the honest figure is 98 MB rather than 266 MB.
 
 ## The contract
 
