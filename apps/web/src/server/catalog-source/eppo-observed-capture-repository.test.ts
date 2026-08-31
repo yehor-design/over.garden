@@ -25,8 +25,13 @@ import {
   buildFailEppoCaptureUnitQuery,
   buildInsertEppoInventoryPageQuery,
   buildInsertEppoObservedSnapshotQuery,
+  buildClaimEppoSourceRecordBatchQuery,
+  buildDeduplicateEppoSourceRecordPayloadsQuery,
+  buildListEppoCapturedSnapshotsQuery,
   buildMaterializeEppoSourceRecordsQuery,
   buildQueueEppoEndpointUnitsQuery,
+  buildReconstructEppoSourceRecordPayloadQuery,
+  buildRestoreEppoSourceRecordPayloadsQuery,
   buildRecoverStaleEppoClaimsQuery,
   buildReleaseCancelledEppoClaimQuery,
   buildTransitionEppoCaptureQuery,
@@ -528,5 +533,88 @@ describe("EPPO observed capture repository", () => {
     expect(records.sql).not.toMatch(
       /(?:insert into|update) "(?:catalog_items|catalog_item_names|catalog_source_links|job_queue)"/u,
     );
+  });
+});
+
+describe("source payload single home", () => {
+  const SNAPSHOT_ID = "00000000-0000-4000-8000-000000354001";
+  const RECORD_IDS = [
+    "00000000-0000-4000-8000-000000354002",
+    "00000000-0000-4000-8000-000000354003",
+  ];
+
+  it("materializes the payload home instead of a second copy of the bytes", () => {
+    const compiled = buildMaterializeEppoSourceRecordsQuery(testDb, {
+      captureId: "00000000-0000-4000-8000-000000354000",
+      sourceSnapshotId: SNAPSHOT_ID,
+    }).compile();
+
+    expect(compiled.sql).toContain('"raw_payload_home"');
+    expect(compiled.parameters).toContain("capture_units");
+    // The record no longer receives the aggregated body; only its digest.
+    expect(compiled.sql).not.toMatch(/insert into "catalog_source_records" \([^)]*"raw_payload"[^_]/u);
+    expect(compiled.sql).toContain("sha256");
+  });
+
+  it("reconstructs a payload and its digest from the units that produced it", () => {
+    const compiled = buildReconstructEppoSourceRecordPayloadQuery(testDb, {
+      sourceSnapshotId: SNAPSHOT_ID,
+      sourceRecordId: "LYPES",
+    }).compile();
+
+    expect(compiled.sql).toContain('"catalog_source_capture_units"');
+    expect(compiled.sql).toContain('"catalog_source_capture_runs"');
+    expect(compiled.sql).toContain("jsonb_object_agg");
+    expect(compiled.sql).toContain("sha256");
+    expect(compiled.parameters).toContain("taxon_endpoint");
+    expect(compiled.parameters).toContain(SNAPSHOT_ID);
+  });
+
+  it("claims a bounded batch at one home without waiting on another run", () => {
+    const compiled = buildClaimEppoSourceRecordBatchQuery(testDb, {
+      sourceSnapshotId: SNAPSHOT_ID,
+      payloadHome: "inline",
+      batchSize: 500,
+    }).compile();
+
+    expect(compiled.sql).toContain("for update");
+    expect(compiled.sql).toContain("skip locked");
+    expect(compiled.sql).toContain('"raw_payload_home"');
+    expect(compiled.parameters).toContain("inline");
+    expect(compiled.parameters).toContain(500);
+  });
+
+  it("drops a copy only where the units reproduce the stored digest", () => {
+    const compiled = buildDeduplicateEppoSourceRecordPayloadsQuery(testDb, {
+      recordIds: RECORD_IDS,
+    }).compile();
+
+    // The comparison and the write are one statement: a record cannot be
+    // emptied on the strength of a digest that was true a moment earlier.
+    expect(compiled.sql).toContain('"unit_digest" = ');
+    expect(compiled.sql).toContain('"stored_digest"');
+    expect(compiled.sql).toContain("update");
+    expect(compiled.parameters).toContain("capture_units");
+    expect(compiled.parameters).toContain("inline");
+    for (const id of RECORD_IDS) expect(compiled.parameters).toContain(id);
+  });
+
+  it("restores a payload from the same aggregate that produced its digest", () => {
+    const compiled = buildRestoreEppoSourceRecordPayloadsQuery(testDb, {
+      recordIds: RECORD_IDS,
+    }).compile();
+
+    expect(compiled.sql).toContain("jsonb_object_agg");
+    expect(compiled.sql).toContain('"rebuilt"."payload"');
+    expect(compiled.parameters).toContain("inline");
+    expect(compiled.parameters).toContain("capture_units");
+  });
+
+  it("lists only snapshots an observed capture actually produced", () => {
+    const compiled = buildListEppoCapturedSnapshotsQuery(testDb).compile();
+
+    expect(compiled.sql).toContain('"catalog_source_capture_runs"');
+    expect(compiled.sql).toContain("is not null");
+    expect(compiled.parameters).toContain("completed");
   });
 });

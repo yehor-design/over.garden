@@ -491,7 +491,8 @@ export interface CatalogSourceRecords {
   created_at: Generated<Timestamp>;
   id: Generated<string>;
   projection_status: Generated<string>;
-  raw_payload: Json;
+  raw_payload: Json | null;
+  raw_payload_home: Generated<string>;
   raw_payload_sha256: string;
   source_only_fields: Generated<Json>;
   source_record_id: string;
