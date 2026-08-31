@@ -22,6 +22,7 @@ describe("job queue manifest", () => {
     expect(matchingSupportedKinds()).toEqual([
       "stable_registry_foundation_build",
       "stable_registry_extension_pack_build",
+      "stable_registry_edition_build",
       "catalog_alias_suggestions_refresh",
       "catalog_fuzzy_duplicate_qa_refresh",
       "catalog_match_suggestions_refresh",

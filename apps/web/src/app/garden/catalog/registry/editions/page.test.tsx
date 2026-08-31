@@ -34,6 +34,7 @@ vi.mock("@/server/stable-registry/edition-repository", () => ({
   readEditionCenter: mocks.readEditionCenter,
 }));
 vi.mock("../edition-actions", () => ({
+  prepareEditionAction: vi.fn(),
   decideEditionDiffGroupAction: vi.fn(),
   approveEditionPreviewAction: vi.fn(),
   moveEditionPointerAction: vi.fn(),
@@ -58,6 +59,12 @@ function model(
       totalAffectedObjectCount: 7,
     },
     activeReleaseId: "00000000-0000-4000-8000-000000258000",
+    availableCaptures: [
+      {
+        captureId: "00000000-0000-4000-8000-000000254001",
+        observedEndedAt: "2026-08-28T00:00:00.000Z",
+      },
+    ],
     diffGroups: [
       {
         id: "00000000-0000-4000-8000-000000258100",

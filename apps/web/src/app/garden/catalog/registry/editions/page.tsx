@@ -12,6 +12,7 @@ import { readEditionCenter } from "@/server/stable-registry/edition-repository";
 
 import {
   approveEditionPreviewAction,
+  prepareEditionAction,
   decideEditionDiffGroupAction,
   moveEditionPointerAction,
 } from "../edition-actions";
@@ -75,6 +76,7 @@ export default async function StableRegistryEditionsPage() {
       <StableRegistryEditionLane
         locale={locale}
         model={model}
+        prepareAction={prepareEditionAction}
         decideAction={decideEditionDiffGroupAction}
         approveAction={approveEditionPreviewAction}
         pointerAction={moveEditionPointerAction}

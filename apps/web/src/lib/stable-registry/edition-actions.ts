@@ -110,10 +110,21 @@ export interface EditionSummary {
   totalAffectedObjectCount: number;
 }
 
+/**
+ * A completed source capture the owner may compare the active release against.
+ * Only the opaque id and its observed time; a capture's contents are source
+ * evidence and never reach this operator surface.
+ */
+export interface EditionCaptureOption {
+  captureId: string;
+  observedEndedAt: string;
+}
+
 export interface EditionCenterReadModel {
   edition: EditionSummary | null;
   activeReleaseId: string | null;
   diffGroups: EditionDiffGroupSummary[];
   activationHistory: EditionActivationReceiptSummary[];
+  availableCaptures: EditionCaptureOption[];
   writesEnabled: boolean;
 }
