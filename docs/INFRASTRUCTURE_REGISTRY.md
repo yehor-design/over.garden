@@ -861,6 +861,22 @@ Vercel invariants:
   present/absent/effective class, the active-release digest class, aggregate
   eligibility counts, and index parity booleans. Never record catalog identity
   names, source rows, release payloads, or user/object identifiers.
+- OVE-259 owns the Stable Registry production landing and is the only issue in
+  the program with a direct production-state mutation. Its harness cannot mutate
+  production on its own: `--environment` must equal `--confirm-environment`,
+  every mutating phase additionally requires a maintainer-approved plan digest,
+  and the live module has no apply implementation at all. Approval binds one
+  exact digest; any drift in the deployment SHA, applied migrations, source
+  inventory, release policy, capacity class, backup class, affected-object
+  count, or active release returns authorization to pending. Capacity and backup
+  freshness are read from `STABLE_REGISTRY_STORAGE_HEADROOM_CLASS` and
+  `STABLE_REGISTRY_BACKUP_FRESHNESS_CLASS`; an unmeasured value blocks the plan
+  rather than defaulting to safe. Rollout evidence may record only phase, status,
+  terminal class, environment class, approval status/reason, plan digest,
+  pending-migration count, duration, parity and orphan counts, and control
+  booleans. Never record a connection string, password, authorization header,
+  API key, catalog name, source row, object or owner identifier, journal text,
+  or coordinates. `docs/STABLE_REGISTRY_PRODUCTION_ROLLOUT.md` is the runbook.
 - Do not commit Vercel tokens, protected preview URLs with nonce/share tokens, build logs containing secrets, or environment variable values.
 - Do not document or paste auth secret values. Evidence may say only whether the legacy `BETTER_AUTH_SECRET` fallback is present/blocked/local-fallback, whether the versioned policy is `versioned_current_vN`/`legacy_transition`/`local_fallback`/`closed`, and the Vercel target/name/sensitivity class. Never record secret-derived values, hashes, prefixes, or sizes.
 - Do not document or paste Google OAuth client secrets, OAuth tokens, callback query parameters, provider token responses, or signed cookies. Evidence may say only whether `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are present and whether the exact redirect URI is authorized.

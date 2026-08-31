@@ -65,6 +65,7 @@
     "smoke:catalog-alias-approval": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-catalog-alias-approval.ts",
     "smoke:catalog-alias-approval:seed-ui": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-catalog-alias-approval.ts --seed-ui",
     "smoke:catalog-alias-approval:reset-ui": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-catalog-alias-approval.ts --reset-ui",
+    "stable-registry:production": "NODE_OPTIONS=--conditions=react-server tsx scripts/prove-stable-registry-production.ts",
     "smoke:catalog-gardener-readback": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-catalog-gardener-readback.ts --prove",
     "smoke:catalog-gardener-readback:seed-ui": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-catalog-gardener-readback.ts --seed-ui",
     "smoke:catalog-gardener-readback:reset-ui": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-catalog-gardener-readback.ts --reset-ui",
