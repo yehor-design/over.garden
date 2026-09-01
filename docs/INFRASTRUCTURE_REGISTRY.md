@@ -785,6 +785,19 @@ Function execution region (2026-09-01):
 - Plan constraint: Hobby permits a **single** function region, not a fixed
   one. Selecting `fra1` therefore needs no paid plan. Pro would allow five
   regions, which this project does not need.
+- Live receipt after the cutover (2026-09-01, merge commit `6a18c53`): the
+  execution region reported `fra1` about four minutes after merge, and the
+  same 48-sample probe over the same four cache-busted targets reported
+  `fra1` for every sample. Median time to first byte, before then after:
+  `/ua/feed` 301 -> 238 ms, `/ua/knowledge` 288 -> 203 ms, `/ru/feed`
+  295 -> 197 ms, `/api/health` 275 -> 184 ms. Fastest observed sample fell by
+  80-91 ms on every target, which is the transatlantic round trip no longer
+  being paid.
+- What the receipt does **not** cover: these are unauthenticated public
+  targets. The four-round-trip garden workspace inventory read is behind a
+  session and was not exercised, so the largest predicted gain is reasoned,
+  not measured. Whether `query_timeout` on that section becomes rarer is still
+  open and needs its own observation.
 - Reading the live value: `curl -sS -D - -o /dev/null https://over.garden/api/health`
   and read `x-vercel-id`. The middle segment is the execution region; a
   two-segment value means the response came from the CDN without invoking a
