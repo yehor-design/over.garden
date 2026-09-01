@@ -86,10 +86,22 @@ begin
       );
   end if;
 
+  -- The constraint below reads `original_deleted_at`, which
+  -- `0038_ove349_retire_legacy_journal_media.sql` drops. Migrations re-apply
+  -- from 0001 on every bootstrap, so on a database past 0038 this ran again
+  -- against a column that no longer exists and failed, taking every later
+  -- migration with it. `0036_ove347_atomic_journal_create.sql` supersedes this
+  -- constraint anyway; the column check keeps the fresh-database path
+  -- untouched and skips it once the column is gone.
   if not exists (
     select 1 from pg_constraint
     where conname = 'media_assets_safe_readiness_shape_check'
       and conrelid = 'media_assets'::regclass
+  ) and exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'media_assets'
+      and column_name = 'original_deleted_at'
   ) then
     alter table media_assets add constraint media_assets_safe_readiness_shape_check
       check (

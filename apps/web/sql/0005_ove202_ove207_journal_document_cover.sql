@@ -147,11 +147,36 @@ begin
   end if;
 end $$;
 
-create unique index if not exists media_assets_one_cover_only_per_entry_uidx
-  on media_assets (journal_entry_id)
-  where journal_entry_id is not null
-    and usage_role = 'cover_only'
-    and quarantine_key not like 'visual-fixtures/%';
+-- `0038_ove349_retire_legacy_journal_media.sql` drops
+-- `media_assets.quarantine_key` and replaces both objects below with versions
+-- that do not mention it. Migrations are re-applied from 0001 on every
+-- bootstrap, so on a database that has had 0038 this file runs again against a
+-- column that no longer exists: the index below failed outright, and every
+-- later migration was unreachable behind it.
+--
+-- Guarding on the column keeps both paths correct. On a fresh database 0005
+-- still runs before 0038, the column is present, and these execute exactly as
+-- before. On a database past 0038 they are skipped, and 0038's superseding
+-- definitions are the ones left standing.
+do $guard$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'media_assets'
+      and column_name = 'quarantine_key'
+  ) then
+    execute $stmt$
+      create unique index if not exists media_assets_one_cover_only_per_entry_uidx
+        on media_assets (journal_entry_id)
+        where journal_entry_id is not null
+          and usage_role = 'cover_only'
+          and quarantine_key not like 'visual-fixtures/%'
+    $stmt$;
+  end if;
+end
+$guard$;
 
 alter table journal_entries
   add column if not exists cover_media_asset_id uuid;
@@ -176,41 +201,61 @@ create index if not exists journal_entries_cover_media_asset_id_idx
   on journal_entries (cover_media_asset_id)
   where cover_media_asset_id is not null;
 
-create or replace function enforce_journal_entry_inline_media_limit()
-returns trigger
-language plpgsql
-as $$
-declare
-  attached_count integer;
+-- Guarded for the same reason as the index above, but the failure here is
+-- quieter and worse. `create or replace function` does not resolve column
+-- references at creation time, so on a database past 0038 this would succeed
+-- and silently reinstate a body reading `new.quarantine_key` — a column that no
+-- longer exists. Nothing would complain until the next media insert fired the
+-- trigger.
+do $guard$
 begin
-  if new.journal_entry_id is null then
-    return new;
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'media_assets'
+      and column_name = 'quarantine_key'
+  ) then
+    execute $stmt$
+      create or replace function enforce_journal_entry_inline_media_limit()
+      returns trigger
+      language plpgsql
+      as $fn$
+      declare
+        attached_count integer;
+      begin
+        if new.journal_entry_id is null then
+          return new;
+        end if;
+
+        if new.quarantine_key like 'visual-fixtures/%' then
+          return new;
+        end if;
+
+        if coalesce(new.usage_role, 'inline') = 'cover_only' then
+          return new;
+        end if;
+
+        select count(*)::integer
+        into attached_count
+        from media_assets
+        where journal_entry_id = new.journal_entry_id
+          and quarantine_key not like 'visual-fixtures/%'
+          and coalesce(usage_role, 'inline') = 'inline'
+          and id is distinct from new.id;
+
+        if attached_count >= 10 then
+          raise exception 'journal entry may attach at most 10 non-fixture media assets'
+            using errcode = 'check_violation';
+        end if;
+
+        return new;
+      end;
+      $fn$
+    $stmt$;
   end if;
-
-  if new.quarantine_key like 'visual-fixtures/%' then
-    return new;
-  end if;
-
-  if coalesce(new.usage_role, 'inline') = 'cover_only' then
-    return new;
-  end if;
-
-  select count(*)::integer
-  into attached_count
-  from media_assets
-  where journal_entry_id = new.journal_entry_id
-    and quarantine_key not like 'visual-fixtures/%'
-    and coalesce(usage_role, 'inline') = 'inline'
-    and id is distinct from new.id;
-
-  if attached_count >= 10 then
-    raise exception 'journal entry may attach at most 10 non-fixture media assets'
-      using errcode = 'check_violation';
-  end if;
-
-  return new;
-end;
-$$;
+end
+$guard$;
 
 drop trigger if exists media_assets_inline_limit_trg on media_assets;
 create trigger media_assets_inline_limit_trg

@@ -15,59 +15,85 @@ alter table media_assets
 alter table media_assets
   drop constraint if exists media_assets_safe_readiness_shape_check;
 
-alter table media_assets
-  add constraint media_assets_safe_readiness_shape_check
-  check (
-    media_readiness_state = 'legacy_non_ready'
-    or (
-      media_readiness_state = 'quarantined'
-      and processing_claim_token is null
-      and processing_claimed_at is null
-      and derivative_key is null
-      and admitted_media_type is null
-      and original_deleted_at is null
-      and status = 'quarantined'
-    )
-    or (
-      media_readiness_state = 'processing'
-      and processing_claim_token is not null
-      and processing_claimed_at is not null
-      and derivative_key is null
-      and admitted_media_type is null
-      and original_deleted_at is null
-      and status = 'quarantined'
-    )
-    or (
-      media_readiness_state = 'derivative_written'
-      and derivative_key is not null
-      and admitted_media_type is not null
-      and original_deleted_at is null
-      and status = 'quarantined'
-    )
-    or (
-      media_readiness_state = 'retryable'
-      and processing_claim_token is null
-      and processing_claimed_at is null
-      and derivative_key is null
-      and admitted_media_type is null
-      and original_deleted_at is null
-      and status = 'quarantined'
-    )
-    or (
-      media_readiness_state = 'public_ready'
-      and derivative_key is not null
-      and admitted_media_type = declared_media_type
-      and original_deleted_at is not null
-      and processing_claim_token is null
-      and processing_claimed_at is null
-      and status = 'processed'
-      and (
-        derivative_key = 'derivatives/' || public_object_id::text || '.webp'
-        or derivative_key = 'derivatives/' || id::text || '/' || upload_generation::text || '.webp'
-      )
-    )
-    or media_readiness_state in ('rejected', 'invalidated')
-  );
+-- This constraint reads `original_deleted_at`, which
+-- `0038_ove349_retire_legacy_journal_media.sql` drops — and 0038 also drops the
+-- constraint itself without re-adding it, because the readiness shape it
+-- describes is retired. Migrations re-apply from 0001 on every bootstrap, so on
+-- a database past 0038 this ran again against a column that no longer exists
+-- and failed, taking every later migration with it.
+--
+-- Guarding on the column makes both paths agree on the same end state. Fresh:
+-- 0013 adds it, this replaces it, 0038 drops it — absent. Past 0038: the column
+-- is gone, this is skipped, 0038 drops nothing — absent. The unconditional
+-- `drop constraint` above stays unconditional precisely because absent is the
+-- intended final state.
+do $guard$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'media_assets'
+      and column_name = 'original_deleted_at'
+  ) then
+    execute $stmt$
+      alter table media_assets
+        add constraint media_assets_safe_readiness_shape_check
+        check (
+          media_readiness_state = 'legacy_non_ready'
+          or (
+            media_readiness_state = 'quarantined'
+            and processing_claim_token is null
+            and processing_claimed_at is null
+            and derivative_key is null
+            and admitted_media_type is null
+            and original_deleted_at is null
+            and status = 'quarantined'
+          )
+          or (
+            media_readiness_state = 'processing'
+            and processing_claim_token is not null
+            and processing_claimed_at is not null
+            and derivative_key is null
+            and admitted_media_type is null
+            and original_deleted_at is null
+            and status = 'quarantined'
+          )
+          or (
+            media_readiness_state = 'derivative_written'
+            and derivative_key is not null
+            and admitted_media_type is not null
+            and original_deleted_at is null
+            and status = 'quarantined'
+          )
+          or (
+            media_readiness_state = 'retryable'
+            and processing_claim_token is null
+            and processing_claimed_at is null
+            and derivative_key is null
+            and admitted_media_type is null
+            and original_deleted_at is null
+            and status = 'quarantined'
+          )
+          or (
+            media_readiness_state = 'public_ready'
+            and derivative_key is not null
+            and admitted_media_type = declared_media_type
+            and original_deleted_at is not null
+            and processing_claim_token is null
+            and processing_claimed_at is null
+            and status = 'processed'
+            and (
+              derivative_key = 'derivatives/' || public_object_id::text || '.webp'
+              or derivative_key = 'derivatives/' || id::text || '/' || upload_generation::text || '.webp'
+            )
+          )
+          or media_readiness_state in ('rejected', 'invalidated')
+        )
+    $stmt$;
+  end if;
+end
+$guard$;
 
 alter table job_queue
   drop constraint if exists job_queue_media_staging_finalize_payload_check;
