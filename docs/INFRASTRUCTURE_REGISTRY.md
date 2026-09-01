@@ -763,6 +763,33 @@ Project:
   accepts daily Cron expressions only; it must not be configured with an
   hourly or sub-hourly recovery schedule.
 
+Function execution region (2026-09-01):
+
+- Declared in `apps/web/vercel.json` as `"regions": ["fra1"]`, not in the
+  dashboard, so the value is version-controlled and travels with the
+  deployment that carries it.
+- `fra1` is Frankfurt, `eu-central-1`. It is chosen to match the managed
+  database `overgarden-postgres-prod-fra1`, the worker droplet
+  `overgarden-worker-prod-fra1`, and the European upstreams the ingestion
+  paths call (`api.eppo.int`, `api.gbif.org`, `data.europa.eu`). Vercel's own
+  guidance is that functions should execute in the same region as the
+  database.
+- Before this change the project ran on the platform default `iad1`
+  (Washington, D.C.). That was never chosen; `iad1` is the default for all new
+  projects. Measured on 2026-09-01 across 48 samples on four cache-busted
+  targets, every response carried `x-vercel-id: fra1::iad1::…` — the request
+  entered at the Frankfurt point of presence and executed in Virginia, then
+  reached back across the Atlantic for every database round trip. The garden
+  workspace inventory read costs four such round trips (OVE-360), which is the
+  section observed returning `query_timeout`.
+- Plan constraint: Hobby permits a **single** function region, not a fixed
+  one. Selecting `fra1` therefore needs no paid plan. Pro would allow five
+  regions, which this project does not need.
+- Reading the live value: `curl -sS -D - -o /dev/null https://over.garden/api/health`
+  and read `x-vercel-id`. The middle segment is the execution region; a
+  two-segment value means the response came from the CDN without invoking a
+  function, so it proves nothing about the region.
+
 OVE-205 behavior deployment at verification time:
 
 - Deployment ID: `dpl_719iz4kshXu7zrk5qzYXwQ3CmFUA`
