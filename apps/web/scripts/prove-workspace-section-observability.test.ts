@@ -3,18 +3,23 @@ import { describe, expect, it } from "vitest";
 import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import {
   GARDEN_WORKSPACE_FAILURE_CLASSES,
+  GARDEN_WORKSPACE_SECTION_QUERY_COUNT,
+  WORKSPACE_SECTION_DEADLINE_MS,
   classifyGardenWorkspaceFailure,
+  gardenWorkspaceSectionDeadlineMs,
 } from "@/server/garden-workspace-repository";
 
 import {
   WAIT_SAFE_CONTROLS,
   WORKSPACE_INVENTORY_RESPONSE_BUDGET_MS,
+  WORKSPACE_SETTLE_OBSERVATION_ALLOWANCE_MS,
   driverRejection,
   parseWorkspaceProofArgs,
   proveClosedClasses,
   proveConcurrentLoads,
   proveInjectedInventoryTimeout,
   proveOwnerScope,
+  proveInventoryRoundTrips,
   proveReplay,
   proveScopedDegradation,
   runWorkspaceObservabilityProof,
@@ -85,7 +90,14 @@ describe("garden workspace section observability", () => {
     const serialized = JSON.stringify(receipt);
 
     expect(receipt.withinBudget).toBe(true);
-    expect(receipt.elapsedMs).toBeLessThanOrEqual(
+    // The load-bearing property: the deadline actually bounds the settle. A
+    // wedged source reaches the deadline and stops there, so the slowest settle
+    // sits at the budget rather than running on.
+    expect(receipt.maxSettleMs).toBeLessThanOrEqual(
+      WORKSPACE_INVENTORY_RESPONSE_BUDGET_MS +
+        WORKSPACE_SETTLE_OBSERVATION_ALLOWANCE_MS,
+    );
+    expect(receipt.maxSettleMs).toBeGreaterThanOrEqual(
       WORKSPACE_INVENTORY_RESPONSE_BUDGET_MS,
     );
     // The driver message and the owner identifier must not survive into a
@@ -136,6 +148,36 @@ describe("garden workspace section observability", () => {
         );
       }
     }
+  });
+
+  it("measures the inventory round-trip count rather than trusting the declaration", async () => {
+    const proof = await proveInventoryRoundTrips();
+
+    // Four when the owner has objects: the summary count and the object page,
+    // then the entry summaries and the cover media keyed on the ids returned.
+    expect(proof.withObjects).toBe(4);
+    // Two when they have none: the object page short-circuits the dependent pair.
+    expect(proof.withoutObjects).toBe(2);
+    expect(proof.declared).toBe(proof.withObjects);
+  });
+
+  it("derives every section budget from its own round-trip cost", () => {
+    for (const section of ["spaces", "recent", "inbox"] as const) {
+      // One query each, so their budget is unchanged by this contract.
+      expect(GARDEN_WORKSPACE_SECTION_QUERY_COUNT[section]).toBe(1);
+      expect(gardenWorkspaceSectionDeadlineMs(section)).toBe(
+        WORKSPACE_SECTION_DEADLINE_MS,
+      );
+    }
+    expect(gardenWorkspaceSectionDeadlineMs("inventory")).toBe(
+      WORKSPACE_SECTION_DEADLINE_MS *
+        GARDEN_WORKSPACE_SECTION_QUERY_COUNT.inventory,
+    );
+    // The budget is a derivation, not a hand-picked constant: it must move if
+    // the round-trip cost moves.
+    expect(gardenWorkspaceSectionDeadlineMs("inventory")).toBeGreaterThan(
+      gardenWorkspaceSectionDeadlineMs("spaces"),
+    );
   });
 
   it("refuses an unknown proof mode before running anything", () => {

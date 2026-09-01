@@ -26,6 +26,39 @@ export const WORKSPACE_SPACE_PAGE_SIZE = 4;
 export const WORKSPACE_RECENT_LIMIT = 8;
 export const WORKSPACE_SECTION_DEADLINE_MS = 1_200;
 
+/**
+ * Database round trips each section costs at its worst. On the serverless pool
+ * default of one connection per instance these do not overlap, so a section
+ * that issues four queries waits four times as long as one that issues one.
+ *
+ * A single deadline shared across sections of unequal work is a unit mismatch
+ * rather than a safety margin: it gives the largest section a quarter of the
+ * protection the smallest one gets. Production measurement on 2026-09-01 found
+ * exactly that — `inventory` was the only section to report `query_timeout`,
+ * and only on a cold instance, while 22 warm samples across sequential and
+ * concurrent shapes never failed.
+ *
+ * `inventory` costs four: the summary count and the object page, then the entry
+ * summaries and the cover media keyed on the ids the page returned. The count
+ * is measured by `prove-workspace-section-observability`, not trusted.
+ */
+export const GARDEN_WORKSPACE_SECTION_QUERY_COUNT = {
+  inventory: 4,
+  spaces: 1,
+  recent: 1,
+  inbox: 1,
+} as const satisfies Record<GardenWorkspaceSectionKey, number>;
+
+/**
+ * The budget is derived from the section's own round-trip cost, so a section
+ * that gains a query gains its budget with it and nobody hand-picks a constant.
+ */
+export function gardenWorkspaceSectionDeadlineMs(
+  section: GardenWorkspaceSectionKey,
+): number {
+  return WORKSPACE_SECTION_DEADLINE_MS * GARDEN_WORKSPACE_SECTION_QUERY_COUNT[section];
+}
+
 const MAX_WORKSPACE_QUERY_LIMIT = 25;
 
 export interface GardenWorkspaceInventorySource {
@@ -141,19 +174,31 @@ export interface GardenWorkspaceSources {
   inbox(scope: RequestScope): Promise<GardenWorkspaceInboxSummary>;
 }
 
-const defaultSources: GardenWorkspaceSources = {
-  async inventory(scope, window) {
-    const [summary, objects] = await Promise.all([
-      buildGardenWorkspaceInventorySummaryQuery(db, scope).executeTakeFirst(),
-      listMyPlantObjects(scope, window.limit, window.offset),
-    ]);
+/**
+ * The inventory read, with an injectable executor so its round-trip count is a
+ * measurement rather than a claim in a comment.
+ */
+export async function loadGardenWorkspaceInventorySource(
+  scope: RequestScope,
+  window: { limit: number; offset: number },
+  executor: QueryExecutor = db,
+): Promise<GardenWorkspaceInventorySource> {
+  const [summary, objects] = await Promise.all([
+    buildGardenWorkspaceInventorySummaryQuery(executor, scope).executeTakeFirst(),
+    listMyPlantObjects(scope, window.limit, window.offset, executor),
+  ]);
 
-    return {
-      totalCount: normalizeCount(summary?.totalCount),
-      plantCount: normalizeCount(summary?.plantCount),
-      animalCount: normalizeCount(summary?.animalCount),
-      objects,
-    };
+  return {
+    totalCount: normalizeCount(summary?.totalCount),
+    plantCount: normalizeCount(summary?.plantCount),
+    animalCount: normalizeCount(summary?.animalCount),
+    objects,
+  };
+}
+
+const defaultSources: GardenWorkspaceSources = {
+  inventory(scope, window) {
+    return loadGardenWorkspaceInventorySource(scope, window);
   },
   async spaces(scope, window) {
     const rows = await buildGardenWorkspaceSpaceSummariesQuery(
@@ -280,7 +325,10 @@ function runWorkspaceSource<T>(
   if (faultSections.has(section)) {
     return Promise.reject(new Error("Deterministic workspace section fault."));
   }
-  return withGardenWorkspaceDeadline(load);
+  return withGardenWorkspaceDeadline(
+    load,
+    gardenWorkspaceSectionDeadlineMs(section),
+  );
 }
 
 /**

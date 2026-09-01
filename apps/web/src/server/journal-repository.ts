@@ -1559,16 +1559,24 @@ async function readExistingFirstPlantEntryResult(
   };
 }
 
+/**
+ * Issues three queries when the owner has objects and one when they do not:
+ * the object page, then the entry summaries and the cover media keyed on the
+ * ids it returned. The executor is injectable so that count can be measured
+ * rather than asserted from a comment — see
+ * `GARDEN_WORKSPACE_SECTION_QUERY_COUNT`.
+ */
 export async function listMyPlantObjects(
   scope: RequestScope,
   limit = 10,
   offset = 0,
+  executor: QueryExecutor = db,
 ): Promise<PlantObjectSummary[]> {
   const boundedLimit = Math.min(Math.max(limit, 1), MAX_RECENT_ITEMS);
   const boundedOffset = Math.max(0, Math.trunc(offset));
 
   const rows = await buildMyPlantObjectsQuery(
-    db,
+    executor,
     scope,
     boundedLimit,
     boundedOffset,
@@ -1577,8 +1585,8 @@ export async function listMyPlantObjects(
 
   const objectIds = rows.map((row) => row.id);
   const [entrySummaries, coverRows] = await Promise.all([
-    buildMyPlantObjectEntrySummariesQuery(db, scope, objectIds).execute(),
-    buildMyPlantObjectCoverMediaQuery(db, scope, objectIds).execute(),
+    buildMyPlantObjectEntrySummariesQuery(executor, scope, objectIds).execute(),
+    buildMyPlantObjectCoverMediaQuery(executor, scope, objectIds).execute(),
   ]);
   const entrySummaryByObjectId = new Map(
     entrySummaries.map((summary) => [summary.plantObjectId, summary]),
