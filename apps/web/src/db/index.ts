@@ -5,6 +5,7 @@ import { Pool } from "pg";
 
 import { numberServerEnv } from "@/lib/env";
 import {
+  defaultDatabasePoolMax,
   resolveDatabaseConnection,
   resolveDatabaseSslConfig,
   resolvePgConnectionString,
@@ -33,14 +34,6 @@ function createPool() {
     max: numberServerEnv("DATABASE_POOL_MAX", defaultDatabasePoolMax()),
     ssl: resolveDatabaseSslConfig(process.env, resolution),
   });
-}
-
-function defaultDatabasePoolMax() {
-  return process.env.VERCEL === "1" ||
-    process.env.VERCEL === "true" ||
-    process.env.NODE_ENV === "production"
-    ? 1
-    : 10;
 }
 
 const pool = globalForDb.overGardenPgPool ?? createPool();

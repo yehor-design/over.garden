@@ -17,6 +17,62 @@ interface DatabaseSslConfig {
 }
 
 /**
+ * True when the application's own connection goes through a pooler.
+ *
+ * The signal is that `DIRECT_URL` exists *and differs* from the connection in
+ * use. Nobody configures a separate direct URL except to sit a pooler in front
+ * of the other one — that is exactly the split the infrastructure registry
+ * records, and the composed self-hosted stack has the same shape.
+ *
+ * Deliberately not a port or database-name check: those are DigitalOcean's
+ * spelling of the idea, and PgBouncer in the composed stack spells it
+ * differently.
+ */
+export function isPooledDatabaseConnection(env: EnvLike = process.env): boolean {
+  const direct = configured(env.DIRECT_URL);
+  if (!direct) return false;
+  const resolution = resolveDatabaseConnection(env);
+  if (!resolution.connectionString) return false;
+  return resolution.connectionString !== direct;
+}
+
+/**
+ * How many connections the application pool may open.
+ *
+ * One per instance is right against a bare Postgres: a serverless deployment
+ * multiplies instances, each instance's pool is private, and a managed
+ * database's connection slots are few — this one has 22. But one connection
+ * also means the concurrency the code already asks for cannot happen. The
+ * garden workspace loads four sections through `Promise.allSettled` and the
+ * inventory read fans out to four round trips through `Promise.all`; on a pool
+ * of one they queue instead, which is the contention OVE-360 measured.
+ *
+ * Behind a transaction pooler the arithmetic inverts. A client connection no
+ * longer owns a backend — the pooler hands one out per transaction and takes it
+ * back at commit — so client connections are cheap and the backend count is
+ * governed by the pool's own size, not by ours.
+ *
+ * Five, not more: four is the widest concurrent fan-out any single request
+ * makes, and the fifth is headroom. Raising this further would buy nothing that
+ * the measured shape of the code can use.
+ *
+ * `DATABASE_POOL_MAX` still overrides everything, so an operator keeps the last
+ * word without a deployment.
+ */
+export const POOLED_DATABASE_POOL_MAX = 5;
+export const DIRECT_SERVERLESS_DATABASE_POOL_MAX = 1;
+export const LOCAL_DATABASE_POOL_MAX = 10;
+
+export function defaultDatabasePoolMax(env: EnvLike = process.env): number {
+  const serverless =
+    env.VERCEL === "1" || env.VERCEL === "true" || env.NODE_ENV === "production";
+  if (!serverless) return LOCAL_DATABASE_POOL_MAX;
+  return isPooledDatabaseConnection(env)
+    ? POOLED_DATABASE_POOL_MAX
+    : DIRECT_SERVERLESS_DATABASE_POOL_MAX;
+}
+
+/**
  * Resolves the connection for work that needs a real session rather than a
  * transaction.
  *
