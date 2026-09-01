@@ -58,12 +58,33 @@ describe("garden workspace query contracts", () => {
     ).compile();
 
     expect(compiled.sql).toContain('from "plant_objects"');
-    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $2');
+    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $1');
     expect(compiled.sql).toContain("object_kind");
     expect(compiled.sql).toContain("plant");
     expect(compiled.sql).toContain("animal");
-    expect(compiled.sql).toContain("animal");
-    expect(compiled.parameters).toEqual(["object", OWNER_ID]);
+    expect(compiled.parameters).toEqual([OWNER_ID]);
+  });
+
+  it("counts inventory without touching journal_entries at all", () => {
+    const compiled = buildGardenWorkspaceInventorySummaryQuery(
+      testDb,
+      scope,
+    ).compile();
+
+    // A left join to `journal_entries` used to sit here contributing nothing:
+    // absent from the select list and the predicate, it could only duplicate
+    // left rows for `count(distinct …)` to collapse again. Its cost scaled with
+    // the owner's own journal — 8.713 ms and 35,878 shared-buffer hits at 4,000
+    // objects and 32,000 entries, against 0.346 ms and 30 hits without it.
+    //
+    // Guarding the join alone would not hold: reintroducing it *with* the
+    // distinct would restore the cost while every count still matched. Both
+    // halves are asserted, and the parameter list is asserted exactly, so a
+    // join carrying its own bound value cannot slip back in silently.
+    expect(compiled.sql).not.toContain("journal_entries");
+    expect(compiled.sql).not.toContain("join");
+    expect(compiled.sql).not.toContain("distinct");
+    expect(compiled.parameters).toHaveLength(1);
   });
 
   it("bounds space summaries and keeps joined objects inside the same owner", () => {
