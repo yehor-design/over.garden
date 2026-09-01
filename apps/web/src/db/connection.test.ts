@@ -4,8 +4,48 @@ import {
   resolveDatabaseConnection,
   resolveDatabaseSsl,
   resolveDatabaseSslConfig,
+  resolveDirectDatabaseConnection,
   resolvePgConnectionString,
 } from "./connection";
+
+describe("direct session resolution", () => {
+  const POOLED = "postgresql://app:secret@db.example.test:25061/pool";
+  const DIRECT = "postgresql://app:secret@db.example.test:25060/defaultdb";
+
+  it("prefers DIRECT_URL over the pooled connection", () => {
+    // Session-level advisory locks and LISTEN/NOTIFY break silently through a
+    // transaction pooler, so anything asking for a direct session must not be
+    // handed the pooled URL when both are configured.
+    expect(
+      resolveDirectDatabaseConnection({
+        DATABASE_URL: POOLED,
+        DIRECT_URL: DIRECT,
+      }),
+    ).toMatchObject({ connectionString: DIRECT, source: "DIRECT_URL" });
+  });
+
+  it("falls back to the pooled resolution when DIRECT_URL is unset", () => {
+    // Local development and production-before-the-pooler have no separate
+    // direct URL, and there the pooled connection *is* direct.
+    expect(
+      resolveDirectDatabaseConnection({ DATABASE_URL: POOLED }),
+    ).toMatchObject({ connectionString: POOLED, source: "DATABASE_URL" });
+  });
+
+  it("treats a blank DIRECT_URL as unset rather than as a connection", () => {
+    expect(
+      resolveDirectDatabaseConnection({ DATABASE_URL: POOLED, DIRECT_URL: "" }),
+    ).toMatchObject({ source: "DATABASE_URL" });
+  });
+
+  it("keeps TLS on for a direct connection", () => {
+    // `resolveDatabaseSsl` returns false by default for a `DATABASE_URL`
+    // source. A direct session must not inherit that exemption, or the lock
+    // would travel unencrypted.
+    const resolution = resolveDirectDatabaseConnection({ DIRECT_URL: DIRECT });
+    expect(resolveDatabaseSsl({ DIRECT_URL: DIRECT }, resolution)).toBe(true);
+  });
+});
 
 describe("database connection resolution", () => {
   it("uses DATABASE_URL first", () => {

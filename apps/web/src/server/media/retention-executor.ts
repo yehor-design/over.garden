@@ -1,8 +1,14 @@
 import "server-only";
 
 import { sql } from "kysely";
+import { Pool, type PoolClient } from "pg";
 
 import { db } from "@/db";
+import {
+  resolveDatabaseSslConfig,
+  resolveDirectDatabaseConnection,
+  resolvePgConnectionString,
+} from "@/db/connection";
 import type { JsonValue } from "@/db/types";
 import { drainMediaLifecycleQueue } from "@/server/media/media-lifecycle-consumer";
 
@@ -346,16 +352,61 @@ async function executeRetentionSelection(selection: RetentionSelection) {
   `.execute(db);
 }
 
+/**
+ * The retention workflow must not run twice at once, and it spans many separate
+ * statements. That is a session-level advisory lock, and it has one property
+ * this job depends on: **Postgres releases it when the session ends**, so a run
+ * that crashes mid-way frees the lock on its own.
+ *
+ * The lock therefore cannot travel over the pooled connection. A transaction
+ * pooler hands out a different backend per transaction, so the acquire and the
+ * release land on different ones: the lock is never released, and every later
+ * run waits on it forever, once a day, silently. The session never ends, so the
+ * automatic cleanup never fires either.
+ *
+ * `DIRECT_URL` is the recorded connection for exactly this — the matching
+ * worker already uses it because `LISTEN`/`NOTIFY` needs a session. Holding a
+ * checked-out client is not enough on its own: through a transaction pooler,
+ * even a held client is unpinned at each transaction boundary. Both halves run
+ * on one client of a direct pool.
+ */
+let leaderPool: Pool | undefined;
+let leaderClient: PoolClient | undefined;
+
+function retentionLeaderPool(): Pool {
+  if (leaderPool) return leaderPool;
+  const resolution = resolveDirectDatabaseConnection(process.env);
+  const connectionString = resolvePgConnectionString(process.env, resolution);
+  if (!connectionString) throw new Error("retention_direct_connection_missing");
+  leaderPool = new Pool({
+    connectionString,
+    max: 1,
+    ssl: resolveDatabaseSslConfig(process.env, resolution),
+  });
+  return leaderPool;
+}
+
 async function acquireRetentionLeaderLock() {
-  await sql`select pg_advisory_lock(hashtextextended('ove349.retention.v2', 0))`.execute(
-    db,
+  leaderClient = await retentionLeaderPool().connect();
+  await leaderClient.query(
+    "select pg_advisory_lock(hashtextextended('ove349.retention.v2', 0))",
   );
 }
 
 async function releaseRetentionLeaderLock() {
-  await sql`select pg_advisory_unlock(hashtextextended('ove349.retention.v2', 0))`.execute(
-    db,
-  );
+  const client = leaderClient;
+  if (!client) return;
+  leaderClient = undefined;
+  try {
+    await client.query(
+      "select pg_advisory_unlock(hashtextextended('ove349.retention.v2', 0))",
+    );
+  } finally {
+    // Returning the client ends its checkout either way. Even if the unlock
+    // above threw, ending the session is what releases the lock, so the next
+    // run is never blocked by this one's failure.
+    client.release();
+  }
 }
 
 async function scalarCount(

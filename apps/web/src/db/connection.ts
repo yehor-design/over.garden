@@ -4,6 +4,7 @@ interface DatabaseConnectionResolution {
   connectionString?: string;
   source:
     | "DATABASE_URL"
+    | "DIRECT_URL"
     | "POSTGRES_URL"
     | "POSTGRES_PRISMA_URL"
     | "POSTGRES_COMPONENTS"
@@ -13,6 +14,30 @@ interface DatabaseConnectionResolution {
 interface DatabaseSslConfig {
   ca?: string;
   rejectUnauthorized: boolean;
+}
+
+/**
+ * Resolves the connection for work that needs a real session rather than a
+ * transaction.
+ *
+ * A transaction pooler hands out a different backend per transaction, so
+ * anything whose meaning spans transactions — `LISTEN`/`NOTIFY`, a
+ * session-level advisory lock — cannot use the pooled connection. The failure
+ * is silent rather than loud: a session advisory lock is acquired on one
+ * backend and released on another, so it is never released, and the next run
+ * waits on it forever.
+ *
+ * `DIRECT_URL` is the recorded name for that connection, and this is the first
+ * runtime reader of it. When it is unset the pooled resolution is returned
+ * unchanged, which is the correct answer everywhere no pooler exists — local
+ * development, and production until the pooler is wired.
+ */
+export function resolveDirectDatabaseConnection(
+  env: EnvLike = process.env,
+): DatabaseConnectionResolution {
+  const directUrl = configured(env.DIRECT_URL);
+  if (directUrl) return { connectionString: directUrl, source: "DIRECT_URL" };
+  return resolveDatabaseConnection(env);
 }
 
 export function resolveDatabaseConnection(
