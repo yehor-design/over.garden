@@ -200,8 +200,13 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
     },
     {
       path: "sql/0001_walking_skeleton.sql",
+      // Repinned when the re-apply guards landed: three statements in this file
+      // read `media_assets.quarantine_key` or `original_deleted_at`, which 0038
+      // drops, and each is now wrapped in a column-existence check. The audit
+      // flagging the change is the pin working — it is meant to make an edit
+      // here a decision rather than a diff.
       sha256:
-        "f0097a48ad08183816c1c68201da493b76e7f3c9a0e5c751603f0cbd3be37a1a",
+        "763ec4df6b002b5752e76ffe4c1bee08eb1c10a7c731d056a45c15ac31d88077",
     },
     {
       path: "sql/0015_ove241_auth_email_outbox.sql",
