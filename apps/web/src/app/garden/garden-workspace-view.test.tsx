@@ -45,7 +45,7 @@ describe("GardenWorkspaceView", () => {
 
   it("keeps healthy sections usable when recent continuity fails", () => {
     const workspace = readyWorkspace();
-    workspace.recent = { status: "error" };
+    workspace.recent = { status: "error", failureClass: "query_timeout" };
 
     const html = renderToStaticMarkup(
       <GardenWorkspaceView
@@ -69,10 +69,10 @@ describe("GardenWorkspaceView", () => {
         locale="uk"
         today="2026-07-12"
         workspace={{
-          inventory: { status: "error" },
-          spaces: { status: "error" },
-          recent: { status: "error" },
-          inbox: { status: "error" },
+          inventory: { status: "error", failureClass: "connection_unavailable" },
+          spaces: { status: "error", failureClass: "connection_unavailable" },
+          recent: { status: "error", failureClass: "connection_unavailable" },
+          inbox: { status: "error", failureClass: "connection_unavailable" },
           allFailed: true,
         }}
       />,
@@ -87,7 +87,7 @@ describe("GardenWorkspaceView", () => {
 
   it("does not present a failed inventory query as an empty garden", () => {
     const workspace = readyWorkspace();
-    workspace.inventory = { status: "error" };
+    workspace.inventory = { status: "error", failureClass: "schema_missing" };
 
     const html = renderToStaticMarkup(
       <GardenWorkspaceView
@@ -101,6 +101,9 @@ describe("GardenWorkspaceView", () => {
     expect(html).toContain("Відновіть список живих об");
     expect(html).toContain("Оновити список");
     expect(html).not.toContain("Почніть з одного живого об");
+    // The bounded class reaches an operator as an attribute, never as copy.
+    expect(html).toContain('data-section-failure="schema_missing"');
+    expect(html).not.toContain(">schema_missing<");
   });
 
   it.each([

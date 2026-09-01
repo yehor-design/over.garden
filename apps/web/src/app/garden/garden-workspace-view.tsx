@@ -30,6 +30,7 @@ import {
 } from "@/lib/interface-localization";
 import { cn } from "@/lib/utils";
 import type {
+  GardenWorkspaceFailureClass,
   GardenWorkspaceReadModel,
   GardenWorkspaceRecentEntry,
   GardenWorkspaceSpaceSummary,
@@ -305,6 +306,7 @@ function SpacesSection({
         id="spaces"
         title={copy.workspace.spaces.errorTitle}
         copy={copy}
+        failureClass={workspace.spaces.failureClass}
       />
     );
   }
@@ -426,6 +428,7 @@ function InventorySection({
         id="inventory"
         title={copy.workspace.inventory.errorTitle}
         copy={copy}
+        failureClass={workspace.inventory.failureClass}
       />
     );
   }
@@ -647,6 +650,7 @@ function RecentSection({
         id="recent"
         title={copy.workspace.recent.errorTitle}
         copy={copy}
+        failureClass={workspace.recent.failureClass}
       />
     );
   }
@@ -746,13 +750,21 @@ function WorkspaceSectionError({
   id,
   title,
   copy,
+  failureClass,
 }: {
   id: string;
   title: string;
   copy: GardenWorkspaceCopy;
+  failureClass: GardenWorkspaceFailureClass;
 }) {
   return (
-    <section id={id} className="scroll-mt-20 border-y border-border py-6">
+    // The bounded class is an attribute, never rendered copy: an operator can
+    // read why a section is degraded without any locale gaining a machine code.
+    <section
+      id={id}
+      data-section-failure={failureClass}
+      className="scroll-mt-20 border-y border-border py-6"
+    >
       <AlertTriangle className="size-5 text-destructive" aria-hidden="true" />
       <h2 className="mt-2 text-lg font-semibold text-foreground">{title}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
