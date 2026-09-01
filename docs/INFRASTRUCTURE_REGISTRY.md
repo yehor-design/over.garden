@@ -257,8 +257,8 @@ R2_SECRET_ACCESS_KEY="..."
 
 Where secrets belong:
 
-- Local app development: `apps/web/.env.local`
-- Vercel/project deployment env: production, development, and the active OVE-27 branch preview
+- Local app development: `apps/web/.env.local` holds loopback MinIO values only. A production R2 credential does not belong on a developer machine; see the 2026-09-01 rotation receipt below.
+- Vercel/project deployment env: the `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` pair belongs to the `production` target only. On 2026-09-01 it was removed from `development` (from where `vercel env pull` had been copying it into `apps/web/.env.local`) and from the retired OVE-27 branch preview. The non-secret `R2_ENDPOINT`, `R2_PUBLIC_BUCKET`, `R2_PUBLIC_BASE_URL`, and `R2_FORCE_PATH_STYLE` remain on `development`.
 - Never in repository docs, source files, Linear comments, or chat
 - R2 values in Vercel must not include trailing newlines or pasted whitespace. A trailing newline in `R2_ACCESS_KEY_ID` produces signed upload URLs that Cloudflare rejects before the app can process media.
 
@@ -268,7 +268,9 @@ R2 API token requirement:
 - Current app use and exact bucket scope: `overgarden-public` only. OVE-350
   removed the legacy-bucket scope in place; no application credential may
   regain it.
-- Prefer an account API token for production if available. A user API token is acceptable for local/dev continuity but is tied to the individual Cloudflare user.
+- Token type: **account** API token. Cloudflare ties a user API token to one person and deactivates it when that user leaves the account, so a service credential must not be one. Only a Super Administrator can create an account token.
+- Token name convention: `overgarden-public-rw-vercel-<yyyy-mm>` — bucket scope, permission, consumer, and creation month. The month is what makes the previous token unambiguous during the next rotation without comparing access key identifiers.
+- Expiry: **none**. The project has no automated renewal and no alerting: `indeterminate_auth` in `apps/web/src/lib/storage.ts` and `apps/web/src/server/media/lifecycle-revoke.ts` is a control-flow value that is never raised anywhere. An expired token would therefore stall media revocation silently, because the OVE-216 contract lets cleanup settle only after a successful `HeadObject`. The compensating control is the scope above, not a timer nobody watches. A finite expiry is acceptable only alongside a calendar reminder set before it.
 - Cloudflare R2 does not support S3 `PutBucketPolicy` on this endpoint. Public reads are controlled through R2 bucket/domain settings, not by committing or replaying S3 bucket policy JSON from the app bootstrap script.
 
 OVE-216 lifecycle proof contract:
@@ -292,6 +294,42 @@ OVE-290 document-generation media contract:
 - `/api/document-mutation-admission/readback` exposes only protocol, enforcement class, deployment SHA, and the non-secret TTL source/effective/maximum tuple with `no-store`. It never exposes environment inventory, credentials, cookies, generations, keys, or capability URLs.
 - Production closeout runs `scripts/smoke-document-mutation-admission.ts` in `reject-only` mode against the immutable exact-SHA deployment. Private A1/A2/B session cookies and the A1 document generation are supplied only through process environment, discarded after the run, and never printed or committed. The smoke performs read-only pre/post database counts and no successful product mutation.
 - On 2026-08-10, Git-backed deployment `dpl_Di1Mwcbtms8mQjjNxgZL9fr2WcwR` reached `READY` at `over-garden-fwg7ddk6a-yehors-projects-01221e2b.vercel.app` and served feature SHA `da38a2c2b5901426353e8d0a55a91a79b584863f` through the canonical aliases. Immutable and canonical read-back both reported enforcement enabled and the default `900`-second TTL. The exact-SHA reject-only smoke proved owner-change, same-owner session-refresh, and malformed-protocol rejection with zero journal-entry and mutation-receipt effects before and after; all three synthetic sessions were revoked and confirmed guest afterward.
+
+### R2 credential rotation and catalog retirement (2026-09-01 receipt)
+
+- Cause: a July 2026 assistant session recorded a whole `apps/web/.env.local` into a
+  transcript, exposing the then-current `R2_ACCESS_KEY_ID` and
+  `R2_SECRET_ACCESS_KEY`. The values were never in git; `apps/web/.gitignore`
+  ignores the file. Of the seven values in that dump only the R2 pair was
+  production: the Meilisearch, matching-service, and auth secrets matched their
+  current local values, and both database URLs were loopback.
+- Mechanism: `apps/web/.env.local` carried `VERCEL_OIDC_TOKEN`, which only
+  `vercel env pull` writes, and that command pulls the `development` target, which
+  held the production R2 pair. Removing the pair from `development` closes the
+  path that put it on a developer machine.
+- Rotation: account token `overgarden-public-rw-vercel-2026-09` created with
+  Object Read & Write scoped to `overgarden-public` only, installed on the Vercel
+  `production` target, and proved by redeploy. The exposed token
+  `overgarden-r2-app-object-rw` (issued 2026-06-26) was revoked afterwards.
+- Retired OVE-27 branch preview: all thirteen environment variables scoped to
+  `Preview (codex/ove-27-production-pilot-smoke)` were deleted on 2026-09-01. The
+  branch no longer exists on `origin`, so no preview deployment can be created for
+  it. Twelve of the thirteen also exist on `production`; the exception was the
+  legacy singular `BETTER_AUTH_SECRET`, superseded by the OVE-240 versioned
+  `BETTER_AUTH_SECRETS` pair that `production` carries.
+- R2 Data Catalog: the Apache Iceberg catalog was enabled on `overgarden-public`
+  with catalog-level compaction, which is why Cloudflare had auto-created the
+  account token `[R2 Data Catalog] Table Maintenance: overgarden-public` with
+  **Admin Read & Write over all buckets** — the widest credential in the account.
+  Nothing in this repository reads an Iceberg catalog, and no Iceberg table was
+  ever written to that bucket. Compaction was disabled, the catalog was disabled,
+  and the token was revoked on 2026-09-01, in that order. Re-enabling the catalog
+  recreates the token; do not re-enable it without a recorded reason here.
+- Worker credentials: `apps/web/cloudflare/media-staging` reaches both buckets
+  through native `r2_buckets` bindings and reads no API token, so a rotation of the
+  S3 credential does not touch it. `CLOUDFLARE_CACHE_PURGE_API_TOKEN` and the
+  optional operator `CLOUDFLARE_API_TOKEN` are separate credentials and were not
+  exposed.
 
 ### Retired Legacy Quarantine Provider (OVE-350 terminal receipt)
 
