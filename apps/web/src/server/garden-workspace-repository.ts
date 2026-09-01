@@ -80,9 +80,28 @@ export interface GardenWorkspaceInboxSummary {
   claimCount: number;
 }
 
+/**
+ * The closed set of reasons a workspace section can fail. `resultSection` used
+ * to map every rejection onto a bare `{ status: "error" }` and discard the
+ * reason, so a degraded section could not be told apart from a permission
+ * refusal, a missing relation, or a timeout — and the platform log could not
+ * help either, because the page still returns its normal status.
+ */
+export const GARDEN_WORKSPACE_FAILURE_CLASSES = [
+  "permission_denied",
+  "schema_missing",
+  "query_timeout",
+  "connection_unavailable",
+  "serialization_failure",
+  "unknown",
+] as const;
+
+export type GardenWorkspaceFailureClass =
+  (typeof GARDEN_WORKSPACE_FAILURE_CLASSES)[number];
+
 export type GardenWorkspaceSection<T> =
   | { status: "ready"; value: T }
-  | { status: "error" };
+  | { status: "error"; failureClass: GardenWorkspaceFailureClass };
 
 export interface GardenWorkspaceReadModel {
   inventory: GardenWorkspaceSection<GardenWorkspaceInventory>;
@@ -265,6 +284,20 @@ function runWorkspaceSource<T>(
 }
 
 /**
+ * A section that exceeded its own deadline. It carries a code so the bounded
+ * classifier reports `query_timeout` rather than losing the distinction between
+ * a slow dependency and an unrecognised fault.
+ */
+export class GardenWorkspaceSectionDeadlineError extends Error {
+  readonly code = "workspace_section_deadline";
+
+  constructor() {
+    super("Garden workspace section deadline exceeded.");
+    this.name = "GardenWorkspaceSectionDeadlineError";
+  }
+}
+
+/**
  * Workspace sections are independent support surfaces. A slow dependency must
  * settle as the caller's generic error state, while a later completion remains
  * unable to alter that completed read model.
@@ -278,7 +311,7 @@ export function withGardenWorkspaceDeadline<T>(
     const timer = setTimeout(() => {
       if (settled) return;
       settled = true;
-      reject(new Error("Garden workspace section deadline exceeded."));
+      reject(new GardenWorkspaceSectionDeadlineError());
     }, deadlineMs);
 
     void Promise.resolve()
@@ -410,8 +443,98 @@ function resultSection<TInput, TOutput>(
   result: PromiseSettledResult<TInput>,
   map: (value: TInput) => TOutput,
 ): GardenWorkspaceSection<TOutput> {
-  if (result.status === "rejected") return { status: "error" };
+  if (result.status === "rejected") {
+    return {
+      status: "error",
+      failureClass: classifyGardenWorkspaceFailure(result.reason),
+    };
+  }
   return { status: "ready", value: map(result.value) };
+}
+
+const POSTGRES_FAILURE_CLASS: Readonly<
+  Record<string, GardenWorkspaceFailureClass>
+> = {
+  // insufficient_privilege
+  "42501": "permission_denied",
+  // undefined_table, undefined_column, undefined_function, undefined_object
+  "42P01": "schema_missing",
+  "42703": "schema_missing",
+  "42883": "schema_missing",
+  "42704": "schema_missing",
+  // query_canceled, idle_session_timeout
+  "57014": "query_timeout",
+  "57P05": "query_timeout",
+  // connection exception family
+  "08000": "connection_unavailable",
+  "08001": "connection_unavailable",
+  "08003": "connection_unavailable",
+  "08004": "connection_unavailable",
+  "08006": "connection_unavailable",
+  "08007": "connection_unavailable",
+  "57P01": "connection_unavailable",
+  "57P03": "connection_unavailable",
+  // serialization_failure, deadlock_detected
+  "40001": "serialization_failure",
+  "40P01": "serialization_failure",
+};
+
+const SYSTEM_FAILURE_CLASS: Readonly<
+  Record<string, GardenWorkspaceFailureClass>
+> = {
+  ECONNREFUSED: "connection_unavailable",
+  ECONNRESET: "connection_unavailable",
+  EHOSTUNREACH: "connection_unavailable",
+  ENOTFOUND: "connection_unavailable",
+  EPIPE: "connection_unavailable",
+  ETIMEDOUT: "query_timeout",
+  workspace_section_deadline: "query_timeout",
+};
+
+/**
+ * Maps a rejection onto exactly one bounded class. The reason itself is never
+ * returned or recorded: a driver error can carry the failing statement and its
+ * bound parameters, and those may contain journal content.
+ */
+export function classifyGardenWorkspaceFailure(
+  reason: unknown,
+): GardenWorkspaceFailureClass {
+  if (reason instanceof Error && reason.name === "AbortError") {
+    return "query_timeout";
+  }
+  const code =
+    reason !== null && typeof reason === "object" && "code" in reason
+      ? String((reason as { code: unknown }).code)
+      : undefined;
+  if (!code) return "unknown";
+  return (
+    POSTGRES_FAILURE_CLASS[code] ?? SYSTEM_FAILURE_CLASS[code] ?? "unknown"
+  );
+}
+
+export interface GardenWorkspaceSectionReceiptRow {
+  section: "inventory" | "spaces" | "recent" | "inbox";
+  status: "ready" | "error";
+  failureClass: GardenWorkspaceFailureClass | null;
+}
+
+/**
+ * A class-only description of how the four sections settled. It carries no
+ * query, parameter, connection string, row, or owner identifier, so it is safe
+ * to record wherever a receipt is kept.
+ */
+export function describeGardenWorkspaceSections(
+  readModel: GardenWorkspaceReadModel,
+): GardenWorkspaceSectionReceiptRow[] {
+  const sections = ["inventory", "spaces", "recent", "inbox"] as const;
+  return sections.map((section) => {
+    const value = readModel[section];
+    return {
+      section,
+      status: value.status,
+      failureClass: value.status === "error" ? value.failureClass : null,
+    };
+  });
 }
 
 function normalizeCount(value: number | string | bigint | null | undefined) {

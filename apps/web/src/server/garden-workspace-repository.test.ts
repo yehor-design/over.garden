@@ -204,11 +204,17 @@ describe("garden workspace read model", () => {
     await vi.advanceTimersByTimeAsync(WORKSPACE_SECTION_DEADLINE_MS);
     const workspace = await pending;
 
-    expect(workspace.recent).toEqual({ status: "error" });
+    expect(workspace.recent).toEqual({
+      status: "error",
+      failureClass: "query_timeout",
+    });
     expect(workspace.inventory.status).toBe("ready");
     resolveRecent?.();
     await Promise.resolve();
-    expect(workspace.recent).toEqual({ status: "error" });
+    expect(workspace.recent).toEqual({
+      status: "error",
+      failureClass: "query_timeout",
+    });
     vi.useRealTimers();
   });
 
