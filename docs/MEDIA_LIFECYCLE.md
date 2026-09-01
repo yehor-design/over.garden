@@ -7,6 +7,36 @@ The browser-generated WebP is the only final artifact. OverGarden does not
 retain a source original, decode or re-encode journal images on the server, or
 admit a second derivative.
 
+## The reservation wire contract (OVE-359)
+
+`apps/web/src/lib/media/ephemeral-staging-contract.ts` declares the upload
+reservation once, and both the reservation route and the browser stager import
+that declaration. Neither side restates it.
+
+| Field | Shape |
+| -- | -- |
+| `uploadUrl` | the exact staging origin plus `/v1/staging/{session}/{asset}/{generation}`, with no query, fragment, or credentials |
+| `uploadCapability` | the signed capability, matching the shared token shape |
+| `expiresAt` | an **integer count of epoch seconds**, inside the declared capability lifetime |
+
+`expiresAt` is a number and never an ISO-8601 string. Between 2026-08-23 and
+2026-09-01 the route serialized it as a string while the browser required a safe
+integer, so every reservation was refused and no photo could be uploaded at all.
+Both suites were green throughout, because each tested only its own side of a
+contract that existed in neither file. `buildEphemeralMediaUploadReservation`
+now refuses to emit anything `parseEphemeralMediaUploadReservation` would
+reject, so a producer-side drift fails at the source.
+
+`EPHEMERAL_MEDIA_EXPIRY_CLOCK_SKEW_SECONDS` exists only to absorb ordinary clock
+drift between the issuing server and the reading browser. It is not a lifetime
+extension: the staging origin verifies the signed claims itself.
+
+A refused handoff records its bounded `EphemeralStagingClientError` code through
+`ephemeralStagingFailureCode`, and the composer surfaces it as the image block's
+`failureCode`. No boundary discards the reason any more.
+
+Proof: `cd apps/web && pnpm exec tsx scripts/prove-staging-reservation-contract.ts --mode verify --inject-staging-upload-timeout`.
+
 ## Publication lifecycle
 
 1. The browser converts a selected image into the bounded final WebP.

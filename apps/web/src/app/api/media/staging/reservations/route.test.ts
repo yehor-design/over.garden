@@ -24,7 +24,18 @@ vi.mock("@/server/media/ephemeral-staging-capability", () => ({
   issueEphemeralStagingCapability: capability.issueEphemeralStagingCapability,
 }));
 
+import {
+  buildEphemeralMediaUploadReservation,
+  parseEphemeralMediaUploadReservation,
+} from "@/lib/media/ephemeral-staging-contract";
+
 import { POST } from "./route";
+
+// A capability the shared contract accepts. The previous fixture was
+// "opaque.capability", which the browser parser would always have refused.
+const CAPABILITY =
+  "eyJhbGciOiJIUzI1NiIsImtpZCI6IjEifQ.eyJraW5kIjoiY2FwYWJpbGl0eSJ9.c2lnbmF0dXJlLXZhbHVl";
+const NOW = 1_777_000_000;
 
 const VALID_BODY = {
   stagingSessionId: "00000000-0000-4000-8000-000000000002",
@@ -47,8 +58,9 @@ describe("POST /api/media/staging/reservations", () => {
       },
     });
     capability.issueEphemeralStagingCapability.mockResolvedValue({
-      capability: "opaque.capability",
-      expiresAt: "2026-08-23T10:15:00.000Z",
+      capability: CAPABILITY,
+      issuedAtSeconds: NOW,
+      expiresAtSeconds: NOW + 900,
     });
   });
 
@@ -89,12 +101,34 @@ describe("POST /api/media/staging/reservations", () => {
     const response = await POST(requestFor(VALID_BODY));
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
-      uploadUrl:
-        "https://media-stage.over.garden/v1/staging/00000000-0000-4000-8000-000000000002/00000000-0000-4000-8000-000000000003/1",
-      uploadCapability: "opaque.capability",
-      expiresAt: "2026-08-23T10:15:00.000Z",
-    });
+    const body = await response.json();
+    // The expectation is built from the shared declaration, so this suite and
+    // the browser suite can no longer drift apart on the wire shape.
+    expect(body).toEqual(
+      buildEphemeralMediaUploadReservation({
+        stagingOrigin: "https://media-stage.over.garden",
+        binding: {
+          stagingSessionId: VALID_BODY.stagingSessionId,
+          mediaAssetId: VALID_BODY.mediaAssetId,
+          generation: VALID_BODY.generation,
+        },
+        uploadCapability: CAPABILITY,
+        expiresAtSeconds: NOW + 900,
+        nowSeconds: NOW,
+      }),
+    );
+    // And the browser's own parser accepts exactly what the route serialized.
+    expect(
+      parseEphemeralMediaUploadReservation(body, {
+        expectedOrigin: "https://media-stage.over.garden",
+        binding: {
+          stagingSessionId: VALID_BODY.stagingSessionId,
+          mediaAssetId: VALID_BODY.mediaAssetId,
+          generation: VALID_BODY.generation,
+        },
+        nowSeconds: NOW,
+      }),
+    ).not.toBeNull();
     expect(capability.issueEphemeralStagingCapability).toHaveBeenCalledWith(
       expect.objectContaining({
         ownerUserId: "00000000-0000-4000-8000-000000000001",
