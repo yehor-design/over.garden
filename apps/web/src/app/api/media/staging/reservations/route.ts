@@ -1,4 +1,7 @@
-import { parseEphemeralMediaReservation } from "@/lib/media/ephemeral-staging-contract";
+import {
+  buildEphemeralMediaUploadReservation,
+  parseEphemeralMediaReservation,
+} from "@/lib/media/ephemeral-staging-contract";
 import {
   admitDocumentMutation,
   documentMutationAdmissionResponse,
@@ -27,14 +30,20 @@ export async function POST(request: Request) {
       ownerUserId: admission.scope.userId,
       ...reservation,
     });
-    const baseUrl = resolveStagingBaseUrl();
-    const path = `/v1/staging/${reservation.stagingSessionId}/${reservation.mediaAssetId}/${reservation.generation}`;
     return privateNoStore(
-      Response.json({
-        uploadUrl: new URL(path, baseUrl).toString(),
-        uploadCapability: issued.capability,
-        expiresAt: issued.expiresAt,
-      }),
+      Response.json(
+        buildEphemeralMediaUploadReservation({
+          stagingOrigin: resolveStagingBaseUrl(),
+          binding: {
+            stagingSessionId: reservation.stagingSessionId,
+            mediaAssetId: reservation.mediaAssetId,
+            generation: reservation.generation,
+          },
+          uploadCapability: issued.capability,
+          expiresAtSeconds: issued.expiresAtSeconds,
+          nowSeconds: issued.issuedAtSeconds,
+        }),
+      ),
     );
   } catch {
     return privateNoStore(

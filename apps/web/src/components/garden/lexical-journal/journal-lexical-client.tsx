@@ -13,6 +13,8 @@ import {
 } from "lexical";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ephemeralStagingFailureCode } from "@/lib/media/ephemeral-staging-client";
+
 import {
   $createOverGardenImageNode,
   $getJournalBlockId,
@@ -118,6 +120,9 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
   const [localPreviewUrls, setLocalPreviewUrls] = useState<
     ReadonlyMap<string, string>
   >(() => new Map());
+  const [localFailureCodes, setLocalFailureCodes] = useState<
+    ReadonlyMap<string, string>
+  >(() => new Map());
   const previewUrls = useMemo(() => {
     const next = new Map(imagePreviewUrls);
     for (const [mediaAssetId, previewUrl] of localPreviewUrls) {
@@ -142,7 +147,23 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
       next.delete(mediaAssetId);
       return next;
     });
+    setLocalFailureCodes((current) => {
+      if (!current.has(mediaAssetId)) return current;
+      const next = new Map(current);
+      next.delete(mediaAssetId);
+      return next;
+    });
   }, []);
+  const onPreviewFailed = useCallback(
+    (mediaAssetId: string, failureCode: string) => {
+      setLocalFailureCodes((current) => {
+        const next = new Map(current);
+        next.set(mediaAssetId, failureCode);
+        return next;
+      });
+    },
+    [],
+  );
   const onLatestGoodDocument = useCallback(
     (document: JournalDocumentV1) => degradationBridge.record(document),
     [degradationBridge],
@@ -153,6 +174,10 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
       getState: (mediaAssetId: string) => {
         const localState = imageStates?.get(mediaAssetId);
         if (localState) return localState;
+        const failureCode = localFailureCodes.get(mediaAssetId);
+        if (failureCode) {
+          return { status: "failed" as const, previewUrl: null, failureCode };
+        }
         const previewUrl = previewUrls.get(mediaAssetId);
         return previewUrl
           ? { status: "ready" as const, previewUrl, failureCode: null }
@@ -178,6 +203,7 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
     }),
     [
       imageStates,
+      localFailureCodes,
       onPreviewRemoved,
       onRemoveImageBlock,
       onReplaceImage,
@@ -201,6 +227,7 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
           {...props}
           initialDocument={initialBinding}
           onPreviewResolved={onPreviewResolved}
+          onPreviewFailed={onPreviewFailed}
           onLatestGoodDocument={onLatestGoodDocument}
         />
       </LexicalExtensionComposer>
@@ -210,6 +237,7 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
 
 interface JournalLexicalClientBodyProps extends JournalLexicalClientProps {
   onPreviewResolved(mediaAssetId: string, previewUrl: string): void;
+  onPreviewFailed(mediaAssetId: string, failureCode: string): void;
   onLatestGoodDocument(document: JournalDocumentV1): void;
 }
 
@@ -225,6 +253,7 @@ function JournalLexicalClientBody({
   onReady,
   onDegraded,
   onPreviewResolved,
+  onPreviewFailed,
   onLatestGoodDocument,
   imageInsertionMode = "after-ready",
 }: JournalLexicalClientBodyProps) {
@@ -385,8 +414,9 @@ function JournalLexicalClientBody({
               onPreviewResolved(mediaAssetId, result.previewUrl);
             }
           })
-          .catch(() => {
+          .catch((error: unknown) => {
             if (mountedRef.current && bindingRef.current === binding) {
+              onPreviewFailed(mediaAssetId, ephemeralStagingFailureCode(error));
               setMediaMessage(labels.imageFailed);
             }
           });
@@ -471,6 +501,7 @@ function JournalLexicalClientBody({
       imageInsertionMode,
       labels.failureBody,
       labels.imageFailed,
+      onPreviewFailed,
       onPreviewResolved,
       serialize,
     ],

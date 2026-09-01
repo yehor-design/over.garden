@@ -9,16 +9,30 @@ import type { LocalJournalMediaStager } from "@/lib/garden/local-journal-media-c
 import {
   EPHEMERAL_MEDIA_CONTROL_DEADLINE_MS,
   EPHEMERAL_MEDIA_UPLOAD_DEADLINE_MS,
+  ephemeralMediaUploadPath,
+  isEphemeralMediaCapabilityToken,
+  parseEphemeralMediaUploadReservation,
 } from "./ephemeral-staging-contract";
 
 const STAGING_PRODUCTION_ORIGIN = "https://media-stage.over.garden";
-const TOKEN = /^[A-Za-z0-9_.-]{40,4096}$/;
 
-class EphemeralStagingClientError extends Error {
+export class EphemeralStagingClientError extends Error {
   constructor(readonly code: string) {
     super(code);
     this.name = "EphemeralStagingClientError";
   }
+}
+
+/**
+ * Returns the bounded refusal class of a staging failure, so a caller can record
+ * why a handoff was refused instead of discarding the reason. Anything that is
+ * not a staging refusal reports `staging_unexpected_error` rather than leaking a
+ * message that may carry a URL, a capability, or user content.
+ */
+export function ephemeralStagingFailureCode(error: unknown): string {
+  return error instanceof EphemeralStagingClientError
+    ? error.code
+    : "staging_unexpected_error";
 }
 
 export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
@@ -71,12 +85,21 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
       if (!reservationResponse.ok) {
         throw new EphemeralStagingClientError(responseCode(reservation));
       }
-      const validatedReservation = validateUploadReservation(reservation, {
-        expectedOrigin: this.stagingOrigin,
-        stagingSessionId: input.stagingSessionId,
-        mediaAssetId: input.mediaAssetId,
-        generation: input.generation,
-      });
+      const validatedReservation = parseEphemeralMediaUploadReservation(
+        reservation,
+        {
+          expectedOrigin: this.stagingOrigin,
+          binding: {
+            stagingSessionId: input.stagingSessionId,
+            mediaAssetId: input.mediaAssetId,
+            generation: input.generation,
+          },
+          nowSeconds: Math.floor(Date.now() / 1_000),
+        },
+      );
+      if (!validatedReservation) {
+        throw new EphemeralStagingClientError("staging_reservation_invalid");
+      }
       const uploadUrl = validatedReservation.uploadUrl;
       const uploadResponse = await this.fetcher(uploadUrl, {
         method: "PUT",
@@ -99,8 +122,8 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
       if (
         !isRecord(uploaded) ||
         uploaded.status !== "staged" ||
-        !validToken(uploaded.stagingReceipt) ||
-        !validToken(uploaded.deleteCapability)
+        !isEphemeralMediaCapabilityToken(uploaded.stagingReceipt) ||
+        !isEphemeralMediaCapabilityToken(uploaded.deleteCapability)
       ) {
         throw new EphemeralStagingClientError("staging_response_invalid");
       }
@@ -120,13 +143,20 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
   }
 
   async delete(input: Parameters<LocalJournalMediaStager["delete"]>[0]) {
-    if (!validToken(input.deleteCapability)) {
+    if (!isEphemeralMediaCapabilityToken(input.deleteCapability)) {
       throw new EphemeralStagingClientError("delete_capability_invalid");
     }
     const key = identityKey(input);
     const uploadUrl =
       this.uploadUrls.get(key) ??
-      `${this.stagingOrigin}/v1/staging/${input.stagingSessionId}/${input.mediaAssetId}/${input.generation}`;
+      new URL(
+        ephemeralMediaUploadPath({
+          stagingSessionId: input.stagingSessionId,
+          mediaAssetId: input.mediaAssetId,
+          generation: input.generation,
+        }),
+        this.stagingOrigin,
+      ).toString();
     const deleteController = linkedDeadlineController(
       null,
       this.options.controlDeadlineMs ?? EPHEMERAL_MEDIA_CONTROL_DEADLINE_MS,
@@ -165,47 +195,6 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
   }
 }
 
-function validateUploadReservation(
-  value: unknown,
-  expected: {
-    expectedOrigin: string;
-    stagingSessionId: string;
-    mediaAssetId: string;
-    generation: number;
-  },
-) {
-  if (
-    !isRecord(value) ||
-    !validToken(value.uploadCapability) ||
-    typeof value.uploadUrl !== "string" ||
-    !Number.isSafeInteger(value.expiresAt)
-  ) {
-    throw new EphemeralStagingClientError("staging_reservation_invalid");
-  }
-  let url: URL;
-  let origin: URL;
-  try {
-    url = new URL(value.uploadUrl);
-    origin = new URL(expected.expectedOrigin);
-  } catch {
-    throw new EphemeralStagingClientError("staging_reservation_invalid");
-  }
-  const exactPath = `/v1/staging/${expected.stagingSessionId}/${expected.mediaAssetId}/${expected.generation}`;
-  if (
-    url.origin !== origin.origin ||
-    url.pathname !== exactPath ||
-    url.search ||
-    url.hash ||
-    url.username ||
-    url.password
-  ) {
-    throw new EphemeralStagingClientError("staging_reservation_invalid");
-  }
-  return {
-    uploadUrl: url.toString(),
-    uploadCapability: value.uploadCapability,
-  };
-}
 
 function linkedDeadlineController(
   source: AbortSignal | null,
@@ -245,9 +234,6 @@ function responseCode(value: unknown) {
     : "staging_request_failed";
 }
 
-function validToken(value: unknown): value is string {
-  return typeof value === "string" && TOKEN.test(value);
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);

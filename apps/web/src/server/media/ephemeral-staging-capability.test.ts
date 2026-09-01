@@ -55,7 +55,9 @@ describe("ephemeral staging capability", () => {
         ownerSubjectHash: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
       }),
     );
-    expect(issued.expiresAt).toBe(new Date((NOW + 900) * 1_000).toISOString());
+    expect(issued.issuedAtSeconds).toBe(NOW);
+    expect(issued.expiresAtSeconds).toBe(NOW + 900);
+    expect(Number.isSafeInteger(issued.expiresAtSeconds)).toBe(true);
   });
 
   it.each([
