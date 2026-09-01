@@ -115,3 +115,19 @@ TalkBack bound, Chrome clipboard round-trip plus Android system
 `KEYCODE_PASTE`, and both CDP and UIAutomator accessibility-tree proof. It
 does not claim physical-device, VoiceOver-runtime, or OS-dictation coverage;
 those residual risks are explicit in the validated authorization receipt.
+
+## A refused photo names its class (OVE-359)
+
+The composer's immediate-insertion path used to catch a staging rejection with
+an empty handler and keep only the generic `imageFailed` sentence, so the
+bounded refusal class was discarded at exactly the boundary where an operator
+would have read it. That is why a total upload failure stayed invisible for nine
+days while the page kept returning success.
+
+The catch now records the class through `ephemeralStagingFailureCode` and stores
+it beside the local preview state, so the image block renders its existing
+failed state with a real `failureCode`. Rendered copy is unchanged in all three
+locales: the class travels separately from the sentence, and no locale string
+carries a machine-readable code.
+
+Contract and proof live with the media lifecycle: `docs/MEDIA_LIFECYCLE.md`.
