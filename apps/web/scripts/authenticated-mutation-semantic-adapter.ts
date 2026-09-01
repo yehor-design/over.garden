@@ -201,10 +201,15 @@ export const AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST = {
     {
       path: "sql/0001_walking_skeleton.sql",
       // Repinned when the re-apply guards landed: three statements in this file
-      // read `media_assets.quarantine_key` or `original_deleted_at`, which 0038
-      // drops, and each is now wrapped in a column-existence check. The audit
-      // flagging the change is the pin working — it is meant to make an edit
-      // here a decision rather than a diff.
+      // read columns that `0038_ove349_retire_legacy_journal_media.sql` retires,
+      // and each is now wrapped in a column-existence check so a second
+      // application does not fail. The audit flagging the change is the pin
+      // working — it exists to make an edit here a decision rather than a diff.
+      //
+      // The retired column names are deliberately not written out here:
+      // `verify-retired-journal-media-runtime` scans this directory for them as
+      // plain substrings and does not exempt comments, which is the right
+      // bluntness for a retirement check.
       sha256:
         "763ec4df6b002b5752e76ffe4c1bee08eb1c10a7c731d056a45c15ac31d88077",
     },
