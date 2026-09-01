@@ -476,6 +476,34 @@ Database invariants:
 - `DATABASE_SSL_CA` may be multi-line in Vercel. The app runtime strips `sslmode` from the connection string when a CA is configured so Node `pg` uses the explicit CA with strict verification.
 - Vercel/serverless Postgres pool default is one connection per instance unless `DATABASE_POOL_MAX` explicitly overrides it. Do not raise this default without proving production connection-slot headroom or adding a pooled connection endpoint.
 
+Connection pool (2026-09-02):
+
+- The headroom this file demanded is now a read number: the cluster reports
+  **22 available backend server connections**, read from the pool creation
+  dialog in the DigitalOcean console.
+- Pool name `overgarden-app-pool`, database `defaultdb`, mode **transaction**,
+  size **12**. Twelve rather than twenty-two because the pooler must not own
+  every backend: the matching worker holds a direct session for
+  `LISTEN`/`NOTIFY`, the media retention leader lock holds another, migrations
+  need one, and an operator needs to be able to connect during an incident.
+- Transaction mode is the recorded architecture for this project, not just
+  DigitalOcean's recommendation. The composed self-hosted stack pools the same
+  way, and the application was written for it — `interaction-admission` uses
+  `SET LOCAL` precisely so a timeout cannot leak into a pooled connection, and
+  every advisory lock on a request path is `pg_advisory_xact_lock`.
+- Two things must never travel over the pooler, because a transaction pooler
+  hands out a different backend per transaction: the matching worker's
+  `LISTEN`/`NOTIFY`, and the media retention leader lock. Both use
+  `DIRECT_URL`.
+- The application does not read a flag to know it is pooled. It compares its own
+  connection with `DIRECT_URL`, and widens its pool only when they differ, so
+  the code is inert until the environment is switched and needs no second
+  deployment when it is.
+- Operator verification, values omitted: DigitalOcean Cloud -> Databases ->
+  `overgarden-postgres-prod-fra1` -> Connection Pools. The pooled connection
+  string names the pool as its database and uses a different port from the
+  direct one; the direct connection remains `defaultdb` on `25060`.
+
 Worker and Meilisearch Droplet:
 
 Runtime classification: this production worker/search surface is `production-linux-required` under `docs/CONTAINER_RUNTIME_POLICY.md`. Apple Container remains the preferred supported-Mac local runtime, but it is not the DigitalOcean Linux droplet process manager. OVE-76 confirms Docker Compose remains the current production process manager until a separate non-Apple Linux replacement is live-proven.

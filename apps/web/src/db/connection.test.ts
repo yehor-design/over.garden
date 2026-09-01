@@ -1,12 +1,81 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DIRECT_SERVERLESS_DATABASE_POOL_MAX,
+  LOCAL_DATABASE_POOL_MAX,
+  POOLED_DATABASE_POOL_MAX,
+  defaultDatabasePoolMax,
+  isPooledDatabaseConnection,
   resolveDatabaseConnection,
   resolveDatabaseSsl,
   resolveDatabaseSslConfig,
   resolveDirectDatabaseConnection,
   resolvePgConnectionString,
 } from "./connection";
+
+describe("application pool sizing", () => {
+  const POOLED = "postgresql://app:secret@db.example.test:25061/pool";
+  const DIRECT = "postgresql://app:secret@db.example.test:25060/defaultdb";
+  const serverless = { VERCEL: "1" };
+
+  it("keeps one connection per instance while the connection is direct", () => {
+    // A bare managed database has few slots — this one has 22 — and a
+    // serverless deployment multiplies instances, each with its own private
+    // pool. Widening before a pooler exists spends those slots.
+    expect(defaultDatabasePoolMax({ ...serverless, DATABASE_URL: DIRECT })).toBe(
+      DIRECT_SERVERLESS_DATABASE_POOL_MAX,
+    );
+    expect(
+      defaultDatabasePoolMax({
+        ...serverless,
+        DATABASE_URL: DIRECT,
+        DIRECT_URL: DIRECT,
+      }),
+    ).toBe(DIRECT_SERVERLESS_DATABASE_POOL_MAX);
+  });
+
+  it("widens once the application connection goes through a pooler", () => {
+    // Behind a transaction pooler a client connection no longer owns a backend,
+    // so the four round trips the inventory read already issues concurrently
+    // can actually overlap.
+    expect(
+      defaultDatabasePoolMax({
+        ...serverless,
+        DATABASE_URL: POOLED,
+        DIRECT_URL: DIRECT,
+      }),
+    ).toBe(POOLED_DATABASE_POOL_MAX);
+    expect(POOLED_DATABASE_POOL_MAX).toBeGreaterThanOrEqual(4);
+  });
+
+  it("reads pooled from the split itself, not from a port or database name", () => {
+    // DigitalOcean spells the pooler as a different port and database; the
+    // composed self-hosted stack spells it differently again. The signal is
+    // that someone configured a separate direct URL at all.
+    expect(isPooledDatabaseConnection({ DATABASE_URL: DIRECT })).toBe(false);
+    expect(
+      isPooledDatabaseConnection({ DATABASE_URL: POOLED, DIRECT_URL: DIRECT }),
+    ).toBe(true);
+    expect(
+      isPooledDatabaseConnection({
+        DATABASE_URL: "postgresql://app:secret@pgbouncer:6432/app",
+        DIRECT_URL: "postgresql://app:secret@postgres:5432/app",
+      }),
+    ).toBe(true);
+  });
+
+  it("leaves development alone and lets an operator override either way", () => {
+    expect(defaultDatabasePoolMax({ DATABASE_URL: DIRECT })).toBe(
+      LOCAL_DATABASE_POOL_MAX,
+    );
+    // `DATABASE_POOL_MAX` is read by the caller, not here, so the default must
+    // stay a plain function of the environment for that override to mean
+    // anything.
+    expect(defaultDatabasePoolMax({ ...serverless, DATABASE_URL: POOLED })).toBe(
+      DIRECT_SERVERLESS_DATABASE_POOL_MAX,
+    );
+  });
+});
 
 describe("direct session resolution", () => {
   const POOLED = "postgresql://app:secret@db.example.test:25061/pool";
