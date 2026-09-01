@@ -1,21 +1,44 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { BrowserEphemeralMediaStager } from "./ephemeral-staging-client";
+import { buildEphemeralMediaUploadReservation } from "./ephemeral-staging-contract";
 
 const ID = "8f5fa87d-b94e-4217-b68d-28303827ad89";
 const SESSION = "46045ba1-d1dc-465a-aea9-0240785e3aa0";
 const SHA = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
+/**
+ * Built from the shared declaration rather than hand-written, so this suite and
+ * the route suite cannot drift apart on the wire shape again. The previous
+ * fixture used a fixed `expiresAt: 2_000_000_000`, a value the route has never
+ * sent, which is how a total production failure coexisted with a green run.
+ */
+function reservationFixture(
+  overrides: Partial<{
+    uploadUrl: string;
+    uploadCapability: string;
+    expiresAt: number;
+  }> = {},
+) {
+  const nowSeconds = Math.floor(Date.now() / 1_000);
+  return {
+    ...buildEphemeralMediaUploadReservation({
+      stagingOrigin: "https://media-stage.over.garden",
+      binding: { stagingSessionId: SESSION, mediaAssetId: ID, generation: 1 },
+      uploadCapability: "u".repeat(40),
+      expiresAtSeconds: nowSeconds + 900,
+      nowSeconds,
+    }),
+    ...overrides,
+  };
+}
 
 describe("BrowserEphemeralMediaStager", () => {
   it("reserves with JSON and sends the WebP bytes directly to the Worker origin", async () => {
     const fetcher = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(
-        Response.json({
-          uploadUrl: `https://media-stage.over.garden/v1/staging/${SESSION}/${ID}/1`,
-          uploadCapability: "u".repeat(40),
-          expiresAt: 2_000_000_000,
-        }),
+        Response.json(reservationFixture()),
       )
       .mockResolvedValueOnce(
         Response.json(
@@ -107,11 +130,11 @@ describe("BrowserEphemeralMediaStager", () => {
 
   it("rejects a provider upload URL outside the exact staging origin", async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
-      Response.json({
-        uploadUrl: `https://attacker.example/v1/staging/${SESSION}/${ID}/1`,
-        uploadCapability: "u".repeat(40),
-        expiresAt: 2_000_000_000,
-      }),
+      Response.json(
+        reservationFixture({
+          uploadUrl: `https://attacker.example/v1/staging/${SESSION}/${ID}/1`,
+        }),
+      ),
     );
     const stager = new BrowserEphemeralMediaStager({
       documentMutationGeneration: "signed-generation",

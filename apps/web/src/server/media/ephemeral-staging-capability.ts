@@ -48,7 +48,11 @@ export async function issueEphemeralStagingCapability(
     nowSeconds?: number;
     nonce?: string;
   } = {},
-): Promise<{ capability: string; expiresAt: string }> {
+): Promise<{
+  capability: string;
+  issuedAtSeconds: number;
+  expiresAtSeconds: number;
+}> {
   const policy = options.policy ?? resolveEphemeralMediaSigningPolicy();
   const nowSeconds = options.nowSeconds ?? Math.floor(Date.now() / 1_000);
   const nonce = options.nonce ?? crypto.randomUUID().replace(/-/g, "");
@@ -94,7 +98,8 @@ export async function issueEphemeralStagingCapability(
       claims as unknown as Record<string, unknown>,
       policy.active,
     ),
-    expiresAt: new Date(claims.expiresAtSeconds * 1_000).toISOString(),
+    issuedAtSeconds: claims.issuedAtSeconds,
+    expiresAtSeconds: claims.expiresAtSeconds,
   };
 }
 
@@ -152,7 +157,11 @@ export async function issueEphemeralStagingSessionCapability(
     nowSeconds?: number;
     nonce?: string;
   } = {},
-): Promise<{ capability: string; expiresAt: string }> {
+): Promise<{
+  capability: string;
+  issuedAtSeconds: number;
+  expiresAtSeconds: number;
+}> {
   const policy = options.policy ?? resolveEphemeralMediaSigningPolicy();
   const nowSeconds = options.nowSeconds ?? Math.floor(Date.now() / 1_000);
   const nonce = options.nonce ?? crypto.randomUUID().replace(/-/g, "");
@@ -188,7 +197,8 @@ export async function issueEphemeralStagingSessionCapability(
       claims as unknown as Record<string, unknown>,
       policy.active,
     ),
-    expiresAt: new Date(claims.expiresAtSeconds * 1_000).toISOString(),
+    issuedAtSeconds: claims.issuedAtSeconds,
+    expiresAtSeconds: claims.expiresAtSeconds,
   };
 }
 

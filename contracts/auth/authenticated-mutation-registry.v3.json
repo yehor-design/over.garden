@@ -16924,6 +16924,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/media/staging/reservations/route.ts",
+        "src/lib/media/ephemeral-staging-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/staging/reservations/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/media/ephemeral-staging-contract",
+      "sourceNodeId": "source:33acfcc4634d8e87c077",
+      "symbol": "buildEphemeralMediaUploadReservation"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/garden-auth-panel.tsx",
         "src/lib/auth-client.ts"
       ],
