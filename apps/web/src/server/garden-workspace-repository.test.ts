@@ -87,6 +87,35 @@ describe("garden workspace query contracts", () => {
     expect(compiled.parameters).toHaveLength(1);
   });
 
+  it("keeps the recent-entries ordering aligned with its supporting index", () => {
+    const compiled = buildGardenWorkspaceRecentEntriesQuery(
+      testDb,
+      scope,
+    ).compile();
+
+    // `journal_entries_owner_recent_idx` is
+    //   (owner_user_id, entry_date desc, created_at desc, id asc)
+    //   where lifecycle_state = 'active'
+    // and a b-tree eliminates the sort only while the requested ordering is
+    // the index ordering. Changing either the order of these three keys or a
+    // direction silently drops the query back to reading every active entry the
+    // owner has written and sorting the lot — 7.038 ms and 657 buffer hits at
+    // 40,000 entries, against 0.035 ms and 13 hits on the index.
+    //
+    // The predicate is asserted too: the partial index is only eligible while
+    // the query constrains `lifecycle_state` to the same constant.
+    const orderBy = compiled.sql.slice(compiled.sql.indexOf("order by"));
+    expect(orderBy).toContain('"journal_entries"."entry_date" desc');
+    expect(orderBy).toContain('"journal_entries"."created_at" desc');
+    expect(orderBy).toContain('"journal_entries"."id" asc');
+    expect(orderBy.indexOf("entry_date")).toBeLessThan(
+      orderBy.indexOf("created_at"),
+    );
+    expect(orderBy.indexOf("created_at")).toBeLessThan(orderBy.indexOf('"id"'));
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" =');
+    expect(compiled.parameters).toContain("active");
+  });
+
   it("bounds space summaries and keeps joined objects inside the same owner", () => {
     const compiled = buildGardenWorkspaceSpaceSummariesQuery(testDb, scope, {
       limit: 5,
