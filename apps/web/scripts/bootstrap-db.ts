@@ -1,3 +1,13 @@
+// `restore-readiness/checks` reaches `@/server/public-identity-integrity`,
+// which opens with `import "server-only"` — a guard that throws under plain
+// Node and stopped this script from running at all. It is an operator script,
+// never part of a Next bundle, so the guard is resolved to an empty module
+// exactly as `vitest.config.ts` already does for the suites.
+//
+// This import must precede every `@/server/*` import below; ES module
+// evaluation order guarantees it.
+import "./neutralise-server-only";
+
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
