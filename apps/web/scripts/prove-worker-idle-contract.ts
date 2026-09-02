@@ -192,9 +192,8 @@ async function main() {
     );
   }
 
-  const { runWorkerIdleContractDatabaseProof } = await import(
-    "./prove-worker-idle-contract-database"
-  );
+  const { runWorkerIdleContractDatabaseProof } =
+    await import("./prove-worker-idle-contract-database");
   const receipt = await runWorkerIdleContractDatabaseProof({ mode: args.mode });
   console.log(JSON.stringify(receipt, null, 2));
 }

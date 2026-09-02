@@ -34,9 +34,8 @@ async function main() {
       runMatchingRuntimeCapabilitySmokeFromHeartbeat,
       validateMatchingRuntimeCapabilityOptions,
     } = await import("../src/lib/matching-runtime-proof");
-    const { readMatchingRuntimeHeartbeat } = await import(
-      "./matching-runtime-heartbeat-reader"
-    );
+    const { readMatchingRuntimeHeartbeat } =
+      await import("./matching-runtime-heartbeat-reader");
     const capabilityArgv = argv.filter(
       (arg, index, all) =>
         arg !== "--environment" &&
@@ -58,7 +57,9 @@ async function main() {
       () => readMatchingRuntimeHeartbeat("available"),
     );
     if (evidence.readiness.unsupportedRetryingClass !== "none") {
-      throw new Error("Production matching queue still has unsupported retries.");
+      throw new Error(
+        "Production matching queue still has unsupported retries.",
+      );
     }
     console.log(
       JSON.stringify(
@@ -77,9 +78,8 @@ async function main() {
     return;
   }
 
-  const { loadMatchingQueueRecoveryReport } = await import(
-    "../src/server/job-queue-recovery"
-  );
+  const { loadMatchingQueueRecoveryReport } =
+    await import("../src/server/job-queue-recovery");
   const report = await loadMatchingQueueRecoveryReport();
   if (report.unsupportedRetryingClass !== "none") {
     throw new Error("Local matching queue still has unsupported retries.");
@@ -101,7 +101,9 @@ async function main() {
 
 main().catch((error: unknown) => {
   console.error(
-    error instanceof Error ? error.message : "matching queue health smoke failed",
+    error instanceof Error
+      ? error.message
+      : "matching queue health smoke failed",
   );
   process.exitCode = 1;
 });

@@ -114,6 +114,9 @@ function sortDbInterfaceKeys(block: string) {
   }
 
   const lines = block.split("\n");
-  const properties = lines.slice(1, -1).filter((line) => line.trim()).sort();
+  const properties = lines
+    .slice(1, -1)
+    .filter((line) => line.trim())
+    .sort();
   return [lines[0], ...properties, lines.at(-1) ?? "}"].join("\n");
 }

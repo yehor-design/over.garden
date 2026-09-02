@@ -33,9 +33,8 @@ async function main() {
     );
   }
 
-  const { runRetentionWorkflow } = await import(
-    "../src/server/media/retention-executor"
-  );
+  const { runRetentionWorkflow } =
+    await import("../src/server/media/retention-executor");
   const dryRun = await runRetentionWorkflow("dry_run");
   const execute = await runRetentionWorkflow("execute");
 

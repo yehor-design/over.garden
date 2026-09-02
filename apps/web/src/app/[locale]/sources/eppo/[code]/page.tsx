@@ -8,10 +8,6 @@ import {
 } from "@/app/stable-registry-public-pages";
 import { isPublicLocale } from "@/lib/public-localization";
 
-// See the default-locale source route: terminal source evidence is resolved at
-// request time rather than from frozen build output.
-export const dynamic = "force-dynamic";
-
 interface EppoDetailPageProps {
   params: Promise<{ locale: string; code: string }>;
 }

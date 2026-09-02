@@ -72,7 +72,9 @@ export function parseCatalogTrigramProofArgs(
 ): CatalogTrigramProofArgs {
   const mode = argValue(argv, "--mode");
   if (!mode || !isCatalogTrigramMode(mode)) {
-    throw new Error(`--mode must be one of ${CATALOG_TRIGRAM_MODES.join("|")}.`);
+    throw new Error(
+      `--mode must be one of ${CATALOG_TRIGRAM_MODES.join("|")}.`,
+    );
   }
   return {
     mode,
@@ -218,9 +220,8 @@ async function main() {
     );
   }
 
-  const { runCatalogTrigramTypeaheadDatabaseProof } = await import(
-    "./prove-catalog-trigram-typeahead-database"
-  );
+  const { runCatalogTrigramTypeaheadDatabaseProof } =
+    await import("./prove-catalog-trigram-typeahead-database");
   const receipt = await runCatalogTrigramTypeaheadDatabaseProof({
     mode: args.mode,
   });

@@ -28,6 +28,10 @@ import {
   type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
+import {
+  readPublicJournalDirectoryFacets,
+  readPublicJournalDirectoryPage,
+} from "@/server/public-cache";
 
 interface PublicJournalsRouteProps {
   params: Promise<{ locale: string }>;
@@ -56,8 +60,8 @@ export async function generateMetadata({
     consumerId: "localized_journals_directory",
     loadSource: async () => {
       const [page, facets] = await Promise.all([
-        listPublicJournalDirectoryPage(request, localeParam),
-        listPublicJournalDirectoryFacets(),
+        readPublicJournalDirectoryPage(request, localeParam),
+        readPublicJournalDirectoryFacets(),
       ]);
       return buildJournalDirectoryDiscoverySource(localeParam, page, facets);
     },
@@ -77,12 +81,18 @@ export async function renderPublicJournalsPage(
   const searchScopePromise = resolvePublicJournalDirectorySearchScope(request, {
     restrictToEntryIds: null,
   });
-  const pagePromise = searchScopePromise.then((searchScope) =>
-    listPublicJournalDirectoryPage(request, locale, { searchScope }),
-  );
-  const facetsPromise = searchScopePromise.then((searchScope) =>
-    listPublicJournalDirectoryFacets({ searchScope }),
-  );
+  // A directory without a search query is the cached listing (ADR-0022, D4);
+  // a search resolves its scope at request time and reads the repository.
+  const pagePromise = request.query
+    ? searchScopePromise.then((searchScope) =>
+        listPublicJournalDirectoryPage(request, locale, { searchScope }),
+      )
+    : readPublicJournalDirectoryPage(request, locale);
+  const facetsPromise = request.query
+    ? searchScopePromise.then((searchScope) =>
+        listPublicJournalDirectoryFacets({ searchScope }),
+      )
+    : readPublicJournalDirectoryFacets();
 
   const [pageResult, facetsResult] = await Promise.allSettled([
     pagePromise,

@@ -215,7 +215,9 @@ export async function readNativeGoogleLinkSourceSnapshot(
     stateProtection,
     runtimeSources,
   ] = await Promise.all([
-    read(path.join(appRoot, "src/app/garden/account-methods-panel.tsx")),
+    read(
+      path.join(appRoot, "src/app/(default)/garden/account-methods-panel.tsx"),
+    ),
     read(path.join(appRoot, "src/server/auth/account-methods.ts")),
     read(path.join(coreRoot, "dist/db/get-tables.mjs")),
     read(path.join(appRoot, "src/lib/auth.ts")),

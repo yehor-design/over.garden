@@ -187,7 +187,8 @@ export function assertCompleteSample(
       (total, count) => total + count,
       0,
     );
-    if (counted !== expectedPerClass) throw new Error("probe_sample_incomplete");
+    if (counted !== expectedPerClass)
+      throw new Error("probe_sample_incomplete");
   }
 }
 
@@ -199,10 +200,7 @@ async function observe(
 ): Promise<ProbeObservation> {
   assertSafeMethod("GET");
   const controller = new AbortController();
-  const timer = setTimeout(
-    () => controller.abort(),
-    PROBE_REQUEST_DEADLINE_MS,
-  );
+  const timer = setTimeout(() => controller.abort(), PROBE_REQUEST_DEADLINE_MS);
   const startedAt = performance.now();
   try {
     const response = await fetcher(new URL(path, origin).toString(), {

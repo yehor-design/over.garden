@@ -13,6 +13,8 @@ import {
   parseEngagementTarget,
   redirectWithEngagementStatus,
 } from "../shared";
+import { publicEngagementChangeTags } from "@/lib/public-cache-tags";
+import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 const LEGACY_ANONYMOUS_ENGAGEMENT_COOKIE = "og_engagement_device";
 
@@ -34,6 +36,10 @@ export async function POST(request: Request) {
       anonymousToken: capability.token,
       capabilityExpiresAt: capability.expiresAt,
     });
+    revalidatePublicCacheTags(
+      publicEngagementChangeTags(target.kind, target.ref),
+      "expire",
+    );
   } catch (error) {
     if (isInteractionAdmissionError(error)) {
       const response = redirectWithEngagementStatus(

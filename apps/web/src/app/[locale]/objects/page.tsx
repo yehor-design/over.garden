@@ -13,7 +13,6 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
-  listPublicObjectCatalogPage,
   normalizePublicObjectCatalogRequest,
   type PublicObjectCatalogPage,
 } from "@/server/public-object-catalog-repository";
@@ -25,6 +24,7 @@ import {
   type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
+import { readPublicObjectCatalogPage } from "@/server/public-cache";
 
 interface PublicObjectsRouteProps {
   params: Promise<{ locale: string }>;
@@ -54,7 +54,7 @@ export async function generateMetadata({
     loadSource: async () =>
       buildObjectCatalogDiscoverySource(
         localeParam,
-        await listPublicObjectCatalogPage(request, localeParam),
+        await readPublicObjectCatalogPage(request, localeParam),
       ),
   });
   return buildObjectCatalogSurface(
@@ -70,7 +70,7 @@ export async function renderPublicObjectsPage(
 ) {
   const request = normalizePublicObjectCatalogRequest(searchParams);
   const result = await Promise.allSettled([
-    listPublicObjectCatalogPage(request, locale),
+    readPublicObjectCatalogPage(request, locale),
   ]);
   const resolved = result[0];
   const page: PublicObjectCatalogPage =

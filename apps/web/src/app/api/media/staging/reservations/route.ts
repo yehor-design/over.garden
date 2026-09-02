@@ -9,9 +9,6 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export async function POST(request: Request) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromRequest(request),

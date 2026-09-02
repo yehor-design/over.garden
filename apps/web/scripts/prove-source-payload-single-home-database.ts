@@ -258,9 +258,13 @@ async function seedHistoricalInlineShape(pool: Pool): Promise<SeededShape> {
 
   // Held case 1 — the record's stored digest is not what its units reproduce.
   const driftedCode = taxonCode(REPRODUCIBLE_RECORDS);
-  await insertTerminalUnits(pool, captureId, driftedCode, REPRODUCIBLE_RECORDS, [
-    ...EPPO_DETAIL_ENDPOINT_CLASSES,
-  ]);
+  await insertTerminalUnits(
+    pool,
+    captureId,
+    driftedCode,
+    REPRODUCIBLE_RECORDS,
+    [...EPPO_DETAIL_ENDPOINT_CLASSES],
+  );
   const driftedDigest = await insertInlineRecordFromUnits(
     pool,
     snapshotId,
@@ -592,7 +596,10 @@ async function assertAbortedBatchLeavesRecordsInline(
       if ((error as Error).message !== "operator_aborted_backfill") throw error;
     });
   const after = await countByHome(pool);
-  if (before.inline !== after.inline || before.captureUnits !== after.captureUnits) {
+  if (
+    before.inline !== after.inline ||
+    before.captureUnits !== after.captureUnits
+  ) {
     throw new Error("aborted_batch_left_a_half_applied_effect");
   }
 }

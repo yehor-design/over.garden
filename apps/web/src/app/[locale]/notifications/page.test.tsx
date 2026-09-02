@@ -29,7 +29,7 @@ vi.mock("@/server/social-return-repository", () => ({
   groupNotificationEvents: mocks.groupNotificationEvents,
 }));
 
-vi.mock("../../garden/garden-auth-panel", () => ({
+vi.mock("@/app/(default)/garden/garden-auth-panel", () => ({
   GardenAuthPanel: ({ initialMessage }: { initialMessage?: string }) => (
     <section>{initialMessage ?? "Sign in"}</section>
   ),

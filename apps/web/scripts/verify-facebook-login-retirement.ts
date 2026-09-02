@@ -26,7 +26,7 @@ const CURRENT_AUTH_DOCS = [
 
 const META_RUNTIME_BASELINE_DIGESTS = {
   "src/app/api/meta/conversions/route.ts":
-    "9fbf0689e06b1657b88fed3db9a36b4aa1dbd625f0fd983dae1e7476a745dffa",
+    "5d76a9e60683683f94ffa4c29253417f6fe6cb983c33d7812e5c837c00027724",
   "src/app/meta-marketing.tsx":
     "15f0ac10a15879e6e2182798ebd838ae705a79f2cf480305ae871ecbd5eaa874",
   "src/lib/meta-marketing/client.ts":
@@ -64,14 +64,14 @@ const RECEIPT_SOURCE_PATHS = [
   "src/lib/auth/social-oauth.test.ts",
   "src/lib/auth/social-oauth.ts",
   "src/app/api/auth/[...all]/route.ts",
-  "src/app/auth/intent/auth-intent-surface.tsx",
-  "src/app/auth/intent/page.tsx",
-  "src/app/garden/garden-auth-panel.tsx",
-  "src/app/garden/garden-auth-panel.test.tsx",
-  "src/app/garden/account-methods-panel.tsx",
-  "src/app/garden/account-methods-panel.test.tsx",
-  "src/app/garden/page.tsx",
-  "src/app/garden/profile/page.tsx",
+  "src/app/(default)/auth/intent/auth-intent-surface.tsx",
+  "src/app/(default)/auth/intent/page.tsx",
+  "src/app/(default)/garden/garden-auth-panel.tsx",
+  "src/app/(default)/garden/garden-auth-panel.test.tsx",
+  "src/app/(default)/garden/account-methods-panel.tsx",
+  "src/app/(default)/garden/account-methods-panel.test.tsx",
+  "src/app/(default)/garden/page.tsx",
+  "src/app/(default)/garden/profile/page.tsx",
   "src/server/auth/account-methods.ts",
   "scripts/smoke-public-identity.ts",
   "scripts/smoke-restore-readiness.ts",
@@ -365,7 +365,7 @@ async function assertGoogleCredentialRegression(
     await Promise.all([
       readText(root, "src/lib/auth.ts", signal),
       readText(root, "src/lib/auth/explicit-google-linking.ts", signal),
-      readText(root, "src/app/garden/garden-auth-panel.tsx", signal),
+      readText(root, "src/app/(default)/garden/garden-auth-panel.tsx", signal),
       readText(root, "src/lib/auth/social-account-policy.ts", signal),
     ]);
   if (

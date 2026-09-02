@@ -10,7 +10,6 @@ import {
   resolveMediaPresentation,
 } from "../src/lib/media/presentation-contract";
 
-
 /**
  * OVE-197 redacted smoke: classify presentation contract modes and optional
  * production HTML object-position presence without private IDs.
@@ -49,10 +48,8 @@ export function classifyMediaFocalPresentation() {
   return {
     coverUsesObjectPosition: coverEdge.objectPosition === "10% 90%",
     containServesCenter: true,
-    containCenterMatchesPresentation:
-      containEdge.objectPosition === "50% 50%",
-    invalidFocalServesCenter:
-      objectPositionCss(invalid.focal) === "50% 50%",
+    containCenterMatchesPresentation: containEdge.objectPosition === "50% 50%",
+    invalidFocalServesCenter: objectPositionCss(invalid.focal) === "50% 50%",
     invalidFocalServeClass: "clamped" as const,
     invalidFocalClassMatchesResolution: invalid.serveClass === "clamped",
     coverFitClass: coverEdge.objectFitClass === "object-cover",

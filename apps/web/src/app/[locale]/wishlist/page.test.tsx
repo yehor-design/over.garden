@@ -24,13 +24,13 @@ vi.mock("@/server/wishlist-repository", () => ({
   listWishlistShelfItems: mocks.listWishlistShelfItems,
 }));
 
-vi.mock("../../garden/garden-auth-panel", () => ({
+vi.mock("@/app/(default)/garden/garden-auth-panel", () => ({
   GardenAuthPanel: ({ initialMessage }: { initialMessage?: string }) => (
     <section>{initialMessage ?? "Sign in"}</section>
   ),
 }));
 
-vi.mock("../../wishlist/actions", () => ({
+vi.mock("@/app/(default)/wishlist/actions", () => ({
   removeCatalogPublicSlugFromWishlistAction:
     mocks.removeCatalogPublicSlugFromWishlistAction,
 }));

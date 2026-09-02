@@ -19,7 +19,11 @@ const mocks = vi.hoisted(() => ({
   convergePublicProjectionsNow: vi.fn(),
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn() ,
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
+}));
 vi.mock("@/lib/storage", () => ({
   getPublicDerivativeUrl: (key: string) => `https://media.over.garden/${key}`,
 }));

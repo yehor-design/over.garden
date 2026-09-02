@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: mocks.revalidatePath,
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
 vi.mock("next/headers", () => ({

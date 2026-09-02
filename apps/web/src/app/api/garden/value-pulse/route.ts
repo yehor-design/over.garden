@@ -5,8 +5,6 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 
-export const runtime = "nodejs";
-
 interface ValuePulseRequestBody {
   plantObjectId?: string;
   journalEntryId?: string;

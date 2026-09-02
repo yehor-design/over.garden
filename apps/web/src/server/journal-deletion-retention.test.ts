@@ -37,7 +37,11 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/cache", () => ({
+  revalidatePath: mocks.revalidatePath ,
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
+}));
 
 vi.mock("@/server/mutation-scope", () => ({
   resolveMutationScope: mocks.resolveMutationScope,
@@ -91,7 +95,7 @@ function committedReceipt(alreadyDeleted = false) {
 }
 
 async function loadAction() {
-  const actions = await import("@/app/garden/objects/[objectId]/actions");
+  const actions = await import("@/app/(default)/garden/objects/[objectId]/actions");
   return actions.deleteJournalEntryAction;
 }
 

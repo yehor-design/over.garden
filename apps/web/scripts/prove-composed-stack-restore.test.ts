@@ -47,9 +47,9 @@ const SAFE_RECEIPT: StackRestoreProofReceipt = {
 
 describe("composed stack proof arguments", () => {
   it("refuses a mode outside the closed set", () => {
-    expect(() => parseStackRestoreProofArgs(["--mode", "destroy"])).toThrowError(
-      /--mode must be one of/u,
-    );
+    expect(() =>
+      parseStackRestoreProofArgs(["--mode", "destroy"]),
+    ).toThrowError(/--mode must be one of/u);
     expect(() => parseStackRestoreProofArgs([])).toThrowError(
       /--mode must be one of/u,
     );
@@ -73,7 +73,12 @@ describe("composed stack proof arguments", () => {
     ]) {
       expect(isDisposableTarget(target)).toBe(false);
       expect(() =>
-        parseStackRestoreProofArgs(["--mode", "verify", "--restored-target", target]),
+        parseStackRestoreProofArgs([
+          "--mode",
+          "verify",
+          "--restored-target",
+          target,
+        ]),
       ).toThrowError(/disposable database/u);
     }
   });
@@ -199,7 +204,9 @@ describe("composed stack definition", () => {
     expect(definition).toContain("ssl=on");
     expect(definition).toContain("ssl_cert_file=/etc/postgres-tls/server.crt");
     expect(definition).toContain("SERVER_TLS_SSLMODE: verify-full");
-    expect(definition).toContain("SERVER_TLS_CA_FILE: /etc/postgres-tls/ca.crt");
+    expect(definition).toContain(
+      "SERVER_TLS_CA_FILE: /etc/postgres-tls/ca.crt",
+    );
   });
 
   it("routes the worker around the pooler, because transaction pooling has no session", () => {

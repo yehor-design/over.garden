@@ -3,8 +3,6 @@ import {
   sendMetaConversionsApiEvent,
 } from "@/server/meta-marketing/conversions-api";
 
-export const runtime = "nodejs";
-
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as unknown;
   const normalized = normalizeMetaConversionsRequestBody(body);

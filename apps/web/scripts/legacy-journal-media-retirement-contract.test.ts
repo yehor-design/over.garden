@@ -66,14 +66,19 @@ function approvedReportFixture(): LegacyProductionReport {
 describe("OVE-349 production retirement contract", () => {
   it("parses read-only mode without a destructive confirmation", () => {
     expect(
-      parseRetirementOperatorArgs(["--mode", "preflight", "--env-file", "/tmp/prod.env"]),
+      parseRetirementOperatorArgs([
+        "--mode",
+        "preflight",
+        "--env-file",
+        "/tmp/prod.env",
+      ]),
     ).toEqual({ mode: "preflight", envFile: "/tmp/prod.env" });
   });
 
   it("requires the exact approved digest, observation receipt, and confirmation for cleanup", () => {
-    expect(() =>
-      parseRetirementOperatorArgs(["--mode", "cleanup"]),
-    ).toThrow(/approved digest/i);
+    expect(() => parseRetirementOperatorArgs(["--mode", "cleanup"])).toThrow(
+      /approved digest/i,
+    );
     expect(
       parseRetirementOperatorArgs([
         "--mode",

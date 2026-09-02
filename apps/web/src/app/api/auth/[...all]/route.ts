@@ -18,7 +18,6 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 
-export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const handler = toNextJsHandler(auth);

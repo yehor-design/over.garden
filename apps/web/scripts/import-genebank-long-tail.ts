@@ -103,9 +103,8 @@ async function main() {
     db,
     "Unreviewed NPGS landrace",
   );
-  const promotedTypeaheadProof = await readPromotedTypeaheadProof(
-    promotedCandidates,
-  );
+  const promotedTypeaheadProof =
+    await readPromotedTypeaheadProof(promotedCandidates);
   const nonPromotedAbsenceProof = await readNonPromotedAbsenceProof();
   const provenanceProof = await readGenebankSourceProvenanceProof(
     db,
@@ -127,7 +126,9 @@ async function main() {
       (candidate) =>
         candidate.sourceRecordKey === promotedCandidate.sourceRecordKey,
     );
-    if (promotedAgainCandidate?.catalogItemId !== promotedCandidate.catalogItemId) {
+    if (
+      promotedAgainCandidate?.catalogItemId !== promotedCandidate.catalogItemId
+    ) {
       throw new Error(
         `Re-running promotion created a new catalog item for ${promotedCandidate.sourceRecordKey}.`,
       );
@@ -187,8 +188,8 @@ async function main() {
   assertAllowedUsage(provenanceProof.allowedUsage);
   assertAllowedProjectionProof(provenanceProof.allowedProjection);
   if (
-    candidateQueueAfterPromotion.some(
-      (row) => definition.promotableRecordKeys.includes(row.sourceRecordKey),
+    candidateQueueAfterPromotion.some((row) =>
+      definition.promotableRecordKeys.includes(row.sourceRecordKey),
     )
   ) {
     throw new Error("Promoted genebank candidates stayed in review queue.");
@@ -289,7 +290,8 @@ async function readPromotedTypeaheadProof(
     const projection = genebankLongTailProjectionForRecord(
       candidate.sourceRecordKey,
     );
-    const query = projection.aliases[0]?.displayName ?? projection.canonicalName;
+    const query =
+      projection.aliases[0]?.displayName ?? projection.canonicalName;
     const typeahead = await readGenebankTypeaheadProof(db, query);
     const matchingRows = typeahead.filter(
       (row) => row.catalogItemId === candidate.catalogItemId,

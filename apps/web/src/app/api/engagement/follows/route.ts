@@ -12,6 +12,8 @@ import {
   ownerUserIdFromRequest,
   resolveMutationScope,
 } from "@/server/mutation-scope";
+import { publicEngagementChangeTags } from "@/lib/public-cache-tags";
+import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -33,6 +35,10 @@ export async function POST(request: Request) {
     target,
     followState: rawState === "removed" ? "removed" : "active",
   });
+  revalidatePublicCacheTags(
+    publicEngagementChangeTags(target.kind, target.ref),
+    "expire",
+  );
 
   revalidatePath(new URL(returnTo, request.url).pathname);
   revalidatePath("/feed");

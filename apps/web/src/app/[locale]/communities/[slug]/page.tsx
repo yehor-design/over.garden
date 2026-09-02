@@ -31,8 +31,7 @@ import {
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
-
-export const dynamic = "force-dynamic";
+import { readPublicCommunityPage } from "@/server/public-cache";
 
 interface CommunityDetailRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -55,7 +54,14 @@ const loadCommunityPage = cache(
     kind: CommunityPageOptions["kind"],
     cursor: string | null,
   ) =>
-    getPublicCommunityPage(slug, locale, { viewerScope, query, kind, cursor }),
+    viewerScope
+      ? getPublicCommunityPage(slug, locale, {
+          viewerScope,
+          query,
+          kind,
+          cursor,
+        })
+      : readPublicCommunityPage(slug, locale, query, kind, cursor),
 );
 
 export async function generateMetadata({

@@ -6,8 +6,8 @@ import { cache } from "react";
 import { Bookmark, NotebookPen } from "lucide-react";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
-import { PublicVarietySourceCredits } from "@/app/variety/[slug]/source-credits";
-import { addCatalogPublicSlugToWishlistAction } from "@/app/wishlist/actions";
+import { PublicVarietySourceCredits } from "@/app/(default)/variety/[slug]/source-credits";
+import { addCatalogPublicSlugToWishlistAction } from "@/app/(default)/wishlist/actions";
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import type { CatalogKind } from "@/db/schema";
@@ -34,11 +34,9 @@ import {
 } from "@/server/public-surface-discovery";
 import { buildPublicVarietySurfaceMetadata } from "@/server/public-variety-metadata";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
-import {
-  buildPublicVarietyDiscoverySource,
-  getPublicVarietyPage,
-} from "@/server/public-variety-repository";
+import { buildPublicVarietyDiscoverySource } from "@/server/public-variety-repository";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
+import { readPublicVarietyPage } from "@/server/public-cache";
 
 export interface PublicCatalogEvidenceRouteProps {
   params: Promise<{ slug: string }>;
@@ -49,7 +47,7 @@ const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
 
 const getCachedPublicCatalogEvidencePage = cache(
   (slug: string, catalogKind: CatalogKind, locale: InterfaceLocale) =>
-    getPublicVarietyPage(slug, catalogKind, undefined, locale),
+    readPublicVarietyPage(slug, catalogKind, locale),
 );
 
 export async function generatePublicCatalogEvidenceMetadata(

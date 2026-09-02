@@ -202,12 +202,38 @@ function getCanonicalTrailingSlashResponse(request: NextRequest) {
   return NextResponse.redirect(url, { status: 308 });
 }
 
+/**
+ * Routes whose responses may hold personal data and never enter a shared
+ * cache (ADR-0022, D4). Public pages keep the cache headers Next emits for
+ * their prerendered shell; everything the proxy answers itself (redirects,
+ * lifecycle documents, hard 404s) stays `no-store` as well.
+ */
+const NO_STORE_ROUTE_PREFIXES = [
+  "/garden",
+  "/account",
+  "/auth",
+  "/erasure",
+  "/api",
+  "/health",
+  "/skeleton",
+] as const;
+
+export function isNoStoreAppRoute(pathname: string) {
+  const path = stripLocalePrefix(pathname).path;
+  return NO_STORE_ROUTE_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  );
+}
+
 function withAppRouteContract(
   response: NextResponse,
   request: NextRequest,
   localization: ResolvedInterfaceLocalization,
+  options: { passThrough?: boolean } = {},
 ) {
-  response.headers.set("Cache-Control", APP_ROUTE_CACHE_CONTROL);
+  if (!options.passThrough || isNoStoreAppRoute(request.nextUrl.pathname)) {
+    response.headers.set("Cache-Control", APP_ROUTE_CACHE_CONTROL);
+  }
   response.headers.set("Content-Language", localization.locale);
 
   if (isDocumentNavigationRequest(request)) {
@@ -634,9 +660,12 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // App HTML/RSC/API responses may contain personalized product data.
-  // Keep them out of intermediary caches even if DNS is proxied later.
-  return withAppRouteContract(response, request, localization);
+  // Workspace, account, auth, and API responses may contain personal data and
+  // stay out of every shared cache. Public pages keep the cache headers Next
+  // emits for their prerendered shell (ADR-0022, D4).
+  return withAppRouteContract(response, request, localization, {
+    passThrough: true,
+  });
 }
 
 async function resolvePublicProfileViewer(

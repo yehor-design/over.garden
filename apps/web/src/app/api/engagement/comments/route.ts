@@ -14,6 +14,8 @@ import {
   ownerUserIdFromRequest,
   resolveMutationScope,
 } from "@/server/mutation-scope";
+import { publicEngagementChangeTags } from "@/lib/public-cache-tags";
+import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -50,6 +52,10 @@ export async function POST(request: Request) {
       clientMutationId: String(formData.get("clientMutationId") ?? ""),
       parentCommentId,
     });
+    revalidatePublicCacheTags(
+      publicEngagementChangeTags(target.kind, target.ref),
+      "expire",
+    );
   } catch (error) {
     if (isInteractionAdmissionError(error)) {
       return redirectWithEngagementStatus(

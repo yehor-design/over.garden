@@ -62,7 +62,7 @@ describe("FacebookSurfaceRetirementReceiptV1", () => {
       });
 
       const { GardenAuthPanel } =
-        await import("@/app/garden/garden-auth-panel");
+        await import("@/app/(default)/garden/garden-auth-panel");
       const html = renderToStaticMarkup(
         createElement(GardenAuthPanel, {
           googleSignInEnabled: true,

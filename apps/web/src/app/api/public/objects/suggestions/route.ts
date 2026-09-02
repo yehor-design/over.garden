@@ -4,8 +4,6 @@ import {
 } from "@/server/public-object-catalog-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 
-export const runtime = "nodejs";
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const catalogRequest = normalizePublicObjectCatalogRequest({

@@ -294,8 +294,7 @@ async function main() {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
-          ATOMIC_JOURNAL_CREATE_PROTOCOL,
+        [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]: ATOMIC_JOURNAL_CREATE_PROTOCOL,
         cookie: jar.header(),
         origin: baseUrl,
       },
@@ -324,7 +323,8 @@ async function main() {
       firstResponse.ok,
       `first entry failed with status ${firstResponse.status}`,
     );
-    const firstBody = (await firstResponse.json()) as AtomicJournalCreateResponse;
+    const firstBody =
+      (await firstResponse.json()) as AtomicJournalCreateResponse;
     const entryId = firstBody.entryId;
     assert(typeof entryId === "string", "first entry id");
 
@@ -360,8 +360,7 @@ async function main() {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
-          ATOMIC_JOURNAL_CREATE_PROTOCOL,
+        [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]: ATOMIC_JOURNAL_CREATE_PROTOCOL,
         cookie: jar.header(),
         origin: baseUrl,
       },

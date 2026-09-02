@@ -27,8 +27,7 @@ import {
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
-
-export const dynamic = "force-dynamic";
+import { readPublicCommunityDirectory } from "@/server/public-cache";
 
 interface CommunityDirectoryRouteProps {
   params: Promise<{ locale: string }>;
@@ -56,7 +55,7 @@ export async function generateMetadata({
     loadSource: async () =>
       buildCommunityDirectoryDiscoverySource(
         locale,
-        await listPublicCommunities(null),
+        await readPublicCommunityDirectory(),
       ),
   });
   return buildCommunityDirectorySurface(locale, [], discovery).metadata;
@@ -65,7 +64,9 @@ export async function generateMetadata({
 export async function renderCommunityDirectory(locale: PublicLocale) {
   const viewerScope = await currentViewerScope();
   try {
-    const communities = await listPublicCommunities(viewerScope);
+    const communities = viewerScope
+      ? await listPublicCommunities(viewerScope)
+      : await readPublicCommunityDirectory();
     const discovery = resolvePublicSurfaceDiscoveryForRequest(
       buildCommunityDirectoryDiscoverySource(locale, communities),
     );

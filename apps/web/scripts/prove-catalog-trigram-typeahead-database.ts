@@ -100,11 +100,12 @@ export async function runCatalogTrigramTypeaheadDatabaseProof(input: {
       }
 
       const startedAt = performance.now();
-      const trigram = await buildActiveStableRegistryProductTrigramTypeaheadQuery(
-        db,
-        typo.typed,
-        "plant",
-      ).execute();
+      const trigram =
+        await buildActiveStableRegistryProductTrigramTypeaheadQuery(
+          db,
+          typo.typed,
+          "plant",
+        ).execute();
       maxQueryLatencyMs = Math.max(
         maxQueryLatencyMs,
         performance.now() - startedAt,
@@ -115,11 +116,12 @@ export async function runCatalogTrigramTypeaheadDatabaseProof(input: {
 
       // AC-04: the same query returns the same ranked set.
       const ids = trigram.map((row) => row.id);
-      const replay = await buildActiveStableRegistryProductTrigramTypeaheadQuery(
-        db,
-        typo.typed,
-        "plant",
-      ).execute();
+      const replay =
+        await buildActiveStableRegistryProductTrigramTypeaheadQuery(
+          db,
+          typo.typed,
+          "plant",
+        ).execute();
       if (replay.map((row) => row.id).join(",") !== ids.join(",")) {
         replayIdentical = false;
       }
@@ -149,12 +151,13 @@ export async function runCatalogTrigramTypeaheadDatabaseProof(input: {
       8,
       db,
     );
-    const trigramRows = await searchActiveStableRegistryProductTrigramSuggestions(
-      typed,
-      "plant",
-      8,
-      db,
-    );
+    const trigramRows =
+      await searchActiveStableRegistryProductTrigramSuggestions(
+        typed,
+        "plant",
+        8,
+        db,
+      );
     // The derived index is simulated as the source that already finds the
     // misspelling today: that is exactly the recall this measures against.
     const derivedRows = canonicalRows;
@@ -226,7 +229,9 @@ async function applyEveryMigration(pool: Pool, connectionString: string) {
   await pool.query(applicationSql[0]!.sql);
 
   const authDb = new Kysely<Database>({
-    dialect: new PostgresDialect({ pool: new Pool({ connectionString, max: 1 }) }),
+    dialect: new PostgresDialect({
+      pool: new Pool({ connectionString, max: 1 }),
+    }),
   });
   const authOptions = {
     appName: "OverGarden",

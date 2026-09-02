@@ -27,9 +27,8 @@ import {
   type EngagementBookmarkShelfItem,
 } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
-import { GardenAuthPanel } from "../../garden/garden-auth-panel";
+import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
 
-export const dynamic = "force-dynamic";
 const PAGE_SIZE = 12;
 
 interface LocalizedBookmarksRouteProps {

@@ -70,7 +70,9 @@ export async function runWorkerIdleContractDatabaseProof(input: {
       `insert into job_queue (queue_name, payload)
        values ('matching', '{"kind":"journal_entry_index"}'::jsonb)`,
     );
-    const availableJobWokeWorker = await wakes.waitForOne(WORKER_WAKE_BUDGET_MS);
+    const availableJobWokeWorker = await wakes.waitForOne(
+      WORKER_WAKE_BUDGET_MS,
+    );
     const wakeLatencyMs = performance.now() - startedAt;
     if (!availableJobWokeWorker) {
       throw new Error("an_available_job_did_not_wake_the_worker");

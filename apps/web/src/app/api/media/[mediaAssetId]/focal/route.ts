@@ -11,8 +11,8 @@ import {
   ownerUserIdFromRequest,
   resolveMutationScope,
 } from "@/server/mutation-scope";
-
-export const runtime = "nodejs";
+import { publicEntryChangeTags } from "@/lib/public-cache-tags";
+import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 type RouteContext = {
   params: Promise<{ mediaAssetId: string }>;
@@ -98,6 +98,16 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
     revalidatePath("/feed");
     revalidatePath("/journals");
+    if (result.journalEntryId) {
+      revalidatePublicCacheTags(
+        publicEntryChangeTags({
+          entryId: result.journalEntryId,
+          publicSlug: result.publicSlug,
+          ownerUserId: scope.userId,
+        }),
+        "expire",
+      );
+    }
 
     if (
       result.journalEntryId &&

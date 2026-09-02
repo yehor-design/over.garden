@@ -191,7 +191,10 @@ export function classifyApplyGate(input: {
   if (!plan.schema.hasDeletedAt || !plan.schema.hasPurgeAfter) {
     return { state: "blocked", reason: "migration_0039_not_applied" };
   }
-  if (!plan.schema.lifecycleCheckPresent || !plan.schema.retentionCheckPresent) {
+  if (
+    !plan.schema.lifecycleCheckPresent ||
+    !plan.schema.retentionCheckPresent
+  ) {
     return { state: "blocked", reason: "lifecycle_constraints_absent" };
   }
   if (plan.lifecycleCounts.legacyArchived === 0) {
@@ -315,7 +318,9 @@ async function readPlan(
   const dependencies: LegacyRelationCount[] = [];
   for (const relation of [...KNOWN_DEPENDENT_RELATIONS].sort()) {
     const column =
-      relation === "public_projection_intents" ? "entity_id" : "journal_entry_id";
+      relation === "public_projection_intents"
+        ? "entity_id"
+        : "journal_entry_id";
     const extra =
       relation === "public_projection_intents"
         ? "and dependent.entity_kind = 'journal_entry'"
@@ -602,7 +607,13 @@ async function main() {
       batchLimit: OVE353_APPLY_BATCH_LIMIT,
     });
     if (gate.state === "blocked") {
-      emit({ mode: args.mode, plan, digest, state: "blocked", reason: gate.reason });
+      emit({
+        mode: args.mode,
+        plan,
+        digest,
+        state: "blocked",
+        reason: gate.reason,
+      });
       process.exitCode = 1;
       return;
     }
@@ -633,7 +644,10 @@ function emit(payload: Record<string, unknown>) {
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
   main().catch((error: unknown) => {
     process.stderr.write(
       `${JSON.stringify({

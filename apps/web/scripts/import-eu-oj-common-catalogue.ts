@@ -100,10 +100,7 @@ async function main() {
   const importOptions = validateCatalogProductionImportOptions(
     parseCatalogProductionImportArgs(process.argv.slice(2)),
   );
-  validateCatalogProductionImportDatabaseTarget(
-    importOptions,
-    connectionKind,
-  );
+  validateCatalogProductionImportDatabaseTarget(importOptions, connectionKind);
   const codeState = readCodeState();
   const dryRunOptions = validateCatalogFullImportDryRunOptions({
     environment: "local",

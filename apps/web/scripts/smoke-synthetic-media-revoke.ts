@@ -88,9 +88,8 @@ async function main() {
     throw new Error("Synthetic derivative was not reachable before revoke.");
   }
 
-  const { revokeMediaObjectBytes } = await import(
-    "../src/server/media/lifecycle-revoke"
-  );
+  const { revokeMediaObjectBytes } =
+    await import("../src/server/media/lifecycle-revoke");
   await revokeMediaObjectBytes({
     bucket: "public_derivative",
     objectKey,

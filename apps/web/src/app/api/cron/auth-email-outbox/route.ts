@@ -2,9 +2,6 @@ import { NextResponse } from "next/server";
 
 import { drainAuthEmailOutbox } from "@/server/auth/auth-email-outbox-consumer";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export async function GET(request: Request) {
   return await runAuthEmailOutboxCron(request);
 }

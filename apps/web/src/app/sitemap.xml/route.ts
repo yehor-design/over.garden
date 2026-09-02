@@ -1,15 +1,16 @@
+import { connection } from "next/server";
+
 import {
   SITEMAP_RESPONSE_HEADERS,
-  listPublicSitemapChunkIds,
   renderSitemapIndexXml,
 } from "@/server/public-sitemap";
-
-export const dynamic = "force-dynamic";
+import { readPublicSitemapChunkIds } from "@/server/public-cache";
 
 /** The sitemap index: one chunk per content family, 5 000 URLs each. */
 export async function GET() {
+  await connection();
   return new Response(
-    renderSitemapIndexXml(await listPublicSitemapChunkIds()),
+    renderSitemapIndexXml(await readPublicSitemapChunkIds()),
     {
       headers: SITEMAP_RESPONSE_HEADERS,
     },

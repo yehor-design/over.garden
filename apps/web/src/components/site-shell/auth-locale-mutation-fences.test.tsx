@@ -51,10 +51,10 @@ vi.mock("@/lib/meta-marketing/client", () => ({
   trackMetaMarketingEvent: vi.fn(),
 }));
 
-import { AccountMethodsPanel } from "@/app/garden/account-methods-panel";
-import { GardenAuthPanel } from "@/app/garden/garden-auth-panel";
-import { PasswordResetRequestForm } from "@/app/auth/help/password-reset-request-form";
-import { ResetPasswordForm } from "@/app/auth/reset-password/reset-password-form";
+import { AccountMethodsPanel } from "@/app/(default)/garden/account-methods-panel";
+import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
+import { PasswordResetRequestForm } from "@/app/(default)/auth/help/password-reset-request-form";
+import { ResetPasswordForm } from "@/app/(default)/auth/reset-password/reset-password-form";
 import { interfaceLocaleChangeCoordinator } from "@/lib/interface-locale-change-coordinator";
 
 describe("auth locale mutation fences", () => {

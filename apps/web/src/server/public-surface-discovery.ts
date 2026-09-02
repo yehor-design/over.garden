@@ -1,5 +1,7 @@
 import "server-only";
 
+import { connection } from "next/server";
+
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import type { PublicLocale } from "@/lib/public-localization";
 import {
@@ -129,7 +131,7 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "lineage_object",
     "object_passport",
     "candidate",
-    "src/app/lineage/objects/[objectId]/page.tsx",
+    "src/app/(default)/lineage/objects/[objectId]/page.tsx",
   ),
   inventory(
     "privacy",
@@ -262,6 +264,7 @@ export async function resolvePublicSurfaceDiscoveryFromLoad(input: {
   loadSource: () => Promise<PublicSurfaceDiscoverySource>;
 }): Promise<PublicSurfaceDiscoveryResult> {
   try {
+    await connection();
     const source = await input.loadSource();
     if (source.consumerId !== input.consumerId) {
       return unresolvedResult(input.consumerId);
@@ -280,6 +283,7 @@ export async function resolvePublicSurfacePayload<Payload>(input: {
   }>;
 }): Promise<PublicSurfaceDiscoveryPayloadResult<Payload>> {
   try {
+    await connection();
     const loaded = await input.load();
     if (loaded.source.consumerId !== input.consumerId) {
       return { ...unresolvedResult(input.consumerId), payload: null };

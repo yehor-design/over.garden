@@ -13,10 +13,7 @@ import { normalizePublicJournalDirectoryReturnTo } from "@/lib/public-journal-di
 import { isPublicLocale, type PublicLocale } from "@/lib/public-localization";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getEngagementSummary } from "@/server/engagement-repository";
-import {
-  getPublicJournalEntryLookup,
-  type PublicJournalEntryPage,
-} from "@/server/journal-repository";
+import type { PublicJournalEntryPage } from "@/server/journal-repository";
 import { getOwnerJournalEntryControl } from "@/server/owner-journal-entry-control";
 import {
   resolvePublicSurfaceDiscoveryForRequest,
@@ -28,8 +25,10 @@ import {
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser } from "@/server/request-scope";
-
-export const dynamic = "force-dynamic";
+import {
+  readGuestEngagementSummary,
+  readPublicJournalEntry,
+} from "@/server/public-cache";
 
 interface PublicJournalEntryRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -47,11 +46,7 @@ export async function generateMetadata({
   const bounded = await resolvePublicSurfacePayload({
     consumerId: "localized_journal_entry",
     load: async () => {
-      const lookup = await getPublicJournalEntryLookup(
-        slug,
-        undefined,
-        localeParam,
-      );
+      const lookup = await readPublicJournalEntry(slug, localeParam);
       if (lookup.status !== "active") {
         throw new Error("Public journal entry unavailable.");
       }
@@ -77,7 +72,7 @@ export default async function PublicJournalEntryRoute({
   if (!isPublicLocale(localeParam)) notFound();
 
   const locale: PublicLocale = localeParam;
-  const lookup = await getPublicJournalEntryLookup(slug, undefined, locale);
+  const lookup = await readPublicJournalEntry(slug, locale);
   if (lookup.status !== "active") notFound();
 
   const session = await getCurrentSession();
@@ -88,9 +83,11 @@ export default async function PublicJournalEntryRoute({
     ref: lookup.page.entry.publicSlug,
   };
   const [engagement, ownerControl] = await Promise.all([
-    getEngagementSummary(engagementTarget, scope, {
-      commentCursor: firstParam(query.cursor),
-    }),
+    scope
+      ? getEngagementSummary(engagementTarget, scope, {
+          commentCursor: firstParam(query.cursor),
+        })
+      : readGuestEngagementSummary(engagementTarget, firstParam(query.cursor)),
     scope
       ? getOwnerJournalEntryControl(scope, lookup.page.entry.publicSlug)
       : Promise.resolve(null),

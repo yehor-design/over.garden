@@ -246,7 +246,9 @@ export function parseRetirementOperatorArgs(
       "approved digest",
     );
     if (approvedDigest !== APPROVED_RETIREMENT_EVIDENCE_DIGEST) {
-      throw new Error("The cleanup approved digest is not the OVE-349 receipt.");
+      throw new Error(
+        "The cleanup approved digest is not the OVE-349 receipt.",
+      );
     }
     const observationReceipt = requireSha256Arg(
       values,
@@ -293,7 +295,9 @@ function parseNamedArgs(argv: readonly string[]) {
     const token = argv[index];
     const value = argv[index + 1];
     if (!token?.startsWith("--") || !value || value.startsWith("--")) {
-      throw new Error(`Invalid OVE-349 operator argument near ${token ?? "end"}.`);
+      throw new Error(
+        `Invalid OVE-349 operator argument near ${token ?? "end"}.`,
+      );
     }
     const name = token.slice(2);
     if (values.has(name)) throw new Error(`Duplicate --${name} argument.`);
@@ -308,7 +312,8 @@ function parseNamedArgs(argv: readonly string[]) {
     "confirm-production",
   ]);
   for (const name of values.keys()) {
-    if (!supported.has(name)) throw new Error(`Unsupported --${name} argument.`);
+    if (!supported.has(name))
+      throw new Error(`Unsupported --${name} argument.`);
   }
   return values;
 }

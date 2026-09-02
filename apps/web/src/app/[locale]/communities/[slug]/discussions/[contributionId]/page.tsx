@@ -18,8 +18,6 @@ import {
 } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
 
-export const dynamic = "force-dynamic";
-
 interface ContributionDiscussionRouteProps {
   params: Promise<{ locale: string; slug: string; contributionId: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

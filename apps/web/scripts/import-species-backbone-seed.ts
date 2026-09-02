@@ -100,11 +100,15 @@ async function main() {
     const rerunSummary = requiredSummary(rerunByKey, concept.key);
 
     if (rerunSummary.catalogItemId !== summary.catalogItemId) {
-      throw new Error(`${concept.key} re-run created a different catalog item.`);
+      throw new Error(
+        `${concept.key} re-run created a different catalog item.`,
+      );
     }
 
     for (const slug of REQUIRED_SOURCE_SLUGS) {
-      if (rerunSummary.sourceRecordIds[slug] !== summary.sourceRecordIds[slug]) {
+      if (
+        rerunSummary.sourceRecordIds[slug] !== summary.sourceRecordIds[slug]
+      ) {
         throw new Error(
           `${concept.key} re-run created a different ${slug} source row.`,
         );

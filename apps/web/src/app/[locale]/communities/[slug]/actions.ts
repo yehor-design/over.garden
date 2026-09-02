@@ -20,6 +20,8 @@ import {
   ownerUserIdFromFormData,
   resolveMutationScope,
 } from "@/server/mutation-scope";
+import { publicCommunityChangeTags } from "@/lib/public-cache-tags";
+import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
 
@@ -37,6 +39,7 @@ export async function setCommunityMembershipAction(formData: FormData) {
   let status: string;
   try {
     await setCommunityMembership(scope, { slug, state });
+    revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
     status = state === "left" ? "left" : "joined";
   } catch {
     status = "unavailable";
@@ -59,6 +62,7 @@ export async function contributeJournalToCommunityAction(formData: FormData) {
       slug,
       journalEntryId: String(formData.get("journalEntryId") ?? ""),
     });
+    revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
     status = "contributed";
   } catch {
     status = "unavailable";
@@ -82,6 +86,7 @@ export async function reportCommunityContributionAction(formData: FormData) {
       contributionId: String(formData.get("contributionId") ?? ""),
       reason: communityReportReason(formData),
     });
+    revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
     status = "reported";
   } catch {
     status = "unavailable";
@@ -106,6 +111,7 @@ export async function blockCommunityContributionAuthorAction(
       slug,
       contributionId: String(formData.get("contributionId") ?? ""),
     });
+    revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
     status = "blocked";
   } catch {
     status = "unavailable";

@@ -20,7 +20,8 @@ function fixtureRoot() {
 }
 
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0))
+    rmSync(root, { recursive: true, force: true });
 });
 
 describe("banned-dependency gate", () => {
@@ -38,28 +39,40 @@ describe("banned-dependency gate", () => {
     expect(scanSource("const r = new window.SpeechRecognition();")).toEqual([
       "speech_recognition",
     ]);
-    expect(scanSource("await navigator.serviceWorker.register('/sw.js')")).toEqual([
-      "service_worker_register",
-    ]);
+    expect(
+      scanSource("await navigator.serviceWorker.register('/sw.js')"),
+    ).toEqual(["service_worker_register"]);
     expect(scanSource("const db = indexedDB.open('x')")).toEqual(["indexeddb"]);
-    expect(scanSource("import sharp from \"sharp\";")).toEqual(["sharp_import"]);
-    expect(scanSource("const online = navigator.onLine;")).toEqual(["navigator_online"]);
+    expect(scanSource('import sharp from "sharp";')).toEqual(["sharp_import"]);
+    expect(scanSource("const online = navigator.onLine;")).toEqual([
+      "navigator_online",
+    ]);
     expect(scanSource("fetch('/api/garden/entries')")).toEqual([]);
   });
 
   it("fails on a source hit outside the residue allowlist and passes on a clean tree", () => {
     const root = fixtureRoot();
-    writeFileSync(join(root, "src", "lib", "clean.ts"), "export const ok = 1;\n");
+    writeFileSync(
+      join(root, "src", "lib", "clean.ts"),
+      "export const ok = 1;\n",
+    );
     expect(
-      runBannedDependencyGate({ rootDir: root, packageJson: {}, allowedResidue: [] })
-        .violations,
+      runBannedDependencyGate({
+        rootDir: root,
+        packageJson: {},
+        allowedResidue: [],
+      }).violations,
     ).toEqual([]);
 
     writeFileSync(
       join(root, "src", "lib", "speech.ts"),
       "export const R = window.webkitSpeechRecognition;\n",
     );
-    const report = runBannedDependencyGate({ rootDir: root, packageJson: {}, allowedResidue: [] });
+    const report = runBannedDependencyGate({
+      rootDir: root,
+      packageJson: {},
+      allowedResidue: [],
+    });
     expect(report.violations).toEqual([
       { kind: "source", detail: "src/lib/speech.ts: speech_recognition" },
     ]);
@@ -72,25 +85,51 @@ describe("banned-dependency gate", () => {
       "export const R = window.SpeechRecognition;\n",
     );
     const residue = [{ pathPrefix: "src/lib/speech.ts", owner: "OVE-364" }];
-    const excused = runBannedDependencyGate({ rootDir: root, packageJson: {}, allowedResidue: residue });
+    const excused = runBannedDependencyGate({
+      rootDir: root,
+      packageJson: {},
+      allowedResidue: residue,
+    });
     expect(excused.violations).toEqual([]);
     expect(excused.excusedFiles).toBe(1);
 
-    writeFileSync(join(root, "src", "lib", "speech.ts"), "export const clean = true;\n");
-    const cleaned = runBannedDependencyGate({ rootDir: root, packageJson: {}, allowedResidue: residue });
-    expect(cleaned.violations.map((violation) => violation.kind)).toEqual(["stale_allowlist"]);
+    writeFileSync(
+      join(root, "src", "lib", "speech.ts"),
+      "export const clean = true;\n",
+    );
+    const cleaned = runBannedDependencyGate({
+      rootDir: root,
+      packageJson: {},
+      allowedResidue: residue,
+    });
+    expect(cleaned.violations.map((violation) => violation.kind)).toEqual([
+      "stale_allowlist",
+    ]);
 
     rmSync(join(root, "src", "lib", "speech.ts"));
-    const stale = runBannedDependencyGate({ rootDir: root, packageJson: {}, allowedResidue: residue });
-    expect(stale.violations.map((violation) => violation.kind)).toEqual(["stale_allowlist"]);
+    const stale = runBannedDependencyGate({
+      rootDir: root,
+      packageJson: {},
+      allowedResidue: residue,
+    });
+    expect(stale.violations.map((violation) => violation.kind)).toEqual([
+      "stale_allowlist",
+    ]);
   });
 
   it("ignores test files and type declarations", () => {
     const root = fixtureRoot();
     writeFileSync(join(root, "src", "lib", "a.test.ts"), "indexedDB;\n");
-    writeFileSync(join(root, "src", "lib", "types.d.ts"), "declare var indexedDB: unknown;\n");
+    writeFileSync(
+      join(root, "src", "lib", "types.d.ts"),
+      "declare var indexedDB: unknown;\n",
+    );
     expect(
-      runBannedDependencyGate({ rootDir: root, packageJson: {}, allowedResidue: [] }).violations,
+      runBannedDependencyGate({
+        rootDir: root,
+        packageJson: {},
+        allowedResidue: [],
+      }).violations,
     ).toEqual([]);
   });
 });

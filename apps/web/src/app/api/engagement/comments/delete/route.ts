@@ -11,6 +11,8 @@ import {
   ownerUserIdFromRequest,
   resolveMutationScope,
 } from "@/server/mutation-scope";
+import { publicEngagementChangeTags } from "@/lib/public-cache-tags";
+import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -34,6 +36,10 @@ export async function POST(request: Request) {
     admission.scope,
     String(formData.get("commentId") ?? ""),
     target,
+  );
+  revalidatePublicCacheTags(
+    publicEngagementChangeTags(target.kind, target.ref),
+    "expire",
   );
   revalidatePath(new URL(returnTo, request.url).pathname);
   return redirectWithEngagementStatus(request, returnTo, "comment-deleted");

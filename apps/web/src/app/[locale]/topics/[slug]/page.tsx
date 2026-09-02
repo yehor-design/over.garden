@@ -13,10 +13,8 @@ import {
 } from "@/lib/public-localization";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getEngagementFollowState } from "@/server/engagement-repository";
-import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
 import {
   buildPublicTopicDiscoverySource,
-  getPublicTopicAggregationPage,
   type PublicTopicAggregationPage,
 } from "@/server/public-topic-repository";
 import {
@@ -27,6 +25,10 @@ import {
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser } from "@/server/request-scope";
+import {
+  readPublicKnowledgeEvidence,
+  readPublicTopicPage,
+} from "@/server/public-cache";
 
 interface PublicTopicRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -35,7 +37,7 @@ interface PublicTopicRouteProps {
 
 /** One topic read per request: `generateMetadata` and the page share it (React.cache). */
 const loadTopicPage = cache((slug: string, locale: PublicLocale) =>
-  getPublicTopicAggregationPage(slug, { locale }),
+  readPublicTopicPage(slug, locale),
 );
 
 export async function generateMetadata({
@@ -89,7 +91,7 @@ export default async function TopicRoute({
   const returnTo = localizedPath(localeParam, `/topics/${topic.topic.slug}`);
   const surface = buildTopicSurface(localeParam, topic);
 
-  const evidenceResult = await listPublicKnowledgeEvidence(
+  const evidenceResult = await readPublicKnowledgeEvidence(
     { topicSlugs: [topic.topic.slug], catalogSlugs: [] },
     localeParam,
   ).then(

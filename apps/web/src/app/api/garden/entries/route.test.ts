@@ -30,7 +30,11 @@ const mocks = vi.hoisted(() => ({
   finalizeEphemeralPublicationMedia: vi.fn(),
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/cache", () => ({
+  revalidatePath: mocks.revalidatePath ,
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
+}));
 
 vi.mock("@/server/mvp-learning/attribution-after-response", () => ({
   scheduleLearningAttributionDrain: mocks.scheduleLearningAttributionDrain,

@@ -13,9 +13,10 @@ describe("OVE-216 provider proof request bounds", () => {
     );
 
     const sends = source.match(/client\.send\(/g) ?? [];
-    const boundedSends = source.match(
-      /\{ abortSignal: AbortSignal\.timeout\(PROVIDER_REQUEST_TIMEOUT_MS\) \}/g,
-    ) ?? [];
+    const boundedSends =
+      source.match(
+        /\{ abortSignal: AbortSignal\.timeout\(PROVIDER_REQUEST_TIMEOUT_MS\) \}/g,
+      ) ?? [];
 
     expect(sends).toHaveLength(5);
     expect(boundedSends).toHaveLength(sends.length);

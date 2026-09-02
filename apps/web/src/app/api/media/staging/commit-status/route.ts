@@ -3,9 +3,6 @@ import {
   verifyCommitStatusRequest,
 } from "@/server/media/ephemeral-staging-commit-status";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export async function POST(request: Request) {
   let verified: Awaited<ReturnType<typeof verifyCommitStatusRequest>>;
   try {

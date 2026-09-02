@@ -29,12 +29,21 @@ export const BANNED_SOURCE_PATTERNS: ReadonlyArray<{
   id: string;
   pattern: RegExp;
 }> = [
-  { id: "speech_recognition", pattern: /\bwebkitSpeechRecognition\b|\bSpeechRecognition\b/ },
-  { id: "service_worker_register", pattern: /serviceWorker\s*\.\s*register\s*\(/ },
+  {
+    id: "speech_recognition",
+    pattern: /\bwebkitSpeechRecognition\b|\bSpeechRecognition\b/,
+  },
+  {
+    id: "service_worker_register",
+    pattern: /serviceWorker\s*\.\s*register\s*\(/,
+  },
   { id: "navigator_online", pattern: /navigator\s*\.\s*onLine\b/ },
   { id: "indexeddb", pattern: /\bindexedDB\b|\bIDBFactory\b/ },
   { id: "web_manifest", pattern: /manifest\.webmanifest/ },
-  { id: "sharp_import", pattern: /from\s+["']sharp["']|require\(\s*["']sharp["']\s*\)/ },
+  {
+    id: "sharp_import",
+    pattern: /from\s+["']sharp["']|require\(\s*["']sharp["']\s*\)/,
+  },
 ];
 
 /**
@@ -46,10 +55,13 @@ export const BANNED_SOURCE_PATTERNS: ReadonlyArray<{
 export const ALLOWED_RESIDUE: ReadonlyArray<{
   pathPrefix: string;
   owner: string;
-}> = [
-];
+}> = [];
 
-const SCAN_DIRECTORIES = ["src", "scripts", "cloudflare/media-staging/src"] as const;
+const SCAN_DIRECTORIES = [
+  "src",
+  "scripts",
+  "cloudflare/media-staging/src",
+] as const;
 const SCAN_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs"]);
 const SKIP_FILE_PATTERNS = [
   /\.test\.tsx?$/,
@@ -68,9 +80,10 @@ export interface BannedDependencyReport {
   excusedFiles: number;
 }
 
-export function scanPackageJson(
-  packageJson: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> },
-): BannedDependencyViolation[] {
+export function scanPackageJson(packageJson: {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+}): BannedDependencyViolation[] {
   const names = [
     ...Object.keys(packageJson.dependencies ?? {}),
     ...Object.keys(packageJson.devDependencies ?? {}),
@@ -85,9 +98,9 @@ export function scanPackageJson(
 }
 
 export function scanSource(source: string): string[] {
-  return BANNED_SOURCE_PATTERNS.filter(({ pattern }) => pattern.test(source)).map(
-    ({ id }) => id,
-  );
+  return BANNED_SOURCE_PATTERNS.filter(({ pattern }) =>
+    pattern.test(source),
+  ).map(({ id }) => id);
 }
 
 function walk(root: string, directory: string, out: string[]) {
@@ -98,7 +111,8 @@ function walk(root: string, directory: string, out: string[]) {
     return;
   }
   for (const entry of entries) {
-    if (entry === "node_modules" || entry === ".next" || entry.startsWith(".")) continue;
+    if (entry === "node_modules" || entry === ".next" || entry.startsWith("."))
+      continue;
     const absolute = join(directory, entry);
     const stats = statSync(absolute);
     if (stats.isDirectory()) {
@@ -113,11 +127,16 @@ function walk(root: string, directory: string, out: string[]) {
 
 export function runBannedDependencyGate(input: {
   rootDir: string;
-  packageJson: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+  packageJson: {
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
   allowedResidue?: ReadonlyArray<{ pathPrefix: string; owner: string }>;
 }): BannedDependencyReport {
   const allowedResidue = input.allowedResidue ?? ALLOWED_RESIDUE;
-  const violations: BannedDependencyViolation[] = scanPackageJson(input.packageJson);
+  const violations: BannedDependencyViolation[] = scanPackageJson(
+    input.packageJson,
+  );
   const files: string[] = [];
   for (const directory of SCAN_DIRECTORIES) {
     walk(input.rootDir, join(input.rootDir, directory), files);
@@ -128,7 +147,9 @@ export function runBannedDependencyGate(input: {
   for (const file of files) {
     if (SKIP_FILE_PATTERNS.some((pattern) => pattern.test(file))) continue;
     scannedFiles += 1;
-    const residue = allowedResidue.find(({ pathPrefix }) => file.startsWith(pathPrefix));
+    const residue = allowedResidue.find(({ pathPrefix }) =>
+      file.startsWith(pathPrefix),
+    );
     const hits = scanSource(readFileSync(join(input.rootDir, file), "utf8"));
     if (hits.length === 0) continue;
     if (residue) {
@@ -153,7 +174,9 @@ export function runBannedDependencyGate(input: {
 
 function main() {
   const rootDir = fileURLToPath(new URL("..", import.meta.url));
-  const packageJson = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8")) as {
+  const packageJson = JSON.parse(
+    readFileSync(join(rootDir, "package.json"), "utf8"),
+  ) as {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
   };

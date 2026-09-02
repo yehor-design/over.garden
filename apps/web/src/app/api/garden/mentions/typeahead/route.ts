@@ -5,8 +5,6 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 
-export const runtime = "nodejs";
-
 export async function GET(request: Request) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromRequest(request),

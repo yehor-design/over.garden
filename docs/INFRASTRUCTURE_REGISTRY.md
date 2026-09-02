@@ -96,14 +96,14 @@ Zone:
 DNS and edge invariants:
 
 - Cloudflare is authoritative DNS for `over.garden`.
-- Cloudflare may proxy DNS records, but must not cache app HTML. Vercel owns app HTML/ISR behavior.
-- App-layer cache guardrail (OVE-91): matched Next app routes set `Cache-Control: private, no-store, max-age=0, s-maxage=0, must-revalidate` in `apps/web/src/proxy.ts`. This is defense-in-depth for app HTML/RSC/API responses; it does not change R2 media or static asset caching.
+- Cloudflare stays DNS-only for the app domain; Vercel's cache serves the public HTML shells (ADR-0022, D4). Cloudflare must not sit in front of app HTML.
+- App-layer cache rule (ADR-0022, D4; supersedes the OVE-91 guardrail): `apps/web/src/proxy.ts` sets `Cache-Control: private, no-store, max-age=0, s-maxage=0, must-revalidate` only on `/garden`, `/account`, `/auth`, `/erasure`, `/api`, `/health`, and on every response the proxy answers itself (redirects, lifecycle 404/410 documents). Public pages keep the headers Next emits: with Cache Components their prerendered shell is served from Vercel's cache and the request-time part (session, personalized controls) streams from the function; data behind them is `use cache` with tags that every mutation revalidates. R2 media and static assets are unchanged.
 - OVE-195 media revoke requires production Vercel env `CLOUDFLARE_ZONE_ID` (`aa4ef4e26d4de961897f29555d20b662`) and `CLOUDFLARE_CACHE_PURGE_API_TOKEN` (Zone Cache Purge only) so archived/erased immutable derivatives stop serving at `media.over.garden` within the declared window. Also set `CRON_SECRET` for `/api/cron/media-lifecycle`.
 - Do not manually CNAME media traffic to the `r2.dev` public development URL. R2 custom domains must be attached through the R2 bucket custom-domain flow.
 - OVE-51 canonical app DNS:
   - `over.garden A 76.76.21.21`, DNS-only, auto TTL, bound to Vercel project `over-garden`
   - `www.over.garden A 76.76.21.21`, DNS-only, auto TTL, bound to Vercel project `over-garden`
-- Because the app DNS records are DNS-only, app HTML responses should not carry Cloudflare cache status. If the app domain is proxied later, any HTML `cf-cache-status: HIT` is a launch blocker and must be fixed before pilot traffic resumes.
+- Because the app DNS records are DNS-only, app HTML responses carry Vercel's `x-vercel-cache` status, never a Cloudflare one. A public page shell answers `HIT`/`PRERENDER` from Vercel's cache; workspace routes answer `MISS`/`BYPASS` with `no-store`. If the app domain is ever proxied at Cloudflare, an HTML `cf-cache-status: HIT` is a launch blocker.
 
 Domain reputation incident (OVE-188):
 

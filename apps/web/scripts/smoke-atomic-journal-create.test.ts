@@ -23,9 +23,9 @@ import {
 
 const WEB_ROOT = process.cwd();
 const CREATE_COMPOSERS = [
-  "src/app/garden/first-entry-composer.tsx",
-  "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
-  "src/app/garden/space-entry-composer.tsx",
+  "src/app/(default)/garden/first-entry-composer.tsx",
+  "src/app/(default)/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+  "src/app/(default)/garden/space-entry-composer.tsx",
 ] as const;
 
 describe("OVE-347 atomic journal creation smoke", () => {
@@ -54,11 +54,7 @@ describe("OVE-347 atomic journal creation smoke", () => {
     expect(migration).toContain("media_staging_finalize");
 
     expect(buildFocusedAtomicJournalCreateReceipt()).toMatchObject({
-      createFlows: [
-        "first_plant_entry",
-        "plant_object_entry",
-        "space_entry",
-      ],
+      createFlows: ["first_plant_entry", "plant_object_entry", "space_entry"],
       prepublishDurableWrites: 0,
       finalVisibility: "public",
       documentContract: "JournalDocumentV1",
@@ -155,13 +151,15 @@ describe("OVE-347 atomic journal creation smoke", () => {
       expect(copy.photoFailed.length).toBeGreaterThan(20);
       expect(copy.photoEmpty).toMatch(/JPEG.*PNG.*WebP.*HEIC.*HEIF/i);
     }
-    const status = read("src/components/garden/local-journal-composer-status.tsx");
+    const status = read(
+      "src/components/garden/local-journal-composer-status.tsx",
+    );
     const image = read(
       "src/components/garden/lexical-journal/journal-lexical-image-node.tsx",
     );
     expect(status).toContain('aria-live="polite"');
     expect(status).toContain("copy.cancelPublishing");
-    expect(image).toContain('aria-busy={busy || undefined}');
+    expect(image).toContain("aria-busy={busy || undefined}");
     expect(image).toContain('role="alert"');
     expect(image).toContain("context.disabled && !failed");
   });
@@ -229,7 +227,7 @@ describe("OVE-347 atomic journal creation smoke", () => {
     for (const file of [
       "src/server/public-journal-directory-repository.ts",
       "src/app/[locale]/journal/[slug]/page.tsx",
-      "src/app/garden/page.tsx",
+      "src/app/(default)/garden/page.tsx",
     ]) {
       const source = read(file);
       expect(source).not.toMatch(
