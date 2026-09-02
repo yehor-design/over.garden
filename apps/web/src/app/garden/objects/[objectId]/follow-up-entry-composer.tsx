@@ -60,7 +60,6 @@ import {
   type ActiveMentionToken,
   type MentionTypeaheadStatus,
 } from "../../journal-mention-typeahead";
-import { JournalVoiceInputControl } from "../../journal-voice-input-control";
 
 interface FollowUpEntryComposerProps {
   ownerUserId: string;
@@ -352,20 +351,6 @@ export function FollowUpEntryComposer({
     setDraft((current) => ({ ...current, title: value }));
   }
 
-  function appendVoiceTranscript(transcript: string) {
-    if (isComposerPersistenceFrozen()) return;
-    void structuredComposerRef.current?.insertVoiceTranscript(transcript);
-    updateActiveMentionToken(null);
-  }
-
-  function updateActiveMentionToken(token: ActiveMentionToken | null) {
-    setActiveMentionToken(token);
-    if (token) return;
-
-    setMentionSuggestions([]);
-    setMentionStatus("idle");
-  }
-
   function selectMentionSuggestion(suggestion: JournalMentionSuggestion) {
     if (isComposerPersistenceFrozen()) return;
     if (!activeMentionToken) return;
@@ -537,11 +522,6 @@ export function FollowUpEntryComposer({
             <span className="text-sm font-medium text-foreground">
               {ownerCopy.composer.fields.whatChanged}
             </span>
-            <JournalVoiceInputControl
-              locale={locale}
-              disabled={persistenceFrozen}
-              onTranscript={appendVoiceTranscript}
-            />
           </div>
           <input type="hidden" name="body" value={draft.body} required />
           <StructuredJournalComposer

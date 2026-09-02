@@ -3,7 +3,7 @@
  *
  * One small mechanical check replaces the retired canon checkers: it refuses
  * packages and browser APIs that would bring back an ORM, server image
- * processing, durable browser journal state, or voice dictation.
+ * processing, durable browser journal state, or speech recognition.
  *
  * Usage: `pnpm check:banned-dependencies` (also part of `pnpm test`).
  */
@@ -48,7 +48,6 @@ export const ALLOWED_RESIDUE: ReadonlyArray<{
   owner: string;
 }> = [
   { pathPrefix: "src/lib/retirement/", owner: "OVE-365" },
-  { pathPrefix: "src/lib/garden/voice-to-text.ts", owner: "OVE-364" },
   { pathPrefix: "src/proxy.ts", owner: "OVE-365" },
 ];
 

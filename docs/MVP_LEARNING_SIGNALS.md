@@ -57,7 +57,7 @@ After a successful canonical journal aggregate mutation (not replay/retry/deboun
 - `journal_cover_changed` when cover source changes
 - `journal_blocks_reordered` when block order hash changes
 
-Allowlisted props only: `photo_count_bucket`, `cover_source`, `block_count_bucket`, `has_formatting`, `via_voice`, `schema_version`, `mutation_outcome`, `latency_bucket`, plus existing allowlisted enums. Never exact counts, media IDs, filenames, URLs, or content.
+Allowlisted props only: `photo_count_bucket`, `cover_source`, `block_count_bucket`, `has_formatting`, `schema_version`, `mutation_outcome`, `latency_bucket`, plus existing allowlisted enums. Never exact counts, media IDs, filenames, URLs, or content.
 
 ## Commands
 

@@ -263,6 +263,12 @@ describe("analytics event privacy contracts", () => {
     ).toThrow("Unsafe analytics event value for source_surface_kind.");
   });
 
+  it("rejects the retired via_voice property now that dictation is gone", () => {
+    expect(() =>
+      normalizeAnalyticsEventProperties({ via_voice: true } as never),
+    ).toThrow(/via_voice/);
+  });
+
   it("builds event inserts with pseudonymous scope and no raw title/body fields", () => {
     const compiled = buildInsertAnalyticsEventQuery(testDb, scope, {
       eventName: "entry_logged",

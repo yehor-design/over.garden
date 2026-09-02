@@ -63,7 +63,6 @@ import {
   nextJournalTitleValue,
   suggestJournalEntryTitle,
 } from "@/lib/garden/journal-title-prefill";
-import { appendVoiceTranscriptToBody } from "@/lib/garden/voice-to-text";
 import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
 import { getLocalizedCoarseRegionOptions } from "@/lib/garden/regions";
 import { trackMetaMarketingEvent } from "@/lib/meta-marketing/client";
@@ -76,7 +75,6 @@ import {
   type ActiveMentionToken,
   type MentionTypeaheadStatus,
 } from "./journal-mention-typeahead";
-import { JournalVoiceInputControl } from "./journal-voice-input-control";
 import { JournalObjectKindSelector } from "./journal-object-kind-selector";
 
 interface FirstEntryComposerProps {
@@ -518,26 +516,6 @@ export function FirstEntryComposer({
     setDraft((current) => ({ ...current, title: value }));
   }
 
-  function appendVoiceTranscript(transcript: string) {
-    if (isComposerPersistenceFrozen()) return;
-    void structuredComposerRef.current?.insertVoiceTranscript(transcript);
-    setDraft((current) =>
-      withSuggestedTitle({
-        ...current,
-        body: appendVoiceTranscriptToBody(current.body, transcript),
-      }),
-    );
-    updateActiveMentionToken(null);
-  }
-
-  function updateActiveMentionToken(token: ActiveMentionToken | null) {
-    setActiveMentionToken(token);
-    if (token) return;
-
-    setMentionSuggestions([]);
-    setMentionStatus("idle");
-  }
-
   function selectMentionSuggestion(suggestion: JournalMentionSuggestion) {
     if (isComposerPersistenceFrozen()) return;
     if (!activeMentionToken) return;
@@ -857,11 +835,6 @@ export function FirstEntryComposer({
             <span className="text-sm font-medium text-foreground">
               {copy.composer.fields.firstUpdate}
             </span>
-            <JournalVoiceInputControl
-              locale={locale}
-              disabled={persistenceFrozen}
-              onTranscript={appendVoiceTranscript}
-            />
           </div>
           <input type="hidden" name="body" value={draft.body} required />
           <StructuredJournalComposer

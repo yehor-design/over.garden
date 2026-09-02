@@ -34,7 +34,7 @@ describe("banned-dependency gate", () => {
     expect(scanPackageJson({ dependencies: { kysely: "^0.29" } })).toEqual([]);
   });
 
-  it("names the browser APIs that would bring back offline or voice", () => {
+  it("names the browser APIs that would bring back offline or speech input", () => {
     expect(scanSource("const r = new window.SpeechRecognition();")).toEqual([
       "speech_recognition",
     ]);
@@ -56,31 +56,31 @@ describe("banned-dependency gate", () => {
     ).toEqual([]);
 
     writeFileSync(
-      join(root, "src", "lib", "voice.ts"),
+      join(root, "src", "lib", "speech.ts"),
       "export const R = window.webkitSpeechRecognition;\n",
     );
     const report = runBannedDependencyGate({ rootDir: root, packageJson: {}, allowedResidue: [] });
     expect(report.violations).toEqual([
-      { kind: "source", detail: "src/lib/voice.ts: speech_recognition" },
+      { kind: "source", detail: "src/lib/speech.ts: speech_recognition" },
     ]);
   });
 
   it("excuses pending residue while it exists and fails once the allowlist goes stale", () => {
     const root = fixtureRoot();
     writeFileSync(
-      join(root, "src", "lib", "voice.ts"),
+      join(root, "src", "lib", "speech.ts"),
       "export const R = window.SpeechRecognition;\n",
     );
-    const residue = [{ pathPrefix: "src/lib/voice.ts", owner: "OVE-364" }];
+    const residue = [{ pathPrefix: "src/lib/speech.ts", owner: "OVE-364" }];
     const excused = runBannedDependencyGate({ rootDir: root, packageJson: {}, allowedResidue: residue });
     expect(excused.violations).toEqual([]);
     expect(excused.excusedFiles).toBe(1);
 
-    writeFileSync(join(root, "src", "lib", "voice.ts"), "export const clean = true;\n");
+    writeFileSync(join(root, "src", "lib", "speech.ts"), "export const clean = true;\n");
     const cleaned = runBannedDependencyGate({ rootDir: root, packageJson: {}, allowedResidue: residue });
     expect(cleaned.violations.map((violation) => violation.kind)).toEqual(["stale_allowlist"]);
 
-    rmSync(join(root, "src", "lib", "voice.ts"));
+    rmSync(join(root, "src", "lib", "speech.ts"));
     const stale = runBannedDependencyGate({ rootDir: root, packageJson: {}, allowedResidue: residue });
     expect(stale.violations.map((violation) => violation.kind)).toEqual(["stale_allowlist"]);
   });

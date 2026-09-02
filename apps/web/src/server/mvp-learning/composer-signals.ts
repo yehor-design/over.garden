@@ -24,7 +24,6 @@ export interface ComposerLearningSignalInput {
   priorBlockOrderHash?: string | null;
   nextBlockOrderHash: string;
   mutationOutcome?: AnalyticsEventProperties["mutation_outcome"];
-  viaVoice?: boolean;
   latencyBucket?: AnalyticsEventProperties["latency_bucket"];
 }
 
@@ -44,7 +43,6 @@ export async function recordComposerLearningSignalsSafely(
     has_formatting: journalDocumentHasFormatting(input.document),
     schema_version: "v1",
     mutation_outcome: input.mutationOutcome ?? "succeeded",
-    via_voice: input.viaVoice ?? false,
     latency_bucket: input.latencyBucket,
     cover_source: input.coverSource,
   };
