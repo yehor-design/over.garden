@@ -30,7 +30,6 @@ interface ProductSelectionReceipt {
   typeaheadResponseBudgetMs: number;
   canonicalFallbackUsed?: boolean;
   parityGap?: number;
-  preciseLocationAbsent: true;
   forbiddenMarkersAbsent: true;
   controls: {
     retrySearchEnabled: true;
@@ -84,7 +83,6 @@ export async function runMeilisearchTimeoutFixture(input: {
     maxTypeaheadResponseTimeMs: roundMs(typeaheadResponseTimeMs),
     typeaheadResponseBudgetMs: CATALOG_TYPEAHEAD_RESPONSE_BUDGET_MS,
     canonicalFallbackUsed: true,
-    preciseLocationAbsent: true,
     forbiddenMarkersAbsent: true,
     controls: {
       retrySearchEnabled: true,
@@ -118,7 +116,6 @@ export async function runLiveReadOnlyCompatibilitySmoke(input: {
     requestCount: checks.length,
     maxTypeaheadResponseTimeMs: roundMs(maxTypeaheadResponseTimeMs),
     typeaheadResponseBudgetMs: CATALOG_TYPEAHEAD_RESPONSE_BUDGET_MS,
-    preciseLocationAbsent: true,
     forbiddenMarkersAbsent: true,
     controls: {
       retrySearchEnabled: true,

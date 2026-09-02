@@ -53,7 +53,6 @@ describe("OVE-332 fail-open authorization smoke", () => {
       weakSecret: { count: 1, visible: true },
       evidenceHygiene: {
         secretMaterialAbsent: true,
-        preciseLocationAbsent: true,
         identityAndPayloadAbsent: true,
       },
     });

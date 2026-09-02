@@ -13,7 +13,6 @@ import {
 import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
-import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
 import {
   buildPublicCommunityContributionsQuery,
   buildPublicCommunityFallbackCandidateQuery,
@@ -39,22 +38,6 @@ const communityId = "00000000-0000-4000-8000-000000000239";
 const entryId = "00000000-0000-4000-8000-000000000001";
 
 describe("OVE-239 canonical bounded community journey", () => {
-  it("drops precise-location input before either search dependency", () => {
-    const precise = "50.4501, 30.5234";
-    expect(sanitizePreciseLocationSearchQuery(precise)).toMatchObject({
-      query: "",
-      rejected: true,
-    });
-    const compiled = buildPublicCommunityContributionsQuery(testDb, {
-      communityId,
-      viewerScope: null,
-      query: sanitizePreciseLocationSearchQuery(precise).query,
-      limit: 13,
-    }).compile();
-    expect(compiled.parameters).not.toContain(precise);
-    expect(compiled.sql).not.toContain("ilike");
-  });
-
   it("revalidates stale hints through every canonical public boundary", () => {
     const compiled = buildPublicCommunityContributionsQuery(testDb, {
       communityId,

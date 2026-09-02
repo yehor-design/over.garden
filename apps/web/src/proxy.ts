@@ -36,7 +36,6 @@ import {
   matchPublicCommunityPath,
   renderNotFoundPublicCommunityHtml,
 } from "@/lib/public-community-lifecycle";
-import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
 import {
   matchPublicJournalEntryPath,
   renderGonePublicJournalEntryHtml,
@@ -467,22 +466,6 @@ export async function proxy(request: NextRequest) {
   }
 
   const isDocumentNavigation = isDocumentNavigationRequest(request);
-  if (
-    (request.method === "GET" || request.method === "HEAD") &&
-    matchPublicCommunityPath(request.nextUrl.pathname) &&
-    sanitizePreciseLocationSearchQuery(
-      request.nextUrl.searchParams.get("q") ?? "",
-    ).rejected
-  ) {
-    const safeUrl = request.nextUrl.clone();
-    safeUrl.searchParams.delete("q");
-    safeUrl.searchParams.delete("cursor");
-    return withAppRouteContract(
-      NextResponse.redirect(safeUrl, { status: 307 }),
-      request,
-      localization,
-    );
-  }
   const initialStrippedPath = stripLocalePrefix(request.nextUrl.pathname);
   const canonicalDefaultProfileHandle =
     isDocumentNavigation &&

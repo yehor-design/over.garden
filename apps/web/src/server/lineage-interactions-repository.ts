@@ -11,9 +11,8 @@ import type {
   PlantObjectKind,
   VarietyState,
 } from "@/db/schema";
-import { assertNoPreciseLocationText } from "@/lib/privacy/precise-location-text";
 import {
-  looksLikePrivateContactOrPreciseLocation,
+  looksLikePrivateContact,
   normalizeRequiredText,
 } from "@/server/lineage-repository";
 import {
@@ -598,11 +597,10 @@ export function buildLineageFollowReadbackQuery(
 
 export function normalizeLineageQuestionText(value: string) {
   const questionText = normalizeRequiredText(value, "Lineage question", 360);
-  assertNoPreciseLocationText(questionText, "lineage_question");
 
-  if (looksLikePrivateContactOrPreciseLocation(questionText)) {
+  if (looksLikePrivateContact(questionText)) {
     throw new Error(
-      "Lineage question cannot include contact details, handles, URLs, or precise coordinates.",
+      "Lineage question cannot include contact details, handles, or URLs.",
     );
   }
 

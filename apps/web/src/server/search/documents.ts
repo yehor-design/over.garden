@@ -3,7 +3,6 @@ import {
   normalizeCoarseRegionCode,
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
-import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
 import {
   searchProjectionQuality,
   type PublicProjectionQualityClass,
@@ -93,15 +92,6 @@ export function buildJournalEntrySearchDocumentContractFixture(
     locationVisibility === "region" ? normalizedCoarseRegionCode : null;
   if (entry.location_visibility === "region" && !normalizedCoarseRegionCode) {
     qualityReasons.push("coarse_region_unavailable");
-  }
-
-  // OVE-234: legacy rows written before the firewall must never be projected
-  // into the public index. This is fail-closed: the document is dropped.
-  if (
-    containsPreciseLocationText(entry.title) ||
-    containsPreciseLocationText(entry.body)
-  ) {
-    return null;
   }
 
   const requestedCoverSource = normalizeCoverSource(entry.cover_source);

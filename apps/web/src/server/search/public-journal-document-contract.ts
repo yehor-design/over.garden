@@ -23,7 +23,6 @@ import { createHash } from "node:crypto";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { isValidPublicJournalSlug } from "@/lib/garden/public-journal-slug";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
-import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
 import {
   isPublicProjectionQualityClass,
   isPublicSearchProjectionQualityReason,
@@ -137,7 +136,6 @@ export const JOURNAL_DOCUMENT_REASONS = [
   "invalid_cover_public_url",
   "invalid_quality_class",
   "invalid_quality_reasons",
-  "precise_location_text",
 ] as const;
 
 export type JournalDocumentReason = (typeof JOURNAL_DOCUMENT_REASONS)[number];
@@ -225,21 +223,6 @@ export function validateObservedJournalSearchDocument(
   const body = typeof doc.body === "string" ? doc.body : null;
   if (body === null || body.trim().length === 0) {
     fail("invalid_body", "body");
-  }
-
-  // OVE-234: a document carrying coordinate text is unsafe even when the
-  // current Postgres row is clean. Fail closed so repair deletes/rewrites it.
-  if (
-    (title !== null && containsPreciseLocationText(title)) ||
-    (body !== null && containsPreciseLocationText(body))
-  ) {
-    reasons.add("precise_location_text");
-    if (title !== null && containsPreciseLocationText(title)) {
-      fields.add("title");
-    }
-    if (body !== null && containsPreciseLocationText(body)) {
-      fields.add("body");
-    }
   }
 
   const publicSlug = isValidPublicJournalSlug(doc.publicSlug)

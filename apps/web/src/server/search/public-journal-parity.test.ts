@@ -144,7 +144,7 @@ describe("public journal search parity gate and evidence", () => {
         { stale: 1 },
         {
           driftFieldClasses: ["title", "coverPublicUrl"],
-          invalidReasonClasses: ["precise_location_text"],
+          invalidReasonClasses: ["invalid_body"],
           expectedCorpusHash: "b".repeat(64),
           observedCorpusHash: "c".repeat(64),
         },
@@ -154,7 +154,7 @@ describe("public journal search parity gate and evidence", () => {
     expect(redacted.evidenceSafety).toBe("counts_classes_and_safe_hashes");
     // Field/reason classes are names, sorted, and carry no values.
     expect(redacted.driftFieldClasses).toEqual(["coverPublicUrl", "title"]);
-    expect(redacted.invalidReasonClasses).toEqual(["precise_location_text"]);
+    expect(redacted.invalidReasonClasses).toEqual(["invalid_body"]);
     expect(redacted.expectedCorpusHash).toMatch(/^[0-9a-f]{64}$/);
 
     const serialized = JSON.stringify(redacted);

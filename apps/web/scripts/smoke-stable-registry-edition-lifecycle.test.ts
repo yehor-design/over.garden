@@ -21,7 +21,6 @@ describe("OVE-258 edition lifecycle smoke", () => {
       // A stalled diff must never read as a half-applied edition.
       terminalClass: "degraded",
       interactionBudgetMs: EDITION_INTERACTION_BUDGET_MS,
-      preciseLocationAbsent: true,
       forbiddenMarkersAbsent: true,
       controls: {
         cancelEditionEnabled: true,

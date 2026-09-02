@@ -55,7 +55,6 @@ import {
 import { enqueueLearningAttributionIntent } from "@/server/mvp-learning/attribution-outbox";
 import type { RequestScope } from "@/server/request-scope";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
-import { assertNoPreciseLocationText } from "@/lib/privacy/precise-location-text";
 import {
   claimJournalEntryCover,
   claimOrderedInlineMediaForEntry,
@@ -4792,14 +4791,8 @@ function normalizeResolvePlantObjectCatalogInput(
   };
 }
 
-/**
- * Entry titles are publishable and indexable, so the precise-location
- * firewall (OVE-234) runs before the value can reach any insert or update.
- */
 function normalizeJournalEntryTitle(value: string) {
-  const title = normalizeRequiredText(value, "Entry title", MAX_TITLE_LENGTH);
-  assertNoPreciseLocationText(title, "journal_title");
-  return title;
+  return normalizeRequiredText(value, "Entry title", MAX_TITLE_LENGTH);
 }
 
 function normalizeRequiredText(

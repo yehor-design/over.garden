@@ -25,7 +25,6 @@ describe("OVE-257 product-selection smoke", () => {
       terminalClass: "degraded",
       canonicalFallbackUsed: true,
       typeaheadResponseBudgetMs: CATALOG_TYPEAHEAD_RESPONSE_BUDGET_MS,
-      preciseLocationAbsent: true,
       forbiddenMarkersAbsent: true,
       controls: {
         retrySearchEnabled: true,

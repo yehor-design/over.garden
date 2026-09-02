@@ -31,7 +31,6 @@ import {
 } from "@/server/identity-policy";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { RequestScope } from "@/server/request-scope";
-import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -1422,12 +1421,6 @@ function isPublicHandleUpdateStatus(
   );
 }
 
-/**
- * OVE-234 read-side firewall: any legacy public text that carries precise
- * location is withheld rather than rendered, indexed, or serialized.
- */
 function publicSafeText(value: string | null | undefined): string | null {
-  const trimmed = value?.trim() || null;
-  if (!trimmed) return null;
-  return containsPreciseLocationText(trimmed) ? null : trimmed;
+  return value?.trim() || null;
 }

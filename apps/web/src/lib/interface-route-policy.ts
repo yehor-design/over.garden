@@ -146,7 +146,6 @@ const ENGAGEMENT_STATUSES = new Set([
   "comment-reported",
   "comment-author-blocked",
   "comment-unavailable",
-  "comment-precise-location",
   "preferences-saved",
   "notification-updated",
 ]);

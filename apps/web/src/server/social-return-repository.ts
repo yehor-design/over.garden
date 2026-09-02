@@ -19,7 +19,6 @@ import type { PublicLocale } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { buildPublicFeedMediaQuery } from "@/server/public-feed-repository";
 import type { RequestScope } from "@/server/request-scope";
-import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -1262,11 +1261,7 @@ function serializeNotificationEvent(
     actorMention: row.actorHandle
       ? `@${normalizeHandle(row.actorHandle)}`
       : null,
-    // OVE-234: notification labels are derived from user text, so a legacy
-    // coordinate-bearing label is withheld from the delivered event.
-    targetLabel: containsPreciseLocationText(row.targetLabel)
-      ? null
-      : row.targetLabel?.trim() || null,
+    targetLabel: row.targetLabel?.trim() || null,
     href: normalizeNotificationHref(row.href),
     actionKind: row.actionKind ?? defaultNotificationAction(row.kind),
     groupKey: stableOpaqueKey("notification-group", row.groupRef),
@@ -1542,9 +1537,6 @@ function normalizeHandle(value: string) {
 }
 
 function summarizePublicText(value: string, limit: number) {
-  // OVE-234: excerpts feed notifications and followed feeds, so a legacy
-  // coordinate-bearing source is withheld rather than summarized.
-  if (containsPreciseLocationText(value)) return "";
   const normalized = value.replace(/\s+/g, " ").trim();
   return normalized.length <= limit
     ? normalized

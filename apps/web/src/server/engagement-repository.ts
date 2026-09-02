@@ -21,10 +21,6 @@ import {
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
-import {
-  assertNoPreciseLocationText,
-  containsPreciseLocationText,
-} from "@/lib/privacy/precise-location-text";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
@@ -56,7 +52,7 @@ const JOURNAL_SLUG_PATTERN = /^[\p{Letter}\p{Number}-]+$/u;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UNSAFE_COMMENT_PATTERN =
-  /(?:\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|(?:\+?\d[\d\s().-]{7,}\d)|https?:\/\/|www\.|(?:^|\s)@[A-Za-z0-9_]{2,}|latitude|longitude|gps|coordinates?|координат|invite|token)/i;
+  /(?:\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|(?:\+?\d[\d\s().-]{7,}\d)|https?:\/\/|www\.|(?:^|\s)@[A-Za-z0-9_]{2,}|invite|token)/i;
 
 export interface EngagementTarget {
   kind: EngagementTargetKind;
@@ -1928,18 +1924,12 @@ function serializeCommentRow(
     replyToken: row.commentId,
     body:
       row.commentState === "active"
-        ? // OVE-234: a legacy comment carrying precise location is withheld
-          // on read instead of being rendered, notified, or indexed.
-          containsPreciseLocationText(row.body)
-          ? "Comment is under review."
-          : row.body
+        ? row.body
         : row.commentState === "deleted"
           ? "Comment deleted by its author."
           : "Comment is under review.",
     authorLabel:
-      (containsPreciseLocationText(row.authorDisplayName)
-        ? null
-        : row.authorDisplayName?.trim()) ||
+      row.authorDisplayName?.trim() ||
       (authorHandle ? `@${authorHandle}` : "Gardener"),
     authorHandle,
     parentReplyToken: row.parentCommentId,
@@ -1958,12 +1948,9 @@ function normalizeCommentBody(value: string) {
   }
   if (UNSAFE_COMMENT_PATTERN.test(body)) {
     throw new Error(
-      "Comment cannot include contact details, handles, URLs, invite tokens, or precise location text.",
+      "Comment cannot include contact details, handles, URLs, or invite tokens.",
     );
   }
-  // OVE-234: the keyword pattern above is contact moderation, not the
-  // location boundary. The authoritative detector runs before persistence.
-  assertNoPreciseLocationText(body, "comment");
   return body;
 }
 

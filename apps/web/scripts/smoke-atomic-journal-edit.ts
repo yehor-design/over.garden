@@ -567,7 +567,6 @@ async function runIntegrationFaultProof() {
         documentTextAbsent: true,
         mediaKeyAbsent: true,
         capabilityAbsent: true,
-        preciseLocationAbsent: true,
       }),
     });
     if (!ok) {

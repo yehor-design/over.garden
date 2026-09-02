@@ -263,7 +263,6 @@ export async function runDatabaseProjectionProof(): Promise<ProductSelectionRece
         Math.round(typeaheadResponseTimeMs * 100) / 100,
       typeaheadResponseBudgetMs: CATALOG_TYPEAHEAD_RESPONSE_BUDGET_MS,
       parityGap,
-      preciseLocationAbsent: true,
       forbiddenMarkersAbsent: true,
       controls: {
         retrySearchEnabled: true,

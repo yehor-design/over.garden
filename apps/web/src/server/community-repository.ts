@@ -28,7 +28,6 @@ import { blockProfile } from "@/server/profile-interaction-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 import type { RequestScope } from "@/server/request-scope";
-import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
 import { assertAdminCapabilityForScope } from "@/server/admin-access";
 import {
   findPublicCommunitySearchCandidates,
@@ -2414,9 +2413,7 @@ function normalizeUuid(value: string, label: string) {
 function normalizeCommunitySearch(value: string | null | undefined) {
   const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
   const bounded = normalized.slice(0, MAX_COMMUNITY_SEARCH_LENGTH).trimEnd();
-  // OVE-234: a coordinate-bearing GET term is dropped, so it can never reach
-  // the SQL predicate, the reflected input, or a query log.
-  return sanitizePreciseLocationSearchQuery(bounded).query;
+  return bounded;
 }
 
 function normalizeCommunityEntryIds(values: readonly string[]) {

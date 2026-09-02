@@ -72,7 +72,7 @@ describe("auth intent token", () => {
         body: "private body",
         email: "person@example.com",
         invite: "v1.private.invite",
-        preciseLocation: "42.0,23.0",
+        gpsCoordinates: "42.0,23.0",
       },
       { secret: SECRET, now: NOW },
     );

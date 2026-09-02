@@ -130,8 +130,9 @@ claim authority, not access to the product.
   shared public-surface policy promotes them.
 - Lineage invitation tokens stay out of query strings, logs, analytics, and
   product-access authorization. Claim flows remain idempotent and owner scoped.
-- Precise location is forbidden throughout product data, analytics, logs,
-  public/search projections, UI, operator evidence, and lineage.
+- Precise location is never stored or projected: profiles, objects, and
+  entries carry only a region label or hidden. Free text is not scanned
+  for coordinates (ADR-0022, D1).
 
 ## Learning and analytics
 

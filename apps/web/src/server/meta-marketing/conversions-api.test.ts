@@ -128,7 +128,9 @@ describe("Meta Conversions API privacy contract", () => {
       assertSafeMetaMarketingEvidence({
         preciseLocation: "50.4501,30.5234",
       }),
-    ).toThrow("Forbidden Meta marketing measurement evidence fragment: location.");
+    ).toThrow(
+      "Forbidden Meta marketing measurement evidence fragment: location.",
+    );
     expect(() =>
       assertSafeMetaMarketingEvidence({
         callbackUrl: "/api/auth/callback/facebook?code=secret",
@@ -137,7 +139,9 @@ describe("Meta Conversions API privacy contract", () => {
   });
 
   it("sends only the safe event class and shared event id to Meta when configured", async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(new Response("{}", { status: 200 }));
 
     const result = await sendMetaConversionsApiEvent(
       {

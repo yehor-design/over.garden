@@ -15,7 +15,6 @@ describe("OVE-256 Stable Registry public catalog smoke", () => {
       status: "pass",
       records: STABLE_REGISTRY_OBSERVED_FIXTURE_RECORDS,
       queryBudgetMs: STABLE_REGISTRY_PUBLIC_QUERY_BUDGET_MS,
-      preciseLocationAbsent: true,
       forbiddenMarkersAbsent: true,
       controls: {
         retrySearchEnabled: true,

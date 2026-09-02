@@ -67,7 +67,7 @@ The public `/erasure` form records an operator-reviewed request. It does not aut
 Operator, support, legal, smoke, audit, and erasure evidence must not include:
 
 - journal text
-- precise location
+- coordinates or any location finer than the region label
 - private email addresses
 - IP addresses
 - user agents

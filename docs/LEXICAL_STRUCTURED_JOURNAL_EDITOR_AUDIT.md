@@ -124,7 +124,7 @@ historical string allowlisting.
 - Orphan classification must normalize `content_document` as v1 and derive
   media IDs with `listJournalDocumentImageMediaIds`. Malformed canonical content
   aborts before the media query and produces no update or enqueue.
-- Precise-location, owner/session generation, revision CAS, idempotency,
+- Owner/session generation, revision CAS, idempotency,
   atomic publication, public projection, and search boundaries remain outside and
   authoritative over the editor.
 - Edit owners do not mount Lexical until the authenticated canonical read

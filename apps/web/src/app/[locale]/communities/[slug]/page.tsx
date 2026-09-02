@@ -21,7 +21,6 @@ import {
   type CommunityObjectKind,
   type PublicCommunityPageModel,
 } from "@/server/community-repository";
-import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
 import {
   latestMeaningfulContentTimestamp,
   PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
@@ -78,11 +77,7 @@ export default async function CommunityDetailRoute({
   if (!slug) return notFound();
   const viewerScope = await currentViewerScope();
 
-  // OVE-234: a coordinate-bearing term is dropped before it is searched or
-  // reflected back into the rendered input.
-  const { query } = sanitizePreciseLocationSearchQuery(
-    firstValue(queryParams.q).slice(0, 100),
-  );
+  const query = firstValue(queryParams.q).slice(0, 100);
   const kind = normalizeKind(firstValue(queryParams.kind));
   const cursor = firstValue(queryParams.cursor).slice(0, 512) || null;
   const community = await getPublicCommunityPage(slug, localeParam, {

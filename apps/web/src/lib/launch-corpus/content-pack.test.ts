@@ -62,11 +62,12 @@ function buildPack(): LaunchCorpusContentPack {
         objectKind: spec.objectKind,
         visibility: spec.visibility,
         coverBranch: spec.coverBranch,
-        spaceLabel:
-          spec.market === "UA" ? "Домашній сад" : "Домашна градина",
+        spaceLabel: spec.market === "UA" ? "Домашній сад" : "Домашна градина",
         objectLabel: spec.objectKind === "plant" ? "Томат" : "Кошер",
         catalogIdentity:
-          spec.objectKind === "plant" ? "Solanum lycopersicum" : "Apis mellifera",
+          spec.objectKind === "plant"
+            ? "Solanum lycopersicum"
+            : "Apis mellifera",
         title: `A first-hand growing journal ${spec.id}`,
         body:
           `This is an intentionally review-only local validation body for ${spec.id}. ` +
@@ -118,17 +119,6 @@ describe("OVE-199 launch corpus content pack", () => {
         "duplicate_disposition_target",
       ]),
     });
-  });
-
-  it("uses the authoritative location firewall without emitting content", () => {
-    const pack = buildPack();
-    pack.slots[0]!.body =
-      "A sufficiently long first-hand journal body with unsafe coordinates 50.45010, 30.52340 that must be rejected before persistence.";
-
-    const result = validateLaunchCorpusContentPack(pack);
-    expect(result.ok).toBe(false);
-    expect(result.errors).toContain("precise_location:UA-J01");
-    expect(JSON.stringify(result)).not.toContain("50.45010");
   });
 
   it("rejects cover semantics that disagree with the canonical branch", () => {

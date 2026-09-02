@@ -1,7 +1,6 @@
 import "server-only";
 
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
-import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
 import type { PublicLocale } from "@/lib/public-localization";
 import {
   evaluatePublicSurfaceIndexability,
@@ -214,11 +213,8 @@ export function resolvePublicSurfaceDiscovery(
   options: { evaluatedAt: string | Date },
 ): PublicSurfaceDiscoveryResult {
   const owner = inventoryOwner(source.consumerId);
-  const hasPreciseLocation = (source.visibleText ?? []).some((value) =>
-    containsPreciseLocationText(value),
-  );
   const candidateState =
-    owner.candidateClass === "non_candidate" || hasPreciseLocation
+    owner.candidateClass === "non_candidate"
       ? "not_public_candidate"
       : source.candidateState;
   const candidateInput: PublicSurfaceCandidateInput =

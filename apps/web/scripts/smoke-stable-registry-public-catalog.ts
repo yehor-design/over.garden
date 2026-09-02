@@ -18,7 +18,6 @@ interface PublicSmokeReceipt {
   requestCount?: number;
   maxQueryLatencyMs?: number;
   queryBudgetMs: number;
-  preciseLocationAbsent: true;
   forbiddenMarkersAbsent: true;
   controls: {
     retrySearchEnabled: true;
@@ -62,7 +61,6 @@ export async function runRepositoryTimeoutFixture(
     status: "pass",
     records,
     queryBudgetMs: STABLE_REGISTRY_PUBLIC_QUERY_BUDGET_MS,
-    preciseLocationAbsent: true,
     forbiddenMarkersAbsent: true,
     controls: {
       retrySearchEnabled: true,
@@ -102,7 +100,6 @@ export async function runLiveReadOnlySmoke(input: {
     requestCount: checks.length,
     maxQueryLatencyMs: roundMs(maxQueryLatencyMs),
     queryBudgetMs: STABLE_REGISTRY_PUBLIC_QUERY_BUDGET_MS,
-    preciseLocationAbsent: true,
     forbiddenMarkersAbsent: true,
     controls: {
       retrySearchEnabled: true,

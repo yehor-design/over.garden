@@ -174,7 +174,8 @@ restricted fields, credentials, unsupported assets, and source-only metadata
 remain outside product UI, public search, logs, analytics, and operator
 evidence. Later source storage may retain a legally reusable field only in an
 isolated source snapshot with provenance, licence, checksum, and usage flags.
-No child may weaken the user/product precise-location firewall.
+No child may add precise-location columns or fields; free text is not
+scanned for coordinates (ADR-0022, D1).
 
 Receipts contain only version, exact checkout baseline SHA, environment class,
 aggregate counts, terminal classes, duration, and SHA-256 digests. They contain

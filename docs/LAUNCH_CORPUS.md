@@ -119,8 +119,8 @@ The approved content pack uses
 `ove199.launch-corpus-content-pack.v1` from
 `apps/web/src/lib/launch-corpus/content-pack.ts`. It requires every shot-list
 slot, reviewed source language, truthful rights/provenance receipts, media byte
-digests, closed cover semantics, the four signed target hashes, and the
-authoritative precise-location firewall. Validation reads local files but emits
+digests, closed cover semantics, and the four signed target hashes.
+Validation reads local files but emits
 only counts, closed error codes, and the content-pack digest:
 
 ```bash
@@ -167,7 +167,7 @@ Run `pnpm launch:corpus:plan -- --environment production --confirm-environment p
 
 Any future production corpus work requires a new vertical issue and v2 plan that
 uses already-final WebPs through OVE-346 staging and atomic publication,
-contains no private journal target, repeats rights and precise-location review,
+contains no private journal target, repeats the rights review,
 and obtains a new exact approval. The historical OVE-199 sign-off phrase is not
 valid authority for that work.
 

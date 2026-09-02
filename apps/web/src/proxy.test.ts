@@ -183,26 +183,6 @@ describe("app route cache guardrail", () => {
     expect(apiResponse.status).toBe(200);
   });
 
-  it("redirects coordinate-bearing community search before App Router can serialize it", async () => {
-    const coordinate = "50.4501,30.5234";
-    const headerCases: HeadersInit[] = [
-      { accept: "text/html", "sec-fetch-dest": "document" },
-      { accept: "text/x-component", rsc: "1" },
-    ];
-    for (const headers of headerCases) {
-      const response = await responseFor(
-        `/uk/communities/observation-and-care?q=${encodeURIComponent(coordinate)}&cursor=unsafe&kind=plant`,
-        headers,
-      );
-      expect(response.status).toBe(307);
-      const location = response.headers.get("location") ?? "";
-      expect(location).not.toContain("50.4501");
-      expect(location).not.toContain("30.5234");
-      expect(location).not.toContain("cursor=");
-      expect(location).toContain("kind=plant");
-    }
-  });
-
   it("hard-404s walking-skeleton routes outside an explicit loopback-only runtime", async () => {
     vi.stubEnv("WALKING_SKELETON_ENABLED", "false");
     const disabledPage = await responseFor("/skeleton");

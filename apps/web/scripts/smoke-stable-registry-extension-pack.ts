@@ -34,7 +34,6 @@ export interface ExtensionPackSmokeReceipt {
    */
   publishedIdentityCount?: number;
   heldRowCount?: number;
-  preciseLocationAbsent: true;
   forbiddenMarkersAbsent: true;
   controls: {
     cancelPackImportEnabled: true;
@@ -75,7 +74,6 @@ export async function runWorkerTimeoutFixture(input: {
     rows: input.rows,
     maxInteractionDelayMs: roundMs(interactionDelayMs),
     interactionBudgetMs: EXTENSION_PACK_INTERACTION_BUDGET_MS,
-    preciseLocationAbsent: true,
     forbiddenMarkersAbsent: true,
     controls: {
       cancelPackImportEnabled: true,

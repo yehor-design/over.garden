@@ -6,7 +6,6 @@ import {
   documentMutationAdmissionResponse,
   documentMutationGenerationFromRequest,
 } from "@/server/document-mutation-admission";
-import { isPreciseLocationTextError } from "@/lib/privacy/precise-location-text";
 import { addEngagementComment } from "@/server/engagement-repository";
 import { isInteractionAdmissionError } from "@/server/interaction-admission";
 import {
@@ -52,15 +51,6 @@ export async function POST(request: Request) {
       parentCommentId,
     });
   } catch (error) {
-    // OVE-234: the refusal is reported as a localized status only. Neither the
-    // redirect nor any log line carries the rejected text.
-    if (isPreciseLocationTextError(error)) {
-      return redirectWithEngagementStatus(
-        request,
-        returnTo,
-        "comment-precise-location",
-      );
-    }
     if (isInteractionAdmissionError(error)) {
       return redirectWithEngagementStatus(
         request,
