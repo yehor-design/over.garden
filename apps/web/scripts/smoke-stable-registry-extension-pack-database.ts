@@ -258,7 +258,6 @@ export async function runExtensionPackDatabaseProof(): Promise<ExtensionPackSmok
       productEligibleRowCount: Number(eligible.rows[0]?.count ?? 0),
       publishedIdentityCount,
       heldRowCount: Number(held.rows[0]?.count ?? 0),
-      preciseLocationAbsent: true,
       forbiddenMarkersAbsent: true,
       controls: {
         cancelPackImportEnabled: true,

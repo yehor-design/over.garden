@@ -175,6 +175,17 @@ describe("observed document validation (OVE-227)", () => {
     expect(result.document).toEqual(CANONICAL);
   });
 
+  it("keeps a document whose text carries coordinates (ADR-0022, D1)", () => {
+    const result = validate(
+      raw({
+        title: "Сад на 50.4501, 30.5234",
+        body: "Ділянка на 50.4501234, 30.5234123 біля дороги.",
+      }),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.reasons).toEqual([]);
+  });
+
   it.each([
     ["invalid_id", { id: "not-a-uuid" }],
     ["invalid_kind", { kind: "plant_object" }],
@@ -189,7 +200,7 @@ describe("observed document validation (OVE-227)", () => {
     ["invalid_entry_scope", { entryScope: "garden" }],
     ["invalid_cover_source", { coverSource: "hero" }],
     ["invalid_quality_class", { qualityClass: "trusted" }],
-    ["invalid_quality_reasons", { qualityReasons: ["precise_location"] }],
+    ["invalid_quality_reasons", { qualityReasons: ["unknown_reason"] }],
   ])("rejects %s", (reason, override) => {
     const result = validate(raw(override));
     expect(result.ok).toBe(false);
@@ -232,15 +243,6 @@ describe("observed document validation (OVE-227)", () => {
     expect(validate(raw({ coarseRegionCode: "UA-32" })).reasons).toContain(
       "invalid_coarse_region_code",
     );
-  });
-
-  it("fails closed on precise-location text even when the schema is valid", () => {
-    const result = validate(
-      raw({ body: "Ділянка на 50.4501234, 30.5234123 біля дороги." }),
-    );
-    expect(result.ok).toBe(false);
-    expect(result.reasons).toContain("precise_location_text");
-    expect(result.fields).toContain("body");
   });
 
   it("requires verified documents to have no reasons and degraded documents to have reasons", () => {

@@ -1,7 +1,5 @@
 import { createHash } from "node:crypto";
 
-import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
-
 export const ADMIN_MENU_VISIBILITY_RECEIPT_VERSION =
   "ove338.adminMenuVisibility.v1";
 export const ADMIN_ROLE_RESOLUTION_DEADLINE_MS = 250;
@@ -71,7 +69,6 @@ export interface AdminMenuContractReceipt {
   queueReadCount: number;
   mutationCount: number;
   durationMs: number;
-  preciseLocationAbsent: boolean;
   digest: string;
   violations: string[];
 }
@@ -124,8 +121,6 @@ export function evaluateAdminMenuContract(
     violations.push("role_resolution_deadline");
   }
 
-  const preciseLocationAbsent = !hasPreciseLocationEvidence(input.evidence);
-  if (!preciseLocationAbsent) violations.push("precise_location");
   if (hasForbiddenEvidenceField(input.evidence)) {
     violations.push("forbidden_evidence_field");
   }
@@ -149,7 +144,6 @@ export function evaluateAdminMenuContract(
     reachableAccountPaths: [...input.reachableAccountPaths],
     queueReadCount: input.queueReadCount,
     mutationCount: input.mutationCount,
-    preciseLocationAbsent,
     violations: uniqueViolations,
   };
 
@@ -170,7 +164,6 @@ export function evaluateAdminMenuContract(
     queueReadCount: input.queueReadCount,
     mutationCount: input.mutationCount,
     durationMs: Math.ceil(input.durationMs),
-    preciseLocationAbsent,
     digest: createHash("sha256").update(JSON.stringify(semantic)).digest("hex"),
     violations: uniqueViolations,
   };
@@ -244,13 +237,4 @@ function hasForbiddenEvidenceField(value: unknown): boolean {
     ([key, child]) =>
       FORBIDDEN_EVIDENCE_FIELD.test(key) || hasForbiddenEvidenceField(child),
   );
-}
-
-function hasPreciseLocationEvidence(value: unknown): boolean {
-  if (typeof value === "string" || typeof value === "number") {
-    return containsPreciseLocationText(value);
-  }
-  if (!value || typeof value !== "object") return false;
-  if (Array.isArray(value)) return value.some(hasPreciseLocationEvidence);
-  return Object.values(value).some(hasPreciseLocationEvidence);
 }

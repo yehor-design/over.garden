@@ -26,7 +26,6 @@ import {
   buildLineageQuestionInboxQuery,
   normalizeLineageQuestionText,
 } from "./lineage-interactions-repository";
-import { PreciseLocationTextError } from "@/lib/privacy/precise-location-text";
 
 class TestPostgresDialect implements Dialect {
   createDriver(): Driver {
@@ -91,9 +90,11 @@ describe("lineage interaction repository query contracts", () => {
   });
 
   it("lists interaction targets only for edges where the viewer is a participant", () => {
-    const compiled = buildLineageInteractionTargetsForEdgesQuery(testDb, scope, [
-      edgeId,
-    ]).compile();
+    const compiled = buildLineageInteractionTargetsForEdgesQuery(
+      testDb,
+      scope,
+      [edgeId],
+    ).compile();
 
     expect(compiled.sql).toContain('"lineage_provenance_edges"."id" in');
     expect(compiled.sql).toContain(
@@ -210,7 +211,9 @@ describe("lineage interaction repository query contracts", () => {
       'inner join "journal_entries" as "target_public_entries"',
     );
     expect(compiled.sql).toContain('"target_public_entries"."visibility" =');
-    expect(compiled.sql).toContain('"target_public_entries"."lifecycle_state" =');
+    expect(compiled.sql).toContain(
+      '"target_public_entries"."lifecycle_state" =',
+    );
     expect(compiled.sql).toContain(
       '"target_public_entries"."public_gone_at" is null',
     );
@@ -248,19 +251,6 @@ describe("lineage interaction repository query contracts", () => {
       expect(() => normalizeLineageQuestionText(unsafe)).toThrow(
         /contact details/i,
       );
-    }
-  });
-
-  it("rejects precise coordinates in questions with the OVE-234 typed error", () => {
-    for (const unsafe of [
-      "50.450100, 30.523400",
-      "широта 50.4501",
-      "geo:50.45010,30.52340",
-    ]) {
-      expect(() => normalizeLineageQuestionText(unsafe)).toThrow(
-        PreciseLocationTextError,
-      );
-      expect(() => normalizeLineageQuestionText(unsafe)).not.toThrow(/50\.45/);
     }
   });
 });

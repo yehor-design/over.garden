@@ -9,7 +9,6 @@ import {
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
 import type { PublicLocale } from "@/lib/public-localization";
-import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
 import { recordPublicProjectionIntentsForOwner } from "@/server/search/public-projection-outbox";
 import {
   evaluatePublicIdentity,
@@ -49,8 +48,7 @@ export type OwnerProfileValidationError =
   | "languages"
   | "region"
   | "profile_visibility"
-  | "relationship_visibility"
-  | "precise_location";
+  | "relationship_visibility";
 
 export interface OwnerPublicProfileInput {
   avatarMediaAssetId: string | null;
@@ -156,12 +154,6 @@ function normalizeOwnerPublicProfileFields(
   if (bio && bio.length > BIO_MAX_LENGTH) {
     return { ok: false, error: "bio" };
   }
-  // OVE-234: bios are public identity text, so precise location is rejected
-  // before the row is written rather than scrubbed afterwards.
-  if (containsPreciseLocationText(bio) || containsPreciseLocationText(displayName)) {
-    return { ok: false, error: "precise_location" };
-  }
-
   const languages = [...new Set(input.languages.map((value) => value.trim()))];
   if (
     languages.length > PROFILE_LANGUAGE_LIMIT ||

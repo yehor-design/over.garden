@@ -24,7 +24,6 @@ from uuid import UUID
 
 import meilisearch
 
-from app.precise_location import contains_precise_location_text
 
 TRACER_INDEX = "health_tracer"
 CATALOG_TYPEAHEAD_INDEX = "catalog_typeahead"
@@ -480,10 +479,6 @@ def journal_entry_search_document_from_row(
     requested_location_visibility = _text(row, "location_visibility")
 
     if not title or not body or not public_slug:
-        return None
-    # OVE-234: legacy rows written before the precise-location firewall must
-    # never be projected into the public index. Fail closed: drop the document.
-    if contains_precise_location_text(title) or contains_precise_location_text(body):
         return None
     if entry_scope not in {"object", "space"}:
         return None

@@ -165,7 +165,6 @@ export async function runEditionLifecycleDatabaseProof(): Promise<EditionSmokeRe
       pointerSequence,
       objectsReassigned: 0,
       historicalRowsLost: 0,
-      preciseLocationAbsent: true,
       forbiddenMarkersAbsent: true,
       controls: {
         cancelEditionEnabled: true,

@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { containsPreciseLocationText } from "../src/lib/privacy/precise-location-text";
 import {
   PUBLIC_PROJECTION_QUALITY_CLASSES,
   analyticsDeliveryQuality,
@@ -52,7 +51,6 @@ export interface FailOpenProjectionReport {
     erased_journal: 1;
     forbidden_field: 1;
     invalid_identity: 1;
-    precise_location: 1;
     private_journal: 1;
     revoked_media: 1;
   };
@@ -60,7 +58,6 @@ export interface FailOpenProjectionReport {
   durationScope: "projection_admission_decision";
   performanceBudgetMs: 750;
   canonicalWriteCount: 0;
-  preciseLocationAbsent: true;
   locales: ["uk", "bg", "ru"];
   controls: typeof CONTROL_RECEIPT;
   liveProbe?: {
@@ -76,7 +73,6 @@ export interface BoundedProjectionDependencyReceipt extends PublicProjectionQual
   cancellationClass: "not_required" | "aborted";
   durationMs: number;
   canonicalWriteCount: 0;
-  preciseLocationAbsent: true;
   controls: typeof CONTROL_RECEIPT;
 }
 
@@ -123,7 +119,6 @@ export async function runBoundedProjectionDependency(options: {
     qualityReasons: [...winner.quality.qualityReasons],
     durationMs: Math.round(performance.now() - startedAt),
     canonicalWriteCount: 0,
-    preciseLocationAbsent: true,
     controls: CONTROL_RECEIPT,
   });
 }
@@ -237,14 +232,10 @@ export async function runFailOpenProjectionSmoke(
     durationScope: "projection_admission_decision",
     performanceBudgetMs: MAX_PROJECTION_ADMISSION_LATENCY_MS,
     canonicalWriteCount: 0,
-    preciseLocationAbsent: true,
     locales: ["uk", "bg", "ru"],
     controls: CONTROL_RECEIPT,
     ...(liveProbe ? { liveProbe } : {}),
   };
-  if (containsPreciseLocationText(JSON.stringify(report))) {
-    throw new Error("Projection receipt contains precise location text.");
-  }
   return report;
 }
 
@@ -262,7 +253,6 @@ export function projectionReceiptSemanticDigest(
     ),
     hardExclusionCounts: report.hardExclusionCounts,
     canonicalWriteCount: report.canonicalWriteCount,
-    preciseLocationAbsent: report.preciseLocationAbsent,
     locales: report.locales,
     controls: report.controls,
   };
@@ -330,9 +320,6 @@ function classifyHardExclusions(
   const invalidIdentity = buildJournalEntrySearchDocumentContractFixture(
     searchRow({ id: "invalid-id" }),
   );
-  const preciseLocation = buildJournalEntrySearchDocumentContractFixture(
-    searchRow({ body: "Ділянка на 50.4501234, 30.5234123 біля дороги." }),
-  );
   const verified = requiredSearchDocument(searchRow());
   const forbiddenObserved = validateObservedJournalSearchDocument({
     ...verified,
@@ -343,7 +330,6 @@ function classifyHardExclusions(
     privateJournal !== null ||
     erasedJournal !== null ||
     invalidIdentity !== null ||
-    preciseLocation !== null ||
     forbiddenObserved.ok ||
     revokedMediaState !== "excluded"
   ) {
@@ -354,7 +340,6 @@ function classifyHardExclusions(
     erased_journal: 1,
     forbidden_field: 1,
     invalid_identity: 1,
-    precise_location: 1,
     private_journal: 1,
     revoked_media: 1,
   };

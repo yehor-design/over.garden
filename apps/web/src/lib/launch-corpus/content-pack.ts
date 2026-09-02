@@ -2,8 +2,6 @@ import { createHash } from "node:crypto";
 
 import { z } from "zod";
 
-import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
-
 import {
   LAUNCH_CORPUS_SHOT_LIST,
   type LaunchCorpusCoverBranch,
@@ -125,9 +123,6 @@ export function validateLaunchCorpusContentPack(
       slot.body,
       ...slot.media.flatMap((media) => [media.alt, media.caption ?? ""]),
     ];
-    if (privacyValues.some(containsPreciseLocationText)) {
-      errors.push(`precise_location:${slot.id}`);
-    }
     if (privacyValues.some(containsTechnicalArtifactText)) {
       errors.push(`technical_artifact:${slot.id}`);
     }
@@ -164,9 +159,7 @@ function containsTechnicalArtifactText(value: string): boolean {
 export function digestLaunchCorpusContentPack(
   pack: LaunchCorpusContentPack,
 ): string {
-  return createHash("sha256")
-    .update(stableJson(pack), "utf8")
-    .digest("hex");
+  return createHash("sha256").update(stableJson(pack), "utf8").digest("hex");
 }
 
 function validateSlotAgainstSpec(
@@ -186,7 +179,10 @@ function validateSlotAgainstSpec(
     }
   }
 
-  if (slot.media.length < spec.minPhotos || slot.media.length > spec.maxPhotos) {
+  if (
+    slot.media.length < spec.minPhotos ||
+    slot.media.length > spec.maxPhotos
+  ) {
     errors.push(`photo_count:${spec.id}`);
   }
 
@@ -205,7 +201,9 @@ function validateCoverBranch(
     ? slot.media.find((media) => media.sha256 === explicit)
     : null;
 
-  if (new Set(slot.media.map((media) => media.sha256)).size !== slot.media.length) {
+  if (
+    new Set(slot.media.map((media) => media.sha256)).size !== slot.media.length
+  ) {
     errors.push(`duplicate_media:${slot.id}`);
   }
   if (explicit && !explicitMedia) errors.push(`unknown_cover:${slot.id}`);
@@ -217,7 +215,9 @@ function validateCoverBranch(
       case "one_inline_auto_cover":
       case "private_one_inline":
       case "archived_one_inline":
-        return inline.length !== 1 || coverOnly.length !== 0 || explicit !== null;
+        return (
+          inline.length !== 1 || coverOnly.length !== 0 || explicit !== null
+        );
       case "multi_explicit_non_first_cover":
         return (
           inline.length !== 3 ||

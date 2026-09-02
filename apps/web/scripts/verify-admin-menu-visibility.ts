@@ -124,7 +124,7 @@ export function verifyAdminMenuRepository() {
     queueReadCount: 1,
     mutationCount: 1,
     durationMs: 1,
-    evidence: { preciseLocationAbsent: true },
+    evidence: {},
   });
   const ordinary = evaluateAdminMenuContract({
     actorClass: "ordinary",
@@ -136,7 +136,7 @@ export function verifyAdminMenuRepository() {
     queueReadCount: 0,
     mutationCount: 0,
     durationMs: 1,
-    evidence: { preciseLocationAbsent: true },
+    evidence: {},
   });
 
   return {
@@ -150,8 +150,6 @@ export function verifyAdminMenuRepository() {
     ordinary,
     activeAdminCallerCount: activeAdminCallers.length,
     runtimeAdminOwnerCount: runtimeAdminOwners.length,
-    preciseLocationAbsent:
-      owner.preciseLocationAbsent && ordinary.preciseLocationAbsent,
   };
 }
 
@@ -220,7 +218,7 @@ export async function verifyAdminMenuStaticControls(
     queueReadCount: 0,
     mutationCount: 0,
     durationMs: 1,
-    evidence: { preciseLocationAbsent: true },
+    evidence: {},
   });
   const accountControlsAligned = accountControls.every(
     (control) =>
@@ -242,7 +240,6 @@ export async function verifyAdminMenuStaticControls(
     retiredControls,
     accountControls,
     semanticDigest: contract.digest,
-    preciseLocationAbsent: contract.preciseLocationAbsent,
   };
 }
 

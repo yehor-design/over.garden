@@ -28,7 +28,6 @@ export interface EditionSmokeReceipt {
   pointerSequence?: string[];
   objectsReassigned?: 0;
   historicalRowsLost?: 0;
-  preciseLocationAbsent: true;
   forbiddenMarkersAbsent: true;
   controls: {
     cancelEditionEnabled: true;
@@ -69,7 +68,6 @@ export async function runDiffWorkerTimeoutFixture(input: {
     records: input.records,
     maxInteractionDelayMs: roundMs(interactionDelayMs),
     interactionBudgetMs: EDITION_INTERACTION_BUDGET_MS,
-    preciseLocationAbsent: true,
     forbiddenMarkersAbsent: true,
     controls: {
       cancelEditionEnabled: true,

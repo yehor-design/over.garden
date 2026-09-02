@@ -81,7 +81,6 @@ export interface PublicSurfaceDiscoveryVerificationReceipt {
   recoveryClass: "fresh_independent_read_admitted";
   replayClass: "deterministic";
   concurrentReadClass: "deterministic";
-  preciseLocationAbsent: true;
   controls: typeof CONTROL_RECEIPT;
   surfaceReceipts: PublicSurfaceCoverageReceipt[];
   liveProbe?: {
@@ -258,7 +257,6 @@ export async function runPublicSurfaceDiscoveryVerification(
     recoveryClass: "fresh_independent_read_admitted",
     replayClass: "deterministic",
     concurrentReadClass: "deterministic",
-    preciseLocationAbsent: true,
     controls: CONTROL_RECEIPT,
     surfaceReceipts,
     ...(liveProbe ? { liveProbe } : {}),

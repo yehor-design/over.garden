@@ -9,8 +9,7 @@ Policy version: `ove242.publicIndexParity.v3` (supersedes
 The queue and document checks below are an operator consistency gate over
 resolved canonical/index state. They do not deny an unresolved product read
 and do not replace ADR-0018 quality-class admission or
-`PUBLIC_SURFACE_INDEXABILITY_THRESHOLD`. Precise-location exclusion remains
-an unconditional product-data boundary.
+`PUBLIC_SURFACE_INDEXABILITY_THRESHOLD`.
 
 ## What changed in v3 (OVE-242)
 
@@ -106,8 +105,7 @@ local and recovery-drill dotenv behavior is unchanged.
 - Exact allowed key set; any unknown key, and any key on the forbidden list, is
   `unsafe_schema`.
 - `id` is a journal UUID; `kind` is `journal_entry`.
-- `title` and `body` are non-empty and contain no precise-location text
-  (OVE-234 fail-closed, even when the current Postgres row is clean).
+- `title` and `body` are non-empty.
 - `publicSlug` matches the canonical slug rule; `publicPath` equals
   `/journal/<slug>` built from that same slug.
 - `locationVisibility` is `region` or `hidden`; `coarseRegionCode` is a valid

@@ -72,9 +72,8 @@ async function main() {
     redactParityReportForEvidence,
     PUBLIC_JOURNAL_ENTRIES_INDEX,
   } = await import("../src/server/search/public-journal-parity");
-  const { listGloballyEligibleJournalSearchDocuments } = await import(
-    "../src/server/search/public-journal-eligibility"
-  );
+  const { listGloballyEligibleJournalSearchDocuments } =
+    await import("../src/server/search/public-journal-eligibility");
 
   const index = meiliSearchClient().index(PUBLIC_JOURNAL_ENTRIES_INDEX);
 
@@ -174,12 +173,9 @@ async function main() {
     coverSource: "none",
   });
 
-  await runCase(
-    "extraneous_document",
-    "extraneous",
-    validShape(randomUUID()),
-    { countKey: "extraneous" },
-  );
+  await runCase("extraneous_document", "extraneous", validShape(randomUUID()), {
+    countKey: "extraneous",
+  });
 
   await runCase(
     "invalid_document_id",
@@ -204,16 +200,6 @@ async function main() {
       coverPublicUrl: "https://foreign.example.com/derivative/stale.webp",
     },
     { countKey: "unsafe_schema", reasonClass: "invalid_cover_public_url" },
-  );
-
-  await runCase(
-    "precise_location_text_in_body",
-    "unsafe_schema",
-    {
-      ...validShape(randomUUID()),
-      body: "Ділянка на 50.4501234, 30.5234123 біля дороги.",
-    },
-    { countKey: "unsafe_schema", reasonClass: "precise_location_text" },
   );
 
   // Stale-content cases need a real eligible document to mutate in the index.

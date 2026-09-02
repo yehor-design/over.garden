@@ -14,8 +14,6 @@ import {
   normalizeJournalDocumentOrThrow,
   type JournalDocumentV1,
 } from "@/lib/garden/journal-document";
-import { assertNoPreciseLocationInJournalDocument } from "@/lib/privacy/precise-location-journal-document";
-import { assertNoPreciseLocationText } from "@/lib/privacy/precise-location-text";
 import {
   enqueueMediaDerivativeRevokes,
   listAbandonedCoverOnlyRevokeCandidates,
@@ -64,9 +62,6 @@ export function resolveJournalContentForWrite(input: {
   }
 
   assertMeaningfulJournalDocument(document);
-  // OVE-234: every textual block is checked before the document or its
-  // derived plain-text body can reach Postgres, the outbox, or a projection.
-  assertNoPreciseLocationInJournalDocument(document);
   if (journalDocumentImageCount(document) > MAX_JOURNAL_INLINE_IMAGES) {
     throw new Error(
       `Journal entry may include at most ${MAX_JOURNAL_INLINE_IMAGES} inline photos.`,
@@ -76,9 +71,6 @@ export function resolveJournalContentForWrite(input: {
   const body = extractJournalDocumentPlainText(document, {
     imageCaptionByMediaId: input.imageCaptionByMediaId,
   });
-  // Captions are merged in from media rows, so the derived body is rechecked
-  // rather than trusted from the document traversal above.
-  assertNoPreciseLocationText(body, "journal_body");
   if (!body.trim()) {
     // Image-only drafts are allowed when captions are unknown at resolve time;
     // repository claim path re-checks with captions.

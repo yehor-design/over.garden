@@ -86,18 +86,6 @@ describe("public surface discovery adapter", () => {
     });
   });
 
-  it("refuses coordinate-bearing visible text through the authoritative firewall", () => {
-    const result = resolvePublicSurfaceDiscovery(
-      richSource({ visibleText: ["Garden note at 50.45010, 30.52340"] }),
-      { evaluatedAt: EVALUATED_AT },
-    );
-
-    expect(result.decision).toMatchObject({
-      value: "noindex",
-      reasons: ["not_public_candidate"],
-    });
-  });
-
   it("keeps thin Stable Registry catalog and source pages behind the shared threshold", () => {
     const result = resolvePublicSurfaceDiscovery(
       richSource({

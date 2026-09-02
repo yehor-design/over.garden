@@ -17,7 +17,6 @@ export interface PublicCatalogDatabaseReceipt {
   animalFilterMatches: number;
   maxQueryLatencyMs: number;
   queryBudgetMs: number;
-  preciseLocationAbsent: true;
   forbiddenMarkersAbsent: true;
   controls: {
     retrySearchEnabled: true;
@@ -278,7 +277,6 @@ export async function runPublicCatalogDatabaseProof(): Promise<PublicCatalogData
       animalFilterMatches: animalFilter.length,
       maxQueryLatencyMs: Math.round(maxQueryLatencyMs * 100) / 100,
       queryBudgetMs: STABLE_REGISTRY_PUBLIC_QUERY_BUDGET_MS,
-      preciseLocationAbsent: true,
       forbiddenMarkersAbsent: true,
       controls: {
         retrySearchEnabled: true,

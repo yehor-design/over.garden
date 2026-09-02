@@ -32,7 +32,6 @@ import {
   resolveLineageClaim,
 } from "./lineage-repository";
 import { signLineageInviteToken } from "./lineage-invite-token";
-import { PreciseLocationTextError } from "@/lib/privacy/precise-location-text";
 
 class TestPostgresDialect implements Dialect {
   createDriver(): Driver {
@@ -472,22 +471,6 @@ describe("lineage provenance repository query contracts", () => {
       expect(() => normalizeLineagePendingSourceLabel(unsafe)).toThrow(
         /contact details/i,
       );
-    }
-  });
-
-  it("rejects precise coordinates in source labels with the OVE-234 typed error", () => {
-    for (const normalize of [
-      normalizeLineageSourceReferenceLabel,
-      normalizeLineagePendingSourceLabel,
-    ]) {
-      for (const unsafe of [
-        "50.450100, 30.523400",
-        "50°27'0.4\" N 30°31'24.2\" E",
-        "geo:50.45010,30.52340",
-      ]) {
-        expect(() => normalize(unsafe)).toThrow(PreciseLocationTextError);
-        expect(() => normalize(unsafe)).not.toThrow(/50\.45/);
-      }
     }
   });
 

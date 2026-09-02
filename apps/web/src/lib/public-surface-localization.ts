@@ -74,7 +74,6 @@ interface PublicSurfaceCopy {
     commentReported: string;
     commentAuthorBlocked: string;
     commentUnavailable: string;
-    commentPreciseLocation: string;
     showMoreComments: string;
     signInComplete: string;
     moreActions: string;
@@ -238,8 +237,6 @@ const COPY = {
       commentReported: "Скаргу надіслано на розгляд.",
       commentAuthorBlocked: "Автора заблоковано.",
       commentUnavailable: "Коментар більше недоступний.",
-      commentPreciseLocation:
-        "Приберіть точні координати з коментаря. Опишіть місце лише регіоном.",
       showMoreComments: "Показати більше коментарів",
       signInComplete: "Вхід завершено. Підтвердьте дію нижче, щоб продовжити.",
       moreActions: "Інші дії",
@@ -410,8 +407,6 @@ const COPY = {
       commentReported: "Сигналът е изпратен за преглед.",
       commentAuthorBlocked: "Авторът е блокиран.",
       commentUnavailable: "Коментарът вече не е достъпен.",
-      commentPreciseLocation:
-        "Премахнете точните координати от коментара. Опишете мястото само с регион.",
       showMoreComments: "Покажи още коментари",
       signInComplete:
         "Влизането е завършено. Потвърдете действието по-долу, за да продължите.",
@@ -582,8 +577,6 @@ const COPY = {
       commentReported: "Жалоба отправлена на проверку.",
       commentAuthorBlocked: "Автор заблокирован.",
       commentUnavailable: "Комментарий больше недоступен.",
-      commentPreciseLocation:
-        "Уберите точные координаты из комментария. Опишите место только регионом.",
       showMoreComments: "Показать больше комментариев",
       signInComplete:
         "Вход завершён. Подтвердите действие ниже, чтобы продолжить.",

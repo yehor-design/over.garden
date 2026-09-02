@@ -4,7 +4,6 @@ import {
   resetUnresolvedAuthorizationServeCountsForTests,
   resolveUnresolvedAuthorizationDecision,
 } from "../src/lib/auth/unresolved-authorization";
-import { containsPreciseLocationText } from "../src/lib/privacy/precise-location-text";
 
 export const OVE332_RESOLVED_ANOTHER_USER_FIXTURE_IDS = Object.freeze(
   OVE332_AUTHORIZATION_OWNERS.map(
@@ -82,7 +81,6 @@ export function buildFailOpenAuthorizationSmokeReceipt() {
       secretMaterialAbsent: !/(?:cookie|credential|password|token)/i.test(
         serialized,
       ),
-      preciseLocationAbsent: !containsPreciseLocationText(serialized),
       identityAndPayloadAbsent:
         !/(?:email|ownerUserId|sessionBinding|payload)/i.test(serialized),
     }),

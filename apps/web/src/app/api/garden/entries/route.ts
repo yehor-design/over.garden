@@ -25,14 +25,7 @@ import {
   journalCreateReturnFallback,
   normalizeJournalComposerReturnTo,
 } from "@/lib/garden/journal-composer-return";
-import { INTERFACE_LOCALE_REQUEST_HEADER } from "@/lib/interface-localization";
-import { preciseLocationRejectionMessage } from "@/lib/privacy/precise-location-copy";
-import { isPreciseLocationTextError } from "@/lib/privacy/precise-location-text";
-import type {
-  EntryScope,
-  LocationVisibility,
-  VarietyState,
-} from "@/db/schema";
+import type { EntryScope, LocationVisibility, VarietyState } from "@/db/schema";
 import {
   isBackdatedEntryDate,
   recordAnalyticsEventSafely,
@@ -282,19 +275,6 @@ async function createEntry(request: Request, scope: RequestScope) {
     );
     return Response.json(response);
   } catch (error) {
-    if (isPreciseLocationTextError(error)) {
-      return Response.json(
-        {
-          error: preciseLocationRejectionMessage(
-            error.surface,
-            request.headers.get(INTERFACE_LOCALE_REQUEST_HEADER),
-          ),
-          code: error.code,
-          surface: error.surface,
-        },
-        { status: 400 },
-      );
-    }
     const code = safeAtomicErrorCode(error);
     return Response.json({ code }, { status: errorStatus(error, code) });
   }

@@ -370,7 +370,6 @@ async function runIntegrationFaultProof() {
         identityAbsent: true,
         payloadAbsent: true,
         capabilityAbsent: true,
-        preciseLocationAbsent: true,
       }),
     });
     if (!ok)

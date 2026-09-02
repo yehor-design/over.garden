@@ -5,7 +5,6 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
-import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -564,12 +563,16 @@ function sanitizePublicLabel(value: unknown): string | null {
   return normalized;
 }
 
+// Source records may carry occurrence coordinates; TECH_STACK invariant 1 keeps
+// them out of every public payload. This is source-data hygiene, not a
+// free-text firewall (ADR-0022, D1 applies to gardener text only).
+const SOURCE_COORDINATE_PAIR =
+  /[-+]?\d{1,3}\.\d{3,}\s*,\s*[-+]?\d{1,3}\.\d{3,}/;
+
 function containsUnsafePublicText(value: string): boolean {
-  return (
-    containsPreciseLocationText(value) ||
-    /[\u0000-\u001f\u007f]|\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|(?:https?:\/\/|www\.)|\b(?:token|invite|checksum|raw[_ -]?payload|source[_ -]?only|latitude|longitude|coordinates?|координат|широт|довгот)\b/iu.test(
-      value,
-    )
+  if (SOURCE_COORDINATE_PAIR.test(value)) return true;
+  return /[\u0000-\u001f\u007f]|\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|(?:https?:\/\/|www\.)|\b(?:token|invite|checksum|raw[_ -]?payload|source[_ -]?only|latitude|longitude|coordinates?|координат|широт|довгот)\b/iu.test(
+    value,
   );
 }
 

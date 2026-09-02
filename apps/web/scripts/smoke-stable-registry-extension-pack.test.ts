@@ -18,7 +18,6 @@ describe("OVE-328 extension pack smoke", () => {
       status: "pass",
       terminalClass: "degraded",
       interactionBudgetMs: EXTENSION_PACK_INTERACTION_BUDGET_MS,
-      preciseLocationAbsent: true,
       forbiddenMarkersAbsent: true,
       controls: {
         cancelPackImportEnabled: true,

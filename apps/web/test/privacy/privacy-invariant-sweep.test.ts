@@ -360,12 +360,6 @@ describe("OVE-40 privacy invariant sweep — public variety JSON-LD", () => {
       ),
     ).toBeNull();
   });
-
-  it("refuses coordinate-bearing visible variety evidence", () => {
-    expect(
-      buildPublicVarietyJsonLd(publicVarietyPage({ poisonVisibleText: true })),
-    ).toBeNull();
-  });
 });
 
 describe("OVE-40 privacy invariant sweep — analytics", () => {

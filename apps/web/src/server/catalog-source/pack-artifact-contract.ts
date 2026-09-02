@@ -386,7 +386,7 @@ export function isPackArtifact(value: unknown): value is PackArtifact {
 /**
  * Precise location and raw payload fields must never enter an artifact. This is
  * a defensive shape check at the contract boundary; the canonical TypeScript
- * precise-location firewall remains the authority for free text.
+ * free text is not scanned for coordinates (ADR-0022, D1).
  */
 const FORBIDDEN_PACK_FIELD_PATTERN =
   /^(latitude|longitude|lat|lon|lng|coordinates?|geo|rawPayload|raw_payload|sourceOnly|source_only)$/iu;

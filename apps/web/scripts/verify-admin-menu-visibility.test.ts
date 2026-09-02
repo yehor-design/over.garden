@@ -29,7 +29,7 @@ describe("OVE-338 admin-inside-account contract", () => {
       queueReadCount: 1,
       mutationCount: 1,
       durationMs: 40,
-      evidence: { preciseLocationAbsent: true },
+      evidence: {},
     });
 
     expect(receipt).toMatchObject({
@@ -39,7 +39,6 @@ describe("OVE-338 admin-inside-account contract", () => {
       linkCount: 4,
       localeCount: 3,
       accountPathCount: 3,
-      preciseLocationAbsent: true,
       violations: [],
     });
     expect(receipt.digest).toMatch(/^[a-f0-9]{64}$/);
@@ -70,7 +69,7 @@ describe("OVE-338 admin-inside-account contract", () => {
         queueReadCount: 0,
         mutationCount: 0,
         durationMs: actorClass === "timed_out" ? 250 : 1,
-        evidence: { preciseLocationAbsent: true },
+        evidence: {},
       });
 
       expect(receipt.status).toBe(
@@ -98,7 +97,7 @@ describe("OVE-338 admin-inside-account contract", () => {
       queueReadCount: 0,
       mutationCount: 0,
       durationMs: 1,
-      evidence: { preciseLocationAbsent: true },
+      evidence: {},
     });
 
     expect(receipt.status).toBe("contract_drift");
@@ -123,9 +122,8 @@ describe("OVE-338 admin-inside-account contract", () => {
     });
 
     expect(receipt.status).toBe("contract_drift");
-    expect(receipt.preciseLocationAbsent).toBe(false);
     expect(receipt.violations).toEqual(
-      expect.arrayContaining(["forbidden_evidence_field", "precise_location"]),
+      expect.arrayContaining(["forbidden_evidence_field"]),
     );
   });
 
@@ -140,7 +138,7 @@ describe("OVE-338 admin-inside-account contract", () => {
       queueReadCount: 1,
       mutationCount: 1,
       durationMs: 20,
-      evidence: { preciseLocationAbsent: true },
+      evidence: {},
     };
 
     const [first, second] = [

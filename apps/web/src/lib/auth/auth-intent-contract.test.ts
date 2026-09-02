@@ -279,7 +279,7 @@ describe("auth intent contract", () => {
       returnTo: "/garden",
       body: "private journal body",
       email: "person@example.com",
-      preciseLocation: "42.0000, 23.0000",
+      gpsCoordinates: "42.0000, 23.0000",
       rawIds: ["private-1", "private-2"],
     });
 

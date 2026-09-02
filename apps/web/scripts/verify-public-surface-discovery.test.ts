@@ -26,7 +26,6 @@ describe("OVE-335 public surface discovery verifier", () => {
       canonicalWriteCount: 0,
       performanceBudgetMs: 150,
       decisionDurationClass: "within_150ms",
-      preciseLocationAbsent: true,
     });
     expect(report.surfaceReceipts).toHaveLength(27);
     expect(
@@ -141,9 +140,7 @@ describe("OVE-335 public surface discovery verifier", () => {
     ]);
     const fetchImpl = (async (input: string | URL | Request) => {
       const pathname = new URL(
-        typeof input === "string" || input instanceof URL
-          ? input
-          : input.url,
+        typeof input === "string" || input instanceof URL ? input : input.url,
       ).pathname;
       requestedPaths.push(pathname);
       const body = responseByPath.get(pathname);
@@ -165,7 +162,10 @@ describe("OVE-335 public surface discovery verifier", () => {
         "/bg/privacy",
       ].sort(),
     );
-    expect(report.liveProbe).toMatchObject({ status: "aligned", probeCount: 5 });
+    expect(report.liveProbe).toMatchObject({
+      status: "aligned",
+      probeCount: 5,
+    });
   });
 
   it("fails closed when the current inventory owner scan cannot prove coverage", () => {

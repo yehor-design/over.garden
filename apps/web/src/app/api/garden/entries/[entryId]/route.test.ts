@@ -321,33 +321,6 @@ describe("PATCH /api/garden/entries/[entryId]", () => {
       expect(mocks.updateAtomicJournalEntry).not.toHaveBeenCalled();
     },
   );
-
-  it("rejects precise location text before claiming staged media", async () => {
-    const { PATCH } = await import("./route");
-    const response = await PATCH(
-      new Request(`http://local.test/api/garden/entries/${ENTRY_ID}`, {
-        method: "PATCH",
-        headers: {
-          "content-type": "application/json",
-          [ATOMIC_JOURNAL_EDIT_PROTOCOL_HEADER]: ATOMIC_JOURNAL_EDIT_PROTOCOL,
-        },
-        body: JSON.stringify({
-          ...validRequest(),
-          title: "Bed at 50.4501234, 30.5234123",
-        }),
-      }),
-      { params: Promise.resolve({ entryId: ENTRY_ID }) },
-    );
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({
-      code: "precise_location_text",
-      surface: "journal_title",
-    });
-    expect(mocks.readAtomicJournalEditBaseline).not.toHaveBeenCalled();
-    expect(mocks.claimEphemeralPublicationMedia).not.toHaveBeenCalled();
-    expect(mocks.updateAtomicJournalEntry).not.toHaveBeenCalled();
-  });
 });
 
 const ENTRY_ID = "00000000-0000-4000-8000-000000000010";

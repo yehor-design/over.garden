@@ -2,21 +2,23 @@
  * OVE-225 read-only inventory of existing `job_queue` journal payloads.
  *
  * Counts and reason classes only: no payload value, journal title or body,
- * email, media object key, signed URL, or precise-location text may ever reach
+ * email, media object key, signed URL, or coordinates may ever reach
  * a report produced here (AGENTS.md hard rules 1 and 7). The report is the
  * approval artifact the maintainer needs before the two new CHECK constraints
  * can be promoted from `not valid` to `validate constraint`.
  */
 
-import { JOB_QUEUE_PAYLOAD_UUID_PATTERN, payloadContractFor } from "./job-queue-manifest";
+import {
+  JOB_QUEUE_PAYLOAD_UUID_PATTERN,
+  payloadContractFor,
+} from "./job-queue-manifest";
 
 export const JOB_QUEUE_INVENTORY_KINDS = [
   "journal_entry_index",
   "journal_entry_unindex",
 ] as const;
 
-export type JobQueueInventoryKind =
-  (typeof JOB_QUEUE_INVENTORY_KINDS)[number];
+export type JobQueueInventoryKind = (typeof JOB_QUEUE_INVENTORY_KINDS)[number];
 
 export const JOB_QUEUE_INVENTORY_REASON_CLASSES = [
   "conforming",

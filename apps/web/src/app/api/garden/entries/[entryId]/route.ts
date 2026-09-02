@@ -17,11 +17,6 @@ import { journalEntryDateInputValue } from "@/lib/garden/journal-entry-date";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { bytesToBase64Url } from "@/lib/media/ephemeral-staging-contract";
 import { stableJson } from "@/lib/media/ephemeral-staging-crypto";
-import { preciseLocationRejectionMessage } from "@/lib/privacy/precise-location-copy";
-import {
-  assertNoPreciseLocationText,
-  isPreciseLocationTextError,
-} from "@/lib/privacy/precise-location-text";
 import { localizedPath, PUBLIC_LOCALES } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
@@ -93,7 +88,6 @@ export async function PATCH(
   try {
     const body = parseAtomicJournalEditRequest(raw, entryId);
     const title = body.title.trim();
-    assertNoPreciseLocationText(title, "journal_title");
     const content = resolveJournalContentForWrite({
       contentDocument: normalizeJournalDocumentOrThrow(body.document),
       requireStructured: true,
@@ -236,18 +230,6 @@ export async function PATCH(
       Response.json(buildAtomicEditResponse(request, body, result)),
     );
   } catch (error) {
-    if (isPreciseLocationTextError(error)) {
-      return privateNoStore(
-        Response.json(
-          {
-            error: preciseLocationRejectionMessage(error.surface, null),
-            code: error.code,
-            surface: error.surface,
-          },
-          { status: 400 },
-        ),
-      );
-    }
     if (error instanceof JournalAggregateConflictError) {
       return privateNoStore(
         Response.json(

@@ -17,7 +17,6 @@ describe("OVE-331 fail-open projection smoke", () => {
       durationScope: "projection_admission_decision",
       performanceBudgetMs: 750,
       canonicalWriteCount: 0,
-      preciseLocationAbsent: true,
       locales: ["uk", "bg", "ru"],
       controls: {
         retryProjectionRebuildCommand: "usable",
@@ -60,11 +59,9 @@ describe("OVE-331 fail-open projection smoke", () => {
       erased_journal: 1,
       forbidden_field: 1,
       invalid_identity: 1,
-      precise_location: 1,
       private_journal: 1,
       revoked_media: 1,
     });
-    expect(report.preciseLocationAbsent).toBe(true);
     expect(report.canonicalWriteCount).toBe(0);
     expect(serialized).not.toMatch(
       /ownerUserId|mediaKey|quarantineKey|latitude|longitude|coordinates|email|userAgent|ipAddress|50\.45010/i,
