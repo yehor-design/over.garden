@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   requireCurrentRequestScope: vi.fn(),
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
   setCommunityMembership: vi.fn(),
   contributePublicJournalToCommunity: vi.fn(),
   reportCommunityContribution: vi.fn(),
@@ -16,9 +16,9 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/server/auth-session", () => ({
   requireCurrentRequestScope: mocks.requireCurrentRequestScope,
 }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationGenerationFromFormData: vi.fn(() => null),
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  ownerUserIdFromFormData: vi.fn(() => null),
 }));
 vi.mock("@/server/community-repository", () => ({
   setCommunityMembership: mocks.setCommunityMembership,
@@ -37,7 +37,7 @@ describe("community actions", () => {
     vi.clearAllMocks();
     mocks.redirect.mockImplementation(() => undefined);
     mocks.requireCurrentRequestScope.mockResolvedValue(scope);
-    mocks.admitDocumentMutation.mockImplementation(async () => ({
+    mocks.resolveMutationScope.mockImplementation(async () => ({
       status: "admitted",
       scope: await mocks.requireCurrentRequestScope(),
     }));

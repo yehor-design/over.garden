@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
@@ -149,7 +149,7 @@ export function StableRegistryExtensionPackLane({
 
       {pack && model.writesEnabled ? (
         <div className="flex flex-wrap items-center gap-3">
-          <DocumentMutationActionForm action={approveAction}>
+          <OwnerScopedActionForm action={approveAction}>
             <input type="hidden" name="packId" value={pack.id} />
             <input
               type="hidden"
@@ -157,10 +157,10 @@ export function StableRegistryExtensionPackLane({
               value={String(pack.version)}
             />
             <SubmitButton label={copy.approvePreview} />
-          </DocumentMutationActionForm>
+          </OwnerScopedActionForm>
 
           {pack.previewDigest ? (
-            <DocumentMutationActionForm action={activateAction}>
+            <OwnerScopedActionForm action={activateAction}>
               <input type="hidden" name="packId" value={pack.id} />
               <input
                 type="hidden"
@@ -168,14 +168,14 @@ export function StableRegistryExtensionPackLane({
                 value={pack.previewDigest}
               />
               <SubmitButton label={copy.activatePack} />
-            </DocumentMutationActionForm>
+            </OwnerScopedActionForm>
           ) : null}
 
           {/* Wait-safe: both controls stay enabled while a pack is parsing. */}
-          <DocumentMutationActionForm action={abandonAction}>
+          <OwnerScopedActionForm action={abandonAction}>
             <input type="hidden" name="packId" value={pack.id} />
             <SubmitButton label={copy.cancelPackImport} alwaysEnabled />
-          </DocumentMutationActionForm>
+          </OwnerScopedActionForm>
           <Link
             href="/garden"
             className={buttonVariants({ variant: "outline" })}
@@ -216,7 +216,7 @@ function DecisionForm({
   const parentId = `extension-parent-${rowClass}`;
 
   return (
-    <DocumentMutationActionForm action={action}>
+    <OwnerScopedActionForm action={action}>
       <input type="hidden" name="packId" value={packId} />
       <input type="hidden" name="rowClass" value={rowClass} />
       <input
@@ -259,7 +259,7 @@ function DecisionForm({
 
         <SubmitButton label={copy.saveDecision} />
       </div>
-    </DocumentMutationActionForm>
+    </OwnerScopedActionForm>
   );
 }
 

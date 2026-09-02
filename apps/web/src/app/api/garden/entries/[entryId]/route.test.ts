@@ -8,7 +8,7 @@ import {
 } from "@/lib/garden/entry-contracts";
 
 const mocks = vi.hoisted(() => ({
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
   readCommittedAtomicJournalEdit: vi.fn(),
   readAtomicJournalEditBaseline: vi.fn(),
   updateAtomicJournalEntry: vi.fn(),
@@ -23,11 +23,11 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/storage", () => ({
   getPublicDerivativeUrl: (key: string) => `https://media.over.garden/${key}`,
 }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationGenerationFromRequest: () => "signed-generation",
-  documentMutationAdmissionResponse: () =>
-    Response.json({ code: "AUTHENTICATION_REQUIRED" }, { status: 401 }),
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  ownerUserIdFromRequest: () => "signed-generation",
+  mutationScopeResponse: () =>
+    Response.json({ code: "session_required" }, { status: 401 }),
 }));
 vi.mock("@/server/journal-repository", () => ({
   JournalAggregateConflictError: class JournalAggregateConflictError extends Error {
@@ -58,7 +58,7 @@ describe("PATCH /api/garden/entries/[entryId]", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    mocks.admitDocumentMutation.mockResolvedValue({
+    mocks.resolveMutationScope.mockResolvedValue({
       status: "admitted",
       scope: { userId: "00000000-0000-4000-8000-000000000001" },
     });

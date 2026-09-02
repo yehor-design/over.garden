@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   removeCatalogPublicSlugFromWishlist: vi.fn(),
   revalidatePath: vi.fn(),
   redirect: vi.fn(),
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -22,9 +22,9 @@ vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
   getSessionId: mocks.getSessionId,
 }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationGenerationFromFormData: vi.fn(() => null),
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  ownerUserIdFromFormData: vi.fn(() => null),
 }));
 
 vi.mock("@/server/request-scope", () => ({
@@ -49,12 +49,12 @@ describe("wishlist actions", () => {
       user: { id: "00000000-0000-4000-8000-000000000001" },
       session: { id: "session-1" },
     });
-    mocks.admitDocumentMutation.mockImplementation(async () => {
+    mocks.resolveMutationScope.mockImplementation(async () => {
       const session = await mocks.getCurrentSession();
       if (!session?.user?.id) {
         return {
           status: "rejected",
-          transportResult: "AUTHENTICATION_REQUIRED",
+          code: "session_required",
         };
       }
       return {

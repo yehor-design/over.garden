@@ -10,10 +10,6 @@ import {
   PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
-import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
 import { parsePublicHandleSyntax } from "@/server/identity-policy";
 import {
   blockProfile,
@@ -22,13 +18,17 @@ import {
   unfollowProfile,
   type ProfileInteractionResult,
 } from "@/server/profile-interaction-repository";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export async function followProfileAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const handle = normalizedHandle(formData);
@@ -39,11 +39,11 @@ export async function followProfileAction(formData: FormData) {
 }
 
 export async function unfollowProfileAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const handle = normalizedHandle(formData);
@@ -54,11 +54,11 @@ export async function unfollowProfileAction(formData: FormData) {
 }
 
 export async function reportProfileAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const handle = normalizedHandle(formData);
@@ -69,11 +69,11 @@ export async function reportProfileAction(formData: FormData) {
 }
 
 export async function blockProfileAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const handle = normalizedHandle(formData);

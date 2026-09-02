@@ -18,14 +18,6 @@ export type InterfaceLanguageControlPlacement =
   | "utility"
   | "none";
 
-export type SessionRecheckMode =
-  | "compatibility_fenced"
-  | "effect_closed_non_fencing";
-
-export type SessionOwnershipUncertaintyMode =
-  | "serve_unresolved"
-  | "preserve_payload_free_exit";
-
 export const INTERFACE_UTILITY_CONTROL_PREFIXES = [
   "/health",
   "/garden/catalog/curation",
@@ -330,36 +322,11 @@ export function getInterfaceLanguageControlPlacement(
   return "site-shell";
 }
 
-export function isSessionConvergenceSafeExitRoute(pathname: string) {
+export function isSafeExitRoute(pathname: string) {
   const basePath = normalizeBasePath(pathname);
   return SESSION_CONVERGENCE_SAFE_EXIT_PATHS.some(
     (safeExitPath) => basePath === safeExitPath,
   );
-}
-
-/**
- * ADR-0018 converts only an unresolved local ownership recheck for a
- * server-admitted document. Payload-free erasure exits retain their existing
- * bypass and every route/localization matcher remains untouched.
- */
-export function getSessionOwnershipUncertaintyMode(
-  pathname: string,
-): SessionOwnershipUncertaintyMode {
-  return isSessionConvergenceSafeExitRoute(pathname)
-    ? "preserve_payload_free_exit"
-    : "serve_unresolved";
-}
-
-/**
- * OVE-286 admits only the existing-entry editor whose complete owner-data
- * effect closure already passes OVE-290 generation admission. OVE-291 owns
- * every later expansion, so this matcher intentionally has no prefix mode.
- */
-export function getSessionRecheckMode(pathname: string): SessionRecheckMode {
-  const match = pathname.match(/^\/garden\/entries\/([^/]+)\/edit$/);
-  return match?.[1] && UUID_PATH_SEGMENT.test(match[1])
-    ? "effect_closed_non_fencing"
-    : "compatibility_fenced";
 }
 
 export function sanitizeInterfaceRouteSearch(

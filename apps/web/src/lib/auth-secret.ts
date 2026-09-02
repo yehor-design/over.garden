@@ -1,7 +1,5 @@
 import { randomBytes } from "node:crypto";
 
-import { recordUnresolvedAuthorizationServe } from "./auth/unresolved-authorization";
-
 type EnvLike = Record<string, string | undefined>;
 type GlobalWithLocalAuthSecret = typeof globalThis & {
   overGardenLocalBetterAuthSecret?: string;
@@ -203,7 +201,6 @@ function evaluateAuthSecretConfiguration(
   }
 
   if (isProductionLikeRuntime(env) && !isBuildRuntime(env)) {
-    recordUnresolvedAuthorizationServe("auth_secret", "weak_secret");
     return {
       health: { class: "weak_secret" },
       active: {

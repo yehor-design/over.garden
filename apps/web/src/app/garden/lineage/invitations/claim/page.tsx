@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import {
   buildAuthIntentAnchor,
@@ -207,9 +207,7 @@ function LineageInvitationClaimCard({
       </dl>
 
       <div className="flex flex-wrap gap-3 border-t border-border pt-3">
-        <DocumentMutationActionForm
-          action={confirmLineageInvitationClaimAction}
-        >
+        <OwnerScopedActionForm action={confirmLineageInvitationClaimAction}>
           <button
             id={resumed ? buildAuthIntentAnchor("claim") : undefined}
             data-auth-intent-control="claim"
@@ -219,10 +217,8 @@ function LineageInvitationClaimCard({
           >
             {copy.invitation.confirm}
           </button>
-        </DocumentMutationActionForm>
-        <DocumentMutationActionForm
-          action={declineLineageInvitationClaimAction}
-        >
+        </OwnerScopedActionForm>
+        <OwnerScopedActionForm action={declineLineageInvitationClaimAction}>
           <button
             type="submit"
             className={buttonVariants({
@@ -232,7 +228,7 @@ function LineageInvitationClaimCard({
           >
             {copy.invitation.decline}
           </button>
-        </DocumentMutationActionForm>
+        </OwnerScopedActionForm>
       </div>
     </section>
   );

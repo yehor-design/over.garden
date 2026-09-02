@@ -290,9 +290,7 @@ OVE-290 document-generation media contract:
 
 - Authenticated Vercel production preflight on 2026-08-10 found no `R2_UPLOAD_URL_TTL_SECONDS` override. The source class is therefore `default` and the effective configured value is `900` seconds; no provider or environment mutation was required.
 - Runtime rejects any explicit malformed, non-positive, or non-900 override. Effective presign lifetime is additionally capped at 900 seconds and the remaining signed document-envelope lifetime.
-- `DOCUMENT_MUTATION_ADMISSION_ENABLED` is absent by default and therefore enforcement is enabled. Setting it to the exact value `false` or `0` is the bounded rollback; it is not a permanent relaxed configuration.
-- `/api/document-mutation-admission/readback` exposes only protocol, enforcement class, deployment SHA, and the non-secret TTL source/effective/maximum tuple with `no-store`. It never exposes environment inventory, credentials, cookies, generations, keys, or capability URLs.
-- Production closeout runs `scripts/smoke-document-mutation-admission.ts` in `reject-only` mode against the immutable exact-SHA deployment. Private A1/A2/B session cookies and the A1 document generation are supplied only through process environment, discarded after the run, and never printed or committed. The smoke performs read-only pre/post database counts and no successful product mutation.
+- ADR-0022 (OVE-367) removed document-mutation admission: there is no `DOCUMENT_MUTATION_ADMISSION_ENABLED`, no readback route, and no admission smoke. Sessions are cookie-cached (`session.cookieCache`, 300 s); every mutation compares the rendered owner id and answers `401 session_required` or `409 session_account_changed`.
 - On 2026-08-10, Git-backed deployment `dpl_Di1Mwcbtms8mQjjNxgZL9fr2WcwR` reached `READY` at `over-garden-fwg7ddk6a-yehors-projects-01221e2b.vercel.app` and served feature SHA `da38a2c2b5901426353e8d0a55a91a79b584863f` through the canonical aliases. Immutable and canonical read-back both reported enforcement enabled and the default `900`-second TTL. The exact-SHA reject-only smoke proved owner-change, same-owner session-refresh, and malformed-protocol rejection with zero journal-entry and mutation-receipt effects before and after; all three synthetic sessions were revoked and confirmed guest afterward.
 
 ### Production availability probe (OVE-361)
@@ -565,11 +563,9 @@ Prefetch 503, root cause and repair (2026-09-02):
 - Repaired by the connection pooler above. Verified after the cutover with 258
   authenticated prefetches in bursts up to 64 concurrent: zero failures, and
   zero new entries in the error table over the covering window.
-- Open, and deliberately not changed here: the proxy still reads the database
-  on every speculative prefetch. Survivable now rather than fatal. Removing it
-  needs a Better Auth session cookie cache — the config has no `session` block
-  today — which trades revocation latency against the saved query while
-  `revokeSessionsOnPasswordReset` is on. That is a product decision.
+- Follow-up: the Better Auth session cookie cache is on since OVE-367, so the
+  proxy's session read no longer touches the database. The remaining lifecycle
+  lookups in the proxy move into `use cache` page lookups under OVE-369.
 
 Worker and Meilisearch Droplet:
 

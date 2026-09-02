@@ -2,20 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 
-import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
 import { resolveLineageClaim } from "@/server/lineage-repository";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 const LINEAGE_CLAIMS_PATH = "/garden/lineage/claims";
 
 export async function confirmLineageClaimAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const result = await resolveLineageClaim(scope, {
@@ -27,11 +27,11 @@ export async function confirmLineageClaimAction(formData: FormData) {
 }
 
 export async function declineLineageClaimAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const result = await resolveLineageClaim(scope, {

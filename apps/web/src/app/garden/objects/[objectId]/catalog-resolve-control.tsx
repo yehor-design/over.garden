@@ -3,7 +3,7 @@
 import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import type { PlantObjectKind, VarietyState } from "@/db/schema";
 import {
@@ -143,10 +143,7 @@ export function CatalogResolveControl({
         </p>
       </div>
 
-      <DocumentMutationActionForm
-        action={action}
-        className="grid min-w-0 gap-3"
-      >
+      <OwnerScopedActionForm action={action} className="grid min-w-0 gap-3">
         <input type="hidden" name="objectId" value={objectId} />
         <input
           type="hidden"
@@ -251,7 +248,7 @@ export function CatalogResolveControl({
         >
           {copy.save}
         </button>
-      </DocumentMutationActionForm>
+      </OwnerScopedActionForm>
     </section>
   );
 }

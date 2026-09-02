@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   requireCurrentRequestScope: vi.fn(),
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
   updateUserPublicHandle: vi.fn(),
   updateOwnerPublicProfile: vi.fn(),
   unblockProfileByBlockId: vi.fn(),
@@ -21,9 +21,9 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/server/auth-session", () => ({
   requireCurrentRequestScope: mocks.requireCurrentRequestScope,
 }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationGenerationFromFormData: vi.fn(() => null),
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  ownerUserIdFromFormData: vi.fn(() => null),
 }));
 
 vi.mock("@/server/public-profile-repository", () => ({
@@ -45,7 +45,7 @@ describe("public handle profile actions", () => {
       userId: "00000000-0000-4000-8000-000000000001",
       sessionId: "session-1",
     });
-    mocks.admitDocumentMutation.mockImplementation(async () => ({
+    mocks.resolveMutationScope.mockImplementation(async () => ({
       status: "admitted",
       scope: await mocks.requireCurrentRequestScope(),
     }));

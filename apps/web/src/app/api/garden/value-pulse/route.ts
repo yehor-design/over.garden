@@ -1,9 +1,9 @@
 import { recordFollowUpValuePulseResponse } from "@/server/follow-up-value-pulse";
 import {
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
-} from "@/server/document-mutation-admission";
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export const runtime = "nodejs";
 
@@ -16,12 +16,12 @@ interface ValuePulseRequestBody {
 }
 
 export async function POST(request: Request) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromRequest(request),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromRequest(request),
   });
   if (admission.status === "rejected") {
-    if (admission.transportResult !== "AUTHENTICATION_REQUIRED") {
-      return documentMutationAdmissionResponse(admission);
+    if (admission.code !== "session_required") {
+      return mutationScopeResponse(admission);
     }
     return Response.json(
       { error: "Sign in to save feedback." },

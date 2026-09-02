@@ -6,8 +6,8 @@ const mocks = vi.hoisted(() => ({
   markNotificationEventsRead: vi.fn(),
   setNotificationReceipt: vi.fn(),
   revalidatePath: vi.fn(),
-  admitDocumentMutation: vi.fn(),
-  documentMutationAdmissionResponse: vi.fn(),
+  resolveMutationScope: vi.fn(),
+  mutationScopeResponse: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -15,10 +15,10 @@ vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
   getSessionId: mocks.getSessionId,
 }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationAdmissionResponse: mocks.documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest: vi.fn(() => null),
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  mutationScopeResponse: mocks.mutationScopeResponse,
+  ownerUserIdFromRequest: vi.fn(() => null),
 }));
 vi.mock("@/server/request-scope", () => ({
   scopedToUser: vi.fn((userId: string, sessionId: string) => ({
@@ -44,22 +44,19 @@ describe("notification receipt return paths", () => {
       session: { id: scope.sessionId },
     });
     mocks.getSessionId.mockReturnValue(scope.sessionId);
-    mocks.admitDocumentMutation.mockImplementation(async () => {
+    mocks.resolveMutationScope.mockImplementation(async () => {
       const session = await mocks.getCurrentSession();
       if (!session?.user?.id) {
         return {
           status: "rejected",
-          transportResult: "AUTHENTICATION_REQUIRED",
+          code: "session_required",
           statusCode: 401,
         };
       }
       return { status: "admitted", scope };
     });
-    mocks.documentMutationAdmissionResponse.mockImplementation((admission) =>
-      Response.json(
-        { code: admission.transportResult },
-        { status: admission.statusCode },
-      ),
+    mocks.mutationScopeResponse.mockImplementation((admission) =>
+      Response.json({ code: admission.code }, { status: admission.statusCode }),
     );
   });
 

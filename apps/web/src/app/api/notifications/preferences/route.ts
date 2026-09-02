@@ -1,12 +1,12 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-import {
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
-} from "@/server/document-mutation-admission";
 import { updateNotificationPreferences } from "@/server/social-return-repository";
+import {
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -18,14 +18,14 @@ export async function POST(request: Request) {
         ? "/ru/notifications"
         : "/notifications";
   const returnTo = basePath;
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromRequest(request),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromRequest(request),
   });
   if (admission.status === "rejected") {
-    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+    if (admission.code === "session_required") {
       return NextResponse.redirect(new URL(returnTo, request.url), 303);
     }
-    return documentMutationAdmissionResponse(admission);
+    return mutationScopeResponse(admission);
   }
 
   await updateNotificationPreferences(admission.scope, {

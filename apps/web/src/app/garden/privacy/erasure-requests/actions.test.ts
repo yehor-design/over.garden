@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   requireCurrentRequestScope: vi.fn(),
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
   assertErasureExecutionAccess: vi.fn(),
   assertErasureRequestMutationAccess: vi.fn(),
   executeApprovedErasureRequest: vi.fn(),
@@ -19,9 +19,9 @@ vi.mock("next/cache", () => ({
 vi.mock("@/server/auth-session", () => ({
   requireCurrentRequestScope: mocks.requireCurrentRequestScope,
 }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationGenerationFromFormData: vi.fn(() => null),
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  ownerUserIdFromFormData: vi.fn(() => null),
 }));
 
 vi.mock("@/server/erasure-request-access", () => ({
@@ -46,7 +46,7 @@ describe("erasure request operator actions", () => {
       userId: "00000000-0000-4000-8000-000000000999",
       sessionId: "non-operator-session",
     });
-    mocks.admitDocumentMutation.mockImplementation(async () => ({
+    mocks.resolveMutationScope.mockImplementation(async () => ({
       status: "admitted",
       scope: await mocks.requireCurrentRequestScope(),
     }));

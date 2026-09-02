@@ -3,10 +3,7 @@
 import { useCallback, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  createDocumentMutationRequestHeaders,
-  useOptionalDocumentMutationGeneration,
-} from "@/components/auth/document-mutation-recovery";
+import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
 import {
   FocalPointControl,
   type FocalPointControlCopy,
@@ -47,7 +44,7 @@ export function OwnerMediaFocalPanel({
   disabled = false,
   onSaved,
 }: OwnerMediaFocalPanelProps) {
-  const documentMutation = useOptionalDocumentMutationGeneration();
+  const documentMutation = useOptionalOwnerScope();
   const [focal, setFocal] = useState<MediaFocalPoint>(
     normalizeFocalPoint(initialFocal),
   );
@@ -65,9 +62,7 @@ export function OwnerMediaFocalPanel({
           method: "PATCH",
           headers: {
             "content-type": "application/json",
-            ...createDocumentMutationRequestHeaders(
-              documentMutation?.transport,
-            ),
+            ...(documentMutation?.headers() ?? {}),
           },
           body: JSON.stringify({
             focalX: focal.x,

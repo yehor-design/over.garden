@@ -7,8 +7,8 @@ const mocks = vi.hoisted(() => ({
   setNotificationReceipt: vi.fn(),
   updateNotificationPreferences: vi.fn(),
   revalidatePath: vi.fn(),
-  admitDocumentMutation: vi.fn(),
-  documentMutationAdmissionResponse: vi.fn(),
+  resolveMutationScope: vi.fn(),
+  mutationScopeResponse: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -16,10 +16,10 @@ vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
   getSessionId: mocks.getSessionId,
 }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationAdmissionResponse: mocks.documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest: vi.fn((request: Request) =>
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  mutationScopeResponse: mocks.mutationScopeResponse,
+  ownerUserIdFromRequest: vi.fn((request: Request) =>
     request.headers.get("x-overgarden-document-generation"),
   ),
 }));
@@ -49,22 +49,19 @@ describe("notification mutation routes", () => {
       user: { id: scope.userId },
       session: { id: scope.sessionId },
     });
-    mocks.admitDocumentMutation.mockImplementation(async () => {
+    mocks.resolveMutationScope.mockImplementation(async () => {
       const session = await mocks.getCurrentSession();
       if (!session?.user?.id) {
         return {
           status: "rejected",
-          transportResult: "AUTHENTICATION_REQUIRED",
+          code: "session_required",
           statusCode: 401,
         };
       }
       return { status: "admitted", scope };
     });
-    mocks.documentMutationAdmissionResponse.mockImplementation((admission) =>
-      Response.json(
-        { code: admission.transportResult },
-        { status: admission.statusCode },
-      ),
+    mocks.mutationScopeResponse.mockImplementation((admission) =>
+      Response.json({ code: admission.code }, { status: admission.statusCode }),
     );
   });
 

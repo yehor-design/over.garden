@@ -15,8 +15,8 @@ import { useState } from "react";
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthenticatedUtilityRegion } from "@/components/auth/authenticated-utility-region";
-import { DocumentMutationGenerationProvider } from "@/components/auth/document-mutation-recovery";
-import { SessionConvergenceBoundary } from "@/components/auth/session-convergence-boundary";
+import { OwnerScopeProvider } from "@/components/auth/owner-scope";
+import { SessionSignalBoundary } from "@/components/auth/session-signal-boundary";
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { SignOutProvider } from "@/components/auth/sign-out-provider";
 import { InterfaceLanguageControl } from "@/components/public/language-switcher";
@@ -48,9 +48,7 @@ import {
 } from "@/lib/operator-menu-copy";
 import {
   getInterfaceLanguageControlPlacement,
-  getSessionOwnershipUncertaintyMode,
-  getSessionRecheckMode,
-  isSessionConvergenceSafeExitRoute,
+  isSafeExitRoute,
 } from "@/lib/interface-route-policy";
 import {
   getSiteShellNavigation,
@@ -76,8 +74,7 @@ export function SiteShell({
   locale,
   market,
   isAuthenticated,
-  documentMutationGeneration = null,
-  currentSessionBinding = null,
+  ownerUserId = null,
   hasOperatorAccess = false,
   communitiesReady = false,
 }: {
@@ -85,17 +82,12 @@ export function SiteShell({
   locale: InterfaceLocale;
   market: InterfaceMarket;
   isAuthenticated: boolean;
-  documentMutationGeneration?: string | null;
-  currentSessionBinding?: string | null;
+  ownerUserId?: string | null;
   hasOperatorAccess?: boolean;
   communitiesReady?: boolean;
 }) {
   const pathname = usePathname() || "/";
-  const isSessionConvergenceSafeExit =
-    isSessionConvergenceSafeExitRoute(pathname);
-  const sessionRecheckMode = getSessionRecheckMode(pathname);
-  const sessionOwnershipUncertaintyMode =
-    getSessionOwnershipUncertaintyMode(pathname);
+  const isSessionConvergenceSafeExit = isSafeExitRoute(pathname);
   const [routeContextModules, setRouteContextModules] = useState<
     SiteShellContextRailModule[] | null
   >(null);
@@ -103,39 +95,24 @@ export function SiteShell({
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const languageControlPlacement =
     getInterfaceLanguageControlPlacement(pathname);
-  const sessionConvergenceLocaleControl =
-    market === "bulgaria" ? (
-      <InterfaceLanguageControl
-        locale={locale}
-        market={market}
-        pathname={pathname}
-        compact={languageControlPlacement === "utility"}
-      />
-    ) : undefined;
-
   if (isSessionConvergenceSafeExit) {
     // The native erasure page intentionally contains no garden payload or
     // authenticated navigation. It stays outside the session convergence
     // guard so a failed session recheck cannot trap a person in an account.
     return (
       <SiteShellLocaleProvider locale={locale}>
+        <SessionSignalBoundary locale={locale} ownerUserId={ownerUserId} />
         {isAuthenticated ? (
-          <DocumentMutationGenerationProvider
-            locale={locale}
-            transport={documentMutationGeneration}
-          >
+          <OwnerScopeProvider locale={locale} ownerUserId={ownerUserId}>
             <div
               data-site-shell="safe-exit"
-              data-session-convergence-safe-exit="erasure"
+              data-site-shell-safe-exit="erasure"
             >
               {children}
             </div>
-          </DocumentMutationGenerationProvider>
+          </OwnerScopeProvider>
         ) : (
-          <div
-            data-site-shell="safe-exit"
-            data-session-convergence-safe-exit="erasure"
-          >
+          <div data-site-shell="safe-exit" data-site-shell-safe-exit="erasure">
             {children}
           </div>
         )}
@@ -149,6 +126,7 @@ export function SiteShell({
       (isAuthenticated || market === "bulgaria");
     const excludedShell = (
       <SiteShellLocaleProvider locale={locale}>
+        <SessionSignalBoundary locale={locale} ownerUserId={ownerUserId} />
         <div data-site-shell="excluded">
           {showUtility ? (
             <AuthenticatedUtilityRegion
@@ -168,25 +146,9 @@ export function SiteShell({
     }
 
     return (
-      <SessionConvergenceBoundary
-        locale={locale}
-        localeControlFallback={sessionConvergenceLocaleControl}
-        currentSessionBinding={currentSessionBinding}
-        recheckMode={sessionRecheckMode}
-        ownershipUncertaintyMode={sessionOwnershipUncertaintyMode}
-      >
-        <DocumentMutationGenerationProvider
-          locale={locale}
-          transport={documentMutationGeneration}
-        >
-          <SignOutProvider
-            locale={locale}
-            currentSessionBinding={currentSessionBinding}
-          >
-            {excludedShell}
-          </SignOutProvider>
-        </DocumentMutationGenerationProvider>
-      </SessionConvergenceBoundary>
+      <OwnerScopeProvider locale={locale} ownerUserId={ownerUserId}>
+        <SignOutProvider locale={locale}>{excludedShell}</SignOutProvider>
+      </OwnerScopeProvider>
     );
   }
 
@@ -201,6 +163,7 @@ export function SiteShell({
 
   const shell = (
     <SiteShellLocaleProvider locale={locale}>
+      <SessionSignalBoundary locale={locale} ownerUserId={ownerUserId} />
       <SiteShellContextRailProvider setModules={setRouteContextModules}>
         <TooltipProvider>
           <div
@@ -619,25 +582,9 @@ export function SiteShell({
   }
 
   return (
-    <SessionConvergenceBoundary
-      locale={locale}
-      localeControlFallback={sessionConvergenceLocaleControl}
-      currentSessionBinding={currentSessionBinding}
-      recheckMode={sessionRecheckMode}
-      ownershipUncertaintyMode={sessionOwnershipUncertaintyMode}
-    >
-      <DocumentMutationGenerationProvider
-        locale={locale}
-        transport={documentMutationGeneration}
-      >
-        <SignOutProvider
-          locale={locale}
-          currentSessionBinding={currentSessionBinding}
-        >
-          {shell}
-        </SignOutProvider>
-      </DocumentMutationGenerationProvider>
-    </SessionConvergenceBoundary>
+    <OwnerScopeProvider locale={locale} ownerUserId={ownerUserId}>
+      <SignOutProvider locale={locale}>{shell}</SignOutProvider>
+    </OwnerScopeProvider>
   );
 }
 

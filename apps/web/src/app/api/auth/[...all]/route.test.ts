@@ -8,9 +8,9 @@ const authSignOut = vi.fn();
 const after = vi.hoisted(() => vi.fn());
 const drainAuthEmailOutbox = vi.hoisted(() => vi.fn());
 const bridgeLegacyEmailVerificationRequest = vi.hoisted(() => vi.fn());
-const admitDocumentMutation = vi.hoisted(() => vi.fn());
-const documentMutationAdmissionResponse = vi.hoisted(() => vi.fn());
-const documentMutationGenerationFromRequest = vi.hoisted(() => vi.fn());
+const resolveMutationScope = vi.hoisted(() => vi.fn());
+const mutationScopeResponse = vi.hoisted(() => vi.fn());
+const ownerUserIdFromRequest = vi.hoisted(() => vi.fn());
 
 vi.mock("next/server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/server")>();
@@ -44,10 +44,10 @@ vi.mock("@/server/auth/auth-email-outbox-consumer", () => ({
 vi.mock("@/server/auth/legacy-email-verification-bridge", () => ({
   bridgeLegacyEmailVerificationRequest,
 }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope,
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
 }));
 
 describe("password-reset API boundary", () => {
@@ -61,9 +61,9 @@ describe("password-reset API boundary", () => {
     after.mockReset();
     drainAuthEmailOutbox.mockReset();
     bridgeLegacyEmailVerificationRequest.mockReset();
-    admitDocumentMutation.mockReset();
-    documentMutationAdmissionResponse.mockReset();
-    documentMutationGenerationFromRequest.mockReset();
+    resolveMutationScope.mockReset();
+    mutationScopeResponse.mockReset();
+    ownerUserIdFromRequest.mockReset();
     isTrustedPasswordResetOrigin.mockReturnValue(true);
     parsePasswordResetRequest.mockReturnValue({
       email: "gardener@example.test",
@@ -74,19 +74,15 @@ describe("password-reset API boundary", () => {
     bridgeLegacyEmailVerificationRequest.mockImplementation(
       async (request: Request) => request,
     );
-    admitDocumentMutation.mockResolvedValue({
+    resolveMutationScope.mockResolvedValue({
       status: "admitted",
       scope: { userId: "user-a", sessionId: "session-a" },
     });
-    documentMutationAdmissionResponse.mockImplementation((admission) =>
-      Response.json(
-        { code: admission.transportResult },
-        { status: admission.statusCode },
-      ),
+    mutationScopeResponse.mockImplementation((admission) =>
+      Response.json({ code: admission.code }, { status: admission.statusCode }),
     );
-    documentMutationGenerationFromRequest.mockImplementation(
-      (request: Request) =>
-        request.headers.get("x-overgarden-document-generation"),
+    ownerUserIdFromRequest.mockImplementation((request: Request) =>
+      request.headers.get("x-overgarden-document-generation"),
     );
   });
 
@@ -173,7 +169,7 @@ describe("password-reset API boundary", () => {
     );
     expect(await delegated.text()).toBe("ok");
     expect(handlerPost).toHaveBeenCalledOnce();
-    expect(admitDocumentMutation).not.toHaveBeenCalled();
+    expect(resolveMutationScope).not.toHaveBeenCalled();
   });
 
   it("owns only the exact Better Auth account/session mutation allowlist", async () => {
@@ -221,36 +217,10 @@ describe("password-reset API boundary", () => {
     }
   });
 
-  it("rejects an account mutation before Better Auth observes the request", async () => {
-    admitDocumentMutation.mockResolvedValueOnce({
-      status: "rejected",
-      transportResult: "DOCUMENT_OWNER_CHANGED",
-      statusCode: 409,
-    });
-    const { POST } = await import("./route");
-
-    const response = await POST(
-      new Request("https://over.garden/api/auth/unlink-account", {
-        method: "POST",
-        headers: {
-          "x-overgarden-document-generation": "opaque-generation-a",
-        },
-      }),
-    );
-
-    expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({ code: "DOCUMENT_OWNER_CHANGED" });
-    expect(documentMutationGenerationFromRequest).toHaveBeenCalledOnce();
-    expect(admitDocumentMutation).toHaveBeenCalledWith({
-      transport: "opaque-generation-a",
-    });
-    expect(handlerPost).not.toHaveBeenCalled();
-  });
-
   it("fences native link-social before Better Auth can create provider state", async () => {
-    admitDocumentMutation.mockResolvedValueOnce({
+    resolveMutationScope.mockResolvedValueOnce({
       status: "rejected",
-      transportResult: "DOCUMENT_OWNER_CHANGED",
+      code: "session_account_changed",
       statusCode: 409,
     });
     const { POST } = await import("./route");
@@ -270,7 +240,7 @@ describe("password-reset API boundary", () => {
     );
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({ code: "DOCUMENT_OWNER_CHANGED" });
+    expect(await response.json()).toEqual({ code: "session_account_changed" });
     expect(handlerPost).not.toHaveBeenCalled();
   });
 
@@ -288,66 +258,7 @@ describe("password-reset API boundary", () => {
     );
 
     expect(await response.text()).toBe("updated");
-    expect(admitDocumentMutation).toHaveBeenCalledOnce();
+    expect(resolveMutationScope).toHaveBeenCalledOnce();
     expect(handlerPost).toHaveBeenCalledOnce();
-  });
-
-  it("uses the canonical library expiry even when exact-session deletion fails", async () => {
-    const { SIGN_OUT_ADAPTER_FAILURE_CODE } =
-      await import("@/lib/auth/sign-out-hardening");
-    authSignOut.mockResolvedValueOnce(
-      Response.json(
-        { success: true },
-        {
-          headers: {
-            "set-cookie":
-              "overgarden.session_token=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax",
-          },
-        },
-      ),
-    );
-    handlerPost.mockResolvedValue(
-      Response.json({ code: SIGN_OUT_ADAPTER_FAILURE_CODE }, { status: 500 }),
-    );
-    const { POST } = await import("./route");
-
-    const response = await POST(
-      new Request("https://over.garden/api/auth/sign-out", {
-        method: "POST",
-        headers: {
-          cookie: "overgarden.session_token=signed-a",
-          "x-overgarden-current-session-binding": "A".repeat(43),
-        },
-      }),
-    );
-
-    expect(response.status).toBe(500);
-    expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
-    expect(handlerPost).toHaveBeenCalledOnce();
-    expect(authSignOut).toHaveBeenCalledOnce();
-  });
-
-  it("keeps stale account-A canonical sign-out from mutating account B's cookie", async () => {
-    const { SIGN_OUT_BINDING_FAILURE_CODE } =
-      await import("@/lib/auth/sign-out-hardening");
-    handlerPost.mockResolvedValue(
-      Response.json({ code: SIGN_OUT_BINDING_FAILURE_CODE }, { status: 409 }),
-    );
-    const { POST } = await import("./route");
-
-    const response = await POST(
-      new Request("https://over.garden/api/auth/sign-out", {
-        method: "POST",
-        headers: {
-          cookie: "overgarden.session_token=signed-b",
-          "x-overgarden-current-session-binding": "A".repeat(43),
-        },
-      }),
-    );
-
-    expect(response.status).toBe(409);
-    expect(response.headers.get("set-cookie")).toBeNull();
-    expect(handlerPost).toHaveBeenCalledOnce();
-    expect(authSignOut).not.toHaveBeenCalled();
   });
 });

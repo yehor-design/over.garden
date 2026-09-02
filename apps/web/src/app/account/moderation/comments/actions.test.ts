@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
   moderateEngagementCommentReport: vi.fn(),
   resolveAdminCapabilityAccessBounded: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationGenerationFromFormData: vi.fn(() => null),
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  ownerUserIdFromFormData: vi.fn(() => null),
 }));
 vi.mock("@/server/engagement-repository", () => ({
   moderateEngagementCommentReport: mocks.moderateEngagementCommentReport,
@@ -28,7 +28,7 @@ const scope = {
 describe("account comment moderation action", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.admitDocumentMutation.mockResolvedValue({
+    mocks.resolveMutationScope.mockResolvedValue({
       status: "admitted",
       scope,
     });

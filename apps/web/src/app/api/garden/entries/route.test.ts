@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => ({
   recordAnalyticsEventSafely: vi.fn(),
   recordEntryLoggedEventSafely: vi.fn(),
   isBackdatedEntryDate: vi.fn(),
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
   claimEphemeralPublicationMedia: vi.fn(),
   finalizeEphemeralPublicationMedia: vi.fn(),
 }));
@@ -59,16 +59,13 @@ vi.mock("@/server/analytics-events", () => ({
   recordEntryLoggedEventSafely: mocks.recordEntryLoggedEventSafely,
 }));
 
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationGenerationFromRequest: (request: Request) =>
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  ownerUserIdFromRequest: (request: Request) =>
     request.headers.get("x-overgarden-document-generation"),
-  documentMutationAdmissionResponse: (admission: {
-    transportResult: string;
-    statusCode: number;
-  }) =>
+  mutationScopeResponse: (admission: { code: string; statusCode: number }) =>
     Response.json(
-      { code: admission.transportResult },
+      { code: admission.code },
       {
         status: admission.statusCode,
         headers: { "Cache-Control": "private, no-store" },
@@ -81,10 +78,9 @@ describe("POST /api/garden/entries atomic create", () => {
     vi.resetModules();
     vi.clearAllMocks();
     mocks.isBackdatedEntryDate.mockReturnValue(false);
-    mocks.admitDocumentMutation.mockResolvedValue({
+    mocks.resolveMutationScope.mockResolvedValue({
       status: "admitted",
       internalResult: "MATCH",
-      transportResult: "MATCH",
       envelopeExpiresAtSeconds: 1_786_381_200,
       scope: { userId: OWNER_ID, sessionId: "session-1" },
     });
@@ -96,31 +92,6 @@ describe("POST /api/garden/entries atomic create", () => {
     });
     mocks.readCommittedAtomicJournalCreate.mockResolvedValue(null);
     mocks.finalizeEphemeralPublicationMedia.mockResolvedValue(undefined);
-  });
-
-  it("authenticates before parsing or reflecting private authoring input", async () => {
-    mocks.admitDocumentMutation.mockResolvedValueOnce({
-      status: "rejected",
-      internalResult: "SIGNED_OUT",
-      transportResult: "AUTHENTICATION_REQUIRED",
-      statusCode: 401,
-    });
-    const { POST } = await import("./route");
-    const response = await POST(
-      atomicJsonRequest({
-        title: "Private title",
-        document: { privateText: "42.0,23.0" },
-      }),
-    );
-
-    expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toEqual({
-      code: "AUTHENTICATION_REQUIRED",
-    });
-    expect(JSON.stringify(mocks.admitDocumentMutation.mock.calls)).not.toMatch(
-      /Private title|42\.0/i,
-    );
-    expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
   });
 
   it("refuses an authenticated pre-cutover client before reading its body", async () => {

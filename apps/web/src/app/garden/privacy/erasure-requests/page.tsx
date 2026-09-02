@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import {
   ERASURE_REQUEST_HANDLED_STATUS_OPTIONS,
@@ -226,7 +226,7 @@ function ErasureRequestCard({
       ) : null}
 
       {canMutate && request.status === "submitted" ? (
-        <DocumentMutationActionForm action={markErasureRequestReviewingAction}>
+        <OwnerScopedActionForm action={markErasureRequestReviewingAction}>
           <input type="hidden" name="requestId" value={request.id} />
           <button
             type="submit"
@@ -237,7 +237,7 @@ function ErasureRequestCard({
           >
             {copy.startReview}
           </button>
-        </DocumentMutationActionForm>
+        </OwnerScopedActionForm>
       ) : null}
       {canMutate &&
       (request.status === "submitted" || request.status === "reviewing") ? (
@@ -280,7 +280,7 @@ function ApprovedErasureExecutionPanel({
           {copy.executionDescription}
         </p>
       </div>
-      <DocumentMutationActionForm
+      <OwnerScopedActionForm
         action={executeApprovedErasureRequestAction}
         className="grid gap-2 sm:max-w-xl"
       >
@@ -314,7 +314,7 @@ function ApprovedErasureExecutionPanel({
             {copy.reviewBeforeExecution}
           </p>
         ) : null}
-      </DocumentMutationActionForm>
+      </OwnerScopedActionForm>
     </section>
   );
 }
@@ -334,7 +334,7 @@ function NonDestructiveOutcomeForm({
   );
 
   return (
-    <DocumentMutationActionForm
+    <OwnerScopedActionForm
       action={markErasureRequestHandledAction}
       className="grid gap-2 border-t border-border pt-3 sm:max-w-md"
     >
@@ -360,7 +360,7 @@ function NonDestructiveOutcomeForm({
       >
         {copy.markHandled}
       </button>
-    </DocumentMutationActionForm>
+    </OwnerScopedActionForm>
   );
 }
 
@@ -433,9 +433,7 @@ function DryRunPreviewPanel({
 
       {canMutate &&
       (request.status === "submitted" || request.status === "reviewing") ? (
-        <DocumentMutationActionForm
-          action={markErasureRequestDryRunReviewedAction}
-        >
+        <OwnerScopedActionForm action={markErasureRequestDryRunReviewedAction}>
           <input type="hidden" name="requestId" value={request.id} />
           <button
             type="submit"
@@ -448,7 +446,7 @@ function DryRunPreviewPanel({
               ? copy.recordReviewAgain
               : copy.markReviewed}
           </button>
-        </DocumentMutationActionForm>
+        </OwnerScopedActionForm>
       ) : null}
     </section>
   );

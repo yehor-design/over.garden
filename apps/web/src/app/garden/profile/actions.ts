@@ -5,39 +5,36 @@ import { redirect } from "next/navigation";
 
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import { PUBLIC_LOCALES } from "@/lib/public-localization";
-import type { DocumentMutationAdmissionTransportResultV1 } from "@/lib/auth/document-mutation-generation-transport";
-import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
+import type { MutationScopeCode } from "@/lib/auth/owner-scope-contract";
 import { updateOwnerPublicProfile } from "@/server/owner-profile-repository";
 import { unblockProfileByBlockId } from "@/server/profile-interaction-repository";
 import {
   updateUserPublicHandle,
   type PublicHandleUpdateStatus,
 } from "@/server/public-profile-repository";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export interface PublicHandleActionState {
   status: PublicHandleUpdateStatus | null;
   currentHandle: string;
   nextEligibleAt: string | null;
-  documentMutationAdmission?: Exclude<
-    DocumentMutationAdmissionTransportResultV1,
-    "MATCH"
-  >;
+  mutationScope?: MutationScopeCode;
 }
 
 export async function updatePublicHandleAction(
   _previousState: PublicHandleActionState,
   formData: FormData,
 ): Promise<PublicHandleActionState> {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
     return {
       ..._previousState,
-      documentMutationAdmission: admission.transportResult,
+      mutationScope: admission.code,
     };
   }
   const scope = admission.scope;
@@ -67,11 +64,11 @@ function finiteIsoDate(value: Date | string | null): string | null {
 }
 
 export async function updatePublicProfileAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const result = await updateOwnerPublicProfile(scope, {
@@ -94,11 +91,11 @@ export async function updatePublicProfileAction(formData: FormData) {
 }
 
 export async function unblockProfileAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const blockId = String(formData.get("blockId") ?? "");

@@ -37,9 +37,7 @@ describe("BrowserEphemeralMediaStager", () => {
   it("reserves with JSON and sends the WebP bytes directly to the Worker origin", async () => {
     const fetcher = vi
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(
-        Response.json(reservationFixture()),
-      )
+      .mockResolvedValueOnce(Response.json(reservationFixture()))
       .mockResolvedValueOnce(
         Response.json(
           {
@@ -51,7 +49,6 @@ describe("BrowserEphemeralMediaStager", () => {
         ),
       );
     const stager = new BrowserEphemeralMediaStager({
-      documentMutationGeneration: "signed-generation",
       fetcher,
     });
     const blob = new Blob([new Uint8Array([82, 73, 70, 70])], {
@@ -82,7 +79,6 @@ describe("BrowserEphemeralMediaStager", () => {
         redirect: "error",
         headers: expect.objectContaining({
           "content-type": "application/json",
-          "x-overgarden-document-generation": "signed-generation",
         }),
       }),
     );
@@ -107,7 +103,6 @@ describe("BrowserEphemeralMediaStager", () => {
       .fn<typeof fetch>()
       .mockResolvedValue(Response.json({ status: "deleted" }));
     const stager = new BrowserEphemeralMediaStager({
-      documentMutationGeneration: "signed-generation",
       fetcher,
     });
 
@@ -137,7 +132,6 @@ describe("BrowserEphemeralMediaStager", () => {
       ),
     );
     const stager = new BrowserEphemeralMediaStager({
-      documentMutationGeneration: "signed-generation",
       fetcher,
     });
 
@@ -168,7 +162,6 @@ describe("BrowserEphemeralMediaStager", () => {
         }),
     ) as unknown as typeof fetch;
     const stager = new BrowserEphemeralMediaStager({
-      documentMutationGeneration: "signed-generation",
       fetcher,
       uploadDeadlineMs: 5,
     });
@@ -205,7 +198,6 @@ describe("BrowserEphemeralMediaStager", () => {
         }),
     ) as unknown as typeof fetch;
     const stager = new BrowserEphemeralMediaStager({
-      documentMutationGeneration: "signed-generation",
       fetcher,
       controlDeadlineMs: 5,
     });

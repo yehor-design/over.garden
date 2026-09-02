@@ -36,23 +36,20 @@ vi.mock("@/components/site-shell/site-shell", () => ({
     locale,
     market,
     isAuthenticated,
-    documentMutationGeneration,
-    currentSessionBinding,
+    ownerUserId,
   }: {
     children: React.ReactNode;
     locale: string;
     market: string;
     isAuthenticated: boolean;
-    documentMutationGeneration: string | null;
-    currentSessionBinding: string | null;
+    ownerUserId: string | null;
   }) => (
     <div
       data-testid="site-shell"
       data-locale={locale}
       data-market={market}
       data-authenticated={String(isAuthenticated)}
-      data-document-generation={documentMutationGeneration ?? "none"}
-      data-current-session-binding={currentSessionBinding ?? "none"}
+      data-owner={ownerUserId ?? "none"}
     >
       {children}
     </div>
@@ -98,8 +95,7 @@ describe("root document locale", () => {
     });
     mocks.getSiteShellSessionState.mockResolvedValue({
       isAuthenticated: true,
-      documentMutationGeneration: "opaque-document-generation",
-      currentSessionBinding: "opaque-current-session-binding",
+      ownerUserId: "private-user-id",
     });
     mocks.hasReadyCommunityNavigation.mockResolvedValue(true);
     const { default: RootLayout } = await import("./layout");
@@ -117,12 +113,8 @@ describe("root document locale", () => {
     expect(html).toContain('data-locale="ru"');
     expect(html).toContain('data-market="bulgaria"');
     expect(html).toContain('data-authenticated="true"');
-    expect(html).toContain(
-      'data-document-generation="opaque-document-generation"',
-    );
-    expect(html).toContain(
-      'data-current-session-binding="opaque-current-session-binding"',
-    );
+    expect(html).toContain('data-owner="private-user-id"');
+    expect(html).toContain('data-owner-user-id="private-user-id"');
     expect(mocks.getSiteShellSessionState).toHaveBeenCalledTimes(1);
     expect(mocks.hasReadyCommunityNavigation).toHaveBeenCalledTimes(1);
   });

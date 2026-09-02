@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { GardenAuthPanel } from "@/app/garden/garden-auth-panel";
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import type { OperatorCopy } from "@/lib/operator-copy";
 import {
@@ -117,7 +117,7 @@ export default async function CommunityModerationPage({
             )}
           </p>
         </div>
-        <DocumentMutationActionForm action={setCommunityParticipationAction}>
+        <OwnerScopedActionForm action={setCommunityParticipationAction}>
           <ModeratorFields slug={slug} reason="rule_violation" />
           <input
             type="hidden"
@@ -133,7 +133,7 @@ export default async function CommunityModerationPage({
               ? copy.community.closeParticipation
               : copy.community.openParticipation}
           </button>
-        </DocumentMutationActionForm>
+        </OwnerScopedActionForm>
       </section>
 
       <section
@@ -299,7 +299,7 @@ function ModerationForm({
   label: string;
 }) {
   return (
-    <DocumentMutationActionForm action={action}>
+    <OwnerScopedActionForm action={action}>
       <ModeratorFields slug={slug} reason={item.reportReason} />
       <input type="hidden" name="reportId" value={item.reportId} />
       <input type="hidden" name="contributionId" value={item.contributionId} />
@@ -308,7 +308,7 @@ function ModerationForm({
       <button className={buttonVariants({ variant: "outline", size: "sm" })}>
         {label}
       </button>
-    </DocumentMutationActionForm>
+    </OwnerScopedActionForm>
   );
 }
 

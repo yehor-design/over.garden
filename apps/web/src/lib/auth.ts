@@ -16,7 +16,6 @@ import {
   createRetiredSharedIdentityDatabaseHooks,
   isRetiredSharedIdentityEmailSignIn,
 } from "@/lib/auth/retired-shared-identity";
-import { hardenCurrentSessionSignOut } from "@/lib/auth/sign-out-hardening";
 import { socialAccountPolicy } from "@/lib/auth/social-account-policy";
 import {
   sendAuthVerificationEmail,
@@ -46,6 +45,11 @@ export const auth = betterAuth({
     db,
     type: "postgres",
     casing: "snake",
+  },
+  session: {
+    // One database read per five minutes per browser; every workspace
+    // document and mutation reads the signed cookie instead (ADR-0022, D6).
+    cookieCache: { enabled: true, maxAge: 300 },
   },
   emailAndPassword: {
     enabled: true,
@@ -80,8 +84,6 @@ export const auth = betterAuth({
           message: "Invalid email or password",
         });
       }
-
-      await hardenCurrentSessionSignOut(context);
     }),
   },
   databaseHooks: createRetiredSharedIdentityDatabaseHooks(async (userId) => {

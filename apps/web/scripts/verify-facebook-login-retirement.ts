@@ -72,7 +72,6 @@ const RECEIPT_SOURCE_PATHS = [
   "src/app/garden/account-methods-panel.test.tsx",
   "src/app/garden/page.tsx",
   "src/app/garden/profile/page.tsx",
-  "src/components/auth/blocked-session-account-methods.tsx",
   "src/server/auth/account-methods.ts",
   "scripts/smoke-account-sign-out.ts",
   "scripts/smoke-public-identity.ts",

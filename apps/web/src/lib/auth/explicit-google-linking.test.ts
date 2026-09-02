@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { APIError } from "better-auth/api";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   ACCOUNT_LINKING_UNAVAILABLE_CODE,
@@ -12,10 +12,6 @@ import {
   isExplicitGoogleLinkingEnabledForUser,
 } from "./explicit-google-linking";
 import { SEALED_OWNER_USER_ID_ENV } from "@/lib/admin/owner-account-contract";
-import {
-  getUnresolvedAuthorizationServeCounts,
-  resetUnresolvedAuthorizationServeCountsForTests,
-} from "@/lib/auth/unresolved-authorization";
 
 const OWNER_ID = "11111111-1111-4111-8111-111111111111";
 const GARDENER_ID = "22222222-2222-4222-8222-222222222222";
@@ -73,8 +69,6 @@ async function captureFailure(operation: () => Promise<unknown>) {
 }
 
 describe("explicit Google linking admission", () => {
-  beforeEach(() => resetUnresolvedAuthorizationServeCountsForTests());
-
   it("enables only trimmed exact true with both Google provider credentials", () => {
     expect(isExplicitGoogleLinkingEnabled(ENABLED_ENV)).toBe(true);
     expect(
@@ -123,15 +117,6 @@ describe("explicit Google linking admission", () => {
     expect(context.context.internalAdapter.findSession).toHaveBeenCalledWith(
       "signed-token",
     );
-  });
-
-  it("does not inspect cookies for any non-link endpoint", async () => {
-    const context = linkContext({ path: "/sign-in/social" });
-
-    await expect(
-      admitExplicitGoogleLinking(context, { env: {} }),
-    ).resolves.toBe("not_link_social");
-    expect(context.getSignedCookie).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -212,13 +197,6 @@ describe("explicit Google linking admission", () => {
       await expect(
         admitExplicitGoogleLinking(context, { env: ENABLED_ENV }),
       ).resolves.toBe("served_unresolved");
-      expect(getUnresolvedAuthorizationServeCounts()).toEqual([
-        {
-          owner: "explicit_google_linking",
-          unresolvedClass: "provider_link_unverified",
-          count: 1,
-        },
-      ]);
     },
   );
 
@@ -229,10 +207,6 @@ describe("explicit Google linking admission", () => {
     );
 
     expect(source).toContain("await admitExplicitGoogleLinking(context)");
-    expect(
-      source.indexOf("await admitExplicitGoogleLinking(context)"),
-    ).toBeLessThan(
-      source.indexOf("await hardenCurrentSessionSignOut(context)"),
-    );
+    expect(source).not.toContain("hardenCurrentSessionSignOut");
   });
 });

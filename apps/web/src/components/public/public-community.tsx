@@ -16,7 +16,7 @@ import {
 } from "@/app/[locale]/communities/[slug]/actions";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import {
   SubjectAwareHtmlImage,
   SubjectAwareMediaImage,
@@ -501,7 +501,7 @@ function CommunityMembershipAction({
     );
   }
   return (
-    <DocumentMutationActionForm action={setCommunityMembershipAction}>
+    <OwnerScopedActionForm action={setCommunityMembershipAction}>
       <CommunityActionFields locale={locale} slug={community.slug} />
       <input
         type="hidden"
@@ -523,7 +523,7 @@ function CommunityMembershipAction({
         <UsersRound aria-hidden="true" />
         {active ? copy.leave : copy.follow}
       </button>
-    </DocumentMutationActionForm>
+    </OwnerScopedActionForm>
   );
 }
 
@@ -549,7 +549,7 @@ function CommunityContributionForm({
         </p>
       </div>
       {community.viewer.eligibleJournals.length > 0 ? (
-        <DocumentMutationActionForm
+        <OwnerScopedActionForm
           action={contributeJournalToCommunityAction}
           className="grid gap-3 sm:flex sm:items-end"
         >
@@ -569,7 +569,7 @@ function CommunityContributionForm({
             </select>
           </label>
           <button className={buttonVariants()}>{copy.contribute}</button>
-        </DocumentMutationActionForm>
+        </OwnerScopedActionForm>
       ) : (
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-muted-foreground">
@@ -771,7 +771,7 @@ function CommunitySafetyActions({
           >
             {copy.report}
           </summary>
-          <DocumentMutationActionForm
+          <OwnerScopedActionForm
             action={reportCommunityContributionAction}
             className="absolute left-0 z-20 mt-1 grid w-72 gap-3 rounded-md border border-border bg-popover p-3 shadow-md"
           >
@@ -793,12 +793,10 @@ function CommunitySafetyActions({
             <button className={buttonVariants({ size: "sm" })}>
               {copy.sendReport}
             </button>
-          </DocumentMutationActionForm>
+          </OwnerScopedActionForm>
         </details>
       )}
-      <DocumentMutationActionForm
-        action={blockCommunityContributionAuthorAction}
-      >
+      <OwnerScopedActionForm action={blockCommunityContributionAuthorAction}>
         <CommunityActionFields locale={locale} slug={community.slug} />
         <input type="hidden" name="contributionId" value={item.id} />
         <button
@@ -813,7 +811,7 @@ function CommunitySafetyActions({
         >
           {copy.block}
         </button>
-      </DocumentMutationActionForm>
+      </OwnerScopedActionForm>
     </>
   );
 }

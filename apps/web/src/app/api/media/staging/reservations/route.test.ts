@@ -1,24 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const admission = vi.hoisted(() => ({
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
 }));
 const capability = vi.hoisted(() => ({
   issueEphemeralStagingCapability: vi.fn(),
 }));
 
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: admission.admitDocumentMutation,
-  documentMutationGenerationFromRequest: (request: Request) =>
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: admission.resolveMutationScope,
+  ownerUserIdFromRequest: (request: Request) =>
     request.headers.get("x-overgarden-document-generation"),
-  documentMutationAdmissionResponse: (result: {
-    statusCode: number;
-    transportResult: string;
-  }) =>
-    Response.json(
-      { code: result.transportResult },
-      { status: result.statusCode },
-    ),
+  mutationScopeResponse: (result: { statusCode: number; code: string }) =>
+    Response.json({ code: result.code }, { status: result.statusCode }),
 }));
 vi.mock("@/server/media/ephemeral-staging-capability", () => ({
   issueEphemeralStagingCapability: capability.issueEphemeralStagingCapability,
@@ -50,7 +44,7 @@ const VALID_BODY = {
 describe("POST /api/media/staging/reservations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    admission.admitDocumentMutation.mockResolvedValue({
+    admission.resolveMutationScope.mockResolvedValue({
       status: "admitted",
       scope: {
         userId: "00000000-0000-4000-8000-000000000001",
@@ -69,10 +63,10 @@ describe("POST /api/media/staging/reservations", () => {
   });
 
   it("authenticates before reading private JSON and returns no-store JSON only", async () => {
-    admission.admitDocumentMutation.mockResolvedValueOnce({
+    admission.resolveMutationScope.mockResolvedValueOnce({
       status: "rejected",
       statusCode: 401,
-      transportResult: "AUTHENTICATION_REQUIRED",
+      code: "session_required",
     });
     let reads = 0;
     const request = new Request(

@@ -58,7 +58,7 @@ import {
   resolvePlantObjectCatalogAction,
   updatePlantObjectLocationAction,
 } from "./actions";
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { CatalogResolveControl } from "./catalog-resolve-control";
 import { FollowUpEntryComposer } from "./follow-up-entry-composer";
 import { FollowUpValuePulse } from "./follow-up-value-pulse";
@@ -362,7 +362,7 @@ function OwnerEntryActions({
         >
           {actionCopy.openPage}
         </Link>
-        <DocumentMutationActionForm
+        <OwnerScopedActionForm
           action={deleteJournalEntryAction}
           className="flex w-full flex-col gap-3 pt-1"
         >
@@ -387,7 +387,7 @@ function OwnerEntryActions({
           >
             {actionCopy.deleteButton}
           </button>
-        </DocumentMutationActionForm>
+        </OwnerScopedActionForm>
       </div>
     );
   }
@@ -427,7 +427,7 @@ function ProvenanceSection({
       {writeEnabled ? (
         <div className="grid min-w-0 gap-4 xl:grid-cols-3">
           {provenancePanel.sourceObjectOptions.length > 0 ? (
-            <DocumentMutationActionForm
+            <OwnerScopedActionForm
               action={createProvenanceEdgeAction}
               className="grid min-w-0 gap-3 rounded-md border border-border p-3"
             >
@@ -458,14 +458,14 @@ function ProvenanceSection({
               >
                 {provenanceCopy.recordObjectSource}
               </button>
-            </DocumentMutationActionForm>
+            </OwnerScopedActionForm>
           ) : (
             <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
               {provenanceCopy.noSourceObject}
             </p>
           )}
 
-          <DocumentMutationActionForm
+          <OwnerScopedActionForm
             action={createProvenanceEdgeAction}
             className="grid min-w-0 gap-3 rounded-md border border-border p-3"
           >
@@ -520,9 +520,9 @@ function ProvenanceSection({
             >
               {provenanceCopy.recordPrivateSource}
             </button>
-          </DocumentMutationActionForm>
+          </OwnerScopedActionForm>
 
-          <DocumentMutationActionForm
+          <OwnerScopedActionForm
             action={createLineageInvitationAction}
             className="grid min-w-0 gap-3 rounded-md border border-border p-3"
           >
@@ -551,7 +551,7 @@ function ProvenanceSection({
             >
               {provenanceCopy.createInvite}
             </button>
-          </DocumentMutationActionForm>
+          </OwnerScopedActionForm>
         </div>
       ) : null}
 

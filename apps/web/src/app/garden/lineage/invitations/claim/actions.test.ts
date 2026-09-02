@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   unsealLineageClaimToken: vi.fn(),
   createAuthIntentToken: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
   resolveLineageInvitationClaim: vi.fn(async () => ({
     edge: {
       subject_plant_object_id: "00000000-0000-4000-8000-000000000101",
@@ -23,9 +23,9 @@ vi.mock("next/cache", () => ({
 }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationGenerationFromFormData: vi.fn((formData: FormData) =>
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  ownerUserIdFromFormData: vi.fn((formData: FormData) =>
     formData.get("__overgardenDocumentGeneration"),
   ),
 }));
@@ -55,7 +55,7 @@ describe("/garden/lineage/invitations/claim actions", () => {
     );
     mocks.createAuthIntentToken.mockReturnValue("opaque-claim-intent");
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
-    mocks.admitDocumentMutation.mockResolvedValue({
+    mocks.resolveMutationScope.mockResolvedValue({
       status: "admitted",
       scope: {
         userId: "00000000-0000-4000-8000-000000000777",
@@ -76,7 +76,7 @@ describe("/garden/lineage/invitations/claim actions", () => {
       "NEXT_REDIRECT:/garden/lineage/claims?invitation=confirmed",
     );
 
-    expect(mocks.admitDocumentMutation).toHaveBeenCalledOnce();
+    expect(mocks.resolveMutationScope).toHaveBeenCalledOnce();
     expect(mocks.resolveLineageInvitationClaim).toHaveBeenCalledWith(
       {
         userId: "00000000-0000-4000-8000-000000000777",
@@ -129,9 +129,9 @@ describe("/garden/lineage/invitations/claim actions", () => {
   });
 
   it("resumes the claim after admission reports that authentication is required", async () => {
-    mocks.admitDocumentMutation.mockResolvedValueOnce({
+    mocks.resolveMutationScope.mockResolvedValueOnce({
       status: "rejected",
-      transportResult: "AUTHENTICATION_REQUIRED",
+      code: "session_required",
     });
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
@@ -152,7 +152,7 @@ describe("/garden/lineage/invitations/claim actions", () => {
 
   it("does not misclassify an operational admission failure as authentication", async () => {
     const failure = new Error("session store unavailable");
-    mocks.admitDocumentMutation.mockRejectedValueOnce(failure);
+    mocks.resolveMutationScope.mockRejectedValueOnce(failure);
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
     await expect(

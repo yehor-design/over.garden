@@ -7,14 +7,14 @@ import { publicLineageObjectPath } from "@/lib/garden/public-paths";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { createAuthIntentToken } from "@/server/auth-intent-token";
 import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
-import {
   askLineageQuestion,
   followLineageNode,
 } from "@/server/lineage-interactions-repository";
 import { isInteractionAdmissionError } from "@/server/interaction-admission";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 const LINEAGE_UPDATES_PATH = "/garden/lineage/questions";
 
@@ -22,18 +22,18 @@ export async function followLineageNodeAction(formData: FormData) {
   const edgeId = String(formData.get("edgeId") ?? "");
   const targetPlantObjectId = String(formData.get("targetPlantObjectId") ?? "");
   const rootPlantObjectId = String(formData.get("rootPlantObjectId") ?? "");
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+    if (admission.code === "session_required") {
       redirectToFollowAuthIntent({
         edgeId,
         targetPlantObjectId,
         rootPlantObjectId,
       });
     }
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
 
@@ -46,11 +46,11 @@ export async function followLineageNodeAction(formData: FormData) {
 }
 
 export async function askLineageQuestionAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const rootPlantObjectId = String(formData.get("rootPlantObjectId") ?? "");

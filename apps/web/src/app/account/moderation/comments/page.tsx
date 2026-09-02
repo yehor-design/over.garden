@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { moderateCommentReportAction } from "@/app/account/moderation/comments/actions";
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import { getOperatorCopy } from "@/lib/operator-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
@@ -64,7 +64,7 @@ export default async function CommentModerationPage() {
               </p>
               <div className="flex flex-wrap gap-2">
                 {(["review", "dismiss", "remove"] as const).map((action) => (
-                  <DocumentMutationActionForm
+                  <OwnerScopedActionForm
                     key={action}
                     action={moderateCommentReportAction}
                   >
@@ -82,7 +82,7 @@ export default async function CommentModerationPage() {
                     >
                       {action}
                     </button>
-                  </DocumentMutationActionForm>
+                  </OwnerScopedActionForm>
                 ))}
               </div>
             </li>

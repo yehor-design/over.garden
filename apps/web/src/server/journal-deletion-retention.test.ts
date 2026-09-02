@@ -27,8 +27,8 @@ const JOURNAL_DELETE_ACTION_DURATION_BUDGET_MS = 500;
 const PROVIDER_STALL_MS = 3_000;
 
 const mocks = vi.hoisted(() => ({
-  admitDocumentMutation: vi.fn(),
-  documentMutationGenerationFromFormData: vi.fn(),
+  resolveMutationScope: vi.fn(),
+  ownerUserIdFromFormData: vi.fn(),
   deleteJournalEntry: vi.fn(),
   resolvePlantObjectCatalog: vi.fn(),
   updatePlantObjectLocation: vi.fn(),
@@ -39,10 +39,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationGenerationFromFormData:
-    mocks.documentMutationGenerationFromFormData,
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  ownerUserIdFromFormData: mocks.ownerUserIdFromFormData,
 }));
 
 vi.mock("@/server/journal-repository", () => ({
@@ -61,9 +60,7 @@ const ENTRY_ID = "00000000-0000-4000-8000-0000000000c1";
 const DELETED_AT = new Date("2026-07-08T16:00:00.000Z");
 const PURGE_AFTER = new Date("2026-07-15T16:00:00.000Z");
 
-function deleteFormData(
-  overrides: Record<string, string> = {},
-): FormData {
+function deleteFormData(overrides: Record<string, string> = {}): FormData {
   const form = new FormData();
   form.set("entryId", ENTRY_ID);
   form.set("objectId", "object-1");
@@ -101,8 +98,8 @@ async function loadAction() {
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
-  mocks.admitDocumentMutation.mockResolvedValue(acceptedAdmission());
-  mocks.documentMutationGenerationFromFormData.mockReturnValue(null);
+  mocks.resolveMutationScope.mockResolvedValue(acceptedAdmission());
+  mocks.ownerUserIdFromFormData.mockReturnValue(null);
   mocks.deleteJournalEntry.mockResolvedValue(committedReceipt());
 });
 
@@ -172,15 +169,15 @@ describe("OVE-353 owner safety and localized control", () => {
   });
 
   it("mutates nothing when admission is rejected", async () => {
-    mocks.admitDocumentMutation.mockResolvedValue({
+    mocks.resolveMutationScope.mockResolvedValue({
       status: "rejected",
-      transportResult: "AUTHENTICATION_REQUIRED",
+      code: "session_required",
     });
     const action = await loadAction();
     const receipt = await action(deleteFormData());
 
     expect(receipt).toEqual({
-      documentMutationAdmission: "AUTHENTICATION_REQUIRED",
+      mutationScope: "session_required",
     });
     expect(mocks.deleteJournalEntry).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
@@ -196,7 +193,6 @@ describe("OVE-353 owner safety and localized control", () => {
       expect(copy).not.toHaveProperty("restoreButton");
     },
   );
-
 });
 
 describe("OVE-353 replay, crash, performance, and no-wedge proof", () => {
@@ -224,10 +220,7 @@ describe("OVE-353 replay, crash, performance, and no-wedge proof", () => {
     const providerStall = new Promise<void>((resolve) => {
       releaseProvider = resolve;
     });
-    const stallTimer = setTimeout(
-      () => releaseProvider?.(),
-      PROVIDER_STALL_MS,
-    );
+    const stallTimer = setTimeout(() => releaseProvider?.(), PROVIDER_STALL_MS);
 
     mocks.deleteJournalEntry.mockImplementation(async () => {
       void providerStall;

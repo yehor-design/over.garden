@@ -2,10 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 
-import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
 import { executeApprovedErasureRequest } from "@/server/erasure-execution";
 import {
   assertErasureExecutionAccess,
@@ -16,15 +12,20 @@ import {
   markErasureRequestHandled,
   markErasureRequestReviewing,
 } from "@/server/erasure-request-repository";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 const ERASURE_REQUESTS_PATH = "/garden/privacy/erasure-requests";
 
 export async function markErasureRequestReviewingAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
+    authoritative: true,
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   await assertErasureRequestMutationAccess(scope);
@@ -38,11 +39,12 @@ export async function markErasureRequestReviewingAction(formData: FormData) {
 }
 
 export async function markErasureRequestHandledAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
+    authoritative: true,
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   await assertErasureRequestMutationAccess(scope);
@@ -64,11 +66,12 @@ export async function markErasureRequestHandledAction(formData: FormData) {
 }
 
 export async function executeApprovedErasureRequestAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
+    authoritative: true,
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   await assertErasureExecutionAccess(scope);
@@ -86,11 +89,12 @@ export async function executeApprovedErasureRequestAction(formData: FormData) {
 export async function markErasureRequestDryRunReviewedAction(
   formData: FormData,
 ) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
+    authoritative: true,
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   await assertErasureRequestMutationAccess(scope);

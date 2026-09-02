@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
-import { useOptionalDocumentMutationGeneration } from "@/components/auth/document-mutation-recovery";
+import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
 import {
   JournalCoverControls,
   type JournalCoverSelectionState,
@@ -67,7 +67,7 @@ export function SpaceEntryComposer({
   const atomicCopy = getAtomicJournalCreateCopy(locale);
   const labels = getStructuredJournalComposerLabels(locale);
   const coverCopy = getJournalCoverControlsCopy(locale);
-  const documentMutation = useOptionalDocumentMutationGeneration();
+  const documentMutation = useOptionalOwnerScope();
   const router = useRouter();
   const structuredComposerRef = useRef<StructuredJournalComposerHandle | null>(
     null,
@@ -89,7 +89,6 @@ export function SpaceEntryComposer({
   const [disclosureAccepted, setDisclosureAccepted] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const local = useLocalJournalComposer({
-    documentMutationGeneration: documentMutation?.transport,
     fallbackReturnTo: "/garden",
     enabled: enableServerPersistence,
     dirty: Boolean(
@@ -168,13 +167,9 @@ export function SpaceEntryComposer({
   function handleTransportBoundary(error: unknown) {
     if (
       error instanceof LocalJournalComposerError &&
-      typeof error.details?.documentMutationAdmission === "string"
+      typeof error.details?.mutationScope === "string"
     ) {
-      documentMutation?.handleTransportResult(
-        error.details.documentMutationAdmission as Parameters<
-          NonNullable<typeof documentMutation>["handleTransportResult"]
-        >[0],
-      );
+      documentMutation?.handleActionResult(error.details);
     }
     if (
       error instanceof LocalJournalComposerError &&

@@ -32,11 +32,6 @@ import {
   recordEntryLoggedEventSafely,
 } from "@/server/analytics-events";
 import {
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
-} from "@/server/document-mutation-admission";
-import {
   BoundedJsonPayloadTooLargeError,
   readBoundedJsonRequest,
 } from "@/server/bounded-json-request";
@@ -57,6 +52,11 @@ import { bytesToBase64Url } from "@/lib/media/ephemeral-staging-contract";
 import { stableJson } from "@/lib/media/ephemeral-staging-crypto";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import {
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export const runtime = "nodejs";
 
@@ -71,11 +71,11 @@ class AtomicJournalCreateError extends Error {
 }
 
 export async function POST(request: Request) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromRequest(request),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromRequest(request),
   });
   if (admission.status === "rejected") {
-    return privateNoStore(documentMutationAdmissionResponse(admission));
+    return privateNoStore(mutationScopeResponse(admission));
   }
   const scope: RequestScope = admission.scope;
   if (

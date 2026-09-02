@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
@@ -105,7 +105,7 @@ export function StableRegistryEditionLane({
             {copy.noCaptureAvailable}
           </p>
         ) : (
-          <DocumentMutationActionForm action={prepareAction}>
+          <OwnerScopedActionForm action={prepareAction}>
             <div className="mt-3 flex flex-col gap-2">
               <label
                 className="text-sm font-medium text-foreground"
@@ -127,7 +127,7 @@ export function StableRegistryEditionLane({
               </select>
               <SubmitButton label={copy.prepareEditionSubmit} />
             </div>
-          </DocumentMutationActionForm>
+          </OwnerScopedActionForm>
         )}
       </div>
 
@@ -197,7 +197,7 @@ export function StableRegistryEditionLane({
 
       {edition && model.writesEnabled ? (
         <div className="flex flex-wrap items-center gap-3">
-          <DocumentMutationActionForm action={approveAction}>
+          <OwnerScopedActionForm action={approveAction}>
             <input type="hidden" name="releaseId" value={edition.id} />
             <input
               type="hidden"
@@ -205,7 +205,7 @@ export function StableRegistryEditionLane({
               value={String(edition.version)}
             />
             <SubmitButton label={copy.approvePreview} />
-          </DocumentMutationActionForm>
+          </OwnerScopedActionForm>
 
           {edition.previewDigest ? (
             <>
@@ -278,12 +278,12 @@ function PointerForm({
   label: string;
 }) {
   return (
-    <DocumentMutationActionForm action={action}>
+    <OwnerScopedActionForm action={action}>
       <input type="hidden" name="releaseId" value={releaseId} />
       <input type="hidden" name="previewDigest" value={previewDigest} />
       <input type="hidden" name="transition" value={transition} />
       <SubmitButton label={label} />
-    </DocumentMutationActionForm>
+    </OwnerScopedActionForm>
   );
 }
 
@@ -304,7 +304,7 @@ function DecisionForm({
   const toId = `edition-to-${group.id}`;
 
   return (
-    <DocumentMutationActionForm action={action}>
+    <OwnerScopedActionForm action={action}>
       <input type="hidden" name="releaseId" value={releaseId} />
       <input type="hidden" name="groupId" value={group.id} />
       <input
@@ -365,7 +365,7 @@ function DecisionForm({
 
         <SubmitButton label={copy.saveDecision} />
       </div>
-    </DocumentMutationActionForm>
+    </OwnerScopedActionForm>
   );
 }
 

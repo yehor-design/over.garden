@@ -9,10 +9,6 @@ import type { Kysely } from "kysely";
 import type { Database } from "../src/db/schema";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import {
-  DOCUMENT_MUTATION_GENERATION_FORM_FIELD,
-  DOCUMENT_MUTATION_GENERATION_HEADER,
-} from "../src/lib/auth/document-mutation-generation-transport";
-import {
   ATOMIC_JOURNAL_CREATE_PROTOCOL,
   ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
   type AtomicJournalCreateResponse,
@@ -102,7 +98,6 @@ interface SmokeContext {
   email: string;
   userId: string;
   jar: CookieJar;
-  documentMutationGeneration: string;
 }
 
 class CookieJar {
@@ -183,9 +178,6 @@ async function main() {
     .executeTakeFirstOrThrow();
   await seedApprovedAliasFixtures(db, user.id);
   runCatalogTypeaheadReindex();
-  const documentMutationGeneration =
-    await readRenderedDocumentMutationGeneration(baseUrl, jar);
-
   const context: SmokeContext = {
     db,
     resolvePlantObjectCatalog,
@@ -195,7 +187,6 @@ async function main() {
     email,
     userId: user.id,
     jar,
-    documentMutationGeneration,
   };
   const proof = await proveGardenerFlow(context);
 
@@ -446,7 +437,6 @@ async function createEntry(
         title: `OVE161 ${input.label} entry`,
         text: "Synthetic atomic catalog readback proof without personal garden data.",
       }),
-      documentMutationGeneration: context.documentMutationGeneration,
     },
   );
   const row = await context.db
@@ -698,23 +688,15 @@ async function jsonRequest<T>(
   init: {
     method?: string;
     body?: unknown;
-    documentMutationGeneration?: string;
   } = {},
 ): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, {
     method: init.method ?? "GET",
     headers: {
       Accept: "application/json",
-      [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
-        ATOMIC_JOURNAL_CREATE_PROTOCOL,
+      [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]: ATOMIC_JOURNAL_CREATE_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: baseUrl } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...(init.documentMutationGeneration
-        ? {
-            [DOCUMENT_MUTATION_GENERATION_HEADER]:
-              init.documentMutationGeneration,
-          }
-        : {}),
       Cookie: jar.header(),
     },
     body: init.body ? JSON.stringify(init.body) : undefined,
@@ -742,50 +724,6 @@ export function requireRenderedDocumentMutationGeneration(
     );
   }
   return generation;
-}
-
-async function readRenderedDocumentMutationGeneration(
-  baseUrl: string,
-  jar: CookieJar,
-): Promise<string> {
-  const { chromium } = await import("playwright");
-  const browser = await chromium.launch({ headless: true });
-  try {
-    const context = await browser.newContext();
-    await context.addCookies(
-      cookieHeaderToPlaywrightCookies(jar.header(), baseUrl),
-    );
-    const page = await context.newPage();
-    const navigation = await page.goto(`${baseUrl}/garden/profile`, {
-      waitUntil: "domcontentloaded",
-      timeout: REQUEST_TIMEOUT_MS,
-    });
-    if (!navigation?.ok()) {
-      throw new Error(
-        "The authenticated owner document was unavailable for the gardener proof.",
-      );
-    }
-    const generationFields = page.locator(
-      `input[name="${DOCUMENT_MUTATION_GENERATION_FORM_FIELD}"]`,
-    );
-    try {
-      await generationFields.first().waitFor({
-        state: "attached",
-        timeout: REQUEST_TIMEOUT_MS,
-      });
-    } catch {
-      throw new Error(
-        "The authenticated owner document omitted a rendered mutation generation.",
-      );
-    }
-    const generation = requireRenderedDocumentMutationGeneration(
-      await generationFields.first().inputValue(),
-    );
-    await context.close();
-    return generation;
-  } finally {
-    await browser.close();
-  }
 }
 
 async function proveRenderedCanonicalIdentity(

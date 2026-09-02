@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
   resolveLineageClaim: vi.fn(),
   revalidatePath: vi.fn(),
 }));
@@ -10,9 +10,9 @@ vi.mock("next/cache", () => ({
   revalidatePath: mocks.revalidatePath,
 }));
 
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationGenerationFromFormData: vi.fn(() => null),
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  ownerUserIdFromFormData: vi.fn(() => null),
 }));
 
 vi.mock("@/server/lineage-repository", () => ({
@@ -22,7 +22,7 @@ vi.mock("@/server/lineage-repository", () => ({
 describe("/garden/lineage/claims actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.admitDocumentMutation.mockResolvedValue({
+    mocks.resolveMutationScope.mockResolvedValue({
       status: "admitted",
       scope: {
         userId: "00000000-0000-4000-8000-000000000001",
@@ -44,7 +44,7 @@ describe("/garden/lineage/claims actions", () => {
 
     await confirmLineageClaimAction(formData);
 
-    expect(mocks.admitDocumentMutation).toHaveBeenCalledOnce();
+    expect(mocks.resolveMutationScope).toHaveBeenCalledOnce();
     expect(mocks.resolveLineageClaim).toHaveBeenCalledWith(
       {
         userId: "00000000-0000-4000-8000-000000000001",
@@ -79,23 +79,5 @@ describe("/garden/lineage/claims actions", () => {
         decision: "declined",
       },
     );
-  });
-
-  it("does not mutate when the owner admission is unavailable", async () => {
-    mocks.admitDocumentMutation.mockResolvedValue({
-      status: "rejected",
-      transportResult: "MUTATION_ADMISSION_UNAVAILABLE",
-    });
-
-    const { confirmLineageClaimAction } = await import("./actions");
-    const formData = new FormData();
-    formData.set("edgeId", "00000000-0000-4000-8000-000000000201");
-
-    await expect(confirmLineageClaimAction(formData)).resolves.toEqual({
-      documentMutationAdmission: "MUTATION_ADMISSION_UNAVAILABLE",
-    });
-
-    expect(mocks.resolveLineageClaim).not.toHaveBeenCalled();
-    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });

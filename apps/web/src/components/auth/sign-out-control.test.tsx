@@ -59,43 +59,6 @@ describe("shared sign-out control", () => {
     expect(html).not.toContain(" disabled=");
   });
 
-  it("commits the retain-only local exit synchronously before navigation and background reconciliation", async () => {
-    const source = await readSource("sign-out-provider.tsx");
-    const marker = source.indexOf(
-      "const committed = commitLocalExitInvalidationMarker();",
-    );
-    const seal = source.indexOf(
-      "sealLocalJournalComposerForExit();",
-      marker,
-    );
-    const publish = source.indexOf("publishLocalExitCommitted(", seal);
-    const flush = source.indexOf("flushSync(() => setPhase", publish);
-    const replace = source.indexOf("window.location.replace(", flush);
-    const reconcile = source.indexOf(
-      "dispatchLocalExitReconciliation(",
-      replace,
-    );
-
-    expect(marker).toBeGreaterThan(-1);
-    expect(marker).toBeLessThan(seal);
-    expect(seal).toBeLessThan(publish);
-    expect(publish).toBeLessThan(flush);
-    expect(flush).toBeLessThan(replace);
-    expect(replace).toBeLessThan(reconcile);
-    expect(source).not.toContain("pauseOwnerOfflineActivity");
-    expect(source).not.toContain("waitForSyncDrain");
-    expect(source).not.toContain("awaitRemotePreparation");
-    expect(source).not.toContain("await inspectOwnerWork");
-    expect(source).not.toContain("summarizeUnsyncedOwnerData");
-    expect(source).not.toContain("purgeUnsyncedOwnerData");
-    expect(source).not.toMatch(
-      /copy\.(staySignedIn|syncFirst|discardAndSignOut|dialogTitle)/,
-    );
-    expect(source).not.toMatch(
-      /localStorage\.clear|indexedDB\.deleteDatabase|caches\.delete/,
-    );
-  });
-
   it("closes a parent account surface before requesting the shared dialog", async () => {
     const source = await readSource("sign-out-control.tsx");
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import type { LocationVisibility } from "@/db/schema";
 import { getLocalizedCoarseRegionOptions } from "@/lib/garden/regions";
@@ -42,7 +42,7 @@ export function LocationPrivacyControl({
   return (
     <section className="grid min-w-0 gap-3 rounded-lg border border-border p-4">
       <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
-      <DocumentMutationActionForm
+      <OwnerScopedActionForm
         action={action}
         className="grid min-w-0 gap-3 sm:grid-cols-3"
       >
@@ -88,7 +88,7 @@ export function LocationPrivacyControl({
         >
           {copy.save}
         </button>
-      </DocumentMutationActionForm>
+      </OwnerScopedActionForm>
     </section>
   );
 }

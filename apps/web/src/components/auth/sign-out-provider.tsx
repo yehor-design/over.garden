@@ -4,14 +4,11 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import { flushSync } from "react-dom";
 
-import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -19,24 +16,11 @@ import {
   AlertDialogDescription,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  dispatchLocalExitReconciliation,
-  localizedPublicRoot,
-  reconcileLocalExitSession,
-} from "@/lib/auth/sign-out-contract";
-import {
-  acquireAuthenticatedSessionTabLease,
-  createSessionTabId,
-  createSignOutOperationId,
-  getCurrentAuthenticatedSessionTabId,
-  publishLocalExitCommitted,
-  type AuthenticatedSessionTabLease,
-} from "@/lib/auth/session-convergence";
-import { commitLocalExitInvalidationMarker } from "@/lib/auth/session-invalidation-marker";
-import { sealLocalJournalComposerForExit } from "@/lib/garden/local-journal-composer-session";
+import { authClient } from "@/lib/auth-client";
+import { announceSessionSignal } from "@/lib/auth/session-signal";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import { localizedPath } from "@/lib/public-localization";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
-import { LocalExitPublicSafeSurface } from "./local-exit-public-safe-surface";
 
 type SignOutCopy = ReturnType<typeof getTrustSurfaceCopy>["signOut"];
 type SignOutPhase = "idle" | "awaiting-confirmation" | "committed";
@@ -49,102 +33,55 @@ interface SignOutContextValue {
 
 const SignOutContext = createContext<SignOutContextValue | null>(null);
 
+/**
+ * Sign-out is one server call followed by a hard navigation to the home page;
+ * every other tab of this browser follows through the session signal (D6).
+ */
 export function SignOutProvider({
   children,
   locale,
-  currentSessionBinding,
 }: {
   children: React.ReactNode;
   locale: InterfaceLocale;
-  currentSessionBinding: string | null;
 }) {
-  const trustCopy = getTrustSurfaceCopy(locale);
-  const copy = trustCopy.signOut;
+  const copy = getTrustSurfaceCopy(locale).signOut;
   const [phase, setPhase] = useState<SignOutPhase>("idle");
-  const operationLockedRef = useRef(false);
-  const confirmationOpenRef = useRef(false);
-  const tabLeaseRef = useRef<AuthenticatedSessionTabLease | null>(null);
-
-  useInterfaceLocaleChangeFormState({
-    id: "sign-out-lifecycle",
-    dirty: false,
-    pending: phase === "awaiting-confirmation",
-  });
-
-  useEffect(() => {
-    try {
-      const lease = acquireAuthenticatedSessionTabLease();
-      tabLeaseRef.current = lease;
-      return () => {
-        if (tabLeaseRef.current === lease) tabLeaseRef.current = null;
-        lease.release();
-      };
-    } catch {
-      tabLeaseRef.current = null;
-      return undefined;
-    }
-  }, []);
+  const committedRef = useRef(false);
 
   const requestSignOut = useCallback(() => {
-    if (operationLockedRef.current || confirmationOpenRef.current) return;
-    confirmationOpenRef.current = true;
+    if (committedRef.current) return;
     setPhase("awaiting-confirmation");
   }, []);
 
   const cancelSignOutConfirmation = useCallback(() => {
-    if (!confirmationOpenRef.current || operationLockedRef.current) return;
-    confirmationOpenRef.current = false;
+    if (committedRef.current) return;
     setPhase("idle");
   }, []);
 
   const confirmSignOut = useCallback(() => {
-    if (!confirmationOpenRef.current || operationLockedRef.current) return;
-    operationLockedRef.current = true;
-    confirmationOpenRef.current = false;
-
-    // This order is the complete user-visible exit transaction. Every step is
-    // synchronous and independent of cookie or network completion. The first promise
-    // is created only by reconciliation after the public-safe commit and the
-    // durable-navigation decision.
-    const committed = commitLocalExitInvalidationMarker();
-    sealLocalJournalComposerForExit();
-    const operationId = createSignOutOperationId();
-    const tabId =
-      tabLeaseRef.current?.tabId ??
-      getCurrentAuthenticatedSessionTabId() ??
-      createSessionTabId();
-    publishLocalExitCommitted(operationId, tabId);
-    flushSync(() => setPhase("committed"));
-    if (committed.status === "persisted") {
-      window.location.replace(localizedPublicRoot(locale));
-      dispatchLocalExitReconciliation(currentSessionBinding, committed.marker);
-      return;
-    }
-    void reconcileLocalExitSession(
-      currentSessionBinding,
-      committed.marker,
-    ).then((result) => {
-      if (result === "response_observed") {
-        window.location.replace(localizedPublicRoot(locale));
-      }
-    });
-  }, [currentSessionBinding, locale]);
+    if (committedRef.current) return;
+    committedRef.current = true;
+    setPhase("committed");
+    const homePath = localizedPath(locale, "/");
+    void authClient
+      .signOut()
+      .catch(() => undefined)
+      .then(() => {
+        announceSessionSignal({ type: "signed_out", ownerUserId: null });
+        window.location.replace(homePath);
+      });
+  }, [locale]);
 
   const value = useMemo<SignOutContextValue>(
     () => ({ copy, phase, requestSignOut }),
     [copy, phase, requestSignOut],
   );
-  const confirmationOpen = phase === "awaiting-confirmation";
 
   return (
     <SignOutContext.Provider value={value}>
-      {phase === "committed" ? (
-        <LocalExitPublicSafeSurface locale={locale} />
-      ) : (
-        children
-      )}
+      {children}
       <AlertDialog
-        open={confirmationOpen}
+        open={phase === "awaiting-confirmation"}
         onOpenChange={(open) => {
           if (!open) cancelSignOutConfirmation();
         }}

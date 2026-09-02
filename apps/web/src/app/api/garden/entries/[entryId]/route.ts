@@ -24,11 +24,6 @@ import {
   readBoundedJsonRequest,
 } from "@/server/bounded-json-request";
 import {
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
-} from "@/server/document-mutation-admission";
-import {
   JournalAggregateConflictError,
   readAtomicJournalEditBaseline,
   readCommittedAtomicJournalEdit,
@@ -47,6 +42,11 @@ import {
 } from "@/server/media/ephemeral-publication-handoff";
 import { validateAtomicJournalEditMediaPlan } from "@/server/atomic-journal-edit-contract";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
+import {
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export const runtime = "nodejs";
 
@@ -55,11 +55,11 @@ export async function PATCH(
   context: { params: Promise<{ entryId: string }> },
 ) {
   const { entryId } = await context.params;
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromRequest(request),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromRequest(request),
   });
   if (admission.status === "rejected") {
-    return privateNoStore(documentMutationAdmissionResponse(admission));
+    return privateNoStore(mutationScopeResponse(admission));
   }
   if (
     request.headers.get(ATOMIC_JOURNAL_EDIT_PROTOCOL_HEADER) !==

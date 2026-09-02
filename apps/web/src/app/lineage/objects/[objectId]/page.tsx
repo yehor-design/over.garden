@@ -5,7 +5,7 @@ import { cache } from "react";
 import { BellPlus, GitBranch } from "lucide-react";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import {
   LivingObjectPassportContextRail,
@@ -434,7 +434,7 @@ function LineageInteractionPanel({
 
       {canInteract ? (
         <div className="grid gap-3 md:grid-cols-2">
-          <DocumentMutationActionForm action={followLineageNodeAction}>
+          <OwnerScopedActionForm action={followLineageNodeAction}>
             <input type="hidden" name="edgeId" value={edge.id} />
             <input
               type="hidden"
@@ -463,9 +463,9 @@ function LineageInteractionPanel({
             >
               {copy.passport.followUpdates}
             </button>
-          </DocumentMutationActionForm>
+          </OwnerScopedActionForm>
 
-          <DocumentMutationActionForm
+          <OwnerScopedActionForm
             action={askLineageQuestionAction}
             className="grid gap-2"
           >
@@ -504,7 +504,7 @@ function LineageInteractionPanel({
             >
               {copy.passport.sendQuestion}
             </button>
-          </DocumentMutationActionForm>
+          </OwnerScopedActionForm>
         </div>
       ) : isAuthenticated ? (
         <p

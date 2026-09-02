@@ -88,10 +88,9 @@ claim authority, not access to the product.
 - The sealed owner must be a verified credential-only account with exactly one
   credential row and no linked social provider.
 - The profile recovery flow prevents removal of the final usable method.
-- Sign-out invalidates only the current server session and requires
-  authoritative null-session convergence. The retired owner-vault runtime no
-  longer participates in sign-out; exact-name legacy cleanup is independent,
-  bounded, content-free, and non-authoritative.
+- Sign-out revokes the current server session, announces the change to every
+  tab of the browser, and reloads them to the home page (ADR-0022, D6). There
+  is no client session gate and no mutation admission protocol.
 - Retired provider and product-access invitation code cannot be re-enabled by
   environment configuration.
 
@@ -215,7 +214,7 @@ pnpm exec vitest run \
   src/components/site-shell/site-shell.test.tsx \
   src/server/site-shell-session.test.ts \
   src/server/admin-access.test.ts \
-  src/server/document-mutation-admission.test.ts \
+  src/server/mutation-scope.test.ts \
   src/server/mvp-learning/attribution-outbox.test.ts
 
 pnpm smoke:admin-role

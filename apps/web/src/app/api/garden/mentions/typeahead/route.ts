@@ -1,18 +1,18 @@
-import {
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
-} from "@/server/document-mutation-admission";
 import { searchJournalMentionSuggestions } from "@/server/journal-mention-repository";
+import {
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromRequest(request),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromRequest(request),
   });
   if (admission.status === "rejected") {
-    return documentMutationAdmissionResponse(admission);
+    return mutationScopeResponse(admission);
   }
   const scope = admission.scope;
   const url = new URL(request.url);

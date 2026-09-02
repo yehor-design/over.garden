@@ -4,13 +4,13 @@ import {
   findMediaAssetForOwner,
   updateMediaAssetFocalForOwner,
 } from "@/server/media/media-repository";
-import {
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
-} from "@/server/document-mutation-admission";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 import { resolveMediaFocalPoint } from "@/lib/media/presentation-contract";
+import {
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export const runtime = "nodejs";
 
@@ -19,11 +19,11 @@ type RouteContext = {
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromRequest(request),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromRequest(request),
   });
   if (admission.status === "rejected") {
-    return documentMutationAdmissionResponse(admission);
+    return mutationScopeResponse(admission);
   }
   const scope = admission.scope;
 

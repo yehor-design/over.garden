@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   headers: vi.fn(),
   revalidatePath: vi.fn(),
   setPassword: vi.fn(),
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -24,8 +24,8 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
 }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
 }));
 
 import { setCurrentAccountPassword } from "./account-method-actions";
@@ -34,7 +34,7 @@ describe("setCurrentAccountPassword", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.headers.mockResolvedValue(new Headers());
-    mocks.admitDocumentMutation.mockResolvedValue({
+    mocks.resolveMutationScope.mockResolvedValue({
       status: "admitted",
       scope: {
         userId: "00000000-0000-4000-8000-000000000777",
@@ -88,15 +88,15 @@ describe("setCurrentAccountPassword", () => {
   });
 
   it("returns the admission transport result without touching Better Auth", async () => {
-    mocks.admitDocumentMutation.mockResolvedValueOnce({
+    mocks.resolveMutationScope.mockResolvedValueOnce({
       status: "rejected",
-      transportResult: "DOCUMENT_OWNER_CHANGED",
+      code: "session_account_changed",
     });
 
     await expect(
       setCurrentAccountPassword("valid-password", "stale-generation"),
     ).resolves.toEqual({
-      documentMutationAdmission: "DOCUMENT_OWNER_CHANGED",
+      mutationScope: "session_account_changed",
     });
     expect(mocks.getCurrentSession).not.toHaveBeenCalled();
     expect(mocks.setPassword).not.toHaveBeenCalled();
