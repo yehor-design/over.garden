@@ -537,11 +537,24 @@ Prefetch 503, root cause and repair (2026-09-02):
   roles with the SUPERUSER attribute`, PostgreSQL `53300`, severity FATAL,
   count `90`, `routes=/middleware`, plus twelve more of the same code across
   `/middleware`, `/journal/[slug]` and `/lineage/objects/[objectId]`.
-- `apps/web/src/proxy.ts` runs on nearly every request — the matcher excludes
-  only static assets and images — and resolves the session through
-  `auth.api.getSession`, which reads the database. A hover burst is twenty to
-  thirty simultaneous prefetches, each on its own serverless instance holding
-  its own connection, against 22 usable slots.
+- The exhaustion was global rather than route-specific. Each serverless
+  instance holds its own connection, the garden workspace render held one
+  through four serialized round trips for 2205-3426 ms, and 22 slots do not
+  survive that under concurrency. Once the slots were gone, everything needing
+  a connection failed at once — which is why the recorded errors name
+  `/middleware`, `/journal/[slug]` and `/lineage/objects/[objectId]` rather
+  than a single culprit.
+- A speculative prefetch of an authenticated route still renders its payload on
+  the server, and that render reads the database. That is where the observed
+  503s were, not in the proxy.
+- **Correction, same day.** An earlier version of this entry said the proxy
+  resolves the session on every request including prefetches. It does not.
+  Every database touch in `apps/web/src/proxy.ts` — the profile, community,
+  passport and journal lookups, and `auth.api.getSession` — is gated on
+  `isDocumentNavigationRequest`, which returns false for prefetch requests. The
+  proxy's own logged failures were on document navigations. Recorded because
+  the wrong version was merged first, and a plausible mechanism in canon is
+  worse than none: it invites a repair to something already correct.
 - Why it looked like it came from outside the application: the failure happened
   in the proxy, so the page function never ran, so nothing appeared in the
   status-code log. The error was in the error table the whole time. The log
