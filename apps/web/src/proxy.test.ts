@@ -802,27 +802,25 @@ describe("app route cache guardrail", () => {
     expect(mocks.getPublicJournalEntryLifecycleLookup).not.toHaveBeenCalled();
   });
 
-  it("keeps only current static assets and image files out of the proxy matcher", async () => {
+  it("keeps only Next internals and the favicon out of the proxy matcher", async () => {
     const matcher = new RegExp(`^${config.matcher[0]}$`);
 
     expect(matcher.test("/")).toBe(true);
     expect(matcher.test("/privacy")).toBe(true);
-    expect(matcher.test("/fonts-and-typography")).toBe(true);
     expect(matcher.test("/api/garden/entries")).toBe(true);
     expect(matcher.test("/_next/static/chunks/app.js")).toBe(false);
     expect(matcher.test("/_next/image")).toBe(false);
+    expect(matcher.test("/favicon.ico")).toBe(false);
+    // Dotted paths reach the proxy so an unknown root file answers a real 404
+    // instead of being swallowed by the [locale] segment.
+    expect(matcher.test("/sw.js")).toBe(true);
     expect(
       matcher.test(
         "/fonts/google-sans/google-sans-cyrillic-0123456789abcdef.woff2",
       ),
-    ).toBe(false);
-    expect(
-      matcher.test("/fonts/geist-mono/geist-mono-latin-0123456789abcdef.woff2"),
-    ).toBe(false);
-    expect(matcher.test("/legacy-fonts/google-sans.woff")).toBe(true);
-    expect(matcher.test("/legacy-fonts/google-sans.woff2")).toBe(true);
-    expect(matcher.test("/favicon.ico")).toBe(false);
-    expect(matcher.test("/photos/derivative.webp")).toBe(false);
+    ).toBe(true);
+    expect(matcher.test("/photos/derivative.webp")).toBe(true);
+    expect(matcher.test("/apple-icon.png")).toBe(true);
   });
 
   it("redirects legacy Ukrainian-prefixed public URLs to unprefixed canonicals", async () => {
@@ -1245,6 +1243,10 @@ describe("unknown root segments", () => {
     "/__nonexistent-xyz",
     "/xyz/journals",
     "/BG/journals",
+    "/sw.js",
+    "/manifest.webmanifest",
+    "/icon-192.png",
+    "/fonts/google-sans/google-sans-latin.woff2",
   ])("answers a real 404 lifecycle document for %s", async (path) => {
     const response = await responseFor(path, {
       ...documentHeaders,
@@ -1267,7 +1269,9 @@ describe("unknown root segments", () => {
       "/bg",
       "/bg/journals",
       "/sitemap.xml",
+      "/sitemap/0.xml",
       "/robots.txt",
+      "/apple-icon.png",
       "/licenses/GoogleSans-OFL.txt",
       "/api/interface/context",
     ]) {
