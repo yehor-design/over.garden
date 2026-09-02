@@ -92,16 +92,14 @@ MEILISEARCH_HOST='http://localhost:7700' \
 - Local API failures use fixed opaque classes: signed-out `401`, authenticated
   but ineligible `403`, malformed payload `400`, and unexpected failure `500`.
 
-Enablement is deliberately two-key and local-only:
+Enablement is deliberately local-only:
 
 ```dotenv
 WALKING_SKELETON_ENABLED="true"
-VISUAL_FIXTURES_ENABLED="true"
-VISUAL_FIXTURES_TARGET="local"
 ```
 
-The remaining database, public/auth origin, and object-storage values must all
-resolve to the matching loopback visual-fixture contract. Never set this gate
+The database, public/auth origin, and object-storage values must all resolve
+to loopback origins on a development or test Node runtime. Never set this gate
 in Vercel or another deployed runtime.
 
 - The retired draft/upload/process endpoints are absent and cannot write.

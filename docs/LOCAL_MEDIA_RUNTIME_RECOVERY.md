@@ -28,8 +28,6 @@ cd apps/web
 ../../infra/run-with-local-infra-env pnpm verify:retired-journal-media-migration
 pnpm test:media-staging-worker
 pnpm media:staging:verify
-pnpm smoke:atomic-journal-codecs
-pnpm smoke:inline-media-integrity
 pnpm smoke:journal-cover-selection
 
 ```

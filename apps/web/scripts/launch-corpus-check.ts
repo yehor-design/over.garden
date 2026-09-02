@@ -18,7 +18,6 @@ import {
   type LaunchCorpusInventoryRows,
 } from "../src/server/launch-corpus/inventory";
 import { assertLocalCoverMatrixComplete } from "../src/lib/launch-corpus/cover-matrix";
-import { tryResolveVisualFixtureEnvironment } from "../src/lib/visual-fixtures/environment";
 
 const envFile = argValue("--env-file") ?? ".env.local";
 loadEnv({ path: envFile, override: false, quiet: true });
@@ -64,15 +63,6 @@ async function main() {
   const environment = requireEnvironment(argv);
   const requireLaunchReady = argv.includes("--require-launch-ready");
   const baseUrl = readFlag(argv, "--base-url");
-
-  if (environment === "production") {
-    const fixtureEnv = tryResolveVisualFixtureEnvironment(process.env);
-    if (fixtureEnv) {
-      throw new Error(
-        "Visual fixtures resolved in a production check environment — refuse.",
-      );
-    }
-  }
 
   const resolution = resolveDatabaseConnection(process.env);
   const connectionString = resolvePgConnectionString(process.env, resolution);

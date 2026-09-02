@@ -5,7 +5,6 @@
 import { sql, type Expression, type SqlBool } from "kysely";
 
 import { PUBLIC_LAUNCH_CONTENT_CLASSES } from "@/lib/launch-corpus/content-class";
-import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
 
 export const PUBLIC_LAUNCH_SURFACE_POLICY_VERSION =
   "ove221.publicLaunchSurface.v1" as const;
@@ -13,11 +12,8 @@ export const PUBLIC_LAUNCH_SURFACE_POLICY_VERSION =
 export function publicLaunchContentClassPredicate(
   column: Expression<string | null> = sql`journal_entries.content_class`,
 ): Expression<SqlBool> {
-  const contentClasses = tryResolveVisualFixtureEnvironment(process.env)
-    ? [...PUBLIC_LAUNCH_CONTENT_CLASSES, "visual_fixture"]
-    : PUBLIC_LAUNCH_CONTENT_CLASSES;
   return sql<SqlBool>`${column} in (${sql.join(
-    contentClasses.map((value) => sql.lit(value)),
+    PUBLIC_LAUNCH_CONTENT_CLASSES.map((value) => sql.lit(value)),
   )})`;
 }
 

@@ -158,8 +158,7 @@ where je.visibility = 'public'
   visualFixtureMutationHits: `
 select count(*)::bigint as count
 from journal_entries
-where client_mutation_id like 'visual-fixtures/%'
-   or content_class = 'visual_fixture'
+where content_class = 'visual_fixture'
 `.trim(),
 
   missingSourceLanguageOnFounderPublic: `

@@ -7,7 +7,6 @@ const mocks = vi.hoisted(() => ({
   setNotificationReceipt: vi.fn(),
   updateNotificationPreferences: vi.fn(),
   revalidatePath: vi.fn(),
-  resolveVisualSocialMutationActor: vi.fn(),
   admitDocumentMutation: vi.fn(),
   documentMutationAdmissionResponse: vi.fn(),
 }));
@@ -35,10 +34,6 @@ vi.mock("@/server/social-return-repository", () => ({
   setNotificationReceipt: mocks.setNotificationReceipt,
   updateNotificationPreferences: mocks.updateNotificationPreferences,
 }));
-vi.mock("@/server/visual-fixtures/social-actor", () => ({
-  resolveVisualSocialMutationActor: mocks.resolveVisualSocialMutationActor,
-}));
-
 const scope = {
   userId: "00000000-0000-4000-8000-000000000001",
   sessionId: "session-1",
@@ -54,7 +49,6 @@ describe("notification mutation routes", () => {
       user: { id: scope.userId },
       session: { id: scope.sessionId },
     });
-    mocks.resolveVisualSocialMutationActor.mockReturnValue(null);
     mocks.admitDocumentMutation.mockImplementation(async () => {
       const session = await mocks.getCurrentSession();
       if (!session?.user?.id) {
@@ -163,33 +157,6 @@ describe("notification mutation routes", () => {
     expect(mocks.setNotificationReceipt).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe(
       "https://over.garden/notifications",
-    );
-  });
-
-  it("updates an isolated fixture receipt without an account session", async () => {
-    const actorId = "18700001-0000-4000-8000-000000000001";
-    mocks.resolveVisualSocialMutationActor.mockReturnValueOnce({
-      actorId,
-      scenario: { id: "notifications-dense" },
-    });
-    const { POST } = await import("./receipts/route");
-    const eventKey = "e".repeat(32);
-
-    const response = await POST(
-      formRequest("/api/notifications/receipts", {
-        eventKey,
-        receiptState: "read",
-        visualSocial: "notifications-dense",
-        returnTo: "/notifications?visualSocial=notifications-dense",
-      }),
-    );
-
-    expect(mocks.setNotificationReceipt).toHaveBeenCalledWith(
-      { userId: actorId, sessionId: null },
-      { eventKey, state: "read" },
-    );
-    expect(response.headers.get("location")).toContain(
-      "visualSocial=notifications-dense",
     );
   });
 });

@@ -260,28 +260,6 @@ describe("public journal directory query", () => {
     expect(compiled.parameters).not.toContain("%синонім з індексу%");
   });
 
-  it("keeps gated visual evidence explicit without weakening the launch default", () => {
-    const request = normalizePublicJournalDirectoryRequest({});
-    const visualEntries = buildPublicJournalDirectoryEntriesQuery(
-      testDb,
-      request,
-      [],
-      ["00000000-0000-4000-8000-000000000010"],
-      "apply",
-      "visual_fixture",
-    ).compile();
-    const visualCandidates = buildPublicJournalDirectoryFallbackCandidateQuery(
-      testDb,
-      undefined,
-      "visual_fixture",
-    ).compile();
-
-    expect(visualEntries.sql).toContain('"journal_entries"."content_class" =');
-    expect(visualEntries.parameters).toContain("visual_fixture");
-    expect(visualCandidates.parameters).toContain("visual_fixture");
-    expect(visualEntries.sql).not.toContain("journal_entries.content_class in");
-  });
-
   it("never selects user accounts, private text, exact location, or raw media/source data", () => {
     const sql = buildPublicJournalDirectoryEntriesQuery(testDb, {
       query: "",
@@ -370,7 +348,7 @@ describe("public journal directory serialization", () => {
         {
           id: "00000000-0000-4000-8000-000000000101",
           entryId: "00000000-0000-4000-8000-000000000001",
-          derivativeKey: "visual-fixtures/public/one.png",
+          derivativeKey: "public/one.png",
           focalX: 0.5,
           focalY: 0.5,
           intrinsicWidth: 800,
@@ -379,7 +357,7 @@ describe("public journal directory serialization", () => {
         {
           id: "00000000-0000-4000-8000-000000000102",
           entryId: "00000000-0000-4000-8000-000000000001",
-          derivativeKey: "visual-fixtures/public/two.png",
+          derivativeKey: "public/two.png",
           focalX: 0.5,
           focalY: 0.5,
           intrinsicWidth: 800,
@@ -388,7 +366,7 @@ describe("public journal directory serialization", () => {
         {
           id: "00000000-0000-4000-8000-000000000103",
           entryId: "00000000-0000-4000-8000-000000000001",
-          derivativeKey: "visual-fixtures/public/three.png",
+          derivativeKey: "public/three.png",
           focalX: 0.5,
           focalY: 0.5,
           intrinsicWidth: 800,

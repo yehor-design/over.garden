@@ -118,10 +118,7 @@ export async function runPublicSurfaceDiscoveryVerification(
       evaluatedAt: EVALUATED_AT,
     });
     const durationMs = Math.max(0, monotonicNow() - startedAt);
-    maximumDecisionDurationMs = Math.max(
-      maximumDecisionDurationMs,
-      durationMs,
-    );
+    maximumDecisionDurationMs = Math.max(maximumDecisionDurationMs, durationMs);
     return { discovery, durationMs };
   };
   const surfaceReceipts = PUBLIC_SURFACE_DISCOVERY_INVENTORY.map((entry) => {
@@ -164,8 +161,8 @@ export async function runPublicSurfaceDiscoveryVerification(
     (entry) => resolveMeasured(sourceFor(entry.consumerId)).discovery,
   );
   const concurrent = await Promise.all(
-    PUBLIC_SURFACE_DISCOVERY_INVENTORY.map(async (entry) =>
-      resolveMeasured(sourceFor(entry.consumerId)).discovery,
+    PUBLIC_SURFACE_DISCOVERY_INVENTORY.map(
+      async (entry) => resolveMeasured(sourceFor(entry.consumerId)).discovery,
     ),
   );
   const firstDigest = decisionDigest(replay);
@@ -216,8 +213,9 @@ export async function runPublicSurfaceDiscoveryVerification(
     };
   }
 
-  const recovery = resolveMeasured(sourceFor("localized_journal_entry"))
-    .discovery;
+  const recovery = resolveMeasured(
+    sourceFor("localized_journal_entry"),
+  ).discovery;
   if (!recovery.decision.isIndexable) {
     throw new Error("public_discovery_recovery_not_independent");
   }
@@ -356,8 +354,7 @@ async function runLivePublicSurfaceProbe(
   if (
     !sitemap.includes(`<loc>https://over.garden${richPath}</loc>`) ||
     sitemap.includes(`<loc>https://over.garden${thinPath}</loc>`) ||
-    sitemap.includes("/privacy</loc>") ||
-    sitemap.includes("__visual")
+    sitemap.includes("/privacy</loc>")
   ) {
     throw new Error("public_discovery_live_sitemap_mismatch");
   }

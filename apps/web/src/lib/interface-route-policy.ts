@@ -163,7 +163,7 @@ export const INTERFACE_ROUTE_POLICIES = [
   {
     id: "non-ui",
     mode: "non-ui",
-    prefixes: ["/api", "/_next", "/__visual-fixtures", "/skeleton"],
+    prefixes: ["/api", "/_next", "/skeleton"],
     safeQueryKeys: NO_QUERY_KEYS,
     preserveClientFragment: false,
   },

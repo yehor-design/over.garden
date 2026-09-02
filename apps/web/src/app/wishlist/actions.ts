@@ -15,8 +15,6 @@ import {
   admitDocumentMutation,
   documentMutationGenerationFromFormData,
 } from "@/server/document-mutation-admission";
-import { scopedToUser } from "@/server/request-scope";
-import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
 import {
   addCatalogPublicSlugToWishlist,
   removeCatalogPublicSlugFromWishlist,
@@ -65,13 +63,10 @@ export async function removeCatalogPublicSlugFromWishlistAction(
     formData.get("catalogPublicSlug"),
   );
   const locale = normalizeLocaleField(formData.get("locale"));
-  const visualActor = resolveVisualSocialMutationActor(formData, ["wishlist"]);
-  const admission = visualActor
-    ? null
-    : await admitDocumentMutation({
-        transport: documentMutationGenerationFromFormData(formData),
-      });
-  if (admission?.status === "rejected") {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
     if (admission.transportResult !== "AUTHENTICATION_REQUIRED") {
       return { documentMutationAdmission: admission.transportResult };
     }
@@ -80,21 +75,12 @@ export async function removeCatalogPublicSlugFromWishlistAction(
     );
   }
 
-  const scope = visualActor
-    ? scopedToUser(visualActor.actorId)
-    : admission!.scope;
+  const scope = admission.scope;
   await removeCatalogPublicSlugFromWishlist(scope, publicSlug);
 
   revalidateWishlistPaths(locale, publicSlug);
   const returnTo = localizedPath(locale, "/wishlist");
-  redirect(
-    withStatusParam(
-      visualActor
-        ? `${returnTo}?visualSocial=${encodeURIComponent(visualActor.scenario.id)}`
-        : returnTo,
-      "removed",
-    ),
-  );
+  redirect(withStatusParam(returnTo, "removed"));
 }
 
 function revalidateWishlistPaths(

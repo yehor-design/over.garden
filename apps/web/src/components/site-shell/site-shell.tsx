@@ -169,7 +169,7 @@ export function SiteShell({
     );
 
     if (!isAuthenticated || languageControlPlacement !== "utility") {
-      return shouldRunLegacyRetirement(pathname) ? (
+      return shouldRunLegacyRetirement() ? (
         <>
           <LegacyDeviceRetirementBanner locale={locale} />
           {excludedShell}
@@ -702,8 +702,8 @@ export function SiteShellOperatorMenu({
   );
 }
 
-function shouldRunLegacyRetirement(pathname: string) {
-  return !pathname.startsWith("/__visual-fixtures");
+function shouldRunLegacyRetirement() {
+  return true;
 }
 
 function AuthenticatedLegacyDeviceRetirement({

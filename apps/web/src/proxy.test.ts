@@ -10,7 +10,6 @@ import {
   INTERFACE_MARKET_REQUEST_HEADER,
   type InterfaceMarket,
 } from "@/lib/interface-market";
-import { INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER } from "@/lib/localization/localization-visual-fixture";
 import {
   APP_ROUTE_CACHE_CONTROL,
   classifyInternalNamespacePath,
@@ -222,44 +221,6 @@ describe("app route cache guardrail", () => {
     }
   });
 
-  it("hard-404s the visual fixture route before App Router unless the full environment gate passes", async () => {
-    vi.stubEnv("VISUAL_FIXTURES_ENABLED", "false");
-    const disabled = await responseFor("/__visual-fixtures");
-    const disabledNested = await responseFor(
-      "/__visual-fixtures/intent/ove174-i001",
-    );
-    const disabledApi = await responseFor(
-      "/api/__visual-fixtures/journal-creation",
-      undefined,
-      { method: "POST" },
-    );
-
-    vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
-    vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
-    vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
-    vi.stubEnv(
-      "DATABASE_URL",
-      "postgresql://overgarden:test@localhost:5432/overgarden",
-    );
-    vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
-    vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
-    vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
-    vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
-    vi.stubEnv("VERCEL_ENV", "development");
-    const enabledLocal = await responseFor("/__visual-fixtures");
-
-    vi.stubEnv("VERCEL_ENV", "production");
-    const production = await responseFor("/__visual-fixtures");
-    vi.unstubAllEnvs();
-
-    expect(disabled.status).toBe(404);
-    expect(disabledNested.status).toBe(404);
-    expect(disabledApi.status).toBe(404);
-    expect(disabled.headers.get("Cache-Control")).toBe(APP_ROUTE_CACHE_CONTROL);
-    expect(enabledLocal.status).toBe(200);
-    expect(production.status).toBe(404);
-  });
-
   it("hard-404s walking-skeleton routes outside an explicit loopback-only runtime", async () => {
     vi.stubEnv("WALKING_SKELETON_ENABLED", "false");
     const disabledPage = await responseFor("/skeleton");
@@ -315,9 +276,6 @@ describe("app route cache guardrail", () => {
   });
 
   it("hard-404s every production internal representation before locale, auth, or lifecycle work", async () => {
-    vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
-    vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
-    vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
     vi.stubEnv(
       "DATABASE_URL",
       "postgresql://overgarden:test@localhost:5432/overgarden",
@@ -339,36 +297,20 @@ describe("app route cache guardrail", () => {
       headers?: HeadersInit;
       init?: Pick<RequestInit, "method">;
     }> = [
-      { path: "/__visual-fixtures" },
-      { path: "/__visual-fixtures/" },
-      { path: "/__visual-fixtures/intent/ove174-i001" },
-      {
-        path: "/api/__visual-fixtures/journal-creation",
-        init: { method: "POST" },
-      },
       { path: "/skeleton" },
       { path: "/skeleton/internal" },
       { path: "/api/skeleton/journal", init: { method: "POST" } },
-      { path: "/%5F%5Fvisual-fixtures" },
-      { path: "/%5f%5fvisual-fixtures/intent/ove174-i001" },
-      { path: "/api/%5F%5Fvisual-fixtures/journal-creation" },
-      { path: "/%2F__visual-fixtures" },
-      { path: "/%2f__visual-fixtures" },
-      { path: "/%255F%255Fvisual-fixtures" },
-      { path: "/%252F__visual-fixtures" },
-      { path: "/%5F%5Fvisual-fixtures%" },
-      { path: "/api/%5F%5Fvisual-fixtures%" },
       { path: "/%73keleton" },
       {
         path: "/api/%73keleton/journal",
         headers: { accept: "text/x-component", rsc: "1" },
       },
       {
-        path: "/%5F%5Fvisual-fixtures",
+        path: "/%73keleton",
         headers: { "next-router-prefetch": "1" },
       },
       {
-        path: "/%5F%5Fvisual-fixtures",
+        path: "/%73keleton",
         init: { method: "HEAD" },
       },
     ];
@@ -401,26 +343,16 @@ describe("app route cache guardrail", () => {
   });
 
   it("classifies only reserved internal representations and keeps the classifier bounded", async () => {
-    expect(classifyInternalNamespacePath("/__visual-fixtures")).toEqual({
-      namespace: "visual-fixtures",
+    expect(classifyInternalNamespacePath("/skeleton")).toEqual({
+      namespace: "skeleton",
       representation: "canonical",
     });
     expect(classifyInternalNamespacePath("/api/skeleton/journal")).toEqual({
       namespace: "skeleton",
       representation: "canonical",
     });
-    expect(classifyInternalNamespacePath("/%5F%5Fvisual-fixtures")).toEqual({
-      namespace: "visual-fixtures",
-      representation: "encoded",
-    });
-    expect(classifyInternalNamespacePath("/%255F%255Fvisual-fixtures")).toEqual(
-      {
-        namespace: "visual-fixtures",
-        representation: "encoded",
-      },
-    );
-    expect(classifyInternalNamespacePath("/%5F%5Fvisual-fixtures%")).toEqual({
-      namespace: "visual-fixtures",
+    expect(classifyInternalNamespacePath("/%73keleton")).toEqual({
+      namespace: "skeleton",
       representation: "encoded",
     });
     expect(classifyInternalNamespacePath("/uk/%D1%81%D0%B0%D0%B4")).toBeNull();
@@ -429,9 +361,7 @@ describe("app route cache guardrail", () => {
     const start = performance.now();
     for (let index = 0; index < 100_000; index += 1) {
       classifyInternalNamespacePath(
-        index % 2 === 0
-          ? "/%255F%255Fvisual-fixtures/intent"
-          : "/uk/%D1%81%D0%B0%D0%B4",
+        index % 2 === 0 ? "/%73keleton/internal" : "/uk/%D1%81%D0%B0%D0%B4",
       );
     }
     expect(performance.now() - start).toBeLessThan(250);
@@ -504,7 +434,7 @@ describe("app route cache guardrail", () => {
     expect(mocks.getPublicObjectPassportLookup).toHaveBeenCalledTimes(3);
   });
 
-  it("returns locale-prefixed passport 404/410 through the same raw Google Sans lifecycle", async () => {
+  it("returns locale-prefixed passport 404/410 through the same raw lifecycle document", async () => {
     const objectId = "00000000-0000-4000-8000-000000000208";
     mocks.getPublicObjectPassportLookup.mockClear();
     mocks.getPublicObjectPassportLookup.mockResolvedValueOnce({
@@ -523,7 +453,7 @@ describe("app route cache guardrail", () => {
     expect(missing.headers.get("Cache-Control")).toBe(APP_ROUTE_CACHE_CONTROL);
     expect(missing.headers.get("Content-Language")).toBe("bg");
     expect(missingHtml).toContain("Паспортът не е намерен");
-    expect(missingHtml).toContain('font-family: "Google Sans"');
+    expect(missingHtml).toContain("font-family: var(--font-overgarden-sans)");
     expect(missingHtml).toContain('name="robots" content="noindex, nofollow"');
 
     mocks.getPublicObjectPassportLookup.mockResolvedValueOnce({
@@ -541,7 +471,7 @@ describe("app route cache guardrail", () => {
     expect(gone.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(gone.headers.get("Content-Language")).toBe("ru");
     expect(goneHtml).toContain("Паспорт удален");
-    expect(goneHtml).toContain('font-family: "Google Sans"');
+    expect(goneHtml).toContain("font-family: var(--font-overgarden-sans)");
     expect(mocks.getPublicObjectPassportLookup).toHaveBeenCalledTimes(2);
   });
 
@@ -1118,73 +1048,6 @@ describe("app route cache guardrail", () => {
     ).toBe("bg");
   });
 
-  it("sets the global-error probe header only for the exact gated visual scenario and overwrites spoofed input", async () => {
-    const internalResponseHeader = `x-middleware-request-${INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER}`;
-    const spoofed = await responseFor("/garden", {
-      [INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER]: "1",
-    });
-
-    stubLocalVisualFixtureEnvironment();
-    const exact = await responseFor("/garden?visualLocaleState=global-error", {
-      accept: "text/html",
-      "sec-fetch-dest": "document",
-    });
-    const duplicate = await responseFor(
-      "/garden?visualLocaleState=global-error&visualLocaleState=global-error",
-      {
-        accept: "text/html",
-        "sec-fetch-dest": "document",
-      },
-    );
-    const extraQuery = await responseFor(
-      "/garden?visualLocaleState=global-error&returnTo=%2Fgarden%2Fprivate",
-      {
-        accept: "text/html",
-        "sec-fetch-dest": "document",
-      },
-    );
-    const encodedValue = await responseFor(
-      "/garden?visualLocaleState=%67lobal-error",
-      {
-        accept: "text/html",
-        "sec-fetch-dest": "document",
-      },
-    );
-    const fragment = await responseFor(
-      "/garden?visualLocaleState=global-error#main-content",
-      {
-        accept: "text/html",
-        "sec-fetch-dest": "document",
-      },
-    );
-    const wrongPath = await responseFor(
-      "/privacy?visualLocaleState=global-error",
-      {
-        accept: "text/html",
-        "sec-fetch-dest": "document",
-      },
-    );
-    vi.stubEnv("VERCEL_ENV", "production");
-    const production = await responseFor(
-      "/garden?visualLocaleState=global-error",
-      {
-        accept: "text/html",
-        "sec-fetch-dest": "document",
-        [INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER]: "1",
-      },
-    );
-    vi.unstubAllEnvs();
-
-    expect(spoofed.headers.get(internalResponseHeader)).toBeNull();
-    expect(exact.headers.get(internalResponseHeader)).toBe("1");
-    expect(duplicate.headers.get(internalResponseHeader)).toBeNull();
-    expect(extraQuery.headers.get(internalResponseHeader)).toBeNull();
-    expect(encodedValue.headers.get(internalResponseHeader)).toBe("1");
-    expect(fragment.headers.get(internalResponseHeader)).toBeNull();
-    expect(wrongPath.headers.get(internalResponseHeader)).toBeNull();
-    expect(production.headers.get(internalResponseHeader)).toBeNull();
-  });
-
   it("bounds root preferences to the resolved market and ignores Accept-Language", async () => {
     const persistedRussian = await responseFor("/", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=ru`,
@@ -1384,25 +1247,6 @@ describe("app route cache guardrail", () => {
 
 function stubLocalWalkingSkeletonEnvironment() {
   vi.stubEnv("WALKING_SKELETON_ENABLED", "true");
-  vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
-  vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
-  vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
-  vi.stubEnv(
-    "DATABASE_URL",
-    "postgresql://overgarden:test@localhost:5432/overgarden",
-  );
-  vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
-  vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
-  vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
-  vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
-  vi.stubEnv("VERCEL", "");
-  vi.stubEnv("VERCEL_ENV", "development");
-}
-
-function stubLocalVisualFixtureEnvironment() {
-  vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
-  vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
-  vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
   vi.stubEnv(
     "DATABASE_URL",
     "postgresql://overgarden:test@localhost:5432/overgarden",

@@ -10,7 +10,6 @@ import {
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { resolveVisualFixturePublicKnowledgeMode } from "@/lib/visual-fixtures/public-knowledge-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getEngagementFollowState } from "@/server/engagement-repository";
 import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
@@ -36,18 +35,12 @@ interface PublicTopicRouteProps {
 
 export async function generateMetadata({
   params,
-  searchParams,
 }: PublicTopicRouteProps): Promise<Metadata> {
   const { locale: localeParam, slug } = await params;
   if (!isPublicLocale(localeParam)) {
     return missingTopicMetadata();
   }
 
-  const visual = await resolveVisualTopicRequest(
-    localeParam,
-    (await searchParams) ?? {},
-  );
-  if (visual.mode === "unavailable") return missingTopicMetadata(localeParam);
   const bounded = await resolvePublicSurfacePayloadWithDeadline({
     consumerId: "localized_topic",
     evaluatedAt: new Date(),
@@ -55,14 +48,13 @@ export async function generateMetadata({
     load: async () => {
       const topic = await getPublicTopicAggregationPage(slug, {
         locale: localeParam,
-        restrictToEntryIds: visual.publicEntryIds,
       });
       if (!topic) throw new Error("Public topic unavailable.");
       return {
         source: buildPublicTopicDiscoverySource(
           topic,
           "localized_topic",
-          visual.mode ? "not_public_candidate" : "candidate",
+          "candidate",
         ),
         payload: topic,
       };
@@ -70,12 +62,7 @@ export async function generateMetadata({
   });
   if (!bounded.payload) return missingTopicMetadata(localeParam);
 
-  return buildTopicSurface(
-    localeParam,
-    bounded.payload,
-    Boolean(visual.mode),
-    bounded,
-  ).metadata;
+  return buildTopicSurface(localeParam, bounded.payload, bounded).metadata;
 }
 
 export default async function TopicRoute({
@@ -86,14 +73,9 @@ export default async function TopicRoute({
   if (!isPublicLocale(localeParam)) notFound();
 
   const query = (await searchParams) ?? {};
-  const [visual, session] = await Promise.all([
-    resolveVisualTopicRequest(localeParam, query),
-    getCurrentSession().catch(() => null),
-  ]);
-  if (visual.mode === "unavailable") notFound();
+  const session = await getCurrentSession().catch(() => null);
   const topic = await getPublicTopicAggregationPage(slug, {
     locale: localeParam,
-    restrictToEntryIds: visual.publicEntryIds,
   }).catch(() => null);
   if (!topic) notFound();
   const userId = session?.user?.id;
@@ -106,29 +88,21 @@ export default async function TopicRoute({
     ? await getEngagementFollowState(scope, followTarget).catch(() => false)
     : false;
   const returnTo = localizedPath(localeParam, `/topics/${topic.topic.slug}`);
-  const surface = buildTopicSurface(localeParam, topic, Boolean(visual.mode));
+  const surface = buildTopicSurface(localeParam, topic);
 
-  const evidenceResult =
-    visual.mode === "loading" || visual.mode === "error"
-      ? { evidence: emptyEvidence(localeParam), state: visual.mode }
-      : await listPublicKnowledgeEvidence(
-          { topicSlugs: [topic.topic.slug], catalogSlugs: [] },
-          localeParam,
-          {
-            restrictToEntryIds: visual.publicEntryIds,
-            visualCorpus: visual.mode === "corpus",
-          },
-        ).then(
-          (evidence) => ({
-            evidence,
-            state:
-              evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
-          }),
-          () => ({
-            evidence: emptyEvidence(localeParam),
-            state: "error" as const,
-          }),
-        );
+  const evidenceResult = await listPublicKnowledgeEvidence(
+    { topicSlugs: [topic.topic.slug], catalogSlugs: [] },
+    localeParam,
+  ).then(
+    (evidence) => ({
+      evidence,
+      state: evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
+    }),
+    () => ({
+      evidence: emptyEvidence(localeParam),
+      state: "error" as const,
+    }),
+  );
 
   return (
     <PublicKnowledgeTopicPage
@@ -137,7 +111,6 @@ export default async function TopicRoute({
       topic={topic}
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
-      visualCorpus={visual.mode === "corpus"}
       actions={
         <EngagementFollowControl
           isAuthenticated={Boolean(userId)}
@@ -173,13 +146,8 @@ function missingTopicMetadata(locale?: "uk" | "bg" | "ru"): Metadata {
 function buildTopicSurface(
   locale: PublicLocale,
   topic: PublicTopicAggregationPage,
-  isVisualFixture: boolean,
   discovery: PublicSurfaceDiscoveryResult = resolvePublicSurfaceDiscoveryForRequest(
-    buildPublicTopicDiscoverySource(
-      topic,
-      "localized_topic",
-      isVisualFixture ? "not_public_candidate" : "candidate",
-    ),
+    buildPublicTopicDiscoverySource(topic, "localized_topic", "candidate"),
   ),
 ) {
   const copy = getPublicKnowledgeCopy(locale);
@@ -197,26 +165,6 @@ function buildTopicSurface(
       trustQualifier: "Curated topic with public gardener evidence",
     },
   });
-}
-
-async function resolveVisualTopicRequest(
-  locale: "uk" | "bg" | "ru",
-  searchParams: Record<string, string | string[] | undefined>,
-) {
-  const mode = resolveVisualFixturePublicKnowledgeMode(
-    searchParams,
-    process.env,
-  );
-  if (!mode || mode === "unavailable") {
-    return { mode, publicEntryIds: mode ? [] : null };
-  }
-
-  const { loadVisualFixtureKnowledgeCorpus } =
-    await import("@/server/public-knowledge-visual-fixture");
-  return {
-    mode,
-    publicEntryIds: loadVisualFixtureKnowledgeCorpus(locale).publicEntryIds,
-  };
 }
 
 function emptyEvidence(locale: "uk" | "bg" | "ru") {

@@ -6,15 +6,14 @@ Issue: [OVE-199](https://linear.app/overgarden/issue/OVE-199/launch-corpus-bulga
 
 ## OVE-339 posture classification
 
-The content-class and visual-fixture eligibility rules below classify resolved
-corpus state; they are not an unresolved authorization or ownership decision.
+The content-class eligibility rules below classify resolved corpus state; they are not an unresolved authorization or ownership decision.
 Current journal media follows ADR-0019: the browser-generated WebP is the sole
 final artifact, and historical source-original processing receipts remain
 provenance only.
 
 ## Purpose
 
-Bulgarian and Ukrainian guests must see useful, locale-coherent first-party living journals — never `OVE-*` smoke labels, 10×10 placeholders, visual fixtures, or English enum stubs pretending to be gardeners.
+Bulgarian and Ukrainian guests must see useful, locale-coherent first-party living journals — never `OVE-*` smoke labels, 10×10 placeholders, synthetic fixtures, or English enum stubs pretending to be gardeners.
 
 ## Content classes
 
@@ -27,7 +26,7 @@ Persisted on `journal_entries.content_class`:
 | `editorial`          | Editorial; not an independent gardener; requires `source_language` |
 | `catalog_fact`       | Catalog/source fact; not a gardener                                |
 | `production_smoke`   | Never guest-launch; archive after sign-off                         |
-| `visual_fixture`     | Local/preview only; production refused                             |
+| `visual_fixture`     | Legacy value; its fixture environment is deleted; keep at zero     |
 
 `source_language` is nullable `uk|bg`. Required for public founder/editorial rows.
 
@@ -57,10 +56,9 @@ cd apps/web
 Operator-only inventory, moderation, owner-control, learning-signal, privacy,
 and restore-readiness queries are intentionally outside this guest-surface
 policy because they must observe excluded rows to enforce or report on them.
-The shared predicate admits `visual_fixture` only when the fail-closed visual
-fixture environment resolver proves an isolated local or preview target; it
-rejects Vercel Production and canonical OverGarden origins. This preserves the
-CI/visual harness without weakening launch eligibility in production.
+The shared predicate never admits `visual_fixture`. The fixture environment
+that produced such rows was deleted under ADR-0022; the inventory keeps
+reporting the class so production stays at zero rows.
 
 ## Commands
 
@@ -113,7 +111,7 @@ Topology: **2 spaces**, **4 objects** (UA plant+animal, BG plant+animal), **14 j
 
 Photo budget was approximately 18–22 owned/licensed files. The listed private
 slot and former conversion path are incompatible with the current public-only
-atomic contract. Never seed `test/visual-fixtures/media/` into production.
+atomic contract.
 
 Machine source of truth: `apps/web/src/lib/launch-corpus/shot-list.ts`.
 
@@ -137,9 +135,9 @@ The approved 2026-07-29 pack contains 14 OverGarden-authored editorial entries
 and 18 normalized Unsplash photographs. The official-license and exact source
 receipt is [`docs/launch-corpus-unsplash-license-receipt.md`](launch-corpus-unsplash-license-receipt.md).
 
-## Local cover matrix (fixtures / unit — not production photos)
+## Local cover matrix (unit — not production photos)
 
-`apps/web/src/lib/launch-corpus/cover-matrix.ts` covers 10+1, eleventh reject, keep-as-cover, replace failure, removal fallback, aspects, lifecycle surfaces, and production fixture refusal without making the local visual-fixture manifest a production corpus dependency.
+`apps/web/src/lib/launch-corpus/cover-matrix.ts` lists the cover, reorder, and lifecycle branches with the unit proof that covers each. Branches that only the deleted fixture media exercised (aspect ratios, lifecycle surfaces) are marked `manual-review`.
 
 ## Before → after disposition (exact classes)
 
@@ -178,4 +176,3 @@ valid authority for that work.
 - No production archive/seed in Phase A.
 - No OVE-186 Done.
 - No claim that H1/H4/H6 passed.
-- No current visual-fixture manifest hash is asserted by this frozen receipt.

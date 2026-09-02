@@ -23,7 +23,6 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
-import { resolveVisualSocialScenario } from "@/lib/visual-fixtures/social-return-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { scopedToUser } from "@/server/request-scope";
 import {
@@ -75,12 +74,7 @@ export default async function LocalizedNotificationsRoute({
   if (!isPublicLocale(localeParam)) notFound();
   const copy = getSocialSurfaceCopy(localeParam);
   const session = await getCurrentSession();
-  const visualScenario = resolveVisualSocialScenario(
-    query.visualSocial,
-    "notifications",
-    process.env,
-  );
-  const userId = visualScenario?.actorId ?? session?.user?.id;
+  const userId = session?.user?.id;
 
   if (!userId) {
     return (
@@ -98,10 +92,7 @@ export default async function LocalizedNotificationsRoute({
     );
   }
 
-  const scope = scopedToUser(
-    userId,
-    visualScenario ? null : getSessionId(session),
-  );
+  const scope = scopedToUser(userId, getSessionId(session));
   const filter = parseFilter(firstParam(query.filter));
   const unreadOnly = firstParam(query.unread) === "1";
   const grouped = firstParam(query.view) !== "individual";
@@ -121,7 +112,6 @@ export default async function LocalizedNotificationsRoute({
     unreadOnly,
     grouped,
     cursor: firstParam(query.cursor),
-    visualScenarioId: visualScenario?.id,
   });
 
   return (
@@ -138,15 +128,10 @@ export default async function LocalizedNotificationsRoute({
           filter={filter}
           unreadOnly={unreadOnly}
           grouped={grouped}
-          visualScenarioId={visualScenario?.id ?? null}
         />
       }
     >
-      <NotificationSettings
-        locale={localeParam}
-        preferences={preferences}
-        visualScenarioId={visualScenario?.id ?? null}
-      />
+      <NotificationSettings locale={localeParam} preferences={preferences} />
       {events.length === 0 ? (
         <SocialEmptyState>{copy.notifications.empty}</SocialEmptyState>
       ) : (
@@ -157,7 +142,6 @@ export default async function LocalizedNotificationsRoute({
               event={event}
               locale={localeParam}
               returnTo={returnTo}
-              visualScenarioId={visualScenario?.id ?? null}
             />
           ))}
         </ol>
@@ -169,7 +153,6 @@ export default async function LocalizedNotificationsRoute({
             unreadOnly,
             grouped,
             cursor: page.nextCursor,
-            visualScenarioId: visualScenario?.id,
           })}
           className="flex min-h-11 items-center justify-center gap-2 border border-border px-4 text-sm font-medium hover:bg-muted"
         >
@@ -186,13 +169,11 @@ function NotificationFilters({
   filter,
   unreadOnly,
   grouped,
-  visualScenarioId,
 }: {
   locale: PublicLocale;
   filter: NotificationFilter;
   unreadOnly: boolean;
   grouped: boolean;
-  visualScenarioId: string | null;
 }) {
   const copy = getSocialSurfaceCopy(locale);
   const filters: Array<[NotificationFilter, string]> = [
@@ -217,7 +198,6 @@ function NotificationFilters({
               filter: value,
               unreadOnly,
               grouped,
-              visualScenarioId,
             })}
             aria-current={filter === value ? "true" : undefined}
             className={filterClass(filter === value)}
@@ -231,7 +211,6 @@ function NotificationFilters({
           filter,
           unreadOnly: !unreadOnly,
           grouped,
-          visualScenarioId,
         })}
         aria-current={unreadOnly ? "true" : undefined}
         className={filterClass(unreadOnly)}
@@ -244,7 +223,6 @@ function NotificationFilters({
           filter,
           unreadOnly,
           grouped: !grouped,
-          visualScenarioId,
         })}
         aria-current={grouped ? "true" : undefined}
         className={filterClass(grouped)}
@@ -259,11 +237,9 @@ function NotificationFilters({
 function NotificationSettings({
   locale,
   preferences,
-  visualScenarioId,
 }: {
   locale: PublicLocale;
   preferences: NotificationPreferences;
-  visualScenarioId: string | null;
 }) {
   const copy = getSocialSurfaceCopy(locale);
   const options: Array<[keyof NotificationPreferences, string]> = [
@@ -286,9 +262,6 @@ function NotificationSettings({
         className="mt-4 grid gap-3 sm:grid-cols-2"
       >
         <input type="hidden" name="locale" value={locale} />
-        {visualScenarioId ? (
-          <input type="hidden" name="visualSocial" value={visualScenarioId} />
-        ) : null}
         {options.map(([key, label]) => (
           <label key={key} className="flex min-h-9 items-center gap-2 text-sm">
             <input
@@ -316,12 +289,10 @@ function NotificationRow({
   event,
   locale,
   returnTo,
-  visualScenarioId,
 }: {
   event: NotificationEvent | GroupedNotificationEvent;
   locale: PublicLocale;
   returnTo: string;
-  visualScenarioId: string | null;
 }) {
   const copy = getSocialSurfaceCopy(locale);
   const eventKeys = "eventKeys" in event ? event.eventKeys : [event.key];
@@ -363,7 +334,6 @@ function NotificationRow({
               : copy.notifications.markRead
           }
           icon={event.read ? <MailOpen /> : <CheckCheck />}
-          visualScenarioId={visualScenarioId}
         />
         <ReceiptForm
           eventKeys={eventKeys}
@@ -371,7 +341,6 @@ function NotificationRow({
           returnTo={returnTo}
           label={copy.notifications.dismiss}
           icon={<EyeOff />}
-          visualScenarioId={visualScenarioId}
         />
       </div>
     </li>
@@ -384,23 +353,18 @@ function ReceiptForm({
   returnTo,
   label,
   icon,
-  visualScenarioId,
 }: {
   eventKeys: string[];
   state: "read" | "unread" | "dismissed";
   returnTo: string;
   label: string;
   icon: React.ReactNode;
-  visualScenarioId: string | null;
 }) {
   return (
     <form method="post" action="/api/notifications/receipts">
       {eventKeys.map((eventKey) => (
         <input key={eventKey} type="hidden" name="eventKey" value={eventKey} />
       ))}
-      {visualScenarioId ? (
-        <input type="hidden" name="visualSocial" value={visualScenarioId} />
-      ) : null}
       <input type="hidden" name="receiptState" value={state} />
       <input type="hidden" name="returnTo" value={returnTo} />
       <button
@@ -422,7 +386,6 @@ function notificationHref(
     unreadOnly: boolean;
     grouped: boolean;
     cursor?: string | null;
-    visualScenarioId?: string | null;
   },
 ) {
   const params = new URLSearchParams();
@@ -430,9 +393,6 @@ function notificationHref(
   if (input.unreadOnly) params.set("unread", "1");
   if (!input.grouped) params.set("view", "individual");
   if (input.cursor) params.set("cursor", input.cursor);
-  if (input.visualScenarioId) {
-    params.set("visualSocial", input.visualScenarioId);
-  }
   const path = localizedPath(locale, "/notifications");
   return params.size ? `${path}?${params}` : path;
 }

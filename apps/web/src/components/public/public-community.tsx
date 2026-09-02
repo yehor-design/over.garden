@@ -159,7 +159,6 @@ export function PublicCommunityView({
   cursor = "",
   actionStatus,
   state = "ready",
-  visualScenarioId,
   resumeAction = null,
   resumeControl = null,
   jsonLd,
@@ -172,7 +171,6 @@ export function PublicCommunityView({
   cursor?: string;
   actionStatus?: string | null;
   state?: PublicCommunityState;
-  visualScenarioId?: string | null;
   resumeAction?: AuthIntentAction | null;
   resumeControl?: string | null;
   jsonLd?: Record<string, unknown> | null;
@@ -180,15 +178,10 @@ export function PublicCommunityView({
   const copy = getCommunityCopy(locale);
   const contentCopy = getCommunityContentCopy(locale, community.contentKey);
   const communityPath = localizedPath(locale, `/communities/${community.slug}`);
-  const communityFixturePath = withVisualCommunity(
-    communityPath,
-    visualScenarioId,
-  );
   const communityReturnPath = communityViewPath(communityPath, {
     query,
     kind,
     cursor,
-    visualScenarioId,
   });
   const knowledgePath = localizedPath(locale, `/topics/${community.topicSlug}`);
   const actionMessage = actionStatus ? copy.actionMessages[actionStatus] : null;
@@ -244,7 +237,6 @@ export function PublicCommunityView({
                 community={community}
                 viewer={viewer}
                 communityPath={communityReturnPath}
-                visualScenarioId={visualScenarioId}
                 resumeAction={resumeAction}
                 resumeControl={resumeControl}
               />
@@ -317,11 +309,7 @@ export function PublicCommunityView({
       community.viewer.membershipState === "active" &&
       community.lifecycleState === "active" &&
       community.participationState === "open" ? (
-        <CommunityContributionForm
-          locale={locale}
-          community={community}
-          visualScenarioId={visualScenarioId}
-        />
+        <CommunityContributionForm locale={locale} community={community} />
       ) : null}
 
       <form
@@ -330,13 +318,6 @@ export function PublicCommunityView({
         aria-label={copy.searchLabel}
         className="grid gap-3 border-b border-border py-4 sm:flex sm:items-end"
       >
-        {visualScenarioId ? (
-          <input
-            type="hidden"
-            name="visualCommunity"
-            value={visualScenarioId}
-          />
-        ) : null}
         <label className="grid min-w-0 gap-1.5 text-sm font-medium sm:flex-1">
           <span>{copy.searchLabel}</span>
           <input
@@ -404,7 +385,7 @@ export function PublicCommunityView({
             </p>
             {query || kind !== "all" ? (
               <Link
-                href={communityFixturePath}
+                href={communityPath}
                 className={buttonVariants({ variant: "outline", size: "sm" })}
               >
                 {copy.resetFilters}
@@ -421,7 +402,6 @@ export function PublicCommunityView({
                 viewer={viewer}
                 community={community}
                 communityPath={communityReturnPath}
-                visualScenarioId={visualScenarioId}
                 resumeAction={resumeAction}
                 resumeControl={resumeControl}
               />
@@ -434,7 +414,6 @@ export function PublicCommunityView({
               query,
               kind,
               cursor: community.contributions.nextCursor,
-              visualScenarioId,
             })}`}
             className={cn(buttonVariants({ variant: "outline" }), "my-4 w-fit")}
           >
@@ -485,7 +464,6 @@ function CommunityMembershipAction({
   community,
   viewer,
   communityPath,
-  visualScenarioId,
   resumeAction,
   resumeControl,
 }: {
@@ -493,7 +471,6 @@ function CommunityMembershipAction({
   community: PublicCommunityPageModel;
   viewer: "guest" | "member";
   communityPath: string;
-  visualScenarioId?: string | null;
   resumeAction: AuthIntentAction | null;
   resumeControl: string | null;
 }) {
@@ -525,11 +502,7 @@ function CommunityMembershipAction({
   }
   return (
     <DocumentMutationActionForm action={setCommunityMembershipAction}>
-      <CommunityActionFields
-        locale={locale}
-        slug={community.slug}
-        visualScenarioId={visualScenarioId}
-      />
+      <CommunityActionFields locale={locale} slug={community.slug} />
       <input
         type="hidden"
         name="membershipState"
@@ -557,11 +530,9 @@ function CommunityMembershipAction({
 function CommunityContributionForm({
   locale,
   community,
-  visualScenarioId,
 }: {
   locale: PublicLocale;
   community: PublicCommunityPageModel;
-  visualScenarioId?: string | null;
 }) {
   const copy = getCommunityCopy(locale);
   return (
@@ -582,11 +553,7 @@ function CommunityContributionForm({
           action={contributeJournalToCommunityAction}
           className="grid gap-3 sm:flex sm:items-end"
         >
-          <CommunityActionFields
-            locale={locale}
-            slug={community.slug}
-            visualScenarioId={visualScenarioId}
-          />
+          <CommunityActionFields locale={locale} slug={community.slug} />
           <label className="grid min-w-0 gap-1.5 text-sm font-medium sm:flex-1">
             <span>{copy.chooseJournal}</span>
             <select
@@ -626,7 +593,6 @@ function CommunityContributionRow({
   viewer,
   community,
   communityPath,
-  visualScenarioId,
   resumeAction,
   resumeControl,
 }: {
@@ -635,7 +601,6 @@ function CommunityContributionRow({
   viewer: "guest" | "member";
   community: PublicCommunityPageModel;
   communityPath: string;
-  visualScenarioId?: string | null;
   resumeAction: AuthIntentAction | null;
   resumeControl: string | null;
 }) {
@@ -707,7 +672,6 @@ function CommunityContributionRow({
             viewer={viewer}
             community={community}
             communityPath={communityPath}
-            visualScenarioId={visualScenarioId}
             resumeAction={resumeAction}
             resumeControl={resumeControl}
           />
@@ -739,7 +703,6 @@ function CommunitySafetyActions({
   viewer,
   community,
   communityPath,
-  visualScenarioId,
   resumeAction,
   resumeControl,
 }: {
@@ -748,7 +711,6 @@ function CommunitySafetyActions({
   viewer: "guest" | "member";
   community: PublicCommunityPageModel;
   communityPath: string;
-  visualScenarioId?: string | null;
   resumeAction: AuthIntentAction | null;
   resumeControl: string | null;
 }) {
@@ -813,11 +775,7 @@ function CommunitySafetyActions({
             action={reportCommunityContributionAction}
             className="absolute left-0 z-20 mt-1 grid w-72 gap-3 rounded-md border border-border bg-popover p-3 shadow-md"
           >
-            <CommunityActionFields
-              locale={locale}
-              slug={community.slug}
-              visualScenarioId={visualScenarioId}
-            />
+            <CommunityActionFields locale={locale} slug={community.slug} />
             <input type="hidden" name="contributionId" value={item.id} />
             <label className="grid gap-1.5 text-sm font-medium">
               <span>{copy.reportReason}</span>
@@ -841,11 +799,7 @@ function CommunitySafetyActions({
       <DocumentMutationActionForm
         action={blockCommunityContributionAuthorAction}
       >
-        <CommunityActionFields
-          locale={locale}
-          slug={community.slug}
-          visualScenarioId={visualScenarioId}
-        />
+        <CommunityActionFields locale={locale} slug={community.slug} />
         <input type="hidden" name="contributionId" value={item.id} />
         <button
           id={
@@ -867,19 +821,14 @@ function CommunitySafetyActions({
 function CommunityActionFields({
   locale,
   slug,
-  visualScenarioId,
 }: {
   locale: PublicLocale;
   slug: string;
-  visualScenarioId?: string | null;
 }) {
   return (
     <>
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="slug" value={slug} />
-      {visualScenarioId ? (
-        <input type="hidden" name="visualCommunity" value={visualScenarioId} />
-      ) : null}
     </>
   );
 }
@@ -902,15 +851,11 @@ function communityQuery(input: {
   query: string;
   kind: string;
   cursor: string;
-  visualScenarioId?: string | null;
 }) {
   const params = new URLSearchParams();
   if (input.query) params.set("q", input.query);
   if (input.kind !== "all") params.set("kind", input.kind);
   params.set("cursor", input.cursor);
-  if (input.visualScenarioId) {
-    params.set("visualCommunity", input.visualScenarioId);
-  }
   return params.toString();
 }
 
@@ -920,23 +865,13 @@ function communityViewPath(
     query: string;
     kind: string;
     cursor: string;
-    visualScenarioId?: string | null;
   },
 ) {
   const params = new URLSearchParams();
   if (input.query) params.set("q", input.query);
   if (input.kind !== "all") params.set("kind", input.kind);
   if (input.cursor) params.set("cursor", input.cursor);
-  if (input.visualScenarioId) {
-    params.set("visualCommunity", input.visualScenarioId);
-  }
   return params.size > 0 ? `${path}?${params.toString()}` : path;
-}
-
-function withVisualCommunity(path: string, visualScenarioId?: string | null) {
-  if (!visualScenarioId) return path;
-  const params = new URLSearchParams({ visualCommunity: visualScenarioId });
-  return `${path}?${params.toString()}`;
 }
 
 function CommunityMedia({

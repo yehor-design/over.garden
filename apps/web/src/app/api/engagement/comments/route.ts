@@ -9,8 +9,6 @@ import {
 import { isPreciseLocationTextError } from "@/lib/privacy/precise-location-text";
 import { addEngagementComment } from "@/server/engagement-repository";
 import { isInteractionAdmissionError } from "@/server/interaction-admission";
-import { scopedToUser } from "@/server/request-scope";
-import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
 import {
   parseEngagementReturnTo,
   parseEngagementCommentTarget,
@@ -22,18 +20,15 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const target = parseEngagementCommentTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
-  const visualActor = resolveVisualSocialMutationActor(formData, ["journal"]);
   const parentCommentId =
     typeof formData.get("parentCommentId") === "string"
       ? String(formData.get("parentCommentId"))
       : null;
 
-  const admission = visualActor
-    ? null
-    : await admitDocumentMutation({
-        transport: documentMutationGenerationFromRequest(request),
-      });
-  if (admission?.status === "rejected") {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
     if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
       return redirectToEngagementAuth(
         request,
@@ -48,9 +43,7 @@ export async function POST(request: Request) {
     return documentMutationAdmissionResponse(admission);
   }
 
-  const scope = visualActor
-    ? scopedToUser(visualActor.actorId)
-    : admission!.scope;
+  const scope = admission.scope;
   try {
     await addEngagementComment(scope, {
       target,

@@ -301,27 +301,4 @@ describe("public journal directory", () => {
       }),
     ).toBe("/bg/journals");
   });
-
-  it("preserves the gated visual corpus through forms, reset, pagination, and detail return", () => {
-    const html = renderToStaticMarkup(
-      <PublicJournalDirectory
-        locale="uk"
-        copy={getPublicJournalDirectoryCopy("uk")}
-        page={{ ...page, request: { ...page.request, page: 1 } }}
-        facets={facets}
-        state="ready"
-        visualCorpus
-      />,
-    );
-
-    expect(html).toContain(
-      'type="hidden" name="__visualJournals" value="corpus"',
-    );
-    expect(html).toContain(
-      'data-journal-filter-state="/journals?q=%D0%B2%D1%96%D0%B4%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%BD%D1%8F&amp;kind=animal&amp;catalog=visual-domestic-shorthair&amp;topic=stress-and-recovery&amp;season=summer&amp;region=BG-23&amp;sort=oldest&amp;__visualJournals=corpus"',
-    );
-    expect(html).toContain('href="/journals?__visualJournals=corpus"');
-    expect(html).toContain("%26__visualJournals%3Dcorpus");
-    expect(html).toContain("page=2&amp;__visualJournals=corpus");
-  });
 });

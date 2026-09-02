@@ -50,7 +50,6 @@ describe("PublicKnowledgeHub", () => {
         items={items}
         contextItems={items}
         state="ready"
-        visualCorpus
       />,
     );
 
@@ -60,14 +59,11 @@ describe("PublicKnowledgeHub", () => {
     expect(html).toContain('name="q"');
     expect(html).toContain('name="type"');
     expect(html).toContain('name="kind"');
-    expect(html).toContain('name="__visualKnowledge" value="corpus"');
     expect(html).toContain("Авторський матеріал");
     expect(html).toContain("Досвід із публічних журналів");
     expect(html).toContain("11 публічних записів");
-    expect(html).toContain(
-      "/guides/visual-seasonal-observation?__visualKnowledge=corpus",
-    );
-    expect(html).toContain("/topics/care-checks?__visualKnowledge=corpus");
+    expect(html).toContain("/guides/visual-seasonal-observation");
+    expect(html).toContain("/topics/care-checks");
     expect(html).toContain('data-site-shell-context="route-owned"');
     expect(html).not.toContain("/garden");
     expect(html).not.toContain("rounded-full");

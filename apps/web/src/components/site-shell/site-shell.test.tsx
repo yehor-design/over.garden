@@ -308,23 +308,6 @@ describe("production site shell", () => {
     expect(html).not.toContain("data-sign-out-control");
   });
 
-  it("keeps the deterministic visual environment outside the product shell", async () => {
-    mocks.pathname = "/__visual-fixtures";
-    const { SiteShell } = await import("./site-shell");
-    const html = renderToStaticMarkup(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
-        <main>Visual fixture scenarios</main>
-      </SiteShell>,
-    );
-
-    expect(html).toContain('data-site-shell="excluded"');
-    expect(html).toContain("Visual fixture scenarios");
-    expect(html).not.toContain('data-site-shell-region="header"');
-    expect(html).not.toContain('data-site-shell-region="mobile-navigation"');
-    expect(html).not.toContain("data-sign-out-control");
-    expect(html).not.toContain("overgarden:session-convergence");
-  });
-
   it("renders the compact Bulgaria control on guest denied and health boundaries", async () => {
     const { SiteShell } = await import("./site-shell");
     for (const pathname of ["/health"]) {

@@ -103,16 +103,16 @@ describe("interface route policy", () => {
     expect(getInterfaceLanguageControlPlacement("/account/communities")).toBe(
       "site-shell",
     );
-    expect(
-      getInterfaceLanguageControlPlacement("/__visual-fixtures/admin"),
-    ).toBe("none");
+    expect(getInterfaceLanguageControlPlacement("/skeleton/admin")).toBe(
+      "none",
+    );
     expect(getInterfaceLanguageControlPlacement("/skeleton")).toBe("none");
     expect(getInterfaceLanguageControlPlacement("/bg/skeleton")).toBe(
       "site-shell",
     );
-    expect(
-      getInterfaceLanguageControlPlacement("/ru/__visual-fixtures/profile"),
-    ).toBe("site-shell");
+    expect(getInterfaceLanguageControlPlacement("/ru/skeleton/profile")).toBe(
+      "site-shell",
+    );
   });
 
   it("allows only native erasure request and owner-review routes to leave the local session gate", () => {

@@ -13,7 +13,6 @@ const ALLOWED_DIRECTORY_PATHS = new Map<string, PublicLocale>([
 export function buildPublicJournalDirectoryHref(
   locale: PublicLocale,
   request: PublicJournalDirectoryRequest,
-  visualCorpus = false,
 ) {
   const params = new URLSearchParams();
   if (request.query) params.set("q", request.query);
@@ -25,7 +24,6 @@ export function buildPublicJournalDirectoryHref(
   const defaultSort = request.query ? "relevance" : "recent";
   if (request.sort !== defaultSort) params.set("sort", request.sort);
   if (request.page > 1) params.set("page", String(request.page));
-  if (visualCorpus) params.set("__visualJournals", "corpus");
 
   const path = localizedPath(locale, "/journals");
   const query = params.toString();
@@ -35,7 +33,6 @@ export function buildPublicJournalDirectoryHref(
 export function normalizePublicJournalDirectoryReturnTo(
   value: string | null | undefined,
   fallbackLocale: PublicLocale,
-  allowVisualCorpus = false,
 ) {
   const fallback = localizedPath(fallbackLocale, "/journals");
   if (!value || value.length > 1_500 || !value.startsWith("/")) return fallback;
@@ -56,10 +53,7 @@ export function normalizePublicJournalDirectoryReturnTo(
       sort: url.searchParams.get("sort") ?? undefined,
       page: url.searchParams.get("page") ?? undefined,
     });
-    const visualCorpus =
-      allowVisualCorpus &&
-      url.searchParams.get("__visualJournals") === "corpus";
-    return buildPublicJournalDirectoryHref(locale, request, visualCorpus);
+    return buildPublicJournalDirectoryHref(locale, request);
   } catch {
     return fallback;
   }

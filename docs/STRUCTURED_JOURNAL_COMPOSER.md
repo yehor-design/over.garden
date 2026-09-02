@@ -95,26 +95,11 @@ pnpm exec vitest run src/lib/garden/journal-document-lexical-adapter.test.ts \
   src/components/garden/lexical-journal/journal-lexical-nodes.test.tsx \
   src/components/garden/lexical-journal/journal-lexical-image-node.test.tsx \
   src/components/garden/lexical-journal/journal-node-reorder.test.tsx
-pnpm smoke:structured-journal-composer
-pnpm smoke:journal-block-reorder
-pnpm smoke:journal-composer-responsiveness
-pnpm smoke:inline-media-integrity -- --environment local --confirm-environment local
-OVE317_DEVICE_EQUIVALENT_AUTHORIZATION=/absolute/content-free-authorization.json \
-OVE317_ANDROID_CDP_URL=http://127.0.0.1:9224 \
-OVE317_ADB_PATH=/absolute/android-sdk/platform-tools/adb \
-  pnpm smoke:lexical-journal-browser-matrix
-pnpm verify:editorjs-retirement
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
-Browser evidence must use the installed editor and record bounded,
-content-free results. For OVE-317, the maintainer-authorized device-equivalent
-gate requires Chromium/Firefox/WebKit, iPhone 17 Pro WebKit and Pixel 10
-Chromium profiles for `uk`/`bg`/`ru`, plus Android 16 Emulator Chrome with
-TalkBack bound, Chrome clipboard round-trip plus Android system
-`KEYCODE_PASTE`, and both CDP and UIAutomator accessibility-tree proof. It
-does not claim physical-device, VoiceOver-runtime, or OS-dictation coverage;
-those residual risks are explicit in the validated authorization receipt.
+The composer is proven by the unit tests above plus `pnpm build`. The former
+browser, device, and responsiveness matrices were retired by ADR-0022.
 
 ## A refused photo names its class (OVE-359)
 

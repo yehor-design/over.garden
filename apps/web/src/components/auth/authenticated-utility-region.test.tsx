@@ -27,7 +27,6 @@ describe("authenticated utility region", () => {
       expect(isAuthenticatedUtilityPath(`${prefix}/nested`)).toBe(true);
     }
     expect(isAuthenticatedUtilityPath("/skeleton")).toBe(false);
-    expect(isAuthenticatedUtilityPath("/__visual-fixtures/admin")).toBe(false);
   });
 
   it("renders a localized, identity-free operator session control", async () => {

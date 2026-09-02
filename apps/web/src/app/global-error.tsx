@@ -16,11 +16,7 @@ import {
 } from "@/lib/interface-market";
 import { INTERFACE_CONTEXT_ENDPOINT } from "@/lib/interface-route-policy";
 import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
-import {
-  GOOGLE_SANS_FONT_FACE_CSS,
-  GOOGLE_SANS_STACK,
-} from "@/lib/typography/google-sans-runtime";
-import { GoogleSansPreloads } from "@/lib/typography/google-sans-preloads";
+import { googleSans } from "./fonts";
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -37,9 +33,9 @@ const SAFE_GLOBAL_ERROR_CONTEXT: GlobalErrorInterfaceContext = {
   locale: "uk",
 };
 
-const GLOBAL_ERROR_TYPOGRAPHY_CSS = `${GOOGLE_SANS_FONT_FACE_CSS}
+const GLOBAL_ERROR_TYPOGRAPHY_CSS = `
 :root {
-  --font-overgarden-sans: ${GOOGLE_SANS_STACK};
+  --font-overgarden-sans: var(--font-google-sans), Arial, sans-serif;
   font-family: var(--font-overgarden-sans);
   font-optical-sizing: auto;
   font-synthesis: none;
@@ -87,10 +83,13 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
   }, [interfaceContext.locale]);
 
   return (
-    <html lang={interfaceContext.locale} suppressHydrationWarning>
+    <html
+      lang={interfaceContext.locale}
+      className={googleSans.variable}
+      suppressHydrationWarning
+    >
       <head>
         <meta name="referrer" content="no-referrer" />
-        <GoogleSansPreloads />
         <style
           dangerouslySetInnerHTML={{ __html: GLOBAL_ERROR_TYPOGRAPHY_CSS }}
         />

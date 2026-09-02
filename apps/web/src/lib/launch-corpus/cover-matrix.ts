@@ -1,13 +1,14 @@
 /**
- * OVE-199 cover/reorder/lifecycle matrix covered by local fixtures + unit proof.
- * Does not mutate the current VISUAL_FIXTURE_MANIFEST (ove187-v9 hash stays frozen).
+ * OVE-199 cover/reorder/lifecycle matrix covered by unit proof.
+ * Branches that only the deleted visual-fixture environment exercised are
+ * marked `manual-review` until a unit test claims them.
  */
 
 export const LAUNCH_CORPUS_LOCAL_COVER_MATRIX = [
   {
     id: "local-no-media",
     branch: "no_image_no_cover",
-    coveredBy: "unit+existing-fixture-none",
+    coveredBy: "unit+journal-cover-contract",
   },
   {
     id: "local-one-inline-auto",
@@ -62,7 +63,7 @@ export const LAUNCH_CORPUS_LOCAL_COVER_MATRIX = [
   {
     id: "local-aspects",
     branch: "portrait_landscape_square_subject_near_edge",
-    coveredBy: "visual-fixture-media-files",
+    coveredBy: "manual-review",
   },
   {
     id: "local-ten-plus-one",
@@ -77,12 +78,7 @@ export const LAUNCH_CORPUS_LOCAL_COVER_MATRIX = [
   {
     id: "local-lifecycle",
     branch: "private_public_archived_410_search_card_seo",
-    coveredBy: "visual-fixture-state-coverage",
-  },
-  {
-    id: "local-production-refuse",
-    branch: "visual_fixture_production_refusal",
-    coveredBy: "visual-fixtures-environment",
+    coveredBy: "manual-review",
   },
 ] as const;
 
@@ -91,7 +87,7 @@ export function listLocalCoverMatrixBranchIds(): string[] {
 }
 
 export function assertLocalCoverMatrixComplete(): void {
-  if (LAUNCH_CORPUS_LOCAL_COVER_MATRIX.length < 16) {
+  if (LAUNCH_CORPUS_LOCAL_COVER_MATRIX.length < 15) {
     throw new Error("OVE-199 local cover matrix is incomplete.");
   }
 }

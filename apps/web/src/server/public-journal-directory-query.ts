@@ -12,9 +12,6 @@ import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-sur
 export type PublicJournalDirectoryQueryExecutor =
   | Kysely<Database>
   | Transaction<Database>;
-export type PublicJournalDirectoryContentClassMode =
-  | "launch"
-  | "visual_fixture";
 
 export const PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE = 8;
 export const PUBLIC_JOURNAL_DIRECTORY_FALLBACK_CANDIDATE_LIMIT = 256;
@@ -92,9 +89,7 @@ export function normalizePublicJournalDirectoryRequest(input: {
   return {
     query,
     kind:
-      kind === "all"
-        ? "all"
-        : (normalizePublicObjectKindFilter(kind) ?? "all"),
+      kind === "all" ? "all" : (normalizePublicObjectKindFilter(kind) ?? "all"),
     catalog,
     topic,
     season: isDirectorySeason(season) ? season : "all",
@@ -114,7 +109,6 @@ export function buildPublicJournalDirectoryEntriesQuery(
   relevanceIds: readonly string[] = [],
   restrictToEntryIds?: readonly string[] | null,
   textSearchMode: "apply" | "skip" = "apply",
-  contentClassMode: PublicJournalDirectoryContentClassMode = "launch",
 ) {
   const safeRegion = publicJournalSafeRegionExpression();
   let query = executor
@@ -199,10 +193,7 @@ export function buildPublicJournalDirectoryEntriesQuery(
       entryId: string;
     }>();
 
-  query =
-    contentClassMode === "visual_fixture"
-      ? query.where("journal_entries.content_class", "=", "visual_fixture")
-      : query.where(publicLaunchSurfacePredicates());
+  query = query.where(publicLaunchSurfacePredicates());
 
   const restrictedEntryIds =
     normalizePublicJournalDirectoryEntryIds(restrictToEntryIds);
@@ -333,7 +324,6 @@ export function buildPublicJournalDirectoryEntriesQuery(
 export function buildPublicJournalDirectoryFallbackCandidateQuery(
   executor: PublicJournalDirectoryQueryExecutor,
   restrictToEntryIds?: readonly string[] | null,
-  contentClassMode: PublicJournalDirectoryContentClassMode = "launch",
 ) {
   let query = executor
     .selectFrom("journal_entries")
@@ -359,10 +349,7 @@ export function buildPublicJournalDirectoryFallbackCandidateQuery(
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null);
 
-  query =
-    contentClassMode === "visual_fixture"
-      ? query.where("journal_entries.content_class", "=", "visual_fixture")
-      : query.where(publicLaunchSurfacePredicates());
+  query = query.where(publicLaunchSurfacePredicates());
 
   const restricted =
     normalizePublicJournalDirectoryEntryIds(restrictToEntryIds);

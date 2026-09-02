@@ -69,22 +69,18 @@ describe("public knowledge URL and filtering contract", () => {
     ).toEqual({ query: "", type: "all", kind: "all" });
   });
 
-  it("builds stable localized hrefs and preserves fixture mode only when requested", () => {
+  it("builds stable localized hrefs", () => {
     expect(
-      buildPublicKnowledgeHref(
-        "bg",
-        { query: "полив", type: "topic", kind: "plant" },
-        true,
-      ),
+      buildPublicKnowledgeHref("bg", {
+        query: "полив",
+        type: "topic",
+        kind: "plant",
+      }),
     ).toBe(
-      "/bg/knowledge?q=%D0%BF%D0%BE%D0%BB%D0%B8%D0%B2&type=topic&kind=plant&__visualKnowledge=corpus",
+      "/bg/knowledge?q=%D0%BF%D0%BE%D0%BB%D0%B8%D0%B2&type=topic&kind=plant",
     );
     expect(
-      buildPublicKnowledgeHref(
-        "uk",
-        { query: "", type: "all", kind: "all" },
-        false,
-      ),
+      buildPublicKnowledgeHref("uk", { query: "", type: "all", kind: "all" }),
     ).toBe("/knowledge");
   });
 

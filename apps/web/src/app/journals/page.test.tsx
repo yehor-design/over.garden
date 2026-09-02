@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   listFacets: vi.fn(),
   resolveSearchScope: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
-  resolveVisualMode: vi.fn(),
   redirect: vi.fn(),
 }));
 
@@ -38,10 +37,6 @@ vi.mock(
 
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
-}));
-
-vi.mock("@/lib/visual-fixtures/public-journal-directory-scenarios", () => ({
-  resolveVisualFixturePublicJournalDirectoryMode: mocks.resolveVisualMode,
 }));
 
 const request = {
@@ -78,7 +73,6 @@ describe("/journals", () => {
     vi.resetModules();
     vi.clearAllMocks();
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
-    mocks.resolveVisualMode.mockReturnValue(null);
     mocks.listPage.mockResolvedValue(page);
     mocks.listFacets.mockResolvedValue(facets);
     mocks.resolveSearchScope.mockResolvedValue({
@@ -145,68 +139,6 @@ describe("/journals", () => {
     expect(html).toContain("Журнали тимчасово недоступні");
   });
 
-  it("renders stable fixture loading and error states without data calls", async () => {
-    const { default: Route } = await import("../[locale]/journals/page");
-
-    mocks.resolveVisualMode.mockReturnValue("loading");
-    const loadingHtml = renderToStaticMarkup(
-      await Route({
-        params: Promise.resolve({ locale: "uk" }),
-        searchParams: Promise.resolve({ __visualJournals: "loading" }),
-      }),
-    );
-    mocks.resolveVisualMode.mockReturnValue("error");
-    const errorHtml = renderToStaticMarkup(
-      await Route({
-        params: Promise.resolve({ locale: "uk" }),
-        searchParams: Promise.resolve({ __visualJournals: "error" }),
-      }),
-    );
-
-    expect(loadingHtml).toContain(
-      'data-public-journal-directory-state="loading"',
-    );
-    expect(errorHtml).toContain('data-public-journal-directory-state="error"');
-    expect(mocks.listPage).not.toHaveBeenCalled();
-    expect(mocks.listFacets).not.toHaveBeenCalled();
-  });
-
-  it("scopes the gated visual corpus through canonical repositories", async () => {
-    mocks.resolveVisualMode.mockReturnValue("corpus");
-    const { default: Route } = await import("../[locale]/journals/page");
-    const html = renderToStaticMarkup(
-      await Route({
-        params: Promise.resolve({ locale: "uk" }),
-        searchParams: Promise.resolve({
-          q: "орхідея",
-          kind: "plant",
-          __visualJournals: "corpus",
-        }),
-      }),
-    );
-
-    const pageOptions = mocks.listPage.mock.calls[0]?.[2];
-    const facetOptions = mocks.listFacets.mock.calls[0]?.[0];
-    expect(mocks.listPage).toHaveBeenCalledWith(
-      request,
-      "uk",
-      expect.objectContaining({
-        restrictToEntryIds: expect.any(Array),
-        searchScope: expect.any(Object),
-      }),
-    );
-    expect(pageOptions.restrictToEntryIds.length).toBeGreaterThan(8);
-    expect(facetOptions.restrictToEntryIds).toEqual(
-      pageOptions.restrictToEntryIds,
-    );
-    expect(pageOptions.contentClassMode).toBe("visual_fixture");
-    expect(facetOptions.contentClassMode).toBe("visual_fixture");
-    expect(facetOptions.searchScope).toEqual(pageOptions.searchScope);
-    expect(html).toContain(
-      'type="hidden" name="__visualJournals" value="corpus"',
-    );
-  });
-
   it("redirects the unprefixed route to a persisted non-Ukrainian locale with filters", async () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("ru");
     const { default: RootJournalsRoute } = await import("./page");
@@ -221,23 +153,6 @@ describe("/journals", () => {
 
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/ru/journals?q=%D0%BF%D1%87%D1%91%D0%BB%D1%8B&kind=animal&page=2",
-    );
-  });
-
-  it("preserves an authorized visual corpus during locale redirect", async () => {
-    mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
-    mocks.resolveVisualMode.mockReturnValue("corpus");
-    const { default: RootJournalsRoute } = await import("./page");
-
-    await RootJournalsRoute({
-      searchParams: Promise.resolve({
-        kind: "plant",
-        __visualJournals: "corpus",
-      }),
-    });
-
-    expect(mocks.redirect).toHaveBeenCalledWith(
-      "/bg/journals?kind=plant&__visualJournals=corpus",
     );
   });
 });

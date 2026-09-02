@@ -47,7 +47,6 @@ export function PublicKnowledgeHub({
   items,
   contextItems,
   state,
-  visualCorpus = false,
   jsonLd,
 }: {
   locale: PublicLocale;
@@ -56,14 +55,12 @@ export function PublicKnowledgeHub({
   items: readonly PublicKnowledgeHubItem[];
   contextItems: readonly PublicKnowledgeHubItem[];
   state: PublicKnowledgeHubState;
-  visualCorpus?: boolean;
   jsonLd?: Record<string, unknown> | null;
 }) {
   const contextModules = buildPublicKnowledgeContextModules(
     locale,
     copy,
     contextItems,
-    visualCorpus,
   );
 
   return (
@@ -94,17 +91,14 @@ export function PublicKnowledgeHub({
 
       <form
         method="get"
-        action={buildPublicKnowledgeHref(
-          locale,
-          { query: "", type: "all", kind: "all" },
-          visualCorpus,
-        )}
+        action={buildPublicKnowledgeHref(locale, {
+          query: "",
+          type: "all",
+          kind: "all",
+        })}
         aria-label={copy.filtersLabel}
         className="grid gap-4 border-b border-border py-4"
       >
-        {visualCorpus ? (
-          <input type="hidden" name="__visualKnowledge" value="corpus" />
-        ) : null}
         <label className="grid gap-1.5 text-sm font-medium text-foreground">
           <span>{copy.searchLabel}</span>
           <span className="flex min-w-0 gap-2">
@@ -140,11 +134,11 @@ export function PublicKnowledgeHub({
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
-            href={buildPublicKnowledgeHref(
-              locale,
-              { query: "", type: "all", kind: "all" },
-              visualCorpus,
-            )}
+            href={buildPublicKnowledgeHref(locale, {
+              query: "",
+              type: "all",
+              kind: "all",
+            })}
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             {copy.resetFilters}
@@ -161,27 +155,13 @@ export function PublicKnowledgeHub({
         <KnowledgeLoading label={copy.loadingLabel} />
       ) : null}
       {state === "error" ? (
-        <KnowledgeError
-          locale={locale}
-          copy={copy}
-          request={request}
-          visualCorpus={visualCorpus}
-        />
+        <KnowledgeError locale={locale} copy={copy} request={request} />
       ) : null}
       {state === "empty" ? (
-        <KnowledgeEmpty
-          locale={locale}
-          copy={copy}
-          visualCorpus={visualCorpus}
-        />
+        <KnowledgeEmpty locale={locale} copy={copy} />
       ) : null}
       {state === "ready" ? (
-        <KnowledgeResults
-          locale={locale}
-          copy={copy}
-          items={items}
-          visualCorpus={visualCorpus}
-        />
+        <KnowledgeResults locale={locale} copy={copy} items={items} />
       ) : null}
 
       <div className="mt-6 border-t border-border pt-6 xl:hidden">
@@ -224,12 +204,10 @@ function KnowledgeResults({
   locale,
   copy,
   items,
-  visualCorpus,
 }: {
   locale: PublicLocale;
   copy: PublicKnowledgeCopy;
   items: readonly PublicKnowledgeHubItem[];
-  visualCorpus: boolean;
 }) {
   return (
     <div className="grid gap-7 py-5">
@@ -275,7 +253,7 @@ function KnowledgeResults({
 
                   <div className="grid gap-1.5">
                     <Link
-                      href={itemHref(locale, item.path, visualCorpus)}
+                      href={itemHref(locale, item.path)}
                       className="text-xl leading-7 font-semibold text-foreground hover:text-primary"
                     >
                       {item.title}
@@ -307,7 +285,7 @@ function KnowledgeResults({
                       ) : null}
                     </div>
                     <Link
-                      href={itemHref(locale, item.path, visualCorpus)}
+                      href={itemHref(locale, item.path)}
                       className={buttonVariants({
                         variant: "outline",
                         size: "sm",
@@ -350,12 +328,10 @@ function KnowledgeError({
   locale,
   copy,
   request,
-  visualCorpus,
 }: {
   locale: PublicLocale;
   copy: PublicKnowledgeCopy;
   request: PublicKnowledgeRequest;
-  visualCorpus: boolean;
 }) {
   return (
     <section className="grid gap-3 border-b border-border py-8">
@@ -367,7 +343,7 @@ function KnowledgeError({
         {copy.errorBody}
       </p>
       <Link
-        href={buildPublicKnowledgeHref(locale, request, visualCorpus)}
+        href={buildPublicKnowledgeHref(locale, request)}
         className={buttonVariants({ variant: "outline", className: "w-fit" })}
       >
         {copy.retry}
@@ -379,11 +355,9 @@ function KnowledgeError({
 function KnowledgeEmpty({
   locale,
   copy,
-  visualCorpus,
 }: {
   locale: PublicLocale;
   copy: PublicKnowledgeCopy;
-  visualCorpus: boolean;
 }) {
   return (
     <section className="grid gap-3 border-b border-border py-8">
@@ -394,11 +368,11 @@ function KnowledgeEmpty({
         {copy.emptyBody}
       </p>
       <Link
-        href={buildPublicKnowledgeHref(
-          locale,
-          { query: "", type: "all", kind: "all" },
-          visualCorpus,
-        )}
+        href={buildPublicKnowledgeHref(locale, {
+          query: "",
+          type: "all",
+          kind: "all",
+        })}
         className={buttonVariants({ variant: "outline", className: "w-fit" })}
       >
         {copy.resetFilters}
@@ -411,7 +385,6 @@ export function buildPublicKnowledgeContextModules(
   locale: PublicLocale,
   copy: PublicKnowledgeCopy,
   items: readonly PublicKnowledgeHubItem[],
-  visualCorpus = false,
 ): SiteShellContextRailModule[] {
   return (["topic", "guide", "answer"] as const).map((kind) => ({
     key: `knowledge-${kind}`,
@@ -420,7 +393,7 @@ export function buildPublicKnowledgeContextModules(
       .filter((item) => item.kind === kind)
       .slice(0, kind === "topic" ? 6 : 3)
       .map((item) => ({
-        href: itemHref(locale, item.path, visualCorpus),
+        href: itemHref(locale, item.path),
         label: item.title,
         meta: formatCount(item.evidenceCount, locale),
       })),
@@ -428,11 +401,9 @@ export function buildPublicKnowledgeContextModules(
   }));
 }
 
-function itemHref(locale: PublicLocale, path: string, visualCorpus: boolean) {
+function itemHref(locale: PublicLocale, path: string) {
   const localized = localizedPath(locale, path);
-  return visualCorpus
-    ? `${localized}?${new URLSearchParams({ __visualKnowledge: "corpus" })}`
-    : localized;
+  return localized;
 }
 
 function sectionTitle(

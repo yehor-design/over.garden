@@ -51,20 +51,8 @@ pnpm exec vitest run \
   src/lib/garden/journal-document-lexical-adapter.test.ts \
   src/lib/garden/online-journal-draft.test.ts \
   src/lib/garden/online-journal-submit.test.ts
-pnpm smoke:journal-block-reorder
-OVE317_DEVICE_EQUIVALENT_AUTHORIZATION=/absolute/content-free-authorization.json \
-OVE317_ANDROID_CDP_URL=http://127.0.0.1:9224 \
-OVE317_ADB_PATH=/absolute/android-sdk/platform-tools/adb \
-  pnpm smoke:lexical-journal-browser-matrix
-
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
-The browser matrix covers pointer, touch event handling, keyboard, history,
-focus, locale fencing, forced colors, reduced motion, and the
-100-block/10-image boundary. OVE-317 uses the exact maintainer-authorized
-device-equivalent gate: iPhone 17 Pro WebKit and Pixel 10 Chromium profiles for
-all three locales, plus Android 16 Emulator Chrome with TalkBack bound and
-CDP/UIAutomator accessibility proof. Physical hardware and VoiceOver runtime
-remain explicitly unverified; evidence must contain no journal text, media
-URLs, block IDs, precise location, or identity.
+Reorder behaviour is proven by the unit tests above. The former browser and
+device matrices were retired by ADR-0022; there is no separate browser gate.

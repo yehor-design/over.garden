@@ -21,7 +21,6 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
-import { resolveVisualSocialScenario } from "@/lib/visual-fixtures/social-return-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import {
   listEngagementBookmarks,
@@ -69,12 +68,7 @@ export default async function LocalizedBookmarksRoute({
   if (!isPublicLocale(localeParam)) notFound();
   const copy = getSocialSurfaceCopy(localeParam);
   const session = await getCurrentSession();
-  const visualScenario = resolveVisualSocialScenario(
-    query.visualSocial,
-    "bookmarks",
-    process.env,
-  );
-  const userId = visualScenario?.actorId ?? session?.user?.id;
+  const userId = session?.user?.id;
   if (!userId) {
     return (
       <MySocialLayout
@@ -94,7 +88,7 @@ export default async function LocalizedBookmarksRoute({
   const filter = parseFilter(firstParam(query.kind));
   const page = parsePage(firstParam(query.page));
   const allItems = await listEngagementBookmarks(
-    scopedToUser(userId, visualScenario ? null : getSessionId(session)),
+    scopedToUser(userId, getSessionId(session)),
     undefined,
     localeParam,
   );
@@ -115,25 +109,14 @@ export default async function LocalizedBookmarksRoute({
       title={copy.bookmarks.title}
       description={copy.bookmarks.description}
       count={filtered.length}
-      controls={
-        <BookmarkFilters
-          locale={localeParam}
-          active={filter}
-          visualScenarioId={visualScenario?.id ?? null}
-        />
-      }
+      controls={<BookmarkFilters locale={localeParam} active={filter} />}
     >
       {items.length === 0 ? (
         <SocialEmptyState>{copy.bookmarks.empty}</SocialEmptyState>
       ) : (
         <ol className="divide-y divide-border border-y border-border">
           {items.map((item) => (
-            <BookmarkRow
-              key={item.key}
-              item={item}
-              locale={localeParam}
-              visualScenarioId={visualScenario?.id ?? null}
-            />
+            <BookmarkRow key={item.key} item={item} locale={localeParam} />
           ))}
         </ol>
       )}
@@ -141,12 +124,7 @@ export default async function LocalizedBookmarksRoute({
         <div className="flex items-center justify-between gap-3">
           {currentPage > 1 ? (
             <Link
-              href={bookmarkHref(
-                localeParam,
-                filter,
-                currentPage - 1,
-                visualScenario?.id,
-              )}
+              href={bookmarkHref(localeParam, filter, currentPage - 1)}
               className={buttonVariants({ variant: "outline" })}
             >
               <ArrowLeft className="size-4" />
@@ -157,12 +135,7 @@ export default async function LocalizedBookmarksRoute({
           )}
           {currentPage < pageCount ? (
             <Link
-              href={bookmarkHref(
-                localeParam,
-                filter,
-                currentPage + 1,
-                visualScenario?.id,
-              )}
+              href={bookmarkHref(localeParam, filter, currentPage + 1)}
               className={buttonVariants({ variant: "outline" })}
             >
               {copy.common.next}
@@ -180,11 +153,9 @@ type BookmarkFilter = "all" | EngagementBookmarkShelfItem["target"]["kind"];
 function BookmarkFilters({
   locale,
   active,
-  visualScenarioId,
 }: {
   locale: PublicLocale;
   active: BookmarkFilter;
-  visualScenarioId: string | null;
 }) {
   const copy = getSocialSurfaceCopy(locale);
   const filters: Array<[BookmarkFilter, string]> = [
@@ -203,7 +174,7 @@ function BookmarkFilters({
       {filters.map(([value, label]) => (
         <Link
           key={value}
-          href={bookmarkHref(locale, value, 1, visualScenarioId)}
+          href={bookmarkHref(locale, value, 1)}
           aria-current={active === value ? "true" : undefined}
           className={filterClass(active === value)}
         >
@@ -217,11 +188,9 @@ function BookmarkFilters({
 function BookmarkRow({
   item,
   locale,
-  visualScenarioId,
 }: {
   item: EngagementBookmarkShelfItem;
   locale: PublicLocale;
-  visualScenarioId: string | null;
 }) {
   const copy = getSocialSurfaceCopy(locale);
   return (
@@ -251,16 +220,13 @@ function BookmarkRow({
           <span className="sr-only">{copy.common.open}</span>
         </Link>
         <form method="post" action="/api/engagement/bookmarks">
-          {visualScenarioId ? (
-            <input type="hidden" name="visualSocial" value={visualScenarioId} />
-          ) : null}
           <input type="hidden" name="targetKind" value={item.target.kind} />
           <input type="hidden" name="targetRef" value={item.target.ref} />
           <input type="hidden" name="bookmarkState" value="removed" />
           <input
             type="hidden"
             name="returnTo"
-            value={bookmarkHref(locale, "all", 1, visualScenarioId)}
+            value={bookmarkHref(locale, "all", 1)}
           />
           <button
             type="submit"
@@ -280,12 +246,10 @@ function bookmarkHref(
   locale: PublicLocale,
   filter: BookmarkFilter,
   page: number,
-  visualScenarioId?: string | null,
 ) {
   const params = new URLSearchParams();
   if (filter !== "all") params.set("kind", filter);
   if (page > 1) params.set("page", String(page));
-  if (visualScenarioId) params.set("visualSocial", visualScenarioId);
   const path = localizedPath(locale, "/bookmarks");
   return params.size ? `${path}?${params}` : path;
 }

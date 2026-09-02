@@ -37,7 +37,6 @@ import {
   PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE,
   PUBLIC_JOURNAL_DIRECTORY_SELECTABLE_CATALOG_STATUSES,
   type PublicJournalDirectoryEntryRow,
-  type PublicJournalDirectoryContentClassMode,
   type PublicJournalDirectoryRequest,
   type PublicJournalDirectorySeason,
 } from "@/server/public-journal-directory-query";
@@ -142,7 +141,6 @@ export interface PublicJournalDirectoryListOptions {
   findSearchCandidates?: SearchCandidates;
   restrictToEntryIds?: readonly string[] | null;
   searchScope?: PublicJournalDirectorySearchScope;
-  contentClassMode?: PublicJournalDirectoryContentClassMode;
 }
 
 export async function resolvePublicJournalDirectorySearchScope(
@@ -170,7 +168,6 @@ export async function resolvePublicJournalDirectorySearchScope(
   const fallbackRows = await buildPublicJournalDirectoryFallbackCandidateQuery(
     executor,
     options.restrictToEntryIds,
-    options.contentClassMode,
   ).execute();
   return {
     entryIds: fallbackRows.map((row) => row.entryId),
@@ -196,7 +193,6 @@ export async function listPublicJournalDirectoryPage(
     relevanceIds,
     searchScope.entryIds,
     searchScope.source === "hybrid" ? "skip" : "apply",
-    options.contentClassMode,
   ).execute();
   const visibleRows = rows.slice(0, PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE);
   const entryIds = visibleRows.map((row) => row.entryId);
@@ -225,7 +221,7 @@ export async function listPublicJournalDirectoryPage(
 export async function listPublicJournalDirectoryFacets(
   options: Pick<
     PublicJournalDirectoryListOptions,
-    "executor" | "restrictToEntryIds" | "searchScope" | "contentClassMode"
+    "executor" | "restrictToEntryIds" | "searchScope"
   > = {},
 ): Promise<PublicJournalDirectoryFacets> {
   const executor = options.executor ?? db;
@@ -233,11 +229,7 @@ export async function listPublicJournalDirectoryFacets(
     options.searchScope?.entryIds ?? options.restrictToEntryIds;
   const safeRegion = publicJournalSafeRegionExpression();
   const [kindRows, catalogRows, topicRows, regionRows] = await Promise.all([
-    publicJournalFacetBase(
-      executor,
-      restrictedEntryIds,
-      options.contentClassMode,
-    )
+    publicJournalFacetBase(executor, restrictedEntryIds)
       .select([
         "plant_objects.object_kind as value",
         sql<number>`count(distinct ${sql.ref("journal_entries.id")})`.as(
@@ -247,11 +239,7 @@ export async function listPublicJournalDirectoryFacets(
       .groupBy("plant_objects.object_kind")
       .orderBy("count", "desc")
       .execute(),
-    publicJournalFacetBase(
-      executor,
-      restrictedEntryIds,
-      options.contentClassMode,
-    )
+    publicJournalFacetBase(executor, restrictedEntryIds)
       .innerJoin("catalog_items", (join) =>
         join
           .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
@@ -280,11 +268,7 @@ export async function listPublicJournalDirectoryFacets(
       .limit(MAX_PUBLIC_JOURNAL_DIRECTORY_FACETS)
       .$narrowType<{ slug: string }>()
       .execute(),
-    publicJournalFacetBase(
-      executor,
-      restrictedEntryIds,
-      options.contentClassMode,
-    )
+    publicJournalFacetBase(executor, restrictedEntryIds)
       .innerJoin(
         "journal_entry_topic_signals",
         "journal_entry_topic_signals.journal_entry_id",
@@ -318,11 +302,7 @@ export async function listPublicJournalDirectoryFacets(
       .orderBy("journal_topics.label", "asc")
       .limit(MAX_PUBLIC_JOURNAL_DIRECTORY_FACETS)
       .execute(),
-    publicJournalFacetBase(
-      executor,
-      restrictedEntryIds,
-      options.contentClassMode,
-    )
+    publicJournalFacetBase(executor, restrictedEntryIds)
       .select([
         safeRegion.as("code"),
         sql<number>`count(distinct ${sql.ref("journal_entries.id")})`.as(
@@ -461,7 +441,6 @@ export function serializePublicJournalDirectoryPage(
 function publicJournalFacetBase(
   executor: QueryExecutor,
   restrictToEntryIds?: readonly string[] | null,
-  contentClassMode: PublicJournalDirectoryContentClassMode = "launch",
 ) {
   let query = executor
     .selectFrom("journal_entries")
@@ -486,10 +465,7 @@ function publicJournalFacetBase(
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null);
 
-  query =
-    contentClassMode === "visual_fixture"
-      ? query.where("journal_entries.content_class", "=", "visual_fixture")
-      : query.where(publicLaunchSurfacePredicates());
+  query = query.where(publicLaunchSurfacePredicates());
 
   const restrictedEntryIds =
     normalizePublicJournalDirectoryEntryIds(restrictToEntryIds);

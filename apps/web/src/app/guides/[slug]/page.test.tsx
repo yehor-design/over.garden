@@ -70,44 +70,6 @@ describe("/guides/[slug]", () => {
       robots: { index: true, follow: true },
     });
   });
-
-  it("renders a noindex synthetic guide with derivative media and restricted evidence", async () => {
-    enableVisualFixtureEnv();
-    mocks.listPublicKnowledgeEvidence.mockResolvedValue({
-      ...emptyEvidence(),
-      totalCount: 11,
-      hasMore: true,
-    });
-
-    const params = Promise.resolve({
-      locale: "uk",
-      slug: "visual-seasonal-observation",
-    });
-    const searchParams = Promise.resolve({ __visualKnowledge: "corpus" });
-    const html = renderToStaticMarkup(
-      await GuideRoute({ params, searchParams }),
-    );
-
-    expect(html).toContain(
-      "Як порівняти два спостереження без зайвих припущень",
-    );
-    expect(html).toContain("Синтетичний матеріал OVE-177");
-    expect(html).toContain("Не є експертною порадою");
-    expect(html).toContain("fixture-media");
-    expect(mocks.listPublicKnowledgeEvidence).toHaveBeenCalledWith(
-      { topicSlugs: ["care-checks"], catalogSlugs: [] },
-      "uk",
-      expect.objectContaining({
-        restrictToEntryIds: expect.any(Array),
-        visualCorpus: true,
-      }),
-    );
-    await expect(
-      generateMetadata({ params, searchParams }),
-    ).resolves.toMatchObject({
-      robots: { index: false, follow: false },
-    });
-  });
 });
 
 function emptyEvidence() {
@@ -117,18 +79,4 @@ function emptyEvidence() {
     hasMore: false,
     allEvidencePath: "/journals",
   };
-}
-
-function enableVisualFixtureEnv() {
-  vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
-  vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
-  vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden_visual");
-  vi.stubEnv(
-    "DATABASE_URL",
-    "postgres://postgres:postgres@127.0.0.1/overgarden_visual",
-  );
-  vi.stubEnv("R2_ENDPOINT", "http://127.0.0.1:9000");
-  vi.stubEnv("R2_PUBLIC_BASE_URL", "http://127.0.0.1:9000/overgarden");
-  vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
-  vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
 }

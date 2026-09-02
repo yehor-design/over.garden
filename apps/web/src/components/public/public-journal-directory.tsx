@@ -48,7 +48,6 @@ export function PublicJournalDirectory({
   page,
   facets,
   state,
-  visualCorpus = false,
   jsonLd,
 }: {
   locale: PublicLocale;
@@ -56,21 +55,15 @@ export function PublicJournalDirectory({
   page: PublicJournalDirectoryPage;
   facets: PublicJournalDirectoryFacets;
   state: PublicJournalDirectoryState;
-  visualCorpus?: boolean;
   jsonLd?: Record<string, unknown> | null;
 }) {
   const contextModules = buildPublicJournalDirectoryContextModules(
     locale,
     copy,
     facets,
-    visualCorpus,
   );
   const activeFilters = buildActiveFilters(copy, page.request, facets);
-  const filterStateHref = buildPublicJournalDirectoryHref(
-    locale,
-    page.request,
-    visualCorpus,
-  );
+  const filterStateHref = buildPublicJournalDirectoryHref(locale, page.request);
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
 
   return (
@@ -102,17 +95,10 @@ export function PublicJournalDirectory({
         key={filterStateHref}
         data-journal-filter-state={filterStateHref}
         method="get"
-        action={buildPublicJournalDirectoryHref(
-          locale,
-          defaultRequest(),
-          visualCorpus,
-        )}
+        action={buildPublicJournalDirectoryHref(locale, defaultRequest())}
         aria-label={copy.filtersLabel}
         className="grid gap-4 border-b border-border py-4"
       >
-        {visualCorpus ? (
-          <input type="hidden" name="__visualJournals" value="corpus" />
-        ) : null}
         <label className="grid gap-1.5 text-sm font-medium text-foreground">
           <span>{copy.searchLabel}</span>
           <span className="flex min-w-0 gap-2">
@@ -220,11 +206,7 @@ export function PublicJournalDirectory({
           {activeFilters.map((filter) => (
             <Link
               key={filter.key}
-              href={buildPublicJournalDirectoryHref(
-                locale,
-                filter.request,
-                visualCorpus,
-              )}
+              href={buildPublicJournalDirectoryHref(locale, filter.request)}
               aria-label={`${copy.removeFilter}: ${filter.label}`}
               className={buttonVariants({ variant: "secondary", size: "sm" })}
             >
@@ -233,11 +215,7 @@ export function PublicJournalDirectory({
             </Link>
           ))}
           <Link
-            href={buildPublicJournalDirectoryHref(
-              locale,
-              defaultRequest(),
-              visualCorpus,
-            )}
+            href={buildPublicJournalDirectoryHref(locale, defaultRequest())}
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             {copy.resetFilters}
@@ -275,19 +253,10 @@ export function PublicJournalDirectory({
         <DirectoryLoading label={copy.loadingLabel} />
       ) : null}
       {state === "error" ? (
-        <DirectoryError
-          locale={locale}
-          copy={copy}
-          request={page.request}
-          visualCorpus={visualCorpus}
-        />
+        <DirectoryError locale={locale} copy={copy} request={page.request} />
       ) : null}
       {state === "empty" ? (
-        <DirectoryEmpty
-          locale={locale}
-          copy={copy}
-          visualCorpus={visualCorpus}
-        />
+        <DirectoryEmpty locale={locale} copy={copy} />
       ) : null}
       {state === "ready" ? (
         <>
@@ -299,17 +268,11 @@ export function PublicJournalDirectory({
                   copy={copy}
                   request={page.request}
                   card={card}
-                  visualCorpus={visualCorpus}
                 />
               </li>
             ))}
           </ol>
-          <DirectoryPagination
-            locale={locale}
-            copy={copy}
-            page={page}
-            visualCorpus={visualCorpus}
-          />
+          <DirectoryPagination locale={locale} copy={copy} page={page} />
         </>
       ) : null}
 
@@ -354,19 +317,13 @@ function JournalResult({
   copy,
   request,
   card,
-  visualCorpus,
 }: {
   locale: PublicLocale;
   copy: PublicJournalDirectoryCopy;
   request: PublicJournalDirectoryRequest;
   card: PublicJournalDirectoryCard;
-  visualCorpus: boolean;
 }) {
-  const directoryHref = buildPublicJournalDirectoryHref(
-    locale,
-    request,
-    visualCorpus,
-  );
+  const directoryHref = buildPublicJournalDirectoryHref(locale, request);
   const entryHref = addDirectoryReturnTo(card.publicPath, directoryHref);
   const KindIcon = {
     plant: Sprout,
@@ -430,15 +387,11 @@ function JournalResult({
             {card.topics.map((topic) => (
               <Link
                 key={topic.slug}
-                href={buildPublicJournalDirectoryHref(
-                  locale,
-                  {
-                    ...request,
-                    topic: topic.slug,
-                    page: 1,
-                  },
-                  visualCorpus,
-                )}
+                href={buildPublicJournalDirectoryHref(locale, {
+                  ...request,
+                  topic: topic.slug,
+                  page: 1,
+                })}
                 className="inline-flex min-h-6 items-center hover:text-primary hover:underline"
               >
                 #{topic.label}
@@ -563,11 +516,9 @@ function DirectoryLoading({ label }: { label: string }) {
 function DirectoryEmpty({
   locale,
   copy,
-  visualCorpus,
 }: {
   locale: PublicLocale;
   copy: PublicJournalDirectoryCopy;
-  visualCorpus: boolean;
 }) {
   return (
     <section className="flex flex-col items-start gap-3 py-10">
@@ -579,11 +530,7 @@ function DirectoryEmpty({
         {copy.emptyBody}
       </p>
       <Link
-        href={buildPublicJournalDirectoryHref(
-          locale,
-          defaultRequest(),
-          visualCorpus,
-        )}
+        href={buildPublicJournalDirectoryHref(locale, defaultRequest())}
         className={buttonVariants({ variant: "outline" })}
       >
         {copy.resetFilters}
@@ -596,12 +543,10 @@ function DirectoryError({
   locale,
   copy,
   request,
-  visualCorpus,
 }: {
   locale: PublicLocale;
   copy: PublicJournalDirectoryCopy;
   request: PublicJournalDirectoryRequest;
-  visualCorpus: boolean;
 }) {
   return (
     <section role="alert" className="flex flex-col items-start gap-3 py-10">
@@ -612,7 +557,7 @@ function DirectoryError({
         {copy.errorBody}
       </p>
       <Link
-        href={buildPublicJournalDirectoryHref(locale, request, visualCorpus)}
+        href={buildPublicJournalDirectoryHref(locale, request)}
         className={buttonVariants({ variant: "outline" })}
       >
         {copy.retry}
@@ -625,26 +570,20 @@ function DirectoryPagination({
   locale,
   copy,
   page,
-  visualCorpus,
 }: {
   locale: PublicLocale;
   copy: PublicJournalDirectoryCopy;
   page: PublicJournalDirectoryPage;
-  visualCorpus: boolean;
 }) {
   return (
     <footer className="grid min-h-16 grid-cols-3 items-center gap-2 border-t border-border py-4">
       <div>
         {page.hasPreviousPage ? (
           <Link
-            href={buildPublicJournalDirectoryHref(
-              locale,
-              {
-                ...page.request,
-                page: Math.max(1, page.request.page - 1),
-              },
-              visualCorpus,
-            )}
+            href={buildPublicJournalDirectoryHref(locale, {
+              ...page.request,
+              page: Math.max(1, page.request.page - 1),
+            })}
             aria-label={copy.previousPage}
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
@@ -664,14 +603,10 @@ function DirectoryPagination({
       <div className="flex justify-end">
         {page.hasNextPage ? (
           <Link
-            href={buildPublicJournalDirectoryHref(
-              locale,
-              {
-                ...page.request,
-                page: page.request.page + 1,
-              },
-              visualCorpus,
-            )}
+            href={buildPublicJournalDirectoryHref(locale, {
+              ...page.request,
+              page: page.request.page + 1,
+            })}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             {copy.loadMore}
@@ -691,21 +626,16 @@ export function buildPublicJournalDirectoryContextModules(
   locale: PublicLocale,
   copy: PublicJournalDirectoryCopy,
   facets: PublicJournalDirectoryFacets,
-  visualCorpus = false,
 ): SiteShellContextRailModule[] {
   return [
     {
       key: "journal-topics",
       title: copy.contextTopicsTitle,
       items: facets.topics.slice(0, 6).map((topic) => ({
-        href: buildPublicJournalDirectoryHref(
-          locale,
-          {
-            ...defaultRequest(),
-            topic: topic.slug,
-          },
-          visualCorpus,
-        ),
+        href: buildPublicJournalDirectoryHref(locale, {
+          ...defaultRequest(),
+          topic: topic.slug,
+        }),
         label: topic.label,
         meta: String(topic.count),
       })),
@@ -714,14 +644,10 @@ export function buildPublicJournalDirectoryContextModules(
       key: "journal-catalogs",
       title: copy.contextCatalogsTitle,
       items: facets.catalogs.slice(0, 6).map((catalog) => ({
-        href: buildPublicJournalDirectoryHref(
-          locale,
-          {
-            ...defaultRequest(),
-            catalog: catalog.slug,
-          },
-          visualCorpus,
-        ),
+        href: buildPublicJournalDirectoryHref(locale, {
+          ...defaultRequest(),
+          catalog: catalog.slug,
+        }),
         label: catalog.label,
         meta: String(catalog.count),
       })),

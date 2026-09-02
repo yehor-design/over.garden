@@ -146,13 +146,11 @@ vi.mock("@/lib/garden/local-journal-composer-session", () => ({
   abortLocalJournalComposerSession: mocks.abort,
   admitLocalJournalComposerSession: mocks.admit,
   pauseLocalJournalComposerActivity: mocks.pause,
-  finalizeLocalJournalComposerForSignedOut:
-    mocks.finalizeStandalone,
+  finalizeLocalJournalComposerForSignedOut: mocks.finalizeStandalone,
   finalizeLocalJournalComposerForSessionChange:
     mocks.finalizeSessionChangeStandalone,
   prepareLocalJournalComposerSession: mocks.prepareComposer,
-  sealLocalJournalComposerForExit:
-    mocks.sealParticipantsForLocalExit,
+  sealLocalJournalComposerForExit: mocks.sealParticipantsForLocalExit,
 }));
 
 import {
@@ -467,10 +465,6 @@ describe("session convergence boundary", () => {
     expect(source).toContain("finalizeForHardReload");
     expect(source).toContain('window.addEventListener("pageshow"');
     expect(source).toContain('window.addEventListener("focus"');
-    expect(source).not.toContain("/__visual-fixtures/session-recheck");
-    expect(source).not.toContain("visualSessionConvergence");
-    expect(source).not.toContain("/__visual-fixtures/account-sign-out");
-    expect(source).not.toContain("visualAccountSignOut");
     expect(source).not.toMatch(/payload\.(?:user|session|account|owner)/);
   });
 

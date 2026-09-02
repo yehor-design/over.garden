@@ -27,7 +27,7 @@ function finalMedia(
 
 describe("OVE-199 local cover matrix", () => {
   it("lists every required local branch id", () => {
-    expect(listLocalCoverMatrixBranchIds().length).toBeGreaterThanOrEqual(16);
+    expect(listLocalCoverMatrixBranchIds().length).toBeGreaterThanOrEqual(15);
   });
 
   it("resolves no-media, auto, explicit, and cover-only branches", () => {

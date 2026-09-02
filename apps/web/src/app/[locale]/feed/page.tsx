@@ -14,7 +14,6 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
-import { resolveVisualSocialScenario } from "@/lib/visual-fixtures/social-return-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { scopedToUser } from "@/server/request-scope";
 import {
@@ -58,12 +57,7 @@ export default async function LocalizedFollowedFeedRoute({
   if (!isPublicLocale(localeParam)) notFound();
   const copy = getSocialSurfaceCopy(localeParam);
   const session = await getCurrentSession();
-  const visualScenario = resolveVisualSocialScenario(
-    query.visualSocial,
-    "feed",
-    process.env,
-  );
-  const userId = visualScenario?.actorId ?? session?.user?.id;
+  const userId = session?.user?.id;
 
   if (!userId) {
     return (
@@ -84,7 +78,7 @@ export default async function LocalizedFollowedFeedRoute({
   const source = parseSource(firstParam(query.source));
   const objectKind = parseObjectKind(firstParam(query.kind));
   const page = await listFollowedFeedPage(
-    scopedToUser(userId, visualScenario ? null : getSessionId(session)),
+    scopedToUser(userId, getSessionId(session)),
     {
       source,
       objectKind,
@@ -105,7 +99,6 @@ export default async function LocalizedFollowedFeedRoute({
           locale={localeParam}
           source={source}
           objectKind={objectKind}
-          visualScenarioId={visualScenario?.id ?? null}
         />
       }
     >
@@ -125,13 +118,7 @@ export default async function LocalizedFollowedFeedRoute({
       )}
       {page.nextCursor ? (
         <Link
-          href={feedHref(
-            localeParam,
-            source,
-            objectKind,
-            page.nextCursor,
-            visualScenario?.id,
-          )}
+          href={feedHref(localeParam, source, objectKind, page.nextCursor)}
           className="flex min-h-11 items-center justify-center gap-2 border border-border px-4 text-sm font-medium text-foreground hover:bg-muted"
         >
           {copy.feed.more}
@@ -146,12 +133,10 @@ function FeedFilters({
   locale,
   source,
   objectKind,
-  visualScenarioId,
 }: {
   locale: PublicLocale;
   source: FollowedFeedSource;
   objectKind: FollowedFeedObjectKind;
-  visualScenarioId: string | null;
 }) {
   const copy = getSocialSurfaceCopy(locale);
   const sources: Array<[FollowedFeedSource, string]> = [
@@ -176,7 +161,7 @@ function FeedFilters({
         {sources.map(([value, label]) => (
           <Link
             key={value}
-            href={feedHref(locale, value, objectKind, null, visualScenarioId)}
+            href={feedHref(locale, value, objectKind, null)}
             aria-current={source === value ? "true" : undefined}
             className={filterClass(source === value)}
           >
@@ -192,7 +177,7 @@ function FeedFilters({
         {kinds.map(([value, label]) => (
           <Link
             key={value}
-            href={feedHref(locale, source, value, null, visualScenarioId)}
+            href={feedHref(locale, source, value, null)}
             aria-current={objectKind === value ? "true" : undefined}
             className={filterClass(objectKind === value)}
           >
@@ -286,13 +271,11 @@ function feedHref(
   source: FollowedFeedSource,
   objectKind: FollowedFeedObjectKind,
   cursor?: string | null,
-  visualScenarioId?: string | null,
 ) {
   const params = new URLSearchParams();
   if (source !== "all") params.set("source", source);
   if (objectKind !== "all") params.set("kind", objectKind);
   if (cursor) params.set("cursor", cursor);
-  if (visualScenarioId) params.set("visualSocial", visualScenarioId);
   const path = localizedPath(locale, "/feed");
   return params.size ? `${path}?${params}` : path;
 }

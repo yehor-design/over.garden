@@ -73,22 +73,6 @@ describe("root document locale", () => {
     expect(source).not.toContain('from "./sw-register"');
   });
 
-  it("exposes the real global-error boundary only through the internal visual-fixture header", async () => {
-    mocks.requestHeaders.mockResolvedValue(
-      new Headers({ "x-overgarden-internal-visual-global-error": "1" }),
-    );
-    const { default: RootLayout } = await import("./layout");
-
-    const fixtureTree = await RootLayout({
-      children: <main>must not render</main>,
-    });
-    expect(() => renderToStaticMarkup(fixtureTree)).toThrow(
-      "Deterministic localization global-error fixture.",
-    );
-
-    mocks.requestHeaders.mockResolvedValue(new Headers());
-  });
-
   it("localizes fallback metadata in the selected interface locale", async () => {
     mocks.getRequestInterfaceLocalization.mockResolvedValue({
       locale: "bg",
@@ -125,8 +109,7 @@ describe("root document locale", () => {
 
     expect(html).toContain('<html lang="ru"');
     expect(html).not.toContain('<html lang="en"');
-    expect(html.match(/rel="preload"/gu)).toHaveLength(1);
-    expect(html).toContain("/fonts/google-sans/v69/");
+    expect(html).toContain("--font-google-sans");
     expect(html).not.toContain("fonts.googleapis.com");
     expect(html).not.toContain("font-geist-sans");
     expect(html).toContain('data-testid="site-shell"');

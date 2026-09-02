@@ -67,8 +67,6 @@ import { appendVoiceTranscriptToBody } from "@/lib/garden/voice-to-text";
 import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
 import { getLocalizedCoarseRegionOptions } from "@/lib/garden/regions";
 import { trackMetaMarketingEvent } from "@/lib/meta-marketing/client";
-import type { VisualFixtureCreationScenarioEvidence } from "@/lib/visual-fixtures/manifest";
-import { runVisualJournalCreationScenario } from "@/lib/visual-fixtures/journal-creation-client";
 import {
   JournalMentionTypeaheadPanel,
   applyMentionSuggestion,
@@ -90,11 +88,6 @@ interface FirstEntryComposerProps {
   initialSpace?: { id: string; displayName: string } | null;
   initialCatalogItem?: FirstEntryCatalogSelection | null;
   activationSource?: ActivationSource | null;
-  visualScenario?: VisualFixtureCreationScenarioEvidence | null;
-  /**
-   * Visual workspace fixtures use in-memory presentation state only and must
-   * not issue an authenticated publication request.
-   */
   enableServerPersistence?: boolean;
 }
 
@@ -132,14 +125,12 @@ export function FirstEntryComposer({
   initialSpace = null,
   initialCatalogItem = null,
   activationSource = null,
-  visualScenario = null,
   enableServerPersistence = true,
 }: FirstEntryComposerProps) {
   const copy = getGardenWorkspaceCopy(locale);
   const atomicCopy = getAtomicJournalCreateCopy(locale);
   const documentMutation = useOptionalDocumentMutationGeneration();
-  const localPersistenceEnabled =
-    enableServerPersistence && visualScenario == null;
+  const localPersistenceEnabled = enableServerPersistence;
   useScrollToHashOnMount("first-entry-composer");
   const router = useRouter();
   const titleEditedByUserRef = useRef(false);
@@ -150,23 +141,21 @@ export function FirstEntryComposer({
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const localeMutationCountRef = useRef(0);
   const [draft, setDraft] = useState<FirstEntryDraftFields>({
-    spaceId: visualScenario?.spaceId ?? initialSpace?.id ?? null,
-    spaceName: visualScenario?.spaceName ?? initialSpace?.displayName ?? "",
-    plantName: visualScenario?.objectName ?? "",
-    objectKind: visualScenario
-      ? visualScenario.objectKind
-      : initialCatalogItem
-        ? defaultObjectKindForCatalogSelection(
-            initialCatalogItem.catalogKind,
-            initialCatalogItem.source,
-          )
-        : ("plant" as PlantObjectKind),
-    title: visualScenario?.entryTitle ?? "",
-    body: visualScenario?.entryBody ?? "",
+    spaceId: initialSpace?.id ?? null,
+    spaceName: initialSpace?.displayName ?? "",
+    plantName: "",
+    objectKind: initialCatalogItem
+      ? defaultObjectKindForCatalogSelection(
+          initialCatalogItem.catalogKind,
+          initialCatalogItem.source,
+        )
+      : ("plant" as PlantObjectKind),
+    title: "",
+    body: "",
     contentDocument: null,
-    entryDate: visualScenario?.entryDate ?? today,
-    locationVisibility: visualScenario?.locationVisibility ?? "hidden",
-    coarseRegionCode: visualScenario?.coarseRegionCode ?? "",
+    entryDate: today,
+    locationVisibility: "hidden",
+    coarseRegionCode: "",
   });
   const [coverSelection, setCoverSelection] =
     useState<JournalCoverSelectionState>({ mode: "automatic" });
@@ -175,7 +164,7 @@ export function FirstEntryComposer({
   } | null>(null);
   const coverCopy = getJournalCoverControlsCopy(locale);
   const [catalogQuery, setCatalogQuery] = useState(
-    visualScenario?.catalogQuery ?? initialCatalogItem?.displayName ?? "",
+    initialCatalogItem?.displayName ?? "",
   );
   const [catalogSuggestions, setCatalogSuggestions] = useState<
     CatalogSuggestion[]
@@ -184,7 +173,7 @@ export function FirstEntryComposer({
     useState<CatalogSuggestion | null>(initialCatalogItem);
   const [userAddedCatalogName, setUserAddedCatalogName] = useState<
     string | null
-  >(visualScenario?.userAddedCatalogName ?? null);
+  >(null);
   const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("idle");
   const [catalogSearchRevision, setCatalogSearchRevision] = useState(0);
   const [activeMentionToken, setActiveMentionToken] =
@@ -192,9 +181,7 @@ export function FirstEntryComposer({
   const [mentionSelections, setMentionSelections] = useState<
     JournalMentionSelection[]
   >([]);
-  const [topicTagInput, setTopicTagInput] = useState(
-    visualScenario?.topicTagInput ?? "",
-  );
+  const [topicTagInput, setTopicTagInput] = useState("");
   const [mentionSuggestions, setMentionSuggestions] = useState<
     JournalMentionSuggestion[]
   >([]);
@@ -205,14 +192,8 @@ export function FirstEntryComposer({
   const [primaryMediaAssetId, setPrimaryMediaAssetId] = useState<string | null>(
     null,
   );
-  const [submitState, setSubmitState] = useState<SubmitState>(
-    visualScenario?.submitState === "failed" ? "failed" : "idle",
-  );
-  const [message, setMessage] = useState(
-    visualScenario
-      ? localizedVisualScenarioMessage(copy, visualScenario)
-      : atomicCopy.localOnly,
-  );
+  const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [message, setMessage] = useState(atomicCopy.localOnly);
   const [disclosureAccepted, setDisclosureAccepted] = useState(false);
   const [localeMutationPending, setLocaleMutationPending] = useState(false);
   const local = useLocalJournalComposer({
@@ -264,8 +245,6 @@ export function FirstEntryComposer({
   }
 
   useEffect(() => {
-    if (visualScenario) return;
-
     const query = catalogQuery.trim();
 
     if (
@@ -311,7 +290,6 @@ export function FirstEntryComposer({
     draft.objectKind,
     selectedCatalogItem,
     userAddedCatalogName,
-    visualScenario,
   ]);
 
   useEffect(() => {
@@ -389,11 +367,6 @@ export function FirstEntryComposer({
 
     beginLocaleMutation();
     try {
-      if (visualScenario) {
-        await handleVisualScenarioSubmit(visualScenario);
-        return;
-      }
-
       if (photoError) {
         setSubmitState("failed");
         setMessage(photoError);
@@ -464,46 +437,6 @@ export function FirstEntryComposer({
       }
     } finally {
       endLocaleMutation();
-    }
-  }
-
-  async function handleVisualScenarioSubmit(
-    scenario: VisualFixtureCreationScenarioEvidence,
-  ) {
-    setSubmitState("publishing");
-    setMessage(copy.composer.messages.visualRunning);
-
-    try {
-      if (scenario.expectedServerWrite) {
-        const readbackPath = await runVisualJournalCreationScenario(
-          scenario.id,
-        );
-        setSubmitState("published");
-        setMessage(copy.composer.messages.visualSaved);
-        router.push(readbackPath);
-        return;
-      }
-
-      if (scenario.state === "local-only" || scenario.state === "cancel") {
-        setSubmitState("idle");
-        setMessage(
-          scenario.state === "cancel"
-            ? copy.composer.messages.visualCancelDraft
-            : copy.composer.messages.visualDraftSaved,
-        );
-        return;
-      }
-
-      if (scenario.state === "error") {
-        setSubmitState("failed");
-        setMessage(copy.composer.messages.visualRecoverableError);
-      } else {
-        setSubmitState("idle");
-        setMessage(copy.composer.messages.visualDraftSaved);
-      }
-    } catch {
-      setSubmitState("failed");
-      setMessage(copy.composer.messages.genericSaveError);
     }
   }
 
@@ -844,7 +777,6 @@ export function FirstEntryComposer({
     <form
       onSubmit={handleSubmit}
       data-local-composer-kind="first_entry"
-      data-visual-creation-scenario={visualScenario?.id}
       data-local-composer-read-only={persistenceFrozen || undefined}
       className="grid min-w-0 gap-4"
     >
@@ -1085,10 +1017,7 @@ export function FirstEntryComposer({
           </p>
         </div>
 
-        <details
-          open={visualScenario?.detailsOpen || undefined}
-          className="group min-w-0 border-y border-border py-3"
-        >
+        <details className="group min-w-0 border-y border-border py-3">
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-foreground marker:text-muted-foreground sm:min-h-0">
             {copy.composer.fields.moreDetails}
             <span className="ml-2 font-normal text-muted-foreground">
@@ -1429,24 +1358,6 @@ function localizedAtomicPhotoHelp(
   if (ready) return copy.photoReady;
   if (!fileName) return copy.photoEmpty;
   return copy.photoPreparing;
-}
-
-function localizedVisualScenarioMessage(
-  copy: GardenWorkspaceCopy,
-  scenario: VisualFixtureCreationScenarioEvidence | null,
-) {
-  if (!scenario) return copy.composer.publicationNotice;
-  if (scenario.state === "local-only")
-    return copy.composer.localScenarioRecovered;
-  if (scenario.state === "connection-required")
-    return copy.composer.messages.fixtureConnectionRequired;
-  if (scenario.state === "error")
-    return copy.composer.messages.fixturePhotoError;
-  if (scenario.state === "cancel") return copy.composer.messages.fixtureCancel;
-  if (scenario.state === "duplicate") {
-    return copy.composer.messages.fixtureDuplicate;
-  }
-  return copy.composer.publicationNotice;
 }
 
 function selectedCoverMediaAssetId(

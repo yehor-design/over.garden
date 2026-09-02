@@ -604,7 +604,7 @@ describe("OVE-184 community repository contracts", () => {
       objectKind: index % 2 === 0 ? "plant" : "animal",
       authorHandle: `keeper_${index}`,
       authorDisplayName: `Keeper ${index}`,
-      coverDerivativeKey: index === 0 ? "visual-fixtures/cover.png" : null,
+      coverDerivativeKey: index === 0 ? "covers/cover.png" : null,
       coverFocalX: index === 0 ? 0.5 : null,
       coverFocalY: index === 0 ? 0.5 : null,
       coverIntrinsicWidth: index === 0 ? 800 : null,
@@ -627,7 +627,7 @@ describe("OVE-184 community repository contracts", () => {
         handle: "keeper_0",
         href: "/bg/@keeper_0",
       },
-      coverUrl: "https://media.over.garden/visual-fixtures/cover.png",
+      coverUrl: "https://media.over.garden/covers/cover.png",
       viewerReportState: null,
     });
     expect(page.items[0]?.excerpt.length).toBeLessThanOrEqual(320);

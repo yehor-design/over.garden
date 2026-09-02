@@ -16,17 +16,11 @@ describe("raw public lifecycle document", () => {
     expect(html).toContain('<html lang="uk">');
     expect(html).toContain('<meta name="referrer" content="no-referrer" />');
     const preloadTags = html.match(/<link rel="preload"[^>]+>/gu) ?? [];
-    expect(preloadTags).toHaveLength(1);
-    expect(
-      preloadTags.every((tag) => tag.includes('referrerpolicy="no-referrer"')),
-    ).toBe(true);
+    expect(preloadTags).toHaveLength(0);
     expect(html).toContain(
       '<a href="/journals" rel="noreferrer" referrerpolicy="no-referrer">',
     );
-    expect(html).toContain('font-family: "Google Sans"');
-    expect(html).toContain("font-optical-sizing: auto");
     expect(html).toContain("font-synthesis: none");
-    expect(html).toContain("/fonts/google-sans/v69/");
     expect(html).not.toContain("fonts.googleapis.com");
     expect(html).not.toContain("fonts.gstatic.com");
     expect(html).toContain("Запис не знайдено");
@@ -68,7 +62,7 @@ describe("raw public lifecycle document", () => {
       'href="/ru/journal/missing-entry?engagement=commented&amp;authIntent=comment"',
     );
     expect(html.match(/rel="noreferrer"/g)).toHaveLength(3);
-    expect(html.match(/referrerpolicy="no-referrer"/g)).toHaveLength(4);
+    expect(html.match(/referrerpolicy="no-referrer"/g)).toHaveLength(3);
     expect(html).toContain(
       '<a href="/bg/journals" rel="noreferrer" referrerpolicy="no-referrer">',
     );

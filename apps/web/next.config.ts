@@ -26,9 +26,6 @@ const nextConfig: NextConfig = {
   // Proxy preserves the existing 308 canonical redirect for every other path.
   skipTrailingSlashRedirect: true,
   images: {
-    dangerouslyAllowLocalIP:
-      process.env.VISUAL_FIXTURES_ENABLED === "true" &&
-      process.env.VISUAL_FIXTURES_TARGET === "local",
     remotePatterns: [
       { protocol: "https", hostname: "media.over.garden" },
       { protocol: "http", hostname: "localhost", port: "9000" },
@@ -43,24 +40,7 @@ const nextConfig: NextConfig = {
     root: path.join(__dirname, "..", ".."),
   },
   async headers() {
-    return [
-      { source: "/:path*", headers: securityHeaders },
-      {
-        // Typography binaries are pinned, content-hashed, and same-origin.
-        // Keep them outside the personalized app-cache boundary and immutable
-        // for one year; a changed binary must ship under a changed pathname.
-        source: "/fonts/:path*",
-        headers: [
-          { key: "Content-Type", value: "font/woff2" },
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
-        ],
-      },
-    ];
+    return [{ source: "/:path*", headers: securityHeaders }];
   },
 };
 

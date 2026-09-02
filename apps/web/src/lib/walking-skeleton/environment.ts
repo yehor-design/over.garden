@@ -1,8 +1,3 @@
-import {
-  resolveVisualFixtureEnvironment,
-  type VisualFixtureEnvironment,
-} from "@/lib/visual-fixtures/environment";
-
 type EnvLike = Record<string, string | undefined>;
 
 export interface WalkingSkeletonEnvironment {
@@ -12,6 +7,11 @@ export interface WalkingSkeletonEnvironment {
   target: "local";
 }
 
+/**
+ * The walking skeleton is an opt-in local diagnostic. It is enabled only by
+ * `WALKING_SKELETON_ENABLED=true` on a development/test Node runtime outside
+ * Vercel, and only when every backing service is a loopback origin.
+ */
 export function resolveWalkingSkeletonEnvironment(
   env: EnvLike,
 ): WalkingSkeletonEnvironment {
@@ -21,15 +21,11 @@ export function resolveWalkingSkeletonEnvironment(
 
   rejectProductionLikeRuntime(env);
 
-  const environment = resolveVisualFixtureEnvironment(env);
-  if (!isLocalVisualFixtureEnvironment(environment)) {
-    throw new Error("Walking skeleton requires the local fixture target.");
-  }
-
-  assertStrictLoopbackUrl(env.DATABASE_URL, "DATABASE_URL", [
-    "postgres:",
-    "postgresql:",
-  ]);
+  const databaseUrl = assertStrictLoopbackUrl(
+    env.DATABASE_URL,
+    "DATABASE_URL",
+    ["postgres:", "postgresql:"],
+  );
   assertStrictLoopbackUrl(env.R2_ENDPOINT, "R2_ENDPOINT", ["http:", "https:"]);
   assertStrictLoopbackUrl(env.R2_PUBLIC_BASE_URL, "R2_PUBLIC_BASE_URL", [
     "http:",
@@ -38,7 +34,19 @@ export function resolveWalkingSkeletonEnvironment(
   assertLoopbackOrigin(env.PUBLIC_SITE_URL, "PUBLIC_SITE_URL");
   assertLoopbackOrigin(env.BETTER_AUTH_URL, "BETTER_AUTH_URL");
 
-  return environment;
+  const databaseName = databaseUrl.pathname.replace(/^\/+/, "");
+  if (!databaseName) {
+    throw new Error(
+      "DATABASE_URL must name a database for the walking skeleton.",
+    );
+  }
+
+  return {
+    databaseHostClass: "loopback",
+    databaseName,
+    objectStoreHostClass: "loopback",
+    target: "local",
+  };
 }
 
 export function tryResolveWalkingSkeletonEnvironment(
@@ -84,16 +92,6 @@ function rejectProductionLikeRuntime(env: EnvLike) {
   }
 }
 
-function isLocalVisualFixtureEnvironment(
-  environment: VisualFixtureEnvironment,
-): environment is WalkingSkeletonEnvironment {
-  return (
-    environment.target === "local" &&
-    environment.databaseHostClass === "loopback" &&
-    environment.objectStoreHostClass === "loopback"
-  );
-}
-
 function assertLoopbackOrigin(value: string | undefined, name: string) {
   assertStrictLoopbackUrl(value, name, ["http:", "https:"]);
 }
@@ -102,7 +100,7 @@ function assertStrictLoopbackUrl(
   value: string | undefined,
   name: string,
   allowedProtocols: readonly string[],
-) {
+): URL {
   const normalizedValue = value?.trim();
   if (!normalizedValue) {
     throw new Error(`${name} is required for the walking skeleton.`);
@@ -121,6 +119,7 @@ function assertStrictLoopbackUrl(
   ) {
     throw new Error(`${name} must use a loopback origin.`);
   }
+  return url;
 }
 
 function isLoopbackHostname(hostname: string) {

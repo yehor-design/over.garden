@@ -125,14 +125,6 @@ describe("remaining document mutation form bridge", () => {
     expect(
       isRemainingDocumentMutationForm(managed as unknown as HTMLFormElement),
     ).toBe(false);
-
-    const visual = new FakeForm("https://over.garden/api/engagement/comments");
-    visual.elements.items.push(
-      new FakeInput({ name: "visualCommunity", value: "verified-fixture" }),
-    );
-    expect(
-      isRemainingDocumentMutationForm(visual as unknown as HTMLFormElement),
-    ).toBe(false);
   });
 
   it("inserts and then reuses one opaque generation field", () => {

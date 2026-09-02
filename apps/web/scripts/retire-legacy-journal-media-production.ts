@@ -116,7 +116,11 @@ async function main() {
   const startedAt = performance.now();
   const args = parseRetirementOperatorArgs(process.argv.slice(2));
   if (args.envFile) {
-    const result = loadEnv({ path: args.envFile, override: false, quiet: true });
+    const result = loadEnv({
+      path: args.envFile,
+      override: false,
+      quiet: true,
+    });
     if (result.error) throw result.error;
   }
   assertProductionEnvironment();
@@ -161,13 +165,17 @@ async function main() {
         throw new Error("ove349_zero_state_digest_drifted");
       }
       const zeroGate = validateZeroState(before);
-      if (!zeroGate.ok) throw new Error(`ove349_migration_blocked:${zeroGate.reason}`);
+      if (!zeroGate.ok)
+        throw new Error(`ove349_migration_blocked:${zeroGate.reason}`);
 
       const client = await pool.connect();
       try {
         const migration = readFileSync(
           fileURLToPath(
-            new URL("../sql/0038_ove349_retire_legacy_journal_media.sql", import.meta.url),
+            new URL(
+              "../sql/0038_ove349_retire_legacy_journal_media.sql",
+              import.meta.url,
+            ),
           ),
           "utf8",
         );
@@ -301,7 +309,8 @@ async function collectLegacyPreflight(pool: Pool, lockTables: boolean) {
       "select pg_try_advisory_xact_lock(hashtextextended($1, 0)) as locked",
       [ADVISORY_LOCK_NAME],
     );
-    if (!locked.rows[0]?.locked) throw new Error("ove349_operator_lock_unavailable");
+    if (!locked.rows[0]?.locked)
+      throw new Error("ove349_operator_lock_unavailable");
     if (lockTables) {
       await client.query(
         `lock table analytics_events, community_contributions,
@@ -314,14 +323,24 @@ async function collectLegacyPreflight(pool: Pool, lockTables: boolean) {
     }
 
     const database = await collectLegacyDatabaseEvidence(client);
-    const provider = await collectProviderEvidence(database.mediaRows, deadline);
+    const provider = await collectProviderEvidence(
+      database.mediaRows,
+      deadline,
+    );
     const report = buildLegacyReport(database, provider);
     const evidenceDigest = stableEvidenceDigest(report);
     const gate = toRetirementGateSnapshot(report, evidenceDigest);
     gate.publicOverlap = database.publicOverlap;
     gate.outsideApprovedScope += database.outsideApprovedScope;
     const classification = classifyRetirementGate(gate);
-    return { client, database, provider, report, evidenceDigest, classification };
+    return {
+      client,
+      database,
+      provider,
+      report,
+      evidenceDigest,
+      classification,
+    };
   } catch (error) {
     await client.query("rollback").catch(() => undefined);
     client.release();
@@ -331,7 +350,8 @@ async function collectLegacyPreflight(pool: Pool, lockTables: boolean) {
 
 async function applyApprovedCleanup(pool: Pool, observationReceipt: string) {
   const preflight = await collectLegacyPreflight(pool, true);
-  const { client, database, provider, evidenceDigest, classification } = preflight;
+  const { client, database, provider, evidenceDigest, classification } =
+    preflight;
   let revokedObjects = 0;
   let transactionOpen = true;
   let clientReleased = false;
@@ -458,7 +478,9 @@ async function applyApprovedCleanup(pool: Pool, observationReceipt: string) {
     const zeroState = await collectZeroStateEvidence(pool);
     const committedGate = validateZeroState(zeroState);
     if (!committedGate.ok) {
-      throw new Error(`ove349_cleanup_commit_readback_blocked:${committedGate.reason}`);
+      throw new Error(
+        `ove349_cleanup_commit_readback_blocked:${committedGate.reason}`,
+      );
     }
     return {
       terminalState: "applied",
@@ -501,7 +523,9 @@ async function collectLegacyDatabaseEvidence(
   `);
   const schemaDigest = stableTextDigest(schema.rows[0]?.signature ?? "");
   const drafts = numbers(
-    await one(client, `
+    await one(
+      client,
+      `
       with classified as (
         select draft.id,
           case
@@ -527,10 +551,13 @@ async function collectLegacyDatabaseEvidence(
         count(*) filter (where class = 'genuine')::text as genuine,
         count(*) filter (where class = 'ambiguous')::text as ambiguous
       from classified
-    `),
+    `,
+    ),
   );
   const privateEntries = numbers(
-    await one(client, `
+    await one(
+      client,
+      `
       with classified as (
         select entry.id,
           case
@@ -549,7 +576,8 @@ async function collectLegacyDatabaseEvidence(
         count(*) filter (where class = 'genuine')::text as genuine,
         count(*) filter (where class = 'ambiguous')::text as ambiguous
       from classified
-    `),
+    `,
+    ),
   );
   const privateEntryGroups = (
     await client.query<{
@@ -589,14 +617,15 @@ async function collectLegacyDatabaseEvidence(
     owners: Number(row.owners),
   }));
   const media = numbers(
-    await one(client, `
+    await one(
+      client,
+      `
       select count(*)::text as total,
         count(*) filter (
           where quarantine_key like 'atomic-create/%'
              or quarantine_key like 'atomic-edit/%'
         )::text as atomic_final_rows,
         count(*) filter (where quarantine_key like 'quarantine/%')::text as legacy_quarantine_rows,
-        count(*) filter (where quarantine_key like 'visual-fixtures/%')::text as visual_fixture_rows,
         count(*) filter (
           where status <> 'processed'
              or media_readiness_state <> 'public_ready'
@@ -629,7 +658,8 @@ async function collectLegacyDatabaseEvidence(
           )
         )::text as attached_nonfinal_rows
       from media_assets
-    `),
+    `,
+    ),
   );
   const mediaRows = (
     await client.query<{
@@ -674,7 +704,9 @@ async function collectLegacyDatabaseEvidence(
   }));
   const mediaGroups = groupMediaRows(mediaRows);
   const jobs = numbers(
-    await one(client, `
+    await one(
+      client,
+      `
       select count(*) filter (
           where queue_name = 'media_lifecycle'
             and payload->>'kind' = 'media_quarantine_expire'
@@ -691,15 +723,19 @@ async function collectLegacyDatabaseEvidence(
             and status in ('pending', 'processing', 'failed')
         )::text as unfinished_preserved_revoke_jobs
       from job_queue
-    `),
+    `,
+    ),
   );
   const visibility = numbers(
-    await one(client, `
+    await one(
+      client,
+      `
       select count(*) filter (where visibility = 'public')::text as public_rows,
         count(*) filter (where visibility = 'private')::text as private_rows,
         count(*) filter (where visibility not in ('public', 'private'))::text as unexpected_rows
       from journal_entries
-    `),
+    `,
+    ),
   );
   const privateEntryIds = (
     await client.query<{ id: string }>(
@@ -919,12 +955,17 @@ function buildLegacyReport(
   };
 }
 
-async function collectZeroStateEvidence(pool: Pool): Promise<ZeroStateEvidence> {
+async function collectZeroStateEvidence(
+  pool: Pool,
+): Promise<ZeroStateEvidence> {
   const client = await pool.connect();
   try {
     await client.query("begin isolation level repeatable read read only");
     await client.query("set local statement_timeout = '30000ms'");
-    const publicRows = await client.query<{ id: string; derivative_key: string }>(`
+    const publicRows = await client.query<{
+      id: string;
+      derivative_key: string;
+    }>(`
       select media.id, media.derivative_key
       from media_assets media
       join journal_entries entry on entry.id = media.journal_entry_id
@@ -963,7 +1004,9 @@ async function collectZeroStateEvidenceFromClient(
   client: PoolClient,
   publicObjectStates: Map<string, ObjectState>,
 ): Promise<ZeroStateEvidence> {
-  const row = await one(client, `
+  const row = await one(
+    client,
+    `
     select
       (select count(*) from journal_entry_drafts)::text as drafts,
       (select count(*) from journal_entries where visibility <> 'public')::text as private_entries,
@@ -982,7 +1025,8 @@ async function collectZeroStateEvidenceFromClient(
       (select count(*) from media_assets media
         join journal_entries entry on entry.id = media.journal_entry_id
         where entry.visibility = 'public')::text as public_media
-  `);
+  `,
+  );
   const counts = numbers(row);
   return {
     drafts: counts.drafts,
@@ -1004,7 +1048,9 @@ async function collectZeroStateEvidenceFromClient(
   };
 }
 
-async function collectContractedEvidence(pool: Pool): Promise<ContractedEvidence> {
+async function collectContractedEvidence(
+  pool: Pool,
+): Promise<ContractedEvidence> {
   const client = await pool.connect();
   try {
     await client.query("begin isolation level repeatable read read only");
@@ -1043,7 +1089,9 @@ async function collectContractedEvidence(pool: Pool): Promise<ContractedEvidence
            and conname = 'journal_entries_visibility_check') as visibility_constraint
     `);
     const counts = numbers(
-      await one(client, `
+      await one(
+        client,
+        `
         select
           (select count(*) from journal_entries where visibility = 'public')::text as public_entries,
           (select count(*) from media_assets)::text as public_media,
@@ -1054,11 +1102,13 @@ async function collectContractedEvidence(pool: Pool): Promise<ContractedEvidence
           (select count(*) from job_queue
             where status in ('pending', 'processing', 'failed')
               and payload->>'kind' = 'media_quarantine_expire')::text as unfinished_legacy_effects
-      `),
+      `,
+      ),
     );
-    const mediaRows = await client.query<{ id: string; derivative_key: string }>(
-      "select id, derivative_key from media_assets order by id",
-    );
+    const mediaRows = await client.query<{
+      id: string;
+      derivative_key: string;
+    }>("select id, derivative_key from media_assets order by id");
     await client.query("commit");
     const states = await probeMediaRows(
       createR2Client(),
@@ -1088,9 +1138,9 @@ async function collectContractedEvidence(pool: Pool): Promise<ContractedEvidence
       preservedMediaColumnsPresent:
         Number(schemaRow.preserved_media_columns) === 17,
       publicOnlyConstraint:
-        schemaRow.visibility_constraint?.replaceAll('"', "").includes(
-          "visibility = 'public'::text",
-        ) ?? false,
+        schemaRow.visibility_constraint
+          ?.replaceAll('"', "")
+          .includes("visibility = 'public'::text") ?? false,
       publicEntries: counts.public_entries,
       publicMedia: counts.public_media,
       unattachedMedia: counts.unattached_media,
@@ -1150,8 +1200,13 @@ function assertCapturedCandidateDigests(database: LegacyDatabaseEvidence) {
   }
 }
 
-function isMonotonicObjectOnlyRecovery(preflight: Awaited<ReturnType<typeof collectLegacyPreflight>>) {
-  const gate = toRetirementGateSnapshot(preflight.report, preflight.evidenceDigest);
+function isMonotonicObjectOnlyRecovery(
+  preflight: Awaited<ReturnType<typeof collectLegacyPreflight>>,
+) {
+  const gate = toRetirementGateSnapshot(
+    preflight.report,
+    preflight.evidenceDigest,
+  );
   gate.publicOverlap = preflight.database.publicOverlap;
   gate.outsideApprovedScope += preflight.database.outsideApprovedScope;
   return (
@@ -1375,11 +1430,7 @@ function required(name: string) {
   return value;
 }
 
-async function one(
-  client: PoolClient,
-  query: string,
-  values: unknown[] = [],
-) {
+async function one(client: PoolClient, query: string, values: unknown[] = []) {
   const result = await client.query<Record<string, string>>(query, values);
   const row = result.rows[0];
   if (!row) throw new Error("ove349_aggregate_query_returned_no_row");
@@ -1406,7 +1457,9 @@ function countSetOverlap(
   left: Array<string | null>,
   right: Array<string | null>,
 ) {
-  const rightSet = new Set(right.filter((value): value is string => Boolean(value)));
+  const rightSet = new Set(
+    right.filter((value): value is string => Boolean(value)),
+  );
   return left.filter(
     (value): value is string => value !== null && rightSet.has(value),
   ).length;

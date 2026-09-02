@@ -12,7 +12,6 @@ import {
   PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { resolveVisualFixturePublicJournalDirectoryMode } from "@/lib/visual-fixtures/public-journal-directory-scenarios";
 import {
   listPublicJournalDirectoryFacets,
   listPublicJournalDirectoryPage,
@@ -65,12 +64,7 @@ export async function generateMetadata({
         listPublicJournalDirectoryPage(request, localeParam),
         listPublicJournalDirectoryFacets(),
       ]);
-      return buildJournalDirectoryDiscoverySource(
-        localeParam,
-        page,
-        facets,
-        false,
-      );
+      return buildJournalDirectoryDiscoverySource(localeParam, page, facets);
     },
   });
   return buildJournalDirectorySurface(
@@ -85,56 +79,14 @@ export async function renderPublicJournalsPage(
   searchParams: Record<string, string | string[] | undefined> = {},
 ) {
   const request = normalizePublicJournalDirectoryRequest(searchParams);
-  const visualMode = resolveVisualFixturePublicJournalDirectoryMode(
-    searchParams,
-    process.env,
-  );
-  if (visualMode === "loading" || visualMode === "error") {
-    return (
-      <PublicJournalDirectory
-        locale={locale}
-        copy={getPublicJournalDirectoryCopy(locale)}
-        page={emptyPublicJournalDirectoryPage(request)}
-        facets={emptyPublicJournalDirectoryFacets()}
-        state={visualMode}
-      />
-    );
-  }
-
-  const visualCorpus = visualMode === "corpus";
-  const restrictedEntryIds = visualCorpus
-    ? await loadVisualFixturePublicJournalEntryIds()
-    : null;
   const searchScopePromise = resolvePublicJournalDirectorySearchScope(request, {
-    restrictToEntryIds: restrictedEntryIds,
-    contentClassMode: visualCorpus ? "visual_fixture" : "launch",
-    ...(visualCorpus
-      ? {
-          findSearchCandidates: async () => ({
-            source: "bounded_fallback" as const,
-            ids: null,
-            reason: "unavailable" as const,
-          }),
-        }
-      : {}),
+    restrictToEntryIds: null,
   });
   const pagePromise = searchScopePromise.then((searchScope) =>
-    visualCorpus
-      ? listPublicJournalDirectoryPage(request, locale, {
-          restrictToEntryIds: restrictedEntryIds,
-          searchScope,
-          contentClassMode: "visual_fixture",
-        })
-      : listPublicJournalDirectoryPage(request, locale, { searchScope }),
+    listPublicJournalDirectoryPage(request, locale, { searchScope }),
   );
   const facetsPromise = searchScopePromise.then((searchScope) =>
-    visualCorpus
-      ? listPublicJournalDirectoryFacets({
-          restrictToEntryIds: restrictedEntryIds,
-          searchScope,
-          contentClassMode: "visual_fixture",
-        })
-      : listPublicJournalDirectoryFacets({ searchScope }),
+    listPublicJournalDirectoryFacets({ searchScope }),
   );
 
   const [pageResult, facetsResult] = await Promise.allSettled([
@@ -157,12 +109,7 @@ export async function renderPublicJournalsPage(
       ? "empty"
       : "ready";
   const discovery = resolvePublicSurfaceDiscoveryForRequest(
-    buildJournalDirectoryDiscoverySource(
-      locale,
-      page,
-      facets,
-      Boolean(visualMode),
-    ),
+    buildJournalDirectoryDiscoverySource(locale, page, facets),
   );
   const surface = buildJournalDirectorySurface(locale, page, discovery);
 
@@ -173,7 +120,6 @@ export async function renderPublicJournalsPage(
       page={page}
       facets={facets}
       state={state}
-      visualCorpus={visualCorpus}
       jsonLd={surface.jsonLd}
     />
   );
@@ -209,12 +155,11 @@ function buildJournalDirectoryDiscoverySource(
   locale: PublicLocale,
   page: PublicJournalDirectoryPage,
   facets: PublicJournalDirectoryFacets,
-  isVisualFixture: boolean,
 ): PublicSurfaceDiscoverySource {
   const copy = getPublicJournalDirectoryCopy(locale);
   return {
     consumerId: "localized_journals_directory",
-    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+    candidateState: "candidate",
     qualityClass: page.qualityClass ?? "unverified",
     visibleText: [
       copy.metadataTitle,
@@ -270,18 +215,4 @@ function buildJournalDirectorySurface(
 
 export function emptyPublicJournalDirectoryFacets(): PublicJournalDirectoryFacets {
   return { kinds: [], catalogs: [], topics: [], regions: [] };
-}
-
-async function loadVisualFixturePublicJournalEntryIds() {
-  const { VISUAL_FIXTURE_MANIFEST } =
-    await import("@/lib/visual-fixtures/manifest");
-  return VISUAL_FIXTURE_MANIFEST.entries.flatMap((entry) =>
-    entry.visibility === "public" &&
-    entry.lifecycleState === "active" &&
-    entry.publicGoneAt === null &&
-    entry.publicSlug !== null &&
-    entry.publishedAt !== null
-      ? [entry.id]
-      : [],
-  );
 }

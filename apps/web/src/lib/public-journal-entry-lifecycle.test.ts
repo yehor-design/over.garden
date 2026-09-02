@@ -27,8 +27,6 @@ describe("public journal entry HTTP lifecycle", () => {
     expect(html).toContain("Записът не е намерен");
     expect(html).toContain('name="robots" content="noindex, nofollow"');
     expect(html).toContain('href="/bg/journals"');
-    expect(html).toContain('font-family: "Google Sans"');
-    expect(html.match(/rel="preload"/gu)).toHaveLength(1);
     expect(html).not.toMatch(
       /private|owner|email|entryId|spaceId|location|region|media/i,
     );

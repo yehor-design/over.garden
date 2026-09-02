@@ -22,11 +22,6 @@ import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-pa
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
-  isInterfaceSafeFlushFailureVisualFixtureValue,
-  isInterfaceSafeFlushTimeoutVisualFixtureValue,
-  isInterfaceServerActionPendingVisualFixtureSearchParams,
-} from "@/lib/localization/localization-visual-fixture";
-import {
   formatGardenWorkspaceDate,
   formatGardenWorkspaceTemplate,
   getGardenWorkspaceCopy,
@@ -38,12 +33,6 @@ import {
   getLocalizedOAuthErrorMessage,
   getTrustSurfaceCopy,
 } from "@/lib/trust-surface-copy";
-import { resolveVisualGardenWorkspaceScenario } from "@/lib/visual-fixtures/garden-workspace-scenarios";
-import { resolveVisualJournalCreationScenario } from "@/lib/visual-fixtures/journal-creation-scenarios";
-import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
-import type {
-  VisualFixtureCreationScenarioEvidence,
-} from "@/lib/visual-fixtures/manifest";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
 import {
@@ -62,11 +51,6 @@ import { addCatalogPublicSlugToWishlistAction } from "../wishlist/actions";
 import { FirstEntryComposer } from "./first-entry-composer";
 import { GardenAuthPanel } from "./garden-auth-panel";
 import { GardenWorkspaceView } from "./garden-workspace-view";
-import { GardenLoadingView } from "./loading";
-import { InterfaceSafeFlushFailureFixture } from "./interface-safe-flush-failure-fixture";
-import { InterfaceSafeFlushTimeoutFixture } from "./interface-safe-flush-timeout-fixture";
-import { holdInterfaceServerActionPendingVisualFixtureAction } from "./interface-server-action-pending-fixture-action";
-import { InterfaceServerActionPendingFixture } from "./interface-server-action-pending-fixture";
 import { SaveProgressMoment } from "./save-progress-moment";
 
 export const dynamic = "force-dynamic";
@@ -87,38 +71,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     searchParams ?? Promise.resolve(EMPTY_GARDEN_SEARCH_PARAMS),
     getRequestInterfaceLocale(),
   ]);
-  const visualScenario = resolveVisualGardenWorkspaceScenario(
-    params.visualWorkspace,
-    process.env,
-  );
-  const visualFixtureEnvironment = tryResolveVisualFixtureEnvironment(
-    process.env,
-  );
-  const safeFlushFailureFixture = Boolean(
-    visualFixtureEnvironment &&
-    isInterfaceSafeFlushFailureVisualFixtureValue(params.visualLocaleState),
-  );
-  const safeFlushTimeoutFixture = Boolean(
-    visualFixtureEnvironment &&
-    isInterfaceSafeFlushTimeoutVisualFixtureValue(params.visualLocaleState),
-  );
-  const serverActionPendingFixture = Boolean(
-    visualFixtureEnvironment?.target === "local" &&
-    isInterfaceServerActionPendingVisualFixtureSearchParams(params),
-  );
-  const creationScenario = resolveVisualJournalCreationScenario(
-    params.visualCreate,
-    "first-entry",
-    process.env,
-  );
-  if (visualScenario?.state === "loading") {
-    return <GardenLoadingView locale={locale} />;
-  }
-
-  const userId =
-    creationScenario?.ownerActorId ??
-    visualScenario?.ownerActorId ??
-    session?.user?.id;
+  const userId = session?.user?.id;
   const engagementAuthMessage = engagementAuthPrompt(locale, params.engagement);
   const engagementPostAuthPath = engagementAuthMessage
     ? normalizeGardenReturnToParam(params.returnTo)
@@ -134,7 +87,6 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
 
   if (
     userId &&
-    !visualScenario &&
     engagementPostAuthPath &&
     engagementPostAuthPath !== "/garden"
   ) {
@@ -158,36 +110,25 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
             : null)
         }
         postAuthPath={engagementPostAuthPath}
-        safeFlushFailureFixture={safeFlushFailureFixture}
-        safeFlushTimeoutFixture={safeFlushTimeoutFixture}
-        serverActionPendingFixture={serverActionPendingFixture}
       />
     );
   }
 
-  const scope = scopedToUser(
-    userId,
-    visualScenario || creationScenario ? null : getSessionId(session),
-  );
+  const scope = scopedToUser(userId, getSessionId(session));
   const loadOptions = {
     inventoryExpanded: firstParam(params.inventory) === "all",
     inventoryPage: positivePage(params.inventoryPage),
     spacesExpanded: firstParam(params.spaces) === "all",
     spacesPage: positivePage(params.spacesPage),
-    faultSections: visualScenario?.faultSections ?? [],
+    faultSections: [],
   };
   const [workspace, priorPublicationDisclosure] = await Promise.all([
     loadGardenWorkspace(scope, loadOptions),
-    visualScenario || creationScenario
-      ? Promise.resolve(false)
-      : hasPriorPublicationDisclosure(scope).catch(() => false),
+    hasPriorPublicationDisclosure(scope).catch(() => false),
   ]);
   const writeAccess = {
     canWrite: true,
-    actorClass:
-      visualScenario || creationScenario
-        ? ("visual_fixture" as const)
-        : ("real_self_serve" as const),
+    actorClass: "real_self_serve" as const,
   };
   const workspaceForView = workspace;
   const requestedSpaceId = uuidParam(params.space);
@@ -195,29 +136,23 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     workspaceForView.spaces.status === "ready"
       ? (workspaceForView.spaces.value.spaces[0]?.id ?? null)
       : null;
-  const selectedSpaceId =
-    requestedSpaceId || creationScenario?.spaceId || defaultSpaceId;
+  const selectedSpaceId = requestedSpaceId || defaultSpaceId;
   const initialSpace =
     workspaceForView.spaces.status === "ready"
       ? (workspaceForView.spaces.value.spaces.find(
           (space) => space.id === selectedSpaceId,
         ) ?? null)
       : null;
-  const today =
-    visualScenario || creationScenario
-      ? "2026-07-12"
-      : new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
 
-  if (!visualScenario && !creationScenario) {
-    scheduleGardenWorkspaceActivationAnalytics(scope, {
-      eventName: "activation_started",
-      properties: {
-        activation_source: activationSource,
-        source_surface_kind: activationSurfaceKindForSource(activationSource),
-        actor_class: writeAccess.actorClass,
-      },
-    });
-  }
+  scheduleGardenWorkspaceActivationAnalytics(scope, {
+    eventName: "activation_started",
+    properties: {
+      activation_source: activationSource,
+      source_surface_kind: activationSurfaceKindForSource(activationSource),
+      actor_class: writeAccess.actorClass,
+    },
+  });
 
   return (
     <>
@@ -225,7 +160,6 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
         action={normalizeAuthIntentResumeAction(params.authIntent)}
         control={normalizeAuthIntentResumeControl(params.authControl)}
       />
-      {safeFlushTimeoutFixture ? <InterfaceSafeFlushTimeoutFixture /> : null}
       <GardenWorkspaceView
         canWrite={writeAccess.canWrite}
         locale={locale}
@@ -248,8 +182,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
               ? { id: initialSpace.id, displayName: initialSpace.displayName }
               : null
           }
-          visualScenario={creationScenario}
-          enableServerPersistence={!visualScenario && !creationScenario}
+          enableServerPersistence
           ownerUserId={userId}
           requiresFirstPublicationDisclosure={!priorPublicationDisclosure}
         >
@@ -262,10 +195,8 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                 scope={scope}
                 spaceId={selectedSpaceId}
                 today={today}
-                enableServerPersistence={!visualScenario && !creationScenario}
-                requiresFirstPublicationDisclosure={
-                  !priorPublicationDisclosure
-                }
+                enableServerPersistence
+                requiresFirstPublicationDisclosure={!priorPublicationDisclosure}
                 showSaveProgress={
                   writeAccess.canWrite &&
                   normalizeSaveProgressMomentKind(params.saveProgress) ===
@@ -286,18 +217,12 @@ function GuestGardenEntry({
   catalogName,
   initialMessage,
   postAuthPath,
-  safeFlushFailureFixture,
-  safeFlushTimeoutFixture,
-  serverActionPendingFixture,
 }: {
   locale: InterfaceLocale;
   activationSource: Parameters<typeof GardenAuthPanel>[0]["activationSource"];
   catalogName?: string | null;
   initialMessage?: string | null;
   postAuthPath?: string | null;
-  safeFlushFailureFixture: boolean;
-  safeFlushTimeoutFixture: boolean;
-  serverActionPendingFixture: boolean;
 }) {
   const copy = getTrustSurfaceCopy(locale).gardenGuest;
 
@@ -307,13 +232,6 @@ function GuestGardenEntry({
       data-garden-workspace="guest"
       className="mx-auto grid w-full max-w-4xl gap-8 px-4 py-6 sm:px-6 sm:py-8"
     >
-      {safeFlushFailureFixture ? <InterfaceSafeFlushFailureFixture /> : null}
-      {safeFlushTimeoutFixture ? <InterfaceSafeFlushTimeoutFixture /> : null}
-      {serverActionPendingFixture ? (
-        <InterfaceServerActionPendingFixture
-          action={holdInterfaceServerActionPendingVisualFixtureAction}
-        />
-      ) : null}
       <header className="border-b border-border pb-5">
         <p className="text-xs font-semibold text-muted-foreground uppercase">
           {copy.eyebrow}
@@ -392,7 +310,6 @@ function GardenWriteTools({
   activationSource,
   initialCatalogItem,
   initialSpace,
-  visualScenario,
   enableServerPersistence,
   requiresFirstPublicationDisclosure,
   children,
@@ -405,7 +322,6 @@ function GardenWriteTools({
   >[0]["activationSource"];
   initialCatalogItem: FirstEntryCatalogSelection | null;
   initialSpace: { id: string; displayName: string } | null;
-  visualScenario: VisualFixtureCreationScenarioEvidence | null;
   enableServerPersistence: boolean;
   requiresFirstPublicationDisclosure: boolean;
   children?: React.ReactNode;
@@ -433,7 +349,6 @@ function GardenWriteTools({
             initialSpace={initialSpace}
             initialCatalogItem={initialCatalogItem}
             activationSource={activationSource}
-            visualScenario={visualScenario}
             enableServerPersistence={enableServerPersistence}
             requiresFirstPublicationDisclosure={
               requiresFirstPublicationDisclosure
