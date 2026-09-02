@@ -605,7 +605,7 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("keeps a terminal marker blocked without consulting legacy device state", async () => {
+  it("keeps a terminal marker blocked without consulting stale device state", async () => {
     mocks.readMarker.mockReturnValueOnce({
       status: "present",
       persistence: "persistent",

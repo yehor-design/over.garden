@@ -47,8 +47,6 @@ export const ALLOWED_RESIDUE: ReadonlyArray<{
   pathPrefix: string;
   owner: string;
 }> = [
-  { pathPrefix: "src/lib/retirement/", owner: "OVE-365" },
-  { pathPrefix: "src/proxy.ts", owner: "OVE-365" },
 ];
 
 const SCAN_DIRECTORIES = ["src", "scripts", "cloudflare/media-staging/src"] as const;

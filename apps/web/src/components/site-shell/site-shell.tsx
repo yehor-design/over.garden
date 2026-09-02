@@ -18,12 +18,8 @@ import { AuthenticatedUtilityRegion } from "@/components/auth/authenticated-util
 import { DocumentMutationGenerationProvider } from "@/components/auth/document-mutation-recovery";
 import { SessionConvergenceBoundary } from "@/components/auth/session-convergence-boundary";
 import { SignOutControl } from "@/components/auth/sign-out-control";
-import {
-  SignOutProvider,
-  useSignOut,
-} from "@/components/auth/sign-out-provider";
+import { SignOutProvider } from "@/components/auth/sign-out-provider";
 import { InterfaceLanguageControl } from "@/components/public/language-switcher";
-import { LegacyDeviceRetirementBanner } from "@/components/retirement/legacy-device-retirement-banner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -123,7 +119,6 @@ export function SiteShell({
     // guard so a failed session recheck cannot trap a person in an account.
     return (
       <SiteShellLocaleProvider locale={locale}>
-        <LegacyDeviceRetirementBanner locale={locale} />
         {isAuthenticated ? (
           <DocumentMutationGenerationProvider
             locale={locale}
@@ -169,14 +164,7 @@ export function SiteShell({
     );
 
     if (!isAuthenticated || languageControlPlacement !== "utility") {
-      return shouldRunLegacyRetirement() ? (
-        <>
-          <LegacyDeviceRetirementBanner locale={locale} />
-          {excludedShell}
-        </>
-      ) : (
-        excludedShell
-      );
+      return excludedShell;
     }
 
     return (
@@ -195,7 +183,6 @@ export function SiteShell({
             locale={locale}
             currentSessionBinding={currentSessionBinding}
           >
-            <AuthenticatedLegacyDeviceRetirement locale={locale} />
             {excludedShell}
           </SignOutProvider>
         </DocumentMutationGenerationProvider>
@@ -628,12 +615,7 @@ export function SiteShell({
   );
 
   if (!isAuthenticated) {
-    return (
-      <>
-        <LegacyDeviceRetirementBanner locale={locale} />
-        {shell}
-      </>
-    );
+    return shell;
   }
 
   return (
@@ -652,7 +634,6 @@ export function SiteShell({
           locale={locale}
           currentSessionBinding={currentSessionBinding}
         >
-          <AuthenticatedLegacyDeviceRetirement locale={locale} />
           {shell}
         </SignOutProvider>
       </DocumentMutationGenerationProvider>
@@ -699,24 +680,6 @@ export function SiteShellOperatorMenu({
         ))}
       </ul>
     </section>
-  );
-}
-
-function shouldRunLegacyRetirement() {
-  return true;
-}
-
-function AuthenticatedLegacyDeviceRetirement({
-  locale,
-}: {
-  locale: InterfaceLocale;
-}) {
-  const signOut = useSignOut();
-  return (
-    <LegacyDeviceRetirementBanner
-      locale={locale}
-      onSignOut={signOut.requestSignOut}
-    />
   );
 }
 
