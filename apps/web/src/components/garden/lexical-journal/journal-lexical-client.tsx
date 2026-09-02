@@ -5,11 +5,9 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $createParagraphNode,
-  $createTextNode,
   $getRoot,
   $getSelection,
   $insertNodes,
-  $isRangeSelection,
 } from "lexical";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -562,28 +560,6 @@ function JournalLexicalClientBody({
         const result = moveJournalBlockById(editor, sourceBlockId, delta);
         if (result === "moved") serialize();
         return result;
-      },
-      insertVoiceTranscript: async (transcript) => {
-        const text = transcript.trim();
-        if (!text || disabled) return;
-        editor.update(
-          () => {
-            const paragraph = $setJournalBlockId(
-              $createParagraphNode(),
-              createJournalBlockId(),
-            );
-            paragraph.append($createTextNode(text));
-            const selection = $getSelection();
-            const top = $isRangeSelection(selection)
-              ? selection.anchor.getNode().getTopLevelElement()
-              : null;
-            if (top) top.insertAfter(paragraph);
-            else $getRoot().append(paragraph);
-            paragraph.selectEnd();
-          },
-          { discrete: true },
-        );
-        serialize();
       },
       focus: () => editor.focus(),
     };

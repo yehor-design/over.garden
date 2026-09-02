@@ -120,7 +120,6 @@ export interface StructuredJournalComposerHandle {
     sourceBlockId: string,
     delta: -1 | 1,
   ) => Promise<"moved" | "noop">;
-  insertVoiceTranscript: (transcript: string) => Promise<void>;
   focus: () => void;
 }
 

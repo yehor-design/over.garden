@@ -125,7 +125,7 @@ describe("garden workspace copy", () => {
 
   it("contains no verified English workspace fallback in authored locale copy", () => {
     const forbidden =
-      /\b(?:next useful action|living objects|drafts on this device|queued locally|save first entry|mention suggestions unavailable|voice input stopped|garden trail|try this section again)\b/i;
+      /\b(?:next useful action|living objects|drafts on this device|queued locally|save first entry|mention suggestions unavailable|garden trail|try this section again)\b/i;
 
     for (const locale of LOCALES) {
       expect(

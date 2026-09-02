@@ -71,7 +71,6 @@ export interface AnalyticsEventProperties {
   cover_source?: AnalyticsCoverSource;
   block_count_bucket?: BlockCountBucket;
   has_formatting?: boolean;
-  via_voice?: boolean;
   schema_version?: "v1";
   mutation_outcome?: ComposerMutationOutcome;
   latency_bucket?: "fast" | "normal" | "slow";
@@ -137,7 +136,6 @@ const ALLOWED_PROPERTY_KEYS = new Set<keyof AnalyticsEventProperties>([
   "cover_source",
   "block_count_bucket",
   "has_formatting",
-  "via_voice",
   "schema_version",
   "mutation_outcome",
   "latency_bucket",
@@ -416,7 +414,6 @@ function normalizeAnalyticsEventPropertyValue(
     case "is_backdated":
     case "followed_by_action":
     case "has_formatting":
-    case "via_voice":
       if (typeof value === "boolean") return value;
       break;
     case "location_visibility_level":

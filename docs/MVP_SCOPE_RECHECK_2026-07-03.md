@@ -55,7 +55,7 @@ claim authority, not product access.
   UGC is never translated.
 - Self-serve auth is MVP. Email auth uses Resend and Google is the supported social sign-in provider. OVE-296 removes the former Meta social sign-in surface; OVE-297 owns bounded provider-state cleanup without making dormant rows part of the product surface. Apple Sign-In is not MVP after the 2026-07-04 founder decision to avoid AppleID login for launch; revisit it only after MVP if native App Store distribution or a fresh sign-in access requirement makes it necessary.
 - Full M:N journaling is MVP: a space-level entry can mention multiple objects and appear in the relevant timelines without duplicated entries.
-- Composer friction work is MVP now: photo-start, title prefill, voice-to-text,
+- Composer friction work is MVP now: photo-start, title prefill,
   ordered media, bounded progress, retry/remove/cancel, and one atomic Publish.
   Under ADR-0019, authoring is local-only and non-durable before Publish; there
   is no server draft, durable browser draft, draft-through-auth, or PWA/offline
@@ -101,7 +101,7 @@ Already documented before this recheck:
 - `OVE-117`: localization foundation
 - `OVE-118`: draft persistence
 - `OVE-119`: photo-start and title prefill
-- `OVE-120`: voice-to-text
+- `OVE-120`: voice-to-text (retired 2026-09-02 under ADR-0022; dictation removed)
 - `OVE-121`: full M:N space journal
 - `OVE-122` through `OVE-126`: lineage edge, claim inbox, invitations, graph readback, follow, and ask-the-lineage
 - `OVE-127`: Resend email auth

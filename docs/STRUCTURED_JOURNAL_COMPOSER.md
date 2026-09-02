@@ -64,7 +64,7 @@ retry controls.
 
 ## Safe input and media
 
-- Normal typing, IME, toolbar actions, voice transcript insertion, and local
+- Normal typing, IME, toolbar actions, and local
   image admission use native editor commands and selection.
 - External HTML paste is reduced through a closed text/mark allowlist. Scripts,
   styles, SVG, handlers, remote images, URI-list drops, and unsupported
