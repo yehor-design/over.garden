@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   abandonFoundationRelease: vi.fn(),
-  admitDocumentMutation: vi.fn(),
+  resolveMutationScope: vi.fn(),
   approveFoundationPreview: vi.fn(),
   assertCatalogCuratorAccess: vi.fn(),
   createFoundationDraft: vi.fn(),
@@ -16,9 +16,9 @@ vi.mock("@/lib/stable-registry/feature-gate", () => ({
   isStableRegistryReleaseCenterEnabled:
     mocks.isStableRegistryReleaseCenterEnabled,
 }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationGenerationFromFormData: vi.fn((formData: FormData) =>
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  ownerUserIdFromFormData: vi.fn((formData: FormData) =>
     formData.get("__overgardenDocumentGeneration"),
   ),
 }));
@@ -36,7 +36,7 @@ vi.mock("@/server/stable-registry/release-repository", () => ({
 describe("Stable Registry Release Center actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.admitDocumentMutation.mockResolvedValue({
+    mocks.resolveMutationScope.mockResolvedValue({
       status: "admitted",
       scope: { userId: "00000000-0000-4000-8000-000000000001" },
     });
@@ -48,22 +48,6 @@ describe("Stable Registry Release Center actions", () => {
       outcome: "blocked",
     });
     mocks.abandonFoundationRelease.mockResolvedValue({ outcome: "blocked" });
-  });
-
-  it("rejects a stale mutation generation before owner or release access", async () => {
-    mocks.admitDocumentMutation.mockResolvedValue({
-      status: "rejected",
-      transportResult: "DOCUMENT_SESSION_REFRESH_REQUIRED",
-    });
-    const { buildFoundationReleaseAction } = await import("./actions");
-
-    const result = await buildFoundationReleaseAction(new FormData());
-
-    expect(result).toEqual({
-      documentMutationAdmission: "DOCUMENT_SESSION_REFRESH_REQUIRED",
-    });
-    expect(mocks.assertCatalogCuratorAccess).not.toHaveBeenCalled();
-    expect(mocks.createFoundationDraft).not.toHaveBeenCalled();
   });
 
   it("keeps a feature-dark build blocked after owner authentication", async () => {

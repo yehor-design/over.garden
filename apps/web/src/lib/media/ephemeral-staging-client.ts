@@ -1,6 +1,6 @@
 "use client";
 
-import { DOCUMENT_MUTATION_GENERATION_HEADER } from "@/lib/auth/document-mutation-generation-transport";
+import { ownerScopeHeaders } from "@/lib/auth/session-signal";
 import {
   BoundedJsonResponseError,
   readBoundedJsonResponse,
@@ -40,7 +40,6 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
 
   constructor(
     private readonly options: {
-      documentMutationGeneration: string;
       fetcher?: typeof fetch;
       stagingOrigin?: string;
       uploadDeadlineMs?: number;
@@ -66,8 +65,7 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
           cache: "no-store",
           headers: {
             "content-type": "application/json",
-            [DOCUMENT_MUTATION_GENERATION_HEADER]:
-              this.options.documentMutationGeneration,
+            ...ownerScopeHeaders(),
           },
           body: JSON.stringify({
             stagingSessionId: input.stagingSessionId,
@@ -195,7 +193,6 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
   }
 }
 
-
 function linkedDeadlineController(
   source: AbortSignal | null,
   timeoutMs: number,
@@ -233,7 +230,6 @@ function responseCode(value: unknown) {
     ? value.code
     : "staging_request_failed";
 }
-
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);

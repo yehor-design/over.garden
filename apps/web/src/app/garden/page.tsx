@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { BookOpenText, CirclePlus, Compass, Sprout } from "lucide-react";
 
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import { SpaceEntryComposer } from "@/app/garden/space-entry-composer";
 import {
@@ -554,9 +554,7 @@ function PendingWishlistIntentPanel({
         })}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <DocumentMutationActionForm
-          action={addCatalogPublicSlugToWishlistAction}
-        >
+        <OwnerScopedActionForm action={addCatalogPublicSlugToWishlistAction}>
           <input
             type="hidden"
             name="catalogPublicSlug"
@@ -571,7 +569,7 @@ function PendingWishlistIntentPanel({
           <button type="submit" className={buttonVariants()}>
             {copy.save}
           </button>
-        </DocumentMutationActionForm>
+        </OwnerScopedActionForm>
         <Link
           href={gardenFirstEntryPreselectionPath(item.publicSlug)}
           className={buttonVariants({ variant: "outline" })}

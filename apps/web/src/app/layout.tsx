@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { InterfaceLocaleChangeBoundary } from "@/components/site-shell/interface-locale-change-boundary";
 import { SiteShell } from "@/components/site-shell/site-shell";
+import { OWNER_USER_ID_DOCUMENT_ATTRIBUTE } from "@/lib/auth/owner-scope-contract";
 import {
   getInterfaceCopy,
   INTERFACE_CONTEXT_META_NAME,
@@ -16,15 +17,13 @@ import { MetaMarketingAttribution } from "./meta-marketing";
 
 type SiteShellSessionState = {
   isAuthenticated: boolean;
-  documentMutationGeneration: string | null;
-  currentSessionBinding: string | null;
+  ownerUserId: string | null;
   hasOperatorAccess: boolean;
 };
 
 const ROOT_LAYOUT_GUEST_SESSION_STATE: SiteShellSessionState = {
   isAuthenticated: false,
-  documentMutationGeneration: null,
-  currentSessionBinding: null,
+  ownerUserId: null,
   hasOperatorAccess: false,
 };
 
@@ -60,6 +59,9 @@ export default async function RootLayout({
     <html
       lang={locale}
       className={`${googleSans.variable} ${geistMono.variable} h-full antialiased`}
+      {...(shellSession.ownerUserId
+        ? { [OWNER_USER_ID_DOCUMENT_ATTRIBUTE]: shellSession.ownerUserId }
+        : {})}
     >
       <body className="flex min-h-full flex-col">
         <InterfaceLocaleChangeBoundary>
@@ -67,8 +69,7 @@ export default async function RootLayout({
             locale={locale}
             market={market}
             isAuthenticated={shellSession.isAuthenticated}
-            documentMutationGeneration={shellSession.documentMutationGeneration}
-            currentSessionBinding={shellSession.currentSessionBinding}
+            ownerUserId={shellSession.ownerUserId}
             hasOperatorAccess={shellSession.hasOperatorAccess}
             communitiesReady={communitiesReady}
           >

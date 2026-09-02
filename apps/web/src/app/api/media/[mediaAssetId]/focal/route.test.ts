@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  admitDocumentMutation: vi.fn(),
-  documentMutationAdmissionResponse: vi.fn(),
-  documentMutationGenerationFromRequest: vi.fn(),
+  resolveMutationScope: vi.fn(),
+  mutationScopeResponse: vi.fn(),
+  ownerUserIdFromRequest: vi.fn(),
   findMediaAssetForOwner: vi.fn(),
   updateMediaAssetFocalForOwner: vi.fn(),
   convergePublicProjectionsNow: vi.fn(),
@@ -11,11 +11,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationAdmissionResponse: mocks.documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest:
-    mocks.documentMutationGenerationFromRequest,
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  mutationScopeResponse: mocks.mutationScopeResponse,
+  ownerUserIdFromRequest: mocks.ownerUserIdFromRequest,
 }));
 vi.mock("@/server/media/media-repository", () => ({
   findMediaAssetForOwner: mocks.findMediaAssetForOwner,
@@ -32,8 +31,8 @@ describe("PATCH /api/media/[mediaAssetId]/focal", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    mocks.documentMutationGenerationFromRequest.mockReturnValue("transport");
-    mocks.admitDocumentMutation.mockResolvedValue({
+    mocks.ownerUserIdFromRequest.mockReturnValue("transport");
+    mocks.resolveMutationScope.mockResolvedValue({
       status: "admitted",
       scope: {
         userId: "00000000-0000-4000-8000-000000000001",

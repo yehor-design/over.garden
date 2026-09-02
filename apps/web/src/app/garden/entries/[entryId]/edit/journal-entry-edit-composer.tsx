@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
-import { useOptionalDocumentMutationGeneration } from "@/components/auth/document-mutation-recovery";
+import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
 import {
   JournalCoverControls,
   type JournalCoverSelectionState,
@@ -71,7 +71,7 @@ export function JournalEntryEditComposer({
   returnTo: string;
 }) {
   const router = useRouter();
-  const documentMutation = useOptionalDocumentMutationGeneration();
+  const documentMutation = useOptionalOwnerScope();
   const composerRef = useRef<StructuredJournalComposerHandle | null>(null);
   const saveButtonRef = useRef<HTMLButtonElement | null>(null);
   const cancelEditingButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -130,7 +130,6 @@ export function JournalEntryEditComposer({
       return focal?.x !== media.focalX || focal?.y !== media.focalY;
     });
   const local = useLocalJournalComposer({
-    documentMutationGeneration: documentMutation?.transport,
     fallbackReturnTo: safeReturnTo,
     dirty,
     existingMedia,
@@ -199,13 +198,9 @@ export function JournalEntryEditComposer({
   function handleTransportBoundary(error: unknown) {
     if (
       error instanceof LocalJournalComposerError &&
-      typeof error.details?.documentMutationAdmission === "string"
+      typeof error.details?.mutationScope === "string"
     ) {
-      documentMutation?.handleTransportResult(
-        error.details.documentMutationAdmission as Parameters<
-          NonNullable<typeof documentMutation>["handleTransportResult"]
-        >[0],
-      );
+      documentMutation?.handleActionResult(error.details);
     }
     if (
       error instanceof LocalJournalComposerError &&

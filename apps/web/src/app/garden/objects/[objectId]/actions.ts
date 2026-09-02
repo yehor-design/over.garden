@@ -2,11 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import type { DocumentMutationActionStateV1 } from "@/lib/auth/document-mutation-generation-transport";
-import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
+import type { MutationScopeActionState } from "@/lib/auth/owner-scope-contract";
 import {
   deleteJournalEntry,
   resolvePlantObjectCatalog,
@@ -16,13 +12,17 @@ import {
   createLineageInvitation,
   createProvenanceEdge,
 } from "@/server/lineage-repository";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export async function resolvePlantObjectCatalogAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const result = await resolvePlantObjectCatalog(scope, {
@@ -38,11 +38,11 @@ export async function resolvePlantObjectCatalogAction(formData: FormData) {
 }
 
 export async function updatePlantObjectLocationAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const result = await updatePlantObjectLocation(scope, {
@@ -59,11 +59,11 @@ export async function updatePlantObjectLocationAction(formData: FormData) {
 }
 
 export async function createProvenanceEdgeAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const result = await createProvenanceEdge(scope, {
@@ -83,11 +83,11 @@ export async function createProvenanceEdgeAction(formData: FormData) {
 }
 
 export async function createLineageInvitationAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const result = await createLineageInvitation(scope, {
@@ -115,13 +115,13 @@ export interface DeleteJournalEntryActionStateV1 {
 export async function deleteJournalEntryAction(
   formData: FormData,
 ): Promise<
-  DocumentMutationActionStateV1 | DeleteJournalEntryActionStateV1 | undefined
+  MutationScopeActionState | DeleteJournalEntryActionStateV1 | undefined
 > {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const entryId = String(formData.get("entryId") ?? "");
@@ -155,5 +155,7 @@ export async function deleteJournalEntryAction(
 }
 
 function toIsoTimestamp(value: Date | string): string {
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }

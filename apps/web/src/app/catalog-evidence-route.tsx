@@ -8,7 +8,7 @@ import { Bookmark, NotebookPen } from "lucide-react";
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
 import { PublicVarietySourceCredits } from "@/app/variety/[slug]/source-credits";
 import { addCatalogPublicSlugToWishlistAction } from "@/app/wishlist/actions";
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import type { CatalogKind } from "@/db/schema";
 import {
@@ -189,7 +189,7 @@ export async function renderPublicCatalogEvidenceRoute(
             {routeCopy.logThisIdentity}
           </Link>
           {isPlantVariety ? (
-            <DocumentMutationActionForm
+            <OwnerScopedActionForm
               action={addCatalogPublicSlugToWishlistAction}
             >
               <input
@@ -209,7 +209,7 @@ export async function renderPublicCatalogEvidenceRoute(
                 <Bookmark className="size-4" />
                 {publicCopy.variety.saveToWishlist}
               </button>
-            </DocumentMutationActionForm>
+            </OwnerScopedActionForm>
           ) : null}
           {isPlantVariety && wishlistStatus === "saved" ? (
             <p className="text-sm text-muted-foreground">

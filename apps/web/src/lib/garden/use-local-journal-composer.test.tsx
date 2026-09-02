@@ -34,7 +34,6 @@ function Probe({
 }) {
   onRender(
     useLocalJournalComposer({
-      documentMutationGeneration: "signed-generation",
       enabled: true,
       dirty: true,
       fallbackReturnTo: "/garden",
@@ -465,7 +464,6 @@ function ProbeWithCoordinator({
 }) {
   onRender(
     useLocalJournalComposer({
-      documentMutationGeneration: "signed-generation",
       enabled: true,
       dirty: true,
       fallbackReturnTo: "/garden",
@@ -499,7 +497,6 @@ function ProbeEdit({
 }) {
   onRender(
     useLocalJournalComposer({
-      documentMutationGeneration: "signed-generation",
       enabled: true,
       dirty: true,
       fallbackReturnTo: "/garden",

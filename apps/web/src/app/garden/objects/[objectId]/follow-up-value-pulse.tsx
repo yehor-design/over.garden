@@ -4,10 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import {
-  createDocumentMutationRequestHeaders,
-  useOptionalDocumentMutationGeneration,
-} from "@/components/auth/document-mutation-recovery";
+import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
 import {
   FOLLOW_UP_USEFULNESS_OPTIONS,
   FOLLOW_UP_USEFULNESS_REASON_OPTIONS,
@@ -35,7 +32,7 @@ export function FollowUpValuePulse({
 }: FollowUpValuePulseProps) {
   const copy = getOwnerObjectCopy(locale).valuePulse;
   const router = useRouter();
-  const documentMutation = useOptionalDocumentMutationGeneration();
+  const documentMutation = useOptionalOwnerScope();
   const [phase, setPhase] = useState<PulsePhase>("prompt");
   const [usefulness, setUsefulness] = useState<FollowUpUsefulness | null>(null);
   const [usefulnessReason, setUsefulnessReason] =
@@ -56,7 +53,7 @@ export function FollowUpValuePulse({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...createDocumentMutationRequestHeaders(documentMutation?.transport),
+          ...(documentMutation?.headers() ?? {}),
         },
         body: JSON.stringify({
           plantObjectId: objectId,

@@ -1,10 +1,5 @@
 import { revalidatePath } from "next/cache";
 
-import {
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
-} from "@/server/document-mutation-admission";
 import { setEngagementBookmark } from "@/server/engagement-repository";
 import {
   parseEngagementReturnTo,
@@ -12,19 +7,24 @@ import {
   redirectToEngagementAuth,
   redirectWithEngagementStatus,
 } from "../shared";
+import {
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
   const target = parseEngagementTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromRequest(request),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromRequest(request),
   });
   if (admission.status === "rejected") {
-    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+    if (admission.code === "session_required") {
       return redirectToEngagementAuth(request, target, returnTo, "bookmark");
     }
-    return documentMutationAdmissionResponse(admission);
+    return mutationScopeResponse(admission);
   }
 
   const scope = admission.scope;

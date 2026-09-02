@@ -5,10 +5,10 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { AtSign, Eye, ImageOff, Save } from "lucide-react";
 
 import {
-  DocumentMutationActionForm,
-  DocumentMutationGenerationFormField,
-  useOptionalDocumentMutationGeneration,
-} from "@/components/auth/document-mutation-recovery";
+  OwnerScopedActionForm,
+  OwnerUserIdField,
+  useOptionalOwnerScope,
+} from "@/components/auth/owner-scope";
 import { PublicProfileView } from "@/components/public/public-profile";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -152,7 +152,7 @@ export function OwnerProfileEditor({
   locale: InterfaceLocale;
   status: string | null;
 }) {
-  const documentMutation = useOptionalDocumentMutationGeneration();
+  const documentMutation = useOptionalOwnerScope();
   const copy = COPY[locale];
   const [editor, setEditor] = useState<OwnerPublicProfileEditor>(
     workspace.editor,
@@ -171,13 +171,13 @@ export function OwnerProfileEditor({
   const handledHandleAdmissionStateRef = useRef<unknown>(undefined);
   useEffect(() => {
     if (
-      handleState.documentMutationAdmission &&
+      handleState.mutationScope &&
       handledHandleAdmissionStateRef.current !== handleState
     ) {
       handledHandleAdmissionStateRef.current = handleState;
-      documentMutation?.handleTransportResult(
-        handleState.documentMutationAdmission,
-      );
+      documentMutation?.handleActionResult({
+        mutationScope: handleState.mutationScope,
+      });
     }
   }, [documentMutation, handleState]);
   const [handleCandidate, setHandleCandidate] = useState(
@@ -294,10 +294,10 @@ export function OwnerProfileEditor({
         <form
           action={handleFormAction}
           className="grid max-w-xl gap-3"
-          data-document-mutation-managed="true"
+          data-owner-scoped-form="true"
           noValidate
         >
-          <DocumentMutationGenerationFormField />
+          <OwnerUserIdField />
           <label
             htmlFor="public-handle-candidate"
             className="text-sm font-medium text-foreground"
@@ -356,7 +356,7 @@ export function OwnerProfileEditor({
         <h2 className="text-xl font-semibold text-foreground">
           {copy.editorTitle}
         </h2>
-        <DocumentMutationActionForm
+        <OwnerScopedActionForm
           action={updatePublicProfileAction}
           className="grid gap-6"
         >
@@ -591,7 +591,7 @@ export function OwnerProfileEditor({
             <Save aria-hidden="true" />
             {copy.save}
           </button>
-        </DocumentMutationActionForm>
+        </OwnerScopedActionForm>
       </section>
 
       <section

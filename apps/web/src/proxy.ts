@@ -3,7 +3,6 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { resolveBetterAuthSecret } from "@/lib/auth-secret";
-import { recordUnresolvedAuthorizationServe } from "@/lib/auth/unresolved-authorization";
 import {
   INTERFACE_LOCALE_COOKIE_MAX_AGE_SECONDS,
   INTERFACE_LOCALE_COOKIE_NAME,
@@ -657,10 +656,6 @@ async function resolvePublicProfileViewer(
       userId: typeof userId === "string" && userId.length > 0 ? userId : null,
     };
   } catch {
-    recordUnresolvedAuthorizationServe(
-      "public_profile_proxy",
-      "proxy_ambiguous",
-    );
     return { ok: true, userId: null };
   }
 }

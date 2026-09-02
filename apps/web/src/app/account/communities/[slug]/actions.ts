@@ -11,11 +11,11 @@ import {
   resolveCommunityReport,
   setCommunityParticipation,
 } from "@/server/community-repository";
-import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
 import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
 const MODERATION_REASONS = new Set([
@@ -29,11 +29,11 @@ const MODERATION_REASONS = new Set([
 ]);
 
 export async function moderateCommunityContributionAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   if (!(await hasOperatorMutationAccess(admission.scope))) {
     return redirectToModerationStatus(
@@ -63,11 +63,11 @@ export async function moderateCommunityContributionAction(formData: FormData) {
 }
 
 export async function moderateCommunityDiscussionAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   if (!(await hasOperatorMutationAccess(admission.scope))) {
     return redirectToModerationStatus(
@@ -95,11 +95,11 @@ export async function moderateCommunityDiscussionAction(formData: FormData) {
 }
 
 export async function moderateCommunityMembershipAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   if (!(await hasOperatorMutationAccess(admission.scope))) {
     return redirectToModerationStatus(
@@ -129,11 +129,11 @@ export async function moderateCommunityMembershipAction(formData: FormData) {
 }
 
 export async function resolveCommunityReportAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   if (!(await hasOperatorMutationAccess(admission.scope))) {
     return redirectToModerationStatus(
@@ -163,11 +163,11 @@ export async function resolveCommunityReportAction(formData: FormData) {
 }
 
 export async function setCommunityParticipationAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   if (!(await hasOperatorMutationAccess(admission.scope))) {
     return redirectToModerationStatus(

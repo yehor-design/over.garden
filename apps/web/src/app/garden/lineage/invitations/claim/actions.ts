@@ -10,39 +10,39 @@ import {
 } from "@/lib/lineage/claim-handoff";
 import { getOwnerLineageCopy } from "@/lib/owner-lineage-copy";
 import { createAuthIntentToken } from "@/server/auth-intent-token";
-import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { unsealLineageClaimToken } from "@/server/lineage-claim-cookie";
 import { resolveLineageInvitationClaim } from "@/server/lineage-repository";
 import type { RequestScope } from "@/server/request-scope";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 const LINEAGE_CLAIMS_PATH = "/garden/lineage/claims";
 
 export async function confirmLineageInvitationClaimAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+    if (admission.code === "session_required") {
       redirectToClaimAuthentication();
     }
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   return resolveInvitationClaim("confirmed", admission.scope);
 }
 
 export async function declineLineageInvitationClaimAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+    if (admission.code === "session_required") {
       redirectToClaimAuthentication();
     }
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   return resolveInvitationClaim("declined", admission.scope);
 }

@@ -2,22 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 
-import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
 import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
 import {
   moderateEngagementCommentReport,
   type EngagementModerationAction,
 } from "@/server/engagement-repository";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export async function moderateCommentReportAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const access = await resolveAdminCapabilityAccessBounded(
     admission.scope,

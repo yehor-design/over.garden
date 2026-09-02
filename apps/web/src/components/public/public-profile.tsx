@@ -17,7 +17,7 @@ import {
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import {
   SiteShellContextRailRegistration,
@@ -383,7 +383,7 @@ function ProfileActions({
           id="lineage-follow"
         />
       ) : viewer.kind === "following" ? (
-        <DocumentMutationActionForm
+        <OwnerScopedActionForm
           action={unfollowProfileAction}
           id="lineage-follow"
         >
@@ -396,12 +396,9 @@ function ProfileActions({
             <UserMinus aria-hidden="true" />
             {copy.unfollow}
           </button>
-        </DocumentMutationActionForm>
+        </OwnerScopedActionForm>
       ) : (
-        <DocumentMutationActionForm
-          action={followProfileAction}
-          id="lineage-follow"
-        >
+        <OwnerScopedActionForm action={followProfileAction} id="lineage-follow">
           {hiddenFields}
           <button
             type="submit"
@@ -411,7 +408,7 @@ function ProfileActions({
             <UserPlus aria-hidden="true" />
             {copy.follow}
           </button>
-        </DocumentMutationActionForm>
+        </OwnerScopedActionForm>
       )}
 
       <details
@@ -460,7 +457,7 @@ function ProfileActions({
             </>
           ) : (
             <>
-              <DocumentMutationActionForm
+              <OwnerScopedActionForm
                 action={reportProfileAction}
                 className="grid gap-2"
               >
@@ -493,8 +490,8 @@ function ProfileActions({
                   <Flag aria-hidden="true" />
                   {copy.reportSubmit}
                 </button>
-              </DocumentMutationActionForm>
-              <DocumentMutationActionForm
+              </OwnerScopedActionForm>
+              <OwnerScopedActionForm
                 action={blockProfileAction}
                 id="profile-block"
               >
@@ -511,7 +508,7 @@ function ProfileActions({
                   <ShieldBan aria-hidden="true" />
                   {copy.block}
                 </button>
-              </DocumentMutationActionForm>
+              </OwnerScopedActionForm>
             </>
           )}
         </div>

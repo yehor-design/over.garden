@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
@@ -346,7 +346,7 @@ function ActionForm({
   }
 
   return (
-    <DocumentMutationActionForm action={submit} className={className}>
+    <OwnerScopedActionForm action={submit} className={className}>
       {children}
       {feedback ? (
         <p
@@ -357,7 +357,7 @@ function ActionForm({
           {feedback}
         </p>
       ) : null}
-    </DocumentMutationActionForm>
+    </OwnerScopedActionForm>
   );
 }
 

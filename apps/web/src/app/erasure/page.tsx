@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
+import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import {
   ERASURE_REQUEST_INTAKE_VERSION,
@@ -126,7 +126,7 @@ export default async function ErasureRequestPage() {
           {hasOpenRequest ? (
             <p className="text-sm text-muted-foreground">{copy.openRequest}</p>
           ) : (
-            <DocumentMutationActionForm
+            <OwnerScopedActionForm
               action={submitErasureRequestAction}
               className="grid gap-4"
             >
@@ -145,7 +145,7 @@ export default async function ErasureRequestPage() {
               >
                 {copy.submit}
               </button>
-            </DocumentMutationActionForm>
+            </OwnerScopedActionForm>
           )}
         </section>
       ) : (

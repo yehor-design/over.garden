@@ -5,10 +5,7 @@ import { UploadCloud, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import {
-  createDocumentMutationRequestHeaders,
-  useOptionalDocumentMutationGeneration,
-} from "@/components/auth/document-mutation-recovery";
+import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
 import {
   JournalCoverControls,
   type JournalCoverSelectionState,
@@ -90,7 +87,7 @@ export function FollowUpEntryComposer({
 }: FollowUpEntryComposerProps) {
   const workspaceCopy = getGardenWorkspaceCopy(locale);
   const atomicCopy = getAtomicJournalCreateCopy(locale);
-  const documentMutation = useOptionalDocumentMutationGeneration();
+  const documentMutation = useOptionalOwnerScope();
   const ownerCopy = getOwnerObjectCopy(locale);
   useScrollToHashOnMount("follow-up-composer");
   const router = useRouter();
@@ -134,7 +131,6 @@ export function FollowUpEntryComposer({
   const [disclosureAccepted, setDisclosureAccepted] = useState(false);
   const [localeMutationPending, setLocaleMutationPending] = useState(false);
   const local = useLocalJournalComposer({
-    documentMutationGeneration: documentMutation?.transport,
     enabled: true,
     fallbackReturnTo: `/garden/objects/${objectId}`,
     dirty: Boolean(
@@ -202,9 +198,7 @@ export function FollowUpEntryComposer({
             activeMentionToken.query,
           )}`,
           {
-            headers: createDocumentMutationRequestHeaders(
-              documentMutation?.transport,
-            ),
+            headers: documentMutation?.headers() ?? {},
             signal: controller.signal,
           },
         );
@@ -308,13 +302,9 @@ export function FollowUpEntryComposer({
   function handleTransportBoundary(error: unknown) {
     if (
       error instanceof LocalJournalComposerError &&
-      typeof error.details?.documentMutationAdmission === "string"
+      typeof error.details?.mutationScope === "string"
     ) {
-      documentMutation?.handleTransportResult(
-        error.details.documentMutationAdmission as Parameters<
-          NonNullable<typeof documentMutation>["handleTransportResult"]
-        >[0],
-      );
+      documentMutation?.handleActionResult(error.details);
     }
     if (
       error instanceof LocalJournalComposerError &&

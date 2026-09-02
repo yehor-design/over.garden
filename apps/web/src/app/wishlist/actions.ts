@@ -12,13 +12,13 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
-import {
   addCatalogPublicSlugToWishlist,
   removeCatalogPublicSlugFromWishlist,
 } from "@/server/wishlist-repository";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 const WISHLIST_STATUS_PARAM = "wishlist";
 
@@ -32,12 +32,12 @@ export async function addCatalogPublicSlugToWishlistAction(formData: FormData) {
     publicSlug,
     locale,
   );
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    if (admission.transportResult !== "AUTHENTICATION_REQUIRED") {
-      return { documentMutationAdmission: admission.transportResult };
+    if (admission.code !== "session_required") {
+      return { mutationScope: admission.code };
     }
     return redirect(
       `/garden?wishlist=${encodeURIComponent(publicSlug)}&returnTo=${encodeURIComponent(
@@ -63,12 +63,12 @@ export async function removeCatalogPublicSlugFromWishlistAction(
     formData.get("catalogPublicSlug"),
   );
   const locale = normalizeLocaleField(formData.get("locale"));
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    if (admission.transportResult !== "AUTHENTICATION_REQUIRED") {
-      return { documentMutationAdmission: admission.transportResult };
+    if (admission.code !== "session_required") {
+      return { mutationScope: admission.code };
     }
     return redirect(
       `/garden?wishlist=${encodeURIComponent(publicSlug)}&source=wishlist`,

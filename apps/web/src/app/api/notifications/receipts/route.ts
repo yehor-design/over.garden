@@ -3,26 +3,26 @@ import { NextResponse } from "next/server";
 
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import {
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
-} from "@/server/document-mutation-admission";
-import {
   markNotificationEventsRead,
   setNotificationReceipt,
 } from "@/server/social-return-repository";
+import {
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
   const returnTo = notificationReturnTo(formData.get("returnTo"));
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromRequest(request),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromRequest(request),
   });
   if (admission.status === "rejected") {
-    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+    if (admission.code === "session_required") {
       return NextResponse.redirect(new URL(returnTo, request.url), 303);
     }
-    return documentMutationAdmissionResponse(admission);
+    return mutationScopeResponse(admission);
   }
 
   const scope = admission.scope;

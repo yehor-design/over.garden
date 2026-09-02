@@ -1,11 +1,6 @@
 import { revalidatePath } from "next/cache";
 
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
-import {
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
-} from "@/server/document-mutation-admission";
 import { addEngagementComment } from "@/server/engagement-repository";
 import { isInteractionAdmissionError } from "@/server/interaction-admission";
 import {
@@ -14,6 +9,11 @@ import {
   redirectToEngagementAuth,
   redirectWithEngagementStatus,
 } from "../shared";
+import {
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -24,11 +24,11 @@ export async function POST(request: Request) {
       ? String(formData.get("parentCommentId"))
       : null;
 
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromRequest(request),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromRequest(request),
   });
   if (admission.status === "rejected") {
-    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+    if (admission.code === "session_required") {
       return redirectToEngagementAuth(
         request,
         target,
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
           : undefined,
       );
     }
-    return documentMutationAdmissionResponse(admission);
+    return mutationScopeResponse(admission);
   }
 
   const scope = admission.scope;

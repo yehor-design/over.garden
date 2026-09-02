@@ -9,8 +9,8 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { DOCUMENT_MUTATION_GENERATION_HEADER } from "@/lib/auth/document-mutation-generation-transport";
-import { isDocumentMutationAdmissionTransportResult } from "@/lib/auth/document-mutation-generation-transport";
+import { isMutationScopeCode } from "@/lib/auth/owner-scope-contract";
+import { ownerScopeHeaders } from "@/lib/auth/session-signal";
 import {
   BoundedJsonResponseError,
   readBoundedJsonResponse,
@@ -88,7 +88,7 @@ export class LocalJournalComposerError extends Error {
     readonly code: string,
     readonly details?: {
       status?: number;
-      documentMutationAdmission?: unknown;
+      mutationScope?: unknown;
       authIntentUrl?: string;
       currentRevision?: number;
     },
@@ -103,7 +103,6 @@ export interface LocalJournalComposerDependencies {
   createId?: () => string;
   createCoordinator?: (input: {
     stagingSessionId: string;
-    documentMutationGeneration: string;
     createId: () => string;
     existingItems: readonly LocalJournalExistingMedia[];
   }) => LocalJournalMediaCoordinator;
@@ -133,7 +132,6 @@ export interface LocalJournalComposerController {
 }
 
 export function useLocalJournalComposer(input: {
-  documentMutationGeneration: string | null | undefined;
   fallbackReturnTo: string;
   dirty: boolean;
   existingMedia?: readonly LocalJournalExistingMedia[];
@@ -149,32 +147,23 @@ export function useLocalJournalComposer(input: {
     () => input.existingMedia ?? [],
   );
   const coordinator = useMemo(() => {
-    if (!enabled || !input.documentMutationGeneration) return null;
+    if (!enabled) return null;
     const stagingSessionId = createId();
     const factory = dependencies?.createCoordinator;
     return factory
       ? factory({
           stagingSessionId,
-          documentMutationGeneration: input.documentMutationGeneration,
           createId,
           existingItems: existingMedia,
         })
       : new LocalJournalMediaCoordinator({
           stagingSessionId,
           encoder: new BrowserJournalImageEncoder(),
-          stager: new BrowserEphemeralMediaStager({
-            documentMutationGeneration: input.documentMutationGeneration,
-          }),
+          stager: new BrowserEphemeralMediaStager({}),
           createId,
           existingItems: existingMedia,
         });
-  }, [
-    createId,
-    dependencies,
-    enabled,
-    existingMedia,
-    input.documentMutationGeneration,
-  ]);
+  }, [createId, dependencies, enabled, existingMedia]);
   const media = useSyncExternalStore(
     coordinator?.subscribe ?? subscribeEmpty,
     coordinator?.getSnapshot ?? getEmptySnapshot,
@@ -358,8 +347,7 @@ export function useLocalJournalComposer(input: {
               cache: "no-store",
               headers: {
                 "content-type": "application/json",
-                [DOCUMENT_MUTATION_GENERATION_HEADER]:
-                  input.documentMutationGeneration ?? "",
+                ...ownerScopeHeaders(),
                 [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
                   ATOMIC_JOURNAL_CREATE_PROTOCOL,
               },
@@ -403,7 +391,6 @@ export function useLocalJournalComposer(input: {
       coordinator,
       createId,
       dependencies,
-      input.documentMutationGeneration,
       input.fallbackReturnTo,
       requireCoordinator,
       updateState,
@@ -496,8 +483,7 @@ export function useLocalJournalComposer(input: {
               cache: "no-store",
               headers: {
                 "content-type": "application/json",
-                [DOCUMENT_MUTATION_GENERATION_HEADER]:
-                  input.documentMutationGeneration ?? "",
+                ...ownerScopeHeaders(),
                 [ATOMIC_JOURNAL_EDIT_PROTOCOL_HEADER]:
                   ATOMIC_JOURNAL_EDIT_PROTOCOL,
               },
@@ -547,7 +533,6 @@ export function useLocalJournalComposer(input: {
       createId,
       dependencies,
       existingMedia,
-      input.documentMutationGeneration,
       input.fallbackReturnTo,
       requireCoordinator,
       updateState,
@@ -667,9 +652,8 @@ function responseError(response: Response, body: unknown) {
     typeof record.code === "string" ? record.code : "atomic_publication_failed";
   return new LocalJournalComposerError(code, {
     status: response.status,
-    documentMutationAdmission:
-      record.documentMutationAdmission ??
-      (isDocumentMutationAdmissionTransportResult(code) ? code : undefined),
+    mutationScope:
+      record.mutationScope ?? (isMutationScopeCode(code) ? code : undefined),
     authIntentUrl:
       typeof record.authIntentUrl === "string"
         ? record.authIntentUrl

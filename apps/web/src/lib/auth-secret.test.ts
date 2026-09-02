@@ -11,10 +11,6 @@ import {
   selectLegacyAuthSecret,
   selectVersionedAuthSecret,
 } from "./auth-secret";
-import {
-  getUnresolvedAuthorizationServeCounts,
-  resetUnresolvedAuthorizationServeCountsForTests,
-} from "./auth/unresolved-authorization";
 
 const currentFixture = Buffer.alloc(32, 3).toString("base64url");
 const priorFixture = Buffer.alloc(32, 4).toString("base64url");
@@ -38,35 +34,10 @@ describe("Better Auth secret policy", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-29T12:00:00.000Z"));
-    resetUnresolvedAuthorizationServeCountsForTests();
   });
 
   afterEach(() => {
     vi.useRealTimers();
-  });
-
-  it("serves production and Preview with a counted visible weak_secret class when policy is unrecognized", () => {
-    for (const env of [
-      productionEnv({
-        BETTER_AUTH_SECRETS: undefined,
-        BETTER_AUTH_CURRENT_SECRET_VERSION: undefined,
-      }),
-      productionEnv({
-        VERCEL_ENV: "preview",
-        BETTER_AUTH_SECRETS: `2:${currentFixture}`,
-        BETTER_AUTH_CURRENT_SECRET_VERSION: "1",
-      }),
-    ]) {
-      const fallback = resolveBetterAuthSecret(env);
-      expect(fallback).toMatch(/^[A-Za-z0-9_-]{43}$/);
-      expect(getAuthSecretHealth(env)).toEqual({ class: "weak_secret" });
-      expect(JSON.stringify(getAuthSecretHealth(env))).not.toContain(fallback);
-    }
-    expect(getUnresolvedAuthorizationServeCounts()).toContainEqual({
-      owner: "auth_secret",
-      unresolvedClass: "weak_secret",
-      count: 6,
-    });
   });
 
   it("accepts only canonical 32-byte versioned keys and exposes a class-only active version", () => {

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import type { DocumentMutationActionStateV1 } from "@/lib/auth/document-mutation-generation-transport";
+import type { MutationScopeActionState } from "@/lib/auth/owner-scope-contract";
 import { isStableRegistryReleaseCenterEnabled } from "@/lib/stable-registry/feature-gate";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import {
@@ -13,26 +13,26 @@ import {
   decideFoundationExceptionGroup,
   type RegistryActionOutcome,
 } from "@/server/stable-registry/release-repository";
-import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
 import type { RequestScope } from "@/server/request-scope";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 const REGISTRY_PATH = "/garden/catalog/registry";
 
 export type StableRegistryActionResult =
   | { outcome: RegistryActionOutcome }
-  | DocumentMutationActionStateV1;
+  | MutationScopeActionState;
 
 export async function buildFoundationReleaseAction(
   formData: FormData,
 ): Promise<StableRegistryActionResult> {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = await requireCatalogOwner(admission.scope);
   if (!scope.ok) return scope.result;
@@ -48,11 +48,11 @@ export async function buildFoundationReleaseAction(
 export async function decideFoundationExceptionGroupAction(
   formData: FormData,
 ): Promise<StableRegistryActionResult> {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = await requireCatalogOwner(admission.scope);
   if (!scope.ok) return scope.result;
@@ -73,11 +73,11 @@ export async function decideFoundationExceptionGroupAction(
 export async function approveFoundationPreviewAction(
   formData: FormData,
 ): Promise<StableRegistryActionResult> {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = await requireCatalogOwner(admission.scope);
   if (!scope.ok) return scope.result;
@@ -93,11 +93,11 @@ export async function approveFoundationPreviewAction(
 export async function activateFoundationReleaseAction(
   formData: FormData,
 ): Promise<StableRegistryActionResult> {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = await requireCatalogOwner(admission.scope);
   if (!scope.ok) return scope.result;
@@ -114,11 +114,11 @@ export async function activateFoundationReleaseAction(
 export async function abandonFoundationReleaseAction(
   formData: FormData,
 ): Promise<StableRegistryActionResult> {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = await requireCatalogOwner(admission.scope);
   if (!scope.ok) return scope.result;

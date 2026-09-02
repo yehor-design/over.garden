@@ -14,8 +14,8 @@ const mocks = vi.hoisted(() => ({
   cookies: vi.fn(),
   createAuthIntentToken: vi.fn(),
   createAuthIntentControlRef: vi.fn(),
-  admitDocumentMutation: vi.fn(),
-  documentMutationAdmissionResponse: vi.fn(),
+  resolveMutationScope: vi.fn(),
+  mutationScopeResponse: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -31,10 +31,10 @@ vi.mock("@/server/auth-session", () => ({
   getSessionId: mocks.getSessionId,
 }));
 
-vi.mock("@/server/document-mutation-admission", () => ({
-  admitDocumentMutation: mocks.admitDocumentMutation,
-  documentMutationAdmissionResponse: mocks.documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest: vi.fn((request: Request) =>
+vi.mock("@/server/mutation-scope", () => ({
+  resolveMutationScope: mocks.resolveMutationScope,
+  mutationScopeResponse: mocks.mutationScopeResponse,
+  ownerUserIdFromRequest: vi.fn((request: Request) =>
     request.headers.get("x-overgarden-document-generation"),
   ),
 }));
@@ -116,12 +116,12 @@ describe("engagement routes", () => {
     });
     mocks.createAuthIntentToken.mockReturnValue("opaque-intent-token");
     mocks.createAuthIntentControlRef.mockReturnValue("reply-a7d8f9c012345678");
-    mocks.admitDocumentMutation.mockImplementation(async () => {
+    mocks.resolveMutationScope.mockImplementation(async () => {
       const session = await mocks.getCurrentSession();
       if (!session?.user?.id) {
         return {
           status: "rejected",
-          transportResult: "AUTHENTICATION_REQUIRED",
+          code: "session_required",
           statusCode: 401,
         };
       }
@@ -133,11 +133,8 @@ describe("engagement routes", () => {
         },
       };
     });
-    mocks.documentMutationAdmissionResponse.mockImplementation((admission) =>
-      Response.json(
-        { code: admission.transportResult },
-        { status: admission.statusCode },
-      ),
+    mocks.mutationScopeResponse.mockImplementation((admission) =>
+      Response.json({ code: admission.code }, { status: admission.statusCode }),
     );
   });
 

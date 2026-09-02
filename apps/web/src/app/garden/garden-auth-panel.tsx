@@ -9,12 +9,8 @@ import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/inter
 import { useSiteShellLocale } from "@/components/site-shell/site-shell-locale-context";
 import type { ActivationSource } from "@/lib/garden/entry-contracts";
 import { AUTH_HELP_PATH } from "@/lib/auth/auth-recovery";
-import { runBrowserAuthMutation } from "@/lib/auth/browser-auth-mutation-coordinator";
+import { announceSessionSignal } from "@/lib/auth/session-signal";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "@/lib/auth/public-identity-compatibility";
-import {
-  AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS,
-  classifySessionConfirmation,
-} from "@/lib/auth/sign-out-contract";
 import {
   GOOGLE_PROVIDER_ID,
   navigateToOAuthAuthorization,
@@ -102,21 +98,14 @@ export function GardenAuthPanel({
     });
 
     try {
-      const mutation = await runBrowserAuthMutation({
-        kind: "session_establishment",
-        operation: () =>
-          authClient.signUp.email({
-            email: email.trim(),
-            password,
-            name: PRIVATE_AUTH_COMPATIBILITY_NAME,
-            callbackURL: postAuthPath ?? "/garden",
-          }),
-        confirmsAuthoritativeSession: async ({ data, error }) =>
-          !error &&
-          hasAuthToken(data) &&
-          (await hasAuthoritativeAuthenticatedSession()),
-      });
-      if (mutation.status === "stale_operation") return;
+      const mutation = {
+        value: await authClient.signUp.email({
+          email: email.trim(),
+          password,
+          name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+          callbackURL: postAuthPath ?? "/garden",
+        }),
+      };
       const { data, error } = mutation.value;
 
       const result = getLocalizedEmailSignUpResult(locale, error);
@@ -129,7 +118,13 @@ export function GardenAuthPanel({
 
       // A non-null token proves that this client now has a session (for example,
       // in local development). It does not change the neutral sign-up message.
-      if (hasAuthToken(data)) router.refresh();
+      if (hasAuthToken(data)) {
+        announceSessionSignal({
+          type: "signed_in",
+          ownerUserId: signedInUserId(data),
+        });
+        router.refresh();
+      }
     } finally {
       setIsPending(false);
     }
@@ -140,18 +135,13 @@ export function GardenAuthPanel({
     setMessage(null);
 
     try {
-      const mutation = await runBrowserAuthMutation({
-        kind: "session_establishment",
-        operation: () =>
-          authClient.signIn.email({
-            email: email.trim(),
-            password,
-          }),
-        confirmsAuthoritativeSession: async ({ error }) =>
-          !error && (await hasAuthoritativeAuthenticatedSession()),
-      });
-      if (mutation.status === "stale_operation") return;
-      const { error } = mutation.value;
+      const mutation = {
+        value: await authClient.signIn.email({
+          email: email.trim(),
+          password,
+        }),
+      };
+      const { data, error } = mutation.value;
 
       if (error) {
         setMessage({
@@ -163,6 +153,10 @@ export function GardenAuthPanel({
         return;
       }
 
+      announceSessionSignal({
+        type: "signed_in",
+        ownerUserId: signedInUserId(data),
+      });
       if (postAuthPath) {
         router.push(postAuthPath);
         return;
@@ -180,21 +174,15 @@ export function GardenAuthPanel({
 
     try {
       const callbackURL = resolveAuthCallbackPath(postAuthPath);
-      const mutation = await runBrowserAuthMutation({
-        kind: "session_establishment",
-        operation: () =>
-          authClient.signIn.social({
-            provider,
-            callbackURL,
-            newUserCallbackURL: callbackURL,
-            errorCallbackURL: callbackURL,
-            disableRedirect: true,
-          }),
-        // This call creates an authorization URL, not a new session. The
-        // marker may clear only after the provider callback establishes one.
-        confirmsAuthoritativeSession: async () => false,
-      });
-      if (mutation.status === "stale_operation") return;
+      const mutation = {
+        value: await authClient.signIn.social({
+          provider,
+          callbackURL,
+          newUserCallbackURL: callbackURL,
+          errorCallbackURL: callbackURL,
+          disableRedirect: true,
+        }),
+      };
       const { data, error } = mutation.value;
 
       if (error || !navigateToOAuthAuthorization(provider, data?.url)) {
@@ -338,17 +326,6 @@ export function GardenAuthPanel({
   );
 }
 
-async function hasAuthoritativeAuthenticatedSession() {
-  try {
-    const result = await authClient.getSession(
-      AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS,
-    );
-    return classifySessionConfirmation(result) === "authenticated";
-  } catch {
-    return false;
-  }
-}
-
 export function runNativeValidatedAuthAction(
   form: Pick<HTMLFormElement, "reportValidity"> | null,
   action: () => void,
@@ -387,4 +364,9 @@ function availableSocialProviderOptions({
   googleSignInEnabled: boolean;
 }) {
   return googleSignInEnabled ? SOCIAL_PROVIDER_OPTIONS : [];
+}
+
+function signedInUserId(data: unknown): string | null {
+  const user = (data as { user?: { id?: unknown } } | null)?.user;
+  return typeof user?.id === "string" ? user.id : null;
 }

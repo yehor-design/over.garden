@@ -2,7 +2,6 @@ import { after, NextResponse } from "next/server";
 import { toNextJsHandler } from "better-auth/next-js";
 
 import { auth } from "@/lib/auth";
-import { executeCurrentSessionExit } from "@/lib/auth/sign-out-hardening";
 import { denyRetiredSocialProviderRequest } from "@/lib/auth/retired-social-provider";
 import {
   equalizePasswordResetAdmission,
@@ -14,10 +13,10 @@ import {
 import { drainAuthEmailOutbox } from "@/server/auth/auth-email-outbox-consumer";
 import { bridgeLegacyEmailVerificationRequest } from "@/server/auth/legacy-email-verification-bridge";
 import {
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
-} from "@/server/document-mutation-admission";
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -54,27 +53,13 @@ export async function POST(request: Request) {
     return await requestPasswordReset(request);
   }
 
-  if (isCurrentSessionSignOutRequest(request)) {
-    let canonicalHttpAttemptStarted = false;
-    const result = await executeCurrentSessionExit(
-      request.headers,
-      (context) => {
-        if (!canonicalHttpAttemptStarted) {
-          canonicalHttpAttemptStarted = true;
-          return handler.POST(request);
-        }
-        return auth.api.signOut(context);
-      },
-    );
-    return result.response;
-  }
-
   if (isAuthenticatedAccountMutationRequest(request)) {
-    const admission = await admitDocumentMutation({
-      transport: documentMutationGenerationFromRequest(request),
+    const admission = await resolveMutationScope({
+      expectedOwnerUserId: ownerUserIdFromRequest(request),
+      authoritative: true,
     });
     if (admission.status === "rejected") {
-      return documentMutationAdmissionResponse(admission);
+      return mutationScopeResponse(admission);
     }
   }
 
@@ -85,10 +70,6 @@ function isPasswordResetRequest(request: Request): boolean {
   return new URL(request.url).pathname.endsWith(
     "/api/auth/request-password-reset",
   );
-}
-
-function isCurrentSessionSignOutRequest(request: Request): boolean {
-  return new URL(request.url).pathname === "/api/auth/sign-out";
 }
 
 export function isAuthenticatedAccountMutationRequest(

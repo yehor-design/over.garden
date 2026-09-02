@@ -150,7 +150,6 @@ export async function proveRoundTrip(): Promise<StagingProofCase> {
   }) as unknown as typeof fetch;
 
   const stager = new BrowserEphemeralMediaStager({
-    documentMutationGeneration: "signed-generation",
     fetcher,
   });
   const controller = new AbortController();
@@ -188,9 +187,18 @@ export async function proveRefusalClasses(): Promise<StagingProofCase[]> {
     ["short_capability", { ...base, uploadCapability: "short" }],
     [
       "foreign_origin",
-      { ...base, uploadUrl: base.uploadUrl.replace(STAGING_ORIGIN, "https://attacker.example") },
+      {
+        ...base,
+        uploadUrl: base.uploadUrl.replace(
+          STAGING_ORIGIN,
+          "https://attacker.example",
+        ),
+      },
     ],
-    ["mismatched_path", { ...base, uploadUrl: `${STAGING_ORIGIN}/v1/staging/other/path/1` }],
+    [
+      "mismatched_path",
+      { ...base, uploadUrl: `${STAGING_ORIGIN}/v1/staging/other/path/1` },
+    ],
     ["unknown_field", { ...base, journalText: "must not cross" }],
   ];
 
@@ -206,7 +214,6 @@ export async function proveRefusalClasses(): Promise<StagingProofCase[]> {
       return stagedResponse();
     }) as unknown as typeof fetch;
     const stager = new BrowserEphemeralMediaStager({
-      documentMutationGeneration: "signed-generation",
       fetcher,
     });
     const controller = new AbortController();
@@ -216,7 +223,10 @@ export async function proveRefusalClasses(): Promise<StagingProofCase[]> {
     } catch (error) {
       failureClass = ephemeralStagingFailureCode(error);
     }
-    if (failureClass !== "staging_reservation_invalid" || uploadAttempts !== 0) {
+    if (
+      failureClass !== "staging_reservation_invalid" ||
+      uploadAttempts !== 0
+    ) {
       throw new Error(`refusal_case_unproven:${name}`);
     }
     cases.push({ name, state: "failed", failureClass, uploadAttempts });
@@ -237,7 +247,6 @@ export async function proveReplay(): Promise<StagingProofCase> {
     return stagedResponse();
   }) as unknown as typeof fetch;
   const stager = new BrowserEphemeralMediaStager({
-    documentMutationGeneration: "signed-generation",
     fetcher,
   });
   const controller = new AbortController();
@@ -273,7 +282,6 @@ export async function proveConcurrentAssets(): Promise<StagingProofCase> {
     return stagedResponse();
   }) as unknown as typeof fetch;
   const stager = new BrowserEphemeralMediaStager({
-    documentMutationGeneration: "signed-generation",
     fetcher,
   });
   const controller = new AbortController();
@@ -307,7 +315,6 @@ export async function proveInjectedUploadTimeout(): Promise<StagingProofCase> {
   }) as unknown as typeof fetch;
 
   const stager = new BrowserEphemeralMediaStager({
-    documentMutationGeneration: "signed-generation",
     fetcher,
     uploadDeadlineMs: 50,
   });
@@ -348,7 +355,6 @@ export async function proveAbortedSelection(): Promise<StagingProofCase> {
     return neverAnswers(init);
   }) as unknown as typeof fetch;
   const stager = new BrowserEphemeralMediaStager({
-    documentMutationGeneration: "signed-generation",
     fetcher,
     uploadDeadlineMs: 50,
   });
@@ -416,7 +422,9 @@ export function parseStagingProofArgs(argv: readonly string[]): {
   }
   return {
     mode,
-    injectStagingUploadTimeout: argv.includes("--inject-staging-upload-timeout"),
+    injectStagingUploadTimeout: argv.includes(
+      "--inject-staging-upload-timeout",
+    ),
   };
 }
 

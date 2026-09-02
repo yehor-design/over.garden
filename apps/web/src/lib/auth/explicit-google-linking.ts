@@ -6,7 +6,6 @@ import { isSealedOwnerUserId } from "@/lib/admin/owner-account-contract";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { configuredEnvValue, type EnvLike } from "@/lib/auth/oauth-env";
 import { GOOGLE_PROVIDER_ID } from "@/lib/auth/social-oauth";
-import { recordUnresolvedAuthorizationServe } from "@/lib/auth/unresolved-authorization";
 
 export const GOOGLE_ACCOUNT_LINKING_ENABLED_ENV =
   "GOOGLE_ACCOUNT_LINKING_ENABLED";
@@ -128,10 +127,6 @@ function classifyCurrentNonOwnerUser(
 }
 
 function serveUnresolvedProviderLink(): "served_unresolved" {
-  recordUnresolvedAuthorizationServe(
-    "explicit_google_linking",
-    "provider_link_unverified",
-  );
   return "served_unresolved";
 }
 

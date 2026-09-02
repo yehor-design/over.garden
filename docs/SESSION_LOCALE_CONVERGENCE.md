@@ -1,9 +1,9 @@
 # Session and locale convergence
 
-Status: OVE-214 canonical locale protocol; OVE-286 route-scoped session convergence; OVE-287 immediate retain-only exit
+Status: OVE-214 canonical locale protocol; sessions are server-authoritative since ADR-0022 (D6, OVE-367)
 
-This document owns the bounded recovery contract for an authenticated session
-gate and a Bulgaria `bg`/`ru` interface transition. It is deliberately a
+This document owns the bounded recovery contract for a Bulgaria `bg`/`ru`
+interface transition and records how sessions behave without a client gate. It is deliberately a
 control-plane contract: it contains no owner identifier, draft, queue payload,
 cookie value, request body, timing sample, or private route.
 
@@ -27,7 +27,6 @@ wait.
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `interfaceLocaleChangeCoordinator`                        | One locale operation, participant registry, synchronous commit gate, cancellation, and retryable release.                             |
 | `online-journal-composer-participants`                    | Acquires each mounted composer fence synchronously, flushes the latest server generation, then resumes or cancels exactly that fence. |
-| `SessionConvergenceBoundary`                              | Bounded authoritative session read and owner-local hydration/recheck epoch.                                                           |
 | `language-switcher`                                       | Inline pending/recovery status, explicit cancellation, guarded preference rollback, and document handoff cleanup.                     |
 | `sign-out-provider` / `browser-auth-mutation-coordinator` | Immediate retain-only local exit plus serialized sign-in, link, unlink, and exact-session reconciliation.                             |
 
@@ -98,112 +97,33 @@ cd apps/web
 pnpm smoke:session-locale-convergence -- --environment production --confirm-environment production --base-url https://over.garden --expected-commit "$OVE214_IMPLEMENTATION_SHA"
 ```
 
-## OVE-286 route-scoped session convergence
+## Sessions (ADR-0022, D6)
 
-`getSessionRecheckMode` is the only rollout authority. Exactly the normalized
-unprefixed pathname `/garden/entries/{valid UUID}/edit` receives
-`effect_closed_non_fencing`. Locale-prefixed, query-bearing, encoded,
-malformed, adjacent, and every other authenticated pathname receive
-`compatibility_fenced`. The allowlist is narrow because OVE-290 already guards
-all journal edit, upload, process, and focal mutations reachable from that
-editor. OVE-291 owns the remaining authenticated mutation entrypoints and is
-the only task that may later expand this rollout.
+There is no client session gate, no mutation admission protocol, and no
+"checking" placeholder. One cookie-cached server read
+(`session.cookieCache`, 300 s) decides what a document renders; the rendered
+owner id is written to `<html data-owner-user-id>` and travels back with every
+mutation (`ownerUserId` hidden field or `x-overgarden-owner-user-id` header).
+`resolveMutationScope` in `apps/web/src/server/mutation-scope.ts` answers
+`401 session_required` when there is no session and `409
+session_account_changed` when the signed-in account differs from the rendered
+owner. The composer keeps its in-memory text and shows one localized notice;
+nothing is retried or reconciled.
 
-On the admitted editor, one bounded no-cache read is coalesced across focus and
-visible-page signals. Exact-session success changes nothing. Timeout, malformed
-data, unknown classification, or network failure is a silent nonterminal
-`background_unavailable` observation: the private React tree, form controls,
-composer, and in-memory local participant state remain unchanged. The
-compatibility mode retains the eager `checking` gate, composer fence, request
-abort, and participant pause before the session await.
-
-A same-owner new session binding is a fresh-document refresh, not an owner
-change. It writes no terminal marker, publishes no terminal signal, shows no
-owner-change message, and reloads once without pre-hiding the editor. Only the
-fresh bounded bootstrap may pass
-`allowAuthoritativeSessionRebind: true`; that path updates the same owner's
-in-memory session fence without moving, deleting, publishing, or persisting the
-transient composer. Ordinary stale-document callers remain closed.
-
-Terminal evidence is a confirmed local exit/account switch, peer committed
-signal, present or malformed marker, authoritative signed-out/different-owner
-result, or `DOCUMENT_OWNER_CHANGED`. It synchronously commits the single
-payload-free v1 invalidation marker before terminal publication or any await,
-removes the old private tree, and latches the document terminal. No exact old
-session completion may reopen it. BroadcastChannel is the fast path;
-localStorage is the sleeping-tab and BFCache recovery path. The marker contains
-only a version and cryptographically random opaque generation. A fresh
-authoritative bootstrap captures the marker before asynchronous work and
-compare-clears only that byte-identical snapshot after session admission and
-local-composer participant preparation; a newer marker always wins.
-
-The deterministic fixture remains local/isolated-preview only and contains
-synthetic markup. Production must return 404 for it. The browser matrix proves
-uk/bg/ru, twenty coalesced signals, degraded reads, compatibility fencing,
-same-owner refresh, marker reload/BFCache races, irreversible peer invalidation,
-responsive controls, and at most 100 ms terminal private-tree removal. No
-production account, cookie, journal content, media, identity, or marker
-generation enters its receipt.
-
-```bash
-cd apps/web
-pnpm smoke:session-convergence
-```
-
-## OVE-287 immediate retain-only exit
-
-After the single confirmation, sign-out no longer waits for a session read,
-browser-storage inspection, participant drain, peer acknowledgement, network
-response, cookie expiry, or adapter deletion. The initiating document synchronously
-commits the `local_exit` v2 variant under the existing
-`overgarden:session-invalidation:v1` key, seals every active local-composer participant,
-publishes the payload-free `local_exit_committed` signal, removes the private
-React tree, and exposes the localized public-safe surface. No journal or media
-row is created, published, moved, or deleted by local exit.
-
-The marker value is exactly a schema version, bounded kind, and opaque random
-generation. The v1 generic terminal marker remains compatible. A v2 local-exit
-generation is compare-cleared only after a response of any status from the
-reconciliation attempt that captured it, or after a serialized product auth
-operation proves that it established a new authoritative session. A transport
-failure leaves the marker present and schedules no timer, polling, or retry.
-The next document bootstrap renders no private region, makes exactly one fresh
-attempt, and otherwise stays on the public-safe surface. If durable marker
-storage is unavailable, the current document remains public-safe until a
-response is observed instead of replacing itself and risking a private repaint.
-
-`POST /api/auth/local-exit-reconcile` is bodyless, same-origin, private,
-no-store, and accepts only the immutable bounded session binding emitted for
-the admitted document. A byte-exact same-session request makes one best-effort
-adapter deletion and receives Better Auth's library-derived session-cookie
-expiry even if adapter deletion fails. A missing, malformed, or stale A binding
-with a B cookie has the same public `204` body but zero session deletion and
-zero `Set-Cookie` effect. HTTP response, browser-cookie expiry, and proved
-server revocation remain separate receipt facts.
-
-`browser-auth-mutation-coordinator.ts` is the single browser ordering owner.
-Web Locks serialize product session establishment, Google link/unlink, and
-session exit across tabs; a promise-tail fallback preserves in-document order.
-An account-A completion that crosses a local-exit generation settles as
-`stale_operation`. A successful new session compare-clears only its captured
-generation, and a delayed generation-A response can never clear generation B.
-
-The focused boundary suite proves `uk`/`bg`/`ru`, marker-storage and network
-denial, one-attempt bootstrap, exact generation races, serialized new-session
-recovery, peer tabs, BFCache semantics, and confirmed private-tree removal. The
-separate OVE-323 browser proof verifies exact legacy-name cleanup while
-preserving unrelated browser state; sign-out itself does not own that cleanup.
+Account changes reach every tab of the browser through
+`BroadcastChannel("overgarden-session")` with a `localStorage` fallback
+(`apps/web/src/lib/auth/session-signal.ts`). Sign-out calls Better Auth once,
+announces `signed_out`, and replaces the current location with the localized
+home page; sign-in and sign-up announce `signed_in`. A tab whose rendered
+owner differs from the announced one, or whose `visibilitychange` recheck sees
+another account, reloads to the home page as whoever is signed in now. Unsaved
+text is lost by design.
 
 ```bash
 cd apps/web
 pnpm exec vitest run \
-  src/components/auth/sign-out-provider.test.tsx \
-  src/components/auth/session-convergence-boundary.test.tsx \
-  src/lib/auth/session-invalidation-marker.test.ts \
-  src/lib/auth/browser-auth-mutation-coordinator.test.ts \
-  src/lib/auth/sign-out-contract.test.ts \
-  src/lib/auth/sign-out-hardening.test.ts \
-  src/lib/retirement/known-client-storage.test.ts \
-  src/app/api/auth
-pnpm exec playwright test tests/offline-runtime-absence.spec.ts
+  src/components/auth/session-signal-boundary.test.tsx \
+  src/lib/auth/session-signal.test.ts \
+  src/server/mutation-scope.test.ts \
+  src/components/site-shell/site-shell.test.tsx
 ```

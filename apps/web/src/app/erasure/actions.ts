@@ -3,19 +3,20 @@
 import { revalidatePath } from "next/cache";
 
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
-import {
-  admitDocumentMutation,
-  documentMutationGenerationFromFormData,
-} from "@/server/document-mutation-admission";
 import { submitErasureRequest } from "@/server/erasure-request-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import {
+  ownerUserIdFromFormData,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export async function submitErasureRequestAction(formData: FormData) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromFormData(formData),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromFormData(formData),
+    authoritative: true,
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
   const scope = admission.scope;
   const acknowledgementAccepted =

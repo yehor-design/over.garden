@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/components/auth/document-mutation-recovery", () => ({
-  DocumentMutationActionForm: ({
+vi.mock("@/components/auth/owner-scope", () => ({
+  OwnerScopedActionForm: ({
     children,
     className,
   }: {

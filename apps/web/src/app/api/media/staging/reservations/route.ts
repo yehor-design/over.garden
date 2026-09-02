@@ -2,22 +2,22 @@ import {
   buildEphemeralMediaUploadReservation,
   parseEphemeralMediaReservation,
 } from "@/lib/media/ephemeral-staging-contract";
-import {
-  admitDocumentMutation,
-  documentMutationAdmissionResponse,
-  documentMutationGenerationFromRequest,
-} from "@/server/document-mutation-admission";
 import { issueEphemeralStagingCapability } from "@/server/media/ephemeral-staging-capability";
+import {
+  mutationScopeResponse,
+  ownerUserIdFromRequest,
+  resolveMutationScope,
+} from "@/server/mutation-scope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGenerationFromRequest(request),
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserIdFromRequest(request),
   });
   if (admission.status === "rejected") {
-    return privateNoStore(documentMutationAdmissionResponse(admission));
+    return privateNoStore(mutationScopeResponse(admission));
   }
   const declaredLength = Number(request.headers.get("content-length") ?? "0");
   if (declaredLength > 4_096) return invalidReservation();

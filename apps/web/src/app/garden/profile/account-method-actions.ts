@@ -4,18 +4,18 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 import { auth } from "@/lib/auth";
-import type { DocumentMutationActionStateV1 } from "@/lib/auth/document-mutation-generation-transport";
+import type { MutationScopeActionState } from "@/lib/auth/owner-scope-contract";
 import { getCurrentSession } from "@/server/auth-session";
-import { admitDocumentMutation } from "@/server/document-mutation-admission";
+import { resolveMutationScope } from "@/server/mutation-scope";
 
 export type AccountMethodPasswordActionResult =
   | { status: "success" }
   | { status: "error" }
-  | DocumentMutationActionStateV1;
+  | MutationScopeActionState;
 
 export async function setCurrentAccountPassword(
   newPassword: string,
-  documentMutationGeneration: string | null,
+  ownerUserId: string | null,
 ): Promise<AccountMethodPasswordActionResult> {
   if (
     typeof newPassword !== "string" ||
@@ -25,11 +25,12 @@ export async function setCurrentAccountPassword(
     return { status: "error" };
   }
 
-  const admission = await admitDocumentMutation({
-    transport: documentMutationGeneration,
+  const admission = await resolveMutationScope({
+    expectedOwnerUserId: ownerUserId,
+    authoritative: true,
   });
   if (admission.status === "rejected") {
-    return { documentMutationAdmission: admission.transportResult };
+    return { mutationScope: admission.code };
   }
 
   const session = await getCurrentSession();
