@@ -77,7 +77,6 @@ def journal_row(**overrides):
         "title": "First flowers",
         "body": "Помідори чері",
         "public_slug": "first-flowers-abc123",
-        "public_noindex": True,
         "public_gone_at": None,
         "published_at": datetime(2026, 6, 26, 12, 0, tzinfo=timezone.utc),
         "entry_date": date(2026, 6, 25),
@@ -98,7 +97,7 @@ def journal_row(**overrides):
     return row
 
 
-def test_journal_entry_document_indexes_public_hidden_entry_with_safe_fields():
+def test_journal_entry_document_indexes_public_entry_with_safe_fields():
     document = search.journal_entry_search_document_from_row(journal_row())
 
     assert document == {
@@ -108,7 +107,7 @@ def test_journal_entry_document_indexes_public_hidden_entry_with_safe_fields():
         "publicSlug": "first-flowers-abc123",
         "publicPath": "/journal/first-flowers-abc123",
         "locationVisibility": "hidden",
-        "noindex": True,
+        "noindex": False,
         "entryDate": "2026-06-25T00:00:00.000Z",
         "entryScope": "object",
         "createdAt": "2026-06-26T12:30:00.000Z",

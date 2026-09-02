@@ -51,7 +51,6 @@ def journal_row(**overrides: Any) -> dict[str, Any]:
         "title": "First flowers",
         "body": "Помідори чері",
         "public_slug": "first-flowers-abc123",
-        "public_noindex": True,
         "public_gone_at": None,
         "published_at": datetime(2026, 6, 26, 12, 0, tzinfo=timezone.utc),
         "entry_date": date(2026, 6, 25),
@@ -540,7 +539,7 @@ def test_journal_index_job_recovers_after_restart_and_stays_public_safe(
     document = index.documents[ENTRY_ID]
     assert set(document.keys()) == PUBLIC_SAFE_DOCUMENT_KEYS
     assert FORBIDDEN_DOCUMENT_KEYS.isdisjoint(document.keys())
-    assert document["noindex"] is True
+    assert document["noindex"] is False
     assert document["locationVisibility"] == "hidden"
     assert document["publicPath"] == "/journal/first-flowers-abc123"
 
