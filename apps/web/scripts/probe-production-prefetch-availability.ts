@@ -31,15 +31,23 @@ import { performance } from "node:perf_hooks";
  * with a further twelve occurrences of the same code across `/middleware`,
  * `/journal/[slug]` and `/lineage/objects/[objectId]`.
  *
- * `src/proxy.ts` runs on nearly every request — its matcher excludes only
- * static assets and images — and resolves the session with
- * `auth.api.getSession`, which reads the database. A hover burst is twenty to
- * thirty simultaneous prefetches, each landing on its own serverless instance
- * holding its own connection, against a managed database with 22 usable slots.
- * The overflow failed inside the proxy, so the page function never ran, so the
+ * The exhaustion was global rather than route-specific. Each serverless
+ * instance holds its own connection, the garden workspace render held one
+ * through four serialized round trips for 2205-3426 ms, and 22 slots do not
+ * survive that under concurrency. Once they were gone, everything needing a
+ * connection failed at once.
+ *
+ * A speculative prefetch of an authenticated route still renders its payload on
+ * the server, and that render reads the database — which is where the observed
+ * 503s were. The proxy's own failures, the ones in the error table, were on
+ * document navigations. Either way the page function never completed, so the
  * status-code log recorded nothing: exactly the "only success statuses" that
  * made this look like it came from outside the application. It did not. It came
  * from one layer earlier than the layer being read.
+ *
+ * Note for anyone tempted to make the proxy skip its session lookup on
+ * prefetches: it already does. Every database touch in `src/proxy.ts` is gated
+ * on `isDocumentNavigationRequest`, which returns false for prefetch requests.
  *
  * That also explains why this probe found nothing across 234 samples: it is
  * unauthenticated, and an unauthenticated request is served from the CDN
@@ -52,10 +60,16 @@ import { performance } from "node:perf_hooks";
  * Verified after the cutover with 258 authenticated prefetches, in bursts up to
  * 64 concurrent — zero failures, and zero new entries in the error table.
  *
- * Still true and still unaddressed: the proxy reads the database on every
- * speculative prefetch. That is now survivable rather than fatal. Removing it
- * needs a session cookie cache, which trades revocation latency for the saved
- * query and is therefore a product decision, not a tuning one.
+ * What remains is the render itself: an authenticated prefetch still renders a
+ * page, and that render reads the database. Removing that would need a session
+ * cookie cache, which trades revocation latency for the saved query and is
+ * therefore a product decision, not a tuning one.
+ *
+ * One reading worth not repeating: passing a null viewer to the public-profile
+ * lifecycle lookup is **not** the safe direction. `viewerUserId` is what
+ * applies the profile-block filter, so an unresolved viewer sees *more*, not
+ * less — a blocked profile comes back as present. Anywhere else in this proxy
+ * an unresolved viewer fails closed; on that path it does not.
  */
 export const PREFETCH_PROBE_BUDGET_MS = 10_000;
 export const PROBE_REQUEST_DEADLINE_MS = 20_000;
