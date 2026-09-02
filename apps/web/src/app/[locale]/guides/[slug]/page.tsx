@@ -9,7 +9,6 @@ import {
   PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { resolveVisualFixturePublicKnowledgeMode } from "@/lib/visual-fixtures/public-knowledge-scenarios";
 import {
   getLocalizedGuide,
   getContentAvailableLocales,
@@ -42,7 +41,6 @@ export function generateStaticParams() {
 
 export async function generateMetadata({
   params,
-  searchParams,
 }: LocalizedGuideRouteProps): Promise<Metadata> {
   const { locale: localeParam, slug } = await params;
 
@@ -56,11 +54,7 @@ export async function generateMetadata({
     };
   }
 
-  const resolved = await resolveGuide(
-    localeParam,
-    slug,
-    (await searchParams) ?? {},
-  );
+  const resolved = await resolveGuide(localeParam, slug);
   const guide = resolved.guide;
 
   if (!guide) {
@@ -73,57 +67,34 @@ export async function generateMetadata({
     };
   }
 
-  return buildGuideSurface(localeParam, guide, Boolean(resolved.visualMode))
-    .metadata;
+  return buildGuideSurface(localeParam, guide).metadata;
 }
 
-export default async function GuideRoute({
-  params,
-  searchParams,
-}: LocalizedGuideRouteProps) {
+export default async function GuideRoute({ params }: LocalizedGuideRouteProps) {
   const { locale: localeParam, slug } = await params;
 
   if (!isPublicLocale(localeParam)) notFound();
 
-  const resolved = await resolveGuide(
-    localeParam,
-    slug,
-    (await searchParams) ?? {},
-  );
+  const resolved = await resolveGuide(localeParam, slug);
   const guide = resolved.guide;
 
   if (!guide) notFound();
 
-  const surface = buildGuideSurface(
-    localeParam,
-    guide,
-    Boolean(resolved.visualMode),
-  );
+  const surface = buildGuideSurface(localeParam, guide);
 
-  const evidenceResult =
-    resolved.visualMode === "loading" || resolved.visualMode === "error"
-      ? {
-          evidence: emptyEvidence(localeParam),
-          state: resolved.visualMode,
-        }
-      : await listPublicKnowledgeEvidence(
-          guide.knowledge.evidence,
-          localeParam,
-          {
-            restrictToEntryIds: resolved.publicEntryIds,
-            visualCorpus: resolved.visualMode === "corpus",
-          },
-        ).then(
-          (evidence) => ({
-            evidence,
-            state:
-              evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
-          }),
-          () => ({
-            evidence: emptyEvidence(localeParam),
-            state: "error" as const,
-          }),
-        );
+  const evidenceResult = await listPublicKnowledgeEvidence(
+    guide.knowledge.evidence,
+    localeParam,
+  ).then(
+    (evidence) => ({
+      evidence,
+      state: evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
+    }),
+    () => ({
+      evidence: emptyEvidence(localeParam),
+      state: "error" as const,
+    }),
+  );
 
   return (
     <LocalizedGuidePage
@@ -133,17 +104,12 @@ export default async function GuideRoute({
       availableLocales={getLanguageSwitcherLocales(localeParam)}
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
-      visualCorpus={resolved.visualMode === "corpus"}
       jsonLd={surface.jsonLd}
     />
   );
 }
 
-function buildGuideSurface(
-  locale: PublicLocale,
-  guide: GuideContent,
-  isVisualFixture: boolean,
-) {
+function buildGuideSurface(locale: PublicLocale, guide: GuideContent) {
   const discovery = resolveAuthoredPublicSurfaceDiscovery({
     consumerId: "localized_guide",
     canonicalPath: localizedPath(locale, guide.path),
@@ -157,7 +123,7 @@ function buildGuideSurface(
       ),
     ]),
     meaningfulContentAt: `${guide.editorial.updatedDate}T00:00:00.000Z`,
-    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+    candidateState: "candidate",
   });
   return buildPublicSurfaceMetadata({
     discovery,
@@ -174,34 +140,8 @@ function buildGuideSurface(
   });
 }
 
-async function resolveGuide(
-  locale: "uk" | "bg" | "ru",
-  slug: string,
-  searchParams: Record<string, string | string[] | undefined>,
-) {
-  const visualMode = resolveVisualFixturePublicKnowledgeMode(
-    searchParams,
-    process.env,
-  );
-  if (!visualMode) {
-    return {
-      guide: getLocalizedGuide(locale, slug),
-      publicEntryIds: null,
-      visualMode: null,
-    };
-  }
-  if (visualMode === "unavailable") {
-    return { guide: null, publicEntryIds: [], visualMode };
-  }
-
-  const { loadVisualFixtureKnowledgeCorpus } =
-    await import("@/server/public-knowledge-visual-fixture");
-  const corpus = loadVisualFixtureKnowledgeCorpus(locale);
-  return {
-    guide: corpus.guides.find((candidate) => candidate.slug === slug) ?? null,
-    publicEntryIds: corpus.publicEntryIds,
-    visualMode,
-  };
+async function resolveGuide(locale: "uk" | "bg" | "ru", slug: string) {
+  return { guide: getLocalizedGuide(locale, slug) };
 }
 
 function emptyEvidence(locale: "uk" | "bg" | "ru") {

@@ -113,7 +113,8 @@ banned-dependency gate. The canon checkers and their classification files, the
 Linear task standard and validator, the closeout ledger, parity reports, the
 mutation registry audit, the browser accessibility, Core Web Vitals, and
 typography matrices, the localization coverage registry, and the visual
-fixtures are deleted. Typography uses `next/font/local`. `AGENTS.md` is a
+fixtures are deleted. Typography uses `next/font/google` (Google Sans and Geist
+Mono, fetched at build time and self-hosted from `/_next/static`). `AGENTS.md` is a
 one-page guide and every task uses the half-page template it contains. There is
 no nightly run.
 

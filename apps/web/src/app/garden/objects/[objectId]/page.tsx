@@ -34,10 +34,6 @@ import {
   publicLineageObjectPath,
 } from "@/lib/garden/public-paths";
 import { localizedPath } from "@/lib/public-localization";
-import {
-  resolveVisualJournalCreationResultScenario,
-  resolveVisualJournalCreationScenario,
-} from "@/lib/visual-fixtures/journal-creation-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { resolveFollowUpValuePulsePrompt } from "@/server/follow-up-value-pulse";
@@ -80,8 +76,6 @@ interface PlantObjectPageProps {
     saveProgress?: string | string[];
     authIntent?: string | string[];
     authControl?: string | string[];
-    visualCreate?: string | string[];
-    visualCreateResult?: string | string[];
   }>;
 }
 
@@ -100,24 +94,7 @@ export default async function PlantObjectReadbackPage({
   const ownerCopy = getOwnerObjectCopy(locale);
   const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
   const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
-  const visualCreationCandidate = resolveVisualJournalCreationScenario(
-    query.visualCreate,
-    "follow-up",
-    process.env,
-  );
-  const visualCreationScenario =
-    visualCreationCandidate?.objectId === objectId
-      ? visualCreationCandidate
-      : null;
-  const visualCreationResultScenario =
-    resolveVisualJournalCreationResultScenario(
-      query.visualCreateResult,
-      objectId,
-      process.env,
-    );
-  const fixtureScenario =
-    visualCreationScenario ?? visualCreationResultScenario;
-  const userId = fixtureScenario?.ownerActorId ?? session?.user?.id;
+  const userId = session?.user?.id;
 
   if (!userId) {
     return (
@@ -138,27 +115,20 @@ export default async function PlantObjectReadbackPage({
     );
   }
 
-  const scope = scopedToUser(
-    userId,
-    fixtureScenario ? null : getSessionId(session),
-  );
+  const scope = scopedToUser(userId, getSessionId(session));
   const page = await getPlantObjectPage(scope, objectId);
   if (!page) notFound();
   const provenancePanel = await getObjectProvenancePanel(scope, objectId);
   if (!provenancePanel) notFound();
-  if (!fixtureScenario) {
-    await recordOwnRecordRevisited(scope, page);
-  }
+  await recordOwnRecordRevisited(scope, page);
   const showProgressMoment = isObjectProgressMomentEligible(
     page.entries.length,
   );
-  if (showProgressMoment && !fixtureScenario) {
+  if (showProgressMoment) {
     await recordProgressMomentShown(scope, page);
   }
 
-  const today = fixtureScenario
-    ? "2026-07-12"
-    : new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
   const saveProgressKind = normalizeSaveProgressMomentKind(query.saveProgress);
   const sourceAttributionCaveat =
     page.plantObject.source_credit?.sourceSlug ===
@@ -197,7 +167,6 @@ export default async function PlantObjectReadbackPage({
   return (
     <main
       lang={locale}
-      data-visual-creation-result={visualCreationResultScenario?.id}
       className="mx-auto flex w-full max-w-5xl flex-col gap-7 px-4 py-4 sm:px-6 sm:py-5"
     >
       <AuthIntentFocus action={resumeAction} control={resumeControl} />
@@ -271,7 +240,6 @@ export default async function PlantObjectReadbackPage({
           requiresFirstPublicationDisclosure={
             !page.hasPriorPublicationDisclosure
           }
-          visualScenario={visualCreationScenario}
         />
       </section>
 

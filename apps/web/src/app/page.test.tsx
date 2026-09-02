@@ -6,7 +6,6 @@ import {
   selectPublicLocaleFromAcceptLanguage,
   selectPublicLocaleFromRequestContext,
 } from "@/lib/public-localization";
-import { VISUAL_FIXTURE_MANIFEST } from "@/lib/visual-fixtures/manifest";
 import type { PublicFeedPage } from "@/server/public-feed-repository";
 import HomeRoute, { generateMetadata } from "./[locale]/page";
 
@@ -177,89 +176,4 @@ describe("/", () => {
     expect(html).toContain('href="/?kind=animal"');
     expect(html).not.toMatch(/href="[^"]*(?:sign.?up|register|join)/i);
   });
-
-  it("renders deterministic loading and error states only inside the visual fixture gate", async () => {
-    enableLocalVisualFixtures();
-    mocks.listPublicFeedPage.mockClear();
-
-    const loadingHtml = renderToStaticMarkup(
-      await HomeRoute({
-        params: Promise.resolve({ locale: "uk" }),
-        searchParams: Promise.resolve({ __visualFeed: "loading" }),
-      }),
-    );
-    const errorHtml = renderToStaticMarkup(
-      await HomeRoute({
-        params: Promise.resolve({ locale: "uk" }),
-        searchParams: Promise.resolve({ __visualFeed: "error" }),
-      }),
-    );
-
-    expect(loadingHtml).toContain("Завантаження публічних журналів");
-    expect(errorHtml).toContain("Стрічку не вдалося завантажити");
-    expect(mocks.listPublicFeedPage).not.toHaveBeenCalled();
-  });
-
-  it("uses deterministic fixture cursors and can empty route-owned context", async () => {
-    enableLocalVisualFixtures();
-    mocks.listPublicFeedPage.mockClear();
-
-    await HomeRoute({
-      params: Promise.resolve({ locale: "uk" }),
-      searchParams: Promise.resolve({ __visualFeed: "page-2" }),
-    });
-    const contextHtml = renderToStaticMarkup(
-      await HomeRoute({
-        params: Promise.resolve({ locale: "uk" }),
-        searchParams: Promise.resolve({ __visualFeed: "context-empty" }),
-      }),
-    );
-
-    expect(mocks.listPublicFeedPage).toHaveBeenNthCalledWith(
-      1,
-      {
-        cursor: {
-          version: 1,
-          ...VISUAL_FIXTURE_MANIFEST.feedEvidence.pageTwoCursor,
-        },
-        kind: "all",
-        topic: VISUAL_FIXTURE_MANIFEST.feedEvidence.denseTopicSlug,
-      },
-      "uk",
-    );
-    expect(contextHtml).toContain(
-      "Поки немає тем із перевіреним публічним доказом.",
-    );
-    expect(contextHtml).not.toContain("Зимовий догляд");
-  });
-
-  it("ignores visual state parameters when the fixture gate is disabled", async () => {
-    const html = renderToStaticMarkup(
-      await HomeRoute({
-        params: Promise.resolve({ locale: "uk" }),
-        searchParams: Promise.resolve({ __visualFeed: "error" }),
-      }),
-    );
-
-    expect(mocks.listPublicFeedPage).toHaveBeenCalledWith(
-      { cursor: null, kind: "all", topic: null },
-      "uk",
-    );
-    expect(html).toContain("Ранкове спостереження");
-    expect(html).not.toContain("Стрічку не вдалося завантажити");
-  });
 });
-
-function enableLocalVisualFixtures() {
-  vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
-  vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
-  vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
-  vi.stubEnv(
-    "DATABASE_URL",
-    "postgresql://overgarden:secret@localhost:5432/overgarden",
-  );
-  vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
-  vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
-  vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
-  vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
-}

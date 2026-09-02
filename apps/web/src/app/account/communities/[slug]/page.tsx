@@ -10,7 +10,6 @@ import {
   getOperatorCopy,
   operatorCommunityStateLabel,
 } from "@/lib/operator-copy";
-import { resolveVisualCommunityScenario } from "@/lib/visual-fixtures/community-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
@@ -44,16 +43,8 @@ export default async function CommunityModerationPage({
   ]);
   const copy = getOperatorCopy(locale);
   if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(slug)) return notFound();
-  const visualScenario = resolveVisualCommunityScenario(query.visualCommunity);
-  const visualModerator =
-    visualScenario?.communitySlug === slug &&
-    visualScenario.actorRole === "moderator" &&
-    visualScenario.actorId
-      ? visualScenario
-      : null;
-  const visualModeratorActorId = visualModerator?.actorId ?? null;
-  const session = visualModeratorActorId ? null : await getCurrentSession();
-  if (!visualModeratorActorId && !session?.user?.id) {
+  const session = await getCurrentSession();
+  if (!session?.user?.id) {
     return (
       <main className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-8">
         <ModerationHeader slug={slug} copy={copy} />
@@ -65,12 +56,11 @@ export default async function CommunityModerationPage({
     );
   }
 
-  const scope = visualModeratorActorId
-    ? scopedToUser(visualModeratorActorId)
-    : scopedToUser(session!.user.id, getSessionId(session));
-  const access = visualModeratorActorId
-    ? { status: "allowed" as const }
-    : await resolveAdminCapabilityAccessBounded(scope, "operator:mutate");
+  const scope = scopedToUser(session.user.id, getSessionId(session));
+  const access = await resolveAdminCapabilityAccessBounded(
+    scope,
+    "operator:mutate",
+  );
   if (access.status !== "allowed") {
     return (
       <main
@@ -103,11 +93,7 @@ export default async function CommunityModerationPage({
 
   return (
     <main className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-8">
-      <ModerationHeader
-        slug={slug}
-        visualScenarioId={visualModerator?.id}
-        copy={copy}
-      />
+      <ModerationHeader slug={slug} copy={copy} />
       {actionStatus ? (
         <p
           className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm"
@@ -132,11 +118,7 @@ export default async function CommunityModerationPage({
           </p>
         </div>
         <DocumentMutationActionForm action={setCommunityParticipationAction}>
-          <ModeratorFields
-            slug={slug}
-            reason="rule_violation"
-            visualScenarioId={visualModerator?.id}
-          />
+          <ModeratorFields slug={slug} reason="rule_violation" />
           <input
             type="hidden"
             name="participationState"
@@ -210,7 +192,6 @@ export default async function CommunityModerationPage({
                     action={moderateCommunityContributionAction}
                     slug={slug}
                     item={item}
-                    visualScenarioId={visualModerator?.id}
                     stateName="contributionState"
                     stateValue={
                       item.contributionState === "active" ? "removed" : "active"
@@ -225,7 +206,6 @@ export default async function CommunityModerationPage({
                     action={moderateCommunityDiscussionAction}
                     slug={slug}
                     item={item}
-                    visualScenarioId={visualModerator?.id}
                     stateName="discussionState"
                     stateValue={
                       item.discussionState === "open" ? "closed" : "open"
@@ -240,7 +220,6 @@ export default async function CommunityModerationPage({
                     action={moderateCommunityMembershipAction}
                     slug={slug}
                     item={item}
-                    visualScenarioId={visualModerator?.id}
                     stateName="membershipState"
                     stateValue="banned"
                     label={copy.community.banParticipant}
@@ -249,7 +228,6 @@ export default async function CommunityModerationPage({
                     action={resolveCommunityReportAction}
                     slug={slug}
                     item={item}
-                    visualScenarioId={visualModerator?.id}
                     stateName="reportState"
                     stateValue="actioned"
                     label={copy.community.resolveActioned}
@@ -258,7 +236,6 @@ export default async function CommunityModerationPage({
                     action={resolveCommunityReportAction}
                     slug={slug}
                     item={item}
-                    visualScenarioId={visualModerator?.id}
                     stateName="reportState"
                     stateValue="dismissed"
                     label={copy.community.dismissReport}
@@ -275,16 +252,12 @@ export default async function CommunityModerationPage({
 
 function ModerationHeader({
   slug,
-  visualScenarioId,
   copy,
 }: {
   slug: string;
-  visualScenarioId?: string;
   copy: OperatorCopy;
 }) {
-  const backPath = visualScenarioId
-    ? `/communities/${slug}?visualCommunity=${encodeURIComponent(visualScenarioId)}`
-    : "/account/communities";
+  const backPath = "/account/communities";
   return (
     <header className="grid gap-4 border-b border-border pb-5">
       <Link
@@ -295,9 +268,7 @@ function ModerationHeader({
           className: "w-fit",
         })}
       >
-        {visualScenarioId
-          ? copy.community.backToCommunity
-          : copy.community.backToCommunities}
+        {copy.community.backToCommunities}
       </Link>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold">{copy.community.title}</h1>
@@ -311,7 +282,6 @@ function ModerationForm({
   action,
   slug,
   item,
-  visualScenarioId,
   stateName,
   stateValue,
   label,
@@ -324,18 +294,13 @@ function ModerationForm({
     membershipId: string;
     reportReason: string;
   };
-  visualScenarioId?: string;
   stateName: string;
   stateValue: string;
   label: string;
 }) {
   return (
     <DocumentMutationActionForm action={action}>
-      <ModeratorFields
-        slug={slug}
-        reason={item.reportReason}
-        visualScenarioId={visualScenarioId}
-      />
+      <ModeratorFields slug={slug} reason={item.reportReason} />
       <input type="hidden" name="reportId" value={item.reportId} />
       <input type="hidden" name="contributionId" value={item.contributionId} />
       <input type="hidden" name="membershipId" value={item.membershipId} />
@@ -347,22 +312,11 @@ function ModerationForm({
   );
 }
 
-function ModeratorFields({
-  slug,
-  reason,
-  visualScenarioId,
-}: {
-  slug: string;
-  reason: string;
-  visualScenarioId?: string;
-}) {
+function ModeratorFields({ slug, reason }: { slug: string; reason: string }) {
   return (
     <>
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="reason" value={reason} />
-      {visualScenarioId ? (
-        <input type="hidden" name="visualCommunity" value={visualScenarioId} />
-      ) : null}
     </>
   );
 }

@@ -13,8 +13,6 @@ const mocks = vi.hoisted(() => ({
   findSelectableCatalogItemByPublicSlug: vi.fn(),
   scheduleGardenWorkspaceActivationAnalytics: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
-  resolveVisualGardenWorkspaceScenario: vi.fn(),
-  resolveVisualJournalCreationScenario: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -50,16 +48,6 @@ vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
-vi.mock("@/lib/visual-fixtures/garden-workspace-scenarios", () => ({
-  resolveVisualGardenWorkspaceScenario:
-    mocks.resolveVisualGardenWorkspaceScenario,
-}));
-
-vi.mock("@/lib/visual-fixtures/journal-creation-scenarios", () => ({
-  resolveVisualJournalCreationScenario:
-    mocks.resolveVisualJournalCreationScenario,
-}));
-
 vi.mock("@/lib/auth/google-oauth", () => ({
   isGoogleSignInEnabled: () => false,
 }));
@@ -72,7 +60,6 @@ vi.mock("./first-entry-composer", () => ({
   FirstEntryComposer: (props: {
     initialSpace?: { id: string; displayName: string } | null;
     requiresFirstPublicationDisclosure: boolean;
-    visualScenario?: { id: string } | null;
   }) => (
     <form
       data-initial-space-id={props.initialSpace?.id ?? ""}
@@ -80,7 +67,6 @@ vi.mock("./first-entry-composer", () => ({
       data-requires-first-publication-disclosure={String(
         props.requiresFirstPublicationDisclosure,
       )}
-      data-visual-create={props.visualScenario?.id ?? ""}
     >
       First entry composer
     </form>
@@ -112,8 +98,6 @@ describe("/garden workspace V2", () => {
     mocks.findSelectableCatalogItemByPublicSlug.mockResolvedValue(null);
     mocks.scheduleGardenWorkspaceActivationAnalytics.mockReturnValue(undefined);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
-    mocks.resolveVisualGardenWorkspaceScenario.mockReturnValue(null);
-    mocks.resolveVisualJournalCreationScenario.mockReturnValue(null);
     mocks.loadGardenWorkspace.mockResolvedValue(workspaceModel());
     mocks.getMySpaceJournalTimeline.mockResolvedValue(spaceTimeline());
     mocks.hasPriorPublicationDisclosure.mockResolvedValue(false);
@@ -279,136 +263,7 @@ describe("/garden workspace V2", () => {
     expect(html).toContain('data-post-auth-path="/garden"');
     expect(html).not.toContain("attacker");
   });
-
-  it("renders a deterministic owner on the real route without credentials or analytics", async () => {
-    mocks.getCurrentSession.mockResolvedValueOnce(null);
-    mocks.resolveVisualGardenWorkspaceScenario.mockReturnValueOnce(
-      visualScenario("connection-required"),
-    );
-
-    const { default: GardenPage } = await import("./page");
-    const html = renderToStaticMarkup(
-      await GardenPage({
-        searchParams: Promise.resolve({
-          visualWorkspace: "connection-required",
-        }),
-      }),
-    );
-
-    expect(mocks.loadGardenWorkspace).toHaveBeenCalledWith(
-      {
-        userId: "00000000-0000-4000-8000-000000000099",
-        sessionId: null,
-      },
-      expect.objectContaining({ faultSections: [] }),
-    );
-    expect(html).toContain('data-garden-workspace="operational-home"');
-    expect(html).not.toContain("Фото в обробці");
-    expect(html).not.toContain("Фото, що потребують уваги");
-    expect(html).toContain("First entry composer");
-    expect(html).not.toMatch(/Офлайн|Synthetic draft|Очікує синхронізації/u);
-    expect(html).not.toContain("Garden auth panel");
-    expect(
-      mocks.scheduleGardenWorkspaceActivationAnalytics,
-    ).not.toHaveBeenCalled();
-  });
-
-  it("renders deterministic loading without querying owner rows", async () => {
-    mocks.getCurrentSession.mockResolvedValueOnce(null);
-    mocks.resolveVisualGardenWorkspaceScenario.mockReturnValueOnce(
-      visualScenario("loading"),
-    );
-
-    const { default: GardenPage } = await import("./page");
-    const html = renderToStaticMarkup(
-      await GardenPage({
-        searchParams: Promise.resolve({ visualWorkspace: "loading" }),
-      }),
-    );
-
-    expect(html).toContain('data-garden-workspace="loading"');
-    expect(mocks.loadGardenWorkspace).not.toHaveBeenCalled();
-    expect(mocks.getMySpaceJournalTimeline).not.toHaveBeenCalled();
-  });
-
-  it("renders a credential-free first-entry fixture on the real owner form", async () => {
-    mocks.getCurrentSession.mockResolvedValueOnce(null);
-    mocks.resolveVisualJournalCreationScenario.mockReturnValueOnce(
-      visualCreationScenario("first-entry"),
-    );
-
-    const { default: GardenPage } = await import("./page");
-    const html = renderToStaticMarkup(
-      await GardenPage({
-        searchParams: Promise.resolve({ visualCreate: "ove182-c001" }),
-      }),
-    );
-
-    expect(html).toContain('data-visual-create="ove182-c001"');
-    expect(mocks.scopedToUser).toHaveBeenCalledWith(
-      "00000000-0000-4000-8000-000000000099",
-      null,
-    );
-    expect(mocks.getMySpaceJournalTimeline).toHaveBeenCalledWith(
-      expect.anything(),
-      "space-1",
-      { objectLimit: 20, entryLimit: 5 },
-    );
-    expect(
-      mocks.scheduleGardenWorkspaceActivationAnalytics,
-    ).not.toHaveBeenCalled();
-  });
 });
-
-function visualCreationScenario(flow: "first-entry" | "follow-up") {
-  return {
-    id: "ove182-c001",
-    flow,
-    state: "minimum",
-    label: "Minimum form",
-    ownerActorId: "00000000-0000-4000-8000-000000000099",
-    objectId: flow === "follow-up" ? "object-1" : null,
-    spaceId: "space-1",
-    objectKind: "plant",
-    objectName: "Cherry tomato",
-    entryTitle: "First flowers",
-    entryBody: "Two new flower clusters.",
-    entryDate: "2026-07-12",
-    catalogQuery: null,
-    userAddedCatalogName: null,
-    locationVisibility: "hidden",
-    coarseRegionCode: null,
-    topicTagInput: "",
-    mediaFileName: null,
-    serverAvailable: true,
-    submitState: "idle",
-    message: "Published only after atomic confirmation.",
-    detailsOpen: false,
-    path: "/garden?visualCreate=ove182-c001",
-    expectedStatus: 200,
-    viewportTargets: ["desktop", "mobile-320"] as const,
-  };
-}
-
-function visualScenario(state: "connection-required" | "loading") {
-  return {
-    id: `workspace-${state}`,
-    state,
-    ownerActorId: "00000000-0000-4000-8000-000000000099",
-    path: `/garden?visualWorkspace=${state}`,
-    expectedSpaceCount: 5,
-    expectedObjectCount: 12,
-    expectedPlantCount: 10,
-    expectedAnimalCount: 1,
-    expectedRecentCount: 8,
-    expectedSpaceIds: ["space-1"],
-    expectedObjectIds: ["object-1"],
-    expectedRecentEntryIds: ["entry-1"],
-    serverAvailable: state !== "connection-required",
-    faultSections: [],
-    viewportTargets: ["desktop", "mobile-320"] as const,
-  };
-}
 
 function workspaceModel(): GardenWorkspaceReadModel {
   return {

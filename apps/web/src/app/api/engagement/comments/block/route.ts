@@ -7,8 +7,6 @@ import {
   documentMutationGenerationFromRequest,
 } from "@/server/document-mutation-admission";
 import { blockEngagementCommentAuthor } from "@/server/engagement-repository";
-import { scopedToUser } from "@/server/request-scope";
-import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
 import {
   parseEngagementReturnTo,
   parseEngagementCommentTarget,
@@ -21,13 +19,10 @@ export async function POST(request: Request) {
   const target = parseEngagementCommentTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
   const commentId = String(formData.get("commentId") ?? "");
-  const visualActor = resolveVisualSocialMutationActor(formData, ["journal"]);
-  const admission = visualActor
-    ? null
-    : await admitDocumentMutation({
-        transport: documentMutationGenerationFromRequest(request),
-      });
-  if (admission?.status === "rejected") {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
     if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
       return redirectToEngagementAuth(
         request,
@@ -40,10 +35,7 @@ export async function POST(request: Request) {
     return documentMutationAdmissionResponse(admission);
   }
 
-  await blockEngagementCommentAuthor(
-    visualActor ? scopedToUser(visualActor.actorId) : admission!.scope,
-    { commentId, target },
-  );
+  await blockEngagementCommentAuthor(admission.scope, { commentId, target });
   const pathname = new URL(returnTo, request.url).pathname;
   revalidatePath(pathname);
   revalidatePath("/feed");

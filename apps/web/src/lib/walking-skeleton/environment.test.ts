@@ -11,9 +11,6 @@ import {
 const LOCAL_ENV = {
   NODE_ENV: "development",
   WALKING_SKELETON_ENABLED: "true",
-  VISUAL_FIXTURES_ENABLED: "true",
-  VISUAL_FIXTURES_TARGET: "local",
-  VISUAL_FIXTURES_DATABASE: "overgarden",
   DATABASE_URL:
     "postgresql://overgarden:local-password@localhost:5432/overgarden",
   R2_ENDPOINT: "http://localhost:9000",
@@ -28,12 +25,10 @@ describe("walking-skeleton environment guard", () => {
       readFileSync(new URL("../../../package.json", import.meta.url), "utf8"),
     ) as { scripts?: { dev?: unknown } };
 
-    expect(packageJson.scripts?.dev).toBe(
-      "next dev --hostname 127.0.0.1",
-    );
+    expect(packageJson.scripts?.dev).toBe("next dev --hostname 127.0.0.1");
   });
 
-  it("accepts only an explicitly enabled local fixture environment", () => {
+  it("accepts only an explicitly enabled loopback environment", () => {
     expect(resolveWalkingSkeletonEnvironment(LOCAL_ENV)).toEqual({
       databaseHostClass: "loopback",
       databaseName: "overgarden",
@@ -42,17 +37,11 @@ describe("walking-skeleton environment guard", () => {
     });
   });
 
-  it("fails closed unless both diagnostic gates are explicitly enabled", () => {
+  it("stays disabled unless the diagnostic gate is explicitly enabled", () => {
     expect(
       tryResolveWalkingSkeletonEnvironment({
         ...LOCAL_ENV,
         WALKING_SKELETON_ENABLED: "false",
-      }),
-    ).toBeNull();
-    expect(
-      tryResolveWalkingSkeletonEnvironment({
-        ...LOCAL_ENV,
-        VISUAL_FIXTURES_ENABLED: "false",
       }),
     ).toBeNull();
   });
@@ -67,26 +56,6 @@ describe("walking-skeleton environment guard", () => {
   ])("rejects production-like runtime signals %#", (runtime) => {
     expect(
       tryResolveWalkingSkeletonEnvironment({ ...LOCAL_ENV, ...runtime }),
-    ).toBeNull();
-  });
-
-  it("rejects the explicitly enabled visual-fixture preview target", () => {
-    expect(
-      tryResolveWalkingSkeletonEnvironment({
-        ...LOCAL_ENV,
-        NODE_ENV: "test",
-        VERCEL: "1",
-        VERCEL_ENV: "preview",
-        VISUAL_FIXTURES_TARGET: "preview",
-        VISUAL_FIXTURES_ALLOW_PREVIEW: "true",
-        VISUAL_FIXTURES_DATABASE: "overgarden_preview",
-        DATABASE_URL:
-          "postgresql://fixture:secret@preview-db.example.test:5432/overgarden_preview",
-        R2_ENDPOINT: "https://preview-storage.example.test",
-        R2_PUBLIC_BASE_URL: "https://preview-media.example.test",
-        PUBLIC_SITE_URL: "https://preview-app.example.test",
-        BETTER_AUTH_URL: "https://preview-app.example.test",
-      }),
     ).toBeNull();
   });
 
@@ -108,7 +77,7 @@ describe("walking-skeleton environment guard", () => {
     },
   );
 
-  it("inherits database, storage, and canonical-origin refusal from visual fixtures", () => {
+  it("refuses non-loopback database, storage, and canonical origins", () => {
     expect(
       tryResolveWalkingSkeletonEnvironment({
         ...LOCAL_ENV,

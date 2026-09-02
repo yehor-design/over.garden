@@ -11,9 +11,11 @@ describe("global responsive floor", () => {
     );
 
     expect(source).toMatch(
-      /--font-overgarden-sans:\s*"Google Sans",\s*"Google Sans Fallback",\s*Arial,/u,
+      /--font-overgarden-sans:\s*var\(--font-google-sans\),\s*Arial,/u,
     );
-    expect(source).toMatch(/--font-overgarden-mono:\s*"Geist Mono"/u);
+    expect(source).toMatch(
+      /--font-overgarden-mono:\s*var\(--font-geist-mono\)/u,
+    );
     expect(source).toContain("--font-sans: var(--font-overgarden-sans);");
     expect(source).toContain("--font-heading: var(--font-overgarden-sans);");
     expect(source).toContain("--font-mono: var(--font-overgarden-mono);");

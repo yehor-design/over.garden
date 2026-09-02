@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
 import { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
-import { resolveVisualFixturePublicJournalDirectoryMode } from "@/lib/visual-fixtures/public-journal-directory-scenarios";
 import {
   DEFAULT_PUBLIC_LOCALE,
   type PublicLocale,
@@ -31,18 +30,9 @@ export default async function RootJournalsRoute({
     searchParams ?? Promise.resolve({}),
   ]);
   const request = normalizePublicJournalDirectoryRequest(query);
-  const visualCorpus =
-    resolveVisualFixturePublicJournalDirectoryMode(query, process.env) ===
-    "corpus";
 
   if (locale !== DEFAULT_PUBLIC_LOCALE) {
-    redirect(
-      buildPublicJournalDirectoryHref(
-        locale as PublicLocale,
-        request,
-        visualCorpus,
-      ),
-    );
+    redirect(buildPublicJournalDirectoryHref(locale as PublicLocale, request));
   }
 
   return renderPublicJournalsPage(DEFAULT_PUBLIC_LOCALE, query);

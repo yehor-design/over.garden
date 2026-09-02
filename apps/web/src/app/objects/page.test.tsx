@@ -6,7 +6,6 @@ import type { PublicObjectCatalogPage } from "@/server/public-object-catalog-rep
 const mocks = vi.hoisted(() => ({
   listPublicObjectCatalogPage: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
-  resolveVisualFixturePublicObjectCatalogMode: vi.fn(),
   redirect: vi.fn(),
 }));
 
@@ -30,11 +29,6 @@ vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
-vi.mock("@/lib/visual-fixtures/public-object-catalog-scenarios", () => ({
-  resolveVisualFixturePublicObjectCatalogMode:
-    mocks.resolveVisualFixturePublicObjectCatalogMode,
-}));
-
 const page: PublicObjectCatalogPage = {
   request: { kind: "animal", identity: "breed", query: "коза", page: 1 },
   cards: [],
@@ -49,7 +43,6 @@ describe("/objects", () => {
     vi.resetModules();
     vi.clearAllMocks();
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
-    mocks.resolveVisualFixturePublicObjectCatalogMode.mockReturnValue(null);
     mocks.listPublicObjectCatalogPage.mockResolvedValue(page);
   });
 
@@ -97,32 +90,6 @@ describe("/objects", () => {
 
     expect(html).toContain("Каталог тимчасово недоступний");
     expect(html).not.toMatch(/sign.?in|register|увійти|створити акаунт/i);
-  });
-
-  it("renders stable loading and error fixture states without querying data", async () => {
-    const { default: Route } = await import("../[locale]/objects/page");
-
-    mocks.resolveVisualFixturePublicObjectCatalogMode.mockReturnValue(
-      "loading",
-    );
-    const loadingHtml = renderToStaticMarkup(
-      await Route({
-        params: Promise.resolve({ locale: "uk" }),
-        searchParams: Promise.resolve({ __visualObjects: "loading" }),
-      }),
-    );
-
-    mocks.resolveVisualFixturePublicObjectCatalogMode.mockReturnValue("error");
-    const errorHtml = renderToStaticMarkup(
-      await Route({
-        params: Promise.resolve({ locale: "uk" }),
-        searchParams: Promise.resolve({ __visualObjects: "error" }),
-      }),
-    );
-
-    expect(loadingHtml).toContain('data-public-object-catalog-state="loading"');
-    expect(errorHtml).toContain('data-public-object-catalog-state="error"');
-    expect(mocks.listPublicObjectCatalogPage).not.toHaveBeenCalled();
   });
 
   it("renders the localized loading boundary without route props", async () => {

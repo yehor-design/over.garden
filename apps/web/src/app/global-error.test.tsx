@@ -70,10 +70,6 @@ describe("global error market boundary", () => {
 
     expect(html).toContain('<html lang="uk"');
     expect(html).toContain('<meta name="referrer" content="no-referrer"/>');
-    expect(html.match(/rel="preload"/gu)).toHaveLength(1);
-    expect(html.match(/referrerPolicy="no-referrer"/gu)).toHaveLength(1);
-    expect(html).toContain('font-family: "Google Sans"');
-    expect(html).toContain("/fonts/google-sans/v69/");
     expect(html).not.toContain("fonts.googleapis.com");
     expect(html).toContain("Цю сторінку не вдалося завантажити");
     expect(html).not.toContain("data-interface-language-control");

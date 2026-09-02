@@ -10,7 +10,6 @@ import {
   PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { resolveVisualCommunityScenario } from "@/lib/visual-fixtures/community-scenarios";
 import {
   blockCommunityContributionAuthor,
   contributePublicJournalToCommunity,
@@ -21,24 +20,17 @@ import {
   admitDocumentMutation,
   documentMutationGenerationFromFormData,
 } from "@/server/document-mutation-admission";
-import { scopedToUser } from "@/server/request-scope";
-import { resolveVisualCommunityMutationActor } from "@/server/visual-fixtures/community-actor";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
 
 export async function setCommunityMembershipAction(formData: FormData) {
-  const visualActor = resolveVisualCommunityMutationActor(formData);
-  const admission = visualActor
-    ? null
-    : await admitDocumentMutation({
-        transport: documentMutationGenerationFromFormData(formData),
-      });
-  if (admission?.status === "rejected") {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
     return { documentMutationAdmission: admission.transportResult };
   }
-  const scope = visualActor
-    ? scopedToUser(visualActor.actorId)
-    : admission!.scope;
+  const scope = admission.scope;
   const slug = communitySlug(formData);
   const state =
     String(formData.get("membershipState")) === "left" ? "left" : "active";
@@ -53,18 +45,13 @@ export async function setCommunityMembershipAction(formData: FormData) {
 }
 
 export async function contributeJournalToCommunityAction(formData: FormData) {
-  const visualActor = resolveVisualCommunityMutationActor(formData);
-  const admission = visualActor
-    ? null
-    : await admitDocumentMutation({
-        transport: documentMutationGenerationFromFormData(formData),
-      });
-  if (admission?.status === "rejected") {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
     return { documentMutationAdmission: admission.transportResult };
   }
-  const scope = visualActor
-    ? scopedToUser(visualActor.actorId)
-    : admission!.scope;
+  const scope = admission.scope;
   const slug = communitySlug(formData);
   let status: string;
   try {
@@ -80,18 +67,13 @@ export async function contributeJournalToCommunityAction(formData: FormData) {
 }
 
 export async function reportCommunityContributionAction(formData: FormData) {
-  const visualActor = resolveVisualCommunityMutationActor(formData);
-  const admission = visualActor
-    ? null
-    : await admitDocumentMutation({
-        transport: documentMutationGenerationFromFormData(formData),
-      });
-  if (admission?.status === "rejected") {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
     return { documentMutationAdmission: admission.transportResult };
   }
-  const scope = visualActor
-    ? scopedToUser(visualActor.actorId)
-    : admission!.scope;
+  const scope = admission.scope;
   const slug = communitySlug(formData);
   let status: string;
   try {
@@ -110,18 +92,13 @@ export async function reportCommunityContributionAction(formData: FormData) {
 export async function blockCommunityContributionAuthorAction(
   formData: FormData,
 ) {
-  const visualActor = resolveVisualCommunityMutationActor(formData);
-  const admission = visualActor
-    ? null
-    : await admitDocumentMutation({
-        transport: documentMutationGenerationFromFormData(formData),
-      });
-  if (admission?.status === "rejected") {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
     return { documentMutationAdmission: admission.transportResult };
   }
-  const scope = visualActor
-    ? scopedToUser(visualActor.actorId)
-    : admission!.scope;
+  const scope = admission.scope;
   const slug = communitySlug(formData);
   let status: string;
   try {
@@ -148,12 +125,6 @@ function finish(
   revalidatePath("/communities");
   const path = localizedPath(requestedLocale(formData), `/communities/${slug}`);
   const query = new URLSearchParams({ communityAction: status });
-  const scenario = resolveVisualCommunityScenario(
-    String(formData.get("visualCommunity") ?? ""),
-  );
-  if (scenario?.communitySlug === slug) {
-    query.set("visualCommunity", scenario.id);
-  }
   redirect(`${path}?${query.toString()}#${anchor}`);
 }
 

@@ -78,7 +78,6 @@ application capability and must not be recreated.
 cd apps/web
 pnpm test:media-staging-worker
 pnpm media:staging:verify
-pnpm smoke:inline-media-integrity
 pnpm smoke:journal-cover-selection
 pnpm smoke:erasure-workflow
 

@@ -21,7 +21,6 @@ const COMMUNITY_QUERY_KEYS = new Set([
   "kind",
   "cursor",
   "communityAction",
-  "visualCommunity",
   "authIntent",
   "authControl",
 ]);

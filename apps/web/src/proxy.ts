@@ -48,11 +48,6 @@ import {
   renderNotFoundPublicProfileHtml,
 } from "@/lib/public-profile-lifecycle";
 import {
-  INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER,
-  isInterfaceGlobalErrorVisualFixtureRequest,
-} from "@/lib/localization/localization-visual-fixture";
-import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
-import {
   isWalkingSkeletonRequestHostAllowed,
   tryResolveWalkingSkeletonEnvironment,
 } from "@/lib/walking-skeleton/environment";
@@ -75,7 +70,7 @@ const RETIRED_PWA_ASSET_PATHS = new Set([
   "/icon-512.png",
 ]);
 
-type InternalNamespace = "visual-fixtures" | "skeleton";
+type InternalNamespace = "skeleton";
 
 type InternalNamespacePath = {
   namespace: InternalNamespace;
@@ -101,10 +96,8 @@ function matchInternalNamespacePath(
 
   const first = segments[firstSegmentIndex];
   const second = segments[firstSegmentIndex + 1];
-  if (first === "__visual-fixtures") return "visual-fixtures";
   if (first === "skeleton") return "skeleton";
   if (first !== "api") return null;
-  if (second === "__visual-fixtures") return "visual-fixtures";
   if (second === "skeleton") return "skeleton";
   return null;
 }
@@ -126,11 +119,8 @@ function matchEscapedInternalNamespacePath(
   if (match) return match;
 
   const malformedReservedPrefix = reservedSyntax.match(
-    /^\/+(?:api\/)?((?:__visual-fixtures)|(?:skeleton))(?:[%\\/]|$)/,
+    /^\/+(?:api\/)?(skeleton)(?:[%\\/]|$)/,
   );
-  if (malformedReservedPrefix?.[1] === "__visual-fixtures") {
-    return "visual-fixtures";
-  }
   if (malformedReservedPrefix?.[1] === "skeleton") return "skeleton";
   return null;
 }
@@ -448,13 +438,6 @@ export async function proxy(request: NextRequest) {
     return getHardNotFoundResponse();
   }
 
-  if (
-    internalNamespacePath?.namespace === "visual-fixtures" &&
-    !tryResolveVisualFixtureEnvironment(process.env)
-  ) {
-    return getHardNotFoundResponse();
-  }
-
   if (isRetiredControlPlanePath(request.nextUrl.pathname)) {
     return getHardNotFoundResponse();
   }
@@ -644,18 +627,10 @@ export async function proxy(request: NextRequest) {
   }
 
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.delete(INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER);
   requestHeaders.delete(INTERNAL_PROFILE_REWRITE_HEADER);
   requestHeaders.delete(INTERNAL_PROFILE_REWRITE_SIGNATURE_HEADER);
   requestHeaders.set(INTERFACE_LOCALE_REQUEST_HEADER, locale);
   requestHeaders.set(INTERFACE_MARKET_REQUEST_HEADER, localization.market);
-  if (
-    isDocumentNavigationRequest(request) &&
-    tryResolveVisualFixtureEnvironment(process.env) &&
-    isInterfaceGlobalErrorVisualFixtureRequest(request.nextUrl)
-  ) {
-    requestHeaders.set(INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER, "1");
-  }
   const response = NextResponse.next({
     request: {
       headers: requestHeaders,

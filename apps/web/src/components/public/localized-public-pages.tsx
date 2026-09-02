@@ -264,7 +264,6 @@ export function LocalizedGuidePage({
   knowledgeCopy = getPublicKnowledgeCopy(locale),
   evidence = emptyKnowledgeEvidence(locale),
   evidenceState = "empty",
-  visualCorpus = false,
   jsonLd,
 }: {
   locale: PublicLocale;
@@ -274,7 +273,6 @@ export function LocalizedGuidePage({
   knowledgeCopy?: PublicKnowledgeCopy;
   evidence?: PublicKnowledgeEvidence;
   evidenceState?: PublicKnowledgeEvidenceState;
-  visualCorpus?: boolean;
   jsonLd?: Record<string, unknown> | null;
 }) {
   const contextModules = knowledgeDetailContextModules(knowledgeCopy, evidence);
@@ -290,9 +288,9 @@ export function LocalizedGuidePage({
       <header className="flex flex-col gap-5 border-b border-border pb-8">
         <PublicLocalizedHeader
           locale={locale}
-          basePath={knowledgeDetailPath(guide.path, visualCorpus)}
+          basePath={knowledgeDetailPath(guide.path)}
           availableLocales={availableLocales}
-          backHref={knowledgeDetailPath("/knowledge", visualCorpus)}
+          backHref={knowledgeDetailPath("/knowledge")}
           backLabel={knowledgeCopy.backToKnowledge}
         />
         <div className="flex flex-col gap-3">
@@ -382,7 +380,6 @@ export function LocalizedAnswerPage({
   knowledgeCopy = getPublicKnowledgeCopy(locale),
   evidence = emptyKnowledgeEvidence(locale),
   evidenceState = "empty",
-  visualCorpus = false,
   jsonLd,
 }: {
   locale: PublicLocale;
@@ -392,7 +389,6 @@ export function LocalizedAnswerPage({
   knowledgeCopy?: PublicKnowledgeCopy;
   evidence?: PublicKnowledgeEvidence;
   evidenceState?: PublicKnowledgeEvidenceState;
-  visualCorpus?: boolean;
   jsonLd?: Record<string, unknown> | null;
 }) {
   const contextModules = knowledgeDetailContextModules(knowledgeCopy, evidence);
@@ -408,9 +404,9 @@ export function LocalizedAnswerPage({
       <header className="flex flex-col gap-5 border-b border-border pb-8">
         <PublicLocalizedHeader
           locale={locale}
-          basePath={knowledgeDetailPath(page.path, visualCorpus)}
+          basePath={knowledgeDetailPath(page.path)}
           availableLocales={availableLocales}
-          backHref={knowledgeDetailPath("/knowledge", visualCorpus)}
+          backHref={knowledgeDetailPath("/knowledge")}
           backLabel={knowledgeCopy.backToKnowledge}
         />
         <div className="flex flex-col gap-3">
@@ -533,10 +529,8 @@ function emptyKnowledgeEvidence(locale: PublicLocale): PublicKnowledgeEvidence {
   };
 }
 
-function knowledgeDetailPath(path: string, visualCorpus: boolean) {
-  return visualCorpus
-    ? `${path}?${new URLSearchParams({ __visualKnowledge: "corpus" })}`
-    : path;
+function knowledgeDetailPath(path: string) {
+  return path;
 }
 
 function knowledgeDetailContextModules(

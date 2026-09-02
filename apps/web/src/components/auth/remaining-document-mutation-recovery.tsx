@@ -114,8 +114,7 @@ export function isRemainingDocumentMutationForm(
 ): boolean {
   if (
     form.method.toUpperCase() === "GET" ||
-    form.getAttribute(MANAGED_FORM_ATTRIBUTE) === "true" ||
-    hasVerifiedVisualFixtureMarker(form)
+    form.getAttribute(MANAGED_FORM_ATTRIBUTE) === "true"
   ) {
     return false;
   }
@@ -147,11 +146,4 @@ export function setDocumentMutationGenerationField(
         });
   field.value = transport;
   if (!field.isConnected) form.append(field);
-}
-
-function hasVerifiedVisualFixtureMarker(form: HTMLFormElement): boolean {
-  return ["visualCommunity", "visualSocial"].some((name) => {
-    const value = form.elements.namedItem(name);
-    return value instanceof HTMLInputElement && value.value.length > 0;
-  });
 }

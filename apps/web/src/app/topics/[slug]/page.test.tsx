@@ -87,37 +87,6 @@ describe("/topics/[slug]", () => {
     });
   });
 
-  it("restricts a synthetic dense topic to fixture evidence and keeps it noindex", async () => {
-    enableVisualFixtureEnv();
-    const { default: TopicRoute, generateMetadata } =
-      await import("../../[locale]/topics/[slug]/page");
-    const params = Promise.resolve({ locale: "uk", slug: "care-checks" });
-    const searchParams = Promise.resolve({ __visualKnowledge: "corpus" });
-    const html = renderToStaticMarkup(
-      await TopicRoute({ params, searchParams }),
-    );
-
-    expect(html).toContain("Регулярні спостереження");
-    expect(html).toContain("/knowledge?__visualKnowledge=corpus");
-    expect(mocks.getPublicTopicAggregationPage).toHaveBeenCalledWith(
-      "care-checks",
-      expect.objectContaining({ restrictToEntryIds: expect.any(Array) }),
-    );
-    expect(mocks.listPublicKnowledgeEvidence).toHaveBeenCalledWith(
-      { topicSlugs: ["care-checks"], catalogSlugs: [] },
-      "uk",
-      expect.objectContaining({
-        restrictToEntryIds: expect.any(Array),
-        visualCorpus: true,
-      }),
-    );
-    await expect(
-      generateMetadata({ params, searchParams }),
-    ).resolves.toMatchObject({
-      robots: { index: false, follow: false },
-    });
-  });
-
   it("redirects an unprefixed Bulgaria-market topic before rendering and preserves only approved state", async () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
     const { default: RootTopicRoute, generateMetadata } =
@@ -179,18 +148,4 @@ function evidence() {
     hasMore: true,
     allEvidencePath: "/ru/journals?topic=care-checks",
   };
-}
-
-function enableVisualFixtureEnv() {
-  vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
-  vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
-  vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden_visual");
-  vi.stubEnv(
-    "DATABASE_URL",
-    "postgres://postgres:postgres@127.0.0.1/overgarden_visual",
-  );
-  vi.stubEnv("R2_ENDPOINT", "http://127.0.0.1:9000");
-  vi.stubEnv("R2_PUBLIC_BASE_URL", "http://127.0.0.1:9000/overgarden");
-  vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
-  vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
 }

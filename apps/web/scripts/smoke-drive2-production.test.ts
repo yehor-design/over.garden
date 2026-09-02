@@ -18,7 +18,6 @@ type FetchOverrides = {
     | "GET /skeleton"
     | "GET /api/skeleton/journal"
     | "POST /api/skeleton/journal";
-  fixtureExposed?: boolean;
   journalPath?: string;
   onEngagementRequest?: (input: {
     endpoint: string;
@@ -104,16 +103,6 @@ function createFetch(overrides: FetchOverrides = {}) {
         url.toString(),
       );
     }
-    if (
-      url.pathname.startsWith("/__visual-fixtures") ||
-      url.pathname.startsWith("/api/__visual-fixtures")
-    ) {
-      return response(
-        "Not found",
-        { status: overrides.fixtureExposed ? 200 : 404 },
-        url.toString(),
-      );
-    }
 
     const headers = {
       "cache-control": "private, no-store, max-age=0",
@@ -167,7 +156,7 @@ function options(
 }
 
 describe("OVE-186 canonical production smoke", () => {
-  it("proves guest reads, mutation auth, and fixture isolation without logging paths", async () => {
+  it("proves guest reads, mutation auth, and public-surface isolation without logging paths", async () => {
     const skeletonResponses: Response[] = [];
     const fetchImpl = createFetch({
       onSkeletonResponse: (response) => skeletonResponses.push(response),
@@ -192,7 +181,6 @@ describe("OVE-186 canonical production smoke", () => {
         create: "auth-intent",
       },
       fixtureIsolation: {
-        blockedRoutes: 3,
         sitemapClean: true,
         publicHtmlClean: true,
       },
@@ -281,12 +269,6 @@ describe("OVE-186 canonical production smoke", () => {
         ),
       ),
     ).rejects.toThrow(/Production feed has no journal entry continuation/);
-  });
-
-  it("fails when Production exposes the fixture namespace", async () => {
-    await expect(
-      runDrive2ProductionSmoke(options(createFetch({ fixtureExposed: true }))),
-    ).rejects.toThrow();
   });
 
   it.each([

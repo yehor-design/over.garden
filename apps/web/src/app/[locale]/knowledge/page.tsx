@@ -20,7 +20,6 @@ import {
   PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { resolveVisualFixturePublicKnowledgeMode } from "@/lib/visual-fixtures/public-knowledge-scenarios";
 import {
   listLocalizedAnswerPages,
   getContentAvailableLocales,
@@ -49,7 +48,6 @@ export function generateStaticParams() {
 
 export async function generateMetadata({
   params,
-  searchParams,
 }: PublicKnowledgeRouteProps): Promise<Metadata> {
   const { locale: localeParam } = await params;
   if (!isPublicLocale(localeParam)) {
@@ -60,11 +58,7 @@ export async function generateMetadata({
     };
   }
 
-  const visualMode = resolveVisualFixturePublicKnowledgeMode(
-    (await searchParams) ?? {},
-    process.env,
-  );
-  return buildKnowledgeSurface(localeParam, Boolean(visualMode)).metadata;
+  return buildKnowledgeSurface(localeParam).metadata;
 }
 
 export async function renderPublicKnowledgePage(
@@ -72,44 +66,16 @@ export async function renderPublicKnowledgePage(
   searchParams: SearchParams = {},
 ) {
   const request = normalizePublicKnowledgeRequest(searchParams);
-  const visualMode = resolveVisualFixturePublicKnowledgeMode(
-    searchParams,
-    process.env,
-  );
-  const surface = buildKnowledgeSurface(locale, Boolean(visualMode));
-  if (visualMode === "loading" || visualMode === "error") {
-    return (
-      <PublicKnowledgeHub
-        locale={locale}
-        copy={getPublicKnowledgeCopy(locale)}
-        request={request}
-        items={[]}
-        contextItems={[]}
-        state={visualMode}
-        jsonLd={surface.jsonLd}
-      />
-    );
-  }
-
-  const visualCorpus =
-    visualMode === "corpus"
-      ? await loadVisualFixtureKnowledgeCorpus(locale)
-      : null;
-  const guides = visualCorpus?.guides ?? listLocalizedGuides(locale);
-  const answers = visualCorpus?.answers ?? listLocalizedAnswerPages(locale);
+  const surface = buildKnowledgeSurface(locale);
+  const guides = listLocalizedGuides(locale);
+  const answers = listLocalizedAnswerPages(locale);
   const evidenceRequests = [...guides, ...answers].map((content) =>
-    listPublicKnowledgeEvidence(content.knowledge.evidence, locale, {
-      restrictToEntryIds: visualCorpus?.publicEntryIds ?? null,
-      visualCorpus: Boolean(visualCorpus),
-    }),
+    listPublicKnowledgeEvidence(content.knowledge.evidence, locale),
   );
   const [topicsResult, evidenceResults] = await Promise.all([
-    Promise.allSettled([
-      listPublicKnowledgeTopics({
-        restrictToEntryIds: visualCorpus?.publicEntryIds ?? null,
-        restrictToTopicSlugs: visualCorpus?.topicSlugs ?? null,
-      }),
-    ]).then((results) => results[0]),
+    Promise.allSettled([listPublicKnowledgeTopics()]).then(
+      (results) => results[0],
+    ),
     Promise.allSettled(evidenceRequests),
   ]);
   const failed =
@@ -169,13 +135,12 @@ export async function renderPublicKnowledgePage(
       items={items}
       contextItems={items}
       state={state}
-      visualCorpus={Boolean(visualCorpus)}
       jsonLd={surface.jsonLd}
     />
   );
 }
 
-function buildKnowledgeSurface(locale: PublicLocale, isVisualFixture: boolean) {
+function buildKnowledgeSurface(locale: PublicLocale) {
   const copy = getPublicKnowledgeCopy(locale);
   const guides = listLocalizedGuides(locale);
   const answers = listLocalizedAnswerPages(locale);
@@ -196,7 +161,7 @@ function buildKnowledgeSurface(locale: PublicLocale, isVisualFixture: boolean) {
       items.map((item) => item.path),
     ),
     meaningfulContentAt: AUTHORED_PUBLIC_SURFACE_LASTMOD,
-    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+    candidateState: "candidate",
   });
   return buildPublicSurfaceMetadata({
     discovery,
@@ -244,10 +209,4 @@ function topicDescription(locale: PublicLocale, entryCount: number) {
     bg: `${count} в проверена тема.`,
     ru: `${count} в проверенной теме.`,
   }[locale];
-}
-
-async function loadVisualFixtureKnowledgeCorpus(locale: PublicLocale) {
-  const visualFixture =
-    await import("@/server/public-knowledge-visual-fixture");
-  return visualFixture.loadVisualFixtureKnowledgeCorpus(locale);
 }

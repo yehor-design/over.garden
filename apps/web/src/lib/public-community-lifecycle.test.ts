@@ -23,8 +23,6 @@ describe("public community lifecycle contract", () => {
     expect(html).toContain("Общността не е намерена");
     expect(html).toContain('<meta name="robots" content="noindex, nofollow"');
     expect(html).toContain('href="/bg/communities"');
-    expect(html).toContain('font-family: "Google Sans"');
-    expect(html.match(/rel="preload"/gu)).toHaveLength(1);
     expect(html).not.toMatch(/journal|email|latitude|longitude|session/i);
   });
 });

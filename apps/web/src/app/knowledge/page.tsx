@@ -8,7 +8,6 @@ import {
   DEFAULT_PUBLIC_LOCALE,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { resolveVisualFixturePublicKnowledgeMode } from "@/lib/visual-fixtures/public-knowledge-scenarios";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   generateMetadata as generateLocalizedKnowledgeMetadata,
@@ -38,29 +37,10 @@ export default async function RootKnowledgeRoute({
     searchParams ?? Promise.resolve({}),
   ]);
   const request = normalizePublicKnowledgeRequest(query);
-  const visualMode = resolveVisualFixturePublicKnowledgeMode(
-    query,
-    process.env,
-  );
 
   if (locale !== DEFAULT_PUBLIC_LOCALE) {
-    const href = buildPublicKnowledgeHref(
-      locale as PublicLocale,
-      request,
-      visualMode === "corpus",
-    );
-    redirect(withVisualMode(href, visualMode));
+    redirect(buildPublicKnowledgeHref(locale as PublicLocale, request));
   }
 
   return renderPublicKnowledgePage(DEFAULT_PUBLIC_LOCALE, query);
-}
-
-function withVisualMode(
-  href: string,
-  mode: ReturnType<typeof resolveVisualFixturePublicKnowledgeMode>,
-) {
-  if (!mode || mode === "corpus") return href;
-  const url = new URL(href, "https://visual-fixtures.invalid");
-  url.searchParams.set("__visualKnowledge", mode);
-  return `${url.pathname}${url.search}`;
 }

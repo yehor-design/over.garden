@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   markNotificationEventsRead: vi.fn(),
   setNotificationReceipt: vi.fn(),
   revalidatePath: vi.fn(),
-  resolveVisualSocialMutationActor: vi.fn(),
   admitDocumentMutation: vi.fn(),
   documentMutationAdmissionResponse: vi.fn(),
 }));
@@ -31,10 +30,6 @@ vi.mock("@/server/social-return-repository", () => ({
   markNotificationEventsRead: mocks.markNotificationEventsRead,
   setNotificationReceipt: mocks.setNotificationReceipt,
 }));
-vi.mock("@/server/visual-fixtures/social-actor", () => ({
-  resolveVisualSocialMutationActor: mocks.resolveVisualSocialMutationActor,
-}));
-
 const scope = {
   userId: "00000000-0000-4000-8000-000000000001",
   sessionId: "session-1",
@@ -66,7 +61,6 @@ describe("notification receipt return paths", () => {
         { status: admission.statusCode },
       ),
     );
-    mocks.resolveVisualSocialMutationActor.mockReturnValue(null);
   });
 
   it.each([

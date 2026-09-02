@@ -4,7 +4,6 @@ import {
   useCallback,
   useEffect,
   useState,
-  useSyncExternalStore,
   type ComponentType,
   type MutableRefObject,
 } from "react";
@@ -134,19 +133,6 @@ type JournalLexicalClientComponent = ComponentType<
   }
 >;
 
-function subscribeVisualWorkspaceFixture() {
-  return () => undefined;
-}
-
-function getVisualWorkspaceFixtureSnapshot() {
-  const params = new URLSearchParams(window.location.search);
-  return params.has("visualWorkspace") || params.has("visualCreate");
-}
-
-function getVisualWorkspaceFixtureServerSnapshot() {
-  return false;
-}
-
 export function StructuredJournalComposer(
   props: StructuredJournalComposerProps,
 ) {
@@ -172,11 +158,6 @@ function StructuredJournalComposerBound(props: StructuredJournalComposerProps) {
     locale,
     onDocumentChange: notifyDocumentChange,
   } = props;
-  const isVisualWorkspaceFixture = useSyncExternalStore(
-    subscribeVisualWorkspaceFixture,
-    getVisualWorkspaceFixtureSnapshot,
-    getVisualWorkspaceFixtureServerSnapshot,
-  );
   const [initialBinding] = useState(() =>
     resolveInitialBinding(initialDocument),
   );
@@ -194,7 +175,7 @@ function StructuredJournalComposerBound(props: StructuredJournalComposerProps) {
   );
 
   useEffect(() => {
-    if (isVisualWorkspaceFixture || initialInvalid) return;
+    if (initialInvalid) return;
     let cancelled = false;
     void import("./lexical-journal/journal-lexical-client")
       .then((module: JournalLexicalClientModule) => {
@@ -207,7 +188,7 @@ function StructuredJournalComposerBound(props: StructuredJournalComposerProps) {
     return () => {
       cancelled = true;
     };
-  }, [initialInvalid, isVisualWorkspaceFixture, retryGeneration]);
+  }, [initialInvalid, retryGeneration]);
 
   useEffect(() => {
     if (status !== "failed" || !composerRef) return;
@@ -231,27 +212,6 @@ function StructuredJournalComposerBound(props: StructuredJournalComposerProps) {
     },
     [notifyDocumentChange],
   );
-
-  if (isVisualWorkspaceFixture) {
-    return (
-      <div
-        className={cn(
-          "grid gap-3 rounded-md border border-border p-3",
-          className,
-        )}
-        data-structured-journal-composer="fixture"
-        lang={locale}
-      >
-        <JournalDocumentRenderer
-          document={initialBinding.document}
-          copy={{
-            unavailableTitle: labels.unavailableTitle,
-            unavailableBody: labels.unavailableBody,
-          }}
-        />
-      </div>
-    );
-  }
 
   if (status === "failed") {
     return (

@@ -79,39 +79,6 @@ describe("/answers/[slug]", () => {
       robots: { index: true, follow: true },
     });
   });
-
-  it("renders a long noindex synthetic answer without leaking it into production content", async () => {
-    enableVisualFixtureEnv();
-    mocks.listPublicKnowledgeEvidence.mockResolvedValue({
-      ...emptyEvidence(),
-      totalCount: 8,
-      hasMore: true,
-    });
-    const params = Promise.resolve({
-      locale: "ru",
-      slug: "visual-long-recovery-answer",
-    });
-    const searchParams = Promise.resolve({ __visualKnowledge: "corpus" });
-    const html = renderToStaticMarkup(
-      await AnswerRoute({ params, searchParams }),
-    );
-
-    expect(html).toContain("Как читать длинную историю восстановления?");
-    expect(html).toContain("Синтетический материал OVE-177");
-    expect(html).toContain("Не является экспертной рекомендацией");
-    expect(html).toContain("8 публичных записей");
-    expect(html).not.toContain('"@type":"FAQPage"');
-    await expect(
-      generateMetadata({ params, searchParams }),
-    ).resolves.toMatchObject({
-      robots: { index: false, follow: false },
-    });
-
-    vi.unstubAllEnvs();
-    await expect(AnswerRoute({ params, searchParams })).rejects.toThrow(
-      "NEXT_HTTP_ERROR_FALLBACK;404",
-    );
-  });
 });
 
 function emptyEvidence() {
@@ -121,18 +88,4 @@ function emptyEvidence() {
     hasMore: false,
     allEvidencePath: "/journals",
   };
-}
-
-function enableVisualFixtureEnv() {
-  vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
-  vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
-  vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden_visual");
-  vi.stubEnv(
-    "DATABASE_URL",
-    "postgres://postgres:postgres@127.0.0.1/overgarden_visual",
-  );
-  vi.stubEnv("R2_ENDPOINT", "http://127.0.0.1:9000");
-  vi.stubEnv("R2_PUBLIC_BASE_URL", "http://127.0.0.1:9000/overgarden");
-  vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
-  vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
 }

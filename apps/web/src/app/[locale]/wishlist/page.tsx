@@ -23,7 +23,6 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
-import { resolveVisualSocialScenario } from "@/lib/visual-fixtures/social-return-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { scopedToUser } from "@/server/request-scope";
 import {
@@ -72,12 +71,7 @@ export default async function LocalizedWishlistRoute({
   if (!isPublicLocale(localeParam)) notFound();
   const copy = getSocialSurfaceCopy(localeParam);
   const session = await getCurrentSession();
-  const visualScenario = resolveVisualSocialScenario(
-    query.visualSocial,
-    "wishlist",
-    process.env,
-  );
-  const userId = visualScenario?.actorId ?? session?.user?.id;
+  const userId = session?.user?.id;
   if (!userId) {
     return (
       <MySocialLayout
@@ -97,7 +91,7 @@ export default async function LocalizedWishlistRoute({
   const filter = parseFilter(firstParam(query.kind));
   const page = parsePage(firstParam(query.page));
   const allItems = await listWishlistShelfItems(
-    scopedToUser(userId, visualScenario ? null : getSessionId(session)),
+    scopedToUser(userId, getSessionId(session)),
   );
   const filtered = allItems.filter((item) =>
     filter === "all" ? true : item.catalog.catalogKind === filter,
@@ -116,25 +110,14 @@ export default async function LocalizedWishlistRoute({
       title={copy.wishlist.title}
       description={copy.wishlist.description}
       count={filtered.length}
-      controls={
-        <WishlistFilters
-          locale={localeParam}
-          active={filter}
-          visualScenarioId={visualScenario?.id ?? null}
-        />
-      }
+      controls={<WishlistFilters locale={localeParam} active={filter} />}
     >
       {items.length === 0 ? (
         <SocialEmptyState>{copy.wishlist.empty}</SocialEmptyState>
       ) : (
         <ol className="divide-y divide-border border-y border-border">
           {items.map((item) => (
-            <WishlistRow
-              key={item.key}
-              item={item}
-              locale={localeParam}
-              visualScenarioId={visualScenario?.id ?? null}
-            />
+            <WishlistRow key={item.key} item={item} locale={localeParam} />
           ))}
         </ol>
       )}
@@ -142,12 +125,7 @@ export default async function LocalizedWishlistRoute({
         <div className="flex items-center justify-between gap-3">
           {currentPage > 1 ? (
             <Link
-              href={wishlistHref(
-                localeParam,
-                filter,
-                currentPage - 1,
-                visualScenario?.id,
-              )}
+              href={wishlistHref(localeParam, filter, currentPage - 1)}
               className={buttonVariants({ variant: "outline" })}
             >
               <ArrowLeft className="size-4" />
@@ -158,12 +136,7 @@ export default async function LocalizedWishlistRoute({
           )}
           {currentPage < pageCount ? (
             <Link
-              href={wishlistHref(
-                localeParam,
-                filter,
-                currentPage + 1,
-                visualScenario?.id,
-              )}
+              href={wishlistHref(localeParam, filter, currentPage + 1)}
               className={buttonVariants({ variant: "outline" })}
             >
               {copy.common.next}
@@ -181,11 +154,9 @@ type WishlistFilter = "all" | CatalogKind;
 function WishlistFilters({
   locale,
   active,
-  visualScenarioId,
 }: {
   locale: PublicLocale;
   active: WishlistFilter;
-  visualScenarioId: string | null;
 }) {
   const copy = getSocialSurfaceCopy(locale);
   const filters: Array<[WishlistFilter, string]> = [
@@ -203,7 +174,7 @@ function WishlistFilters({
       {filters.map(([value, label]) => (
         <Link
           key={value}
-          href={wishlistHref(locale, value, 1, visualScenarioId)}
+          href={wishlistHref(locale, value, 1)}
           aria-current={active === value ? "true" : undefined}
           className={filterClass(active === value)}
         >
@@ -217,11 +188,9 @@ function WishlistFilters({
 function WishlistRow({
   item,
   locale,
-  visualScenarioId,
 }: {
   item: WishlistShelfItem;
   locale: PublicLocale;
-  visualScenarioId: string | null;
 }) {
   const copy = getSocialSurfaceCopy(locale);
   return (
@@ -268,13 +237,6 @@ function WishlistRow({
               value={item.catalog.publicSlug}
             />
             <input type="hidden" name="locale" value={locale} />
-            {visualScenarioId ? (
-              <input
-                type="hidden"
-                name="visualSocial"
-                value={visualScenarioId}
-              />
-            ) : null}
             <button
               type="submit"
               title={copy.common.remove}
@@ -294,12 +256,10 @@ function wishlistHref(
   locale: PublicLocale,
   filter: WishlistFilter,
   page: number,
-  visualScenarioId?: string | null,
 ) {
   const params = new URLSearchParams();
   if (filter !== "all") params.set("kind", filter);
   if (page > 1) params.set("page", String(page));
-  if (visualScenarioId) params.set("visualSocial", visualScenarioId);
   const path = localizedPath(locale, "/wishlist");
   return params.size ? `${path}?${params}` : path;
 }

@@ -64,7 +64,6 @@ const QUERY_KEYS = new Set([
   "page",
   "sort",
   "engagement",
-  "__visualFeed",
   "source",
   "filter",
   "unread",

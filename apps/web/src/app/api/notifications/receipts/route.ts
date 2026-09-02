@@ -11,30 +11,21 @@ import {
   markNotificationEventsRead,
   setNotificationReceipt,
 } from "@/server/social-return-repository";
-import { scopedToUser } from "@/server/request-scope";
-import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const visualActor = resolveVisualSocialMutationActor(formData, [
-    "notifications",
-  ]);
   const returnTo = notificationReturnTo(formData.get("returnTo"));
-  const admission = visualActor
-    ? null
-    : await admitDocumentMutation({
-        transport: documentMutationGenerationFromRequest(request),
-      });
-  if (admission?.status === "rejected") {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
     if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
       return NextResponse.redirect(new URL(returnTo, request.url), 303);
     }
     return documentMutationAdmissionResponse(admission);
   }
 
-  const scope = visualActor
-    ? scopedToUser(visualActor.actorId)
-    : admission!.scope;
+  const scope = admission.scope;
   const keys = formData
     .getAll("eventKey")
     .map(String)
@@ -65,7 +56,7 @@ function notificationReturnTo(value: FormDataEntryValue | null) {
     return "/notifications";
   }
   const safe = new URLSearchParams();
-  for (const key of ["filter", "unread", "view", "cursor", "visualSocial"]) {
+  for (const key of ["filter", "unread", "view", "cursor"]) {
     const item = url.searchParams.get(key);
     if (item && /^[A-Za-z0-9._~-]{1,512}$/.test(item)) safe.set(key, item);
   }

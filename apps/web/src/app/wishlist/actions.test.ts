@@ -7,7 +7,6 @@ const mocks = vi.hoisted(() => ({
   removeCatalogPublicSlugFromWishlist: vi.fn(),
   revalidatePath: vi.fn(),
   redirect: vi.fn(),
-  resolveVisualSocialMutationActor: vi.fn(),
   admitDocumentMutation: vi.fn(),
 }));
 
@@ -39,10 +38,6 @@ vi.mock("@/server/wishlist-repository", () => ({
   addCatalogPublicSlugToWishlist: mocks.addCatalogPublicSlugToWishlist,
   removeCatalogPublicSlugFromWishlist:
     mocks.removeCatalogPublicSlugFromWishlist,
-}));
-
-vi.mock("@/server/visual-fixtures/social-actor", () => ({
-  resolveVisualSocialMutationActor: mocks.resolveVisualSocialMutationActor,
 }));
 
 describe("wishlist actions", () => {
@@ -79,7 +74,6 @@ describe("wishlist actions", () => {
     mocks.removeCatalogPublicSlugFromWishlist.mockResolvedValue({
       removed: true,
     });
-    mocks.resolveVisualSocialMutationActor.mockReturnValue(null);
   });
 
   it("adds a public variety to wishlist inside the signed-in scope", async () => {
@@ -161,30 +155,5 @@ describe("wishlist actions", () => {
       "pomidor-cheri-0000000101",
     );
     expect(mocks.redirect).toHaveBeenCalledWith("/wishlist?wishlist=removed");
-  });
-
-  it("removes an isolated fixture wishlist row and preserves the scenario", async () => {
-    const actorId = "18700001-0000-4000-8000-000000000001";
-    mocks.getCurrentSession.mockResolvedValueOnce(null);
-    mocks.resolveVisualSocialMutationActor.mockReturnValueOnce({
-      actorId,
-      scenario: { id: "wishlist-dense" },
-    });
-    const { removeCatalogPublicSlugFromWishlistAction } =
-      await import("./actions");
-    const formData = new FormData();
-    formData.set("catalogPublicSlug", "pomidor-cheri-0000000101");
-    formData.set("locale", "uk");
-    formData.set("visualSocial", "wishlist-dense");
-
-    await removeCatalogPublicSlugFromWishlistAction(formData);
-
-    expect(mocks.removeCatalogPublicSlugFromWishlist).toHaveBeenCalledWith(
-      { userId: actorId, sessionId: null },
-      "pomidor-cheri-0000000101",
-    );
-    expect(mocks.redirect).toHaveBeenCalledWith(
-      "/wishlist?visualSocial=wishlist-dense&wishlist=removed",
-    );
   });
 });

@@ -45,18 +45,12 @@ import {
   nextJournalTitleValue,
   suggestJournalEntryTitle,
 } from "@/lib/garden/journal-title-prefill";
-import {
-  getGardenWorkspaceCopy,
-  type GardenWorkspaceCopy,
-} from "@/lib/garden-workspace-copy";
+import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
 import {
   formatOwnerObjectTemplate,
   getOwnerObjectCopy,
-  type OwnerObjectCopy,
 } from "@/lib/owner-object-copy";
-import type { VisualFixtureCreationScenarioEvidence } from "@/lib/visual-fixtures/manifest";
-import { runVisualJournalCreationScenario } from "@/lib/visual-fixtures/journal-creation-client";
 import {
   JournalMentionTypeaheadPanel,
   applyMentionSuggestion,
@@ -77,7 +71,6 @@ interface FollowUpEntryComposerProps {
   today: string;
   initialClientMutationId: string;
   requiresFirstPublicationDisclosure: boolean;
-  visualScenario?: VisualFixtureCreationScenarioEvidence | null;
 }
 
 type SubmitState = "idle" | "publishing" | "published" | "failed";
@@ -95,7 +88,6 @@ export function FollowUpEntryComposer({
   objectDisplayName,
   today,
   requiresFirstPublicationDisclosure,
-  visualScenario = null,
 }: FollowUpEntryComposerProps) {
   const workspaceCopy = getGardenWorkspaceCopy(locale);
   const atomicCopy = getAtomicJournalCreateCopy(locale);
@@ -111,10 +103,10 @@ export function FollowUpEntryComposer({
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const localeMutationCountRef = useRef(0);
   const [draft, setDraft] = useState<FollowUpEntryDraftFields>({
-    title: visualScenario?.entryTitle ?? "",
-    body: visualScenario?.entryBody ?? "",
+    title: "",
+    body: "",
     contentDocument: null,
-    entryDate: visualScenario?.entryDate ?? today,
+    entryDate: today,
   });
   const [coverSelection, setCoverSelection] =
     useState<JournalCoverSelectionState>({ mode: "automatic" });
@@ -127,9 +119,7 @@ export function FollowUpEntryComposer({
   const [mentionSelections, setMentionSelections] = useState<
     JournalMentionSelection[]
   >([]);
-  const [topicTagInput, setTopicTagInput] = useState(
-    visualScenario?.topicTagInput ?? "",
-  );
+  const [topicTagInput, setTopicTagInput] = useState("");
   const [mentionSuggestions, setMentionSuggestions] = useState<
     JournalMentionSuggestion[]
   >([]);
@@ -140,24 +130,13 @@ export function FollowUpEntryComposer({
   const [primaryMediaAssetId, setPrimaryMediaAssetId] = useState<string | null>(
     null,
   );
-  const [submitState, setSubmitState] = useState<SubmitState>(
-    visualScenario?.submitState === "failed" ? "failed" : "idle",
-  );
-  const [message, setMessage] = useState(
-    visualScenario
-      ? localizedVisualScenarioMessage(
-          workspaceCopy,
-          ownerCopy,
-          visualScenario,
-          objectDisplayName,
-        )
-      : atomicCopy.localOnly,
-  );
+  const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [message, setMessage] = useState(atomicCopy.localOnly);
   const [disclosureAccepted, setDisclosureAccepted] = useState(false);
   const [localeMutationPending, setLocaleMutationPending] = useState(false);
   const local = useLocalJournalComposer({
     documentMutationGeneration: documentMutation?.transport,
-    enabled: visualScenario == null,
+    enabled: true,
     fallbackReturnTo: `/garden/objects/${objectId}`,
     dirty: Boolean(
       draft.title ||
@@ -263,10 +242,6 @@ export function FollowUpEntryComposer({
 
     beginLocaleMutation();
     try {
-      if (visualScenario) {
-        await handleVisualScenarioSubmit(visualScenario);
-        return;
-      }
       if (isComposerPersistenceFrozen()) return;
 
       if (photoError) {
@@ -323,47 +298,6 @@ export function FollowUpEntryComposer({
       }
     } finally {
       endLocaleMutation();
-    }
-  }
-
-  async function handleVisualScenarioSubmit(
-    scenario: VisualFixtureCreationScenarioEvidence,
-  ) {
-    setSubmitState("publishing");
-    setMessage(workspaceCopy.composer.messages.visualRunning);
-
-    try {
-      if (scenario.expectedServerWrite) {
-        const readbackPath = await runVisualJournalCreationScenario(
-          scenario.id,
-        );
-        setSubmitState("published");
-        setMessage(workspaceCopy.composer.messages.visualSaved);
-        router.push(readbackPath);
-        router.refresh();
-        return;
-      }
-
-      if (scenario.state === "local-only" || scenario.state === "cancel") {
-        setSubmitState("idle");
-        setMessage(
-          scenario.state === "cancel"
-            ? workspaceCopy.composer.messages.visualCancelDraft
-            : workspaceCopy.composer.messages.visualDraftSaved,
-        );
-        return;
-      }
-
-      if (scenario.state === "error") {
-        setSubmitState("failed");
-        setMessage(workspaceCopy.composer.messages.visualRecoverableError);
-      } else {
-        setSubmitState("idle");
-        setMessage(workspaceCopy.composer.messages.visualDraftSaved);
-      }
-    } catch {
-      setSubmitState("failed");
-      setMessage(workspaceCopy.composer.messages.genericSaveError);
     }
   }
 
@@ -582,7 +516,6 @@ export function FollowUpEntryComposer({
     <form
       onSubmit={handleSubmit}
       data-local-composer-kind="follow_up"
-      data-visual-creation-scenario={visualScenario?.id}
       data-local-composer-read-only={persistenceFrozen || undefined}
       className="grid gap-4"
     >
@@ -766,10 +699,7 @@ export function FollowUpEntryComposer({
           </p>
         </div>
 
-        <details
-          open={visualScenario?.detailsOpen || undefined}
-          className="group border-y border-border py-3"
-        >
+        <details className="group border-y border-border py-3">
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-foreground marker:text-muted-foreground sm:min-h-0">
             {workspaceCopy.composer.fields.moreDetails}
             <span className="ml-2 font-normal text-muted-foreground">
@@ -906,35 +836,4 @@ function localizedAtomicPhotoHelp(
   if (ready) return copy.photoReady;
   if (!fileName) return copy.photoEmpty;
   return copy.photoPreparing;
-}
-
-function localizedVisualScenarioMessage(
-  workspaceCopy: GardenWorkspaceCopy,
-  ownerCopy: OwnerObjectCopy,
-  scenario: VisualFixtureCreationScenarioEvidence | null,
-  objectName: string,
-) {
-  if (!scenario) {
-    return formatOwnerObjectTemplate(ownerCopy.composer.initialMessage, {
-      objectName,
-    });
-  }
-  if (scenario.state === "local-only") {
-    return workspaceCopy.composer.localScenarioRecovered;
-  }
-  if (scenario.state === "connection-required") {
-    return workspaceCopy.composer.messages.fixtureConnectionRequired;
-  }
-  if (scenario.state === "error") {
-    return workspaceCopy.composer.messages.fixturePhotoError;
-  }
-  if (scenario.state === "cancel") {
-    return workspaceCopy.composer.messages.fixtureCancel;
-  }
-  if (scenario.state === "duplicate") {
-    return workspaceCopy.composer.messages.fixtureDuplicate;
-  }
-  return formatOwnerObjectTemplate(ownerCopy.composer.initialMessage, {
-    objectName,
-  });
 }

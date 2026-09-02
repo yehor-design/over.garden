@@ -45,24 +45,6 @@ describe("interface locale change boundary", () => {
     expect(root.listenerCount()).toBe(0);
   });
 
-  it("keeps deterministic visual fixtures outside product lifecycle wiring", async () => {
-    mocks.pathname = "/__visual-fixtures";
-    const root = eventRoot();
-    vi.stubGlobal("document", root.target);
-    let renderer: ReactTestRenderer;
-
-    await act(async () => {
-      renderer = create(
-        <InterfaceLocaleChangeBoundary>
-          <main>Fixture</main>
-        </InterfaceLocaleChangeBoundary>,
-      );
-    });
-
-    expect(root.listenerCount()).toBe(0);
-    await act(async () => renderer!.unmount());
-  });
-
   it("tracks ordinary dirty forms by static element id without reading values", async () => {
     const coordinator = createInterfaceLocaleChangeCoordinator();
     const root = eventRoot();

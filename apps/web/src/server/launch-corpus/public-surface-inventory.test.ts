@@ -54,8 +54,11 @@ describe("public launch journal caller inventory", () => {
     );
 
     const serverRoot = path.resolve("src/server");
-    for (const [, module, minimumPolicyApplications] of
-      PUBLIC_LAUNCH_JOURNAL_CALLERS) {
+    for (const [
+      ,
+      module,
+      minimumPolicyApplications,
+    ] of PUBLIC_LAUNCH_JOURNAL_CALLERS) {
       const source = readFileSync(path.join(serverRoot, module), "utf8");
       const applications = source.match(/publicLaunchSurfacePredicates\(/g);
       expect(applications?.length ?? 0, module).toBeGreaterThanOrEqual(
@@ -76,47 +79,9 @@ describe("public launch journal caller inventory", () => {
       .compile();
 
     expect(compiled.sql).toContain(
-      '"public_entries"."content_class" in (\'real_ugc\', \'founder_first_hand\', \'editorial\')',
+      "\"public_entries\".\"content_class\" in ('real_ugc', 'founder_first_hand', 'editorial')",
     );
     expect(compiled.parameters).toEqual([]);
     expect(PUBLIC_LAUNCH_CONTENT_CLASSES).toHaveLength(3);
-  });
-
-  it("admits fixtures only for a resolved isolated visual environment", () => {
-    vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
-    vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
-    vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
-    vi.stubEnv("DATABASE_URL", "postgresql://local:local@localhost:5432/overgarden");
-    vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
-    vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
-    vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
-    vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
-    vi.stubEnv("VERCEL_ENV", "development");
-
-    const compiled = testDb
-      .selectFrom("journal_entries")
-      .select("id")
-      .where(publicLaunchSurfacePredicates())
-      .compile();
-    expect(compiled.sql).toContain("'visual_fixture'");
-  });
-
-  it("rejects the fixture exception on canonical production origins", () => {
-    vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
-    vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
-    vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
-    vi.stubEnv("DATABASE_URL", "postgresql://local:local@localhost:5432/overgarden");
-    vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
-    vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
-    vi.stubEnv("PUBLIC_SITE_URL", "https://over.garden");
-    vi.stubEnv("BETTER_AUTH_URL", "https://over.garden");
-    vi.stubEnv("VERCEL_ENV", "production");
-
-    const compiled = testDb
-      .selectFrom("journal_entries")
-      .select("id")
-      .where(publicLaunchSurfacePredicates())
-      .compile();
-    expect(compiled.sql).not.toContain("'visual_fixture'");
   });
 });

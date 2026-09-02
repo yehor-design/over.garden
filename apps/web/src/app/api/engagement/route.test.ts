@@ -14,7 +14,6 @@ const mocks = vi.hoisted(() => ({
   cookies: vi.fn(),
   createAuthIntentToken: vi.fn(),
   createAuthIntentControlRef: vi.fn(),
-  resolveVisualSocialMutationActor: vi.fn(),
   admitDocumentMutation: vi.fn(),
   documentMutationAdmissionResponse: vi.fn(),
 }));
@@ -86,10 +85,6 @@ vi.mock("@/server/auth-intent-control", () => ({
   createAuthIntentControlRef: mocks.createAuthIntentControlRef,
 }));
 
-vi.mock("@/server/visual-fixtures/social-actor", () => ({
-  resolveVisualSocialMutationActor: mocks.resolveVisualSocialMutationActor,
-}));
-
 describe("engagement routes", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -121,7 +116,6 @@ describe("engagement routes", () => {
     });
     mocks.createAuthIntentToken.mockReturnValue("opaque-intent-token");
     mocks.createAuthIntentControlRef.mockReturnValue("reply-a7d8f9c012345678");
-    mocks.resolveVisualSocialMutationActor.mockReturnValue(null);
     mocks.admitDocumentMutation.mockImplementation(async () => {
       const session = await mocks.getCurrentSession();
       if (!session?.user?.id) {
@@ -239,37 +233,6 @@ describe("engagement routes", () => {
     expect(response.headers.get("location")).toBe(
       "https://over.garden/journal/first-public-harvest?engagement=commented",
     );
-  });
-
-  it("posts an isolated visual-fixture comment in the manifest actor scope", async () => {
-    const actorId = "18700001-0000-4000-8000-000000000003";
-    mocks.resolveVisualSocialMutationActor.mockReturnValueOnce({
-      actorId,
-      scenario: { id: "comments-dense" },
-    });
-    const { POST } = await import("./comments/route");
-
-    await POST(
-      formRequest("/api/engagement/comments", {
-        targetKind: "journal_entry",
-        targetRef: "visual-fixture-living-object-004",
-        returnTo:
-          "/journal/visual-fixture-living-object-004?visualSocial=comments-dense",
-        body: "Fixture interaction stays isolated.",
-        clientMutationId: "visual-comment-submit-000000000001",
-      }),
-    );
-
-    expect(mocks.addEngagementComment).toHaveBeenCalledWith(
-      { userId: actorId, sessionId: null },
-      expect.objectContaining({
-        target: {
-          kind: "journal_entry",
-          ref: "visual-fixture-living-object-004",
-        },
-      }),
-    );
-    expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
   });
 
   it.each([

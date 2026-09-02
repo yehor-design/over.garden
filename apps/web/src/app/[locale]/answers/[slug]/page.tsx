@@ -9,7 +9,6 @@ import {
   PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { resolveVisualFixturePublicKnowledgeMode } from "@/lib/visual-fixtures/public-knowledge-scenarios";
 import {
   getLocalizedAnswerPage,
   getContentAvailableLocales,
@@ -42,7 +41,6 @@ export function generateStaticParams() {
 
 export async function generateMetadata({
   params,
-  searchParams,
 }: LocalizedAnswerRouteProps): Promise<Metadata> {
   const { locale: localeParam, slug } = await params;
 
@@ -56,11 +54,7 @@ export async function generateMetadata({
     };
   }
 
-  const resolved = await resolveAnswer(
-    localeParam,
-    slug,
-    (await searchParams) ?? {},
-  );
+  const resolved = await resolveAnswer(localeParam, slug);
   const page = resolved.page;
 
   if (!page) {
@@ -73,57 +67,36 @@ export async function generateMetadata({
     };
   }
 
-  return buildAnswerSurface(localeParam, page, Boolean(resolved.visualMode))
-    .metadata;
+  return buildAnswerSurface(localeParam, page).metadata;
 }
 
 export default async function AnswerRoute({
   params,
-  searchParams,
 }: LocalizedAnswerRouteProps) {
   const { locale: localeParam, slug } = await params;
 
   if (!isPublicLocale(localeParam)) notFound();
 
-  const resolved = await resolveAnswer(
-    localeParam,
-    slug,
-    (await searchParams) ?? {},
-  );
+  const resolved = await resolveAnswer(localeParam, slug);
   const page = resolved.page;
 
   if (!page) notFound();
 
-  const surface = buildAnswerSurface(
-    localeParam,
-    page,
-    Boolean(resolved.visualMode),
-  );
+  const surface = buildAnswerSurface(localeParam, page);
 
-  const evidenceResult =
-    resolved.visualMode === "loading" || resolved.visualMode === "error"
-      ? {
-          evidence: emptyEvidence(localeParam),
-          state: resolved.visualMode,
-        }
-      : await listPublicKnowledgeEvidence(
-          page.knowledge.evidence,
-          localeParam,
-          {
-            restrictToEntryIds: resolved.publicEntryIds,
-            visualCorpus: resolved.visualMode === "corpus",
-          },
-        ).then(
-          (evidence) => ({
-            evidence,
-            state:
-              evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
-          }),
-          () => ({
-            evidence: emptyEvidence(localeParam),
-            state: "error" as const,
-          }),
-        );
+  const evidenceResult = await listPublicKnowledgeEvidence(
+    page.knowledge.evidence,
+    localeParam,
+  ).then(
+    (evidence) => ({
+      evidence,
+      state: evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
+    }),
+    () => ({
+      evidence: emptyEvidence(localeParam),
+      state: "error" as const,
+    }),
+  );
 
   return (
     <LocalizedAnswerPage
@@ -133,17 +106,12 @@ export default async function AnswerRoute({
       availableLocales={getLanguageSwitcherLocales(localeParam)}
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
-      visualCorpus={resolved.visualMode === "corpus"}
       jsonLd={surface.jsonLd}
     />
   );
 }
 
-function buildAnswerSurface(
-  locale: PublicLocale,
-  page: AnswerPageContent,
-  isVisualFixture: boolean,
-) {
+function buildAnswerSurface(locale: PublicLocale, page: AnswerPageContent) {
   const discovery = resolveAuthoredPublicSurfaceDiscovery({
     consumerId: "localized_answer",
     canonicalPath: localizedPath(locale, page.path),
@@ -156,7 +124,7 @@ function buildAnswerSurface(
       ...page.knowledge.evidence.catalogSlugs.map((slug) => `/catalog/${slug}`),
     ]),
     meaningfulContentAt: `${page.editorial.updatedDate}T00:00:00.000Z`,
-    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+    candidateState: "candidate",
   });
   return buildPublicSurfaceMetadata({
     discovery,
@@ -174,34 +142,8 @@ function buildAnswerSurface(
   });
 }
 
-async function resolveAnswer(
-  locale: "uk" | "bg" | "ru",
-  slug: string,
-  searchParams: Record<string, string | string[] | undefined>,
-) {
-  const visualMode = resolveVisualFixturePublicKnowledgeMode(
-    searchParams,
-    process.env,
-  );
-  if (!visualMode) {
-    return {
-      page: getLocalizedAnswerPage(locale, slug),
-      publicEntryIds: null,
-      visualMode: null,
-    };
-  }
-  if (visualMode === "unavailable") {
-    return { page: null, publicEntryIds: [], visualMode };
-  }
-
-  const { loadVisualFixtureKnowledgeCorpus } =
-    await import("@/server/public-knowledge-visual-fixture");
-  const corpus = loadVisualFixtureKnowledgeCorpus(locale);
-  return {
-    page: corpus.answers.find((candidate) => candidate.slug === slug) ?? null,
-    publicEntryIds: corpus.publicEntryIds,
-    visualMode,
-  };
+async function resolveAnswer(locale: "uk" | "bg" | "ru", slug: string) {
+  return { page: getLocalizedAnswerPage(locale, slug) };
 }
 
 function emptyEvidence(locale: "uk" | "bg" | "ru") {

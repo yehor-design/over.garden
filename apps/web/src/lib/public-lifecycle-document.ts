@@ -13,11 +13,6 @@ import {
   PUBLIC_LOCALE_CONFIG,
   type PublicLocale,
 } from "@/lib/public-localization";
-import {
-  GOOGLE_SANS_FONT_FACE_CSS,
-  GOOGLE_SANS_PRELOAD_ASSETS,
-  GOOGLE_SANS_STACK,
-} from "@/lib/typography/google-sans-runtime";
 
 export interface PublicLifecycleRequestLocation {
   pathname: string;
@@ -43,10 +38,6 @@ export function renderPublicLifecycleDocument(
   const languageControl = renderRawInterfaceLanguageControl(input);
   const languageControlStyles =
     input.locale === "uk" ? "" : renderRawInterfaceLanguageControlStyles();
-  const typographyPreloads = GOOGLE_SANS_PRELOAD_ASSETS.map(
-    (asset) =>
-      `<link rel="preload" as="font" type="${asset.contentType}" href="${asset.publicPath}" crossorigin="anonymous" fetchpriority="high" referrerpolicy="no-referrer" />`,
-  ).join("\n    ");
 
   return `<!doctype html>
 <html lang="${escapeAttribute(input.locale)}">
@@ -55,11 +46,9 @@ export function renderPublicLifecycleDocument(
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="no-referrer" />
-    ${typographyPreloads}
     <title>${escapeHtml(input.title)} | OverGarden</title>
     <style>
-      ${GOOGLE_SANS_FONT_FACE_CSS}
-      :root { --fg: rgb(23 23 23); --bg: rgb(255 255 255); --brand: rgb(47 125 50); --muted: rgb(102 102 102); --line: rgb(212 212 212); --font-overgarden-sans: ${GOOGLE_SANS_STACK}; color-scheme: light; font-family: var(--font-overgarden-sans); font-optical-sizing: auto; font-synthesis: none; color: var(--fg); background: var(--bg); }
+      :root { --fg: rgb(23 23 23); --bg: rgb(255 255 255); --brand: rgb(47 125 50); --muted: rgb(102 102 102); --line: rgb(212 212 212); --font-overgarden-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color-scheme: light; font-family: var(--font-overgarden-sans); font-optical-sizing: auto; font-synthesis: none; color: var(--fg); background: var(--bg); }
       * { box-sizing: border-box; }
       body { margin: 0; min-height: 100vh; }
       button, input, select, textarea { font: inherit; }

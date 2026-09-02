@@ -11,8 +11,6 @@ import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
 import { normalizePublicJournalDirectoryReturnTo } from "@/lib/public-journal-directory-navigation";
 import { isPublicLocale, type PublicLocale } from "@/lib/public-localization";
-import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
-import { resolveVisualSocialScenario } from "@/lib/visual-fixtures/social-return-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getEngagementSummary } from "@/server/engagement-repository";
 import {
@@ -87,15 +85,8 @@ export default async function PublicJournalEntryRoute({
   if (lookup.status !== "active") notFound();
 
   const session = await getCurrentSession();
-  const visualScenario = resolveVisualSocialScenario(
-    query.visualSocial,
-    "journal",
-    process.env,
-  );
-  const userId = visualScenario?.actorId ?? session?.user?.id;
-  const scope = userId
-    ? scopedToUser(userId, visualScenario ? null : getSessionId(session))
-    : null;
+  const userId = session?.user?.id;
+  const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
   const engagementTarget = {
     kind: "journal_entry" as const,
     ref: lookup.page.entry.publicSlug,
@@ -111,11 +102,8 @@ export default async function PublicJournalEntryRoute({
   const directoryReturnTo = normalizePublicJournalDirectoryReturnTo(
     firstParam(query.from),
     locale,
-    Boolean(tryResolveVisualFixtureEnvironment(process.env)),
   );
-  const engagementReturnTo = visualScenario
-    ? `${lookup.page.entry.publicPath}?visualSocial=${visualScenario.id}`
-    : lookup.page.entry.publicPath;
+  const engagementReturnTo = lookup.page.entry.publicPath;
   const editOwnerControl = ownerControl
     ? {
         ...ownerControl,

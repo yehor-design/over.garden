@@ -94,13 +94,7 @@ describe("public knowledge evidence repository", () => {
   });
 
   it("serializes bounded evidence with an explainable topic/catalog match and object link", () => {
-    const evidence = serializePublicKnowledgeEvidence(
-      page(),
-      rule,
-      "uk",
-      1,
-      true,
-    );
+    const evidence = serializePublicKnowledgeEvidence(page(), rule, "uk", 1);
 
     expect(evidence.totalCount).toBe(2);
     expect(evidence.hasMore).toBe(true);
@@ -111,8 +105,7 @@ describe("public knowledge evidence repository", () => {
           kind: "topic",
           slug: "stress-and-recovery",
           label: "Відновлення",
-          publicPath:
-            "/topics/stress-and-recovery?__visualKnowledge=corpus",
+          publicPath: "/topics/stress-and-recovery",
         },
         {
           kind: "catalog",
@@ -129,7 +122,7 @@ describe("public knowledge evidence repository", () => {
       },
     });
     expect(evidence.allEvidencePath).toBe(
-      "/journals?topic=stress-and-recovery&__visualJournals=corpus",
+      "/journals?topic=stress-and-recovery",
     );
     expect(JSON.stringify(evidence)).not.toMatch(
       /ownerUserId|spaceId|derivativeKey|quarantine|email|coordinates/i,

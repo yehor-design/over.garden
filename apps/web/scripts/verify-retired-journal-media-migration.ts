@@ -26,8 +26,8 @@ async function main() {
     await adminPool.query(`create database ${quoteIdentifier(databaseName)}`);
     created = true;
     const databaseUrl = withDatabase(baseUrl, databaseName);
-    bootstrapDatabase(databaseUrl, databaseName);
-    verifyGeneratedTypes(databaseUrl, databaseName);
+    bootstrapDatabase(databaseUrl);
+    verifyGeneratedTypes(databaseUrl);
 
     const pool = new Pool({ connectionString: databaseUrl, max: 1 });
     try {
@@ -35,13 +35,19 @@ async function main() {
       const firstSchemaDigest = await contractedSchemaDigest(pool);
       const firstDataDigest = await preservedDataDigest(pool);
 
-      await pool.query(readSql("../sql/rollback/0038_ove349_retire_legacy_journal_media.down.sql"));
+      await pool.query(
+        readSql(
+          "../sql/rollback/0038_ove349_retire_legacy_journal_media.down.sql",
+        ),
+      );
       await assertCompatibilityShape(pool);
       if ((await preservedDataDigest(pool)) !== firstDataDigest) {
         throw new Error("ove349_down_migration_mutated_final_data");
       }
 
-      const migration = readSql("../sql/0038_ove349_retire_legacy_journal_media.sql");
+      const migration = readSql(
+        "../sql/0038_ove349_retire_legacy_journal_media.sql",
+      );
       await pool.query(migration);
       const secondSchemaDigest = await contractedSchemaDigest(pool);
       const secondDataDigest = await preservedDataDigest(pool);
@@ -90,7 +96,7 @@ async function main() {
   }
 }
 
-function bootstrapDatabase(databaseUrl: string, databaseName: string) {
+function bootstrapDatabase(databaseUrl: string) {
   const result = spawnSync(
     process.platform === "win32" ? "pnpm.cmd" : "pnpm",
     ["db:bootstrap", "--", "--env-file", "/dev/null"],
@@ -103,7 +109,6 @@ function bootstrapDatabase(databaseUrl: string, databaseName: string) {
         NODE_OPTIONS: [process.env.NODE_OPTIONS, "--conditions=react-server"]
           .filter(Boolean)
           .join(" "),
-        VISUAL_FIXTURES_DATABASE: databaseName,
       },
       encoding: "utf8",
       timeout: 120_000,
@@ -117,7 +122,7 @@ function bootstrapDatabase(databaseUrl: string, databaseName: string) {
   }
 }
 
-function verifyGeneratedTypes(databaseUrl: string, databaseName: string) {
+function verifyGeneratedTypes(databaseUrl: string) {
   const result = spawnSync(
     process.platform === "win32" ? "pnpm.cmd" : "pnpm",
     ["db:types:check"],
@@ -130,7 +135,6 @@ function verifyGeneratedTypes(databaseUrl: string, databaseName: string) {
         NODE_OPTIONS: [process.env.NODE_OPTIONS, "--conditions=react-server"]
           .filter(Boolean)
           .join(" "),
-        VISUAL_FIXTURES_DATABASE: databaseName,
       },
       encoding: "utf8",
       timeout: 120_000,
@@ -279,7 +283,8 @@ async function preservedDataDigest(pool: Pool) {
     document_position: number | null;
     revoked: boolean;
     unreachable: boolean;
-  }>(`
+  }>(
+    `
     select entry.id::text as entry_id, entry.visibility, entry.lifecycle_state,
       media.id::text as media_id, media.derivative_key,
       media.upload_generation::text, media.declared_size_bytes::text,
@@ -289,7 +294,9 @@ async function preservedDataDigest(pool: Pool) {
     from journal_entries entry
     join media_assets media on media.journal_entry_id = entry.id
     where entry.id = $1 and media.id = $2
-  `, [ENTRY_ID, MEDIA_ID]);
+  `,
+    [ENTRY_ID, MEDIA_ID],
+  );
   if (result.rows.length !== 1) {
     throw new Error("ove349_preserved_final_fixture_missing");
   }

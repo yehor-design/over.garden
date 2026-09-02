@@ -39,9 +39,6 @@ unchanged and the transient image retryable/removable.
 ```bash
 cd apps/web
 pnpm smoke:journal-cover-selection
-pnpm smoke:inline-media-integrity
-pnpm smoke:atomic-journal-codecs
-pnpm exec tsx scripts/verify-retired-journal-media-runtime.ts
 ```
 
 Cover evidence never includes object keys, capabilities, original bytes,

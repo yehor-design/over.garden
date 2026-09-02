@@ -12,8 +12,6 @@ const mocks = vi.hoisted(() => ({
   recordAnalyticsEventSafely: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   createAuthIntentControlRef: vi.fn(),
-  resolveVisualJournalCreationScenario: vi.fn(),
-  resolveVisualJournalCreationResultScenario: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -50,13 +48,6 @@ vi.mock("@/server/auth-intent-control", () => ({
   createAuthIntentControlRef: mocks.createAuthIntentControlRef,
 }));
 
-vi.mock("@/lib/visual-fixtures/journal-creation-scenarios", () => ({
-  resolveVisualJournalCreationScenario:
-    mocks.resolveVisualJournalCreationScenario,
-  resolveVisualJournalCreationResultScenario:
-    mocks.resolveVisualJournalCreationResultScenario,
-}));
-
 vi.mock("./catalog-resolve-control", () => ({
   CatalogResolveControl: () => <section>Catalog resolve</section>,
 }));
@@ -65,14 +56,12 @@ vi.mock("./follow-up-entry-composer", () => ({
   FollowUpEntryComposer: (props: {
     objectKind: string;
     requiresFirstPublicationDisclosure: boolean;
-    visualScenario?: { id: string } | null;
   }) => (
     <form
       data-object-kind={props.objectKind}
       data-requires-first-publication-disclosure={String(
         props.requiresFirstPublicationDisclosure,
       )}
-      data-visual-create={props.visualScenario?.id ?? ""}
     >
       Follow-up composer
     </form>
@@ -122,8 +111,6 @@ describe("/garden/objects/[objectId]", () => {
     mocks.createAuthIntentControlRef.mockImplementation(
       (_namespace: string, source: string) => `publish-ref-${source}`,
     );
-    mocks.resolveVisualJournalCreationScenario.mockReturnValue(null);
-    mocks.resolveVisualJournalCreationResultScenario.mockReturnValue(null);
   });
 
   it("preserves manual catalog resolution without rendering external photo identification", async () => {
@@ -548,78 +535,6 @@ describe("/garden/objects/[objectId]", () => {
     expect(html).toContain("First private note");
     expect(html).not.toContain('data-auth-intent-control="publish"');
     expect(html).not.toContain("entry-publish-");
-  });
-
-  it("renders a credential-free follow-up fixture without analytics or write gating", async () => {
-    mocks.getCurrentSession.mockResolvedValueOnce(null);
-    mocks.resolveVisualJournalCreationScenario.mockReturnValueOnce({
-      id: "ove182-c012",
-      flow: "follow-up",
-      ownerActorId: "00000000-0000-4000-8000-000000000099",
-      objectId: "object-1",
-    });
-    mocks.getPlantObjectPage.mockResolvedValue(
-      plantObjectPage([
-        {
-          id: "entry-1",
-          title: "First flowers",
-          body: "Two new flower clusters.",
-          entryDate: "2026-07-04",
-        },
-      ]),
-    );
-    const { default: PlantObjectReadbackPage } = await import("./page");
-
-    const html = renderToStaticMarkup(
-      await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
-        searchParams: Promise.resolve({ visualCreate: "ove182-c012" }),
-      }),
-    );
-
-    expect(html).toContain('data-object-kind="plant"');
-    expect(html).toContain('data-visual-create="ove182-c012"');
-    expect(mocks.scopedToUser).toHaveBeenCalledWith(
-      "00000000-0000-4000-8000-000000000099",
-      null,
-    );
-    expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();
-  });
-
-  it("renders the canonical scenario result for its fixture owner", async () => {
-    mocks.getCurrentSession.mockResolvedValueOnce(null);
-    mocks.resolveVisualJournalCreationResultScenario.mockReturnValueOnce({
-      id: "ove182-c001",
-      ownerActorId: "00000000-0000-4000-8000-000000000099",
-      expectedObjectId: "object-1",
-    });
-    mocks.getPlantObjectPage.mockResolvedValue(
-      plantObjectPage([
-        {
-          id: "expected-entry",
-          title: "First fixture update",
-          body: "Canonical repository readback.",
-          entryDate: "2026-07-12",
-        },
-      ]),
-    );
-    const { default: PlantObjectReadbackPage } = await import("./page");
-
-    const html = renderToStaticMarkup(
-      await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
-        searchParams: Promise.resolve({ visualCreateResult: "ove182-c001" }),
-      }),
-    );
-
-    expect(html).toContain('data-visual-creation-result="ove182-c001"');
-    expect(html).toContain("Canonical repository readback.");
-    expect(html).not.toContain('data-visual-create="ove182-c001"');
-    expect(mocks.scopedToUser).toHaveBeenCalledWith(
-      "00000000-0000-4000-8000-000000000099",
-      null,
-    );
-    expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();
   });
 
   it("keeps first-publication disclosure on atomic composition only", async () => {

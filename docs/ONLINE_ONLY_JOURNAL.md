@@ -56,7 +56,6 @@ runtime authority and must never be copied into a new implementation.
 
 ```bash
 cd apps/web
-pnpm smoke:atomic-journal-codecs
 pnpm smoke:atomic-journal-edit
 pnpm test:media-staging-worker
 pnpm media:staging:verify

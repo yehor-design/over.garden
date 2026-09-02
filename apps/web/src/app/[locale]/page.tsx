@@ -9,10 +9,6 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
-  filterVisualFixturePublicFeedTopics,
-  resolveVisualFixturePublicFeedScenario,
-} from "@/lib/visual-fixtures/public-feed-scenarios";
-import {
   listPublicFeedPage,
   listTrustedPublicFeedTopics,
   normalizePublicFeedRequest,
@@ -67,13 +63,7 @@ export async function generateMetadata({
         listPublicFeedPage(normalizePublicFeedRequest({}), localeParam),
         listTrustedPublicFeedTopics(undefined, 6, localeParam),
       ]);
-      return buildHomeDiscoverySource(
-        localeParam,
-        content,
-        feed,
-        topics,
-        false,
-      );
+      return buildHomeDiscoverySource(localeParam, content, feed, topics);
     },
   });
   return buildHomeSurface(localeParam, content, [], discovery).metadata;
@@ -83,16 +73,11 @@ export async function renderLocalizedHomePage(
   locale: PublicLocale,
   searchParams: Record<string, string | string[] | undefined> = {},
 ) {
-  const visualScenario = resolveVisualFixturePublicFeedScenario(
-    searchParams,
-    process.env,
+  const request = normalizePublicFeedRequest(searchParams);
+  const feedPromise: Promise<PublicFeedPage> = listPublicFeedPage(
+    request,
+    locale,
   );
-  const request =
-    visualScenario?.requestOverride ?? normalizePublicFeedRequest(searchParams);
-  const feedPromise: Promise<PublicFeedPage> =
-    visualScenario?.mode === "loading" || visualScenario?.mode === "error"
-      ? Promise.resolve({ entries: [], nextCursor: null })
-      : listPublicFeedPage(request, locale);
   const [feedResult, topicsResult, sessionResult] = await Promise.allSettled([
     feedPromise,
     listTrustedPublicFeedTopics(undefined, 6, locale),
@@ -103,24 +88,19 @@ export async function renderLocalizedHomePage(
       ? feedResult.value
       : { entries: [], nextCursor: null };
   const topics: TrustedPublicFeedTopic[] =
-    visualScenario?.hideTopics || topicsResult.status === "rejected"
-      ? []
-      : filterVisualFixturePublicFeedTopics(topicsResult.value, process.env);
+    topicsResult.status === "rejected" ? [] : topicsResult.value;
   const state =
-    visualScenario?.mode === "loading"
-      ? "loading"
-      : visualScenario?.mode === "error" || feedResult.status === "rejected"
-        ? "error"
-        : feed.entries.length === 0
-          ? "empty"
-          : "ready";
+    feedResult.status === "rejected"
+      ? "error"
+      : feed.entries.length === 0
+        ? "empty"
+        : "ready";
   const discovery = resolvePublicSurfaceDiscoveryForRequest(
     buildHomeDiscoverySource(
       locale,
       getLocalizedHomeContent(locale),
       feed,
       topics,
-      Boolean(visualScenario),
     ),
   );
   const surface = buildHomeSurface(
@@ -152,7 +132,6 @@ function buildHomeDiscoverySource(
   content: ReturnType<typeof getLocalizedHomeContent>,
   feed: PublicFeedPage,
   topics: readonly TrustedPublicFeedTopic[],
-  isVisualFixture: boolean,
 ): PublicSurfaceDiscoverySource {
   const feedCopyText = Object.values(content.feed).flatMap((value) =>
     typeof value === "string"
@@ -163,7 +142,7 @@ function buildHomeDiscoverySource(
   );
   return {
     consumerId: "localized_home",
-    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+    candidateState: "candidate",
     qualityClass: combinePublicProjectionQualityClasses(
       feed.entries.map((entry) => entry.qualityClass),
     ),

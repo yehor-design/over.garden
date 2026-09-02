@@ -12,7 +12,6 @@ import {
   PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { resolveVisualFixturePublicObjectCatalogMode } from "@/lib/visual-fixtures/public-object-catalog-scenarios";
 import {
   listPublicObjectCatalogPage,
   normalizePublicObjectCatalogRequest,
@@ -60,7 +59,6 @@ export async function generateMetadata({
       buildObjectCatalogDiscoverySource(
         localeParam,
         await listPublicObjectCatalogPage(request, localeParam),
-        false,
       ),
   });
   return buildObjectCatalogSurface(
@@ -75,26 +73,6 @@ export async function renderPublicObjectsPage(
   searchParams: Record<string, string | string[] | undefined> = {},
 ) {
   const request = normalizePublicObjectCatalogRequest(searchParams);
-  const visualMode = resolveVisualFixturePublicObjectCatalogMode(
-    searchParams,
-    process.env,
-  );
-  if (visualMode) {
-    const page = emptyPublicObjectCatalogPage(request);
-    const discovery = resolvePublicSurfaceDiscoveryForRequest(
-      buildObjectCatalogDiscoverySource(locale, page, true),
-    );
-    const surface = buildObjectCatalogSurface(locale, page, discovery);
-    return (
-      <PublicObjectCatalog
-        locale={locale}
-        copy={getPublicObjectCatalogCopy(locale)}
-        page={page}
-        state={visualMode}
-        jsonLd={surface.jsonLd}
-      />
-    );
-  }
   const result = await Promise.allSettled([
     listPublicObjectCatalogPage(request, locale),
   ]);
@@ -110,7 +88,7 @@ export async function renderPublicObjectsPage(
         ? "empty"
         : "ready";
   const discovery = resolvePublicSurfaceDiscoveryForRequest(
-    buildObjectCatalogDiscoverySource(locale, page, false),
+    buildObjectCatalogDiscoverySource(locale, page),
   );
   const surface = buildObjectCatalogSurface(locale, page, discovery);
 
@@ -152,12 +130,11 @@ function emptyPublicObjectCatalogPage(
 function buildObjectCatalogDiscoverySource(
   locale: PublicLocale,
   page: PublicObjectCatalogPage,
-  isVisualFixture: boolean,
 ): PublicSurfaceDiscoverySource {
   const copy = getPublicObjectCatalogCopy(locale);
   return {
     consumerId: "localized_catalog_browse",
-    candidateState: isVisualFixture ? "not_public_candidate" : "candidate",
+    candidateState: "candidate",
     qualityClass: page.qualityClass ?? "unverified",
     visibleText: [
       copy.metadataTitle,

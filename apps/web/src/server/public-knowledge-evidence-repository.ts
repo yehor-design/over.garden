@@ -6,14 +6,10 @@ import { db } from "@/db";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { Database } from "@/db/schema";
 import { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
-import {
-  localizedPath,
-  type PublicLocale,
-} from "@/lib/public-localization";
+import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import {
   normalizePublicJournalDirectoryEntryIds,
   PUBLIC_JOURNAL_DIRECTORY_SELECTABLE_CATALOG_STATUSES,
-  type PublicJournalDirectoryContentClassMode,
 } from "@/server/public-journal-directory-query";
 import {
   listPublicJournalDirectoryPage,
@@ -53,7 +49,6 @@ export interface PublicKnowledgeEvidenceOptions {
   executor?: QueryExecutor;
   restrictToEntryIds?: readonly string[] | null;
   visibleLimit?: number;
-  visualCorpus?: boolean;
 }
 
 export async function listPublicKnowledgeEvidence(
@@ -67,7 +62,6 @@ export async function listPublicKnowledgeEvidence(
     executor,
     normalizedRule,
     options.restrictToEntryIds,
-    options.visualCorpus ? "visual_fixture" : "launch",
   ).execute();
   const request = normalizePublicJournalDirectoryRequest({});
 
@@ -77,14 +71,12 @@ export async function listPublicKnowledgeEvidence(
       normalizedRule,
       locale,
       options.visibleLimit,
-      options.visualCorpus,
     );
   }
 
   const page = await listPublicJournalDirectoryPage(request, locale, {
     executor,
     restrictToEntryIds: rows.map((row) => row.entryId),
-    contentClassMode: options.visualCorpus ? "visual_fixture" : "launch",
   });
 
   return serializePublicKnowledgeEvidence(
@@ -92,7 +84,6 @@ export async function listPublicKnowledgeEvidence(
     normalizedRule,
     locale,
     options.visibleLimit,
-    options.visualCorpus,
   );
 }
 
@@ -100,7 +91,6 @@ export function buildPublicKnowledgeEvidenceEntryIdsQuery(
   executor: QueryExecutor,
   rule: PublicKnowledgeEvidenceRule,
   restrictToEntryIds?: readonly string[] | null,
-  contentClassMode: PublicJournalDirectoryContentClassMode = "launch",
 ) {
   const normalizedRule = normalizePublicKnowledgeEvidenceRule(rule);
   let query = executor
@@ -141,10 +131,7 @@ export function buildPublicKnowledgeEvidenceEntryIdsQuery(
     .where("journal_entries.published_at", "is not", null)
     .$narrowType<{ entryId: string; objectId: string; publishedAt: Date }>();
 
-  query =
-    contentClassMode === "visual_fixture"
-      ? query.where("journal_entries.content_class", "=", "visual_fixture")
-      : query.where(publicLaunchSurfacePredicates());
+  query = query.where(publicLaunchSurfacePredicates());
 
   const hasTopics = normalizedRule.topicSlugs.length > 0;
   const hasCatalogs = normalizedRule.catalogSlugs.length > 0;
@@ -230,24 +217,19 @@ export function serializePublicKnowledgeEvidence(
   rule: PublicKnowledgeEvidenceRule,
   locale: PublicLocale,
   visibleLimit = PUBLIC_KNOWLEDGE_VISIBLE_EVIDENCE_LIMIT,
-  visualCorpus = false,
 ): PublicKnowledgeEvidence {
   const normalizedRule = normalizePublicKnowledgeEvidenceRule(rule);
   const limit = Math.min(Math.max(Math.trunc(visibleLimit), 1), 8);
   const items = page.cards.slice(0, limit).map((card) => ({
     card,
-    matches: matchesForCard(card, normalizedRule, locale, visualCorpus),
+    matches: matchesForCard(card, normalizedRule, locale),
   }));
 
   return {
     items,
     totalCount: page.totalCount,
     hasMore: page.totalCount > items.length,
-    allEvidencePath: evidenceDirectoryPath(
-      locale,
-      normalizedRule,
-      visualCorpus,
-    ),
+    allEvidencePath: evidenceDirectoryPath(locale, normalizedRule),
   };
 }
 
@@ -264,7 +246,6 @@ function matchesForCard(
   card: PublicJournalDirectoryCard,
   rule: PublicKnowledgeEvidenceRule,
   locale: PublicLocale,
-  visualCorpus: boolean,
 ) {
   const matches: PublicKnowledgeEvidenceMatch[] = card.topics
     .filter((topic) => rule.topicSlugs.includes(topic.slug))
@@ -272,7 +253,7 @@ function matchesForCard(
       kind: "topic" as const,
       slug: topic.slug,
       label: topic.label,
-      publicPath: topicPath(locale, topic.slug, visualCorpus),
+      publicPath: topicPath(locale, topic.slug),
     }));
 
   if (
@@ -292,27 +273,20 @@ function matchesForCard(
   return matches;
 }
 
-function topicPath(
-  locale: PublicLocale,
-  slug: string,
-  visualCorpus: boolean,
-) {
+function topicPath(locale: PublicLocale, slug: string) {
   const path = localizedPath(locale, `/topics/${slug}`);
-  return visualCorpus
-    ? `${path}?${new URLSearchParams({ __visualKnowledge: "corpus" })}`
-    : path;
+  return path;
 }
 
 function evidenceDirectoryPath(
   locale: PublicLocale,
   rule: PublicKnowledgeEvidenceRule,
-  visualCorpus: boolean,
 ) {
   const request = normalizePublicJournalDirectoryRequest({
     topic: rule.topicSlugs[0],
     catalog: rule.topicSlugs.length === 0 ? rule.catalogSlugs[0] : undefined,
   });
-  return buildPublicJournalDirectoryHref(locale, request, visualCorpus);
+  return buildPublicJournalDirectoryHref(locale, request);
 }
 
 function normalizeSlugs(values: readonly string[]) {

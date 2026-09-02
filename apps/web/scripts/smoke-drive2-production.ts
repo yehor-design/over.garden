@@ -14,11 +14,6 @@ const DIRECTORY_ROUTES = [
   "/bg/privacy",
   "/garden",
 ] as const;
-const FIXTURE_ROUTES = [
-  "/__visual-fixtures",
-  "/__visual-fixtures/intent/ove174-i001",
-  "/api/__visual-fixtures/journal-creation",
-] as const;
 const PRODUCTION_SKELETON_REQUESTS = [
   {
     evidenceKey: "pageGet",
@@ -40,9 +35,6 @@ const PRODUCTION_SKELETON_REQUESTS = [
   },
 ] as const;
 const FORBIDDEN_PUBLIC_MARKERS = [
-  "visual-fixtures/",
-  "__visual-fixtures",
-  "@visual-fixtures.invalid",
   "quarantine/",
   "owner_user_id",
   "latitude",
@@ -76,7 +68,6 @@ export interface Drive2ProductionSmokeReport {
     create: "auth-intent";
   };
   fixtureIsolation: {
-    blockedRoutes: number;
     sitemapClean: true;
     publicHtmlClean: true;
   };
@@ -106,18 +97,6 @@ export async function runDrive2ProductionSmoke(
   const fetchImpl = options.fetchImpl ?? fetch;
 
   await assertProductionSkeletonBoundary(fetchImpl, baseUrl);
-
-  for (const route of FIXTURE_ROUTES) {
-    const response = await fetchImpl(`${baseUrl}${route}`, {
-      redirect: "manual",
-      headers: {
-        Accept: route.startsWith("/api/") ? "application/json" : "text/html",
-      },
-    });
-    if (response.status !== 404) {
-      throw new Error(`Production fixture route ${route} must return 404.`);
-    }
-  }
 
   const htmlBodies: string[] = [];
   let feedHtml = "";
@@ -217,7 +196,6 @@ export async function runDrive2ProductionSmoke(
       create: "auth-intent",
     },
     fixtureIsolation: {
-      blockedRoutes: FIXTURE_ROUTES.length,
       sitemapClean: true,
       publicHtmlClean: true,
     },
@@ -415,8 +393,7 @@ function assertNoForbiddenMarkers(value: string, label: string) {
   const marker = FORBIDDEN_PUBLIC_MARKERS.find((candidate) =>
     lower.includes(candidate.toLowerCase()),
   );
-  if (marker)
-    throw new Error(`${label} contains forbidden private fixture data.`);
+  if (marker) throw new Error(`${label} contains forbidden private data.`);
 }
 
 function assertIncludes(value: string, expected: string, label: string) {

@@ -39,22 +39,18 @@ export function normalizePublicKnowledgeRequest(
     query,
     type: isContentType(type) ? type : "all",
     kind:
-      kind === "all"
-        ? "all"
-        : (normalizePublicObjectKindFilter(kind) ?? "all"),
+      kind === "all" ? "all" : (normalizePublicObjectKindFilter(kind) ?? "all"),
   };
 }
 
 export function buildPublicKnowledgeHref(
   locale: PublicLocale,
   request: PublicKnowledgeRequest,
-  visualCorpus = false,
 ) {
   const params = new URLSearchParams();
   if (request.query) params.set("q", request.query);
   if (request.type !== "all") params.set("type", request.type);
   if (request.kind !== "all") params.set("kind", request.kind);
-  if (visualCorpus) params.set("__visualKnowledge", "corpus");
 
   const query = params.toString();
   const path = localizedPath(locale, "/knowledge");

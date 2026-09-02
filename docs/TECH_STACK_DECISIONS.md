@@ -12,6 +12,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Web/app runtime         | Next.js App Router + TypeScript on Vercel                                                                                                                                                                                                                                                             |
 | UI                      | shadcn/ui only                                                                                                                                                                                                                                                                                        |
+| Typography              | Google Sans (text) and Geist Mono (code) via `next/font/google`: fetched at build time, self-hosted under `/_next/static`, preloaded, `display: swap`, `Arial` fallback by hand. Wired once in `apps/web/src/app/fonts.ts` and `globals.css`; no contract, verifier, or matrix (ADR-0022 D7).         |
 | Journal authoring       | Lexical 0.49.0 native node-tree editor behind one shared client-only composer; `JournalDocumentV1` v1 is the sole persistence/API/read contract; public and owner-read routes load no authoring engine. Under ADR-0019, unpublished composer state is local-only and non-durable before Publish.               |
 | Auth                    | Better Auth                                                                                                                                                                                                                                                                                           |
 | Database                | DigitalOcean Managed Postgres in production; Apple Container-first local Postgres on supported Macs, with Docker only as fallback; local/CI default to the production major version, currently Postgres 18                                                                                            |
@@ -29,6 +30,15 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 | Analytics               | PostHog / first-party analytics later, after privacy event review                                                                                                                                                                                                                                     |
 | Build method            | Walking skeleton first, then vertical SDD slices from `docs/SDD_VERTICAL_SLICE_ROADMAP.md`; no layer-ticket batches                                                                                                                                                                                   |
 | Local container runtime | Apple Container-first for local Postgres, Meilisearch, MinIO, and matching-image smoke on supported Apple Silicon/macOS 26; Docker Desktop is not required after OVE-77, except as a fallback for unsupported hosts or verified Apple Container feature gaps. See `docs/CONTAINER_RUNTIME_POLICY.md`. |
+
+## Typography
+
+Typography is wired once and never re-verified (ADR-0022, D7):
+
+- `apps/web/src/app/fonts.ts` declares Google Sans (normal and italic; `latin`, `latin-ext`, `cyrillic`, `cyrillic-ext`) and Geist Mono through `next/font/google`. Next fetches the subsets at build time, self-hosts the hashed files under `/_next/static`, preloads them, and fails the build if a font cannot be fetched.
+- `layout.tsx` puts the two variables (`--font-google-sans`, `--font-geist-mono`) on `<html>`; `globals.css` maps them to `--font-overgarden-sans` and `--font-overgarden-mono` with an `Arial, sans-serif` fallback, because Next has no metric table for Google Sans.
+- Raw lifecycle documents served by the proxy (404/410 pages) use the system font stack and never load web fonts.
+- There is no typography contract, verifier, browser matrix, or CWV budget. To change a face, edit `fonts.ts` and `globals.css` only.
 
 ## Binding invariants
 

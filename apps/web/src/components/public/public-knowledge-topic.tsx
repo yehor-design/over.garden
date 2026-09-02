@@ -27,7 +27,6 @@ export function PublicKnowledgeTopicPage({
   topic,
   evidence,
   evidenceState,
-  visualCorpus = false,
   actions,
   jsonLd,
 }: {
@@ -36,7 +35,6 @@ export function PublicKnowledgeTopicPage({
   topic: PublicTopicAggregationPage;
   evidence: PublicKnowledgeEvidence;
   evidenceState: PublicKnowledgeEvidenceState;
-  visualCorpus?: boolean;
   actions?: ReactNode;
   jsonLd?: Record<string, unknown> | null;
 }) {
@@ -60,7 +58,7 @@ export function PublicKnowledgeTopicPage({
 
       <header className="grid gap-4 border-b border-border pb-5">
         <Link
-          href={knowledgeHubPath(locale, visualCorpus)}
+          href={knowledgeHubPath(locale)}
           className={buttonVariants({
             variant: "outline",
             size: "sm",
@@ -105,11 +103,9 @@ export function PublicKnowledgeTopicPage({
   );
 }
 
-function knowledgeHubPath(locale: PublicLocale, visualCorpus: boolean) {
+function knowledgeHubPath(locale: PublicLocale) {
   const path = localizedPath(locale, "/knowledge");
-  return visualCorpus
-    ? `${path}?${new URLSearchParams({ __visualKnowledge: "corpus" })}`
-    : path;
+  return path;
 }
 
 function topicContextModules(

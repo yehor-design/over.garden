@@ -15,7 +15,6 @@ import {
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { resolveVisualCommunityScenario } from "@/lib/visual-fixtures/community-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import {
   getPublicCommunityPage,
@@ -46,16 +45,12 @@ const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
 
 export async function generateMetadata({
   params,
-  searchParams,
 }: CommunityDetailRouteProps): Promise<Metadata> {
   const { locale: localeParam, slug } = await params;
   const safeSlug = normalizeCommunitySlug(slug);
   if (!isPublicLocale(localeParam) || !safeSlug) {
     return missingCommunityMetadata();
   }
-  const visualScenario = resolveVisualCommunityScenario(
-    (await searchParams)?.visualCommunity,
-  );
   const discovery = await resolvePublicSurfaceDiscoveryWithDeadline({
     consumerId: "localized_community",
     evaluatedAt: new Date(),
@@ -63,11 +58,7 @@ export async function generateMetadata({
     loadSource: async () => {
       const community = await getPublicCommunityPage(safeSlug, localeParam);
       if (!community) throw new Error("Public community unavailable.");
-      return buildCommunityDiscoverySource(
-        localeParam,
-        community,
-        Boolean(visualScenario),
-      );
+      return buildCommunityDiscoverySource(localeParam, community);
     },
   });
   return buildCommunitySurface(localeParam, safeSlug, null, discovery).metadata;
@@ -85,21 +76,7 @@ export default async function CommunityDetailRoute({
   if (!isPublicLocale(localeParam)) return notFound();
   const slug = normalizeCommunitySlug(slugParam);
   if (!slug) return notFound();
-  const visualScenario = resolveVisualCommunityScenario(
-    queryParams.visualCommunity,
-  );
-  if (
-    visualScenario &&
-    (visualScenario.communitySlug !== slug ||
-      visualScenario.expectedStatus === 404)
-  ) {
-    return notFound();
-  }
-  const viewerScope = visualScenario
-    ? visualScenario.actorId
-      ? scopedToUser(visualScenario.actorId)
-      : null
-    : await currentViewerScope();
+  const viewerScope = await currentViewerScope();
 
   // OVE-234: a coordinate-bearing term is dropped before it is searched or
   // reflected back into the rendered input.
@@ -116,11 +93,7 @@ export default async function CommunityDetailRoute({
   });
   if (!community) return notFound();
   const discovery = resolvePublicSurfaceDiscoveryForRequest(
-    buildCommunityDiscoverySource(
-      localeParam,
-      community,
-      Boolean(visualScenario),
-    ),
+    buildCommunityDiscoverySource(localeParam, community),
   );
   const surface = buildCommunitySurface(
     localeParam,
@@ -138,12 +111,7 @@ export default async function CommunityDetailRoute({
       kind={kind}
       cursor={cursor ?? ""}
       actionStatus={firstValue(queryParams.communityAction) || null}
-      state={
-        visualScenario?.state === "loading" || visualScenario?.state === "error"
-          ? visualScenario.state
-          : "ready"
-      }
-      visualScenarioId={visualScenario?.id}
+      state="ready"
       resumeAction={normalizeAuthIntentResumeAction(queryParams.authIntent)}
       resumeControl={normalizeAuthIntentResumeControl(queryParams.authControl)}
       jsonLd={surface.jsonLd}
@@ -162,15 +130,13 @@ function missingCommunityMetadata(): Metadata {
 function buildCommunityDiscoverySource(
   locale: PublicLocale,
   community: PublicCommunityPageModel,
-  isVisualFixture: boolean,
 ): PublicSurfaceDiscoverySource {
   const copy = getCommunityContentCopy(locale, community.contentKey);
   const contributions = community.contributions?.items ?? [];
   const activeCandidate =
     community.lifecycleState === "active" &&
     community.participationState === "open" &&
-    community.navigationReady &&
-    !isVisualFixture;
+    community.navigationReady;
   return {
     consumerId: "localized_community",
     candidateState: activeCandidate ? "candidate" : "not_public_candidate",
