@@ -54,7 +54,8 @@ const loadCommunityPage = cache(
     query: string,
     kind: CommunityPageOptions["kind"],
     cursor: string | null,
-  ) => getPublicCommunityPage(slug, locale, { viewerScope, query, kind, cursor }),
+  ) =>
+    getPublicCommunityPage(slug, locale, { viewerScope, query, kind, cursor }),
 );
 
 export async function generateMetadata({
@@ -148,28 +149,25 @@ function buildCommunityDiscoverySource(
   locale: PublicLocale,
   community: PublicCommunityPageModel,
 ): PublicSurfaceDiscoverySource {
-  const copy = getCommunityContentCopy(locale, community.contentKey);
   const contributions = community.contributions?.items ?? [];
-  const activeCandidate =
-    community.lifecycleState === "active" &&
-    community.participationState === "open" &&
-    community.navigationReady;
+  // A live community is a public candidate whatever its participation or
+  // navigation readiness says (ADR-0022, D3: no readiness read turns a page
+  // `noindex`). It is a listing of contributions, so it counts only those.
+  const liveCandidate =
+    community.lifecycleState === "active" ||
+    community.lifecycleState === "archived";
   return {
     consumerId: "localized_community",
-    candidateState: activeCandidate ? "candidate" : "not_public_candidate",
-    visibleText: [
-      copy.name,
-      copy.description,
-      ...contributions.flatMap((item) => [
-        item.title,
-        item.excerpt,
-        item.object.displayName,
-      ]),
-    ],
-    distinctPublicEntityIds: [
-      community.id,
-      ...contributions.flatMap((item) => [item.id, item.object.id]),
-    ],
+    candidateState: liveCandidate ? "candidate" : "not_public_candidate",
+    visibleText: contributions.flatMap((item) => [
+      item.title,
+      item.excerpt,
+      item.object.displayName,
+    ]),
+    distinctPublicEntityIds: contributions.flatMap((item) => [
+      item.id,
+      item.object.id,
+    ]),
     canonicalPath: localizedPath(locale, `/communities/${community.slug}`),
     equivalentLocales: [locale],
   };

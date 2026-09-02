@@ -97,9 +97,12 @@ function buildCommunityDirectoryDiscoverySource(
   locale: PublicLocale,
   communities: readonly PublicCommunityDirectoryItem[],
 ): PublicSurfaceDiscoverySource {
+  // The directory lists every live community; readiness is a navigation
+  // concern and never decides indexability (ADR-0022, D3).
   const active = communities.filter(
     (community) =>
-      community.lifecycleState === "active" && community.navigationReady,
+      community.lifecycleState === "active" ||
+      community.lifecycleState === "archived",
   );
   return {
     consumerId: "localized_community_directory",
