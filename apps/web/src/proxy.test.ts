@@ -91,26 +91,6 @@ function interfaceCookies(market: InterfaceMarket, locale: "uk" | "bg" | "ru") {
 }
 
 describe("app route cache guardrail", () => {
-  it("hard-404s retired PWA assets before the App Router fallback", async () => {
-    for (const path of [
-      "/manifest.webmanifest",
-      "/sw.js",
-      "/icon-192.png",
-      "/icon-512.png",
-    ]) {
-      const response = await responseFor(path);
-
-      expect(response.status, path).toBe(404);
-      expect(response.headers.get("Cache-Control"), path).toBe(
-        APP_ROUTE_CACHE_CONTROL,
-      );
-      expect(response.headers.get("X-Robots-Tag"), path).toBe(
-        "noindex, nofollow",
-      );
-      expect(response.headers.get("set-cookie"), path).toBeNull();
-    }
-  });
-
   it("hard-404s retired control-plane routes before locale or App Router fallback handling", async () => {
     const retiredPaths = [
       "/admin",
@@ -842,10 +822,6 @@ describe("app route cache guardrail", () => {
     expect(matcher.test("/legacy-fonts/google-sans.woff")).toBe(true);
     expect(matcher.test("/legacy-fonts/google-sans.woff2")).toBe(true);
     expect(matcher.test("/favicon.ico")).toBe(false);
-    expect(matcher.test("/sw.js")).toBe(true);
-    expect(matcher.test("/manifest.webmanifest")).toBe(true);
-    expect(config.matcher).toContain("/icon-192.png");
-    expect(config.matcher).toContain("/icon-512.png");
     expect(matcher.test("/photos/derivative.webp")).toBe(false);
   });
 

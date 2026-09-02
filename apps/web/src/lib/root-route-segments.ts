@@ -47,7 +47,7 @@ export const ROOT_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
 /**
  * True when no route can serve the first segment. Locale roots, profile
  * handles, Next internals, dot-prefixed well-known paths, and file-like paths
- * (`/robots.txt`, `/sitemap.xml`, `/sw.js`) stay with the App Router.
+ * (`/robots.txt`, `/sitemap.xml`, `/favicon.ico`) stay with the App Router.
  */
 export function isUnknownRootPath(pathname: string): boolean {
   const segments = pathname.split("/").filter((segment) => segment.length > 0);

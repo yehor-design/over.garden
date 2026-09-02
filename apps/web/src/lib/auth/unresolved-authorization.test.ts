@@ -13,7 +13,7 @@ import {
 describe("OVE-332 unresolved authorization contract", () => {
   beforeEach(() => resetUnresolvedAuthorizationServeCountsForTests());
 
-  it("exports the closed five-class and nine-owner contract", () => {
+  it("exports the closed five-class and eight-owner contract", () => {
     expect(OVE332_UNRESOLVED_CLASSES).toEqual([
       "session_unresolved",
       "ownership_unresolved",
@@ -21,8 +21,8 @@ describe("OVE-332 unresolved authorization contract", () => {
       "weak_secret",
       "proxy_ambiguous",
     ]);
-    expect(OVE332_AUTHORIZATION_OWNERS).toHaveLength(9);
-    expect(OVE332_CONVERTIBLE_AUTHORIZATION_OWNERS).toHaveLength(8);
+    expect(OVE332_AUTHORIZATION_OWNERS).toHaveLength(8);
+    expect(OVE332_CONVERTIBLE_AUTHORIZATION_OWNERS).toHaveLength(7);
     expect(OVE332_CONVERTIBLE_AUTHORIZATION_OWNERS).not.toContain(
       "responsive_accessibility",
     );

@@ -46,10 +46,10 @@ describe("OVE-332 fail-open authorization smoke", () => {
     const receipt = buildFailOpenAuthorizationSmokeReceipt();
     expect(receipt).toMatchObject({
       version: "ove332.failOpenAuthorizationSmoke.v1",
-      ownerCount: 9,
-      servedUnresolvedCount: 8,
+      ownerCount: 8,
+      servedUnresolvedCount: 7,
       preservedControlCount: 1,
-      resolvedAnotherUserDeniedCount: 9,
+      resolvedAnotherUserDeniedCount: 8,
       weakSecret: { count: 1, visible: true },
       evidenceHygiene: {
         secretMaterialAbsent: true,
@@ -57,8 +57,8 @@ describe("OVE-332 fail-open authorization smoke", () => {
         identityAndPayloadAbsent: true,
       },
     });
-    expect(receipt.unresolvedOrPreserved).toHaveLength(9);
-    expect(receipt.resolvedAnotherUser).toHaveLength(9);
+    expect(receipt.unresolvedOrPreserved).toHaveLength(8);
+    expect(receipt.resolvedAnotherUser).toHaveLength(8);
     expect(
       receipt.unresolvedOrPreserved.find(
         ({ fixtureId }) =>

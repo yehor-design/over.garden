@@ -17,7 +17,6 @@ export const OVE332_AUTHORIZATION_OWNERS = [
   "account_methods",
   "interface_route_ownership",
   "public_profile_proxy",
-  "legacy_device_retirement",
   "responsive_accessibility",
 ] as const;
 
@@ -29,7 +28,6 @@ export const OVE332_CONVERTIBLE_AUTHORIZATION_OWNERS = [
   "account_methods",
   "interface_route_ownership",
   "public_profile_proxy",
-  "legacy_device_retirement",
 ] as const;
 
 export type Ove332UnresolvedClass = (typeof OVE332_UNRESOLVED_CLASSES)[number];
@@ -46,7 +44,6 @@ const EXPECTED_CLASS_BY_OWNER = {
   account_methods: "ownership_unresolved",
   interface_route_ownership: "ownership_unresolved",
   public_profile_proxy: "proxy_ambiguous",
-  legacy_device_retirement: "ownership_unresolved",
 } as const satisfies Record<
   Ove332ConvertibleAuthorizationOwner,
   Ove332UnresolvedClass

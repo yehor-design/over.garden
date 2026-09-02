@@ -45,8 +45,8 @@ describe("root route segments", () => {
       "/_next/static/chunk.js",
       "/robots.txt",
       "/sitemap.xml",
-      "/sw.js",
-      "/manifest.webmanifest",
+      "/favicon.ico",
+      "/apple-icon.png",
       "/licenses/GoogleSans-OFL.txt",
       "/api/interface/context",
     ]) {

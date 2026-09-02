@@ -43,21 +43,6 @@ vi.mock("@/components/auth/session-convergence-boundary", () => ({
     );
   },
 }));
-vi.mock("@/components/retirement/legacy-device-retirement-banner", () => ({
-  LegacyDeviceRetirementBanner: ({
-    locale,
-    onSignOut,
-  }: {
-    locale: string;
-    onSignOut?: () => void;
-  }) => (
-    <aside
-      data-retirement-banner="true"
-      data-retirement-locale={locale}
-      data-retirement-sign-out={onSignOut ? "available" : "unavailable"}
-    />
-  ),
-}));
 vi.mock("@/components/auth/document-mutation-recovery", () => ({
   DocumentMutationGenerationProvider: ({
     children,
@@ -119,8 +104,6 @@ describe("production site shell", () => {
     expect(html).not.toMatch(/draftCount|owner_user_id|private-user/i);
     expect(html).not.toContain("data-sign-out-control");
     expect(html).not.toContain("data-interface-language-control");
-    expect(html).toContain('data-retirement-banner="true"');
-    expect(html).toContain('data-retirement-sign-out="unavailable"');
   });
 
   it("adds the complete Bulgarian My rail without serializing account data", async () => {
@@ -181,9 +164,6 @@ describe("production site shell", () => {
     expect(html).not.toContain('href="/garden/catalog/curation"');
     expect(html).not.toContain('href="/garden/privacy/erasure-requests"');
     expect(mocks.currentSessionBinding).toBe("opaque-current-session-binding");
-    expect(html).toContain('data-retirement-banner="true"');
-    expect(html).toContain('data-retirement-locale="bg"');
-    expect(html).toContain('data-retirement-sign-out="available"');
   });
 
   it("adds exactly the four surviving operator links to the sealed owner avatar menu", async () => {
@@ -244,7 +224,6 @@ describe("production site shell", () => {
     expect(html).toContain('data-site-shell-region="sidebar"');
     expect(html).toContain('data-site-shell-region="mobile-navigation"');
     expect(html).not.toContain('data-authenticated-utility-region="true"');
-    expect(html).toContain('data-retirement-banner="true"');
   });
 
   it("keeps guest account moderation free of owner links", async () => {

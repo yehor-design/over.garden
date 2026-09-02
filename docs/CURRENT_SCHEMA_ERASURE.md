@@ -75,10 +75,11 @@ browser and therefore must not claim that browser-local work was deleted.
 An unresolved legacy owner binding is retained fail-closed and reported by the
 returning-device boundary; it is not a remote-erasure receipt.
 
-Historical implementation status (2026-08-13): OVE-288 added the separate
-signed-in current-device control documented in `docs/OFFLINE_OWNER_VAULT.md`.
-ADR-0017 makes that document non-operative retirement provenance. OVE-323
-removed its route, server owner, and current-device action. Ordinary sign-out,
+Historical implementation status (2026-08-13): OVE-288 added a separate
+signed-in current-device control; ADR-0017 retired it, OVE-323 removed its
+route, server owner, and current-device action, and ADR-0022 deleted the last
+browser storage probe and banner. `docs/OFFLINE_RETIREMENT_PROVENANCE.md`
+keeps the analytics receipt. Ordinary sign-out,
 account switching, and submission of the non-destructive server erasure request
 do not claim to clean an unreachable browser.
 

@@ -104,11 +104,9 @@ claim authority, not access to the product.
 - The browser-created WebP is previewed and sent directly to bounded private
   edge staging. Vercel receives signed receipts and JSON only, never image
   bytes. Finalization and abandonment are idempotent and alarm-recoverable.
-- OVE-322's content transfer bridge is retired. The surviving localized banner
-  reports only content-free exact-name cleanup failure or unresolved-binding
-  state, never hydrates legacy records, and offers bounded retry/cancel plus a
-  safe sign-out action when an authenticated shell is present. See
-  `docs/LEGACY_DEVICE_DATA_RETIREMENT.md`.
+- OVE-322's content transfer bridge and its legacy-device retirement banner are
+  gone (ADR-0022): the browser runs no IndexedDB, Cache API, or service-worker
+  probe on load. `docs/OFFLINE_RETIREMENT_PROVENANCE.md` keeps the receipt.
 - The app has no original retention, server decoder/re-encoder, admission or
   quality-processing state, private toggle, or separate publish control.
 - Atomic publication records the disclosure version. Archive removes the
