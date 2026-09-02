@@ -91,14 +91,11 @@ function expectCurrentEligibleCommentIdentity(
     '"user_public_profiles"."normalized_handle" = "comment_author_handles"."normalized_handle"',
   );
   expect(compiled.sql).toContain(
-    '"user_public_profiles"."profile_visibility" =',
-  );
-  expect(compiled.sql).toContain(
     '"user_public_profiles"."profile_lifecycle_state" =',
   );
   expect(compiled.sql).toContain('"user_public_profiles"."removed_at" is null');
   expect(compiled.parameters).toEqual(
-    expect.arrayContaining(["current", "public", "active"]),
+    expect.arrayContaining(["current", "active"]),
   );
 }
 
@@ -155,7 +152,6 @@ describe("engagement repository contracts", () => {
 
     expect(compiled.sql).toContain('from "engagement_comments"');
     expect(compiled.sql).toContain('left join "user_public_profiles"');
-    expect(compiled.sql).toContain('"profile_visibility"');
     expect(compiled.sql).toContain('"profile_lifecycle_state"');
     expect(compiled.sql).toContain('"removed_at"');
     expect(compiled.sql).toContain('"user_public_profiles"."handle"');

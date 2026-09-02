@@ -325,7 +325,6 @@ async function main() {
       "body",
       "visibility",
       "lifecycle_state as lifecycleState",
-      "public_noindex as publicNoindex",
       "public_gone_at as publicGoneAt",
       "cover_media_asset_id as coverMediaAssetId",
     ])
@@ -341,7 +340,6 @@ async function main() {
   );
   assertEqual(tombstone.visibility, "public", "journal visibility public");
   assertEqual(tombstone.lifecycleState, "archived", "journal archived");
-  assertEqual(tombstone.publicNoindex, true, "journal noindex");
   assertEqual(tombstone.coverMediaAssetId, null, "cover cleared");
   if (!tombstone.publicGoneAt) {
     throw new Error("public tombstone missing public_gone_at");
@@ -553,7 +551,6 @@ async function seedSmokeRows() {
         visibility: "public",
         lifecycle_state: "active",
         public_slug: PUBLIC_SLUG,
-        public_noindex: true,
         published_at: now,
         client_mutation_id: "ove-97-public-entry",
         created_at: now,
@@ -570,7 +567,6 @@ async function seedSmokeRows() {
         visibility: "public",
         lifecycle_state: "active",
         public_slug: `${PUBLIC_SLUG}-second`,
-        public_noindex: true,
         published_at: now,
         client_mutation_id: "ove-97-second-public-entry",
         created_at: now,

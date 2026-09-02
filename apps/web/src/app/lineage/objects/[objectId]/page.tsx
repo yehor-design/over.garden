@@ -45,10 +45,8 @@ import {
 } from "@/server/public-object-passport-repository";
 import { buildPublicObjectPassportPresentation } from "@/server/public-object-passport-presentation";
 import {
-  latestMeaningfulContentTimestamp,
-  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
   resolvePublicSurfaceDiscoveryForRequest,
-  resolvePublicSurfacePayloadWithDeadline,
+  resolvePublicSurfacePayload,
   resolveUnresolvedPublicSurfaceDiscovery,
   type PublicSurfaceDiscoveryResult,
   type PublicSurfaceDiscoverySource,
@@ -87,10 +85,8 @@ export async function generateMetadata({
     getRequestInterfaceLocale(),
   ]);
   const copy = getPublicSurfaceCopy(locale);
-  const bounded = await resolvePublicSurfacePayloadWithDeadline({
+  const bounded = await resolvePublicSurfacePayload({
     consumerId: "lineage_object",
-    evaluatedAt: new Date(),
-    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
     load: async () => {
       const page = await getCachedPublicObjectPassportPage(objectId, locale);
       if (!page) throw new Error("Public lineage object unavailable.");
@@ -287,7 +283,6 @@ function buildLineageObjectDiscoverySource(
   return {
     consumerId: "lineage_object",
     candidateState: "candidate",
-    qualityClass: page.qualityClass ?? "unverified",
     visibleText: [
       page.object.displayName,
       page.object.catalogCanonicalName ?? "",
@@ -299,9 +294,6 @@ function buildLineageObjectDiscoverySource(
       page.object.plantObjectId,
       ...journals.map((entry) => entry.id),
     ],
-    meaningfulContentAt: latestMeaningfulContentTimestamp([
-      page.object.latestEntryDate,
-    ]),
     canonicalPath: publicLineageObjectPath(page.object.plantObjectId),
     equivalentLocales: [],
   };

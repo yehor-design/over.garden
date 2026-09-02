@@ -88,7 +88,6 @@
     "auth:security:check": "tsx scripts/verify-better-auth-security.ts",
     "smoke:public-index-parity": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-index-parity.ts",
     "smoke:public-index-parity:production": "tsx scripts/run-production-public-index-parity.ts",
-    "public-surface:verify": "tsx scripts/verify-public-surface-discovery.ts --prove-determinism --inject-source-timeout",
     "smoke:public-projection-revocation": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-projection-revocation.ts --environment local --confirm-environment local",
     "smoke:public-index-parity-adversarial": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-index-parity-adversarial.ts",
     "smoke:restore-readiness": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-restore-readiness.ts",

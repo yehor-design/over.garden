@@ -63,7 +63,6 @@ export function publicJournalSearchRow(
     title: JOURNEY.safeTitle,
     body: JOURNEY.safeBody,
     public_slug: JOURNEY.publicSlug,
-    public_noindex: true,
     public_gone_at: null,
     published_at: JOURNEY.publishedAt,
     entry_date: JOURNEY.entryDate,
@@ -157,7 +156,6 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
       entryScope: "object",
       publicSlug: JOURNEY.publicSlug,
       publicPath: `/journal/${JOURNEY.publicSlug}`,
-      publicNoindex: true,
       publishedAt: JOURNEY.publishedAt,
     },
     context: {
@@ -292,10 +290,7 @@ export function publicVarietyPage(
   } satisfies Omit<PublicVarietyPage, "indexState">;
   return {
     ...page,
-    indexState: resolvePublicSurfaceDiscoveryForRequest(
-      buildPublicVarietyDiscoverySource(page, "public_variety_repository"),
-      "2026-08-24T00:00:00.000Z",
-    ).decision,
+    indexState: resolvePublicSurfaceDiscoveryForRequest(buildPublicVarietyDiscoverySource(page, "public_variety_repository")).decision,
   };
 }
 

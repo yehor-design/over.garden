@@ -159,7 +159,7 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "topic_sitemap",
     "topic_aggregation",
     "candidate",
-    "src/app/sitemap.ts",
+    "src/server/public-sitemap.ts",
   ),
   inventory(
     "public_variety_repository",
@@ -175,18 +175,16 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
   ),
 ] as const;
 
-export const PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS = 150;
-
 export type PublicSurfaceDiscoveryConsumerId =
   (typeof PUBLIC_SURFACE_DISCOVERY_INVENTORY)[number]["consumerId"];
 
 export interface PublicSurfaceDiscoverySource {
   consumerId: PublicSurfaceDiscoveryConsumerId;
   candidateState: PublicSurfaceCandidateState;
-  qualityClass: PublicProjectionQualityClass | null;
+  /** Text the page shows; a listing with none of it is an empty listing. */
   visibleText: readonly string[] | null;
+  /** Entities the page lists; a listing with none of them is empty. */
   distinctPublicEntityIds: readonly string[] | null;
-  meaningfulContentAt: string | null;
   canonicalPath: string | null;
   equivalentLocales: readonly PublicLocale[] | null;
 }
@@ -197,20 +195,14 @@ export interface PublicSurfaceDiscoveryResult {
   decision: PublicSurfaceIndexState;
 }
 
-export interface PublicSurfaceDiscoveryDeadlineResult extends PublicSurfaceDiscoveryResult {
-  terminalClass: "resolved" | "timed_out" | "cancelled" | "unavailable";
-  durationMs: number;
-}
-
-export interface PublicSurfaceDiscoveryPayloadDeadlineResult<
+export interface PublicSurfaceDiscoveryPayloadResult<
   Payload,
-> extends PublicSurfaceDiscoveryDeadlineResult {
+> extends PublicSurfaceDiscoveryResult {
   payload: Payload | null;
 }
 
 export function resolvePublicSurfaceDiscovery(
   source: PublicSurfaceDiscoverySource,
-  options: { evaluatedAt: string | Date },
 ): PublicSurfaceDiscoveryResult {
   const owner = inventoryOwner(source.consumerId);
   const candidateState =
@@ -221,12 +213,7 @@ export function resolvePublicSurfaceDiscovery(
     candidateState === "candidate"
       ? {
           candidateState,
-          qualityClass: source.qualityClass,
-          visibleWordCount: countMeaningfulVisibleWords(source.visibleText),
-          distinctPublicEntityIds: normalizeEntityIds(
-            source.distinctPublicEntityIds,
-          ),
-          meaningfulContentAt: source.meaningfulContentAt,
+          hasContent: hasVisibleContent(source),
           canonicalPath: source.canonicalPath,
           equivalentLocales: normalizeLocales(source.equivalentLocales),
           surfaceKind: owner.surfaceKind,
@@ -236,145 +223,74 @@ export function resolvePublicSurfaceDiscovery(
   return {
     consumerId: source.consumerId,
     candidateInput,
-    decision: evaluatePublicSurfaceIndexability(candidateInput, options),
+    decision: evaluatePublicSurfaceIndexability(candidateInput),
   };
 }
 
 export function resolvePublicSurfaceDiscoveryForRequest(
   source: PublicSurfaceDiscoverySource,
-  evaluatedAt: string | Date = new Date(),
 ) {
-  return resolvePublicSurfaceDiscovery(source, { evaluatedAt });
+  return resolvePublicSurfaceDiscovery(source);
 }
 
 export function resolveUnresolvedPublicSurfaceDiscovery(
   consumerId: PublicSurfaceDiscoveryConsumerId,
-  evaluatedAt: string | Date = new Date(),
 ) {
-  return unresolvedResult(consumerId, evaluatedAt);
+  return unresolvedResult(consumerId);
 }
 
 export function resolveNonCandidatePublicSurfaceDiscovery(
   consumerId: PublicSurfaceDiscoveryConsumerId,
-  evaluatedAt: string | Date = new Date(),
 ) {
-  return resolvePublicSurfaceDiscovery(
-    {
-      consumerId,
-      candidateState: "not_public_candidate",
-      qualityClass: null,
-      visibleText: null,
-      distinctPublicEntityIds: null,
-      meaningfulContentAt: null,
-      canonicalPath: null,
-      equivalentLocales: null,
-    },
-    { evaluatedAt },
-  );
-}
-
-export async function resolvePublicSurfaceDiscoveryWithDeadline(input: {
-  consumerId: PublicSurfaceDiscoveryConsumerId;
-  evaluatedAt: string | Date;
-  deadlineMs: number;
-  loadSource: () => Promise<PublicSurfaceDiscoverySource>;
-  signal?: AbortSignal;
-}): Promise<PublicSurfaceDiscoveryDeadlineResult> {
-  if (!Number.isFinite(input.deadlineMs) || input.deadlineMs <= 0) {
-    return deadlineResult(
-      unresolvedResult(input.consumerId, input.evaluatedAt),
-      "timed_out",
-      performance.now(),
-    );
-  }
-  const startedAt = performance.now();
-  if (input.signal?.aborted) {
-    return deadlineResult(
-      unresolvedResult(input.consumerId, input.evaluatedAt),
-      "cancelled",
-      startedAt,
-    );
-  }
-
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (
-      result: PublicSurfaceDiscoveryResult,
-      terminalClass: PublicSurfaceDiscoveryDeadlineResult["terminalClass"],
-    ) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      input.signal?.removeEventListener("abort", abort);
-      resolve(deadlineResult(result, terminalClass, startedAt));
-    };
-    const abort = () =>
-      finish(
-        unresolvedResult(input.consumerId, input.evaluatedAt),
-        "cancelled",
-      );
-    const timer = setTimeout(
-      () =>
-        finish(
-          unresolvedResult(input.consumerId, input.evaluatedAt),
-          "timed_out",
-        ),
-      input.deadlineMs,
-    );
-    input.signal?.addEventListener("abort", abort, { once: true });
-
-    Promise.resolve()
-      .then(input.loadSource)
-      .then((source) => {
-        if (source.consumerId !== input.consumerId) {
-          finish(
-            unresolvedResult(input.consumerId, input.evaluatedAt),
-            "unavailable",
-          );
-          return;
-        }
-        finish(
-          resolvePublicSurfaceDiscovery(source, {
-            evaluatedAt: input.evaluatedAt,
-          }),
-          "resolved",
-        );
-      })
-      .catch(() =>
-        finish(
-          unresolvedResult(input.consumerId, input.evaluatedAt),
-          "unavailable",
-        ),
-      );
+  return resolvePublicSurfaceDiscovery({
+    consumerId,
+    candidateState: "not_public_candidate",
+    visibleText: null,
+    distinctPublicEntityIds: null,
+    canonicalPath: null,
+    equivalentLocales: null,
   });
 }
 
-export async function resolvePublicSurfacePayloadWithDeadline<Payload>(input: {
+/**
+ * Loads the page's discovery source with no deadline (ADR-0022, D3): a slow
+ * database never turns a live page into `noindex`. A load that fails leaves
+ * the page unresolved, which is the only remaining `noindex` for a live route.
+ */
+export async function resolvePublicSurfaceDiscoveryFromLoad(input: {
   consumerId: PublicSurfaceDiscoveryConsumerId;
-  evaluatedAt: string | Date;
-  deadlineMs: number;
+  loadSource: () => Promise<PublicSurfaceDiscoverySource>;
+}): Promise<PublicSurfaceDiscoveryResult> {
+  try {
+    const source = await input.loadSource();
+    if (source.consumerId !== input.consumerId) {
+      return unresolvedResult(input.consumerId);
+    }
+    return resolvePublicSurfaceDiscovery(source);
+  } catch {
+    return unresolvedResult(input.consumerId);
+  }
+}
+
+export async function resolvePublicSurfacePayload<Payload>(input: {
+  consumerId: PublicSurfaceDiscoveryConsumerId;
   load: () => Promise<{
     source: PublicSurfaceDiscoverySource;
     payload: Payload;
   }>;
-  signal?: AbortSignal;
-}): Promise<PublicSurfaceDiscoveryPayloadDeadlineResult<Payload>> {
-  let payload: Payload | null = null;
-  const result = await resolvePublicSurfaceDiscoveryWithDeadline({
-    consumerId: input.consumerId,
-    evaluatedAt: input.evaluatedAt,
-    deadlineMs: input.deadlineMs,
-    ...(input.signal ? { signal: input.signal } : {}),
-    loadSource: async () => {
-      const loaded = await input.load();
-      payload = loaded.payload;
-      return loaded.source;
-    },
-  });
-  return {
-    ...result,
-    payload: result.terminalClass === "resolved" ? payload : null,
-  };
+}): Promise<PublicSurfaceDiscoveryPayloadResult<Payload>> {
+  try {
+    const loaded = await input.load();
+    if (loaded.source.consumerId !== input.consumerId) {
+      return { ...unresolvedResult(input.consumerId), payload: null };
+    }
+    return {
+      ...resolvePublicSurfaceDiscovery(loaded.source),
+      payload: loaded.payload,
+    };
+  } catch {
+    return { ...unresolvedResult(input.consumerId), payload: null };
+  }
 }
 
 export function countMeaningfulVisibleWords(values: readonly string[] | null) {
@@ -408,6 +324,12 @@ export function latestMeaningfulContentTimestamp(
   return new Date(Math.max(...timestamps)).toISOString();
 }
 
+function hasVisibleContent(source: PublicSurfaceDiscoverySource) {
+  const words = countMeaningfulVisibleWords(source.visibleText) ?? 0;
+  const entities = normalizeEntityIds(source.distinctPublicEntityIds) ?? [];
+  return words > 0 || entities.length > 0;
+}
+
 function normalizeEntityIds(value: readonly string[] | null) {
   if (!value) return null;
   return [...new Set(value.map((item) => item.trim()).filter(Boolean))];
@@ -418,10 +340,7 @@ function normalizeLocales(value: readonly PublicLocale[] | null) {
   return [...new Set(value)];
 }
 
-function unresolvedResult(
-  consumerId: PublicSurfaceDiscoveryConsumerId,
-  evaluatedAt: string | Date,
-) {
+function unresolvedResult(consumerId: PublicSurfaceDiscoveryConsumerId) {
   const owner = inventoryOwner(consumerId);
   const candidateInput = unresolvedCandidateInput(
     owner.surfaceKind,
@@ -430,9 +349,7 @@ function unresolvedResult(
   return {
     consumerId,
     candidateInput,
-    decision: evaluatePublicSurfaceIndexability(candidateInput, {
-      evaluatedAt,
-    }),
+    decision: evaluatePublicSurfaceIndexability(candidateInput),
   };
 }
 
@@ -442,25 +359,10 @@ function unresolvedCandidateInput(
 ): PublicSurfaceCandidateInput {
   return {
     candidateState,
-    qualityClass: null,
-    visibleWordCount: null,
-    distinctPublicEntityIds: null,
-    meaningfulContentAt: null,
+    hasContent: null,
     canonicalPath: null,
     equivalentLocales: null,
     surfaceKind,
-  };
-}
-
-function deadlineResult(
-  result: PublicSurfaceDiscoveryResult,
-  terminalClass: PublicSurfaceDiscoveryDeadlineResult["terminalClass"],
-  startedAt: number,
-): PublicSurfaceDiscoveryDeadlineResult {
-  return {
-    ...result,
-    terminalClass,
-    durationMs: Math.max(0, performance.now() - startedAt),
   };
 }
 

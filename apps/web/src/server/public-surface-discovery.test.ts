@@ -3,12 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   PUBLIC_SURFACE_DISCOVERY_INVENTORY,
   resolvePublicSurfaceDiscovery,
-  resolvePublicSurfacePayloadWithDeadline,
-  resolvePublicSurfaceDiscoveryWithDeadline,
+  resolveNonCandidatePublicSurfaceDiscovery,
+  resolvePublicSurfacePayload,
+  resolvePublicSurfaceDiscoveryFromLoad,
   type PublicSurfaceDiscoverySource,
 } from "./public-surface-discovery";
 
-const EVALUATED_AT = "2026-08-24T00:00:00.000Z";
 
 function richSource(
   overrides: Partial<PublicSurfaceDiscoverySource> = {},
@@ -16,12 +16,10 @@ function richSource(
   return {
     consumerId: "localized_journal_entry",
     candidateState: "candidate",
-    qualityClass: "partial",
     visibleText: [
       Array.from({ length: 120 }, (_, index) => `word${index}`).join(" "),
     ],
     distinctPublicEntityIds: ["plant-1"],
-    meaningfulContentAt: "2026-08-23T00:00:00.000Z",
     canonicalPath: "/journal/season-note",
     equivalentLocales: ["uk"],
     ...overrides,
@@ -70,109 +68,66 @@ describe("public surface discovery adapter", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("derives the measured decision from visible facts and explicit entities", () => {
-    const result = resolvePublicSurfaceDiscovery(richSource(), {
-      evaluatedAt: EVALUATED_AT,
-    });
-
-    expect(result.decision).toMatchObject({
-      value: "indexable",
-      reasons: [],
-    });
+  it("indexes a live page from its visible facts without a measured threshold", () => {
+    const result = resolvePublicSurfaceDiscovery(richSource());
+    expect(result.decision.isIndexable).toBe(true);
     expect(result.candidateInput).toMatchObject({
+      candidateState: "candidate",
+      hasContent: true,
       surfaceKind: "journal_entry",
-      visibleWordCount: 120,
-      distinctPublicEntityIds: ["plant-1"],
     });
+    expect(
+      resolvePublicSurfaceDiscovery(
+        richSource({ visibleText: ["Домат"], distinctPublicEntityIds: [] }),
+      ).decision.isIndexable,
+    ).toBe(true);
   });
 
-  it("keeps thin Stable Registry catalog and source pages behind the shared threshold", () => {
-    const result = resolvePublicSurfaceDiscovery(
-      richSource({
-        consumerId: "stable_registry_eppo_detail",
-        qualityClass: "partial",
-        visibleText: ["source evidence"],
-        distinctPublicEntityIds: ["SOLLC"],
-        canonicalPath: "/sources/eppo/SOLLC",
-      }),
-      { evaluatedAt: EVALUATED_AT },
-    );
-
-    expect(result.decision).toMatchObject({
-      value: "noindex",
-      reasons: ["word_count_below_threshold"],
-    });
+  it("marks a listing with nothing on it noindex and a non-candidate route noindex", () => {
+    expect(
+      resolvePublicSurfaceDiscovery(
+        richSource({ visibleText: [], distinctPublicEntityIds: [] }),
+      ).decision.reasons,
+    ).toEqual(["empty_listing"]);
+    expect(
+      resolvePublicSurfaceDiscovery(
+        richSource({ consumerId: "privacy", canonicalPath: "/bg/privacy" }),
+      ).decision.reasons,
+    ).toEqual(["not_public_candidate"]);
+    expect(
+      resolveNonCandidatePublicSurfaceDiscovery("localized_home").decision
+        .reasons,
+    ).toEqual(["not_public_candidate"]);
   });
 
-  it("times out without accepting a late source result", async () => {
-    vi.useFakeTimers();
-    const pending = resolvePublicSurfaceDiscoveryWithDeadline({
+  it("never turns a slow load into noindex and keeps a failed load unresolved", async () => {
+    const slow = await resolvePublicSurfaceDiscoveryFromLoad({
       consumerId: "localized_journal_entry",
-      evaluatedAt: EVALUATED_AT,
-      deadlineMs: 150,
       loadSource: () =>
-        new Promise((resolve) => {
-          setTimeout(() => resolve(richSource()), 500);
-        }),
+        new Promise((resolve) => setTimeout(() => resolve(richSource()), 20)),
     });
+    expect(slow.decision.isIndexable).toBe(true);
 
-    await vi.advanceTimersByTimeAsync(150);
-    const result = await pending;
-    await vi.advanceTimersByTimeAsync(500);
-
-    expect(result).toMatchObject({
-      terminalClass: "timed_out",
-      decision: {
-        value: "noindex",
-        reasons: ["candidate_input_unresolved"],
+    const failed = await resolvePublicSurfacePayload({
+      consumerId: "localized_journal_entry",
+      load: async () => {
+        throw new Error("database unavailable");
       },
     });
-  });
+    expect(failed.payload).toBeNull();
+    expect(failed.decision.reasons).toEqual(["candidate_input_unresolved"]);
 
-  it("cancels before resolution and never admits the source", async () => {
-    const controller = new AbortController();
-    controller.abort();
-
-    const result = await resolvePublicSurfaceDiscoveryWithDeadline({
+    const loaded = await resolvePublicSurfacePayload({
       consumerId: "localized_journal_entry",
-      evaluatedAt: EVALUATED_AT,
-      deadlineMs: 150,
-      signal: controller.signal,
-      loadSource: async () => richSource(),
+      load: async () => ({ source: richSource(), payload: { id: "entry" } }),
     });
+    expect(loaded.payload).toEqual({ id: "entry" });
+    expect(loaded.decision.isIndexable).toBe(true);
 
-    expect(result).toMatchObject({
-      terminalClass: "cancelled",
-      decision: {
-        value: "noindex",
-        reasons: ["candidate_input_unresolved"],
-      },
+    const foreign = await resolvePublicSurfacePayload({
+      consumerId: "localized_home",
+      load: async () => ({ source: richSource(), payload: { id: "entry" } }),
     });
-  });
-
-  it("drops a payload that completes after the metadata deadline", async () => {
-    vi.useFakeTimers();
-    const pending = resolvePublicSurfacePayloadWithDeadline<string>({
-      consumerId: "localized_journal_entry",
-      evaluatedAt: EVALUATED_AT,
-      deadlineMs: 150,
-      load: () =>
-        new Promise((resolve) => {
-          setTimeout(
-            () => resolve({ source: richSource(), payload: "late-page" }),
-            500,
-          );
-        }),
-    });
-
-    await vi.advanceTimersByTimeAsync(150);
-    const result = await pending;
-    await vi.advanceTimersByTimeAsync(500);
-
-    expect(result).toMatchObject({
-      terminalClass: "timed_out",
-      payload: null,
-      decision: { value: "noindex" },
-    });
+    expect(foreign.payload).toBeNull();
   });
 });

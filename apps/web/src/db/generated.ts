@@ -784,7 +784,6 @@ export interface JournalEntries {
   owner_user_id: string;
   plant_object_id: string | null;
   public_gone_at: Timestamp | null;
-  public_noindex: Generated<boolean>;
   public_slug: string | null;
   published_at: Timestamp | null;
   purge_after: Timestamp | null;

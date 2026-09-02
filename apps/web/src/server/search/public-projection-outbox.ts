@@ -629,7 +629,6 @@ export async function loadExpectedPublicJournalDocument(
     title: row.title,
     body: row.body,
     public_slug: row.publicSlug,
-    public_noindex: row.publicNoindex,
     public_gone_at: row.publicGoneAt,
     published_at: row.publishedAt,
     entry_date: row.entryDate,

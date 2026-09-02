@@ -152,7 +152,6 @@ describe("public handle profile actions", () => {
     formData.append("languages", "en");
     formData.set("locationVisibility", "region");
     formData.set("coarseRegionCode", "UA-32");
-    formData.set("profileVisibility", "public");
     formData.set("relationshipVisibility", "counts");
 
     await updatePublicProfileAction(formData);
@@ -169,7 +168,6 @@ describe("public handle profile actions", () => {
         languages: ["uk", "en"],
         locationVisibility: "region",
         coarseRegionCode: "UA-32",
-        profileVisibility: "public",
         relationshipVisibility: "counts",
       },
     );

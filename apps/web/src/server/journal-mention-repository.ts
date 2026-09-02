@@ -443,7 +443,6 @@ export function buildPublicHandleMentionSuggestionsQuery(
       "user_public_profiles.updated_at as updatedAt",
     ])
     .where("user_public_profiles.user_id", "!=", scope.userId)
-    .where("user_public_profiles.profile_visibility", "=", "public")
     .where("user_public_profiles.profile_lifecycle_state", "=", "active")
     .where("user_public_profiles.removed_at", "is", null)
     .where("user_public_profiles.handle_registry_state", "=", "current")
@@ -568,7 +567,6 @@ export function buildResolvePublicHandleMentionTargetsQuery(
     )
     .select(["user_public_profiles.user_id as userId"])
     .where("user_public_profiles.user_id", "!=", scope.userId)
-    .where("user_public_profiles.profile_visibility", "=", "public")
     .where("user_public_profiles.profile_lifecycle_state", "=", "active")
     .where("user_public_profiles.removed_at", "is", null)
     .where("user_public_profiles.handle_registry_state", "=", "current")

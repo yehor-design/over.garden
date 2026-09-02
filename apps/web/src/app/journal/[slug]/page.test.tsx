@@ -159,7 +159,7 @@ describe("/journal/[slug] V2", () => {
     expect(html).toContain('data-authenticated="true"');
   });
 
-  it("publishes noindex metadata without fabricated language alternates", async () => {
+  it("publishes indexable metadata without fabricated language alternates", async () => {
     const { generateMetadata } =
       await import("../../[locale]/journal/[slug]/page");
     const metadata = await generateMetadata({
@@ -171,40 +171,11 @@ describe("/journal/[slug] V2", () => {
 
     expect(metadata).toMatchObject({
       title: "First public chapter · Запис в дневник | OverGarden",
-      robots: { index: false, follow: false },
+      robots: { index: true, follow: true },
     });
-    expect(metadata.alternates).toBeUndefined();
-  });
-
-  it("times out metadata source reads without blocking or admitting a late page", async () => {
-    const { generateMetadata } =
-      await import("../../[locale]/journal/[slug]/page");
-    vi.useFakeTimers();
-    mocks.getLookup.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(() => resolve({ status: "active", page }), 500);
-        }),
-    );
-
-    try {
-      const pending = generateMetadata({
-        params: Promise.resolve({
-          locale: "bg",
-          slug: page.entry.publicSlug,
-        }),
-      });
-      await vi.advanceTimersByTimeAsync(150);
-      const metadata = await pending;
-      await vi.advanceTimersByTimeAsync(500);
-
-      expect(metadata).toMatchObject({
-        robots: { index: false, follow: false },
-      });
-      expect(metadata.alternates).toBeUndefined();
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(metadata.alternates).toEqual({
+      canonical: `/journal/${page.entry.publicSlug}`,
+    });
   });
 
   it("fails closed for private, removed RSC, missing and invalid locale reads", async () => {

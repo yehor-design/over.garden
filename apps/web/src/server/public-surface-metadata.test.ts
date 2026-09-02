@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { resolvePublicSurfaceDiscovery } from "./public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "./public-surface-metadata";
 
-const EVALUATED_AT = "2026-08-24T00:00:00.000Z";
 const RICH_TEXT = Array.from(
   { length: 120 },
   (_, index) => `visible${index}`,
@@ -14,15 +13,11 @@ function discovery(equivalentLocales: readonly ("uk" | "bg" | "ru")[]) {
     {
       consumerId: "localized_blog_post",
       candidateState: "candidate",
-      qualityClass: "verified",
       visibleText: [RICH_TEXT],
       distinctPublicEntityIds: ["topic-proof"],
-      meaningfulContentAt: "2026-08-23T00:00:00.000Z",
       canonicalPath: "/bg/blog/proof-note",
       equivalentLocales,
-    },
-    { evaluatedAt: EVALUATED_AT },
-  );
+    });
 }
 
 describe("public surface metadata", () => {
@@ -91,15 +86,11 @@ describe("public surface metadata", () => {
       {
         consumerId: "localized_blog_post",
         candidateState: "candidate",
-        qualityClass: "unverified",
-        visibleText: ["thin"],
+        visibleText: [],
         distinctPublicEntityIds: [],
-        meaningfulContentAt: "2026-08-23T00:00:00.000Z",
         canonicalPath: "/blog/thin",
         equivalentLocales: ["uk"],
-      },
-      { evaluatedAt: EVALUATED_AT },
-    );
+      });
     const result = buildPublicSurfaceMetadata({
       discovery: refused,
       locale: "uk",

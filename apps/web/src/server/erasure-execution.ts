@@ -892,7 +892,6 @@ export function buildAnonymizeJournalEntriesForErasureQuery(
       entry_date: toDateOnly(input.now),
       visibility: "public",
       lifecycle_state: "deleted_retention",
-      public_noindex: true,
       published_at: sql<Date>`coalesce(published_at, ${input.now})`,
       archived_at: null,
       // OVE-353: erasure never *extends* a retention horizon. A journal the

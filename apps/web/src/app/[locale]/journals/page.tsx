@@ -21,16 +21,13 @@ import {
   type PublicJournalDirectoryPage,
 } from "@/server/public-journal-directory-repository";
 import {
-  latestMeaningfulContentTimestamp,
-  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
   resolvePublicSurfaceDiscoveryForRequest,
-  resolvePublicSurfaceDiscoveryWithDeadline,
+  resolvePublicSurfaceDiscoveryFromLoad,
   resolveUnresolvedPublicSurfaceDiscovery,
   type PublicSurfaceDiscoveryResult,
   type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
-import { AUTHORED_PUBLIC_SURFACE_LASTMOD } from "@/server/public-surface-indexing-policy";
 
 interface PublicJournalsRouteProps {
   params: Promise<{ locale: string }>;
@@ -55,10 +52,8 @@ export async function generateMetadata({
   }
 
   const request = normalizePublicJournalDirectoryRequest({});
-  const discovery = await resolvePublicSurfaceDiscoveryWithDeadline({
+  const discovery = await resolvePublicSurfaceDiscoveryFromLoad({
     consumerId: "localized_journals_directory",
-    evaluatedAt: new Date(),
-    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
     loadSource: async () => {
       const [page, facets] = await Promise.all([
         listPublicJournalDirectoryPage(request, localeParam),
@@ -156,16 +151,10 @@ function buildJournalDirectoryDiscoverySource(
   page: PublicJournalDirectoryPage,
   facets: PublicJournalDirectoryFacets,
 ): PublicSurfaceDiscoverySource {
-  const copy = getPublicJournalDirectoryCopy(locale);
   return {
     consumerId: "localized_journals_directory",
     candidateState: "candidate",
-    qualityClass: page.qualityClass ?? "unverified",
     visibleText: [
-      copy.metadataTitle,
-      copy.metadataDescription,
-      copy.heading,
-      copy.intro,
       ...page.cards.flatMap((card) => [
         card.title,
         card.excerpt,
@@ -184,10 +173,6 @@ function buildJournalDirectoryDiscoverySource(
       ...facets.catalogs.map((facet) => `catalog:${facet.slug}`),
       ...facets.topics.map((facet) => `topic:${facet.slug}`),
     ],
-    meaningfulContentAt:
-      latestMeaningfulContentTimestamp(
-        page.cards.map((card) => card.publishedAt),
-      ) ?? AUTHORED_PUBLIC_SURFACE_LASTMOD,
     canonicalPath: localizedPath(locale, "/journals"),
     equivalentLocales: [locale],
   };

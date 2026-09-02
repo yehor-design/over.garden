@@ -26,6 +26,8 @@ export interface PublicSurfaceVisibleFacts {
   datePublished?: string;
   dateModified?: string;
   trustQualifier?: string;
+  /** Absolute URL of the page's primary image (entries: the cover). */
+  image?: string;
   questions?: readonly { question: string; answer: string }[];
   itemNames?: readonly string[];
 }
@@ -141,6 +143,7 @@ function buildVisibleFactNode(
     "@id": `${pageUrl}#article`,
     headline: facts.name,
     ...(facts.description ? { description: facts.description } : {}),
+    ...(facts.image ? { image: facts.image } : {}),
     ...(facts.datePublished ? { datePublished: facts.datePublished } : {}),
     ...(facts.dateModified ? { dateModified: facts.dateModified } : {}),
     ...(facts.trustQualifier ? { about: facts.trustQualifier } : {}),

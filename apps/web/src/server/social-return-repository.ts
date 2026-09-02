@@ -296,7 +296,6 @@ export function buildFollowedFeedCandidatesQuery(
           "=",
           "owner_handles.normalized_handle",
         )
-        .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
     )
@@ -620,7 +619,6 @@ export function buildNotificationCommentEventsQuery(
           "=",
           "actor_handles.normalized_handle",
         )
-        .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
     )
@@ -675,7 +673,6 @@ export function buildNotificationProfileFollowEventsQuery(
           "=",
           "actor_handles.normalized_handle",
         )
-        .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
     )
@@ -692,7 +689,6 @@ export function buildNotificationProfileFollowEventsQuery(
           "=",
           "target_handles.normalized_handle",
         )
-        .on("target_profiles.profile_visibility", "=", "public")
         .on("target_profiles.profile_lifecycle_state", "=", "active")
         .on("target_profiles.removed_at", "is", null),
     )
@@ -744,7 +740,6 @@ export function buildNotificationObjectFollowEventsQuery(
           "=",
           "actor_handles.normalized_handle",
         )
-        .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
     )
@@ -800,7 +795,6 @@ export function buildNotificationMentionEventsQuery(
           "=",
           "actor_handles.normalized_handle",
         )
-        .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
     )
@@ -851,7 +845,6 @@ export function buildNotificationClaimDecisionEventsQuery(
           "=",
           "actor_handles.normalized_handle",
         )
-        .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
     )
@@ -898,7 +891,6 @@ export function buildNotificationQuestionEventsQuery(
           "=",
           "actor_handles.normalized_handle",
         )
-        .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
     )
@@ -951,7 +943,6 @@ export function buildNotificationLineageFollowEventsQuery(
           "=",
           "actor_handles.normalized_handle",
         )
-        .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
     )

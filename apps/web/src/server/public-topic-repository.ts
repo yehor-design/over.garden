@@ -314,12 +314,9 @@ export function serializePublicKnowledgeTopics(
       indexState: resolvePublicSurfaceDiscoveryForRequest({
         consumerId: "public_topic_repository",
         candidateState: "candidate",
-        qualityClass: "verified",
-        visibleText: [topic.label],
-        distinctPublicEntityIds: [`topic:${topic.slug}`],
-        meaningfulContentAt: stats?.latestPublishedAt
-          ? toIsoTimestamp(stats.latestPublishedAt)
-          : null,
+        visibleText: entryCount > 0 ? [topic.label] : [],
+        distinctPublicEntityIds:
+          entryCount > 0 ? [`topic:${topic.slug}`] : [],
         canonicalPath: publicTopicPath(topic.slug),
         equivalentLocales: [],
       }).decision,
@@ -338,18 +335,23 @@ export function buildPublicTopicDiscoverySource(
   return {
     consumerId,
     candidateState,
-    qualityClass: page.qualityClass ?? "unverified",
-    visibleText: [
-      page.topic.label,
-      ...page.entries.flatMap((entry) => [entry.title, entry.bodyPreview]),
-    ],
-    distinctPublicEntityIds: [
-      `topic:${page.topic.slug}`,
-      ...page.entries.flatMap((entry) => [entry.id, entry.objectId]),
-    ],
-    meaningfulContentAt: page.latestPublishedAt
-      ? toIsoTimestamp(page.latestPublishedAt)
-      : null,
+    visibleText:
+      page.entries.length > 0
+        ? [
+            page.topic.label,
+            ...page.entries.flatMap((entry) => [
+              entry.title,
+              entry.bodyPreview,
+            ]),
+          ]
+        : [],
+    distinctPublicEntityIds:
+      page.entries.length > 0
+        ? [
+            `topic:${page.topic.slug}`,
+            ...page.entries.flatMap((entry) => [entry.id, entry.objectId]),
+          ]
+        : [],
     canonicalPath: localizedPath(
       DEFAULT_PUBLIC_LOCALE,
       publicTopicPath(page.topic.slug),
@@ -363,11 +365,6 @@ function publicTopicBodyPreview(body: string) {
   return normalized.length <= 360
     ? normalized
     : `${normalized.slice(0, 357).trimEnd()}...`;
-}
-
-function toIsoTimestamp(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isFinite(date.getTime()) ? date.toISOString() : "";
 }
 
 function buildPublicTopicMembershipBaseQuery(

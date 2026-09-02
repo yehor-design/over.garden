@@ -88,9 +88,6 @@ describe("OVE-184 community repository contracts", () => {
       "user_public_profiles.normalized_handle = user_handle_registry.normalized_handle",
     );
     expect(compiled.sql).toContain(
-      "user_public_profiles.profile_visibility = 'public'",
-    );
-    expect(compiled.sql).toContain(
       "user_public_profiles.profile_lifecycle_state = 'active'",
     );
     expect(compiled.sql).toContain("user_public_profiles.removed_at is null");
@@ -255,7 +252,6 @@ describe("OVE-184 community repository contracts", () => {
     ).toHaveLength(2);
     expect(compiled.sql).toContain('"contribution_state" =');
     expect(compiled.sql).toContain('"membership_state" !=');
-    expect(compiled.sql).toContain('"profile_visibility" =');
     expect(compiled.sql).toContain('"profile_lifecycle_state" =');
     expect(compiled.sql).toContain(
       '"user_public_profiles"."removed_at" is null',
@@ -446,9 +442,6 @@ describe("OVE-184 community repository contracts", () => {
       "cover_profiles.normalized_handle = cover_handles.normalized_handle",
     );
     expect(lookup.sql).toContain(
-      "cover_profiles.profile_visibility = 'public'",
-    );
-    expect(lookup.sql).toContain(
       "cover_profiles.profile_lifecycle_state = 'active'",
     );
     expect(lookup.sql).toContain("cover_profiles.removed_at is null");
@@ -466,10 +459,6 @@ describe("OVE-184 community repository contracts", () => {
       stats.sql.match(
         /user_public_profiles\.normalized_handle = user_handle_registry\.normalized_handle/g,
       ) ?? [],
-    ).toHaveLength(2);
-    expect(
-      stats.sql.match(/user_public_profiles\.profile_visibility = 'public'/g) ??
-        [],
     ).toHaveLength(2);
     expect(
       stats.sql.match(
@@ -526,9 +515,6 @@ describe("OVE-184 community repository contracts", () => {
     );
     expect(queue.sql).toContain(
       '"user_public_profiles"."normalized_handle" = "contributor_handles"."normalized_handle"',
-    );
-    expect(queue.sql).toContain(
-      '"user_public_profiles"."profile_visibility" =',
     );
     expect(queue.sql).toContain(
       '"user_public_profiles"."profile_lifecycle_state" =',

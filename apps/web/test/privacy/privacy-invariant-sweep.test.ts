@@ -136,7 +136,7 @@ describe("OVE-40 privacy invariant sweep — search index", () => {
       publicPath: `/journal/${JOURNEY.publicSlug}`,
       locationVisibility: "region",
       coarseRegionCode: JOURNEY.regionCode,
-      noindex: true,
+      noindex: false,
       kind: "journal_entry",
     });
   });
@@ -282,11 +282,10 @@ describe("OVE-163 privacy invariant sweep — matching rollout evidence", () => 
 });
 
 describe("OVE-40 privacy invariant sweep — public journal SSR", () => {
-  it("renders region-safe, derivative-only, noindex HTML with no private values", () => {
+  it("renders region-safe, derivative-only HTML with no private values", () => {
     const page = publicJournalEntryPage();
     const html = renderPublicJournalEntry(page);
 
-    expect(page.entry.publicNoindex).toBe(true);
     expect(html).toContain(`Регіон: ${JOURNEY.regionLabel}`);
     expect(html).toContain(JOURNEY.derivativePublicUrl);
     expectNoForbiddenValues("public journal HTML", html);
@@ -353,12 +352,12 @@ describe("OVE-40 privacy invariant sweep — public variety JSON-LD", () => {
     expect(JSON.stringify(jsonLd)).not.toContain(JOURNEY.safeBody);
   });
 
-  it("returns null (noindex) for thin variety pages", () => {
+  it("returns a graph for thin variety pages: every live page is indexable (ADR-0022, D3)", () => {
     expect(
       buildPublicVarietyJsonLd(
         publicVarietyPage({ entryCount: 1, aggregateBodyLength: 50 }),
       ),
-    ).toBeNull();
+    ).toMatchObject({ "@context": "https://schema.org" });
   });
 });
 

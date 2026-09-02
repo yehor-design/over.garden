@@ -269,7 +269,6 @@ function searchRow(
     title: "Safe public journal",
     body: "A bounded public narrative without private location data.",
     public_slug: "safe-public-journal-abc123",
-    public_noindex: false,
     public_gone_at: null,
     published_at: "2026-08-21T00:00:00.000Z",
     entry_date: "2026-08-21",

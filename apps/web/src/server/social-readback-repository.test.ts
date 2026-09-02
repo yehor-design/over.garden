@@ -88,9 +88,6 @@ describe("social readback repository contracts", () => {
       '"target_owner_profiles"."normalized_handle" = "target_owner_handles"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"target_owner_profiles"."profile_visibility" =',
-    );
-    expect(compiled.sql).toContain(
       '"target_owner_profiles"."profile_lifecycle_state" =',
     );
     expect(compiled.sql).toContain(
@@ -181,9 +178,6 @@ describe("social readback repository contracts", () => {
     expect(compiled.sql).toContain('"follower_handles"."lifecycle_state" =');
     expect(compiled.sql).toContain(
       '"follower_profiles"."normalized_handle" = "follower_handles"."normalized_handle"',
-    );
-    expect(compiled.sql).toContain(
-      '"follower_profiles"."profile_visibility" =',
     );
     expect(compiled.sql).toContain(
       '"follower_profiles"."profile_lifecycle_state" =',

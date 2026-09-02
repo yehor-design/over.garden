@@ -4,40 +4,25 @@ import {
   evaluateNonDiscoveryRouteIndexability,
   evaluatePublicSurfaceIndexability,
   formatRobotsMetaContent,
-  PUBLIC_SURFACE_INDEXABILITY_THRESHOLD,
   type PublicSurfaceCandidateInput,
 } from "./public-surface-indexing-policy";
-
-const EVALUATED_AT = "2026-08-24T00:00:00.000Z";
 
 function candidate(
   overrides: Partial<PublicSurfaceCandidateInput> = {},
 ): PublicSurfaceCandidateInput {
   return {
     candidateState: "candidate",
-    qualityClass: "partial",
-    visibleWordCount: 120,
-    distinctPublicEntityIds: ["plant-1", "plant-1"],
-    meaningfulContentAt: "2025-03-02T00:00:00.000Z",
-    canonicalPath: "/journal/season-note",
-    equivalentLocales: ["uk"],
+    hasContent: true,
+    canonicalPath: "/bg/journal/first-frost",
+    equivalentLocales: ["bg", "ru"],
     surfaceKind: "journal_entry",
     ...overrides,
   };
 }
 
-describe("public surface indexing policy", () => {
-  it("admits a candidate exactly on every inclusive threshold boundary", () => {
-    const state = evaluatePublicSurfaceIndexability(candidate(), {
-      evaluatedAt: EVALUATED_AT,
-    });
-
-    expect(PUBLIC_SURFACE_INDEXABILITY_THRESHOLD).toEqual({
-      minimumQualityClass: "partial",
-      minimumWordCount: 120,
-      minimumDistinctEntities: 1,
-      maximumStalenessDays: 540,
-    });
+describe("public surface indexability (ADR-0022, D3)", () => {
+  it("indexes every live public page that has content", () => {
+    const state = evaluatePublicSurfaceIndexability(candidate());
     expect(state).toMatchObject({
       value: "indexable",
       isIndexable: true,
@@ -46,89 +31,50 @@ describe("public surface indexing policy", () => {
       reasons: [],
     });
     expect(formatRobotsMetaContent(state)).toBe("index, follow");
+    expect(
+      evaluatePublicSurfaceIndexability(
+        candidate({
+          canonicalPath: "/journal/first-frost",
+          equivalentLocales: [],
+        }),
+      ).isIndexable,
+    ).toBe(true);
   });
 
-  it("returns every failed measured member in deterministic order", () => {
-    const state = evaluatePublicSurfaceIndexability(
-      candidate({
-        qualityClass: "unverified",
-        visibleWordCount: 119,
-        distinctPublicEntityIds: [],
-        meaningfulContentAt: "2025-03-01T00:00:00.000Z",
-      }),
-      { evaluatedAt: EVALUATED_AT },
-    );
-
-    expect(state).toMatchObject({
-      value: "noindex",
-      isIndexable: false,
-      sitemapEligible: false,
-      robots: { index: false, follow: false },
-      reasons: [
-        "quality_class_below_threshold",
-        "word_count_below_threshold",
-        "distinct_entity_count_below_threshold",
-        "surface_stale",
-      ],
-    });
-  });
-
-  it("treats invalid or missing measured input as one unresolved refusal", () => {
-    for (const input of [
-      candidate({ meaningfulContentAt: null }),
-      candidate({ meaningfulContentAt: "not-a-date" }),
-      candidate({ qualityClass: null }),
-      candidate({ visibleWordCount: Number.NaN }),
-      candidate({ canonicalPath: "" }),
-      candidate({ equivalentLocales: null }),
+  it("refuses only an empty listing, a gone or non-public record, or an unresolved load", () => {
+    expect(
+      evaluatePublicSurfaceIndexability(candidate({ hasContent: false })),
+    ).toMatchObject({ value: "noindex", reasons: ["empty_listing"] });
+    expect(
+      evaluatePublicSurfaceIndexability(
+        candidate({ candidateState: "not_public_candidate" }),
+      ).reasons,
+    ).toEqual(["not_public_candidate"]);
+    expect(
+      evaluatePublicSurfaceIndexability(
+        candidate({ candidateState: "candidate_input_unresolved" }),
+      ).reasons,
+    ).toEqual(["candidate_input_unresolved"]);
+    for (const broken of [
+      { hasContent: null },
+      { canonicalPath: null },
+      { canonicalPath: "/bg/journal/x?y" },
+      { equivalentLocales: null },
+      { equivalentLocales: ["bg", "bg"] as const },
     ]) {
       expect(
-        evaluatePublicSurfaceIndexability(input, {
-          evaluatedAt: EVALUATED_AT,
-        }),
-      ).toMatchObject({
-        value: "noindex",
-        reasons: ["candidate_input_unresolved"],
-      });
+        evaluatePublicSurfaceIndexability(candidate(broken)).reasons,
+        JSON.stringify(broken),
+      ).toEqual(["candidate_input_unresolved"]);
     }
   });
 
-  it("keeps lifecycle refusals outside the measured threshold", () => {
+  it("keeps a canonical path outside its declared locale set out of the index", () => {
     expect(
       evaluatePublicSurfaceIndexability(
-        candidate({
-          candidateState: "not_public_candidate",
-          qualityClass: null,
-          visibleWordCount: null,
-          distinctPublicEntityIds: null,
-          meaningfulContentAt: null,
-          canonicalPath: null,
-          equivalentLocales: null,
-        }),
-        { evaluatedAt: EVALUATED_AT },
-      ),
-    ).toMatchObject({
-      value: "noindex",
-      reasons: ["not_public_candidate"],
-    });
-
-    expect(
-      evaluatePublicSurfaceIndexability(
-        candidate({
-          candidateState: "candidate_input_unresolved",
-          qualityClass: null,
-          visibleWordCount: null,
-          distinctPublicEntityIds: null,
-          meaningfulContentAt: null,
-          canonicalPath: null,
-          equivalentLocales: null,
-        }),
-        { evaluatedAt: EVALUATED_AT },
-      ),
-    ).toMatchObject({
-      value: "noindex",
-      reasons: ["candidate_input_unresolved"],
-    });
+        candidate({ canonicalPath: "/journal/x", equivalentLocales: ["bg"] }),
+      ).reasons,
+    ).toEqual(["non_equivalent_locale"]);
   });
 
   it("preserves explicit non-discovery route controls", () => {
@@ -138,8 +84,8 @@ describe("public surface indexing policy", () => {
     expect(evaluateNonDiscoveryRouteIndexability("auth").reasons).toEqual([
       "auth_route_noindex",
     ]);
-    expect(evaluateNonDiscoveryRouteIndexability("operator").reasons).toEqual([
-      "operator_route_noindex",
-    ]);
+    expect(
+      formatRobotsMetaContent(evaluateNonDiscoveryRouteIndexability("operator")),
+    ).toBe("noindex, nofollow");
   });
 });

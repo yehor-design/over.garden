@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 
 import { LocalizedHomePage } from "@/components/public/localized-public-pages";
@@ -13,20 +14,17 @@ import {
   listTrustedPublicFeedTopics,
   normalizePublicFeedRequest,
   type PublicFeedPage,
+  type PublicFeedRequest,
   type TrustedPublicFeedTopic,
 } from "@/server/public-feed-repository";
 import { getLocalizedHomeContent } from "@/server/public-localized-content";
 import {
-  combinePublicProjectionQualityClasses,
-  latestMeaningfulContentTimestamp,
   resolvePublicSurfaceDiscoveryForRequest,
-  resolvePublicSurfaceDiscoveryWithDeadline,
+  resolvePublicSurfaceDiscoveryFromLoad,
   resolveUnresolvedPublicSurfaceDiscovery,
-  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
   type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
-import { AUTHORED_PUBLIC_SURFACE_LASTMOD } from "@/server/public-surface-indexing-policy";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
 
 interface LocalizedHomeRouteProps {
@@ -36,6 +34,22 @@ interface LocalizedHomeRouteProps {
 
 export function generateStaticParams() {
   return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
+}
+
+/**
+ * One feed read and one topic read per request: `generateMetadata` and the
+ * page share them (React.cache). The request is keyed by its JSON form so the
+ * default request built in both places resolves to the same read.
+ */
+const loadFeedPage = cache((locale: PublicLocale, requestKey: string) =>
+  listPublicFeedPage(JSON.parse(requestKey) as PublicFeedRequest, locale),
+);
+const loadFeedTopics = cache((locale: PublicLocale) =>
+  listTrustedPublicFeedTopics(undefined, 6, locale),
+);
+
+function feedRequestKey(request: PublicFeedRequest) {
+  return JSON.stringify(request);
 }
 
 export async function generateMetadata({
@@ -54,14 +68,15 @@ export async function generateMetadata({
   }
 
   const content = getLocalizedHomeContent(localeParam);
-  const discovery = await resolvePublicSurfaceDiscoveryWithDeadline({
+  const discovery = await resolvePublicSurfaceDiscoveryFromLoad({
     consumerId: "localized_home",
-    evaluatedAt: new Date(),
-    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
     loadSource: async () => {
       const [feed, topics] = await Promise.all([
-        listPublicFeedPage(normalizePublicFeedRequest({}), localeParam),
-        listTrustedPublicFeedTopics(undefined, 6, localeParam),
+        loadFeedPage(
+          localeParam,
+          feedRequestKey(normalizePublicFeedRequest({})),
+        ),
+        loadFeedTopics(localeParam),
       ]);
       return buildHomeDiscoverySource(localeParam, content, feed, topics);
     },
@@ -74,13 +89,13 @@ export async function renderLocalizedHomePage(
   searchParams: Record<string, string | string[] | undefined> = {},
 ) {
   const request = normalizePublicFeedRequest(searchParams);
-  const feedPromise: Promise<PublicFeedPage> = listPublicFeedPage(
-    request,
+  const feedPromise: Promise<PublicFeedPage> = loadFeedPage(
     locale,
+    feedRequestKey(request),
   );
   const [feedResult, topicsResult, sessionResult] = await Promise.allSettled([
     feedPromise,
-    listTrustedPublicFeedTopics(undefined, 6, locale),
+    loadFeedTopics(locale),
     getSiteShellSessionState(),
   ]);
   const feed: PublicFeedPage =
@@ -133,23 +148,10 @@ function buildHomeDiscoverySource(
   feed: PublicFeedPage,
   topics: readonly TrustedPublicFeedTopic[],
 ): PublicSurfaceDiscoverySource {
-  const feedCopyText = Object.values(content.feed).flatMap((value) =>
-    typeof value === "string"
-      ? [value]
-      : Object.values(value).filter(
-          (item): item is string => typeof item === "string",
-        ),
-  );
   return {
     consumerId: "localized_home",
     candidateState: "candidate",
-    qualityClass: combinePublicProjectionQualityClasses(
-      feed.entries.map((entry) => entry.qualityClass),
-    ),
     visibleText: [
-      content.title,
-      content.description,
-      ...feedCopyText,
       ...feed.entries.flatMap((entry) => [
         entry.title,
         entry.excerpt,
@@ -162,10 +164,6 @@ function buildHomeDiscoverySource(
       ...feed.entries.flatMap((entry) => [entry.id, entry.object.id]),
       ...topics.map((topic) => `topic:${topic.slug}`),
     ],
-    meaningfulContentAt:
-      latestMeaningfulContentTimestamp(
-        feed.entries.map((entry) => entry.publishedAt),
-      ) ?? AUTHORED_PUBLIC_SURFACE_LASTMOD,
     canonicalPath: localizedPath(locale, "/"),
     equivalentLocales: [locale],
   };

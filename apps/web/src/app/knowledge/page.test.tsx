@@ -52,13 +52,14 @@ describe("/knowledge", () => {
 
     expect(html).toContain("Знания");
     expect(html).toContain("Регулярни наблюдения");
-    expect(html).not.toContain("Как да започнете жив запис на растение");
+    expect(html).toContain("Как да започнете жив запис на растение");
     expect(html).not.toContain("/garden");
     await expect(
       generateMetadata({ params: Promise.resolve({ locale: "bg" }) }),
     ).resolves.toMatchObject({
       title: "Знания | OverGarden",
-      robots: { index: false, follow: false },
+      robots: { index: true, follow: true },
+      alternates: { canonical: "/bg/knowledge" },
     });
   });
 

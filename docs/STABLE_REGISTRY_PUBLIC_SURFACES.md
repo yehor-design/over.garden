@@ -118,9 +118,9 @@ from the operator-only `STABLE_REGISTRY_RELEASE_CENTER` flag. The flag remains
 off until production proof is ready. Release Center stays unavailable on Vercel
 under its existing local-only safeguard.
 
-All four public routes use `PUBLIC_SURFACE_INDEXABILITY_THRESHOLD` through the
-shared public discovery inventory. A route whose visible candidate does not
-meet the threshold is `noindex` and emits no canonical/JSON-LD public facts.
+All four public routes go through the shared public discovery inventory
+(ADR-0022, D3): every live route is indexable. Only an empty listing is
+`noindex`, and only then does a route emit no canonical/JSON-LD public facts.
 There is intentionally no Stable Registry sitemap producer in OVE-256; one may
 be added only by a later slice that proves the same shared predicate for every
 listed detail record.

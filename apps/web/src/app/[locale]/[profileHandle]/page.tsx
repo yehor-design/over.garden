@@ -18,10 +18,8 @@ import {
   type PublicProfileEvidencePage,
 } from "@/server/public-profile-repository";
 import {
-  latestMeaningfulContentTimestamp,
-  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
   resolvePublicSurfaceDiscoveryForRequest,
-  resolvePublicSurfacePayloadWithDeadline,
+  resolvePublicSurfacePayload,
   resolveUnresolvedPublicSurfaceDiscovery,
   type PublicSurfaceDiscoveryResult,
   type PublicSurfaceDiscoverySource,
@@ -85,10 +83,8 @@ export async function generateMetadata({
   const routeHandle = routeHandleFromSegment(profileHandle);
   const bounded =
     isPublicLocale(localeParam) && routeHandle
-      ? await resolvePublicSurfacePayloadWithDeadline({
+      ? await resolvePublicSurfacePayload({
           consumerId: "localized_profile",
-          evaluatedAt: new Date(),
-          deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
           load: async () => {
             const routeState = await getCachedPublicProfileRouteState(
               routeHandle,
@@ -210,7 +206,6 @@ function buildProfileDiscoverySource(
   return {
     consumerId: "localized_profile",
     candidateState: "candidate",
-    qualityClass: page.qualityClass ?? "unverified",
     visibleText: [
       page.displayName,
       page.mention,
@@ -230,10 +225,6 @@ function buildProfileDiscoverySource(
       ...page.objects.map((object) => object.objectId),
       ...page.journals.map((journal) => journal.entryId),
     ],
-    meaningfulContentAt: latestMeaningfulContentTimestamp([
-      ...page.objects.map((object) => object.latestEntryDate),
-      ...page.journals.map((journal) => journal.publishedAt),
-    ]),
     canonicalPath: publicProfilePath(locale, page.handle),
     equivalentLocales: [locale],
   };

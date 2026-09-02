@@ -112,16 +112,13 @@ describe("public feed repository", () => {
       '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_visibility" = $2',
-    );
-    expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_lifecycle_state" = $3',
+      '"user_public_profiles"."profile_lifecycle_state" = $2',
     );
     expect(compiled.sql).toContain(
       '"user_public_profiles"."removed_at" is null',
     );
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $4');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $3');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -137,7 +134,6 @@ describe("public feed repository", () => {
     expect(compiled.sql).toMatch(/limit \$\d+/);
     expect(compiled.parameters).toEqual([
       "current",
-      "public",
       "active",
       "public",
       "active",

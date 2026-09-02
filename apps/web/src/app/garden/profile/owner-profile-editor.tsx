@@ -54,9 +54,6 @@ const COPY = {
     location: "Регіон",
     hidden: "Не показувати",
     region: "Показувати лише регіон",
-    visibility: "Видимість профілю",
-    public: "Публічний",
-    private: "Приватний",
     relationships: "Лічильники підписок",
     counts: "Показувати",
     save: "Зберегти профіль",
@@ -90,9 +87,6 @@ const COPY = {
     location: "Регион",
     hidden: "Не показвай",
     region: "Показвай само регион",
-    visibility: "Видимост на профила",
-    public: "Публичен",
-    private: "Частен",
     relationships: "Броячи за следване",
     counts: "Показвай",
     save: "Запази профила",
@@ -126,9 +120,6 @@ const COPY = {
     location: "Регион",
     hidden: "Не показывать",
     region: "Показывать только регион",
-    visibility: "Видимость профиля",
-    public: "Публичный",
-    private: "Приватный",
     relationships: "Счётчики подписок",
     counts: "Показывать",
     save: "Сохранить профиль",
@@ -535,25 +526,6 @@ export function OwnerProfileEditor({
           <div className="grid gap-5 sm:grid-cols-2">
             <fieldset className="grid gap-2">
               <legend className="text-sm font-semibold text-foreground">
-                {copy.visibility}
-              </legend>
-              <SegmentedChoice
-                name="profileVisibility"
-                value={editor.profileVisibility}
-                options={[
-                  { value: "public", label: copy.public },
-                  { value: "private", label: copy.private },
-                ]}
-                onChange={(value) =>
-                  setEditor((current) => ({
-                    ...current,
-                    profileVisibility: value as "public" | "private",
-                  }))
-                }
-              />
-            </fieldset>
-            <fieldset className="grid gap-2">
-              <legend className="text-sm font-semibold text-foreground">
                 {copy.relationships}
               </legend>
               <SegmentedChoice
@@ -610,7 +582,7 @@ export function OwnerProfileEditor({
           profile={preview}
           locale={locale}
           viewer={{ kind: "guest" }}
-          previewVisibility={editor.profileVisibility}
+          preview
           headingLevel="h3"
         />
       </section>
@@ -747,7 +719,6 @@ function profileEditorStatus(
       "bio",
       "languages",
       "region",
-      "profile_visibility",
       "relationship_visibility",
     ].includes(status)
   )

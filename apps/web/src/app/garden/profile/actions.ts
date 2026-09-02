@@ -78,7 +78,6 @@ export async function updatePublicProfileAction(formData: FormData) {
     languages: formData.getAll("languages").map(String),
     locationVisibility: String(formData.get("locationVisibility") ?? "hidden"),
     coarseRegionCode: nullableString(formData.get("coarseRegionCode")),
-    profileVisibility: String(formData.get("profileVisibility") ?? "public"),
     relationshipVisibility: String(
       formData.get("relationshipVisibility") ?? "counts",
     ),

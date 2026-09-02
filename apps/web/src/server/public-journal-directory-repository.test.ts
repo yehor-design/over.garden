@@ -185,9 +185,6 @@ describe("public journal directory query", () => {
       '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_visibility" =',
-    );
-    expect(compiled.sql).toContain(
       '"user_public_profiles"."profile_lifecycle_state" =',
     );
     expect(compiled.sql).toContain(

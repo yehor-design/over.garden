@@ -19,10 +19,8 @@ import {
 } from "@/server/journal-repository";
 import { getOwnerJournalEntryControl } from "@/server/owner-journal-entry-control";
 import {
-  latestMeaningfulContentTimestamp,
-  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
   resolvePublicSurfaceDiscoveryForRequest,
-  resolvePublicSurfacePayloadWithDeadline,
+  resolvePublicSurfacePayload,
   resolveUnresolvedPublicSurfaceDiscovery,
   type PublicSurfaceDiscoveryResult,
   type PublicSurfaceDiscoverySource,
@@ -46,10 +44,8 @@ export async function generateMetadata({
   const { locale: localeParam, slug } = await params;
   if (!isPublicLocale(localeParam)) return missingMetadata();
 
-  const bounded = await resolvePublicSurfacePayloadWithDeadline({
+  const bounded = await resolvePublicSurfacePayload({
     consumerId: "localized_journal_entry",
-    evaluatedAt: new Date(),
-    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
     load: async () => {
       const lookup = await getPublicJournalEntryLookup(
         slug,
@@ -211,10 +207,7 @@ function buildJournalDiscoverySource(
         : [];
   return {
     consumerId: "localized_journal_entry",
-    candidateState: page.entry.publicNoindex
-      ? "not_public_candidate"
-      : "candidate",
-    qualityClass: page.qualityClass ?? "unverified",
+    candidateState: "candidate",
     visibleText: [
       page.entry.title,
       page.entry.body,
@@ -228,9 +221,6 @@ function buildJournalDiscoverySource(
       ...objectIds,
       ...topics.map((topic) => `topic:${topic.slug}`),
     ],
-    meaningfulContentAt: latestMeaningfulContentTimestamp([
-      page.entry.publishedAt,
-    ]),
     canonicalPath: publicJournalEntryPath(page.entry.publicSlug),
     equivalentLocales: [],
   };

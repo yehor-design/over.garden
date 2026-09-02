@@ -305,14 +305,10 @@ describe("public profile handle contracts", () => {
     expect(followers.sql).toContain('inner join "user_public_profiles"');
     expect(followers.sql).toContain('"profile_follows"."follow_state" =');
     expect(followers.sql).toContain(
-      '"follower_profiles"."profile_visibility" =',
-    );
-    expect(followers.sql).toContain(
       '"follower_profiles"."profile_lifecycle_state" =',
     );
     expect(following.sql).toContain('from "profile_follows"');
     expect(following.sql).toContain('inner join "user_public_profiles"');
-    expect(following.sql).toContain('"target_profiles"."profile_visibility" =');
     expect(following.sql).toContain(
       '"target_profiles"."profile_lifecycle_state" =',
     );
@@ -333,7 +329,6 @@ describe("public profile handle contracts", () => {
       '"user_handle_registry"."normalized_handle" =',
     );
     expect(compiled.sql).toContain('"lifecycle_state"');
-    expect(compiled.sql).toContain('"profile_visibility"');
     expect(compiled.sql).toContain('"profile_lifecycle_state"');
     expect(compiled.sql).toContain('"removed_at"');
     expect(compiled.sql).not.toMatch(/email|provider|session|token|journal/i);
@@ -367,7 +362,6 @@ describe("public profile handle contracts", () => {
     expect(
       classifyPublicProfileLifecycle({
         handleLifecycleState: "retired",
-        profileVisibility: "public",
         profileLifecycleState: "active",
         removedAt: null,
       }),
@@ -378,7 +372,6 @@ describe("public profile handle contracts", () => {
     expect(
       classifyPublicProfileLifecycle({
         handleLifecycleState: "current",
-        profileVisibility: "public",
         profileLifecycleState: "active",
         removedAt: null,
       }),
@@ -388,37 +381,21 @@ describe("public profile handle contracts", () => {
       null,
       {
         handleLifecycleState: "retired",
-        profileVisibility: "private",
-        profileLifecycleState: "active",
-        removedAt: null,
-      },
-      {
-        handleLifecycleState: "retired",
-        profileVisibility: "public",
         profileLifecycleState: "removed",
         removedAt: "2026-07-18T12:00:00.000Z",
       },
       {
         handleLifecycleState: "current",
-        profileVisibility: null,
         profileLifecycleState: null,
         removedAt: null,
       },
       {
         handleLifecycleState: "current",
-        profileVisibility: "private",
-        profileLifecycleState: "active",
-        removedAt: null,
-      },
-      {
-        handleLifecycleState: "current",
-        profileVisibility: "public",
         profileLifecycleState: "removed",
         removedAt: "2026-07-18T12:00:00.000Z",
       },
       {
         handleLifecycleState: "unknown",
-        profileVisibility: "public",
         profileLifecycleState: "active",
         removedAt: null,
       },
@@ -615,7 +592,6 @@ describe("public profile handle contracts", () => {
     expect(tableBody).toContain("languages text[]");
     expect(tableBody).toContain("location_visibility text");
     expect(tableBody).toContain("coarse_region_code text");
-    expect(tableBody).toContain("profile_visibility text");
     expect(tableBody).toContain("profile_lifecycle_state text");
     expect(tableBody).toContain("relationship_visibility text");
     expect(tableBody).toContain("avatar_media_asset_id uuid");

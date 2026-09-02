@@ -697,10 +697,7 @@ describe("journal repository query contracts", () => {
       '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_visibility" = $4',
-    );
-    expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_lifecycle_state" = $5',
+      '"user_public_profiles"."profile_lifecycle_state" = $4',
     );
     expect(compiled.sql).toContain(
       '"user_public_profiles"."removed_at" is null',
@@ -712,9 +709,9 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"user_public_profiles"."handle"');
     expect(compiled.sql).toContain('"plant_objects"."coarse_region_code"');
     expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
-    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $6');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $7');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $8');
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $6');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $7');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -729,7 +726,6 @@ describe("journal repository query contracts", () => {
       "seeded",
       "confirmed",
       "current",
-      "public",
       "active",
       "first-flowers-abc123",
       "public",
@@ -743,7 +739,7 @@ describe("journal repository query contracts", () => {
       "first-flowers-abc123",
     ).compile();
 
-    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $6');
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $5');
     expect(compiled.sql).toContain('left join "catalog_items"');
     expect(compiled.sql).toContain('"catalog_items"."public_slug"');
     expect(compiled.sql).toContain('left join "user_handle_registry"');
@@ -755,10 +751,7 @@ describe("journal repository query contracts", () => {
       '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_visibility" = $4',
-    );
-    expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_lifecycle_state" = $5',
+      '"user_public_profiles"."profile_lifecycle_state" = $4',
     );
     expect(compiled.sql).toContain(
       '"user_public_profiles"."removed_at" is null',
@@ -780,7 +773,6 @@ describe("journal repository query contracts", () => {
       "seeded",
       "confirmed",
       "current",
-      "public",
       "active",
       "first-flowers-abc123",
     ]);
@@ -949,10 +941,7 @@ describe("journal repository query contracts", () => {
       '"mentioned_profiles"."normalized_handle" = "mentioned_handles"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"mentioned_profiles"."profile_visibility" = $3',
-    );
-    expect(compiled.sql).toContain(
-      '"mentioned_profiles"."profile_lifecycle_state" = $4',
+      '"mentioned_profiles"."profile_lifecycle_state" = $3',
     );
     expect(compiled.sql).toContain('"mentioned_profiles"."removed_at" is null');
     expect(compiled.sql).toContain('"mentioned_profiles"."handle" as "handle"');
@@ -986,7 +975,6 @@ describe("journal repository query contracts", () => {
         visibility: "public",
         lifecycleState: "active",
         publicSlug: "pershyi-urozhai",
-        publicNoindex: true,
         publishedAt: "2026-07-10T10:00:00.000Z",
         publicGoneAt: null,
         spaceId: "00000000-0000-4000-8000-000000000002",

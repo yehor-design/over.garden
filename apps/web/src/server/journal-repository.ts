@@ -2,6 +2,7 @@ import "server-only";
 import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 
 import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
+import { cache } from "react";
 
 import { db } from "@/db";
 import type {
@@ -348,7 +349,6 @@ export interface PublicJournalEntryPage {
     entryScope: EntryScope;
     publicSlug: string;
     publicPath: string;
-    publicNoindex: boolean;
     publishedAt: Date | string | null;
   };
   context: PublicJournalEntryContext;
@@ -462,7 +462,6 @@ interface PublicJournalEntryRootRow {
   visibility: string;
   lifecycleState: string;
   publicSlug: string | null;
-  publicNoindex: boolean;
   publishedAt: Date | string | null;
   publicGoneAt: Date | string | null;
   spaceId: string;
@@ -522,7 +521,6 @@ interface PublicJournalEntryRelatedRow {
 export interface GonePublicJournalEntryPage {
   publicSlug: string;
   publicGoneAt: Date | string;
-  publicNoindex: boolean;
 }
 
 export type PublicJournalEntryLookup =
@@ -2599,7 +2597,10 @@ export async function getPublicJournalEntryLifecycleLookup(
     : { status: "not_found" };
 }
 
-export async function getPublicJournalEntryLookup(
+/** One lookup per request: `generateMetadata` and the page share it (React.cache). */
+export const getPublicJournalEntryLookup = cache(loadPublicJournalEntryLookup);
+
+async function loadPublicJournalEntryLookup(
   publicSlug: string,
   executor: QueryExecutor = db,
   locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
@@ -2619,7 +2620,6 @@ export async function getPublicJournalEntryLookup(
       entry: {
         publicSlug: row.publicSlug,
         publicGoneAt: row.publicGoneAt,
-        publicNoindex: row.publicNoindex,
       },
     };
   }
@@ -2784,7 +2784,6 @@ export function serializePublicJournalEntryPage(input: {
         locale,
         root.publicSlug ?? "",
       ),
-      publicNoindex: root.publicNoindex,
       publishedAt: root.publishedAt,
     },
     context,
@@ -3193,7 +3192,6 @@ export function buildDeleteJournalEntryQuery(
       entry_date: sql<Date>`current_date`,
       lifecycle_state: "deleted_retention",
       visibility: "public",
-      public_noindex: true,
       archived_at: null,
       deleted_at: sql<Date>`now()`,
       purge_after: sql<Date>`now() + interval '7 days'`,
@@ -3663,7 +3661,6 @@ export function buildPublicJournalEntryLookupQuery(
           "=",
           "user_handle_registry.normalized_handle",
         )
-        .on("user_public_profiles.profile_visibility", "=", "public")
         .on("user_public_profiles.profile_lifecycle_state", "=", "active")
         .on("user_public_profiles.removed_at", "is", null),
     )
@@ -3679,7 +3676,6 @@ export function buildPublicJournalEntryLookupQuery(
       "journal_entries.visibility as visibility",
       "journal_entries.lifecycle_state as lifecycleState",
       "journal_entries.public_slug as publicSlug",
-      "journal_entries.public_noindex as publicNoindex",
       "journal_entries.published_at as publishedAt",
       "journal_entries.public_gone_at as publicGoneAt",
       "spaces.id as spaceId",
@@ -3990,7 +3986,6 @@ export function buildPublicJournalEntryPersonMentionsQuery(
           "mentioned_handles.normalized_handle",
         )
         .on("mentioned_profiles.handle_registry_state", "=", "current")
-        .on("mentioned_profiles.profile_visibility", "=", "public")
         .on("mentioned_profiles.profile_lifecycle_state", "=", "active")
         .on("mentioned_profiles.removed_at", "is", null),
     )
@@ -4232,7 +4227,6 @@ async function atomicJournalEntryValues(
     visibility: "public",
     lifecycle_state: "active",
     public_slug: createAtomicPublicSlug(input.title, atomic.publishId),
-    public_noindex: true,
     published_at: now,
     first_publication_disclosure_version: disclosureLogged
       ? FIRST_PUBLICATION_DISCLOSURE_VERSION
@@ -4855,12 +4849,10 @@ function isGonePublicEntry(row: {
   publicSlug: string | null;
   publicGoneAt: Date | string | null;
   lifecycleState: EntryLifecycleState | string;
-  publicNoindex: boolean;
 }): row is {
   publicSlug: string;
   publicGoneAt: Date | string;
   lifecycleState: "deleted_retention" | "archived";
-  publicNoindex: boolean;
 } {
   return (
     row.publicSlug !== null &&

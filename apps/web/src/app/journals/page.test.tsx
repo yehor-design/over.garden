@@ -103,6 +103,7 @@ describe("/journals", () => {
     expect(mocks.listFacets).toHaveBeenCalledTimes(2);
     expect(html).toContain('lang="bg"');
     expect(html).toContain("Дневници");
+    // The mocked directory lists nothing: an empty listing stays noindex (ADR-0022, D3).
     expect(metadata).toMatchObject({
       robots: { index: false, follow: false },
     });

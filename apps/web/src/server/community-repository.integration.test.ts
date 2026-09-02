@@ -55,8 +55,6 @@ describe("OVE-239 canonical bounded community journey", () => {
       '"journal_entries"."public_gone_at" is null',
       '"journal_entries"."public_slug" is not null',
       '"journal_entries"."published_at" is not null',
-      '"user_public_profiles"."profile_visibility" =',
-      '"user_public_profiles"."removed_at" is null',
     ]) {
       expect(compiled.sql).toContain(predicate);
     }

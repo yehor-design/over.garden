@@ -331,7 +331,6 @@ export function buildPublicObjectPassportRootQuery(
           "=",
           "user_handle_registry.normalized_handle",
         )
-        .on("user_public_profiles.profile_visibility", "=", "public")
         .on("user_public_profiles.profile_lifecycle_state", "=", "active")
         .on("user_public_profiles.removed_at", "is", null),
     )

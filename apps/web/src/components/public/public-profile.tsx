@@ -58,7 +58,7 @@ export function PublicProfileView({
   locale,
   viewer,
   actionStatus,
-  previewVisibility,
+  preview = false,
   headingLevel = "h1",
   resumeAction = null,
   resumeControl = null,
@@ -67,7 +67,8 @@ export function PublicProfileView({
   locale: InterfaceLocale;
   viewer: PublicProfileViewer;
   actionStatus?: string | null;
-  previewVisibility?: "public" | "private";
+  /** The owner's editor preview shows the owner-facing empty states. */
+  preview?: boolean;
   headingLevel?: "h1" | "h2" | "h3";
   resumeAction?: AuthIntentAction | null;
   resumeControl?: string | null;
@@ -80,8 +81,7 @@ export function PublicProfileView({
   const moreJournals = profile.journals.slice(JOURNAL_PREVIEW_SIZE);
   const regionLabel = publicProfileRegionLabel(profile.coarseRegionCode);
   const actionMessage = profileActionMessage(actionStatus, locale);
-  const ownerEmptyState =
-    viewer.kind === "owner" || previewVisibility !== undefined;
+  const ownerEmptyState = viewer.kind === "owner" || preview;
   const ProfileHeading = headingLevel;
 
   return (
@@ -104,11 +104,6 @@ export function PublicProfileView({
                 <p className="text-xs font-semibold text-muted-foreground uppercase">
                   {copy.profileLabel}
                 </p>
-                {previewVisibility === "private" ? (
-                  <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
-                    {copy.privateProfile}
-                  </span>
-                ) : null}
               </div>
               <ProfileHeading className="mt-1 text-2xl leading-tight font-semibold break-words text-foreground sm:text-3xl">
                 {profile.displayName}

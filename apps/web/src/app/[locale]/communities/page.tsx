@@ -19,17 +19,13 @@ import {
   type PublicCommunityDirectoryItem,
 } from "@/server/community-repository";
 import {
-  combinePublicProjectionQualityClasses,
-  latestMeaningfulContentTimestamp,
-  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
   resolvePublicSurfaceDiscoveryForRequest,
-  resolvePublicSurfaceDiscoveryWithDeadline,
+  resolvePublicSurfaceDiscoveryFromLoad,
   resolveUnresolvedPublicSurfaceDiscovery,
   type PublicSurfaceDiscoveryResult,
   type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
-import { AUTHORED_PUBLIC_SURFACE_LASTMOD } from "@/server/public-surface-indexing-policy";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
 
 export const dynamic = "force-dynamic";
@@ -55,10 +51,8 @@ export async function generateMetadata({
     };
   }
   const locale = localeParam;
-  const discovery = await resolvePublicSurfaceDiscoveryWithDeadline({
+  const discovery = await resolvePublicSurfaceDiscoveryFromLoad({
     consumerId: "localized_community_directory",
-    evaluatedAt: new Date(),
-    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
     loadSource: async () =>
       buildCommunityDirectoryDiscoverySource(
         locale,
@@ -103,7 +97,6 @@ function buildCommunityDirectoryDiscoverySource(
   locale: PublicLocale,
   communities: readonly PublicCommunityDirectoryItem[],
 ): PublicSurfaceDiscoverySource {
-  const copy = getCommunityCopy(locale);
   const active = communities.filter(
     (community) =>
       community.lifecycleState === "active" && community.navigationReady,
@@ -111,22 +104,13 @@ function buildCommunityDirectoryDiscoverySource(
   return {
     consumerId: "localized_community_directory",
     candidateState: "candidate",
-    qualityClass: combinePublicProjectionQualityClasses(
-      active.map((community) => community.qualityClass),
-    ),
     visibleText: [
-      copy.directoryTitle,
-      copy.directoryDescription,
       ...active.flatMap((community) => {
         const content = getCommunityContentCopy(locale, community.contentKey);
         return [content.name, content.description];
       }),
     ],
     distinctPublicEntityIds: active.map((community) => community.id),
-    meaningfulContentAt:
-      latestMeaningfulContentTimestamp(
-        active.map((community) => community.updatedAt),
-      ) ?? AUTHORED_PUBLIC_SURFACE_LASTMOD,
     canonicalPath: localizedPath(locale, "/communities"),
     equivalentLocales: getLanguageSwitcherLocales(locale),
   };
