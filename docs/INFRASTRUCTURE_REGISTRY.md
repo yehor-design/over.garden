@@ -504,6 +504,31 @@ Connection pool (2026-09-02):
   string names the pool as its database and uses a different port from the
   direct one; the direct connection remains `defaultdb` on `25060`.
 
+Cutover receipt (2026-09-02):
+
+- Production `DATABASE_URL` now resolves to the pool; `DIRECT_URL` still
+  resolves to the direct endpoint. They differ, which is the signal
+  `isPooledDatabaseConnection` reads, so the application pool widened without a
+  second deployment.
+- The pooled endpoint was proven to be a pooler before the cutover, not
+  assumed. The pool name is not a Postgres database: asking the direct port for
+  it answers `database "overgarden-app-pool" does not exist`, while the pooler
+  port serves it. The direct port serving `defaultdb` was the control.
+- Authenticated garden workspace, the surface this work targeted, measured
+  after the cutover. Full page load over four samples: `1227`, `533`, `393`,
+  `401` ms — a warm band of roughly `393`-`533` ms. Twelve document-only
+  samples: median `169` ms, maximum `234` ms, every response `200`. No section
+  reported a failure class in any of the sixteen observations.
+- `docs/GARDEN_WORKSPACE_SECTION_OBSERVABILITY.md` recorded a warm page latency
+  of `2205`-`3426` ms on 2026-09-01, measured the same way. That is the
+  comparison, and it is cumulative: the function region moved to `fra1`, a dead
+  join left the inventory summary, `journal_entries_owner_recent_idx` landed,
+  and the pool widened. No single change is isolated by these numbers.
+- Public unauthenticated paths were measured before and after and did not move:
+  medians `199`-`246` ms before, `202`-`211` ms after. Expected — they are
+  CDN-served and never reach the four-round-trip inventory read. A reader
+  looking for the pool's effect there will not find it.
+
 Worker and Meilisearch Droplet:
 
 Runtime classification: this production worker/search surface is `production-linux-required` under `docs/CONTAINER_RUNTIME_POLICY.md`. Apple Container remains the preferred supported-Mac local runtime, but it is not the DigitalOcean Linux droplet process manager. OVE-76 confirms Docker Compose remains the current production process manager until a separate non-Apple Linux replacement is live-proven.
