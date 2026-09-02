@@ -202,21 +202,8 @@ release, search document, provider effect, or deployment.
 
 ## Machine enforcement
 
-From `apps/web`, run:
-
-```bash
-pnpm stable-registry:canon:check
-pnpm exec vitest run scripts/check-stable-registry-canon.test.ts
-```
-
-The checker owns the closed consumer inventory, requires ADR-0016, ADR-0020,
-and this specification, verifies migration allocation and source/product
-separation,
-classifies OVE-253 wording as historical evidence, rejects a duplicate current
-authority, stale official-manifest future gate, raw-to-product projection,
-mutable identity/release wording, missing consumer, unknown authority consumer,
-or weakened location redaction, and returns a deterministic canon digest.
-
-`--inject-consumer-timeout` is the bounded no-wedge proof. It emits only a
-`timed_out` class and rejects late evidence; it performs no provider or data
-operation.
+The dedicated canon checker was retired by ADR-0022 (OVE-362). Migration
+numbers are reserved in `docs/MIGRATION_ALLOCATION.md`, and the migration
+loader test in `apps/web/scripts` fails when a numbered SQL file is missing
+from the manifest. Source/product separation is enforced by the repositories
+and their unit tests, not by a document scanner.

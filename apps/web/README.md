@@ -18,11 +18,11 @@ Current stack in this package:
   reads journal content or creates durable browser state.
 - Meilisearch client for derived public search.
 
-ADR-0018 is the current MVP posture: unresolved authorization/ownership/session
-conditions serve with an accepted cross-account-read exposure, public candidates
-use one measured quality threshold, and admin tools belong in the account product.
-OVE-330 through OVE-339 own the runtime and final authority convergence; this
-package description does not claim those child effects have already shipped.
+ADR-0022 (2026-09-02) is the current authority for this package: every live
+public page is indexable, public HTML is cached with tags, sessions are checked
+on the server only, admin pages live in the account menu, and the process is
+the engineering minimum described in `AGENTS.md`. Tasks OVE-362 through
+OVE-373 land those changes area by area.
 
 ## Local Development
 
@@ -82,9 +82,5 @@ itself to `127.0.0.1`.
 `/skeleton` provides scoped SSR readback; the gated
 `/api/skeleton/journal` endpoint retains the local read/write integration proof.
 
-The boundary is machine-checked in source and fresh production build output:
-
-```bash
-pnpm walking-skeleton:boundary:check
-pnpm build
-```
+The boundary is enforced by the proxy and the route handlers themselves; there
+is no separate build-output checker.

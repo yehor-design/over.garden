@@ -94,7 +94,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm mainline:closeout:check
+
 ```
 
 Focused self-serve and owner-boundary checks:
@@ -103,8 +103,7 @@ Focused self-serve and owner-boundary checks:
 cd apps/web
 pnpm smoke:self-serve-providers
 pnpm smoke:admin-role
-pnpm test:a11y
-pnpm localization:coverage:browser
+
 ```
 
 Authenticated browser evidence must prove, without recording identities or
@@ -211,4 +210,4 @@ Durable production capabilities established by those releases—managed
 Postgres, R2 derivative privacy, Meilisearch projection boundaries, server
 idempotency, honest network-failure recovery, public lifecycle, self-serve auth, consent, and
 exact-main deployment proof—remain governed by their current focused runbooks
-and `docs/MAINLINE_CLOSEOUT.md`.
+and `AGENTS.md`.

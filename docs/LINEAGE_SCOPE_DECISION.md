@@ -9,8 +9,8 @@ slices. Lineage and the social graph are MVP scope. They must not depend on a
 product-access invitation, cohort grant, pilot-health page, founder rehearsal,
 or manual owner learning form.
 
-Any new or materially rewritten execution task affecting this boundary must
-follow `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`.
+Any new execution task affecting this boundary uses the task template in
+`AGENTS.md`.
 
 ## Current boundary
 

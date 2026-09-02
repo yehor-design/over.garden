@@ -85,7 +85,7 @@ link. It never runs against the production domain.
 
 ```bash
 cd apps/web
-ACCESSIBILITY_BASE_URL=http://127.0.0.1:3000 pnpm test:a11y
+
 ```
 
 The production-safe smoke is read-only and public: it proves one Bulgaria

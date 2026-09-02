@@ -65,7 +65,7 @@ Status: GitHub-hosted Actions cannot start jobs (`Actions budget is preventing f
 Operational bypass in force:
 
 - `.github/workflows/ci.yml` and `.github/workflows/matching-image.yml` are `workflow_dispatch` only (no auto `push` / `pull_request` triggers).
-- Merge / production gate while freeze lasts: Vercel deployment `READY` for the exact SHA plus local proof (`pnpm typography:assets:check`, focused vitest, `pnpm mainline:closeout:check` from `main`).
+- Merge gate: green CI on the pull request (install, bootstrap, generated-types check, lint, typecheck, banned-dependency gate, tests, build) plus a `READY` Vercel deployment for the merged SHA.
 - Cleared Actions artifacts and listed caches during OVE-208; usage meters may lag 6–12 hours.
 - When included minutes/storage recover, restore auto `pull_request`/`push` triggers on CI and optional `push` on matching-image; keep `KEEP_COUNT=0` and short retention.
 

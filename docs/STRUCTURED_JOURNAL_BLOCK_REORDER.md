@@ -56,7 +56,7 @@ OVE317_DEVICE_EQUIVALENT_AUTHORIZATION=/absolute/content-free-authorization.json
 OVE317_ANDROID_CDP_URL=http://127.0.0.1:9224 \
 OVE317_ADB_PATH=/absolute/android-sdk/platform-tools/adb \
   pnpm smoke:lexical-journal-browser-matrix
-pnpm localization:coverage:check
+
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
