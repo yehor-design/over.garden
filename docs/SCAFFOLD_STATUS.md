@@ -9,8 +9,7 @@ This file is the concise current-state mirror for the implemented OverGarden
 runtime. Authenticated Linear and the issue-specific execution contract remain
 the queue authority; `docs/SDD_VERTICAL_SLICE_ROADMAP.md` remains the vertical
 slice/dependency authority; `docs/TECH_STACK_DECISIONS.md` plus ADR-0014 as
-superseded by ADR-0017 and ADR-0019 remain the stack authority. Every new or materially rewritten Linear task must follow
-`docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`.
+superseded by ADR-0017 and ADR-0019 remain the stack authority. Every Linear task uses the template in `AGENTS.md`.
 
 ADR-0017 and ADR-0019 are the current save authority. Authoring is transient in
 the active tab, image conversion produces the final WebP in the browser, and
@@ -200,13 +199,12 @@ Core gates:
 
 ```bash
 pnpm auth:security:check
-pnpm mutation:surface:enforce
-pnpm localization:coverage:check
+
 pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm exec tsx scripts/verify-retired-journal-media-runtime.ts
+
 git diff --check
 ```
 
@@ -223,8 +221,7 @@ pnpm exec vitest run \
 
 pnpm smoke:admin-role
 pnpm smoke:self-serve-providers
-pnpm test:a11y
-pnpm localization:coverage:browser
+
 ```
 
 Local bootstrap can additionally fail on an independently unhealthy MinIO
@@ -246,7 +243,7 @@ A repository change is not Done until:
 5. authenticated production browser/provider/database proof passes for the
    changed behavior;
 6. temporary data/config/evidence is cleaned up;
-7. `pnpm mainline:closeout:check` passes from a clean current-main worktree;
+7. CI is green on the merged commit;
 8. Linear description, relations, terminal receipt, and Done state read back
    exactly.
 

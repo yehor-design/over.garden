@@ -1,9 +1,5 @@
 name: CI
 
-# Auto triggers were paused during the account Actions budget freeze, which
-# made jobs end with zero executed steps. The repository is now public, so
-# GitHub-hosted runners no longer draw on that budget and the pre-merge gate is
-# executed CI again, not Vercel READY plus local proof (OVE-233).
 on:
   pull_request:
     branches:
@@ -14,9 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: write
   contents: read
-  deployments: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -26,12 +20,10 @@ jobs:
   web:
     name: Web app
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    # ci-required: GitHub-hosted Ubuntu uses Actions service containers and
-    # Docker for ad hoc services. This is a platform-bound exception, not a
-    # local Docker Desktop prerequisite. Do not move CI to Apple Container
-    # unless runner support, cost/availability, and proof commands are
-    # recorded in docs/CONTAINER_RUNTIME_POLICY.md.
+    timeout-minutes: 30
+    # GitHub-hosted Ubuntu uses Actions service containers and Docker for ad
+    # hoc services. This is a platform-bound exception, not a local Docker
+    # Desktop prerequisite; see docs/CONTAINER_RUNTIME_POLICY.md.
     services:
       postgres:
         image: postgres:18-alpine
@@ -62,14 +54,13 @@ jobs:
       DIRECT_URL: postgresql://overgarden:overgarden@localhost:5432/overgarden
       DATABASE_POOL_MAX: "1"
       DATABASE_SSL: "false"
-      # OVE-219 must exercise transactional outbox leasing against this
-      # PostgreSQL service; the test stays opt-in for non-CI local unit runs.
+      # Transactional outbox leasing runs against this PostgreSQL service; the
+      # test stays opt-in for non-CI local unit runs.
       OVE219_POSTGRES_INTEGRATION: "true"
       R2_ENDPOINT: http://localhost:9000
       R2_ACCESS_KEY_ID: overgarden-ci
       R2_SECRET_ACCESS_KEY: overgarden-ci-secret
       R2_FORCE_PATH_STYLE: "true"
-      R2_QUARANTINE_BUCKET: overgarden-quarantine
       R2_PUBLIC_BUCKET: overgarden-public
       R2_PUBLIC_BASE_URL: http://localhost:9000/overgarden-public
       MEILISEARCH_HOST: http://localhost:7700
@@ -79,8 +70,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
@@ -96,53 +85,15 @@ jobs:
 
       - name: Generate isolated versioned Better Auth CI fixture
         run: |
-          # Keep the production-shaped `next start` gate on the same strict
-          # versioned policy as Vercel without placing deterministic or legacy
-          # material in the workflow. This value exists only for this run and
-          # is never printed, uploaded, or used outside localhost CI.
+          # This value exists only for this run and is never printed, uploaded,
+          # or used outside localhost CI.
           node -e 'const { randomBytes } = require("node:crypto"); console.log(`BETTER_AUTH_SECRETS=2:${randomBytes(32).toString("base64url")}`); console.log("BETTER_AUTH_CURRENT_SECRET_VERSION=2")' >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # The Linear task validator resolves every declared verification
-      # executable in PATH. Task contracts verify the Python matching tier
-      # through `uv`, so this job needs the same pinned `uv` as the matching
-      # job or the validator reports false `verification_executable_missing`.
-      - name: Set up Python for task-standard executable resolution
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install uv for task-standard executable resolution
-        run: python -m pip install uv==0.11.24
-
-      - name: Verify AI-executable Linear task standard
-        run: pnpm linear:task:standard:check
-
-      - name: Verify online-only canon classification
-        run: pnpm online-only:canon:check
-
-      - name: Verify online-only retirement closure
-        run: pnpm verify:online-only-retirement -- --prove-determinism
-
-      - name: Verify MVP posture canon classification
-        run: pnpm mvp-posture:canon:check
-
-      - name: Verify pinned typography assets
-        run: pnpm typography:assets:check
-
-      - name: Check mainline closeout ledger
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: pnpm mainline:closeout:check
-
       - name: Start MinIO
         run: |
-          # ci-required: GitHub Actions runs this job on Ubuntu, where Apple
-          # Container is not the service-container runtime. This does not make
-          # Docker Desktop a supported-Mac local prerequisite.
-          # See docs/CONTAINER_RUNTIME_POLICY.md.
           docker run --detach --rm \
             --name overgarden-ci-minio \
             -p 9000:9000 \
@@ -150,8 +101,6 @@ jobs:
             -e MINIO_ROOT_USER=overgarden-ci \
             -e MINIO_ROOT_PASSWORD=overgarden-ci-secret \
             minio/minio:latest server /data --console-address ":9001"
-
-          sleep 2
 
           for attempt in {1..30}; do
             if curl -fsS http://localhost:9000/minio/health/ready >/dev/null 2>&1; then
@@ -195,124 +144,14 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Verify localization route and state coverage
-        run: pnpm localization:coverage:check
-
-      - name: Verify Drive2-parity closeout coverage
-        run: pnpm drive2:closeout:check
+      - name: Banned dependencies
+        run: pnpm check:banned-dependencies
 
       - name: Test
         run: pnpm test
 
       - name: Build
         run: pnpm build
-
-      # The Google Sans Fallback face resolves Arial first and then the
-      # metric-compatible Liberation Sans / Arimo. Ubuntu runners ship no Arial,
-      # so without one of those installed the face stays unresolved, its metric
-      # overrides never apply, and the swap shifts layout. Provide the same
-      # metrics real clients get instead of relaxing the layout-shift gate.
-      - name: Install metric-compatible fallback fonts
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y fonts-liberation
-          fc-match Arial
-          fc-match "Liberation Sans"
-
-      - name: Install Playwright performance, typography, and accessibility browsers
-        run: pnpm exec playwright install --with-deps chromium firefox webkit
-
-      - name: Verify responsive and accessibility matrix
-        env:
-          PUBLIC_SITE_URL: http://localhost:3000
-          DATABASE_POOL_MAX: "4"
-          VISUAL_FIXTURES_ENABLED: "true"
-          VISUAL_FIXTURES_TARGET: local
-          VISUAL_FIXTURES_DATABASE: overgarden
-          VISUAL_FIXTURES_ALLOW_PREVIEW: "false"
-          ACCESSIBILITY_BASE_URL: http://localhost:3000
-        run: |
-          pnpm visual:fixtures:seed
-          pnpm visual:fixtures:journal-create -- reset all
-          pnpm visual:fixtures:journal-create -- run all
-          pnpm visual:fixtures:journal-create -- verify all
-          pnpm visual:fixtures:journal-create -- reset all
-          pnpm visual:fixtures:verify
-          pnpm start --hostname 127.0.0.1 --port 3000 > /tmp/overgarden-a11y-server.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid"' EXIT
-
-          for attempt in {1..60}; do
-            if curl -fsS http://localhost:3000/__visual-fixtures >/dev/null 2>&1; then
-              pnpm cwv:check -- --base-url http://localhost:3000 --environment local --sha "$GITHUB_SHA" --output "$RUNNER_TEMP/ove337-core-web-vitals.json"
-              TYPOGRAPHY_BASE_URL=http://localhost:3000 pnpm typography:browser -- --sha "$GITHUB_SHA" --output "$RUNNER_TEMP/ove208-typography-browser.json" --screenshot-dir "$RUNNER_TEMP/ove208-typography-screenshots"
-              pnpm test:a11y
-              exit 0
-            fi
-            sleep 1
-          done
-
-          cat /tmp/overgarden-a11y-server.log
-          exit 1
-
-      - name: Prune stale ove208 typography artifacts
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          ARTIFACT_PREFIX: "ove208-typography-"
-          KEEP_COUNT: "0"
-        run: |
-          set -euo pipefail
-
-          if ! command -v gh >/dev/null 2>&1; then
-            echo "gh CLI is required for stale artifact cleanup." >&2
-            exit 1
-          fi
-
-          stale_artifact_ids="$(gh api "repos/${{ github.repository }}/actions/artifacts?per_page=100" \
-            --paginate \
-            --jq ".artifacts
-              | map(select(.name | startswith(\"${ARTIFACT_PREFIX}\")))
-              | sort_by(.created_at)
-              | reverse
-              | .[${KEEP_COUNT}:]
-              | .[].id")"
-
-          if [[ -z "${stale_artifact_ids// /}" ]]; then
-            echo "No stale ove208 typography artifacts to delete."
-            exit 0
-          fi
-
-          printf '%s\n' "$stale_artifact_ids" |
-            while read -r artifact_id; do
-              [[ -z "$artifact_id" ]] && continue
-              echo "Deleting stale ove208 typography artifact $artifact_id"
-              gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$artifact_id" >/dev/null
-            done
-
-      - name: Upload exact-SHA typography browser evidence
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: ove208-typography-browser-${{ github.sha }}
-          path: |
-            ${{ runner.temp }}/ove208-typography-browser.json
-            ${{ runner.temp }}/ove208-typography-screenshots
-          if-no-files-found: warn
-          compression-level: 9
-          retention-days: 14
-
-      - name: Upload exact-SHA Core Web Vitals evidence
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@v7
-        with:
-          name: ove337-core-web-vitals-${{ github.sha }}
-          path: ${{ runner.temp }}/ove337-core-web-vitals.json
-          if-no-files-found: warn
-          compression-level: 9
-          retention-days: 14
 
   matching:
     name: Python matching tier

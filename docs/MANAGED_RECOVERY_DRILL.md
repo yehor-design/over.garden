@@ -38,7 +38,7 @@ Run only after the implementation SHA is merged and contained in origin/main:
     git fetch origin main
     git merge-base --is-ancestor "$OVE230_IMPLEMENTATION_SHA" origin/main
     cd apps/web
-    pnpm mainline:closeout:check
+
     pnpm smoke:restore-readiness -- plan --environment recovery-drill --confirm-environment recovery-drill --approval-digest e87bd9c0118bcf88a6fac07c069b01396b5b2c0322b7c961f058b016554a31ae --implementation-sha "$OVE230_IMPLEMENTATION_SHA"
     pnpm smoke:restore-readiness -- execute --environment recovery-drill --confirm-environment recovery-drill --approval-digest e87bd9c0118bcf88a6fac07c069b01396b5b2c0322b7c961f058b016554a31ae --implementation-sha "$OVE230_IMPLEMENTATION_SHA"
 

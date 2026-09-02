@@ -1,6 +1,6 @@
 # OverGarden — Technology Stack & Decisions
 
-> **Current status:** consolidated by ADR-0014, superseded for connectivity and browser-local journal persistence by ADR-0017, for the MVP refusal, media, indexability, and operator-surface posture by ADR-0018, for atomic local journal authoring and client-final media publication by ADR-0019, and for the journal deletion-retention lifecycle by ADR-0021. Older ADRs remain historical records; this document plus the latest explicit superseding ADR is the current stack surface for new work.
+> **Current status:** consolidated by ADR-0014, superseded for connectivity and browser-local journal persistence by ADR-0017, for the MVP refusal, media, indexability, and operator-surface posture by ADR-0018, for atomic local journal authoring and client-final media publication by ADR-0019, for the journal deletion-retention lifecycle by ADR-0021, and on 2026-09-02 by **ADR-0022 (owner MVP reset)** for the location-text firewall, media parameters, indexability, public HTML caching, sessions, admin, and process. Where a row below still describes a pre-ADR-0022 rule, ADR-0022 wins; rows are updated by the tasks OVE-362 through OVE-373 as each area ships.
 
 ## Product frame
 
@@ -42,7 +42,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 8. **Network-required publication must be honest.** ADR-0017/ADR-0019 forbid durable browser journal writes, server drafts, offline queues, PWA shell/installability promises, and `navigator.onLine` as a success oracle. Only the acknowledged atomic Publish response establishes durable journal state; unavailable requests use `network_unavailable_save_refused`.
 9. **Python is a worker, not a product dependency.** Typeahead uses Meilisearch. Dedup/matching can lag; SEO canonicalization must prevent thin duplicate public pages from being indexed before merge.
 10. **Every public SEO page is server-rendered and uses one measured threshold.** `PUBLIC_SURFACE_INDEXABILITY_THRESHOLD` starts at quality class `partial`, 120 words, one distinct entity, and maximum staleness 540 days. OVE-335 owns runtime convergence.
-11. **Agents follow vertical SDD slices after the skeleton.** Do not build “all DB then all auth then all UI,” and do not create standalone product-execution issues for schema, UI, media, search, analytics, or public pages. Each product execution issue must start from a concrete user behavior and integrate every affected layer end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/local-retirement/event boundary when relevant -> tests -> docs. Remediation, operator, decision, canon-correction, and coordination-container work must use the explicit bounded contract instead of inventing fake layers. Every new or materially rewritten work item follows `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, starts from its tracked template, and passes its validator plus the applicable `SDD Slice Test` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`.
+11. **One Linear issue, one branch, one vertical change.** Start from a concrete user or operator outcome and change every layer it needs (SQL/types -> repository -> route/action -> UI -> tests -> docs) in the same PR. Tasks use the half-page template in `AGENTS.md`; there is no separate task standard or validator.
 12. **CI gates are part of the stack.** Typecheck, lint, focused tests, privacy tests, SSR tests, media derivative tests, and search-index privacy tests should be added before expanding product surface area.
 13. **Live infra values are centralized.** Non-secret provider IDs, bucket names, public domains, env contracts, and operational links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Agents must not rediscover or guess those values in each task.
 14. **Product research is repo-local.** ICP, JTBD, positioning, IA, SEO/content, growth, trust/privacy, and business-model context lives in `docs/product-research/`. User-facing implementation must run the Product Thinking Gate in `docs/product-research/README.md` before Linear task creation or execution.
@@ -107,3 +107,10 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
 - ADR-0020 — Stable Registry migration allocation amendment. Binding for the
   future allocation of `0027` to OVE-328 and `0028` to OVE-258.
   OVE-327 and OVE-259 have no SQL migration.
+- ADR-0021 — Journal deletion is a seven-day retention-only lifecycle. Binding.
+- ADR-0022 — Owner MVP reset (2026-09-02). Binding for: no location-text
+  firewall, WebP variants from a native-first browser codec, every live public
+  page indexable, cached public HTML with tags, server-only session checks,
+  admin inside the product, and the engineering-minimum process. Supersedes
+  the clauses it lists in ADR-0017, ADR-0018, ADR-0019, and the earlier
+  `AGENTS.md`.

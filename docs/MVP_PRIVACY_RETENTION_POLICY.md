@@ -101,7 +101,7 @@ Before closing related Linear work, also run:
 
 ```bash
 cd apps/web
-pnpm mainline:closeout:check
+
 pnpm lint
 pnpm typecheck
 pnpm test

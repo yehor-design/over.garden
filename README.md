@@ -2,7 +2,7 @@
 
 A gardening journal that doubles as a catalog-as-social-graph for Ukraine and Bulgaria. Users keep a growing journal; public variety/region pages aggregate real first-hand experience; a later lineage layer traces where plants came from.
 
-Status: pre-MVP. The stack has been realigned for agentic development: fewer hidden platform assumptions, stronger type feedback, network-required journal writes under ADR-0017, and the explicit speed-and-reach MVP posture under ADR-0018. See `docs/TECH_STACK_DECISIONS.md`, the superseding ADRs, `docs/WALKING_SKELETON.md`, `docs/SDD_VERTICAL_SLICE_ROADMAP.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, and `docs/product-research/README.md`.
+Status: pre-MVP, online-only, everything public. The current decisions are in `docs/adr/ADR-0022-owner-mvp-reset.md`; the stack detail is in `docs/TECH_STACK_DECISIONS.md`; live provider values are in `docs/INFRASTRUCTURE_REGISTRY.md`; product research is in `docs/product-research/README.md`.
 
 ## Stack
 
@@ -15,21 +15,19 @@ Next.js App Router + TypeScript · shadcn/ui · Better Auth · Kysely · Digital
 - `infra/` — local runtime services and SQL helpers. Apple Container is the preferred local container runtime; Docker is fallback-only where Apple Container is unavailable or lacks a required feature.
 - `docs/TECH_STACK_DECISIONS.md` — current consolidated stack decisions.
 - `docs/CONTAINER_RUNTIME_POLICY.md` — Apple Container-first runtime policy plus Docker fallback matrix.
-- `docs/SDD_VERTICAL_SLICE_ROADMAP.md` — living roadmap for vertical SDD execution slices; not a full backlog.
+- `docs/SDD_VERTICAL_SLICE_ROADMAP.md` — historical roadmap and execution log; active work lives in Linear.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — live non-secret infrastructure values, provider IDs, bucket/domain names, env contracts, and dashboard links.
 - `docs/product-research/` — duplicated product research corpus for ICP, JTBD, positioning, IA, SEO/content, trust/privacy, GTM, and validation evidence.
-- `docs/adr/` — historical ADRs plus current superseding decisions; ADR-0017 owns online-only persistence and ADR-0018 owns the MVP refusal, media, indexability, and in-product admin posture.
+- `docs/adr/` — ADRs; `ADR-0022-owner-mvp-reset.md` is the current authority and lists what it supersedes in ADR-0017, ADR-0018, and ADR-0019.
 - `AGENTS.md` — operating rules for AI agents and humans.
 
-## Agentic Execution
+## How work happens
 
-Every new or materially rewritten Linear work item must follow `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, start from its tracked AI-agent template, and pass the validator plus the applicable `SDD Slice Test` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`. Product execution remains a behavior-first vertical slice; remediation, operator, decision, canon-correction, and coordination-container work uses the standard's bounded contracts. Do not split one behavior into isolated schema, UI, media, analytics, search, or public-page layer tickets, and do not invent fake product layers for a legitimate non-product task.
-
-The open OVE-213 through OVE-244 reference batch predates contract v1. Each issue must receive its own current-main/current-Linear re-audit, material v1 rewrite, final validation, saved-body read-back, and digest match before assignment or `In Progress`; the range is not blanket-certified by this repository standard.
-
-Issues that touch DNS, R2, production env, media URLs, deployment, storage, or external services must include `docs/INFRASTRUCTURE_REGISTRY.md` under the exact `Required context` heading.
-
-User-facing issues must also run the Product Thinking Gate in `docs/product-research/README.md` and include the relevant research files in their context.
+Every change is one Linear issue on one branch, implemented end to end (SQL,
+repository, route, UI, tests, docs) and merged on green CI. `AGENTS.md` is the
+one-page operating guide and contains the task template; ADR-0022 records the
+current product and engineering decisions. Historical roadmaps, runbooks, and
+audits under `docs/` are receipts, not instructions.
 
 ## Getting Started
 
@@ -77,8 +75,8 @@ uv run python -m app.worker
 
 ## Safety Notes
 
-This product handles user data under wartime risk. Precise location remains
-locked. ADR-0018 is the explicit maintainer-approved supersession for the MVP
-serve-under-uncertainty, format-conversion-only media, measured indexability,
-and in-product admin posture; its accepted cross-account-read exposure must be
-named honestly, and runtime changes remain owned by OVE-330 through OVE-339.
+The audience includes people living under wartime risk. The product stores no
+precise coordinates for users, entries, or media, and a gardener chooses whether
+a region label is shown at all. Beyond that, ADR-0022 deliberately favours
+speed and reach over defensive refusal for the MVP; the accepted trade-offs are
+listed in that ADR.

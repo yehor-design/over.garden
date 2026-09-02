@@ -53,7 +53,6 @@ runtime authority and must never be copied into a new implementation.
 - Atomic create/edit: `apps/web/src/app/api/garden/entries/`
 - Persistence: `apps/web/src/server/journal-repository.ts` and
   `apps/web/src/server/journal-document-persistence.ts`
-- Retirement guard: `apps/web/scripts/verify-retired-journal-media-runtime.ts`
 
 ```bash
 cd apps/web
@@ -61,7 +60,7 @@ pnpm smoke:atomic-journal-codecs
 pnpm smoke:atomic-journal-edit
 pnpm test:media-staging-worker
 pnpm media:staging:verify
-pnpm exec tsx scripts/verify-retired-journal-media-runtime.ts
+
 ```
 
 Receipts may contain only closed classes, counts, durations, and digests. They

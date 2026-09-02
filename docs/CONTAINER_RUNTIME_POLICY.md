@@ -57,7 +57,7 @@ Do not replace the CI Docker service path with Apple Container until a separate 
 - a supported runner environment, such as macOS 26 on Apple Silicon or another Apple Container-capable runner;
 - runner availability, queue-time, concurrency, and cost tradeoffs versus hosted Ubuntu;
 - proof that the candidate runner can start the required Postgres, Meilisearch, and MinIO service contracts without weakening CI coverage;
-- proof commands for the replacement, including `pnpm mainline:closeout:check`, `pnpm local:bootstrap`, `pnpm db:types:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build`;
+- proof commands for the replacement, including `pnpm local:bootstrap`, `pnpm db:types:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build`;
 - an explicit fallback plan if the Apple Container CI runner is unavailable.
 
 ## Production Linux Boundary

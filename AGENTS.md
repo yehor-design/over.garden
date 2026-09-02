@@ -1,146 +1,102 @@
 # AGENTS.md — OverGarden
 
-Operating guide for AI agents and humans working in this repo. Read this before any change. Current stack authority is `docs/TECH_STACK_DECISIONS.md` plus ADR-0014, as superseded for connectivity and browser-local journal persistence by ADR-0017, for the MVP refusal, media, indexability, and operator-surface posture by ADR-0018, and for atomic local journal authoring and client-final media publication by ADR-0019. `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md` is the binding construction and Definition-of-Ready contract for every new or materially rewritten Linear work item. Live non-secret infrastructure values and provider links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Product-thinking research lives in `docs/product-research/`. Older ADR clauses are historical when a later accepted ADR explicitly supersedes them.
+Read this whole page before changing anything. It is the current operating
+guide for AI agents and humans. Current decisions live in
+`docs/adr/ADR-0022-owner-mvp-reset.md`; older ADRs and dated documents are
+history and never override it.
 
-## Project
+## Product
 
-OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and Bulgaria. The audience includes Ukrainian users under wartime risk, so location privacy and image metadata handling are safety-critical.
+OverGarden is a public gardening journal for Ukraine and Bulgaria: a gardener
+keeps a narrative journal per plant or animal, every entry is public and
+indexable, and public variety, topic, profile, and community pages aggregate
+real first-hand experience. There are no private entries, no drafts, no
+offline mode, and no separate admin panel. Speed and search discovery come
+before defensive refusal.
 
-## Current MVP Scope
+## Stack
 
-The current MVP scope reconciliation is `docs/MVP_SCOPE_RECHECK_2026-07-03.md`. It supersedes the 2026-07-01 OVE-96 decision that deferred lineage/social graph. SEO/AEO, localization, full M:N journaling, composer friction work, self-serve auth, and lineage/social graph are MVP scope as vertical SDD slices. Monetization is post-MVP. Apple Sign-In is not MVP after the 2026-07-04 founder decision; revisit it only after MVP if native App Store distribution or a fresh sign-in access requirement makes it necessary.
-Object kinds are exactly `{plant, animal}`; a hive is an animal with a bee-breed catalog identity; see `docs/OBJECT_CATEGORY_MODEL_2026-07-23.md`.
+| Layer | Decision |
+| --- | --- |
+| App | Next.js App Router + TypeScript on Vercel (`fra1`), Cache Components for public pages |
+| UI | shadcn/ui primitives, Tailwind, `next/font/local` for Google Sans and Geist Mono |
+| Auth | Better Auth with session cookie cache; one sealed `owner` role bootstrapped by CLI |
+| Data | DigitalOcean Managed Postgres, Kysely, SQL migrations under `apps/web/sql` are the schema truth, no ORM |
+| Journal | Lexical composer, `JournalDocumentV1` is the sole persisted document contract |
+| Media | Browser converts photos to WebP variants, uploads straight to the Cloudflare staging Worker, atomic Publish promotes them to the public bucket served at `media.over.garden` |
+| Search | Meilisearch as a derived public index; Python worker for matching and reindex jobs |
+| Queue | Postgres `job_queue` table |
+| Edge | Cloudflare DNS and R2; Vercel serves and caches HTML |
 
-ADR-0018 is the current MVP-posture authority. Public SEO/AEO indexability
-policy lives in `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md` and
-`apps/web/src/server/public-surface-indexing-policy.ts`; public candidates use
-the declared `PUBLIC_SURFACE_INDEXABILITY_THRESHOLD` rather than per-kind
-blanket exclusion. The runtime predicate remains transitional until OVE-335.
+Live provider values are in `docs/INFRASTRUCTURE_REGISTRY.md`; read it before
+touching DNS, R2, env, or deployment. Local infra starts with
+`infra/container-up` (Apple Container first, Docker as fallback).
 
-ADR-0019 is the current atomic journal-media authority. Authoring is
-local-only and non-durable before Publish, the browser-generated WebP is the
-sole final artifact, and image bytes never traverse a Vercel Function. OVE-349
-removed the legacy server-draft, quarantine-original, server-conversion,
-admission/quality, and private-then-publish application runtime. OVE-350 then
-deleted the exact empty legacy provider and narrowed the app credential to the
-public bucket; that provider surface must remain absent.
+## Hard rules
 
-Current Stable Registry authority: ADR-0016, its ADR-0020 migration-allocation
-amendment, and `docs/STABLE_REGISTRY.md`. ADR-0020 assigns migration `0027` to
-OVE-328 and migration `0028` to OVE-258.
-OVE-327 and OVE-259 have no SQL migration. EPPO full-corpus inputs are
-OverGarden-owned observed captures, never official EPPO releases. Source
-capture, rights clearance, identity resolution, immutable
-release approval, and product eligibility are separate evidence states. Stable
-OverGarden UUIDs and published release membership must not be rewritten in
-place; OVE-253 remains historical `blocked_manifest` evidence, not the current
-acquisition gate.
+1. No ORM. Kysely plus SQL migrations only.
+2. No server-side image processing, no source-original retention, no metadata
+   cleaning step. The browser-made WebP variants are the only artifacts.
+3. No durable browser journal state: no IndexedDB, service worker, PWA
+   manifest, offline queue, or draft. Only an acknowledged Publish is durable.
+4. Everything public is indexable. `noindex` only for empty listings, the
+   seven-day 410 tombstone, and signed-in workspace screens.
+5. Public pages are cached with tags and revalidated by the mutations that
+   change them; workspace, account, auth, erasure, health, and API stay
+   `no-store`.
+6. Authorization happens on the server at the moment of the mutation. No
+   client-side session gates, admission tokens, or pre-checks.
+7. Admin pages live in the account menu under the sealed owner role and must
+   work in production.
+8. No voice dictation, no speech recognition.
+9. No secrets in git. `.env*` is ignored except `.env.example`.
+10. Do not touch without the owner's explicit sign-off: destructive schema
+    changes, bulk deletes, history rewrites, force-push.
 
-## Current Stack
+`apps/web/scripts/check-banned-dependencies.ts` enforces the mechanical half of
+these rules in CI and in `pnpm test`.
 
-- Next.js App Router + TypeScript on Vercel.
-- shadcn/ui only for UI primitives.
-- Better Auth for auth.
-- Lexical 0.49.0 for the authenticated structured-journal authoring surface;
-  `JournalDocumentV1` remains the sole persistence/API/read contract,
-  public/owner read routes must not load the authoring runtime, and unpublished
-  composer state is local-only and non-durable before Publish under ADR-0019.
-- DigitalOcean Managed Postgres for production data; Apple Container-first local Postgres on supported Macs, with Docker only as fallback.
-- Kysely as the typed SQL builder. SQL migrations are schema source of truth. No ORM.
-- Cloudflare R2 for media. Under ADR-0019 the browser-generated WebP is the sole
-  final artifact and is uploaded directly to bounded private staging before an
-  atomic publication. The application has no source-original quarantine or
-  server-conversion path, and OVE-350 deleted the isolated empty legacy provider
-  resource after exact-plan zero-state proof.
-- Meilisearch as a derived public search/typeahead index.
-- Python worker for RapidFuzz/PyICU/CyrTranslit matching, dedup, and reindex work.
-- Plain Postgres `job_queue` table for TS -> Python background work. No Redis, no pgmq, no Python-only queue framework.
-- Network-required journal publication governed by ADR-0017 and ADR-0019: no
-  new durable browser journal state, PWA shell, offline mutation queue, server
-  draft, or browser connectivity hint may be presented as a successful save.
-  Only an acknowledged atomic Publish creates durable product state.
-- Cloudflare for DNS/edge/WAF/R2. Cloudflare must not cache HTML.
+## How we work
 
-## Container Runtime Policy
+- Start from a fresh `origin/main`; branch `codex/<issue>-<slug>`; one Linear
+  issue per branch; implement end to end (SQL → repository → route → UI →
+  tests → docs); Conventional Commits; open a PR; merge only on green CI;
+  then move the Linear issue to Done and sync `main`.
+- CI is `.github/workflows/ci.yml`: install, services, bootstrap, generated
+  DB types check, lint, typecheck, banned-dependency gate, tests, build, plus
+  the Python matching job. Keep it under ten minutes.
+- Do not name a Done Linear issue in a PR title or body; the GitHub
+  integration reopens it. Describe the work instead.
+- Read-only commands against production are fine; anything that changes
+  production data, schema, or provider state needs one explicit approval each.
+- English for code, identifiers, commits, and repository docs.
 
-- Runtime authority lives in `docs/CONTAINER_RUNTIME_POLICY.md`.
-- Prefer Apple Container for local containerized development on supported Apple Silicon/macOS 26 machines.
-- Use Docker only as a fallback when Apple Container is unavailable or does not provide a required feature, such as GitHub Actions Ubuntu service containers, Linux production droplet process management, mature Compose restart policies, or another explicitly verified gap.
-- Do not assume Docker Desktop is required for local OverGarden work after OVE-77. Local Postgres, Meilisearch, and MinIO start through `infra/container-up`; matching-image and worker/search smoke use the Apple Container-first path on supported Macs.
-- GitHub Actions Ubuntu CI may keep Docker service containers as the OVE-75 platform-bound exception; never treat that as a local Docker Desktop prerequisite.
-- When Docker remains in CI, production, or fallback docs, state why Apple Container does not fit that specific surface.
+## Task template
 
-## Hard Rules
+Every Linear task uses this shape and nothing more:
 
-1. User/product precise location remains locked in v0. Free-text coordinates are governed by `docs/PRECISE_LOCATION_TEXT_FIREWALL.md` (OVE-234): the authoritative detector is `apps/web/src/lib/privacy/precise-location-text.ts` with its Python mirror and shared corpus; never add a local coordinate regex. Do not collect, store, send, log, index, render, or infer precise coordinates for OverGarden users, journal entries, media, analytics, public/search documents, operator evidence, or product UI; region-level or hidden only. External catalog/source ingestion may store legally reusable occurrence/distribution coordinates only in isolated raw/source snapshot tables with provenance, license, and usage flags; those fields must stay out of user data, analytics, Meilisearch/public projections, logs, and product UI unless a later explicit ADR and SDD slice promote a safe aggregate projection.
-2. Public product media follows ADR-0019: the browser-generated WebP is the sole final artifact, and its exact bytes are previewed, staged, promoted, stored, and served. Image bytes never traverse a Vercel Function. Do not add source-original retention, server re-encoding, a durable pending-media card, a private-then-publish state, or a second final artifact. OVE-350 deleted the old provider resource; do not recreate it or treat historical operator evidence as an application capability.
-3. Metadata omission may remain an encoder property, but it is not a separate MVP admission promise. Client conversion establishes the final WebP itself; a failed client conversion is removable/retryable and must not fall back to server conversion.
-4. No browser-direct broad database access. All app data access goes through server APIs/server actions/repositories. Short-lived, object-specific Cloudflare staging capabilities are narrow exceptions and never authorize journal/database access.
-5. Kysely is allowed and expected. Do not introduce Prisma, Drizzle, TypeORM, or another ORM without a superseding ADR.
-6. Scoped repositories remain the canonical data-access shape. Under ADR-0018, however, an unresolved authorization, ownership, or session condition serves the request and carries the explicitly accepted cross-account-read exposure; OVE-332 owns that runtime cutover. Do not represent the transitional denial runtime as the future contract.
-7. Meilisearch remains a derived public projection. ADR-0018 admits uncertain derived rows with an explicit quality class instead of silently dropping them; OVE-331 owns that transition. Canonical writes still record projection intent transactionally, and positively resolved erasure remains canonical state.
-8. Realtime is not a source of truth. Add live updates only after the canonical server fetch path exists.
-9. A public-surface candidate becomes indexable only through ADR-0018's shared measured threshold: quality class at least `partial`, at least 120 words, at least one distinct entity, and no more than 540 days stale. Private routes and positively non-public records are not candidates. OVE-335 owns runtime convergence.
-10. No secrets in git. Use env vars/platform secret stores. `.env*` is git-ignored except `.env.example`.
-11. Do not guess external service values. Read `docs/INFRASTRUCTURE_REGISTRY.md` before touching DNS, R2, media URLs, deployment env, or external service wiring, then verify live provider state when drift would matter.
-12. Do not make product decisions from implementation convenience alone. Before shaping a feature, UI flow, public page, analytics event, onboarding step, or user-facing Linear issue, run the Product Thinking Gate in `docs/product-research/README.md`. Every `User-facing: no` issue, including remediation, operator, security, migration, decision, canon, and coordination work, must still state its protected product/trust/reliability outcome, load-bearing assumption, and falsification signal under `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`; it must choose exactly one branch: identical non-empty sets of genuinely constraining non-README research paths in both its Product Thinking rationale and Required context, or a specific task-local no-direct-research conclusion with zero research paths. A `coordination_container` names the protected integration outcome and child evidence while owning zero implementation.
-13. Launch guest corpus hygiene is governed by `docs/LAUNCH_CORPUS.md` (OVE-199): never present production smoke/visual fixtures as real gardeners; production archive/seed requires explicit maintainer sign-off on the exact plan report.
-14. MVP learning for H1/H4/H6 is governed by `docs/MVP_LEARNING_SIGNALS.md` (OVE-200, reconciled by OVE-314): `real_self_serve` is the single decision-eligible cohort; production-smoke/visual-fixture/editorial/bot actors are exclusions only; unclassified activity fails the decision gate closed. Product-access invites, closed-pilot/founder-rehearsal cohorts, and their UI/storage are retired; lineage invitations remain a separate provenance feature.
-15. Stable Registry work is governed by ADR-0016, its ADR-0020
-    migration-allocation amendment, `docs/STABLE_REGISTRY.md`, and
-    `docs/MIGRATION_ALLOCATION.md`. An observed
-    source capture may enter only the isolated source layer owned by OVE-254;
-    it cannot reach product UI or search until rights, stable identity,
-    immutable release, and product-eligibility gates independently pass.
-
-## Workflow
-
-- Build a walking skeleton first, then vertical SDD slices.
-- Keep changes scoped and wire all affected surfaces together: SQL/types -> repository -> route/action -> UI -> tests -> docs.
-- Prefer machine-checkable guardrails over prose instructions: typecheck, lint, focused tests, privacy tests, SSR tests, media tests, search-index tests.
-- For every repository-changing task, start from aligned `main` (fetch current `origin/main`), create a dedicated issue branch `codex/<issue-id>-<slug>` (or equivalent repository branch required by the governing task contract), implement end-to-end, make a Conventional Commit, push, open PR, wait for merge to `main` without bypass, then return and synchronize local state from the merged `main` commit.
-- `main` is not the working branch for implementation: implementation branch must own one full task; `main` must be used only as the synchronized containment target after merge.
-- Branch lifecycle requirement for this project: `git fetch --all --prune` → `checkout` aligned `origin/main` branch/target → create issue branch → implement/commit → push → PR → merge → fetch `origin/main` → ensure `origin/main` contains task SHA (`git merge-base --is-ancestor <TASK_SHA> origin/main`) → continue to next task from clean aligned `main`.
-- Move the issue to Linear `Done` only after the task is truly complete: no blocking relations, all required closeout checks are passed, PR is merged without bypass, implementation SHA is contained in `origin/main`, and required live/provider read-backs are captured. Do not use `Done` as a substitute for merge, tests, or containment. When conditions are satisfied, the agent must explicitly transition the issue to `Done` (self-initiated closeout action), not rely on an external reminder.
-- Before starting the next Linear issue after completed critical work, read `docs/MAINLINE_CLOSEOUT.md` and run `cd apps/web && pnpm mainline:closeout:check`. For any repository change, Linear `Done` is not accepted until the implementation commit is contained in current `origin/main`; exact-SHA deployment/provider proof is additive. An external-state-only operator task with no repository delta must instead carry the explicit provider receipt and no-code declaration required by the Linear task standard. A non-executable coordination container creates no branch or effect and closes directly from independently completed children, an acyclic relation read-back, and its own integration receipt.
-- Any Linear SDD issue touching media, DNS, production env, deployment, storage, or external services must include `docs/INFRASTRUCTURE_REGISTRY.md` under the exact `Required context` heading and update it when external values change.
-- Any Linear SDD issue with user-facing behavior must include `docs/product-research/README.md` plus the relevant 2-5 research files selected by the Product Thinking Gate.
-- English for code, identifiers, comments, commit messages, and repository docs.
-- Conventional Commits.
-
-## Product Research
-
-`docs/product-research/` is the duplicated research corpus from the original Startups research folder. Treat it as the repo-local product memory for ICP, JTBD, positioning, brand, IA, UX, SEO/content, growth, business model, trust/privacy, and validation evidence.
-
-Do not treat copied research files as the current technical stack authority when they conflict with root repo docs. Product facts come from the research corpus; implementation facts come from `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, ADR-0014 as superseded by ADR-0017, the SDD roadmap, and live code.
-
-## Linear SDD Task Rule
-
-Every new or materially rewritten Linear work item must conform to `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, start from `docs/linear/AI_AGENT_EXECUTION_ISSUE_TEMPLATE.md`, and pass the tracked validator before creation/update and again after Linear read-back. This includes product execution, remediation, migrations, infrastructure/provider/release work, decision spikes, canon correction, and non-executable coordination containers; the standard defines the exact vertical or bounded-exception contract for each kind.
-
-OVE-213 through OVE-244 are open pre-`overgarden.linear-sdd.v1` reference tasks, not ready-to-execute exceptions. Before any one is assigned, moved to `In Progress`, or implemented, re-audit and materially rewrite that individual issue against current `main`, authenticated current Linear fields/relations, external state, and the full standard; pass draft and final validation; save it; read the complete Linear issue back; and prove the saved-description digest matches. Do not bulk-certify the range or change its execution state as part of governance-only standardization.
-
-Run:
-
-```bash
-cd apps/web
-pnpm linear:task:check -- --file ../../path/to/issue.md --phase final
-pnpm linear:task:standard:check
+```
+## Outcome
+## Owner decisions this task implements
+## Scope (in / out)
+## Key files
+## Acceptance criteria
+## Proof
+## Dependencies
 ```
 
-Product execution issues must be vertical SDD slices, not layer tickets. A valid issue starts from a concrete user behavior and owns every affected layer needed to prove that behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/local-retirement/event boundary when relevant -> tests -> docs. Remediation and operator exceptions must still own a complete observable journey, one enforceable boundary, bounded blast radius, rollback, and executable read-back; do not add fake UI or unrelated layers to satisfy a quota.
+## Where things are
 
-Do not create standalone product-execution issues such as "build schema", "build UI", "add media pipeline", "add analytics", "build public pages", or "wire search" unless that work is inside the same user-visible path. Before creating or accepting any Linear work item, run the common `SDD Slice Test` plus its issue-kind-specific test in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`; rewrite any item that fails its applicable test before implementation or coordination.
-
-Never treat a linked document, parent issue, comment, or prior chat as a substitute for task-local invariants, state/protocol/concurrency semantics, dependencies, acceptance criteria, commands, rollback, failure gates, or exact-SHA closeout. Never assign or start implementation while placeholders, stale evidence, ownership ambiguity, cyclic relations, missing approval, or validator failures remain.
-
-The roadmap is not the full backlog. Authenticated current Linear read-back is the primary queue authority; `Current Execution State` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` is its dated repository mirror. Any discrepancy blocks task selection until both are reconciled and read back. Older execution-batch text and task-local OVE-213 through OVE-244 implementation facts are historical provenance unless explicitly reverified. Later horizon slices must be rewritten into fresh agent-executable Linear tasks after current implementation friction and product learning are reviewed.
-
-## Decision Changes
-
-Existing ADRs are immutable historical records. To change a stack decision, add a superseding ADR and update the consolidated docs/instructions so future agents do not read contradictory canon.
-
-## Do Not Touch Without Explicit Maintainer Sign-off
-
-- Destructive database changes, schema drops, bulk deletes, history rewrites, force-push.
-- Weakening location privacy, media derivative guarantees, scoped repository rules, or search-index privacy boundaries.
+- `docs/adr/ADR-0022-owner-mvp-reset.md` — current decisions and what they
+  supersede. `docs/TECH_STACK_DECISIONS.md` — stack detail and ADR index.
+- `docs/INFRASTRUCTURE_REGISTRY.md` — provider IDs, buckets, domains, env.
+- `docs/MEDIA_LIFECYCLE.md`, `docs/ONLINE_ONLY_JOURNAL.md`,
+  `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`, `docs/ADMIN_ROLE_BOOTSTRAP.md`,
+  `docs/STABLE_REGISTRY.md`, `docs/MIGRATION_ALLOCATION.md` — current
+  behaviour of each area.
+- `docs/product-research/` — product research; read the two to five files
+  relevant to a user-facing change, nothing more is required.
+- `docs/SDD_VERTICAL_SLICE_ROADMAP.md`, `docs/runbooks/`,
+  `docs/audit-inbox/`, `docs/reviews/`, `docs/linear/` — historical receipts.
+- `apps/web/AGENTS.md` — the Next.js version notice; read the framework docs
+  in `node_modules/next/dist/docs/` before using an API from memory.

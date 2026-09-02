@@ -36,7 +36,7 @@ infra/container-status
 cd apps/web
 pnpm install
 cp .env.example .env.local
-pnpm mainline:closeout:check
+
 pnpm local:bootstrap
 pnpm db:types
 pnpm db:types:check
@@ -44,7 +44,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build
-pnpm walking-skeleton:boundary:check
+
 pnpm dev
 ```
 
@@ -124,7 +124,7 @@ in Vercel or another deployed runtime.
 
 ## Next SDD Rule
 
-From here, product implementation must be vertical. `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md` is the binding construction contract, and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` is the living repository mirror rather than a full or primary queue.
+From here, product implementation must be vertical. `AGENTS.md` holds the task template, and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` is a historical receipt; active work is read from Linear.
 
 A valid product execution task names the end-to-end user behavior and touches the necessary layers together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/local-retirement/event boundary when relevant -> tests -> docs. Remediation, operator, decision, canon-correction, and coordination-container items use the standard's explicit bounded contracts. Do not build all database schema, all UI, all media, all analytics, all public pages, or all worker logic as isolated horizontal phases.
 

@@ -81,7 +81,7 @@ pnpm media:staging:verify
 pnpm smoke:inline-media-integrity
 pnpm smoke:journal-cover-selection
 pnpm smoke:erasure-workflow
-pnpm exec tsx scripts/verify-retired-journal-media-runtime.ts
+
 ```
 
 Media evidence is identifier-minimal and redacted. Never log source bytes,

@@ -31,7 +31,7 @@ pnpm media:staging:verify
 pnpm smoke:atomic-journal-codecs
 pnpm smoke:inline-media-integrity
 pnpm smoke:journal-cover-selection
-pnpm exec tsx scripts/verify-retired-journal-media-runtime.ts
+
 ```
 
 The disposable migration verifier creates one exact temporary loopback

@@ -23,18 +23,6 @@ export default defineConfig({
       name: "chromium",
       use: { browserName: "chromium" },
     },
-    {
-      name: "firefox",
-      testMatch:
-        /(?:offline-runtime-absence|online-only-product)\.spec\.ts/u,
-      use: { browserName: "firefox" },
-    },
-    {
-      name: "webkit",
-      testMatch:
-        /(?:offline-runtime-absence|online-only-product)\.spec\.ts/u,
-      use: { browserName: "webkit" },
-    },
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined

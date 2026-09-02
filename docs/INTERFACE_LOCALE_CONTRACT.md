@@ -21,9 +21,9 @@ The current product contract is:
 - User-authored content, catalog identity, scientific names, official source
   names, and literal evidence are never silently translated.
 
-`docs/LOCALIZATION_COVERAGE_BASELINE_2026-07-14.md` remains the copy-contract
-baseline. `docs/LOCALIZATION_COVERAGE_WORKFLOW.md` defines the OVE-205
-route/state/lifecycle completion gate.
+Copy is typed per locale (`uk`, `bg`, `ru`), so typecheck proves every key
+exists in every language. The former coverage registry, its baseline document,
+and the browser matrix were retired by ADR-0022.
 
 ## Market And Locale Model
 
@@ -312,10 +312,8 @@ against the same final behavior commit:
   treating their unimplemented real UI as OVE-205 completion blockers;
 - exact-SHA CI, build, deployment, and safe production smoke.
 
-The static report cannot attest that a browser run is fresh, so its sole
-`browser-run-required` reason is discharged only by a successful candidate-SHA
-`localization:coverage:browser`/`test:a11y` artifact. Downstream-owned entries
-remain visible in the report as future obligations, not current failures.
+There is no coverage report or browser artifact any more (ADR-0022); a change
+to a localized control is verified by its unit test and by opening the page.
 
 The completed OVE-171 evidence remains a regression input, but its former
 page/route count and owner probes are not sufficient OVE-205 proof by
