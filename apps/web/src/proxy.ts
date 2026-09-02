@@ -52,6 +52,9 @@ import {
   tryResolveWalkingSkeletonEnvironment,
 } from "@/lib/walking-skeleton/environment";
 
+import { renderNotFoundUnknownRouteHtml } from "@/lib/public-unknown-route-lifecycle";
+import { isUnknownRootPath } from "@/lib/root-route-segments";
+
 export const APP_ROUTE_CACHE_CONTROL =
   "private, no-store, max-age=0, s-maxage=0, must-revalidate";
 
@@ -450,6 +453,28 @@ export async function proxy(request: NextRequest) {
   if (canonicalHostResponse) return canonicalHostResponse;
   const localization = resolveRequestLocalization(request);
   const { locale } = localization;
+
+  // A first segment no route can serve must not reach `[locale]`: under Cache
+  // Components the page would stream a 200 shell before `notFound()` runs.
+  if (isUnknownRootPath(request.nextUrl.pathname)) {
+    return withAppRouteContract(
+      new NextResponse(
+        renderNotFoundUnknownRouteHtml(locale, {
+          pathname: request.nextUrl.pathname,
+          search: request.nextUrl.searchParams,
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
+        },
+      ),
+      request,
+      localization,
+    );
+  }
 
   const isDocumentNavigation = isDocumentNavigationRequest(request);
   if (

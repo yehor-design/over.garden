@@ -21,6 +21,8 @@ import {
   resetUnresolvedAuthorizationServeCountsForTests,
 } from "@/lib/auth/unresolved-authorization";
 
+import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
+
 const mocks = vi.hoisted(() => ({
   getPublicObjectPassportLookup: vi.fn().mockResolvedValue({
     status: "not_found",
@@ -1258,3 +1260,43 @@ function stubLocalWalkingSkeletonEnvironment() {
   vi.stubEnv("VERCEL", "");
   vi.stubEnv("VERCEL_ENV", "development");
 }
+
+describe("unknown root segments", () => {
+  const documentHeaders = { accept: "text/html", "sec-fetch-dest": "document" };
+
+  it.each([
+    "/__visual-fixtures",
+    "/__nonexistent-xyz",
+    "/xyz/journals",
+    "/BG/journals",
+  ])("answers a real 404 lifecycle document for %s", async (path) => {
+    const response = await responseFor(path, {
+      ...documentHeaders,
+      "x-vercel-ip-country": "BG",
+    });
+    const html = await response.text();
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(response.headers.get("Cache-Control")).toBe(APP_ROUTE_CACHE_CONTROL);
+    expect(response.headers.get("Content-Language")).toBe("bg");
+    expect(html).toContain('<html lang="bg"');
+    expect(html).toContain(getPublicSurfaceCopy("bg").notFound.title);
+    expect(html).toContain('href="/bg"');
+  });
+
+  it("leaves known roots, locale roots, and file-like paths to the App Router", async () => {
+    for (const path of [
+      "/feed",
+      "/bg",
+      "/bg/journals",
+      "/sitemap.xml",
+      "/robots.txt",
+      "/licenses/GoogleSans-OFL.txt",
+      "/api/interface/context",
+    ]) {
+      const response = await responseFor(path, documentHeaders);
+      expect(response.status, path).not.toBe(404);
+    }
+  });
+});
