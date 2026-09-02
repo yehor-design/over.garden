@@ -17,6 +17,45 @@ import { performance } from "node:perf_hooks";
  * This probe replaces that single observation with counts. It samples two
  * request classes against the same public paths, so a difference between them
  * is measurable rather than assumed, and it records status classes only.
+ *
+ * ## Resolved, 2026-09-02
+ *
+ * The cause was database connection exhaustion in the proxy, and the platform
+ * error table had been recording it since 2026-07-27 while nobody was reading
+ * that table:
+ *
+ *     remaining connection slots are reserved for roles with the SUPERUSER
+ *     attribute   —   PostgreSQL 53300, severity FATAL
+ *     count 90, routes=/middleware
+ *
+ * with a further twelve occurrences of the same code across `/middleware`,
+ * `/journal/[slug]` and `/lineage/objects/[objectId]`.
+ *
+ * `src/proxy.ts` runs on nearly every request — its matcher excludes only
+ * static assets and images — and resolves the session with
+ * `auth.api.getSession`, which reads the database. A hover burst is twenty to
+ * thirty simultaneous prefetches, each landing on its own serverless instance
+ * holding its own connection, against a managed database with 22 usable slots.
+ * The overflow failed inside the proxy, so the page function never ran, so the
+ * status-code log recorded nothing: exactly the "only success statuses" that
+ * made this look like it came from outside the application. It did not. It came
+ * from one layer earlier than the layer being read.
+ *
+ * That also explains why this probe found nothing across 234 samples: it is
+ * unauthenticated, and an unauthenticated request is served from the CDN
+ * without a session lookup. The probe was measuring a path the fault could not
+ * reach.
+ *
+ * The repair is the connection pooler recorded in
+ * `docs/INFRASTRUCTURE_REGISTRY.md`: client connections are multiplexed onto
+ * twelve backends instead of competing for slots one instance at a time.
+ * Verified after the cutover with 258 authenticated prefetches, in bursts up to
+ * 64 concurrent — zero failures, and zero new entries in the error table.
+ *
+ * Still true and still unaddressed: the proxy reads the database on every
+ * speculative prefetch. That is now survivable rather than fatal. Removing it
+ * needs a session cookie cache, which trades revocation latency for the saved
+ * query and is therefore a product decision, not a tuning one.
  */
 export const PREFETCH_PROBE_BUDGET_MS = 10_000;
 export const PROBE_REQUEST_DEADLINE_MS = 20_000;

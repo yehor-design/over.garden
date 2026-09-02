@@ -529,6 +529,35 @@ Cutover receipt (2026-09-02):
   CDN-served and never reach the four-round-trip inventory read. A reader
   looking for the pool's effect there will not find it.
 
+Prefetch 503, root cause and repair (2026-09-02):
+
+- The unexplained 503 on authenticated speculative prefetches was database
+  connection exhaustion inside the proxy. Vercel's error table had been
+  recording it since 2026-07-27: `remaining connection slots are reserved for
+  roles with the SUPERUSER attribute`, PostgreSQL `53300`, severity FATAL,
+  count `90`, `routes=/middleware`, plus twelve more of the same code across
+  `/middleware`, `/journal/[slug]` and `/lineage/objects/[objectId]`.
+- `apps/web/src/proxy.ts` runs on nearly every request — the matcher excludes
+  only static assets and images — and resolves the session through
+  `auth.api.getSession`, which reads the database. A hover burst is twenty to
+  thirty simultaneous prefetches, each on its own serverless instance holding
+  its own connection, against 22 usable slots.
+- Why it looked like it came from outside the application: the failure happened
+  in the proxy, so the page function never ran, so nothing appeared in the
+  status-code log. The error was in the error table the whole time. The log
+  being read was one layer too late, not wrong.
+- Why the OVE-361 probe found nothing in 234 samples: it is unauthenticated,
+  and an unauthenticated request is CDN-served without a session lookup. It was
+  measuring a path the fault could not reach.
+- Repaired by the connection pooler above. Verified after the cutover with 258
+  authenticated prefetches in bursts up to 64 concurrent: zero failures, and
+  zero new entries in the error table over the covering window.
+- Open, and deliberately not changed here: the proxy still reads the database
+  on every speculative prefetch. Survivable now rather than fatal. Removing it
+  needs a Better Auth session cookie cache — the config has no `session` block
+  today — which trades revocation latency against the saved query while
+  `revokeSessionsOnPasswordReset` is on. That is a product decision.
+
 Worker and Meilisearch Droplet:
 
 Runtime classification: this production worker/search surface is `production-linux-required` under `docs/CONTAINER_RUNTIME_POLICY.md`. Apple Container remains the preferred supported-Mac local runtime, but it is not the DigitalOcean Linux droplet process manager. OVE-76 confirms Docker Compose remains the current production process manager until a separate non-Apple Linux replacement is live-proven.
