@@ -73,7 +73,6 @@ const RECEIPT_SOURCE_PATHS = [
   "src/app/garden/page.tsx",
   "src/app/garden/profile/page.tsx",
   "src/server/auth/account-methods.ts",
-  "scripts/smoke-account-sign-out.ts",
   "scripts/smoke-public-identity.ts",
   "scripts/smoke-restore-readiness.ts",
   "scripts/smoke-self-serve-providers.ts",

@@ -259,10 +259,6 @@ async function navigatePastSessionConvergence(
     throw new Error(`Browser page request failed at ${path}.`);
   }
 
-  const gate = page.locator("[data-session-convergence-gate]");
-  if ((await gate.count()) > 0) {
-    await gate.waitFor({ state: "detached", timeout: 15_000 });
-  }
   await page.locator("main").waitFor({ state: "visible" });
 }
 

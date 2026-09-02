@@ -81,7 +81,6 @@
     "prove:r2-media-lifecycle": "tsx scripts/prove-r2-media-lifecycle-provider.ts",
     "smoke:admin-role": "tsx scripts/smoke-admin-role.ts",
     "admin-menu:verify": "tsx scripts/verify-admin-menu-visibility.ts",
-    "smoke:account-sign-out": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-account-sign-out.ts",
     "smoke:self-serve-mvp": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-self-serve-mvp.ts",
     "smoke:self-serve-providers": "tsx scripts/smoke-self-serve-providers.ts",
     "smoke:exact-sha-self-serve": "tsx scripts/smoke-exact-sha-self-serve.ts",
