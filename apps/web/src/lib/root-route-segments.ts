@@ -48,7 +48,7 @@ export const ROOT_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
  * Every file the site serves at the root: the App Router file conventions in
  * `src/app` (`robots.ts` → `/robots.txt`, `sitemap.ts` → `/sitemap.xml`,
  * `favicon.ico`) plus the files at the top of `public/`. Any other dotted root
- * path (`/sw.js`, `/manifest.webmanifest`, `/icon-192.png`, `/wp-login.php`)
+ * path (`/sw.js`, a web manifest, `/icon-192.png`, `/wp-login.php`)
  * would otherwise be swallowed by `[locale]` and answer 200.
  */
 export const ROOT_ROUTE_FILES: ReadonlySet<string> = new Set([
