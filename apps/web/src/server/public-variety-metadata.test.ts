@@ -15,27 +15,29 @@ describe("public variety metadata", () => {
     vi.unstubAllEnvs();
   });
 
-  it("omits canonical admission and JSON-LD for measured thin pages", () => {
+  it("indexes a page with little text: there is no measured threshold (ADR-0022, D3)", () => {
     const page = buildPage({ rich: false });
     const surface = buildPublicVarietySurfaceMetadata(page);
 
-    expect(surface.metadata.robots).toEqual({ index: false, follow: false });
-    expect(surface.metadata.alternates).toBeUndefined();
-    expect(surface.jsonLd).toBeNull();
+    expect(surface.metadata.robots).toEqual({ index: true, follow: true });
+    expect(surface.metadata.alternates).toMatchObject({
+      canonical: expect.stringContaining("pomidor-cheri-0000000101"),
+    });
+    expect(surface.jsonLd).not.toBeNull();
   });
 
   it("recomputes from visible facts instead of trusting a stale page decision", () => {
     const page = buildPage({ rich: false });
     page.indexState = {
       ...page.indexState,
-      value: "indexable",
-      isIndexable: true,
-      sitemapEligible: true,
-      robots: { index: true, follow: true },
-      reasons: [],
+      value: "noindex",
+      isIndexable: false,
+      sitemapEligible: false,
+      robots: { index: false, follow: false },
+      reasons: ["candidate_input_unresolved"],
     };
 
-    expect(buildPublicVarietyJsonLd(page)).toBeNull();
+    expect(buildPublicVarietyJsonLd(page)).not.toBeNull();
   });
 
   it("emits the shared visible-fact graph without private source fields", () => {
@@ -108,7 +110,6 @@ function buildPage({ rich }: { rich: boolean }): PublicVarietyPage {
     entryCount: 1,
     photoCount: 1,
     aggregateBodyLength: rich ? 900 : 10,
-    qualityClass: "verified" as const,
     latestMeaningfulAt: "2026-08-23T00:00:00.000Z",
     seedProof: null,
     sourceCredits: [],
@@ -132,9 +133,6 @@ function buildPage({ rich }: { rich: boolean }): PublicVarietyPage {
   } satisfies Omit<PublicVarietyPage, "indexState">;
   return {
     ...page,
-    indexState: resolvePublicSurfaceDiscoveryForRequest(
-      buildPublicVarietyDiscoverySource(page, "public_variety_repository"),
-      "2026-08-24T00:00:00.000Z",
-    ).decision,
+    indexState: resolvePublicSurfaceDiscoveryForRequest(buildPublicVarietyDiscoverySource(page, "public_variety_repository")).decision,
   };
 }

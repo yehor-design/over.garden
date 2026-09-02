@@ -113,9 +113,7 @@ export default async function GardenPublicProfilePage({
     >
       <ProfileHeader
         locale={locale}
-        publicPath={
-          workspace.editor.profileVisibility === "public" ? publicPath : null
-        }
+        publicPath={publicPath}
       />
 
       <OwnerProfileEditor

@@ -42,7 +42,6 @@ const WORKSPACE: OwnerProfileWorkspace = {
     languages: ["uk", "bg"],
     locationVisibility: "region",
     coarseRegionCode: "UA-30",
-    profileVisibility: "public",
     relationshipVisibility: "counts",
   },
   handleRename: {
@@ -106,7 +105,6 @@ describe("OwnerProfileEditor", () => {
     expect(html).toContain('name="languages"');
     expect(html).toContain('name="locationVisibility"');
     expect(html).toContain('name="coarseRegionCode"');
-    expect(html).toContain('name="profileVisibility"');
     expect(html).toContain('name="relationshipVisibility"');
     expect(html).toContain('data-public-profile="v2"');
     expect(html).toContain('data-public-preview-audience="visitor"');

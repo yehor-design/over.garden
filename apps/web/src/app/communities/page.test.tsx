@@ -69,7 +69,7 @@ describe("community public routes", () => {
     mocks.getPublicCommunityPage.mockResolvedValue(communityPage);
   });
 
-  it("renders the localized directory and detail guest-open with noindex metadata", async () => {
+  it("renders the localized directory and detail guest-open with indexable metadata", async () => {
     const { default: Directory, generateMetadata: directoryMetadata } =
       await import("../[locale]/communities/page");
     const { default: Detail, generateMetadata: detailMetadata } =
@@ -110,9 +110,9 @@ describe("community public routes", () => {
       params: Promise.resolve({ locale: "bg" }),
     });
     expect(directoryMeta).toMatchObject({
-      robots: { index: false, follow: false },
+      robots: { index: true, follow: true },
+      alternates: { canonical: "/bg/communities" },
     });
-    expect(directoryMeta.alternates).toBeUndefined();
     const detailMeta = await detailMetadata({
       params: Promise.resolve({
         locale: "bg",
@@ -120,9 +120,9 @@ describe("community public routes", () => {
       }),
     });
     expect(detailMeta).toMatchObject({
-      robots: { index: false, follow: false },
+      robots: { index: true, follow: true },
+      alternates: { canonical: "/bg/communities/observation-and-care" },
     });
-    expect(detailMeta.alternates).toBeUndefined();
   });
 
   it("redirects the unprefixed directory to the persisted locale", async () => {

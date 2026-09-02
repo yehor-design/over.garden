@@ -142,7 +142,7 @@ describe("/variety/[slug]", () => {
     expect(html).toContain("Сохранено в ваш список желаний.");
   });
 
-  it("keeps thin public variety metadata noindex", async () => {
+  it("indexes thin public variety metadata", async () => {
     const { generateMetadata } = await import("./page");
 
     await expect(
@@ -150,7 +150,8 @@ describe("/variety/[slug]", () => {
         params: Promise.resolve({ slug: "pomidor-cheri-0000000101" }),
       }),
     ).resolves.toMatchObject({
-      robots: { index: false, follow: false },
+      robots: { index: true, follow: true },
+      alternates: { canonical: "/variety/pomidor-cheri-0000000101" },
     });
   });
 

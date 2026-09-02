@@ -9,7 +9,6 @@ import type { PublicProjectionQualityClass } from "@/lib/public-projection-quali
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-export const PUBLIC_STABLE_REGISTRY_QUERY_DEADLINE_MS = 750;
 export const PUBLIC_STABLE_REGISTRY_PAGE_SIZE = 20;
 
 export type PublicStableRegistryKind = "all" | "plant" | "animal";

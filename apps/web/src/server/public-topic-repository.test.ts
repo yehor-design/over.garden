@@ -248,15 +248,14 @@ describe("public topic repository query contracts", () => {
 
     expect(topics.map((topic) => topic.entryCount)).toEqual([0, 1, 11]);
     expect(topics[0]?.indexState.isIndexable).toBe(false);
-    expect(topics[1]?.indexState.reasons).toContain(
-      "word_count_below_threshold",
-    );
+    expect(topics[0]?.indexState.reasons).toEqual(["empty_listing"]);
+    expect(topics[1]?.indexState.isIndexable).toBe(true);
     expect(topics[2]).toMatchObject({
       objectKinds: ["plant", "animal"],
       indexState: {
-        isIndexable: false,
-        sitemapEligible: false,
-        reasons: ["word_count_below_threshold"],
+        isIndexable: true,
+        sitemapEligible: true,
+        reasons: [],
       },
     });
   });

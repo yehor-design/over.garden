@@ -97,7 +97,6 @@ describe("approved erasure execution SQL contracts", () => {
     expect(compiled.sql).toContain('"journal_revision" = journal_revision + 1');
     expect(compiled.sql).toContain('"visibility" = $8');
     expect(compiled.sql).toContain('"lifecycle_state" = $9');
-    expect(compiled.sql).toContain('"public_noindex" = $10');
     expect(compiled.sql).toContain("coalesce(public_gone_at");
     expect(compiled.sql).toContain(
       '\'erased:\' || "journal_entries"."id"::text',

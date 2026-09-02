@@ -24,7 +24,6 @@ function files(url: URL) {
 const APP_FILE_CONVENTIONS: Record<string, string> = {
   "favicon.ico": "favicon.ico",
   "robots.ts": "robots.txt",
-  "sitemap.ts": "sitemap.xml",
 };
 
 describe("root route segments", () => {
@@ -77,7 +76,7 @@ describe("root route segments", () => {
       "/_next/static/chunk.js",
       "/robots.txt",
       "/sitemap.xml",
-      "/sitemap/0.xml",
+      "/sitemaps/entries-0.xml",
       "/favicon.ico",
       "/apple-icon.png",
       "/next.svg",

@@ -9,7 +9,6 @@ import {
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
 import type { PublicLocale } from "@/lib/public-localization";
-import { recordPublicProjectionIntentsForOwner } from "@/server/search/public-projection-outbox";
 import {
   evaluatePublicIdentity,
   IDENTITY_POLICY_VERSION,
@@ -47,7 +46,6 @@ export type OwnerProfileValidationError =
   | "bio"
   | "languages"
   | "region"
-  | "profile_visibility"
   | "relationship_visibility";
 
 export interface OwnerPublicProfileInput {
@@ -57,7 +55,6 @@ export interface OwnerPublicProfileInput {
   languages: readonly string[];
   locationVisibility: "hidden" | "region" | string;
   coarseRegionCode: string | null;
-  profileVisibility: "public" | "private" | string;
   relationshipVisibility: "counts" | "hidden" | string;
 }
 
@@ -68,7 +65,6 @@ export interface NormalizedOwnerPublicProfileInput {
   languages: PublicProfileLanguage[];
   locationVisibility: "hidden" | "region";
   coarseRegionCode: CoarseRegionCode | null;
-  profileVisibility: "public" | "private";
   relationshipVisibility: "counts" | "hidden";
 }
 
@@ -80,7 +76,6 @@ export interface OwnerPublicProfileEditor {
   languages: PublicProfileLanguage[];
   locationVisibility: "hidden" | "region";
   coarseRegionCode: CoarseRegionCode | null;
-  profileVisibility: "public" | "private";
   relationshipVisibility: "counts" | "hidden";
 }
 
@@ -179,12 +174,6 @@ function normalizeOwnerPublicProfileFields(
   }
 
   if (
-    input.profileVisibility !== "public" &&
-    input.profileVisibility !== "private"
-  ) {
-    return { ok: false, error: "profile_visibility" };
-  }
-  if (
     input.relationshipVisibility !== "counts" &&
     input.relationshipVisibility !== "hidden"
   ) {
@@ -200,7 +189,6 @@ function normalizeOwnerPublicProfileFields(
       languages: languages as PublicProfileLanguage[],
       locationVisibility: input.locationVisibility,
       coarseRegionCode,
-      profileVisibility: input.profileVisibility,
       relationshipVisibility: input.relationshipVisibility,
     },
   };
@@ -249,7 +237,6 @@ export async function getOwnerProfileWorkspace(
       languages: profile.languages,
       locationVisibility: profile.location_visibility,
       coarseRegionCode: profile.coarse_region_code,
-      profileVisibility: profile.profile_visibility,
       relationshipVisibility: profile.relationship_visibility,
     }),
     handleRename: {
@@ -293,30 +280,11 @@ export async function updateOwnerPublicProfile(
     return { status: "unchanged", profile: current };
   }
 
-  // OVE-242: making a profile private (or public again) reclassifies every
-  // public journal entry this owner has. The canonical profile write and those
-  // projection intents commit together, so a hidden profile can never leave the
-  // owner's entries searchable.
-  const visibilityChanged =
-    current.profile_visibility !== value.profileVisibility;
-  const updated = await executor.transaction().execute(async (trx) => {
-    const row = await buildUpdateOwnerPublicProfileQuery(
-      trx,
-      scope,
-      value,
-    ).executeTakeFirst();
-
-    if (row && visibilityChanged) {
-      await recordPublicProjectionIntentsForOwner(trx, {
-        ownerUserId: scope.userId,
-        desiredState:
-          value.profileVisibility === "public" ? "present" : "absent",
-        reason: "profile_visibility",
-      });
-    }
-
-    return row;
-  });
+  const updated = await buildUpdateOwnerPublicProfileQuery(
+    executor,
+    scope,
+    value,
+  ).executeTakeFirst();
   return updated
     ? { status: "updated", profile: updated }
     : {
@@ -339,7 +307,6 @@ export function buildOwnerPublicProfileByUserIdQuery(
       "languages",
       "location_visibility as locationVisibility",
       "coarse_region_code as coarseRegionCode",
-      "profile_visibility as profileVisibility",
       "relationship_visibility as relationshipVisibility",
     ])
     .where("user_id", "=", scope.userId)
@@ -376,7 +343,6 @@ export function buildUpdateOwnerPublicProfileQuery(
       languages: input.languages,
       location_visibility: input.locationVisibility,
       coarse_region_code: input.coarseRegionCode,
-      profile_visibility: input.profileVisibility,
       relationship_visibility: input.relationshipVisibility,
       updated_at: new Date(),
     })
@@ -449,7 +415,6 @@ export function serializeOwnerPublicProfileEditor(input: {
   languages: readonly string[];
   locationVisibility: string;
   coarseRegionCode: string | null;
-  profileVisibility: string;
   relationshipVisibility: string;
 }): OwnerPublicProfileEditor {
   const normalized = normalizeOwnerPublicProfileFields(
@@ -460,7 +425,6 @@ export function serializeOwnerPublicProfileEditor(input: {
       languages: input.languages,
       locationVisibility: input.locationVisibility,
       coarseRegionCode: input.coarseRegionCode,
-      profileVisibility: input.profileVisibility,
       relationshipVisibility: input.relationshipVisibility,
     },
     false,
@@ -478,7 +442,6 @@ export function serializeOwnerPublicProfileEditor(input: {
     languages: value.languages,
     locationVisibility: value.locationVisibility,
     coarseRegionCode: value.coarseRegionCode,
-    profileVisibility: value.profileVisibility,
     relationshipVisibility: value.relationshipVisibility,
   };
 }
@@ -494,7 +457,6 @@ function ownerProfileMatches(
     JSON.stringify(profile.languages) === JSON.stringify(input.languages) &&
     profile.location_visibility === input.locationVisibility &&
     profile.coarse_region_code === input.coarseRegionCode &&
-    profile.profile_visibility === input.profileVisibility &&
     profile.relationship_visibility === input.relationshipVisibility
   );
 }

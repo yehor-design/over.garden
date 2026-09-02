@@ -20,7 +20,6 @@ import {
   findPublicEppoSourceRecord,
   listPublicEppoSourcePage,
   parsePublicStableRegistryRequest,
-  PUBLIC_STABLE_REGISTRY_QUERY_DEADLINE_MS,
   type PublicEppoSourceRecord,
   type PublicStableRegistrySurface,
 } from "@/server/catalog-source/public-eppo-explorer-repository";
@@ -31,9 +30,8 @@ import {
   type PublicStableRegistryPage,
 } from "@/server/stable-registry/public-catalog-repository";
 import {
-  latestMeaningfulContentTimestamp,
   resolvePublicSurfaceDiscoveryForRequest,
-  resolvePublicSurfacePayloadWithDeadline,
+  resolvePublicSurfacePayload,
   resolveUnresolvedPublicSurfaceDiscovery,
   type PublicSurfaceDiscoveryResult,
   type PublicSurfaceDiscoverySource,
@@ -69,7 +67,7 @@ export async function renderStableRegistryExplorer(
     parsed.request,
   );
   const state: PublicStableRegistryExplorerState =
-    resolved.terminalClass === "resolved" && resolved.payload
+    resolved.payload
       ? resolved.payload.records.length > 0
         ? "ready"
         : "empty"
@@ -206,10 +204,8 @@ async function loadExplorerWithDiscovery(
   surface: PublicStableRegistrySurface,
   request: PublicStableRegistryPage<ExplorerRecord>["request"],
 ) {
-  return resolvePublicSurfacePayloadWithDeadline({
+  return resolvePublicSurfacePayload({
     consumerId: consumerId(surface),
-    evaluatedAt: new Date(),
-    deadlineMs: PUBLIC_STABLE_REGISTRY_QUERY_DEADLINE_MS,
     load: async () => {
       const page =
         surface === "catalog"
@@ -255,15 +251,10 @@ function buildExplorerDiscoverySource(
   page: PublicStableRegistryPage<ExplorerRecord>,
 ): PublicSurfaceDiscoverySource {
   const copy = getPublicStableRegistryExplorerCopy(locale);
-  const surfaceCopy = publicStableRegistrySurfaceCopy(copy, surface);
   return {
     consumerId: consumerId(surface),
     candidateState: "candidate",
-    qualityClass: page.qualityClass,
     visibleText: [
-      surfaceCopy.title,
-      surfaceCopy.intro,
-      surfaceCopy.resultsTitle,
       ...page.records.flatMap((record) => [
         record.displayName,
         record.scientificName ?? "",
@@ -275,9 +266,6 @@ function buildExplorerDiscoverySource(
     ],
     distinctPublicEntityIds: page.records.map((record) =>
       "stableTaxon" in record ? record.stableTaxon : record.eppoCode,
-    ),
-    meaningfulContentAt: latestMeaningfulContentTimestamp(
-      page.records.map((record) => record.observedAt),
     ),
     canonicalPath: localizedPath(
       locale,
@@ -298,7 +286,6 @@ function buildDetailDiscoverySource(
   return {
     consumerId: detailConsumerId(surface),
     candidateState: "candidate",
-    qualityClass: record.qualityClass,
     visibleText: [
       record.displayName,
       record.scientificName ?? "",
@@ -308,7 +295,6 @@ function buildDetailDiscoverySource(
       copy.evidenceDescription[record.evidenceState],
     ],
     distinctPublicEntityIds: [identifier],
-    meaningfulContentAt: record.observedAt,
     canonicalPath: localizedPath(
       locale,
       surface === "catalog"

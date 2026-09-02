@@ -70,6 +70,7 @@ describe("/objects", () => {
     );
     expect(html).toContain('lang="bg"');
     expect(html).toContain("Живи обекти");
+    // The mocked catalog lists nothing: an empty listing stays noindex (ADR-0022, D3).
     expect(metadata).toMatchObject({
       robots: { index: false, follow: false },
     });

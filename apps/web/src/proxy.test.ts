@@ -1216,7 +1216,7 @@ describe("unknown root segments", () => {
       "/bg",
       "/bg/journals",
       "/sitemap.xml",
-      "/sitemap/0.xml",
+      "/sitemaps/entries-0.xml",
       "/robots.txt",
       "/apple-icon.png",
       "/licenses/GoogleSans-OFL.txt",

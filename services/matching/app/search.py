@@ -186,7 +186,6 @@ select
   journal_entries.title,
   journal_entries.body,
   journal_entries.public_slug,
-  journal_entries.public_noindex,
   journal_entries.public_gone_at,
   journal_entries.published_at,
   journal_entries.entry_date,
@@ -233,7 +232,6 @@ left join user_handle_registry
 left join user_public_profiles
   on user_public_profiles.user_id = user_handle_registry.user_id
  and user_public_profiles.normalized_handle = user_handle_registry.normalized_handle
- and user_public_profiles.profile_visibility = 'public'
  and user_public_profiles.profile_lifecycle_state = 'active'
  and user_public_profiles.removed_at is null
 left join lateral (
@@ -518,7 +516,7 @@ def journal_entry_search_document_from_row(
         "publicSlug": public_slug,
         "publicPath": f"/journal/{public_slug}",
         "locationVisibility": location_visibility,
-        "noindex": bool(row.get("public_noindex")),
+        "noindex": False,
         "entryDate": _iso_datetime(row.get("entry_date")),
         "entryScope": entry_scope,
         "createdAt": _iso_datetime(row.get("created_at")),

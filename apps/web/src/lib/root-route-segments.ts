@@ -35,6 +35,8 @@ export const ROOT_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
   "notifications",
   "objects",
   "privacy",
+  "sitemap.xml",
+  "sitemaps",
   "skeleton",
   "sources",
   "species",
@@ -58,15 +60,14 @@ export const ROOT_ROUTE_FILES: ReadonlySet<string> = new Set([
   "globe.svg",
   "next.svg",
   "robots.txt",
-  "sitemap.xml",
   "vercel.svg",
   "window.svg",
 ]);
 
 /**
  * True when no route can serve the first segment. Locale roots, profile
- * handles, Next internals, dot-prefixed well-known paths, the sitemap index
- * chunks, and the known root files stay with the App Router.
+ * handles, Next internals, dot-prefixed well-known paths, and the known root
+ * files (including the `sitemap.xml` route directory) stay with the App Router.
  */
 export function isUnknownRootPath(pathname: string): boolean {
   const segments = pathname.split("/").filter((segment) => segment.length > 0);
@@ -77,13 +78,12 @@ export function isUnknownRootPath(pathname: string): boolean {
     first.startsWith("@") ||
     first.startsWith("%40") ||
     first.startsWith(".") ||
-    first === "_next" ||
-    first === "sitemap"
+    first === "_next"
   ) {
     return false;
   }
   if (segments.length === 1 && first.includes(".")) {
-    return !ROOT_ROUTE_FILES.has(first);
+    return !ROOT_ROUTE_FILES.has(first) && !ROOT_ROUTE_SEGMENTS.has(first);
   }
   return !ROOT_ROUTE_SEGMENTS.has(first);
 }

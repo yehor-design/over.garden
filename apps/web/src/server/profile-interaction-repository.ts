@@ -223,7 +223,6 @@ export function buildProfileInteractionTargetQuery(
     .selectFrom("user_public_profiles")
     .select(["user_id as userId", "handle"])
     .where("normalized_handle", "=", normalizedHandle)
-    .where("profile_visibility", "=", "public")
     .where("profile_lifecycle_state", "=", "active")
     .where("removed_at", "is", null)
     .where("user_id", "!=", scope.userId);

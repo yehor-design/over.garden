@@ -201,10 +201,7 @@ describe("lineage provenance repository query contracts", () => {
       '"source_person_profiles"."normalized_handle" = "source_person_handles"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"source_person_profiles"."profile_visibility" = $5',
-    );
-    expect(compiled.sql).toContain(
-      '"source_person_profiles"."profile_lifecycle_state" = $6',
+      '"source_person_profiles"."profile_lifecycle_state" = $5',
     );
     expect(compiled.sql).toContain(
       '"source_person_profiles"."removed_at" is null',
@@ -218,10 +215,10 @@ describe("lineage provenance repository query contracts", () => {
       'profile_blocks.blocked_user_id = "lineage_provenance_edges"."source_owner_user_id"',
     );
     expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."owner_user_id" = $7',
+      '"lineage_provenance_edges"."owner_user_id" = $6',
     );
     expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."subject_plant_object_id" = $8',
+      '"lineage_provenance_edges"."subject_plant_object_id" = $7',
     );
     expect(compiled.sql).toContain(
       '"source_objects"."owner_user_id" = "lineage_provenance_edges"."source_owner_user_id"',
@@ -234,7 +231,6 @@ describe("lineage provenance repository query contracts", () => {
       "source_reference",
       "person",
       "current",
-      "public",
       "active",
       scope.userId,
       subjectPlantObjectId,

@@ -93,7 +93,7 @@ describe("/", () => {
     ).toBe("uk");
   });
 
-  it("renders the Ukrainian read-first feed without admitting an unresolved projection", async () => {
+  it("renders the Ukrainian read-first feed as an indexable listing", async () => {
     const html = renderToStaticMarkup(
       await HomeRoute({
         params: Promise.resolve({ locale: "uk" }),
@@ -104,8 +104,8 @@ describe("/", () => {
       params: Promise.resolve({ locale: "uk" }),
     });
 
-    expect(metadata.robots).toMatchObject({ index: false, follow: false });
-    expect(metadata.alternates).toBeUndefined();
+    expect(metadata.robots).toMatchObject({ index: true, follow: true });
+    expect(metadata.alternates).toMatchObject({ canonical: "/" });
     expect(html).toContain('lang="uk"');
     expect(html).toContain(">Стрічка</h1>");
     expect(html).toContain("Ранкове спостереження");

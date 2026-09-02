@@ -60,7 +60,6 @@ describe("profile interaction repository", () => {
 
     expect(compiled.sql).toContain('from "user_public_profiles"');
     expect(compiled.sql).toContain('"normalized_handle" =');
-    expect(compiled.sql).toContain('"profile_visibility" =');
     expect(compiled.sql).toContain('"profile_lifecycle_state" =');
     expect(compiled.sql).toContain('"removed_at" is null');
     expect(compiled.sql).toContain('"user_id" !=');

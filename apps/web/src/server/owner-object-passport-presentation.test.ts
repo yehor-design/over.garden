@@ -163,7 +163,6 @@ function ownerEntry(
     visibility,
     lifecycle_state: lifecycleState,
     public_slug: visibility === "public" ? `${id}-slug` : null,
-    public_noindex: true,
     published_at:
       visibility === "public" ? new Date(`${entryDate}T12:00:00.000Z`) : null,
     archived_at: null,

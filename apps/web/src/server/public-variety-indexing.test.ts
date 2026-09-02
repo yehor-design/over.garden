@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  evaluatePublicVarietyIndexState,
-  PUBLIC_VARIETY_INDEXABILITY_THRESHOLD,
-} from "./public-variety-indexing";
+import { evaluatePublicVarietyIndexState } from "./public-variety-indexing";
 import type { PublicSurfaceDiscoverySource } from "./public-surface-discovery";
-
-const EVALUATED_AT = "2026-08-24T00:00:00.000Z";
 
 function source(
   overrides: Partial<PublicSurfaceDiscoverySource> = {},
@@ -16,12 +11,8 @@ function source(
   return {
     consumerId: "public_variety_repository",
     candidateState: "candidate",
-    qualityClass: "partial",
-    visibleText: [
-      Array.from({ length: 120 }, (_, index) => `word${index}`).join(" "),
-    ],
+    visibleText: ["Домати Черi"],
     distinctPublicEntityIds: ["catalog:plant_variety:tomato"],
-    meaningfulContentAt: "2026-08-23T00:00:00.000Z",
     canonicalPath: "/variety/tomato",
     equivalentLocales: [],
     ...overrides,
@@ -30,43 +21,29 @@ function source(
   };
 }
 
-describe("public variety indexability threshold", () => {
-  it("uses the single public-surface threshold without catalog trust gates", () => {
-    expect(PUBLIC_VARIETY_INDEXABILITY_THRESHOLD).toEqual({
-      minimumQualityClass: "partial",
-      minimumWordCount: 120,
-      minimumDistinctEntities: 1,
-      maximumStalenessDays: 540,
-    });
-    expect(
-      evaluatePublicVarietyIndexState(source(), EVALUATED_AT),
-    ).toMatchObject({
+describe("public variety indexability (ADR-0022, D3)", () => {
+  it("indexes a variety page that shows anything, without a catalog trust gate", () => {
+    expect(evaluatePublicVarietyIndexState(source())).toMatchObject({
       value: "indexable",
       reasons: [],
     });
+    expect(
+      evaluatePublicVarietyIndexState(
+        source({ visibleText: [], distinctPublicEntityIds: ["one"] }),
+      ).value,
+    ).toBe("indexable");
   });
 
-  it("refuses thin, entity-free, and unverified projections deterministically", () => {
-    const result = evaluatePublicVarietyIndexState(
-      source({
-        qualityClass: "unverified",
-        visibleText: [
-          Array.from({ length: 119 }, (_, index) => `word${index}`).join(" "),
-        ],
-        distinctPublicEntityIds: [],
-      }),
-      EVALUATED_AT,
-    );
-
-    expect(result).toMatchObject({
+  it("keeps only an empty projection out of the index", () => {
+    expect(
+      evaluatePublicVarietyIndexState(
+        source({ visibleText: [], distinctPublicEntityIds: [] }),
+      ),
+    ).toMatchObject({
       value: "noindex",
       sitemapEligible: false,
       robots: { index: false, follow: false },
-      reasons: [
-        "quality_class_below_threshold",
-        "word_count_below_threshold",
-        "distinct_entity_count_below_threshold",
-      ],
+      reasons: ["empty_listing"],
     });
   });
 });

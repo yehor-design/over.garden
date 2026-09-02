@@ -8,8 +8,8 @@ Policy version: `ove242.publicIndexParity.v3` (supersedes
 
 The queue and document checks below are an operator consistency gate over
 resolved canonical/index state. They do not deny an unresolved product read
-and do not replace ADR-0018 quality-class admission or
-`PUBLIC_SURFACE_INDEXABILITY_THRESHOLD`.
+and do not replace the ADR-0022 (D3) indexability rule in
+`docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`.
 
 ## What changed in v3 (OVE-242)
 

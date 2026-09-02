@@ -29,8 +29,7 @@ import {
 import { getEngagementSummary } from "@/server/engagement-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
-  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
-  resolvePublicSurfacePayloadWithDeadline,
+  resolvePublicSurfacePayload,
   resolveUnresolvedPublicSurfaceDiscovery,
 } from "@/server/public-surface-discovery";
 import { buildPublicVarietySurfaceMetadata } from "@/server/public-variety-metadata";
@@ -62,10 +61,8 @@ export async function generatePublicCatalogEvidenceMetadata(
     getRequestInterfaceLocale(),
   ]);
   const routeCopy = getCatalogEvidenceCopy(locale, catalogKind);
-  const bounded = await resolvePublicSurfacePayloadWithDeadline({
+  const bounded = await resolvePublicSurfacePayload({
     consumerId: "catalog_evidence",
-    evaluatedAt: new Date(),
-    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
     load: async () => {
       const page = await getCachedPublicCatalogEvidencePage(
         slug,

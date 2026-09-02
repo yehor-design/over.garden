@@ -191,17 +191,19 @@ describe("/lineage/objects/[objectId]", () => {
     ]);
   });
 
-  it("marks a thin object passport noindex without canonical admission", async () => {
+  it("indexes a thin object passport with its canonical path", async () => {
     const { generateMetadata } = await import("./page");
     const metadata = await generateMetadata({
       params: Promise.resolve({ objectId }),
     });
 
     expect(metadata.title).toBe("Balcony tomato · жив обект | OverGarden");
-    expect(metadata.alternates).toBeUndefined();
+    expect(metadata.alternates).toMatchObject({
+      canonical: `/lineage/objects/${objectId}`,
+    });
     expect(metadata.robots).toEqual({
-      index: false,
-      follow: false,
+      index: true,
+      follow: true,
     });
   });
 

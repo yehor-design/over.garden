@@ -138,9 +138,6 @@ describe("journal mention repository query contracts", () => {
     );
     expect(compiled.sql).toContain('"user_public_profiles"."user_id" !=');
     expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_visibility" =',
-    );
-    expect(compiled.sql).toContain(
       '"user_public_profiles"."profile_lifecycle_state" =',
     );
     expect(compiled.sql).toContain(
@@ -188,9 +185,6 @@ describe("journal mention repository query contracts", () => {
       '"user_public_profiles"."user_id" as "userId"',
     );
     expect(compiled.sql).toContain('"user_public_profiles"."user_id" !=');
-    expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_visibility" =',
-    );
     expect(compiled.sql).toContain(
       '"user_public_profiles"."profile_lifecycle_state" =',
     );

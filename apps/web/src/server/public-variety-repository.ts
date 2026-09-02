@@ -199,7 +199,6 @@ export function buildPublicVarietyDiscoverySource(
   return {
     consumerId,
     candidateState: "candidate",
-    qualityClass: page.qualityClass ?? "unverified",
     visibleText: [
       page.catalog.canonicalName,
       page.seedProof?.title ?? "",
@@ -223,9 +222,6 @@ export function buildPublicVarietyDiscoverySource(
       `catalog:${page.catalog.catalogKind}:${page.catalog.publicSlug}`,
       ...page.entries.map((entry) => entry.id),
     ],
-    meaningfulContentAt: page.latestMeaningfulAt
-      ? toIsoTimestamp(page.latestMeaningfulAt)
-      : null,
     canonicalPath: publicCatalogEvidencePath(
       page.catalog.catalogKind,
       page.catalog.publicSlug,
@@ -428,11 +424,6 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
     .groupBy(["catalog_items.catalog_kind", "catalog_items.public_slug"])
     .orderBy("catalog_items.public_slug", "asc")
     .$narrowType<{ catalogKind: CatalogKind; publicSlug: string }>();
-}
-
-function toIsoTimestamp(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isFinite(date.getTime()) ? date.toISOString() : "";
 }
 
 export function buildPublicVarietyEntriesQuery(

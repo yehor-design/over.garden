@@ -66,8 +66,8 @@ describe("/markets/[market]", () => {
     });
     expect(bulgariaMetadata).toMatchObject({
       title: "OverGarden за градинари в България | OverGarden",
-      robots: { index: false, follow: false },
+      robots: { index: true, follow: true },
+      alternates: { canonical: "/bg/markets/bulgaria" },
     });
-    expect(bulgariaMetadata.alternates).toBeUndefined();
   });
 });

@@ -31,7 +31,6 @@ export interface JournalEntrySearchContractRow {
   title: string;
   body: string;
   public_slug: string | null;
-  public_noindex: boolean;
   public_gone_at: Date | string | null;
   published_at: Date | string | null;
   entry_date: Date | string;
@@ -123,7 +122,7 @@ export function buildJournalEntrySearchDocumentContractFixture(
     publicPath: publicJournalEntryPath(entry.public_slug),
     locationVisibility,
     ...(coarseRegionCode ? { coarseRegionCode } : {}),
-    noindex: entry.public_noindex,
+    noindex: false,
     entryDate: normalizeCalendarDate(entry.entry_date),
     entryScope: entry.entry_scope,
     createdAt: normalizeTimestamp(entry.created_at),

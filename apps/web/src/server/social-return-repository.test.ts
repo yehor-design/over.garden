@@ -57,13 +57,12 @@ function expectCurrentEligibleIdentity(
   expect(compiled.sql).toContain(
     `"${profilesAlias}"."normalized_handle" = "${handlesAlias}"."normalized_handle"`,
   );
-  expect(compiled.sql).toContain(`"${profilesAlias}"."profile_visibility" =`);
   expect(compiled.sql).toContain(
     `"${profilesAlias}"."profile_lifecycle_state" =`,
   );
   expect(compiled.sql).toContain(`"${profilesAlias}"."removed_at" is null`);
   expect(compiled.parameters).toEqual(
-    expect.arrayContaining(["current", "public", "active"]),
+    expect.arrayContaining(["current", "active"]),
   );
 }
 

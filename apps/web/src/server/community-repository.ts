@@ -1,6 +1,7 @@
 import "server-only";
 
 import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
+import { cache } from "react";
 
 import { db } from "@/db";
 import type {
@@ -211,7 +212,10 @@ export interface CommunityModerationQueueItem {
   authorHandle: string | null;
 }
 
-export async function listPublicCommunities(
+/** One directory read per request: metadata and the page share it (React.cache). */
+export const listPublicCommunities = cache(loadPublicCommunities);
+
+async function loadPublicCommunities(
   viewerScope: RequestScope | null = null,
   executor: QueryExecutor = db,
 ): Promise<PublicCommunityDirectoryItem[]> {
@@ -938,7 +942,6 @@ export function buildCommunityReadinessQuery(
         join user_public_profiles
           on user_public_profiles.user_id = user_handle_registry.user_id
          and user_public_profiles.normalized_handle = user_handle_registry.normalized_handle
-         and user_public_profiles.profile_visibility = 'public'
          and user_public_profiles.profile_lifecycle_state = 'active'
          and user_public_profiles.removed_at is null
         join community_memberships
@@ -998,7 +1001,6 @@ export function buildReadyCommunityNavigationQuery(executor: QueryExecutor) {
           join user_public_profiles
             on user_public_profiles.user_id = user_handle_registry.user_id
            and user_public_profiles.normalized_handle = user_handle_registry.normalized_handle
-           and user_public_profiles.profile_visibility = 'public'
            and user_public_profiles.profile_lifecycle_state = 'active'
            and user_public_profiles.removed_at is null
           join community_memberships
@@ -1214,7 +1216,6 @@ export function buildCommunityStatsQuery(
         join user_public_profiles
           on user_public_profiles.user_id = user_handle_registry.user_id
          and user_public_profiles.normalized_handle = user_handle_registry.normalized_handle
-         and user_public_profiles.profile_visibility = 'public'
          and user_public_profiles.profile_lifecycle_state = 'active'
          and user_public_profiles.removed_at is null
         join community_memberships as contribution_memberships
@@ -1247,7 +1248,6 @@ export function buildCommunityStatsQuery(
         join user_public_profiles
           on user_public_profiles.user_id = user_handle_registry.user_id
          and user_public_profiles.normalized_handle = user_handle_registry.normalized_handle
-         and user_public_profiles.profile_visibility = 'public'
          and user_public_profiles.profile_lifecycle_state = 'active'
          and user_public_profiles.removed_at is null
         join community_memberships as object_memberships
@@ -1360,7 +1360,6 @@ export function buildPublicCommunityContributionsQuery(
           "=",
           "user_handle_registry.normalized_handle",
         )
-        .on("user_public_profiles.profile_visibility", "=", "public")
         .on("user_public_profiles.profile_lifecycle_state", "=", "active")
         .on("user_public_profiles.removed_at", "is", null),
     )
@@ -1609,7 +1608,6 @@ export function buildPublicCommunityFallbackCandidateQuery(
                 "=",
                 "user_handle_registry.normalized_handle",
               )
-              .on("user_public_profiles.profile_visibility", "=", "public")
               .on("user_public_profiles.profile_lifecycle_state", "=", "active")
               .on("user_public_profiles.removed_at", "is", null),
           )
@@ -1771,7 +1769,6 @@ export function buildEligibleCommunityContributionCandidatesQuery(
           "=",
           "journal_entries.owner_user_id",
         )
-        .on("user_public_profiles.profile_visibility", "=", "public")
         .on("user_public_profiles.profile_lifecycle_state", "=", "active")
         .on("user_public_profiles.removed_at", "is", null),
     )
@@ -1941,7 +1938,6 @@ export function buildCommunityReportTargetQuery(
           "=",
           "journal_entries.owner_user_id",
         )
-        .on("user_public_profiles.profile_visibility", "=", "public")
         .on("user_public_profiles.profile_lifecycle_state", "=", "active")
         .on("user_public_profiles.removed_at", "is", null),
     )
@@ -2057,7 +2053,6 @@ export function buildCommunityModerationQueueQuery(
           "=",
           "contributor_handles.normalized_handle",
         )
-        .on("user_public_profiles.profile_visibility", "=", "public")
         .on("user_public_profiles.profile_lifecycle_state", "=", "active")
         .on("user_public_profiles.removed_at", "is", null),
     )
@@ -2282,7 +2277,6 @@ function communityCoverDerivativeKey(viewerScope: RequestScope | null = null) {
     join user_public_profiles as cover_profiles
       on cover_profiles.user_id = cover_handles.user_id
      and cover_profiles.normalized_handle = cover_handles.normalized_handle
-     and cover_profiles.profile_visibility = 'public'
      and cover_profiles.profile_lifecycle_state = 'active'
      and cover_profiles.removed_at is null
     join media_assets as cover_media
@@ -2329,7 +2323,6 @@ function communityCoverFocalColumn(
     join user_public_profiles as cover_profiles
       on cover_profiles.user_id = cover_handles.user_id
      and cover_profiles.normalized_handle = cover_handles.normalized_handle
-     and cover_profiles.profile_visibility = 'public'
      and cover_profiles.profile_lifecycle_state = 'active'
      and cover_profiles.removed_at is null
     join media_assets as cover_media

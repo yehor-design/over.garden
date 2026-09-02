@@ -244,7 +244,6 @@ export function buildFollowedFeedStoriesQuery(
           "=",
           "target_owner_handles.normalized_handle",
         )
-        .on("target_owner_profiles.profile_visibility", "=", "public")
         .on("target_owner_profiles.profile_lifecycle_state", "=", "active")
         .on("target_owner_profiles.removed_at", "is", null),
     )
@@ -560,7 +559,6 @@ export function buildNotificationFollowEventsQuery(
           "=",
           "follower_handles.normalized_handle",
         )
-        .on("follower_profiles.profile_visibility", "=", "public")
         .on("follower_profiles.profile_lifecycle_state", "=", "active")
         .on("follower_profiles.removed_at", "is", null),
     )

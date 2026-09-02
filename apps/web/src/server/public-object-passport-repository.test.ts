@@ -88,16 +88,13 @@ describe("public object passport repository query contracts", () => {
       '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_visibility" = $6',
-    );
-    expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_lifecycle_state" = $7',
+      '"user_public_profiles"."profile_lifecycle_state" = $6',
     );
     expect(compiled.sql).toContain(
       '"user_public_profiles"."removed_at" is null',
     );
     expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
-    expect(compiled.sql).toContain('"plant_objects"."id" = $8');
+    expect(compiled.sql).toContain('"plant_objects"."id" = $7');
     expect(compiled.sql).not.toMatch(
       /journal_entries"\."title|journal_entries"\."body|media_assets|quarantine_key|derivative_key|ip_address|user_agent|email|phone|coordinates|latitude|longitude|source_reference_label|client_mutation_id|pending_identity/i,
     );
@@ -107,7 +104,6 @@ describe("public object passport repository query contracts", () => {
       "seeded",
       "confirmed",
       "current",
-      "public",
       "active",
       plantObjectId,
     ]);

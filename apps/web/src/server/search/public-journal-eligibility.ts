@@ -121,7 +121,6 @@ export function buildGloballyEligibleJournalSearchRowsQuery(
           "=",
           "user_handle_registry.normalized_handle",
         )
-        .on("user_public_profiles.profile_visibility", "=", "public")
         .on("user_public_profiles.profile_lifecycle_state", "=", "active")
         .on("user_public_profiles.removed_at", "is", null),
     )
@@ -138,7 +137,6 @@ export function buildGloballyEligibleJournalSearchRowsQuery(
       "journal_entries.title as title",
       "journal_entries.body as body",
       "journal_entries.public_slug as publicSlug",
-      "journal_entries.public_noindex as publicNoindex",
       "journal_entries.public_gone_at as publicGoneAt",
       "journal_entries.published_at as publishedAt",
       "journal_entries.entry_date as entryDate",
@@ -209,7 +207,6 @@ export async function listGloballyEligibleJournalSearchDocuments(
       title: row.title,
       body: row.body,
       public_slug: row.publicSlug,
-      public_noindex: row.publicNoindex,
       public_gone_at: row.publicGoneAt,
       published_at: row.publishedAt,
       entry_date: row.entryDate,

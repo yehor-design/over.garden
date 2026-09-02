@@ -79,7 +79,6 @@ const WORKSPACE = {
     languages: ["uk"],
     locationVisibility: "hidden",
     coarseRegionCode: null,
-    profileVisibility: "public",
     relationshipVisibility: "counts",
   },
   handleRename: {
@@ -143,19 +142,6 @@ describe("/garden/profile", () => {
     expect(html).toContain("Вийти з облікового запису");
     expect(html).toContain('class="w-full"');
     expect(html).not.toMatch(/email|provider|session-1|quarantine|token/i);
-  });
-
-  it("does not link a private profile as publicly available", async () => {
-    mocks.getOwnerProfileWorkspace.mockResolvedValueOnce({
-      ...WORKSPACE,
-      editor: { ...WORKSPACE.editor, profileVisibility: "private" },
-    });
-    const { default: Page } = await import("./page");
-    const html = renderToStaticMarkup(
-      await Page({ searchParams: Promise.resolve({}) }),
-    );
-
-    expect(html).not.toContain('href="/@green_thumb"');
   });
 
   it("localizes blocked-state management", async () => {

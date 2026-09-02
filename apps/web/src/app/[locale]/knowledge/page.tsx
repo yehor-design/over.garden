@@ -150,10 +150,6 @@ function buildKnowledgeSurface(locale: PublicLocale) {
     canonicalPath: localizedPath(locale, "/knowledge"),
     equivalentLocales: getContentAvailableLocales("/knowledge"),
     visibleText: [
-      copy.metadataTitle,
-      copy.metadataDescription,
-      copy.heading,
-      copy.intro,
       ...items.flatMap((item) => [item.title, item.description]),
     ],
     distinctPublicEntityIds: authoredContentEntityIds(

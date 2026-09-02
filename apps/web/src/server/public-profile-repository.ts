@@ -253,7 +253,6 @@ interface PublicProfileJournalMediaRow {
 
 interface PublicProfileLifecycleRow {
   handleLifecycleState: string;
-  profileVisibility: string | null;
   profileLifecycleState: string | null;
   removedAt: Date | string | null;
 }
@@ -459,7 +458,6 @@ export function classifyPublicProfileLifecycle(
   if (
     (row?.handleLifecycleState !== "current" &&
       row?.handleLifecycleState !== "retired") ||
-    row.profileVisibility !== "public" ||
     row.profileLifecycleState !== "active" ||
     row.removedAt !== null
   ) {
@@ -815,7 +813,6 @@ export function buildPublicProfileByNormalizedHandleQuery(
       "relationship_visibility as relationshipVisibility",
     ])
     .where("normalized_handle", "=", normalizedHandle)
-    .where("profile_visibility", "=", "public")
     .where("profile_lifecycle_state", "=", "active")
     .where("removed_at", "is", null);
 }
@@ -859,7 +856,6 @@ export function buildPublicProfileLifecycleQuery(
     )
     .select([
       "user_handle_registry.lifecycle_state as handleLifecycleState",
-      "user_public_profiles.profile_visibility as profileVisibility",
       "user_public_profiles.profile_lifecycle_state as profileLifecycleState",
       "user_public_profiles.removed_at as removedAt",
     ])
@@ -1262,7 +1258,6 @@ export function buildPublicProfileFollowerCountQuery(
           "=",
           "profile_follows.follower_user_id",
         )
-        .on("follower_profiles.profile_visibility", "=", "public")
         .on("follower_profiles.profile_lifecycle_state", "=", "active")
         .on("follower_profiles.removed_at", "is", null),
     )
@@ -1297,7 +1292,6 @@ export function buildPublicProfileFollowingCountQuery(
     .innerJoin("user_public_profiles as target_profiles", (join) =>
       join
         .onRef("target_profiles.user_id", "=", "profile_follows.target_user_id")
-        .on("target_profiles.profile_visibility", "=", "public")
         .on("target_profiles.profile_lifecycle_state", "=", "active")
         .on("target_profiles.removed_at", "is", null),
     )

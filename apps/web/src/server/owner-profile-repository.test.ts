@@ -56,7 +56,6 @@ describe("owner profile repository", () => {
         languages: ["uk", "en", "uk"],
         locationVisibility: "region",
         coarseRegionCode: "ua-32",
-        profileVisibility: "public",
         relationshipVisibility: "counts",
       }),
     ).toEqual({
@@ -68,7 +67,6 @@ describe("owner profile repository", () => {
         languages: ["uk", "en"],
         locationVisibility: "region",
         coarseRegionCode: "UA-32",
-        profileVisibility: "public",
         relationshipVisibility: "counts",
       },
     });
@@ -80,7 +78,6 @@ describe("owner profile repository", () => {
         languages: ["uk"],
         locationVisibility: "hidden",
         coarseRegionCode: null,
-        profileVisibility: "public",
         relationshipVisibility: "counts",
       }),
     ).toEqual({ ok: false, error: "bio" });
@@ -92,7 +89,6 @@ describe("owner profile repository", () => {
         languages: ["de"],
         locationVisibility: "hidden",
         coarseRegionCode: null,
-        profileVisibility: "public",
         relationshipVisibility: "counts",
       }),
     ).toEqual({ ok: false, error: "languages" });
@@ -104,7 +100,6 @@ describe("owner profile repository", () => {
         languages: ["uk"],
         locationVisibility: "region",
         coarseRegionCode: null,
-        profileVisibility: "public",
         relationshipVisibility: "counts",
       }),
     ).toEqual({ ok: false, error: "region" });
@@ -116,7 +111,6 @@ describe("owner profile repository", () => {
         languages: ["uk"],
         locationVisibility: "hidden",
         coarseRegionCode: null,
-        profileVisibility: "public",
         relationshipVisibility: "counts",
       }),
     ).toEqual({ ok: false, error: "avatar" });
@@ -144,13 +138,11 @@ describe("owner profile repository", () => {
       languages: ["uk", "en"],
       locationVisibility: "region",
       coarseRegionCode: "UA-32",
-      profileVisibility: "public",
       relationshipVisibility: "counts",
     }).compile();
 
     expect(compiled.sql).toContain('update "user_public_profiles"');
     expect(compiled.sql).toContain('"user_id" =');
-    expect(compiled.sql).toContain('"profile_visibility" =');
     expect(compiled.sql).toContain('"relationship_visibility" =');
     expect(compiled.sql).toContain('"coarse_region_code" =');
     expect(compiled.sql).toContain('"avatar_media_asset_id" =');
@@ -212,7 +204,6 @@ describe("owner profile repository", () => {
       languages: ["uk", "en"],
       locationVisibility: "region",
       coarseRegionCode: "UA-32",
-      profileVisibility: "public",
       relationshipVisibility: "counts",
     });
 
@@ -224,7 +215,6 @@ describe("owner profile repository", () => {
       languages: ["uk", "en"],
       locationVisibility: "region",
       coarseRegionCode: "UA-32",
-      profileVisibility: "public",
       relationshipVisibility: "counts",
     });
     expect(JSON.stringify(editor)).not.toMatch(

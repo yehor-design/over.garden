@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { PublicKnowledgeTopicPage } from "@/components/public/public-knowledge-topic";
 import { EngagementFollowControl } from "@/app/engagement/public-engagement-panel";
@@ -19,9 +20,8 @@ import {
   type PublicTopicAggregationPage,
 } from "@/server/public-topic-repository";
 import {
-  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
   resolvePublicSurfaceDiscoveryForRequest,
-  resolvePublicSurfacePayloadWithDeadline,
+  resolvePublicSurfacePayload,
   resolveUnresolvedPublicSurfaceDiscovery,
   type PublicSurfaceDiscoveryResult,
 } from "@/server/public-surface-discovery";
@@ -33,6 +33,11 @@ interface PublicTopicRouteProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
+/** One topic read per request: `generateMetadata` and the page share it (React.cache). */
+const loadTopicPage = cache((slug: string, locale: PublicLocale) =>
+  getPublicTopicAggregationPage(slug, { locale }),
+);
+
 export async function generateMetadata({
   params,
 }: PublicTopicRouteProps): Promise<Metadata> {
@@ -41,14 +46,10 @@ export async function generateMetadata({
     return missingTopicMetadata();
   }
 
-  const bounded = await resolvePublicSurfacePayloadWithDeadline({
+  const bounded = await resolvePublicSurfacePayload({
     consumerId: "localized_topic",
-    evaluatedAt: new Date(),
-    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
     load: async () => {
-      const topic = await getPublicTopicAggregationPage(slug, {
-        locale: localeParam,
-      });
+      const topic = await loadTopicPage(slug, localeParam);
       if (!topic) throw new Error("Public topic unavailable.");
       return {
         source: buildPublicTopicDiscoverySource(
@@ -74,9 +75,7 @@ export default async function TopicRoute({
 
   const query = (await searchParams) ?? {};
   const session = await getCurrentSession().catch(() => null);
-  const topic = await getPublicTopicAggregationPage(slug, {
-    locale: localeParam,
-  }).catch(() => null);
+  const topic = await loadTopicPage(slug, localeParam).catch(() => null);
   if (!topic) notFound();
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;

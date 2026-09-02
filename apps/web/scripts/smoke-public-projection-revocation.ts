@@ -146,7 +146,6 @@ async function main() {
           lifecycle_state: "active",
           content_class: "real_ugc",
           public_slug: `ove-242-revocation-${OWNER_ID.slice(0, 8)}`,
-          public_noindex: true,
           published_at: new Date(),
           client_mutation_id: `ove-242-${OWNER_ID}`,
         })
@@ -288,7 +287,6 @@ async function main() {
         .set({
           lifecycle_state: "archived",
           public_gone_at: new Date(),
-          public_noindex: true,
         })
         .where("id", "=", ENTRY_ID)
         .execute();

@@ -18,10 +18,8 @@ import {
   type PublicObjectCatalogPage,
 } from "@/server/public-object-catalog-repository";
 import {
-  latestMeaningfulContentTimestamp,
-  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
   resolvePublicSurfaceDiscoveryForRequest,
-  resolvePublicSurfaceDiscoveryWithDeadline,
+  resolvePublicSurfaceDiscoveryFromLoad,
   resolveUnresolvedPublicSurfaceDiscovery,
   type PublicSurfaceDiscoveryResult,
   type PublicSurfaceDiscoverySource,
@@ -51,10 +49,8 @@ export async function generateMetadata({
   }
 
   const request = normalizePublicObjectCatalogRequest({});
-  const discovery = await resolvePublicSurfaceDiscoveryWithDeadline({
+  const discovery = await resolvePublicSurfaceDiscoveryFromLoad({
     consumerId: "localized_catalog_browse",
-    evaluatedAt: new Date(),
-    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
     loadSource: async () =>
       buildObjectCatalogDiscoverySource(
         localeParam,
@@ -131,16 +127,10 @@ function buildObjectCatalogDiscoverySource(
   locale: PublicLocale,
   page: PublicObjectCatalogPage,
 ): PublicSurfaceDiscoverySource {
-  const copy = getPublicObjectCatalogCopy(locale);
   return {
     consumerId: "localized_catalog_browse",
     candidateState: "candidate",
-    qualityClass: page.qualityClass ?? "unverified",
     visibleText: [
-      copy.metadataTitle,
-      copy.metadataDescription,
-      copy.heading,
-      copy.intro,
       ...page.cards.flatMap((card) => [
         card.identityName ?? "",
         card.representativeObject.displayName,
@@ -152,9 +142,6 @@ function buildObjectCatalogDiscoverySource(
       card.representativeObject.path,
       card.latestJournal.path,
     ]),
-    meaningfulContentAt: latestMeaningfulContentTimestamp(
-      page.cards.map((card) => card.latestJournal.entryDate),
-    ),
     canonicalPath: localizedPath(locale, "/objects"),
     equivalentLocales: [locale],
   };

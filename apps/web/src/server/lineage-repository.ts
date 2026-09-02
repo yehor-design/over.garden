@@ -673,7 +673,6 @@ export function buildObjectProvenanceEdgesQuery(
           "source_person_handles.normalized_handle",
         )
         .on("source_person_profiles.handle_registry_state", "=", "current")
-        .on("source_person_profiles.profile_visibility", "=", "public")
         .on("source_person_profiles.profile_lifecycle_state", "=", "active")
         .on("source_person_profiles.removed_at", "is", null)
         .on(noActiveLineageProfileBlockPredicate()),

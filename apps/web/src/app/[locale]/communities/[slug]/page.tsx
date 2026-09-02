@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { PublicCommunityView } from "@/components/public/public-community";
 import {
@@ -22,10 +23,8 @@ import {
   type PublicCommunityPageModel,
 } from "@/server/community-repository";
 import {
-  latestMeaningfulContentTimestamp,
-  PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
   resolvePublicSurfaceDiscoveryForRequest,
-  resolvePublicSurfaceDiscoveryWithDeadline,
+  resolvePublicSurfaceDiscoveryFromLoad,
   resolveUnresolvedPublicSurfaceDiscovery,
   type PublicSurfaceDiscoveryResult,
   type PublicSurfaceDiscoverySource,
@@ -42,6 +41,22 @@ interface CommunityDetailRouteProps {
 
 const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
 
+type CommunityPageOptions = NonNullable<
+  Parameters<typeof getPublicCommunityPage>[2]
+>;
+
+/** One community read per request: `generateMetadata` and the guest page share it (React.cache). */
+const loadCommunityPage = cache(
+  (
+    slug: string,
+    locale: PublicLocale,
+    viewerScope: CommunityPageOptions["viewerScope"],
+    query: string,
+    kind: CommunityPageOptions["kind"],
+    cursor: string | null,
+  ) => getPublicCommunityPage(slug, locale, { viewerScope, query, kind, cursor }),
+);
+
 export async function generateMetadata({
   params,
 }: CommunityDetailRouteProps): Promise<Metadata> {
@@ -50,12 +65,17 @@ export async function generateMetadata({
   if (!isPublicLocale(localeParam) || !safeSlug) {
     return missingCommunityMetadata();
   }
-  const discovery = await resolvePublicSurfaceDiscoveryWithDeadline({
+  const discovery = await resolvePublicSurfaceDiscoveryFromLoad({
     consumerId: "localized_community",
-    evaluatedAt: new Date(),
-    deadlineMs: PUBLIC_SURFACE_DISCOVERY_DEADLINE_MS,
     loadSource: async () => {
-      const community = await getPublicCommunityPage(safeSlug, localeParam);
+      const community = await loadCommunityPage(
+        safeSlug,
+        localeParam,
+        null,
+        "",
+        undefined,
+        null,
+      );
       if (!community) throw new Error("Public community unavailable.");
       return buildCommunityDiscoverySource(localeParam, community);
     },
@@ -80,12 +100,14 @@ export default async function CommunityDetailRoute({
   const query = firstValue(queryParams.q).slice(0, 100);
   const kind = normalizeKind(firstValue(queryParams.kind));
   const cursor = firstValue(queryParams.cursor).slice(0, 512) || null;
-  const community = await getPublicCommunityPage(slug, localeParam, {
+  const community = await loadCommunityPage(
+    slug,
+    localeParam,
     viewerScope,
     query,
     kind,
     cursor,
-  });
+  );
   if (!community) return notFound();
   const discovery = resolvePublicSurfaceDiscoveryForRequest(
     buildCommunityDiscoverySource(localeParam, community),
@@ -135,7 +157,6 @@ function buildCommunityDiscoverySource(
   return {
     consumerId: "localized_community",
     candidateState: activeCandidate ? "candidate" : "not_public_candidate",
-    qualityClass: community.qualityClass ?? "unverified",
     visibleText: [
       copy.name,
       copy.description,
@@ -149,10 +170,6 @@ function buildCommunityDiscoverySource(
       community.id,
       ...contributions.flatMap((item) => [item.id, item.object.id]),
     ],
-    meaningfulContentAt: latestMeaningfulContentTimestamp([
-      community.updatedAt,
-      ...contributions.map((item) => item.publishedAt),
-    ]),
     canonicalPath: localizedPath(locale, `/communities/${community.slug}`),
     equivalentLocales: [locale],
   };

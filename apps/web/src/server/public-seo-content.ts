@@ -495,14 +495,11 @@ export function resolveAuthoredPublicSurfaceDiscovery(
     {
       consumerId: input.consumerId,
       candidateState: input.candidateState ?? "candidate",
-      qualityClass: "verified",
       visibleText: input.visibleText,
       distinctPublicEntityIds: input.distinctPublicEntityIds,
-      meaningfulContentAt: input.meaningfulContentAt,
       canonicalPath: input.canonicalPath,
       equivalentLocales: input.equivalentLocales,
     },
-    input.evaluatedAt,
   );
 }
 
