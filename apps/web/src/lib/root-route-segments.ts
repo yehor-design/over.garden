@@ -45,9 +45,28 @@ export const ROOT_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Every file the site serves at the root: the App Router file conventions in
+ * `src/app` (`robots.ts` → `/robots.txt`, `sitemap.ts` → `/sitemap.xml`,
+ * `favicon.ico`) plus the files at the top of `public/`. Any other dotted root
+ * path (`/sw.js`, `/manifest.webmanifest`, `/icon-192.png`, `/wp-login.php`)
+ * would otherwise be swallowed by `[locale]` and answer 200.
+ */
+export const ROOT_ROUTE_FILES: ReadonlySet<string> = new Set([
+  "apple-icon.png",
+  "favicon.ico",
+  "file.svg",
+  "globe.svg",
+  "next.svg",
+  "robots.txt",
+  "sitemap.xml",
+  "vercel.svg",
+  "window.svg",
+]);
+
+/**
  * True when no route can serve the first segment. Locale roots, profile
- * handles, Next internals, dot-prefixed well-known paths, and file-like paths
- * (`/robots.txt`, `/sitemap.xml`, `/favicon.ico`) stay with the App Router.
+ * handles, Next internals, dot-prefixed well-known paths, the sitemap index
+ * chunks, and the known root files stay with the App Router.
  */
 export function isUnknownRootPath(pathname: string): boolean {
   const segments = pathname.split("/").filter((segment) => segment.length > 0);
@@ -58,10 +77,13 @@ export function isUnknownRootPath(pathname: string): boolean {
     first.startsWith("@") ||
     first.startsWith("%40") ||
     first.startsWith(".") ||
-    first === "_next"
+    first === "_next" ||
+    first === "sitemap"
   ) {
     return false;
   }
-  if (segments[segments.length - 1].includes(".")) return false;
+  if (segments.length === 1 && first.includes(".")) {
+    return !ROOT_ROUTE_FILES.has(first);
+  }
   return !ROOT_ROUTE_SEGMENTS.has(first);
 }
