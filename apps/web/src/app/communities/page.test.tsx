@@ -119,7 +119,35 @@ describe("community public routes", () => {
         slug: "observation-and-care",
       }),
     });
+    // The mocked community lists no contributions: an empty listing stays
+    // noindex (ADR-0022, D3), whatever its readiness says.
     expect(detailMeta).toMatchObject({
+      robots: { index: false, follow: false },
+    });
+    expect(detailMeta.alternates).toBeUndefined();
+
+    mocks.getPublicCommunityPage.mockResolvedValueOnce({
+      ...directoryCommunity,
+      navigationReady: false,
+      contributions: {
+        items: [
+          {
+            id: "contribution-1",
+            title: "Домати на балкона",
+            excerpt: "Първи плодове след три седмици.",
+            object: { id: "object-1", displayName: "Домат" },
+          },
+        ],
+        nextCursor: null,
+      },
+    });
+    const listingMeta = await detailMetadata({
+      params: Promise.resolve({
+        locale: "bg",
+        slug: "observation-and-care",
+      }),
+    });
+    expect(listingMeta).toMatchObject({
       robots: { index: true, follow: true },
       alternates: { canonical: "/bg/communities/observation-and-care" },
     });
