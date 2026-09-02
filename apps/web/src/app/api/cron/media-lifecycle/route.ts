@@ -3,9 +3,6 @@ import { NextResponse } from "next/server";
 import { drainMediaLifecycleQueue } from "@/server/media/media-lifecycle-consumer";
 import { runRetentionWorkflow } from "@/server/media/retention-executor";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export async function POST(request: Request) {
   const secret = process.env.CRON_SECRET;
   const auth = request.headers.get("authorization");

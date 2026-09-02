@@ -105,7 +105,8 @@ async function main() {
         row.public_slug,
       ).executeTakeFirst();
       if (allowed.has(row.content_class)) {
-        if (!direct || !lifecycle) throw new Error("Eligible direct row missing.");
+        if (!direct || !lifecycle)
+          throw new Error("Eligible direct row missing.");
         directEligible += 1;
         lifecycleEligible += 1;
       } else {
@@ -128,7 +129,10 @@ async function main() {
     const profileIds = new Set(profileEntries.map((row) => row.entryId));
     for (const row of rows) {
       const expected = allowed.has(row.content_class);
-      if (timelineIds.has(row.id) !== expected || profileIds.has(row.id) !== expected) {
+      if (
+        timelineIds.has(row.id) !== expected ||
+        profileIds.has(row.id) !== expected
+      ) {
         throw new Error("Relationship surface policy mismatch.");
       }
     }
@@ -143,7 +147,8 @@ async function main() {
     ).executeTakeFirstOrThrow();
     const expectedDelta = PUBLIC_LAUNCH_CONTENT_CLASSES.length;
     if (
-      Number(afterRoot.publicEntryCount) - Number(beforeRoot.publicEntryCount) !==
+      Number(afterRoot.publicEntryCount) -
+        Number(beforeRoot.publicEntryCount) !==
         expectedDelta ||
       Number(afterProfile.publicEntryCount) -
         Number(beforeProfile.publicEntryCount) !==
@@ -201,7 +206,9 @@ async function main() {
 main()
   .catch((error: unknown) => {
     console.error(
-      error instanceof Error ? error.message : "Launch corpus surface smoke failed.",
+      error instanceof Error
+        ? error.message
+        : "Launch corpus surface smoke failed.",
     );
     process.exitCode = 1;
   })

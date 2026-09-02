@@ -59,10 +59,10 @@ const retiredRouteOwners = [
   "src/app/admin/communities/[slug]/actions.ts",
   "src/app/admin/moderation/comments/page.tsx",
   "src/app/admin/moderation/comments/actions.ts",
-  "src/app/garden/pilot-health/page.tsx",
-  "src/app/garden/pilot-smoke/page.tsx",
-  "src/app/garden/pilot-learning/interviews/page.tsx",
-  "src/app/garden/pilot-learning/decision/page.tsx",
+  "src/app/(default)/garden/pilot-health/page.tsx",
+  "src/app/(default)/garden/pilot-smoke/page.tsx",
+  "src/app/(default)/garden/pilot-learning/interviews/page.tsx",
+  "src/app/(default)/garden/pilot-learning/decision/page.tsx",
   "src/app/join/page.tsx",
 ] as const;
 
@@ -485,7 +485,10 @@ describe("OVE-314 active caller and schema retirement", () => {
     );
     await expect(
       access(
-        path.join(webRoot, "src/app/garden/lineage/invitations/claim/page.tsx"),
+        path.join(
+          webRoot,
+          "src/app/(default)/garden/lineage/invitations/claim/page.tsx",
+        ),
       ),
     ).resolves.toBeUndefined();
   });

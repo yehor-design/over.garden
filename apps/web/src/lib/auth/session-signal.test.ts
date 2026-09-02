@@ -45,10 +45,13 @@ describe("session signal", () => {
 
   it("reads the rendered owner id from the document and turns it into a header", () => {
     vi.stubGlobal("document", {
-      documentElement: {
-        getAttribute: (name: string) =>
-          name === "data-owner-user-id" ? " owner-a " : null,
-      },
+      querySelector: (selector: string) =>
+        selector === "[data-owner-user-id]"
+          ? {
+              getAttribute: (name: string) =>
+                name === "data-owner-user-id" ? " owner-a " : null,
+            }
+          : null,
     });
     expect(readRenderedOwnerUserId()).toBe("owner-a");
     expect(ownerScopeHeaders()).toEqual({

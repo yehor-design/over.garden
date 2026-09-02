@@ -55,7 +55,8 @@ main().catch((error: unknown) => {
       ok: false,
       issue: "OVE-199",
       redacted: true,
-      errorCode: error instanceof SyntaxError ? "invalid_json" : "validation_failed",
+      errorCode:
+        error instanceof SyntaxError ? "invalid_json" : "validation_failed",
     }),
   );
   process.exitCode = 1;

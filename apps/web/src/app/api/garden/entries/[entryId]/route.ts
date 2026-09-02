@@ -47,8 +47,8 @@ import {
   ownerUserIdFromRequest,
   resolveMutationScope,
 } from "@/server/mutation-scope";
-
-export const runtime = "nodejs";
+import { publicEntryChangeTags } from "@/lib/public-cache-tags";
+import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 export async function PATCH(
   request: Request,
@@ -400,6 +400,14 @@ async function convergeAndRevalidate(entry: {
   if (entry.plant_object_id) {
     revalidatePath(`/garden/objects/${entry.plant_object_id}`);
   }
+  revalidatePublicCacheTags(
+    publicEntryChangeTags({
+      entryId: entry.id,
+      publicSlug: entry.public_slug,
+      plantObjectId: entry.plant_object_id,
+    }),
+    "expire",
+  );
   if (entry.public_slug) {
     const publicPath = publicJournalEntryPath(entry.public_slug);
     for (const locale of PUBLIC_LOCALES) {

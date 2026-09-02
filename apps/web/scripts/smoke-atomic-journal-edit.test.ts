@@ -18,9 +18,11 @@ const EXISTING_MEDIA_ID = "00000000-0000-4000-8000-000000000348";
 
 describe("OVE-348 atomic journal edit smoke", () => {
   it("focused contract: cuts the public editor to one local-only CAS transaction", async () => {
-    const page = read("src/app/garden/entries/[entryId]/edit/page.tsx");
+    const page = read(
+      "src/app/(default)/garden/entries/[entryId]/edit/page.tsx",
+    );
     const composer = read(
-      "src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
+      "src/app/(default)/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
     );
     const route = read("src/app/api/garden/entries/[entryId]/route.ts");
     const repository = read("src/server/journal-repository.ts");
@@ -31,7 +33,9 @@ describe("OVE-348 atomic journal edit smoke", () => {
     const workspaceRepository = read(
       "src/server/garden-workspace-repository.ts",
     );
-    const workspaceView = read("src/app/garden/garden-workspace-view.tsx");
+    const workspaceView = read(
+      "src/app/(default)/garden/garden-workspace-view.tsx",
+    );
     const shellNavigation = read("src/lib/site-shell-navigation.ts");
 
     expect(page).toContain("readAtomicJournalEditBaseline");
@@ -134,7 +138,7 @@ describe("OVE-348 atomic journal edit smoke", () => {
       );
     }
     const composer = read(
-      "src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
+      "src/app/(default)/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
     );
     const status = read(
       "src/components/garden/local-journal-composer-status.tsx",
@@ -217,7 +221,7 @@ describe("OVE-348 atomic journal edit smoke", () => {
     });
     const hook = read("src/lib/garden/use-local-journal-composer.ts");
     const composer = read(
-      "src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
+      "src/app/(default)/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
     );
     expect(hook).toContain("ATOMIC_PUBLICATION_DEADLINE_MS");
     expect(hook).toContain('status: "conflict"');

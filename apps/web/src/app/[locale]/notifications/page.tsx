@@ -34,9 +34,7 @@ import {
   type NotificationFilter,
   type NotificationPreferences,
 } from "@/server/social-return-repository";
-import { GardenAuthPanel } from "../../garden/garden-auth-panel";
-
-export const dynamic = "force-dynamic";
+import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
 
 interface LocalizedNotificationsRouteProps {
   params: Promise<{ locale: string }>;

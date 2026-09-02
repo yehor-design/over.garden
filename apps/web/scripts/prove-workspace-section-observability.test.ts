@@ -43,7 +43,9 @@ describe("garden workspace section observability", () => {
   });
 
   it("reports unknown for a cause the classifier has never seen", () => {
-    expect(classifyGardenWorkspaceFailure(new Error("no code"))).toBe("unknown");
+    expect(classifyGardenWorkspaceFailure(new Error("no code"))).toBe(
+      "unknown",
+    );
     expect(classifyGardenWorkspaceFailure(driverRejection("99999"))).toBe(
       "unknown",
     );
@@ -139,7 +141,9 @@ describe("garden workspace section observability", () => {
       expect(copy.workspace.nextAction.unavailableTitle.length).toBeGreaterThan(
         0,
       );
-      expect(copy.workspace.nextAction.retryInventory.length).toBeGreaterThan(0);
+      expect(copy.workspace.nextAction.retryInventory.length).toBeGreaterThan(
+        0,
+      );
       // The class travels as an attribute, so no locale string may carry a
       // machine-readable failure code.
       for (const failureClass of GARDEN_WORKSPACE_FAILURE_CLASSES) {

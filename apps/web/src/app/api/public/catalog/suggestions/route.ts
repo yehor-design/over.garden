@@ -1,3 +1,5 @@
+import { connection } from "next/server";
+
 import { isStableRegistryPublicDiscoveryEnabled } from "@/lib/stable-registry/feature-gate";
 import { listPublicStableCatalogPage } from "@/server/stable-registry/public-catalog-repository";
 import {
@@ -6,9 +8,9 @@ import {
 } from "@/server/catalog-source/public-eppo-explorer-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 
-export const runtime = "nodejs";
-
 export async function GET(request: Request) {
+  // Suggestions depend on the query string: never a prerendered response.
+  await connection();
   const startedAt = performance.now();
   if (!isStableRegistryPublicDiscoveryEnabled()) return notAvailable();
 

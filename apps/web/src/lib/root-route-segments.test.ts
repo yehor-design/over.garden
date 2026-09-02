@@ -29,9 +29,9 @@ const APP_FILE_CONVENTIONS: Record<string, string> = {
 describe("root route segments", () => {
   it("matches the App Router root directories and public/ directories exactly", () => {
     const expected = [
-      ...directories(new URL("../app/", import.meta.url)).filter(
-        (name) => name !== "[locale]",
-      ),
+      ...directories(new URL("../app/", import.meta.url))
+        .filter((name) => name !== "[locale]" && name !== "(default)")
+        .concat(directories(new URL("../app/(default)/", import.meta.url))),
       ...directories(new URL("../../public/", import.meta.url)),
     ].sort();
 

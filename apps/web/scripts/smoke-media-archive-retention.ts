@@ -28,20 +28,16 @@ async function main() {
   const argv = process.argv.slice(2);
   const environment = requireEnvironment(argv);
 
-  const { drainMediaLifecycleQueue } = await import(
-    "../src/server/media/media-lifecycle-consumer"
-  );
-  const {
-    listJournalDeletionDerivativeRevokeCandidates,
-  } = await import("../src/server/media/media-lifecycle-enqueue");
+  const { drainMediaLifecycleQueue } =
+    await import("../src/server/media/media-lifecycle-consumer");
+  const { listJournalDeletionDerivativeRevokeCandidates } =
+    await import("../src/server/media/media-lifecycle-enqueue");
 
   // Contract smoke: archive candidate selection and drain are invocable.
   // Full local MinIO archive→byte proof is covered by unit tests plus optional
   // operator synthetic production run documented in MEDIA_LIFECYCLE.md.
   const candidates = await listJournalDeletionDerivativeRevokeCandidates(
-    (
-      await import("../src/db")
-    ).db,
+    (await import("../src/db")).db,
     {
       journalEntryId: "00000000-0000-4000-8000-000000000000",
       ownerUserId: "00000000-0000-4000-8000-000000000000",

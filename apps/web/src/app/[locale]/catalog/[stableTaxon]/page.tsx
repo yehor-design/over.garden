@@ -8,10 +8,6 @@ import {
 } from "@/app/stable-registry-public-pages";
 import { isPublicLocale } from "@/lib/public-localization";
 
-// See the default-locale route: a Stable Registry record is always resolved
-// against the active pointer at request time.
-export const dynamic = "force-dynamic";
-
 interface CatalogDetailPageProps {
   params: Promise<{ locale: string; stableTaxon: string }>;
 }

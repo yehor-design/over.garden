@@ -16,17 +16,19 @@ import {
 
 function stubFetcher(status: number | ((url: string) => number)) {
   const seen: Array<{ url: string; method: string; headers: HeadersInit }> = [];
-  const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = String(input);
-    seen.push({
-      url,
-      method: init?.method ?? "GET",
-      headers: init?.headers ?? {},
-    });
-    return new Response(null, {
-      status: typeof status === "number" ? status : status(url),
-    });
-  }) as unknown as typeof fetch;
+  const fetcher = vi.fn(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      seen.push({
+        url,
+        method: init?.method ?? "GET",
+        headers: init?.headers ?? {},
+      });
+      return new Response(null, {
+        status: typeof status === "number" ? status : status(url),
+      });
+    },
+  ) as unknown as typeof fetch;
   return { fetcher, seen };
 }
 

@@ -35,9 +35,8 @@ async function main() {
     );
   }
 
-  const { runRetentionWorkflow } = await import(
-    "../src/server/media/retention-executor"
-  );
+  const { runRetentionWorkflow } =
+    await import("../src/server/media/retention-executor");
   const report = await runRetentionWorkflow(mode);
   console.log(
     JSON.stringify(

@@ -57,8 +57,8 @@ import {
   ownerUserIdFromRequest,
   resolveMutationScope,
 } from "@/server/mutation-scope";
-
-export const runtime = "nodejs";
+import { publicEntryChangeTags } from "@/lib/public-cache-tags";
+import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 class AtomicJournalCreateError extends Error {
   constructor(
@@ -272,6 +272,15 @@ async function createEntry(request: Request, scope: RequestScope) {
     revalidateAtomicCreatePaths(
       body,
       "plantObject" in result ? result.plantObject.id : null,
+    );
+    revalidatePublicCacheTags(
+      publicEntryChangeTags({
+        entryId: result.entry.id,
+        publicSlug: result.entry.public_slug,
+        ownerUserId: scope.userId,
+        plantObjectId: "plantObject" in result ? result.plantObject.id : null,
+      }),
+      "expire",
     );
     return Response.json(response);
   } catch (error) {

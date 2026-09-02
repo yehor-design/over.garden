@@ -109,7 +109,8 @@ async function main() {
         ok,
         issue: "OVE-216",
         evidenceClass: "media-lifecycle-worker",
-        reclaimedClass: result.reclaimed === 1 ? "one_stale_lease" : "unexpected",
+        reclaimedClass:
+          result.reclaimed === 1 ? "one_stale_lease" : "unexpected",
         settlementClass: settled.status,
         staleClaimantClass: staleSettlement ? "unsafe_settlement" : "fenced",
         transportProofClass: transportOutcome,

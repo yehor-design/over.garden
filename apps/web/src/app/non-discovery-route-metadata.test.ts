@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { metadata as accountMetadata } from "./account/layout";
-import { metadata as authMetadata } from "./auth/layout";
-import { generateMetadata as generateGardenMetadata } from "./garden/layout";
+import { metadata as accountMetadata } from "./(default)/account/layout";
+import { metadata as authMetadata } from "./(default)/auth/layout";
+import { generateMetadata as generateGardenMetadata } from "./(default)/garden/layout";
 
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: vi.fn(async () => "uk"),

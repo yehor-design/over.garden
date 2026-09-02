@@ -20,3 +20,19 @@ vi.mock("next/font/google", () => {
     Geist_Mono: font("--font-geist-mono"),
   };
 });
+
+// Cache Components runtime helpers (ADR-0022, D4). `connection()` marks a
+// render as request-time and needs a request scope; `cacheTag`/`cacheLife`
+// need the Cache Components runtime. Neither exists in a unit test.
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  connection: async () => undefined,
+}));
+vi.mock("next/cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/cache")>()),
+  cacheTag: () => undefined,
+  cacheLife: () => undefined,
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
+  revalidatePath: vi.fn(),
+}));

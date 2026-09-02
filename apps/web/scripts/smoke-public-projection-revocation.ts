@@ -61,7 +61,9 @@ function requireLocalEnvironment(argv: string[]) {
     meiliHost.startsWith("http://localhost:") ||
     meiliHost.startsWith("http://[::1]:");
   if (!isLoopback) {
-    throw new Error("Refuse: MEILISEARCH_HOST must be loopback for this proof.");
+    throw new Error(
+      "Refuse: MEILISEARCH_HOST must be loopback for this proof.",
+    );
   }
 }
 
@@ -101,7 +103,10 @@ async function main() {
     results.push({ case: name, passed, observed: observed as never });
   };
 
-  const observedDocument = async (): Promise<Record<string, unknown> | null> => {
+  const observedDocument = async (): Promise<Record<
+    string,
+    unknown
+  > | null> => {
     try {
       return (await index.getDocument(ENTRY_ID)) as Record<string, unknown>;
     } catch {
@@ -463,7 +468,6 @@ async function seed(db: Db, sql: SqlTag) {
       updated_at: now,
     })
     .execute();
-
 }
 
 async function cleanup(db: Db) {

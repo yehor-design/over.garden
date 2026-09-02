@@ -10,8 +10,6 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
-  listPublicFeedPage,
-  listTrustedPublicFeedTopics,
   normalizePublicFeedRequest,
   type PublicFeedPage,
   type PublicFeedRequest,
@@ -26,6 +24,10 @@ import {
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
+import {
+  readPublicFeedPage,
+  readTrustedPublicFeedTopics,
+} from "@/server/public-cache";
 
 interface LocalizedHomeRouteProps {
   params: Promise<{ locale: string }>;
@@ -42,10 +44,10 @@ export function generateStaticParams() {
  * default request built in both places resolves to the same read.
  */
 const loadFeedPage = cache((locale: PublicLocale, requestKey: string) =>
-  listPublicFeedPage(JSON.parse(requestKey) as PublicFeedRequest, locale),
+  readPublicFeedPage(JSON.parse(requestKey) as PublicFeedRequest, locale),
 );
 const loadFeedTopics = cache((locale: PublicLocale) =>
-  listTrustedPublicFeedTopics(undefined, 6, locale),
+  readTrustedPublicFeedTopics(locale),
 );
 
 function feedRequestKey(request: PublicFeedRequest) {

@@ -101,8 +101,15 @@ export async function runComposedStackRestoreDatabaseProof(input: {
     const sourceFingerprint = await productFingerprint(source);
 
     const dump = await runInPostgres(
-      ["pg_dump", "--format=custom", "--no-owner", "--no-privileges", "-U",
-        postgresUser(), source],
+      [
+        "pg_dump",
+        "--format=custom",
+        "--no-owner",
+        "--no-privileges",
+        "-U",
+        postgresUser(),
+        source,
+      ],
       undefined,
     );
     if (dump.length === 0) throw new Error("backup_produced_no_bytes");
@@ -116,8 +123,15 @@ export async function runComposedStackRestoreDatabaseProof(input: {
 
     await admin.query(`create database "${target}"`);
     await runInPostgres(
-      ["pg_restore", "--no-owner", "--no-privileges", "-U", postgresUser(),
-        "-d", target],
+      [
+        "pg_restore",
+        "--no-owner",
+        "--no-privileges",
+        "-U",
+        postgresUser(),
+        "-d",
+        target,
+      ],
       dump,
     );
 
@@ -192,7 +206,10 @@ async function applyAuthMigrations(connectionString: string) {
       secret: "ove358-disposable-rehearsal-secret-not-a-credential",
       database: { db, type: "postgres", casing: "snake" },
       emailAndPassword: { enabled: true, requireEmailVerification: false },
-      advanced: { cookiePrefix: "overgarden", database: { generateId: "uuid" } },
+      advanced: {
+        cookiePrefix: "overgarden",
+        database: { generateId: "uuid" },
+      },
     } satisfies BetterAuthOptions;
     betterAuth(options);
     await (await getMigrations(options)).runMigrations();
@@ -265,7 +282,11 @@ async function readBackProduct(target: string): Promise<ProductReadBack> {
       db,
     );
     const resolved = anchor[0]
-      ? await findActiveStableRegistryProductCatalogItem(db, anchor[0].id, "plant")
+      ? await findActiveStableRegistryProductCatalogItem(
+          db,
+          anchor[0].id,
+          "plant",
+        )
       : null;
 
     // The derived index is rebuilt from Postgres, never restored as a source.
@@ -510,11 +531,9 @@ function runInPostgres(
 ): Promise<Buffer> {
   const runtime = process.env.OVERGARDEN_CONTAINER_CLI ?? "container";
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      runtime,
-      ["exec", "-i", POSTGRES_CONTAINER, ...argv],
-      { stdio: ["pipe", "pipe", "pipe"] },
-    );
+    const child = spawn(runtime, ["exec", "-i", POSTGRES_CONTAINER, ...argv], {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     const out: Buffer[] = [];
     const err: string[] = [];
     child.stdout.on("data", (chunk: Buffer) => out.push(chunk));

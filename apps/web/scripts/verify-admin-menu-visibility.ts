@@ -40,12 +40,12 @@ export function verifyAdminMenuRepository() {
     path.join(webRoot, "src/app/admin"),
   );
   const accountFiles = [
-    "src/app/account/layout.tsx",
-    "src/app/account/communities/page.tsx",
-    "src/app/account/communities/[slug]/page.tsx",
-    "src/app/account/communities/[slug]/actions.ts",
-    "src/app/account/moderation/comments/page.tsx",
-    "src/app/account/moderation/comments/actions.ts",
+    "src/app/(default)/account/layout.tsx",
+    "src/app/(default)/account/communities/page.tsx",
+    "src/app/(default)/account/communities/[slug]/page.tsx",
+    "src/app/(default)/account/communities/[slug]/actions.ts",
+    "src/app/(default)/account/moderation/comments/page.tsx",
+    "src/app/(default)/account/moderation/comments/actions.ts",
   ];
   const accountGuarded = accountFiles.every((relativePath) => {
     const absolutePath = path.join(webRoot, relativePath);

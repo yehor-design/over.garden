@@ -72,7 +72,10 @@ function main() {
 
   for (const locale of ["uk", "bg", "ru"] as const) {
     const copy = getJournalCoverControlsCopy(locale);
-    assert(copy.sectionLabel && copy.uploadSeparate && copy.keepAsCover, locale);
+    assert(
+      copy.sectionLabel && copy.uploadSeparate && copy.keepAsCover,
+      locale,
+    );
   }
 
   const tenInline = Array.from(
@@ -84,7 +87,9 @@ function main() {
     string,
     {
       mediaAssetId: string;
-      usageRole: typeof JOURNAL_MEDIA_USAGE_INLINE | typeof JOURNAL_MEDIA_USAGE_COVER_ONLY;
+      usageRole:
+        | typeof JOURNAL_MEDIA_USAGE_INLINE
+        | typeof JOURNAL_MEDIA_USAGE_COVER_ONLY;
       derivativeKey: string;
       revokedAt: null;
     }

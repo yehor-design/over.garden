@@ -588,8 +588,7 @@ async function jsonRequest<T>(
     method: init.method ?? "GET",
     headers: {
       Accept: "application/json",
-      [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
-        ATOMIC_JOURNAL_CREATE_PROTOCOL,
+      [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]: ATOMIC_JOURNAL_CREATE_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: baseUrl } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       Cookie: jar.header(),

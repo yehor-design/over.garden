@@ -29,10 +29,9 @@ import {
   listWishlistShelfItems,
   type WishlistShelfItem,
 } from "@/server/wishlist-repository";
-import { GardenAuthPanel } from "../../garden/garden-auth-panel";
-import { removeCatalogPublicSlugFromWishlistAction } from "../../wishlist/actions";
+import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
+import { removeCatalogPublicSlugFromWishlistAction } from "@/app/(default)/wishlist/actions";
 
-export const dynamic = "force-dynamic";
 const PAGE_SIZE = 12;
 
 interface LocalizedWishlistRouteProps {

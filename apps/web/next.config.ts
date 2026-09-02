@@ -21,6 +21,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // ADR-0022, D4: Cache Components ("use cache", cacheLife, cacheTag) with
+  // Partial Prerendering for the public pages.
+  cacheComponents: true,
   // Retired control-plane paths must reach Proxy before framework-level
   // trailing-slash canonicalization so they can return a direct hard 404.
   // Proxy preserves the existing 308 canonical redirect for every other path.

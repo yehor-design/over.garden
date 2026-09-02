@@ -72,9 +72,13 @@ export async function runSessionLocaleConvergenceSmoke(
         '[data-interface-language-control="site-shell-interface-language-control"]',
       );
       if ((await control.count()) !== 1) {
-        throw new Error("Expected exactly one public Bulgaria language control.");
+        throw new Error(
+          "Expected exactly one public Bulgaria language control.",
+        );
       }
-      const trigger = control.locator('[data-interface-language-trigger="true"]');
+      const trigger = control.locator(
+        '[data-interface-language-trigger="true"]',
+      );
       await trigger.click();
       const russianOption = page.getByRole("menuitemradio", {
         name: PUBLIC_LOCALE_CONFIG.ru.label,
@@ -121,14 +125,18 @@ export async function runSessionLocaleConvergenceSmoke(
 function normalizeCanonicalBase(value: string) {
   const url = new URL(value);
   if (url.origin !== CANONICAL_ORIGIN || url.pathname !== "/") {
-    throw new Error("Base URL must be the canonical https://over.garden origin.");
+    throw new Error(
+      "Base URL must be the canonical https://over.garden origin.",
+    );
   }
   return url.origin;
 }
 
 function assertCommit(value: string) {
   if (!/^[0-9a-f]{40}$/.test(value)) {
-    throw new Error("--expected-commit must be a lowercase 40-character Git SHA.");
+    throw new Error(
+      "--expected-commit must be a lowercase 40-character Git SHA.",
+    );
   }
 }
 
@@ -161,6 +169,7 @@ const isDirectExecution =
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isDirectExecution) {
-  void runSessionLocaleConvergenceSmoke(parseCliOptions(process.argv.slice(2)))
-    .then((report) => process.stdout.write(`${JSON.stringify(report)}\n`));
+  void runSessionLocaleConvergenceSmoke(
+    parseCliOptions(process.argv.slice(2)),
+  ).then((report) => process.stdout.write(`${JSON.stringify(report)}\n`));
 }

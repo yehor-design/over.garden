@@ -41,10 +41,7 @@ const CONTAINER_COMMON_PATH = path.join(
   REPOSITORY_ROOT,
   "infra/container-common",
 );
-const CI_WORKFLOW_PATH = path.join(
-  REPOSITORY_ROOT,
-  ".github/workflows/ci.yml",
-);
+const CI_WORKFLOW_PATH = path.join(REPOSITORY_ROOT, ".github/workflows/ci.yml");
 
 type Harness = {
   env: NodeJS.ProcessEnv;
@@ -94,19 +91,20 @@ async function createPreflightHarness(
   await writeExecutable(path.join(bin, "docker"), [
     "#!/usr/bin/env bash",
     "set -euo pipefail",
-    "printf '%s\\n' \"$*\" >> \"$OVERGARDEN_TEST_DOCKER_LOG\"",
-    "case \"$*\" in",
-    "  \"compose version\") exit 0 ;;",
-    "  \"network inspect overgarden_default\") exit 0 ;;",
-    "  \"info --format {{.DockerRootDir}}\") printf '%s\\n' \"$OVERGARDEN_TEST_DOCKER_ROOT\"; exit 0 ;;",
-    "  *\" ps -q meilisearch\") printf '%s\\n' \"legacy-container\"; exit 0 ;;",
-    "  \"ps --format {{.Names}}\") printf '%s\\n' \"matching-api\"; exit 0 ;;",
-    "  \"exec matching-api python -c \"*)",
-    "    if [[ \"$" + "{OVERGARDEN_TEST_DOCKER_DELAY_MS:-0}\" != \"0\" ]]; then sleep 0.35; fi",
-    "    printf '%s\\n' \"$" + "{OVERGARDEN_TEST_SOURCE_VERSION:-1.15.2}\"",
+    'printf \'%s\\n\' "$*" >> "$OVERGARDEN_TEST_DOCKER_LOG"',
+    'case "$*" in',
+    '  "compose version") exit 0 ;;',
+    '  "network inspect overgarden_default") exit 0 ;;',
+    '  "info --format {{.DockerRootDir}}") printf \'%s\\n\' "$OVERGARDEN_TEST_DOCKER_ROOT"; exit 0 ;;',
+    '  *" ps -q meilisearch") printf \'%s\\n\' "legacy-container"; exit 0 ;;',
+    '  "ps --format {{.Names}}") printf \'%s\\n\' "matching-api"; exit 0 ;;',
+    '  "exec matching-api python -c "*)',
+    '    if [[ "$' +
+      '{OVERGARDEN_TEST_DOCKER_DELAY_MS:-0}" != "0" ]]; then sleep 0.35; fi',
+    "    printf '%s\\n' \"$" + '{OVERGARDEN_TEST_SOURCE_VERSION:-1.15.2}"',
     "    exit 0",
     "    ;;",
-    "  \"volume inspect overgarden_meili_data\") exit 0 ;;",
+    '  "volume inspect overgarden_meili_data") exit 0 ;;',
     "  *) exit 0 ;;",
     "esac",
   ]);
@@ -114,7 +112,8 @@ async function createPreflightHarness(
     "#!/usr/bin/env bash",
     "set -euo pipefail",
     "printf '%s\\n' 'Filesystem 1024-blocks Used Available Capacity Mounted on'",
-    "printf 'stub 10000000 1 %s 1%% /\\n' \"$" + "{OVERGARDEN_TEST_DISK_KB:-6000000}\"",
+    "printf 'stub 10000000 1 %s 1%% /\\n' \"$" +
+      '{OVERGARDEN_TEST_DISK_KB:-6000000}"',
   ]);
   await writeExecutable(path.join(bin, "jq"), [
     "#!/usr/bin/env bash",
@@ -190,11 +189,15 @@ describe("OVE-198 Meilisearch upgrade production pin contract", () => {
     expect(script).toContain("legacyVolumeDeletion");
     expect(script).toContain("forbidden_in_ove198");
 
-    expect(localCompose).toContain(`getmeili/meilisearch:v${MEILISEARCH_PINNED_TARGET_VERSION}`);
+    expect(localCompose).toContain(
+      `getmeili/meilisearch:v${MEILISEARCH_PINNED_TARGET_VERSION}`,
+    );
     expect(containerCommon).toContain(
       `getmeili/meilisearch:v${MEILISEARCH_PINNED_TARGET_VERSION}`,
     );
-    expect(ci).toContain(`getmeili/meilisearch:v${MEILISEARCH_PINNED_TARGET_VERSION}`);
+    expect(ci).toContain(
+      `getmeili/meilisearch:v${MEILISEARCH_PINNED_TARGET_VERSION}`,
+    );
   });
 });
 

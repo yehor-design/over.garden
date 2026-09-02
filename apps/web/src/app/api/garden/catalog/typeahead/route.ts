@@ -2,8 +2,6 @@ import { parseCatalogTypeaheadResponse } from "@/lib/garden/catalog-typeahead-co
 import { requireCurrentRequestScope } from "@/server/auth-session";
 import { searchCatalogSuggestionsForTypeaheadResult } from "@/server/catalog-repository";
 
-export const runtime = "nodejs";
-
 export async function GET(request: Request) {
   await requireCurrentRequestScope();
 

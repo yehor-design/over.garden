@@ -338,19 +338,32 @@ describe("app route cache guardrail", () => {
   });
 
   it.each([
-    "/",
     "/garden",
     "/garden/catalog/curation",
-    "/privacy",
+    "/bg/garden",
+    "/account/communities",
+    "/auth/help",
+    "/erasure",
     "/health",
-    "/journal/smoke-slug",
-    "/variety/smoke-variety",
     "/api/garden/entries",
   ])("sends explicit no-store cache control for %s", async (path) => {
     expect((await responseFor(path)).headers.get("Cache-Control")).toBe(
       APP_ROUTE_CACHE_CONTROL,
     );
   });
+
+  it.each([
+    "/",
+    "/privacy",
+    "/journal/smoke-slug",
+    "/variety/smoke-variety",
+    "/bg/journals",
+  ])(
+    "leaves the cache headers of the public page %s to Next (ADR-0022, D4)",
+    async (path) => {
+      expect((await responseFor(path)).headers.get("Cache-Control")).toBeNull();
+    },
+  );
 
   it("returns a real 410 tombstone only for a previously public gone passport", async () => {
     const objectId = "00000000-0000-4000-8000-000000000101";

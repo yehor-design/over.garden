@@ -11,9 +11,6 @@ import {
 } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 const NO_STORE_HEADERS = {
   "Cache-Control": "private, no-store, max-age=0, must-revalidate",
   "X-Robots-Tag": "noindex, nofollow",

@@ -24,7 +24,7 @@ vi.mock("@/server/engagement-repository", () => ({
   listEngagementBookmarks: mocks.listEngagementBookmarks,
 }));
 
-vi.mock("../../garden/garden-auth-panel", () => ({
+vi.mock("@/app/(default)/garden/garden-auth-panel", () => ({
   GardenAuthPanel: ({ initialMessage }: { initialMessage?: string }) => (
     <section>{initialMessage}</section>
   ),

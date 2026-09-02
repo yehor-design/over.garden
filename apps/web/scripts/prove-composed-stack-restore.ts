@@ -114,10 +114,7 @@ export async function runBackupFetchTimeoutFixture(input: {
   mode: StackRestoreMode;
 }): Promise<StackRestoreProofReceipt> {
   const startedAt = performance.now();
-  const outcome = await Promise.race([
-    stalledBackupFetch(),
-    deadlineAfter(50),
-  ]);
+  const outcome = await Promise.race([stalledBackupFetch(), deadlineAfter(50)]);
   const elapsedSeconds = (performance.now() - startedAt) / 1000;
 
   if (outcome !== "timed_out") {
@@ -224,9 +221,8 @@ async function main() {
     );
   }
 
-  const { runComposedStackRestoreDatabaseProof } = await import(
-    "./prove-composed-stack-restore-database"
-  );
+  const { runComposedStackRestoreDatabaseProof } =
+    await import("./prove-composed-stack-restore-database");
   const receipt = await runComposedStackRestoreDatabaseProof({
     mode: args.mode,
     restoredTarget: args.restoredTarget,

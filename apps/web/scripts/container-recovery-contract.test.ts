@@ -519,7 +519,6 @@ describe("container-recover-minio contract", () => {
   });
 });
 
-
 describe("composed self-hosted stack contract", () => {
   const stackScript = path.join(REPOSITORY_ROOT, "infra/overgarden-stack");
   const stackCompose = path.join(
@@ -545,7 +544,14 @@ describe("composed self-hosted stack contract", () => {
   it("prints its closed subcommand set instead of doing anything on no argument", () => {
     const bare = spawnSync("bash", [stackScript], { encoding: "utf8" });
     expect(bare.status).toBe(1);
-    for (const subcommand of ["up", "down", "status", "backup", "restore", "verify"]) {
+    for (const subcommand of [
+      "up",
+      "down",
+      "status",
+      "backup",
+      "restore",
+      "verify",
+    ]) {
       expect(bare.stdout).toContain(subcommand);
     }
   });
@@ -553,7 +559,11 @@ describe("composed self-hosted stack contract", () => {
   it("refuses a restore digest that is not a digest", async () => {
     // Anything reaching `psql` from here would be interpolated into a database
     // name, so the shape is checked before a connection is opened.
-    for (const argument of ["not-a-digest", "'; drop database overgarden; --", "abc"]) {
+    for (const argument of [
+      "not-a-digest",
+      "'; drop database overgarden; --",
+      "abc",
+    ]) {
       const refused = spawnSync("bash", [stackScript, "restore", argument], {
         encoding: "utf8",
       });

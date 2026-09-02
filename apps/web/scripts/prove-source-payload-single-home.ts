@@ -84,9 +84,7 @@ export function parseSourcePayloadProofArgs(
 ): SourcePayloadProofArgs {
   const mode = argValue(argv, "--mode");
   if (!mode || !isSourcePayloadMode(mode)) {
-    throw new Error(
-      `--mode must be one of ${SOURCE_PAYLOAD_MODES.join("|")}.`,
-    );
+    throw new Error(`--mode must be one of ${SOURCE_PAYLOAD_MODES.join("|")}.`);
   }
 
   const rawBatchSize = argValue(argv, "--batch-size") ?? "500";
@@ -136,7 +134,10 @@ export async function runCaptureUnitTimeoutFixture(input: {
   // Both controls answer from state the stalled read never touched, which is
   // why a wedged batch cannot wedge the operator.
   const abortAcknowledged = abortBackfill();
-  const status = dedupStatus({ batchIndex: 0, candidateCount: input.batchSize });
+  const status = dedupStatus({
+    batchIndex: 0,
+    candidateCount: input.batchSize,
+  });
   if (!abortAcknowledged || status.terminalClass !== "inconclusive") {
     throw new Error("source_payload_controls_not_responsive");
   }
@@ -171,7 +172,11 @@ export function abortBackfill(): boolean {
 export function dedupStatus(input: {
   batchIndex: number;
   candidateCount: number;
-}): { batchIndex: number; candidateCount: number; terminalClass: "inconclusive" } {
+}): {
+  batchIndex: number;
+  candidateCount: number;
+  terminalClass: "inconclusive";
+} {
   return { ...input, terminalClass: "inconclusive" };
 }
 
@@ -181,8 +186,8 @@ export function dedupStatus(input: {
  */
 export function relationSizeClass(bytes: number): string {
   const boundaries = [
-    1_048_576, 10_485_760, 104_857_600, 268_435_456, 536_870_912,
-    1_073_741_824, 5_368_709_120,
+    1_048_576, 10_485_760, 104_857_600, 268_435_456, 536_870_912, 1_073_741_824,
+    5_368_709_120,
   ];
   const labels = [
     "under_1MB",
@@ -265,9 +270,8 @@ async function main() {
     );
   }
 
-  const { runSourcePayloadSingleHomeDatabaseProof } = await import(
-    "./prove-source-payload-single-home-database"
-  );
+  const { runSourcePayloadSingleHomeDatabaseProof } =
+    await import("./prove-source-payload-single-home-database");
   const receipt = await runSourcePayloadSingleHomeDatabaseProof({
     mode: args.mode,
     batchSize: args.batchSize,

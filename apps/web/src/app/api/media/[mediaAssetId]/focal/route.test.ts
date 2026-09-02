@@ -10,7 +10,11 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/cache", () => ({
+  revalidatePath: mocks.revalidatePath ,
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
+}));
 vi.mock("@/server/mutation-scope", () => ({
   resolveMutationScope: mocks.resolveMutationScope,
   mutationScopeResponse: mocks.mutationScopeResponse,

@@ -163,7 +163,11 @@ describe("OVE-353 apply gate", () => {
   it("blocks when there is nothing to convert rather than running empty", () => {
     expect(
       allow({
-        lifecycleCounts: { active: 120, deletedRetention: 3, legacyArchived: 0 },
+        lifecycleCounts: {
+          active: 120,
+          deletedRetention: 3,
+          legacyArchived: 0,
+        },
         candidateCount: 0,
       }),
     ).toEqual({ state: "blocked", reason: "nothing_to_convert" });

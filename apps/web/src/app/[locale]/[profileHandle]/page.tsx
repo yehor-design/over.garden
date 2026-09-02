@@ -13,7 +13,6 @@ import { getPublicProfileCopy } from "@/lib/public-profile-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getProfileViewerState } from "@/server/profile-interaction-repository";
 import {
-  getPublicProfileEvidencePageByHandle,
   getPublicProfileLifecycleLookup,
   type PublicProfileEvidencePage,
 } from "@/server/public-profile-repository";
@@ -27,8 +26,7 @@ import {
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser } from "@/server/request-scope";
-
-export const dynamic = "force-dynamic";
+import { readPublicProfileEvidencePage } from "@/server/public-cache";
 
 interface LocalizedPublicProfileRouteProps {
   params: Promise<{ locale: string; profileHandle: string }>;
@@ -58,7 +56,7 @@ const getCachedPublicProfileRouteState = cache(
         )
       : Promise.resolve(GUEST_PROFILE_VIEWER);
     const [profile, viewer] = await Promise.all([
-      getPublicProfileEvidencePageByHandle(handle, locale),
+      readPublicProfileEvidencePage(handle, locale),
       viewerPromise,
     ]);
 

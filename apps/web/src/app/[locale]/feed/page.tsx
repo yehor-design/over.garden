@@ -23,9 +23,7 @@ import {
   type FollowedFeedSource,
 } from "@/server/social-return-repository";
 import { evaluateNonDiscoveryRouteIndexability } from "@/server/public-surface-indexing-policy";
-import { GardenAuthPanel } from "../../garden/garden-auth-panel";
-
-export const dynamic = "force-dynamic";
+import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
 
 interface LocalizedFeedRouteProps {
   params: Promise<{ locale: string }>;

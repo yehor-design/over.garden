@@ -45,9 +45,9 @@ function suggestion(id: string): CatalogSuggestion {
 
 describe("catalog trigram proof arguments", () => {
   it("refuses a mode outside the closed set", () => {
-    expect(() => parseCatalogTrigramProofArgs(["--mode", "apply"])).toThrowError(
-      /--mode must be one of/u,
-    );
+    expect(() =>
+      parseCatalogTrigramProofArgs(["--mode", "apply"]),
+    ).toThrowError(/--mode must be one of/u);
     expect(() => parseCatalogTrigramProofArgs([])).toThrowError(
       /--mode must be one of/u,
     );
@@ -86,7 +86,10 @@ describe("receipt safety", () => {
       assertNoForbiddenTrigramMarkers({ ...SAFE_RECEIPT, query: "помдор" }),
     ).toThrowError(/forbidden_marker/u);
     expect(() =>
-      assertNoForbiddenTrigramMarkers({ ...SAFE_RECEIPT, searchTerm: "помдор" }),
+      assertNoForbiddenTrigramMarkers({
+        ...SAFE_RECEIPT,
+        searchTerm: "помдор",
+      }),
     ).toThrowError(/forbidden_marker/u);
   });
 

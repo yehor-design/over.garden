@@ -11,7 +11,11 @@ const mocks = vi.hoisted(() => ({
   mutationScopeResponse: vi.fn(),
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/cache", () => ({
+  revalidatePath: mocks.revalidatePath ,
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
+}));
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
   getSessionId: mocks.getSessionId,

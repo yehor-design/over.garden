@@ -479,8 +479,7 @@ async function jsonRequest<T>(
     method: init.method ?? "GET",
     headers: {
       Accept: "application/json",
-      [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
-        ATOMIC_JOURNAL_CREATE_PROTOCOL,
+      [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]: ATOMIC_JOURNAL_CREATE_PROTOCOL,
       ...(init.method && init.method !== "GET" ? { Origin: baseUrl } : {}),
       ...(init.body ? { "Content-Type": "application/json" } : {}),
       Cookie: jar.header(),
@@ -520,8 +519,14 @@ async function textRequest(baseUrl: string, jar: CookieJar, path: string) {
 
 function normalizeBaseUrl(value: string) {
   const url = new URL(value);
-  if (!["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"].includes(url.hostname)) {
-    throw new Error("EU OJ atomic catalog smoke requires a loopback application.");
+  if (
+    !["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"].includes(
+      url.hostname,
+    )
+  ) {
+    throw new Error(
+      "EU OJ atomic catalog smoke requires a loopback application.",
+    );
   }
   url.pathname = "";
   url.search = "";

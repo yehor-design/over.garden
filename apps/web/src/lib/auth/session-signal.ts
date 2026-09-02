@@ -18,7 +18,9 @@ export const SESSION_SIGNAL_TAB_ID =
 export function readRenderedOwnerUserId(): string | null {
   if (typeof document === "undefined") return null;
   return normalizeOwnerUserId(
-    document.documentElement.getAttribute(OWNER_USER_ID_DOCUMENT_ATTRIBUTE),
+    document
+      .querySelector(`[${OWNER_USER_ID_DOCUMENT_ATTRIBUTE}]`)
+      ?.getAttribute(OWNER_USER_ID_DOCUMENT_ATTRIBUTE) ?? null,
   );
 }
 

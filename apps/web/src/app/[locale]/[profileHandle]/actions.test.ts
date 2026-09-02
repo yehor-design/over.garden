@@ -11,7 +11,11 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn(),
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("next/cache", () => ({
+  revalidatePath: mocks.revalidatePath ,
+  revalidateTag: vi.fn(),
+  updateTag: vi.fn(),
+}));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/server/auth-session", () => ({
   requireCurrentRequestScope: mocks.requireCurrentRequestScope,

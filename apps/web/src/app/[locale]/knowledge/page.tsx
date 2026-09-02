@@ -26,7 +26,6 @@ import {
   listLocalizedGuides,
 } from "@/server/public-localized-content";
 import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
-import { listPublicKnowledgeTopics } from "@/server/public-topic-repository";
 import {
   authoredContentEntityIds,
   resolveAuthoredPublicSurfaceDiscovery,
@@ -34,6 +33,10 @@ import {
 import { AUTHORED_PUBLIC_SURFACE_LASTMOD } from "@/server/public-surface-indexing-policy";
 import { resolveUnresolvedPublicSurfaceDiscovery } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
+import {
+  readPublicKnowledgeEvidence,
+  readPublicKnowledgeTopics,
+} from "@/server/public-cache";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -70,10 +73,10 @@ export async function renderPublicKnowledgePage(
   const guides = listLocalizedGuides(locale);
   const answers = listLocalizedAnswerPages(locale);
   const evidenceRequests = [...guides, ...answers].map((content) =>
-    listPublicKnowledgeEvidence(content.knowledge.evidence, locale),
+    readPublicKnowledgeEvidence(content.knowledge.evidence, locale),
   );
   const [topicsResult, evidenceResults] = await Promise.all([
-    Promise.allSettled([listPublicKnowledgeTopics()]).then(
+    Promise.allSettled([readPublicKnowledgeTopics()]).then(
       (results) => results[0],
     ),
     Promise.allSettled(evidenceRequests),
@@ -149,9 +152,7 @@ function buildKnowledgeSurface(locale: PublicLocale) {
     consumerId: "localized_knowledge_hub",
     canonicalPath: localizedPath(locale, "/knowledge"),
     equivalentLocales: getContentAvailableLocales("/knowledge"),
-    visibleText: [
-      ...items.flatMap((item) => [item.title, item.description]),
-    ],
+    visibleText: [...items.flatMap((item) => [item.title, item.description])],
     distinctPublicEntityIds: authoredContentEntityIds(
       "/knowledge",
       items.map((item) => item.path),
