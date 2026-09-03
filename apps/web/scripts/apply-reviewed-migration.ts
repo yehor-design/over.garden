@@ -30,7 +30,7 @@ import {
  *     number of statements, and the elapsed time. Never a value, a row, or the
  *     connection string.
  */
-export const APPLY_MODES = ["verify", "apply"] as const;
+export const APPLY_MODES = ["verify", "apply", "inventory"] as const;
 export type ApplyMode = (typeof APPLY_MODES)[number];
 export const HOST_CLASSES = [
   "digitalocean_managed",
@@ -57,7 +57,8 @@ export function parseReviewedMigrationArgs(
   if (!(APPLY_MODES as readonly string[]).includes(mode)) {
     throw new Error("apply_mode_invalid");
   }
-  const migration = valueFor("--migration");
+  const migration =
+    valueFor("--migration") ?? (mode === "inventory" ? "0000" : undefined);
   if (!migration || !/^\d{4}$/.test(migration)) {
     throw new Error("apply_migration_number_required");
   }
@@ -94,6 +95,50 @@ export function resolveMigrationFile(sqlDirectory: string, number: string) {
   return path.join(sqlDirectory, matches[0]!);
 }
 
+/**
+ * The schema objects a migration creates, read from its own statements:
+ * `create table`, `alter table … add column`, `create index`. Checking each
+ * against `information_schema`/`pg_indexes` tells which reviewed migrations a
+ * database has not received, without a migration ledger (there is none).
+ */
+export type MigrationSentinel =
+  | { kind: "table"; table: string }
+  | { kind: "column"; table: string; column: string }
+  | { kind: "index"; index: string };
+
+export function extractMigrationSentinels(sql: string): MigrationSentinel[] {
+  const body = sql
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("--"))
+    .join("\n");
+  const sentinels: MigrationSentinel[] = [];
+  for (const match of body.matchAll(
+    /create\s+table\s+(?:if\s+not\s+exists\s+)?([a-z_][a-z0-9_]*)/gi,
+  )) {
+    sentinels.push({ kind: "table", table: match[1]!.toLowerCase() });
+  }
+  for (const match of body.matchAll(
+    /alter\s+table\s+(?:if\s+exists\s+)?([a-z_][a-z0-9_]*)\s+([\s\S]*?);/gi,
+  )) {
+    const table = match[1]!.toLowerCase();
+    for (const column of match[2]!.matchAll(
+      /add\s+column\s+(?:if\s+not\s+exists\s+)?([a-z_][a-z0-9_]*)/gi,
+    )) {
+      sentinels.push({
+        kind: "column",
+        table,
+        column: column[1]!.toLowerCase(),
+      });
+    }
+  }
+  for (const match of body.matchAll(
+    /create\s+(?:unique\s+)?index\s+(?:concurrently\s+)?(?:if\s+not\s+exists\s+)?([a-z_][a-z0-9_]*)/gi,
+  )) {
+    sentinels.push({ kind: "index", index: match[1]!.toLowerCase() });
+  }
+  return sentinels;
+}
+
 export function countStatements(sql: string) {
   return sql
     .split("\n")
@@ -116,11 +161,7 @@ async function main() {
     throw new Error(`apply_refused_host_class_${hostClass}`);
   }
 
-  const file = resolveMigrationFile(
-    path.join(process.cwd(), "sql"),
-    args.migration,
-  );
-  const sql = readFileSync(file, "utf8");
+  const sqlDirectory = path.join(process.cwd(), "sql");
   const pool = new Pool({
     connectionString,
     max: 1,
@@ -130,6 +171,74 @@ async function main() {
   try {
     const database = (await client.query("select current_database() as db"))
       .rows[0]?.db as string;
+    if (args.mode === "inventory") {
+      const names = readdirSync(sqlDirectory)
+        .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/.test(name))
+        .sort();
+      const migrations: Record<string, unknown>[] = [];
+      for (const name of names) {
+        const sentinels = extractMigrationSentinels(
+          readFileSync(path.join(sqlDirectory, name), "utf8"),
+        );
+        const checks: Array<{ sentinel: string; present: boolean }> = [];
+        for (const sentinel of sentinels) {
+          let present = false;
+          if (sentinel.kind === "table") {
+            present =
+              (
+                await client.query(
+                  "select 1 from information_schema.tables where table_schema = 'public' and table_name = $1",
+                  [sentinel.table],
+                )
+              ).rowCount === 1;
+          } else if (sentinel.kind === "column") {
+            present =
+              (
+                await client.query(
+                  "select 1 from information_schema.columns where table_schema = 'public' and table_name = $1 and column_name = $2",
+                  [sentinel.table, sentinel.column],
+                )
+              ).rowCount === 1;
+          } else {
+            present =
+              (
+                await client.query(
+                  "select 1 from pg_indexes where schemaname = 'public' and indexname = $1",
+                  [sentinel.index],
+                )
+              ).rowCount === 1;
+          }
+          checks.push({
+            sentinel:
+              sentinel.kind === "table"
+                ? `table ${sentinel.table}`
+                : sentinel.kind === "column"
+                  ? `column ${sentinel.table}.${sentinel.column}`
+                  : `index ${sentinel.index}`,
+            present,
+          });
+        }
+        const absent = checks.filter((check) => !check.present);
+        migrations.push({
+          migration: name,
+          status:
+            checks.length === 0
+              ? "no_sentinel"
+              : absent.length === 0
+                ? "applied"
+                : absent.length === checks.length
+                  ? "missing"
+                  : "partial",
+          absent: absent.map((check) => check.sentinel),
+        });
+      }
+      process.stdout.write(
+        `${JSON.stringify({ mode: "inventory", hostClass, database, migrations }, null, 2)}\n`,
+      );
+      return;
+    }
+    const file = resolveMigrationFile(sqlDirectory, args.migration);
+    const sql = readFileSync(file, "utf8");
     const receipt: Record<string, unknown> = {
       mode: args.mode,
       migration: path.basename(file),
