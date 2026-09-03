@@ -4,13 +4,13 @@ import {
   EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO,
   EPHEMERAL_MEDIA_PLACEHOLDER_MAX_BYTES,
   EPHEMERAL_MEDIA_VARIANT_LONG_EDGES,
-  buildEphemeralMediaUploadReservation,
   ephemeralMediaPublicKey,
   ephemeralMediaUploadPath,
   isEphemeralMediaPlaceholderDataUri,
   isEphemeralMediaVariant,
   parseEphemeralMediaReservation,
-  parseEphemeralMediaUploadReservation,
+  parseEphemeralMediaStagingSession,
+  parseEphemeralMediaUploadDescription,
 } from "./ephemeral-staging-contract";
 
 const SESSION = "00000000-0000-4000-8000-000000000002";
@@ -92,38 +92,56 @@ describe("ephemeral staging variants (OVE-371)", () => {
     ).toBe(`derivatives/${MEDIA}/3-480.webp`);
   });
 
-  it("binds a variant reservation to its own path on both sides", () => {
-    const nowSeconds = 2_000_000_000;
-    const binding = {
+  it("describes a variant upload by its path and headers (OVE-372)", () => {
+    const headers = new Headers({
+      "content-sha256": SHA,
+      "x-media-width": "480",
+      "x-media-height": "360",
+    });
+    expect(
+      parseEphemeralMediaUploadDescription({
+        binding: {
+          stagingSessionId: SESSION,
+          mediaAssetId: MEDIA,
+          generation: 3,
+          variant: 480,
+        },
+        headers,
+        contentLength: 1_024,
+      }),
+    ).toEqual({
       stagingSessionId: SESSION,
       mediaAssetId: MEDIA,
       generation: 3,
-      variant: 480 as const,
-    };
-    const issued = buildEphemeralMediaUploadReservation({
-      stagingOrigin: "https://media-stage.over.garden",
-      binding,
-      uploadCapability: "u".repeat(40),
-      expiresAtSeconds: nowSeconds + 900,
-      nowSeconds,
+      variant: 480,
+      sha256: SHA,
+      sizeBytes: 1_024,
+      width: 480,
+      height: 360,
     });
-    expect(issued.uploadUrl).toBe(
-      `https://media-stage.over.garden/v1/staging/${SESSION}/${MEDIA}/3/v480`,
-    );
     expect(
-      parseEphemeralMediaUploadReservation(issued, {
-        expectedOrigin: "https://media-stage.over.garden",
-        binding: { ...binding, variant: 0 },
-        nowSeconds,
+      parseEphemeralMediaUploadDescription({
+        binding: { stagingSessionId: SESSION, mediaAssetId: MEDIA, generation: 3 },
+        headers: new Headers({ "content-sha256": SHA }),
+        contentLength: 1_024,
       }),
     ).toBeNull();
     expect(
-      parseEphemeralMediaUploadReservation(issued, {
-        expectedOrigin: "https://media-stage.over.garden",
-        binding,
-        nowSeconds,
-      }),
-    ).toEqual(issued);
+      parseEphemeralMediaStagingSession(
+        { stagingSessionId: SESSION, sessionCapability: "s".repeat(40), expiresAt: 2_000_000_900 },
+        SESSION,
+      ),
+    ).toEqual({
+      stagingSessionId: SESSION,
+      sessionCapability: "s".repeat(40),
+      expiresAt: 2_000_000_900,
+    });
+    expect(
+      parseEphemeralMediaStagingSession(
+        { stagingSessionId: MEDIA, sessionCapability: "s".repeat(40), expiresAt: 2_000_000_900 },
+        SESSION,
+      ),
+    ).toBeNull();
   });
 
   it("admits only a small inline WebP as a placeholder", () => {

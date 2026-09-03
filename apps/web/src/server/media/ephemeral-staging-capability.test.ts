@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  issueEphemeralStagingCapability,
   issueEphemeralStagingSessionCapability,
+  issueEphemeralStagingSessionToken,
   resolveEphemeralMediaSigningPolicy,
-  verifyEphemeralStagingCapability,
   verifyEphemeralStagingSessionCapability,
+  verifyEphemeralStagingSessionToken,
 } from "./ephemeral-staging-capability";
 
 const SECRET = Buffer.alloc(32, 7).toString("base64url");
@@ -15,21 +15,15 @@ const NOW = 1_787_477_600;
 const FIXTURE = {
   ownerUserId: "00000000-0000-4000-8000-000000000001",
   stagingSessionId: "00000000-0000-4000-8000-000000000002",
-  mediaAssetId: "00000000-0000-4000-8000-000000000003",
-  generation: 2,
-  sha256: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-  sizeBytes: 123,
-  width: 800,
-  height: 600,
 } as const;
 
 describe("ephemeral staging capability", () => {
-  it("issues one owner/object/purpose-bound capability and verifies it", async () => {
+  it("issues one owner/session-bound staging session token and verifies it (OVE-372)", async () => {
     const policy = resolveEphemeralMediaSigningPolicy({
       EPHEMERAL_MEDIA_CAPABILITY_SECRETS: `1:${SECRET}`,
       EPHEMERAL_MEDIA_CAPABILITY_CURRENT_VERSION: "1",
     });
-    const issued = await issueEphemeralStagingCapability(FIXTURE, {
+    const issued = await issueEphemeralStagingSessionToken(FIXTURE, {
       policy,
       ownerHashSecret: OWNER_HASH_SECRET,
       nowSeconds: NOW,
@@ -37,31 +31,24 @@ describe("ephemeral staging capability", () => {
     });
 
     await expect(
-      verifyEphemeralStagingCapability(issued.capability, {
+      verifyEphemeralStagingSessionToken(issued.capability, {
         policy,
         ownerHashSecret: OWNER_HASH_SECRET,
-        purpose: "upload",
         ownerUserId: FIXTURE.ownerUserId,
         nowSeconds: NOW + 1,
       }),
     ).resolves.toEqual(
       expect.objectContaining({
-        purpose: "upload",
+        kind: "staging_session",
         stagingSessionId: FIXTURE.stagingSessionId,
-        mediaAssetId: FIXTURE.mediaAssetId,
-        generation: 2,
-        sha256: FIXTURE.sha256,
-        sizeBytes: 123,
         ownerSubjectHash: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
       }),
     );
     expect(issued.issuedAtSeconds).toBe(NOW);
     expect(issued.expiresAtSeconds).toBe(NOW + 900);
-    expect(Number.isSafeInteger(issued.expiresAtSeconds)).toBe(true);
   });
 
   it.each([
-    ["wrong purpose", { purpose: "delete" as const, nowSeconds: NOW + 1 }],
     [
       "wrong owner",
       {
@@ -73,10 +60,9 @@ describe("ephemeral staging capability", () => {
   ])("rejects %s without disclosing claims", async (_label, override) => {
     const policy = resolveEphemeralMediaSigningPolicy({
       EPHEMERAL_MEDIA_CAPABILITY_SECRETS: `1:${SECRET}`,
-      EPHEMERAL_MEDIA_CAPABILITY_CURRENT_SECRET_VERSION: undefined,
       EPHEMERAL_MEDIA_CAPABILITY_CURRENT_VERSION: "1",
     });
-    const issued = await issueEphemeralStagingCapability(FIXTURE, {
+    const issued = await issueEphemeralStagingSessionToken(FIXTURE, {
       policy,
       ownerHashSecret: OWNER_HASH_SECRET,
       nowSeconds: NOW,
@@ -84,10 +70,9 @@ describe("ephemeral staging capability", () => {
     });
 
     await expect(
-      verifyEphemeralStagingCapability(issued.capability, {
+      verifyEphemeralStagingSessionToken(issued.capability, {
         policy,
         ownerHashSecret: OWNER_HASH_SECRET,
-        purpose: "upload",
         ownerUserId: FIXTURE.ownerUserId,
         ...override,
       }),
@@ -99,7 +84,7 @@ describe("ephemeral staging capability", () => {
       EPHEMERAL_MEDIA_CAPABILITY_SECRETS: `1:${SECRET}`,
       EPHEMERAL_MEDIA_CAPABILITY_CURRENT_VERSION: "1",
     });
-    const issued = await issueEphemeralStagingCapability(FIXTURE, {
+    const issued = await issueEphemeralStagingSessionToken(FIXTURE, {
       policy,
       ownerHashSecret: OWNER_HASH_SECRET,
       nowSeconds: NOW,
@@ -107,9 +92,8 @@ describe("ephemeral staging capability", () => {
     });
 
     await expect(
-      verifyEphemeralStagingCapability(issued.capability, {
+      verifyEphemeralStagingSessionToken(issued.capability, {
         policy,
-        purpose: "upload",
         nowSeconds: NOW + 1,
       }),
     ).rejects.toMatchObject({ code: "capability_invalid" });
@@ -137,14 +121,14 @@ describe("ephemeral staging capability", () => {
     }
   });
 
-  it("refuses to sign a typed caller that bypasses reservation bounds", async () => {
+  it("refuses to sign a session token for a malformed session id", async () => {
     const policy = resolveEphemeralMediaSigningPolicy({
       EPHEMERAL_MEDIA_CAPABILITY_SECRETS: `1:${SECRET}`,
       EPHEMERAL_MEDIA_CAPABILITY_CURRENT_VERSION: "1",
     });
     await expect(
-      issueEphemeralStagingCapability(
-        { ...FIXTURE, sizeBytes: 32 * 1024 * 1024 + 1 },
+      issueEphemeralStagingSessionToken(
+        { ...FIXTURE, stagingSessionId: "not-a-session" },
         {
           policy,
           ownerHashSecret: OWNER_HASH_SECRET,
@@ -152,7 +136,7 @@ describe("ephemeral staging capability", () => {
           nonce: "n_1234567890abcdef",
         },
       ),
-    ).rejects.toThrow("ephemeral_media_capability_input_invalid");
+    ).rejects.toThrow("ephemeral_media_session_token_invalid");
   });
 
   it("binds claim/finalize to the frozen receipt digest and keeps owner identity stable across signing-key rotation", async () => {

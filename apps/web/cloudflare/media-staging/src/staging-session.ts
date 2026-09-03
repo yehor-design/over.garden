@@ -491,6 +491,51 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
     };
   }
 
+  /**
+   * Extends the session lease and every live object's lease to
+   * now + `EPHEMERAL_MEDIA_LEASE_SECONDS` (OVE-372). Only an open session is
+   * touched: a publishing session is on the claim path, and a terminal one is
+   * gone.
+   */
+  async touch(input: {
+    ownerSubjectHash: string;
+    stagingSessionId: string;
+    nowMs: number;
+    deadlineAtMs: number;
+  }) {
+    if (!isControlDeadlineOpen(input.deadlineAtMs)) {
+      return { status: "rejected", code: "control_expired" } as const;
+    }
+    const session = this.session();
+    if (
+      !session ||
+      session.owner_subject_hash !== input.ownerSubjectHash ||
+      session.staging_session_id !== input.stagingSessionId
+    ) {
+      return { status: "rejected", code: "owner_or_session_mismatch" } as const;
+    }
+    if (session.state !== "open") {
+      return { status: "rejected", code: "session_not_open" } as const;
+    }
+    const leaseExpiresAtMs =
+      input.nowMs + EPHEMERAL_MEDIA_LEASE_SECONDS * 1_000;
+    this.ctx.storage.transactionSync(() => {
+      this.ctx.storage.sql.exec(
+        `UPDATE staging_session SET lease_expires_at_ms = ?,
+           state_version = state_version + 1, alarm_attempts = 0
+         WHERE singleton = 1`,
+        leaseExpiresAtMs,
+      );
+      this.ctx.storage.sql.exec(
+        `UPDATE staging_media SET lease_expires_at_ms = ?
+         WHERE state NOT IN ('deleted', 'expired', 'finalized')`,
+        leaseExpiresAtMs,
+      );
+    });
+    await this.ctx.storage.setAlarm(leaseExpiresAtMs);
+    return { status: "touched", leaseExpiresAtMs } as const;
+  }
+
   async completeSupersededDeletes(input: {
     ownerSubjectHash: string;
     stagingSessionId: string;

@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
 import {
   EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS,
   EPHEMERAL_MEDIA_STAGING_PROTOCOL,
-  type EphemeralMediaCapabilityClaims,
+  type EphemeralMediaStagingSessionClaims,
   type EphemeralMediaSessionCapabilityClaims,
 } from "../src/lib/media/ephemeral-staging-contract";
 import {
@@ -138,8 +138,10 @@ export function verifyEphemeralMediaRepositoryContract(
     }>;
   };
   const envExample = read("apps/web/.env.example");
-  const reservationRoute = read(
-    "apps/web/src/app/api/media/staging/reservations/route.ts",
+  // OVE-372: the only Vercel route in the upload path issues the session
+  // capability; it must stay free of database effects.
+  const sessionRoute = read(
+    "apps/web/src/app/api/media/staging/sessions/route.ts",
   );
   const worker = read("apps/web/cloudflare/media-staging/src/index.ts");
   const coordinator = read(
@@ -218,10 +220,10 @@ export function verifyEphemeralMediaRepositoryContract(
   }
   if (
     /@\/db|media-repository|createQuarantinedMediaAsset|journal-draft-repository/.test(
-      reservationRoute,
+      sessionRoute,
     )
   ) {
-    violations.push("reservation:database_effect");
+    violations.push("session:database_effect");
   }
   for (const required of [
     "request.body",
@@ -503,19 +505,14 @@ async function liveStage(
   const stagingSessionId = randomUUID();
   const mediaAssetId = randomUUID();
   const now = Math.floor(Date.now() / 1_000);
-  const claims: EphemeralMediaCapabilityClaims = {
+  // OVE-372: one session token per composer session; the upload describes
+  // itself through its path and headers.
+  const claims: EphemeralMediaStagingSessionClaims = {
     protocol: EPHEMERAL_MEDIA_STAGING_PROTOCOL,
-    kind: "capability",
+    kind: "staging_session",
     keyVersion: context.capabilityPolicy.active.version,
-    purpose: "upload",
     ownerSubjectHash: context.ownerSubjectHash,
     stagingSessionId,
-    mediaAssetId,
-    generation: 1,
-    sha256,
-    sizeBytes: body.byteLength,
-    width: 1,
-    height: 1,
     issuedAtSeconds: now,
     expiresAtSeconds: now + EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS,
     nonce: randomBytes(16).toString("base64url"),
@@ -562,6 +559,8 @@ async function liveUpload(
       "content-type": "image/webp",
       "content-length": String(input.body.byteLength),
       "content-sha256": input.sha256,
+      "x-media-width": "1",
+      "x-media-height": "1",
       origin: "https://over.garden",
     },
     body: input.body.buffer.slice(

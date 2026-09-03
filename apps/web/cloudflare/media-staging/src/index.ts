@@ -2,6 +2,7 @@ import {
   EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS,
   EPHEMERAL_MEDIA_CLAIM_DEADLINE_MS,
   EPHEMERAL_MEDIA_CONTROL_DEADLINE_MS,
+  EPHEMERAL_MEDIA_LEASE_SECONDS,
   EPHEMERAL_MEDIA_MAX_BYTES,
   EPHEMERAL_MEDIA_MAX_DIMENSION,
   EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO,
@@ -20,9 +21,11 @@ import {
   isSafeNonce,
   isSubjectHash,
   isUuid,
+  parseEphemeralMediaUploadDescription,
   type EphemeralMediaCapabilityClaims,
   type EphemeralMediaSessionCapabilityClaims,
   type EphemeralMediaStagingReceiptClaims,
+  type EphemeralMediaStagingSessionClaims,
 } from "../../../src/lib/media/ephemeral-staging-contract";
 import {
   deriveEphemeralMediaPublicOwnershipProof,
@@ -39,6 +42,7 @@ import {
   type MediaStagingEnv,
 } from "./staging-session";
 import { corsHeaders, parseWorkerRoute, type WorkerRoute } from "./http-policy";
+import { PROMOTION_CONCURRENCY, promoteWithConcurrency } from "./promotion";
 
 export { MediaStagingSession };
 export { corsHeaders, parseWorkerRoute } from "./http-policy";
@@ -114,6 +118,8 @@ const worker = {
           return await handleClaim(request, env, route, origin);
         case "finalize":
           return await handleFinalize(request, env, route, origin);
+        case "touch":
+          return await handleTouch(request, env, route, origin);
       }
     } catch (error) {
       const classified = classifyWorkerError(error);
@@ -136,10 +142,16 @@ async function handleUpload(
   route: Extract<WorkerRoute, { operation: "upload" }>,
   origin: string | null,
 ) {
+  // OVE-372: one session capability per composer session; the upload itself
+  // is described by its path (asset, generation, variant) and headers
+  // (checksum, size, dimensions), through the same bounds the reservation
+  // route used to enforce.
   const token = bearerToken(request);
   const policy = capabilityPolicy(env);
-  const claims = await verifyMediaCapability(token, policy, "upload");
-  assertMediaRoute(claims, route);
+  const session = await verifyStagingSession(token, policy);
+  if (session.stagingSessionId !== route.stagingSessionId) {
+    throw workerError("capability_invalid", 401);
+  }
   if (
     request.headers.get("content-type")?.split(";", 1)[0]?.trim() !==
     "image/webp"
@@ -151,15 +163,19 @@ async function handleUpload(
   const contentLength = parseContentLength(
     request.headers.get("content-length"),
   );
-  const declaredSha256 = request.headers.get("content-sha256");
-  if (
-    contentLength !== claims.sizeBytes ||
-    declaredSha256 !== claims.sha256 ||
-    contentLength > EPHEMERAL_MEDIA_MAX_BYTES ||
-    !request.body
-  ) {
+  const description = parseEphemeralMediaUploadDescription({
+    binding: route,
+    headers: request.headers,
+    contentLength,
+  });
+  if (!description || !request.body) {
     throw workerError("upload_declaration_mismatch", 400);
   }
+  const claims = {
+    ...description,
+    ownerSubjectHash: session.ownerSubjectHash,
+    nonce: crypto.randomUUID().replace(/-/g, ""),
+  };
   const uploadControlDeadlineAtMs = controlDeadlineAt();
   const edgeAdmission = await bounded(
     env.MEDIA_STAGING_UPLOAD_RATE_LIMIT.limit({
@@ -321,8 +337,7 @@ async function handleUpload(
     throw workerError("checksum_mismatch", 422);
   }
   const stagedAtSeconds = Math.floor(Date.now() / 1_000);
-  const leaseExpiresAtSeconds =
-    stagedAtSeconds + EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS;
+  const leaseExpiresAtSeconds = stagedAtSeconds + EPHEMERAL_MEDIA_LEASE_SECONDS;
   const receiptPolicy = receiptSigningPolicy(env);
   const receiptClaims: EphemeralMediaStagingReceiptClaims = {
     protocol: EPHEMERAL_MEDIA_STAGING_PROTOCOL,
@@ -346,6 +361,8 @@ async function handleUpload(
     receiptPolicy.active,
   );
   const deleteClaims: EphemeralMediaCapabilityClaims = {
+    protocol: EPHEMERAL_MEDIA_STAGING_PROTOCOL,
+    kind: "capability",
     ...claims,
     variant,
     keyVersion: policy.active.version,
@@ -518,12 +535,14 @@ async function handleClaim(
     "coordinator_timeout",
   );
   if (begin.status === "rejected") throw workerError(begin.code, 409);
-  for (const item of begin.items) {
+  // Promotion runs with bounded concurrency (OVE-372): ten photos with their
+  // variants are thirty objects, and each copy is independent.
+  await promoteWithConcurrency(begin.items, PROMOTION_CONCURRENCY, async (item) => {
     const ownershipProof = item.publicOwnershipProof;
     if (!isBase64UrlSha256(ownershipProof)) {
       throw workerError("public_ownership_proof_unavailable", 409);
     }
-    if (item.publicReady === 1) continue;
+    if (item.publicReady === 1) return;
     const source = await bounded(
       env.MEDIA_STAGING_BUCKET.get(item.stagingKey),
       remainingDeadlineMs(claimDeadlineAtMs, "claim_timeout"),
@@ -585,7 +604,7 @@ async function handleClaim(
       "coordinator_timeout",
     );
     if (completed.status !== "claimed") throw workerError(completed.code, 409);
-  }
+  });
   const claimedByMediaKey = new Map(
     begin.items.map(
       (item) => [`${item.mediaAssetId}#${item.variant}`, item] as const,
@@ -740,6 +759,46 @@ async function handleFinalize(
   return closedResponse({ status: "finalized" }, 200, origin, request.method);
 }
 
+/**
+ * The composer touches its session every five minutes while it is mounted
+ * and holds media (OVE-372); the Durable Object extends the lease of the
+ * session and its staged objects to now + `EPHEMERAL_MEDIA_LEASE_SECONDS`.
+ */
+async function handleTouch(
+  request: Request,
+  env: Env,
+  route: Extract<WorkerRoute, { operation: "touch" }>,
+  origin: string | null,
+) {
+  const session = await verifyStagingSession(
+    bearerToken(request),
+    capabilityPolicy(env),
+  );
+  if (session.stagingSessionId !== route.stagingSessionId) {
+    throw workerError("capability_invalid", 401);
+  }
+  const touched = await bounded(
+    sessionStub(env, route.stagingSessionId).touch({
+      ownerSubjectHash: session.ownerSubjectHash,
+      stagingSessionId: route.stagingSessionId,
+      nowMs: Date.now(),
+      deadlineAtMs: controlDeadlineAt(),
+    }),
+    EPHEMERAL_MEDIA_CONTROL_DEADLINE_MS,
+    "coordinator_timeout",
+  );
+  if (touched.status === "rejected") throw workerError(touched.code, 409);
+  return closedResponse(
+    {
+      status: "touched",
+      leaseExpiresAt: new Date(touched.leaseExpiresAtMs).toISOString(),
+    },
+    200,
+    origin,
+    request.method,
+  );
+}
+
 function preflight(request: Request, origin: string | null) {
   const requestedMethod =
     request.headers.get("access-control-request-method") ?? "OPTIONS";
@@ -800,16 +859,35 @@ function receiptSigningPolicy(env: Env) {
   });
 }
 
+/** Per-object capabilities remain only for delete; they live as long as the lease. */
 async function verifyMediaCapability(
   token: string,
   policy: EphemeralMediaSigningPolicy,
-  purpose: "upload" | "delete",
+  purpose: "delete",
 ): Promise<EphemeralMediaCapabilityClaims> {
   const value = await verifyEphemeralMediaToken(token, policy);
   const now = Math.floor(Date.now() / 1_000);
   if (
     !isMediaCapability(value) ||
     value.purpose !== purpose ||
+    value.issuedAtSeconds > now + 30 ||
+    value.expiresAtSeconds < now ||
+    value.expiresAtSeconds - value.issuedAtSeconds < 1 ||
+    value.expiresAtSeconds - value.issuedAtSeconds >
+      EPHEMERAL_MEDIA_LEASE_SECONDS
+  )
+    throw workerError("capability_invalid", 401);
+  return value;
+}
+
+async function verifyStagingSession(
+  token: string,
+  policy: EphemeralMediaSigningPolicy,
+): Promise<EphemeralMediaStagingSessionClaims> {
+  const value = await verifyEphemeralMediaToken(token, policy);
+  const now = Math.floor(Date.now() / 1_000);
+  if (
+    !isStagingSession(value) ||
     value.issuedAtSeconds > now + 30 ||
     value.expiresAtSeconds < now ||
     value.expiresAtSeconds - value.issuedAtSeconds !==
@@ -844,13 +922,10 @@ async function verifyStagingReceipt(
 ): Promise<EphemeralMediaStagingReceiptClaims> {
   const value = await verifyEphemeralMediaToken(token, policy);
   const now = Math.floor(Date.now() / 1_000);
-  if (
-    !isStagingReceipt(value) ||
-    value.stagedAtSeconds > now + 30 ||
-    value.leaseExpiresAtSeconds < now ||
-    value.leaseExpiresAtSeconds - value.stagedAtSeconds !==
-      EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS
-  ) {
+  // Expiry is the Durable Object's lease (touched while the composer lives),
+  // not arithmetic on the receipt (OVE-372); `beginClaim` answers
+  // `receipt_expired` from the row.
+  if (!isStagingReceipt(value) || value.stagedAtSeconds > now + 30) {
     throw workerError("receipt_invalid", 409);
   }
   return value;
@@ -865,7 +940,7 @@ function isMediaCapability(
     item.protocol === EPHEMERAL_MEDIA_STAGING_PROTOCOL &&
     item.kind === "capability" &&
     Number.isSafeInteger(item.keyVersion) &&
-    ["upload", "delete"].includes(String(item.purpose)) &&
+    item.purpose === "delete" &&
     isSubjectHash(item.ownerSubjectHash) &&
     isUuid(item.stagingSessionId) &&
     isUuid(item.mediaAssetId) &&
@@ -879,6 +954,23 @@ function isMediaCapability(
     item.width <= EPHEMERAL_MEDIA_MAX_DIMENSION &&
     item.height <= EPHEMERAL_MEDIA_MAX_DIMENSION &&
     item.width * item.height <= EPHEMERAL_MEDIA_MAX_PIXELS &&
+    Number.isSafeInteger(item.issuedAtSeconds) &&
+    Number.isSafeInteger(item.expiresAtSeconds) &&
+    isSafeNonce(item.nonce),
+  );
+}
+
+function isStagingSession(
+  value: unknown,
+): value is EphemeralMediaStagingSessionClaims {
+  const item = value as Record<string, unknown> | null;
+  return Boolean(
+    item &&
+    item.protocol === EPHEMERAL_MEDIA_STAGING_PROTOCOL &&
+    item.kind === "staging_session" &&
+    Number.isSafeInteger(item.keyVersion) &&
+    isSubjectHash(item.ownerSubjectHash) &&
+    isUuid(item.stagingSessionId) &&
     Number.isSafeInteger(item.issuedAtSeconds) &&
     Number.isSafeInteger(item.expiresAtSeconds) &&
     isSafeNonce(item.nonce),
@@ -935,7 +1027,7 @@ function isStagingReceipt(
 
 function assertMediaRoute(
   claims: EphemeralMediaCapabilityClaims,
-  route: Extract<WorkerRoute, { operation: "upload" | "delete" }>,
+  route: Extract<WorkerRoute, { operation: "delete" }>,
 ) {
   if (
     claims.stagingSessionId !== route.stagingSessionId ||

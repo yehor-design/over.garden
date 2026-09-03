@@ -1,7 +1,17 @@
 export const EPHEMERAL_MEDIA_STAGING_PROTOCOL =
   "ove346.ephemeralMediaStaging.v1" as const;
 export const EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS = 15 * 60;
-export const EPHEMERAL_MEDIA_LEASE_SECONDS = 15 * 60;
+/**
+ * How long staged objects live without a touch (ADR-0022, D2; OVE-372). The
+ * composer touches its session every `EPHEMERAL_MEDIA_TOUCH_INTERVAL_MS`
+ * while it is mounted and holds media, so a gardener who writes for an hour
+ * keeps every photo; a closed tab is cleaned up two hours after its last
+ * touch.
+ */
+export const EPHEMERAL_MEDIA_LEASE_SECONDS = 2 * 60 * 60;
+export const EPHEMERAL_MEDIA_TOUCH_INTERVAL_MS = 5 * 60 * 1_000;
+/** Renew the session capability when less than this remains. */
+export const EPHEMERAL_MEDIA_SESSION_RENEW_AHEAD_SECONDS = 3 * 60;
 export const EPHEMERAL_MEDIA_TERMINAL_RETENTION_SECONDS = 24 * 60 * 60;
 export const EPHEMERAL_MEDIA_MAX_BYTES = 32 * 1024 * 1024;
 export const EPHEMERAL_MEDIA_MAX_DIMENSION = 16_384;
@@ -36,6 +46,36 @@ export type EphemeralMediaCapabilityPurpose =
   | "delete"
   | "claim"
   | "finalize";
+
+/**
+ * One capability per composer session (OVE-372): the browser uploads and
+ * touches with it directly at the Worker, so adding a photo makes no call to
+ * Vercel. `POST /api/media/staging/sessions` issues and renews it.
+ */
+export interface EphemeralMediaStagingSessionClaims {
+  protocol: typeof EPHEMERAL_MEDIA_STAGING_PROTOCOL;
+  kind: "staging_session";
+  keyVersion: number;
+  ownerSubjectHash: string;
+  stagingSessionId: string;
+  issuedAtSeconds: number;
+  expiresAtSeconds: number;
+  nonce: string;
+}
+
+/** The sessions route's response; `expiresAt` is epoch seconds. */
+export interface EphemeralMediaStagingSession {
+  stagingSessionId: string;
+  sessionCapability: string;
+  expiresAt: number;
+}
+
+/** Request headers that describe an upload under a session capability. */
+export const EPHEMERAL_MEDIA_UPLOAD_HEADERS = {
+  sha256: "content-sha256",
+  width: "x-media-width",
+  height: "x-media-height",
+} as const;
 export type EphemeralMediaGenerationState =
   | "reserved"
   | "uploading"
@@ -258,21 +298,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-/**
- * The upload reservation is the one shape that crosses the network between the
- * reservation route and the browser stager. It is declared here, once, because
- * the two sides previously agreed on it only by coincidence: the route typed
- * `expiresAt` as an ISO-8601 string while the browser required a safe integer,
- * so every reservation was refused before an upload was ever attempted, and
- * neither suite could see it because each tested only its own side.
- */
-export interface EphemeralMediaUploadReservation {
-  uploadUrl: string;
-  uploadCapability: string;
-  /** Integer count of epoch seconds. Never an ISO-8601 string. */
-  expiresAt: number;
-}
-
 export interface EphemeralMediaUploadBinding {
   stagingSessionId: string;
   mediaAssetId: string;
@@ -281,20 +306,7 @@ export interface EphemeralMediaUploadBinding {
   variant?: EphemeralMediaVariant;
 }
 
-/**
- * A reservation observed more than this far outside the declared capability
- * lifetime is refused. The allowance exists only to absorb ordinary clock drift
- * between the issuing server and the reading browser; it is not a lifetime
- * extension, because the staging origin verifies the signed claims itself.
- */
-export const EPHEMERAL_MEDIA_EXPIRY_CLOCK_SKEW_SECONDS = 60 * 60;
-
 const CAPABILITY_TOKEN = /^[A-Za-z0-9_.-]{40,4096}$/;
-const UPLOAD_RESERVATION_KEYS = new Set([
-  "uploadUrl",
-  "uploadCapability",
-  "expiresAt",
-]);
 
 export function isEphemeralMediaCapabilityToken(
   value: unknown,
@@ -310,87 +322,47 @@ export function ephemeralMediaUploadPath(
 }
 
 /**
- * Serializes a reservation and refuses to emit anything the consumer's own
- * parser would reject, so a producer-side drift fails at the source instead of
- * in a browser nobody is watching.
+ * Reads the upload description a session-capability PUT carries in its
+ * headers and path, or `null` when any part is missing or out of bounds. The
+ * same parser the reservation route used, so the bounds did not move.
  */
-export function buildEphemeralMediaUploadReservation(input: {
-  stagingOrigin: string | URL;
+export function parseEphemeralMediaUploadDescription(input: {
   binding: EphemeralMediaUploadBinding;
-  uploadCapability: string;
-  expiresAtSeconds: number;
-  nowSeconds: number;
-}): EphemeralMediaUploadReservation {
-  const origin = new URL(String(input.stagingOrigin));
-  const reservation: EphemeralMediaUploadReservation = {
-    uploadUrl: new URL(ephemeralMediaUploadPath(input.binding), origin).toString(),
-    uploadCapability: input.uploadCapability,
-    expiresAt: input.expiresAtSeconds,
-  };
-  const parsed = parseEphemeralMediaUploadReservation(reservation, {
-    expectedOrigin: origin.origin,
-    binding: input.binding,
-    nowSeconds: input.nowSeconds,
+  headers: Pick<Headers, "get">;
+  contentLength: number;
+}): EphemeralMediaReservationRequest | null {
+  const width = Number(input.headers.get(EPHEMERAL_MEDIA_UPLOAD_HEADERS.width));
+  const height = Number(
+    input.headers.get(EPHEMERAL_MEDIA_UPLOAD_HEADERS.height),
+  );
+  return parseEphemeralMediaReservation({
+    stagingSessionId: input.binding.stagingSessionId,
+    mediaAssetId: input.binding.mediaAssetId,
+    generation: input.binding.generation,
+    variant: input.binding.variant ?? 0,
+    sha256: input.headers.get(EPHEMERAL_MEDIA_UPLOAD_HEADERS.sha256) ?? "",
+    sizeBytes: input.contentLength,
+    width,
+    height,
   });
-  if (!parsed) throw new Error("ephemeral_media_upload_reservation_invalid");
-  return parsed;
 }
 
-/**
- * Returns the reservation when it is exactly what the declared binding expects,
- * and `null` otherwise. Callers map `null` onto their own bounded refusal class.
- */
-export function parseEphemeralMediaUploadReservation(
+/** The session route's response, validated where the browser reads it. */
+export function parseEphemeralMediaStagingSession(
   value: unknown,
-  expected: {
-    expectedOrigin: string;
-    binding: EphemeralMediaUploadBinding;
-    nowSeconds?: number;
-  },
-): EphemeralMediaUploadReservation | null {
+  expectedStagingSessionId: string,
+): EphemeralMediaStagingSession | null {
   if (!isRecord(value)) return null;
-  if (Object.keys(value).some((key) => !UPLOAD_RESERVATION_KEYS.has(key))) {
-    return null;
-  }
   if (
-    !isEphemeralMediaCapabilityToken(value.uploadCapability) ||
-    typeof value.uploadUrl !== "string" ||
+    value.stagingSessionId !== expectedStagingSessionId ||
+    !isEphemeralMediaCapabilityToken(value.sessionCapability) ||
     !isPositiveSafeInteger(value.expiresAt)
   ) {
     return null;
   }
-  let url: URL;
-  let origin: URL;
-  try {
-    url = new URL(value.uploadUrl);
-    origin = new URL(expected.expectedOrigin);
-  } catch {
-    return null;
-  }
-  if (
-    url.origin !== origin.origin ||
-    url.pathname !== ephemeralMediaUploadPath(expected.binding) ||
-    url.search ||
-    url.hash ||
-    url.username ||
-    url.password
-  ) {
-    return null;
-  }
-  if (expected.nowSeconds !== undefined) {
-    const remaining = value.expiresAt - expected.nowSeconds;
-    if (
-      remaining <= -EPHEMERAL_MEDIA_EXPIRY_CLOCK_SKEW_SECONDS ||
-      remaining >
-        EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS +
-          EPHEMERAL_MEDIA_EXPIRY_CLOCK_SKEW_SECONDS
-    ) {
-      return null;
-    }
-  }
   return {
-    uploadUrl: url.toString(),
-    uploadCapability: value.uploadCapability,
+    stagingSessionId: expectedStagingSessionId,
+    sessionCapability: value.sessionCapability,
     expiresAt: value.expiresAt,
   };
 }

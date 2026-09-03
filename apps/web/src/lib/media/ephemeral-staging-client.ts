@@ -8,13 +8,17 @@ import {
 import type { LocalJournalMediaStager } from "@/lib/garden/local-journal-media-coordinator";
 import {
   EPHEMERAL_MEDIA_CONTROL_DEADLINE_MS,
+  EPHEMERAL_MEDIA_SESSION_RENEW_AHEAD_SECONDS,
   EPHEMERAL_MEDIA_UPLOAD_DEADLINE_MS,
+  EPHEMERAL_MEDIA_UPLOAD_HEADERS,
   ephemeralMediaUploadPath,
   isEphemeralMediaCapabilityToken,
-  parseEphemeralMediaUploadReservation,
+  parseEphemeralMediaStagingSession,
+  type EphemeralMediaStagingSession,
 } from "./ephemeral-staging-contract";
 
 const STAGING_PRODUCTION_ORIGIN = "https://media-stage.over.garden";
+const SESSIONS_ROUTE = "/api/media/staging/sessions";
 
 export class EphemeralStagingClientError extends Error {
   constructor(readonly code: string) {
@@ -35,8 +39,18 @@ export function ephemeralStagingFailureCode(error: unknown): string {
     : "staging_unexpected_error";
 }
 
+/**
+ * The browser side of the OVE-372 session contract: one capability per
+ * composer session from Vercel, then every upload and touch goes straight to
+ * the Worker with it. The capability is fetched once when the composer
+ * prepares the session and renewed a few minutes before it expires.
+ */
 export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
   private readonly uploadUrls = new Map<string, string>();
+  private readonly sessions = new Map<
+    string,
+    { promise: Promise<EphemeralMediaStagingSession>; expiresAt: number }
+  >();
 
   constructor(
     private readonly options: {
@@ -44,8 +58,14 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
       stagingOrigin?: string;
       uploadDeadlineMs?: number;
       controlDeadlineMs?: number;
+      now?: () => number;
     },
   ) {}
+
+  /** Fetches the session capability so the first photo makes no Vercel call. */
+  async prepare(stagingSessionId: string): Promise<void> {
+    await this.sessionCapability(stagingSessionId);
+  }
 
   async stage(input: Parameters<LocalJournalMediaStager["stage"]>[0]) {
     if (input.blob.type !== "image/webp") {
@@ -56,51 +76,16 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
       this.options.uploadDeadlineMs ?? EPHEMERAL_MEDIA_UPLOAD_DEADLINE_MS,
     );
     try {
-      const reservationResponse = await this.fetcher(
-        "/api/media/staging/reservations",
-        {
-          method: "POST",
-          redirect: "error",
-          credentials: "same-origin",
-          cache: "no-store",
-          headers: {
-            "content-type": "application/json",
-            ...ownerScopeHeaders(),
-          },
-          body: JSON.stringify({
-            stagingSessionId: input.stagingSessionId,
-            mediaAssetId: input.mediaAssetId,
-            generation: input.generation,
-            variant: input.variant ?? 0,
-            sha256: input.sha256,
-            sizeBytes: input.blob.size,
-            width: input.width,
-            height: input.height,
-          }),
-          signal: stageController.signal,
-        },
-      );
-      const reservation = await boundedJson(reservationResponse, 8_192);
-      if (!reservationResponse.ok) {
-        throw new EphemeralStagingClientError(responseCode(reservation));
-      }
-      const validatedReservation = parseEphemeralMediaUploadReservation(
-        reservation,
-        {
-          expectedOrigin: this.stagingOrigin,
-          binding: {
-            stagingSessionId: input.stagingSessionId,
-            mediaAssetId: input.mediaAssetId,
-            generation: input.generation,
-            variant: input.variant ?? 0,
-          },
-          nowSeconds: Math.floor(Date.now() / 1_000),
-        },
-      );
-      if (!validatedReservation) {
-        throw new EphemeralStagingClientError("staging_reservation_invalid");
-      }
-      const uploadUrl = validatedReservation.uploadUrl;
+      const session = await this.sessionCapability(input.stagingSessionId);
+      const uploadUrl = new URL(
+        ephemeralMediaUploadPath({
+          stagingSessionId: input.stagingSessionId,
+          mediaAssetId: input.mediaAssetId,
+          generation: input.generation,
+          variant: input.variant ?? 0,
+        }),
+        this.stagingOrigin,
+      ).toString();
       const uploadResponse = await this.fetcher(uploadUrl, {
         method: "PUT",
         redirect: "error",
@@ -108,9 +93,11 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
         cache: "no-store",
         credentials: "omit",
         headers: {
-          authorization: `Bearer ${validatedReservation.uploadCapability}`,
+          authorization: `Bearer ${session.sessionCapability}`,
           "content-type": "image/webp",
-          "content-sha256": input.sha256,
+          [EPHEMERAL_MEDIA_UPLOAD_HEADERS.sha256]: input.sha256,
+          [EPHEMERAL_MEDIA_UPLOAD_HEADERS.width]: String(input.width),
+          [EPHEMERAL_MEDIA_UPLOAD_HEADERS.height]: String(input.height),
         },
         body: input.blob,
         signal: stageController.signal,
@@ -139,6 +126,40 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
       throw error;
     } finally {
       stageController.dispose();
+    }
+  }
+
+  /** Extends the session lease at the Worker (every five minutes while mounted). */
+  async touch(stagingSessionId: string): Promise<void> {
+    const session = await this.sessionCapability(stagingSessionId);
+    const controller = linkedDeadlineController(
+      null,
+      this.options.controlDeadlineMs ?? EPHEMERAL_MEDIA_CONTROL_DEADLINE_MS,
+    );
+    try {
+      const response = await this.fetcher(
+        new URL(`/v1/staging/${stagingSessionId}/touch`, this.stagingOrigin).toString(),
+        {
+          method: "POST",
+          redirect: "error",
+          mode: "cors",
+          cache: "no-store",
+          credentials: "omit",
+          headers: { authorization: `Bearer ${session.sessionCapability}` },
+          signal: controller.signal,
+        },
+      );
+      const body = await boundedJson(response, 4_096);
+      if (!response.ok) {
+        throw new EphemeralStagingClientError(responseCode(body));
+      }
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new EphemeralStagingClientError("staging_touch_timeout");
+      }
+      throw error;
+    } finally {
+      controller.dispose();
     }
   }
 
@@ -186,12 +207,88 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
     }
   }
 
+  private sessionCapability(
+    stagingSessionId: string,
+  ): Promise<EphemeralMediaStagingSession> {
+    const nowSeconds = Math.floor(this.now() / 1_000);
+    const cached = this.sessions.get(stagingSessionId);
+    if (
+      cached &&
+      cached.expiresAt - nowSeconds > EPHEMERAL_MEDIA_SESSION_RENEW_AHEAD_SECONDS
+    ) {
+      return cached.promise;
+    }
+    const promise = this.issueSession(stagingSessionId);
+    // Until the route answers, the entry is optimistic; a refusal clears it so
+    // the next upload asks again instead of failing forever.
+    this.sessions.set(stagingSessionId, {
+      promise,
+      expiresAt: Number.POSITIVE_INFINITY,
+    });
+    promise.then(
+      (session) =>
+        this.sessions.set(stagingSessionId, {
+          promise,
+          expiresAt: session.expiresAt,
+        }),
+      () => {
+        if (this.sessions.get(stagingSessionId)?.promise === promise) {
+          this.sessions.delete(stagingSessionId);
+        }
+      },
+    );
+    return promise;
+  }
+
+  private async issueSession(
+    stagingSessionId: string,
+  ): Promise<EphemeralMediaStagingSession> {
+    const controller = linkedDeadlineController(
+      null,
+      this.options.controlDeadlineMs ?? EPHEMERAL_MEDIA_CONTROL_DEADLINE_MS,
+    );
+    try {
+      const response = await this.fetcher(SESSIONS_ROUTE, {
+        method: "POST",
+        redirect: "error",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: {
+          "content-type": "application/json",
+          ...ownerScopeHeaders(),
+        },
+        body: JSON.stringify({ stagingSessionId }),
+        signal: controller.signal,
+      });
+      const body = await boundedJson(response, 8_192);
+      if (!response.ok) {
+        throw new EphemeralStagingClientError(responseCode(body));
+      }
+      const session = parseEphemeralMediaStagingSession(body, stagingSessionId);
+      if (!session) {
+        throw new EphemeralStagingClientError("staging_session_invalid");
+      }
+      return session;
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new EphemeralStagingClientError("staging_session_timeout");
+      }
+      throw error;
+    } finally {
+      controller.dispose();
+    }
+  }
+
   private get fetcher() {
     return this.options.fetcher ?? fetch;
   }
 
   private get stagingOrigin() {
     return this.options.stagingOrigin ?? STAGING_PRODUCTION_ORIGIN;
+  }
+
+  private now() {
+    return this.options.now?.() ?? Date.now();
   }
 }
 

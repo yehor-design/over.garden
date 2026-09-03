@@ -1,6 +1,7 @@
 "use client";
 
 import type { ClientImageSourceKind } from "@/lib/media/client-webp-policy";
+import { EPHEMERAL_MEDIA_TOUCH_INTERVAL_MS } from "@/lib/media/ephemeral-staging-contract";
 import { isUuid } from "@/lib/media/ephemeral-staging-contract";
 
 export const LOCAL_JOURNAL_MEDIA_MAX_ITEMS = 10;
@@ -14,6 +15,8 @@ export type LocalJournalMediaStatus =
   | "staging"
   | "ready"
   | "failed";
+
+const DEFAULT_TOUCH_INTERVAL_MS = EPHEMERAL_MEDIA_TOUCH_INTERVAL_MS;
 
 export interface EncodedJournalImageVariant {
   longEdge: number;
@@ -58,6 +61,10 @@ export interface LocalJournalImageEncoder {
 }
 
 export interface LocalJournalMediaStager {
+  /** Fetches the session capability early so the first photo waits on nothing (OVE-372). */
+  prepare?(stagingSessionId: string): Promise<void>;
+  /** Extends the staging lease at the Worker while the composer holds media. */
+  touch?(stagingSessionId: string): Promise<void>;
   stage(input: {
     stagingSessionId: string;
     mediaAssetId: string;
@@ -156,6 +163,7 @@ export class LocalJournalMediaCoordinator {
   private snapshot: LocalJournalMediaSnapshot = { items: [] };
   private destroyed = false;
   private publicationFrozen = false;
+  private touchTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly options: {
@@ -166,8 +174,11 @@ export class LocalJournalMediaCoordinator {
       createObjectURL?: (blob: Blob) => string;
       revokeObjectURL?: (url: string) => void;
       createId?: () => string;
+      /** Test seam for the touch cadence; defaults to five minutes. */
+      touchIntervalMs?: number;
     },
   ) {
+    options.stager.prepare?.(options.stagingSessionId).catch(() => undefined);
     for (const existing of options.existingItems ?? []) {
       if (
         !isUuid(existing.mediaAssetId) ||
@@ -424,6 +435,7 @@ export class LocalJournalMediaCoordinator {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.stopTouching();
     for (const item of this.items.values()) {
       this.retireOperation(item, "media_abandoned");
       this.revokePreview(item);
@@ -443,6 +455,7 @@ export class LocalJournalMediaCoordinator {
     if (this.destroyed) return;
     this.destroyed = true;
     this.publicationFrozen = false;
+    this.stopTouching();
     for (const item of this.items.values()) {
       item.controller.abort();
       this.revokePreview(item);
@@ -519,6 +532,7 @@ export class LocalJournalMediaCoordinator {
       item.variantReceipts = variantReceipts;
       item.deleteCapability = staged.deleteCapability;
       item.failureCode = null;
+      this.startTouching();
       this.publish();
       settleGeneration(item.operation, "resolve", publicItem(item));
     } catch (error) {
@@ -568,6 +582,30 @@ export class LocalJournalMediaCoordinator {
       "reject",
       new LocalJournalMediaError(code),
     );
+  }
+
+  /**
+   * While the coordinator holds staged media it touches the session every
+   * five minutes so the Worker keeps the lease alive (OVE-372). A touch that
+   * fails is retried on the next tick; the lease is two hours long.
+   */
+  private startTouching() {
+    if (this.touchTimer || this.destroyed || !this.options.stager.touch) return;
+    if (typeof setInterval !== "function") return;
+    this.touchTimer = setInterval(() => {
+      if (this.destroyed || this.items.size === 0) {
+        this.stopTouching();
+        return;
+      }
+      this.options.stager
+        .touch?.(this.options.stagingSessionId)
+        .catch(() => undefined);
+    }, this.options.touchIntervalMs ?? DEFAULT_TOUCH_INTERVAL_MS);
+  }
+
+  private stopTouching() {
+    if (this.touchTimer) clearInterval(this.touchTimer);
+    this.touchTimer = null;
   }
 
   private revokePreview(item: InternalItem) {

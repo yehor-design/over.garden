@@ -4,6 +4,7 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -88,6 +89,49 @@ export async function probePublicDerivativeObjectState(
     objectKey,
     abortSignal,
   );
+}
+
+export interface PublicDerivativeObjectListing {
+  objects: Array<{ key: string; lastModified: Date | null; size: number }>;
+  nextContinuationToken: string | null;
+}
+
+/** One page of the public bucket under `prefix`, for the orphan sweep (OVE-372). */
+export async function listPublicDerivativeObjects(input: {
+  prefix: string;
+  continuationToken?: string | null;
+  maxKeys?: number;
+  abortSignal?: AbortSignal;
+}): Promise<PublicDerivativeObjectListing> {
+  const page = await r2Client().send(
+    new ListObjectsV2Command({
+      Bucket: requiredServerEnv("R2_PUBLIC_BUCKET"),
+      Prefix: input.prefix,
+      ContinuationToken: input.continuationToken ?? undefined,
+      MaxKeys: input.maxKeys ?? 1_000,
+    }),
+    {
+      abortSignal:
+        input.abortSignal ??
+        AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
+    },
+  );
+  return {
+    objects: (page.Contents ?? []).flatMap((object) =>
+      object.Key
+        ? [
+            {
+              key: object.Key,
+              lastModified: object.LastModified ?? null,
+              size: Number(object.Size ?? 0),
+            },
+          ]
+        : [],
+    ),
+    nextContinuationToken: page.IsTruncated
+      ? (page.NextContinuationToken ?? null)
+      : null,
+  };
 }
 
 export async function deletePublicDerivativeObject(

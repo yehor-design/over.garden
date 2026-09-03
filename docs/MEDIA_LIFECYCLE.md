@@ -51,35 +51,34 @@ Delivery is a plain `<img srcset sizes>` (`buildPublicMediaSourceSet`) with
 the placeholder painted as a background until the image loads; there is no
 image optimizer hop.
 
-## The reservation wire contract (OVE-359)
+## The session contract (OVE-372)
 
-`apps/web/src/lib/media/ephemeral-staging-contract.ts` declares the upload
-reservation once, and both the reservation route and the browser stager import
-that declaration. Neither side restates it.
+`apps/web/src/lib/media/ephemeral-staging-contract.ts` declares the session
+contract once, and the sessions route, the browser stager, and the Worker
+import that declaration. Neither side restates it.
 
-| Field | Shape |
+| Piece | Shape |
 | -- | -- |
-| `uploadUrl` | the exact staging origin plus `/v1/staging/{session}/{asset}/{generation}` (plus `/v{longEdge}` for a variant), with no query, fragment, or credentials |
-| `uploadCapability` | the signed capability, matching the shared token shape |
-| `expiresAt` | an **integer count of epoch seconds**, inside the declared capability lifetime |
+| `POST /api/media/staging/sessions` | body `{ stagingSessionId }` (a UUID the composer minted); answers `{ stagingSessionId, sessionCapability, expiresAt }` with `expiresAt` an **integer count of epoch seconds**, private and no-store |
+| session capability | a signed `staging_session` token bound to the owner hash and the session, 15 min TTL; renewed by the same call when less than three minutes remain |
+| upload | `PUT {stagingOrigin}/v1/staging/{session}/{asset}/{generation}[/v{longEdge}]` with `authorization: Bearer <session capability>`, `content-type: image/webp`, `content-length`, `content-sha256`, `x-media-width`, `x-media-height`; the Worker validates type, size, dimensions, checksum, and the per-session photo count in the Durable Object and answers the staging receipt and a per-object delete capability |
+| touch | `POST {stagingOrigin}/v1/staging/{session}/touch` with the session capability; extends the session's and its objects' lease to now + 2 h |
+| lease | `EPHEMERAL_MEDIA_LEASE_SECONDS` = 2 h; the composer touches every 5 min (`EPHEMERAL_MEDIA_TOUCH_INTERVAL_MS`) while it is mounted and holds media; the Durable Object abandons a session only after its lease expires with no touch |
 
-`expiresAt` is a number and never an ISO-8601 string. Between 2026-08-23 and
-2026-09-01 the route serialized it as a string while the browser required a safe
-integer, so every reservation was refused and no photo could be uploaded at all.
-Both suites were green throughout, because each tested only its own side of a
-contract that existed in neither file. `buildEphemeralMediaUploadReservation`
-now refuses to emit anything `parseEphemeralMediaUploadReservation` would
-reject, so a producer-side drift fails at the source.
-
-`EPHEMERAL_MEDIA_EXPIRY_CLOCK_SKEW_SECONDS` exists only to absorb ordinary clock
-drift between the issuing server and the reading browser. It is not a lifetime
-extension: the staging origin verifies the signed claims itself.
+Adding a photo makes no call to Vercel: the composer fetches the session
+capability once when it opens (the coordinator calls `stager.prepare`) and
+every upload and touch goes straight to the Worker. A receipt's expiry is the
+Durable Object's lease, not arithmetic on the receipt: the claim answers
+`receipt_expired` from the row, so a composer left open for an hour still
+publishes every photo.
 
 A refused handoff records its bounded `EphemeralStagingClientError` code through
 `ephemeralStagingFailureCode`, and the composer surfaces it as the image block's
-`failureCode`. No boundary discards the reason any more.
+`failureCode`. No boundary discards the reason.
 
-Proof: `cd apps/web && pnpm exec tsx scripts/prove-staging-reservation-contract.ts --mode verify --inject-staging-upload-timeout`.
+The per-photo reservation route (`/api/media/staging/reservations`), the
+per-photo upload capability, and `scripts/prove-staging-reservation-contract.ts`
+were retired with OVE-372.
 
 ## Publication lifecycle
 
@@ -89,13 +88,14 @@ Proof: `cd apps/web && pnpm exec tsx scripts/prove-staging-reservation-contract.
 3. Atomic journal publication claims the signed staging receipts and commits
    public journal/media rows in one database transaction.
 4. `media_staging_finalize` promotes the claimed bytes to their final public
-   identity. The Durable Object lease and alarm recover interrupted finalize or
-   abandonment idempotently.
+   identity, four objects at a time (`PROMOTION_CONCURRENCY`). The Durable
+   Object lease and alarm recover interrupted finalize or abandonment
+   idempotently.
 5. A journal card is visible only after the atomic contract has final media;
    there is no durable pending-media state.
 
-Normal abandoned staging is reclaimed after 15 minutes. The one-day staging
-bucket lifecycle is catastrophic fallback, not product state.
+Normal abandoned staging is reclaimed two hours after the last touch. The
+one-day staging bucket lifecycle is catastrophic fallback, not product state.
 
 ## Public removal lifecycle
 
@@ -110,6 +110,11 @@ The only app-owned media lifecycle job kinds are:
 - `media_staging_finalize`
 - `media_derivative_revoke`
 - `erasure_media_object_delete` in the erasure consumer
+
+`GET /api/cron/media-orphans` (weekly, Monday 05:00 UTC, `CRON_SECRET`) lists
+`derivatives/` objects older than seven days and deletes those no
+`media_assets` row names, as its `derivative_key` or as one of that key's
+recorded variants (OVE-372). Its receipt carries counts only.
 
 The former quarantine expiry, processing claim, quality receipt, and failed
 source-original retention states no longer exist in active schema or runtime.

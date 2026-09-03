@@ -5,7 +5,6 @@ import {
   readBoundedJsonResponse,
 } from "@/lib/bounded-json-response";
 import {
-  EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS,
   EPHEMERAL_MEDIA_CLAIM_DEADLINE_MS,
   EPHEMERAL_MEDIA_MAX_BYTES,
   EPHEMERAL_MEDIA_MAX_DIMENSION,
@@ -125,12 +124,10 @@ export async function verifyEphemeralPublicationReceipts(
       throw new EphemeralPublicationHandoffError("receipt_mismatch");
     }
     stagingSessionId ??= payload.stagingSessionId;
-    if (
-      payload.stagedAtSeconds > now + 30 ||
-      payload.leaseExpiresAtSeconds < now ||
-      payload.leaseExpiresAtSeconds - payload.stagedAtSeconds !==
-        EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS
-    ) {
+    // A receipt's lease is the Durable Object's, renewed by touches while the
+    // composer lives (OVE-372); the claim answers `receipt_expired` from the
+    // row. Only a receipt from the future is refused here.
+    if (payload.stagedAtSeconds > now + 30) {
       throw new EphemeralPublicationHandoffError("receipt_expired");
     }
     media.push(payload);
