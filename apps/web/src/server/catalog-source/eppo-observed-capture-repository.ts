@@ -530,6 +530,90 @@ export function buildClaimNextEppoCaptureUnitQuery(
     ]);
 }
 
+/**
+ * Failure classes that left no evidence behind.
+ *
+ * A unit in one of these states was never observed: the request never reached
+ * a documented response, so nothing about the provider's answer is known and
+ * nothing has been written. Re-attempting one in a later invocation cannot
+ * overwrite evidence, which is what separates it from a digest, schema, or
+ * authorization failure. Those stay terminal and fail the capture closed.
+ */
+export const EPPO_RECOVERABLE_TRANSPORT_ERROR_CLASSES = [
+  "request_timeout",
+  "rate_limited",
+  "api_unavailable",
+  "network_failure",
+  "stale_claim_attempts_exhausted",
+] as const;
+
+export type EppoRecoverableTransportErrorClass =
+  (typeof EPPO_RECOVERABLE_TRANSPORT_ERROR_CLASSES)[number];
+
+type ReclaimTransportFailedEppoCaptureUnitsInput = {
+  captureId: string;
+};
+
+/**
+ * Returns transport-failed units to the pending queue with a fresh attempt
+ * budget.
+ *
+ * The attempt budget is an operator control over one invocation, not a
+ * lifetime quota for an identifier. A capture spanning hundreds of thousands
+ * of serial requests will meet transient network trouble; spending the whole
+ * corpus because one unit met it twice within a second is not fail-closed
+ * behaviour, it is lost evidence. Terminal units are never touched here, so a
+ * reclaim can only ever re-observe something that was never observed.
+ */
+export function buildReclaimTransportFailedEppoCaptureUnitsQuery(
+  executor: QueryExecutor,
+  input: ReclaimTransportFailedEppoCaptureUnitsInput,
+) {
+  return executor
+    .updateTable("catalog_source_capture_units")
+    .set({
+      state: "pending",
+      attempt_count: 0,
+      claim_token: null,
+      claimed_at: null,
+      last_error_class: null,
+      updated_at: new Date(),
+    })
+    .where("capture_id", "=", input.captureId)
+    .where("unit_kind", "=", "taxon_endpoint")
+    .where("state", "=", "failed")
+    .where("last_error_class", "in", [
+      ...EPPO_RECOVERABLE_TRANSPORT_ERROR_CLASSES,
+    ])
+    .returning("id");
+}
+
+/**
+ * Counts failed units and how many of them carry a recoverable transport
+ * class.
+ *
+ * The caller uses the two numbers to tell an interrupted run apart from a
+ * refused one: equal counts mean every open unit can be re-observed, so the
+ * capture pauses; any difference means at least one unit was refused on its
+ * own evidence and the capture fails closed.
+ */
+export function buildEppoCaptureFailureRecoverabilityQuery(
+  executor: QueryExecutor,
+  captureId: string,
+) {
+  return executor
+    .selectFrom("catalog_source_capture_units")
+    .select([
+      sql<number>`count(*)::int`.as("failedUnitCount"),
+      sql<number>`count(*) filter (where ${sql.ref("last_error_class")} = any(${sql.val([...EPPO_RECOVERABLE_TRANSPORT_ERROR_CLASSES])}))::int`.as(
+        "recoverableFailedUnitCount",
+      ),
+    ])
+    .where("capture_id", "=", captureId)
+    .where("unit_kind", "=", "taxon_endpoint")
+    .where("state", "=", "failed");
+}
+
 type RecoverStaleEppoClaimsInput = {
   captureId: string;
   staleBefore: Date;
@@ -1444,6 +1528,31 @@ export async function recoverStaleEppoCaptureClaims(
     .returning("id")
     .execute();
   return { recovered: recovered.length, exhausted: exhausted.length };
+}
+
+export async function reclaimTransportFailedEppoCaptureUnits(
+  input: ReclaimTransportFailedEppoCaptureUnitsInput,
+  executor: QueryExecutor = db,
+): Promise<{ reclaimed: number }> {
+  const rows = await buildReclaimTransportFailedEppoCaptureUnitsQuery(
+    executor,
+    input,
+  ).execute();
+  return { reclaimed: rows.length };
+}
+
+export async function readEppoCaptureFailureRecoverability(
+  captureId: string,
+  executor: QueryExecutor = db,
+): Promise<{ failedUnitCount: number; recoverableFailedUnitCount: number }> {
+  const row = await buildEppoCaptureFailureRecoverabilityQuery(
+    executor,
+    captureId,
+  ).executeTakeFirstOrThrow();
+  return {
+    failedUnitCount: row.failedUnitCount,
+    recoverableFailedUnitCount: row.recoverableFailedUnitCount,
+  };
 }
 
 export async function readEppoCaptureSafeStatus(

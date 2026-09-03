@@ -82,6 +82,12 @@ const releaseCancelledEppoCaptureClaim = lazyCaptureRepositoryMethod(
 const recoverStaleEppoCaptureClaims = lazyCaptureRepositoryMethod(
   "recoverStaleEppoCaptureClaims",
 );
+const reclaimTransportFailedEppoCaptureUnits = lazyCaptureRepositoryMethod(
+  "reclaimTransportFailedEppoCaptureUnits",
+);
+const readEppoCaptureFailureRecoverability = lazyCaptureRepositoryMethod(
+  "readEppoCaptureFailureRecoverability",
+);
 const readEppoCaptureSafeStatus = lazyCaptureRepositoryMethod(
   "readEppoCaptureSafeStatus",
 );
@@ -100,7 +106,7 @@ const withEppoCaptureWriterLock = lazyCaptureRepositoryMethod(
 const finalizeEppoCapture = lazyCaptureRepositoryMethod("finalizeEppoCapture");
 
 export type EppoCaptureMode = "plan" | "capture" | "resume" | "verify";
-export type EppoCaptureFixture = "timeout" | "complete" | "drift";
+export type EppoCaptureFixture = "timeout" | "complete" | "drift" | "transport";
 
 export type EppoCaptureOptions = {
   mode: EppoCaptureMode;
@@ -188,7 +194,9 @@ export function parseEppoCaptureOptions(args: string[]): EppoCaptureOptions {
   const fixture = parsed.get("--fixture");
   if (
     fixture &&
-    !(["timeout", "complete", "drift"] as string[]).includes(fixture)
+    !(["timeout", "complete", "drift", "transport"] as string[]).includes(
+      fixture,
+    )
   ) {
     throw new Error("invalid_fixture");
   }
@@ -459,6 +467,46 @@ const INVENTORY_PAGE_LIMIT = 1_000;
 const STALE_CLAIM_SECONDS = 300;
 const STALE_CLAIM_RECOVERY_INTERVAL_MS = STALE_CLAIM_SECONDS * 1_000;
 const MAX_JOB_DURATION_MS = 86_400_000;
+
+/**
+ * The class an interrupted-but-unobserved run reports.
+ *
+ * It is deliberately not a request error: no provider answer was refused and
+ * no evidence changed. The run is checkpointed as `paused` and one more
+ * invocation continues it with a fresh attempt budget.
+ */
+const TRANSPORT_BUDGET_EXHAUSTED = "capture_transport_budget_exhausted";
+
+/**
+ * How long to wait before spending the second attempt on a unit.
+ *
+ * The first failure of a transport class is usually a moment of trouble rather
+ * than a state: a roaming interface, a renewed lease, a briefly loaded
+ * upstream. Retrying 250 ms later spends the whole budget inside that same
+ * moment. A provider-declared `Retry-After` always wins when it is longer.
+ */
+const RETRY_BACKOFF_MS: Record<string, number> = {
+  request_timeout: 2_000,
+  network_failure: 2_000,
+  api_unavailable: 2_000,
+  rate_limited: 1_000,
+};
+
+/**
+ * The checkpoint class for an interruption that wrote no evidence, or null
+ * when the run must fail closed instead.
+ *
+ * Both classes describe a run that stopped without learning anything it could
+ * have got wrong, so the correct terminal state is `paused` and the correct
+ * recovery is one more `--mode resume`.
+ */
+export function checkpointableErrorClass(error: unknown): string | null {
+  if (!(error instanceof Error)) return null;
+  return error.message === "capture_job_deadline" ||
+    error.message === TRANSPORT_BUDGET_EXHAUSTED
+    ? error.message
+    : null;
+}
 
 export function staleClaimRecoveryIsDue(
   nowMs: number,
@@ -745,6 +793,23 @@ async function hydrateOfficialEndpoints(input: {
     },
     input.executor,
   );
+  // Once per invocation, never inside the loop: within this run a unit still
+  // gets exactly `--max-attempts` attempts and no more.
+  const reclaimed = await reclaimTransportFailedEppoCaptureUnits(
+    { captureId: input.captureId },
+    input.executor,
+  );
+  if (reclaimed.reclaimed > 0) {
+    console.log(
+      JSON.stringify({
+        class: "observed_capture_reclaim",
+        captureId: input.captureId,
+        phase: "hydrating",
+        reclaimedUnitCount: reclaimed.reclaimed,
+        reason: TRANSPORT_BUDGET_EXHAUSTED,
+      }),
+    );
+  }
   let processed = 0;
   let nextStaleClaimRecoveryAt = Date.now() + STALE_CLAIM_RECOVERY_INTERVAL_MS;
 
@@ -857,9 +922,12 @@ async function hydrateOfficialEndpoints(input: {
           "network_failure",
         ].includes(error.code);
       if (retryable && failed.attemptCount < input.options.maxAttempts) {
-        await sleep(error.retryAfterMs || 250);
+        await sleep(
+          Math.max(error.retryAfterMs, RETRY_BACKOFF_MS[errorClass] ?? 250),
+        );
         continue;
       }
+      if (retryable) throw new Error(TRANSPORT_BUDGET_EXHAUSTED);
       throw error;
     }
 
@@ -894,6 +962,19 @@ async function hydrateOfficialEndpoints(input: {
     status.inProgressUnitCount !== 0 ||
     status.failedUnitCount !== 0
   ) {
+    const recoverability = await readEppoCaptureFailureRecoverability(
+      input.captureId,
+      input.executor,
+    );
+    if (
+      status.pendingUnitCount === 0 &&
+      status.inProgressUnitCount === 0 &&
+      recoverability.failedUnitCount > 0 &&
+      recoverability.failedUnitCount ===
+        recoverability.recoverableFailedUnitCount
+    ) {
+      throw new Error(TRANSPORT_BUDGET_EXHAUSTED);
+    }
     throw new Error("endpoint_units_incomplete");
   }
 }
@@ -990,13 +1071,12 @@ async function runNewOfficialCapture(
     );
   } catch (error) {
     const status = await readEppoCaptureSafeStatus(captureId, executor);
-    const deadlineReached =
-      error instanceof Error && error.message === "capture_job_deadline";
+    const checkpointClass = checkpointableErrorClass(error);
     if (
       ["inventorying", "hydrating", "verifying"].includes(
         status.captureState,
       ) &&
-      (signal.aborted || deadlineReached)
+      (signal.aborted || checkpointClass !== null)
     ) {
       await transitionEppoCapture(
         {
@@ -1004,9 +1084,7 @@ async function runNewOfficialCapture(
           fromStates: [status.captureState],
           toState: "paused",
           updates: {
-            lastErrorClass: deadlineReached
-              ? "capture_job_deadline"
-              : "operator_cancelled",
+            lastErrorClass: checkpointClass ?? "operator_cancelled",
           },
         },
         executor,
@@ -1138,13 +1216,12 @@ async function resumeOfficialCapture(
     );
   } catch (error) {
     status = await readEppoCaptureSafeStatus(captureId, executor);
-    const deadlineReached =
-      error instanceof Error && error.message === "capture_job_deadline";
+    const checkpointClass = checkpointableErrorClass(error);
     if (
       ["inventorying", "hydrating", "verifying"].includes(
         status.captureState,
       ) &&
-      (signal.aborted || deadlineReached)
+      (signal.aborted || checkpointClass !== null)
     ) {
       await transitionEppoCapture(
         {
@@ -1152,16 +1229,14 @@ async function resumeOfficialCapture(
           fromStates: [status.captureState],
           toState: "paused",
           updates: {
-            lastErrorClass: deadlineReached
-              ? "capture_job_deadline"
-              : "operator_cancelled",
+            lastErrorClass: checkpointClass ?? "operator_cancelled",
           },
         },
         executor,
       );
     } else if (
       status.captureState === "paused" &&
-      (signal.aborted || deadlineReached)
+      (signal.aborted || checkpointClass !== null)
     ) {
       // The interrupted resume was already checkpointed as paused.
     } else if (
@@ -1386,6 +1461,291 @@ async function runCompleteFixture(): Promise<
   });
 }
 
+/**
+ * Builds one disposable three-identifier capture already in hydration.
+ *
+ * Shared by the transport fixture's two halves so both observe the same shape:
+ * two active identifiers worth three detail units each, and one inactive
+ * legacy identifier that is terminal without a request.
+ */
+async function seedTransportFixtureCapture(
+  executor: EppoCaptureExecutor,
+  label: string,
+): Promise<{ captureId: string; inventory: EppoCapturedInventory }> {
+  const captureId = randomUUID();
+  const baseline = await readEppoZeroProductFingerprint(executor);
+  await createEppoCapture(
+    {
+      id: captureId,
+      captureToolRevision: currentGitRevision(),
+      openApiSha256: "a".repeat(64),
+      licenseSha256: "b".repeat(64),
+      observedStartedAt: new Date(),
+      preflightReceipt: { environment: "local", fixture: label },
+      zeroProductBaseline: baseline,
+    },
+    executor,
+  );
+  await transitionEppoCapture(
+    { captureId, fromStates: ["planned"], toState: "inventorying" },
+    executor,
+  );
+  await recordEppoInventoryPage(
+    {
+      captureId,
+      offset: 0,
+      limit: 3,
+      payload: {
+        pagination: { offset: 0, limit: 3, count: 3, total: 3 },
+        data: [
+          { eppocode: "AAAA00", is_active: true },
+          { eppocode: "AAAA.A", is_active: false, datatype: "SPB" },
+          { eppocode: "ZZZZ99", is_active: true },
+        ],
+      },
+      observedAt: new Date(),
+    },
+    executor,
+  );
+  const inventory = await readEppoCapturedInventory(captureId, executor);
+  await transitionEppoCapture(
+    {
+      captureId,
+      fromStates: ["inventorying"],
+      toState: "hydrating",
+      updates: {
+        inventoryStartTotal: inventory.total,
+        inventoryUniqueCodes: inventory.total,
+        inventoryPageCount: inventory.pageCount,
+        inventoryStartSha256: inventory.sha256,
+      },
+    },
+    executor,
+  );
+  return { captureId, inventory };
+}
+
+/**
+ * Spends one unit's whole attempt budget on the given error class and
+ * completes every other unit, leaving the capture with no claimable work.
+ */
+async function exhaustOneTransportBudget(
+  executor: EppoCaptureExecutor,
+  captureId: string,
+  errorClass: string,
+): Promise<{ completed: number; exhaustedUnitId: string }> {
+  let completed = 0;
+  let exhaustedUnitId = "";
+  while (true) {
+    const claim = await claimNextEppoCaptureUnit(
+      {
+        captureId,
+        claimToken: randomUUID(),
+        claimedAt: new Date(),
+        maxAttempts: 2,
+      },
+      executor,
+    );
+    if (!claim) break;
+    if (exhaustedUnitId === "" || exhaustedUnitId === claim.id) {
+      exhaustedUnitId = claim.id;
+      await failEppoCaptureUnit(
+        {
+          captureId,
+          unitId: claim.id,
+          claimToken: claim.claimToken,
+          errorClass,
+          failedAt: new Date(),
+        },
+        executor,
+      );
+      continue;
+    }
+    await completeEppoCaptureUnit(
+      {
+        captureId,
+        unitId: claim.id,
+        claimToken: claim.claimToken,
+        observedAt: new Date(),
+        httpStatusClass: "2xx",
+        payload: fixturePayload(claim.eppoCode, claim.endpointClass),
+      },
+      executor,
+    );
+    completed += 1;
+  }
+  if (exhaustedUnitId === "") throw new Error("fixture_no_unit_exhausted");
+  return { completed, exhaustedUnitId };
+}
+
+/**
+ * Proves the boundary between an interruption and a refusal.
+ *
+ * A unit whose attempts were spent without ever reaching a documented response
+ * leaves the capture resumable: the run checkpoints as paused, one more
+ * invocation returns that unit to the queue with a fresh budget, and the
+ * capture still closes on the same inventory digest. A unit refused on its own
+ * evidence is never returned: it keeps its failure and the capture stays
+ * closed against it.
+ */
+async function runTransportFixture() {
+  return withEppoCaptureWriterLock(async (executor) => {
+    const interrupted = await seedTransportFixtureCapture(
+      executor,
+      "transport_interrupted",
+    );
+    const spent = await exhaustOneTransportBudget(
+      executor,
+      interrupted.captureId,
+      "network_failure",
+    );
+    const exhausted = await readEppoCaptureFailureRecoverability(
+      interrupted.captureId,
+      executor,
+    );
+    if (
+      exhausted.failedUnitCount !== 1 ||
+      exhausted.recoverableFailedUnitCount !== 1
+    ) {
+      throw new Error("fixture_transport_exhaustion_mismatch");
+    }
+
+    // What the command does with a `capture_transport_budget_exhausted` throw.
+    await transitionEppoCapture(
+      {
+        captureId: interrupted.captureId,
+        fromStates: ["hydrating"],
+        toState: "paused",
+        updates: { lastErrorClass: TRANSPORT_BUDGET_EXHAUSTED },
+      },
+      executor,
+    );
+    await transitionEppoCapture(
+      {
+        captureId: interrupted.captureId,
+        fromStates: ["paused"],
+        toState: "hydrating",
+        updates: { lastErrorClass: null },
+      },
+      executor,
+    );
+    const reclaimed = await reclaimTransportFailedEppoCaptureUnits(
+      { captureId: interrupted.captureId },
+      executor,
+    );
+    if (reclaimed.reclaimed !== 1) {
+      throw new Error("fixture_transport_reclaim_mismatch");
+    }
+
+    let resumedCompletions = 0;
+    while (true) {
+      const claim = await claimNextEppoCaptureUnit(
+        {
+          captureId: interrupted.captureId,
+          claimToken: randomUUID(),
+          claimedAt: new Date(),
+          maxAttempts: 2,
+        },
+        executor,
+      );
+      if (!claim) break;
+      if (claim.id !== spent.exhaustedUnitId) {
+        throw new Error("fixture_transport_reclaimed_unit_mismatch");
+      }
+      await completeEppoCaptureUnit(
+        {
+          captureId: interrupted.captureId,
+          unitId: claim.id,
+          claimToken: claim.claimToken,
+          observedAt: new Date(),
+          httpStatusClass: "2xx",
+          payload: fixturePayload(claim.eppoCode, claim.endpointClass),
+        },
+        executor,
+      );
+      resumedCompletions += 1;
+    }
+    if (resumedCompletions !== 1) {
+      throw new Error("fixture_transport_resume_mismatch");
+    }
+    await transitionEppoCapture(
+      {
+        captureId: interrupted.captureId,
+        fromStates: ["hydrating"],
+        toState: "verifying",
+      },
+      executor,
+    );
+    const receipt = await finalizeEppoCapture(
+      {
+        captureId: interrupted.captureId,
+        endingInventory: interrupted.inventory,
+        observedEndedAt: new Date(),
+      },
+      executor,
+    );
+
+    // The other half: refused evidence is never re-queued.
+    const refused = await seedTransportFixtureCapture(
+      executor,
+      "transport_refused",
+    );
+    await exhaustOneTransportBudget(
+      executor,
+      refused.captureId,
+      "response_schema_mismatch",
+    );
+    const refusedBefore = await readEppoCaptureFailureRecoverability(
+      refused.captureId,
+      executor,
+    );
+    const refusedReclaim = await reclaimTransportFailedEppoCaptureUnits(
+      { captureId: refused.captureId },
+      executor,
+    );
+    const refusedAfter = await readEppoCaptureFailureRecoverability(
+      refused.captureId,
+      executor,
+    );
+    if (
+      refusedBefore.failedUnitCount !== 1 ||
+      refusedBefore.recoverableFailedUnitCount !== 0 ||
+      refusedReclaim.reclaimed !== 0 ||
+      refusedAfter.failedUnitCount !== 1
+    ) {
+      throw new Error("fixture_refused_evidence_mismatch");
+    }
+    await transitionEppoCapture(
+      {
+        captureId: refused.captureId,
+        fromStates: ["hydrating"],
+        toState: "failed",
+        updates: { lastErrorClass: "response_schema_mismatch" },
+      },
+      executor,
+    );
+
+    return {
+      class: "fixture" as const,
+      fixture: "transport" as const,
+      state: "completed" as const,
+      captureId: receipt.captureId,
+      manifestSha256: receipt.manifestSha256,
+      hydratedBeforePause: spent.completed,
+      transportBudgetPause: "verified" as const,
+      reclaimedUnitCount: reclaimed.reclaimed,
+      resumedTerminalUnits: resumedCompletions,
+      terminalCounts: receipt.terminalCounts,
+      refusedEvidenceRetained: "verified" as const,
+      refusedCaptureState: "failed" as const,
+      productMutationCount: 0,
+      searchMutationCount: 0,
+      zeroProductEffect: receipt.zeroProductEffect,
+      cleanup: "completed" as const,
+    };
+  });
+}
+
 async function runDriftFixture() {
   return withEppoCaptureWriterLock(async (executor) => {
     const captureId = randomUUID();
@@ -1487,6 +1847,7 @@ export async function runEppoObservedCapture(options: EppoCaptureOptions) {
   await loadCaptureRepository();
   if (options.fixture === "complete") return runCompleteFixture();
   if (options.fixture === "drift") return runDriftFixture();
+  if (options.fixture === "transport") return runTransportFixture();
 
   if (options.statusOnly) {
     const captureId =

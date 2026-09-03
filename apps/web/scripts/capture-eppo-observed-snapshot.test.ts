@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   assertLocalEppoCaptureEnvironment,
   buildEppoEndpointUrl,
+  checkpointableErrorClass,
   parseEppoCaptureOptions,
   requestEppoJson,
   runEppoTimeoutFixture,
@@ -132,5 +133,24 @@ describe("EPPO observed capture command", () => {
   it("recovers stale claims on a bounded timer without changing provider concurrency", () => {
     expect(staleClaimRecoveryIsDue(299_999, 300_000)).toBe(false);
     expect(staleClaimRecoveryIsDue(300_000, 300_000)).toBe(true);
+  });
+
+  it("checkpoints an unobserved interruption and fails closed on refused evidence", () => {
+    expect(checkpointableErrorClass(new Error("capture_job_deadline"))).toBe(
+      "capture_job_deadline",
+    );
+    expect(
+      checkpointableErrorClass(new Error("capture_transport_budget_exhausted")),
+    ).toBe("capture_transport_budget_exhausted");
+
+    for (const refused of [
+      "response_schema_mismatch",
+      "inventory_replay_digest_mismatch",
+      "authentication_rejected",
+      "endpoint_units_incomplete",
+    ]) {
+      expect(checkpointableErrorClass(new Error(refused))).toBeNull();
+    }
+    expect(checkpointableErrorClass("capture_job_deadline")).toBeNull();
   });
 });
