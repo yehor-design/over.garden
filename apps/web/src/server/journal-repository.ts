@@ -71,6 +71,12 @@ import {
   buildEnqueueMediaStagingFinalizeJobQuery,
   enqueueJournalDeletionDerivativeRevokes,
 } from "@/server/media/media-lifecycle-enqueue";
+import { expandDerivativeObjectKeys } from "@/lib/media/derivative-keys";
+import {
+  mediaVariantColumnsAvailable,
+  readMediaVariantExtras,
+  type MediaVariantExtras,
+} from "@/server/media/media-variant-schema";
 import {
   buildInsertClaimedEphemeralEditMediaQuery,
   buildReplaceClaimedEphemeralMediaQuery,
@@ -433,6 +439,10 @@ export interface PublicJournalEntryMedia {
   focalY: number;
   intrinsicWidth: number | null;
   intrinsicHeight: number | null;
+  /** 16 px WebP data URI painted until the photo loads (OVE-371). */
+  placeholderDataUri: string | null;
+  /** Long edges of the promoted variants; [] on pre-0047 rows. */
+  variantLongEdges: number[];
 }
 
 export interface PublicJournalEntryTopic {
@@ -597,6 +607,9 @@ export interface AtomicJournalEditMediaBaseline {
   generation: number;
   publicPath: string;
   publicUrl: string;
+  placeholderDataUri: string | null;
+  /** Variants recorded for this generation; empty before migration 0047. */
+  variantLongEdges: number[];
   focalX: number;
   focalY: number;
   intrinsicWidth: number | null;
@@ -723,6 +736,7 @@ export async function readAtomicJournalEditBaseline(
   ) {
     return atomicEditUnavailable();
   }
+  const variantExtras = await readMediaVariantExtras(executor, expectedIds);
 
   return {
     entry,
@@ -730,11 +744,14 @@ export async function readAtomicJournalEditBaseline(
     media: expectedIds.map((mediaAssetId) => {
       const row = rowById.get(mediaAssetId)!;
       const publicPath = row.derivative_key!;
+      const extras = variantExtras.get(mediaAssetId);
       return {
         mediaAssetId,
         generation: Math.max(1, Number(row.upload_generation ?? 1)),
         publicPath,
         publicUrl: getPublicDerivativeUrl(publicPath),
+        placeholderDataUri: extras?.placeholderDataUri ?? null,
+        variantLongEdges: extras?.variantLongEdges ?? [],
         focalX: Number(row.focal_x ?? 0.5),
         focalY: Number(row.focal_y ?? 0.5),
         intrinsicWidth: row.intrinsic_width,
@@ -966,19 +983,27 @@ export async function updateAtomicJournalEntry(
       );
     }
 
+    const variantColumns = await mediaVariantColumnsAvailable(trx);
     for (const replacement of mediaPlan.replacements) {
-      await buildEnqueueMediaDerivativeRevokeJobQuery(trx, {
-        bucket: "public_derivative",
-        objectKey: replacement.priorPublicPath,
-        reason: "orphan",
-        journalEntryId: entryId,
-      }).execute();
+      // The prior generation's primary and every variant it had go together.
+      for (const objectKey of expandDerivativeObjectKeys(
+        replacement.priorPublicPath,
+        replacement.priorVariantLongEdges,
+      )) {
+        await buildEnqueueMediaDerivativeRevokeJobQuery(trx, {
+          bucket: "public_derivative",
+          objectKey,
+          reason: "orphan",
+          journalEntryId: entryId,
+        }).execute();
+      }
       const replaced = await buildReplaceClaimedEphemeralMediaQuery(trx, {
         ownerUserId: scope.userId,
         journalEntryId: entryId,
         priorGeneration: replacement.priorGeneration,
         priorPublicPath: replacement.priorPublicPath,
         media: replacement,
+        variantColumns,
       }).executeTakeFirst();
       if (!replaced) throw new Error("atomic_media_claim_mismatch");
     }
@@ -987,6 +1012,7 @@ export async function updateAtomicJournalEntry(
         ownerUserId: scope.userId,
         journalEntryId: entryId,
         media: addition,
+        variantColumns,
       }).executeTakeFirst();
       if (!inserted) throw new Error("atomic_media_claim_mismatch");
     }
@@ -2686,12 +2712,17 @@ async function loadPublicJournalEntryLookup(
       : Promise.resolve([]),
     buildPublicJournalEntryPersonMentionsQuery(executor, row.entryId).execute(),
   ]);
+  const mediaExtras = await readMediaVariantExtras(
+    executor,
+    (mediaRows as PublicJournalEntryMediaRow[]).map((media) => media.id),
+  );
 
   return {
     status: "active",
     page: serializePublicJournalEntryPage({
       root: row as PublicJournalEntryRootRow,
       mediaRows: mediaRows as PublicJournalEntryMediaRow[],
+      mediaExtras,
       topicRows: topicRows as PublicJournalEntryTopicRow[],
       relatedRows: relatedRows as PublicJournalEntryRelatedRow[],
       newerRow: (newerRow as PublicJournalEntryRelatedRow | undefined) ?? null,
@@ -2707,6 +2738,8 @@ async function loadPublicJournalEntryLookup(
 export function serializePublicJournalEntryPage(input: {
   root: PublicJournalEntryRootRow;
   mediaRows: PublicJournalEntryMediaRow[];
+  /** OVE-371 placeholder/variant columns, keyed by media asset id. */
+  mediaExtras?: ReadonlyMap<string, MediaVariantExtras>;
   topicRows: PublicJournalEntryTopicRow[];
   relatedRows: PublicJournalEntryRelatedRow[];
   newerRow: PublicJournalEntryRelatedRow | null;
@@ -2821,6 +2854,9 @@ export function serializePublicJournalEntryPage(input: {
         "intrinsicHeight" in row
           ? (row.intrinsicHeight as number | null)
           : null,
+      placeholderDataUri:
+        input.mediaExtras?.get(row.id)?.placeholderDataUri ?? null,
+      variantLongEdges: input.mediaExtras?.get(row.id)?.variantLongEdges ?? [],
     })),
     mentionedProfiles: (input.mentionedProfileRows ?? []).map((profile) => ({
       handle: profile.handle,

@@ -24,6 +24,7 @@ describe("media staging Worker HTTP boundary", () => {
       stagingSessionId: session,
       mediaAssetId: media,
       generation: 2,
+      variant: 0,
     });
     expect(
       parseWorkerRoute(`/v1/staging/${session}/${media}/2`, "DELETE"),

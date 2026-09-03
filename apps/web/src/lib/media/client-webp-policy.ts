@@ -1,10 +1,26 @@
 export const CLIENT_WEBP_SOURCE_MAX_BYTES = 50 * 1024 * 1024;
-export const CLIENT_WEBP_SOURCE_MAX_PIXELS = 64_000_000;
+/**
+ * A source larger than this is refused outright; anything between the
+ * fallback ceiling and this cap must be decoded natively, where the browser
+ * downscales during decode instead of materialising the full bitmap.
+ */
+export const CLIENT_WEBP_SOURCE_MAX_PIXELS = 500_000_000;
+/** The JS fallback decoders materialise the whole bitmap; bound them. */
+export const CLIENT_WEBP_FALLBACK_MAX_PIXELS = 64_000_000;
 export const CLIENT_WEBP_FINAL_MAX_BYTES = 32 * 1024 * 1024;
 export const CLIENT_WEBP_LONG_EDGE = 2560;
-export const CLIENT_WEBP_PHOTO_QUALITY = 82;
+/** ADR-0022, D2: quality 85, long edge 2560, variants 1280 and 480. */
+export const CLIENT_WEBP_PHOTO_QUALITY = 85;
+export const CLIENT_WEBP_VARIANT_LONG_EDGES = [1280, 480] as const;
+export const CLIENT_WEBP_PREVIEW_LONG_EDGE = 480;
+export const CLIENT_WEBP_PREVIEW_QUALITY = 70;
+export const CLIENT_WEBP_PLACEHOLDER_LONG_EDGE = 16;
+export const CLIENT_WEBP_PLACEHOLDER_MAX_BYTES = 400;
 export const CLIENT_WEBP_ENCODE_TIMEOUT_MS = 30_000;
 export const CLIENT_WEBP_MEASURED_12MP_BUDGET_MS = 20_000;
+
+export type ClientWebpVariantLongEdge =
+  (typeof CLIENT_WEBP_VARIANT_LONG_EDGES)[number];
 
 export type ClientImageSourceKind = "jpeg" | "png" | "webp" | "heic" | "heif";
 
@@ -27,6 +43,10 @@ export interface ClientWebpEncodingPlan {
   outputHeight: number;
   lossless: boolean;
   quality: number;
+  /** Long edges of the smaller variants the source is large enough for. */
+  variantLongEdges: ClientWebpVariantLongEdge[];
+  /** True above the fallback ceiling: only native decode may handle it. */
+  nativeDecodeRequired: boolean;
 }
 
 export class ClientWebpPolicyError extends Error {
@@ -68,6 +88,8 @@ export function createClientWebpEncodingPlan(input: {
   ) {
     throw new ClientWebpPolicyError("source_pixels_exceeded");
   }
+  const nativeDecodeRequired =
+    codedWidth * codedHeight > CLIENT_WEBP_FALLBACK_MAX_PIXELS;
   if (!Number.isInteger(orientation) || orientation < 1 || orientation > 8) {
     throw new ClientWebpPolicyError("source_orientation_invalid");
   }
@@ -91,6 +113,30 @@ export function createClientWebpEncodingPlan(input: {
     outputHeight,
     lossless,
     quality: lossless ? 100 : CLIENT_WEBP_PHOTO_QUALITY,
+    variantLongEdges: planVariantLongEdges(outputWidth, outputHeight),
+    nativeDecodeRequired,
+  };
+}
+
+/** Smaller variants only: never upscale, skip a width the source lacks. */
+export function planVariantLongEdges(
+  outputWidth: number,
+  outputHeight: number,
+): ClientWebpVariantLongEdge[] {
+  const longEdge = Math.max(outputWidth, outputHeight);
+  return CLIENT_WEBP_VARIANT_LONG_EDGES.filter((edge) => edge < longEdge);
+}
+
+/** The pixel size of an output whose long edge is scaled to `longEdge`. */
+export function scaledVariantSize(
+  width: number,
+  height: number,
+  longEdge: number,
+): { width: number; height: number } {
+  const scale = Math.min(1, longEdge / Math.max(width, height));
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
   };
 }
 

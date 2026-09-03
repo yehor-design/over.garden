@@ -1,6 +1,8 @@
 import {
   EPHEMERAL_MEDIA_ALLOWED_ORIGINS,
+  isEphemeralMediaVariant,
   isUuid,
+  type EphemeralMediaVariant,
 } from "../../../src/lib/media/ephemeral-staging-contract";
 
 export type WorkerRoute =
@@ -9,12 +11,15 @@ export type WorkerRoute =
       stagingSessionId: string;
       mediaAssetId: string;
       generation: number;
+      /** `0` for the primary object; the long edge for a variant (`/v1280`). */
+      variant: EphemeralMediaVariant;
     }
   | {
       operation: "delete";
       stagingSessionId: string;
       mediaAssetId: string;
       generation: number;
+      variant: EphemeralMediaVariant;
     }
   | { operation: "claim"; stagingSessionId: string }
   | { operation: "finalize"; stagingSessionId: string }
@@ -37,19 +42,22 @@ export function parseWorkerRoute(
     }
   }
   if (
-    segments.length === 5 &&
+    (segments.length === 5 || segments.length === 6) &&
     isUuid(segments[2]) &&
     isUuid(segments[3]) &&
     /^(?:[1-9]\d*)$/.test(segments[4] ?? "")
   ) {
     const generation = Number(segments[4]);
     if (!Number.isSafeInteger(generation)) return null;
+    const variant = parseVariantSegment(segments[5]);
+    if (variant === null) return null;
     if (method === "PUT") {
       return {
         operation: "upload",
         stagingSessionId: segments[2],
         mediaAssetId: segments[3],
         generation,
+        variant,
       };
     }
     if (method === "DELETE") {
@@ -58,10 +66,22 @@ export function parseWorkerRoute(
         stagingSessionId: segments[2],
         mediaAssetId: segments[3],
         generation,
+        variant,
       };
     }
   }
   return null;
+}
+
+/** `undefined` is the primary; `v1280` or `v480` names a variant. */
+function parseVariantSegment(
+  segment: string | undefined,
+): EphemeralMediaVariant | null {
+  if (segment === undefined) return 0;
+  const match = /^v([1-9]\d{1,4})$/.exec(segment);
+  if (!match) return null;
+  const variant = Number(match[1]);
+  return isEphemeralMediaVariant(variant) ? variant : null;
 }
 
 export function corsHeaders(

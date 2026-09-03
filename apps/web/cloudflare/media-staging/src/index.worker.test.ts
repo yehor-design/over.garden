@@ -146,6 +146,7 @@ describe("media staging Worker in workerd", () => {
         stagingSessionId,
         mediaAssetId,
         generation: 1,
+        variant: 0,
         sha256: sha,
         sizeBytes: webp.byteLength,
         width: 1,
@@ -340,6 +341,7 @@ describe("media staging Worker in workerd", () => {
       stagingSessionId,
       mediaAssetId,
       generation: 3,
+      variant: 0,
       sha256: firstSha,
       sizeBytes: first.byteLength,
       width: 1,
@@ -920,6 +922,278 @@ describe("media staging Worker in workerd", () => {
         mediaStates: [{ state: "deleted", count: 1 }],
       }),
     );
+  });
+
+  it("stages, claims, and finalizes a photo's variants with its primary", async () => {
+    const owner = crypto.randomUUID();
+    const session = crypto.randomUUID();
+    const publishId = crypto.randomUUID();
+    const media = crypto.randomUUID();
+    const objects = [
+      { variant: 0, width: 2560, height: 1920, tail: 0 },
+      { variant: 1280, width: 1280, height: 960, tail: 1 },
+      { variant: 480, width: 480, height: 360, tail: 2 },
+    ] as const;
+    const receipts: string[] = [];
+    const bytesByVariant = new Map<number, Uint8Array>();
+    for (const object of objects) {
+      const webp = new Uint8Array([
+        82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80, object.tail,
+      ]);
+      bytesByVariant.set(object.variant, webp);
+      const sha = await sha256Base64(webp);
+      const issued = await issueWorkerUploadCapabilityForTest(env, {
+        ownerUserId: owner,
+        stagingSessionId: session,
+        mediaAssetId: media,
+        generation: 1,
+        variant: object.variant,
+        sha256: sha,
+        sizeBytes: webp.byteLength,
+        width: object.width,
+        height: object.height,
+      });
+      if (object.variant !== 0) {
+        // A variant capability is bound to its own path, never the primary's.
+        const misrouted = await exports.default.fetch(
+          uploadRequest(
+            `https://media-stage.over.garden/v1/staging/${session}/${media}/1`,
+            issued.capability,
+            webp,
+            sha,
+          ),
+        );
+        expect(misrouted.status).toBe(401);
+      }
+      const response = await exports.default.fetch(
+        uploadRequest(
+          `https://media-stage.over.garden/v1/staging/${session}/${media}/1${object.variant ? `/v${object.variant}` : ""}`,
+          issued.capability,
+          webp,
+          sha,
+        ),
+      );
+      const body = (await response.json()) as { stagingReceipt: string };
+      expect(response.status, JSON.stringify(body)).toBe(201);
+      receipts.push(body.stagingReceipt);
+    }
+    expect((await env.MEDIA_STAGING_BUCKET.list()).objects).toHaveLength(3);
+
+    const claimed = await claimStagedSession({
+      owner,
+      stagingSessionId: session,
+      publishId,
+      stagingReceipts: receipts,
+    });
+    expect(claimed.response.status).toBe(200);
+    expect(claimed.publicPaths).toEqual([
+      `derivatives/${media}/1.webp`,
+      `derivatives/${media}/1-1280.webp`,
+      `derivatives/${media}/1-480.webp`,
+    ]);
+    expect((await env.PUBLIC_MEDIA_BUCKET.list()).objects).toHaveLength(3);
+
+    let expectedMedia: unknown = null;
+    network.use(
+      http.post(
+        "https://over.garden/api/media/staging/commit-status",
+        async ({ request }) => {
+          expectedMedia = (
+            (await request.json()) as { expectedMedia: unknown }
+          ).expectedMedia;
+          return HttpResponse.json({ status: "committed" });
+        },
+      ),
+    );
+    const finalizeCapability = await issueWorkerSessionCapabilityForTest(env, {
+      ownerUserId: owner,
+      stagingSessionId: session,
+      publishId,
+      stagingReceipts: receipts,
+      purpose: "finalize",
+    });
+    const finalized = await exports.default.fetch(
+      new Request(
+        `https://media-stage.over.garden/v1/staging/${session}/finalize`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${finalizeCapability.capability}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ publishId }),
+        },
+      ),
+    );
+    expect(finalized.status).toBe(200);
+    // The read-back names every object; only variants carry the field.
+    expect(expectedMedia).toEqual([
+      expect.objectContaining({
+        mediaAssetId: media,
+        generation: 1,
+        width: 2560,
+        height: 1920,
+        publicKey: `derivatives/${media}/1.webp`,
+      }),
+      expect.objectContaining({
+        mediaAssetId: media,
+        variant: 1280,
+        width: 1280,
+        publicKey: `derivatives/${media}/1-1280.webp`,
+      }),
+      expect.objectContaining({
+        mediaAssetId: media,
+        variant: 480,
+        width: 480,
+        publicKey: `derivatives/${media}/1-480.webp`,
+      }),
+    ]);
+    expect((expectedMedia as Array<Record<string, unknown>>)[0]).not.toHaveProperty(
+      "variant",
+    );
+    expect((await env.MEDIA_STAGING_BUCKET.list()).objects).toHaveLength(0);
+    for (const object of objects) {
+      const promoted = await env.PUBLIC_MEDIA_BUCKET.head(
+        `derivatives/${media}/1${object.variant ? `-${object.variant}` : ""}.webp`,
+      );
+      expect(promoted?.size).toBe(bytesByVariant.get(object.variant)!.byteLength);
+      expect(promoted?.httpMetadata?.cacheControl).toBe(
+        "public, max-age=31536000, immutable",
+      );
+    }
+  });
+
+  it("deletes a photo's variants with its primary and counts the session limit per photo", async () => {
+    const owner = crypto.randomUUID();
+    const session = crypto.randomUUID();
+    const media = crypto.randomUUID();
+    const primary = new Uint8Array([82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80]);
+    const variant = new Uint8Array([
+      82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80, 7,
+    ]);
+    const primarySha = await sha256Base64(primary);
+    const primaryCapability = await issueWorkerUploadCapabilityForTest(env, {
+      ownerUserId: owner,
+      stagingSessionId: session,
+      mediaAssetId: media,
+      generation: 1,
+      sha256: primarySha,
+      sizeBytes: primary.byteLength,
+      width: 2000,
+      height: 1000,
+    });
+    const staged = await exports.default.fetch(
+      uploadRequest(
+        `https://media-stage.over.garden/v1/staging/${session}/${media}/1`,
+        primaryCapability.capability,
+        primary,
+        primarySha,
+      ),
+    );
+    const stagedBody = (await staged.json()) as { deleteCapability: string };
+    expect(staged.status).toBe(201);
+    const variantSha = await sha256Base64(variant);
+    const variantCapability = await issueWorkerUploadCapabilityForTest(env, {
+      ownerUserId: owner,
+      stagingSessionId: session,
+      mediaAssetId: media,
+      generation: 1,
+      variant: 480,
+      sha256: variantSha,
+      sizeBytes: variant.byteLength,
+      width: 480,
+      height: 240,
+    });
+    expect(
+      (
+        await exports.default.fetch(
+          uploadRequest(
+            `https://media-stage.over.garden/v1/staging/${session}/${media}/1/v480`,
+            variantCapability.capability,
+            variant,
+            variantSha,
+          ),
+        )
+      ).status,
+    ).toBe(201);
+    expect((await env.MEDIA_STAGING_BUCKET.list()).objects).toHaveLength(2);
+
+    // Ten more photos, each with a variant, still fit: the limit counts photos.
+    for (let index = 0; index < 9; index += 1) {
+      const other = await stageForOwner({
+        owner,
+        stagingSessionId: session,
+        mediaAssetId: crypto.randomUUID(),
+        webp: new Uint8Array([82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80, 10 + index]),
+      });
+      const otherVariant = new Uint8Array([
+        82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80, 40 + index,
+      ]);
+      const otherVariantSha = await sha256Base64(otherVariant);
+      const otherVariantCapability = await issueWorkerUploadCapabilityForTest(
+        env,
+        {
+          ownerUserId: owner,
+          stagingSessionId: session,
+          mediaAssetId: other.mediaAssetId,
+          generation: 1,
+          variant: 480,
+          sha256: otherVariantSha,
+          sizeBytes: otherVariant.byteLength,
+          width: 1,
+          height: 1,
+        },
+      );
+      expect(
+        (
+          await exports.default.fetch(
+            uploadRequest(
+              `https://media-stage.over.garden/v1/staging/${session}/${other.mediaAssetId}/1/v480`,
+              otherVariantCapability.capability,
+              otherVariant,
+              otherVariantSha,
+            ),
+          )
+        ).status,
+      ).toBe(201);
+    }
+    const eleventhSha = await sha256Base64(
+      new Uint8Array([82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80, 99]),
+    );
+    const eleventhCapability = await issueWorkerUploadCapabilityForTest(env, {
+      ownerUserId: owner,
+      stagingSessionId: session,
+      mediaAssetId: crypto.randomUUID(),
+      generation: 1,
+      sha256: eleventhSha,
+      sizeBytes: 13,
+      width: 1,
+      height: 1,
+    });
+    const eleventh = await exports.default.fetch(
+      uploadRequest(
+        `https://media-stage.over.garden/v1/staging/${session}/${crypto.randomUUID()}/1`,
+        eleventhCapability.capability,
+        new Uint8Array([82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80, 99]),
+        eleventhSha,
+      ),
+    );
+    // The capability is bound to another asset id; the route refuses first.
+    expect(eleventh.status).toBe(401);
+
+    const deleted = await exports.default.fetch(
+      new Request(
+        `https://media-stage.over.garden/v1/staging/${session}/${media}/1`,
+        {
+          method: "DELETE",
+          headers: { authorization: `Bearer ${stagedBody.deleteCapability}` },
+        },
+      ),
+    );
+    expect(deleted.status).toBe(200);
+    const remaining = (await env.MEDIA_STAGING_BUCKET.list()).objects;
+    // The photo's primary and its 480 variant are both gone; the others stay.
+    expect(remaining).toHaveLength(18);
   });
 
   it("rejects a delayed finalize completion after the session left publishing", async () => {

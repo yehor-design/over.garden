@@ -1,4 +1,8 @@
 import "server-only";
+import {
+  readMediaVariantExtras,
+  type MediaVariantExtras,
+} from "@/server/media/media-variant-schema";
 
 import { sql, type Kysely, type Transaction } from "kysely";
 
@@ -102,6 +106,10 @@ export interface PublicJournalDirectoryCard {
     focalY: number;
     intrinsicWidth: number | null;
     intrinsicHeight: number | null;
+    /** 16 px WebP data URI painted until the photo loads (OVE-371). */
+    placeholderDataUri: string | null;
+    /** Long edges of the promoted variants; [] on pre-0047 rows. */
+    variantLongEdges: number[];
   }>;
   topics: Array<{ slug: string; label: string }>;
 }
@@ -203,6 +211,10 @@ export async function listPublicJournalDirectoryPage(
           buildPublicFeedMediaQuery(executor, entryIds).execute(),
           buildPublicFeedTopicsForEntriesQuery(executor, entryIds).execute(),
         ]);
+  const mediaExtras = await readMediaVariantExtras(
+    executor,
+    mediaRows.map((media) => media.id),
+  );
 
   return {
     ...serializePublicJournalDirectoryPage(
@@ -211,6 +223,9 @@ export async function listPublicJournalDirectoryPage(
       topicRows,
       locale,
       request,
+      PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE,
+      getPublicDerivativeUrl,
+      mediaExtras,
     ),
     searchSource: searchScope.source,
     searchFallbackReason: searchScope.reason,
@@ -362,6 +377,7 @@ export function serializePublicJournalDirectoryPage(
   request: PublicJournalDirectoryRequest,
   pageSize = PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE,
   publicMediaUrl: (derivativeKey: string) => string = getPublicDerivativeUrl,
+  mediaExtras?: ReadonlyMap<string, MediaVariantExtras>,
 ): Omit<PublicJournalDirectoryPage, "searchSource" | "searchFallbackReason"> {
   const visibleRows = rows.slice(0, pageSize);
   const mediaByEntry = Object.groupBy(mediaRows, (row) => row.entryId);
@@ -418,6 +434,9 @@ export function serializePublicJournalDirectoryPage(
         focalY: Number(media.focalY ?? 0.5),
         intrinsicWidth: media.intrinsicWidth ?? null,
         intrinsicHeight: media.intrinsicHeight ?? null,
+        placeholderDataUri:
+          mediaExtras?.get(media.id)?.placeholderDataUri ?? null,
+        variantLongEdges: mediaExtras?.get(media.id)?.variantLongEdges ?? [],
       })),
       topics: (topicsByEntry[row.entryId] ?? []).map((topic) => ({
         slug: topic.slug,

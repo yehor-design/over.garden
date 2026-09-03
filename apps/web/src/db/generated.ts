@@ -958,11 +958,13 @@ export interface MediaAssets {
   intrinsic_width: number | null;
   journal_entry_id: string;
   owner_user_id: string;
+  placeholder_data_uri: string | null;
   public_unreachable_at: Timestamp | null;
   revoked_at: Timestamp | null;
   updated_at: Generated<Timestamp>;
   upload_generation: number | null;
   usage_role: Generated<string>;
+  variant_long_edges: number[] | null;
 }
 
 export interface MediaLifecycleRetentionRuns {

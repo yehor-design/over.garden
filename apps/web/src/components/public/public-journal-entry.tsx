@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
+import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import {
   SiteShellContextRailModules,
   SiteShellContextRailRegistration,
@@ -356,12 +357,13 @@ function JournalMediaGallery({
       <figure className="grid min-w-0 grid-cols-1 gap-2">
         <SubjectAwareMediaImage
           src={page.media[0]!.publicUrl}
+          srcSet={buildPublicMediaSourceSet(page.media[0]!).srcSet}
+          placeholderDataUri={page.media[0]!.placeholderDataUri}
           alt={page.media[0]!.altText ?? `${page.entry.title}, 1`}
           width={1200}
           height={900}
           sizes="(min-width: 1280px) 48rem, 100vw"
           priority
-          unoptimized
           presentationMode="contain"
           focalX={page.media[0]!.focalX}
           focalY={page.media[0]!.focalY}
@@ -382,11 +384,12 @@ function JournalMediaGallery({
               <figure className="grid min-w-0 grid-cols-1 gap-1.5">
                 <SubjectAwareMediaImage
                   src={media.publicUrl}
+                  srcSet={buildPublicMediaSourceSet(media).srcSet}
+                  placeholderDataUri={media.placeholderDataUri}
                   alt={media.altText ?? `${page.entry.title}, ${index + 2}`}
                   width={720}
                   height={540}
                   sizes="(min-width: 640px) 15rem, 50vw"
-                  unoptimized
                   presentationMode="contain"
                   focalX={media.focalX}
                   focalY={media.focalY}

@@ -204,6 +204,160 @@ describe("ephemeral publication handoff", () => {
     );
   });
 
+  it("groups a photo's variant receipts behind its primary (OVE-371)", async () => {
+    const primary = await receipt({ width: 2560, height: 1920 });
+    const large = await receipt({
+      variant: 1280,
+      width: 1280,
+      height: 960,
+      sha256: "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBA=",
+      receiptNonce: "l".repeat(32),
+    });
+    const small = await receipt({
+      variant: 480,
+      width: 480,
+      height: 360,
+      sha256: "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCA=",
+      receiptNonce: "s".repeat(32),
+    });
+    const dependencies = {
+      receiptPolicy: policy,
+      ownerHashSecret: SECRET,
+      nowSeconds: 2_000_000_010,
+    };
+
+    const verified = await verifyEphemeralPublicationReceipts(
+      {
+        ownerUserId: OWNER,
+        stagingReceipts: [primary, large, small],
+        orderedMediaAssetIds: [MEDIA],
+      },
+      dependencies,
+    );
+    expect(verified.media).toHaveLength(3);
+    expect(verified.photos).toEqual([
+      {
+        primary: expect.objectContaining({ mediaAssetId: MEDIA, width: 2560 }),
+        variants: [
+          expect.objectContaining({ variant: 1280 }),
+          expect.objectContaining({ variant: 480 }),
+        ],
+      },
+    ]);
+
+    // A variant needs the primary it was cut from, in front of it.
+    await expect(
+      verifyEphemeralPublicationReceipts(
+        { ownerUserId: OWNER, stagingReceipts: [large, primary] },
+        dependencies,
+      ),
+    ).rejects.toMatchObject({ code: "receipt_set_invalid" });
+    // The same variant twice is not two objects.
+    await expect(
+      verifyEphemeralPublicationReceipts(
+        { ownerUserId: OWNER, stagingReceipts: [primary, small, small] },
+        dependencies,
+      ),
+    ).rejects.toMatchObject({ code: "receipt_set_invalid" });
+    // A "variant" larger than its primary is not a variant.
+    const oversized = await receipt({
+      variant: 1280,
+      width: 1280,
+      height: 960,
+      receiptNonce: "o".repeat(32),
+    });
+    await expect(
+      verifyEphemeralPublicationReceipts(
+        { ownerUserId: OWNER, stagingReceipts: [await receipt(), oversized] },
+        dependencies,
+      ),
+    ).rejects.toMatchObject({ code: "receipt_set_invalid" });
+  });
+
+  it("requires the claim response to name every variant object at its own key", async () => {
+    const primary = await receipt({ width: 2560, height: 1920 });
+    const small = await receipt({
+      variant: 480,
+      width: 480,
+      height: 360,
+      sha256: "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCA=",
+      receiptNonce: "s".repeat(32),
+    });
+    const response = (variantPath: string) =>
+      Response.json({
+        status: "claimed",
+        publishId: PUBLISH,
+        publicMedia: [
+          {
+            mediaAssetId: MEDIA,
+            generation: 1,
+            sha256: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            sizeBytes: 4,
+            width: 2560,
+            height: 1920,
+            publicPath: `derivatives/${MEDIA}/1.webp`,
+          },
+          {
+            mediaAssetId: MEDIA,
+            generation: 1,
+            variant: 480,
+            sha256: "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCA=",
+            sizeBytes: 4,
+            width: 480,
+            height: 360,
+            publicPath: variantPath,
+          },
+        ],
+      });
+    const dependencies = {
+      receiptPolicy: policy,
+      capabilityPolicy: policy,
+      ownerHashSecret: SECRET,
+      nowSeconds: 2_000_000_010,
+      nonce: "x".repeat(32),
+    };
+    const input = {
+      ownerUserId: OWNER,
+      publishId: PUBLISH,
+      stagingSessionId: SESSION,
+      stagingReceipts: [primary, small],
+      orderedMediaAssetIds: [MEDIA],
+    };
+
+    await expect(
+      claimEphemeralPublicationMedia(input, {
+        ...dependencies,
+        fetcher: vi
+          .fn<typeof fetch>()
+          .mockResolvedValue(response(`derivatives/${MEDIA}/1-480.webp`)),
+      }),
+    ).resolves.toMatchObject({
+      publicMedia: [
+        {
+          mediaAssetId: MEDIA,
+          publicPath: `derivatives/${MEDIA}/1.webp`,
+          width: 2560,
+          variants: [
+            {
+              variant: 480,
+              width: 480,
+              height: 360,
+              publicPath: `derivatives/${MEDIA}/1-480.webp`,
+            },
+          ],
+        },
+      ],
+    });
+    await expect(
+      claimEphemeralPublicationMedia(input, {
+        ...dependencies,
+        fetcher: vi
+          .fn<typeof fetch>()
+          .mockResolvedValue(response(`derivatives/${MEDIA}/1.webp`)),
+      }),
+    ).rejects.toMatchObject({ code: "claim_response_mismatch" });
+  });
+
   it("keeps the claim deadline active while the provider response body is stalled", async () => {
     vi.useFakeTimers();
     const token = await receipt();

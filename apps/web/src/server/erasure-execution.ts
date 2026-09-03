@@ -7,7 +7,9 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database, JsonValue } from "@/db/schema";
 import { formatErasureRequestReference } from "@/lib/privacy/disclosures";
+import { expandDerivativeObjectKeys } from "@/lib/media/derivative-keys";
 import { revokeMediaObjectBytes } from "@/server/media/lifecycle-revoke";
+import { readMediaVariantExtras } from "@/server/media/media-variant-schema";
 import type { RequestScope } from "@/server/request-scope";
 import {
   arePublicProjectionsConverged,
@@ -449,7 +451,7 @@ export function buildListMediaObjectsForErasureQuery(
 ) {
   return executor
     .selectFrom("media_assets")
-    .select("derivative_key as derivativeKey")
+    .select(["id", "derivative_key as derivativeKey"])
     .where("owner_user_id", "=", requesterUserId);
 }
 
@@ -1290,11 +1292,20 @@ async function listMediaObjectReferencesForErasure(
     executor,
     requesterUserId,
   ).execute();
+  const variantExtras = await readMediaVariantExtras(
+    executor,
+    rows.map((row) => row.id),
+  );
 
-  return rows.map((row) => ({
-    bucket: "public_derivative" as const,
-    objectKey: row.derivativeKey,
-  }));
+  return rows.flatMap((row) =>
+    expandDerivativeObjectKeys(
+      row.derivativeKey,
+      variantExtras.get(row.id)?.variantLongEdges,
+    ).map((objectKey) => ({
+      bucket: "public_derivative" as const,
+      objectKey,
+    })),
+  );
 }
 
 async function deleteR2MediaObject(reference: ErasureMediaObjectReference) {

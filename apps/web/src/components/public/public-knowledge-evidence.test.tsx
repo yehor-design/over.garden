@@ -101,6 +101,8 @@ function evidence(): PublicKnowledgeEvidence {
               focalY: 0.5,
               intrinsicWidth: 800,
               intrinsicHeight: 600,
+              placeholderDataUri: null,
+              variantLongEdges: [],
             },
           ],
           topics: [

@@ -11,6 +11,7 @@ vi.mock("@/db", () => ({
 }));
 
 import { signEphemeralMediaText } from "@/lib/media/ephemeral-staging-crypto";
+import { resetMediaVariantSchemaProbeForTests } from "@/server/media/media-variant-schema";
 import {
   readEphemeralMediaCommitStatus,
   verifyCommitStatusRequest,
@@ -130,6 +131,89 @@ describe("ephemeral media commit-status boundary", () => {
 
     database.entry = null;
     await expect(readEphemeralMediaCommitStatus(input)).resolves.toBe("absent");
+  });
+
+  it("commits a variant object through its primary row, and through the recorded edges once 0047 is live", async () => {
+    const variantItem = {
+      mediaAssetId: MEDIA_ID,
+      generation: 2,
+      variant: 1280 as const,
+      sizeBytes: 45,
+      width: 1280,
+      height: 960,
+      publicKey: `derivatives/${MEDIA_ID}/2-1280.webp`,
+    };
+    const base = fixture();
+    const input = {
+      ...base,
+      expectedMedia: [...base.expectedMedia, variantItem],
+    };
+    const body = JSON.stringify(input);
+    const signature = await signEphemeralMediaText(
+      SECRET,
+      "commit-status",
+      body,
+    );
+    await expect(
+      verifyCommitStatusRequest(
+        new Request("https://over.garden/api/media/staging/commit-status", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-overgarden-staging-signature": `v1:${signature}`,
+          },
+          body,
+        }),
+      ),
+    ).resolves.toEqual(input);
+
+    // Before migration 0047 nothing records variants: the primary row stands.
+    resetMediaVariantSchemaProbeForTests(false);
+    await expect(readEphemeralMediaCommitStatus(input)).resolves.toBe(
+      "committed",
+    );
+    // Once the columns exist, the variant must be recorded on the row.
+    resetMediaVariantSchemaProbeForTests(true);
+    database.media = [
+      { ...database.media[0], variant_long_edges: [480] },
+    ];
+    await expect(readEphemeralMediaCommitStatus(input)).resolves.toBe(
+      "indeterminate",
+    );
+    database.media = [
+      { ...database.media[0], variant_long_edges: [1280, 480] },
+    ];
+    await expect(readEphemeralMediaCommitStatus(input)).resolves.toBe(
+      "committed",
+    );
+    resetMediaVariantSchemaProbeForTests(null);
+    // A variant key at the wrong path is not a read-back.
+    await expect(
+      verifyCommitStatusRequest(
+        new Request("https://over.garden/api/media/staging/commit-status", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-overgarden-staging-signature": `v1:${await signEphemeralMediaText(
+              SECRET,
+              "commit-status",
+              JSON.stringify({
+                ...base,
+                expectedMedia: [
+                  { ...variantItem, publicKey: `derivatives/${MEDIA_ID}/2.webp` },
+                ],
+              }),
+            )}`,
+          },
+          body: JSON.stringify({
+            ...base,
+            expectedMedia: [
+              { ...variantItem, publicKey: `derivatives/${MEDIA_ID}/2.webp` },
+            ],
+          }),
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "invalid" });
   });
 
   it("proves an edit claim as a committed subset while unrelated retained media stays attached", async () => {

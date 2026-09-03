@@ -57,9 +57,12 @@ describe("BrowserJournalImageEncoder", () => {
       width: 1,
       height: 1,
       sha256: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      variants: [],
+      placeholderDataUri: null,
       sourceKind: "jpeg",
       lossless: false,
-      quality: 82,
+      quality: 85,
+      codecPath: "fallback",
       durationMs: 12,
     });
 

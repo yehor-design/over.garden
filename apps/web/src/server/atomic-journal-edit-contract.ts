@@ -36,11 +36,14 @@ export interface AtomicJournalEditCurrentMedia {
   mediaAssetId: string;
   generation: number;
   publicPath: string;
+  /** Variants recorded for the current generation (OVE-371); [] before 0047. */
+  variantLongEdges?: readonly number[] | null;
 }
 
 export interface AtomicJournalEditReplacement extends ClaimedEphemeralPublicationMedia {
   priorGeneration: number;
   priorPublicPath: string;
+  priorVariantLongEdges: number[];
 }
 
 export function validateAtomicJournalEditMediaPlan(input: {
@@ -134,6 +137,7 @@ export function validateAtomicJournalEditMediaPlan(input: {
         ...media,
         priorGeneration: current.generation,
         priorPublicPath: current.publicPath,
+        priorVariantLongEdges: [...(current.variantLongEdges ?? [])],
       });
     } else {
       additions.push(media);

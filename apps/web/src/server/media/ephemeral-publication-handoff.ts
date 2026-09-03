@@ -9,11 +9,13 @@ import {
   EPHEMERAL_MEDIA_CLAIM_DEADLINE_MS,
   EPHEMERAL_MEDIA_MAX_BYTES,
   EPHEMERAL_MEDIA_MAX_DIMENSION,
+  EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO,
   EPHEMERAL_MEDIA_MAX_PER_SESSION,
   EPHEMERAL_MEDIA_MAX_PIXELS,
   EPHEMERAL_MEDIA_STAGING_PROTOCOL,
   bytesToBase64Url,
   isCanonicalSha256,
+  isEphemeralMediaVariant,
   isPositiveSafeInteger,
   isSafeNonce,
   isSubjectHash,
@@ -27,19 +29,20 @@ import {
   type EphemeralMediaSigningPolicy,
 } from "@/lib/media/ephemeral-staging-crypto";
 import {
+  claimedMediaFromPhotos,
+  type ClaimedEphemeralPublicationMedia,
+  type EphemeralPublicationPhoto,
+} from "@/lib/media/claimed-media";
+import {
   issueEphemeralStagingSessionCapability,
   resolveEphemeralMediaSigningPolicy,
 } from "./ephemeral-staging-capability";
 
-export interface ClaimedEphemeralPublicationMedia {
-  mediaAssetId: string;
-  generation: number;
-  sha256: string;
-  sizeBytes: number;
-  width: number;
-  height: number;
-  publicPath: string;
-}
+export type {
+  ClaimedEphemeralPublicationMedia,
+  ClaimedEphemeralPublicationVariant,
+  EphemeralPublicationPhoto,
+} from "@/lib/media/claimed-media";
 
 export class EphemeralPublicationHandoffError extends Error {
   constructor(readonly code: string) {
@@ -61,6 +64,12 @@ interface PublicationHandoffDependencies extends PublicationReceiptDependencies 
   baseUrl?: string;
 }
 
+/**
+ * Receipts arrive grouped per photo, each primary followed by its variants,
+ * in the order of `orderedMediaAssetIds` when given. A variant without a
+ * primary, a duplicate variant, or a variant larger than its primary is a
+ * malformed set, never a partial success.
+ */
 export async function verifyEphemeralPublicationReceipts(
   input: {
     ownerUserId: string;
@@ -72,14 +81,18 @@ export async function verifyEphemeralPublicationReceipts(
 ): Promise<{
   receiptSetDigest: string;
   stagingSessionId: string;
+  /** Every receipt in wire order. */
   media: EphemeralMediaStagingReceiptClaims[];
+  photos: EphemeralPublicationPhoto[];
 }> {
   if (
     (input.stagingSessionId !== undefined && !isUuid(input.stagingSessionId)) ||
     input.stagingReceipts.length < 1 ||
-    input.stagingReceipts.length > EPHEMERAL_MEDIA_MAX_PER_SESSION ||
+    input.stagingReceipts.length >
+      EPHEMERAL_MEDIA_MAX_PER_SESSION * EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO ||
     (input.orderedMediaAssetIds !== undefined &&
-      (input.stagingReceipts.length !== input.orderedMediaAssetIds.length ||
+      (input.orderedMediaAssetIds.length < 1 ||
+        input.orderedMediaAssetIds.length > EPHEMERAL_MEDIA_MAX_PER_SESSION ||
         new Set(input.orderedMediaAssetIds).size !==
           input.orderedMediaAssetIds.length))
   ) {
@@ -94,6 +107,7 @@ export async function verifyEphemeralPublicationReceipts(
   );
   const now = dependencies.nowSeconds ?? Math.floor(Date.now() / 1_000);
   const media: EphemeralMediaStagingReceiptClaims[] = [];
+  const photos: EphemeralPublicationPhoto[] = [];
   let stagingSessionId = input.stagingSessionId ?? null;
   for (let index = 0; index < input.stagingReceipts.length; index += 1) {
     const payload = await verifyEphemeralMediaToken(
@@ -106,9 +120,7 @@ export async function verifyEphemeralPublicationReceipts(
     if (
       payload.ownerSubjectHash !== expectedOwnerHash ||
       (stagingSessionId !== null &&
-        payload.stagingSessionId !== stagingSessionId) ||
-      (input.orderedMediaAssetIds !== undefined &&
-        payload.mediaAssetId !== input.orderedMediaAssetIds[index])
+        payload.stagingSessionId !== stagingSessionId)
     ) {
       throw new EphemeralPublicationHandoffError("receipt_mismatch");
     }
@@ -122,14 +134,44 @@ export async function verifyEphemeralPublicationReceipts(
       throw new EphemeralPublicationHandoffError("receipt_expired");
     }
     media.push(payload);
+    const variant = payload.variant ?? 0;
+    if (variant === 0) {
+      if (
+        input.orderedMediaAssetIds !== undefined &&
+        payload.mediaAssetId !== input.orderedMediaAssetIds[photos.length]
+      ) {
+        throw new EphemeralPublicationHandoffError("receipt_mismatch");
+      }
+      photos.push({ primary: payload, variants: [] });
+      continue;
+    }
+    const photo = photos[photos.length - 1];
+    if (
+      !photo ||
+      photo.primary.mediaAssetId !== payload.mediaAssetId ||
+      photo.primary.generation !== payload.generation ||
+      photo.variants.some((item) => item.variant === variant) ||
+      payload.width > photo.primary.width ||
+      payload.height > photo.primary.height ||
+      Math.max(payload.width, payload.height) !== variant
+    ) {
+      throw new EphemeralPublicationHandoffError("receipt_set_invalid");
+    }
+    photo.variants.push(payload);
   }
-  if (new Set(media.map((item) => item.mediaAssetId)).size !== media.length) {
+  if (
+    new Set(photos.map((photo) => photo.primary.mediaAssetId)).size !==
+      photos.length ||
+    (input.orderedMediaAssetIds !== undefined &&
+      photos.length !== input.orderedMediaAssetIds.length)
+  ) {
     throw new EphemeralPublicationHandoffError("receipt_set_invalid");
   }
   return {
     receiptSetDigest: await digestReceiptSet(input.stagingReceipts),
     stagingSessionId: stagingSessionId!,
     media,
+    photos,
   };
 }
 
@@ -194,7 +236,7 @@ export async function claimEphemeralPublicationMedia(
   }
   const publicMedia = validateClaimResponse(body, {
     publishId: input.publishId,
-    receipts: verified.media,
+    photos: verified.photos,
   });
   return {
     receiptSetDigest: verified.receiptSetDigest,
@@ -247,59 +289,76 @@ function validateClaimResponse(
   value: unknown,
   expected: {
     publishId: string;
-    receipts: readonly EphemeralMediaStagingReceiptClaims[];
+    photos: readonly EphemeralPublicationPhoto[];
   },
 ): ClaimedEphemeralPublicationMedia[] {
+  const expectedCount = expected.photos.reduce(
+    (count, photo) => count + 1 + photo.variants.length,
+    0,
+  );
   if (
     !isRecord(value) ||
     value.status !== "claimed" ||
     value.publishId !== expected.publishId ||
     !Array.isArray(value.publicMedia) ||
-    value.publicMedia.length !== expected.receipts.length
+    value.publicMedia.length !== expectedCount
   ) {
     throw new EphemeralPublicationHandoffError("claim_response_invalid");
   }
-  const rawByMediaAssetId = new Map<string, Record<string, unknown>>();
+  const rawByMediaKey = new Map<string, Record<string, unknown>>();
   for (const raw of value.publicMedia) {
     if (!isRecord(raw)) {
       throw new EphemeralPublicationHandoffError("claim_response_invalid");
     }
-    const mediaAssetId = raw.mediaAssetId;
+    const variant = raw.variant ?? 0;
     if (
-      typeof mediaAssetId !== "string" ||
-      rawByMediaAssetId.has(mediaAssetId)
+      typeof raw.mediaAssetId !== "string" ||
+      !isEphemeralMediaVariant(variant)
     ) {
       throw new EphemeralPublicationHandoffError("claim_response_invalid");
     }
-    rawByMediaAssetId.set(mediaAssetId, raw);
+    const key = `${raw.mediaAssetId}#${variant}`;
+    if (rawByMediaKey.has(key)) {
+      throw new EphemeralPublicationHandoffError("claim_response_invalid");
+    }
+    rawByMediaKey.set(key, raw);
   }
-  return expected.receipts.map((receipt) => {
-    const raw = rawByMediaAssetId.get(receipt.mediaAssetId);
-    if (!raw) {
-      throw new EphemeralPublicationHandoffError("claim_response_mismatch");
+  const claimed = claimedMediaFromPhotos(expected.photos);
+  for (const [index, photo] of expected.photos.entries()) {
+    const media = claimed[index]!;
+    assertClaimedObject(
+      rawByMediaKey.get(`${photo.primary.mediaAssetId}#0`),
+      photo.primary,
+      media.publicPath,
+    );
+    for (const [variantIndex, receipt] of photo.variants.entries()) {
+      assertClaimedObject(
+        rawByMediaKey.get(`${receipt.mediaAssetId}#${receipt.variant}`),
+        receipt,
+        (media.variants ?? [])[variantIndex]!.publicPath,
+      );
     }
-    const expectedPath = `derivatives/${receipt.mediaAssetId}/${receipt.generation}.webp`;
-    if (
-      raw.mediaAssetId !== receipt.mediaAssetId ||
-      raw.generation !== receipt.generation ||
-      raw.sha256 !== receipt.sha256 ||
-      raw.sizeBytes !== receipt.sizeBytes ||
-      raw.width !== receipt.width ||
-      raw.height !== receipt.height ||
-      raw.publicPath !== expectedPath
-    ) {
-      throw new EphemeralPublicationHandoffError("claim_response_mismatch");
-    }
-    return {
-      mediaAssetId: receipt.mediaAssetId,
-      generation: receipt.generation,
-      sha256: receipt.sha256,
-      sizeBytes: receipt.sizeBytes,
-      width: receipt.width,
-      height: receipt.height,
-      publicPath: expectedPath,
-    };
-  });
+  }
+  return claimed;
+}
+
+function assertClaimedObject(
+  raw: Record<string, unknown> | undefined,
+  receipt: EphemeralMediaStagingReceiptClaims,
+  expectedPath: string,
+) {
+  if (
+    !raw ||
+    raw.mediaAssetId !== receipt.mediaAssetId ||
+    raw.generation !== receipt.generation ||
+    raw.sha256 !== receipt.sha256 ||
+    raw.sizeBytes !== receipt.sizeBytes ||
+    raw.width !== receipt.width ||
+    raw.height !== receipt.height ||
+    raw.publicPath !== expectedPath
+  ) {
+    throw new EphemeralPublicationHandoffError("claim_response_mismatch");
+  }
 }
 
 function isStagingReceipt(
@@ -315,6 +374,7 @@ function isStagingReceipt(
     isUuid(item.stagingSessionId) &&
     isUuid(item.mediaAssetId) &&
     isPositiveSafeInteger(item.generation) &&
+    (item.variant === undefined || isEphemeralMediaVariant(item.variant)) &&
     isCanonicalSha256(item.sha256) &&
     isPositiveSafeInteger(item.sizeBytes) &&
     Number(item.sizeBytes) <= EPHEMERAL_MEDIA_MAX_BYTES &&

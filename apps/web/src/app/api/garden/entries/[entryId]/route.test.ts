@@ -90,19 +90,19 @@ describe("PATCH /api/garden/entries/[entryId]", () => {
         },
       ],
     });
+    const replacementReceipt = {
+      mediaAssetId: MEDIA_ID,
+      generation: 5,
+      sha256: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      sizeBytes: 1_024,
+      width: 800,
+      height: 600,
+    };
     mocks.verifyEphemeralPublicationReceipts.mockResolvedValue({
       receiptSetDigest: "B".repeat(43),
       stagingSessionId: SESSION_ID,
-      media: [
-        {
-          mediaAssetId: MEDIA_ID,
-          generation: 5,
-          sha256: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-          sizeBytes: 1_024,
-          width: 800,
-          height: 600,
-        },
-      ],
+      media: [replacementReceipt],
+      photos: [{ primary: replacementReceipt, variants: [] }],
     });
     mocks.claimEphemeralPublicationMedia.mockResolvedValue({
       receiptSetDigest: "B".repeat(43),

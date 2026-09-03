@@ -35,6 +35,9 @@ another issue's number.
 | `0042` | OVE-354      | Source layer           | explicit raw-payload home so a captured payload has exactly one copy |
 | `0043` | OVE-355      | Catalog search         | trigram extensions and expression indexes for typo-tolerant typeahead |
 | `0044` | OVE-356      | Matching worker        | drain-failure heartbeat columns and the worker wake notification      |
+| `0045` | maintainer   | Workspace              | recent-entries index (`perf(db)`, commit `daf87ca`); no issue owner   |
+| `0046` | OVE-368      | Owner MVP reset        | index every live public page: visibility normalization, noindex drop  |
+| `0047` | OVE-371      | Owner MVP reset        | media placeholder and variant long-edge columns (ADR-0022, D2)        |
 
 Compact range receipt:
 

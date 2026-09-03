@@ -2,13 +2,19 @@ import "server-only";
 
 import { db } from "@/db";
 import {
+  EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO,
+  EPHEMERAL_MEDIA_MAX_PER_SESSION,
+  ephemeralMediaPublicKey,
   isBase64UrlSha256,
+  isEphemeralMediaVariant,
   isPositiveSafeInteger,
   isSafeNonce,
   isSubjectHash,
   isUuid,
   type EphemeralMediaCommitStatus,
+  type EphemeralMediaVariant,
 } from "@/lib/media/ephemeral-staging-contract";
+import { readMediaVariantExtras } from "@/server/media/media-variant-schema";
 import {
   deriveEphemeralMediaOwnerSubjectHash,
   requireStrongSecret,
@@ -18,6 +24,8 @@ import {
 export interface EphemeralMediaCommitStatusExpectedMedia {
   mediaAssetId: string;
   generation: number;
+  /** Absent for the primary; the long edge for a variant object. */
+  variant?: EphemeralMediaVariant;
   sizeBytes: number;
   width: number;
   height: number;
@@ -109,13 +117,30 @@ export async function readEphemeralMediaCommitStatus(
     .where("journal_entry_id", "=", entry.id)
     .orderBy("id", "asc")
     .execute();
-  const expected = [...input.expectedMedia].sort((left, right) =>
-    left.mediaAssetId.localeCompare(right.mediaAssetId),
-  );
   const mediaById = new Map(media.map((row) => [row.id, row]));
-  return expected.every((item) => {
+  const variantExtras = await readMediaVariantExtras(
+    db,
+    input.expectedMedia
+      .filter((item) => (item.variant ?? 0) !== 0)
+      .map((item) => item.mediaAssetId),
+  );
+  return input.expectedMedia.every((item) => {
     const row = mediaById.get(item.mediaAssetId);
     if (!row) return false;
+    const variant = item.variant ?? 0;
+    if (variant !== 0) {
+      // A variant commits with its primary row: same generation, not revoked,
+      // and recorded in `variant_long_edges` once migration 0047 is live.
+      // Before the migration nothing records variants, so the primary row's
+      // own commitment stands for them.
+      const extras = variantExtras.get(item.mediaAssetId);
+      return (
+        row.owner_user_id === entry.owner_user_id &&
+        Number(row.upload_generation) === item.generation &&
+        row.revoked_at === null &&
+        (extras === undefined || extras.variantLongEdges.includes(variant))
+      );
+    }
     return (
       row.id === item.mediaAssetId &&
       row.owner_user_id === entry.owner_user_id &&
@@ -165,18 +190,25 @@ function isCommitStatusRequest(
 function isExpectedMedia(
   value: unknown,
 ): value is EphemeralMediaCommitStatusExpectedMedia[] {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 10)
+  if (
+    !Array.isArray(value) ||
+    value.length < 1 ||
+    value.length >
+      EPHEMERAL_MEDIA_MAX_PER_SESSION * EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO
+  )
     return false;
   const seen = new Set<string>();
   for (const item of value) {
     if (!item || typeof item !== "object" || Array.isArray(item)) return false;
     const row = item as Record<string, unknown>;
+    const variant = row.variant ?? 0;
     if (
       Object.keys(row).some(
         (key) =>
           ![
             "mediaAssetId",
             "generation",
+            "variant",
             "sizeBytes",
             "width",
             "height",
@@ -184,16 +216,22 @@ function isExpectedMedia(
           ].includes(key),
       ) ||
       !isUuid(row.mediaAssetId) ||
-      seen.has(row.mediaAssetId) ||
+      !isEphemeralMediaVariant(variant) ||
+      seen.has(`${row.mediaAssetId}#${variant}`) ||
       !isPositiveSafeInteger(row.generation) ||
       !isPositiveSafeInteger(row.sizeBytes) ||
       !isPositiveSafeInteger(row.width) ||
       !isPositiveSafeInteger(row.height) ||
-      row.publicKey !== `derivatives/${row.mediaAssetId}/${row.generation}.webp`
+      row.publicKey !==
+        ephemeralMediaPublicKey({
+          mediaAssetId: row.mediaAssetId,
+          generation: row.generation,
+          variant,
+        })
     ) {
       return false;
     }
-    seen.add(row.mediaAssetId);
+    seen.add(`${row.mediaAssetId}#${variant}`);
   }
   return true;
 }

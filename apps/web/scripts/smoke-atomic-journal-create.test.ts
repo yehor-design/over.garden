@@ -101,10 +101,10 @@ describe("OVE-347 atomic journal creation smoke", () => {
   });
 
   it("focused contract: golden policy fixes orientation, scale, lossless alpha, and limits", () => {
-    expect(CLIENT_WEBP_PHOTO_QUALITY).toBe(82);
+    expect(CLIENT_WEBP_PHOTO_QUALITY).toBe(85);
     expect(CLIENT_WEBP_LONG_EDGE).toBe(2_560);
     expect(CLIENT_WEBP_SOURCE_MAX_BYTES).toBe(50 * 1_024 * 1_024);
-    expect(CLIENT_WEBP_SOURCE_MAX_PIXELS).toBe(64_000_000);
+    expect(CLIENT_WEBP_SOURCE_MAX_PIXELS).toBe(500_000_000);
     expect(CLIENT_WEBP_FINAL_MAX_BYTES).toBe(32 * 1_024 * 1_024);
     expect(
       createClientWebpEncodingPlan({
@@ -120,7 +120,7 @@ describe("OVE-347 atomic journal creation smoke", () => {
     ).toMatchObject({
       outputWidth: 1_920,
       outputHeight: 2_560,
-      quality: 82,
+      quality: 85,
       lossless: false,
     });
     expect(
@@ -249,7 +249,7 @@ function encodedImage(): EncodedJournalImage {
     sha256: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     sourceKind: "jpeg",
     lossless: false,
-    quality: 82,
+    quality: 85,
     durationMs: 1,
   };
 }

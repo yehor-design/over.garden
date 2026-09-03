@@ -194,6 +194,8 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
         focalY: 0.5,
         intrinsicWidth: 1200,
         intrinsicHeight: 900,
+        placeholderDataUri: null,
+        variantLongEdges: [],
       }),
     ],
   };

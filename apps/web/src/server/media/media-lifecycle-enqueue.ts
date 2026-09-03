@@ -16,6 +16,9 @@ const MEDIA_STAGING_FINALIZE_KIND = "media_staging_finalize";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
+import { expandDerivativeObjectKeys } from "@/lib/media/derivative-keys";
+import { readMediaVariantExtras } from "@/server/media/media-variant-schema";
+
 export type MediaLifecycleBucket = "public_derivative";
 
 export interface MediaRevokeCandidate {
@@ -85,15 +88,20 @@ export async function listJournalDeletionDerivativeRevokeCandidates(
     .where("revoked_at", "is", null)
     .execute();
 
+  const variantExtras = await readMediaVariantExtras(
+    executor,
+    rows.map((row) => row.id),
+  );
   return rows.flatMap((row) => {
     if (!row.derivative_key) return [];
-    return [
-      {
-        mediaAssetId: row.id,
-        bucket: "public_derivative" as const,
-        objectKey: row.derivative_key,
-      },
-    ];
+    return expandDerivativeObjectKeys(
+      row.derivative_key,
+      variantExtras.get(row.id)?.variantLongEdges,
+    ).map((objectKey) => ({
+      mediaAssetId: row.id,
+      bucket: "public_derivative" as const,
+      objectKey,
+    }));
   });
 }
 
@@ -138,6 +146,10 @@ export async function listOrphanProcessedDerivativesForEntry(
     .where("derivative_key", "is not", null)
     .where("revoked_at", "is", null)
     .execute();
+  const variantExtras = await readMediaVariantExtras(
+    executor,
+    rows.map((row) => row.id),
+  );
 
   return rows.flatMap((row) => {
     if (!row.derivative_key) return [];
@@ -150,13 +162,14 @@ export async function listOrphanProcessedDerivativesForEntry(
     ) {
       return [];
     }
-    return [
-      {
-        mediaAssetId: row.id,
-        bucket: "public_derivative" as const,
-        objectKey: row.derivative_key,
-      },
-    ];
+    return expandDerivativeObjectKeys(
+      row.derivative_key,
+      variantExtras.get(row.id)?.variantLongEdges,
+    ).map((objectKey) => ({
+      mediaAssetId: row.id,
+      bucket: "public_derivative" as const,
+      objectKey,
+    }));
   });
 }
 
@@ -281,15 +294,20 @@ export async function listAbandonedCoverOnlyRevokeCandidates(
   }
 
   const rows = await query.execute();
+  const variantExtras = await readMediaVariantExtras(
+    executor,
+    rows.map((row) => row.id),
+  );
   return rows.flatMap((row) => {
     if (!row.derivative_key) return [];
-    return [
-      {
-        mediaAssetId: row.id,
-        bucket: "public_derivative" as const,
-        objectKey: row.derivative_key,
-      },
-    ];
+    return expandDerivativeObjectKeys(
+      row.derivative_key,
+      variantExtras.get(row.id)?.variantLongEdges,
+    ).map((objectKey) => ({
+      mediaAssetId: row.id,
+      bucket: "public_derivative" as const,
+      objectKey,
+    }));
   });
 }
 
@@ -309,17 +327,22 @@ export async function listDetachedInlineRevokeCandidates(
     .where("derivative_key", "is not", null)
     .where("revoked_at", "is", null)
     .execute();
+  const variantExtras = await readMediaVariantExtras(
+    executor,
+    rows.map((row) => row.id),
+  );
 
   return rows.flatMap((row) => {
     if (!row.derivative_key) return [];
     if (row.usage_role === "cover_only") return [];
     if (input.keepMediaAssetIds.has(row.id)) return [];
-    return [
-      {
-        mediaAssetId: row.id,
-        bucket: "public_derivative" as const,
-        objectKey: row.derivative_key,
-      },
-    ];
+    return expandDerivativeObjectKeys(
+      row.derivative_key,
+      variantExtras.get(row.id)?.variantLongEdges,
+    ).map((objectKey) => ({
+      mediaAssetId: row.id,
+      bucket: "public_derivative" as const,
+      objectKey,
+    }));
   });
 }

@@ -19,6 +19,10 @@ import { getPublicDerivativeUrl } from "@/lib/storage";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { localizeCuratedTopicLabel } from "@/lib/launch-corpus/topic-labels";
 import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
+import {
+  readMediaVariantExtras,
+  type MediaVariantExtras,
+} from "@/server/media/media-variant-schema";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -49,6 +53,10 @@ export interface PublicFeedMedia {
   focalY: number;
   intrinsicWidth: number | null;
   intrinsicHeight: number | null;
+  /** 16 px WebP data URI painted until the photo loads (OVE-371). */
+  placeholderDataUri: string | null;
+  /** Long edges of the promoted variants; [] on pre-0047 rows. */
+  variantLongEdges: number[];
 }
 
 export interface PublicFeedTopic {
@@ -176,6 +184,10 @@ export async function listPublicFeedPage(
           buildPublicFeedMediaQuery(executor, entryIds).execute(),
           buildPublicFeedTopicsForEntriesQuery(executor, entryIds).execute(),
         ]);
+  const mediaExtras = await readMediaVariantExtras(
+    executor,
+    mediaRows.map((media) => media.id),
+  );
 
   return serializePublicFeedPage({
     rows,
@@ -183,6 +195,7 @@ export async function listPublicFeedPage(
     topicRows,
     locale,
     pageSize,
+    mediaExtras,
   });
 }
 
@@ -507,6 +520,8 @@ export function serializePublicFeedPage(input: {
   locale: PublicLocale;
   pageSize: number;
   publicMediaUrl?: (derivativeKey: string) => string;
+  /** OVE-371 placeholder/variant columns, keyed by media asset id. */
+  mediaExtras?: ReadonlyMap<string, MediaVariantExtras>;
 }): PublicFeedPage {
   const pageSize = normalizePageSize(input.pageSize);
   const visibleRows = input.rows.slice(0, pageSize);
@@ -558,6 +573,10 @@ export function serializePublicFeedPage(input: {
           focalY: Number(media.focalY ?? 0.5),
           intrinsicWidth: media.intrinsicWidth ?? null,
           intrinsicHeight: media.intrinsicHeight ?? null,
+          placeholderDataUri:
+            input.mediaExtras?.get(media.id)?.placeholderDataUri ?? null,
+          variantLongEdges:
+            input.mediaExtras?.get(media.id)?.variantLongEdges ?? [],
         })),
       topics: (topicsByEntry[row.entryId] ?? []).map((topic) => ({
         slug: topic.slug,

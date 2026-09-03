@@ -329,6 +329,7 @@ export function useLocalJournalComposer(input: {
               clientMutationId: createId(),
               ...semanticInput,
               mediaClaimReceipts: frozen.mediaClaimReceipts,
+              mediaPlaceholders: frozen.mediaPlaceholders,
             };
             publicationRef.current = { semanticKey, request };
           }
@@ -457,6 +458,7 @@ export function useLocalJournalComposer(input: {
               document,
               coverMediaAssetId: publicationInput.coverMediaAssetId,
               newMediaClaimReceipts: frozen.mediaClaimReceipts,
+              mediaPlaceholders: frozen.mediaPlaceholders,
               retainedMediaAssetIds: existingMedia
                 .map((item) => item.mediaAssetId)
                 .filter((mediaAssetId) => finalSet.has(mediaAssetId)),

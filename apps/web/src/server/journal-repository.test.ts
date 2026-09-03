@@ -1063,6 +1063,8 @@ describe("journal repository query contracts", () => {
         focalY: 0.5,
         intrinsicWidth: null,
         intrinsicHeight: null,
+        placeholderDataUri: null,
+        variantLongEdges: [],
       },
     ]);
     expect(page.adjacentEntries).toMatchObject({

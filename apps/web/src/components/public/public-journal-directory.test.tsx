@@ -95,6 +95,8 @@ const page: PublicJournalDirectoryPage = {
           focalY: 0.5,
           intrinsicWidth: 800,
           intrinsicHeight: 600,
+          placeholderDataUri: null,
+          variantLongEdges: [],
         },
         {
           publicUrl: "https://media.example/two.png",
@@ -102,6 +104,8 @@ const page: PublicJournalDirectoryPage = {
           focalY: 0.5,
           intrinsicWidth: 800,
           intrinsicHeight: 600,
+          placeholderDataUri: null,
+          variantLongEdges: [],
         },
         {
           publicUrl: "https://media.example/three.png",
@@ -109,6 +113,8 @@ const page: PublicJournalDirectoryPage = {
           focalY: 0.5,
           intrinsicWidth: 800,
           intrinsicHeight: 600,
+          placeholderDataUri: null,
+          variantLongEdges: [],
         },
       ],
       topics: [

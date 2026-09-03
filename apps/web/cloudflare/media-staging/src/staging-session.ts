@@ -2,18 +2,22 @@ import { DurableObject } from "cloudflare:workers";
 
 import {
   EPHEMERAL_MEDIA_LEASE_SECONDS,
+  EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO,
   EPHEMERAL_MEDIA_MAX_PER_SESSION,
   EPHEMERAL_MEDIA_OWNER_MAX_ACTIVE_SESSIONS,
   EPHEMERAL_MEDIA_OWNER_UPLOADS_PER_MINUTE,
   EPHEMERAL_MEDIA_TERMINAL_RETENTION_SECONDS,
   EPHEMERAL_MEDIA_STAGING_PROTOCOL,
   base64ToBytes,
+  ephemeralMediaPublicKey,
   isBase64UrlSha256,
+  isEphemeralMediaVariant,
   isSubjectHash,
   isUuid,
   type EphemeralMediaCommitStatus,
   type EphemeralMediaGenerationState,
   type EphemeralMediaSessionState,
+  type EphemeralMediaVariant,
 } from "../../../src/lib/media/ephemeral-staging-contract";
 import {
   requireStrongSecret,
@@ -29,6 +33,24 @@ import {
 
 const OWNER_ADMISSION_WINDOW_MS = 60_000;
 const MAX_PENDING_DELETES_PER_SESSION = 100;
+const MAX_OBJECTS_PER_SESSION =
+  EPHEMERAL_MEDIA_MAX_PER_SESSION * EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO;
+
+/**
+ * One photo stages up to three objects: the primary and its variants
+ * (ADR-0022, D2). They share `media_asset_id` and `generation`, so the SQLite
+ * primary key is a media key: the asset id alone for the primary and
+ * `<id>#<variant>` for a variant. Rows written before variants existed carry
+ * the bare id and `variant = 0`, so no data migration is needed.
+ */
+export function mediaKey(mediaAssetId: string, variant: EphemeralMediaVariant) {
+  return variant ? `${mediaAssetId}#${variant}` : mediaAssetId;
+}
+
+function mediaAssetIdOfKey(key: string) {
+  const separator = key.indexOf("#");
+  return separator === -1 ? key : key.slice(0, separator);
+}
 
 export interface MediaStagingEnv {
   MEDIA_STAGING_BUCKET: R2Bucket;
@@ -42,6 +64,7 @@ export interface BeginUploadInput {
   stagingSessionId: string;
   mediaAssetId: string;
   generation: number;
+  variant: EphemeralMediaVariant;
   sha256: string;
   sizeBytes: number;
   width: number;
@@ -88,6 +111,7 @@ export type OwnerUploadAdmissionResult =
 export interface ClaimItemInput {
   mediaAssetId: string;
   generation: number;
+  variant: EphemeralMediaVariant;
   sha256: string;
   sizeBytes: number;
   stagingReceipt: string;
@@ -109,8 +133,10 @@ interface SessionRow extends Record<string, SqlStorageValue> {
 }
 
 interface MediaRow extends Record<string, SqlStorageValue> {
+  /** The media key (see `mediaKey`), not always a bare asset id. */
   media_asset_id: string;
   generation: number;
+  variant: number;
   sha256: string;
   size_bytes: number;
   width: number;
@@ -183,6 +209,11 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
       ) {
         sql.exec(
           "ALTER TABLE staging_media ADD COLUMN public_ownership_proof TEXT",
+        );
+      }
+      if (!stagingMediaColumns.some((column) => column.name === "variant")) {
+        sql.exec(
+          "ALTER TABLE staging_media ADD COLUMN variant INTEGER NOT NULL DEFAULT 0",
         );
       }
       sql.exec(
@@ -318,7 +349,11 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
     if (session && session.state !== "open") {
       return { status: "rejected", code: "session_not_open" };
     }
-    const current = this.media(input.mediaAssetId);
+    if (!isEphemeralMediaVariant(input.variant)) {
+      return { status: "rejected", code: "variant_invalid" };
+    }
+    const key = mediaKey(input.mediaAssetId, input.variant);
+    const current = this.media(input.mediaAssetId, input.variant);
     const transition = classifyGenerationTransition(
       current
         ? {
@@ -356,12 +391,14 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
         status: "recover",
         attempt: current.upload_attempt,
         storageKey: current.staging_key,
-        supersededStorageKeys: this.pendingDeleteKeys(input.mediaAssetId),
+        supersededStorageKeys: this.pendingDeleteKeys(key),
       };
     }
     if (
       !current &&
-      this.activeMediaCount() >= EPHEMERAL_MEDIA_MAX_PER_SESSION
+      (input.variant === 0
+        ? this.activePhotoCount() >= EPHEMERAL_MEDIA_MAX_PER_SESSION
+        : this.activeMediaCount() >= MAX_OBJECTS_PER_SESSION)
     ) {
       return { status: "rejected", code: "session_media_limit" };
     }
@@ -404,19 +441,20 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
              storage_key, media_asset_id, generation, queued_at_ms
            ) VALUES (?, ?, ?, ?)`,
           supersededStorageKey,
-          input.mediaAssetId,
+          key,
           current.generation,
           input.nowMs,
         );
       }
       this.ctx.storage.sql.exec(
         `INSERT INTO staging_media (
-           media_asset_id, generation, sha256, size_bytes, width, height,
+           media_asset_id, generation, variant, sha256, size_bytes, width, height,
            capability_nonce, staging_key, state, upload_attempt,
            public_ready, lease_expires_at_ms
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'uploading', ?, 0, ?)
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'uploading', ?, 0, ?)
          ON CONFLICT(media_asset_id) DO UPDATE SET
            generation = excluded.generation,
+           variant = excluded.variant,
            sha256 = excluded.sha256,
            size_bytes = excluded.size_bytes,
            width = excluded.width,
@@ -431,8 +469,9 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
            delete_capability = NULL,
            public_ownership_proof = NULL,
            lease_expires_at_ms = excluded.lease_expires_at_ms`,
-        input.mediaAssetId,
+        key,
         input.generation,
+        input.variant,
         input.sha256,
         input.sizeBytes,
         input.width,
@@ -448,7 +487,7 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
       status: "accepted",
       attempt,
       storageKey: input.storageKey,
-      supersededStorageKeys: this.pendingDeleteKeys(input.mediaAssetId),
+      supersededStorageKeys: this.pendingDeleteKeys(key),
     };
   }
 
@@ -491,6 +530,7 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
   async completeUpload(input: {
     mediaAssetId: string;
     generation: number;
+    variant: EphemeralMediaVariant;
     attempt: number;
     stagingReceipt: string;
     deleteCapability: string;
@@ -511,13 +551,13 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
         input.stagingReceipt,
         input.deleteCapability,
         input.leaseExpiresAtMs,
-        input.mediaAssetId,
+        mediaKey(input.mediaAssetId, input.variant),
         input.generation,
         input.attempt,
       )
       .toArray();
     if (updated.length !== 1) {
-      const current = this.media(input.mediaAssetId);
+      const current = this.media(input.mediaAssetId, input.variant);
       if (
         current?.generation === input.generation &&
         current.upload_attempt === input.attempt &&
@@ -541,6 +581,7 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
   async abortUpload(input: {
     mediaAssetId: string;
     generation: number;
+    variant: EphemeralMediaVariant;
     attempt: number;
     deadlineAtMs: number;
   }) {
@@ -550,18 +591,24 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
     this.ctx.storage.sql.exec(
       `UPDATE staging_media SET state = 'reserved'
        WHERE media_asset_id = ? AND generation = ? AND upload_attempt = ? AND state = 'uploading'`,
-      input.mediaAssetId,
+      mediaKey(input.mediaAssetId, input.variant),
       input.generation,
       input.attempt,
     );
     return { status: "reserved" } as const;
   }
 
+  /**
+   * Deleting the primary (`variant` 0) deletes the photo: its variants go with
+   * it, because the browser holds one delete capability per photo. Deleting a
+   * variant on its own removes only that object.
+   */
   async beginDelete(input: {
     ownerSubjectHash: string;
     stagingSessionId: string;
     mediaAssetId: string;
     generation: number;
+    variant: EphemeralMediaVariant;
     deadlineAtMs: number;
   }) {
     if (!isControlDeadlineOpen(input.deadlineAtMs)) {
@@ -573,30 +620,37 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
       session.owner_subject_hash !== input.ownerSubjectHash ||
       session.staging_session_id !== input.stagingSessionId
     ) {
-      return { status: "deleted", stagingKey: null } as const;
+      return { status: "deleted", stagingKeys: [] as string[] } as const;
     }
     if (session.state !== "open")
       return { status: "rejected", code: "session_not_open" } as const;
-    const row = this.media(input.mediaAssetId);
-    const pendingStagingKeys = this.pendingDeleteKeys(input.mediaAssetId);
-    if ((!row || row.state === "deleted") && pendingStagingKeys.length === 0)
+    const rows = this.photoRows(input.mediaAssetId, input.variant);
+    const pendingStagingKeys = rows.flatMap((row) =>
+      this.pendingDeleteKeys(row.media_asset_id),
+    );
+    const live = rows.filter((row) => row.state !== "deleted");
+    if (live.length === 0 && pendingStagingKeys.length === 0)
       return {
         status: "deleted",
-        stagingKey: null,
-        pendingStagingKeys: [],
+        stagingKeys: [] as string[],
+        pendingStagingKeys: [] as string[],
       } as const;
-    if (row && row.generation !== input.generation)
+    const primary = live.find((row) => row.variant === input.variant);
+    if (primary && primary.generation !== input.generation)
       return { status: "rejected", code: "stale_generation" } as const;
-    if (row) {
-      this.ctx.storage.sql.exec(
-        "UPDATE staging_media SET state = 'deleting' WHERE media_asset_id = ? AND generation = ?",
-        input.mediaAssetId,
-        input.generation,
-      );
-    }
+    const doomed = live.filter((row) => row.generation === input.generation);
+    this.ctx.storage.transactionSync(() => {
+      for (const row of doomed) {
+        this.ctx.storage.sql.exec(
+          "UPDATE staging_media SET state = 'deleting' WHERE media_asset_id = ? AND generation = ?",
+          row.media_asset_id,
+          input.generation,
+        );
+      }
+    });
     return {
       status: "delete",
-      stagingKey: row?.staging_key ?? null,
+      stagingKeys: doomed.map((row) => row.staging_key),
       pendingStagingKeys,
     } as const;
   }
@@ -604,24 +658,32 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
   async completeDelete(input: {
     mediaAssetId: string;
     generation: number;
+    variant: EphemeralMediaVariant;
     deadlineAtMs: number;
   }) {
     if (!isControlDeadlineOpen(input.deadlineAtMs)) {
       return { status: "rejected", code: "control_expired" } as const;
     }
-    this.ctx.storage.sql.exec(
-      `UPDATE staging_media SET state = 'deleted', public_ready = 0
-       WHERE media_asset_id = ? AND generation = ? AND state = 'deleting'`,
-      input.mediaAssetId,
-      input.generation,
+    const keys = this.photoRows(input.mediaAssetId, input.variant).map(
+      (row) => row.media_asset_id,
     );
-    this.ctx.storage.sql.exec(
-      "UPDATE staging_session SET state_version = state_version + 1 WHERE singleton = 1",
-    );
-    this.ctx.storage.sql.exec(
-      "DELETE FROM staging_pending_delete WHERE media_asset_id = ?",
-      input.mediaAssetId,
-    );
+    this.ctx.storage.transactionSync(() => {
+      for (const key of keys) {
+        this.ctx.storage.sql.exec(
+          `UPDATE staging_media SET state = 'deleted', public_ready = 0
+           WHERE media_asset_id = ? AND generation = ? AND state = 'deleting'`,
+          key,
+          input.generation,
+        );
+        this.ctx.storage.sql.exec(
+          "DELETE FROM staging_pending_delete WHERE media_asset_id = ?",
+          key,
+        );
+      }
+      this.ctx.storage.sql.exec(
+        "UPDATE staging_session SET state_version = state_version + 1 WHERE singleton = 1",
+      );
+    });
     return { status: "deleted" } as const;
   }
 
@@ -672,23 +734,25 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
     }
     if (
       input.items.length < 1 ||
-      input.items.length > EPHEMERAL_MEDIA_MAX_PER_SESSION
+      input.items.length > MAX_OBJECTS_PER_SESSION
     ) {
       return { status: "rejected", code: "claim_invalid" } as const;
     }
     const seen = new Set<string>();
     for (const item of input.items) {
-      if (seen.has(item.mediaAssetId))
+      if (!isEphemeralMediaVariant(item.variant))
         return { status: "rejected", code: "claim_invalid" } as const;
-      seen.add(item.mediaAssetId);
-      const row = this.media(item.mediaAssetId);
+      const key = mediaKey(item.mediaAssetId, item.variant);
+      if (seen.has(key))
+        return { status: "rejected", code: "claim_invalid" } as const;
+      seen.add(key);
+      const row = this.media(item.mediaAssetId, item.variant);
       if (row && row.lease_expires_at_ms < input.nowMs) {
         return { status: "rejected", code: "receipt_expired" } as const;
       }
       if (
         !isBase64UrlSha256(item.publicOwnershipProof) ||
-        item.publicKey !==
-          `derivatives/${item.mediaAssetId}/${item.generation}.webp` ||
+        item.publicKey !== ephemeralMediaPublicKey(item) ||
         !row ||
         row.generation !== item.generation ||
         row.sha256 !== item.sha256 ||
@@ -698,6 +762,14 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
       ) {
         return { status: "rejected", code: "receipt_mismatch" } as const;
       }
+    }
+    // A variant is only claimable next to the primary it was cut from.
+    if (
+      input.items.some(
+        (item) => item.variant !== 0 && !seen.has(mediaKey(item.mediaAssetId, 0)),
+      )
+    ) {
+      return { status: "rejected", code: "claim_invalid" } as const;
     }
     if (this.activeMediaCount() !== seen.size) {
       return { status: "rejected", code: "receipt_set_mismatch" } as const;
@@ -722,7 +794,7 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
           item.publicKey,
           item.publicOwnershipProof,
           leaseExpiresAtMs,
-          item.mediaAssetId,
+          mediaKey(item.mediaAssetId, item.variant),
           item.generation,
         );
       }
@@ -734,6 +806,7 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
   async completeClaim(input: {
     mediaAssetId: string;
     generation: number;
+    variant: EphemeralMediaVariant;
     deadlineAtMs: number;
   }) {
     if (!isControlDeadlineOpen(input.deadlineAtMs)) {
@@ -744,7 +817,7 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
         `UPDATE staging_media SET public_ready = 1
        WHERE media_asset_id = ? AND generation = ? AND state = 'claimed'
        RETURNING state`,
-        input.mediaAssetId,
+        mediaKey(input.mediaAssetId, input.variant),
         input.generation,
       )
       .toArray();
@@ -1205,23 +1278,54 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
     return Math.min(...candidates, nowMs + OWNER_ADMISSION_WINDOW_MS);
   }
 
-  private media(mediaAssetId: string): MediaRow | null {
+  private media(
+    mediaAssetId: string,
+    variant: EphemeralMediaVariant,
+  ): MediaRow | null {
     return (
       this.ctx.storage.sql
         .exec<MediaRow>(
           "SELECT * FROM staging_media WHERE media_asset_id = ?",
-          mediaAssetId,
+          mediaKey(mediaAssetId, variant),
         )
         .toArray()[0] ?? null
     );
   }
 
+  /** The primary's row and its variants; a variant alone for `variant` > 0. */
+  private photoRows(mediaAssetId: string, variant: EphemeralMediaVariant) {
+    if (variant !== 0) {
+      const row = this.media(mediaAssetId, variant);
+      return row ? [row] : [];
+    }
+    return this.ctx.storage.sql
+      .exec<MediaRow>(
+        "SELECT * FROM staging_media WHERE media_asset_id = ? OR media_asset_id LIKE ? ORDER BY media_asset_id",
+        mediaAssetId,
+        `${mediaAssetId}#%`,
+      )
+      .toArray();
+  }
+
+  /** Every live object: primaries and variants. */
   private activeMediaCount() {
     const row = this.ctx.storage.sql
       .exec<{
         count: number;
       }>(
         "SELECT COUNT(*) AS count FROM staging_media WHERE state NOT IN ('deleted', 'expired')",
+      )
+      .toArray()[0];
+    return Number(row?.count ?? 0);
+  }
+
+  /** Live photos only; the per-session limit counts these. */
+  private activePhotoCount() {
+    const row = this.ctx.storage.sql
+      .exec<{
+        count: number;
+      }>(
+        "SELECT COUNT(*) AS count FROM staging_media WHERE variant = 0 AND state NOT IN ('deleted', 'expired')",
       )
       .toArray()[0];
     return Number(row?.count ?? 0);
@@ -1271,8 +1375,9 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
       )
       .toArray()
       .map((row) => ({
-        mediaAssetId: row.media_asset_id,
+        mediaAssetId: mediaAssetIdOfKey(row.media_asset_id),
         generation: row.generation,
+        variant: (Number(row.variant) || 0) as EphemeralMediaVariant,
         sha256: row.sha256,
         sizeBytes: row.size_bytes,
         width: row.width,
@@ -1313,6 +1418,8 @@ export class MediaStagingSession extends DurableObject<MediaStagingEnv> {
       expectedMedia: this.claimedItems().map((item) => ({
         mediaAssetId: item.mediaAssetId,
         generation: item.generation,
+        // Only variants carry the field; the primary keeps the older shape.
+        ...(item.variant ? { variant: item.variant } : {}),
         sizeBytes: item.sizeBytes,
         width: item.width,
         height: item.height,
