@@ -38,6 +38,7 @@ another issue's number.
 | `0045` | maintainer   | Workspace              | recent-entries index (`perf(db)`, commit `daf87ca`); no issue owner   |
 | `0046` | OVE-368      | Owner MVP reset        | index every live public page: visibility normalization, noindex drop  |
 | `0047` | OVE-371      | Owner MVP reset        | media placeholder and variant long-edge columns (ADR-0022, D2)        |
+| `0048` | OVE-375      | Source layer           | capture claim-ordering index so one claim stops reading the whole run |
 
 Compact range receipt:
 

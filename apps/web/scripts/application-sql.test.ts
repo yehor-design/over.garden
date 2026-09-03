@@ -47,6 +47,7 @@ describe("versioned application SQL bootstrap", () => {
       "0045_workspace_recent_entries_index.sql",
       "0046_ove368_index_every_live_page.sql",
       "0047_ove371_media_variants.sql",
+      "0048_ove375_capture_claim_ordering_index.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });
