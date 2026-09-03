@@ -23,6 +23,8 @@ export type WorkerRoute =
     }
   | { operation: "claim"; stagingSessionId: string }
   | { operation: "finalize"; stagingSessionId: string }
+  /** Extends the session lease under the session capability (OVE-372). */
+  | { operation: "touch"; stagingSessionId: string }
   | { operation: "status" };
 
 export function parseWorkerRoute(
@@ -39,6 +41,9 @@ export function parseWorkerRoute(
     }
     if (segments[3] === "finalize" && method === "POST") {
       return { operation: "finalize", stagingSessionId: segments[2] };
+    }
+    if (segments[3] === "touch" && method === "POST") {
+      return { operation: "touch", stagingSessionId: segments[2] };
     }
   }
   if (

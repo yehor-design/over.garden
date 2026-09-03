@@ -293,6 +293,24 @@ OVE-290 document-generation media contract:
 - ADR-0022 (OVE-367) removed document-mutation admission: there is no `DOCUMENT_MUTATION_ADMISSION_ENABLED`, no readback route, and no admission smoke. Sessions are cookie-cached (`session.cookieCache`, 300 s); every mutation compares the rendered owner id and answers `401 session_required` or `409 session_account_changed`.
 - On 2026-08-10, Git-backed deployment `dpl_Di1Mwcbtms8mQjjNxgZL9fr2WcwR` reached `READY` at `over-garden-fwg7ddk6a-yehors-projects-01221e2b.vercel.app` and served feature SHA `da38a2c2b5901426353e8d0a55a91a79b584863f` through the canonical aliases. Immutable and canonical read-back both reported enforcement enabled and the default `900`-second TTL. The exact-SHA reject-only smoke proved owner-change, same-owner session-refresh, and malformed-protocol rejection with zero journal-entry and mutation-receipt effects before and after; all three synthetic sessions were revoked and confirmed guest afterward.
 
+### Session contract and orphan sweep (OVE-372)
+
+Worker `overgarden-media-staging` routes:
+
+- `PUT /v1/staging/{session}/{asset}/{generation}[/v{longEdge}]` — upload
+  under the session capability; headers `content-sha256`, `x-media-width`,
+  `x-media-height`
+- `DELETE /v1/staging/{session}/{asset}/{generation}[/v{longEdge}]` — per-object
+  delete capability (the primary's delete removes its variants)
+- `POST /v1/staging/{session}/touch` — extends the two-hour lease
+- `POST /v1/staging/{session}/claim`, `POST /v1/staging/{session}/finalize`
+- `GET /v1/status`
+
+Vercel issues the session capability at `POST /api/media/staging/sessions`
+(owner-authenticated); the reservations route is gone. Vercel cron
+`/api/cron/media-orphans` (`0 5 * * 1`, `CRON_SECRET`) sweeps unreferenced
+`derivatives/` objects older than seven days; its receipt is counts only.
+
 ### Production availability probe (OVE-361)
 
 - Non-secret operator command:

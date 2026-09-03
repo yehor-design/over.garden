@@ -449,6 +449,50 @@ describe("local-only journal media coordinator", () => {
   });
 });
 
+describe("local-only journal media coordinator: session lease (OVE-372)", () => {
+  it("prepares the session when it is created and touches it while it holds staged media", async () => {
+    vi.useFakeTimers();
+    try {
+      const encoded = encodedImage([2]);
+      const encoder: LocalJournalImageEncoder = {
+        encode: vi.fn(async () => encoded),
+      };
+      const stager: LocalJournalMediaStager = {
+        prepare: vi.fn(async () => undefined),
+        touch: vi.fn(async () => undefined),
+        stage: vi.fn(async () => ({
+          stagingReceipt: "receipt-0",
+          deleteCapability: "delete-0",
+        })),
+        delete: vi.fn(async () => undefined),
+      };
+      const coordinator = new LocalJournalMediaCoordinator({
+        stagingSessionId: SESSION_ID,
+        encoder,
+        stager,
+        createObjectURL: vi.fn(() => "blob:final"),
+        revokeObjectURL: vi.fn(),
+        createId: idSequence(MEDIA_1),
+        touchIntervalMs: 1_000,
+      });
+      expect(stager.prepare).toHaveBeenCalledWith(SESSION_ID);
+      expect(stager.touch).not.toHaveBeenCalled();
+
+      const selection = coordinator.add(photo([9]), { blockId: "b_first" });
+      await selection.ready;
+      await vi.advanceTimersByTimeAsync(2_500);
+      expect(stager.touch).toHaveBeenCalledTimes(2);
+      expect(stager.touch).toHaveBeenCalledWith(SESSION_ID);
+
+      coordinator.destroy();
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(stager.touch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("local-only journal media coordinator: variants and preview (OVE-371)", () => {
   it("shows the preview before the final encode, stages the variants after the primary, and freezes every receipt", async () => {
     const previewBlob = new Blob([new Uint8Array([1])], { type: "image/webp" });

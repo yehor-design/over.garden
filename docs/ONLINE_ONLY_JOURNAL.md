@@ -14,7 +14,8 @@ durability boundary.
    captions, focal points, cover selection, and browser-generated WebP bytes in
    memory.
 2. Each accepted image is converted once in the browser. Those exact WebP bytes
-   are previewed and uploaded directly to short-lived private edge staging;
+   are previewed and uploaded directly to private edge staging under one
+   session capability, leased for two hours and renewed while the tab lives;
    image bytes never cross a Vercel Function.
 3. The create or edit request carries JSON plus bounded signed staging receipts.
    The server validates the entire request and commits the public journal entry,

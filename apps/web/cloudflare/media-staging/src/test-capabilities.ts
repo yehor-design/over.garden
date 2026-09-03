@@ -2,8 +2,8 @@ import {
   EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS,
   EPHEMERAL_MEDIA_STAGING_PROTOCOL,
   bytesToBase64Url,
-  type EphemeralMediaCapabilityClaims,
   type EphemeralMediaSessionCapabilityClaims,
+  type EphemeralMediaStagingSessionClaims,
   type EphemeralMediaVariant,
 } from "../../../src/lib/media/ephemeral-staging-contract";
 import {
@@ -18,40 +18,26 @@ interface TestCapabilityEnv {
   EPHEMERAL_MEDIA_COMMIT_STATUS_SECRET: string;
 }
 
-export async function issueWorkerUploadCapabilityForTest(
+/**
+ * The per-session upload capability (OVE-372). The per-object fields the old
+ * reservation carried are accepted and ignored so existing call sites read
+ * the same; an upload is described by its path and headers instead.
+ */
+export async function issueWorkerStagingSessionForTest(
   env: TestCapabilityEnv,
-  input: {
-    ownerUserId: string;
-    stagingSessionId: string;
-    mediaAssetId: string;
-    generation: number;
-    /** Absent or 0 for the primary; the long edge for a variant. */
-    variant?: EphemeralMediaVariant;
-    sha256: string;
-    sizeBytes: number;
-    width: number;
-    height: number;
-  },
+  input: { ownerUserId: string; stagingSessionId: string },
 ) {
   const policy = capabilityPolicy(env);
   const now = Math.floor(Date.now() / 1_000);
-  const claims: EphemeralMediaCapabilityClaims = {
+  const claims: EphemeralMediaStagingSessionClaims = {
     protocol: EPHEMERAL_MEDIA_STAGING_PROTOCOL,
-    kind: "capability",
+    kind: "staging_session",
     keyVersion: policy.active.version,
-    purpose: "upload",
     ownerSubjectHash: await deriveEphemeralMediaOwnerSubjectHash(
       env.EPHEMERAL_MEDIA_COMMIT_STATUS_SECRET,
       input.ownerUserId,
     ),
     stagingSessionId: input.stagingSessionId,
-    mediaAssetId: input.mediaAssetId,
-    generation: input.generation,
-    ...(input.variant ? { variant: input.variant } : {}),
-    sha256: input.sha256,
-    sizeBytes: input.sizeBytes,
-    width: input.width,
-    height: input.height,
     issuedAtSeconds: now,
     expiresAtSeconds: now + EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS,
     nonce: crypto.randomUUID().replace(/-/g, ""),
@@ -62,6 +48,26 @@ export async function issueWorkerUploadCapabilityForTest(
       policy.active,
     ),
   };
+}
+
+export async function issueWorkerUploadCapabilityForTest(
+  env: TestCapabilityEnv,
+  input: {
+    ownerUserId: string;
+    stagingSessionId: string;
+    mediaAssetId?: string;
+    generation?: number;
+    variant?: EphemeralMediaVariant;
+    sha256?: string;
+    sizeBytes?: number;
+    width?: number;
+    height?: number;
+  },
+) {
+  return issueWorkerStagingSessionForTest(env, {
+    ownerUserId: input.ownerUserId,
+    stagingSessionId: input.stagingSessionId,
+  });
 }
 
 export async function issueWorkerSessionCapabilityForTest(

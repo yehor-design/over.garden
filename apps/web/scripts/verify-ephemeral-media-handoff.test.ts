@@ -43,7 +43,7 @@ describe("ephemeral media provider verifier", () => {
     ).toEqual(expect.objectContaining({ status: "aligned", violations: [] }));
   });
 
-  it("proves the tracked Worker, SQLite, R2, CORS, lifecycle, env, and zero-write reservation contract", () => {
+  it("proves the tracked Worker, SQLite, R2, CORS, lifecycle, env, and zero-write session contract", () => {
     expect(verifyEphemeralMediaRepositoryContract()).toEqual({
       version: "ove346.repositoryContract.v1",
       status: "aligned",

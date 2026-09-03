@@ -8,10 +8,8 @@ import {
   isSafeNonce,
   isSubjectHash,
   isUuid,
-  parseEphemeralMediaReservation,
-  type EphemeralMediaCapabilityClaims,
-  type EphemeralMediaReservationRequest,
   type EphemeralMediaSessionCapabilityClaims,
+  type EphemeralMediaStagingSessionClaims,
 } from "@/lib/media/ephemeral-staging-contract";
 import {
   deriveEphemeralMediaOwnerSubjectHash,
@@ -39,12 +37,16 @@ export function resolveEphemeralMediaSigningPolicy(
   });
 }
 
-export async function issueEphemeralStagingCapability(
-  input: EphemeralMediaReservationRequest & { ownerUserId: string },
+/**
+ * One capability per composer session (OVE-372). The browser presents it on
+ * every upload and touch at the Worker; nothing per photo touches Vercel.
+ * Renewal is the same call with the same `stagingSessionId`.
+ */
+export async function issueEphemeralStagingSessionToken(
+  input: { ownerUserId: string; stagingSessionId: string },
   options: {
     policy?: EphemeralMediaSigningPolicy;
     ownerHashSecret?: string;
-    purpose?: "upload" | "delete";
     nowSeconds?: number;
     nonce?: string;
   } = {},
@@ -58,39 +60,21 @@ export async function issueEphemeralStagingCapability(
   const nonce = options.nonce ?? crypto.randomUUID().replace(/-/g, "");
   if (
     !validOwnerUserId(input.ownerUserId) ||
+    !isUuid(input.stagingSessionId) ||
     !isPositiveSafeInteger(nowSeconds) ||
-    !isSafeNonce(nonce) ||
-    !parseEphemeralMediaReservation({
-      stagingSessionId: input.stagingSessionId,
-      mediaAssetId: input.mediaAssetId,
-      generation: input.generation,
-      variant: input.variant ?? 0,
-      sha256: input.sha256,
-      sizeBytes: input.sizeBytes,
-      width: input.width,
-      height: input.height,
-    })
+    !isSafeNonce(nonce)
   ) {
-    throw new Error("ephemeral_media_capability_input_invalid");
+    throw new Error("ephemeral_media_session_token_invalid");
   }
-  const ownerSubjectHash = await deriveEphemeralMediaOwnerSubjectHash(
-    options.ownerHashSecret ?? resolveOwnerHashSecret(),
-    input.ownerUserId,
-  );
-  const claims: EphemeralMediaCapabilityClaims = {
+  const claims: EphemeralMediaStagingSessionClaims = {
     protocol: EPHEMERAL_MEDIA_STAGING_PROTOCOL,
-    kind: "capability",
+    kind: "staging_session",
     keyVersion: policy.active.version,
-    purpose: options.purpose ?? "upload",
-    ownerSubjectHash,
+    ownerSubjectHash: await deriveEphemeralMediaOwnerSubjectHash(
+      options.ownerHashSecret ?? resolveOwnerHashSecret(),
+      input.ownerUserId,
+    ),
     stagingSessionId: input.stagingSessionId,
-    mediaAssetId: input.mediaAssetId,
-    generation: input.generation,
-    variant: input.variant ?? 0,
-    sha256: input.sha256,
-    sizeBytes: input.sizeBytes,
-    width: input.width,
-    height: input.height,
     issuedAtSeconds: nowSeconds,
     expiresAtSeconds: nowSeconds + EPHEMERAL_MEDIA_CAPABILITY_TTL_SECONDS,
     nonce,
@@ -105,23 +89,21 @@ export async function issueEphemeralStagingCapability(
   };
 }
 
-export async function verifyEphemeralStagingCapability(
+export async function verifyEphemeralStagingSessionToken(
   token: string,
   input: {
     policy?: EphemeralMediaSigningPolicy;
-    purpose: "upload" | "delete";
     ownerUserId?: string;
     ownerSubjectHash?: string;
     ownerHashSecret?: string;
     nowSeconds?: number;
   },
-): Promise<EphemeralMediaCapabilityClaims> {
+): Promise<EphemeralMediaStagingSessionClaims> {
   const policy = input.policy ?? resolveEphemeralMediaSigningPolicy();
   const payload = await verifyEphemeralMediaToken(token, policy);
   const nowSeconds = input.nowSeconds ?? Math.floor(Date.now() / 1_000);
   if (
-    !isCapabilityClaims(payload) ||
-    payload.purpose !== input.purpose ||
+    !isStagingSessionClaims(payload) ||
     Boolean(input.ownerUserId) === Boolean(input.ownerSubjectHash)
   ) {
     throw new EphemeralMediaCapabilityError();
@@ -244,26 +226,17 @@ export async function verifyEphemeralStagingSessionCapability(
   return payload;
 }
 
-function isCapabilityClaims(
+export function isStagingSessionClaims(
   value: unknown,
-): value is EphemeralMediaCapabilityClaims {
+): value is EphemeralMediaStagingSessionClaims {
   const candidate = value as Record<string, unknown> | null;
   return Boolean(
     candidate &&
     candidate.protocol === EPHEMERAL_MEDIA_STAGING_PROTOCOL &&
-    candidate.kind === "capability" &&
+    candidate.kind === "staging_session" &&
     Number.isSafeInteger(candidate.keyVersion) &&
-    ["upload", "delete"].includes(String(candidate.purpose)) &&
     isSubjectHash(candidate.ownerSubjectHash) &&
-    parseEphemeralMediaReservation({
-      stagingSessionId: candidate.stagingSessionId,
-      mediaAssetId: candidate.mediaAssetId,
-      generation: candidate.generation,
-      sha256: candidate.sha256,
-      sizeBytes: candidate.sizeBytes,
-      width: candidate.width,
-      height: candidate.height,
-    }) !== null &&
+    isUuid(candidate.stagingSessionId) &&
     isPositiveSafeInteger(candidate.issuedAtSeconds) &&
     isPositiveSafeInteger(candidate.expiresAtSeconds) &&
     isSafeNonce(candidate.nonce),

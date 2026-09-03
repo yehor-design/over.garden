@@ -15,6 +15,7 @@ import {
 import { signEphemeralMediaText } from "../../../src/lib/media/ephemeral-staging-crypto";
 import {
   issueWorkerSessionCapabilityForTest,
+  issueWorkerStagingSessionForTest,
   issueWorkerUploadCapabilityForTest,
 } from "./test-capabilities";
 
@@ -58,6 +59,8 @@ describe("media staging Worker in workerd", () => {
             "content-type": "image/webp",
             "content-length": String(webp.byteLength),
             "content-sha256": sha,
+            "x-media-width": "1",
+            "x-media-height": "1",
             origin: "https://over.garden",
           },
           body: webp,
@@ -85,6 +88,8 @@ describe("media staging Worker in workerd", () => {
             "content-type": "image/webp",
             "content-length": String(webp.byteLength),
             "content-sha256": sha,
+            "x-media-width": "1",
+            "x-media-height": "1",
           },
           body: webp,
         },
@@ -953,24 +958,13 @@ describe("media staging Worker in workerd", () => {
         width: object.width,
         height: object.height,
       });
-      if (object.variant !== 0) {
-        // A variant capability is bound to its own path, never the primary's.
-        const misrouted = await exports.default.fetch(
-          uploadRequest(
-            `https://media-stage.over.garden/v1/staging/${session}/${media}/1`,
-            issued.capability,
-            webp,
-            sha,
-          ),
-        );
-        expect(misrouted.status).toBe(401);
-      }
       const response = await exports.default.fetch(
         uploadRequest(
           `https://media-stage.over.garden/v1/staging/${session}/${media}/1${object.variant ? `/v${object.variant}` : ""}`,
           issued.capability,
           webp,
           sha,
+          { width: object.width, height: object.height },
         ),
       );
       const body = (await response.json()) as { stagingReceipt: string };
@@ -1088,6 +1082,7 @@ describe("media staging Worker in workerd", () => {
         primaryCapability.capability,
         primary,
         primarySha,
+        { width: 2000, height: 1000 },
       ),
     );
     const stagedBody = (await staged.json()) as { deleteCapability: string };
@@ -1112,13 +1107,15 @@ describe("media staging Worker in workerd", () => {
             variantCapability.capability,
             variant,
             variantSha,
+            { width: 480, height: 240 },
           ),
         )
       ).status,
     ).toBe(201);
     expect((await env.MEDIA_STAGING_BUCKET.list()).objects).toHaveLength(2);
 
-    // Ten more photos, each with a variant, still fit: the limit counts photos.
+    // Nine more photos, some with a variant, still fit: the limit counts
+    // photos, and the owner's upload budget (20 per minute) is not touched.
     for (let index = 0; index < 9; index += 1) {
       const other = await stageForOwner({
         owner,
@@ -1126,6 +1123,7 @@ describe("media staging Worker in workerd", () => {
         mediaAssetId: crypto.randomUUID(),
         webp: new Uint8Array([82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80, 10 + index]),
       });
+      if (index % 2 === 1) continue;
       const otherVariant = new Uint8Array([
         82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80, 40 + index,
       ]);
@@ -1178,8 +1176,11 @@ describe("media staging Worker in workerd", () => {
         eleventhSha,
       ),
     );
-    // The capability is bound to another asset id; the route refuses first.
-    expect(eleventh.status).toBe(401);
+    // Under a session capability the path names the photo: an eleventh one.
+    expect(eleventh.status).toBe(409);
+    await expect(eleventh.json()).resolves.toEqual({
+      code: "session_media_limit",
+    });
 
     const deleted = await exports.default.fetch(
       new Request(
@@ -1192,8 +1193,109 @@ describe("media staging Worker in workerd", () => {
     );
     expect(deleted.status).toBe(200);
     const remaining = (await env.MEDIA_STAGING_BUCKET.list()).objects;
-    // The photo's primary and its 480 variant are both gone; the others stay.
-    expect(remaining).toHaveLength(18);
+    // The photo's primary and its 480 variant are both gone; the other nine
+    // photos and their five variants stay.
+    expect(remaining).toHaveLength(14);
+  });
+
+  it("touches extend a two-hour lease and an untouched session is abandoned only at its expiry (OVE-372)", async () => {
+    const owner = crypto.randomUUID();
+    const session = crypto.randomUUID();
+    const media = crypto.randomUUID();
+    const staged = await stageForOwner({
+      owner,
+      stagingSessionId: session,
+      mediaAssetId: media,
+      webp: new Uint8Array([82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80, 5]),
+    });
+    expect(staged.stagingReceipt).toEqual(expect.any(String));
+    const stub = env.MEDIA_STAGING_SESSIONS.getByName(session);
+    const readLease = () =>
+      runInDurableObject(stub, (_instance, state) => {
+        const row = state.storage.sql
+          .exec<{ lease_expires_at_ms: number }>(
+            "SELECT lease_expires_at_ms FROM staging_session WHERE singleton = 1",
+          )
+          .toArray()[0]!;
+        const mediaRow = state.storage.sql
+          .exec<{ lease_expires_at_ms: number }>(
+            "SELECT lease_expires_at_ms FROM staging_media WHERE media_asset_id = ?",
+            media,
+          )
+          .toArray()[0]!;
+        return {
+          session: Number(row.lease_expires_at_ms),
+          media: Number(mediaRow.lease_expires_at_ms),
+        };
+      });
+    const initial = await readLease();
+    const twoHours = 2 * 60 * 60 * 1_000;
+    expect(initial.session - Date.now()).toBeGreaterThan(twoHours - 60_000);
+    expect(initial.media - Date.now()).toBeGreaterThan(twoHours - 60_000);
+
+    // Pretend ten minutes passed, then touch: the lease moves to now + 2 h.
+    await runInDurableObject(stub, (_instance, state) => {
+      state.storage.sql.exec(
+        "UPDATE staging_session SET lease_expires_at_ms = lease_expires_at_ms - 600000 WHERE singleton = 1",
+      );
+      state.storage.sql.exec(
+        "UPDATE staging_media SET lease_expires_at_ms = lease_expires_at_ms - 600000",
+      );
+    });
+    const sessionToken = await issueWorkerStagingSessionForTest(env, {
+      ownerUserId: owner,
+      stagingSessionId: session,
+    });
+    const touched = await exports.default.fetch(
+      new Request(
+        `https://media-stage.over.garden/v1/staging/${session}/touch`,
+        {
+          method: "POST",
+          headers: { authorization: `Bearer ${sessionToken.capability}` },
+        },
+      ),
+    );
+    expect(touched.status).toBe(200);
+    const afterTouch = await readLease();
+    expect(afterTouch.session).toBeGreaterThan(initial.session - 600_000 + 500_000);
+    expect(afterTouch.media).toBe(afterTouch.session);
+
+    // Another owner cannot touch this session.
+    const stranger = await issueWorkerStagingSessionForTest(env, {
+      ownerUserId: crypto.randomUUID(),
+      stagingSessionId: session,
+    });
+    const refused = await exports.default.fetch(
+      new Request(
+        `https://media-stage.over.garden/v1/staging/${session}/touch`,
+        {
+          method: "POST",
+          headers: { authorization: `Bearer ${stranger.capability}` },
+        },
+      ),
+    );
+    expect(refused.status).toBe(409);
+
+    // With the lease still open the alarm keeps the object; once the lease
+    // has passed with no touch, the alarm abandons the stage.
+    await runInDurableObject(stub, (_instance, state) => {
+      state.storage.sql.exec(
+        "UPDATE staging_session SET lease_expires_at_ms = ? WHERE singleton = 1",
+        Date.now() + 60_000,
+      );
+    });
+    expect(await runDurableObjectAlarm(stub)).toBe(true);
+    expect((await env.MEDIA_STAGING_BUCKET.list()).objects).toHaveLength(1);
+    await runInDurableObject(stub, (_instance, state) => {
+      state.storage.sql.exec(
+        "UPDATE staging_session SET lease_expires_at_ms = 0 WHERE singleton = 1",
+      );
+    });
+    expect(await runDurableObjectAlarm(stub)).toBe(true);
+    expect((await env.MEDIA_STAGING_BUCKET.list()).objects).toHaveLength(0);
+    await expect(stub.redactedState()).resolves.toEqual(
+      expect.objectContaining({ sessionState: "abandoned" }),
+    );
   });
 
   it("rejects a delayed finalize completion after the session left publishing", async () => {
@@ -1343,6 +1445,7 @@ function uploadRequest(
   capability: string,
   body: Uint8Array,
   sha256: string,
+  dimensions: { width: number; height: number } = { width: 1, height: 1 },
 ) {
   return new Request(url, {
     method: "PUT",
@@ -1351,6 +1454,8 @@ function uploadRequest(
       "content-type": "image/webp",
       "content-length": String(body.byteLength),
       "content-sha256": sha256,
+      "x-media-width": String(dimensions.width),
+      "x-media-height": String(dimensions.height),
     },
     body: body.buffer.slice(
       body.byteOffset,
