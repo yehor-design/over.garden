@@ -119,7 +119,7 @@ const UK_COPY = {
     authLegacyTransition:
       "Маршрут Better Auth підключено — legacy_transition; потрібна підготовлена versioned-конфігурація",
     authClosed:
-      "Маршрут Better Auth підключено — secret відсутній або схожий на placeholder, автентифікація fail-closed",
+      "Маршрут Better Auth підключено — secret відсутній або схожий на placeholder, вхід закрито",
     authWeakSecret:
       "Маршрут Better Auth обслуговує трафік — weak_secret; виправте versioned-конфігурацію",
     authLocalFallback:
@@ -242,7 +242,7 @@ const BG_COPY = {
     authLegacyTransition:
       "Маршрутът на Better Auth е свързан — legacy_transition; нужна е подготвена versioned конфигурация",
     authClosed:
-      "Маршрутът на Better Auth е свързан — secret липсва или прилича на placeholder, автентикацията е fail-closed",
+      "Маршрутът на Better Auth е свързан — secret липсва или прилича на placeholder, входът е затворен",
     authWeakSecret:
       "Маршрутът на Better Auth обслужва трафик — weak_secret; коригирайте versioned конфигурацията",
     authLocalFallback:
@@ -363,7 +363,7 @@ const RU_COPY = {
     authLegacyTransition:
       "Маршрут Better Auth подключён — legacy_transition; нужна подготовленная versioned-конфигурация",
     authClosed:
-      "Маршрут Better Auth подключён — secret отсутствует или похож на placeholder, аутентификация fail-closed",
+      "Маршрут Better Auth подключён — secret отсутствует или похож на placeholder, вход закрыт",
     authWeakSecret:
       "Маршрут Better Auth обслуживает трафик — weak_secret; исправьте versioned-конфигурацию",
     authLocalFallback:

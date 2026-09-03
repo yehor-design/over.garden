@@ -32,7 +32,7 @@ Live provider values are in `docs/INFRASTRUCTURE_REGISTRY.md`; read it before
 touching DNS, R2, env, or deployment. Local infra starts with
 `infra/container-up` (Apple Container first, Docker as fallback).
 
-## Hard rules
+## Hard rules (ADR-0022)
 
 1. No ORM. Kysely plus SQL migrations only.
 2. No server-side image processing, no source-original retention, no metadata

@@ -1,7 +1,7 @@
 # Local Atomic Journal-Media Recovery
 
-Status: current after OVE-349
-Authority: `docs/CONTAINER_RUNTIME_POLICY.md`, ADR-0019
+Status: current after OVE-372 (the staging Worker's session contract; see `docs/MEDIA_LIFECYCLE.md`)
+Authority: `docs/CONTAINER_RUNTIME_POLICY.md`, ADR-0019, ADR-0022
 
 Local recovery proves the current final-WebP architecture. It must not recreate
 the retired source-original quarantine or server conversion path.
