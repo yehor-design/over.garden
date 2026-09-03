@@ -73,7 +73,10 @@ export interface AtomicJournalCreateRequest {
   title: string;
   document: JournalDocumentV1;
   coverMediaAssetId: string | null;
+  /** Every staged object's receipt: each photo's primary, then its variants. */
   mediaClaimReceipts: string[];
+  /** `mediaAssetId` → 16 px WebP data URI painted until the photo loads. */
+  mediaPlaceholders?: Record<string, string>;
   returnTo: string;
   disclosureAccepted: boolean;
 }
@@ -108,6 +111,7 @@ export interface AtomicJournalEditRequest {
   document: JournalDocumentV1;
   coverMediaAssetId: string | null;
   newMediaClaimReceipts: string[];
+  mediaPlaceholders?: Record<string, string>;
   retainedMediaAssetIds: string[];
   removedMediaAssetIds: string[];
   focalPoints: AtomicJournalEditFocalPoint[];

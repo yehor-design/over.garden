@@ -5,7 +5,13 @@ import {
   CLIENT_WEBP_LONG_EDGE,
   CLIENT_WEBP_PHOTO_QUALITY,
   CLIENT_WEBP_SOURCE_MAX_BYTES,
+  CLIENT_WEBP_FALLBACK_MAX_PIXELS,
+  CLIENT_WEBP_PLACEHOLDER_LONG_EDGE,
+  CLIENT_WEBP_PLACEHOLDER_MAX_BYTES,
+  CLIENT_WEBP_PREVIEW_LONG_EDGE,
   CLIENT_WEBP_SOURCE_MAX_PIXELS,
+  planVariantLongEdges,
+  scaledVariantSize,
   assertClientFinalWebp,
   createClientWebpEncodingPlan,
   parseClientImageHeader,
@@ -70,6 +76,19 @@ describe("ADR-0019 client WebP policy", () => {
       createClientWebpEncodingPlan({
         source: {
           kind: "jpeg",
+          width: 25_000,
+          height: 20_001,
+          orientation: 1,
+          hasAlpha: false,
+        },
+        sourceBytes: CLIENT_WEBP_SOURCE_MAX_BYTES,
+      }),
+    ).toThrow("source_pixels_exceeded");
+    // Above the fallback decoder's ceiling only the browser may decode it.
+    expect(
+      createClientWebpEncodingPlan({
+        source: {
+          kind: "jpeg",
           width: 8_001,
           height: 8_000,
           orientation: 1,
@@ -77,7 +96,7 @@ describe("ADR-0019 client WebP policy", () => {
         },
         sourceBytes: CLIENT_WEBP_SOURCE_MAX_BYTES,
       }),
-    ).toThrow("source_pixels_exceeded");
+    ).toMatchObject({ nativeDecodeRequired: true, outputWidth: 2560 });
     expect(() =>
       createClientWebpEncodingPlan({
         source: {
@@ -90,7 +109,8 @@ describe("ADR-0019 client WebP policy", () => {
         sourceBytes: CLIENT_WEBP_SOURCE_MAX_BYTES + 1,
       }),
     ).toThrow("source_bytes_exceeded");
-    expect(CLIENT_WEBP_SOURCE_MAX_PIXELS).toBe(64_000_000);
+    expect(CLIENT_WEBP_SOURCE_MAX_PIXELS).toBe(500_000_000);
+    expect(CLIENT_WEBP_FALLBACK_MAX_PIXELS).toBe(64_000_000);
   });
 
   it("uses the HEIF clean aperture for display dimensions while retaining coded bomb guards", () => {
@@ -135,6 +155,8 @@ describe("ADR-0019 client WebP policy", () => {
       outputHeight: 2560,
       lossless: false,
       quality: CLIENT_WEBP_PHOTO_QUALITY,
+      variantLongEdges: [1280, 480],
+      nativeDecodeRequired: false,
     });
 
     expect(
@@ -155,7 +177,26 @@ describe("ADR-0019 client WebP policy", () => {
       quality: 100,
     });
     expect(CLIENT_WEBP_LONG_EDGE).toBe(2560);
-    expect(CLIENT_WEBP_PHOTO_QUALITY).toBe(82);
+    expect(CLIENT_WEBP_PHOTO_QUALITY).toBe(85);
+  });
+
+  it("plans only the variants the primary is larger than, and never upscales", () => {
+    expect(planVariantLongEdges(2560, 1920)).toEqual([1280, 480]);
+    expect(planVariantLongEdges(1280, 960)).toEqual([480]);
+    expect(planVariantLongEdges(1281, 100)).toEqual([1280, 480]);
+    expect(planVariantLongEdges(480, 320)).toEqual([]);
+    expect(scaledVariantSize(2560, 1920, 1280)).toEqual({
+      width: 1280,
+      height: 960,
+    });
+    expect(scaledVariantSize(1920, 2560, 480)).toEqual({
+      width: 360,
+      height: 480,
+    });
+    expect(scaledVariantSize(3, 2560, 16)).toEqual({ width: 1, height: 16 });
+    expect(CLIENT_WEBP_PREVIEW_LONG_EDGE).toBe(480);
+    expect(CLIENT_WEBP_PLACEHOLDER_LONG_EDGE).toBe(16);
+    expect(CLIENT_WEBP_PLACEHOLDER_MAX_BYTES).toBe(400);
   });
 
   it("admits only one bounded final WebP artifact", () => {

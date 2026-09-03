@@ -4,6 +4,7 @@ import {
   EPHEMERAL_MEDIA_CONTROL_DEADLINE_MS,
   EPHEMERAL_MEDIA_MAX_BYTES,
   EPHEMERAL_MEDIA_MAX_DIMENSION,
+  EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO,
   EPHEMERAL_MEDIA_MAX_PER_SESSION,
   EPHEMERAL_MEDIA_MAX_PIXELS,
   EPHEMERAL_MEDIA_STAGING_PROTOCOL,
@@ -11,8 +12,10 @@ import {
   base64ToBytes,
   bytesToBase64,
   bytesToBase64Url,
+  ephemeralMediaPublicKey,
   isBase64UrlSha256,
   isCanonicalSha256,
+  isEphemeralMediaVariant,
   isPositiveSafeInteger,
   isSafeNonce,
   isSubjectHash,
@@ -191,6 +194,7 @@ async function handleUpload(
     }
     throw workerError("owner_admission_unavailable", 503);
   }
+  const variant = claims.variant ?? 0;
   const storageDigest = await signEphemeralMediaText(
     env.EPHEMERAL_MEDIA_COMMIT_STATUS_SECRET,
     "staging-object",
@@ -200,6 +204,8 @@ async function handleUpload(
       claims.mediaAssetId,
       String(claims.generation),
       claims.sha256,
+      // The primary keeps its pre-variant key; variants get their own.
+      ...(variant ? [String(variant)] : []),
     ].join("\0"),
   );
   const storageKey = `staging/${storageDigest}.webp`;
@@ -211,6 +217,7 @@ async function handleUpload(
       stagingSessionId: claims.stagingSessionId,
       mediaAssetId: claims.mediaAssetId,
       generation: claims.generation,
+      variant,
       sha256: claims.sha256,
       sizeBytes: claims.sizeBytes,
       width: claims.width,
@@ -289,6 +296,7 @@ async function handleUpload(
           .abortUpload({
             mediaAssetId: claims.mediaAssetId,
             generation: claims.generation,
+            variant,
             attempt: begin.attempt,
             deadlineAtMs: controlDeadlineAt(),
           })
@@ -306,6 +314,7 @@ async function handleUpload(
     await stub.abortUpload({
       mediaAssetId: claims.mediaAssetId,
       generation: claims.generation,
+      variant,
       attempt: begin.attempt,
       deadlineAtMs: controlDeadlineAt(),
     });
@@ -323,6 +332,7 @@ async function handleUpload(
     stagingSessionId: claims.stagingSessionId,
     mediaAssetId: claims.mediaAssetId,
     generation: claims.generation,
+    variant,
     sha256: claims.sha256,
     sizeBytes: claims.sizeBytes,
     width: claims.width,
@@ -337,6 +347,7 @@ async function handleUpload(
   );
   const deleteClaims: EphemeralMediaCapabilityClaims = {
     ...claims,
+    variant,
     keyVersion: policy.active.version,
     purpose: "delete",
     issuedAtSeconds: stagedAtSeconds,
@@ -351,6 +362,7 @@ async function handleUpload(
     stub.completeUpload({
       mediaAssetId: claims.mediaAssetId,
       generation: claims.generation,
+      variant,
       attempt: begin.attempt,
       stagingReceipt,
       deleteCapability,
@@ -390,6 +402,7 @@ async function handleDelete(
     "delete",
   );
   assertMediaRoute(claims, route);
+  const variant = claims.variant ?? 0;
   const stub = sessionStub(env, claims.stagingSessionId);
   const begin = await bounded(
     stub.beginDelete({
@@ -397,6 +410,7 @@ async function handleDelete(
       stagingSessionId: claims.stagingSessionId,
       mediaAssetId: claims.mediaAssetId,
       generation: claims.generation,
+      variant,
       deadlineAtMs: controlDeadlineAt(),
     }),
     EPHEMERAL_MEDIA_CONTROL_DEADLINE_MS,
@@ -405,10 +419,7 @@ async function handleDelete(
   if (begin.status === "rejected") throw workerError(begin.code, 409);
   if (begin.status === "delete") {
     const stagingKeys = [
-      ...new Set([
-        ...(begin.stagingKey ? [begin.stagingKey] : []),
-        ...begin.pendingStagingKeys,
-      ]),
+      ...new Set([...begin.stagingKeys, ...begin.pendingStagingKeys]),
     ];
     await bounded(
       stagingKeys.length > 0
@@ -421,6 +432,7 @@ async function handleDelete(
       stub.completeDelete({
         mediaAssetId: claims.mediaAssetId,
         generation: claims.generation,
+        variant,
         deadlineAtMs: controlDeadlineAt(),
       }),
       EPHEMERAL_MEDIA_CONTROL_DEADLINE_MS,
@@ -469,18 +481,26 @@ async function handleClaim(
     receipts.push(receipt);
   }
   const items: ClaimItemInput[] = await Promise.all(
-    receipts.map(async (receipt, index) => ({
-      mediaAssetId: receipt.mediaAssetId,
-      generation: receipt.generation,
-      sha256: receipt.sha256,
-      sizeBytes: receipt.sizeBytes,
-      stagingReceipt: parsed.stagingReceipts[index]!,
-      publicKey: `derivatives/${receipt.mediaAssetId}/${receipt.generation}.webp`,
-      publicOwnershipProof: await deriveEphemeralMediaPublicOwnershipProof(
-        env.EPHEMERAL_MEDIA_COMMIT_STATUS_SECRET,
-        receipt,
-      ),
-    })),
+    receipts.map(async (receipt, index) => {
+      const variant = receipt.variant ?? 0;
+      return {
+        mediaAssetId: receipt.mediaAssetId,
+        generation: receipt.generation,
+        variant,
+        sha256: receipt.sha256,
+        sizeBytes: receipt.sizeBytes,
+        stagingReceipt: parsed.stagingReceipts[index]!,
+        publicKey: ephemeralMediaPublicKey({
+          mediaAssetId: receipt.mediaAssetId,
+          generation: receipt.generation,
+          variant,
+        }),
+        publicOwnershipProof: await deriveEphemeralMediaPublicOwnershipProof(
+          env.EPHEMERAL_MEDIA_COMMIT_STATUS_SECRET,
+          receipt,
+        ),
+      };
+    }),
   );
   const stub = sessionStub(env, route.stagingSessionId);
   const claimDeadlineAtMs = Date.now() + EPHEMERAL_MEDIA_CLAIM_DEADLINE_MS;
@@ -555,6 +575,7 @@ async function handleClaim(
       stub.completeClaim({
         mediaAssetId: item.mediaAssetId,
         generation: item.generation,
+        variant: item.variant,
         deadlineAtMs: Math.min(controlDeadlineAt(), claimDeadlineAtMs),
       }),
       Math.min(
@@ -565,11 +586,15 @@ async function handleClaim(
     );
     if (completed.status !== "claimed") throw workerError(completed.code, 409);
   }
-  const claimedByMediaAssetId = new Map(
-    begin.items.map((item) => [item.mediaAssetId, item] as const),
+  const claimedByMediaKey = new Map(
+    begin.items.map(
+      (item) => [`${item.mediaAssetId}#${item.variant}`, item] as const,
+    ),
   );
   const orderedClaimedItems = items.map((requested) => {
-    const claimed = claimedByMediaAssetId.get(requested.mediaAssetId);
+    const claimed = claimedByMediaKey.get(
+      `${requested.mediaAssetId}#${requested.variant}`,
+    );
     if (!claimed || claimed.generation !== requested.generation) {
       throw workerError("claim_response_mismatch", 409);
     }
@@ -582,6 +607,7 @@ async function handleClaim(
       publicMedia: orderedClaimedItems.map((item) => ({
         mediaAssetId: item.mediaAssetId,
         generation: item.generation,
+        ...(item.variant ? { variant: item.variant } : {}),
         sha256: item.sha256,
         sizeBytes: item.sizeBytes,
         width: item.width,
@@ -844,6 +870,7 @@ function isMediaCapability(
     isUuid(item.stagingSessionId) &&
     isUuid(item.mediaAssetId) &&
     isPositiveSafeInteger(item.generation) &&
+    (item.variant === undefined || isEphemeralMediaVariant(item.variant)) &&
     isCanonicalSha256(item.sha256) &&
     isPositiveSafeInteger(item.sizeBytes) &&
     item.sizeBytes <= EPHEMERAL_MEDIA_MAX_BYTES &&
@@ -891,6 +918,7 @@ function isStagingReceipt(
     isUuid(item.stagingSessionId) &&
     isUuid(item.mediaAssetId) &&
     isPositiveSafeInteger(item.generation) &&
+    (item.variant === undefined || isEphemeralMediaVariant(item.variant)) &&
     isCanonicalSha256(item.sha256) &&
     isPositiveSafeInteger(item.sizeBytes) &&
     item.sizeBytes <= EPHEMERAL_MEDIA_MAX_BYTES &&
@@ -912,7 +940,8 @@ function assertMediaRoute(
   if (
     claims.stagingSessionId !== route.stagingSessionId ||
     claims.mediaAssetId !== route.mediaAssetId ||
-    claims.generation !== route.generation
+    claims.generation !== route.generation ||
+    (claims.variant ?? 0) !== route.variant
   )
     throw workerError("capability_invalid", 401);
 }
@@ -1015,7 +1044,8 @@ function parseClaimBody(
     !isUuid(item.publishId) ||
     !Array.isArray(item.stagingReceipts) ||
     item.stagingReceipts.length < 1 ||
-    item.stagingReceipts.length > EPHEMERAL_MEDIA_MAX_PER_SESSION ||
+    item.stagingReceipts.length >
+      EPHEMERAL_MEDIA_MAX_PER_SESSION * EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO ||
     item.stagingReceipts.some(
       (receipt) =>
         typeof receipt !== "string" ||

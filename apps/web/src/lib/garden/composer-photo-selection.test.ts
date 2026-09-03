@@ -38,10 +38,10 @@ describe("composer photo selection", () => {
     expect(isSupportedComposerPhoto(empty)).toBe(false);
     expect(isSupportedComposerPhoto(oversized)).toBe(false);
     expect(composerPhotoSelectionError(oversized)).toBe(
-      "Choose a photo up to 12 MB.",
+      "Choose a photo up to 50 MB.",
     );
     await expect(createComposerPhotoIntent(empty)).rejects.toThrow(
-      "Choose a photo up to 12 MB.",
+      "Choose a photo up to 50 MB.",
     );
   });
 

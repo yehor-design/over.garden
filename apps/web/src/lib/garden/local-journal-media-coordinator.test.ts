@@ -181,6 +181,7 @@ describe("local-only journal media coordinator", () => {
       stagingSessionId: SESSION_ID,
       mediaClaimReceipts: ["receipt-2", "receipt-1"],
       orderedMediaAssetIds: [MEDIA_2, MEDIA_1],
+      mediaPlaceholders: {},
     });
   });
 
@@ -231,6 +232,7 @@ describe("local-only journal media coordinator", () => {
       stagingSessionId: SESSION_ID,
       mediaClaimReceipts: ["receipt-8"],
       orderedMediaAssetIds: [MEDIA_1],
+      mediaPlaceholders: {},
     });
     expect(stager.stage).toHaveBeenCalledWith(
       expect.objectContaining({ mediaAssetId: MEDIA_1, generation: 8 }),
@@ -268,6 +270,7 @@ describe("local-only journal media coordinator", () => {
       stagingSessionId: SESSION_ID,
       mediaClaimReceipts: [],
       orderedMediaAssetIds: [MEDIA_1],
+      mediaPlaceholders: {},
     });
     expect(encoder.encode).not.toHaveBeenCalled();
     expect(stager.stage).not.toHaveBeenCalled();
@@ -446,6 +449,79 @@ describe("local-only journal media coordinator", () => {
   });
 });
 
+describe("local-only journal media coordinator: variants and preview (OVE-371)", () => {
+  it("shows the preview before the final encode, stages the variants after the primary, and freezes every receipt", async () => {
+    const previewBlob = new Blob([new Uint8Array([1])], { type: "image/webp" });
+    const encoded = encodedImage([2]);
+    const variant1280 = new Blob([new Uint8Array([3])], { type: "image/webp" });
+    const variant480 = new Blob([new Uint8Array([4])], { type: "image/webp" });
+    encoded.variants = [
+      { longEdge: 1280, width: 1280, height: 853, blob: variant1280, sha256: "B".repeat(43) + "=" },
+      { longEdge: 480, width: 480, height: 320, blob: variant480, sha256: "C".repeat(43) + "=" },
+    ];
+    encoded.placeholderDataUri = "data:image/webp;base64,UklGRg==";
+    let previewSeen: { status: string; previewUrl: string | null } | null = null;
+    const encoder: LocalJournalImageEncoder = {
+      encode: vi.fn(async (input) => {
+        input.onPhase("decoding");
+        input.onPreview?.({ blob: previewBlob, width: 480, height: 320 });
+        previewSeen = {
+          status: coordinator.getSnapshot().items[0]!.status,
+          previewUrl: coordinator.getSnapshot().items[0]!.previewUrl,
+        };
+        input.onPhase("encoding");
+        return encoded;
+      }),
+    };
+    const stager: LocalJournalMediaStager = {
+      stage: vi.fn(async ({ variant }) => ({
+        stagingReceipt: `receipt-${variant ?? 0}`,
+        deleteCapability: `delete-${variant ?? 0}`,
+      })),
+      delete: vi.fn(async () => undefined),
+    };
+    const revokeObjectURL = vi.fn();
+    const coordinator = new LocalJournalMediaCoordinator({
+      stagingSessionId: SESSION_ID,
+      encoder,
+      stager,
+      createObjectURL: vi.fn((blob: Blob) =>
+        blob === previewBlob ? "blob:preview" : "blob:final",
+      ),
+      revokeObjectURL,
+      createId: idSequence(MEDIA_1),
+    });
+
+    const selection = coordinator.add(photo([9]), { blockId: "b_first" });
+    await selection.ready;
+
+    expect(previewSeen).toEqual({ status: "decoding", previewUrl: "blob:preview" });
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+    expect(coordinator.getSnapshot().items[0]).toMatchObject({
+      status: "ready",
+      previewUrl: "blob:final",
+      width: 1200,
+      height: 800,
+    });
+    expect(stager.stage).toHaveBeenCalledTimes(3);
+    expect(
+      (stager.stage as ReturnType<typeof vi.fn>).mock.calls.map(
+        ([call]) => [call.variant, call.blob, call.width],
+      ),
+    ).toEqual([
+      [0, encoded.blob, 1200],
+      [1280, variant1280, 1280],
+      [480, variant480, 480],
+    ]);
+    await expect(coordinator.freeze([MEDIA_1])).resolves.toEqual({
+      stagingSessionId: SESSION_ID,
+      mediaClaimReceipts: ["receipt-0", "receipt-1280", "receipt-480"],
+      orderedMediaAssetIds: [MEDIA_1],
+      mediaPlaceholders: { [MEDIA_1]: "data:image/webp;base64,UklGRg==" },
+    });
+  });
+});
+
 function encodedImage(bytes: number[]): EncodedJournalImage {
   const blob = new Blob([new Uint8Array(bytes)], { type: "image/webp" });
   return {
@@ -453,9 +529,11 @@ function encodedImage(bytes: number[]): EncodedJournalImage {
     width: 1200,
     height: 800,
     sha256: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    variants: [],
+    placeholderDataUri: null,
     sourceKind: "jpeg",
     lossless: false,
-    quality: 82,
+    quality: 85,
     durationMs: 12,
   };
 }

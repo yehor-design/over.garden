@@ -35,6 +35,7 @@ export async function POST(request: Request) {
             stagingSessionId: reservation.stagingSessionId,
             mediaAssetId: reservation.mediaAssetId,
             generation: reservation.generation,
+            variant: reservation.variant,
           },
           uploadCapability: issued.capability,
           expiresAtSeconds: issued.expiresAtSeconds,

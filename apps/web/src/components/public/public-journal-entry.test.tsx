@@ -144,6 +144,8 @@ const objectPage: PublicJournalEntryPage = {
       focalY: 0.5,
       intrinsicWidth: 1200,
       intrinsicHeight: 900,
+      placeholderDataUri: null,
+      variantLongEdges: [],
     },
     {
       id: "media-2",
@@ -154,6 +156,8 @@ const objectPage: PublicJournalEntryPage = {
       focalY: 0.75,
       intrinsicWidth: 800,
       intrinsicHeight: 1200,
+      placeholderDataUri: null,
+      variantLongEdges: [],
     },
   ],
 };

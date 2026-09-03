@@ -13,6 +13,14 @@ Authority: additive `media_assets` focal/intrinsic columns + shared presentation
 - Invalid/out-of-range focal → center fail-closed.
 - Browser codec policy rejects images outside the bounded final-WebP dimensions;
   there is no separate server quality-admission gate.
+- `media_assets.placeholder_data_uri` (OVE-371) — a 16 px WebP data URI, at
+  most 400 bytes, painted behind the `<img>` until it loads.
+- `media_assets.variant_long_edges` (OVE-371) — which of the 1280/480 variants
+  were promoted next to the primary; keys are derived, never stored twice.
+- `SubjectAwareMediaImage` is a plain `<img>` since OVE-371: `srcSet` comes
+  from `buildPublicMediaSourceSet` (variant widths at the encoder's rounding,
+  primary last), `sizes` stays with the call site, `fill`/`priority` keep their
+  `next/image` meaning.
 
 ## Surfaces
 
@@ -29,6 +37,8 @@ Meilisearch does **not** store focal fields (no matching redeploy). Discovery ca
 ## Production catch-up
 
 Apply `apps/web/sql/0006_ove197_media_focal_presentation.sql` once per environment.
+Apply `apps/web/sql/0047_ove371_media_variants.sql` for the placeholder and
+variant columns; the deploy is safe before it (the columns are probed).
 
 ## Smoke
 

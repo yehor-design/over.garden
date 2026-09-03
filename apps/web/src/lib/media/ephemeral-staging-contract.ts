@@ -6,7 +6,18 @@ export const EPHEMERAL_MEDIA_TERMINAL_RETENTION_SECONDS = 24 * 60 * 60;
 export const EPHEMERAL_MEDIA_MAX_BYTES = 32 * 1024 * 1024;
 export const EPHEMERAL_MEDIA_MAX_DIMENSION = 16_384;
 export const EPHEMERAL_MEDIA_MAX_PIXELS = 40_000_000;
+/** Photos (primary objects) per staging session; variants do not count. */
 export const EPHEMERAL_MEDIA_MAX_PER_SESSION = 10;
+/**
+ * The smaller renditions the browser encodes next to the 2560 primary
+ * (ADR-0022, D2). `0` is the primary; a variant is named by its long edge.
+ */
+export const EPHEMERAL_MEDIA_VARIANT_LONG_EDGES = [1280, 480] as const;
+/** Primary plus every variant: the most objects one photo can stage. */
+export const EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO =
+  1 + EPHEMERAL_MEDIA_VARIANT_LONG_EDGES.length;
+/** A 16 px WebP data URI; anything larger is not a placeholder. */
+export const EPHEMERAL_MEDIA_PLACEHOLDER_MAX_BYTES = 400;
 export const EPHEMERAL_MEDIA_OWNER_MAX_ACTIVE_SESSIONS = 3;
 export const EPHEMERAL_MEDIA_OWNER_UPLOADS_PER_MINUTE = 20;
 export const EPHEMERAL_MEDIA_UPLOAD_DEADLINE_MS = 120_000;
@@ -46,10 +57,21 @@ export type EphemeralMediaCommitStatus =
   | "absent"
   | "indeterminate";
 
+export type EphemeralMediaVariant =
+  | 0
+  | (typeof EPHEMERAL_MEDIA_VARIANT_LONG_EDGES)[number];
+
 export interface EphemeralMediaReservationRequest {
   stagingSessionId: string;
   mediaAssetId: string;
   generation: number;
+  /**
+   * `0` for the primary WebP; the long edge (1280, 480) for a variant.
+   * Absent on the wire means the primary (reservations and receipts issued
+   * before variants existed carry no field); `parseEphemeralMediaReservation`
+   * always fills it in.
+   */
+  variant?: EphemeralMediaVariant;
   sha256: string;
   sizeBytes: number;
   width: number;
@@ -99,11 +121,45 @@ const RESERVATION_KEYS = new Set([
   "stagingSessionId",
   "mediaAssetId",
   "generation",
+  "variant",
   "sha256",
   "sizeBytes",
   "width",
   "height",
 ]);
+
+export function isEphemeralMediaVariant(
+  value: unknown,
+): value is EphemeralMediaVariant {
+  return (
+    value === 0 ||
+    (EPHEMERAL_MEDIA_VARIANT_LONG_EDGES as readonly number[]).includes(
+      value as number,
+    )
+  );
+}
+
+/** The R2 key a staged object is promoted to when its entry commits. */
+export function ephemeralMediaPublicKey(input: {
+  mediaAssetId: string;
+  generation: number;
+  variant: EphemeralMediaVariant;
+}): string {
+  return `derivatives/${input.mediaAssetId}/${input.generation}${input.variant ? `-${input.variant}` : ""}.webp`;
+}
+
+const PLACEHOLDER_DATA_URI = /^data:image\/webp;base64,([A-Za-z0-9+/]+={0,2})$/;
+
+/** A tiny inline WebP the page paints before the real image loads. */
+export function isEphemeralMediaPlaceholderDataUri(
+  value: unknown,
+): value is string {
+  if (typeof value !== "string") return false;
+  const match = PLACEHOLDER_DATA_URI.exec(value);
+  if (!match || match[1].length % 4 !== 0) return false;
+  const bytes = (match[1].length / 4) * 3 - (match[1].endsWith("==") ? 2 : match[1].endsWith("=") ? 1 : 0);
+  return bytes > 0 && bytes <= EPHEMERAL_MEDIA_PLACEHOLDER_MAX_BYTES;
+}
 
 export function parseEphemeralMediaReservation(
   value: unknown,
@@ -114,6 +170,8 @@ export function parseEphemeralMediaReservation(
     stagingSessionId: value.stagingSessionId,
     mediaAssetId: value.mediaAssetId,
     generation: value.generation,
+    // Reservations written before variants existed carry no `variant`.
+    variant: value.variant === undefined ? 0 : value.variant,
     sha256: value.sha256,
     sizeBytes: value.sizeBytes,
     width: value.width,
@@ -123,6 +181,7 @@ export function parseEphemeralMediaReservation(
     !isUuid(result.stagingSessionId) ||
     !isUuid(result.mediaAssetId) ||
     !isPositiveSafeInteger(result.generation) ||
+    !isEphemeralMediaVariant(result.variant) ||
     !isCanonicalSha256(result.sha256) ||
     !isPositiveSafeInteger(result.sizeBytes) ||
     result.sizeBytes > EPHEMERAL_MEDIA_MAX_BYTES ||
@@ -218,6 +277,8 @@ export interface EphemeralMediaUploadBinding {
   stagingSessionId: string;
   mediaAssetId: string;
   generation: number;
+  /** Absent or `0` for the primary; the long edge for a variant. */
+  variant?: EphemeralMediaVariant;
 }
 
 /**
@@ -244,7 +305,8 @@ export function isEphemeralMediaCapabilityToken(
 export function ephemeralMediaUploadPath(
   binding: EphemeralMediaUploadBinding,
 ): string {
-  return `/v1/staging/${binding.stagingSessionId}/${binding.mediaAssetId}/${binding.generation}`;
+  const base = `/v1/staging/${binding.stagingSessionId}/${binding.mediaAssetId}/${binding.generation}`;
+  return binding.variant ? `${base}/v${binding.variant}` : base;
 }
 
 /**

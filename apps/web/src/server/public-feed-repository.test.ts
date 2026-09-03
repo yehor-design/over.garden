@@ -334,6 +334,8 @@ describe("public feed repository", () => {
         focalY: 0.5,
         intrinsicWidth: 800,
         intrinsicHeight: 600,
+        placeholderDataUri: null,
+        variantLongEdges: [],
       },
       {
         id: "00000000-0000-4000-8000-000000000202",
@@ -342,6 +344,8 @@ describe("public feed repository", () => {
         focalY: 0.5,
         intrinsicWidth: 800,
         intrinsicHeight: 600,
+        placeholderDataUri: null,
+        variantLongEdges: [],
       },
     ]);
     expect(page.entries[1].object.safeRegionCode).toBeNull();

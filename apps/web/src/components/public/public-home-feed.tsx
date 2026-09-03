@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
+import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import {
   SiteShellContextRailModules,
   SiteShellContextRailRegistration,
@@ -384,6 +385,8 @@ function FeedMediaGrid({ entry }: { entry: PublicFeedEntry }) {
         >
           <SubjectAwareMediaImage
             src={item.publicUrl}
+            srcSet={buildPublicMediaSourceSet(item).srcSet}
+            placeholderDataUri={item.placeholderDataUri}
             alt={`${entry.object.displayName}: ${entry.title}`}
             fill
             sizes="(max-width: 767px) 100vw, 680px"

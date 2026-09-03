@@ -51,6 +51,15 @@ import {
 import { bytesToBase64Url } from "@/lib/media/ephemeral-staging-contract";
 import { stableJson } from "@/lib/media/ephemeral-staging-crypto";
 import { getPublicDerivativeUrl } from "@/lib/storage";
+import {
+  EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO,
+  EPHEMERAL_MEDIA_MAX_PER_SESSION,
+  isEphemeralMediaPlaceholderDataUri,
+} from "@/lib/media/ephemeral-staging-contract";
+import {
+  listClaimedPublicPaths,
+  type ClaimedEphemeralPublicationMedia,
+} from "@/lib/media/claimed-media";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import {
   mutationScopeResponse,
@@ -166,6 +175,9 @@ async function createEntry(request: Request, scope: RequestScope) {
             stagingReceipts: body.mediaClaimReceipts,
             orderedMediaAssetIds,
           });
+    if (handoff) {
+      attachMediaPlaceholders(handoff.publicMedia, body.mediaPlaceholders);
+    }
     const requestDigest = await atomicRequestDigest({
       ...body,
       document,
@@ -302,6 +314,7 @@ function parseAtomicJournalCreateRequest(
     "document",
     "coverMediaAssetId",
     "mediaClaimReceipts",
+    "mediaPlaceholders",
     "returnTo",
     "disclosureAccepted",
   ]);
@@ -318,11 +331,13 @@ function parseAtomicJournalCreateRequest(
     !isRecord(value.document) ||
     !(value.coverMediaAssetId === null || isUuid(value.coverMediaAssetId)) ||
     !Array.isArray(value.mediaClaimReceipts) ||
-    value.mediaClaimReceipts.length > 10 ||
+    value.mediaClaimReceipts.length >
+      EPHEMERAL_MEDIA_MAX_PER_SESSION * EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO ||
     value.mediaClaimReceipts.some(
       (token) =>
         typeof token !== "string" || token.length < 40 || token.length > 4096,
     ) ||
+    !isMediaPlaceholderMap(value.mediaPlaceholders) ||
     typeof value.returnTo !== "string" ||
     value.returnTo.length > 2_048 ||
     typeof value.disclosureAccepted !== "boolean"
@@ -590,10 +605,13 @@ function revalidateAtomicCreatePaths(
 }
 
 async function assertPublicMediaReady(
-  media: readonly { publicPath: string }[],
+  media: readonly {
+    publicPath: string;
+    variants?: readonly { publicPath: string }[];
+  }[],
 ) {
   await Promise.all(
-    media.map(async ({ publicPath }) => {
+    listClaimedPublicPaths(media).map(async (publicPath) => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5_000);
       try {
@@ -615,6 +633,31 @@ async function assertPublicMediaReady(
       }
     }),
   );
+}
+
+/** `mediaAssetId` → 16 px WebP data URI, at most one per staged photo. */
+function isMediaPlaceholderMap(
+  value: unknown,
+): value is Record<string, string> | undefined {
+  if (value === undefined) return true;
+  if (!isRecord(value)) return false;
+  const entries = Object.entries(value);
+  return (
+    entries.length <= EPHEMERAL_MEDIA_MAX_PER_SESSION &&
+    entries.every(
+      ([mediaAssetId, placeholder]) =>
+        isUuid(mediaAssetId) && isEphemeralMediaPlaceholderDataUri(placeholder),
+    )
+  );
+}
+
+function attachMediaPlaceholders(
+  media: readonly ClaimedEphemeralPublicationMedia[],
+  placeholders: Record<string, string> | undefined,
+) {
+  for (const item of media) {
+    item.placeholderDataUri = placeholders?.[item.mediaAssetId] ?? null;
+  }
 }
 
 function safeAtomicErrorCode(error: unknown) {

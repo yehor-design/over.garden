@@ -71,6 +71,7 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
             stagingSessionId: input.stagingSessionId,
             mediaAssetId: input.mediaAssetId,
             generation: input.generation,
+            variant: input.variant ?? 0,
             sha256: input.sha256,
             sizeBytes: input.blob.size,
             width: input.width,
@@ -91,6 +92,7 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
             stagingSessionId: input.stagingSessionId,
             mediaAssetId: input.mediaAssetId,
             generation: input.generation,
+            variant: input.variant ?? 0,
           },
           nowSeconds: Math.floor(Date.now() / 1_000),
         },
@@ -239,6 +241,7 @@ function identityKey(input: {
   stagingSessionId: string;
   mediaAssetId: string;
   generation: number;
+  variant?: number;
 }) {
-  return `${input.stagingSessionId}:${input.mediaAssetId}:${input.generation}`;
+  return `${input.stagingSessionId}:${input.mediaAssetId}:${input.generation}:${input.variant ?? 0}`;
 }

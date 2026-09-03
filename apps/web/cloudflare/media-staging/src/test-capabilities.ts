@@ -4,6 +4,7 @@ import {
   bytesToBase64Url,
   type EphemeralMediaCapabilityClaims,
   type EphemeralMediaSessionCapabilityClaims,
+  type EphemeralMediaVariant,
 } from "../../../src/lib/media/ephemeral-staging-contract";
 import {
   deriveEphemeralMediaOwnerSubjectHash,
@@ -24,6 +25,8 @@ export async function issueWorkerUploadCapabilityForTest(
     stagingSessionId: string;
     mediaAssetId: string;
     generation: number;
+    /** Absent or 0 for the primary; the long edge for a variant. */
+    variant?: EphemeralMediaVariant;
     sha256: string;
     sizeBytes: number;
     width: number;
@@ -44,6 +47,7 @@ export async function issueWorkerUploadCapabilityForTest(
     stagingSessionId: input.stagingSessionId,
     mediaAssetId: input.mediaAssetId,
     generation: input.generation,
+    ...(input.variant ? { variant: input.variant } : {}),
     sha256: input.sha256,
     sizeBytes: input.sizeBytes,
     width: input.width,

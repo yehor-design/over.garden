@@ -34,6 +34,64 @@ function reservationFixture(
 }
 
 describe("BrowserEphemeralMediaStager", () => {
+  it("reserves a variant with its long edge and uploads it to the variant path (OVE-371)", async () => {
+    const nowSeconds = Math.floor(Date.now() / 1_000);
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        Response.json(
+          buildEphemeralMediaUploadReservation({
+            stagingOrigin: "https://media-stage.over.garden",
+            binding: {
+              stagingSessionId: SESSION,
+              mediaAssetId: ID,
+              generation: 1,
+              variant: 1280,
+            },
+            uploadCapability: "u".repeat(40),
+            expiresAtSeconds: nowSeconds + 900,
+            nowSeconds,
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        Response.json(
+          {
+            status: "staged",
+            stagingReceipt: "v".repeat(40),
+            deleteCapability: "w".repeat(40),
+          },
+          { status: 201 },
+        ),
+      );
+    const stager = new BrowserEphemeralMediaStager({ fetcher });
+
+    await expect(
+      stager.stage({
+        stagingSessionId: SESSION,
+        mediaAssetId: ID,
+        generation: 1,
+        variant: 1280,
+        blob: new Blob([new Uint8Array([82, 73, 70, 70])], {
+          type: "image/webp",
+        }),
+        sha256: SHA,
+        width: 1280,
+        height: 960,
+        signal: new AbortController().signal,
+      }),
+    ).resolves.toEqual({
+      stagingReceipt: "v".repeat(40),
+      deleteCapability: "w".repeat(40),
+    });
+    expect(
+      JSON.parse(String((fetcher.mock.calls[0]![1] as RequestInit).body)),
+    ).toMatchObject({ variant: 1280, width: 1280, height: 960 });
+    expect(fetcher.mock.calls[1]![0]).toBe(
+      `https://media-stage.over.garden/v1/staging/${SESSION}/${ID}/1/v1280`,
+    );
+  });
+
   it("reserves with JSON and sends the WebP bytes directly to the Worker origin", async () => {
     const fetcher = vi
       .fn<typeof fetch>()

@@ -70,7 +70,12 @@ retry controls.
   styles, SVG, handlers, remote images, URI-list drops, and unsupported
   presentation cannot cause external I/O.
 - Only local image files enter the shared admission controller. Ten concurrent
-  reservations may win; the eleventh is rejected synchronously.
+  reservations may win; the eleventh is rejected synchronously. A photo may be
+  up to 50 MB; the browser decodes it natively (downscaling while it decodes)
+  and shows a 480 px preview before the final 2560 WebP, its 1280/480
+  variants, and the 16 px placeholder are encoded and staged (OVE-371). The
+  jsquash/libheif fallback is used only for lossless plans, HEIC the browser
+  cannot decode, or browsers without native WebP encoding.
 - Object URLs have one controller owner and are revoked on removal, cancellation,
   owner/document transition, and unmount.
 - Server orphan classification reads normalized `JournalDocumentV1`

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
+import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import {
   SiteShellContextRailModules,
   SiteShellContextRailRegistration,
@@ -474,6 +475,8 @@ function ResultMedia({
         >
           <SubjectAwareMediaImage
             src={item.publicUrl}
+            srcSet={buildPublicMediaSourceSet(item).srcSet}
+            placeholderDataUri={item.placeholderDataUri}
             alt={`${card.object.displayName}: ${card.title}`}
             fill
             sizes="(max-width: 767px) 100vw, 192px"

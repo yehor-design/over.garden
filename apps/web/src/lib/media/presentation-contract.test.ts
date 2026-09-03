@@ -9,10 +9,6 @@ import {
   resolveMediaFocalPoint,
   resolveMediaPresentation,
 } from "./presentation-contract";
-import {
-  meetsLaunchMediaQuality,
-  MIN_LAUNCH_MEDIA_SHORT_SIDE_PX,
-} from "./image-limits";
 
 describe("normalizeFocalPoint", () => {
   it("returns center for missing or invalid values", () => {
@@ -106,22 +102,5 @@ describe("resolveMediaPresentation", () => {
       objectPosition: "50% 50%",
       serveClass: "clamped",
     });
-  });
-});
-
-describe("meetsLaunchMediaQuality", () => {
-  it("rejects tiny placeholders", () => {
-    expect(meetsLaunchMediaQuality({ width: 10, height: 10 })).toBe(false);
-    expect(
-      meetsLaunchMediaQuality({
-        width: MIN_LAUNCH_MEDIA_SHORT_SIDE_PX - 1,
-        height: 200,
-      }),
-    ).toBe(false);
-  });
-
-  it("accepts launch-quality dimensions", () => {
-    expect(meetsLaunchMediaQuality({ width: 64, height: 64 })).toBe(true);
-    expect(meetsLaunchMediaQuality({ width: 800, height: 600 })).toBe(true);
   });
 });

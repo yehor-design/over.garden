@@ -20,6 +20,14 @@ import { stableJson } from "@/lib/media/ephemeral-staging-crypto";
 import { localizedPath, PUBLIC_LOCALES } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
+  claimedMediaFromPhotos,
+  listClaimedPublicPaths,
+} from "@/lib/media/claimed-media";
+import {
+  EPHEMERAL_MEDIA_MAX_PER_SESSION,
+  isEphemeralMediaPlaceholderDataUri,
+} from "@/lib/media/ephemeral-staging-contract";
+import {
   BoundedJsonPayloadTooLargeError,
   readBoundedJsonRequest,
 } from "@/server/bounded-json-request";
@@ -154,15 +162,7 @@ export async function PATCH(
             ownerUserId: admission.scope.userId,
             stagingReceipts: body.newMediaClaimReceipts,
           });
-    const verifiedMedia = (verified?.media ?? []).map((media) => ({
-      mediaAssetId: media.mediaAssetId,
-      generation: media.generation,
-      sha256: media.sha256,
-      sizeBytes: media.sizeBytes,
-      width: media.width,
-      height: media.height,
-      publicPath: `derivatives/${media.mediaAssetId}/${media.generation}.webp`,
-    }));
+    const verifiedMedia = claimedMediaFromPhotos(verified?.photos ?? []);
     validateAtomicJournalEditMediaPlan({
       currentMedia: baseline.media,
       finalMediaAssetIds,
@@ -178,11 +178,17 @@ export async function PATCH(
           publishId: entryId,
           stagingSessionId: verified.stagingSessionId,
           stagingReceipts: body.newMediaClaimReceipts,
-          orderedMediaAssetIds: verified.media.map(
-            (media) => media.mediaAssetId,
+          orderedMediaAssetIds: verified.photos.map(
+            (photo) => photo.primary.mediaAssetId,
           ),
         })
       : null;
+    if (handoff) {
+      for (const item of handoff.publicMedia) {
+        item.placeholderDataUri =
+          body.mediaPlaceholders?.[item.mediaAssetId] ?? null;
+      }
+    }
     const result = await updateAtomicJournalEntry(admission.scope, {
       entryId,
       mutationPrefix,
@@ -262,6 +268,7 @@ function parseAtomicJournalEditRequest(
     "document",
     "coverMediaAssetId",
     "newMediaClaimReceipts",
+    "mediaPlaceholders",
     "retainedMediaAssetIds",
     "removedMediaAssetIds",
     "focalPoints",
@@ -284,6 +291,7 @@ function parseAtomicJournalEditRequest(
     !isRecord(value.document) ||
     !(value.coverMediaAssetId === null || isUuid(value.coverMediaAssetId)) ||
     !validTokenList(value.newMediaClaimReceipts) ||
+    !validPlaceholderMap(value.mediaPlaceholders) ||
     !validUuidList(value.retainedMediaAssetIds, 11) ||
     !validUuidList(value.removedMediaAssetIds, 11) ||
     !validFocalPoints(value.focalPoints) ||
@@ -371,10 +379,13 @@ function buildAtomicEditResponse(
 }
 
 async function assertPublicMediaReady(
-  media: readonly { publicPath: string }[],
+  media: readonly {
+    publicPath: string;
+    variants?: readonly { publicPath: string }[];
+  }[],
 ) {
   await Promise.all(
-    media.map(async ({ publicPath }) => {
+    listClaimedPublicPaths(media).map(async (publicPath) => {
       const response = await fetch(getPublicDerivativeUrl(publicPath), {
         method: "HEAD",
         redirect: "error",
@@ -388,6 +399,19 @@ async function assertPublicMediaReady(
         throw new Error("public_media_not_ready");
       }
     }),
+  );
+}
+
+function validPlaceholderMap(value: unknown) {
+  if (value === undefined) return true;
+  if (!isRecord(value)) return false;
+  const entries = Object.entries(value);
+  return (
+    entries.length <= EPHEMERAL_MEDIA_MAX_PER_SESSION &&
+    entries.every(
+      ([mediaAssetId, placeholder]) =>
+        isUuid(mediaAssetId) && isEphemeralMediaPlaceholderDataUri(placeholder),
+    )
   );
 }
 

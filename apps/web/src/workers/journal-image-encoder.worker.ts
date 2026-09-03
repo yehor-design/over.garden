@@ -1,9 +1,10 @@
 /// <reference lib="webworker" />
 
-import { encodeJournalImageToWebp } from "@/lib/media/journal-image-codec";
+import { encodeJournalImage } from "@/lib/media/journal-image-codec";
 import type {
   JournalImageEncoderErrorMessage,
   JournalImageEncoderPhaseMessage,
+  JournalImageEncoderPreviewMessage,
   JournalImageEncoderResultMessage,
   JournalImageEncoderStartMessage,
 } from "@/lib/media/journal-image-encoder-protocol";
@@ -21,14 +22,25 @@ workerScope.addEventListener(
 async function encode(input: JournalImageEncoderStartMessage) {
   const startedAt = performance.now();
   try {
-    const result = await encodeJournalImageToWebp(input.source, (phase) => {
-      const message: JournalImageEncoderPhaseMessage = {
-        type: "phase",
-        mediaAssetId: input.mediaAssetId,
-        generation: input.generation,
-        phase,
-      };
-      workerScope.postMessage(message);
+    const result = await encodeJournalImage(input.source, {
+      onPhase: (phase) => {
+        const message: JournalImageEncoderPhaseMessage = {
+          type: "phase",
+          mediaAssetId: input.mediaAssetId,
+          generation: input.generation,
+          phase,
+        };
+        workerScope.postMessage(message);
+      },
+      onPreview: (preview) => {
+        const message: JournalImageEncoderPreviewMessage = {
+          type: "preview",
+          mediaAssetId: input.mediaAssetId,
+          generation: input.generation,
+          ...preview,
+        };
+        workerScope.postMessage(message, [message.bytes]);
+      },
     });
     const message: JournalImageEncoderResultMessage = {
       type: "result",
@@ -37,7 +49,10 @@ async function encode(input: JournalImageEncoderStartMessage) {
       ...result,
       durationMs: Math.round(performance.now() - startedAt),
     };
-    workerScope.postMessage(message, [message.bytes]);
+    workerScope.postMessage(message, [
+      message.bytes,
+      ...message.variants.map((variant) => variant.bytes),
+    ]);
   } catch (error) {
     const message: JournalImageEncoderErrorMessage = {
       type: "error",

@@ -136,6 +136,8 @@ const page: PublicFeedPage = {
           focalY: 0.5,
           intrinsicWidth: 800,
           intrinsicHeight: 600,
+          placeholderDataUri: null,
+          variantLongEdges: [],
         },
         {
           id: "media-2",
@@ -144,6 +146,8 @@ const page: PublicFeedPage = {
           focalY: 0.5,
           intrinsicWidth: 800,
           intrinsicHeight: 600,
+          placeholderDataUri: null,
+          variantLongEdges: [],
         },
         {
           id: "media-3",
@@ -152,6 +156,8 @@ const page: PublicFeedPage = {
           focalY: 0.5,
           intrinsicWidth: 800,
           intrinsicHeight: 600,
+          placeholderDataUri: null,
+          variantLongEdges: [],
         },
       ],
       topics: [{ slug: "winter-care", label: "Зимовий догляд" }],

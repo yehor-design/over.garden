@@ -7,8 +7,25 @@ import type { Database, MediaAsset } from "@/db/schema";
 import type { RequestScope } from "@/server/request-scope";
 import { recordPublicProjectionIntent } from "@/server/search/public-projection-outbox";
 import type { ClaimedEphemeralPublicationMedia } from "@/server/media/ephemeral-publication-handoff";
+import { mediaVariantColumnsAvailable } from "@/server/media/media-variant-schema";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
+
+/**
+ * The OVE-371 columns, written only once migration 0047 is live (see
+ * `mediaVariantColumnsAvailable`). `variant_long_edges` records which
+ * variants were promoted so revoke and delivery can derive their keys.
+ */
+function claimedMediaVariantColumns(
+  media: ClaimedEphemeralPublicationMedia,
+  variantColumns: boolean,
+) {
+  if (!variantColumns) return {};
+  return {
+    placeholder_data_uri: media.placeholderDataUri ?? null,
+    variant_long_edges: (media.variants ?? []).map((item) => item.variant),
+  };
+}
 
 export function buildInsertClaimedEphemeralMediaQuery(
   executor: QueryExecutor,
@@ -18,6 +35,7 @@ export function buildInsertClaimedEphemeralMediaQuery(
     media: ClaimedEphemeralPublicationMedia;
     documentPosition: number | null;
     usageRole: "inline" | "cover_only";
+    variantColumns?: boolean;
   },
 ) {
   return executor
@@ -36,6 +54,7 @@ export function buildInsertClaimedEphemeralMediaQuery(
       usage_role: input.usageRole,
       document_position: input.documentPosition,
       updated_at: new Date(),
+      ...claimedMediaVariantColumns(input.media, input.variantColumns ?? false),
     })
     .returningAll();
 }
@@ -46,6 +65,7 @@ export function buildInsertClaimedEphemeralEditMediaQuery(
     ownerUserId: string;
     journalEntryId: string;
     media: ClaimedEphemeralPublicationMedia;
+    variantColumns?: boolean;
   },
 ) {
   return executor
@@ -64,6 +84,7 @@ export function buildInsertClaimedEphemeralEditMediaQuery(
       usage_role: "inline",
       document_position: null,
       updated_at: new Date(),
+      ...claimedMediaVariantColumns(input.media, input.variantColumns ?? false),
     })
     .returningAll();
 }
@@ -76,6 +97,7 @@ export function buildReplaceClaimedEphemeralMediaQuery(
     priorGeneration: number;
     priorPublicPath: string;
     media: ClaimedEphemeralPublicationMedia;
+    variantColumns?: boolean;
   },
 ) {
   return executor
@@ -89,6 +111,7 @@ export function buildReplaceClaimedEphemeralMediaQuery(
       revoked_at: null,
       public_unreachable_at: null,
       updated_at: new Date(),
+      ...claimedMediaVariantColumns(input.media, input.variantColumns ?? false),
     })
     .where("id", "=", input.media.mediaAssetId)
     .where("owner_user_id", "=", input.ownerUserId)
@@ -120,6 +143,7 @@ export async function insertClaimedEphemeralMediaForEntry(
   const positionById = new Map(
     input.orderedInlineMediaAssetIds.map((id, index) => [id, index + 1]),
   );
+  const variantColumns = await mediaVariantColumnsAvailable(executor);
   for (const media of input.media) {
     const documentPosition = positionById.get(media.mediaAssetId) ?? null;
     const inserted = await buildInsertClaimedEphemeralMediaQuery(executor, {
@@ -128,6 +152,7 @@ export async function insertClaimedEphemeralMediaForEntry(
       media,
       documentPosition,
       usageRole: documentPosition === null ? "cover_only" : "inline",
+      variantColumns,
     }).executeTakeFirst();
     if (!inserted) throw new Error("claimed_media_insert_failed");
   }

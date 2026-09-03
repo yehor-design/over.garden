@@ -91,6 +91,14 @@ export class BrowserJournalImageEncoder implements LocalJournalImageEncoder {
           input.onPhase(message.phase);
           return;
         }
+        if (message.type === "preview") {
+          input.onPreview?.({
+            blob: new Blob([message.bytes], { type: "image/webp" }),
+            width: message.width,
+            height: message.height,
+          });
+          return;
+        }
         if (message.type === "error") {
           finish({
             type: "reject",
@@ -112,9 +120,18 @@ export class BrowserJournalImageEncoder implements LocalJournalImageEncoder {
               width: message.width,
               height: message.height,
               sha256: message.sha256,
+              variants: (message.variants ?? []).map((variant) => ({
+                longEdge: variant.longEdge,
+                width: variant.width,
+                height: variant.height,
+                blob: new Blob([variant.bytes], { type: "image/webp" }),
+                sha256: variant.sha256,
+              })),
+              placeholderDataUri: message.placeholderDataUri ?? null,
               sourceKind: message.sourceKind,
               lossless: message.lossless,
               quality: message.quality,
+              codecPath: message.codecPath ?? "fallback",
               durationMs: message.durationMs,
             },
           });

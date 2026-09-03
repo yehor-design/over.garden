@@ -15,15 +15,34 @@ export type LocalJournalMediaStatus =
   | "ready"
   | "failed";
 
+export interface EncodedJournalImageVariant {
+  longEdge: number;
+  width: number;
+  height: number;
+  blob: Blob;
+  sha256: string;
+}
+
 export interface EncodedJournalImage {
   blob: Blob;
   width: number;
   height: number;
   sha256: string;
+  /** Smaller variants (1280, 480 long edge) the source was large enough for. */
+  variants?: EncodedJournalImageVariant[];
+  /** A 16 px WebP data URI shown until the real image loads, or null. */
+  placeholderDataUri?: string | null;
   sourceKind: ClientImageSourceKind;
   lossless: boolean;
   quality: number;
+  codecPath?: "native" | "fallback";
   durationMs: number;
+}
+
+export interface EncodedJournalImagePreview {
+  blob: Blob;
+  width: number;
+  height: number;
 }
 
 export interface LocalJournalImageEncoder {
@@ -33,6 +52,8 @@ export interface LocalJournalImageEncoder {
     generation: number;
     signal: AbortSignal;
     onPhase(phase: LocalJournalMediaPhase): void;
+    /** Called once with a small preview before the final encode completes. */
+    onPreview?(preview: EncodedJournalImagePreview): void;
   }): Promise<EncodedJournalImage>;
 }
 
@@ -41,6 +62,8 @@ export interface LocalJournalMediaStager {
     stagingSessionId: string;
     mediaAssetId: string;
     generation: number;
+    /** Absent or 0 for the primary WebP; the long edge (1280, 480) for a variant. */
+    variant?: 0 | 1280 | 480;
     blob: Blob;
     sha256: string;
     width: number;
@@ -119,6 +142,9 @@ interface InternalItem {
   height: number | null;
   failureCode: string | null;
   stagingReceipt: string | null;
+  /** Receipts of the staged variants, largest first. */
+  variantReceipts: string[];
+  placeholderDataUri: string | null;
   deleteCapability: string | null;
   controller: AbortController;
   operation: InternalGeneration;
@@ -168,6 +194,8 @@ export class LocalJournalMediaCoordinator {
         height: existing.height,
         failureCode: null,
         stagingReceipt: null,
+        variantReceipts: [],
+        placeholderDataUri: null,
         deleteCapability: null,
         controller: new AbortController(),
         operation,
@@ -215,6 +243,8 @@ export class LocalJournalMediaCoordinator {
       height: null,
       failureCode: null,
       stagingReceipt: null,
+      variantReceipts: [],
+      placeholderDataUri: null,
       deleteCapability: null,
       controller: new AbortController(),
       operation,
@@ -251,6 +281,8 @@ export class LocalJournalMediaCoordinator {
       height: null,
       failureCode: null,
       stagingReceipt: null,
+      variantReceipts: [],
+      placeholderDataUri: null,
       deleteCapability: null,
       controller: new AbortController(),
       operation: createGeneration(),
@@ -280,6 +312,8 @@ export class LocalJournalMediaCoordinator {
       height: null,
       failureCode: null,
       stagingReceipt: null,
+      variantReceipts: [],
+      placeholderDataUri: null,
       deleteCapability: null,
       controller: new AbortController(),
       operation: createGeneration(),
@@ -303,8 +337,11 @@ export class LocalJournalMediaCoordinator {
 
   async freeze(mediaAssetIds: readonly string[]): Promise<{
     stagingSessionId: string;
+    /** Every receipt, each photo's primary first and its variants after it. */
     mediaClaimReceipts: string[];
     orderedMediaAssetIds: string[];
+    /** Blur placeholders of the staged photos, by media asset id. */
+    mediaPlaceholders: Record<string, string>;
   }> {
     this.assertMutable();
     this.publicationFrozen = true;
@@ -324,23 +361,27 @@ export class LocalJournalMediaCoordinator {
         };
       });
       await Promise.all(captured.map(({ ready }) => ready));
-      const receipts = captured
-        .map(({ mediaAssetId, generation }) => {
-          const item = this.requireItem(mediaAssetId);
-          if (item.generation !== generation || item.status !== "ready") {
-            throw new LocalJournalMediaError("media_not_ready");
-          }
-          if (item.origin === "existing") return null;
-          if (!item.stagingReceipt) {
-            throw new LocalJournalMediaError("media_not_ready");
-          }
-          return item.stagingReceipt;
-        })
-        .filter((receipt): receipt is string => receipt !== null);
+      const receipts: string[] = [];
+      const mediaPlaceholders: Record<string, string> = {};
+      for (const { mediaAssetId, generation } of captured) {
+        const item = this.requireItem(mediaAssetId);
+        if (item.generation !== generation || item.status !== "ready") {
+          throw new LocalJournalMediaError("media_not_ready");
+        }
+        if (item.origin === "existing") continue;
+        if (!item.stagingReceipt) {
+          throw new LocalJournalMediaError("media_not_ready");
+        }
+        receipts.push(item.stagingReceipt, ...item.variantReceipts);
+        if (item.placeholderDataUri) {
+          mediaPlaceholders[mediaAssetId] = item.placeholderDataUri;
+        }
+      }
       return {
         stagingSessionId: this.options.stagingSessionId,
         mediaClaimReceipts: receipts,
         orderedMediaAssetIds: [...mediaAssetIds],
+        mediaPlaceholders,
       };
     } catch (error) {
       this.publicationFrozen = false;
@@ -423,10 +464,22 @@ export class LocalJournalMediaCoordinator {
         generation: item.generation,
         signal: item.controller.signal,
         onPhase: (phase) => this.updateCurrent(item, { status: phase }),
+        onPreview: (preview) => {
+          // The decoded bitmap is on screen before the final encode finishes.
+          if (!this.isCurrent(item) || item.previewUrl) return;
+          item.previewOwned = true;
+          this.updateCurrent(item, {
+            previewUrl: this.createObjectURL(preview.blob),
+            width: preview.width,
+            height: preview.height,
+          });
+        },
       });
       this.assertCurrent(item);
+      this.revokePreview(item);
       const previewUrl = this.createObjectURL(encoded.blob);
       item.previewOwned = true;
+      item.placeholderDataUri = encoded.placeholderDataUri ?? null;
       this.updateCurrent(item, {
         status: "staging",
         previewUrl,
@@ -437,6 +490,7 @@ export class LocalJournalMediaCoordinator {
         stagingSessionId: this.options.stagingSessionId,
         mediaAssetId: item.mediaAssetId,
         generation: item.generation,
+        variant: 0,
         blob: encoded.blob,
         sha256: encoded.sha256,
         width: encoded.width,
@@ -444,8 +498,25 @@ export class LocalJournalMediaCoordinator {
         signal: item.controller.signal,
       });
       this.assertCurrent(item);
+      const variantReceipts: string[] = [];
+      for (const variant of encoded.variants ?? []) {
+        const stagedVariant = await this.options.stager.stage({
+          stagingSessionId: this.options.stagingSessionId,
+          mediaAssetId: item.mediaAssetId,
+          generation: item.generation,
+          variant: variant.longEdge as 1280 | 480,
+          blob: variant.blob,
+          sha256: variant.sha256,
+          width: variant.width,
+          height: variant.height,
+          signal: item.controller.signal,
+        });
+        this.assertCurrent(item);
+        variantReceipts.push(stagedVariant.stagingReceipt);
+      }
       item.status = "ready";
       item.stagingReceipt = staged.stagingReceipt;
+      item.variantReceipts = variantReceipts;
       item.deleteCapability = staged.deleteCapability;
       item.failureCode = null;
       this.publish();
