@@ -34,7 +34,7 @@ vi.mock("@/lib/stable-registry/feature-gate", () => ({
 vi.mock("@/server/stable-registry/release-repository", () => ({
   readStableRegistryReleaseCenter: mocks.readStableRegistryReleaseCenter,
 }));
-vi.mock("./release-center", () => ({
+vi.mock("../release-center", () => ({
   StableRegistryReleaseCenter: ({
     model,
   }: {
@@ -45,7 +45,7 @@ vi.mock("./release-center", () => ({
     </div>
   ),
 }));
-vi.mock("./actions", () => ({
+vi.mock("../actions", () => ({
   abandonFoundationReleaseAction: vi.fn(),
   activateFoundationReleaseAction: vi.fn(),
   approveFoundationPreviewAction: vi.fn(),

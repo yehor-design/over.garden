@@ -26,15 +26,15 @@ import {
   StableRegistryNavigation,
   StableRegistryShell,
   STABLE_REGISTRY_PATH,
-} from "./registry-shell";
+} from "../registry-shell";
 import {
   abandonFoundationReleaseAction,
   activateFoundationReleaseAction,
   approveFoundationPreviewAction,
   buildFoundationReleaseAction,
   decideFoundationExceptionGroupAction,
-} from "./actions";
-import { StableRegistryReleaseCenter } from "./release-center";
+} from "../actions";
+import { StableRegistryReleaseCenter } from "../release-center";
 
 /** The release center read walks the release, its exception groups, and the
  * capture aggregate: four round trips at worst. */

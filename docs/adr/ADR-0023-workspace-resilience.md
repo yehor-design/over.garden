@@ -106,6 +106,15 @@ records itself inside `settleSection`, where the driver code is still in hand.
 Decision point 6 above should be read as "server failures are recorded", with
 `instrumentation.ts` covering only the thrown half.
 
+**A `loading.tsx` covers its segment *and every child of it*.** That is what made
+the garden home's skeleton appear on the editions page, and the same trap was
+still set one level down after the first fix: `registry/loading.tsx` streamed the
+Foundation heading as the first thing a reader saw on the extensions and
+editions pages. Caught by reading the deployed HTML, not by a test. A page whose
+segment has children keeps its skeleton in a route group of its own — `(home)`
+for the workspace, `(center)` for the Release Center — and only a leaf may hold
+its `loading.tsx` directly.
+
 **A skeleton in the bytes is not a skeleton on screen.** A route with its own
 `loading.tsx` always writes that fallback into the HTML stream; React replaces
 it with a completion instruction. The check that means something is therefore

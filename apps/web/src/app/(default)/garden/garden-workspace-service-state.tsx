@@ -48,9 +48,7 @@ export function GardenWorkspaceServiceState({
         data-garden-service-state="true"
         className="border-y border-border bg-muted/20 px-4 py-3 sm:px-6 xl:hidden"
       >
-        <div
-          className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground"
-        >
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="size-4" aria-hidden="true" />
             {copy.composer.publicationNotice}
