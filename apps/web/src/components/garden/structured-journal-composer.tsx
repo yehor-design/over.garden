@@ -46,6 +46,10 @@ export interface StructuredJournalComposerLabels {
   imageChoose: string;
   imageUploading: string;
   imageFailed: string;
+  /** A dropped, pasted, or picked file over the 50 MiB limit (OVE-371). */
+  imageTooLarge: string;
+  /** A file that is not a JPEG, PNG, WebP, or HEIC photo. */
+  imageUnsupported: string;
   imageRetry: string;
   imageReplace: string;
   imageSetCover: string;

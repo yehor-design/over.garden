@@ -124,7 +124,13 @@ async function createEntry(request: Request, scope: RequestScope) {
     ) {
       orderedMediaAssetIds.push(body.coverMediaAssetId);
     }
-    if (orderedMediaAssetIds.length !== body.mediaClaimReceipts.length) {
+    // Each photo carries one primary receipt plus up to two variant receipts
+    // (OVE-371); the handoff verifies the exact grouping against this order.
+    if (
+      body.mediaClaimReceipts.length < orderedMediaAssetIds.length ||
+      body.mediaClaimReceipts.length >
+        orderedMediaAssetIds.length * EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO
+    ) {
       throw new AtomicJournalCreateError("atomic_media_set_mismatch", 400);
     }
 
