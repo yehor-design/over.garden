@@ -36,9 +36,9 @@ export type WorkspaceSection<T> =
 
 /**
  * What an operator gets to see about a failure, and nothing more. `digest` is
- * the reference the panel prints and `onRequestError` writes, so the person
- * reading the screen and the person reading the log are holding the same
- * string. `relation` is populated only for `schema_missing`, and only for
+ * the reference the panel prints and `recordWorkspaceSectionFailure` writes, so
+ * the person reading the screen and the person reading the log are holding the
+ * same string. `relation` is populated only for `schema_missing`, and only for
  * owner-only surfaces to render.
  */
 export interface WorkspaceFailureDescription {
