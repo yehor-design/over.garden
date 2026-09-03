@@ -124,3 +124,9 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   admin inside the product, and the engineering-minimum process. Supersedes
   the clauses it lists in ADR-0017, ADR-0018, ADR-0019, and the earlier
   `AGENTS.md`.
+- ADR-0023 — Workspace failures are rendered values, never thrown exceptions
+  (2026-09-03). Binding for every page under `/garden/**`: shell first, data in
+  streamed sections, one bounded failure vocabulary, per-surface skeletons, and
+  `onRequestError` instrumentation. Records the reproduced Cache Components
+  defect that makes `error.tsx` unreliable on a hard load. Accepted; OVE-374
+  implements it.

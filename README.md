@@ -2,7 +2,7 @@
 
 A gardening journal that doubles as a catalog-as-social-graph for Ukraine and Bulgaria. Users keep a growing journal; public variety/region pages aggregate real first-hand experience; a later lineage layer traces where plants came from.
 
-Status: pre-MVP, online-only, everything public. The current decisions are in `docs/adr/ADR-0022-owner-mvp-reset.md`; the stack detail is in `docs/TECH_STACK_DECISIONS.md`; live provider values are in `docs/INFRASTRUCTURE_REGISTRY.md`; product research is in `docs/product-research/README.md`.
+Status: pre-MVP, online-only, everything public. Start with `docs/PROJECT_STATE.md` — what is true in production, what is next, what is knowingly unfinished. The current decisions are in `docs/adr/ADR-0022-owner-mvp-reset.md` and `docs/adr/ADR-0023-workspace-resilience.md`; the stack detail is in `docs/TECH_STACK_DECISIONS.md`; live provider values are in `docs/INFRASTRUCTURE_REGISTRY.md`; product research is in `docs/product-research/README.md`.
 
 ## Stack
 
@@ -11,10 +11,11 @@ Next.js App Router + TypeScript · shadcn/ui · Better Auth · Kysely · Digital
 ## Repository Layout
 
 - `apps/web/` — Next.js app and app backend.
-- `services/matching/` — Python health service + background worker skeleton.
+- `services/matching/` — Python background worker for matching and reindex jobs. Its self-reporting HTTP service was retired by OVE-357; liveness comes from the worker's heartbeat row.
 - `infra/` — local runtime services and SQL helpers. Apple Container is the preferred local container runtime; Docker is fallback-only where Apple Container is unavailable or lacks a required feature.
 - `docs/TECH_STACK_DECISIONS.md` — current consolidated stack decisions.
 - `docs/CONTAINER_RUNTIME_POLICY.md` — Apple Container-first runtime policy plus Docker fallback matrix.
+- `docs/PROJECT_STATE.md` — production truth, current direction, known gaps. `docs/DELIVERY_LOG_2026-09.md` — what the owner MVP reset shipped and why. `docs/PRODUCTION_SCHEMA_STATE.md` — which migrations production runs.
 - `docs/SDD_VERTICAL_SLICE_ROADMAP.md` — historical roadmap and execution log; active work lives in Linear.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — live non-secret infrastructure values, provider IDs, bucket/domain names, env contracts, and dashboard links.
 - `docs/product-research/` — duplicated product research corpus for ICP, JTBD, positioning, IA, SEO/content, trust/privacy, GTM, and validation evidence.
