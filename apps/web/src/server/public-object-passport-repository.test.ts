@@ -298,6 +298,7 @@ describe("public object passport repository query contracts", () => {
             : `Public journal body ${index + 1}.`,
         entryDate: new Date(`2026-07-0${Math.min(index + 1, 9)}T12:00:00.000Z`),
         entryPublicSlug: index === 0 ? "first-flowering" : `entry-${index + 1}`,
+        mediaId: null,
         mediaDerivativeKey:
           index === 0 ? "derivatives/first-flowering.webp" : null,
         mediaFocalX: index === 0 ? 0.5 : null,

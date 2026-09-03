@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
@@ -9,6 +8,8 @@ import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel"
 import { PublicVarietySourceCredits } from "@/app/(default)/variety/[slug]/source-credits";
 import { addCatalogPublicSlugToWishlistAction } from "@/app/(default)/wishlist/actions";
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
+import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { buttonVariants } from "@/components/ui/button";
 import type { CatalogKind } from "@/db/schema";
 import {
@@ -293,14 +294,18 @@ export async function renderPublicCatalogEvidenceRoute(
             </article>
 
             {entry.media ? (
-              <Image
+              <SubjectAwareMediaImage
                 src={entry.media.publicUrl}
+                srcSet={buildPublicMediaSourceSet(entry.media).srcSet}
+                placeholderDataUri={entry.media.placeholderDataUri}
                 alt={`${entry.title} · ${publicCopy.passport.publicPhotoSuffix}`}
                 width={448}
                 height={252}
                 sizes="(min-width: 640px) 14rem, 100vw"
-                unoptimized
-                className="aspect-video w-full rounded-md border border-border object-cover sm:w-56"
+                presentationMode="cover"
+                intrinsicWidth={entry.media.intrinsicWidth}
+                intrinsicHeight={entry.media.intrinsicHeight}
+                className="aspect-video w-full rounded-md border border-border sm:w-56"
               />
             ) : null}
           </li>

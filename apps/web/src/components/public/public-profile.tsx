@@ -19,6 +19,7 @@ import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
+import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import {
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
@@ -549,11 +550,19 @@ function ProfileObjectCard({
       {object.coverImageUrl ? (
         <SubjectAwareMediaImage
           src={object.coverImageUrl}
+          srcSet={
+            buildPublicMediaSourceSet({
+              publicUrl: object.coverImageUrl,
+              intrinsicWidth: object.coverIntrinsicWidth,
+              intrinsicHeight: object.coverIntrinsicHeight,
+              variantLongEdges: object.coverVariantLongEdges,
+            }).srcSet
+          }
+          placeholderDataUri={object.coverPlaceholderDataUri}
           alt={object.coverImageAlt}
           width={640}
           height={480}
           sizes="(min-width: 640px) 20rem, 100vw"
-          unoptimized
           presentationMode="cover"
           focalX={object.coverFocalX}
           focalY={object.coverFocalY}
@@ -608,11 +617,19 @@ function ProfileJournalRow({
         {journal.coverImageUrl ? (
           <SubjectAwareMediaImage
             src={journal.coverImageUrl}
+            srcSet={
+              buildPublicMediaSourceSet({
+                publicUrl: journal.coverImageUrl,
+                intrinsicWidth: journal.coverIntrinsicWidth,
+                intrinsicHeight: journal.coverIntrinsicHeight,
+                variantLongEdges: journal.coverVariantLongEdges,
+              }).srcSet
+            }
+            placeholderDataUri={journal.coverPlaceholderDataUri}
             alt={journal.coverImageAlt}
             width={320}
             height={240}
             sizes="120px"
-            unoptimized
             presentationMode="cover"
             focalX={journal.coverFocalX}
             focalY={journal.coverFocalY}

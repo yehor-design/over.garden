@@ -1,5 +1,9 @@
 import "server-only";
 import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
+import {
+  readMediaVariantExtras,
+  type MediaVariantExtras,
+} from "@/server/media/media-variant-schema";
 
 import { sql, type Kysely, type Transaction } from "kysely";
 
@@ -106,6 +110,10 @@ export interface PublicProfileObjectEvidence {
   coverFocalY: number | null;
   coverIntrinsicWidth: number | null;
   coverIntrinsicHeight: number | null;
+  /** 16 px WebP data URI painted until the cover loads (OVE-371). */
+  coverPlaceholderDataUri: string | null;
+  /** Long edges of the cover's promoted variants; [] on pre-0047 rows. */
+  coverVariantLongEdges: number[];
 }
 
 export interface PublicProfileJournalEvidence {
@@ -127,6 +135,8 @@ export interface PublicProfileJournalEvidence {
   coverFocalY: number | null;
   coverIntrinsicWidth: number | null;
   coverIntrinsicHeight: number | null;
+  coverPlaceholderDataUri: string | null;
+  coverVariantLongEdges: number[];
 }
 
 export interface PublicProfileEvidencePage {
@@ -233,6 +243,7 @@ interface PublicProfileJournalRow {
 interface PublicProfileObjectMediaRow {
   objectId: string;
   entryId: string;
+  mediaAssetId: string;
   derivativeKey: string | null;
   altText: string | null;
   focalX: number | null;
@@ -243,6 +254,7 @@ interface PublicProfileObjectMediaRow {
 
 interface PublicProfileJournalMediaRow {
   entryId: string;
+  mediaAssetId: string;
   derivativeKey: string | null;
   altText: string | null;
   focalX: number | null;
@@ -525,8 +537,13 @@ async function loadPublicProfileEvidencePage(
           journalIds,
         ).execute()
       : [];
+  const mediaExtras = await readMediaVariantExtras(executor, [
+    ...objectMedia.map((row) => row.mediaAssetId),
+    ...journalMedia.map((row) => row.mediaAssetId),
+  ]);
 
   return serializePublicProfileEvidencePage({
+    mediaExtras,
     locale,
     profile: {
       ...profile,
@@ -651,6 +668,8 @@ export function serializePublicProfileEvidencePage(input: {
   objectMedia: PublicProfileObjectMediaRow[];
   journals: PublicProfileJournalRow[];
   journalMedia: PublicProfileJournalMediaRow[];
+  /** OVE-371 placeholder/variant columns, keyed by media asset id. */
+  mediaExtras?: ReadonlyMap<string, MediaVariantExtras>;
 }): PublicProfileEvidencePage {
   const displayName = input.profile.displayName ?? `@${input.profile.handle}`;
   const objectMedia = firstObjectMediaByObject(input.objectMedia);
@@ -683,6 +702,14 @@ export function serializePublicProfileEvidencePage(input: {
             : null,
           coverIntrinsicWidth: cover?.intrinsicWidth ?? null,
           coverIntrinsicHeight: cover?.intrinsicHeight ?? null,
+          coverPlaceholderDataUri: cover?.derivativeKey
+            ? (input.mediaExtras?.get(cover.mediaAssetId)?.placeholderDataUri ??
+              null)
+            : null,
+          coverVariantLongEdges: cover?.derivativeKey
+            ? (input.mediaExtras?.get(cover.mediaAssetId)?.variantLongEdges ??
+              [])
+            : [],
         },
       ];
     });
@@ -734,6 +761,14 @@ export function serializePublicProfileEvidencePage(input: {
             : null,
           coverIntrinsicWidth: cover?.intrinsicWidth ?? null,
           coverIntrinsicHeight: cover?.intrinsicHeight ?? null,
+          coverPlaceholderDataUri: cover?.derivativeKey
+            ? (input.mediaExtras?.get(cover.mediaAssetId)?.placeholderDataUri ??
+              null)
+            : null,
+          coverVariantLongEdges: cover?.derivativeKey
+            ? (input.mediaExtras?.get(cover.mediaAssetId)?.variantLongEdges ??
+              [])
+            : [],
         },
       ];
     });
@@ -1153,6 +1188,7 @@ export function buildPublicProfileObjectMediaEvidenceQuery(
     .select([
       "plant_objects.id as objectId",
       "journal_entries.id as entryId",
+      "media_assets.id as mediaAssetId",
       "media_assets.derivative_key as derivativeKey",
       "media_assets.alt_text as altText",
       "media_assets.focal_x as focalX",
@@ -1211,6 +1247,7 @@ export function buildPublicProfileJournalMediaEvidenceQuery(
     )
     .select([
       "journal_entries.id as entryId",
+      "media_assets.id as mediaAssetId",
       "media_assets.derivative_key as derivativeKey",
       "media_assets.alt_text as altText",
       "media_assets.focal_x as focalX",

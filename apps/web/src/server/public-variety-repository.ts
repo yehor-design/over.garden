@@ -21,6 +21,7 @@ import {
 } from "@/lib/public-localization";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
+import { readMediaVariantExtras } from "@/server/media/media-variant-schema";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
@@ -93,6 +94,10 @@ export interface PublicVarietyEntry {
     id: string;
     derivativeKey: string;
     publicUrl: string;
+    intrinsicWidth: number | null;
+    intrinsicHeight: number | null;
+    placeholderDataUri: string | null;
+    variantLongEdges: number[];
   } | null;
 }
 
@@ -129,6 +134,10 @@ export async function getPublicVarietyPage(
       summary.catalogItemId,
     ).execute(),
   ]);
+  const mediaExtras = await readMediaVariantExtras(
+    executor,
+    entries.flatMap((entry) => (entry.mediaId ? [entry.mediaId] : [])),
+  );
   const entryCount = Number(summary.entryCount);
   const aggregateBodyLength = Number(summary.aggregateBodyLength);
   const page = {
@@ -177,6 +186,12 @@ export async function getPublicVarietyPage(
               id: entry.mediaId,
               derivativeKey: entry.mediaDerivativeKey,
               publicUrl: getPublicDerivativeUrl(entry.mediaDerivativeKey),
+              intrinsicWidth: entry.mediaIntrinsicWidth ?? null,
+              intrinsicHeight: entry.mediaIntrinsicHeight ?? null,
+              placeholderDataUri:
+                mediaExtras.get(entry.mediaId)?.placeholderDataUri ?? null,
+              variantLongEdges:
+                mediaExtras.get(entry.mediaId)?.variantLongEdges ?? [],
             }
           : null,
     })),
@@ -471,6 +486,8 @@ export function buildPublicVarietyEntriesQuery(
       "spaces.coarse_region_code as spaceCoarseRegionCode",
       "first_public_media.mediaId as mediaId",
       "first_public_media.derivativeKey as mediaDerivativeKey",
+      "first_public_media.intrinsicWidth as mediaIntrinsicWidth",
+      "first_public_media.intrinsicHeight as mediaIntrinsicHeight",
     ])
     .where("catalog_items.public_slug", "=", publicSlug)
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])

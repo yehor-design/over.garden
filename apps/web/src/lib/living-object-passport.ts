@@ -42,6 +42,10 @@ export interface LivingObjectPassportMedia {
   focalY?: number | null;
   intrinsicWidth?: number | null;
   intrinsicHeight?: number | null;
+  /** 16 px WebP data URI painted until the photo loads (OVE-371). */
+  placeholderDataUri?: string | null;
+  /** Long edges of the promoted variants, for `srcset`. */
+  variantLongEdges?: number[];
 }
 
 export interface LivingObjectPassportTimelineEntryInput {
@@ -55,6 +59,8 @@ export interface LivingObjectPassportTimelineEntryInput {
   mediaFocalY?: number | null;
   mediaIntrinsicWidth?: number | null;
   mediaIntrinsicHeight?: number | null;
+  mediaPlaceholderDataUri?: string | null;
+  mediaVariantLongEdges?: number[];
   stateLabel: string;
   relationLabel: string;
 }
