@@ -1,0 +1,49 @@
+-- The observed-capture claim read every remaining unit to take one.
+--
+-- `buildClaimNextEppoCaptureUnitQuery` takes the next unit of work with an
+-- equality on `capture_id` and `unit_kind`, a two-value `state` restriction, a
+-- bound on `attempt_count`, `order by inventory_ordinal asc, endpoint_class
+-- asc`, and `limit 1 for update skip locked`. Nothing in the schema served
+-- that shape:
+--
+--   * `catalog_source_capture_units_claim_idx` leads with
+--     `(capture_id, state, ...)`, so a claim that admits two states cannot get
+--     its ordering from one scan of that index — `inventory_ordinal` sits
+--     behind a column the query does not pin to a single value.
+--   * `catalog_source_capture_units_code_idx` orders by nothing the claim asks
+--     for.
+--
+-- The planner therefore read every unit of the capture and sorted the whole
+-- set to return one row. That cost is paid once per unit, so a full observed
+-- capture pays it as many times as it has units, and the scan does not shrink
+-- as work completes: the heap keeps growing while each unit's response is
+-- written into it, so the claim gets slower exactly as the run gets longer.
+--
+-- Measured on Postgres 18 during a real capture of the documented EPPO ordered
+-- list, 387,642 endpoint units with 364,035 still open:
+--
+--   before   33.089 ms   11,299 shared-buffer hits   parallel seq scan + top-N heapsort
+--   after     0.073 ms        7 shared-buffer hits   index scan, 1 row read
+--
+-- End to end that moved the capture from 6.2 to 11.9 units per second — from
+-- 161 ms per unit to 84 ms, against a provider that answers in 71 ms. The
+-- remaining overhead is now the two round trips the protocol actually needs.
+--
+-- The column order is not a preference. `capture_id` is the query's only
+-- equality on a high-cardinality column, and the two ordering columns follow it
+-- in their declared directions, because a b-tree can only eliminate the sort
+-- when the index ordering is the requested ordering. `state` and `unit_kind`
+-- move into the partial predicate instead of the key: leaving `state` in the
+-- key is what denied the ordering in the first place, and both values are the
+-- literals the claim itself uses, which is what lets the planner prove the
+-- index covers the query.
+--
+-- The existing claim index stays. It still serves the stale-claim recovery and
+-- reclaim paths, which look up `in_progress` and `failed` rows by state and do
+-- not order at all.
+--
+-- No column, constraint, or table is added, and no row is rewritten.
+
+create index if not exists catalog_source_capture_units_claim_order_idx
+  on catalog_source_capture_units (capture_id, inventory_ordinal, endpoint_class)
+  where unit_kind = 'taxon_endpoint' and state in ('pending', 'failed');
