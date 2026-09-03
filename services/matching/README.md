@@ -195,10 +195,14 @@ After activation, run the public safe capability/readiness proof from
 
 ```bash
 pnpm smoke:matching-runtime-capabilities -- \
-  --base-url https://matching.over.garden \
   --expected-commit <40-character-main-sha> \
   --expected-digest sha256:<64-hex-digest>
 ```
+
+The proof reads the worker's `matching_worker_heartbeats` row, not an HTTP
+service (OVE-357). `--base-url` is refused rather than ignored, so a runbook
+that still names the retired hostname fails loudly instead of appearing to
+check something.
 
 The six-handler queue canary is a production mutation and therefore requires
 the operator's explicit approval immediately before execution. Without the

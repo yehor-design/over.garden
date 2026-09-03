@@ -52,7 +52,7 @@ flock -n /opt/overgarden/release-state/matching-release.lock \
 
 The harness captures container identity and start time only inside the remote process. It admits the result only when the worker keeps the same container identity with a new start time, every peer keeps the same identity and start time, all four roles remain running, and the worker becomes healthy. Raw identities and timestamps are never returned or saved.
 
-After restart, `https://matching.over.garden/capabilities` and `/ready` must return the exact immutable release and six-handler manifest. `/ready` is the authoritative proof that the worker heartbeat is fresh and belongs to the same API/worker release. The canary begins only after that proof.
+After restart, the exact immutable release and six-handler manifest must be proved, along with a fresh worker heartbeat. Historical note: this runbook was executed against `https://matching.over.garden/capabilities` and `/ready`, which OVE-357 retired on 2026-09-03. The equivalent proof today is `pnpm smoke:matching-runtime-capabilities`, which reads the same classes from the heartbeat row. The canary begins only after that proof.
 
 The disposable journal path then requires:
 

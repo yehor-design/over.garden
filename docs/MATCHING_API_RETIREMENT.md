@@ -1,9 +1,10 @@
 # Matching API retirement
 
-Status: executable runbook
+Status: complete
 Owner: OVE-357
-Scope of this document: **phase A only** — the repository half. The live
-container, its reverse-proxy route, and its DNS record are still there.
+Scope of this document: both halves. Phase A removed the application from the
+repository; phase B removed the container, its reverse-proxy route, and its DNS
+record from the host on 2026-09-03.
 
 ## Why
 
@@ -91,36 +92,50 @@ pnpm exec vitest run scripts/prove-matching-api-retirement.test.ts
 
 Both read Postgres. Neither issues an HTTP request.
 
-## Phase B — not done
+## Phase B — done on 2026-09-03
 
-**The live container, its Caddy route, and the public matching DNS record still
-exist.** Removing them is a maintainer-approved provider effect with its own
-plan digest, and it has not been performed.
+The owner decided that the managed database and the droplet stay, then approved
+the immutable teardown plan
+`1463999c3956b0078daaf3e1f5f9c0e1bf320eb8255d728e41da4bda2bb1ee7f`. Before any
+provider effect, both Postgres-sourced commands passed against production with
+no HTTP call: queue health `ready` with all five dependencies `available`, and
+runtime capabilities `ready` for release `003a0da6` / digest `sha256:4251c864…`
+with the six required handlers and a heartbeat six seconds old, matching the
+host's own `release-state/active.env`.
 
-Until it is:
+The removal ran in the order below, each step verified twice.
 
-- `matching-api` may still be running on the host and answering;
-- `https://matching.over.garden/*` may still resolve and serve;
-- `docs/INFRASTRUCTURE_REGISTRY.md` keeps its live-state entries, which remain
-  accurate.
+| Step | Effect | Verification |
+| -- | -- | -- |
+| 1. Route | The `matching.over.garden` site block deleted from `/opt/overgarden/Caddyfile`, `caddy reload` exit 0, retired certificate directory moved out of the `overgarden_caddy_data` volume | `meili.over.garden` still `200`; the retired hostname is no longer proxied |
+| 2. DNS | The `A matching.over.garden` record deleted from the `over.garden` zone | three public resolvers return nothing, twice; every other record untouched |
+| 3. Container | `overgarden-matching-api-1` stopped and removed; the service definition removed from both compose files on the host | `docker ps -a` has no `matching-api`; `compose config --services` lists `matching-worker` (release file) and `meilisearch`, `matching-worker`, `caddy` (legacy file) |
 
-Nothing in phase A depends on phase B. The worker, its heartbeat, its handler
-set, and every job contract are unchanged, and no product route calls the retired
-service, so the repository half is complete and safe on its own.
+Throughout, `overgarden-matching-worker-1` stayed `healthy`, its heartbeat kept
+updating inside the freshness bound, and both operator commands returned `ready`
+again after the teardown.
 
-Phase B is also the part that depends on **where the host lives**. It is the one
-piece of this issue a hosting decision touches.
+### Rollback (still executable)
 
-## Rollback
+The sealed release image remains on the host, and every replaced file was kept
+beside its original as `*.ove357-backup-2026-09-03`, with the retired
+certificate directory under `/opt/overgarden/ove357-retired/`. Restoring means:
+put the route block back and reload Caddy, recreate the `A` record pointing at
+the droplet, restore the release compose file, and start the service with
+`release-state/active.env`. No heartbeat row, secret, or worker state was
+deleted at any point.
 
-Revert the commit. The endpoints return, the two proofs go back to HTTP, and
-nothing on the host has to change — because nothing on the host was changed.
+## Rollback of phase A
+
+Revert the commit. The endpoints return in the image and the two proofs go back
+to HTTP. Phase B's own rollback, above, restores the host resources; the two are
+independent and can be applied separately.
 
 ## Boundaries
 
 - The worker loop, every job handler, the heartbeat write, its interval, and its
   lease margin are untouched.
 - The Meilisearch host and its Caddy route are untouched; only the matching route
-  is in scope, and only in phase B.
+  was in scope.
 - `MATCHING_SERVICE_TOKEN` and every other secret stay in their platform store.
   No secret is read, moved, or recorded here.
