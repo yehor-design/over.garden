@@ -297,13 +297,20 @@ export async function runLiveExplicitDeleteSmoke(
       origin: "https://over.garden",
       "access-control-request-method": "PUT",
       "access-control-request-headers":
-        "authorization,content-type,content-sha256",
+        "authorization,content-type,content-sha256,x-media-width,x-media-height",
     },
   });
+  const allowedHeaders = (
+    preflight.headers.get("access-control-allow-headers") ?? ""
+  ).toLowerCase();
   if (
     preflight.status !== 204 ||
     preflight.headers.get("access-control-allow-origin") !==
-      "https://over.garden"
+      "https://over.garden" ||
+    // OVE-372: the browser sends the dimensions as headers; a preflight that
+    // does not admit them blocks every upload while looking healthy.
+    !allowedHeaders.includes("x-media-width") ||
+    !allowedHeaders.includes("x-media-height")
   ) {
     throw new Error("live_cors_preflight_failed");
   }
