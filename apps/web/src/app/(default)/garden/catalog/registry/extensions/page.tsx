@@ -1,15 +1,32 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Suspense } from "react";
 
-import { buttonVariants } from "@/components/ui/button";
+import {
+  WorkspaceAccessPanel,
+  WorkspaceSectionError,
+  WorkspaceSectionSkeleton,
+  workspaceSchemaMissingHint,
+} from "@/components/garden/workspace-state";
+import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getStableRegistryExtensionPackCopy } from "@/lib/operator-curation-copy";
 import { isStableRegistryExtensionPacksEnabled } from "@/lib/stable-registry/feature-gate";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
-import { scopedToUser } from "@/server/request-scope";
 import { readExtensionPackCenter } from "@/server/stable-registry/extension-pack-repository";
+import {
+  resolveWorkspaceAdminAccess,
+  resolveWorkspaceViewer,
+} from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
 
+import {
+  StableRegistryExtensionsShell,
+  StableRegistryReturnLink,
+  STABLE_REGISTRY_EXTENSIONS_PATH,
+} from "../registry-shell";
 import {
   abandonExtensionPackAction,
   activateExtensionPackAction,
@@ -17,6 +34,9 @@ import {
   decideExtensionPackGroupAction,
 } from "../extension-actions";
 import { StableRegistryExtensionPackLane } from "./extension-pack-lane";
+
+/** The pack read walks the pack, its groups, and the active catalog pointer. */
+const EXTENSION_PACK_DEADLINE_MS = workspaceSectionDeadlineMs(4);
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getStableRegistryExtensionPackCopy(
@@ -30,96 +50,93 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function StableRegistryExtensionsPage() {
-  const [locale, session] = await Promise.all([
+  const [locale, viewer] = await Promise.all([
     getRequestInterfaceLocale(),
-    getCurrentSession(),
+    resolveWorkspaceViewer(),
   ]);
   const copy = getStableRegistryExtensionPackCopy(locale);
-  const userId = session?.user?.id;
-  if (!userId) {
-    return <AccessPanel localeCopy={copy} state="sign-in-required" />;
+
+  const panel = (
+    state: "sign-in-required" | "denied" | "disabled" | "unavailable",
+    message: string,
+    failure?: Parameters<typeof WorkspaceAccessPanel>[0]["failure"],
+  ) => (
+    <WorkspaceAccessPanel
+      locale={locale}
+      surface="stable-registry-extensions"
+      stateAttribute="data-extension-pack-state"
+      state={state}
+      title={copy.title}
+      message={message}
+      failure={failure}
+      retryHref={STABLE_REGISTRY_EXTENSIONS_PATH}
+      navigation={
+        <StableRegistryReturnLink
+          locale={locale}
+          label={copy.returnToActiveCatalog}
+        />
+      }
+    />
+  );
+
+  if (viewer.status === "unavailable") {
+    return panel("unavailable", copy.unavailable, viewer.failure);
+  }
+  if (viewer.status === "sign-in-required") {
+    return panel("sign-in-required", copy.signInRequired);
   }
 
-  try {
-    await assertCatalogCuratorAccess(
-      scopedToUser(userId, getSessionId(session)),
-    );
-  } catch {
-    return <AccessPanel localeCopy={copy} state="denied" />;
+  const access = await resolveWorkspaceAdminAccess(() =>
+    assertCatalogCuratorAccess(viewer.scope),
+  );
+  if (access.status === "unavailable") {
+    return panel("unavailable", copy.unavailable, access.failure);
+  }
+  if (access.status === "denied") {
+    return panel("denied", copy.accessDenied);
+  }
+  if (!isStableRegistryExtensionPacksEnabled()) {
+    return panel("disabled", copy.disabled);
   }
 
-  const writesEnabled = isStableRegistryExtensionPacksEnabled();
-  if (!writesEnabled) {
-    return <AccessPanel localeCopy={copy} state="disabled" />;
-  }
-
-  const model = await readExtensionPackCenter({ writesEnabled });
   return (
-    <main className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-6 px-5 py-8 sm:px-8 [&>*]:min-w-0">
-      <header className="flex flex-col gap-3 border-b border-border pb-5">
-        <Link
-          href="/garden/catalog/registry"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          {copy.returnToActiveCatalog}
-        </Link>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {copy.title}
-        </h1>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          {copy.description}
-        </p>
-      </header>
-      <StableRegistryExtensionPackLane
-        locale={locale}
-        model={model}
-        decideAction={decideExtensionPackGroupAction}
-        approveAction={approveExtensionPackPreviewAction}
-        activateAction={activateExtensionPackAction}
-        abandonAction={abandonExtensionPackAction}
-      />
-    </main>
+    <StableRegistryExtensionsShell locale={locale}>
+      <Suspense
+        fallback={<WorkspaceSectionSkeleton locale={locale} rows={3} />}
+      >
+        <ExtensionPackSection locale={locale} />
+      </Suspense>
+    </StableRegistryExtensionsShell>
   );
 }
 
-function AccessPanel({
-  localeCopy: copy,
-  state,
-}: {
-  localeCopy: ReturnType<typeof getStableRegistryExtensionPackCopy>;
-  state: "sign-in-required" | "denied" | "disabled";
-}) {
-  const message =
-    state === "sign-in-required"
-      ? copy.signInRequired
-      : state === "denied"
-        ? copy.accessDenied
-        : copy.disabled;
+async function ExtensionPackSection({ locale }: { locale: InterfaceLocale }) {
+  const copy = getStableRegistryExtensionPackCopy(locale);
+  const model = await settleSection(
+    () => readExtensionPackCenter({ writesEnabled: true }),
+    { deadlineMs: EXTENSION_PACK_DEADLINE_MS },
+  );
+
+  if (model.status === "error") {
+    return (
+      <WorkspaceSectionError
+        locale={locale}
+        title={copy.unavailable}
+        failure={model}
+        retryHref={STABLE_REGISTRY_EXTENSIONS_PATH}
+        technicalHint={workspaceSchemaMissingHint(locale, model)}
+      />
+    );
+  }
+
   return (
-    <main
-      data-extension-pack-state={state}
-      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
-    >
-      <header className="flex flex-col gap-3 border-b border-border pb-5">
-        <Link
-          href="/garden/catalog/registry"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          {copy.returnToActiveCatalog}
-        </Link>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {copy.title}
-        </h1>
-      </header>
-      <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-        {message}
-      </p>
-    </main>
+    <StableRegistryExtensionPackLane
+      locale={locale}
+      model={model.value}
+      decideAction={decideExtensionPackGroupAction}
+      approveAction={approveExtensionPackPreviewAction}
+      activateAction={activateExtensionPackAction}
+      abandonAction={abandonExtensionPackAction}
+    />
   );
 }

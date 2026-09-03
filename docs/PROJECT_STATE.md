@@ -19,7 +19,7 @@ separate admin panel. Speed and search discovery come before defensive refusal.
 
 The governing decisions are `docs/adr/ADR-0022-owner-mvp-reset.md` (D1–D7,
 accepted 2026-09-02) and `docs/adr/ADR-0023-workspace-resilience.md` (D8,
-accepted 2026-09-03, not yet implemented). Older ADRs are immutable history and
+accepted and implemented 2026-09-03). Older ADRs are immutable history and
 never override them.
 
 ## What is true in production
@@ -35,6 +35,8 @@ Verified on 2026-09-03 against `https://over.garden` and the live providers.
 | Media upload | One session capability per composer, uploads straight to the Cloudflare Worker, two-hour lease renewed every five minutes, parallel promotion, weekly orphan sweep |
 | Sessions | Server-authoritative. The cookie-cached session decides at the moment of the mutation; no client gate |
 | Admin | Release Center, extension packs, and editions render for the sealed owner in production; `/health` is owner-only |
+| Workspace | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023) |
+| Server errors | `src/instrumentation.ts` writes one JSON line per server error with digest, route, and failure class, including on responses that answer 200 |
 | Schema | Migrations `0001`–`0047` applied, minus the two deliberately skipped. See `docs/PRODUCTION_SCHEMA_STATE.md` |
 | Matching | The worker runs on the droplet and writes its heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03 |
 | Hosting | Decided 2026-09-03: the DigitalOcean managed database and the `fra1` droplet stay |
@@ -45,16 +47,17 @@ The seven owner requirements have one committed production receipt:
 
 ## Where the project is heading
 
-**Now.** `OVE-374` — workspace resilience. Every page under `/garden/**` renders
-its own shell immediately, streams its data in sections, and turns every failure
-into a designed state with a retry and a reference code. It exists because a
-verified framework defect leaves a skeleton on screen forever when a Server
-Component throws during a postponed resume; see ADR-0023.
+**Just delivered.** `OVE-374` — workspace resilience. Every page under
+`/garden/**` renders its own shell immediately, streams its data in sections, and
+turns every failure into a designed state with a retry and a reference code. It
+existed because a verified framework defect leaves a skeleton on screen forever
+when a Server Component throws during a postponed resume; see ADR-0023 and the
+receipt in `docs/WORKSPACE_RESILIENCE_PROOF_2026-09.md`.
 
-**After that.** The MVP reset is delivered, so the next work is product, not
+**Now.** The MVP reset is delivered, so the next work is product, not
 platform: real gardeners publishing, the catalog activated from real source
-data, and organic discovery measured rather than assumed. Two measurement gaps
-block honest prioritisation, both listed under known gaps below.
+data, and organic discovery measured rather than assumed. One measurement gap
+blocks honest prioritisation; see known gaps below.
 
 **Not planned.** Private entries, drafts, offline mode, a separate admin panel,
 voice dictation, server-side image processing, an ORM. Each is a positive
@@ -62,18 +65,22 @@ decision in ADR-0022, not an omission.
 
 ## Known gaps, stated deliberately
 
-1. **A workspace page can strand a reader on a skeleton.** Verified defect, not
-   a hypothesis: under Cache Components a thrown Server Component error during
-   the postponed resume never completes or errors its Suspense boundary on a
-   hard load, so `error.tsx` never renders. `OVE-374` removes the reliance on
-   thrown errors; ADR-0023 records the mechanism and the reproduction.
-2. **No frontend analytics.** Vercel Web Analytics is not enabled for the
+1. **The framework defect itself is unfixed, and unreported.** Under Cache
+   Components a thrown Server Component error during a postponed resume never
+   completes or errors its Suspense boundary on a hard load, so `error.tsx`
+   never renders. `OVE-374` removed every workspace page's reliance on thrown
+   errors, so no reader is stranded — but the defect is still there for any code
+   that forgets, and the upstream report with the three-page reproduction has not
+   been filed. ADR-0023 records the mechanism.
+2. **The signed-in chrome can disagree with the page during an outage.** When
+   the session store is unreachable, a workspace page says so, but the site
+   header still renders its signed-out state ("sign in"). The page is honest;
+   the chrome is not yet, and it sits outside `/garden/**`.
+3. **No frontend analytics.** Vercel Web Analytics is not enabled for the
    project, and runtime logs are retained for about an hour, so there is no
    denominator for "how often does a reader hit a failure". Server errors are
-   aggregated for seven days and are the only current signal.
-3. **No server error instrumentation.** `src/instrumentation.ts` does not exist,
-   so a page that degrades gracefully and answers 200 leaves no record.
-   `OVE-374` adds it.
+   aggregated for seven days, now with a digest and a bounded failure class on
+   each line (`src/instrumentation.ts`).
 4. **The catalog is empty in production.** The Stable Registry schema landed on
    2026-09-03 and the Release Center renders, but no Foundation release has been
    built from real source data, so `/garden/catalog/registry` shows zero
@@ -89,6 +96,7 @@ decision in ADR-0022, not an omission.
 ```bash
 cd apps/web
 pnpm prove:owner-mvp-reset                 # the seven requirements against production
+pnpm prove:workspace-resilience -- --base-url <running next start> --cookie-file <cookie>
 pnpm smoke:matching-queue-health -- --environment production --confirm-environment production
 pnpm smoke:matching-runtime-capabilities   # worker liveness from the heartbeat row
 pnpm exec tsx scripts/apply-reviewed-migration.ts --mode inventory --env-file <pulled-env>

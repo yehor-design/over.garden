@@ -1,15 +1,32 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Suspense } from "react";
 
-import { buttonVariants } from "@/components/ui/button";
+import {
+  WorkspaceAccessPanel,
+  WorkspaceSectionError,
+  WorkspaceSectionSkeleton,
+  workspaceSchemaMissingHint,
+} from "@/components/garden/workspace-state";
+import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getStableRegistryEditionCopy } from "@/lib/operator-curation-copy";
 import { isStableRegistryEditionsEnabled } from "@/lib/stable-registry/feature-gate";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
-import { scopedToUser } from "@/server/request-scope";
 import { readEditionCenter } from "@/server/stable-registry/edition-repository";
+import {
+  resolveWorkspaceAdminAccess,
+  resolveWorkspaceViewer,
+} from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
 
+import {
+  StableRegistryEditionsShell,
+  StableRegistryReturnLink,
+  STABLE_REGISTRY_EDITIONS_PATH,
+} from "../registry-shell";
 import {
   approveEditionPreviewAction,
   prepareEditionAction,
@@ -17,6 +34,9 @@ import {
   moveEditionPointerAction,
 } from "../edition-actions";
 import { StableRegistryEditionLane } from "./edition-lane";
+
+/** The edition read walks the edition, its diff groups, and both pointers. */
+const EDITION_CENTER_DEADLINE_MS = workspaceSectionDeadlineMs(4);
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getStableRegistryEditionCopy(await getRequestInterfaceLocale());
@@ -28,96 +48,93 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function StableRegistryEditionsPage() {
-  const [locale, session] = await Promise.all([
+  const [locale, viewer] = await Promise.all([
     getRequestInterfaceLocale(),
-    getCurrentSession(),
+    resolveWorkspaceViewer(),
   ]);
   const copy = getStableRegistryEditionCopy(locale);
-  const userId = session?.user?.id;
-  if (!userId) {
-    return <AccessPanel localeCopy={copy} state="sign-in-required" />;
+
+  const panel = (
+    state: "sign-in-required" | "denied" | "disabled" | "unavailable",
+    message: string,
+    failure?: Parameters<typeof WorkspaceAccessPanel>[0]["failure"],
+  ) => (
+    <WorkspaceAccessPanel
+      locale={locale}
+      surface="stable-registry-editions"
+      stateAttribute="data-edition-state"
+      state={state}
+      title={copy.title}
+      message={message}
+      failure={failure}
+      retryHref={STABLE_REGISTRY_EDITIONS_PATH}
+      navigation={
+        <StableRegistryReturnLink
+          locale={locale}
+          label={copy.keepCurrentRelease}
+        />
+      }
+    />
+  );
+
+  if (viewer.status === "unavailable") {
+    return panel("unavailable", copy.unavailable, viewer.failure);
+  }
+  if (viewer.status === "sign-in-required") {
+    return panel("sign-in-required", copy.signInRequired);
   }
 
-  try {
-    await assertCatalogCuratorAccess(
-      scopedToUser(userId, getSessionId(session)),
-    );
-  } catch {
-    return <AccessPanel localeCopy={copy} state="denied" />;
+  const access = await resolveWorkspaceAdminAccess(() =>
+    assertCatalogCuratorAccess(viewer.scope),
+  );
+  if (access.status === "unavailable") {
+    return panel("unavailable", copy.unavailable, access.failure);
+  }
+  if (access.status === "denied") {
+    return panel("denied", copy.accessDenied);
+  }
+  if (!isStableRegistryEditionsEnabled()) {
+    return panel("disabled", copy.disabled);
   }
 
-  const writesEnabled = isStableRegistryEditionsEnabled();
-  if (!writesEnabled) {
-    return <AccessPanel localeCopy={copy} state="disabled" />;
-  }
-
-  const model = await readEditionCenter({ writesEnabled });
   return (
-    <main className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-6 px-5 py-8 sm:px-8 [&>*]:min-w-0">
-      <header className="flex flex-col gap-3 border-b border-border pb-5">
-        <Link
-          href="/garden/catalog/registry"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          {copy.keepCurrentRelease}
-        </Link>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {copy.title}
-        </h1>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          {copy.description}
-        </p>
-      </header>
-      <StableRegistryEditionLane
-        locale={locale}
-        model={model}
-        prepareAction={prepareEditionAction}
-        decideAction={decideEditionDiffGroupAction}
-        approveAction={approveEditionPreviewAction}
-        pointerAction={moveEditionPointerAction}
-      />
-    </main>
+    <StableRegistryEditionsShell locale={locale}>
+      <Suspense
+        fallback={<WorkspaceSectionSkeleton locale={locale} rows={3} />}
+      >
+        <EditionCenterSection locale={locale} />
+      </Suspense>
+    </StableRegistryEditionsShell>
   );
 }
 
-function AccessPanel({
-  localeCopy: copy,
-  state,
-}: {
-  localeCopy: ReturnType<typeof getStableRegistryEditionCopy>;
-  state: "sign-in-required" | "denied" | "disabled";
-}) {
-  const message =
-    state === "sign-in-required"
-      ? copy.signInRequired
-      : state === "denied"
-        ? copy.accessDenied
-        : copy.disabled;
+async function EditionCenterSection({ locale }: { locale: InterfaceLocale }) {
+  const copy = getStableRegistryEditionCopy(locale);
+  const model = await settleSection(
+    () => readEditionCenter({ writesEnabled: true }),
+    { deadlineMs: EDITION_CENTER_DEADLINE_MS },
+  );
+
+  if (model.status === "error") {
+    return (
+      <WorkspaceSectionError
+        locale={locale}
+        title={copy.unavailable}
+        failure={model}
+        retryHref={STABLE_REGISTRY_EDITIONS_PATH}
+        technicalHint={workspaceSchemaMissingHint(locale, model)}
+      />
+    );
+  }
+
   return (
-    <main
-      data-edition-state={state}
-      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
-    >
-      <header className="flex flex-col gap-3 border-b border-border pb-5">
-        <Link
-          href="/garden/catalog/registry"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          {copy.keepCurrentRelease}
-        </Link>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {copy.title}
-        </h1>
-      </header>
-      <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-        {message}
-      </p>
-    </main>
+    <StableRegistryEditionLane
+      locale={locale}
+      model={model.value}
+      prepareAction={prepareEditionAction}
+      decideAction={decideEditionDiffGroupAction}
+      approveAction={approveEditionPreviewAction}
+      pointerAction={moveEditionPointerAction}
+    />
   );
 }

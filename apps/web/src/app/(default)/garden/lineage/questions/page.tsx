@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Suspense } from "react";
 
-import { buttonVariants } from "@/components/ui/button";
+import {
+  WorkspaceSectionError,
+  WorkspaceSectionSkeleton,
+} from "@/components/garden/workspace-state";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   formatOwnerLineageDate,
@@ -10,7 +13,6 @@ import {
   getOwnerLineageCopy,
   type OwnerLineageCopy,
 } from "@/lib/owner-lineage-copy";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   listLineageFollowReadback,
@@ -19,7 +21,13 @@ import {
   type LineageInteractionObjectReadback,
   type LineageQuestionInboxItem,
 } from "@/server/lineage-interactions-repository";
-import { scopedToUser } from "@/server/request-scope";
+import type { RequestScope } from "@/server/request-scope";
+import { resolveWorkspaceViewer } from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
+import { LineageUpdatesShell, LINEAGE_QUESTIONS_PATH } from "./questions-shell";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -31,41 +39,79 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function LineageUpdatesPage() {
-  const [session, locale] = await Promise.all([
-    getCurrentSession(),
+  const [viewer, locale] = await Promise.all([
+    resolveWorkspaceViewer(),
     getRequestInterfaceLocale(),
   ]);
-  const copy = getOwnerLineageCopy(locale);
-  const userId = session?.user?.id;
 
-  if (!userId) {
+  if (viewer.status === "unavailable") {
     return (
-      <main
-        lang={locale}
-        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
-      >
-        <LineageUpdatesHeader copy={copy} />
-        <GardenAuthPanel locale={locale} />
-      </main>
+      <LineageUpdatesShell locale={locale}>
+        <WorkspaceSectionError
+          locale={locale}
+          failure={viewer.failure}
+          retryHref={LINEAGE_QUESTIONS_PATH}
+        />
+      </LineageUpdatesShell>
     );
   }
 
-  const scope = scopedToUser(userId, getSessionId(session));
+  if (viewer.status === "sign-in-required") {
+    return (
+      <LineageUpdatesShell locale={locale}>
+        <GardenAuthPanel locale={locale} />
+      </LineageUpdatesShell>
+    );
+  }
+
+  return (
+    <LineageUpdatesShell locale={locale}>
+      <Suspense
+        fallback={<WorkspaceSectionSkeleton locale={locale} rows={2} />}
+      >
+        <LineageUpdatesSection locale={locale} scope={viewer.scope} />
+      </Suspense>
+    </LineageUpdatesShell>
+  );
+}
+
+/**
+ * Questions and follows settle independently: a fault in one inbox leaves the
+ * other rendering its rows rather than blanking both.
+ */
+async function LineageUpdatesSection({
+  locale,
+  scope,
+}: {
+  locale: InterfaceLocale;
+  scope: RequestScope;
+}) {
+  const copy = getOwnerLineageCopy(locale);
   const [questions, follows] = await Promise.all([
-    listLineageQuestionInbox(scope),
-    listLineageFollowReadback(scope),
+    settleSection(() => listLineageQuestionInbox(scope), {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+    }),
+    settleSection(() => listLineageFollowReadback(scope), {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+    }),
   ]);
 
   return (
-    <main
-      lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
-    >
-      <LineageUpdatesHeader
-        copy={copy}
-        questionCount={questions.length}
-        followCount={follows.length}
-      />
+    <>
+      {questions.status === "ready" && follows.status === "ready" ? (
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <span className="rounded-md border border-border px-2 py-1">
+            {formatOwnerLineageTemplate(copy.updates.questionCount, {
+              count: questions.value.length,
+            })}
+          </span>
+          <span className="rounded-md border border-border px-2 py-1">
+            {formatOwnerLineageTemplate(copy.updates.followedCount, {
+              count: follows.value.length,
+            })}
+          </span>
+        </div>
+      ) : null}
 
       <section className="grid gap-4">
         <div className="flex flex-col gap-1">
@@ -77,13 +123,20 @@ export default async function LineageUpdatesPage() {
           </p>
         </div>
 
-        {questions.length === 0 ? (
+        {questions.status === "error" ? (
+          <WorkspaceSectionError
+            locale={locale}
+            failure={questions}
+            title={copy.updates.questionsTitle}
+            retryHref={LINEAGE_QUESTIONS_PATH}
+          />
+        ) : questions.value.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
             {copy.updates.questionsEmpty}
           </p>
         ) : (
           <ol className="grid gap-3">
-            {questions.map((question) => (
+            {questions.value.map((question) => (
               <LineageQuestionCard
                 key={question.id}
                 copy={copy}
@@ -105,13 +158,20 @@ export default async function LineageUpdatesPage() {
           </p>
         </div>
 
-        {follows.length === 0 ? (
+        {follows.status === "error" ? (
+          <WorkspaceSectionError
+            locale={locale}
+            failure={follows}
+            title={copy.updates.followedTitle}
+            retryHref={LINEAGE_QUESTIONS_PATH}
+          />
+        ) : follows.value.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
             {copy.updates.followedEmpty}
           </p>
         ) : (
           <ol className="grid gap-3">
-            {follows.map((follow) => (
+            {follows.value.map((follow) => (
               <LineageFollowCard
                 key={follow.id}
                 copy={copy}
@@ -122,62 +182,7 @@ export default async function LineageUpdatesPage() {
           </ol>
         )}
       </section>
-    </main>
-  );
-}
-
-function LineageUpdatesHeader({
-  copy,
-  questionCount,
-  followCount,
-}: {
-  copy: OwnerLineageCopy;
-  questionCount?: number;
-  followCount?: number;
-}) {
-  return (
-    <header className="flex flex-col gap-4 border-b border-border pb-5">
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/garden"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          {copy.common.backToJournal}
-        </Link>
-        <Link
-          href="/garden/lineage/claims"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          {copy.common.claims}
-        </Link>
-      </div>
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {copy.updates.title}
-        </h1>
-        {typeof questionCount === "number" &&
-        typeof followCount === "number" ? (
-          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="rounded-md border border-border px-2 py-1">
-              {formatOwnerLineageTemplate(copy.updates.questionCount, {
-                count: questionCount,
-              })}
-            </span>
-            <span className="rounded-md border border-border px-2 py-1">
-              {formatOwnerLineageTemplate(copy.updates.followedCount, {
-                count: followCount,
-              })}
-            </span>
-          </div>
-        ) : null}
-      </div>
-    </header>
+    </>
   );
 }
 

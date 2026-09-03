@@ -79,6 +79,41 @@ catalog; a longer one would move to the worker with a progress row. Every
 irreversible action needs the confirm box; without it the action answers
 `confirmation_required` and changes nothing.
 
+## When the screen says the registry is unavailable
+
+Since OVE-374 (ADR-0023) the three registry surfaces never leave you on a
+skeleton. A failure is a panel with a sentence, a retry, and a reference code,
+and the machine class sits in `data-section-failure` on the panel's `<section>`.
+Read it before deciding what to do:
+
+| What you see | Class | What it means | What to do |
+| -- | -- | -- | -- |
+| A named relation and a pointer to `docs/MIGRATION_ALLOCATION.md` | `schema_missing` | The production database does not have the relation this screen reads | Apply the migration that owns it, then reload |
+| "The release center is unavailable right now" | `connection_unavailable` | The database could not be reached at all | Check the database before touching the registry; nothing here is wrong |
+| The same panel with a slow page | `query_timeout` | The read passed its own deadline | Retry once; if it repeats, treat it as a database-load question |
+| "Access denied" | — | A genuine refusal, not an outage. Since OVE-374 these are told apart, so this really is the role check | Confirm you are signed in as the sealed owner |
+
+The relation name is shown **only** on owner-only surfaces — the three registry
+screens and erasure requests — because the owner is the person who can apply the
+migration. A gardener's screen never gains a machine code.
+
+The reference code on the panel is the same string the deployment's runtime log
+writes on the `workspace_server_error` line, so you can match one to the other:
+
+```bash
+vercel logs <deployment> | grep workspace_server_error
+```
+
+### Clearing a `schema_missing` panel
+
+1. Read the relation name off the panel.
+2. Find the migration that creates it in `docs/MIGRATION_ALLOCATION.md`.
+3. Confirm it is genuinely absent in production —
+   `docs/PRODUCTION_SCHEMA_STATE.md` says how to check, and assuming is what
+   produced this panel in the first place.
+4. Apply it with the reviewed-migration path, then reload the screen. The panel
+   is replaced by the release center; no restart or redeploy is needed.
+
 ## Recovery and rollback
 
 | Condition                         | Safe response                                                                                                                 |

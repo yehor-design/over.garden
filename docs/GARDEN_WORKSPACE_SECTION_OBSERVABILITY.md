@@ -1,8 +1,11 @@
 # Garden workspace section observability
 
 Status: current implementation contract
-Owner: OVE-360
-Instrument: `apps/web/scripts/prove-workspace-section-observability.ts`
+Owner: OVE-360, extended to every workspace surface by OVE-374 (ADR-0023)
+Instruments: `apps/web/scripts/prove-workspace-section-observability.ts`
+(the vocabulary, hermetic) and
+`apps/web/scripts/prove-workspace-resilience.ts` (every surface, against a
+running server)
 
 ## Why this exists
 
@@ -25,9 +28,18 @@ An operator therefore had no way to tell which of four candidate queries had
 rejected, and neither did the repository: the reason was destroyed at the first
 return on the way back.
 
+## Where the vocabulary lives
+
+Since OVE-374 the closed set, the classifier, and the settle helper live in
+`apps/web/src/server/workspace-failure.ts` as `WORKSPACE_FAILURE_CLASSES`,
+`classifyWorkspaceFailure`, and `settleSection`, and **every** page under
+`/garden/**` uses them — not just the workspace home.
+`garden-workspace-repository.ts` re-exports the original names, so this
+document's `GARDEN_WORKSPACE_*` spellings and the OVE-360 proof still hold.
+
 ## The closed set
 
-`GARDEN_WORKSPACE_FAILURE_CLASSES` is the whole vocabulary. A section that
+`WORKSPACE_FAILURE_CLASSES` is the whole vocabulary. A section that
 fails carries exactly one member and nothing else.
 
 | Class | Cause |
@@ -62,9 +74,53 @@ rendered copy, so the `uk`, `bg`, and `ru` strings are unchanged and no locale
 gains a machine-readable code.
 
 ```
-# read the class from the deployed workspace
-document.querySelector('[data-section-failure]')?.dataset.sectionFailure
+# read the class from any deployed workspace surface
+[...document.querySelectorAll('[data-section-failure]')]
+  .map((node) => node.dataset.sectionFailure)
 ```
+
+Every surface also stamps `data-workspace-surface="<surface>"` on its `<main>`,
+so a class can be attributed to the page that produced it:
+
+| Surface | Route |
+| -- | -- |
+| `garden-home` | `/garden` |
+| `stable-registry` | `/garden/catalog/registry` |
+| `stable-registry-extensions` | `/garden/catalog/registry/extensions` |
+| `stable-registry-editions` | `/garden/catalog/registry/editions` |
+| `object` | `/garden/objects/[objectId]` |
+| `entry-edit` | `/garden/entries/[entryId]/edit` |
+| `profile` | `/garden/profile` |
+| `lineage-claims` | `/garden/lineage/claims` |
+| `lineage-questions` | `/garden/lineage/questions` |
+| `lineage-invitation-claim` | `/garden/lineage/invitations/claim` |
+| `erasure-requests` | `/garden/privacy/erasure-requests` |
+
+## The digest, and matching a screen to a log
+
+`describeWorkspaceFailure` adds a short reference derived from the class and the
+Postgres code — nothing else, never a message or a parameter. The failure panel
+prints it, and `apps/web/src/instrumentation.ts` writes the same reference on the
+`onRequestError` line, so the person looking at the screen and the person reading
+the platform log can name the same event.
+
+```bash
+# one JSON line per server error, in the deployment's runtime logs
+{"event":"workspace_server_error","digest":"…","path":"/garden/…",
+ "routeType":"render","failureClass":"schema_missing"}
+```
+
+The line carries no request body, cookie, header, or query string, and no error
+message. `failureClass` is `null` when the classifier does not recognise the
+cause, which is a different statement from the closed set's own `unknown`.
+
+## Proving a whole surface, not just a section
+
+`pnpm prove:workspace-resilience` fetches every workspace page from a running
+`next start` whose `DATABASE_URL` points at a closed port and checks that each
+one answers `200` with its own heading, at least one bounded class, no stranded
+Suspense boundary, and no errored boundary. The committed receipt is
+`docs/WORKSPACE_RESILIENCE_PROOF_2026-09.md`.
 
 ## Running the proof
 

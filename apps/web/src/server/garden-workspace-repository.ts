@@ -16,6 +16,34 @@ import {
 } from "@/server/journal-repository";
 import type { RequestScope } from "@/server/request-scope";
 import { listNotificationCenter } from "@/server/social-readback-repository";
+import {
+  classifyWorkspaceFailure,
+  settleSection,
+  WORKSPACE_FAILURE_CLASSES,
+  WORKSPACE_SECTION_DEADLINE_MS,
+  WorkspaceSectionDeadlineError,
+  withWorkspaceSectionDeadline,
+  type WorkspaceFailureClass,
+  type WorkspaceSection,
+} from "@/server/workspace-failure";
+
+/**
+ * The failure vocabulary lives in `@/server/workspace-failure` now that every
+ * page under `/garden/**` shares it (ADR-0023). These aliases keep the
+ * workspace home page's original names compiling — including in
+ * `scripts/prove-workspace-section-observability.ts`, whose receipt names are a
+ * published contract — so renaming a member of the closed set stays the one
+ * breaking change it always was.
+ */
+export type GardenWorkspaceFailureClass = WorkspaceFailureClass;
+export type GardenWorkspaceSection<T> = WorkspaceSection<T>;
+export {
+  classifyWorkspaceFailure as classifyGardenWorkspaceFailure,
+  WORKSPACE_FAILURE_CLASSES as GARDEN_WORKSPACE_FAILURE_CLASSES,
+  WORKSPACE_SECTION_DEADLINE_MS,
+  WorkspaceSectionDeadlineError as GardenWorkspaceSectionDeadlineError,
+  withWorkspaceSectionDeadline as withGardenWorkspaceDeadline,
+};
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -24,7 +52,6 @@ export const WORKSPACE_INVENTORY_PAGE_SIZE = 10;
 export const WORKSPACE_SPACE_PREVIEW_SIZE = 4;
 export const WORKSPACE_SPACE_PAGE_SIZE = 4;
 export const WORKSPACE_RECENT_LIMIT = 8;
-export const WORKSPACE_SECTION_DEADLINE_MS = 1_200;
 
 /**
  * Database round trips each section costs at its worst. On the serverless pool
@@ -56,7 +83,10 @@ export const GARDEN_WORKSPACE_SECTION_QUERY_COUNT = {
 export function gardenWorkspaceSectionDeadlineMs(
   section: GardenWorkspaceSectionKey,
 ): number {
-  return WORKSPACE_SECTION_DEADLINE_MS * GARDEN_WORKSPACE_SECTION_QUERY_COUNT[section];
+  return (
+    WORKSPACE_SECTION_DEADLINE_MS *
+    GARDEN_WORKSPACE_SECTION_QUERY_COUNT[section]
+  );
 }
 
 const MAX_WORKSPACE_QUERY_LIMIT = 25;
@@ -113,29 +143,6 @@ export interface GardenWorkspaceInboxSummary {
   claimCount: number;
 }
 
-/**
- * The closed set of reasons a workspace section can fail. `resultSection` used
- * to map every rejection onto a bare `{ status: "error" }` and discard the
- * reason, so a degraded section could not be told apart from a permission
- * refusal, a missing relation, or a timeout — and the platform log could not
- * help either, because the page still returns its normal status.
- */
-export const GARDEN_WORKSPACE_FAILURE_CLASSES = [
-  "permission_denied",
-  "schema_missing",
-  "query_timeout",
-  "connection_unavailable",
-  "serialization_failure",
-  "unknown",
-] as const;
-
-export type GardenWorkspaceFailureClass =
-  (typeof GARDEN_WORKSPACE_FAILURE_CLASSES)[number];
-
-export type GardenWorkspaceSection<T> =
-  | { status: "ready"; value: T }
-  | { status: "error"; failureClass: GardenWorkspaceFailureClass };
-
 export interface GardenWorkspaceReadModel {
   inventory: GardenWorkspaceSection<GardenWorkspaceInventory>;
   spaces: GardenWorkspaceSection<GardenWorkspaceSpaces>;
@@ -184,7 +191,10 @@ export async function loadGardenWorkspaceInventorySource(
   executor: QueryExecutor = db,
 ): Promise<GardenWorkspaceInventorySource> {
   const [summary, objects] = await Promise.all([
-    buildGardenWorkspaceInventorySummaryQuery(executor, scope).executeTakeFirst(),
+    buildGardenWorkspaceInventorySummaryQuery(
+      executor,
+      scope,
+    ).executeTakeFirst(),
     listMyPlantObjects(scope, window.limit, window.offset, executor),
   ]);
 
@@ -264,27 +274,27 @@ export async function loadGardenWorkspace(
     : 0;
   const faultSections = new Set(options.faultSections ?? []);
 
-  const [inventory, spaces, recent, inbox] = await Promise.allSettled([
-    runWorkspaceSource(faultSections, "inventory", () =>
+  const [inventory, spaces, recent, inbox] = await Promise.all([
+    settleWorkspaceSource(faultSections, "inventory", () =>
       sources.inventory(scope, {
         limit: inventoryPageSize + 1,
         offset: inventoryOffset,
       }),
     ),
-    runWorkspaceSource(faultSections, "spaces", () =>
+    settleWorkspaceSource(faultSections, "spaces", () =>
       sources.spaces(scope, {
         limit: spacesPageSize + 1,
         offset: spacesOffset,
       }),
     ),
-    runWorkspaceSource(faultSections, "recent", () =>
+    settleWorkspaceSource(faultSections, "recent", () =>
       sources.recent(scope, WORKSPACE_RECENT_LIMIT),
     ),
-    runWorkspaceSource(faultSections, "inbox", () => sources.inbox(scope)),
+    settleWorkspaceSource(faultSections, "inbox", () => sources.inbox(scope)),
   ]);
 
   const readModel: GardenWorkspaceReadModel = {
-    inventory: resultSection(inventory, (value) => ({
+    inventory: mapSection(inventory, (value) => ({
       ...value,
       objects: value.objects.slice(0, inventoryPageSize),
       hasMore:
@@ -293,7 +303,7 @@ export async function loadGardenWorkspace(
       page: options.inventoryExpanded ? inventoryPage : 1,
       pageSize: inventoryPageSize,
     })),
-    spaces: resultSection(spaces, (value) => ({
+    spaces: mapSection(spaces, (value) => ({
       ...value,
       spaces: value.spaces.slice(0, spacesPageSize),
       hasMore:
@@ -302,8 +312,8 @@ export async function loadGardenWorkspace(
       page: options.spacesExpanded ? spacesPage : 1,
       pageSize: spacesPageSize,
     })),
-    recent: resultSection(recent, (value) => value),
-    inbox: resultSection(inbox, (value) => value),
+    recent,
+    inbox,
     allFailed: false,
   };
 
@@ -317,68 +327,32 @@ export async function loadGardenWorkspace(
   return readModel;
 }
 
-function runWorkspaceSource<T>(
+function settleWorkspaceSource<T>(
   faultSections: ReadonlySet<GardenWorkspaceSectionKey>,
   section: GardenWorkspaceSectionKey,
   load: () => Promise<T>,
-) {
-  if (faultSections.has(section)) {
-    return Promise.reject(new Error("Deterministic workspace section fault."));
-  }
-  return withGardenWorkspaceDeadline(
-    load,
-    gardenWorkspaceSectionDeadlineMs(section),
+): Promise<GardenWorkspaceSection<T>> {
+  return settleSection(
+    () => {
+      if (faultSections.has(section)) {
+        throw new Error("Deterministic workspace section fault.");
+      }
+      return load();
+    },
+    { deadlineMs: gardenWorkspaceSectionDeadlineMs(section) },
   );
 }
 
 /**
- * A section that exceeded its own deadline. It carries a code so the bounded
- * classifier reports `query_timeout` rather than losing the distinction between
- * a slow dependency and an unrecognised fault.
+ * Presentation shaping applies to a settled value and leaves a failure whole:
+ * the class, digest, and relation an operator reads must survive the map.
  */
-export class GardenWorkspaceSectionDeadlineError extends Error {
-  readonly code = "workspace_section_deadline";
-
-  constructor() {
-    super("Garden workspace section deadline exceeded.");
-    this.name = "GardenWorkspaceSectionDeadlineError";
-  }
-}
-
-/**
- * Workspace sections are independent support surfaces. A slow dependency must
- * settle as the caller's generic error state, while a later completion remains
- * unable to alter that completed read model.
- */
-export function withGardenWorkspaceDeadline<T>(
-  load: () => Promise<T>,
-  deadlineMs = WORKSPACE_SECTION_DEADLINE_MS,
-): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    let settled = false;
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      reject(new GardenWorkspaceSectionDeadlineError());
-    }, deadlineMs);
-
-    void Promise.resolve()
-      .then(load)
-      .then(
-        (value) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          resolve(value);
-        },
-        (error: unknown) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          reject(error);
-        },
-      );
-  });
+function mapSection<TInput, TOutput>(
+  section: GardenWorkspaceSection<TInput>,
+  map: (value: TInput) => TOutput,
+): GardenWorkspaceSection<TOutput> {
+  if (section.status === "error") return section;
+  return { status: "ready", value: map(section.value) };
 }
 
 export function buildGardenWorkspaceInventorySummaryQuery(
@@ -483,79 +457,6 @@ export function buildGardenWorkspaceRecentEntriesQuery(
     .orderBy("journal_entries.created_at", "desc")
     .orderBy("journal_entries.id", "asc")
     .limit(normalizeLimit(limit));
-}
-
-function resultSection<TInput, TOutput>(
-  result: PromiseSettledResult<TInput>,
-  map: (value: TInput) => TOutput,
-): GardenWorkspaceSection<TOutput> {
-  if (result.status === "rejected") {
-    return {
-      status: "error",
-      failureClass: classifyGardenWorkspaceFailure(result.reason),
-    };
-  }
-  return { status: "ready", value: map(result.value) };
-}
-
-const POSTGRES_FAILURE_CLASS: Readonly<
-  Record<string, GardenWorkspaceFailureClass>
-> = {
-  // insufficient_privilege
-  "42501": "permission_denied",
-  // undefined_table, undefined_column, undefined_function, undefined_object
-  "42P01": "schema_missing",
-  "42703": "schema_missing",
-  "42883": "schema_missing",
-  "42704": "schema_missing",
-  // query_canceled, idle_session_timeout
-  "57014": "query_timeout",
-  "57P05": "query_timeout",
-  // connection exception family
-  "08000": "connection_unavailable",
-  "08001": "connection_unavailable",
-  "08003": "connection_unavailable",
-  "08004": "connection_unavailable",
-  "08006": "connection_unavailable",
-  "08007": "connection_unavailable",
-  "57P01": "connection_unavailable",
-  "57P03": "connection_unavailable",
-  // serialization_failure, deadlock_detected
-  "40001": "serialization_failure",
-  "40P01": "serialization_failure",
-};
-
-const SYSTEM_FAILURE_CLASS: Readonly<
-  Record<string, GardenWorkspaceFailureClass>
-> = {
-  ECONNREFUSED: "connection_unavailable",
-  ECONNRESET: "connection_unavailable",
-  EHOSTUNREACH: "connection_unavailable",
-  ENOTFOUND: "connection_unavailable",
-  EPIPE: "connection_unavailable",
-  ETIMEDOUT: "query_timeout",
-  workspace_section_deadline: "query_timeout",
-};
-
-/**
- * Maps a rejection onto exactly one bounded class. The reason itself is never
- * returned or recorded: a driver error can carry the failing statement and its
- * bound parameters, and those may contain journal content.
- */
-export function classifyGardenWorkspaceFailure(
-  reason: unknown,
-): GardenWorkspaceFailureClass {
-  if (reason instanceof Error && reason.name === "AbortError") {
-    return "query_timeout";
-  }
-  const code =
-    reason !== null && typeof reason === "object" && "code" in reason
-      ? String((reason as { code: unknown }).code)
-      : undefined;
-  if (!code) return "unknown";
-  return (
-    POSTGRES_FAILURE_CLASS[code] ?? SYSTEM_FAILURE_CLASS[code] ?? "unknown"
-  );
 }
 
 export interface GardenWorkspaceSectionReceiptRow {

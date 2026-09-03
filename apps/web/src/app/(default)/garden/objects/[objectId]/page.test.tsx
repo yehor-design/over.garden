@@ -1,4 +1,5 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderServerHtml } from "@test/render-server-html";
+import { missingRelationRejection } from "@test/postgres-rejection";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -119,7 +120,7 @@ describe("/garden/objects/[objectId]", () => {
     mocks.getPlantObjectPage.mockResolvedValue(page);
     const { default: PlantObjectReadbackPage } = await import("./page");
 
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await PlantObjectReadbackPage({
         params: Promise.resolve({ objectId: "object-1" }),
         searchParams: Promise.resolve({}),
@@ -144,7 +145,7 @@ describe("/garden/objects/[objectId]", () => {
     );
     const { default: PlantObjectReadbackPage } = await import("./page");
 
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await PlantObjectReadbackPage({
         params: Promise.resolve({ objectId: "object-1" }),
         searchParams: Promise.resolve({}),
@@ -171,7 +172,7 @@ describe("/garden/objects/[objectId]", () => {
     );
     const { default: PlantObjectReadbackPage } = await import("./page");
 
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await PlantObjectReadbackPage({
         params: Promise.resolve({ objectId: "object-1" }),
         searchParams: Promise.resolve({ saveProgress: "first-entry" }),
@@ -206,7 +207,7 @@ describe("/garden/objects/[objectId]", () => {
     );
     const { default: PlantObjectReadbackPage } = await import("./page");
 
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await PlantObjectReadbackPage({
         params: Promise.resolve({ objectId: "object-1" }),
         searchParams: Promise.resolve({ saveProgress: "follow-up" }),
@@ -260,7 +261,7 @@ describe("/garden/objects/[objectId]", () => {
       );
       const { default: PlantObjectReadbackPage } = await import("./page");
 
-      const html = renderToStaticMarkup(
+      const html = await renderServerHtml(
         await PlantObjectReadbackPage({
           params: Promise.resolve({ objectId: "object-1" }),
           searchParams: Promise.resolve({}),
@@ -339,7 +340,7 @@ describe("/garden/objects/[objectId]", () => {
       );
       const { default: PlantObjectReadbackPage } = await import("./page");
 
-      const html = renderToStaticMarkup(
+      const html = await renderServerHtml(
         await PlantObjectReadbackPage({
           params: Promise.resolve({ objectId: "object-1" }),
           searchParams: Promise.resolve({}),
@@ -380,7 +381,7 @@ describe("/garden/objects/[objectId]", () => {
     });
     const { default: PlantObjectReadbackPage } = await import("./page");
 
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await PlantObjectReadbackPage({
         params: Promise.resolve({ objectId: "object-1" }),
         searchParams: Promise.resolve({}),
@@ -413,7 +414,7 @@ describe("/garden/objects/[objectId]", () => {
     });
     const { default: PlantObjectReadbackPage } = await import("./page");
 
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await PlantObjectReadbackPage({
         params: Promise.resolve({ objectId: "object-1" }),
         searchParams: Promise.resolve({}),
@@ -450,7 +451,7 @@ describe("/garden/objects/[objectId]", () => {
       );
       const { default: PlantObjectReadbackPage } = await import("./page");
 
-      const html = renderToStaticMarkup(
+      const html = await renderServerHtml(
         await PlantObjectReadbackPage({
           params: Promise.resolve({ objectId: "object-1" }),
           searchParams: Promise.resolve({}),
@@ -486,7 +487,7 @@ describe("/garden/objects/[objectId]", () => {
     );
     const { default: PlantObjectReadbackPage } = await import("./page");
 
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await PlantObjectReadbackPage({
         params: Promise.resolve({ objectId: "object-1" }),
         searchParams: Promise.resolve({}),
@@ -521,7 +522,7 @@ describe("/garden/objects/[objectId]", () => {
     );
     const { default: PlantObjectReadbackPage } = await import("./page");
 
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await PlantObjectReadbackPage({
         params: Promise.resolve({ objectId: "object-1" }),
         searchParams: Promise.resolve({
@@ -553,7 +554,7 @@ describe("/garden/objects/[objectId]", () => {
     );
     const { default: PlantObjectReadbackPage } = await import("./page");
 
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await PlantObjectReadbackPage({
         params: Promise.resolve({ objectId: "object-1" }),
         searchParams: Promise.resolve({}),
@@ -565,6 +566,42 @@ describe("/garden/objects/[objectId]", () => {
     );
     expect(html).not.toContain('name="publicationDisclosureAccepted"');
     expect(html).not.toContain('data-auth-intent-control="publish"');
+  });
+
+  it("renders its own shell and a bounded failure when the relation is missing", async () => {
+    mocks.getPlantObjectPage.mockRejectedValue(
+      missingRelationRejection("plant_objects"),
+    );
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = await renderServerHtml(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain('data-workspace-surface="object"');
+    expect(html).toContain('data-section-failure="schema_missing"');
+    expect(html).not.toContain("plant_objects");
+    expect(html).not.toContain('data-workspace-state="loading"');
+    expect(html).not.toContain('data-workspace-section="loading"');
+  });
+
+  it("says an absent object is absent instead of throwing a not-found", async () => {
+    mocks.getPlantObjectPage.mockResolvedValue(null);
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = await renderServerHtml(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain('data-workspace-record="missing"');
+    expect(html).toContain('data-workspace-surface="object"');
+    expect(html).not.toContain("Follow-up composer");
   });
 });
 

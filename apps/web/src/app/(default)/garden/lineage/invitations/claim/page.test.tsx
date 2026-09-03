@@ -1,4 +1,6 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderServerHtml } from "@test/render-server-html";
+import { LINEAGE_CLAIM_COOKIE_NAME } from "@/lib/lineage/claim-handoff";
+import { postgresRejection } from "@test/postgres-rejection";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -16,12 +18,15 @@ vi.mock("next/headers", () => ({
   cookies: mocks.cookies,
 }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
   redirect: mocks.redirect,
+  useRouter: () => ({ refresh: vi.fn() }),
 }));
 
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
+  getSessionId: vi.fn(() => "claim-session"),
 }));
 
 vi.mock("@/server/interface-localization", () => ({
@@ -47,7 +52,7 @@ vi.mock("./actions", () => ({
 
 async function renderClaimPage(searchParams?: Record<string, string>) {
   const { default: LineageInvitationClaimPage } = await import("./page");
-  return renderToStaticMarkup(
+  return await renderServerHtml(
     await LineageInvitationClaimPage({
       searchParams: Promise.resolve(searchParams ?? {}),
     }),
@@ -59,7 +64,14 @@ describe("/garden/lineage/invitations/claim page", () => {
     vi.clearAllMocks();
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.cookies.mockResolvedValue({ get: mocks.cookieGet });
-    mocks.cookieGet.mockReturnValue({ value: "v1.opaque.sealed.tag" });
+    // Name-aware: only the lineage claim cookie is present. A blanket return
+    // would also answer for the session cookie, and the page would then read a
+    // signed-in viewer that this suite never set up.
+    mocks.cookieGet.mockImplementation((name: string) =>
+      name === LINEAGE_CLAIM_COOKIE_NAME
+        ? { value: "v1.opaque.sealed.tag" }
+        : undefined,
+    );
     mocks.unsealLineageClaimToken.mockReturnValue(
       "v1.private-payload.private-signature",
     );
@@ -78,7 +90,7 @@ describe("/garden/lineage/invitations/claim page", () => {
   });
 
   it("accepts a fragment handoff without server-rendering any token", async () => {
-    mocks.cookieGet.mockReturnValueOnce(undefined);
+    mocks.cookieGet.mockImplementation(() => undefined);
     mocks.unsealLineageClaimToken.mockReturnValueOnce(null);
     mocks.getCurrentSession.mockResolvedValue(null);
 
@@ -235,4 +247,22 @@ describe("/garden/lineage/invitations/claim page", () => {
       expect(html).toContain("Cherokee Purple");
     },
   );
+
+  it("renders its own shell and a bounded failure when the relation is missing", async () => {
+    mocks.getCurrentSession.mockResolvedValue({
+      user: { id: "00000000-0000-4000-8000-000000000777" },
+      session: { id: "session-1" },
+    });
+    mocks.getLineageInvitationClaimPreview.mockRejectedValue(
+      postgresRejection("42P01", 'relation "lineage_edges" does not exist'),
+    );
+
+    const html = await renderClaimPage();
+
+    expect(html).toContain('data-workspace-surface="lineage-invitation-claim"');
+    expect(html).toContain("Запрошення щодо походження");
+    expect(html).toContain('data-section-failure="schema_missing"');
+    expect(html).not.toContain("lineage_edges");
+    expect(html).not.toContain('data-workspace-state="loading"');
+  });
 });

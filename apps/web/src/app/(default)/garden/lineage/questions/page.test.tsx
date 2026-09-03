@@ -1,4 +1,5 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderServerHtml } from "@test/render-server-html";
+import { postgresRejection } from "@test/postgres-rejection";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -84,7 +85,7 @@ describe("/garden/lineage/questions", () => {
       mocks.getRequestInterfaceLocale.mockResolvedValue(locale);
 
       const { default: LineageUpdatesPage } = await import("./page");
-      const html = renderToStaticMarkup(await LineageUpdatesPage());
+      const html = await renderServerHtml(await LineageUpdatesPage());
 
       expect(html).toContain(title);
       expect(html).toContain(questionsTitle);
@@ -100,7 +101,7 @@ describe("/garden/lineage/questions", () => {
     mocks.getCurrentSession.mockResolvedValue(null);
 
     const { default: LineageUpdatesPage } = await import("./page");
-    const html = renderToStaticMarkup(await LineageUpdatesPage());
+    const html = await renderServerHtml(await LineageUpdatesPage());
 
     expect(html).toContain("Обновления за произхода");
     expect(html).toContain('data-locale="bg"');
@@ -113,9 +114,24 @@ describe("/garden/lineage/questions", () => {
     mocks.listLineageFollowReadback.mockResolvedValue([]);
 
     const { default: LineageUpdatesPage } = await import("./page");
-    const html = renderToStaticMarkup(await LineageUpdatesPage());
+    const html = await renderServerHtml(await LineageUpdatesPage());
 
     expect(html).toContain("Для вас немає нових питань про походження.");
     expect(html).toContain("Ви ще не стежите за вузлами походження.");
+  });
+
+  it("renders its own shell and a bounded failure when the relation is missing", async () => {
+    mocks.listLineageQuestionInbox.mockRejectedValueOnce(
+      postgresRejection("42P01", 'relation "lineage_questions" does not exist'),
+    );
+
+    const { default: Page } = await import("./page");
+    const html = await renderServerHtml(await Page());
+
+    expect(html).toContain('data-workspace-surface="lineage-questions"');
+    expect(html).toContain("Оновлення походження");
+    expect(html).toContain('data-section-failure="schema_missing"');
+    expect(html).not.toContain("lineage_questions");
+    expect(html).not.toContain('data-workspace-state="loading"');
   });
 });

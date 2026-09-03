@@ -1,4 +1,6 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderServerHtml } from "@test/render-server-html";
+import { missingRelationRejection } from "@test/postgres-rejection";
+import { AdminAccessDeniedError } from "@/server/admin-access";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EditionCenterReadModel } from "@/lib/stable-registry/edition-actions";
@@ -105,16 +107,18 @@ describe("Stable Registry edition page", () => {
     mocks.getCurrentSession.mockResolvedValue(null);
     const { default: Page } = await import("./page");
 
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
     expect(html).toContain('data-edition-state="sign-in-required"');
     expect(mocks.readEditionCenter).not.toHaveBeenCalled();
   });
 
   it("denies an ordinary user without exposing diff evidence", async () => {
-    mocks.assertCatalogCuratorAccess.mockRejectedValue(new Error("denied"));
+    mocks.assertCatalogCuratorAccess.mockRejectedValue(
+      new AdminAccessDeniedError(),
+    );
     const { default: Page } = await import("./page");
 
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
     expect(html).toContain('data-edition-state="denied"');
     expect(html).not.toContain("supersession");
     expect(mocks.readEditionCenter).not.toHaveBeenCalled();
@@ -124,7 +128,7 @@ describe("Stable Registry edition page", () => {
     mocks.isStableRegistryEditionsEnabled.mockReturnValue(false);
     const { default: Page } = await import("./page");
 
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
     expect(html).toContain('data-edition-state="disabled"');
     expect(mocks.readEditionCenter).not.toHaveBeenCalled();
   });
@@ -132,7 +136,7 @@ describe("Stable Registry edition page", () => {
   it("shows the owner impact before approval, not thousands of rows", async () => {
     const { default: Page } = await import("./page");
 
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
     expect(html).toContain('data-diff-class="supersession"');
     // 128k unchanged records produce zero review work.
     expect(html).toContain("128000");
@@ -143,7 +147,7 @@ describe("Stable Registry edition page", () => {
   it("keeps the rollback receipt visible in the activation history", async () => {
     const { default: Page } = await import("./page");
 
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
     expect(html).toContain('data-transition="rollback"');
     expect(html).toContain('data-receipt-state="verified"');
   });
@@ -151,7 +155,7 @@ describe("Stable Registry edition page", () => {
   it("keeps the keep-current and cancel controls available during review", async () => {
     const { default: Page } = await import("./page");
 
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
     expect(html).toContain("Залишити поточний випуск");
     expect(html).toContain('data-edition-cancel="true"');
   });
@@ -165,8 +169,35 @@ describe("Stable Registry edition page", () => {
       vi.resetModules();
       mocks.getRequestInterfaceLocale.mockResolvedValue(locale);
       const { default: Page } = await import("./page");
-      const html = renderToStaticMarkup(await Page());
+      const html = await renderServerHtml(await Page());
       expect(html).toContain(title);
     }
+  });
+
+  it("renders its own shell and a bounded failure when the relation is missing", async () => {
+    mocks.readEditionCenter.mockRejectedValue(
+      missingRelationRejection("catalog_editions"),
+    );
+    const { default: Page } = await import("./page");
+    const html = await renderServerHtml(await Page());
+
+    expect(html).toContain('data-workspace-surface="stable-registry-editions"');
+    expect(html).toContain('data-section-failure="schema_missing"');
+    expect(html).toContain("catalog_editions");
+    expect(html).not.toContain('data-workspace-state="loading"');
+    expect(html).not.toContain('data-workspace-section="loading"');
+  });
+
+  it("tells an unreachable database apart from a refusal", async () => {
+    mocks.assertCatalogCuratorAccess.mockRejectedValue(
+      Object.assign(new Error("redacted driver failure"), {
+        code: "ECONNREFUSED",
+      }),
+    );
+    const { default: Page } = await import("./page");
+    const html = await renderServerHtml(await Page());
+
+    expect(html).toContain('data-section-failure="connection_unavailable"');
+    expect(mocks.readEditionCenter).not.toHaveBeenCalled();
   });
 });

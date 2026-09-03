@@ -1,18 +1,19 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderServerHtml } from "@test/render-server-html";
+import { missingRelationRejection } from "@test/postgres-rejection";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ERASURE_REQUEST_INTAKE_VERSION } from "@/lib/privacy/disclosures";
+import { AdminAccessDeniedError } from "@/server/admin-access";
 
 const mocks = vi.hoisted(() => ({
-  resolveErasureRequestOperatorAccess: vi.fn(),
+  assertAdminCapabilityForScope: vi.fn(),
+  getCurrentSession: vi.fn(),
   listOperatorErasureRequests: vi.fn(),
   getErasureDryRunPreviewForRequest: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
-  getCurrentSession: vi.fn(async () => ({
-    user: { id: "00000000-0000-4000-8000-000000000999" },
-  })),
+  getCurrentSession: mocks.getCurrentSession,
   getSessionId: vi.fn(() => "operator-session"),
 }));
 
@@ -27,16 +28,9 @@ vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: vi.fn(async () => "uk"),
 }));
 
-vi.mock("@/server/admin-access", () => ({
-  hasAdminCapability: vi.fn(
-    (access: { capabilities: string[] }, capability: string) =>
-      access.capabilities.includes(capability),
-  ),
-}));
-
-vi.mock("@/server/erasure-request-access", () => ({
-  resolveErasureRequestOperatorAccess:
-    mocks.resolveErasureRequestOperatorAccess,
+vi.mock("@/server/admin-access", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/server/admin-access")>()),
+  assertAdminCapabilityForScope: mocks.assertAdminCapabilityForScope,
 }));
 
 vi.mock("@/server/erasure-request-repository", () => ({
@@ -66,8 +60,10 @@ vi.mock("./actions", () => ({
 describe("/garden/privacy/erasure-requests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
-      status: "allowed",
+    mocks.getCurrentSession.mockResolvedValue({
+      user: { id: "00000000-0000-4000-8000-000000000999" },
+    });
+    mocks.assertAdminCapabilityForScope.mockResolvedValue({
       mode: "sealed_owner_credential_only",
       role: "owner",
       capabilities: [
@@ -112,12 +108,10 @@ describe("/garden/privacy/erasure-requests", () => {
   });
 
   it("renders the structural sign-in boundary without reading requests", async () => {
-    mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
-      status: "sign_in_required",
-    });
+    mocks.getCurrentSession.mockResolvedValue(null);
 
     const { default: ErasureRequestsOperatorPage } = await import("./page");
-    const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
+    const html = await renderServerHtml(await ErasureRequestsOperatorPage());
 
     expect(html).toContain('data-operator-surface="erasure-requests"');
     expect(html).toContain('data-operator-access-state="sign-in-required"');
@@ -125,12 +119,12 @@ describe("/garden/privacy/erasure-requests", () => {
   });
 
   it("does not read erasure requests for a signed-in non-operator", async () => {
-    mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
-      status: "denied",
-    });
+    mocks.assertAdminCapabilityForScope.mockRejectedValue(
+      new AdminAccessDeniedError(),
+    );
 
     const { default: ErasureRequestsOperatorPage } = await import("./page");
-    const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
+    const html = await renderServerHtml(await ErasureRequestsOperatorPage());
 
     expect(html).toContain('data-operator-surface="erasure-requests"');
     expect(html).toContain('data-operator-access-state="denied"');
@@ -141,7 +135,7 @@ describe("/garden/privacy/erasure-requests", () => {
 
   it("renders dry-run preview counts without private journal evidence", async () => {
     const { default: ErasureRequestsOperatorPage } = await import("./page");
-    const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
+    const html = await renderServerHtml(await ErasureRequestsOperatorPage());
 
     expect(html).toContain('data-operator-surface="erasure-requests"');
     expect(html).toContain('data-operator-access-state="allowed"');
@@ -160,5 +154,37 @@ describe("/garden/privacy/erasure-requests", () => {
     expect(html).toContain("Потрібне підтвердження особи");
     expect(html).not.toContain('<option value="completed">');
     expect(html).not.toMatch(/quarantine|derivative|https?:\/\//i);
+  });
+
+  it("renders its own shell and a bounded failure when the relation is missing", async () => {
+    mocks.listOperatorErasureRequests.mockRejectedValue(
+      missingRelationRejection("erasure_requests"),
+    );
+
+    const { default: ErasureRequestsOperatorPage } = await import("./page");
+    const html = await renderServerHtml(await ErasureRequestsOperatorPage());
+
+    expect(html).toContain('data-workspace-surface="erasure-requests"');
+    expect(html).toContain('data-section-failure="schema_missing"');
+    // Owner-only surface: naming the relation is the difference between a
+    // five-minute migration and a hunt.
+    expect(html).toContain("erasure_requests");
+    expect(html).toContain("docs/MIGRATION_ALLOCATION.md");
+    expect(html).not.toContain('data-workspace-state="loading"');
+  });
+
+  it("says the role table is unreachable instead of reporting a denial", async () => {
+    mocks.assertAdminCapabilityForScope.mockRejectedValue(
+      Object.assign(new Error("redacted driver failure"), {
+        code: "ECONNREFUSED",
+      }),
+    );
+
+    const { default: ErasureRequestsOperatorPage } = await import("./page");
+    const html = await renderServerHtml(await ErasureRequestsOperatorPage());
+
+    expect(html).toContain('data-operator-access-state="unavailable"');
+    expect(html).toContain('data-section-failure="connection_unavailable"');
+    expect(mocks.listOperatorErasureRequests).not.toHaveBeenCalled();
   });
 });

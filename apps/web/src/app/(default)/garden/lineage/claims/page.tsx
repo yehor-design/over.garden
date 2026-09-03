@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Suspense } from "react";
+
+import {
+  WorkspaceSectionError,
+  WorkspaceSectionSkeleton,
+} from "@/components/garden/workspace-state";
 
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
@@ -10,14 +15,19 @@ import {
   getOwnerLineageCopy,
   type OwnerLineageCopy,
 } from "@/lib/owner-lineage-copy";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   listLineageClaimInbox,
   type LineageClaimInboxItem,
   type LineagePlantObjectOption,
 } from "@/server/lineage-repository";
-import { scopedToUser } from "@/server/request-scope";
+import type { RequestScope } from "@/server/request-scope";
+import { resolveWorkspaceViewer } from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
+import { LineageClaimsShell, LINEAGE_CLAIMS_PATH } from "./claims-shell";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
   confirmLineageClaimAction,
@@ -37,38 +47,37 @@ export default async function LineageClaimInboxPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 } = {}) {
-  const params = await (searchParams ??
-    Promise.resolve<Record<string, string | string[] | undefined>>({}));
-  const invitationStatus = normalizeInvitationStatus(params.invitation);
-  const [session, locale] = await Promise.all([
-    getCurrentSession(),
+  const [params, viewer, locale] = await Promise.all([
+    searchParams ??
+      Promise.resolve<Record<string, string | string[] | undefined>>({}),
+    resolveWorkspaceViewer(),
     getRequestInterfaceLocale(),
   ]);
   const copy = getOwnerLineageCopy(locale);
-  const userId = session?.user?.id;
+  const invitationStatus = normalizeInvitationStatus(params.invitation);
 
-  if (!userId) {
+  if (viewer.status === "unavailable") {
     return (
-      <main
-        lang={locale}
-        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
-      >
-        <LineageClaimInboxHeader copy={copy} />
-        <GardenAuthPanel locale={locale} />
-      </main>
+      <LineageClaimsShell locale={locale}>
+        <WorkspaceSectionError
+          locale={locale}
+          failure={viewer.failure}
+          retryHref={LINEAGE_CLAIMS_PATH}
+        />
+      </LineageClaimsShell>
     );
   }
 
-  const scope = scopedToUser(userId, getSessionId(session));
-  const claims = await listLineageClaimInbox(scope);
+  if (viewer.status === "sign-in-required") {
+    return (
+      <LineageClaimsShell locale={locale}>
+        <GardenAuthPanel locale={locale} />
+      </LineageClaimsShell>
+    );
+  }
 
   return (
-    <main
-      lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
-    >
-      <LineageClaimInboxHeader copy={copy} claimCount={claims.length} />
-
+    <LineageClaimsShell locale={locale}>
       {invitationStatus ? (
         <p
           role="status"
@@ -79,14 +88,57 @@ export default async function LineageClaimInboxPage({
             : copy.claims.declinedNotice}
         </p>
       ) : null}
+      <Suspense
+        fallback={<WorkspaceSectionSkeleton locale={locale} rows={2} />}
+      >
+        <LineageClaimsSection locale={locale} scope={viewer.scope} />
+      </Suspense>
+    </LineageClaimsShell>
+  );
+}
 
-      {claims.length === 0 ? (
+async function LineageClaimsSection({
+  locale,
+  scope,
+}: {
+  locale: InterfaceLocale;
+  scope: RequestScope;
+}) {
+  const copy = getOwnerLineageCopy(locale);
+  const claims = await settleSection(() => listLineageClaimInbox(scope), {
+    deadlineMs: workspaceSectionDeadlineMs(2),
+  });
+
+  if (claims.status === "error") {
+    return (
+      <WorkspaceSectionError
+        locale={locale}
+        failure={claims}
+        title={copy.claims.title}
+        retryHref={LINEAGE_CLAIMS_PATH}
+      />
+    );
+  }
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+        <span className="rounded-md border border-border px-2 py-1">
+          {formatOwnerLineageTemplate(copy.claims.waiting, {
+            count: claims.value.length,
+          })}
+        </span>
+        <span className="rounded-md border border-border px-2 py-1">
+          {copy.claims.publicChange}
+        </span>
+      </div>
+      {claims.value.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
           {copy.claims.empty}
         </p>
       ) : (
         <ol className="grid gap-4">
-          {claims.map((claim) => (
+          {claims.value.map((claim) => (
             <LineageClaimCard
               key={claim.id}
               claim={claim}
@@ -97,7 +149,7 @@ export default async function LineageClaimInboxPage({
           ))}
         </ol>
       )}
-    </main>
+    </>
   );
 }
 
@@ -108,56 +160,6 @@ function normalizeInvitationStatus(
   return candidate === "confirmed" || candidate === "declined"
     ? candidate
     : null;
-}
-
-function LineageClaimInboxHeader({
-  copy,
-  claimCount,
-}: {
-  copy: OwnerLineageCopy;
-  claimCount?: number;
-}) {
-  return (
-    <header className="flex flex-col gap-4 border-b border-border pb-5">
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/garden"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          {copy.common.backToJournal}
-        </Link>
-        <Link
-          href="/garden/lineage/questions"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          {copy.common.updates}
-        </Link>
-      </div>
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {copy.claims.title}
-        </h1>
-        {typeof claimCount === "number" ? (
-          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="rounded-md border border-border px-2 py-1">
-              {formatOwnerLineageTemplate(copy.claims.waiting, {
-                count: claimCount,
-              })}
-            </span>
-            <span className="rounded-md border border-border px-2 py-1">
-              {copy.claims.publicChange}
-            </span>
-          </div>
-        ) : null}
-      </div>
-    </header>
-  );
 }
 
 function LineageClaimCard({

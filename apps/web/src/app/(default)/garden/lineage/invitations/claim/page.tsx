@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
+import { Suspense } from "react";
+
+import {
+  WorkspaceSectionError,
+  WorkspaceSectionSkeleton,
+} from "@/components/garden/workspace-state";
 
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
@@ -24,7 +28,6 @@ import {
   getOwnerLineageCopy,
   type OwnerLineageCopy,
 } from "@/lib/owner-lineage-copy";
-import { getCurrentSession } from "@/server/auth-session";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { unsealLineageClaimToken } from "@/server/lineage-claim-cookie";
 import { verifyLineageInviteToken } from "@/server/lineage-invite-token";
@@ -33,6 +36,12 @@ import {
   type LineageInvitationClaimPreview,
   type LineagePlantObjectOption,
 } from "@/server/lineage-repository";
+import { resolveWorkspaceViewer } from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
+import { LineageInvitationClaimShell } from "./invitation-shell";
 import {
   confirmLineageInvitationClaimAction,
   declineLineageInvitationClaimAction,
@@ -71,92 +80,100 @@ export default async function LineageInvitationClaimPage({
     );
   }
 
-  const [cookieStore, session] = await Promise.all([
+  const [cookieStore, viewer] = await Promise.all([
     cookies(),
-    getCurrentSession(),
+    resolveWorkspaceViewer(),
   ]);
   const token = unsealLineageClaimToken(
     cookieStore.get(LINEAGE_CLAIM_COOKIE_NAME)?.value,
   );
-  const userId = session?.user?.id;
   const resumeAction = normalizeAuthIntentResumeAction(params.authIntent);
   const resumeControl = normalizeAuthIntentResumeControl(params.authControl);
 
+  if (viewer.status === "unavailable") {
+    return (
+      <LineageInvitationClaimShell locale={locale}>
+        <WorkspaceSectionError
+          locale={locale}
+          failure={viewer.failure}
+          retryHref={LINEAGE_INVITATION_CLAIM_PATH}
+        />
+      </LineageInvitationClaimShell>
+    );
+  }
+
   if (!token) {
     return (
-      <LineageInvitationClaimShell locale={locale} copy={copy}>
+      <LineageInvitationClaimShell locale={locale}>
         <LineageClaimHandoff locale={locale} />
       </LineageInvitationClaimShell>
     );
   }
 
-  if (!userId) {
+  if (viewer.status === "sign-in-required") {
     return (
-      <LineageInvitationClaimShell locale={locale} copy={copy}>
+      <LineageInvitationClaimShell locale={locale}>
         <GuestClaimPrompt copy={copy} />
       </LineageInvitationClaimShell>
     );
   }
 
-  const preview = await getLineageInvitationClaimPreview(token);
-
   return (
-    <LineageInvitationClaimShell locale={locale} copy={copy}>
+    <LineageInvitationClaimShell locale={locale}>
       <AuthIntentFocus action={resumeAction} control={resumeControl} />
-      {preview ? (
-        <LineageInvitationClaimCard
-          copy={copy}
+      <Suspense
+        fallback={<WorkspaceSectionSkeleton locale={locale} rows={1} />}
+      >
+        <LineageInvitationClaimSection
           locale={locale}
-          preview={preview}
+          token={token}
           resumed={resumeAction === "claim"}
         />
-      ) : (
-        <UnavailableInvite copy={copy} />
-      )}
+      </Suspense>
     </LineageInvitationClaimShell>
+  );
+}
+
+async function LineageInvitationClaimSection({
+  locale,
+  token,
+  resumed,
+}: {
+  locale: InterfaceLocale;
+  token: string;
+  resumed: boolean;
+}) {
+  const copy = getOwnerLineageCopy(locale);
+  const preview = await settleSection(
+    () => getLineageInvitationClaimPreview(token),
+    { deadlineMs: workspaceSectionDeadlineMs(2) },
+  );
+
+  if (preview.status === "error") {
+    return (
+      <WorkspaceSectionError
+        locale={locale}
+        failure={preview}
+        title={copy.invitation.title}
+        retryHref={LINEAGE_INVITATION_CLAIM_PATH}
+      />
+    );
+  }
+
+  return preview.value ? (
+    <LineageInvitationClaimCard
+      copy={copy}
+      locale={locale}
+      preview={preview.value}
+      resumed={resumed}
+    />
+  ) : (
+    <UnavailableInvite copy={copy} />
   );
 }
 
 function firstSearchParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function LineageInvitationClaimShell({
-  children,
-  copy,
-  locale,
-}: {
-  children: ReactNode;
-  copy: OwnerLineageCopy;
-  locale: InterfaceLocale;
-}) {
-  return (
-    <main
-      lang={locale}
-      className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-8 sm:px-8"
-    >
-      <header className="flex flex-col gap-4 border-b border-border pb-5">
-        <Link
-          href="/garden"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          {copy.common.backToJournal}
-        </Link>
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            {copy.invitation.title}
-          </h1>
-          <p className="text-sm leading-6 text-muted-foreground">
-            {copy.invitation.description}
-          </p>
-        </div>
-      </header>
-      {children}
-    </main>
-  );
 }
 
 function LineageInvitationClaimCard({
