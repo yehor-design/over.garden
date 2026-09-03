@@ -594,13 +594,10 @@ Runtime classification: this production worker/search surface is `production-lin
 - Region: Frankfurt, Datacenter 1, `FRA1`
 - Current size: Basic 1 vCPU, 1 GB RAM
 - Runtime: Docker Compose under `/opt/overgarden`
-- Public matching health URL: `https://matching.over.garden/health`
-- Public matching capability URL: `https://matching.over.garden/capabilities`
-- Public matching readiness URL: `https://matching.over.garden/ready`
+- Retired hostname: `matching.over.garden` served three self-reporting endpoints until OVE-357. The route, its DNS record, and its container were removed on 2026-09-03; the name resolves to nothing. Worker liveness is read from the `matching_worker_heartbeats` row.
 - Public Meilisearch URL: `https://meili.over.garden`
-- Reverse proxy/TLS: Caddy on the Droplet
-- Containers: active Meilisearch (`overgarden-meilisearch-next` after OVE-198), legacy Meilisearch retained stopped, `matching-api`, `matching-worker`, `caddy`
-- Matching API health returned status `ok` with ICU present on 2026-06-29.
+- Reverse proxy/TLS: Caddy on the Droplet, serving the Meilisearch site only
+- Containers: active Meilisearch (`overgarden-meilisearch-next` after OVE-198), legacy Meilisearch retained stopped, `matching-worker`, `caddy`
 - Meilisearch health returned status `available` on 2026-06-29.
 
 Meilisearch version pin (OVE-198):
@@ -660,9 +657,9 @@ Worker and search invariants:
 
 Process management and recovery (OVE-39):
 
-- Process manager: Docker Compose under `/opt/overgarden` on `overgarden-worker-prod-fra1`, containers `meilisearch`, `matching-api`, `matching-worker`, `caddy` (Caddy terminates TLS).
-- Restart policy: live-confirmed on 2026-06-29 as `unless-stopped` for `matching-worker`, `matching-api`, `meilisearch`, and `caddy`, so the worker, API, and Meilisearch return automatically after a process crash or droplet reboot.
-- Health endpoints: matching `https://matching.over.garden/health` (status `ok`, ICU present) and Meilisearch `https://meili.over.garden/health` (status `available`) passed on 2026-06-29.
+- Process manager: Docker Compose under `/opt/overgarden` on `overgarden-worker-prod-fra1`, containers `meilisearch`, `matching-worker`, `caddy` (Caddy terminates TLS). The `matching-api` service was retired by OVE-357 and is defined in neither compose file.
+- Restart policy: live-confirmed on 2026-06-29 as `unless-stopped` for `matching-worker`, `meilisearch`, and `caddy`, so the worker and Meilisearch return automatically after a process crash or droplet reboot.
+- Health endpoints: Meilisearch `https://meili.over.garden/health` (status `available`) passed on 2026-06-29 and again after the OVE-357 teardown on 2026-09-03. Worker liveness comes from the heartbeat row through `pnpm smoke:matching-queue-health` and `pnpm smoke:matching-runtime-capabilities`, not from an HTTP endpoint.
 - Stale-job reclaim: the worker claims `job_queue` rows with `FOR UPDATE SKIP LOCKED` and reclaims rows stuck in `processing` once `locked_at` is older than `WORKER_VT_SECONDS` (default 30s). Deterministic catalog matching uses the code-default `CATALOG_MATCH_WORKER_VT_SECONDS` lease (300s), plus a persisted rerun request and claim-token compare-and-set completion, so a concurrent operator rescan cannot be swallowed by the older claim. Handlers are idempotent (Meilisearch upsert by primary key / delete by id; catalog suggestion upsert by source/candidate/kind), so at-least-once re-delivery after a restart cannot duplicate or corrupt derived state. Failed jobs back off `WORKER_VT_SECONDS` and retry; unknown job kinds fail with `last_error` instead of being marked done.
 - Local recovery proof: `services/matching/tests/test_worker_recovery.py` deterministically proves reclaim-after-timeout, `journal_entry_index`/`journal_entry_unindex` reaching `done` after a simulated restart, the public-safe document contract, idempotent re-delivery, and fail-then-recover when Meilisearch is briefly unavailable. It runs with `uv run --frozen pytest` and needs no live services.
 - Live restart smoke (2026-06-29, redacted): restarted only `matching-worker`, confirmed it returned `Up`, then published a canary through the production app path and confirmed `journal_entry_index` reached `done` in one attempt. The Meilisearch `journal_entries` document had exactly the public-safe keys `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, and `title`, with `noindex = true`, `locationVisibility = hidden`, and no forbidden owner/user IDs, media keys, precise location, IPs, user agents, or referrers. Archiving the same canary confirmed `journal_entry_unindex` reached `done` in one attempt, the Meilisearch document returned `404`, and the old public URL returned `410`. Record only job-state classes, document presence/absence, document key names, and privacy booleans.
@@ -1131,18 +1128,31 @@ endpoints reported the release, digest, schema class, and handler set — every
 one of which the worker already writes to Postgres — and a healthy HTTP response
 proved the API was up, never that the worker was claiming jobs.
 
-**Pending teardown obligation.** The live container, its Caddy route, and the
-public matching DNS record still exist on the host. Removing them is a
-maintainer-approved provider effect and has **not** been performed. Until it is:
+**Terminal absence receipt (2026-09-03).** The teardown was approved against
+plan digest `1463999c3956b0078daaf3e1f5f9c0e1bf320eb8255d728e41da4bda2bb1ee7f`
+and executed in order — reverse-proxy route, DNS record, container — with two
+verifications after each step:
 
-- the `matching-api` container may still be running and answering;
-- `https://matching.over.garden/*` may still resolve and serve;
-- the live-state entries above remain accurate and are not rewritten as though
-  the teardown had happened.
+- Route: the `matching.over.garden` site block is gone from `/opt/overgarden/Caddyfile`
+  and `caddy reload` exited zero; the `meili.over.garden` block is unchanged and
+  answers `200`. The Caddy-managed certificate directory for the retired
+  hostname was moved out of the `overgarden_caddy_data` volume, so nothing
+  serves or renews it.
+- DNS: the `A matching.over.garden` record is absent from the `over.garden`
+  zone; three public resolvers return nothing, twice. No other record changed.
+- Container: `overgarden-matching-api-1` is absent from `docker ps -a`, and
+  neither compose file on the host defines a `matching-api` service any more, so
+  no `compose up` recreates it. `overgarden-matching-worker-1` stayed healthy
+  throughout, its heartbeat stayed under the freshness bound, and both
+  Postgres-sourced operator commands returned `ready` after the teardown.
 
-The terminal absence receipt belongs to that separate step. Record only class
-names and absence booleans; never a token, certificate body, connection string,
-or provider credential.
+Rollback stays executable while the sealed release image remains on the host:
+restore the route block and reload Caddy, recreate the `A` record, restore the
+service definition from `/opt/overgarden/docker-compose.release.yml.ove357-backup-2026-09-03`,
+and bring the container up with `release-state/active.env`.
+
+Receipts record class names and absence booleans only; never a token,
+certificate body, connection string, or provider credential.
 
 ## Composed self-hosted stack (OVE-358)
 

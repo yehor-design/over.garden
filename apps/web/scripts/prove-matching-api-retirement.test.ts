@@ -211,12 +211,22 @@ describe("the proof reads the heartbeat row instead", () => {
   });
 });
 
-describe("the teardown is not claimed", () => {
-  it("records the live container, route, and DNS record as still pending", () => {
-    // Phase B is a maintainer-approved provider effect and has not been
-    // performed. The registry must not read as though it had.
+describe("the teardown is recorded, not assumed", () => {
+  it("records terminal absence for the container, route, and DNS record", () => {
+    // Phase B ran on 2026-09-03 under an approved plan digest. The registry
+    // carries the receipt, and no entry may still advertise the retired
+    // hostname as a live health surface.
     const registry = repoFile("docs/INFRASTRUCTURE_REGISTRY.md");
-    expect(registry).toContain("Pending teardown obligation");
-    expect(registry).toContain("has **not** been performed");
+    expect(registry).toContain("Terminal absence receipt");
+    expect(registry).not.toContain("Pending teardown obligation");
+    expect(registry).not.toContain(
+      "Public matching health URL: `https://matching.over.garden/health`",
+    );
+  });
+
+  it("keeps an executable rollback for the retired host resources", () => {
+    const runbook = repoFile("docs/MATCHING_API_RETIREMENT.md");
+    expect(runbook).toContain("ove357-backup-2026-09-03");
+    expect(runbook).toContain("Rollback (still executable)");
   });
 });

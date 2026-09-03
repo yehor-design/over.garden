@@ -59,7 +59,7 @@ The complete proof has a 180-second monotonic deadline. Each live worker-job, pr
 1. Fetch `origin/main`, prove the feature SHA is contained, and use a clean exact-main checkout.
 2. Read the Vercel deployment twice and require `READY`, Production, ref `main`, exact SHA, and canonical apex plus www aliases.
 3. Read `/api/document-mutation-admission/readback` twice and require the exact SHA with enforcement enabled.
-4. Read `https://matching.over.garden/capabilities` and `/ready`: require the immutable runtime shape, exact six-handler manifest, `journal_entry_index`, `journal_entry_unindex`, and every dependency available.
+4. Require the immutable runtime shape, the exact six-handler manifest, `journal_entry_index`, `journal_entry_unindex`, and every dependency available. Historical note: this step read `https://matching.over.garden/capabilities` and `/ready`, retired by OVE-357 on 2026-09-03; `pnpm smoke:matching-runtime-capabilities` returns the same classes from the heartbeat row.
 5. Read `https://meili.over.garden/health` and require `available`.
 6. Run `pnpm mainline:closeout:check` from the clean exact-main checkout.
 7. Use `vercel env run -e production`; never copy production secrets into evidence.
