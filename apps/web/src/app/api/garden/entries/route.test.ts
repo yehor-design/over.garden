@@ -261,6 +261,111 @@ describe("POST /api/garden/entries atomic create", () => {
     fetcher.mockRestore();
   });
 
+  it("accepts a photo's variant receipts next to its primary and refuses a set that no photo count explains (OVE-371)", async () => {
+    const publicPath = `derivatives/${MEDIA_ID}/1.webp`;
+    mocks.createPlantObjectJournalEntry.mockResolvedValueOnce({
+      ...entryResult(),
+      mediaAttached: true,
+    });
+    mocks.claimEphemeralPublicationMedia.mockResolvedValueOnce({
+      stagingSessionId: SESSION_ID,
+      receiptSetDigest: "receipt-digest",
+      publicMedia: [
+        {
+          mediaAssetId: MEDIA_ID,
+          generation: 1,
+          sha256: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+          sizeBytes: 2,
+          width: 2560,
+          height: 1920,
+          publicPath,
+          variants: [
+            {
+              variant: 1280,
+              sha256: "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBA=",
+              sizeBytes: 2,
+              width: 1280,
+              height: 960,
+              publicPath: `derivatives/${MEDIA_ID}/1-1280.webp`,
+            },
+            {
+              variant: 480,
+              sha256: "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCA=",
+              sizeBytes: 2,
+              width: 480,
+              height: 360,
+              publicPath: `derivatives/${MEDIA_ID}/1-480.webp`,
+            },
+          ],
+        },
+      ],
+    });
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, {
+        status: 200,
+        headers: { "content-type": "image/webp" },
+      }),
+    );
+    const { POST } = await import("./route");
+    const receipts = ["r".repeat(40), "s".repeat(40), "t".repeat(40)];
+    const response = await POST(
+      atomicJsonRequest(
+        atomicRequest({
+          context: {
+            target: "plant_object_entry",
+            plantObjectId: OBJECT_ID,
+            entryDate: "2026-08-23",
+          },
+          document: documentWithImage(),
+          coverMediaAssetId: MEDIA_ID,
+          mediaClaimReceipts: receipts,
+          mediaPlaceholders: { [MEDIA_ID]: "data:image/webp;base64,UklGRg==" },
+          returnTo: `/garden/objects/${OBJECT_ID}#follow-up-composer`,
+        }),
+      ),
+    );
+    expect(response.status, JSON.stringify(await response.clone().json())).toBe(
+      200,
+    );
+    expect(mocks.claimEphemeralPublicationMedia).toHaveBeenCalledWith({
+      ownerUserId: OWNER_ID,
+      publishId: ENTRY_ID,
+      stagingReceipts: receipts,
+      orderedMediaAssetIds: [MEDIA_ID],
+    });
+    // Every promoted object is proven reachable, variants included.
+    expect(
+      fetcher.mock.calls.map(([url]) => String(url)).sort(),
+    ).toEqual(
+      [
+        `https://media.over.garden/${publicPath}`,
+        `https://media.over.garden/derivatives/${MEDIA_ID}/1-1280.webp`,
+        `https://media.over.garden/derivatives/${MEDIA_ID}/1-480.webp`,
+      ].sort(),
+    );
+    fetcher.mockRestore();
+
+    const tooMany = await POST(
+      atomicJsonRequest(
+        atomicRequest({
+          context: {
+            target: "plant_object_entry",
+            plantObjectId: OBJECT_ID,
+            entryDate: "2026-08-23",
+          },
+          document: documentWithImage(),
+          coverMediaAssetId: MEDIA_ID,
+          mediaClaimReceipts: [...receipts, "u".repeat(40)],
+          returnTo: `/garden/objects/${OBJECT_ID}#follow-up-composer`,
+        }),
+      ),
+    );
+    expect(tooMany.status).toBe(400);
+    await expect(tooMany.json()).resolves.toEqual({
+      code: "atomic_media_set_mismatch",
+    });
+  });
+
   it("returns a durable exact replay before an expired or unavailable staging handoff", async () => {
     const publicPath = `derivatives/${MEDIA_ID}/1.webp`;
     mocks.readCommittedAtomicJournalCreate.mockResolvedValueOnce({

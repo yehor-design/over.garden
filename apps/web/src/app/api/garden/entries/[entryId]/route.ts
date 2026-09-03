@@ -24,6 +24,7 @@ import {
   listClaimedPublicPaths,
 } from "@/lib/media/claimed-media";
 import {
+  EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO,
   EPHEMERAL_MEDIA_MAX_PER_SESSION,
   isEphemeralMediaPlaceholderDataUri,
 } from "@/lib/media/ephemeral-staging-contract";
@@ -444,7 +445,8 @@ async function convergeAndRevalidate(entry: {
 function validTokenList(value: unknown): value is string[] {
   return (
     Array.isArray(value) &&
-    value.length <= 10 &&
+    value.length <=
+      EPHEMERAL_MEDIA_MAX_PER_SESSION * EPHEMERAL_MEDIA_MAX_OBJECTS_PER_PHOTO &&
     value.every(
       (token) =>
         typeof token === "string" && token.length >= 40 && token.length <= 4096,
