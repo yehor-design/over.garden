@@ -102,8 +102,10 @@ export function corsHeaders(
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
+    // OVE-372: an upload describes its dimensions in headers, so the
+    // preflight must admit them or the browser never sends the PUT.
     "Access-Control-Allow-Headers":
-      "Authorization, Content-Type, Content-Length, Content-SHA256",
+      "Authorization, Content-Type, Content-Length, Content-SHA256, X-Media-Width, X-Media-Height",
     "Access-Control-Expose-Headers": "ETag",
     "Access-Control-Max-Age": "3600",
     Vary: "Origin",

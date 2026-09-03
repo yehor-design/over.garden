@@ -10,6 +10,11 @@ describe("media staging Worker HTTP boundary", () => {
         Vary: "Origin",
       }),
     );
+    // OVE-372: an upload's dimensions travel as headers; the preflight must
+    // admit them or the browser never sends the PUT.
+    expect(
+      corsHeaders("https://over.garden", "PUT")?.["Access-Control-Allow-Headers"],
+    ).toMatch(/X-Media-Width, X-Media-Height/);
     expect(corsHeaders("https://attacker.example", "PUT")).toBeNull();
     expect(corsHeaders("https://over.garden", "PATCH")).toBeNull();
   });
