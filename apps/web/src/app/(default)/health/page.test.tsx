@@ -6,6 +6,21 @@ const mocks = vi.hoisted(() => ({
   getRequestInterfaceLocale: vi.fn(),
   pingDatabase: vi.fn(),
   readRecentHealth: vi.fn(),
+  getCurrentSession: vi.fn(),
+  resolveAdminCapabilityAccessBounded: vi.fn(),
+  notFound: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+}));
+
+vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
+vi.mock("@/server/auth-session", () => ({
+  getCurrentSession: mocks.getCurrentSession,
+  getSessionId: () => "session-1",
+}));
+vi.mock("@/server/admin-access", () => ({
+  resolveAdminCapabilityAccessBounded:
+    mocks.resolveAdminCapabilityAccessBounded,
 }));
 
 vi.mock("@/lib/auth-secret", () => ({
@@ -33,9 +48,30 @@ describe("/health", () => {
     mocks.readRecentHealth.mockResolvedValue([
       { id: "00000000-0000-4000-8000-000000000001" },
     ]);
+    mocks.getCurrentSession.mockResolvedValue({ user: { id: "owner-1" } });
+    mocks.resolveAdminCapabilityAccessBounded.mockResolvedValue({
+      status: "allowed",
+    });
   });
 
-  it("stays public for smoke checks but noindex for crawlers", async () => {
+  it("is not found for guests and for signed-in non-owners (ADR-0022, D5)", async () => {
+    const { default: HealthPage } = await import("./page");
+
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    await expect(HealthPage()).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(mocks.pingDatabase).not.toHaveBeenCalled();
+
+    mocks.resolveAdminCapabilityAccessBounded.mockResolvedValueOnce({
+      status: "denied",
+    });
+    await expect(HealthPage()).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(mocks.resolveAdminCapabilityAccessBounded).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "owner-1" }),
+      "operator:mutate",
+    );
+  });
+
+  it("renders the diagnostics for the sealed owner, noindex for crawlers", async () => {
     const { default: HealthPage, generateMetadata } = await import("./page");
     const html = renderToStaticMarkup(await HealthPage());
 

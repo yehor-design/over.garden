@@ -9,7 +9,12 @@ import {
   getOperatorDatabaseAvailabilityCopy,
 } from "@/lib/operator-copy";
 import type { Ove330ServeClass } from "@/lib/media/presentation-contract";
+import { notFound } from "next/navigation";
+
+import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
+import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { pingDatabase, readRecentHealth } from "@/server/health-repository";
+import { scopedToUser } from "@/server/request-scope";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -65,7 +70,24 @@ async function getDbStatus(locale: InterfaceLocale): Promise<{
   }
 }
 
+/**
+ * Owner-only (ADR-0022, D5): anyone else gets the not-found page. The proxy
+ * already answers a hard 404 to requests without a session cookie; this is
+ * the full-budget check for signed-in visitors.
+ */
+async function assertHealthOwner() {
+  const session = await getCurrentSession().catch(() => null);
+  const userId = session?.user?.id;
+  if (!userId) notFound();
+  const access = await resolveAdminCapabilityAccessBounded(
+    scopedToUser(userId, getSessionId(session)),
+    "operator:mutate",
+  );
+  if (access.status !== "allowed") notFound();
+}
+
 export default async function HealthPage() {
+  await assertHealthOwner();
   const locale = await getRequestInterfaceLocale();
   const copy = getOperatorCopy(locale).health;
   const renderedAt = new Date().toISOString();

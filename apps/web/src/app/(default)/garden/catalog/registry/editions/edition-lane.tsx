@@ -5,7 +5,9 @@ import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { IrreversibleActionConfirmation } from "@/components/stable-registry/irreversible-action-confirmation";
 import { buttonVariants } from "@/components/ui/button";
+import { formatOperatorTemplate } from "@/lib/operator-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   getStableRegistryEditionCopy,
@@ -215,6 +217,10 @@ export function StableRegistryEditionLane({
                 previewDigest={edition.previewDigest}
                 transition="activate"
                 label={copy.activateEdition}
+                acknowledgement={formatOperatorTemplate(
+                  copy.pointerAcknowledge,
+                  { affected: edition.totalAffectedObjectCount },
+                )}
               />
               <PointerForm
                 action={pointerAction}
@@ -222,6 +228,10 @@ export function StableRegistryEditionLane({
                 previewDigest={edition.previewDigest}
                 transition="rollback"
                 label={copy.rollbackEdition}
+                acknowledgement={formatOperatorTemplate(
+                  copy.pointerAcknowledge,
+                  { affected: edition.totalAffectedObjectCount },
+                )}
               />
               <PointerForm
                 action={pointerAction}
@@ -229,6 +239,10 @@ export function StableRegistryEditionLane({
                 previewDigest={edition.previewDigest}
                 transition="forward"
                 label={copy.forwardEdition}
+                acknowledgement={formatOperatorTemplate(
+                  copy.pointerAcknowledge,
+                  { affected: edition.totalAffectedObjectCount },
+                )}
               />
             </>
           ) : null}
@@ -270,18 +284,21 @@ function PointerForm({
   previewDigest,
   transition,
   label,
+  acknowledgement,
 }: {
   action: EditionAction;
   releaseId: string;
   previewDigest: string;
   transition: "activate" | "rollback" | "forward";
   label: string;
+  acknowledgement: string;
 }) {
   return (
     <OwnerScopedActionForm action={action}>
       <input type="hidden" name="releaseId" value={releaseId} />
       <input type="hidden" name="previewDigest" value={previewDigest} />
       <input type="hidden" name="transition" value={transition} />
+      <IrreversibleActionConfirmation text={acknowledgement} />
       <SubmitButton label={label} />
     </OwnerScopedActionForm>
   );

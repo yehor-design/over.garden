@@ -136,7 +136,7 @@ describe("app route cache guardrail", () => {
       "/account/communities",
       "/account/communities/example",
       "/account/moderation/comments",
-      "/garden/catalog/curation",
+      "/garden/catalog/registry",
       "/garden/privacy/erasure-requests",
       "/garden/lineage/invitations/example",
     ]) {
@@ -339,7 +339,7 @@ describe("app route cache guardrail", () => {
 
   it.each([
     "/garden",
-    "/garden/catalog/curation",
+    "/garden/catalog/registry",
     "/bg/garden",
     "/account/communities",
     "/auth/help",

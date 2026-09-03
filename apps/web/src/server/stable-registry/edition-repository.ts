@@ -45,6 +45,7 @@ export type {
 
 export type EditionOutcome =
   | "accepted"
+  | "confirmation_required"
   | "stale"
   | "blocked"
   | "forbidden"

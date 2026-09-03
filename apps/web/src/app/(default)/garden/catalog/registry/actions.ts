@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
+import { isIrreversibleActionConfirmed } from "@/lib/stable-registry/irreversible-action";
+import { recordOwnerAction } from "@/server/owner-action-audit";
+
 import type { MutationScopeActionState } from "@/lib/auth/owner-scope-contract";
 import { isStableRegistryReleaseCenterEnabled } from "@/lib/stable-registry/feature-gate";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
@@ -102,11 +105,22 @@ export async function activateFoundationReleaseAction(
   const scope = await requireCatalogOwner(admission.scope);
   if (!scope.ok) return scope.result;
 
+  if (!isIrreversibleActionConfirmed(formData)) {
+    return { outcome: "confirmation_required" };
+  }
+  const releaseId = formString(formData, "releaseId");
   const result = await activateFoundationRelease(scope.scope, {
-    releaseId: formString(formData, "releaseId"),
+    releaseId,
     previewDigest: formString(formData, "previewDigest"),
     writesEnabled: isStableRegistryReleaseCenterEnabled(),
   });
+  if (result.outcome === "accepted") {
+    await recordOwnerAction(
+      scope.scope,
+      "stable_registry_foundation_activate",
+      `release=${releaseId}`,
+    );
+  }
   revalidatePath(REGISTRY_PATH);
   return { outcome: result.outcome };
 }

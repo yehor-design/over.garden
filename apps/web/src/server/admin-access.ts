@@ -21,7 +21,7 @@ import type { RequestScope } from "@/server/request-scope";
 export const ADMIN_ACCESS_DENIED_MESSAGE = "Admin access denied.";
 export const ADMIN_CREDENTIAL_PROVIDER_ID = OWNER_CREDENTIAL_PROVIDER_ID;
 export const ADMIN_SEALED_OWNER_USER_ID_ENV = SEALED_OWNER_USER_ID_ENV;
-export const ADMIN_ROLE_RESOLUTION_DEADLINE_MS = 250;
+export const ADMIN_ROLE_RESOLUTION_DEADLINE_MS = 2_000;
 
 export interface AdminAccess {
   mode: "sealed_owner_credential_only";

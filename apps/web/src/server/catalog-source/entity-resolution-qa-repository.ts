@@ -591,7 +591,7 @@ function buildCatalogConceptClusters(
         reason:
           "Multiple source-backed catalog rows share the same normalized canonical identity and kind. Keep one selectable concept after manual review.",
         recommendedAction: "merge_review",
-        actionHref: "/garden/catalog/curation",
+        actionHref: "/garden/catalog/registry",
         members: groupRows.map(catalogRowMember),
       });
 
@@ -607,7 +607,7 @@ function buildCatalogConceptClusters(
           reason:
             "The same normalized concept appears across source families. Confirm source precedence and attribution before production proof.",
           recommendedAction: "review_needed",
-          actionHref: "/garden/catalog/curation",
+          actionHref: "/garden/catalog/registry",
           members: groupRows.map(catalogRowMember),
         });
       }
@@ -625,7 +625,7 @@ function buildCatalogConceptClusters(
         reason:
           "One canonical catalog concept carries multiple source proofs. This is acceptable when provenance remains auditable and typeahead remains one selectable suggestion.",
         recommendedAction: "no_action",
-        actionHref: "/garden/catalog/curation",
+        actionHref: "/garden/catalog/registry",
         members: [catalogRowMember(row)],
       });
     }
@@ -645,7 +645,7 @@ function buildAliasCollisionClusters(
     reason:
       "One normalized alias resolves to multiple source-backed catalog concepts. Confirm whether this is a true synonym, a homonym, or a false-positive merge risk.",
     recommendedAction: "review_needed",
-    actionHref: "/garden/catalog/curation",
+    actionHref: "/garden/catalog/registry",
     members: [
       {
         label: row.canonicalNames ?? row.normalizedAlias,
@@ -683,7 +683,7 @@ function buildSourceCandidateClusters(
             ? "These rows are intentionally blocked or rejected and must stay out of product suggestions unless a later gate supersedes the decision."
             : "These rows still need operator review before product projection can be trusted.",
         recommendedAction: kind === "blocked_projection" ? "reject" : "hold",
-        actionHref: `/garden/catalog/curation?sourceStatus=${kind === "blocked_projection" ? "blocked" : "review_needed"}`,
+        actionHref: `/garden/catalog/registry?sourceStatus=${kind === "blocked_projection" ? "blocked" : "review_needed"}`,
         members: [
           {
             label: row.sampleDisplayName ?? row.sourceName,
@@ -723,7 +723,7 @@ function buildFuzzyDuplicateClusters(
             ? "RapidFuzz found a cross-locale near-name match. Keep the concepts separate until locale and source provenance are reviewed."
             : "RapidFuzz found a deterministic same-locale near-name match. Review the pair manually; this evidence cannot merge catalog rows.",
       recommendedAction,
-      actionHref: "/garden/catalog/curation",
+      actionHref: "/garden/catalog/registry",
       fuzzyScore: score,
       fuzzyScoreBucket: row.scoreBucket,
       reasonCodes: row.reasonCodes,

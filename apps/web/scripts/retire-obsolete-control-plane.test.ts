@@ -497,8 +497,11 @@ describe("OVE-314 active caller and schema retirement", () => {
     expect(OPERATOR_MENU_LINKS.map(({ href }) => href)).toEqual([
       "/account/communities",
       "/account/moderation/comments",
-      "/garden/catalog/curation",
+      "/garden/catalog/registry",
+      "/garden/catalog/registry/extensions",
+      "/garden/catalog/registry/editions",
       "/garden/privacy/erasure-requests",
+      "/health",
     ]);
     expect(JSON.stringify(OPERATOR_MENU_LINKS)).not.toMatch(
       /\/admin(?:"|\/users)|pilot|\/join/,
