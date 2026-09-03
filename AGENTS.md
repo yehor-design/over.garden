@@ -1,9 +1,12 @@
 # AGENTS.md — OverGarden
 
 Read this whole page before changing anything. It is the current operating
-guide for AI agents and humans. Current decisions live in
-`docs/adr/ADR-0022-owner-mvp-reset.md`; older ADRs and dated documents are
-history and never override it.
+guide for AI agents and humans. Read `docs/PROJECT_STATE.md` beside it: it says
+what is true in production right now, what is being worked on, and what is
+knowingly unfinished. Current decisions live in
+`docs/adr/ADR-0022-owner-mvp-reset.md` and
+`docs/adr/ADR-0023-workspace-resilience.md`; older ADRs and dated documents are
+history and never override them.
 
 ## Product
 
@@ -52,6 +55,9 @@ touching DNS, R2, env, or deployment. Local infra starts with
 9. No secrets in git. `.env*` is ignored except `.env.example`.
 10. Do not touch without the owner's explicit sign-off: destructive schema
     changes, bulk deletes, history rewrites, force-push.
+11. A page under `/garden/**` never awaits a read that may throw. Settle it into
+    a bounded failure class and render that value; `error.tsx` does not catch a
+    Server Component error on a hard load (ADR-0023).
 
 `apps/web/scripts/check-banned-dependencies.ts` enforces the mechanical half of
 these rules in CI and in `pnpm test`.
@@ -87,9 +93,14 @@ Every Linear task uses this shape and nothing more:
 
 ## Where things are
 
+- `docs/PROJECT_STATE.md` — read first: production truth, direction, known gaps.
+  `docs/DELIVERY_LOG_2026-09.md` — what shipped in the reset and why.
 - `docs/adr/ADR-0022-owner-mvp-reset.md` — current decisions and what they
-  supersede. `docs/TECH_STACK_DECISIONS.md` — stack detail and ADR index.
+  supersede. `docs/adr/ADR-0023-workspace-resilience.md` — how a workspace page
+  handles failure. `docs/TECH_STACK_DECISIONS.md` — stack detail and ADR index.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — provider IDs, buckets, domains, env.
+- `docs/PRODUCTION_SCHEMA_STATE.md` — which migrations the production database
+  actually runs, and how to check before assuming.
 - `docs/MEDIA_LIFECYCLE.md`, `docs/ONLINE_ONLY_JOURNAL.md`,
   `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`, `docs/ADMIN_ROLE_BOOTSTRAP.md`,
   `docs/STABLE_REGISTRY.md`, `docs/MIGRATION_ALLOCATION.md` — current
