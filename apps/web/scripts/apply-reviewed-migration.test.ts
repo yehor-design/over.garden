@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   classifyDatabaseHost,
   countStatements,
+  extractMigrationSentinels,
   parseReviewedMigrationArgs,
   resolveMigrationFile,
 } from "./apply-reviewed-migration";
@@ -70,5 +71,29 @@ describe("apply-reviewed-migration", () => {
         "-- comment;\nalter table a drop column if exists b;\n\nupdate a set c = 1\nwhere c <> 1;\n",
       ),
     ).toBe(2);
+  });
+
+  it("reads the schema objects a migration creates as its sentinels", () => {
+    expect(
+      extractMigrationSentinels(
+        [
+          "-- create table commented_out (id int);",
+          "create table if not exists new_table (id uuid primary key);",
+          "alter table journal_entries",
+          "  add column if not exists deleted_at timestamptz,",
+          "  add column purge_after timestamptz;",
+          "alter table journal_entries drop column if exists public_noindex;",
+          "create index if not exists journal_entries_deleted_idx on journal_entries (deleted_at);",
+        ].join("\n"),
+      ),
+    ).toEqual([
+      { kind: "table", table: "new_table" },
+      { kind: "column", table: "journal_entries", column: "deleted_at" },
+      { kind: "column", table: "journal_entries", column: "purge_after" },
+      { kind: "index", index: "journal_entries_deleted_idx" },
+    ]);
+    expect(parseReviewedMigrationArgs(["--mode", "inventory"]).mode).toBe(
+      "inventory",
+    );
   });
 });
