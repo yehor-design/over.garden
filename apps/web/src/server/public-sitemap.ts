@@ -143,7 +143,9 @@ export function renderSitemapUrlsetXml(urls: readonly PublicSitemapUrl[]) {
 
 export const SITEMAP_RESPONSE_HEADERS = {
   "content-type": "application/xml; charset=utf-8",
-  "cache-control": "public, max-age=300, s-maxage=3600",
+  // The chunk data is a tagged `use cache` read that every entry mutation
+  // expires; the CDN copy must not outlive that by an hour (ADR-0022, D4).
+  "cache-control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
 } as const;
 
 function escapeXml(value: string) {
