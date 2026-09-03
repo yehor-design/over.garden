@@ -1,7 +1,7 @@
 /**
  * OVE-373: one read-only proof of the seven owner requirements (ADR-0022)
- * against production. Safe GETs only, no credentials, no writes. The receipt
- * carries counts and classes, never page content.
+ * against production. Safe GETs and HEADs only, no credentials, no writes. The
+ * receipt carries counts and classes, never page content.
  *
  *   cd apps/web && pnpm exec tsx scripts/prove-owner-mvp-reset.ts [--base https://over.garden] [--out ../../docs/OWNER_MVP_RESET_PROOF_2026-09.md]
  */
@@ -36,18 +36,31 @@ async function main() {
   let indexable = 0;
   let withCanonical = 0;
   let withJsonLd = 0;
-  let withSrcset = 0;
   let withImages = 0;
   let withOptimizer = 0;
+  let withVariants = 0;
+  let withVariantSrcset = 0;
+  let primaryOnly = 0;
   for (const path of entryPaths) {
     const entry = await page(base, path);
     if (/<meta name="robots" content="index, follow"/.test(entry.html)) indexable += 1;
     if (/<link rel="canonical" href="/.test(entry.html)) withCanonical += 1;
     if (/<script type="application\/ld\+json"/.test(entry.html)) withJsonLd += 1;
-    if (/<img[^>]+media\.over\.garden/.test(entry.html)) {
+    const primary = /<img[^>]+src="(https:\/\/media\.over\.garden\/[^"]+\.webp)"/.exec(
+      entry.html,
+    )?.[1];
+    if (primary) {
       withImages += 1;
-      if (/srcset="/.test(entry.html)) withSrcset += 1;
       if (/\/_next\/image\?/.test(entry.html)) withOptimizer += 1;
+      // Variants exist only for photos published after migration 0047, and
+      // the CDN is the witness. React serialises the attribute as `srcSet`,
+      // so the match is case-insensitive.
+      if (await variantExists(primary)) {
+        withVariants += 1;
+        if (/srcset="/i.test(entry.html)) withVariantSrcset += 1;
+      } else {
+        primaryOnly += 1;
+      }
     }
   }
   checks.push({
@@ -92,19 +105,20 @@ async function main() {
     detail: cacheDetail.join("; "),
   });
 
-  // D2: photos serve as plain <img srcset>, never through an optimizer.
+  // D2: photos with promoted variants serve as plain <img srcset>, never
+  // through an optimizer. Photos published before migration 0047 never had
+  // variants generated and serve the primary only; they are counted, not
+  // failed.
   checks.push({
     requirement: "D2 delivery",
-    check: "entry photos have srcset and no /_next/image",
+    check: "entry photos with variants have srcset and no /_next/image",
     class:
-      withImages === 0
+      withImages === 0 || withVariants === 0
         ? "pending"
-        : withOptimizer === 0 && withSrcset === withImages
+        : withOptimizer === 0 && withVariantSrcset === withVariants
           ? "pass"
-          : withOptimizer === 0
-            ? "pending"
-            : "fail",
-    detail: `${withImages} entries with photos, ${withSrcset} with srcset (needs migration 0047 for photos published after it), ${withOptimizer} through the optimizer`,
+          : "fail",
+    detail: `${withImages} entries with photos: ${withVariantSrcset}/${withVariants} with variants serve srcset, ${primaryOnly} published before migration 0047 (primary only), ${withOptimizer} through the optimizer`,
   });
 
   // D6 / offline residue: no client gates or retirement markers in public HTML.
@@ -171,16 +185,38 @@ function renderReceipt(base: string, checks: Check[]) {
   return `# Owner MVP reset proof (${date})
 
 Status: receipt of \`apps/web/scripts/prove-owner-mvp-reset.ts\` against \`${base}\`
-Authority: ADR-0022 (OVE-373). Safe GETs only, no credentials; counts and classes only.
+Authority: ADR-0022 (OVE-373). Safe GETs and HEADs only, no credentials; counts and classes only.
 
 | Requirement | Check | Class | Detail |
 | -- | -- | -- | -- |
 ${rows}
 
 \`pending\` names a check whose runtime is shipped but whose production data is
-not there yet (for example \`srcset\`, which appears for photos published after
-migration 0047 is applied).
+not there yet (for example \`srcset\` before any photo has been published after
+migration 0047).
 `;
+}
+
+/**
+ * A photo published after migration 0047 has its 480 px variant promoted next
+ * to the primary; a HEAD on that key is the safe witness that variants exist.
+ */
+async function variantExists(primaryUrl: string) {
+  const url = primaryUrl.replace(/\.webp$/, "-480.webp");
+  try {
+    const response = await fetch(url, {
+      method: "HEAD",
+      redirect: "error",
+      headers: { "user-agent": USER_AGENT },
+      signal: AbortSignal.timeout(10_000),
+    });
+    return (
+      response.ok &&
+      (response.headers.get("content-type") ?? "").startsWith("image/webp")
+    );
+  } catch {
+    return false;
+  }
 }
 
 async function page(base: string, path: string) {
