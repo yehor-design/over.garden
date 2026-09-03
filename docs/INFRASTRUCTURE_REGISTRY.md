@@ -104,6 +104,7 @@ DNS and edge invariants:
   - `over.garden A 76.76.21.21`, DNS-only, auto TTL, bound to Vercel project `over-garden`
   - `www.over.garden A 76.76.21.21`, DNS-only, auto TTL, bound to Vercel project `over-garden`
 - Because the app DNS records are DNS-only, app HTML responses carry Vercel's `x-vercel-cache` status, never a Cloudflare one. A public page shell answers `HIT`/`PRERENDER` from Vercel's cache; workspace routes answer `MISS`/`BYPASS` with `no-store`. If the app domain is ever proxied at Cloudflare, an HTML `cf-cache-status: HIT` is a launch blocker.
+- `media.over.garden` is the R2 custom domain and is proxied by Cloudflare: a GET of an immutable derivative answers `cf-cache-status: MISS` then `HIT`; HEAD is never cached, so probes must use GET (OVE-371 proof, 2026-09-03).
 
 Domain reputation incident (OVE-188):
 

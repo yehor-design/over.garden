@@ -155,6 +155,16 @@ header to another, or if the native codec produces visibly worse photos than
 the WASM path on supported phones. On falsification, stop the responsible task
 and supersede this ADR explicitly.
 
+Measured (2026-09-03, OVE-371 production proof in the owner's desktop
+Chrome): a 15.5 MB, 27 MP JPEG shows its 480 px preview 183 ms after the
+drop and its final 2560 WebP at 575 ms; a 31.7 MB, 67.5 MP JPEG (above the
+64 MP fallback ceiling, so native decoding only) shows the preview at 326 ms,
+the final at 665 ms, and has its three objects staged at 3.15 s. The three
+renditions serve from `media.over.garden` as immutable WebP with
+`cf-cache-status: HIT` on the second GET. Public HTML shells answer
+`x-vercel-cache: HIT`; the closeout receipt
+(`docs/OWNER_MVP_RESET_PROOF_2026-09.md`) records the TTFBs.
+
 ## Rollout
 
 OVE-362 (process) → OVE-363 (typography, fixtures) → OVE-364 (voice) →

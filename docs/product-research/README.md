@@ -33,16 +33,13 @@ If a copied research file such as `TECH_STACK_DECISIONS.md` conflicts with the c
 
 ## Product Thinking Gate
 
-Before creating, accepting, or implementing any user-facing Linear issue, product feature, UI flow, public page, onboarding path, analytics event, catalog behavior, or GTM-facing surface:
-
-1. Search this corpus with `rg` for the feature, user behavior, segment, object type, market, language, privacy risk, or growth mechanism.
-2. Read the 2-5 most relevant research files and list them under the task's `Key files`.
-3. State the product assumption the slice is testing.
-4. State the user job, motivation, or trust concern that shaped the implementation.
-5. If research docs conflict with each other or with current implementation docs, name the conflict and choose the smallest reversible path.
-6. Keep the SDD shape vertical: the research informs one user behavior; it does not justify layer-only tasks.
-
-For work with no user-facing behaviour (migrations, infrastructure, process), cite a research file only when it genuinely constrains the decision; otherwise say so in one sentence. Nothing else is required.
+Before implementing a user-facing change, read the 3–5 research files that
+bear on it (search this corpus with `rg` for the feature, segment, market,
+language, privacy risk, or growth mechanism) and name them under the task's
+`Key files`. If a research file conflicts with a current implementation doc,
+say so in one sentence and take the smallest reversible path. Work with no
+user-facing behaviour cites a research file only when it genuinely constrains
+the decision; otherwise it says so in one sentence.
 
 ## Fast Routing
 

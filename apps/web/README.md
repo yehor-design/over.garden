@@ -7,9 +7,11 @@ Current stack in this package:
 - shadcn/ui for UI primitives.
 - Better Auth mounted at `/api/auth/[...all]`.
 - Kysely + `pg` for typed SQL access to Postgres.
-- Cloudflare R2 through the S3 SDK. The browser-generated WebP is the sole
-  final artifact and moves through short-lived private staging before atomic
-  journal publication; image bytes never traverse a Vercel Function.
+- Cloudflare R2 through the S3 SDK. The browser-generated WebP renditions
+  (2560 primary, 1280/480 variants, 16 px placeholder; ADR-0022 D2) move
+  through private staging under one session capability with a two-hour lease
+  before atomic journal publication; image bytes never traverse a Vercel
+  Function, and public pages serve them as plain `<img srcset>`.
 - Browser-owned WebP conversion under ADR-0019; the app has no server image
   decoder or quarantine-processing runtime.
 - Network-required journal writes under ADR-0017. OVE-323 removed the Dexie,
