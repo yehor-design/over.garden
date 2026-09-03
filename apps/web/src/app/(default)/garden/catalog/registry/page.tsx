@@ -116,7 +116,11 @@ async function ReleaseCenterSection({ locale }: { locale: InterfaceLocale }) {
   const copy = getStableRegistryCopy(locale);
   const model = await settleSection(
     () => readStableRegistryReleaseCenter({ writesEnabled: true }),
-    { deadlineMs: RELEASE_CENTER_DEADLINE_MS },
+    {
+      deadlineMs: RELEASE_CENTER_DEADLINE_MS,
+      surface: "stable-registry",
+      section: "release-center",
+    },
   );
 
   if (model.status === "error") {

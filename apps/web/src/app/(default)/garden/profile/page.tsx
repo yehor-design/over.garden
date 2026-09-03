@@ -101,9 +101,13 @@ async function ProfileSections({
   const [workspace, accountMethods] = await Promise.all([
     settleSection(() => getOwnerProfileWorkspace(scope, locale), {
       deadlineMs: workspaceSectionDeadlineMs(3),
+      surface: "profile",
+      section: "owner-workspace",
     }),
     settleSection(() => getCurrentAccountMethodProjection(), {
       deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "profile",
+      section: "account-methods",
     }),
   ]);
 

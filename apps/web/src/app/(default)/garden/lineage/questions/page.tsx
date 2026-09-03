@@ -90,9 +90,13 @@ async function LineageUpdatesSection({
   const [questions, follows] = await Promise.all([
     settleSection(() => listLineageQuestionInbox(scope), {
       deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "lineage-questions",
+      section: "questions",
     }),
     settleSection(() => listLineageFollowReadback(scope), {
       deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "lineage-questions",
+      section: "follows",
     }),
   ]);
 

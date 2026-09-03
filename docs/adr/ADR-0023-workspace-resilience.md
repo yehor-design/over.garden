@@ -98,6 +98,14 @@ which is right for a gate and wrong for a screen: it told the owner to audit
 permissions while the role table was simply unreachable. `AdminAccessDeniedError`
 now carries the refusal, and anything else keeps its own failure class.
 
+**`onRequestError` alone cannot see a workspace failure.** A page that renders
+its failure does not throw, so the hook is never called; and when something does
+throw, the error React forwards is sanitized to a digest with no `code` and no
+`cause`, so the class is gone before it arrives. A settled failure therefore
+records itself inside `settleSection`, where the driver code is still in hand.
+Decision point 6 above should be read as "server failures are recorded", with
+`instrumentation.ts` covering only the thrown half.
+
 **A skeleton in the bytes is not a skeleton on screen.** A route with its own
 `loading.tsx` always writes that fallback into the HTML stream; React replaces
 it with a completion instruction. The check that means something is therefore

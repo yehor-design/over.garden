@@ -146,7 +146,11 @@ async function LineageInvitationClaimSection({
   const copy = getOwnerLineageCopy(locale);
   const preview = await settleSection(
     () => getLineageInvitationClaimPreview(token),
-    { deadlineMs: workspaceSectionDeadlineMs(2) },
+    {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "lineage-invitation-claim",
+      section: "preview",
+    },
   );
 
   if (preview.status === "error") {

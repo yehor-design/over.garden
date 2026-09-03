@@ -36,7 +36,7 @@ Verified on 2026-09-03 against `https://over.garden` and the live providers.
 | Sessions | Server-authoritative. The cookie-cached session decides at the moment of the mutation; no client gate |
 | Admin | Release Center, extension packs, and editions render for the sealed owner in production; `/health` is owner-only |
 | Workspace | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023) |
-| Server errors | `src/instrumentation.ts` writes one JSON line per server error with digest, route, and failure class, including on responses that answer 200 |
+| Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw |
 | Schema | Migrations `0001`–`0047` applied, minus the two deliberately skipped. See `docs/PRODUCTION_SCHEMA_STATE.md` |
 | Matching | The worker runs on the droplet and writes its heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03 |
 | Hosting | Decided 2026-09-03: the DigitalOcean managed database and the `fra1` droplet stay |
@@ -79,8 +79,8 @@ decision in ADR-0022, not an omission.
 3. **No frontend analytics.** Vercel Web Analytics is not enabled for the
    project, and runtime logs are retained for about an hour, so there is no
    denominator for "how often does a reader hit a failure". Server errors are
-   aggregated for seven days, now with a digest and a bounded failure class on
-   each line (`src/instrumentation.ts`).
+   aggregated for seven days, and a degraded section now writes its own line
+   with a bounded class and the digest the reader can see on screen.
 4. **The catalog is empty in production.** The Stable Registry schema landed on
    2026-09-03 and the Release Center renders, but no Foundation release has been
    built from real source data, so `/garden/catalog/registry` shows zero

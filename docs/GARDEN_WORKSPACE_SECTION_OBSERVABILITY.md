@@ -100,19 +100,43 @@ so a class can be attributed to the page that produced it:
 
 `describeWorkspaceFailure` adds a short reference derived from the class and the
 Postgres code — nothing else, never a message or a parameter. The failure panel
-prints it, and `apps/web/src/instrumentation.ts` writes the same reference on the
-`onRequestError` line, so the person looking at the screen and the person reading
-the platform log can name the same event.
+prints it and the log line carries it, so the person looking at the screen and
+the person reading the platform log can name the same event.
+
+There are **two** lines, and the reason there are two is worth knowing.
 
 ```bash
-# one JSON line per server error, in the deployment's runtime logs
-{"event":"workspace_server_error","digest":"…","path":"/garden/…",
- "routeType":"render","failureClass":"schema_missing"}
+# a section that settled into a failure — the workspace case
+{"event":"workspace_section_degraded","surface":"stable-registry",
+ "section":"release-center","failureClass":"schema_missing","digest":"…"}
+
+# something that actually threw — a route handler, an action, a failed render
+{"event":"workspace_server_error","digest":"…","path":"/api/…",
+ "routeType":"route","failureClass":null}
 ```
 
-The line carries no request body, cookie, header, or query string, and no error
-message. `failureClass` is `null` when the classifier does not recognise the
-cause, which is a different statement from the closed set's own `unknown`.
+`onRequestError` alone cannot cover a workspace page, for two measured reasons
+(both 2026-09-03, against a production build):
+
+1. **A page that renders its failure does not throw**, so `onRequestError` is
+   never called for it. That is the entire point of ADR-0023.
+2. **The error React forwards to `onRequestError` is sanitized** — an `Error`
+   carrying only `digest`, with no `code` and no `cause` — so even when
+   something does throw, the class cannot be recovered there. `failureClass` on
+   that line is therefore usually `null`, and `null` is an honest "could not
+   classify", distinct from the closed set's own `unknown`.
+
+So a settled failure records itself in `settleSection`, where the driver code is
+still in hand. Both lines carry the `workspace_` prefix, so one grep finds both:
+
+```bash
+vercel logs <deployment> | grep -E 'workspace_section_degraded|workspace_server_error'
+```
+
+Neither line carries a request body, cookie, header, query string, row, owner
+identifier, or error message. A read whose failure is a designed absence rather
+than an incident — a catalog preselection that could not be resolved — passes
+`record: false` and stays out of the log entirely.
 
 ## Proving a whole surface, not just a section
 

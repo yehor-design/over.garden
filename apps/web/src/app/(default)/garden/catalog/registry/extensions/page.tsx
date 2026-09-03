@@ -114,7 +114,11 @@ async function ExtensionPackSection({ locale }: { locale: InterfaceLocale }) {
   const copy = getStableRegistryExtensionPackCopy(locale);
   const model = await settleSection(
     () => readExtensionPackCenter({ writesEnabled: true }),
-    { deadlineMs: EXTENSION_PACK_DEADLINE_MS },
+    {
+      deadlineMs: EXTENSION_PACK_DEADLINE_MS,
+      surface: "stable-registry-extensions",
+      section: "extension-packs",
+    },
   );
 
   if (model.status === "error") {

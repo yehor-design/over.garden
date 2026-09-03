@@ -112,7 +112,11 @@ async function EditionCenterSection({ locale }: { locale: InterfaceLocale }) {
   const copy = getStableRegistryEditionCopy(locale);
   const model = await settleSection(
     () => readEditionCenter({ writesEnabled: true }),
-    { deadlineMs: EDITION_CENTER_DEADLINE_MS },
+    {
+      deadlineMs: EDITION_CENTER_DEADLINE_MS,
+      surface: "stable-registry-editions",
+      section: "edition-center",
+    },
   );
 
   if (model.status === "error") {

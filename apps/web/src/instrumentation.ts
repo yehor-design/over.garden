@@ -63,6 +63,13 @@ function safePath(path: string): string {
  * Not every server error is a database error. A rejection the classifier does
  * not recognise reports `null` rather than `unknown`, so "we could not classify
  * this" stays distinguishable from "the closed set says unknown".
+ *
+ * Measured on 2026-09-03 against a production build: the error React hands to
+ * `onRequestError` is a sanitized `Error` carrying only `digest` — no `code`,
+ * no `cause` — so in production this is almost always `null`. That is not a
+ * defect to work around here; it is the reason a *settled* failure records
+ * itself where the code is still in hand, in `settleSection`. The two lines
+ * share a shape so one grep finds both.
  */
 function workspaceFailureClassOf(error: unknown): WorkspaceFailureClass | null {
   const failureClass = classifyWorkspaceFailure(error);

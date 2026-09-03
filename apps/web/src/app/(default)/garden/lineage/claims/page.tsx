@@ -107,6 +107,8 @@ async function LineageClaimsSection({
   const copy = getOwnerLineageCopy(locale);
   const claims = await settleSection(() => listLineageClaimInbox(scope), {
     deadlineMs: workspaceSectionDeadlineMs(2),
+    surface: "lineage-claims",
+    section: "inbox",
   });
 
   if (claims.status === "error") {

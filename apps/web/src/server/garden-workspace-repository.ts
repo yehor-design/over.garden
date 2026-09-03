@@ -339,7 +339,11 @@ function settleWorkspaceSource<T>(
       }
       return load();
     },
-    { deadlineMs: gardenWorkspaceSectionDeadlineMs(section) },
+    {
+      deadlineMs: gardenWorkspaceSectionDeadlineMs(section),
+      surface: "garden-home",
+      section,
+    },
   );
 }
 

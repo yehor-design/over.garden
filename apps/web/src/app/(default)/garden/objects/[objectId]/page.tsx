@@ -175,7 +175,11 @@ async function PlantObjectSections({
       const provenancePanel = await getObjectProvenancePanel(scope, objectId);
       return provenancePanel ? { page, provenancePanel } : null;
     },
-    { deadlineMs: workspaceSectionDeadlineMs(6) },
+    {
+      deadlineMs: workspaceSectionDeadlineMs(6),
+      surface: "object",
+      section: "passport",
+    },
   );
 
   if (settled.status === "error") {
@@ -202,7 +206,12 @@ async function PlantObjectSections({
       await recordOwnRecordRevisited(scope, page);
       if (showProgressMoment) await recordProgressMomentShown(scope, page);
     },
-    { deadlineMs: workspaceSectionDeadlineMs(2) },
+    {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "object",
+      section: "analytics",
+      record: false,
+    },
   );
 
   const today = new Date().toISOString().slice(0, 10);
@@ -237,7 +246,12 @@ async function PlantObjectSections({
               plantObjectId: objectId,
               journalEntryId: valuePulseJournalEntryId,
             }),
-          { deadlineMs: workspaceSectionDeadlineMs(2) },
+          {
+            deadlineMs: workspaceSectionDeadlineMs(2),
+            surface: "object",
+            section: "value-pulse",
+            record: false,
+          },
         )
       : null;
   const valuePulsePrompt =

@@ -247,6 +247,39 @@ export function failedSection(
 }
 
 /**
+ * One JSON line for a section that settled into a failure.
+ *
+ * `instrumentation.ts` cannot cover this. A workspace page that renders its
+ * failure state does not throw, so `onRequestError` is never called — and even
+ * when something does throw, the error React forwards there is a sanitized
+ * `Error` carrying only a digest (measured 2026-09-03 against a production
+ * build), so the class is gone by the time it arrives. Here the code is still in
+ * hand, which is the only place the class can honestly be derived.
+ *
+ * The line carries the surface, the section, the bounded class and the digest —
+ * never a message, a statement, a parameter, or an owner identifier. It shares
+ * the `workspace_` prefix with the `onRequestError` line so one grep finds both.
+ */
+export function recordWorkspaceSectionFailure(
+  failure: WorkspaceFailureDescription,
+  labels: { surface?: string; section?: string } = {},
+): void {
+  try {
+    console.error(
+      JSON.stringify({
+        event: "workspace_section_degraded",
+        surface: labels.surface ?? null,
+        section: labels.section ?? null,
+        failureClass: failure.failureClass,
+        digest: failure.digest,
+      }),
+    );
+  } catch {
+    // Observability must never be the reason a page fails to render.
+  }
+}
+
+/**
  * Turns one read into a rendered value. Nothing under `/garden/**` awaits a
  * repository call outside this function: an exception escaping a Server
  * Component during a postponed resume is not a UI mechanism (ADR-0023).
@@ -260,6 +293,12 @@ export async function settleSection<T>(
   options: {
     deadlineMs?: number;
     rethrow?: (reason: unknown) => void;
+    /** Which screen and which block, for the log line. Never rendered. */
+    surface?: string;
+    section?: string;
+    /** Off for a read whose failure is a designed absence rather than an
+     * incident — a catalog preselection that could not be resolved. */
+    record?: boolean;
   } = {},
 ): Promise<WorkspaceSection<T>> {
   try {
@@ -267,6 +306,13 @@ export async function settleSection<T>(
     return { status: "ready", value };
   } catch (reason) {
     options.rethrow?.(reason);
-    return { status: "error", ...describeWorkspaceFailure(reason) };
+    const failure = describeWorkspaceFailure(reason);
+    if (options.record !== false) {
+      recordWorkspaceSectionFailure(failure, {
+        surface: options.surface,
+        section: options.section,
+      });
+    }
+    return { status: "error", ...failure };
   }
 }

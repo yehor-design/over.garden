@@ -181,7 +181,11 @@ async function ErasureRequestsSection({
         ),
       };
     },
-    { deadlineMs: workspaceSectionDeadlineMs(8) },
+    {
+      deadlineMs: workspaceSectionDeadlineMs(8),
+      surface: "erasure-requests",
+      section: "requests",
+    },
   );
 
   if (settled.status === "error") {

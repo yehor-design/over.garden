@@ -53,6 +53,8 @@ async function hasSessionCookie(): Promise<boolean> {
 export async function resolveWorkspaceViewer(): Promise<WorkspaceViewer> {
   const session = await settleSection(() => getCurrentSession(), {
     deadlineMs: SESSION_DEADLINE_MS,
+    surface: "workspace",
+    section: "session",
   });
   if (session.status === "error") {
     return { status: "unavailable", failure: session };
@@ -79,6 +81,8 @@ export async function resolveWorkspaceViewer(): Promise<WorkspaceViewer> {
   if (await hasSessionCookie()) {
     const liveness = await settleSection(() => pingDatabase(), {
       deadlineMs: SESSION_DEADLINE_MS,
+      surface: "workspace",
+      section: "session-store-liveness",
     });
     if (liveness.status === "error") {
       return { status: "unavailable", failure: liveness };

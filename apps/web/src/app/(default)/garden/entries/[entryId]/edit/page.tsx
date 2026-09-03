@@ -94,7 +94,11 @@ async function JournalEntryEditSection({
 }) {
   const settled = await settleSection(
     () => readAtomicJournalEditBaseline(scope, entryId),
-    { deadlineMs: workspaceSectionDeadlineMs(3) },
+    {
+      deadlineMs: workspaceSectionDeadlineMs(3),
+      surface: "entry-edit",
+      section: "baseline",
+    },
   );
 
   if (settled.status === "error") {

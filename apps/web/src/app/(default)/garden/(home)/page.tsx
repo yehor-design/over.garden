@@ -169,7 +169,11 @@ async function GardenHomeSections({
           spacesPage: positivePage(params.spacesPage),
           faultSections: [],
         }),
-      { deadlineMs: workspaceSectionDeadlineMs(7) },
+      {
+        deadlineMs: workspaceSectionDeadlineMs(7),
+        surface: "garden-home",
+        section: "read-model",
+      },
     ),
     settledOrNull(() => hasPriorPublicationDisclosure(scope)),
     settledOrNull(() => resolveInitialCatalogSelection(params)),
@@ -276,6 +280,7 @@ async function GardenHomeSections({
 async function settledOrNull<T>(load: () => Promise<T>): Promise<T | null> {
   const settled = await settleSection(load, {
     deadlineMs: workspaceSectionDeadlineMs(2),
+    record: false,
   });
   return settled.status === "ready" ? settled.value : null;
 }
@@ -504,7 +509,11 @@ async function GardenSelectedSpaceTimeline({
         objectLimit: 20,
         entryLimit: 5,
       }),
-    { deadlineMs: workspaceSectionDeadlineMs(2) },
+    {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "garden-home",
+      section: "space-timeline",
+    },
   );
   if (settled.status === "error" || !settled.value) return null;
   const timeline = settled.value;

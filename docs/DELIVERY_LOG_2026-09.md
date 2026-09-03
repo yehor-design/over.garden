@@ -173,9 +173,15 @@ retry control and a reference code on each. Under 400 kbps / 400 ms latency and
 4× CPU throttling the heading of every surface appears at first paint and does
 not move by a single pixel when the data arrives.
 
-`src/instrumentation.ts` now writes one JSON line per server error with the same
-digest the panel prints, closing the gap where a page degraded gracefully,
-answered `200`, and left no trace at all.
+Observability turned out to need two lines, not one. `src/instrumentation.ts`
+covers what actually throws — but a page that renders its failure does not
+throw, so `onRequestError` is never called for it, and when something does
+throw, the error React forwards there is sanitized down to a digest with no
+driver code attached (both measured against a production build). A settled
+failure therefore records itself in `settleSection`, where the code is still in
+hand. Verified on a closed-port production build: the panel on screen and the
+`workspace_section_degraded` line in the log carried the same reference,
+`16JQ1ET`.
 
 ## Corrections made in this window
 

@@ -101,8 +101,12 @@ describe("settleSection", () => {
   });
 
   it("turns a rejection into a rendered value instead of throwing", async () => {
-    const settled = await settleSection(() =>
-      Promise.reject(postgresRejection("42P01", 'relation "x" does not exist')),
+    const settled = await settleSection(
+      () =>
+        Promise.reject(
+          postgresRejection("42P01", 'relation "x" does not exist'),
+        ),
+      { record: false },
     );
 
     expect(settled).toEqual(
@@ -110,11 +114,65 @@ describe("settleSection", () => {
     );
   });
 
+  it("records one labelled line for a degraded section, and none for a ready one", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await settleSection(async () => 1, {
+        surface: "profile",
+        section: "owner-workspace",
+      });
+      expect(error).not.toHaveBeenCalled();
+
+      await settleSection(() => Promise.reject(postgresRejection("42501")), {
+        surface: "profile",
+        section: "owner-workspace",
+      });
+
+      expect(error).toHaveBeenCalledTimes(1);
+      const [written] = error.mock.calls[0] as [string];
+      expect(JSON.parse(written)).toEqual({
+        event: "workspace_section_degraded",
+        surface: "profile",
+        section: "owner-workspace",
+        failureClass: "permission_denied",
+        digest: failedSection("permission_denied", { code: "42501" }).digest,
+      });
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("stays silent for a read whose failure is a designed absence", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await settleSection(() => Promise.reject(postgresRejection("42501")), {
+        record: false,
+      });
+      expect(error).not.toHaveBeenCalled();
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("never lets the record itself break a render", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {
+      throw new Error("log sink is down");
+    });
+    try {
+      await expect(
+        settleSection(() => Promise.reject(postgresRejection("42501"))),
+      ).resolves.toMatchObject({ failureClass: "permission_denied" });
+    } finally {
+      error.mockRestore();
+    }
+  });
+
   it("settles a read that never answers at its own deadline", async () => {
     vi.useFakeTimers();
     try {
       const pending = settleSection(() => new Promise<number>(() => {}), {
         deadlineMs: workspaceSectionDeadlineMs(2),
+        record: false,
       });
       await vi.advanceTimersByTimeAsync(workspaceSectionDeadlineMs(2));
 
@@ -137,11 +195,15 @@ describe("settleSection", () => {
     };
 
     await expect(
-      settleSection(() => Promise.reject(notFound), { rethrow }),
+      settleSection(() => Promise.reject(notFound), {
+        rethrow,
+        record: false,
+      }),
     ).rejects.toBe(notFound);
     await expect(
       settleSection(() => Promise.reject(postgresRejection("42P01")), {
         rethrow,
+        record: false,
       }),
     ).resolves.toMatchObject({ failureClass: "schema_missing" });
   });
