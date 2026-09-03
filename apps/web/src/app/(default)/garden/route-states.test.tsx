@@ -41,7 +41,7 @@ const SURFACES = [
   },
   {
     surface: "stable-registry",
-    loading: () => import("./catalog/registry/loading"),
+    loading: () => import("./catalog/registry/(center)/loading"),
     heading: "Stable Registry — Foundation",
   },
   {
@@ -130,6 +130,18 @@ describe("/garden route states", () => {
       expect(html).toContain('data-workspace-surface="garden-home"');
     },
   );
+
+  it("scopes each registry skeleton to its own page", async () => {
+    // A `loading.tsx` covers its segment and every child of it, so the Release
+    // Center's fallback was the first thing a reader saw on the extensions and
+    // editions pages — the wrong heading, which is the defect ADR-0023 exists
+    // to remove. The `(center)` group scopes it to the page it belongs to.
+    const registry = await readdir(
+      new URL("./catalog/registry/", import.meta.url),
+    );
+    expect(registry).not.toContain("loading.tsx");
+    expect(registry).toContain("(center)");
+  });
 });
 
 describe("workspace loading watchdog", () => {

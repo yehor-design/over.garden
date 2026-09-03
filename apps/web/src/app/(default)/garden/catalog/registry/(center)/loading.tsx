@@ -1,7 +1,7 @@
 import { WorkspaceSectionSkeleton } from "@/components/garden/workspace-state";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 
-import { StableRegistryShell } from "./registry-shell";
+import { StableRegistryShell } from "../registry-shell";
 
 export default async function StableRegistryLoading() {
   const locale = await getRequestInterfaceLocale();

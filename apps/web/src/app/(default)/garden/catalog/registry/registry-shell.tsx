@@ -13,8 +13,13 @@ import {
 /**
  * The three registry surfaces, each as one shell its page and its `loading.tsx`
  * both render (ADR-0023). Keeping the header in one place is what makes the
- * skeleton and the finished page agree; before this they were separate JSX and
- * a child route inherited a sibling's heading.
+ * skeleton and the finished page agree.
+ *
+ * The Release Center page lives in a `(center)` route group for the same reason
+ * the workspace home lives in `(home)`: a `loading.tsx` covers its segment *and
+ * every child of it*, so `registry/loading.tsx` was streaming the Foundation
+ * heading as the first thing a reader saw on the extensions and editions pages.
+ * The group scopes that fallback to the page it belongs to.
  */
 
 export const STABLE_REGISTRY_PATH = "/garden/catalog/registry";

@@ -29,8 +29,8 @@ Passed 11 of 11 surfaces.
 | -- | -- | -- | -- | -- | -- |
 | `garden-home` | 200 | yes | `connection_unavailable` | none | 3 |
 | `stable-registry` | 200 | yes | `connection_unavailable` | none | 3 |
-| `stable-registry-extensions` | 200 | yes | `connection_unavailable` | none | 3 |
-| `stable-registry-editions` | 200 | yes | `connection_unavailable` | none | 3 |
+| `stable-registry-extensions` | 200 | yes | `connection_unavailable` | none | 2 |
+| `stable-registry-editions` | 200 | yes | `connection_unavailable` | none | 2 |
 | `object` | 200 | yes | `connection_unavailable` | none | 3 |
 | `entry-edit` | 200 | yes | `connection_unavailable` | none | 3 |
 | `profile` | 200 | yes | `connection_unavailable` | none | 3 |
@@ -39,4 +39,4 @@ Passed 11 of 11 surfaces.
 | `lineage-invitation-claim` | 200 | yes | `connection_unavailable` | none | 3 |
 | `erasure-requests` | 200 | yes | `connection_unavailable` | none | 2 |
 
-Generated at 2026-09-03T17:06:40.487Z against `http://127.0.0.1:3013`.
+Generated at 2026-09-03T17:22:47.977Z against `http://127.0.0.1:3016`.
