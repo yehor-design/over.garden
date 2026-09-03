@@ -37,6 +37,6 @@ Passed 11 of 11 surfaces.
 | `lineage-claims` | 200 | yes | `connection_unavailable` | none | 3 |
 | `lineage-questions` | 200 | yes | `connection_unavailable` | none | 3 |
 | `lineage-invitation-claim` | 200 | yes | `connection_unavailable` | none | 3 |
-| `erasure-requests` | 200 | yes | `connection_unavailable` | none | 3 |
+| `erasure-requests` | 200 | yes | `connection_unavailable` | none | 2 |
 
-Generated at 2026-09-03T16:48:02.906Z against `http://127.0.0.1:3011`.
+Generated at 2026-09-03T17:06:40.487Z against `http://127.0.0.1:3013`.
