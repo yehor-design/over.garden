@@ -20,6 +20,7 @@ import {
   buildClaimNextEppoCaptureUnitQuery,
   buildCompleteEppoCaptureUnitQuery,
   buildCreateEppoCaptureQuery,
+  buildEppoCaptureFailureRecoverabilityQuery,
   buildEppoCaptureSafeStatusQuery,
   buildEppoZeroProductFingerprintQuery,
   buildFailEppoCaptureUnitQuery,
@@ -30,11 +31,13 @@ import {
   buildListEppoCapturedSnapshotsQuery,
   buildMaterializeEppoSourceRecordsQuery,
   buildQueueEppoEndpointUnitsQuery,
+  buildReclaimTransportFailedEppoCaptureUnitsQuery,
   buildReconstructEppoSourceRecordPayloadQuery,
   buildRestoreEppoSourceRecordPayloadsQuery,
   buildRecoverStaleEppoClaimsQuery,
   buildReleaseCancelledEppoClaimQuery,
   buildTransitionEppoCaptureQuery,
+  EPPO_RECOVERABLE_TRANSPORT_ERROR_CLASSES,
   classifyEppoResponseFields,
   digestCanonicalJson,
   parseEppoInventoryPage,
@@ -85,12 +88,8 @@ describe("EPPO observed capture repository", () => {
     expect(sql).toContain("superseded_by_capture_id");
     expect(sql).toContain("catalog_source_capture_units_immutable_terminal");
     expect(sql).toContain("invalid observed capture state transition");
-    expect(sql).toContain(
-      "eppo_code ~ '^[0-9A-Z.!:/]{1,10}$'",
-    );
-    expect(sql).toContain(
-      "eppo_code !~ '^[0-9A-Z]{5,6}$'",
-    );
+    expect(sql).toContain("eppo_code ~ '^[0-9A-Z.!:/]{1,10}$'");
+    expect(sql).toContain("eppo_code !~ '^[0-9A-Z]{5,6}$'");
     expect(sql).toContain("'inactive_eppo_identifier'");
     expect(sql).not.toMatch(
       /insert\s+into\s+(?:catalog_items|catalog_item_names|catalog_source_links|job_queue)/iu,
@@ -449,6 +448,45 @@ describe("EPPO observed capture repository", () => {
     expect(released.sql).toContain('"attempt_count" -');
   });
 
+  it("returns only unobserved transport failures to the queue with a fresh budget", () => {
+    const reclaim = buildReclaimTransportFailedEppoCaptureUnitsQuery(testDb, {
+      captureId,
+    }).compile();
+
+    // Terminal evidence is out of reach: only a `failed` taxon endpoint whose
+    // error class says nothing was ever observed can be re-queued.
+    expect(reclaim.parameters).toContain("failed");
+    expect(reclaim.parameters).toContain("taxon_endpoint");
+    expect(reclaim.parameters).toContain("pending");
+    for (const state of [
+      "captured",
+      "source_only",
+      "forbidden",
+      "not_applicable",
+    ]) {
+      expect(reclaim.parameters).not.toContain(state);
+    }
+    for (const recoverable of EPPO_RECOVERABLE_TRANSPORT_ERROR_CLASSES) {
+      expect(reclaim.parameters).toContain(recoverable);
+    }
+    for (const refused of [
+      "response_schema_mismatch",
+      "authentication_rejected",
+      "authorization_rejected",
+    ]) {
+      expect(reclaim.parameters).not.toContain(refused);
+    }
+    expect(reclaim.sql).toContain('"attempt_count" = $');
+
+    const recoverability = buildEppoCaptureFailureRecoverabilityQuery(
+      testDb,
+      captureId,
+    ).compile();
+    expect(recoverability.sql).toContain("count(*) filter (where");
+    expect(recoverability.sql).not.toContain("raw_payload");
+    expect(recoverability.parameters).toContain("failed");
+  });
+
   it("exposes aggregate status and fingerprints every zero product owner", () => {
     const status = buildEppoCaptureSafeStatusQuery(testDb, captureId).compile();
     const zeroProduct = buildEppoZeroProductFingerprintQuery(testDb).compile();
@@ -552,7 +590,9 @@ describe("source payload single home", () => {
     expect(compiled.sql).toContain('"raw_payload_home"');
     expect(compiled.parameters).toContain("capture_units");
     // The record no longer receives the aggregated body; only its digest.
-    expect(compiled.sql).not.toMatch(/insert into "catalog_source_records" \([^)]*"raw_payload"[^_]/u);
+    expect(compiled.sql).not.toMatch(
+      /insert into "catalog_source_records" \([^)]*"raw_payload"[^_]/u,
+    );
     expect(compiled.sql).toContain("sha256");
   });
 

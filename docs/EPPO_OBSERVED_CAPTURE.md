@@ -64,8 +64,10 @@ controls.
 `resume` accepts a checkpointed planned, inventorying, paused, hydrating, or
 verifying run whose tool, OpenAPI, and licence digests still match. Inventory
 pages replay by exact digest before hydration continues; completed endpoint
-units are immutable and skipped. A stale claim older than 300 seconds returns
-to pending only when it still has an allowed attempt.
+units are immutable and skipped. Entering hydration it returns transport-failed
+units to the queue with a fresh attempt budget, once, before it claims anything.
+A stale claim older than 300 seconds returns to pending only when it still has
+an allowed attempt.
 
 The advisory lock and every checkpoint, claim, and completion operation share
 one pinned database executor. This remains live with a pool size of one and
@@ -85,9 +87,11 @@ pnpm eppo:observed-capture -- --mode verify --environment local --confirm-enviro
 ## State and recovery contract
 
 Run states are `planned -> inventorying -> hydrating -> verifying -> completed`.
-Hydration or verification can become `paused` on operator cancellation and
-resume through `hydrating`. Non-recoverable provider/schema drift or exhausted work becomes
-`failed`. A completed run and all successful terminal units are immutable.
+Hydration or verification can become `paused` on operator cancellation, on the
+24-hour job deadline, or on an exhausted transport budget, and resume through
+`hydrating`. Non-recoverable provider/schema drift, refused evidence, or work
+that cannot be re-observed becomes `failed`. A completed run and all successful
+terminal units are immutable.
 
 Exact page replay is accepted only when the canonical response SHA-256 is
 identical. A changed page digest fails the run; it never overwrites prior
@@ -96,9 +100,25 @@ closure. A later observation uses a new capture UUID and may supersede a prior
 completed capture only through explicit successor linkage.
 
 HTTP 429, 5xx, network failure, and timeout are retryable within the two-attempt
-budget. Authentication, authorization, response schema, digest mismatch, and
-environment errors are terminal. SIGINT aborts the active request, fences late
-writes, and leaves completed checkpoints intact.
+budget, and that budget belongs to one invocation rather than to the identifier
+for the life of the capture. A unit that spends both attempts on those classes
+was never observed: no documented response was refused and nothing was written.
+The run therefore checkpoints as `paused` with `capture_transport_budget_exhausted`
+instead of failing, and the next `--mode resume` returns exactly those units to
+the queue with a fresh budget before it claims anything. Terminal units are out
+of reach of that reclaim, so it can only ever re-observe what was never
+observed.
+
+Authentication, authorization, response schema, digest mismatch, and
+environment errors are terminal and fail the capture closed; a unit refused on
+its own evidence keeps that failure and is never returned to the queue. SIGINT
+aborts the active request, fences late writes, and leaves completed checkpoints
+intact.
+
+The second attempt on a transport class waits before it is spent — two seconds
+for a timeout, network failure, or 5xx, one second for a 429, and longer when
+the provider declares a longer `Retry-After` — because the first failure of
+those classes is usually a moment rather than a state.
 
 ## Rights and identifier classification
 
@@ -154,12 +174,17 @@ deadline, cancellation responsiveness, status responsiveness, and late-write
 rejection. The complete fixture proves exact inventory replay after restart,
 hydration interruption/resume, single-writer exclusion, normalized source
 closure, and zero product effect. The drift fixture proves that changed
-evidence is rejected rather than overwritten.
+evidence is rejected rather than overwritten. The transport fixture proves the
+boundary between an interruption and a refusal: an exhausted transport budget
+pauses, reclaims exactly the unobserved unit, and still closes on the same
+inventory digest, while a unit refused on its own evidence is retained as
+failed and its capture stays closed against it.
 
 ```bash
 pnpm eppo:observed-capture -- --mode capture --environment local --confirm-environment local --concurrency 1 --request-timeout-ms 15000 --max-attempts 2 --fixture timeout
 pnpm eppo:observed-capture -- --mode capture --environment local --confirm-environment local --concurrency 1 --request-timeout-ms 15000 --max-attempts 2 --fixture complete
 pnpm eppo:observed-capture -- --mode capture --environment local --confirm-environment local --concurrency 1 --request-timeout-ms 15000 --max-attempts 2 --fixture drift
+pnpm eppo:observed-capture -- --mode capture --environment local --confirm-environment local --concurrency 1 --request-timeout-ms 15000 --max-attempts 2 --fixture transport
 ```
 
 Rollback is fail-closed: stop the process, retain immutable evidence for
