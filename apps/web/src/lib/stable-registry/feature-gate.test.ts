@@ -7,7 +7,7 @@ import {
 } from "./feature-gate";
 
 describe("Stable Registry Release Center feature gate", () => {
-  it("stays dark by default and in every Vercel deployment", () => {
+  it("stays dark by default and follows the flag on Vercel (ADR-0022, D5)", () => {
     expect(isStableRegistryReleaseCenterEnabled({})).toBe(false);
     expect(
       isStableRegistryReleaseCenterEnabled({
@@ -15,13 +15,13 @@ describe("Stable Registry Release Center feature gate", () => {
         VERCEL: "1",
         VERCEL_ENV: "production",
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isStableRegistryReleaseCenterEnabled({
         STABLE_REGISTRY_RELEASE_CENTER: "true",
         VERCEL_ENV: "preview",
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("permits the explicitly enabled local-only proof path", () => {

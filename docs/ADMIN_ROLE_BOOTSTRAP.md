@@ -21,12 +21,16 @@ but cannot satisfy the sealed-owner boundary.
 
 Every authenticated user receives the ordinary avatar menu. After a
 server-side sealed-owner check, the same menu conditionally adds exactly these
-four localized links:
+seven localized links (ADR-0022, D5):
 
 - `/account/communities`
 - `/account/moderation/comments`
-- `/garden/catalog/curation`
+- `/garden/catalog/registry` (Release Center; `/garden/catalog/curation` is gone)
+- `/garden/catalog/registry/extensions` (variety and breed packs)
+- `/garden/catalog/registry/editions`
 - `/garden/privacy/erasure-requests`
+- `/health` (owner-only diagnostics; a request without a session gets a real
+  404 from the proxy, a signed-in non-owner gets the not-found page)
 
 An ordinary gardener, guest, session-error state, non-sealed `owner` role row,
 or owner lookup failure receives no owner links and no empty owner section. The
@@ -35,7 +39,10 @@ identifier, credential-provider detail, or denial reason.
 
 Menu visibility is not authorization. Each destination repeats a bounded
 sealed-owner `operator:mutate` check before any private read or real mutation.
-The decision resolves within 250 ms; failure, timeout, or cancellation denies
+The role read has a 2 000 ms budget (`ADMIN_ROLE_RESOLUTION_DEADLINE_MS`).
+The shell waits 750 ms of it and hides the owner links on a slower answer;
+every owner page re-checks with the full budget and denies only on a positive
+non-owner result or an exhausted budget. Failure or cancellation denies
 generically without mutation or private data. Community membership moderation
 remains a separate domain-level authorization and never grants access to these
 owner account pages.
@@ -53,14 +60,18 @@ redirect. These other retired control-plane routes also remain exact `404`:
 The live role enum is exactly `owner`. Its server-side capability set protects:
 
 - community and comment moderation;
-- catalog curation;
+- the catalog Release Center, extension packs, editions, and `/health`;
 - minimized erasure-request readback and review;
 - separately maintainer-approved irreversible erasure execution.
 
-There are no grantable admin roles in the product. `CATALOG_CURATOR_USER_IDS`
-is not an authorization model and must not be used for new operator surfaces.
-Historical audit rows can retain bounded provenance, but current runtime code
-accepts only current enum values and the configured credential-only owner.
+There are no grantable admin roles in the product and no environment
+allow-list: the retired `CATALOG_CURATOR_USER_IDS` variable is gone from the
+code, the env example, and this document. Historical audit rows can retain
+bounded provenance, but current runtime code accepts only current enum values
+and the configured credential-only owner. Every irreversible Release Center
+action (activate a Foundation release or a pack, move an edition pointer) needs
+the owner's explicit confirmation with the affected counts and writes one
+`admin_role_audit_log` row (`src/server/owner-action-audit.ts`).
 
 ## Owner bootstrap
 

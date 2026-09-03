@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
+import { isIrreversibleActionConfirmed } from "@/lib/stable-registry/irreversible-action";
+import { recordOwnerAction } from "@/server/owner-action-audit";
+
 import type { MutationScopeActionState } from "@/lib/auth/owner-scope-contract";
 import type { ExtensionPackDecisionAction } from "@/lib/stable-registry/extension-pack-actions";
 import { isStableRegistryExtensionPacksEnabled } from "@/lib/stable-registry/feature-gate";
@@ -84,11 +87,22 @@ export async function activateExtensionPackAction(
   const owner = await requireCatalogOwner(admission.scope);
   if (!owner.ok) return owner.result;
 
+  if (!isIrreversibleActionConfirmed(formData)) {
+    return { outcome: "confirmation_required" };
+  }
+  const packId = formString(formData, "packId");
   const result = await activateExtensionPack(owner.scope, {
-    packId: formString(formData, "packId"),
+    packId,
     previewDigest: formString(formData, "previewDigest"),
     writesEnabled: isStableRegistryExtensionPacksEnabled(),
   });
+  if (result.outcome === "accepted") {
+    await recordOwnerAction(
+      owner.scope,
+      "stable_registry_extension_pack_activate",
+      `pack=${packId}`,
+    );
+  }
   revalidatePath(EXTENSIONS_PATH);
   return { outcome: result.outcome };
 }

@@ -25,11 +25,7 @@ export const STABLE_REGISTRY_EXTENSION_PACKS_FLAG =
 export function isStableRegistryReleaseCenterEnabled(
   env: Record<string, string | undefined> = process.env,
 ): boolean {
-  const isVercelDeployment =
-    env.VERCEL === "1" ||
-    env.VERCEL_ENV === "production" ||
-    env.VERCEL_ENV === "preview";
-  return env.STABLE_REGISTRY_RELEASE_CENTER === "true" && !isVercelDeployment;
+  return env.STABLE_REGISTRY_RELEASE_CENTER === "true";
 }
 
 export function isStableRegistryPublicDiscoveryEnabled(
@@ -47,11 +43,7 @@ export function isStableRegistryProductSelectionEnabled(
 export function isStableRegistryExtensionPacksEnabled(
   env: Record<string, string | undefined> = process.env,
 ): boolean {
-  const isVercelDeployment =
-    env.VERCEL === "1" ||
-    env.VERCEL_ENV === "production" ||
-    env.VERCEL_ENV === "preview";
-  return env.STABLE_REGISTRY_EXTENSION_PACKS === "true" && !isVercelDeployment;
+  return env.STABLE_REGISTRY_EXTENSION_PACKS === "true";
 }
 
 /**
@@ -65,9 +57,5 @@ export const STABLE_REGISTRY_EDITIONS_FLAG =
 export function isStableRegistryEditionsEnabled(
   env: Record<string, string | undefined> = process.env,
 ): boolean {
-  const isVercelDeployment =
-    env.VERCEL === "1" ||
-    env.VERCEL_ENV === "production" ||
-    env.VERCEL_ENV === "preview";
-  return env.STABLE_REGISTRY_EDITIONS === "true" && !isVercelDeployment;
+  return env.STABLE_REGISTRY_EDITIONS === "true";
 }

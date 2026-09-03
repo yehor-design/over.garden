@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
+import { isIrreversibleActionConfirmed } from "@/lib/stable-registry/irreversible-action";
+import { recordOwnerAction } from "@/server/owner-action-audit";
+
 import type { MutationScopeActionState } from "@/lib/auth/owner-scope-contract";
 import type {
   EditionDecisionAction,
@@ -109,12 +112,28 @@ export async function moveEditionPointerAction(
   const owner = await requireCatalogOwner(admission.scope);
   if (!owner.ok) return owner.result;
 
+  if (!isIrreversibleActionConfirmed(formData)) {
+    return { outcome: "confirmation_required" };
+  }
+  const releaseId = formString(formData, "releaseId");
+  const transition = formString(formData, "transition") as EditionTransition;
   const result = await moveEditionPointer(owner.scope, {
-    releaseId: formString(formData, "releaseId"),
+    releaseId,
     previewDigest: formString(formData, "previewDigest"),
-    transition: formString(formData, "transition") as EditionTransition,
+    transition,
     writesEnabled: isStableRegistryEditionsEnabled(),
   });
+  if (result.outcome === "accepted") {
+    await recordOwnerAction(
+      owner.scope,
+      transition === "rollback"
+        ? "stable_registry_edition_rollback"
+        : transition === "forward"
+          ? "stable_registry_edition_forward"
+          : "stable_registry_edition_activate",
+      `release=${releaseId}`,
+    );
+  }
   revalidatePath(EDITIONS_PATH);
   return { outcome: result.outcome };
 }

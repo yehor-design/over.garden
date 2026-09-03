@@ -20,7 +20,7 @@ export type InterfaceLanguageControlPlacement =
 
 export const INTERFACE_UTILITY_CONTROL_PREFIXES = [
   "/health",
-  "/garden/catalog/curation",
+  "/garden/catalog/registry",
   "/garden/privacy/erasure-requests",
 ] as const;
 

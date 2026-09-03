@@ -10,6 +10,9 @@ export interface SiteShellSessionState {
   hasOperatorAccess: boolean;
 }
 
+/** The shell waits this long for the owner check before hiding the links. */
+export const SHELL_OPERATOR_ACCESS_TIMEOUT_MS = 750;
+
 export const GUEST_SITE_SHELL_SESSION_STATE: SiteShellSessionState = {
   isAuthenticated: false,
   ownerUserId: null,
@@ -43,9 +46,13 @@ async function resolveShellOperatorAccess(
   sessionId: string | null,
 ) {
   try {
+    // The shell only decides whether to show the owner links; a slow answer
+    // hides them and every owner page re-checks with the full budget.
     const access = await resolveAdminCapabilityAccessBounded(
       { userId, sessionId },
       "operator:mutate",
+      undefined,
+      { timeoutMs: SHELL_OPERATOR_ACCESS_TIMEOUT_MS },
     );
     return access.status === "allowed";
   } catch {

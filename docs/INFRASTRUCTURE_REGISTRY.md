@@ -1034,13 +1034,13 @@ Vercel invariants:
   do not install it as true in any deployed environment. Exact-production proof
   belongs to the credential-free `smoke:drive2-production` result, which records
   only status classes and redaction booleans.
-- Stable Registry rollout is gated by three independent, reversible non-secret
-  flags. All three ship absent/false and only the approved OVE-259 production
-  rollout plan may set one in production; no environment default, sibling issue,
-  or manual toggle may. `STABLE_REGISTRY_RELEASE_CENTER` enables the operator
-  Release Center writes and additionally refuses to enable on any Vercel
-  deployment. `STABLE_REGISTRY_PUBLIC_DISCOVERY` enables the guest catalog and
-  EPPO source explorer reads. `STABLE_REGISTRY_PRODUCT_SELECTION` (OVE-257)
+- Stable Registry flags are kill switches (ADR-0022, D5): they ship
+  absent/false in the env example and are set to `true` in Vercel production by
+  the owner (`vercel env add <NAME> production`). `STABLE_REGISTRY_RELEASE_CENTER`
+  enables the owner's Release Center writes, `STABLE_REGISTRY_EXTENSION_PACKS`
+  the pack lane, `STABLE_REGISTRY_EDITIONS` the edition lane; none refuses a
+  Vercel deployment any more. `STABLE_REGISTRY_PUBLIC_DISCOVERY` enables the
+  guest catalog and EPPO source explorer reads. `STABLE_REGISTRY_PRODUCT_SELECTION` (OVE-257)
   switches the authenticated picker, canonical fallback, and save validation
   from the compatibility predicate to the active-release product projection;
   turning it off returns to the compatibility predicate without changing any

@@ -5,7 +5,9 @@ import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { IrreversibleActionConfirmation } from "@/components/stable-registry/irreversible-action-confirmation";
 import { buttonVariants } from "@/components/ui/button";
+import { formatOperatorTemplate } from "@/lib/operator-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   REGISTRY_DECISION_ACTIONS,
@@ -154,6 +156,12 @@ export function StableRegistryReleaseCenter({
                   type="hidden"
                   name="previewDigest"
                   value={release.previewDigest}
+                />
+                <IrreversibleActionConfirmation
+                  text={formatOperatorTemplate(copy.activationAcknowledge, {
+                    eligible: release.eligibleMemberCount,
+                    members: release.memberCount,
+                  })}
                 />
                 <button
                   type="submit"

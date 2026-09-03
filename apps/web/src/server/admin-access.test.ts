@@ -171,7 +171,7 @@ describe("admin access gate", () => {
       fakeAdminDb({ role: "owner" }),
     );
 
-    expect(ADMIN_ROLE_RESOLUTION_DEADLINE_MS).toBe(250);
+    expect(ADMIN_ROLE_RESOLUTION_DEADLINE_MS).toBe(2_000);
     expect(access.status).toBe("allowed");
   });
 

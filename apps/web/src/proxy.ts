@@ -63,6 +63,7 @@ const INTERNAL_PROFILE_REWRITE_VERSION = "v1";
 const INTERNAL_PROFILE_REWRITE_SIGNATURE_CONTEXT =
   "overgarden:internal-profile-rewrite:v1";
 const CANONICAL_PRODUCTION_HOST = "over.garden";
+const SESSION_COOKIE_NAME = "overgarden.session_token";
 const NON_CANONICAL_PRODUCTION_HOST = "www.over.garden";
 
 type InternalNamespace = "skeleton";
@@ -71,6 +72,11 @@ type InternalNamespacePath = {
   namespace: InternalNamespace;
   representation: "canonical" | "encoded";
 };
+
+export function isOwnerHealthPath(pathname: string) {
+  const path = stripLocalePrefix(pathname).path;
+  return path === "/health" || path.startsWith("/health/");
+}
 
 function getHardNotFoundResponse() {
   return new NextResponse(null, {
@@ -459,6 +465,16 @@ export async function proxy(request: NextRequest) {
     return getHardNotFoundResponse();
   }
 
+  // `/health` belongs to the sealed owner (ADR-0022, D5). A request that
+  // carries no session cannot be the owner, so it gets a real 404 here; a
+  // signed-in visitor is checked by the page with the full role budget.
+  if (
+    isOwnerHealthPath(request.nextUrl.pathname) &&
+    !request.headers.get("cookie")?.includes(`${SESSION_COOKIE_NAME}=`)
+  ) {
+    return getHardNotFoundResponse();
+  }
+
   const canonicalTrailingSlashResponse =
     getCanonicalTrailingSlashResponse(request);
   if (canonicalTrailingSlashResponse) return canonicalTrailingSlashResponse;
@@ -672,7 +688,7 @@ async function resolvePublicProfileViewer(
   request: NextRequest,
 ): Promise<{ ok: true; userId: string | null } | { ok: false }> {
   const cookieHeader = request.headers.get("cookie") ?? "";
-  if (!cookieHeader.includes("overgarden.session_token=")) {
+  if (!cookieHeader.includes(`${SESSION_COOKIE_NAME}=`)) {
     return { ok: true, userId: null };
   }
 

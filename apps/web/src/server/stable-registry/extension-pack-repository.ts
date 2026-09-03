@@ -42,6 +42,7 @@ export type {
 
 export type ExtensionPackOutcome =
   | "accepted"
+  | "confirmation_required"
   | "stale"
   | "blocked"
   | "forbidden"

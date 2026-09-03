@@ -41,6 +41,7 @@ export type {
 };
 export type RegistryActionOutcome =
   | "accepted"
+  | "confirmation_required"
   | "stale"
   | "blocked"
   | "forbidden"

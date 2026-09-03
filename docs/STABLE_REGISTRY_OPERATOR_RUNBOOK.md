@@ -34,8 +34,9 @@ eligibility merely because it was observed in EPPO.
 
 1. Confirm the capture is terminal `completed` and its manifest receipt is
    immutable. Do not start from a partial, failed, or superseded capture.
-2. Open the Release Center. If it says the feature is disabled, stop: that is
-   the expected deployed posture before OVE-259.
+2. Open the Release Center from the account menu. If it says the feature is
+   disabled, the `STABLE_REGISTRY_RELEASE_CENTER` kill switch is off in that
+   environment (ADR-0022, D5); it is `true` in production.
 3. Build Foundation. The action is idempotent for the capture digest and
    policy version; a repeated click returns the existing draft.
 4. Wait for `review_ready`. The build is background work; use **Cancel build**
@@ -51,7 +52,8 @@ eligibility merely because it was observed in EPPO.
 6. The preview button stays unavailable while a group is open or blocked.
    When preview is approved, it records a digest of release membership and
    decisions; changing either makes an activation request stale.
-7. A local activation atomically updates the single Foundation pointer,
+7. Activation asks for the confirm step (the box that names the eligible and
+   total member counts) and then atomically updates the single Foundation pointer,
    records the activation receipt, and queues derived-search intent. It
    reports `queued`, never a false claim that Meilisearch, public discovery,
    or gardener picker parity is complete.
@@ -59,6 +61,23 @@ eligibility merely because it was observed in EPPO.
    decision receipt, pointer, and search-outbox state. Use a later edition or
    explicit rollback receipt for correction; never rewrite an active release
    in place.
+
+## Where each operation runs
+
+| Operation | Runs | Progress |
+| --- | --- | --- |
+| Build Foundation release | Server Action inserts the draft (set-based SQL under the interactive deadline) and enqueues `stable_registry_foundation_build`; the Python worker builds it | release state `building` → `review_ready` on the page |
+| Decide an exception group, approve a preview | Server Action, in-request SQL | immediate |
+| Activate a Foundation release | Server Action after the confirm step; pointer move in one transaction; `admin_role_audit_log` row | immediate |
+| Import a pack | Server Action enqueues `stable_registry_extension_pack_build`; worker parses it | pack state on the page |
+| Activate a pack | Server Action after the confirm step; audit row | immediate |
+| Prepare an edition | Server Action enqueues `stable_registry_edition_build`; worker diffs it | edition state on the page |
+| Activate, roll back, or move forward an edition pointer | Server Action after the confirm step; audit row | immediate |
+
+Every in-request operation completes in well under ten seconds on the current
+catalog; a longer one would move to the worker with a progress row. Every
+irreversible action needs the confirm box; without it the action answers
+`confirmation_required` and changes nothing.
 
 ## Recovery and rollback
 

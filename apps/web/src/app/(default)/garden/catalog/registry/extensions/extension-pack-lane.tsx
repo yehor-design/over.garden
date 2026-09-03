@@ -5,7 +5,9 @@ import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { IrreversibleActionConfirmation } from "@/components/stable-registry/irreversible-action-confirmation";
 import { buttonVariants } from "@/components/ui/button";
+import { formatOperatorTemplate } from "@/lib/operator-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   getStableRegistryExtensionPackCopy,
@@ -166,6 +168,12 @@ export function StableRegistryExtensionPackLane({
                 type="hidden"
                 name="previewDigest"
                 value={pack.previewDigest}
+              />
+              <IrreversibleActionConfirmation
+                text={formatOperatorTemplate(copy.activationAcknowledge, {
+                  eligible: pack.productEligibleRowCount,
+                  rows: pack.rowCount,
+                })}
               />
               <SubmitButton label={copy.activatePack} />
             </OwnerScopedActionForm>

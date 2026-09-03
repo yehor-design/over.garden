@@ -343,6 +343,8 @@ const REGISTRY_UK_COPY = {
   previewApproved: "Preview схвалено. Він прив’язаний до поточних рішень.",
   activationConfirmation:
     "Активація перемикає лише локальний pointer випуску й ставить derived search у чергу. Публічний каталог не оголошується готовим тут.",
+  activationAcknowledge:
+    "Підтверджую активацію: {eligible} із {members} записів випуску стануть активним каталогом. Дія незворотна; попередній випуск лишається для відкату.",
   activateFoundation: "Активувати локально",
   activated: "Локальний Foundation активовано; search intent додано в чергу.",
   releaseStates: {
@@ -362,6 +364,8 @@ const REGISTRY_UK_COPY = {
     blocked: "Заблоковано правилом",
   },
   outcomeLabels: {
+    confirmation_required:
+      "Підтвердіть незворотну дію прапорцем перед виконанням.",
     stale: "Стан змінився. Оновіть сторінку перед повторною дією.",
     blocked: "Дія заблокована поточним безпечним станом.",
     forbidden: "Доступ заборонено.",
@@ -425,6 +429,8 @@ const REGISTRY_BG_COPY = {
   previewApproved: "Preview е одобрен и е обвързан с текущите решения.",
   activationConfirmation:
     "Активирането сменя само локалния pointer на изданието и добавя derived search в опашката. Публичният каталог не се обявява за готов тук.",
+  activationAcknowledge:
+    "Потвърждавам активирането: {eligible} от {members} записа на изданието стават активен каталог. Действието е необратимо; предишното издание остава за връщане.",
   activateFoundation: "Активирай локално",
   activated:
     "Локалният Foundation е активиран; search intent е добавен в опашката.",
@@ -445,6 +451,8 @@ const REGISTRY_BG_COPY = {
     blocked: "Блокирано от правило",
   },
   outcomeLabels: {
+    confirmation_required:
+      "Потвърдете необратимото действие с отметката, преди да продължите.",
     stale: "Състоянието е променено. Обновете страницата преди нов опит.",
     blocked: "Действието е блокирано от текущото безопасно състояние.",
     forbidden: "Достъпът е отказан.",
@@ -506,6 +514,8 @@ const REGISTRY_RU_COPY = {
   previewApproved: "Preview одобрен и привязан к текущим решениям.",
   activationConfirmation:
     "Активация переключает только локальный pointer выпуска и добавляет derived search в очередь. Публичный каталог здесь не объявляется готовым.",
+  activationAcknowledge:
+    "Подтверждаю активацию: {eligible} из {members} записей выпуска станут активным каталогом. Действие необратимо; предыдущий выпуск остаётся для отката.",
   activateFoundation: "Активировать локально",
   activated:
     "Локальный Foundation активирован; search intent добавлен в очередь.",
@@ -526,6 +536,8 @@ const REGISTRY_RU_COPY = {
     blocked: "Заблокировано правилом",
   },
   outcomeLabels: {
+    confirmation_required:
+      "Подтвердите необратимое действие флажком перед выполнением.",
     stale: "Состояние изменилось. Обновите страницу перед повторной попыткой.",
     blocked: "Действие заблокировано текущим безопасным состоянием.",
     forbidden: "Доступ запрещён.",
@@ -596,6 +608,8 @@ const EXTENSION_PACK_UK_COPY = {
   saveDecision: "Зберегти рішення",
   parentCatalogItemId: "Ідентифікатор активного батьківського виду",
   approvePreview: "Схвалити незмінний preview",
+  activationAcknowledge:
+    "Підтверджую активацію пакета: {eligible} із {rows} рядків стануть частиною каталогу. Дія незворотна.",
   activatePack: "Активувати пакет локально",
   activationConfirmation:
     "Активація використовує наявну проєкцію продукту й наявний rebuild пошуку. Другого власника пошуку не створюється.",
@@ -643,6 +657,8 @@ const EXTENSION_PACK_UK_COPY = {
     rejected: "Відхилена",
   },
   outcomeLabels: {
+    confirmation_required:
+      "Підтвердіть незворотну дію прапорцем перед виконанням.",
     stale: "Стан змінився. Оновіть сторінку перед повторною дією.",
     blocked: "Дію заблоковано поточним безпечним станом.",
     forbidden: "Доступ заборонено.",
@@ -685,6 +701,8 @@ const EXTENSION_PACK_BG_COPY = {
   saveDecision: "Запазване на решението",
   parentCatalogItemId: "Идентификатор на активния родителски вид",
   approvePreview: "Одобряване на непроменимия preview",
+  activationAcknowledge:
+    "Потвърждавам активирането на пакета: {eligible} от {rows} реда стават част от каталога. Действието е необратимо.",
   activatePack: "Активиране на пакета локално",
   activationConfirmation:
     "Активирането използва съществуващата продуктова проекция и съществуващия rebuild на търсенето. Не се създава втори собственик на търсенето.",
@@ -732,6 +750,8 @@ const EXTENSION_PACK_BG_COPY = {
     rejected: "Отхвърлено",
   },
   outcomeLabels: {
+    confirmation_required:
+      "Потвърдете необратимото действие с отметката, преди да продължите.",
     stale:
       "Състоянието се промени. Опреснете страницата преди повторно действие.",
     blocked: "Действието е блокирано от текущото безопасно състояние.",
@@ -771,6 +791,8 @@ const EXTENSION_PACK_RU_COPY = {
   saveDecision: "Сохранить решение",
   parentCatalogItemId: "Идентификатор активного родительского вида",
   approvePreview: "Одобрить неизменяемый preview",
+  activationAcknowledge:
+    "Подтверждаю активацию пакета: {eligible} из {rows} строк станут частью каталога. Действие необратимо.",
   activatePack: "Активировать пакет локально",
   activationConfirmation:
     "Активация использует существующую продуктовую проекцию и существующий rebuild поиска. Второй владелец поиска не создаётся.",
@@ -818,6 +840,8 @@ const EXTENSION_PACK_RU_COPY = {
     rejected: "Отклонено",
   },
   outcomeLabels: {
+    confirmation_required:
+      "Подтвердите необратимое действие флажком перед выполнением.",
     stale: "Состояние изменилось. Обновите страницу перед повторным действием.",
     blocked: "Действие заблокировано текущим безопасным состоянием.",
     forbidden: "Доступ запрещён.",
@@ -875,6 +899,8 @@ const EDITION_UK_COPY = {
   approvePreview: "Схвалити незмінний preview",
   activateEdition: "Активувати видання",
   rollbackEdition: "Відкотити до попереднього випуску",
+  pointerAcknowledge:
+    "Підтверджую переміщення покажчика: зачеплено {affected} обʼєктів. Дія незворотна; зворотний перехід лишається доступним.",
   forwardEdition: "Повернутися вперед",
   activationHistoryTitle: "Історія активацій",
   noActivationHistory: "Активацій ще не було.",
@@ -929,6 +955,8 @@ const EDITION_UK_COPY = {
     block_rule: "Заблокувати правилом",
   },
   outcomeLabels: {
+    confirmation_required:
+      "Підтвердіть незворотну дію прапорцем перед виконанням.",
     stale: "Стан або кількість задіяних обʼєктів змінилися. Оновіть сторінку.",
     blocked: "Дію заблоковано поточним безпечним станом.",
     forbidden: "Доступ заборонено.",
@@ -976,6 +1004,8 @@ const EDITION_BG_COPY = {
   approvePreview: "Одобряване на непроменимия preview",
   activateEdition: "Активиране на изданието",
   rollbackEdition: "Връщане към предишното издание",
+  pointerAcknowledge:
+    "Потвърждавам преместването на указателя: засегнати {affected} обекта. Действието е необратимо; обратният преход остава наличен.",
   forwardEdition: "Връщане напред",
   activationHistoryTitle: "История на активациите",
   noActivationHistory: "Още няма активации.",
@@ -1030,6 +1060,8 @@ const EDITION_BG_COPY = {
     block_rule: "Блокиране с правило",
   },
   outcomeLabels: {
+    confirmation_required:
+      "Потвърдете необратимото действие с отметката, преди да продължите.",
     stale:
       "Състоянието или броят засегнати обекти се промени. Опреснете страницата.",
     blocked: "Действието е блокирано от текущото безопасно състояние.",
@@ -1076,6 +1108,8 @@ const EDITION_RU_COPY = {
   approvePreview: "Одобрить неизменяемый preview",
   activateEdition: "Активировать издание",
   rollbackEdition: "Откатить к предыдущему выпуску",
+  pointerAcknowledge:
+    "Подтверждаю перемещение указателя: затронуто {affected} объектов. Действие необратимо; обратный переход остаётся доступным.",
   forwardEdition: "Вернуться вперёд",
   activationHistoryTitle: "История активаций",
   noActivationHistory: "Активаций ещё не было.",
@@ -1130,6 +1164,8 @@ const EDITION_RU_COPY = {
     block_rule: "Заблокировать правилом",
   },
   outcomeLabels: {
+    confirmation_required:
+      "Подтвердите необратимое действие флажком перед выполнением.",
     stale:
       "Состояние или число затронутых объектов изменились. Обновите страницу.",
     blocked: "Действие заблокировано текущим безопасным состоянием.",

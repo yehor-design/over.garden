@@ -43,6 +43,8 @@ describe("site shell session state", () => {
     expect(mocks.resolveAdminCapabilityAccessBounded).toHaveBeenCalledWith(
       { userId: "private-user-id", sessionId: "private-session-id" },
       "operator:mutate",
+      undefined,
+      { timeoutMs: 750 },
     );
   });
 

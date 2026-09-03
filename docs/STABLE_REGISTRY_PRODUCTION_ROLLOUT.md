@@ -1,7 +1,10 @@
 # Stable Registry Production Rollout
 
-Status: harness implemented by OVE-259; **production apply not authorized**
-Production state: **unmeasured** — see "Measured production state" below
+Status: superseded for the owner flow (ADR-0022, D5, 2026-09-03). The
+plan-digest ceremony below is history; the owner builds, previews, confirms,
+and activates from `/garden/catalog/registry` in production, and the
+`--mode apply` path of the harness stays as a maintainer fallback only.
+Production state: read it live in the Release Center
 Harness: `apps/web/scripts/prove-stable-registry-production.ts`
 Plan contract: `apps/web/src/lib/catalog/stable-registry-production-plan.ts`
 Read-back: `apps/web/src/server/stable-registry/production-rollout-repository.ts`
@@ -227,10 +230,12 @@ provider move returns authorization to pending and the capture has to be redone
 against the new instance. Landing before the provider is settled would be work
 thrown away, and worse, a `Done` that quietly stops being true.
 
-## Open maintainer authorization gate
+## The in-product flow replaces the authorization gate
 
-Applying migrations `0023`–`0028` to production, capturing the observed EPPO
-source there, activating Foundation and extension packs, rebuilding search,
-creating disposable proof effects, and executing rollback/forward all remain
-**pending**. Nothing in this PR performs any of them, and no approval is implied
-by the harness existing.
+Since ADR-0022 (D5) the owner activates from the product: `/garden/catalog/registry`
+builds a Foundation draft (the worker builds it in the background and the page
+shows the release state), the preview is approved, and activation requires the
+confirm step with the affected counts; the same holds for extension packs and
+edition pointer moves. Each irreversible action writes one
+`admin_role_audit_log` row. The plan-digest approval and the
+`--approved-plan-digest` apply mode are no longer part of the owner's path.
