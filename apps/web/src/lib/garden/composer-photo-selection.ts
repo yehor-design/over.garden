@@ -34,13 +34,32 @@ export function isSupportedComposerPhoto(
   return composerPhotoSelectionError(file) === null;
 }
 
+export type ComposerPhotoRefusal = "unsupported_type" | "too_large";
+
+/**
+ * Why a picked, pasted, or dropped file is refused before any block or codec
+ * work starts, or `null` when it may proceed. The composer maps the class
+ * onto its localized copy; `composerPhotoSelectionError` keeps the English
+ * form for scripts and tests.
+ */
+export function classifyComposerPhotoRefusal(
+  file: Pick<File, "type" | "size"> | null | undefined,
+): ComposerPhotoRefusal | null {
+  if (!file || !SUPPORTED_COMPOSER_PHOTO_TYPES.has(file.type)) {
+    return "unsupported_type";
+  }
+  if (!isAllowedComposerImageSize(file.size)) return "too_large";
+  return null;
+}
+
 export function composerPhotoSelectionError(
   file: Pick<File, "type" | "size"> | null | undefined,
 ) {
-  if (!file || !SUPPORTED_COMPOSER_PHOTO_TYPES.has(file.type)) {
+  const refusal = classifyComposerPhotoRefusal(file);
+  if (refusal === "unsupported_type") {
     return "Use a JPEG, PNG, WebP, or HEIC photo.";
   }
-  if (!isAllowedComposerImageSize(file.size)) {
+  if (refusal === "too_large") {
     return `Choose a photo up to ${MAX_COMPOSER_IMAGE_MEGABYTES} MB.`;
   }
   return null;

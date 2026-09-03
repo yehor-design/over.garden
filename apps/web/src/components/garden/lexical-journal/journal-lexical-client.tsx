@@ -32,6 +32,7 @@ import type {
   StructuredJournalComposerHandle,
   StructuredJournalComposerProps,
 } from "@/components/garden/structured-journal-composer";
+import { classifyComposerPhotoRefusal } from "@/lib/garden/composer-photo-selection";
 import { waitForComposerIdle } from "@/lib/garden/composer-idle-deadline";
 import {
   lexicalEditorStateToJournalDocumentV1,
@@ -371,6 +372,15 @@ function JournalLexicalClientBody({
   const chooseImage = useCallback(
     async (file: File) => {
       if (disabled || !mountedRef.current) return;
+      // A file over the limit or of another type is refused here, before a
+      // block or the codec sees it, with the bounded copy (OVE-371).
+      const refusal = classifyComposerPhotoRefusal(file);
+      if (refusal) {
+        setMediaMessage(
+          refusal === "too_large" ? labels.imageTooLarge : labels.imageUnsupported,
+        );
+        return;
+      }
       if (
         journalDocumentImageCount(latestDocumentRef.current) +
           pendingMediaCountRef.current +
@@ -499,6 +509,8 @@ function JournalLexicalClientBody({
       imageInsertionMode,
       labels.failureBody,
       labels.imageFailed,
+      labels.imageTooLarge,
+      labels.imageUnsupported,
       onPreviewFailed,
       onPreviewResolved,
       serialize,
