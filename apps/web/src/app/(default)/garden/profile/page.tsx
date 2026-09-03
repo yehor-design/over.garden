@@ -7,7 +7,6 @@ import {
   WorkspaceSectionError,
   WorkspaceSectionSkeleton,
 } from "@/components/garden/workspace-state";
-
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";

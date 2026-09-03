@@ -6,7 +6,6 @@ import {
   WorkspaceSectionError,
   WorkspaceSectionSkeleton,
 } from "@/components/garden/workspace-state";
-
 import {
   LivingObjectPassportContextRail,
   LivingObjectPassportOverview,
