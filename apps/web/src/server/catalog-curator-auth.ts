@@ -4,6 +4,7 @@ import type { Kysely } from "kysely";
 
 import type { Database } from "@/db/schema";
 import {
+  AdminAccessDeniedError,
   assertAdminCapabilityForScope,
   type AdminAccess,
 } from "@/server/admin-access";
@@ -25,7 +26,15 @@ export function assertCatalogCuratorAccess(
     scope,
     "operator:mutate",
     database,
-  ).catch(() => {
-    throw new Error(ACCESS_DENIED_ERROR);
+  ).catch((reason: unknown) => {
+    // A refusal is rewritten to this surface's own wording. Anything else —
+    // an unreachable role table, a timeout — is re-thrown untouched, because
+    // ADR-0023 needs the caller to be able to tell "you may not" apart from
+    // "we could not ask", and flattening both into one message is what made
+    // a database outage look like a permissions problem.
+    if (reason instanceof AdminAccessDeniedError) {
+      throw new AdminAccessDeniedError(ACCESS_DENIED_ERROR);
+    }
+    throw reason;
   });
 }

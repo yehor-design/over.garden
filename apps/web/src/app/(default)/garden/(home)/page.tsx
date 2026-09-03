@@ -33,12 +33,9 @@ import {
   getLocalizedOAuthErrorMessage,
   getTrustSurfaceCopy,
 } from "@/lib/trust-surface-copy";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { WorkspaceSectionError } from "@/components/garden/workspace-state";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
-import {
-  loadGardenWorkspace,
-  withGardenWorkspaceDeadline,
-} from "@/server/garden-workspace-repository";
+import { loadGardenWorkspace } from "@/server/garden-workspace-repository";
 import { scheduleGardenWorkspaceActivationAnalytics } from "@/server/garden-workspace-after-response";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
@@ -47,11 +44,21 @@ import {
   type SpaceJournalTimeline,
 } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
-import { addCatalogPublicSlugToWishlistAction } from "../wishlist/actions";
-import { FirstEntryComposer } from "./first-entry-composer";
-import { GardenAuthPanel } from "./garden-auth-panel";
-import { GardenWorkspaceView } from "./garden-workspace-view";
-import { SaveProgressMoment } from "./save-progress-moment";
+import { resolveWorkspaceViewer } from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
+import {
+  GARDEN_HOME_PATH,
+  GardenHomeSectionsSkeleton,
+  GardenHomeShell,
+} from "./garden-home-shell";
+import { addCatalogPublicSlugToWishlistAction } from "../../wishlist/actions";
+import { FirstEntryComposer } from "../first-entry-composer";
+import { GardenAuthPanel } from "../garden-auth-panel";
+import { GardenWorkspaceView } from "../garden-workspace-view";
+import { SaveProgressMoment } from "../save-progress-moment";
 
 type GardenSearchParams = Record<string, string | string[] | undefined>;
 const EMPTY_GARDEN_SEARCH_PARAMS: GardenSearchParams = {};
@@ -64,80 +71,141 @@ interface GardenPageProps {
 }
 
 export default async function GardenPage({ searchParams }: GardenPageProps) {
-  const [session, params, locale] = await Promise.all([
-    getCurrentSession(),
+  const [viewer, params, locale] = await Promise.all([
+    resolveWorkspaceViewer(),
     searchParams ?? Promise.resolve(EMPTY_GARDEN_SEARCH_PARAMS),
     getRequestInterfaceLocale(),
   ]);
-  const userId = session?.user?.id;
   const engagementAuthMessage = engagementAuthPrompt(locale, params.engagement);
   const engagementPostAuthPath = engagementAuthMessage
     ? normalizeGardenReturnToParam(params.returnTo)
     : null;
-  const [initialCatalogItem, pendingWishlistItem] = await Promise.all([
-    resolveInitialCatalogSelection(params),
-    resolvePendingWishlistSelection(params),
-  ]);
-  const activationSource = normalizeActivationSourceParam(params.source, {
-    hasResolvedCatalogSelection: Boolean(initialCatalogItem),
-  });
-  const oauthMessage = getLocalizedOAuthErrorMessage(locale, params.error);
 
-  if (
-    userId &&
-    engagementPostAuthPath &&
-    engagementPostAuthPath !== "/garden"
-  ) {
-    redirect(engagementPostAuthPath);
+  // The session store is the one read allowed before the shell, and it can fail
+  // like any other. Saying so is a different sentence from "sign in" and points
+  // at a different fix (ADR-0023).
+  if (viewer.status === "unavailable") {
+    return (
+      <GardenHomeShell locale={locale}>
+        <div className="px-4 py-8 sm:px-6">
+          <WorkspaceSectionError
+            locale={locale}
+            failure={viewer.failure}
+            retryHref={GARDEN_HOME_PATH}
+          />
+        </div>
+      </GardenHomeShell>
+    );
   }
 
-  if (!userId) {
+  if (viewer.status === "sign-in-required") {
     return (
-      <GuestGardenEntry
+      <GuestGardenEntrySection
         locale={locale}
-        activationSource={activationSource}
-        catalogName={initialCatalogItem?.displayName}
-        initialMessage={
-          oauthMessage ??
-          engagementAuthMessage ??
-          (pendingWishlistItem
-            ? formatTrustTemplate(
-                getTrustSurfaceCopy(locale).gardenGuest.wishlistPrompt,
-                { catalogName: pendingWishlistItem.canonicalName },
-              )
-            : null)
-        }
-        postAuthPath={engagementPostAuthPath}
+        params={params}
+        engagementAuthMessage={engagementAuthMessage}
+        engagementPostAuthPath={engagementPostAuthPath}
       />
     );
   }
 
-  const scope = scopedToUser(userId, getSessionId(session));
-  const loadOptions = {
-    inventoryExpanded: firstParam(params.inventory) === "all",
-    inventoryPage: positivePage(params.inventoryPage),
-    spacesExpanded: firstParam(params.spaces) === "all",
-    spacesPage: positivePage(params.spacesPage),
-    faultSections: [],
-  };
-  const [workspace, priorPublicationDisclosure] = await Promise.all([
-    loadGardenWorkspace(scope, loadOptions),
-    hasPriorPublicationDisclosure(scope).catch(() => false),
+  if (engagementPostAuthPath && engagementPostAuthPath !== "/garden") {
+    redirect(engagementPostAuthPath);
+  }
+
+  return (
+    <>
+      <AuthIntentFocus
+        action={normalizeAuthIntentResumeAction(params.authIntent)}
+        control={normalizeAuthIntentResumeControl(params.authControl)}
+      />
+      <GardenHomeShell locale={locale}>
+        <Suspense fallback={<GardenHomeSectionsSkeleton locale={locale} />}>
+          <GardenHomeSections
+            locale={locale}
+            params={params}
+            scope={viewer.scope}
+            userId={viewer.userId}
+          />
+        </Suspense>
+      </GardenHomeShell>
+    </>
+  );
+}
+
+/**
+ * Everything on the home page that needs the database. It never throws: the
+ * read model settles its four sections itself, and the three smaller reads go
+ * through `settleSection`, so the worst case is a designed panel rather than a
+ * boundary that never resolves.
+ */
+async function GardenHomeSections({
+  locale,
+  params,
+  scope,
+  userId,
+}: {
+  locale: InterfaceLocale;
+  params: GardenSearchParams;
+  scope: ReturnType<typeof scopedToUser>;
+  userId: string;
+}) {
+  const [
+    readModel,
+    priorPublicationDisclosure,
+    initialCatalogItem,
+    pendingWishlistItem,
+  ] = await Promise.all([
+    // `loadGardenWorkspace` settles its own four sections and is not supposed to
+    // reject. It is still wrapped, because "not supposed to" is exactly the
+    // assumption that left a reader on a skeleton once already, and the rule
+    // ADR-0023 states has no exceptions.
+    settleSection(
+      () =>
+        loadGardenWorkspace(scope, {
+          inventoryExpanded: firstParam(params.inventory) === "all",
+          inventoryPage: positivePage(params.inventoryPage),
+          spacesExpanded: firstParam(params.spaces) === "all",
+          spacesPage: positivePage(params.spacesPage),
+          faultSections: [],
+        }),
+      {
+        deadlineMs: workspaceSectionDeadlineMs(7),
+        surface: "garden-home",
+        section: "read-model",
+      },
+    ),
+    settledOrNull(() => hasPriorPublicationDisclosure(scope)),
+    settledOrNull(() => resolveInitialCatalogSelection(params)),
+    settledOrNull(() => resolvePendingWishlistSelection(params)),
   ]);
-  const writeAccess = {
-    canWrite: true,
-    actorClass: "real_self_serve" as const,
-  };
-  const workspaceForView = workspace;
+
+  if (readModel.status === "error") {
+    return (
+      <div className="px-4 py-8 sm:px-6">
+        <WorkspaceSectionError
+          locale={locale}
+          failure={readModel}
+          retryHref={GARDEN_HOME_PATH}
+        />
+      </div>
+    );
+  }
+  const workspace = readModel.value;
+
+  const activationSource = normalizeActivationSourceParam(params.source, {
+    hasResolvedCatalogSelection: Boolean(initialCatalogItem),
+  });
+  const canWrite = true;
   const requestedSpaceId = uuidParam(params.space);
   const defaultSpaceId =
-    workspaceForView.spaces.status === "ready"
-      ? (workspaceForView.spaces.value.spaces[0]?.id ?? null)
+    workspace.spaces.status === "ready"
+      ? (workspace.spaces.value.spaces[0]?.id ?? null)
       : null;
   const selectedSpaceId = requestedSpaceId || defaultSpaceId;
   const initialSpace =
-    workspaceForView.spaces.status === "ready"
-      ? (workspaceForView.spaces.value.spaces.find(
+    workspace.spaces.status === "ready"
+      ? (workspace.spaces.value.spaces.find(
           (space) => space.id === selectedSpaceId,
         ) ?? null)
       : null;
@@ -148,64 +216,115 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     properties: {
       activation_source: activationSource,
       source_surface_kind: activationSurfaceKindForSource(activationSource),
-      actor_class: writeAccess.actorClass,
+      actor_class: "real_self_serve",
     },
   });
 
   return (
-    <>
-      <AuthIntentFocus
-        action={normalizeAuthIntentResumeAction(params.authIntent)}
-        control={normalizeAuthIntentResumeControl(params.authControl)}
-      />
-      <GardenWorkspaceView
-        canWrite={writeAccess.canWrite}
-        locale={locale}
-        today={today}
-        workspace={workspaceForView}
-      >
-        {writeAccess.canWrite && pendingWishlistItem ? (
-          <PendingWishlistIntentPanel
-            item={pendingWishlistItem}
-            locale={locale}
-          />
-        ) : null}
-        <GardenWriteTools
-          today={today}
+    <GardenWorkspaceView
+      canWrite={canWrite}
+      locale={locale}
+      today={today}
+      workspace={workspace}
+    >
+      {pendingWishlistItem ? (
+        <PendingWishlistIntentPanel
+          item={pendingWishlistItem}
           locale={locale}
-          activationSource={activationSource}
-          initialCatalogItem={initialCatalogItem}
-          initialSpace={
-            initialSpace
-              ? { id: initialSpace.id, displayName: initialSpace.displayName }
-              : null
-          }
-          enableServerPersistence
-          ownerUserId={userId}
-          requiresFirstPublicationDisclosure={!priorPublicationDisclosure}
-        >
-          {selectedSpaceId ? (
-            <Suspense fallback={null}>
-              <GardenSelectedSpaceTimeline
-                canWrite={writeAccess.canWrite}
-                locale={locale}
-                ownerUserId={userId}
-                scope={scope}
-                spaceId={selectedSpaceId}
-                today={today}
-                enableServerPersistence
-                requiresFirstPublicationDisclosure={!priorPublicationDisclosure}
-                showSaveProgress={
-                  writeAccess.canWrite &&
-                  normalizeSaveProgressMomentKind(params.saveProgress) ===
-                    "space-entry"
-                }
-              />
-            </Suspense>
-          ) : null}
-        </GardenWriteTools>
-      </GardenWorkspaceView>
-    </>
+        />
+      ) : null}
+      <GardenWriteTools
+        today={today}
+        locale={locale}
+        activationSource={activationSource}
+        initialCatalogItem={initialCatalogItem}
+        initialSpace={
+          initialSpace
+            ? { id: initialSpace.id, displayName: initialSpace.displayName }
+            : null
+        }
+        enableServerPersistence
+        ownerUserId={userId}
+        requiresFirstPublicationDisclosure={!priorPublicationDisclosure}
+      >
+        {selectedSpaceId ? (
+          <Suspense fallback={null}>
+            <GardenSelectedSpaceTimeline
+              canWrite={canWrite}
+              locale={locale}
+              ownerUserId={userId}
+              scope={scope}
+              spaceId={selectedSpaceId}
+              today={today}
+              enableServerPersistence
+              requiresFirstPublicationDisclosure={!priorPublicationDisclosure}
+              showSaveProgress={
+                normalizeSaveProgressMomentKind(params.saveProgress) ===
+                "space-entry"
+              }
+            />
+          </Suspense>
+        ) : null}
+      </GardenWriteTools>
+    </GardenWorkspaceView>
+  );
+}
+
+/**
+ * A read whose failure is genuinely nothing to show. A catalog preselection
+ * that cannot be resolved leaves the composer empty, which is where a gardener
+ * who typed no preselection already starts; it does not deserve a panel. It
+ * still goes through `settleSection`, so the class is classified and the read
+ * is bounded rather than silently swallowed by a bare `catch`.
+ */
+async function settledOrNull<T>(load: () => Promise<T>): Promise<T | null> {
+  const settled = await settleSection(load, {
+    deadlineMs: workspaceSectionDeadlineMs(2),
+    record: false,
+  });
+  return settled.status === "ready" ? settled.value : null;
+}
+
+/**
+ * The signed-out home. Its two reads are preselection niceties, so they settle
+ * to `null` and the sign-in panel still renders in full.
+ */
+async function GuestGardenEntrySection({
+  locale,
+  params,
+  engagementAuthMessage,
+  engagementPostAuthPath,
+}: {
+  locale: InterfaceLocale;
+  params: GardenSearchParams;
+  engagementAuthMessage: string | null;
+  engagementPostAuthPath: string | null;
+}) {
+  const [initialCatalogItem, pendingWishlistItem] = await Promise.all([
+    settledOrNull(() => resolveInitialCatalogSelection(params)),
+    settledOrNull(() => resolvePendingWishlistSelection(params)),
+  ]);
+  const oauthMessage = getLocalizedOAuthErrorMessage(locale, params.error);
+
+  return (
+    <GuestGardenEntry
+      locale={locale}
+      activationSource={normalizeActivationSourceParam(params.source, {
+        hasResolvedCatalogSelection: Boolean(initialCatalogItem),
+      })}
+      catalogName={initialCatalogItem?.displayName}
+      initialMessage={
+        oauthMessage ??
+        engagementAuthMessage ??
+        (pendingWishlistItem
+          ? formatTrustTemplate(
+              getTrustSurfaceCopy(locale).gardenGuest.wishlistPrompt,
+              { catalogName: pendingWishlistItem.canonicalName },
+            )
+          : null)
+      }
+      postAuthPath={engagementPostAuthPath}
+    />
   );
 }
 
@@ -381,13 +500,23 @@ async function GardenSelectedSpaceTimeline({
   requiresFirstPublicationDisclosure: boolean;
   showSaveProgress: boolean;
 }) {
-  const timeline = await withGardenWorkspaceDeadline(() =>
-    getMySpaceJournalTimeline(scope, spaceId, {
-      objectLimit: 20,
-      entryLimit: 5,
-    }),
-  ).catch(() => null);
-  if (!timeline) return null;
+  // The space timeline is an addition to a page that already renders without it,
+  // so a failure here is an absent block rather than a panel — but it is still
+  // settled and bounded, never awaited bare.
+  const settled = await settleSection(
+    () =>
+      getMySpaceJournalTimeline(scope, spaceId, {
+        objectLimit: 20,
+        entryLimit: 5,
+      }),
+    {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "garden-home",
+      section: "space-timeline",
+    },
+  );
+  if (settled.status === "error" || !settled.value) return null;
+  const timeline = settled.value;
 
   const copy = getGardenWorkspaceCopy(locale);
   return (

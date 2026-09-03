@@ -1,8 +1,11 @@
 # Garden workspace section observability
 
 Status: current implementation contract
-Owner: OVE-360
-Instrument: `apps/web/scripts/prove-workspace-section-observability.ts`
+Owner: OVE-360, extended to every workspace surface by OVE-374 (ADR-0023)
+Instruments: `apps/web/scripts/prove-workspace-section-observability.ts`
+(the vocabulary, hermetic) and
+`apps/web/scripts/prove-workspace-resilience.ts` (every surface, against a
+running server)
 
 ## Why this exists
 
@@ -25,9 +28,18 @@ An operator therefore had no way to tell which of four candidate queries had
 rejected, and neither did the repository: the reason was destroyed at the first
 return on the way back.
 
+## Where the vocabulary lives
+
+Since OVE-374 the closed set, the classifier, and the settle helper live in
+`apps/web/src/server/workspace-failure.ts` as `WORKSPACE_FAILURE_CLASSES`,
+`classifyWorkspaceFailure`, and `settleSection`, and **every** page under
+`/garden/**` uses them — not just the workspace home.
+`garden-workspace-repository.ts` re-exports the original names, so this
+document's `GARDEN_WORKSPACE_*` spellings and the OVE-360 proof still hold.
+
 ## The closed set
 
-`GARDEN_WORKSPACE_FAILURE_CLASSES` is the whole vocabulary. A section that
+`WORKSPACE_FAILURE_CLASSES` is the whole vocabulary. A section that
 fails carries exactly one member and nothing else.
 
 | Class | Cause |
@@ -62,9 +74,77 @@ rendered copy, so the `uk`, `bg`, and `ru` strings are unchanged and no locale
 gains a machine-readable code.
 
 ```
-# read the class from the deployed workspace
-document.querySelector('[data-section-failure]')?.dataset.sectionFailure
+# read the class from any deployed workspace surface
+[...document.querySelectorAll('[data-section-failure]')]
+  .map((node) => node.dataset.sectionFailure)
 ```
+
+Every surface also stamps `data-workspace-surface="<surface>"` on its `<main>`,
+so a class can be attributed to the page that produced it:
+
+| Surface | Route |
+| -- | -- |
+| `garden-home` | `/garden` |
+| `stable-registry` | `/garden/catalog/registry` |
+| `stable-registry-extensions` | `/garden/catalog/registry/extensions` |
+| `stable-registry-editions` | `/garden/catalog/registry/editions` |
+| `object` | `/garden/objects/[objectId]` |
+| `entry-edit` | `/garden/entries/[entryId]/edit` |
+| `profile` | `/garden/profile` |
+| `lineage-claims` | `/garden/lineage/claims` |
+| `lineage-questions` | `/garden/lineage/questions` |
+| `lineage-invitation-claim` | `/garden/lineage/invitations/claim` |
+| `erasure-requests` | `/garden/privacy/erasure-requests` |
+
+## The digest, and matching a screen to a log
+
+`describeWorkspaceFailure` adds a short reference derived from the class and the
+Postgres code — nothing else, never a message or a parameter. The failure panel
+prints it and the log line carries it, so the person looking at the screen and
+the person reading the platform log can name the same event.
+
+There are **two** lines, and the reason there are two is worth knowing.
+
+```bash
+# a section that settled into a failure — the workspace case
+{"event":"workspace_section_degraded","surface":"stable-registry",
+ "section":"release-center","failureClass":"schema_missing","digest":"…"}
+
+# something that actually threw — a route handler, an action, a failed render
+{"event":"workspace_server_error","digest":"…","path":"/api/…",
+ "routeType":"route","failureClass":null}
+```
+
+`onRequestError` alone cannot cover a workspace page, for two measured reasons
+(both 2026-09-03, against a production build):
+
+1. **A page that renders its failure does not throw**, so `onRequestError` is
+   never called for it. That is the entire point of ADR-0023.
+2. **The error React forwards to `onRequestError` is sanitized** — an `Error`
+   carrying only `digest`, with no `code` and no `cause` — so even when
+   something does throw, the class cannot be recovered there. `failureClass` on
+   that line is therefore usually `null`, and `null` is an honest "could not
+   classify", distinct from the closed set's own `unknown`.
+
+So a settled failure records itself in `settleSection`, where the driver code is
+still in hand. Both lines carry the `workspace_` prefix, so one grep finds both:
+
+```bash
+vercel logs <deployment> | grep -E 'workspace_section_degraded|workspace_server_error'
+```
+
+Neither line carries a request body, cookie, header, query string, row, owner
+identifier, or error message. A read whose failure is a designed absence rather
+than an incident — a catalog preselection that could not be resolved — passes
+`record: false` and stays out of the log entirely.
+
+## Proving a whole surface, not just a section
+
+`pnpm prove:workspace-resilience` fetches every workspace page from a running
+`next start` whose `DATABASE_URL` points at a closed port and checks that each
+one answers `200` with its own heading, at least one bounded class, no stranded
+Suspense boundary, and no errored boundary. The committed receipt is
+`docs/WORKSPACE_RESILIENCE_PROOF_2026-09.md`.
 
 ## Running the proof
 

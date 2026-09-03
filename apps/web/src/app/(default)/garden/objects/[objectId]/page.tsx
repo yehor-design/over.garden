@@ -1,6 +1,11 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
+import {
+  WorkspaceMissingRecord,
+  WorkspaceSectionError,
+  WorkspaceSectionSkeleton,
+} from "@/components/garden/workspace-state";
 import {
   LivingObjectPassportContextRail,
   LivingObjectPassportOverview,
@@ -34,7 +39,6 @@ import {
   publicLineageObjectPath,
 } from "@/lib/garden/public-paths";
 import { localizedPath } from "@/lib/public-localization";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { resolveFollowUpValuePulsePrompt } from "@/server/follow-up-value-pulse";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
@@ -49,7 +53,13 @@ import {
   type ObjectProvenancePanel,
 } from "@/server/lineage-repository";
 import { buildOwnerObjectPassportPresentation } from "@/server/owner-object-passport-presentation";
-import { scopedToUser } from "@/server/request-scope";
+import type { RequestScope } from "@/server/request-scope";
+import { resolveWorkspaceViewer } from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
+import { gardenObjectPath, ObjectShell } from "./object-shell";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
   deleteJournalEntryAction,
@@ -81,50 +91,128 @@ export default async function PlantObjectReadbackPage({
   params,
   searchParams,
 }: PlantObjectPageProps) {
-  const [{ objectId }, query, session, locale] = await Promise.all([
+  const [{ objectId }, query, viewer, locale] = await Promise.all([
     params,
     searchParams,
-    getCurrentSession(),
+    resolveWorkspaceViewer(),
     getRequestInterfaceLocale(),
   ]);
   const copy = getInterfaceCopy(locale);
-  const workspaceCopy = getGardenWorkspaceCopy(locale);
-  const ownerCopy = getOwnerObjectCopy(locale);
   const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
   const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
-  const userId = session?.user?.id;
 
-  if (!userId) {
+  if (viewer.status === "unavailable") {
     return (
-      <main
-        lang={locale}
-        className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8"
-      >
-        <header className="flex flex-col gap-2 border-b border-border pb-5">
-          <Link href="/garden" className="text-sm text-muted-foreground">
-            {copy.object.gardenJournal}
-          </Link>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            {copy.object.livingObject}
-          </h1>
-        </header>
-        <GardenAuthPanel locale={locale} />
-      </main>
+      <ObjectShell locale={locale}>
+        <WorkspaceSectionError
+          locale={locale}
+          failure={viewer.failure}
+          retryHref={gardenObjectPath(objectId)}
+        />
+      </ObjectShell>
     );
   }
 
-  const scope = scopedToUser(userId, getSessionId(session));
-  const page = await getPlantObjectPage(scope, objectId);
-  if (!page) notFound();
-  const provenancePanel = await getObjectProvenancePanel(scope, objectId);
-  if (!provenancePanel) notFound();
-  await recordOwnRecordRevisited(scope, page);
+  if (viewer.status === "sign-in-required") {
+    return (
+      <ObjectShell locale={locale}>
+        <GardenAuthPanel locale={locale} />
+      </ObjectShell>
+    );
+  }
+
+  return (
+    <ObjectShell locale={locale}>
+      <AuthIntentFocus action={resumeAction} control={resumeControl} />
+      <Suspense
+        fallback={
+          <WorkspaceSectionSkeleton
+            locale={locale}
+            title={copy.object.livingObject}
+            rows={3}
+          />
+        }
+      >
+        <PlantObjectSections
+          locale={locale}
+          objectId={objectId}
+          query={query}
+          scope={viewer.scope}
+          userId={viewer.userId}
+        />
+      </Suspense>
+    </ObjectShell>
+  );
+}
+
+/**
+ * The whole passport, settled. The object read and the provenance read are
+ * bounded together because the presentation needs both; a missing record is a
+ * rendered state rather than `notFound()`, for the reason `WorkspaceMissingRecord`
+ * records.
+ */
+async function PlantObjectSections({
+  locale,
+  objectId,
+  query,
+  scope,
+  userId,
+}: {
+  locale: InterfaceLocale;
+  objectId: string;
+  query: Awaited<PlantObjectPageProps["searchParams"]>;
+  scope: RequestScope;
+  userId: string;
+}) {
+  const copy = getInterfaceCopy(locale);
+  const workspaceCopy = getGardenWorkspaceCopy(locale);
+  const ownerCopy = getOwnerObjectCopy(locale);
+
+  const settled = await settleSection(
+    async () => {
+      const page = await getPlantObjectPage(scope, objectId);
+      if (!page) return null;
+      const provenancePanel = await getObjectProvenancePanel(scope, objectId);
+      return provenancePanel ? { page, provenancePanel } : null;
+    },
+    {
+      deadlineMs: workspaceSectionDeadlineMs(6),
+      surface: "object",
+      section: "passport",
+    },
+  );
+
+  if (settled.status === "error") {
+    return (
+      <WorkspaceSectionError
+        locale={locale}
+        failure={settled}
+        title={copy.object.livingObject}
+        retryHref={gardenObjectPath(objectId)}
+      />
+    );
+  }
+  if (!settled.value) return <WorkspaceMissingRecord locale={locale} />;
+
+  const { page, provenancePanel } = settled.value;
   const showProgressMoment = isObjectProgressMomentEligible(
     page.entries.length,
   );
-  if (showProgressMoment) {
-    await recordProgressMomentShown(scope, page);
-  }
+  // Analytics is a side effect of rendering this passport, never a reason not
+  // to render it: bounded here so a slow or unhappy recorder cannot become the
+  // reason a gardener stares at a skeleton.
+  await settleSection(
+    async () => {
+      await recordOwnRecordRevisited(scope, page);
+      if (showProgressMoment) await recordProgressMomentShown(scope, page);
+    },
+    {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "object",
+      section: "analytics",
+      record: false,
+    },
+  );
 
   const today = new Date().toISOString().slice(0, 10);
   const saveProgressKind = normalizeSaveProgressMomentKind(query.saveProgress);
@@ -148,12 +236,27 @@ export default async function PlantObjectReadbackPage({
     query.valuePulse === "1" && typeof query.entryId === "string"
       ? query.entryId.trim()
       : "";
-  const valuePulsePrompt =
+  // A value pulse is an optional prompt on top of a page that already renders,
+  // so its failure is its absence — bounded and classified all the same.
+  const valuePulseSection =
     valuePulseJournalEntryId.length > 0
-      ? await resolveFollowUpValuePulsePrompt(scope, {
-          plantObjectId: objectId,
-          journalEntryId: valuePulseJournalEntryId,
-        })
+      ? await settleSection(
+          () =>
+            resolveFollowUpValuePulsePrompt(scope, {
+              plantObjectId: objectId,
+              journalEntryId: valuePulseJournalEntryId,
+            }),
+          {
+            deadlineMs: workspaceSectionDeadlineMs(2),
+            surface: "object",
+            section: "value-pulse",
+            record: false,
+          },
+        )
+      : null;
+  const valuePulsePrompt =
+    valuePulseSection?.status === "ready"
+      ? valuePulseSection.value
       : { eligible: false };
   const presentation = buildOwnerObjectPassportPresentation(
     page,
@@ -163,11 +266,7 @@ export default async function PlantObjectReadbackPage({
   const entriesById = new Map(page.entries.map((entry) => [entry.id, entry]));
 
   return (
-    <main
-      lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-col gap-7 px-4 py-4 sm:px-6 sm:py-5"
-    >
-      <AuthIntentFocus action={resumeAction} control={resumeControl} />
+    <>
       <LivingObjectPassportContextRail
         passport={presentation}
         locale={locale}
@@ -320,7 +419,7 @@ export default async function PlantObjectReadbackPage({
         lineageReadbackPath={lineageReadbackPath}
         locale={locale}
       />
-    </main>
+    </>
   );
 }
 

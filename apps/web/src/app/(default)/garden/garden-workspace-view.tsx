@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
-  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   BookOpenText,
@@ -10,7 +9,6 @@ import {
   ImageOff,
   Leaf,
   PawPrint,
-  RefreshCw,
   Sprout,
   SquarePen,
 } from "lucide-react";
@@ -24,18 +22,15 @@ import {
   getGardenWorkspaceCopy,
   type GardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
-import {
-  getInterfaceCopy,
-  type InterfaceLocale,
-} from "@/lib/interface-localization";
+import type { InterfaceLocale } from "@/lib/interface-localization";
 import { cn } from "@/lib/utils";
 import type {
-  GardenWorkspaceFailureClass,
   GardenWorkspaceReadModel,
   GardenWorkspaceRecentEntry,
   GardenWorkspaceSpaceSummary,
 } from "@/server/garden-workspace-repository";
 import type { PlantObjectSummary } from "@/server/journal-repository";
+import { WorkspaceSectionError } from "@/components/garden/workspace-state";
 import { GardenWorkspaceServiceState } from "./garden-workspace-service-state";
 
 interface GardenWorkspaceViewProps {
@@ -53,40 +48,23 @@ export function GardenWorkspaceView({
   workspace,
   children,
 }: GardenWorkspaceViewProps) {
-  const copy = getInterfaceCopy(locale);
   const workspaceCopy = getGardenWorkspaceCopy(locale);
 
-  if (workspace.allFailed) {
+  // `allFailed` means every section carries a class; inventory is named here so
+  // the panel can print one digest, and the narrowing is free.
+  if (workspace.allFailed && workspace.inventory.status === "error") {
     return (
-      <main
-        lang={locale}
+      <div
         data-garden-workspace="error"
-        className="mx-auto flex w-full max-w-4xl flex-col px-4 py-6 sm:px-6 sm:py-8"
+        className="flex flex-col px-4 py-6 sm:px-6 sm:py-8"
       >
-        <WorkspaceHeader
-          eyebrow={workspaceCopy.workspace.headerEyebrow}
-          title={copy.workspace.title}
-          description={copy.workspace.returningDescription}
+        <WorkspaceSectionError
+          locale={locale}
+          failure={workspace.inventory}
+          title={workspaceCopy.workspace.error.title}
+          retryHref="/garden"
+          retryLabel={workspaceCopy.workspace.error.retry}
         />
-        <section className="mt-8 border-y border-border py-8">
-          <AlertTriangle
-            className="size-6 text-destructive"
-            aria-hidden="true"
-          />
-          <h2 className="mt-3 text-xl font-semibold text-foreground">
-            {workspaceCopy.workspace.error.title}
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            {workspaceCopy.workspace.error.description}
-          </p>
-          <Link
-            href="/garden"
-            className={buttonVariants({ className: "mt-4" })}
-          >
-            <RefreshCw aria-hidden="true" />
-            {workspaceCopy.workspace.error.retry}
-          </Link>
-        </section>
         <GardenWorkspaceServiceState
           locale={locale}
           nextAction={{
@@ -96,7 +74,7 @@ export function GardenWorkspaceView({
           recent={[]}
           inbox={null}
         />
-      </main>
+      </div>
     );
   }
 
@@ -109,27 +87,10 @@ export function GardenWorkspaceView({
   const nextAction = inventory
     ? chooseNextAction(inventory.objects, today, workspaceCopy)
     : unavailableInventoryNextAction(workspaceCopy);
-  const hasObjects = inventory ? inventory.totalCount > 0 : null;
 
   return (
-    <main
-      lang={locale}
-      data-garden-workspace="operational-home"
-      className="mx-auto flex w-full max-w-4xl flex-col"
-    >
-      <div className="px-4 pt-6 sm:px-6 sm:pt-8">
-        <WorkspaceHeader
-          eyebrow={workspaceCopy.workspace.headerEyebrow}
-          title={copy.workspace.title}
-          description={
-            hasObjects === null
-              ? copy.workspace.returningDescription
-              : hasObjects
-                ? copy.workspace.returningDescription
-                : copy.workspace.emptyDescription
-          }
-        />
-
+    <div data-garden-workspace="operational-home" className="flex flex-col">
+      <div className="px-4 sm:px-6">
         <section className="flex flex-col gap-4 border-b border-border py-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-muted-foreground uppercase">
@@ -196,29 +157,7 @@ export function GardenWorkspaceView({
         />
         {children}
       </div>
-    </main>
-  );
-}
-
-function WorkspaceHeader({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <header className="border-b border-border pb-5">
-      <p className="text-xs font-semibold text-muted-foreground uppercase">
-        {eyebrow}
-      </p>
-      <h1 className="mt-1 text-3xl font-semibold text-foreground">{title}</h1>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-        {description}
-      </p>
-    </header>
+    </div>
   );
 }
 
@@ -304,9 +243,10 @@ function SpacesSection({
     return (
       <WorkspaceSectionError
         id="spaces"
+        locale={locale}
         title={copy.workspace.spaces.errorTitle}
-        copy={copy}
-        failureClass={workspace.spaces.failureClass}
+        failure={workspace.spaces}
+        retryHref={`/garden#spaces`}
       />
     );
   }
@@ -426,9 +366,10 @@ function InventorySection({
     return (
       <WorkspaceSectionError
         id="inventory"
+        locale={locale}
         title={copy.workspace.inventory.errorTitle}
-        copy={copy}
-        failureClass={workspace.inventory.failureClass}
+        failure={workspace.inventory}
+        retryHref={`/garden#inventory`}
       />
     );
   }
@@ -648,9 +589,10 @@ function RecentSection({
     return (
       <WorkspaceSectionError
         id="recent"
+        locale={locale}
         title={copy.workspace.recent.errorTitle}
-        copy={copy}
-        failureClass={workspace.recent.failureClass}
+        failure={workspace.recent}
+        retryHref={`/garden#recent`}
       />
     );
   }
@@ -743,41 +685,6 @@ function SectionHeading({
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
-  );
-}
-
-function WorkspaceSectionError({
-  id,
-  title,
-  copy,
-  failureClass,
-}: {
-  id: string;
-  title: string;
-  copy: GardenWorkspaceCopy;
-  failureClass: GardenWorkspaceFailureClass;
-}) {
-  return (
-    // The bounded class is an attribute, never rendered copy: an operator can
-    // read why a section is degraded without any locale gaining a machine code.
-    <section
-      id={id}
-      data-section-failure={failureClass}
-      className="scroll-mt-20 border-y border-border py-6"
-    >
-      <AlertTriangle className="size-5 text-destructive" aria-hidden="true" />
-      <h2 className="mt-2 text-lg font-semibold text-foreground">{title}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {copy.workspace.sectionError.description}
-      </p>
-      <Link
-        href={`/garden#${id}`}
-        className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
-      >
-        <RefreshCw className="size-4" aria-hidden="true" />
-        {copy.workspace.sectionError.retry}
-      </Link>
-    </section>
   );
 }
 

@@ -130,6 +130,59 @@ repository half had merged on 31 August; the container, its Caddy route, and
 each step verified twice, with the worker healthy throughout. Worker liveness now
 comes only from the heartbeat row. See `docs/MATCHING_API_RETIREMENT.md`.
 
+## 3 September — the workspace stops stranding readers
+
+**Every page under `/garden/**` renders its own shell and turns failure into a
+state** (`OVE-374`, ADR-0023). The trigger was concrete: the owner opened the
+editions page in production before its migrations existed, the page threw a
+Postgres `42P01`, and the reader was left on the garden home's loading skeleton
+— the wrong page's skeleton — forever, with a `200` in the platform's log.
+
+The obvious repair was `error.tsx`, and it does not work. Reproduced on
+Next 16.2.11 and React 19.2.4 with `cacheComponents: true`: when a Server
+Component throws while a postponed response is resumed, the HTML stream closes
+with the Suspense boundary still pending, no completion instruction is written,
+and React keeps the server fallback on screen. The boundary catches on a
+client-side navigation and never on a hard load.
+
+So failures became values. One shared vocabulary
+(`apps/web/src/server/workspace-failure.ts`) settles every read into a bounded
+class with a short digest; eleven pages became a synchronous shell plus streamed
+sections; each surface got a `loading.tsx` that renders the same shell as its
+page, so the fallback and the finished page agree and nothing jumps;
+`garden/loading.tsx` — which had been standing in for every child route, which is
+why the wrong skeleton appeared — is gone.
+
+Two things were only learned by running it, and both are in the ADR:
+
+- **A null session is not proof that nobody is signed in.** Better Auth swallows
+  its own read failure and answers `null`, so every workspace page would have
+  told a signed-in gardener to sign in during a database outage. A bearer of a
+  session cookie who resolves to nobody now gets one liveness read, and an
+  honest "unavailable" if that fails.
+- **A refusal and an outage must not share a code path.** The admin gate
+  collapsed every rejection onto "denied", which told the owner to audit
+  permissions while the role table was simply unreachable.
+
+Proof: `pnpm prove:workspace-resilience` against a local production build whose
+`DATABASE_URL` points at a closed port — all eleven surfaces answer `200` with
+their own heading and a `connection_unavailable` panel, and no Suspense boundary
+is left standing (`docs/WORKSPACE_RESILIENCE_PROOF_2026-09.md`). Verified again
+in a real Chromium DOM, signed in: zero visible skeletons on every surface, a
+retry control and a reference code on each. Under 400 kbps / 400 ms latency and
+4× CPU throttling the heading of every surface appears at first paint and does
+not move by a single pixel when the data arrives.
+
+Observability turned out to need two lines, not one. `src/instrumentation.ts`
+covers what actually throws — but a page that renders its failure does not
+throw, so `onRequestError` is never called for it, and when something does
+throw, the error React forwards there is sanitized down to a digest with no
+driver code attached (both measured against a production build). A settled
+failure therefore records itself in `settleSection`, where the code is still in
+hand. Verified on a closed-port production build: the panel on screen and the
+`workspace_section_degraded` line in the log carried the same reference,
+`16JQ1ET`.
+
 ## Corrections made in this window
 
 Recorded because a wrong explanation that was quietly replaced is worse than one

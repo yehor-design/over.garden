@@ -1,4 +1,5 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderServerHtml } from "@test/render-server-html";
+import { postgresRejection } from "@test/postgres-rejection";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -77,7 +78,7 @@ describe("/garden/lineage/claims", () => {
     mocks.getCurrentSession.mockResolvedValue(null);
 
     const { default: LineageClaimInboxPage } = await import("./page");
-    const html = renderToStaticMarkup(await LineageClaimInboxPage());
+    const html = await renderServerHtml(await LineageClaimInboxPage());
 
     expect(html).toContain("Запити щодо походження");
     expect(html).toContain('data-locale="uk"');
@@ -86,7 +87,7 @@ describe("/garden/lineage/claims", () => {
 
   it("renders bounded proposed claim cards without private payload fields", async () => {
     const { default: LineageClaimInboxPage } = await import("./page");
-    const html = renderToStaticMarkup(await LineageClaimInboxPage());
+    const html = await renderServerHtml(await LineageClaimInboxPage());
 
     expect(mocks.listLineageClaimInbox).toHaveBeenCalledOnce();
     expect(html).toContain("Запити щодо походження");
@@ -105,7 +106,7 @@ describe("/garden/lineage/claims", () => {
 
   it("shows a bounded completion state after an invitation decision", async () => {
     const { default: LineageClaimInboxPage } = await import("./page");
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await LineageClaimInboxPage({
         searchParams: Promise.resolve({ invitation: "confirmed" }),
       }),
@@ -125,7 +126,7 @@ describe("/garden/lineage/claims", () => {
       mocks.getRequestInterfaceLocale.mockResolvedValue(locale);
 
       const { default: LineageClaimInboxPage } = await import("./page");
-      const html = renderToStaticMarkup(await LineageClaimInboxPage());
+      const html = await renderServerHtml(await LineageClaimInboxPage());
 
       expect(html).toContain(title);
       expect(html).toContain(confirm);
@@ -133,4 +134,19 @@ describe("/garden/lineage/claims", () => {
       expect(html).toContain("Seed mother");
     },
   );
+
+  it("renders its own shell and a bounded failure when the relation is missing", async () => {
+    mocks.listLineageClaimInbox.mockRejectedValueOnce(
+      postgresRejection("42P01", 'relation "lineage_edges" does not exist'),
+    );
+
+    const { default: Page } = await import("./page");
+    const html = await renderServerHtml(await Page());
+
+    expect(html).toContain('data-workspace-surface="lineage-claims"');
+    expect(html).toContain("Запити щодо походження");
+    expect(html).toContain('data-section-failure="schema_missing"');
+    expect(html).not.toContain("lineage_edges");
+    expect(html).not.toContain('data-workspace-state="loading"');
+  });
 });

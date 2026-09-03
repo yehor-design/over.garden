@@ -1,11 +1,25 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
+import {
+  WorkspaceMissingRecord,
+  WorkspaceSectionError,
+  WorkspaceSectionSkeleton,
+} from "@/components/garden/workspace-state";
 import { JournalEntryEditComposer } from "@/app/(default)/garden/entries/[entryId]/edit/journal-entry-edit-composer";
 import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
 import { journalEntryDateInputValue } from "@/lib/garden/journal-entry-date";
-import { requireCurrentRequestScope } from "@/server/auth-session";
+import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { readAtomicJournalEditBaseline } from "@/server/journal-repository";
+import type { RequestScope } from "@/server/request-scope";
+import { resolveWorkspaceViewer } from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
+
+import { gardenEntryEditPath, JournalEntryEditShell } from "./edit-shell";
 
 export default async function GardenEntryEditPage({
   params,
@@ -14,31 +28,93 @@ export default async function GardenEntryEditPage({
   params: Promise<{ entryId: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [{ entryId }, query] = await Promise.all([
+  const [{ entryId }, query, viewer, locale] = await Promise.all([
     params,
     searchParams ??
       Promise.resolve<Record<string, string | string[] | undefined>>({}),
+    resolveWorkspaceViewer(),
+    getRequestInterfaceLocale(),
   ]);
-  const requestedReturnTo = firstParam(query.returnTo);
   const returnTo = normalizeJournalComposerReturnTo(
-    requestedReturnTo,
+    firstParam(query.returnTo),
     "/garden",
   );
-  const editPath = `/garden/entries/${encodeURIComponent(entryId)}/edit?returnTo=${encodeURIComponent(returnTo)}`;
+  const editPath = gardenEntryEditPath(entryId, returnTo);
 
-  let scope;
-  try {
-    scope = await requireCurrentRequestScope();
-  } catch {
+  // Signing in is the whole point of this route, so an unauthenticated visitor
+  // keeps the redirect they had. A session store that cannot answer is a
+  // different thing entirely and is rendered, not redirected: bouncing someone
+  // to a sign-in page because the database is down sends them to solve the
+  // wrong problem (ADR-0023).
+  if (viewer.status === "sign-in-required") {
     redirect(`/auth/intent?returnTo=${encodeURIComponent(editPath)}`);
   }
 
-  const baseline = await readAtomicJournalEditBaseline(scope, entryId).catch(
-    () => null,
-  );
-  if (!baseline) notFound();
+  if (viewer.status === "unavailable") {
+    return (
+      <JournalEntryEditShell locale={locale} returnTo={returnTo}>
+        <WorkspaceSectionError
+          locale={locale}
+          failure={viewer.failure}
+          retryHref={editPath}
+        />
+      </JournalEntryEditShell>
+    );
+  }
 
-  const locale = await getRequestInterfaceLocale();
+  return (
+    <JournalEntryEditShell locale={locale} returnTo={returnTo}>
+      <Suspense
+        fallback={<WorkspaceSectionSkeleton locale={locale} rows={3} />}
+      >
+        <JournalEntryEditSection
+          entryId={entryId}
+          editPath={editPath}
+          locale={locale}
+          returnTo={returnTo}
+          scope={viewer.scope}
+        />
+      </Suspense>
+    </JournalEntryEditShell>
+  );
+}
+
+async function JournalEntryEditSection({
+  entryId,
+  editPath,
+  locale,
+  returnTo,
+  scope,
+}: {
+  entryId: string;
+  editPath: string;
+  locale: InterfaceLocale;
+  returnTo: string;
+  scope: RequestScope;
+}) {
+  const settled = await settleSection(
+    () => readAtomicJournalEditBaseline(scope, entryId),
+    {
+      deadlineMs: workspaceSectionDeadlineMs(3),
+      surface: "entry-edit",
+      section: "baseline",
+    },
+  );
+
+  if (settled.status === "error") {
+    return (
+      <WorkspaceSectionError
+        locale={locale}
+        failure={settled}
+        retryHref={editPath}
+      />
+    );
+  }
+  if (!settled.value) {
+    return <WorkspaceMissingRecord locale={locale} backHref={returnTo} />;
+  }
+
+  const baseline = settled.value;
   const blockIdByMediaId = new Map(
     baseline.document.blocks.flatMap((block) =>
       block.type === "image" ? [[block.mediaAssetId, block.id] as const] : [],
@@ -57,20 +133,18 @@ export default async function GardenEntryEditPage({
   }));
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
-      <JournalEntryEditComposer
-        key={`${baseline.entry.id}:${baseline.entry.journal_revision}`}
-        locale={locale}
-        entryId={baseline.entry.id}
-        title={baseline.entry.title}
-        entryDate={journalEntryDateInputValue(baseline.entry.entry_date)}
-        expectedRevision={Number(baseline.entry.journal_revision ?? 1)}
-        initialDocument={baseline.document}
-        existingMedia={existingMedia}
-        initialCoverMediaAssetId={baseline.entry.cover_media_asset_id}
-        returnTo={returnTo}
-      />
-    </main>
+    <JournalEntryEditComposer
+      key={`${baseline.entry.id}:${baseline.entry.journal_revision}`}
+      locale={locale}
+      entryId={baseline.entry.id}
+      title={baseline.entry.title}
+      entryDate={journalEntryDateInputValue(baseline.entry.entry_date)}
+      expectedRevision={Number(baseline.entry.journal_revision ?? 1)}
+      initialDocument={baseline.document}
+      existingMedia={existingMedia}
+      initialCoverMediaAssetId={baseline.entry.cover_media_asset_id}
+      returnTo={returnTo}
+    />
   );
 }
 

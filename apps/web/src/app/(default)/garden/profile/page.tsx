@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
+import { Suspense } from "react";
+import { ExternalLink, ShieldCheck } from "lucide-react";
 
+import {
+  WorkspaceSectionError,
+  WorkspaceSectionSkeleton,
+} from "@/components/garden/workspace-state";
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
@@ -11,15 +16,20 @@ import {
   getLocalizedOAuthErrorMessage,
   getTrustSurfaceCopy,
 } from "@/lib/trust-surface-copy";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { getOwnerProfileWorkspace } from "@/server/owner-profile-repository";
-import { scopedToUser } from "@/server/request-scope";
+import type { RequestScope } from "@/server/request-scope";
+import { resolveWorkspaceViewer } from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
 import { getCurrentAccountMethodProjection } from "@/server/auth/account-methods";
 import { AccountMethodsPanel } from "../account-methods-panel";
 import { GardenAuthPanel } from "../garden-auth-panel";
 import { unblockProfileAction } from "./actions";
 import { OwnerProfileEditor } from "./owner-profile-editor";
+import { COPY, GARDEN_PROFILE_PATH, ProfileShell } from "./profile-shell";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestInterfaceLocale();
@@ -36,96 +46,116 @@ interface GardenPublicProfilePageProps {
 
 const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
 
-const COPY = {
-  uk: {
-    title: "Мій публічний профіль",
-    back: "До мого саду",
-    open: "Відкрити публічний профіль",
-    blockedTitle: "Заблоковані профілі",
-    blockedEmpty: "Заблокованих профілів немає.",
-    unblock: "Розблокувати",
-    blocked: "Профіль заблоковано.",
-    unblocked: "Профіль розблоковано.",
-  },
-  bg: {
-    title: "Моят публичен профил",
-    back: "Към моята градина",
-    open: "Отвори публичния профил",
-    blockedTitle: "Блокирани профили",
-    blockedEmpty: "Няма блокирани профили.",
-    unblock: "Разблокирай",
-    blocked: "Профилът е блокиран.",
-    unblocked: "Профилът е разблокиран.",
-  },
-  ru: {
-    title: "Мой публичный профиль",
-    back: "К моему саду",
-    open: "Открыть публичный профиль",
-    blockedTitle: "Заблокированные профили",
-    blockedEmpty: "Заблокированных профилей нет.",
-    unblock: "Разблокировать",
-    blocked: "Профиль заблокирован.",
-    unblocked: "Профиль разблокирован.",
-  },
-} as const;
-
 export default async function GardenPublicProfilePage({
   searchParams,
 }: GardenPublicProfilePageProps) {
-  const [session, params, locale] = await Promise.all([
-    getCurrentSession(),
+  const [viewer, params, locale] = await Promise.all([
+    resolveWorkspaceViewer(),
     searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
     getRequestInterfaceLocale(),
   ]);
-  const copy = COPY[locale];
-  const signOutCopy = getTrustSurfaceCopy(locale).signOut;
-  const userId = session?.user?.id;
 
-  if (!userId) {
+  if (viewer.status === "unavailable") {
     return (
-      <main
-        lang={locale}
-        data-garden-profile-auth-shell="guest"
-        className="mx-auto grid w-full max-w-4xl gap-6 px-4 py-6 sm:px-6 sm:py-8"
-      >
-        <ProfileHeader locale={locale} />
-        <GardenAuthPanel locale={locale} />
-      </main>
+      <ProfileShell locale={locale}>
+        <WorkspaceSectionError
+          locale={locale}
+          failure={viewer.failure}
+          retryHref={GARDEN_PROFILE_PATH}
+        />
+      </ProfileShell>
     );
   }
 
+  if (viewer.status === "sign-in-required") {
+    return (
+      <ProfileShell locale={locale} authShell="guest">
+        <GardenAuthPanel locale={locale} />
+      </ProfileShell>
+    );
+  }
+
+  return (
+    <ProfileShell locale={locale}>
+      <Suspense
+        fallback={<WorkspaceSectionSkeleton locale={locale} rows={3} />}
+      >
+        <ProfileSections locale={locale} params={params} scope={viewer.scope} />
+      </Suspense>
+    </ProfileShell>
+  );
+}
+
+/** The owner workspace read and the account-method projection, both settled. */
+async function ProfileSections({
+  locale,
+  params,
+  scope,
+}: {
+  locale: InterfaceLocale;
+  params: Record<string, string | string[] | undefined>;
+  scope: RequestScope;
+}) {
+  const copy = COPY[locale];
+  const signOutCopy = getTrustSurfaceCopy(locale).signOut;
   const [workspace, accountMethods] = await Promise.all([
-    getOwnerProfileWorkspace(
-      scopedToUser(userId, getSessionId(session)),
-      locale,
-    ),
-    getCurrentAccountMethodProjection(),
+    settleSection(() => getOwnerProfileWorkspace(scope, locale), {
+      deadlineMs: workspaceSectionDeadlineMs(3),
+      surface: "profile",
+      section: "owner-workspace",
+    }),
+    settleSection(() => getCurrentAccountMethodProjection(), {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "profile",
+      section: "account-methods",
+    }),
   ]);
-  const publicPath = publicProfilePath(locale, workspace.editor.handle);
+
+  if (workspace.status === "error") {
+    return (
+      <WorkspaceSectionError
+        locale={locale}
+        failure={workspace}
+        retryHref={GARDEN_PROFILE_PATH}
+      />
+    );
+  }
+
+  const publicPath = publicProfilePath(locale, workspace.value.editor.handle);
   const relationshipStatus = firstParam(params.relationshipStatus);
 
   return (
-    <main
-      lang={locale}
-      className="mx-auto grid w-full max-w-4xl gap-10 px-4 py-6 sm:px-6 sm:py-8"
-    >
-      <ProfileHeader
-        locale={locale}
-        publicPath={publicPath}
-      />
+    <>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link
+          href={publicPath}
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          {copy.open}
+          <ExternalLink aria-hidden="true" />
+        </Link>
+      </div>
 
       <OwnerProfileEditor
-        workspace={workspace}
+        workspace={workspace.value}
         locale={locale}
         status={firstParam(params.status) ?? null}
       />
 
       <section className="border-t border-border pt-7">
-        <AccountMethodsPanel
-          initialMessage={getLocalizedOAuthErrorMessage(locale, params.error)}
-          locale={locale}
-          {...accountMethods}
-        />
+        {accountMethods.status === "ready" ? (
+          <AccountMethodsPanel
+            initialMessage={getLocalizedOAuthErrorMessage(locale, params.error)}
+            locale={locale}
+            {...accountMethods.value}
+          />
+        ) : (
+          <WorkspaceSectionError
+            locale={locale}
+            failure={accountMethods}
+            retryHref={GARDEN_PROFILE_PATH}
+          />
+        )}
       </section>
 
       <section
@@ -167,9 +197,9 @@ export default async function GardenPublicProfilePage({
             {relationshipStatus === "blocked" ? copy.blocked : copy.unblocked}
           </p>
         ) : null}
-        {workspace.blockedProfiles.length > 0 ? (
+        {workspace.value.blockedProfiles.length > 0 ? (
           <ul className="divide-y divide-border border-y border-border">
-            {workspace.blockedProfiles.map((profile) => (
+            {workspace.value.blockedProfiles.map((profile) => (
               <li
                 key={profile.blockId}
                 className="flex min-w-0 flex-wrap items-center justify-between gap-3 py-3"
@@ -201,41 +231,7 @@ export default async function GardenPublicProfilePage({
           <p className="text-sm text-muted-foreground">{copy.blockedEmpty}</p>
         )}
       </section>
-    </main>
-  );
-}
-
-function ProfileHeader({
-  locale,
-  publicPath,
-}: {
-  locale: InterfaceLocale;
-  publicPath?: string | null;
-}) {
-  const copy = COPY[locale];
-  return (
-    <header className="flex flex-col gap-4 border-b border-border pb-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href="/garden"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-          data-testid="profile-return-navigation"
-        >
-          <ArrowLeft aria-hidden="true" />
-          {copy.back}
-        </Link>
-        {publicPath ? (
-          <Link
-            href={publicPath}
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            {copy.open}
-            <ExternalLink aria-hidden="true" />
-          </Link>
-        ) : null}
-      </div>
-      <h1 className="text-3xl font-semibold text-foreground">{copy.title}</h1>
-    </header>
+    </>
   );
 }
 

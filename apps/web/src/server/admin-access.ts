@@ -19,6 +19,23 @@ import {
 import type { RequestScope } from "@/server/request-scope";
 
 export const ADMIN_ACCESS_DENIED_MESSAGE = "Admin access denied.";
+
+/**
+ * A refusal, told apart from an infrastructure failure.
+ *
+ * `resolveAdminCapabilityAccess` collapses every rejection onto `denied`, which
+ * is right for a gate but wrong for a screen: telling the owner "access denied"
+ * when the role table was simply unreachable sends them to look at permissions
+ * while the real fault is the database. A workspace surface (ADR-0023) needs to
+ * separate the two, so the refusal carries a type. The message is unchanged, so
+ * every existing caller and assertion behaves exactly as before.
+ */
+export class AdminAccessDeniedError extends Error {
+  constructor(message: string = ADMIN_ACCESS_DENIED_MESSAGE) {
+    super(message);
+    this.name = "AdminAccessDeniedError";
+  }
+}
 export const ADMIN_CREDENTIAL_PROVIDER_ID = OWNER_CREDENTIAL_PROVIDER_ID;
 export const ADMIN_SEALED_OWNER_USER_ID_ENV = SEALED_OWNER_USER_ID_ENV;
 export const ADMIN_ROLE_RESOLUTION_DEADLINE_MS = 2_000;
@@ -65,7 +82,7 @@ export async function assertAdminAccess(
   const role = await readAdminRoleForUser(database, scope.userId);
 
   if (!role) {
-    throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
+    throw new AdminAccessDeniedError();
   }
 
   assertSealedOwner(scope.userId, role);
@@ -97,7 +114,7 @@ export function assertAdminCapability(
   capability: AdminCapability,
 ) {
   if (!access.capabilities.includes(capability)) {
-    throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
+    throw new AdminAccessDeniedError();
   }
 }
 
@@ -199,7 +216,7 @@ export async function assertCredentialOnlyAdminAccount(
       accounts,
     })
   ) {
-    throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
+    throw new AdminAccessDeniedError();
   }
 }
 
@@ -208,7 +225,7 @@ export function resolveSealedAdminOwnerUserId(
 ) {
   const configured = resolveConfiguredSealedOwnerUserId(env);
   if (!configured) {
-    throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
+    throw new AdminAccessDeniedError();
   }
 
   return configured;
@@ -218,6 +235,6 @@ function assertSealedOwner(userId: string, role: AdminRole) {
   const sealedOwnerUserId = resolveSealedAdminOwnerUserId();
 
   if (role !== "owner" || userId !== sealedOwnerUserId) {
-    throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
+    throw new AdminAccessDeniedError();
   }
 }

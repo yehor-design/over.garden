@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Suspense } from "react";
+
+import {
+  WorkspaceSectionError,
+  WorkspaceSectionSkeleton,
+  workspaceSchemaMissingHint,
+} from "@/components/garden/workspace-state";
 
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
@@ -13,7 +19,6 @@ import {
   getOperatorErasureCopy,
   operatorErasureCountLabel,
 } from "@/lib/operator-erasure-copy";
-import type { OperatorCopy } from "@/lib/operator-copy";
 import {
   formatOperatorDate,
   getOperatorCopy,
@@ -21,16 +26,25 @@ import {
   operatorRoleLabel,
 } from "@/lib/operator-copy";
 import { getLocalizedErasureStatusCopy } from "@/lib/trust-surface-copy";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getErasureDryRunPreviewForRequest } from "@/server/erasure-dry-run-repository";
 import { expectedErasureMaintainerApprovalText } from "@/server/erasure-execution";
-import { hasAdminCapability } from "@/server/admin-access";
-import { resolveErasureRequestOperatorAccess } from "@/server/erasure-request-access";
+import {
+  assertAdminCapabilityForScope,
+  hasAdminCapability,
+} from "@/server/admin-access";
 import {
   listOperatorErasureRequests,
   type ErasureRequestReadModel,
 } from "@/server/erasure-request-repository";
-import { scopedToUser } from "@/server/request-scope";
+import {
+  resolveWorkspaceAdminAccess,
+  resolveWorkspaceViewer,
+} from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
+import { ErasureRequestsShell } from "./erasure-shell";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
@@ -48,104 +62,180 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+export const ERASURE_REQUESTS_PATH = "/garden/privacy/erasure-requests";
+
 export default async function ErasureRequestsOperatorPage() {
-  const [locale, session] = await Promise.all([
+  const [locale, viewer] = await Promise.all([
     getRequestInterfaceLocale(),
-    getCurrentSession(),
+    resolveWorkspaceViewer(),
   ]);
   const operatorCopy = getOperatorCopy(locale);
-  const copy = getOperatorErasureCopy(locale);
-  const userId = session?.user?.id;
-  const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
-  const access = await resolveErasureRequestOperatorAccess(scope);
 
-  if (access.status === "sign_in_required") {
+  if (viewer.status === "unavailable") {
     return (
-      <main
-        data-operator-surface="erasure-requests"
-        data-operator-access-state="sign-in-required"
-        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
-      >
-        <OperatorHeader operatorCopy={operatorCopy} copy={copy} />
+      <ErasureRequestsShell locale={locale} accessState="unavailable">
+        <WorkspaceSectionError
+          locale={locale}
+          failure={viewer.failure}
+          title={operatorCopy.common.accessDenied}
+          retryHref={ERASURE_REQUESTS_PATH}
+          technicalHint={workspaceSchemaMissingHint(locale, viewer.failure)}
+        />
+      </ErasureRequestsShell>
+    );
+  }
+
+  if (viewer.status === "sign-in-required") {
+    return (
+      <ErasureRequestsShell locale={locale} accessState="sign-in-required">
         <GardenAuthPanel locale={locale} />
-      </main>
+      </ErasureRequestsShell>
+    );
+  }
+
+  const access = await resolveWorkspaceAdminAccess(() =>
+    assertAdminCapabilityForScope(viewer.scope, "operator:read"),
+  );
+
+  if (access.status === "unavailable") {
+    return (
+      <ErasureRequestsShell locale={locale} accessState="unavailable">
+        <WorkspaceSectionError
+          locale={locale}
+          failure={access.failure}
+          title={operatorCopy.common.accessDenied}
+          retryHref={ERASURE_REQUESTS_PATH}
+          technicalHint={workspaceSchemaMissingHint(locale, access.failure)}
+        />
+      </ErasureRequestsShell>
     );
   }
 
   if (access.status === "denied") {
     return (
-      <main
-        data-operator-surface="erasure-requests"
-        data-operator-access-state="denied"
-        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
-      >
-        <OperatorHeader operatorCopy={operatorCopy} copy={copy} />
+      <ErasureRequestsShell locale={locale} accessState="denied">
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
           {operatorCopy.common.accessDenied}
         </p>
-      </main>
+      </ErasureRequestsShell>
     );
   }
 
-  const requests = await listOperatorErasureRequests();
-  const dryRunPreviews = await Promise.all(
-    requests.map(async (request) => ({
-      requestId: request.id,
-      preview: await getErasureDryRunPreviewForRequest({
-        requestId: request.id,
-        requesterUserId: request.requesterUserId,
-      }),
-    })),
+  return (
+    <ErasureRequestsShell locale={locale} accessState="allowed">
+      <Suspense
+        fallback={<WorkspaceSectionSkeleton locale={locale} rows={2} />}
+      >
+        <ErasureRequestsSection
+          locale={locale}
+          canMutate={hasAdminCapability(access.access, "operator:mutate")}
+          canExecuteErasure={hasAdminCapability(
+            access.access,
+            "erasure:execute",
+          )}
+          gateLabel={operatorAccessModeLabel(locale, access.access.mode)}
+          roleLabel={operatorRoleLabel(locale, access.access.role)}
+        />
+      </Suspense>
+    </ErasureRequestsShell>
   );
-  const dryRunByRequestId = new Map(
-    dryRunPreviews.map((entry) => [entry.requestId, entry.preview]),
+}
+
+/**
+ * The request list and every request's dry-run preview. Owner-only, so a
+ * `schema_missing` here names the relation and points at the migration
+ * allocation: the owner is the person who can apply it.
+ */
+async function ErasureRequestsSection({
+  locale,
+  canMutate,
+  canExecuteErasure,
+  gateLabel,
+  roleLabel,
+}: {
+  locale: InterfaceLocale;
+  canMutate: boolean;
+  canExecuteErasure: boolean;
+  gateLabel: string;
+  roleLabel: string;
+}) {
+  const operatorCopy = getOperatorCopy(locale);
+  const copy = getOperatorErasureCopy(locale);
+
+  const settled = await settleSection(
+    async () => {
+      const requests = await listOperatorErasureRequests();
+      const previews = await Promise.all(
+        requests.map(async (request) => ({
+          requestId: request.id,
+          preview: await getErasureDryRunPreviewForRequest({
+            requestId: request.id,
+            requesterUserId: request.requesterUserId,
+          }),
+        })),
+      );
+      return {
+        requests,
+        dryRunByRequestId: new Map(
+          previews.map((entry) => [entry.requestId, entry.preview]),
+        ),
+      };
+    },
+    {
+      deadlineMs: workspaceSectionDeadlineMs(8),
+      surface: "erasure-requests",
+      section: "requests",
+    },
   );
-  const canMutate = hasAdminCapability(access, "operator:mutate");
-  const canExecuteErasure = hasAdminCapability(access, "erasure:execute");
+
+  if (settled.status === "error") {
+    return (
+      <WorkspaceSectionError
+        locale={locale}
+        failure={settled}
+        title={copy.title}
+        retryHref={ERASURE_REQUESTS_PATH}
+        technicalHint={workspaceSchemaMissingHint(locale, settled)}
+      />
+    );
+  }
+
+  const { requests, dryRunByRequestId } = settled.value;
 
   return (
-    <main
-      data-operator-surface="erasure-requests"
-      data-operator-access-state="allowed"
-      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
-    >
-      <OperatorHeader operatorCopy={operatorCopy} copy={copy} />
+    <section className="grid gap-3">
+      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+        <span className="rounded-md border border-border px-2 py-1">
+          {operatorCopy.common.requests}: {requests.length}
+        </span>
+        <span className="rounded-md border border-border px-2 py-1">
+          {operatorCopy.common.gate}: {gateLabel}
+        </span>
+        <span className="rounded-md border border-border px-2 py-1">
+          {operatorCopy.common.role}: {roleLabel}
+        </span>
+      </div>
 
-      <section className="grid gap-3">
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <span className="rounded-md border border-border px-2 py-1">
-            {operatorCopy.common.requests}: {requests.length}
-          </span>
-          <span className="rounded-md border border-border px-2 py-1">
-            {operatorCopy.common.gate}:{" "}
-            {operatorAccessModeLabel(locale, access.mode)}
-          </span>
-          <span className="rounded-md border border-border px-2 py-1">
-            {operatorCopy.common.role}: {operatorRoleLabel(locale, access.role)}
-          </span>
-        </div>
-
-        {requests.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            {copy.empty}
-          </p>
-        ) : (
-          <ol className="grid gap-3">
-            {requests.map((request) => (
-              <ErasureRequestCard
-                key={request.id}
-                request={request}
-                dryRunPreview={dryRunByRequestId.get(request.id) ?? null}
-                canMutate={canMutate}
-                canExecuteErasure={canExecuteErasure}
-                locale={locale}
-                copy={copy}
-              />
-            ))}
-          </ol>
-        )}
-      </section>
-    </main>
+      {requests.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+          {copy.empty}
+        </p>
+      ) : (
+        <ol className="grid gap-3">
+          {requests.map((request) => (
+            <ErasureRequestCard
+              key={request.id}
+              request={request}
+              dryRunPreview={dryRunByRequestId.get(request.id) ?? null}
+              canMutate={canMutate}
+              canExecuteErasure={canExecuteErasure}
+              locale={locale}
+              copy={copy}
+            />
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }
 
@@ -447,35 +537,5 @@ function DryRunPreviewPanel({
         </OwnerScopedActionForm>
       ) : null}
     </section>
-  );
-}
-
-function OperatorHeader({
-  operatorCopy,
-  copy,
-}: {
-  operatorCopy: OperatorCopy;
-  copy: OperatorErasureCopy;
-}) {
-  return (
-    <header className="flex flex-col gap-4 border-b border-border pb-5">
-      <Link
-        href="/garden"
-        className={buttonVariants({
-          variant: "outline",
-          className: "self-start",
-        })}
-      >
-        {operatorCopy.common.backToJournal}
-      </Link>
-      <div className="grid gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {copy.title}
-        </h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          {copy.description}
-        </p>
-      </div>
-    </header>
   );
 }

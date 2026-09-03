@@ -70,7 +70,7 @@ const RECEIPT_SOURCE_PATHS = [
   "src/app/(default)/garden/garden-auth-panel.test.tsx",
   "src/app/(default)/garden/account-methods-panel.tsx",
   "src/app/(default)/garden/account-methods-panel.test.tsx",
-  "src/app/(default)/garden/page.tsx",
+  "src/app/(default)/garden/(home)/page.tsx",
   "src/app/(default)/garden/profile/page.tsx",
   "src/server/auth/account-methods.ts",
   "scripts/smoke-public-identity.ts",

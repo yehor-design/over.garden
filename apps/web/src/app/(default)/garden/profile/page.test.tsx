@@ -1,4 +1,5 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderServerHtml } from "@test/render-server-html";
+import { missingRelationRejection } from "@test/postgres-rejection";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -120,7 +121,7 @@ describe("/garden/profile", () => {
 
   it("loads the scoped owner workspace and exact preview", async () => {
     const { default: Page } = await import("./page");
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await Page({ searchParams: Promise.resolve({}) }),
     );
 
@@ -147,7 +148,7 @@ describe("/garden/profile", () => {
   it("localizes blocked-state management", async () => {
     mocks.getRequestInterfaceLocale.mockResolvedValueOnce("bg");
     const { default: Page } = await import("./page");
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await Page({
         searchParams: Promise.resolve({ relationshipStatus: "unblocked" }),
       }),
@@ -161,7 +162,7 @@ describe("/garden/profile", () => {
   it("shows auth without creating an owner workspace when signed out", async () => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);
     const { default: Page } = await import("./page");
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await Page({ searchParams: Promise.resolve({}) }),
     );
 
@@ -169,5 +170,24 @@ describe("/garden/profile", () => {
     expect(mocks.getOwnerProfileWorkspace).not.toHaveBeenCalled();
     expect(mocks.getCurrentAccountMethodProjection).not.toHaveBeenCalled();
     expect(html).toContain('data-garden-profile-auth-shell="guest"');
+  });
+
+  it("renders its own shell and a bounded failure when the relation is missing", async () => {
+    mocks.getOwnerProfileWorkspace.mockRejectedValueOnce(
+      missingRelationRejection("public_identities"),
+    );
+
+    const { default: Page } = await import("./page");
+    const html = await renderServerHtml(
+      await Page({ searchParams: Promise.resolve({}) }),
+    );
+
+    expect(html).toContain('data-workspace-surface="profile"');
+    expect(html).toContain("Мій публічний профіль");
+    expect(html).toContain('data-section-failure="schema_missing"');
+    // A gardener's screen never gains a machine code: the class travels as an
+    // attribute and the relation name stays out of the copy entirely.
+    expect(html).not.toContain("public_identities");
+    expect(html).not.toContain('data-workspace-state="loading"');
   });
 });

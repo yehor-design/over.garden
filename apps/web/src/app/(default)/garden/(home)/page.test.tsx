@@ -1,4 +1,5 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderServerHtml } from "@test/render-server-html";
+import { postgresRejection } from "@test/postgres-rejection";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { GardenWorkspaceReadModel } from "@/server/garden-workspace-repository";
@@ -26,7 +27,6 @@ vi.mock("@/server/request-scope", () => ({
 
 vi.mock("@/server/garden-workspace-repository", () => ({
   loadGardenWorkspace: mocks.loadGardenWorkspace,
-  withGardenWorkspaceDeadline: (load: () => Promise<unknown>) => load(),
 }));
 
 vi.mock("@/server/garden-workspace-after-response", () => ({
@@ -52,11 +52,11 @@ vi.mock("@/lib/auth/google-oauth", () => ({
   isGoogleSignInEnabled: () => false,
 }));
 
-vi.mock("../wishlist/actions", () => ({
+vi.mock("../../wishlist/actions", () => ({
   addCatalogPublicSlugToWishlistAction: vi.fn(),
 }));
 
-vi.mock("./first-entry-composer", () => ({
+vi.mock("../first-entry-composer", () => ({
   FirstEntryComposer: (props: {
     initialSpace?: { id: string; displayName: string } | null;
     requiresFirstPublicationDisclosure: boolean;
@@ -73,7 +73,7 @@ vi.mock("./first-entry-composer", () => ({
   ),
 }));
 
-vi.mock("./garden-auth-panel", () => ({
+vi.mock("../garden-auth-panel", () => ({
   GardenAuthPanel: (props: { postAuthPath?: string | null }) => (
     <section data-post-auth-path={props.postAuthPath ?? ""}>
       Garden auth panel
@@ -105,7 +105,7 @@ describe("/garden workspace V2", () => {
 
   it("renders the shared-shell operational home and preserves write paths", async () => {
     const { default: GardenPage } = await import("./page");
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await GardenPage({ searchParams: Promise.resolve({}) }),
     );
 
@@ -133,14 +133,17 @@ describe("/garden workspace V2", () => {
     expect(html).toContain('data-initial-space-id="space-1"');
     expect(html).toContain('data-initial-space-name="Balcony"');
     expect(html).toContain('data-requires-first-publication-disclosure="true"');
-    // Timeline work is a deferred server boundary: first-entry composition is
-    // already present in the initial response instead of waiting for it.
+    // Timeline work stays behind its own Suspense boundary: the composer is
+    // written into the shell ahead of it, so a slow timeline never delays the
+    // control a gardener came here to use.
     expect(mocks.getMySpaceJournalTimeline).toHaveBeenCalledWith(
       expect.anything(),
       "space-1",
       { objectLimit: 20, entryLimit: 5 },
     );
-    expect(html).not.toContain("Інструменти журналу простору");
+    expect(html.indexOf("First entry composer")).toBeLessThan(
+      html.indexOf("Інструменти журналу простору"),
+    );
     expect(html).not.toContain("Sign-in methods");
     expect(html).not.toContain("Social account link panel");
     expect(html).not.toContain("gardener@example.com");
@@ -152,7 +155,7 @@ describe("/garden workspace V2", () => {
   it("does not ask a previously disclosed owner for first-publication consent again", async () => {
     mocks.hasPriorPublicationDisclosure.mockResolvedValueOnce(true);
     const { default: GardenPage } = await import("./page");
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await GardenPage({ searchParams: Promise.resolve({}) }),
     );
 
@@ -164,14 +167,16 @@ describe("/garden workspace V2", () => {
 
   it("parses bounded inventory and space view-all pages from URL state", async () => {
     const { default: GardenPage } = await import("./page");
-    await GardenPage({
-      searchParams: Promise.resolve({
-        inventory: "all",
-        inventoryPage: "999999999999999999999999",
-        spaces: "all",
-        spacesPage: "3",
+    await renderServerHtml(
+      await GardenPage({
+        searchParams: Promise.resolve({
+          inventory: "all",
+          inventoryPage: "999999999999999999999999",
+          spaces: "all",
+          spacesPage: "3",
+        }),
       }),
-    });
+    );
 
     expect(mocks.loadGardenWorkspace).toHaveBeenCalledWith(expect.anything(), {
       faultSections: [],
@@ -184,7 +189,7 @@ describe("/garden workspace V2", () => {
 
   it("falls back to the preview space when the requested space is malformed", async () => {
     const { default: GardenPage } = await import("./page");
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await GardenPage({
         searchParams: Promise.resolve({ space: "not-a-uuid" }),
       }),
@@ -203,7 +208,7 @@ describe("/garden workspace V2", () => {
     mocks.getMySpaceJournalTimeline.mockResolvedValueOnce(null);
 
     const { default: GardenPage } = await import("./page");
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await GardenPage({ searchParams: Promise.resolve({}) }),
     );
 
@@ -217,7 +222,7 @@ describe("/garden workspace V2", () => {
 
   it("lets a self-serve gardener write from an authenticated session", async () => {
     const { default: GardenPage } = await import("./page");
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await GardenPage({ searchParams: Promise.resolve({}) }),
     );
 
@@ -231,7 +236,7 @@ describe("/garden workspace V2", () => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);
 
     const { default: GardenPage } = await import("./page");
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await GardenPage({ searchParams: Promise.resolve({}) }),
     );
 
@@ -251,7 +256,7 @@ describe("/garden workspace V2", () => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);
 
     const { default: GardenPage } = await import("./page");
-    const html = renderToStaticMarkup(
+    const html = await renderServerHtml(
       await GardenPage({
         searchParams: Promise.resolve({
           engagement: "comment-auth",
@@ -262,6 +267,39 @@ describe("/garden workspace V2", () => {
 
     expect(html).toContain('data-post-auth-path="/garden"');
     expect(html).not.toContain("attacker");
+  });
+
+  it("renders its own shell and a bounded failure when the read model rejects", async () => {
+    mocks.loadGardenWorkspace.mockRejectedValueOnce(
+      postgresRejection("42P01", 'relation "plant_objects" does not exist'),
+    );
+
+    const { default: GardenPage } = await import("./page");
+    const html = await renderServerHtml(
+      await GardenPage({ searchParams: Promise.resolve({}) }),
+    );
+
+    expect(html).toContain('data-workspace-surface="garden-home"');
+    expect(html).toContain("Простір саду");
+    expect(html).toContain('data-section-failure="schema_missing"');
+    expect(html).not.toContain('data-workspace-state="loading"');
+    expect(html).not.toContain('data-garden-workspace="loading"');
+  });
+
+  it("says the session store is unreachable instead of asking for a sign-in", async () => {
+    mocks.getCurrentSession.mockRejectedValueOnce(
+      postgresRejection("ECONNREFUSED"),
+    );
+
+    const { default: GardenPage } = await import("./page");
+    const html = await renderServerHtml(
+      await GardenPage({ searchParams: Promise.resolve({}) }),
+    );
+
+    expect(html).toContain('data-workspace-surface="garden-home"');
+    expect(html).toContain('data-section-failure="connection_unavailable"');
+    expect(html).not.toContain("Garden auth panel");
+    expect(mocks.loadGardenWorkspace).not.toHaveBeenCalled();
   });
 });
 

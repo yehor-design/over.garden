@@ -11,7 +11,7 @@ describe("garden media native-runtime boundary", () => {
     const [repository, storage, gardenPage] = await Promise.all([
       source("server", "media", "media-repository.ts"),
       source("lib", "storage.ts"),
-      source("app", "(default)", "garden", "page.tsx"),
+      source("app", "(default)", "garden", "(home)", "page.tsx"),
     ]);
 
     expect(repository).not.toMatch(/processing_claim|quarantine|sharp/i);

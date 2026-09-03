@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { failedSection } from "@/server/workspace-failure";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
@@ -23,7 +24,9 @@ describe("GardenWorkspaceView", () => {
     expect(html).toContain(
       'class="grid grid-cols-2 border-b border-border bg-foreground text-background md:grid-cols-4"',
     );
-    expect(html).toContain("Простір саду");
+    // The heading belongs to the shell, which renders before this view exists
+    // (ADR-0023). A second <h1> here would be the jump the shell removes.
+    expect(html).not.toContain("<h1");
     expect(html).toContain("Наступна корисна дія");
     expect(html).toContain("Оновіть Object 1");
     expect(html).toContain("Рослини");
@@ -45,7 +48,7 @@ describe("GardenWorkspaceView", () => {
 
   it("keeps healthy sections usable when recent continuity fails", () => {
     const workspace = readyWorkspace();
-    workspace.recent = { status: "error", failureClass: "query_timeout" };
+    workspace.recent = failedSection("query_timeout");
 
     const html = renderToStaticMarkup(
       <GardenWorkspaceView
@@ -69,10 +72,10 @@ describe("GardenWorkspaceView", () => {
         locale="uk"
         today="2026-07-12"
         workspace={{
-          inventory: { status: "error", failureClass: "connection_unavailable" },
-          spaces: { status: "error", failureClass: "connection_unavailable" },
-          recent: { status: "error", failureClass: "connection_unavailable" },
-          inbox: { status: "error", failureClass: "connection_unavailable" },
+          inventory: failedSection("connection_unavailable"),
+          spaces: failedSection("connection_unavailable"),
+          recent: failedSection("connection_unavailable"),
+          inbox: failedSection("connection_unavailable"),
           allFailed: true,
         }}
       />,
@@ -87,7 +90,7 @@ describe("GardenWorkspaceView", () => {
 
   it("does not present a failed inventory query as an empty garden", () => {
     const workspace = readyWorkspace();
-    workspace.inventory = { status: "error", failureClass: "schema_missing" };
+    workspace.inventory = failedSection("schema_missing");
 
     const html = renderToStaticMarkup(
       <GardenWorkspaceView

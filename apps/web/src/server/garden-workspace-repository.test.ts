@@ -11,6 +11,7 @@ import {
   type QueryCompiler,
 } from "kysely";
 import { describe, expect, it, vi } from "vitest";
+import { failedSection } from "@/server/workspace-failure";
 
 import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
@@ -157,7 +158,6 @@ describe("garden workspace query contracts", () => {
     ]);
     expect(compiled.sql).not.toMatch(/\."body"|client_mutation_id|email/i);
   });
-
 });
 
 describe("garden workspace read model", () => {
@@ -254,17 +254,15 @@ describe("garden workspace read model", () => {
     await vi.advanceTimersByTimeAsync(WORKSPACE_SECTION_DEADLINE_MS);
     const workspace = await pending;
 
-    expect(workspace.recent).toEqual({
-      status: "error",
-      failureClass: "query_timeout",
-    });
+    expect(workspace.recent).toEqual(
+      failedSection("query_timeout", { code: "workspace_section_deadline" }),
+    );
     expect(workspace.inventory.status).toBe("ready");
     resolveRecent?.();
     await Promise.resolve();
-    expect(workspace.recent).toEqual({
-      status: "error",
-      failureClass: "query_timeout",
-    });
+    expect(workspace.recent).toEqual(
+      failedSection("query_timeout", { code: "workspace_section_deadline" }),
+    );
     vi.useRealTimers();
   });
 

@@ -122,9 +122,29 @@ const UK_COPY = {
       spaceJournal: "Журнал простору",
     },
     sectionError: {
+      title: "Цей розділ зараз недоступний",
       description:
         "Інші розділи простору залишаються доступними. Дані не змінено.",
       retry: "Спробувати цей розділ ще раз",
+      reference: "Код звірки: {digest}",
+      schemaMissing:
+        "База даних не має об'єкта «{relation}». Застосуйте міграцію: docs/MIGRATION_ALLOCATION.md.",
+      schemaMissingUnnamed:
+        "База даних не має потрібного об'єкта. Застосуйте міграцію: docs/MIGRATION_ALLOCATION.md.",
+    },
+    loading: {
+      label: "Завантаження розділу",
+      stillLoading: "Розділ усе ще завантажується.",
+      reload: "Перезавантажити сторінку",
+    },
+    entryEdit: {
+      title: "Редагування запису",
+    },
+    missing: {
+      title: "Цей запис недоступний",
+      description:
+        "Його немає у вашому саду або він був видалений. Відкрийте сад, щоб побачити наявні записи.",
+      back: "До мого саду",
     },
     pagination: {
       ariaLabel: "Сторінки розділу «{section}»",
@@ -535,9 +555,29 @@ const BG_COPY = {
       spaceJournal: "Дневник на пространството",
     },
     sectionError: {
+      title: "Този раздел не е достъпен сега",
       description:
         "Останалите раздели остават достъпни. Данните не са променени.",
       retry: "Нов опит за този раздел",
+      reference: "Код за справка: {digest}",
+      schemaMissing:
+        "Базата данни няма обекта „{relation}“. Приложете миграцията: docs/MIGRATION_ALLOCATION.md.",
+      schemaMissingUnnamed:
+        "Базата данни няма нужния обект. Приложете миграцията: docs/MIGRATION_ALLOCATION.md.",
+    },
+    loading: {
+      label: "Зареждане на раздела",
+      stillLoading: "Разделът още се зарежда.",
+      reload: "Презареждане на страницата",
+    },
+    entryEdit: {
+      title: "Редактиране на записа",
+    },
+    missing: {
+      title: "Този запис не е достъпен",
+      description:
+        "Няма го във вашата градина или е изтрит. Отворете градината, за да видите наличните записи.",
+      back: "Към моята градина",
     },
     pagination: {
       ariaLabel: "Страници на раздел „{section}“",
@@ -945,9 +985,29 @@ const RU_COPY = {
       spaceJournal: "Журнал пространства",
     },
     sectionError: {
+      title: "Этот раздел сейчас недоступен",
       description:
         "Другие разделы пространства остаются доступными. Данные не изменены.",
       retry: "Попробовать этот раздел снова",
+      reference: "Код сверки: {digest}",
+      schemaMissing:
+        "В базе данных нет объекта «{relation}». Примените миграцию: docs/MIGRATION_ALLOCATION.md.",
+      schemaMissingUnnamed:
+        "В базе данных нет нужного объекта. Примените миграцию: docs/MIGRATION_ALLOCATION.md.",
+    },
+    loading: {
+      label: "Загрузка раздела",
+      stillLoading: "Раздел всё ещё загружается.",
+      reload: "Перезагрузить страницу",
+    },
+    entryEdit: {
+      title: "Редактирование записи",
+    },
+    missing: {
+      title: "Эта запись недоступна",
+      description:
+        "Её нет в вашем саду или она была удалена. Откройте сад, чтобы увидеть доступные записи.",
+      back: "К моему саду",
     },
     pagination: {
       ariaLabel: "Страницы раздела «{section}»",

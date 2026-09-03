@@ -1,4 +1,6 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderServerHtml } from "@test/render-server-html";
+import { missingRelationRejection } from "@test/postgres-rejection";
+import { AdminAccessDeniedError } from "@/server/admin-access";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -71,16 +73,18 @@ describe("/garden/catalog/registry", () => {
   it("returns a bounded sign-in state before reading release data", async () => {
     mocks.getCurrentSession.mockResolvedValue(null);
     const { default: Page } = await import("./page");
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
 
     expect(html).toContain('data-release-center-state="sign-in-required"');
     expect(mocks.readStableRegistryReleaseCenter).not.toHaveBeenCalled();
   });
 
   it("returns a bounded denial before reading release data", async () => {
-    mocks.assertCatalogCuratorAccess.mockRejectedValue(new Error("denied"));
+    mocks.assertCatalogCuratorAccess.mockRejectedValue(
+      new AdminAccessDeniedError(),
+    );
     const { default: Page } = await import("./page");
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
 
     expect(html).toContain('data-release-center-state="denied"');
     expect(mocks.readStableRegistryReleaseCenter).not.toHaveBeenCalled();
@@ -89,7 +93,7 @@ describe("/garden/catalog/registry", () => {
   it("keeps the Release Center dark without leaking release evidence", async () => {
     mocks.isStableRegistryReleaseCenterEnabled.mockReturnValue(false);
     const { default: Page } = await import("./page");
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
 
     expect(html).toContain('data-release-center-state="disabled"');
     expect(html).not.toContain("completed-captures");
@@ -101,7 +105,7 @@ describe("/garden/catalog/registry", () => {
     async (locale) => {
       mocks.getRequestInterfaceLocale.mockResolvedValue(locale);
       const { default: Page } = await import("./page");
-      const html = renderToStaticMarkup(await Page());
+      const html = await renderServerHtml(await Page());
 
       expect(html).toContain('data-registry-center="safe"');
       expect(html).toContain("completed-captures:1");
@@ -113,4 +117,31 @@ describe("/garden/catalog/registry", () => {
       });
     },
   );
+
+  it("renders its own shell and a bounded failure when the relation is missing", async () => {
+    mocks.readStableRegistryReleaseCenter.mockRejectedValue(
+      missingRelationRejection("foundation_releases"),
+    );
+    const { default: Page } = await import("./page");
+    const html = await renderServerHtml(await Page());
+
+    expect(html).toContain('data-workspace-surface="stable-registry"');
+    expect(html).toContain('data-section-failure="schema_missing"');
+    expect(html).toContain("foundation_releases");
+    expect(html).not.toContain('data-workspace-state="loading"');
+    expect(html).not.toContain('data-workspace-section="loading"');
+  });
+
+  it("tells an unreachable database apart from a refusal", async () => {
+    mocks.assertCatalogCuratorAccess.mockRejectedValue(
+      Object.assign(new Error("redacted driver failure"), {
+        code: "ECONNREFUSED",
+      }),
+    );
+    const { default: Page } = await import("./page");
+    const html = await renderServerHtml(await Page());
+
+    expect(html).toContain('data-section-failure="connection_unavailable"');
+    expect(mocks.readStableRegistryReleaseCenter).not.toHaveBeenCalled();
+  });
 });

@@ -55,9 +55,10 @@ touching DNS, R2, env, or deployment. Local infra starts with
 9. No secrets in git. `.env*` is ignored except `.env.example`.
 10. Do not touch without the owner's explicit sign-off: destructive schema
     changes, bulk deletes, history rewrites, force-push.
-11. A page under `/garden/**` never awaits a read that may throw. Settle it into
-    a bounded failure class and render that value; `error.tsx` does not catch a
-    Server Component error on a hard load (ADR-0023).
+11. A page under `/garden/**` never awaits a `@/server/*` read outside
+    `settleSection`. Settle it into a bounded failure class and render that
+    value; `error.tsx` does not catch a Server Component error on a hard load
+    (ADR-0023).
 
 `apps/web/scripts/check-banned-dependencies.ts` enforces the mechanical half of
 these rules in CI and in `pnpm test`.

@@ -1,4 +1,6 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderServerHtml } from "@test/render-server-html";
+import { missingRelationRejection } from "@test/postgres-rejection";
+import { AdminAccessDeniedError } from "@/server/admin-access";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ExtensionPackCenterReadModel } from "@/lib/stable-registry/extension-pack-actions";
@@ -94,16 +96,18 @@ describe("Stable Registry extension pack page", () => {
     mocks.getCurrentSession.mockResolvedValue(null);
     const { default: Page } = await import("./page");
 
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
     expect(html).toContain('data-extension-pack-state="sign-in-required"');
     expect(mocks.readExtensionPackCenter).not.toHaveBeenCalled();
   });
 
   it("denies an ordinary user without exposing pack evidence", async () => {
-    mocks.assertCatalogCuratorAccess.mockRejectedValue(new Error("denied"));
+    mocks.assertCatalogCuratorAccess.mockRejectedValue(
+      new AdminAccessDeniedError(),
+    );
     const { default: Page } = await import("./page");
 
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
     expect(html).toContain('data-extension-pack-state="denied"');
     expect(html).not.toContain("ua-state-register");
     expect(mocks.readExtensionPackCenter).not.toHaveBeenCalled();
@@ -113,7 +117,7 @@ describe("Stable Registry extension pack page", () => {
     mocks.isStableRegistryExtensionPacksEnabled.mockReturnValue(false);
     const { default: Page } = await import("./page");
 
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
     expect(html).toContain('data-extension-pack-state="disabled"');
     expect(mocks.readExtensionPackCenter).not.toHaveBeenCalled();
   });
@@ -121,7 +125,7 @@ describe("Stable Registry extension pack page", () => {
   it("renders grouped exceptions and aggregate counts, never a denomination", async () => {
     const { default: Page } = await import("./page");
 
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
     expect(html).toContain('data-row-class="needs_parent"');
     expect(html).toContain('data-exception-row-count="3"');
     // The owner sees counts, not thousands of individual rows.
@@ -132,7 +136,7 @@ describe("Stable Registry extension pack page", () => {
   it("keeps the cancel and return controls available during review", async () => {
     const { default: Page } = await import("./page");
 
-    const html = renderToStaticMarkup(await Page());
+    const html = await renderServerHtml(await Page());
     expect(html).toContain("Скасувати імпорт пакета");
     expect(html).toContain("Повернутися до активного каталогу");
   });
@@ -146,8 +150,37 @@ describe("Stable Registry extension pack page", () => {
       vi.resetModules();
       mocks.getRequestInterfaceLocale.mockResolvedValue(locale);
       const { default: Page } = await import("./page");
-      const html = renderToStaticMarkup(await Page());
+      const html = await renderServerHtml(await Page());
       expect(html).toContain(title);
     }
+  });
+
+  it("renders its own shell and a bounded failure when the relation is missing", async () => {
+    mocks.readExtensionPackCenter.mockRejectedValue(
+      missingRelationRejection("catalog_extension_packs"),
+    );
+    const { default: Page } = await import("./page");
+    const html = await renderServerHtml(await Page());
+
+    expect(html).toContain(
+      'data-workspace-surface="stable-registry-extensions"',
+    );
+    expect(html).toContain('data-section-failure="schema_missing"');
+    expect(html).toContain("catalog_extension_packs");
+    expect(html).not.toContain('data-workspace-state="loading"');
+    expect(html).not.toContain('data-workspace-section="loading"');
+  });
+
+  it("tells an unreachable database apart from a refusal", async () => {
+    mocks.assertCatalogCuratorAccess.mockRejectedValue(
+      Object.assign(new Error("redacted driver failure"), {
+        code: "ECONNREFUSED",
+      }),
+    );
+    const { default: Page } = await import("./page");
+    const html = await renderServerHtml(await Page());
+
+    expect(html).toContain('data-section-failure="connection_unavailable"');
+    expect(mocks.readExtensionPackCenter).not.toHaveBeenCalled();
   });
 });
