@@ -23,6 +23,10 @@ import {
 } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
+import {
+  readMediaVariantExtras,
+  type MediaVariantExtras,
+} from "@/server/media/media-variant-schema";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { buildFirstProcessedMediaPerEntryQuery } from "@/server/public-media-repository";
@@ -63,12 +67,16 @@ export interface PublicObjectPassportPage {
   coverMediaFocalY: number | null;
   coverMediaIntrinsicWidth: number | null;
   coverMediaIntrinsicHeight: number | null;
+  coverMediaPlaceholderDataUri: string | null;
+  coverMediaVariantLongEdges: number[];
   galleryMedia: Array<{
     publicUrl: string;
     focalX: number;
     focalY: number;
     intrinsicWidth: number | null;
     intrinsicHeight: number | null;
+    placeholderDataUri: string | null;
+    variantLongEdges: number[];
   }>;
   /** @deprecated Prefer galleryMedia; kept for fixture/evidence URL lists. */
   galleryMediaPublicUrls: string[];
@@ -93,6 +101,10 @@ export interface PublicObjectPassportJournalEntry {
   mediaFocalY: number | null;
   mediaIntrinsicWidth: number | null;
   mediaIntrinsicHeight: number | null;
+  /** 16 px WebP data URI painted until the photo loads (OVE-371). */
+  mediaPlaceholderDataUri: string | null;
+  /** Long edges of the promoted variants; [] on pre-0047 rows. */
+  mediaVariantLongEdges: number[];
 }
 
 interface PublicObjectPassportRootRow {
@@ -122,6 +134,7 @@ interface PublicObjectPassportTimelineRow {
   entryBody: string;
   entryDate: Date | string;
   entryPublicSlug: string;
+  mediaId: string | null;
   mediaDerivativeKey: string | null;
   mediaFocalX: number | null;
   mediaFocalY: number | null;
@@ -197,6 +210,10 @@ export async function getPublicObjectPassportLookup(
       normalizedPlantObjectId,
     ).execute(),
   ]);
+  const mediaExtras = await readMediaVariantExtras(executor, [
+    ...journalRows.flatMap((row) => (row.mediaId ? [row.mediaId] : [])),
+    ...galleryRows.map((row) => row.mediaId),
+  ]);
 
   return {
     status: "active",
@@ -205,6 +222,7 @@ export async function getPublicObjectPassportLookup(
       journalRows,
       galleryRows,
       locale,
+      mediaExtras,
     ),
   };
 }
@@ -407,6 +425,7 @@ export function buildPublicObjectPassportTimelineQuery(
       "journal_entries.body as entryBody",
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as entryPublicSlug",
+      "first_public_media.mediaId as mediaId",
       "first_public_media.derivativeKey as mediaDerivativeKey",
       "first_public_media.focalX as mediaFocalX",
       "first_public_media.focalY as mediaFocalY",
@@ -480,6 +499,8 @@ export function serializePublicObjectPassportPage(
   journalRows: PublicObjectPassportTimelineRow[],
   galleryRows: PublicObjectPassportGalleryRow[] = [],
   locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
+  /** OVE-371 placeholder/variant columns, keyed by media asset id. */
+  mediaExtras?: ReadonlyMap<string, MediaVariantExtras>,
 ): PublicObjectPassportPage {
   const serializedJournal = journalRows.map((entry) => ({
     id: entry.entryId,
@@ -506,6 +527,14 @@ export function serializePublicObjectPassportPage(
     mediaIntrinsicHeight: entry.mediaDerivativeKey
       ? (entry.mediaIntrinsicHeight ?? null)
       : null,
+    mediaPlaceholderDataUri:
+      entry.mediaDerivativeKey && entry.mediaId
+        ? (mediaExtras?.get(entry.mediaId)?.placeholderDataUri ?? null)
+        : null,
+    mediaVariantLongEdges:
+      entry.mediaDerivativeKey && entry.mediaId
+        ? (mediaExtras?.get(entry.mediaId)?.variantLongEdges ?? [])
+        : [],
   }));
   const journalPreview = serializedJournal.slice(
     0,
@@ -533,6 +562,9 @@ export function serializePublicObjectPassportPage(
     focalY: Number(media.mediaFocalY ?? 0.5),
     intrinsicWidth: media.mediaIntrinsicWidth ?? null,
     intrinsicHeight: media.mediaIntrinsicHeight ?? null,
+    placeholderDataUri:
+      mediaExtras?.get(media.mediaId)?.placeholderDataUri ?? null,
+    variantLongEdges: mediaExtras?.get(media.mediaId)?.variantLongEdges ?? [],
   }));
   const galleryMediaPublicUrls = galleryMedia.map((media) => media.publicUrl);
   const coverFromGallery = galleryMedia[0] ?? null;
@@ -578,6 +610,14 @@ export function serializePublicObjectPassportPage(
       coverFromGallery?.intrinsicHeight ??
       coverFromJournal?.mediaIntrinsicHeight ??
       null,
+    coverMediaPlaceholderDataUri:
+      coverFromGallery?.placeholderDataUri ??
+      coverFromJournal?.mediaPlaceholderDataUri ??
+      null,
+    coverMediaVariantLongEdges:
+      coverFromGallery?.variantLongEdges ??
+      coverFromJournal?.mediaVariantLongEdges ??
+      [],
     galleryMedia,
     galleryMediaPublicUrls,
     timelineHasMore: Number(root.publicEntryCount) > serializedJournal.length,

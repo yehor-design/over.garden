@@ -28,13 +28,10 @@ const nextConfig: NextConfig = {
   // trailing-slash canonicalization so they can return a direct hard 404.
   // Proxy preserves the existing 308 canonical redirect for every other path.
   skipTrailingSlashRedirect: true,
-  images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "media.over.garden" },
-      { protocol: "http", hostname: "localhost", port: "9000" },
-      { protocol: "http", hostname: "127.0.0.1", port: "9000" },
-    ],
-  },
+  // No optimised `next/image` remains (OVE-371): public photos are plain
+  // `<img srcset>` of final WebP renditions, and the few `next/image` uses
+  // left (avatars, editorial guide art) are `unoptimized`, so no remote
+  // pattern allowlist is needed.
   // Pin the workspace root to the MONOREPO root (two levels up from apps/web).
   // This matches the `outputFileTracingRoot` Vercel forces to the repo clone
   // root (otherwise Next warns they must be equal), and it also stops local

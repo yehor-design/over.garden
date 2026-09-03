@@ -45,6 +45,8 @@ const PROFILE: PublicProfileEvidencePage = {
     coverFocalY: index === 0 ? 0.5 : null,
     coverIntrinsicWidth: index === 0 ? 800 : null,
     coverIntrinsicHeight: index === 0 ? 600 : null,
+    coverPlaceholderDataUri: null,
+    coverVariantLongEdges: [],
   })),
   journals: Array.from({ length: 9 }, (_, index) => ({
     entryId: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
@@ -65,6 +67,8 @@ const PROFILE: PublicProfileEvidencePage = {
     coverFocalY: null,
     coverIntrinsicWidth: null,
     coverIntrinsicHeight: null,
+    coverPlaceholderDataUri: null,
+    coverVariantLongEdges: [],
   })),
   hasMoreObjects: false,
   hasMoreJournals: false,

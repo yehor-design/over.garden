@@ -448,6 +448,7 @@ describe("public profile handle contracts", () => {
         {
           objectId: "00000000-0000-4000-8000-000000000201",
           entryId: "00000000-0000-4000-8000-000000000301",
+          mediaAssetId: "00000000-0000-4000-8000-0000000000aa",
           derivativeKey: "objects/lemon.png",
           altText: "Lemon leaves",
           focalX: 0.5,
@@ -474,6 +475,7 @@ describe("public profile handle contracts", () => {
       journalMedia: [
         {
           entryId: "00000000-0000-4000-8000-000000000301",
+          mediaAssetId: "00000000-0000-4000-8000-0000000000aa",
           derivativeKey: "objects/lemon.png",
           altText: "Lemon leaves",
           focalX: 0.5,

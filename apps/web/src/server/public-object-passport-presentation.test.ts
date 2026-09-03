@@ -95,6 +95,8 @@ function publicPassport(
         mediaFocalY: 0.5,
         mediaIntrinsicWidth: 1200,
         mediaIntrinsicHeight: 900,
+        mediaPlaceholderDataUri: null,
+        mediaVariantLongEdges: [],
       },
       {
         id: "entry-1",
@@ -108,6 +110,8 @@ function publicPassport(
         mediaFocalY: null,
         mediaIntrinsicWidth: null,
         mediaIntrinsicHeight: null,
+        mediaPlaceholderDataUri: null,
+        mediaVariantLongEdges: [],
       },
     ],
     journalContinuation: [],
@@ -116,6 +120,8 @@ function publicPassport(
     coverMediaFocalY: 0.5,
     coverMediaIntrinsicWidth: 1200,
     coverMediaIntrinsicHeight: 900,
+    coverMediaPlaceholderDataUri: null,
+    coverMediaVariantLongEdges: [],
     galleryMedia: [
       {
         publicUrl: "https://media.over.garden/second.webp",
@@ -123,6 +129,8 @@ function publicPassport(
         focalY: 0.5,
         intrinsicWidth: 1200,
         intrinsicHeight: 900,
+        placeholderDataUri: null,
+        variantLongEdges: [],
       },
     ],
     galleryMediaPublicUrls: ["https://media.over.garden/second.webp"],

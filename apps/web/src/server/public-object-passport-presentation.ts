@@ -35,6 +35,8 @@ export function buildPublicObjectPassportPresentation(
       mediaFocalY: entry.mediaFocalY,
       mediaIntrinsicWidth: entry.mediaIntrinsicWidth,
       mediaIntrinsicHeight: entry.mediaIntrinsicHeight,
+      mediaPlaceholderDataUri: entry.mediaPlaceholderDataUri,
+      mediaVariantLongEdges: entry.mediaVariantLongEdges,
       stateLabel: copy.publicEntry,
       relationLabel: copy.directObjectUpdate,
     })),
@@ -70,6 +72,8 @@ export function buildPublicObjectPassportPresentation(
           focalY: media.focalY,
           intrinsicWidth: media.intrinsicWidth,
           intrinsicHeight: media.intrinsicHeight,
+          placeholderDataUri: media.placeholderDataUri,
+          variantLongEdges: media.variantLongEdges,
         }))
       : entries.flatMap((entry) =>
           entry.mediaPublicUrl
@@ -81,6 +85,8 @@ export function buildPublicObjectPassportPresentation(
                   focalY: entry.mediaFocalY,
                   intrinsicWidth: entry.mediaIntrinsicWidth,
                   intrinsicHeight: entry.mediaIntrinsicHeight,
+                  placeholderDataUri: entry.mediaPlaceholderDataUri,
+                  variantLongEdges: entry.mediaVariantLongEdges,
                 },
               ]
             : [],
@@ -161,6 +167,8 @@ export function buildPublicObjectPassportPresentation(
           focalY: page.coverMediaFocalY,
           intrinsicWidth: page.coverMediaIntrinsicWidth,
           intrinsicHeight: page.coverMediaIntrinsicHeight,
+          placeholderDataUri: page.coverMediaPlaceholderDataUri,
+          variantLongEdges: page.coverMediaVariantLongEdges,
         }
       : null,
     gallery,

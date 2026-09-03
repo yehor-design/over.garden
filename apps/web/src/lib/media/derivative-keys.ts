@@ -50,9 +50,9 @@ export interface PublicMediaSourceSet {
  */
 export function buildPublicMediaSourceSet(input: {
   publicUrl: string;
-  intrinsicWidth: number | null | undefined;
-  intrinsicHeight: number | null | undefined;
-  variantLongEdges: readonly number[] | null | undefined;
+  intrinsicWidth?: number | null;
+  intrinsicHeight?: number | null;
+  variantLongEdges?: readonly number[] | null;
 }): PublicMediaSourceSet {
   const edges = normalizeVariantLongEdges(input.variantLongEdges);
   const width = input.intrinsicWidth ?? 0;

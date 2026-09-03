@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
+import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 
 import {
   SiteShellContextRailRegistration,
@@ -236,11 +237,12 @@ export function LivingObjectPassportOverview({
               <li key={media.publicUrl} className="min-w-0">
                 <SubjectAwareMediaImage
                   src={media.publicUrl}
+                  srcSet={buildPublicMediaSourceSet(media).srcSet}
+                  placeholderDataUri={media.placeholderDataUri ?? null}
                   alt={media.alt}
                   width={640}
                   height={480}
                   sizes="(min-width: 1024px) 14rem, 45vw"
-                  unoptimized
                   presentationMode="contain"
                   focalX={media.focalX}
                   focalY={media.focalY}
@@ -355,12 +357,13 @@ function PassportCover({
   return passport.cover ? (
     <SubjectAwareMediaImage
       src={passport.cover.publicUrl}
+      srcSet={buildPublicMediaSourceSet(passport.cover).srcSet}
+      placeholderDataUri={passport.cover.placeholderDataUri ?? null}
       alt={passport.cover.alt}
       width={960}
       height={720}
       sizes="(min-width: 768px) 20rem, 100vw"
       loading="eager"
-      unoptimized
       presentationMode="cover"
       focalX={passport.cover.focalX}
       focalY={passport.cover.focalY}
@@ -553,12 +556,20 @@ function renderTimelineEntries(
               {entry.mediaPublicUrl ? (
                 <SubjectAwareMediaImage
                   src={entry.mediaPublicUrl}
+                  srcSet={
+                    buildPublicMediaSourceSet({
+                      publicUrl: entry.mediaPublicUrl,
+                      intrinsicWidth: entry.mediaIntrinsicWidth,
+                      intrinsicHeight: entry.mediaIntrinsicHeight,
+                      variantLongEdges: entry.mediaVariantLongEdges,
+                    }).srcSet
+                  }
+                  placeholderDataUri={entry.mediaPlaceholderDataUri ?? null}
                   alt={copy.entryPhotoAlt.replace("{title}", entry.title)}
                   width={240}
                   height={180}
                   sizes="(min-width: 640px) 8rem, 100vw"
                   loading={eagerFirstMedia && index === 0 ? "eager" : "lazy"}
-                  unoptimized
                   presentationMode="cover"
                   focalX={entry.mediaFocalX}
                   focalY={entry.mediaFocalY}
