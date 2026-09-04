@@ -28,7 +28,8 @@ No `latest` tag is produced. The droplet does not need a persistent GHCR token:
 an authenticated operator downloads the private Actions artifact and transfers
 only that sealed artifact to the host. `matching-release install` verifies the
 archive checksum, portable archive-config digest, exact source SHA, OCI labels,
-schema class, registry digest, and six-handler capability file before creating
+schema class, registry digest, and the capability file against the handler set
+that release sealed into its own `release.json` before creating
 a digest-qualified local image reference. Docker daemon image IDs are not
 portable across classic and containerd-backed image stores, so the installer
 records the receiving daemon's loaded image ID only after the archive identity
