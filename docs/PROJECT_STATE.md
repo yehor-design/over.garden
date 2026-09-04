@@ -68,6 +68,14 @@ in any client closure and React renders `action="javascript:throw …"`, which
 does nothing until the bundle runs. Three source-level tests now hold that
 shape for the engagement controls, the sign-in screen, and the language control.
 
+Verifying the slice in production on 2026-09-04 found one defect the slice had
+shipped: merely *hovering* a language option rewrote the reader's saved language.
+The proxy reads the preference from the locale prefix a request lands on, and
+Next strips `Next-Router-Prefetch` before middleware runs, so the guard written
+to exclude prefetches never fired. Cross-locale links now carry
+`prefetch={false}`; a source test and a browser test hold it, and ADR-0024 D4
+records the mechanism.
+
 **Previously delivered.** `OVE-374` — workspace resilience. Every page under
 `/garden/**` renders its own shell immediately, streams its data in sections, and
 turns every failure into a designed state with a retry and a reference code. It
@@ -108,8 +116,8 @@ decision in ADR-0022, not an omission.
    like was proved end to end on production. A *successful* sign-in was never
    walked through in a browser — only the refusal path — so the `next`
    round-trip and the ADR-0022 D6 cross-tab reload are asserted by tests rather
-   than observed. `tests/public-hydration.spec.ts` and the other Playwright
-   specs run by hand; CI does not invoke them.
+   than observed. CI runs `tests/public-hydration.spec.ts` against a real
+   Chromium on every push; the other Playwright specs still run by hand.
 4. **No frontend analytics.** Vercel Web Analytics is not enabled for the
    project, and runtime logs are retained for about an hour, so there is no
    denominator for "how often does a reader hit a failure". Server errors are

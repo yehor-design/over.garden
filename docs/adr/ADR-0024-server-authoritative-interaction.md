@@ -109,8 +109,18 @@ document.
 
 On a public page the locale is in the path, so the choice is a link, and the
 proxy writes the preference from the prefix it lands on — now on RSC navigations
-as well as document loads, so a soft switch persists immediately. Prefetches stay
-excluded: hovering a link must not change what language somebody is reading in.
+as well as document loads, so a soft switch persists immediately.
+
+Hovering a link must not change what language somebody is reading in, and the
+proxy alone cannot deliver that. Next strips `Next-Router-Prefetch` and its
+siblings before middleware runs, so a router prefetch of `/ru/…` reaches the
+proxy looking exactly like a reader landing there. The header checks in
+`isPrefetchRequest` catch only browser-initiated speculation (`Purpose`,
+`Sec-Purpose`), which the App Router does not send. The guarantee therefore lives
+on the link: cross-locale options carry `prefetch={false}`, and
+`language-switcher.test.tsx` fails if that is removed. This was found by
+verification after the slice shipped — hovering "Русский" on a `/bg/` page did
+rewrite the saved language — and is recorded here rather than quietly patched.
 
 On a route with no locale prefix the choice is a form over a Server Action that
 writes the cookie. Nothing replaces the document, so text typed into a composer
@@ -146,6 +156,13 @@ a production defect on the like, was caught in review on the sign-in screen, and
 was caught by the author's own pre-flight check on the language control. Only
 the third one was cheap. The source-level tests exist because the shape is
 invisible in a render.
+
+**A guard is not a guarantee until the runtime is asked.** `isPrefetchRequest`
+read exactly the headers the App Router sends, its unit test passed, and it never
+fired in production: Next removes those headers before middleware. Two probes
+that differed only in headers exposed it, and a real browser confirmed the
+consequence. A predicate over request headers is only as true as a measurement of
+what the runtime actually forwards.
 
 **A tombstone must not carry the identity of what is gone.** The first version of
 the language form on the 410 page copied the current path into a hidden

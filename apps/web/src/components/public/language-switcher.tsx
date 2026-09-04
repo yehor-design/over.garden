@@ -117,6 +117,14 @@ export function InterfaceLanguageControl({
                 <Link
                   key={availableLocale}
                   href={target}
+                  // Never prefetch a language the reader has not chosen. The
+                  // proxy reads the preference from the locale prefix a request
+                  // lands on, and Next strips `Next-Router-Prefetch` before
+                  // middleware runs (verified in Chromium against a production
+                  // build, 2026-09-04), so a prefetch is indistinguishable from
+                  // a navigation there. Left prefetchable, merely hovering this
+                  // option rewrote the saved language — see ADR-0024 D4.
+                  prefetch={false}
                   role="menuitemradio"
                   aria-checked={selected}
                   aria-current={selected ? "true" : undefined}

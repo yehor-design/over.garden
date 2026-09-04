@@ -126,3 +126,49 @@ test.describe("public pages hydrate below the shell", () => {
     expect(response.status()).toBeLessThan(400);
   });
 });
+
+test.describe("choosing a language is a choice, not a hover", () => {
+  test("hovering an option requests nothing, clicking it switches and sticks", async ({
+    page,
+    context,
+  }) => {
+    await page.goto("/bg/journals", { waitUntil: "load" });
+
+    await page.locator("summary").first().click();
+    const option = page.locator('a[data-interface-locale="ru"]').first();
+    await option.waitFor({ state: "visible", timeout: 10_000 });
+
+    // The assertion is the request, not the cookie, and deliberately so. The
+    // proxy reads the preference from the locale prefix a request lands on, and
+    // Next strips `Next-Router-Prefetch` before middleware runs — so any
+    // prefetch of `/ru/…` answers `Set-Cookie: …locale=ru`. Whether the browser
+    // has applied it by the time this test looks is a race, and a cookie
+    // assertion passed against the broken build. The absence of the request is
+    // not a race: without `prefetch={false}` the hover fired five of them.
+    const crossLocale: string[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname.startsWith("/ru/")) {
+        crossLocale.push(request.url());
+      }
+    });
+
+    await option.hover();
+    await page.waitForTimeout(2_000);
+    expect(crossLocale).toEqual([]);
+    expect(await page.locator("html").getAttribute("lang")).toBe("bg");
+
+    await option.click();
+    await page.waitForURL("**/ru/journals", { timeout: 10_000 });
+
+    expect(await page.locator("html").getAttribute("lang")).toBe("ru");
+    await expect
+      .poll(
+        async () =>
+          (await context.cookies()).find(
+            (cookie) => cookie.name === "overgarden_interface_locale",
+          )?.value ?? null,
+        { timeout: 10_000 },
+      )
+      .toBe("ru");
+  });
+});
