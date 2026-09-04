@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-03. Divergence noted 2026-09-04.
+Last inventory: 2026-09-05. Divergences noted 2026-09-04 and 2026-09-05.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -112,33 +112,76 @@ migration — which is the rule at the bottom of this file, broken by the person
 who wrote the rule down.** The gap lasted about two hours, during which this
 page said production ran a schema it no longer ran.
 
+## The 2026-09-05 application of `0051` and `0052`
+
+Both were applied to production through `scripts/apply-reviewed-migration.ts`,
+one transaction each, host class `digitalocean_managed`, database `defaultdb` —
+`0051` in 281 ms, `0052` in 178 ms.
+
+`0051` replaces `matching_worker_heartbeats_supported_handlers_check`. It pinned
+`supported_handlers` to an exact array, which made the one state worth seeing
+unrecordable: a worker whose handler set differs from the manifest could not
+write a heartbeat at all, so it read as dead rather than as
+`capability_mismatch` — and that row is the only liveness signal there is. It
+also coupled image and schema in both directions. The replacement checks shape
+(one to sixty-four lowercase snake_case names) and leaves identity to
+`app.runtime`, the web classification, and the release script.
+
+`0052` adds the four payload CHECK constraints that four kinds declared and none
+had. **Its first attempt failed and rolled back**, which is what the design
+intends: `validate constraint` refused
+`job_queue_media_derivative_revoke_payload_check` because production holds five
+`media_derivative_revoke` rows written on 2026-08-23 with no `mediaAssetId` —
+the producer did not send one yet. All five are `done`; the five written on
+2026-09-03 satisfy the contract exactly. The applied version therefore leaves
+that one constraint `NOT VALID`: every new and updated row is checked, and five
+terminal rows stay as the record of what was written, rather than being deleted
+or the contract weakened to match a shape nothing emits any more.
+
+Read back immediately after, read-only, against `digitalocean_managed` /
+`defaultdb`:
+
+```
+job_queue payload checks: all twelve present
+  validated: catalog_alias, catalog_fuzzy_duplicate, catalog_match,
+             catalog_typeahead, erasure_media_object_delete,
+             stable_registry_edition_build
+  not valid: journal_entry_index, journal_entry_unindex,
+             media_derivative_revoke, media_staging_finalize,
+             stable_registry_extension_pack_build,
+             stable_registry_foundation_build
+matching_worker_heartbeats_supported_handlers_check:
+  names no handler, checks cardinality, validated
+matching_worker_heartbeats: handler_count 6, fresh
+```
+
+Two things that read-back settles. The deployed worker really does report six
+handlers, so production has no handler for the three Stable Registry build kinds
+and one enqueued there terminalises as `unsupported_kind` — the release was red
+for eight days and the host installs only sealed artifacts. And five of the
+pre-existing payload constraints were already `NOT VALID` before this change;
+that is inherited state, not something `0052` introduced.
+
+Also observed, and outside this change: the `media_lifecycle` outbox has
+unfinished work — five `media_derivative_revoke` rows pending for about a day
+and a half, and four `media_staging_finalize` rows pending for about three and a
+half days. Both kinds are web-owned. Nothing here drains them.
+
 ## Landed on main, not applied to production
 
 | Migration | Why it is not applied                                                                                                                                                                                                                                                                                                                    |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0050`    | The matching heartbeat handler-set catch-up. It replaces `matching_worker_heartbeats_supported_handlers_check` — which pins `supported_handlers` to the six kinds that existed in `0001` — with the nine the queue manifest declares today. Production has not felt it because the deployed worker image predates the three Stable Registry kinds. Constraint replacement only: no table, column, index, or row is touched. |
 | `0048`    | The capture claim-ordering index. It only matters where an observed capture runs, and OVE-254 refuses production capture, so production has the table and no rows to claim. Additive and reversible — one partial index, no column, constraint, or row — so it can be applied whenever the owner wants production converged with `sql/`. |
 
 Applied on the loopback database on 2026-09-03 through
 `scripts/apply-reviewed-migration.ts` and verified by `pg_indexes`. Whoever
 applies it to production updates the inventory above in the same pull request.
 
-`0050` and the matching image move together, in both directions, because the
-constraint states an exact array rather than a shape. Executed against a
-scratch Postgres 18.4 database on 2026-09-04, on a table created from the
-production-shaped `0002` excerpt:
-
-- before `0050`, the heartbeat a current worker writes is refused with `23514`;
-- after `0050`, the same write succeeds;
-- after `0050`, a beat carrying the old six-handler set is refused with `23514`;
-- `0050` is re-runnable, and the rollback refuses while a nine-handler row is
-  present, aborting with nothing changed.
-
-So: apply `0050` **before** deploying a matching image built after 2026-08-27,
-and roll the image back **before** applying the rollback. Getting the order
-wrong freezes the heartbeat rather than losing anything — but since OVE-357 that
-row is the only liveness signal there is, and a healthy worker then reads as
-stale.
+`0050` was superseded by `0051` before either reached production; applying it
+is unnecessary. `pnpm queue:contract:prove-database` executes both `0051` and
+`0052` against a disposable database on every CI run — nineteen accept and
+refuse cases, including the two defects execution found in the first draft of
+`0051`.
 
 ## The rule this produced
 

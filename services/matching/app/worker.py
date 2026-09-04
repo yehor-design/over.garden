@@ -21,39 +21,34 @@ from uuid import UUID, uuid4
 import psycopg
 from psycopg.rows import dict_row
 
-from app.catalog_aliases import (
-    CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
-    refresh_catalog_alias_suggestions,
-)
-from app.catalog_matching import (
-    CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
-    refresh_catalog_match_suggestions,
-)
-from app.catalog_fuzzy_duplicates import (
-    CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND,
-    refresh_catalog_fuzzy_duplicate_suggestions,
-)
+from app.catalog_aliases import refresh_catalog_alias_suggestions
+from app.catalog_matching import refresh_catalog_match_suggestions
+from app.catalog_fuzzy_duplicates import refresh_catalog_fuzzy_duplicate_suggestions
 from app.job_handlers import SUPPORTED_JOB_KINDS
-from app.public_projection import drain_public_projection_intents
-from app.job_queue_manifest import max_attempts_for_kind, payload_contract_for_kind
-from app.search import (
+# Every kind literal comes from the generated contract rather than from the
+# module that happens to handle it, so dispatch and the manifest cannot disagree
+# about what a kind is called.
+from app.job_queue_contract import (
+    CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
+    CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND,
+    CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
     CATALOG_TYPEAHEAD_REINDEX_KIND,
     JOURNAL_ENTRY_INDEX_KIND,
     JOURNAL_ENTRY_UNINDEX_KIND,
+    STABLE_REGISTRY_EDITION_BUILD_KIND,
+    STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND,
+    STABLE_REGISTRY_FOUNDATION_BUILD_KIND,
+)
+from app.public_projection import drain_public_projection_intents
+from app.job_queue_manifest import max_attempts_for_kind, payload_contract_for_kind
+from app.search import (
     index_journal_entry,
     reindex_catalog_typeahead,
     unindex_journal_entry_for_owner,
 )
-from app.stable_registry_edition import (
-    STABLE_REGISTRY_EDITION_BUILD_KIND,
-    build_edition_release,
-)
-from app.stable_registry_extension_pack import (
-    STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND,
-    review_extension_pack,
-)
+from app.stable_registry_edition import build_edition_release
+from app.stable_registry_extension_pack import review_extension_pack
 from app.stable_registry_foundation import (
-    STABLE_REGISTRY_FOUNDATION_BUILD_KIND,
     build_foundation_release,
     mark_foundation_release_failed,
 )

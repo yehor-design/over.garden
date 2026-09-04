@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import psycopg
 from psycopg.rows import dict_row
 
-from app.catalog_aliases import CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND
+from app.job_queue_contract import CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND
 from app.worker import _handle
 
 

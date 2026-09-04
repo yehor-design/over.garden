@@ -48,6 +48,14 @@ export interface JobQueueManifestEntry {
   /** Cover/document/publication changes enqueue these matching kinds only. */
   coversStructuredJournalCover: boolean;
   payloadContract: JobQueuePayloadContract;
+  /**
+   * The Postgres CHECK constraint that enforces `payloadContract` in the
+   * database. Naming it here is what makes the "enforced at every layer" claim
+   * checkable: `queue:contract:check` refuses a kind whose constraint no
+   * migration creates, and the worker's preflight refuses a database that is
+   * missing one.
+   */
+  payloadConstraint: string;
   notes: string;
 }
 
@@ -68,6 +76,8 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: ["releaseId"],
     },
+    payloadConstraint:
+      "job_queue_stable_registry_foundation_build_payload_check",
     notes:
       "Foundation build receives only one opaque release UUID; worker reads bounded, rights-cleared aggregate source facts from Postgres.",
   },
@@ -83,6 +93,8 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: ["packId"],
     },
+    payloadConstraint:
+      "job_queue_stable_registry_extension_pack_build_payload_check",
     notes:
       "Extension pack review receives only one opaque pack UUID; the worker reads aggregate row classes and advances a fully resolved pack to review_ready off-request.",
   },
@@ -98,6 +110,7 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: ["releaseId"],
     },
+    payloadConstraint: "job_queue_stable_registry_edition_build_payload_check",
     notes:
       "Edition diff receives only one opaque release UUID; the worker compares it with the release it succeeds and writes grouped aggregate counts, never an object id, owner id, or name.",
   },
@@ -113,6 +126,7 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: ["catalogItemId"],
     },
+    payloadConstraint: "job_queue_catalog_alias_payload_check",
     notes: "Allowlisted catalogItemId only.",
   },
   {
@@ -127,6 +141,7 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: [],
     },
+    payloadConstraint: "job_queue_catalog_fuzzy_duplicate_payload_check",
     notes: "Kind-only payload.",
   },
   {
@@ -141,6 +156,7 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: ["sourceCatalogItemId"],
     },
+    payloadConstraint: "job_queue_catalog_match_payload_check",
     notes: "Allowlisted sourceCatalogItemId only.",
   },
   {
@@ -155,6 +171,7 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: [],
     },
+    payloadConstraint: "job_queue_catalog_typeahead_payload_check",
     notes: "Kind-only typeahead rebuild.",
   },
   {
@@ -169,6 +186,7 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: ["journalEntryId", "userId"],
     },
+    payloadConstraint: "job_queue_journal_entry_index_payload_check",
     notes:
       "Structured journal create/edit, cover selection, reorder, and publication enqueue this kind with journalEntryId+userId only. Handler reads current DB cover/document; replay cannot resurrect an obsolete cover.",
   },
@@ -184,6 +202,7 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: ["journalEntryId", "userId"],
     },
+    payloadConstraint: "job_queue_journal_entry_unindex_payload_check",
     notes:
       "Archive/erasure/unpublish enqueue this kind. Cover-only and inline media revocation converge through current DB state, not payload blobs.",
   },
@@ -199,6 +218,7 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: [],
     },
+    payloadConstraint: "job_queue_erasure_media_object_delete_payload_check",
     notes:
       "DB-first erasure outbox for final public object keys after cover refs are cleared. Consumed in-process by erasure-execution via the shared lifecycle revoke helper.",
   },
@@ -219,6 +239,7 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: ["publishId", "stagingSessionId"],
     },
+    payloadConstraint: "job_queue_media_staging_finalize_payload_check",
     notes:
       "Atomic journal create queues only publish/session identifiers plus the receipt-set digest; the consumer derives owner scope from the committed entry and idempotently finalizes OVE-346 staging.",
   },
@@ -234,6 +255,7 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: ["journalEntryId"],
       uuidKeys: ["mediaAssetId", "journalEntryId"],
     },
+    payloadConstraint: "job_queue_media_derivative_revoke_payload_check",
     notes:
       "Archive/unpublish revoke for processed public derivatives. Completes only after canonical custom-domain URL is non-2xx.",
   },
@@ -246,10 +268,46 @@ export function jobQueueManifestKey(entry: {
   return `${entry.queueName}:${entry.kind}`;
 }
 
+export const MATCHING_QUEUE_NAME = "matching" as const;
+
+/**
+ * The kinds the Python worker claims — one definition, not two.
+ *
+ * This filtered on `consumer` while the Python mirror filtered on `queueName`.
+ * The two agreed by coincidence, and nothing said they had to: a matching-queue
+ * kind consumed by the web app would have split them silently, and the release
+ * gate compares one against the other. `assertMatchingQueueConsistency` makes
+ * the coincidence an invariant instead.
+ */
 export function matchingSupportedKinds(): string[] {
-  return JOB_QUEUE_MANIFEST.filter(
-    (entry) => entry.consumer === "matching-python-worker",
-  ).map((entry) => entry.kind);
+  return JOB_QUEUE_MANIFEST.filter(isMatchingWorkerEntry).map(
+    (entry) => entry.kind,
+  );
+}
+
+function isMatchingWorkerEntry(entry: JobQueueManifestEntry): boolean {
+  return entry.consumer === "matching-python-worker";
+}
+
+/**
+ * Fails when "the matching queue" and "what the matching worker consumes" stop
+ * describing the same set. Called by the contract generator, so a manifest that
+ * breaks it cannot be built into the Python mirror at all.
+ */
+export function assertMatchingQueueConsistency(): void {
+  const byConsumer = JOB_QUEUE_MANIFEST.filter(isMatchingWorkerEntry)
+    .map((entry) => entry.kind)
+    .sort();
+  const byQueue = JOB_QUEUE_MANIFEST.filter(
+    (entry) => entry.queueName === MATCHING_QUEUE_NAME,
+  )
+    .map((entry) => entry.kind)
+    .sort();
+  if (byConsumer.join(",") !== byQueue.join(",")) {
+    throw new Error(
+      `Job queue manifest disagrees with itself: the matching queue holds [${byQueue.join(", ")}] but the matching worker consumes [${byConsumer.join(", ")}].`,
+    );
+  }
 }
 
 export function maxAttemptsForKind(queueName: string, kind: string): number {

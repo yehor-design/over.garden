@@ -1,10 +1,13 @@
 -- OVE-190 production-only additive migration.
 --
--- The handler set here is the nine kinds the queue manifest declares. It said
--- six until 2026-09-04, three Stable Registry kinds after the manifest grew,
--- and this file only ever adds a missing constraint — so on a database that
--- already has the six-handler check it changes nothing. Correcting an existing
--- database is apps/web/sql/0050_matching_handler_set_catch_up.sql.
+-- `supported_handlers` is checked for shape, not for identity. It pinned an
+-- exact array until 2026-09-04 — six kinds, then nine — which meant the column
+-- refused to record the one state anyone needed to see: a worker whose handler
+-- set differs from the manifest. That worker then had no heartbeat at all and
+-- read as dead. Identity is compared in `app.runtime`, which can report
+-- `capability_mismatch`. See apps/web/sql/0051_matching_handler_set_shape.sql;
+-- this file only ever adds a missing constraint, so on an existing database it
+-- changes nothing and 0051 is what corrects one.
 --
 -- This is intentionally the minimal matching_worker_heartbeats excerpt of the
 -- canonical apps/web/sql/0001_walking_skeleton.sql schema. Never replay the
@@ -34,17 +37,9 @@ create table if not exists matching_worker_heartbeats (
     queue_name = 'matching'
   ),
   constraint matching_worker_heartbeats_supported_handlers_check check (
-    supported_handlers = array[
-      'catalog_alias_suggestions_refresh',
-      'catalog_fuzzy_duplicate_qa_refresh',
-      'catalog_match_suggestions_refresh',
-      'catalog_typeahead_reindex',
-      'journal_entry_index',
-      'journal_entry_unindex',
-      'stable_registry_edition_build',
-      'stable_registry_extension_pack_build',
-      'stable_registry_foundation_build'
-    ]::text[]
+    supported_handlers is not null
+    and cardinality(supported_handlers) between 1 and 64
+    and supported_handlers::text ~ '^\{[a-z][a-z0-9_]*(,[a-z][a-z0-9_]*)*\}$'
   )
 );
 
@@ -100,17 +95,9 @@ begin
     alter table matching_worker_heartbeats
       add constraint matching_worker_heartbeats_supported_handlers_check
       check (
-        supported_handlers = array[
-          'catalog_alias_suggestions_refresh',
-          'catalog_fuzzy_duplicate_qa_refresh',
-          'catalog_match_suggestions_refresh',
-          'catalog_typeahead_reindex',
-          'journal_entry_index',
-          'journal_entry_unindex',
-          'stable_registry_edition_build',
-          'stable_registry_extension_pack_build',
-          'stable_registry_foundation_build'
-        ]::text[]
+        supported_handlers is not null
+        and cardinality(supported_handlers) between 1 and 64
+        and supported_handlers::text ~ '^\{[a-z][a-z0-9_]*(,[a-z][a-z0-9_]*)*\}$'
       );
   end if;
 end $$;

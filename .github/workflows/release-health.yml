@@ -1,0 +1,67 @@
+name: Release health
+
+# The matching image release failed on every push to `main` for eight days —
+# seventy-six runs — and nobody saw it. The workflow runs after merge, so it can
+# never be a required check on a pull request, and a red run that only exists in
+# the Actions tab is a red run nobody reads.
+#
+# This is the signal instead: it asks once a day whether the newest matching
+# image release on `main` succeeded, and fails when it did not. A failing
+# scheduled workflow is visible in the Actions list and reaches the maintainer
+# through GitHub's own notifications, without ever blocking a pull request for a
+# reason that has nothing to do with it.
+
+on:
+  schedule:
+    # 07:10 UTC, which is morning in both countries this product serves.
+    - cron: "10 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-health
+  cancel-in-progress: true
+
+jobs:
+  matching-image:
+    name: Newest matching image release on main
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Read the newest completed run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          newest="$(gh api \
+            "repos/${REPOSITORY}/actions/workflows/matching-image.yml/runs?branch=main&status=completed&per_page=1" \
+            --jq '.workflow_runs[0] | {conclusion, html_url, head_sha, created_at}')"
+
+          if [[ -z "$newest" || "$newest" == "null" ]]; then
+            echo "No completed matching image release has ever run on main." >&2
+            exit 1
+          fi
+
+          conclusion="$(jq -r '.conclusion' <<<"$newest")"
+          printf 'newest matching image release on main:\n%s\n' "$(jq . <<<"$newest")"
+
+          if [[ "$conclusion" != "success" ]]; then
+            {
+              echo "The newest matching image release on main did not succeed."
+              echo "conclusion: $conclusion"
+              echo "run:        $(jq -r '.html_url' <<<"$newest")"
+              echo "commit:     $(jq -r '.head_sha' <<<"$newest")"
+              echo
+              echo "Production can only install a sealed release artifact, so"
+              echo "while this is red no matching image reaches the worker and"
+              echo "no new handler runs in production."
+            } >&2
+            exit 1
+          fi
+
+          echo "The newest matching image release on main succeeded."

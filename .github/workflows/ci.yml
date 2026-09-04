@@ -138,6 +138,12 @@ jobs:
       - name: Check generated DB types
         run: pnpm db:types:check
 
+      - name: Check the generated job queue contract
+        run: pnpm queue:contract:check
+
+      - name: Prove the job queue contract against a database
+        run: pnpm queue:contract:prove-database
+
       - name: Lint
         run: pnpm lint
 

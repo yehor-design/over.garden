@@ -50,6 +50,31 @@ export function assertLoopbackLocalRuntimeEnvironment(
   };
 }
 
+/**
+ * The database half of the same guard, for a command that touches Postgres and
+ * nothing else.
+ *
+ * `assertLoopbackLocalRuntimeEnvironment` also requires the app, auth, object
+ * store, media and search origins, which a database-only proof neither reads
+ * nor can be endangered by — and requiring them made the job queue contract
+ * proof fail in CI on a missing `PUBLIC_SITE_URL`. The property that actually
+ * protects production is this one: the DSN must be loopback.
+ */
+export function assertLoopbackDatabaseEnvironment(env: EnvLike): {
+  databaseHostClass: "loopback";
+} {
+  if (env.VERCEL_ENV?.trim().toLowerCase() === "production") {
+    throw new Error(
+      "Local runtime commands are forbidden in Vercel Production.",
+    );
+  }
+  assertLoopbackUrl(env.DATABASE_URL, "DATABASE_URL", [
+    "postgres:",
+    "postgresql:",
+  ]);
+  return { databaseHostClass: "loopback" };
+}
+
 function assertLoopbackUrl(
   rawValue: string | undefined,
   name: string,

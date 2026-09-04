@@ -13,7 +13,6 @@ from rapidfuzz import fuzz
 
 from app.catalog_matching import normalize_catalog_name
 
-CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND = "catalog_fuzzy_duplicate_qa_refresh"
 FUZZY_DUPLICATE_MATCHER_VERSION = "ove162-v1"
 FUZZY_SCORE_HIGH = 95
 FUZZY_SCORE_SAME_LOCALE = 90

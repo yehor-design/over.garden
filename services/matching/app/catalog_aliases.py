@@ -13,7 +13,6 @@ from rapidfuzz import fuzz
 
 from app.catalog_matching import normalize_catalog_name, script_hint
 
-CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND = "catalog_alias_suggestions_refresh"
 CATALOG_ALIAS_GENERATOR_VERSION = "ove160-v1"
 CATALOG_ALIAS_SOURCE_SLUG = "overgarden-alias-generator"
 MAX_SOURCE_NAMES = 100
