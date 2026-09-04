@@ -125,6 +125,7 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   the clauses it lists in ADR-0017, ADR-0018, ADR-0019, and the earlier
   `AGENTS.md`.
 - ADR-0023 — Workspace failures are rendered values, never thrown exceptions
+- ADR-0024 — Interaction, language, and sign-in are platform primitives, not hand-written client protocols
   (2026-09-03). Binding for every page under `/garden/**`: shell first, data in
   streamed sections, one bounded failure vocabulary, per-surface skeletons, and
   `onRequestError` instrumentation. Records the reproduced Cache Components

@@ -37,7 +37,9 @@ Verified on 2026-09-03 against `https://over.garden` and the live providers.
 | Admin         | Release Center, extension packs, and editions render for the sealed owner in production; `/health` is owner-only                                                                                            |
 | Workspace     | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023)                                                 |
 | Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw |
-| Schema        | Migrations `0001`–`0047` applied, minus the two deliberately skipped. See `docs/PRODUCTION_SCHEMA_STATE.md`                                                                                                 |
+| Schema        | Migrations `0001`–`0047` and `0049` applied, minus the two deliberately skipped. See `docs/PRODUCTION_SCHEMA_STATE.md`                                                                                      |
+| Interaction   | Like, bookmark, follow and comment are Server Actions on a form with a real endpoint, so they work before hydration and with JavaScript off. A like is a permanent row owned by an account or by one signed visitor cookie, with no expiry and no ceiling |
+| Sign-in       | One screen: `/auth/sign-in` and `/auth/sign-up` over one component and Server Actions. Every other page shows its own empty state and one link to it                                                        |
 | Matching      | The worker runs on the droplet and writes its heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03                                                                |
 | Hosting       | Decided 2026-09-03: the DigitalOcean managed database and the `fra1` droplet stay                                                                                                                           |
 
@@ -47,7 +49,26 @@ The seven owner requirements have one committed production receipt:
 
 ## Where the project is heading
 
-**Just delivered.** `OVE-374` — workspace resilience. Every page under
+**Just delivered.** SDD Slice 22 (`OVE-376`–`OVE-379`) — the interaction,
+language and sign-in surfaces stop layering hand-written client protocols over
+platform primitives. Clicking Like answered `500` with an empty body on 7 of the
+8 public journal entries because the capability token embedded the slug and
+overflowed its own length bound on any Cyrillic text; it is now a permanent
+owned row behind a Server Action. Fourteen pages embedded the sign-in form, two
+of them offering Google and four remembering where to return; there is one
+screen now. Choosing a language ran a two-phase distributed commit ending in a
+full document replacement; it is a link. Net for the slice: roughly 7 000 lines
+removed against 2 500 added.
+
+The rule the slice leaves behind, learned the hard way and then corrected in
+public: **a control on a public page may not depend on hydration to do its job.**
+A `<form action={…}>` gets a real endpoint only when the action is a Server
+Action reference or the `formAction` `useActionState` derives from one; wrap it
+in any client closure and React renders `action="javascript:throw …"`, which
+does nothing until the bundle runs. Three source-level tests now hold that
+shape for the engagement controls, the sign-in screen, and the language control.
+
+**Previously delivered.** `OVE-374` — workspace resilience. Every page under
 `/garden/**` renders its own shell immediately, streams its data in sections, and
 turns every failure into a designed state with a retry and a reference code. It
 existed because a verified framework defect leaves a skeleton on screen forever
@@ -82,12 +103,19 @@ decision in ADR-0022, not an omission.
    the session store is unreachable, a workspace page says so, but the site
    header still renders its signed-out state ("sign in"). The page is honest;
    the chrome is not yet, and it sits outside `/garden/**`.
-3. **No frontend analytics.** Vercel Web Analytics is not enabled for the
+3. **The slice's browser proofs are partial.** Like, language and sign-in were
+   each proved with JavaScript switched off against a production build, and the
+   like was proved end to end on production. A *successful* sign-in was never
+   walked through in a browser — only the refusal path — so the `next`
+   round-trip and the ADR-0022 D6 cross-tab reload are asserted by tests rather
+   than observed. `tests/public-hydration.spec.ts` and the other Playwright
+   specs run by hand; CI does not invoke them.
+4. **No frontend analytics.** Vercel Web Analytics is not enabled for the
    project, and runtime logs are retained for about an hour, so there is no
    denominator for "how often does a reader hit a failure". Server errors are
    aggregated for seven days, and a degraded section now writes its own line
    with a bounded class and the digest the reader can see on screen.
-4. **The catalog is empty in production.** The Stable Registry schema landed on
+5. **The catalog is empty in production.** The Stable Registry schema landed on
    2026-09-03 and the Release Center renders, but no Foundation release has been
    built from real source data, so `/garden/catalog/registry` shows zero
    completed captures. The source evidence now exists: one completed observed
@@ -96,9 +124,9 @@ decision in ADR-0022, not an omission.
    on a loopback database, and it is the first of five admission gates — a
    gardener still sees nothing until a Foundation release is built, approved,
    and activated.
-5. **One owner only.** There is no role-grant interface; the single sealed owner
+6. **One owner only.** There is no role-grant interface; the single sealed owner
    is bootstrapped by CLI (ADR-0022, D5).
-6. **`matching_worker_heartbeats` has no build timestamp.** The retired API read
+7. **`matching_worker_heartbeats` has no build timestamp.** The retired API read
    it from the image environment and no column holds it, so the runtime proof
    reports the image digest instead of inventing a value.
 
@@ -110,6 +138,7 @@ pnpm prove:owner-mvp-reset                 # the seven requirements against prod
 pnpm prove:workspace-resilience -- --base-url <running next start> --cookie-file <cookie>
 pnpm smoke:matching-queue-health -- --environment production --confirm-environment production
 pnpm smoke:matching-runtime-capabilities   # worker liveness from the heartbeat row
+pnpm test:public-hydration                 # real Chromium, production build: public pages hydrate
 pnpm exec tsx scripts/apply-reviewed-migration.ts --mode inventory --env-file <pulled-env>
 ```
 

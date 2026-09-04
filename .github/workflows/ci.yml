@@ -153,6 +153,23 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # A public control that needs hydration to act is invisible to every test
+      # above: unit renders cannot tell a real form endpoint from React's
+      # placeholder, and `next dev` does not exercise the postpone/resume path.
+      # This runs a real Chromium against the build produced one step earlier.
+      - name: Install Chromium for the browser proof
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Public hydration proof
+        run: |
+          pnpm next start -p 3179 &
+          for _ in $(seq 1 60); do
+            curl -sf -o /dev/null http://127.0.0.1:3179/journals && break
+            sleep 1
+          done
+          PLAYWRIGHT_BASE_URL=http://127.0.0.1:3179 \
+            pnpm exec playwright test tests/public-hydration.spec.ts
+
   matching:
     name: Python matching tier
     runs-on: ubuntu-latest

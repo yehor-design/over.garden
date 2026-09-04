@@ -5,7 +5,8 @@ guide for AI agents and humans. Read `docs/PROJECT_STATE.md` beside it: it says
 what is true in production right now, what is being worked on, and what is
 knowingly unfinished. Current decisions live in
 `docs/adr/ADR-0022-owner-mvp-reset.md` and
-`docs/adr/ADR-0023-workspace-resilience.md`; older ADRs and dated documents are
+`docs/adr/ADR-0023-workspace-resilience.md` and
+`docs/adr/ADR-0024-server-authoritative-interaction.md`; older ADRs and dated documents are
 history and never override them.
 
 ## Product
@@ -98,7 +99,9 @@ Every Linear task uses this shape and nothing more:
   `docs/DELIVERY_LOG_2026-09.md` — what shipped in the reset and why.
 - `docs/adr/ADR-0022-owner-mvp-reset.md` — current decisions and what they
   supersede. `docs/adr/ADR-0023-workspace-resilience.md` — how a workspace page
-  handles failure. `docs/TECH_STACK_DECISIONS.md` — stack detail and ADR index.
+  handles failure. `docs/adr/ADR-0024-server-authoritative-interaction.md` — why
+  a public control may not depend on hydration, and what a like, a language
+  choice, and a sign-in are made of. `docs/TECH_STACK_DECISIONS.md` — stack detail and ADR index.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — provider IDs, buckets, domains, env.
 - `docs/PRODUCTION_SCHEMA_STATE.md` — which migrations the production database
   actually runs, and how to check before assuming.
