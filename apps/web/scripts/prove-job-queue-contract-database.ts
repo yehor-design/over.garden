@@ -21,7 +21,7 @@ import process from "node:process";
 import { config as loadEnv } from "dotenv";
 import { Pool } from "pg";
 
-import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
+import { assertLoopbackDatabaseEnvironment } from "../src/lib/local-runtime-safety";
 import { loadVersionedApplicationSql } from "./application-sql";
 
 /** Migrations this proof owns: the handler set, its shape, the payload checks. */
@@ -259,7 +259,7 @@ const MINIMAL_SCHEMA = `
 
 export async function runJobQueueContractDatabaseProof() {
   loadEnv({ path: ".env.local", quiet: true });
-  assertLoopbackLocalRuntimeEnvironment(process.env);
+  assertLoopbackDatabaseEnvironment(process.env);
 
   const disposable = `overgarden_queue_contract_${randomUUID().replaceAll("-", "")}`;
   const databaseUrl = process.env.DATABASE_URL;
