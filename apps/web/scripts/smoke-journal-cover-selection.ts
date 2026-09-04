@@ -9,7 +9,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  OWNER_COMPOSER_COVER_UPLOAD_PARTICIPANT_ID,
   OVE_207_BROWSER_SCENARIO_IDS,
   OVE_207_PRIMARY_BROWSER_SCENARIO_ID,
   JOURNAL_MEDIA_USAGE_COVER_ONLY,
@@ -59,11 +58,6 @@ function main() {
   assert(
     OVE_207_BROWSER_SCENARIO_IDS.length === 8,
     "OVE-207 mandatory browser scenarios must stay complete",
-  );
-  assert(
-    OWNER_COMPOSER_COVER_UPLOAD_PARTICIPANT_ID ===
-      "owner-composer-cover-upload",
-    "Locale in-flight participant id mismatch",
   );
   assert(
     MAX_JOURNAL_INLINE_IMAGES === 10,

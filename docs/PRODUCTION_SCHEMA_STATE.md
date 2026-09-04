@@ -72,6 +72,46 @@ What the gap had been costing:
 - `0047` missing meant photos were promoted with their variants but the variants
   were never recorded, so no `srcset` and no placeholder reached a reader.
 
+## The 2026-09-04 application of `0049`
+
+`0049_ove377_owned_engagement_likes.sql` was applied to production on
+2026-09-04 through `scripts/apply-reviewed-migration.ts`, one transaction, host
+class `digitalocean_managed`, database `defaultdb`, 307 ms. It was executed
+first inside a transaction that was rolled back, to see the resulting shape and
+to confirm the owner check refuses both a row with two owners and a row with
+none (`23514` both ways), before being applied for real.
+
+It is the only migration in this repository that deletes rows, and it does so by
+the owner's explicit sign-off under `AGENTS.md` rule 10: `anonymous_device_hash`
+is derived from a token scoped to one target and held in someone's browser, so
+it names neither a person nor a device this schema can reach and no conversion
+into `user_id` or `visitor_id` exists. Read before applying: 13 rows, of which 10
+were still counting, and every one of them was a verification POST made earlier
+the same day. The rollback file restores the columns but cannot restore rows,
+and says so.
+
+Verified against production immediately after, and re-verified on 2026-09-04
+when this page was written:
+
+```
+engagement_likes columns: id, target_kind, target_ref, created_at, updated_at, user_id, visitor_id
+engagement_likes indexes: engagement_likes_pkey, engagement_likes_target_idx,
+  engagement_likes_user_recent_idx, engagement_likes_user_target_uidx,
+  engagement_likes_visitor_target_uidx
+engagement_like_target_budgets: absent
+```
+
+The deploy order was migration first, then code. Both orders leave a window in
+which one half does not match the other; migration-first was chosen because
+OVE-376 had already shipped the settlement boundary, so the older code degraded
+into `interaction-unavailable` for the two minutes the build took rather than
+into anything worse.
+
+**This page was written after the fact, not in the pull request that applied the
+migration — which is the rule at the bottom of this file, broken by the person
+who wrote the rule down.** The gap lasted about two hours, during which this
+page said production ran a schema it no longer ran.
+
 ## Landed on main, not applied to production
 
 | Migration | Why it is not applied                                                                                                                                                                                                                                                                                                                    |

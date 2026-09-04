@@ -76,13 +76,6 @@ export interface InterfaceCopy {
     retry: string;
     languageControlLabel: string;
     languageControlTrigger: string;
-    languageDiscardTitle: string;
-    languageDiscardConfirmation: string;
-    languageDiscardAction: string;
-    languageDiscardCancel: string;
-    languageFlushFailure: string;
-    languageMutationPending: string;
-    languageSwitchingPending: string;
   };
   workspace: {
     title: string;
@@ -151,16 +144,6 @@ const INTERFACE_COPY = {
       retry: "Спробувати ще раз",
       languageControlLabel: "Вибір мови інтерфейсу",
       languageControlTrigger: "Змінити мову",
-      languageDiscardTitle: "Відкинути незбережені зміни?",
-      languageDiscardConfirmation:
-        "Незбережені зміни буде втрачено. Продовжити зміну мови?",
-      languageDiscardAction: "Відкинути й змінити мову",
-      languageDiscardCancel: "Скасувати",
-      languageFlushFailure:
-        "Не вдалося зберегти зміни перед зміною мови. Спробуйте ще раз.",
-      languageMutationPending:
-        "Дочекайтеся завершення поточної дії, перш ніж змінювати мову.",
-      languageSwitchingPending: "Змінюємо мову…",
     },
     workspace: {
       title: "Простір саду",
@@ -229,16 +212,6 @@ const INTERFACE_COPY = {
       retry: "Опитайте отново",
       languageControlLabel: "Избор на език на интерфейса",
       languageControlTrigger: "Смяна на езика",
-      languageDiscardTitle: "Отхвърляне на незапазените промени?",
-      languageDiscardConfirmation:
-        "Незапазените промени ще бъдат загубени. Да продължи ли смяната на езика?",
-      languageDiscardAction: "Отхвърли и смени езика",
-      languageDiscardCancel: "Отказ",
-      languageFlushFailure:
-        "Промените не можаха да се запазят преди смяната на езика. Опитайте отново.",
-      languageMutationPending:
-        "Изчакайте текущото действие да завърши, преди да смените езика.",
-      languageSwitchingPending: "Езикът се сменя…",
     },
     workspace: {
       title: "Градинско пространство",
@@ -307,16 +280,6 @@ const INTERFACE_COPY = {
       retry: "Повторить",
       languageControlLabel: "Выбор языка интерфейса",
       languageControlTrigger: "Сменить язык",
-      languageDiscardTitle: "Отбросить несохранённые изменения?",
-      languageDiscardConfirmation:
-        "Несохранённые изменения будут потеряны. Продолжить смену языка?",
-      languageDiscardAction: "Отбросить и сменить язык",
-      languageDiscardCancel: "Отмена",
-      languageFlushFailure:
-        "Не удалось сохранить изменения перед сменой языка. Попробуйте ещё раз.",
-      languageMutationPending:
-        "Дождитесь завершения текущего действия, прежде чем менять язык.",
-      languageSwitchingPending: "Меняем язык…",
     },
     workspace: {
       title: "Пространство сада",

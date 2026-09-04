@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import {
   AUTH_HELP_PATH,
   passwordResetSuccessPath,
@@ -31,13 +30,6 @@ export function ResetPasswordForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState<string>("");
   const [isPending, setIsPending] = useState(false);
-  const [localeDirtyRevision, setLocaleDirtyRevision] = useState(0);
-  useInterfaceLocaleChangeFormState({
-    id: "password-reset-mutation",
-    dirty: password.length > 0 || confirmPassword.length > 0,
-    pending: isPending,
-    revision: localeDirtyRevision,
-  });
 
   if (tokenError || !token) {
     return (
@@ -100,7 +92,6 @@ export function ResetPasswordForm({
           value={password}
           onChange={(event) => {
             setPassword(event.target.value);
-            setLocaleDirtyRevision((revision) => revision + 1);
           }}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
           minLength={8}
@@ -118,7 +109,6 @@ export function ResetPasswordForm({
           value={confirmPassword}
           onChange={(event) => {
             setConfirmPassword(event.target.value);
-            setLocaleDirtyRevision((revision) => revision + 1);
           }}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
           minLength={8}

@@ -1,7 +1,6 @@
 import { connection } from "next/server";
 import { Suspense } from "react";
 
-import { InterfaceLocaleChangeBoundary } from "@/components/site-shell/interface-locale-change-boundary";
 import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
 import { SiteShell } from "@/components/site-shell/site-shell";
 import { OWNER_USER_ID_DOCUMENT_ATTRIBUTE } from "@/lib/auth/owner-scope-contract";
@@ -48,11 +47,9 @@ export function RootDocument({
     >
       <body className="flex min-h-full flex-col">
         <Suspense fallback={<RootLoadingSkeleton />}>
-          <InterfaceLocaleChangeBoundary>
-            <RootDocumentShell localization={localization}>
-              {children}
-            </RootDocumentShell>
-          </InterfaceLocaleChangeBoundary>
+          <RootDocumentShell localization={localization}>
+            {children}
+          </RootDocumentShell>
         </Suspense>
       </body>
     </html>

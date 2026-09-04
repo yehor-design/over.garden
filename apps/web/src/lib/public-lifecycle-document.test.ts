@@ -67,11 +67,9 @@ describe("raw public lifecycle document", () => {
       '<a href="/bg/journals" rel="noreferrer" referrerpolicy="no-referrer">',
     );
     expect(html).not.toContain("private");
-    expect(html).toContain("new URL(document.URL).hash");
-    expect(html).toContain("document.getElementById(v)");
-    expect(html).toContain("interfaceLocaleFragmentSafe==='true'");
-    expect(html).not.toContain("._~:%-");
-    expect(html).toContain("e.key==='Escape'");
+    // A tombstone carries no client bundle, so it carries no script either: the
+    // language options are anchors, which is all a localized route needs.
+    expect(html).not.toContain("<script");
     expect(html).toContain(
       "[data-interface-language-status]:empty { position: absolute",
     );
@@ -106,48 +104,15 @@ describe("raw public lifecycle document", () => {
     ).toHaveLength(2);
     expect(html).toContain('data-interface-locale="bg" lang="bg"');
     expect(html).toContain('data-interface-locale="ru" lang="ru"');
-    expect(html).toContain("/api/interface/locale");
-    expect(html).toContain("JSON.stringify({locale})");
-    expect(html).toContain("referrerPolicy:'no-referrer'");
-    expect(html).toContain("q['redi'+'rect']='error'");
-    expect(html).toContain("m.name='referrer'");
-    expect(html).toContain("m.content='no-referrer'");
-    expect(html).toContain("window['loca'+'tion'].reload()");
-    expect(html).toContain('"currentLocale":"ru"');
-    expect(html).toContain("const a=new AbortController()");
-    expect(html).toContain("setTimeout(()=>a.abort(),10000)");
-    expect(html).toContain("signal:a.signal");
-    expect(html).toContain("finally{clearTimeout(t);}");
-    expect(html).toContain(
-      "return e.status===204&&!e['redi'+'rected']?'committed':'rejected'",
-    );
-    expect(html).toContain("catch{return'unknown';}");
-    expect(html).toContain(
-      "const b=async()=>await p(c.currentLocale)==='committed'",
-    );
-    expect(html).toContain("const q=async()=>{if(await b())f();else u();}");
-    expect(html).toContain("if(n!=='committed')");
-    expect(html).toContain("if(n==='rejected')f()");
-    expect(html).toContain("else await q()");
-    expect(html).toContain("data-interface-language-recovery hidden");
-    expect(html).toContain("for(const x of o)x.disabled=true");
-    expect(html).toContain("s.setAttribute('aria-disabled','true')");
-    expect(html).toContain(
-      "z.textContent=c.failureMessage;\n      d.open=false;",
-    );
-    expect(html).toContain("s.removeAttribute('aria-disabled')");
-    expect(html).toContain("if(!A())return;e.preventDefault();d.open=false");
-    expect(html).toContain("if(!A()||(e.key!=='Enter'&&e.key!==' '))return");
-    expect(html).toContain("if(A()&&d.open){d.open=false");
-    expect(html).toContain('summary[aria-disabled="true"]');
-    expect(html).toContain("window.stop()");
-    expect(html).toContain("addEventListener('pagehide'");
-    expect(html).toContain("addEventListener('pageshow'");
-    expect(html).not.toContain("history.go(0)");
-    expect(html).not.toContain("n.href=document.URL");
+    expect(html).toContain('action="/api/interface/locale"');
+    expect(html).toContain('method="post"');
+    expect(html).toContain('name="locale" value="bg"');
+    expect(html).toContain('name="locale" value="ru"');
+    // No script, no fetch protocol, no reload handshake — and, as before, no
+    // route identity copied into the markup of the thing that is gone.
+    expect(html).not.toContain("<script");
     expect(html).not.toContain(privateObjectId);
     expect(html).not.toContain("never-copy-this");
-    expect(html).not.toContain("returnUrl");
   });
 
   it("escapes authored lifecycle copy", () => {

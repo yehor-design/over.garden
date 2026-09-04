@@ -152,11 +152,5 @@ describe("interface locale contract", () => {
     expect(getInterfaceCopy("uk").shell.languageControlTrigger).toBe(
       "Змінити мову",
     );
-    expect(getInterfaceCopy("bg").shell.languageSwitchingPending).toBe(
-      "Езикът се сменя…",
-    );
-    expect(getInterfaceCopy("ru").shell.languageDiscardConfirmation).toContain(
-      "Несохранённые изменения",
-    );
   });
 });

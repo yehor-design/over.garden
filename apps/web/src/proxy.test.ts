@@ -466,8 +466,12 @@ describe("app route cache guardrail", () => {
     expect(response.status).toBe(410);
     expect(response.headers.get("Content-Language")).toBe("bg");
     expect(html).toContain('data-interface-language-control="true"');
-    expect(html).toContain("/api/interface/locale");
-    expect(html).toContain("JSON.stringify({locale})");
+    // A tombstone carries no client bundle, so its language control is a plain
+    // form post rather than the inline fetch protocol it used to inline
+    // (OVE-379).
+    expect(html).toContain('action="/api/interface/locale"');
+    expect(html).toContain('name="locale"');
+    expect(html).not.toContain("<script>");
     expect(html).not.toContain(objectId);
     expect(html).not.toContain("opaque-passport-token");
     expect(html).not.toContain("engagement=liked");

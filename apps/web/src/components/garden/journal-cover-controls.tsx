@@ -9,7 +9,6 @@ import { useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
-  OWNER_COMPOSER_COVER_UPLOAD_PARTICIPANT_ID,
   type JournalCoverMode,
 } from "@/lib/garden/journal-cover-contract";
 import {
@@ -17,7 +16,6 @@ import {
   createComposerPhotoIntent,
   type OnlineComposerPhotoIntent,
 } from "@/lib/garden/composer-photo-selection";
-import { interfaceLocaleChangeCoordinator } from "@/lib/interface-locale-change-coordinator";
 import { cn } from "@/lib/utils";
 import { SubjectAwareHtmlImage } from "@/components/media/subject-aware-media-image";
 import type { JournalImageUiState } from "./lexical-journal/journal-lexical-image-node";
@@ -120,10 +118,6 @@ export function JournalCoverControls({
   async function onPickSeparate(file: File | null) {
     if (!file || disabled) return;
     setUploading(true);
-    const unregisterInFlight = interfaceLocaleChangeCoordinator.register({
-      id: OWNER_COMPOSER_COVER_UPLOAD_PARTICIPANT_ID,
-      kind: "in-flight",
-    });
     try {
       const intent = onSelectLocalSeparateFile
         ? null
@@ -142,7 +136,6 @@ export function JournalCoverControls({
       });
     } finally {
       setUploading(false);
-      unregisterInFlight();
     }
   }
 

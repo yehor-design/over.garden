@@ -166,6 +166,19 @@ function isPrefetchRequest(request: NextRequest) {
   );
 }
 
+/**
+ * A navigation the reader performed, whether the browser fetched a document or
+ * the router fetched an RSC payload. Prefetches are excluded: a link the reader
+ * merely hovered must not change what language they are reading in.
+ */
+function isNavigationRequest(request: NextRequest) {
+  if (request.method !== "GET" && request.method !== "HEAD") return false;
+  if (request.nextUrl.pathname.startsWith("/api/")) return false;
+  if (isPrefetchRequest(request)) return false;
+  if (request.headers.has("next-action")) return false;
+  return true;
+}
+
 function isDocumentNavigationRequest(request: NextRequest) {
   if (request.method !== "GET" && request.method !== "HEAD") return false;
   if (request.nextUrl.pathname.startsWith("/api/")) return false;
@@ -242,7 +255,11 @@ function withAppRouteContract(
   }
   response.headers.set("Content-Language", localization.locale);
 
-  if (isDocumentNavigationRequest(request)) {
+  // A client-side navigation is an RSC GET, not a document load, and choosing a
+  // language on a public page is now exactly that (OVE-379). Persisting only on
+  // document loads would show the new language immediately and forget it until
+  // the next full page load, so the preference is written on both.
+  if (isNavigationRequest(request)) {
     if (
       request.cookies.get(INTERFACE_MARKET_COOKIE_NAME)?.value !==
       localization.market

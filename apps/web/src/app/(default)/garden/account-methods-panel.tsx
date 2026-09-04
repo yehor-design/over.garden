@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
-import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -87,11 +86,6 @@ export function AccountMethodsPanel({
   const disconnectPasswordRef = useRef<HTMLInputElement>(null);
   const disconnectCancelRef = useRef<HTMLButtonElement>(null);
   const disconnectTriggerRef = useRef<HTMLButtonElement>(null);
-  useInterfaceLocaleChangeFormState({
-    id: "account-method-mutation",
-    dirty: password.length > 0 || disconnectPassword.length > 0,
-    pending: pendingAction !== null,
-  });
   useEffect(() => {
     clearOAuthCallbackParameters();
   }, []);

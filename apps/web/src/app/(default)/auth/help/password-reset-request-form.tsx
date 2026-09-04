@@ -4,7 +4,6 @@ import { Mail } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import {
   AUTH_RESET_PASSWORD_PATH,
   passwordResetRedirectUrl,
@@ -22,13 +21,6 @@ export function PasswordResetRequestForm({
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [isPending, setIsPending] = useState(false);
-  const [localeDirtyRevision, setLocaleDirtyRevision] = useState(0);
-  useInterfaceLocaleChangeFormState({
-    id: "password-reset-request-mutation",
-    dirty: email.length > 0,
-    pending: isPending,
-    revision: localeDirtyRevision,
-  });
 
   async function requestPasswordReset() {
     const trimmedEmail = email.trim();
@@ -76,7 +68,6 @@ export function PasswordResetRequestForm({
           value={email}
           onChange={(event) => {
             setEmail(event.target.value);
-            setLocaleDirtyRevision((revision) => revision + 1);
           }}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
           required

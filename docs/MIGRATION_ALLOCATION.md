@@ -39,6 +39,7 @@ another issue's number.
 | `0046` | OVE-368      | Owner MVP reset        | index every live public page: visibility normalization, noindex drop  |
 | `0047` | OVE-371      | Owner MVP reset        | media placeholder and variant long-edge columns (ADR-0022, D2)        |
 | `0048` | OVE-375      | Source layer           | capture claim-ordering index so one claim stops reading the whole run |
+| `0049` | OVE-377      | Slice 22 interaction   | a like becomes a permanent row owned by an account or one visitor     |
 
 Compact range receipt:
 
@@ -53,10 +54,17 @@ Compact range receipt:
 - `0042: source-layer raw-payload home`
 - `0043: catalog trigram typeahead indexes`
 - `0044: matching worker idle contract`
+- `0049: owned engagement likes`
 
 Rows `0036`-`0038` are reconciled after the fact under rule 4: those migrations
 landed before the ledger recorded them, and renaming a landed file to restore
 the appearance of a prior reservation is forbidden by rule 5.
+
+Row `0049` is the only migration in the ledger that deletes rows. It does so
+under the owner's explicit `AGENTS.md` rule 10 sign-off of 2026-09-04, because
+the column it replaces — `anonymous_device_hash` — is derived from a token
+scoped to one target and cannot be converted into either new owner column. Its
+rollback restores the columns and states plainly that it cannot restore rows.
 
 Rows `0040` and `0041` are second allocations to owners that already hold `0025`
 and `0027`. Rule 2 permits them: each number is used by its own owner, for that
