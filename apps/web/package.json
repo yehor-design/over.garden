@@ -110,6 +110,7 @@
     "test:journal-delete-retention": "vitest run src/server/journal-deletion-retention.test.ts src/server/journal-repository.test.ts src/server/media/retention-executor.test.ts scripts/plan-journal-delete-retention-transition.test.ts src/lib/owner-object-copy.test.ts 'src/app/garden/objects/[objectId]/page.test.tsx'",
     "external-photo-identification:retirement:production": "tsx scripts/retire-external-photo-identification-production.ts",
     "test:external-photo-identification-retirement:integration": "../../infra/run-with-local-infra-env env RUN_OVE351_DATABASE_INTEGRATION=true pnpm exec vitest run scripts/retire-external-photo-identification-production.test.ts --maxWorkers=1",
+    "test:public-hydration": "pnpm build && ../../infra/run-with-local-infra-env pnpm exec playwright test tests/public-hydration.spec.ts",
     "test:google-account-linking": "../../infra/container-up && ../../infra/run-with-local-infra-env pnpm local:bootstrap && pnpm exec vitest run src/server/auth/account-methods.test.ts && OVE295_RUN_DB_INTEGRATION=true ../../infra/run-with-local-infra-env pnpm exec vitest run scripts/google-account-linking-db.test.ts && GOOGLE_ACCOUNT_LINKING_ENABLED=true ../../infra/run-with-local-infra-env pnpm exec playwright test tests/google-account-linking.spec.ts",
     "google-linking:production-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/check-google-linking-production-proof-plan.ts",
     "test": "vitest run && pnpm check:banned-dependencies && pnpm test:media-staging-worker && pnpm media:staging:verify",

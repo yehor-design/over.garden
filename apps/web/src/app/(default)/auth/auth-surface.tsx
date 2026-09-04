@@ -32,10 +32,9 @@ import type { AuthFormState } from "./auth-actions";
  * `"new-password"` could not both be right, and the error copy had to serve two
  * meanings at once.
  *
- * The form posts to a Server Action, so it works with JavaScript switched off.
- * That is not decoration on this site: measured 2026-09-04, public pages do not
- * hydrate below the shell (OVE-380), and a screen nobody can submit is worse
- * than a plain one.
+ * The form posts to a Server Action, so it works with JavaScript switched off
+ * and before hydration finishes. A sign-in screen is the worst possible place to
+ * depend on the client bundle having run.
  */
 
 export type AuthMode = "sign-in" | "sign-up";

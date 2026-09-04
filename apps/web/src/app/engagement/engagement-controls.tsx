@@ -32,10 +32,13 @@ import type {
  * This is not a detail. The first version wrapped the action in an ordinary
  * client function, and React rendered
  * `action="javascript:throw new Error('React form unexpectedly submitted.')"` —
- * a placeholder it only replaces on hydration. Measured against production on
- * 2026-09-04: the subtree never hydrated, so pressing Like produced no request
- * and no change at all. A control on a public page may not depend on hydration
- * to do its job; hydration may only make it faster.
+ * a placeholder it only replaces on hydration. That form has no endpoint until
+ * the client bundle runs, so the claim that it still posted without JavaScript
+ * was simply false, and any browser that had not finished hydrating pressed a
+ * button that did nothing.
+ *
+ * The rule the episode leaves behind: a control on a public page may not depend
+ * on hydration to do its job. Hydration may only make it faster.
  *
  * Instant feedback therefore comes from `useFormStatus`, which a child of the
  * form can read while the action is in flight, rather than from an optimistic
