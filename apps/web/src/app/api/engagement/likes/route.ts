@@ -12,14 +12,14 @@ import {
   parseEngagementReturnTo,
   parseEngagementTarget,
   redirectWithEngagementStatus,
+  settleEngagementMutation,
 } from "../shared";
 import { publicEngagementChangeTags } from "@/lib/public-cache-tags";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 const LEGACY_ANONYMOUS_ENGAGEMENT_COOKIE = "og_engagement_device";
 
-export async function POST(request: Request) {
-  const formData = await request.formData();
+async function runEngagementMutation(request: Request, formData: FormData) {
   const target = parseEngagementTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
   const cookieStore = await cookies();
@@ -93,4 +93,13 @@ function setCapabilityCookies(
     path: "/",
     maxAge: 0,
   });
+}
+
+export async function POST(request: Request) {
+  return settleEngagementMutation(
+    request,
+    "likes",
+    (formData) => runEngagementMutation(request, formData),
+    { quotaStatus: "like-rate-limited" },
+  );
 }

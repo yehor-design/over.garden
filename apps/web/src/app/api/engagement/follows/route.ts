@@ -6,6 +6,7 @@ import {
   parseEngagementTarget,
   redirectToEngagementAuth,
   redirectWithEngagementStatus,
+  settleEngagementMutation,
 } from "../shared";
 import {
   mutationScopeResponse,
@@ -15,8 +16,7 @@ import {
 import { publicEngagementChangeTags } from "@/lib/public-cache-tags";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
-export async function POST(request: Request) {
-  const formData = await request.formData();
+async function runEngagementMutation(request: Request, formData: FormData) {
   const target = parseEngagementTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
   const admission = await resolveMutationScope({
@@ -48,5 +48,11 @@ export async function POST(request: Request) {
     request,
     returnTo,
     result.active ? "followed" : "unfollowed",
+  );
+}
+
+export async function POST(request: Request) {
+  return settleEngagementMutation(request, "follows", (formData) =>
+    runEngagementMutation(request, formData),
   );
 }

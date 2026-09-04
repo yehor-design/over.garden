@@ -5,6 +5,7 @@ import {
   parseEngagementReturnTo,
   parseEngagementCommentTarget,
   redirectWithEngagementStatus,
+  settleEngagementMutation,
 } from "../../shared";
 import {
   mutationScopeResponse,
@@ -14,8 +15,7 @@ import {
 import { publicEngagementChangeTags } from "@/lib/public-cache-tags";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
-export async function POST(request: Request) {
-  const formData = await request.formData();
+async function runEngagementMutation(request: Request, formData: FormData) {
   const target = parseEngagementCommentTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
   const admission = await resolveMutationScope({
@@ -43,4 +43,10 @@ export async function POST(request: Request) {
   );
   revalidatePath(new URL(returnTo, request.url).pathname);
   return redirectWithEngagementStatus(request, returnTo, "comment-deleted");
+}
+
+export async function POST(request: Request) {
+  return settleEngagementMutation(request, "comments_delete", (formData) =>
+    runEngagementMutation(request, formData),
+  );
 }

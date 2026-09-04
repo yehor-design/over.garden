@@ -7,6 +7,7 @@ import {
   parseEngagementCommentTarget,
   redirectToEngagementAuth,
   redirectWithEngagementStatus,
+  settleEngagementMutation,
 } from "../../shared";
 import {
   mutationScopeResponse,
@@ -14,8 +15,7 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 
-export async function POST(request: Request) {
-  const formData = await request.formData();
+async function runEngagementMutation(request: Request, formData: FormData) {
   const target = parseEngagementCommentTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
   const commentId = String(formData.get("commentId") ?? "");
@@ -42,4 +42,10 @@ export async function POST(request: Request) {
   });
   revalidatePath(new URL(returnTo, request.url).pathname);
   return redirectWithEngagementStatus(request, returnTo, "comment-reported");
+}
+
+export async function POST(request: Request) {
+  return settleEngagementMutation(request, "comments_report", (formData) =>
+    runEngagementMutation(request, formData),
+  );
 }
