@@ -1,0 +1,271 @@
+{
+  "schema": "overgarden.jobQueueContract.v1",
+  "manifestVersion": "ove255.job-queue.v4",
+  "matchingQueueName": "matching",
+  "matchingDefaultMaxAttempts": 8,
+  "terminalErrorCodes": [
+    "unsupported_kind",
+    "invalid_payload",
+    "max_attempts_exceeded"
+  ],
+  "supportedMatchingKinds": [
+    "catalog_alias_suggestions_refresh",
+    "catalog_fuzzy_duplicate_qa_refresh",
+    "catalog_match_suggestions_refresh",
+    "catalog_typeahead_reindex",
+    "journal_entry_index",
+    "journal_entry_unindex",
+    "stable_registry_edition_build",
+    "stable_registry_extension_pack_build",
+    "stable_registry_foundation_build"
+  ],
+  "entries": [
+    {
+      "queueName": "matching",
+      "kind": "stable_registry_foundation_build",
+      "consumer": "matching-python-worker",
+      "maxAttempts": 3,
+      "privacyClass": "catalog_ids_only",
+      "coversStructuredJournalCover": false,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "releaseId"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": [
+          "releaseId"
+        ]
+      },
+      "payloadConstraint": "job_queue_stable_registry_foundation_build_payload_check",
+      "notes": "Foundation build receives only one opaque release UUID; worker reads bounded, rights-cleared aggregate source facts from Postgres."
+    },
+    {
+      "queueName": "matching",
+      "kind": "stable_registry_extension_pack_build",
+      "consumer": "matching-python-worker",
+      "maxAttempts": 3,
+      "privacyClass": "catalog_ids_only",
+      "coversStructuredJournalCover": false,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "packId"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": [
+          "packId"
+        ]
+      },
+      "payloadConstraint": "job_queue_stable_registry_extension_pack_build_payload_check",
+      "notes": "Extension pack review receives only one opaque pack UUID; the worker reads aggregate row classes and advances a fully resolved pack to review_ready off-request."
+    },
+    {
+      "queueName": "matching",
+      "kind": "stable_registry_edition_build",
+      "consumer": "matching-python-worker",
+      "maxAttempts": 3,
+      "privacyClass": "catalog_ids_only",
+      "coversStructuredJournalCover": false,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "releaseId"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": [
+          "releaseId"
+        ]
+      },
+      "payloadConstraint": "job_queue_stable_registry_edition_build_payload_check",
+      "notes": "Edition diff receives only one opaque release UUID; the worker compares it with the release it succeeds and writes grouped aggregate counts, never an object id, owner id, or name."
+    },
+    {
+      "queueName": "matching",
+      "kind": "catalog_alias_suggestions_refresh",
+      "consumer": "matching-python-worker",
+      "maxAttempts": 8,
+      "privacyClass": "catalog_ids_only",
+      "coversStructuredJournalCover": false,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "catalogItemId"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": [
+          "catalogItemId"
+        ]
+      },
+      "payloadConstraint": "job_queue_catalog_alias_payload_check",
+      "notes": "Allowlisted catalogItemId only."
+    },
+    {
+      "queueName": "matching",
+      "kind": "catalog_fuzzy_duplicate_qa_refresh",
+      "consumer": "matching-python-worker",
+      "maxAttempts": 8,
+      "privacyClass": "empty_payload",
+      "coversStructuredJournalCover": false,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": []
+      },
+      "payloadConstraint": "job_queue_catalog_fuzzy_duplicate_payload_check",
+      "notes": "Kind-only payload."
+    },
+    {
+      "queueName": "matching",
+      "kind": "catalog_match_suggestions_refresh",
+      "consumer": "matching-python-worker",
+      "maxAttempts": 8,
+      "privacyClass": "catalog_ids_only",
+      "coversStructuredJournalCover": false,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "sourceCatalogItemId"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": [
+          "sourceCatalogItemId"
+        ]
+      },
+      "payloadConstraint": "job_queue_catalog_match_payload_check",
+      "notes": "Allowlisted sourceCatalogItemId only."
+    },
+    {
+      "queueName": "matching",
+      "kind": "catalog_typeahead_reindex",
+      "consumer": "matching-python-worker",
+      "maxAttempts": 8,
+      "privacyClass": "empty_payload",
+      "coversStructuredJournalCover": false,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": []
+      },
+      "payloadConstraint": "job_queue_catalog_typeahead_payload_check",
+      "notes": "Kind-only typeahead rebuild."
+    },
+    {
+      "queueName": "matching",
+      "kind": "journal_entry_index",
+      "consumer": "matching-python-worker",
+      "maxAttempts": 8,
+      "privacyClass": "identifiers_only",
+      "coversStructuredJournalCover": true,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "journalEntryId",
+          "userId"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": [
+          "journalEntryId",
+          "userId"
+        ]
+      },
+      "payloadConstraint": "job_queue_journal_entry_index_payload_check",
+      "notes": "Structured journal create/edit, cover selection, reorder, and publication enqueue this kind with journalEntryId+userId only. Handler reads current DB cover/document; replay cannot resurrect an obsolete cover."
+    },
+    {
+      "queueName": "matching",
+      "kind": "journal_entry_unindex",
+      "consumer": "matching-python-worker",
+      "maxAttempts": 8,
+      "privacyClass": "identifiers_only",
+      "coversStructuredJournalCover": true,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "journalEntryId",
+          "userId"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": [
+          "journalEntryId",
+          "userId"
+        ]
+      },
+      "payloadConstraint": "job_queue_journal_entry_unindex_payload_check",
+      "notes": "Archive/erasure/unpublish enqueue this kind. Cover-only and inline media revocation converge through current DB state, not payload blobs."
+    },
+    {
+      "queueName": "erasure",
+      "kind": "erasure_media_object_delete",
+      "consumer": "web-erasure-execution",
+      "maxAttempts": 8,
+      "privacyClass": "identifiers_only",
+      "coversStructuredJournalCover": true,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "requestId",
+          "bucket",
+          "objectKey"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": []
+      },
+      "payloadConstraint": "job_queue_erasure_media_object_delete_payload_check",
+      "notes": "DB-first erasure outbox for final public object keys after cover refs are cleared. Consumed in-process by erasure-execution via the shared lifecycle revoke helper."
+    },
+    {
+      "queueName": "media_lifecycle",
+      "kind": "media_staging_finalize",
+      "consumer": "web-media-lifecycle",
+      "maxAttempts": 8,
+      "privacyClass": "identifiers_only",
+      "coversStructuredJournalCover": true,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "publishId",
+          "stagingSessionId",
+          "receiptSetDigest"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": [
+          "publishId",
+          "stagingSessionId"
+        ]
+      },
+      "payloadConstraint": "job_queue_media_staging_finalize_payload_check",
+      "notes": "Atomic journal create queues only publish/session identifiers plus the receipt-set digest; the consumer derives owner scope from the committed entry and idempotently finalizes OVE-346 staging."
+    },
+    {
+      "queueName": "media_lifecycle",
+      "kind": "media_derivative_revoke",
+      "consumer": "web-media-lifecycle",
+      "maxAttempts": 8,
+      "privacyClass": "identifiers_only",
+      "coversStructuredJournalCover": true,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "mediaAssetId",
+          "bucket",
+          "objectKey",
+          "reason"
+        ],
+        "optionalKeys": [
+          "journalEntryId"
+        ],
+        "uuidKeys": [
+          "mediaAssetId",
+          "journalEntryId"
+        ]
+      },
+      "payloadConstraint": "job_queue_media_derivative_revoke_payload_check",
+      "notes": "Archive/unpublish revoke for processed public derivatives. Completes only after canonical custom-domain URL is non-2xx."
+    }
+  ]
+}

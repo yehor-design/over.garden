@@ -11,7 +11,6 @@ import hashlib
 import json
 from typing import Any
 
-STABLE_REGISTRY_FOUNDATION_BUILD_KIND = "stable_registry_foundation_build"
 FOUNDATION_POLICY_VERSION = "ove255.foundation.v1"
 
 

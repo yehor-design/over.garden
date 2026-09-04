@@ -121,39 +121,47 @@ describe("OVE-190 immutable matching release contract", () => {
     ]);
   });
 
-  it("keeps the heartbeat constraint in step with the queue manifest", async () => {
-    // The constraint pins `supported_handlers` to an exact array, so a manifest
-    // that grows without a migration makes every heartbeat fail with 23514 —
-    // and since OVE-357 the heartbeat row is the only liveness signal there is.
-    // The newest migration that states the constraint has to state today's set.
+  it("checks the heartbeat handler set for shape, and its identity in code", async () => {
+    // An exact-array constraint made the one state worth seeing unrecordable:
+    // a worker whose handler set differs from the manifest could not write a
+    // heartbeat, so it read as dead rather than as `capability_mismatch`. The
+    // newest migration that states this constraint must therefore name no
+    // handler at all — and the identity comparison has to exist in code.
     const sqlFiles = (await readdir(SQL_DIRECTORY))
       .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/u.test(name))
       .sort((left, right) => left.localeCompare(right, "en"));
-    const stated: { file: string; handlers: string[][] }[] = [];
+
+    let newest: { file: string; body: string } | null = null;
     for (const name of sqlFiles) {
-      const handlers = heartbeatHandlerConstraints(
-        await readFile(path.join(SQL_DIRECTORY, name), "utf8"),
-      );
-      if (handlers.length > 0) stated.push({ file: name, handlers });
+      const body = await readFile(path.join(SQL_DIRECTORY, name), "utf8");
+      if (
+        body.includes(
+          "add constraint matching_worker_heartbeats_supported_handlers_check",
+        )
+      ) {
+        newest = { file: name, body };
+      }
     }
 
-    expect(stated.length).toBeGreaterThan(0);
-    const newest = stated[stated.length - 1];
-    for (const declared of newest.handlers) {
-      expect([declared.join(","), newest.file]).toEqual([
-        REQUIRED_HANDLERS.join(","),
-        newest.file,
-      ]);
-    }
+    expect(newest?.file).toBe("0051_matching_handler_set_shape.sql");
+    expect(heartbeatHandlerConstraints(newest!.body)).toEqual([]);
 
-    // The production worker host bootstraps the table from its own excerpt.
-    const hostMigration = heartbeatHandlerConstraints(
-      await readFile(MIGRATION_PATH, "utf8"),
+    // The production worker host bootstraps the table from its own excerpt, so
+    // a fresh host must not recreate the constraint this replaced.
+    const hostMigration = await readFile(MIGRATION_PATH, "utf8");
+    expect(heartbeatHandlerConstraints(hostMigration)).toEqual([]);
+    expect(hostMigration).toContain(
+      "cardinality(supported_handlers) between 1 and 64",
     );
-    expect(hostMigration.length).toBeGreaterThan(0);
-    for (const declared of hostMigration) {
-      expect(declared).toEqual([...REQUIRED_HANDLERS]);
-    }
+
+    // Identity, where it can be reported: the worker classifies a differing set
+    // rather than being unable to record it.
+    const runtime = await readFile(
+      path.join(REPOSITORY_ROOT, "services/matching/app/runtime.py"),
+      "utf8",
+    );
+    expect(runtime).toContain('return "capability_mismatch"');
+    expect(runtime).toContain("!= SUPPORTED_JOB_KINDS");
   });
 
   it("uses one no-latest image for the worker with dependency readiness", async () => {
@@ -195,11 +203,8 @@ describe("OVE-190 immutable matching release contract", () => {
     ]) {
       expect(migration).toContain(constraint);
     }
-    for (const handler of REQUIRED_HANDLERS) {
-      expect(migration).toContain(`'${handler}'`);
-    }
     expect(migration).toContain(
-      "apps/web/sql/0050_matching_handler_set_catch_up.sql",
+      "apps/web/sql/0051_matching_handler_set_shape.sql",
     );
     expect(executableSql).not.toMatch(
       /\b(drop|delete|truncate)\b\s+(table|from)/i,

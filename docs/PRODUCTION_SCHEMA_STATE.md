@@ -116,29 +116,38 @@ page said production ran a schema it no longer ran.
 
 | Migration | Why it is not applied                                                                                                                                                                                                                                                                                                                    |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0050`    | The matching heartbeat handler-set catch-up. It replaces `matching_worker_heartbeats_supported_handlers_check` — which pins `supported_handlers` to the six kinds that existed in `0001` — with the nine the queue manifest declares today. Production has not felt it because the deployed worker image predates the three Stable Registry kinds. Constraint replacement only: no table, column, index, or row is touched. |
+| `0051`    | The heartbeat handler-set **shape** check, superseding `0050`. `matching_worker_heartbeats_supported_handlers_check` pins `supported_handlers` to an exact array — six kinds since `0001`, nine after `0050` — which makes the one state worth seeing unrecordable: a worker whose handler set differs from the manifest cannot write a heartbeat at all, so it reads as dead rather than as `capability_mismatch`, and the image and the schema have to be migrated together in both directions. `0051` replaces it with a shape check (one to sixty-four lowercase snake_case names) and leaves identity to `app.runtime`, the web classification, and the release script. Constraint replacement only. |
+| `0052`    | The four payload CHECK constraints that `stable_registry_edition_build`, `catalog_typeahead_reindex`, `erasure_media_object_delete` and `media_derivative_revoke` declared and no migration ever created. Each is added `not valid` and validated in the same transaction, so no full-table lock is taken and a legacy row rolls the whole thing back rather than half-applying. **Apply this before deploying a matching image built after 2026-09-04**: `REQUIRED_JOB_QUEUE_PAYLOAD_CONSTRAINTS` is generated from the manifest, so the worker's preflight reports `schema_mismatch` against a database missing one and the release refuses to activate. |
+| `0050`    | Superseded by `0051` before either was applied anywhere but CI. Applying it is harmless and unnecessary; `0051` is self-sufficient. |
 | `0048`    | The capture claim-ordering index. It only matters where an observed capture runs, and OVE-254 refuses production capture, so production has the table and no rows to claim. Additive and reversible — one partial index, no column, constraint, or row — so it can be applied whenever the owner wants production converged with `sql/`. |
 
 Applied on the loopback database on 2026-09-03 through
 `scripts/apply-reviewed-migration.ts` and verified by `pg_indexes`. Whoever
 applies it to production updates the inventory above in the same pull request.
 
-`0050` and the matching image move together, in both directions, because the
-constraint states an exact array rather than a shape. Executed against a
-scratch Postgres 18.4 database on 2026-09-04, on a table created from the
-production-shaped `0002` excerpt:
+`0051` and `0052` were executed against Postgres 18.4 on a disposable database
+on 2026-09-04, not merely reviewed. `pnpm queue:contract:prove-database` is that
+proof, and it runs in CI: eighteen cases covering every accept and every refuse,
+including the two defects execution found in the first draft of `0051` — a
+shape check over `array_to_string(handlers, ',')` accepted the single element
+`'journal_entry_index,journal_entry_unindex'`, because after joining, one
+element containing a separator is indistinguishable from two, and it also
+accepted a NULL element, which `array_to_string` silently drops.
 
-- before `0050`, the heartbeat a current worker writes is refused with `23514`;
-- after `0050`, the same write succeeds;
-- after `0050`, a beat carrying the old six-handler set is refused with `23514`;
-- `0050` is re-runnable, and the rollback refuses while a nine-handler row is
-  present, aborting with nothing changed.
+Neither is applied to production yet. The commands, in order:
 
-So: apply `0050` **before** deploying a matching image built after 2026-08-27,
-and roll the image back **before** applying the rollback. Getting the order
-wrong freezes the heartbeat rather than losing anything — but since OVE-357 that
-row is the only liveness signal there is, and a healthy worker then reads as
-stale.
+```bash
+cd apps/web
+vercel env pull /tmp/production.env --environment=production
+pnpm exec tsx scripts/apply-reviewed-migration.ts --mode apply --migration 0051 --env-file /tmp/production.env
+pnpm exec tsx scripts/apply-reviewed-migration.ts --mode apply --migration 0052 --env-file /tmp/production.env
+pnpm exec tsx scripts/apply-reviewed-migration.ts --mode inventory --env-file /tmp/production.env
+```
+
+`0052` must land before the next matching image is deployed, for the reason in
+its row above. `0051` may land at any time and removes a coupling rather than
+adding one. Whoever applies them updates the inventory above in the same pull
+request.
 
 ## The rule this produced
 

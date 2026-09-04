@@ -71,8 +71,17 @@ these rules in CI and in `pnpm test`.
   tests → docs); Conventional Commits; open a PR; merge only on green CI;
   then move the Linear issue to Done and sync `main`.
 - CI is `.github/workflows/ci.yml`: install, services, bootstrap, generated
-  DB types check, lint, typecheck, banned-dependency gate, tests, build, plus
-  the Python matching job. Keep it under ten minutes.
+  DB types check, generated job-queue contract check and its executed database
+  proof, lint, typecheck, banned-dependency gate, tests, build, plus the Python
+  matching job. Keep it under ten minutes.
+- The job queue contract is generated. `apps/web/src/server/job-queue-manifest.ts`
+  is the only place that declares a kind; `pnpm queue:contract:build` writes
+  `contracts/job-queue/job-queue.contract.v1.json` and
+  `services/matching/app/job_queue_contract.py`. Never hand-edit either, the
+  same way `src/db/generated.ts` is never hand-edited.
+- `.github/workflows/release-health.yml` fails once a day when the newest
+  matching image release on `main` did not succeed. That workflow runs after
+  merge, so it can never be a required check — this is the signal instead.
 - Do not name a Done Linear issue in a PR title or body; the GitHub
   integration reopens it. Describe the work instead.
 - Read-only commands against production are fine; anything that changes

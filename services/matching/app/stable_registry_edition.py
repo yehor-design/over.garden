@@ -16,7 +16,6 @@ import hashlib
 import json
 from typing import Any
 
-STABLE_REGISTRY_EDITION_BUILD_KIND = "stable_registry_edition_build"
 EDITION_POLICY_VERSION = "ove258.edition.v1"
 
 # Classes this build derives from immutable release evidence alone.

@@ -15,7 +15,6 @@ import icu
 from psycopg.types.json import Jsonb
 from rapidfuzz import fuzz
 
-CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND = "catalog_match_suggestions_refresh"
 MATCHER_VERSION = "ove159-v3"
 MATCH_EVIDENCE_SCHEMA_VERSION = "ove158.catalogMatchEvidence.v2"
 MATCH_SCORE_HIGH = 95

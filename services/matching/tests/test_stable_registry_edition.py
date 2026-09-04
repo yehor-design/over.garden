@@ -2,7 +2,8 @@ from contextlib import nullcontext
 
 import pytest
 
-from app import stable_registry_edition
+from app import job_queue_contract, stable_registry_edition
+from app.job_handlers import SUPPORTED_JOB_KINDS
 
 RELEASE_ID = "00000000-0000-4000-8000-000000000258"
 PRIOR_RELEASE_ID = "00000000-0000-4000-8000-000000000255"
@@ -12,7 +13,12 @@ JOB_KIND = "stable_registry_edition_build"
 
 
 def test_handler_owns_the_declared_job_kind():
-    assert stable_registry_edition.STABLE_REGISTRY_EDITION_BUILD_KIND == JOB_KIND
+    # The literal moved into the generated contract, so this asserts the two
+    # things that still matter: the contract declares this kind, and the worker
+    # claims it. Asserting the handler module holds the literal only ever proved
+    # where a string was written.
+    assert job_queue_contract.STABLE_REGISTRY_EDITION_BUILD_KIND == JOB_KIND
+    assert JOB_KIND in SUPPORTED_JOB_KINDS
 
 
 def test_only_derivable_classes_are_emitted():

@@ -1,10 +1,12 @@
-import { readFileSync } from "node:fs";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { renderContractArtifacts } from "../../scripts/build-job-queue-contract";
 import {
+  assertMatchingQueueConsistency,
   JOB_QUEUE_MANIFEST,
   JOB_QUEUE_MANIFEST_VERSION,
   jobQueueManifestKey,
@@ -47,76 +49,50 @@ describe("job queue manifest", () => {
     ]);
   });
 
-  it("stays aligned with the Python matching manifest mirror", () => {
-    const python = readFileSync(
-      path.join(repoRoot, "services/matching/app/job_queue_manifest.py"),
-      "utf8",
-    );
-    expect(python).toContain(
-      `JOB_QUEUE_MANIFEST_VERSION: Final = "${JOB_QUEUE_MANIFEST_VERSION}"`,
-    );
-    expect(python).toContain("MATCHING_DEFAULT_MAX_ATTEMPTS: Final = 8");
-    expect(python).toContain("erasure_media_object_delete");
-    expect(python).toContain("web-erasure-execution");
-    expect(python).toContain("media_derivative_revoke");
-    expect(python).toContain("media_staging_finalize");
-    expect(python).toContain("web-media-lifecycle");
-    expect(python).toContain("matching-python-worker");
-    expect(python).toContain("JOURNAL_ENTRY_INDEX_KIND");
-    expect(python).toContain("JOURNAL_ENTRY_UNINDEX_KIND");
-    expect(python).toContain('coversStructuredJournalCover": True');
-  });
+  it("keeps every generated artifact identical to what the manifest builds", async () => {
+    // This replaced a substring search of the hand-written Python mirror. That
+    // search asked whether a handful of strings appeared, so it passed for a
+    // week while the mirror was missing three kinds and the release gate
+    // refused every image. Regenerating and comparing byte for byte cannot
+    // agree about a file it has not fully read.
+    const { files } = renderContractArtifacts();
+    expect(files).toHaveLength(2);
 
-  it("mirrors every per-kind payload contract in the Python manifest", () => {
-    const python = readFileSync(
-      path.join(repoRoot, "services/matching/app/job_queue_manifest.py"),
-      "utf8",
-    );
-    const mirrored = parsePythonPayloadContracts(python);
-
-    expect([...mirrored.keys()].sort()).toEqual(
-      JOB_QUEUE_MANIFEST.map((entry) => jobQueueManifestKey(entry)).sort(),
-    );
-
-    for (const entry of JOB_QUEUE_MANIFEST) {
-      const key = jobQueueManifestKey(entry);
-      expect(mirrored.get(key), key).toEqual({
-        requiredKeys: [...entry.payloadContract.requiredKeys],
-        optionalKeys: [...entry.payloadContract.optionalKeys],
-        uuidKeys: [...entry.payloadContract.uuidKeys],
-      });
+    for (const file of files) {
+      const onDisk = await readFile(file.path, "utf8");
+      expect(onDisk, path.relative(repoRoot, file.path)).toBe(file.contents);
     }
   });
+
+  it("declares one enforced CHECK constraint per kind, and no migration is missing it", async () => {
+    // The manifest claims each payload contract is enforced by Postgres. Until
+    // now nothing checked that claim: four kinds named a contract that no
+    // constraint enforced.
+    const sqlDirectory = path.join(repoRoot, "apps/web/sql");
+    const sql = (
+      await Promise.all(
+        (await readdir(sqlDirectory))
+          .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/u.test(name))
+          .map((name) => readFile(path.join(sqlDirectory, name), "utf8")),
+      )
+    ).join("\n");
+
+    const unenforced = JOB_QUEUE_MANIFEST.filter(
+      (entry) =>
+        !sql.includes(`add constraint ${entry.payloadConstraint} check`),
+    ).map((entry) => jobQueueManifestKey(entry));
+
+    expect(unenforced).toEqual([]);
+  });
+
+  it("agrees with itself about what the matching queue is", () => {
+    // `matchingSupportedKinds()` filtered on the consumer while the Python
+    // mirror filtered on the queue name. They matched by luck.
+    expect(() => assertMatchingQueueConsistency()).not.toThrow();
+    expect(matchingSupportedKinds().sort()).toEqual(
+      JOB_QUEUE_MANIFEST.filter((entry) => entry.queueName === "matching")
+        .map((entry) => entry.kind)
+        .sort(),
+    );
+  });
 });
-
-/**
- * Parses JOB_QUEUE_PAYLOAD_CONTRACTS out of the Python mirror. Parsing rather
- * than substring-matching keeps the drift check independent of ruff formatting
- * while still failing closed when either side declares a different key set.
- */
-function parsePythonPayloadContracts(python: string) {
-  const block =
-    /JOB_QUEUE_PAYLOAD_CONTRACTS:\s*Final\s*=\s*\{([\s\S]*?)\n\}/.exec(python);
-  expect(block, "JOB_QUEUE_PAYLOAD_CONTRACTS is missing").not.toBeNull();
-
-  const entries = new Map<
-    string,
-    { requiredKeys: string[]; optionalKeys: string[]; uuidKeys: string[] }
-  >();
-  const entryPattern =
-    /"([^"]+)":\s*\{\s*"requiredKeys":\s*\[([^\]]*)\],\s*"optionalKeys":\s*\[([^\]]*)\],\s*"uuidKeys":\s*\[([^\]]*)\],?\s*\}/g;
-
-  for (const match of block![1].matchAll(entryPattern)) {
-    entries.set(match[1], {
-      requiredKeys: pythonStringList(match[2]),
-      optionalKeys: pythonStringList(match[3]),
-      uuidKeys: pythonStringList(match[4]),
-    });
-  }
-
-  return entries;
-}
-
-function pythonStringList(source: string): string[] {
-  return [...source.matchAll(/"([^"]*)"/g)].map((match) => match[1]);
-}

@@ -22,6 +22,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from app.job_handlers import SUPPORTED_JOB_KINDS
+from app.job_queue_contract import REQUIRED_JOB_QUEUE_PAYLOAD_CONSTRAINTS
 from app.search import MEILISEARCH_HTTP_TIMEOUT_SECONDS
 
 RUNTIME_SCHEMA_VERSION = "ove194.matchingRuntime.v1"
@@ -52,15 +53,17 @@ _REQUIRED_JOB_QUEUE_COLUMNS = frozenset(
         "updated_at",
     }
 )
+# Every payload CHECK the contract declares, not the four someone listed by
+# hand. The manifest says each kind is enforced "at every layer"; this is what
+# makes that true — a database missing one reports `schema_mismatch` and the
+# release refuses to activate against it, instead of the worker running on a
+# layer that silently is not there.
 _REQUIRED_QUEUE_CONSTRAINTS = frozenset(
-    {
-        "job_queue_catalog_alias_payload_check",
-        "job_queue_catalog_fuzzy_duplicate_payload_check",
-        "job_queue_catalog_match_payload_check",
-        "job_queue_stable_registry_foundation_build_payload_check",
+    (
+        *REQUIRED_JOB_QUEUE_PAYLOAD_CONSTRAINTS,
         "job_queue_status_check",
         "job_queue_terminal_error_code_check",
-    }
+    )
 )
 _REQUIRED_HEARTBEAT_COLUMNS = frozenset(
     {

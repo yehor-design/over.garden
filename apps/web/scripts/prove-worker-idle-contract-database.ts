@@ -18,11 +18,12 @@ import {
 
 /**
  * Migrations this proof owns: base schema, projection outbox, wake contract,
- * and the handler-set catch-up. `0050` is here because the heartbeat row this
- * proof writes carries the real handler set, and `0001` still constrains the
- * column to the six handlers that existed when it was written.
+ * and the two that settle the handler-set constraint. `0050` and `0051` are
+ * here because the heartbeat row this proof writes carries the real handler
+ * set, and `0001` still constrains the column to the six handlers that existed
+ * when it was written.
  */
-const WORKER_IDLE_MIGRATIONS = /^(0001|0011|0044|0050)_/u;
+const WORKER_IDLE_MIGRATIONS = /^(0001|0011|0044|0050|0051)_/u;
 
 /** The fallback the worker ships with; asserted, not assumed. */
 const FALLBACK_BOUND_SECONDS = 30;
@@ -169,7 +170,7 @@ async function applyWorkerIdleMigrations(pool: Pool) {
   const applied = migrations.filter((migration) =>
     WORKER_IDLE_MIGRATIONS.test(migration.name),
   );
-  if (applied.length !== 4) {
+  if (applied.length !== 5) {
     throw new Error("worker_idle_migrations_missing");
   }
   for (const migration of applied) {

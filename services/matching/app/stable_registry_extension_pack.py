@@ -14,8 +14,6 @@ from __future__ import annotations
 
 from typing import Any
 
-STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND = "stable_registry_extension_pack_build"
-
 # A pack carrying any of these cannot advance: each needs an owner decision.
 BLOCKING_ROW_CLASSES = (
     "needs_parent",

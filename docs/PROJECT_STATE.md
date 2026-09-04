@@ -157,17 +157,25 @@ decision in ADR-0022, not an omission.
 7. **`matching_worker_heartbeats` has no build timestamp.** The retired API read
    it from the image environment and no column holds it, so the runtime proof
    reports the image digest instead of inventing a value.
-8. **No matching image has been released since 2026-08-27.** The release
-   workflow's seal step demanded a six-handler capability manifest; the queue
-   manifest grew `stable_registry_foundation_build` and its two siblings on
-   2026-08-28 and the container began answering with nine. Seventy-six
-   consecutive runs failed on a `main` that was correct, each exiting 1 with no
-   output. Fixed on 2026-09-04 by deriving the expected set from the manifest
-   and by making every gate in that step print what it wanted and what it got.
-   The same frozen six lived in the heartbeat CHECK constraint: apply
-   `apps/web/sql/0050_matching_handler_set_catch_up.sql` to production before
-   deploying any image built after 2026-08-27, or the worker's first heartbeat
-   is refused and a running worker reads as stale.
+8. **The job queue contract is generated now; two of its migrations are not in
+   production yet.** The matching image release refused seventy-six correct
+   builds between 2026-08-27 and 2026-09-04 because the expected handler set was
+   a frozen literal in five places and the manifest had grown three Stable
+   Registry kinds. `apps/web/src/server/job-queue-manifest.ts` is now the only
+   place that says what the set is: `pnpm queue:contract:build` writes the JSON
+   contract and the Python module, `queue:contract:check` fails on drift, and
+   `queue:contract:prove-database` executes the database half. Releases are green
+   again. What is still owed to production: `0051` (the heartbeat handler set is
+   checked for shape, not identity — an exact array made a mismatched worker
+   unrecordable and therefore indistinguishable from a dead one) and `0052` (the
+   four payload CHECK constraints four kinds declared and none had). `0052` must
+   land before the next matching image is deployed, or the worker's preflight
+   reports `schema_mismatch` and the release refuses to activate.
+9. **Production still runs a worker built before 2026-08-28.** The host installs
+   only sealed release artifacts, and none was produced while the release was
+   red, so the deployed worker has no handler for the three Stable Registry
+   build kinds. Until a current image is installed, a Foundation, extension-pack
+   or edition build enqueued in production terminalises as `unsupported_kind`.
 
 ## How to check any of this yourself
 
@@ -177,6 +185,8 @@ pnpm prove:owner-mvp-reset                 # the seven requirements against prod
 pnpm prove:workspace-resilience -- --base-url <running next start> --cookie-file <cookie>
 pnpm smoke:matching-queue-health -- --environment production --confirm-environment production
 pnpm smoke:matching-runtime-capabilities   # worker liveness from the heartbeat row
+pnpm queue:contract:check                  # the generated queue contract matches the manifest
+pnpm queue:contract:prove-database         # the two new CHECK constraints, executed
 pnpm test:public-hydration                 # real Chromium, production build: public pages hydrate
 pnpm exec tsx scripts/apply-reviewed-migration.ts --mode inventory --env-file <pulled-env>
 ```

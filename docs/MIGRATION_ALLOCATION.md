@@ -41,6 +41,8 @@ another issue's number.
 | `0048` | OVE-375      | Source layer           | capture claim-ordering index so one claim stops reading the whole run |
 | `0049` | OVE-377      | Slice 22 interaction   | a like becomes a permanent row owned by an account or one visitor     |
 | `0050` | maintainer   | Matching worker        | heartbeat handler-set catch-up: six frozen kinds become the manifest's nine |
+| `0051` | maintainer   | Matching worker        | the heartbeat handler set is checked for shape; identity moves to code      |
+| `0052` | maintainer   | Job queue contract     | the four declared payload contracts that no CHECK constraint enforced       |
 
 Compact range receipt:
 
@@ -57,6 +59,8 @@ Compact range receipt:
 - `0044: matching worker idle contract`
 - `0049: owned engagement likes`
 - `0050: matching worker heartbeat handler set`
+- `0051: matching worker heartbeat handler shape`
+- `0052: job queue declared payload checks`
 
 Rows `0036`-`0038` are reconciled after the fact under rule 4: those migrations
 landed before the ledger recorded them, and renaming a landed file to restore
@@ -68,10 +72,20 @@ the column it replaces — `anonymous_device_hash` — is derived from a token
 scoped to one target and cannot be converted into either new owner column. Its
 rollback restores the columns and states plainly that it cannot restore rows.
 
-Row `0050` has no issue owner, like `0045`. It is a constraint replacement, not
-a feature: `matching_worker_heartbeats_supported_handlers_check` still pinned
-`supported_handlers` to the six kinds the queue manifest had in `0001`, while
-the manifest and the worker had moved to nine.
+Rows `0050`, `0051` and `0052` have no issue owner, like `0045`. None is a
+feature.
+
+`0050` was a catch-up: `matching_worker_heartbeats_supported_handlers_check`
+still pinned `supported_handlers` to the six kinds the queue manifest had in
+`0001`, while the manifest and the worker had moved to nine. `0051` supersedes
+it hours later and is the correct fix: an exact array made a mismatched handler
+set unrecordable, so the worker carrying one read as dead instead of as
+`capability_mismatch`, and the image and the schema had to be migrated together
+in both directions. Applying `0051` alone is enough; `0050` need not be applied
+to a database that never had it.
+
+`0052` adds the four payload CHECK constraints that four kinds declared and no
+migration ever created.
 
 Rows `0040` and `0041` are second allocations to owners that already hold `0025`
 and `0027`. Rule 2 permits them: each number is used by its own owner, for that
