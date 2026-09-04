@@ -8,37 +8,40 @@ import {
   UserMinus,
   UserPlus,
 } from "lucide-react";
-import { useOptimistic, useState, type ReactNode } from "react";
+import { useActionState, type ReactNode } from "react";
+import { useFormStatus } from "react-dom";
 
 import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { formatPublicCount } from "@/lib/public-surface-localization";
 import type {
   EngagementActionFailure,
-  EngagementActionResult,
-  EngagementCommentActionResult,
-  EngagementLikeActionResult,
+  EngagementCommentState,
+  EngagementLikeState,
+  EngagementToggleState,
 } from "./engagement-actions";
 
 /**
  * The interactive half of the public engagement panel.
  *
- * These are `<form action={serverAction}>`, so with JavaScript switched off the
- * browser posts the form and the page re-renders — the same progressive
- * enhancement the old route handlers gave. With JavaScript the control answers
- * on the click: `useOptimistic` flips the button and moves the count before the
- * round trip, and no navigation happens at all.
+ * Every control here is `<form action={formAction}>` where `formAction` comes
+ * from `useActionState` over a **Server Action**. That is the one shape React
+ * gives a real endpoint to, so the browser can post the form with no JavaScript
+ * running at all.
  *
- * What this replaces: a POST to `/api/engagement/*` that answered a 303 back to
- * the page with `?engagement=liked` in the address. Every like cost a full
- * document navigation, and the status had to travel as a query parameter that
- * the route policy then had to sanitize through a closed allow-list.
+ * This is not a detail. The first version wrapped the action in an ordinary
+ * client function, and React rendered
+ * `action="javascript:throw new Error('React form unexpectedly submitted.')"` —
+ * a placeholder it only replaces on hydration. Measured against production on
+ * 2026-09-04: the subtree never hydrated, so pressing Like produced no request
+ * and no change at all. A control on a public page may not depend on hydration
+ * to do its job; hydration may only make it faster.
+ *
+ * Instant feedback therefore comes from `useFormStatus`, which a child of the
+ * form can read while the action is in flight, rather than from an optimistic
+ * update injected into a client closure.
  */
 
-interface LikeState {
-  liked: boolean;
-  count: number;
-}
 export function EngagementLikeControl({
   targetKind,
   targetRef,
@@ -59,65 +62,73 @@ export function EngagementLikeControl({
     unavailable: string;
     rateLimited: string;
   };
-  toggle: (input: {
-    targetKind: string;
-    targetRef: string;
-  }) => Promise<EngagementLikeActionResult>;
+  toggle: (
+    previous: EngagementLikeState,
+    formData: FormData,
+  ) => Promise<EngagementLikeState>;
 }) {
-  const [confirmed, setConfirmed] = useState<LikeState>({
+  const [state, formAction] = useActionState(toggle, {
     liked: initialLiked,
-    count: initialCount,
+    activeLikeCount: initialCount,
+    failure: null,
   });
-  const [failure, setFailure] = useState<EngagementActionFailure | null>(null);
-  const [state, applyOptimistic] = useOptimistic(
-    confirmed,
-    (current: LikeState): LikeState => ({
-      liked: !current.liked,
-      count: Math.max(0, current.count + (current.liked ? -1 : 1)),
-    }),
-  );
-
-  async function submit() {
-    applyOptimistic(undefined);
-    setFailure(null);
-    const result = await toggle({ targetKind, targetRef });
-    if (!result.ok) {
-      setFailure(result.reason);
-      return;
-    }
-    setConfirmed({ liked: result.liked, count: result.activeLikeCount });
-  }
 
   return (
-    <div className="flex flex-col gap-1">
-      <form action={submit}>
-        <button
-          type="submit"
-          aria-pressed={state.liked}
-          className={buttonVariants({
-            variant: state.liked ? "default" : "outline",
-            className: "self-start",
-          })}
-        >
-          <Heart
-            className="size-4"
-            aria-hidden="true"
-            fill={state.liked ? "currentColor" : "none"}
-          />
-          {state.liked ? labels.liked : labels.like}
-        </button>
-      </form>
-      <p className="text-sm text-muted-foreground" role="status">
-        {formatPublicCount(locale, "like", state.count)}
-      </p>
+    <form action={formAction} className="flex flex-col gap-1">
+      <TargetFields targetKind={targetKind} targetRef={targetRef} />
+      <LikeButton state={state} locale={locale} labels={labels} />
       <ActionFailure
-        failure={failure}
+        failure={state.failure}
         labels={{
           unavailable: labels.unavailable,
           rateLimited: labels.rateLimited,
         }}
       />
-    </div>
+    </form>
+  );
+}
+
+/**
+ * Inside the form, so `useFormStatus` can see it. While the action is in flight
+ * the button already shows the state it is about to have — the reader gets an
+ * answer on the press, and the server still decides the truth.
+ */
+function LikeButton({
+  state,
+  locale,
+  labels,
+}: {
+  state: EngagementLikeState;
+  locale: InterfaceLocale;
+  labels: { like: string; liked: string };
+}) {
+  const { pending } = useFormStatus();
+  const liked = pending ? !state.liked : state.liked;
+  const count = pending
+    ? Math.max(0, state.activeLikeCount + (state.liked ? -1 : 1))
+    : state.activeLikeCount;
+
+  return (
+    <>
+      <button
+        type="submit"
+        aria-pressed={liked}
+        className={buttonVariants({
+          variant: liked ? "default" : "outline",
+          className: "self-start",
+        })}
+      >
+        <Heart
+          className="size-4"
+          aria-hidden="true"
+          fill={liked ? "currentColor" : "none"}
+        />
+        {liked ? labels.liked : labels.like}
+      </button>
+      <p className="text-sm text-muted-foreground" role="status">
+        {formatPublicCount(locale, "like", count)}
+      </p>
+    </>
   );
 }
 
@@ -140,18 +151,19 @@ export function EngagementBookmarkControl({
   targetRef: string;
   initialActive: boolean;
   labels: ToggleLabels;
-  submit: (input: {
-    targetKind: string;
-    targetRef: string;
-    bookmarked: boolean;
-  }) => Promise<EngagementActionResult>;
+  submit: (
+    previous: EngagementToggleState,
+    formData: FormData,
+  ) => Promise<EngagementToggleState>;
 }) {
   return (
     <ToggleControl
+      targetKind={targetKind}
+      targetRef={targetRef}
       initialActive={initialActive}
       labels={labels}
       icon={() => <Bookmark className="size-4" aria-hidden="true" />}
-      run={(active) => submit({ targetKind, targetRef, bookmarked: active })}
+      submit={submit}
     />
   );
 }
@@ -170,14 +182,15 @@ export function EngagementFollowToggleControl({
   /** Focused when the reader has just returned from signing in to follow. */
   autoFocus?: boolean;
   labels: ToggleLabels;
-  submit: (input: {
-    targetKind: string;
-    targetRef: string;
-    following: boolean;
-  }) => Promise<EngagementActionResult>;
+  submit: (
+    previous: EngagementToggleState,
+    formData: FormData,
+  ) => Promise<EngagementToggleState>;
 }) {
   return (
     <ToggleControl
+      targetKind={targetKind}
+      targetRef={targetRef}
       initialActive={initialActive}
       autoFocus={autoFocus}
       controlId={autoFocus ? "lineage-follow" : undefined}
@@ -189,68 +202,245 @@ export function EngagementFollowToggleControl({
           <UserPlus className="size-4" aria-hidden="true" />
         )
       }
-      run={(active) => submit({ targetKind, targetRef, following: active })}
+      submit={submit}
     />
   );
 }
 
-/**
- * The shared body of the two toggles. `run` receives the *confirmed* state, not
- * the optimistic one: the server is told what the reader is undoing, so a
- * double click cannot turn into two inserts.
- */
 function ToggleControl({
+  targetKind,
+  targetRef,
   initialActive,
   autoFocus = false,
   controlId,
   labels,
   icon,
-  run,
+  submit,
 }: {
+  targetKind: string;
+  targetRef: string;
   initialActive: boolean;
   autoFocus?: boolean;
   controlId?: string;
   labels: ToggleLabels;
   icon: (active: boolean) => ReactNode;
-  run: (confirmedActive: boolean) => Promise<EngagementActionResult>;
+  submit: (
+    previous: EngagementToggleState,
+    formData: FormData,
+  ) => Promise<EngagementToggleState>;
 }) {
-  const [confirmed, setConfirmed] = useState(initialActive);
-  const [failure, setFailure] = useState<EngagementActionFailure | null>(null);
-  const [active, applyOptimistic] = useOptimistic(
-    confirmed,
-    (current: boolean) => !current,
-  );
-
-  async function submit() {
-    applyOptimistic(undefined);
-    setFailure(null);
-    const result = await run(confirmed);
-    if (!result.ok) {
-      setFailure(result.reason);
-      return;
-    }
-    setConfirmed(result.active);
-  }
+  const [state, formAction] = useActionState(submit, {
+    active: initialActive,
+    failure: null,
+  });
 
   return (
-    <div className="flex flex-col gap-1">
-      <form action={submit}>
-        <button
-          id={controlId}
-          type="submit"
+    <form action={formAction} className="flex flex-col gap-1">
+      <TargetFields targetKind={targetKind} targetRef={targetRef} />
+      <ToggleButton
+        active={state.active}
+        autoFocus={autoFocus}
+        controlId={controlId}
+        labels={labels}
+        icon={icon}
+      />
+      <ActionFailure failure={state.failure} labels={labels} />
+    </form>
+  );
+}
+
+function ToggleButton({
+  active,
+  autoFocus,
+  controlId,
+  labels,
+  icon,
+}: {
+  active: boolean;
+  autoFocus: boolean;
+  controlId?: string;
+  labels: ToggleLabels;
+  icon: (active: boolean) => ReactNode;
+}) {
+  const { pending } = useFormStatus();
+  const shown = pending ? !active : active;
+
+  return (
+    <button
+      id={controlId}
+      type="submit"
+      autoFocus={autoFocus}
+      aria-pressed={shown}
+      className={buttonVariants({
+        variant: "outline",
+        className: "self-start",
+      })}
+    >
+      {icon(shown)}
+      {shown ? labels.active : labels.inactive}
+    </button>
+  );
+}
+
+/**
+ * The comment composer. Posts through a Server Action, so it works without
+ * JavaScript; with JavaScript it clears itself once the action reports the
+ * comment landed, and keeps the text on screen when the action refuses.
+ */
+export function EngagementCommentForm({
+  targetKind,
+  targetRef,
+  parentCommentId,
+  clientMutationId,
+  autoFocus = false,
+  fieldId,
+  controlRef,
+  compact = false,
+  labels,
+  submit,
+}: {
+  targetKind: string;
+  targetRef: string;
+  parentCommentId?: string | null;
+  clientMutationId: string;
+  autoFocus?: boolean;
+  fieldId?: string;
+  controlRef?: string;
+  compact?: boolean;
+  labels: {
+    field: string;
+    action: string;
+    unavailable: string;
+    rateLimited: string;
+    signInRequired: string;
+  };
+  submit: (
+    previous: EngagementCommentState,
+    formData: FormData,
+  ) => Promise<EngagementCommentState>;
+}) {
+  const [state, formAction] = useActionState(submit, {
+    submitted: false,
+    failure: null,
+  });
+
+  return (
+    <form
+      action={formAction}
+      className={compact ? "grid gap-2" : "grid gap-3"}
+      key={state.submitted ? "sent" : "draft"}
+    >
+      <TargetFields targetKind={targetKind} targetRef={targetRef} />
+      <input type="hidden" name="clientMutationId" value={clientMutationId} />
+      {parentCommentId ? (
+        <input type="hidden" name="parentCommentId" value={parentCommentId} />
+      ) : null}
+      <label className="grid gap-2 text-sm font-medium text-foreground">
+        {labels.field}
+        <textarea
+          id={fieldId}
+          data-auth-intent-control="comment"
+          data-auth-intent-control-ref={controlRef}
           autoFocus={autoFocus}
-          aria-pressed={active}
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          {icon(active)}
-          {active ? labels.active : labels.inactive}
-        </button>
-      </form>
-      <ActionFailure failure={failure} labels={labels} />
-    </div>
+          name="body"
+          defaultValue=""
+          maxLength={600}
+          rows={compact ? 2 : 3}
+          className={`${compact ? "min-h-16" : "min-h-24"} rounded-md border border-border bg-background px-3 py-2 text-sm leading-6 text-foreground shadow-sm transition-colors outline-none placeholder:text-muted-foreground focus:border-primary`}
+        />
+      </label>
+      <button
+        type="submit"
+        className={buttonVariants({
+          variant: compact ? "outline" : "default",
+          size: compact ? "sm" : "default",
+          className: "self-start",
+        })}
+      >
+        {compact ? (
+          <Reply className="size-4" aria-hidden="true" />
+        ) : (
+          <MessageCircle className="size-4" aria-hidden="true" />
+        )}
+        {labels.action}
+      </button>
+      <ActionFailure failure={state.failure} labels={labels} />
+    </form>
+  );
+}
+
+/**
+ * One moderation control on a comment — delete, report, block. Each is its own
+ * form so a failure lands next to the control the reader pressed.
+ */
+export function EngagementCommentActionButton({
+  targetKind,
+  targetRef,
+  commentId,
+  label,
+  icon,
+  variant = "ghost",
+  children,
+  labels,
+  submit,
+}: {
+  targetKind: string;
+  targetRef: string;
+  commentId: string;
+  label: string;
+  icon: ReactNode;
+  variant?: "ghost" | "outline";
+  children?: ReactNode;
+  labels: {
+    unavailable: string;
+    rateLimited: string;
+    signInRequired: string;
+  };
+  submit: (
+    previous: EngagementCommentState,
+    formData: FormData,
+  ) => Promise<EngagementCommentState>;
+}) {
+  const [state, formAction] = useActionState(submit, {
+    submitted: false,
+    failure: null,
+  });
+
+  return (
+    <form action={formAction} className="grid gap-2">
+      <TargetFields targetKind={targetKind} targetRef={targetRef} />
+      <input type="hidden" name="commentId" value={commentId} />
+      {children}
+      <button
+        type="submit"
+        disabled={state.submitted}
+        className={buttonVariants({ variant, size: "sm" })}
+      >
+        {icon}
+        {label}
+      </button>
+      <ActionFailure failure={state.failure} labels={labels} />
+    </form>
+  );
+}
+
+/**
+ * The target, carried in the form rather than in a closure. A browser with no
+ * JavaScript has no other channel, and the action normalizes both fields before
+ * either reaches a query.
+ */
+function TargetFields({
+  targetKind,
+  targetRef,
+}: {
+  targetKind: string;
+  targetRef: string;
+}) {
+  return (
+    <>
+      <input type="hidden" name="targetKind" value={targetKind} />
+      <input type="hidden" name="targetRef" value={targetRef} />
+    </>
   );
 }
 
@@ -281,153 +471,5 @@ function ActionFailure({
     <p className="text-sm text-destructive" role="status" aria-live="polite">
       {text}
     </p>
-  );
-}
-
-/**
- * The comment composer. Posts through a Server Action, clears itself on
- * success, and keeps the text on screen when the action refuses — the reader
- * never loses what they wrote to a failure they did not cause.
- */
-export function EngagementCommentForm({
-  targetKind,
-  targetRef,
-  parentCommentId,
-  clientMutationId,
-  autoFocus = false,
-  fieldId,
-  controlRef,
-  compact = false,
-  labels,
-  submit,
-}: {
-  targetKind: string;
-  targetRef: string;
-  parentCommentId?: string | null;
-  clientMutationId: string;
-  autoFocus?: boolean;
-  fieldId?: string;
-  controlRef?: string;
-  compact?: boolean;
-  labels: {
-    field: string;
-    action: string;
-    unavailable: string;
-    rateLimited: string;
-    signInRequired: string;
-  };
-  submit: (input: {
-    targetKind: string;
-    targetRef: string;
-    body: string;
-    clientMutationId: string;
-    parentCommentId?: string | null;
-  }) => Promise<EngagementCommentActionResult>;
-}) {
-  const [body, setBody] = useState("");
-  const [failure, setFailure] = useState<EngagementActionFailure | null>(null);
-
-  async function run() {
-    setFailure(null);
-    const result = await submit({
-      targetKind,
-      targetRef,
-      body,
-      clientMutationId,
-      parentCommentId: parentCommentId ?? null,
-    });
-    if (!result.ok) {
-      setFailure(result.reason);
-      return;
-    }
-    setBody("");
-  }
-
-  return (
-    <form action={run} className={compact ? "grid gap-2" : "grid gap-3"}>
-      <label className="grid gap-2 text-sm font-medium text-foreground">
-        {labels.field}
-        <textarea
-          id={fieldId}
-          data-auth-intent-control="comment"
-          data-auth-intent-control-ref={controlRef}
-          autoFocus={autoFocus}
-          name="body"
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-          maxLength={600}
-          rows={compact ? 2 : 3}
-          className={`${compact ? "min-h-16" : "min-h-24"} rounded-md border border-border bg-background px-3 py-2 text-sm leading-6 text-foreground shadow-sm transition-colors outline-none placeholder:text-muted-foreground focus:border-primary`}
-        />
-      </label>
-      <button
-        type="submit"
-        className={buttonVariants({
-          variant: compact ? "outline" : "default",
-          size: compact ? "sm" : "default",
-          className: "self-start",
-        })}
-      >
-        {compact ? (
-          <Reply className="size-4" aria-hidden="true" />
-        ) : (
-          <MessageCircle className="size-4" aria-hidden="true" />
-        )}
-        {labels.action}
-      </button>
-      <ActionFailure failure={failure} labels={labels} />
-    </form>
-  );
-}
-
-/**
- * One moderation control on a comment — delete, report, block. Each is its own
- * form so a failure lands next to the control the reader pressed.
- */
-export function EngagementCommentActionButton({
-  label,
-  icon,
-  variant = "ghost",
-  children,
-  labels,
-  run,
-}: {
-  label: string;
-  icon: ReactNode;
-  variant?: "ghost" | "outline";
-  children?: ReactNode;
-  labels: {
-    unavailable: string;
-    rateLimited: string;
-    signInRequired: string;
-  };
-  run: (formData: FormData) => Promise<EngagementCommentActionResult>;
-}) {
-  const [failure, setFailure] = useState<EngagementActionFailure | null>(null);
-  const [done, setDone] = useState(false);
-
-  async function submit(formData: FormData) {
-    setFailure(null);
-    const result = await run(formData);
-    if (!result.ok) {
-      setFailure(result.reason);
-      return;
-    }
-    setDone(true);
-  }
-
-  return (
-    <form action={submit} className="grid gap-2">
-      {children}
-      <button
-        type="submit"
-        disabled={done}
-        className={buttonVariants({ variant, size: "sm" })}
-      >
-        {icon}
-        {label}
-      </button>
-      <ActionFailure failure={failure} labels={labels} />
-    </form>
   );
 }
