@@ -129,12 +129,21 @@ in source tables. A separately stored `allowed_projection` contains only
 `source_only_fields`; unknown and forbidden values are not copied out of raw
 evidence.
 
-The latest 2026-08-25 full ordered-list shape read observed 129,211 rows:
-121,774 active identifiers matching the current OpenAPI `[0-9A-Z]{5,6}`
-pattern, 6,329 inactive identifiers with that documented shape, and 1,108
-inactive legacy-shape identifiers. Of the legacy set, 1,048 are bounded
-alphanumeric values with historical lengths outside the current constraint and
-60 use only the observed legacy separators `.`, `!`, `:`, or `/`.
+The 2026-09-04 completed capture observed 129,214 rows: 121,777 active
+identifiers matching the current OpenAPI `[0-9A-Z]{5,6}` pattern, 6,329
+inactive identifiers with that documented shape, and 1,108 inactive
+legacy-shape identifiers. Of the legacy set, 1,048 are bounded alphanumeric
+values with historical lengths outside the current constraint and 60 use only
+the observed legacy separators `.`, `!`, `:`, or `/`. Against the 2026-08-25
+shape read of 129,211 rows the corpus moved by exactly three active
+identifiers in nine days; the inactive and legacy counts did not move. Treat
+these as sizing inputs, not as expected membership: the receipt is
+`docs/EPPO_OBSERVED_CAPTURE_PROOF_2026-09.md`.
+
+One documented field is still unclassified. `infos` on the `overview` response
+falls in neither the public nor the source-only list, so it stays `unknown`:
+present in raw evidence, copied into no projection. It cannot pass
+`rights_cleared_source_public` without an explicit decision.
 
 Every list row must carry a boolean `is_active`. Only a documented-shape active
 identifier queues detail requests. A documented-shape inactive row becomes
