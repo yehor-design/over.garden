@@ -174,7 +174,14 @@ validate_manifest_shape() {
       and (.image.archiveConfigDigest | type == "string" and length > 0)
       and (.archive.file | type == "string" and length > 0)
       and (.archive.sha256 | type == "string" and length > 0)
-      and (.capabilitiesFile | type == "string" and length > 0)' \
+      and (.capabilitiesFile | type == "string" and length > 0)
+      and ((.queue // null) == null or (
+        .queue.name == "matching"
+        and (.queue.supportedHandlers | type == "array")
+        and (.queue.supportedHandlers | length > 0)
+        and (.queue.supportedHandlers | all(type == "string" and test("^[a-z][a-z0-9_]*$")))
+        and (.queue.supportedHandlers == (.queue.supportedHandlers | unique))
+      ))' \
     "$manifest" >/dev/null || fail "release manifest contract does not match OVE-190"
 
   local source_sha
@@ -278,16 +285,31 @@ validate_capabilities_artifact() {
     '.release.commitSha == $sha
       and .release.imageDigest == $digest
       and .release.schemaCompatibilityClass == $compatibility
-      and .queue.name == "matching"
-      and .queue.supportedHandlers == [
-        "catalog_alias_suggestions_refresh",
-        "catalog_fuzzy_duplicate_qa_refresh",
-        "catalog_match_suggestions_refresh",
-        "catalog_typeahead_reindex",
-        "journal_entry_index",
-        "journal_entry_unindex"
-      ]' "$release_dir/$capability_file" >/dev/null \
-    || fail "sealed capabilities do not contain the exact six-handler contract"
+      and .queue.name == "matching"' "$release_dir/$capability_file" >/dev/null \
+    || fail "sealed capabilities do not match the sealed release identity"
+
+  # The handler set is whatever this release sealed, never a list restated here.
+  # A frozen six-handler copy lived in this function and in the CI workflow; the
+  # queue manifest grew to nine and both copies stayed, so every matching image
+  # release failed for a week. A release sealed before release.json carried the
+  # set falls back to a shape check: its exact set was verified against the
+  # commit when it was built, and the artifact is immutable on disk.
+  local expected_handlers
+  expected_handlers="$(jq -c '.queue.supportedHandlers // empty' "$manifest")"
+  if [[ -n "$expected_handlers" ]]; then
+    jq -e --argjson handlers "$expected_handlers" \
+      '.queue.supportedHandlers == $handlers' \
+      "$release_dir/$capability_file" >/dev/null \
+      || fail "sealed capabilities do not carry the handler set recorded in release.json"
+  else
+    jq -e '.queue.supportedHandlers
+        | type == "array"
+          and length > 0
+          and all(type == "string" and test("^[a-z][a-z0-9_]*$"))
+          and . == (. | unique)' \
+      "$release_dir/$capability_file" >/dev/null \
+      || fail "sealed capabilities do not declare a sorted, distinct handler set"
+  fi
 }
 
 verify_loaded_image() {
@@ -472,7 +494,7 @@ preflight_candidate() {
     --project-name overgarden \
     --env-file "$candidate_env" \
     --file "$COMPOSE_FILE" \
-    run --rm --no-deps matching-api python -m app.runtime preflight >/dev/null 2>&1 \
+    run --rm --no-deps matching-worker python -m app.runtime preflight >/dev/null 2>&1 \
     || fail "candidate schema or dependency preflight failed"
 }
 
@@ -486,7 +508,7 @@ apply_schema_migration() {
     --project-name overgarden \
     --env-file "$candidate_env" \
     --file "$COMPOSE_FILE" \
-    run --rm --no-deps -T matching-api \
+    run --rm --no-deps -T matching-worker \
       python -c 'import os, sys, psycopg; connection = psycopg.connect(os.environ["DIRECT_URL"], autocommit=True); connection.execute(sys.stdin.read()); connection.close()' \
       < "$MIGRATION_FILE" >/dev/null 2>&1; then
     rm -f -- "$candidate_env"
@@ -498,7 +520,7 @@ apply_schema_migration() {
       --project-name overgarden \
       --env-file "$candidate_env" \
       --file "$COMPOSE_FILE" \
-      run --rm --no-deps -T matching-api \
+      run --rm --no-deps -T matching-worker \
         python -c 'import os, sys, psycopg; connection = psycopg.connect(os.environ["DIRECT_URL"], autocommit=True); connection.execute(sys.stdin.read()); connection.close()' \
         < "$DEAD_LETTER_MIGRATION_FILE" >/dev/null 2>&1; then
       rm -f -- "$candidate_env"
@@ -515,24 +537,22 @@ verify_active_release() {
   local expected_id
   expected_id="$(manifest_value "$manifest" '.loadedImageId')"
 
-  compose exec -T matching-api python -m app.runtime ready >/dev/null 2>&1 \
-    || return 1
   compose exec -T matching-worker python -m app.runtime ready >/dev/null 2>&1 \
     || return 1
 
-  local service
-  for service in matching-api matching-worker; do
-    local container_id
-    local actual_id
-    container_id="$(compose ps -q "$service")"
-    [[ -n "$container_id" ]] || return 1
-    actual_id="$(docker container inspect --format '{{.Image}}' "$container_id")"
-    [[ "$actual_id" == "$expected_id" ]] || return 1
-  done
+  # One service since OVE-357 retired `matching-api`; this used to iterate two
+  # and named a service the release compose file no longer defines, so every
+  # command here failed before it could check anything.
+  local container_id
+  local actual_id
+  container_id="$(compose ps -q matching-worker)"
+  [[ -n "$container_id" ]] || return 1
+  actual_id="$(docker container inspect --format '{{.Image}}' "$container_id")"
+  [[ "$actual_id" == "$expected_id" ]] || return 1
 
   local observed_capabilities
   observed_capabilities="$(mktemp "$STATE_ROOT/.capabilities.XXXXXX")"
-  if ! compose exec -T matching-api python -m app.runtime capabilities \
+  if ! compose exec -T matching-worker python -m app.runtime capabilities \
     > "$observed_capabilities" 2>/dev/null; then
     rm -f -- "$observed_capabilities"
     return 1
@@ -540,24 +560,29 @@ verify_active_release() {
 
   local source_sha
   local digest
+  local sealed_capabilities
+  local expected_handlers
   source_sha="$(manifest_value "$manifest" '.sourceCommit')"
   digest="$(manifest_value "$manifest" '.image.registryDigest')"
+  sealed_capabilities="$RELEASES_ROOT/$(release_key_from_manifest "$manifest")/matching-capabilities.json"
+  if [[ ! -f "$sealed_capabilities" ]]; then
+    rm -f -- "$observed_capabilities"
+    return 1
+  fi
+  # Pinned to the set this release sealed rather than to a list written here, so
+  # the running container is held to its own contract and adding a handler never
+  # makes a correct deployment look like a failed one.
+  expected_handlers="$(jq -c '.queue.supportedHandlers' "$sealed_capabilities")"
   if ! jq -e \
     --arg sha "$source_sha" \
     --arg digest "$digest" \
     --arg compatibility "$EXPECTED_SCHEMA_COMPATIBILITY" \
+    --argjson handlers "$expected_handlers" \
     '.release.commitSha == $sha
       and .release.imageDigest == $digest
       and .release.schemaCompatibilityClass == $compatibility
       and .queue.name == "matching"
-      and .queue.supportedHandlers == [
-        "catalog_alias_suggestions_refresh",
-        "catalog_fuzzy_duplicate_qa_refresh",
-        "catalog_match_suggestions_refresh",
-        "catalog_typeahead_reindex",
-        "journal_entry_index",
-        "journal_entry_unindex"
-      ]' "$observed_capabilities" >/dev/null; then
+      and .queue.supportedHandlers == $handlers' "$observed_capabilities" >/dev/null; then
     rm -f -- "$observed_capabilities"
     return 1
   fi
@@ -647,7 +672,7 @@ activate_manifest() {
   mv "$candidate_env" "$ACTIVE_ENV"
   chmod 0600 "$ACTIVE_ENV"
 
-  if compose up --detach --no-deps --force-recreate matching-api matching-worker >/dev/null 2>&1 \
+  if compose up --detach --no-deps --force-recreate matching-worker >/dev/null 2>&1 \
     && wait_for_active_release "$target_manifest"; then
     [[ -z "$prior_env" ]] || rm -f -- "$prior_env"
     return 0
@@ -656,7 +681,7 @@ activate_manifest() {
   info "candidate activation failed; attempting prior sealed release restore"
   if [[ -n "$prior_env" && -f "$prior_env" ]]; then
     mv "$prior_env" "$ACTIVE_ENV"
-    if compose up --detach --no-deps --force-recreate matching-api matching-worker >/dev/null 2>&1 \
+    if compose up --detach --no-deps --force-recreate matching-worker >/dev/null 2>&1 \
       && [[ -f "$CURRENT_POINTER" ]] \
       && wait_for_active_release "$CURRENT_POINTER"; then
       info "prior sealed release restore passed readiness"

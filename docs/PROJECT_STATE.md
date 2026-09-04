@@ -157,6 +157,17 @@ decision in ADR-0022, not an omission.
 7. **`matching_worker_heartbeats` has no build timestamp.** The retired API read
    it from the image environment and no column holds it, so the runtime proof
    reports the image digest instead of inventing a value.
+8. **No matching image has been released since 2026-08-27.** The release
+   workflow's seal step demanded a six-handler capability manifest; the queue
+   manifest grew `stable_registry_foundation_build` and its two siblings on
+   2026-08-28 and the container began answering with nine. Seventy-six
+   consecutive runs failed on a `main` that was correct, each exiting 1 with no
+   output. Fixed on 2026-09-04 by deriving the expected set from the manifest
+   and by making every gate in that step print what it wanted and what it got.
+   The same frozen six lived in the heartbeat CHECK constraint: apply
+   `apps/web/sql/0050_matching_handler_set_catch_up.sql` to production before
+   deploying any image built after 2026-08-27, or the worker's first heartbeat
+   is refused and a running worker reads as stale.
 
 ## How to check any of this yourself
 

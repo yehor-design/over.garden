@@ -1,3 +1,5 @@
+import { matchingSupportedKinds } from "@/server/job-queue-manifest";
+
 export const MATCHING_RUNTIME_SCHEMA_VERSION =
   "ove194.matchingRuntime.v1" as const;
 export const MATCHING_RUNTIME_SERVICE = "overgarden-matching" as const;
@@ -5,14 +7,19 @@ export const MATCHING_RUNTIME_SCHEMA_COMPATIBILITY_CLASS =
   "ove190.matching-schema.v1" as const;
 export const MATCHING_RUNTIME_QUEUE_NAME = "matching" as const;
 
-export const MATCHING_RUNTIME_REQUIRED_HANDLERS = [
-  "catalog_alias_suggestions_refresh",
-  "catalog_fuzzy_duplicate_qa_refresh",
-  "catalog_match_suggestions_refresh",
-  "catalog_typeahead_reindex",
-  "journal_entry_index",
-  "journal_entry_unindex",
-] as const;
+/**
+ * Derived, never restated. This list used to be six frozen literals, and the
+ * matching image release failed on every push to `main` from 2026-08-28 to
+ * 2026-09-04 because `stable_registry_foundation_build` and its two siblings
+ * joined the manifest while the copies did not move. The manifest is the
+ * builder; everything that needs the set asks for it.
+ *
+ * Sorted, because the Python runtime reports `sorted(SUPPORTED_JOB_KINDS)` and
+ * the comparisons below are order-sensitive on purpose.
+ */
+export const MATCHING_RUNTIME_REQUIRED_HANDLERS: readonly string[] = [
+  ...matchingSupportedKinds(),
+].sort();
 
 const DEPENDENCY_STATUSES = {
   postgres: ["available", "unavailable"],

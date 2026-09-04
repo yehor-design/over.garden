@@ -1,8 +1,10 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import { matchingSupportedKinds } from "@/server/job-queue-manifest";
 
 const WEB_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -26,14 +28,29 @@ const MIGRATION_PATH = path.join(
   "infra/production-worker/0002_matching_worker_heartbeats.sql",
 );
 
-const REQUIRED_HANDLERS = [
-  "catalog_alias_suggestions_refresh",
-  "catalog_fuzzy_duplicate_qa_refresh",
-  "catalog_match_suggestions_refresh",
-  "catalog_typeahead_reindex",
-  "journal_entry_index",
-  "journal_entry_unindex",
-] as const;
+const SQL_DIRECTORY = path.join(REPOSITORY_ROOT, "apps/web/sql");
+
+/**
+ * Derived, never restated.
+ *
+ * This file used to carry its own copy of the handler set and assert that the
+ * workflow and the migration each contained those six strings. They did. The
+ * queue manifest had already grown to nine, so the test passed while the
+ * release workflow refused every image built from a correct `main` — seventy-six
+ * consecutive failures between 2026-08-28 and 2026-09-04, each one exiting 1
+ * with no output. A guard that restates the value it is guarding proves only
+ * that two copies of a stale answer agree.
+ */
+const REQUIRED_HANDLERS = [...matchingSupportedKinds()].sort();
+
+/** Every `supported_handlers = array[...]::text[]` list a SQL file declares. */
+function heartbeatHandlerConstraints(sql: string): string[][] {
+  return [
+    ...sql.matchAll(/supported_handlers = array\[([^\]]*)\]::text\[\]/gu),
+  ].map((match) =>
+    [...match[1].matchAll(/'([a-z0-9_]+)'/gu)].map((handler) => handler[1]),
+  );
+}
 
 describe("OVE-190 immutable matching release contract", () => {
   it("tests the frozen source before publishing a unique exact-SHA image", async () => {
@@ -67,14 +84,76 @@ describe("OVE-190 immutable matching release contract", () => {
     expect(workflow).toContain(".release.imageDigest == $digest");
     expect(workflow).toContain(".release.schemaCompatibilityClass == $schema");
     expect(workflow).toContain('.queue.name == "matching"');
-    for (const handler of REQUIRED_HANDLERS) {
-      expect(workflow).toContain(`\"${handler}\"`);
-    }
+    // The handler set is read from the commit being released and compared to
+    // what the built container answers, then sealed into release.json so the
+    // production host can hold the running container to it without a list of
+    // its own.
+    expect(workflow).toContain(
+      "from app.job_handlers import SUPPORTED_JOB_KINDS",
+    );
+    expect(workflow).toContain('assert_equal "queue.supportedHandlers"');
+    expect(workflow).toContain("--argjson supportedHandlers");
+    expect(workflow).toContain("supportedHandlers: $supportedHandlers");
     expect(workflow).toContain("release.json");
     expect(workflow).toContain("matching-capabilities.json");
     expect(workflow).toContain("archive_sha256");
     expect(workflow).toContain("archiveConfigDigest");
     expect(workflow).toContain("actions/upload-artifact");
+  });
+
+  it("names no handler in the release path, so the set cannot go stale there", async () => {
+    const restatements = await Promise.all(
+      [WORKFLOW_PATH, RELEASE_SCRIPT_PATH].map(async (file) => {
+        const contents = await readFile(file, "utf8");
+        return {
+          file: path.relative(REPOSITORY_ROOT, file),
+          named: REQUIRED_HANDLERS.filter((handler) =>
+            contents.includes(`"${handler}"`),
+          ),
+        };
+      }),
+    );
+
+    // Falsify this by pasting one handler name back into either file.
+    expect(restatements).toEqual([
+      { file: ".github/workflows/matching-image.yml", named: [] },
+      { file: "infra/production-worker/matching-release", named: [] },
+    ]);
+  });
+
+  it("keeps the heartbeat constraint in step with the queue manifest", async () => {
+    // The constraint pins `supported_handlers` to an exact array, so a manifest
+    // that grows without a migration makes every heartbeat fail with 23514 —
+    // and since OVE-357 the heartbeat row is the only liveness signal there is.
+    // The newest migration that states the constraint has to state today's set.
+    const sqlFiles = (await readdir(SQL_DIRECTORY))
+      .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/u.test(name))
+      .sort((left, right) => left.localeCompare(right, "en"));
+    const stated: { file: string; handlers: string[][] }[] = [];
+    for (const name of sqlFiles) {
+      const handlers = heartbeatHandlerConstraints(
+        await readFile(path.join(SQL_DIRECTORY, name), "utf8"),
+      );
+      if (handlers.length > 0) stated.push({ file: name, handlers });
+    }
+
+    expect(stated.length).toBeGreaterThan(0);
+    const newest = stated[stated.length - 1];
+    for (const declared of newest.handlers) {
+      expect([declared.join(","), newest.file]).toEqual([
+        REQUIRED_HANDLERS.join(","),
+        newest.file,
+      ]);
+    }
+
+    // The production worker host bootstraps the table from its own excerpt.
+    const hostMigration = heartbeatHandlerConstraints(
+      await readFile(MIGRATION_PATH, "utf8"),
+    );
+    expect(hostMigration.length).toBeGreaterThan(0);
+    for (const declared of hostMigration) {
+      expect(declared).toEqual([...REQUIRED_HANDLERS]);
+    }
   });
 
   it("uses one no-latest image for the worker with dependency readiness", async () => {
@@ -119,6 +198,9 @@ describe("OVE-190 immutable matching release contract", () => {
     for (const handler of REQUIRED_HANDLERS) {
       expect(migration).toContain(`'${handler}'`);
     }
+    expect(migration).toContain(
+      "apps/web/sql/0050_matching_handler_set_catch_up.sql",
+    );
     expect(executableSql).not.toMatch(
       /\b(drop|delete|truncate)\b\s+(table|from)/i,
     );
@@ -182,6 +264,23 @@ describe("OVE-190 immutable matching release contract", () => {
     expect(releaseScript).toContain("verify_loaded_image");
     expect(releaseScript).toContain("python -m app.runtime preflight");
     expect(releaseScript).toContain("python -m app.runtime ready");
+    // The expected handler set comes from the artifact being verified.
+    expect(releaseScript).toContain(".queue.supportedHandlers // empty");
+    expect(releaseScript).toContain("--argjson handlers");
+    // OVE-357 retired `matching-api`, and the release compose file has defined
+    // one service ever since. Every command this script sent to that file still
+    // named the retired one, so preflight, activation, and readiness each asked
+    // Compose for a service it does not have. Only the emergency restore path,
+    // which drives the untouched pre-OVE-190 host Compose file, may name it.
+    const staleServiceUse = releaseScript
+      .split("\n")
+      .filter(
+        (line) =>
+          line.includes("matching-api") &&
+          !line.includes("legacy_compose") &&
+          !line.trimStart().startsWith("#"),
+      );
+    expect(staleServiceUse).toEqual([]);
     expect(releaseScript).toContain("--no-deps");
     expect(releaseScript).toContain("rollback accepts no arguments");
     expect(releaseScript).toContain("forward accepts no arguments");

@@ -4,6 +4,7 @@ import {
   MATCHING_RUNTIME_REQUIRED_HANDLERS,
   WORKER_DRAIN_CLASSES,
 } from "@/lib/matching-runtime-proof";
+import { matchingSupportedKinds } from "@/server/job-queue-manifest";
 
 import {
   assertNoForbiddenWorkerMarkers,
@@ -129,14 +130,12 @@ describe("worker drain class", () => {
 
   it("leaves the handler capability set untouched", () => {
     // The wake mechanism changes when work is discovered, never what the work
-    // does. A changed handler set here would mean the contract moved.
-    expect([...MATCHING_RUNTIME_REQUIRED_HANDLERS]).toEqual([
-      "catalog_alias_suggestions_refresh",
-      "catalog_fuzzy_duplicate_qa_refresh",
-      "catalog_match_suggestions_refresh",
-      "catalog_typeahead_reindex",
-      "journal_entry_index",
-      "journal_entry_unindex",
-    ]);
+    // does. This used to restate six literals, which is how the release gate
+    // went on demanding six handlers for a week after the manifest grew to
+    // nine. The set still may not drift — it may only drift from the manifest,
+    // which is the one place allowed to say what it is.
+    expect([...MATCHING_RUNTIME_REQUIRED_HANDLERS]).toEqual(
+      [...matchingSupportedKinds()].sort(),
+    );
   });
 });

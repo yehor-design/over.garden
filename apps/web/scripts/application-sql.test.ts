@@ -49,6 +49,7 @@ describe("versioned application SQL bootstrap", () => {
       "0047_ove371_media_variants.sql",
       "0048_ove375_capture_claim_ordering_index.sql",
       "0049_ove377_owned_engagement_likes.sql",
+      "0050_matching_handler_set_catch_up.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

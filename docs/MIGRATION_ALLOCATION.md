@@ -40,6 +40,7 @@ another issue's number.
 | `0047` | OVE-371      | Owner MVP reset        | media placeholder and variant long-edge columns (ADR-0022, D2)        |
 | `0048` | OVE-375      | Source layer           | capture claim-ordering index so one claim stops reading the whole run |
 | `0049` | OVE-377      | Slice 22 interaction   | a like becomes a permanent row owned by an account or one visitor     |
+| `0050` | maintainer   | Matching worker        | heartbeat handler-set catch-up: six frozen kinds become the manifest's nine |
 
 Compact range receipt:
 
@@ -55,6 +56,7 @@ Compact range receipt:
 - `0043: catalog trigram typeahead indexes`
 - `0044: matching worker idle contract`
 - `0049: owned engagement likes`
+- `0050: matching worker heartbeat handler set`
 
 Rows `0036`-`0038` are reconciled after the fact under rule 4: those migrations
 landed before the ledger recorded them, and renaming a landed file to restore
@@ -65,6 +67,11 @@ under the owner's explicit `AGENTS.md` rule 10 sign-off of 2026-09-04, because
 the column it replaces — `anonymous_device_hash` — is derived from a token
 scoped to one target and cannot be converted into either new owner column. Its
 rollback restores the columns and states plainly that it cannot restore rows.
+
+Row `0050` has no issue owner, like `0045`. It is a constraint replacement, not
+a feature: `matching_worker_heartbeats_supported_handlers_check` still pinned
+`supported_handlers` to the six kinds the queue manifest had in `0001`, while
+the manifest and the worker had moved to nine.
 
 Rows `0040` and `0041` are second allocations to owners that already hold `0025`
 and `0027`. Rule 2 permits them: each number is used by its own owner, for that
