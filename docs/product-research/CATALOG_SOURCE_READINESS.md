@@ -1,3 +1,14 @@
+> # ✅ STATUS 2026-09-04 · `CURRENT`
+>
+> This corpus is product research written **before** the code existed. The repository is the
+> source of truth for the product. Canon: `PRODUCT_CANON_2026-09.md` · superseded decisions:
+> `SUPERSEDED_DECISIONS_LEDGER.md` · per-file status: `RESEARCH_STATUS_INDEX.md`.
+> Reconciled against `over.garden` @ `main` `ab52664`, 2026-09-04.
+>
+> Live source gate. Still binding: it decides which catalog sources an ingestion slice may consume. Read it with `ADR-0016` and `docs/STABLE_REGISTRY.md`: a source that passes this gate still has to clear the observed-capture, Foundation-release, identity, product-eligibility and activation gates before a gardener sees anything. Production catalog is empty as of 2026-09-04.
+
+---
+
 # Catalog Source Readiness Gate
 
 Status: OVE-55 live gate plus OVE-79 full-import readiness gate plus OVE-100 EU OJ/EUR-Lex source-path approval plus OVE-87 PGR/genebank source-use gate plus OVE-89 entity-resolution QA gate plus OVE-105 EU OJ production landing gate plus OVE-318 Stable Registry canon; OVE-253 is a historical EPPO source-contract receipt (`blocked_manifest`)

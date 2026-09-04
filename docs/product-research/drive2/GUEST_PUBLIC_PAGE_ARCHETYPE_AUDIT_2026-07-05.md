@@ -1,3 +1,14 @@
+> # 🕰 STATUS 2026-09-04 · `RETROSPECTIVE`
+>
+> This corpus is product research written **before** the code existed. The repository is the
+> source of truth for the product. Canon: `PRODUCT_CANON_2026-09.md` · superseded decisions:
+> `SUPERSEDED_DECISIONS_LEDGER.md` · per-file status: `RESEARCH_STATUS_INDEX.md`.
+> Reconciled against `over.garden` @ `main` `ab52664`, 2026-09-04.
+>
+> Dated audit of another product, 2026-07-05. Useful as mechanics research; it does not describe OverGarden as built.
+
+---
+
 # Drive2 Guest Public Page Archetype Audit
 
 Status: OVE-145 research artifact

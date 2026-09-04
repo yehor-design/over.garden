@@ -1,3 +1,14 @@
+> # ✅ STATUS 2026-09-04 · `CURRENT`
+>
+> This corpus is product research written **before** the code existed. The repository is the
+> source of truth for the product. Canon: `PRODUCT_CANON_2026-09.md` · superseded decisions:
+> `SUPERSEDED_DECISIONS_LEDGER.md` · per-file status: `RESEARCH_STATUS_INDEX.md`.
+> Reconciled against `over.garden` @ `main` `ab52664`, 2026-09-04.
+>
+> Still binding for the species backbone and reviewed vernacular aliases. The Stable Registry boundary section (OVE-318) is the part that governs today.
+
+---
+
 # Species Backbone Policy
 
 Status: OVE-83 planned species import and reviewed vernacular alias policy, extending the OVE-58/59/63 seed, alias-promotion, and attribution path
