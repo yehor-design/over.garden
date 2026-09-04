@@ -111,9 +111,15 @@ decision in ADR-0022, not an omission.
    the session store is unreachable, a workspace page says so, but the site
    header still renders its signed-out state ("sign in"). The page is honest;
    the chrome is not yet, and it sits outside `/garden/**`.
-3. **The slice's browser proofs are partial.** Like, language and sign-in were
-   each proved with JavaScript switched off against a production build, and the
-   like was proved end to end on production. A *successful* sign-in was never
+3. **The slice's browser proofs are partial, and one of them was overstated.**
+   Like, language and sign-in each had their *endpoint* proved with a real
+   no-JavaScript POST against a production build, and all three were then
+   verified end to end on production in a real browser. That is not the same as
+   working with JavaScript off, and the earlier wording here said it was: every
+   public page renders inside streamed Suspense boundaries, so with scripts
+   disabled it shows nothing at all and no control is reachable. See ADR-0024
+   D3 for the measurement and for why the crawler cases are nonetheless
+   covered. A *successful* sign-in was never
    walked through in a browser — only the refusal path — so the `next`
    round-trip and the ADR-0022 D6 cross-tab reload are asserted by tests rather
    than observed. CI runs `tests/public-hydration.spec.ts` against a real

@@ -105,6 +105,23 @@ only once it opens, so the language options were absent from the server HTML;
 the control is a `<details>` disclosure now, and the anchors ship in the
 document.
 
+**What this rule does not claim, measured on 2026-09-04.** "A real endpoint" is
+not "reachable with JavaScript off". Every public page renders inside streamed
+Suspense boundaries, so its markup arrives in `<div hidden id="S:n">` and only
+React's inline completion script moves it into place. With scripts disabled a
+public page shows nothing at all — 0 visible characters, on a journal entry,
+the feed, knowledge and objects alike — and `<title>` and the metadata sit after
+`</head>` in the body stream. Two tools agree: raw HTML byte offsets and a
+Chromium context with `javaScriptEnabled: false`.
+
+This is the app's rendering architecture, not something this slice introduced,
+and Next's own bot handling already covers the cases that matter: agents that do
+not run scripts (`facebookexternalhit`, Slackbot, Telegrambot, WhatsApp) receive
+a fully blocking render with the title in `<head>`, while Googlebot receives the
+stream because it executes scripts. What the rule buys is therefore narrower and
+still worth having: the control posts to a real endpoint the moment it is
+reachable, and never depends on hydration to *act* once rendered.
+
 ### D4. Choosing a language is a navigation
 
 On a public page the locale is in the path, so the choice is a link, and the
