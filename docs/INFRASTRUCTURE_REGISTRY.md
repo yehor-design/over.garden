@@ -635,10 +635,11 @@ Worker and search invariants:
   releases between 2026-08-28 and 2026-09-04 after the manifest grew to nine.
   `contracts/job-queue/job-queue.contract.v1.json` is generated from
   `apps/web/src/server/job-queue-manifest.ts` and is the readable answer. Reclaim
-  stale `processing` rows after the visibility timeout. The canonical manifest
-  is `services/matching/app/job_handlers.py`; dispatch, heartbeat, CI sealing,
-  deployment, and runtime smoke must all use it rather than duplicating a
-  smaller capability claim.
+  stale `processing` rows after the visibility timeout. Within the Python tier
+  the set is named once, in `services/matching/app/job_handlers.py`, which reads
+  it from the generated `app/job_queue_contract.py`; dispatch, heartbeat, CI
+  sealing, deployment, and runtime smoke must all use that rather than
+  duplicating a smaller capability claim.
 - Runtime writer: `services/matching/app/search.py:journal_entry_search_document_from_row`.
 - Machine-readable contract: `contracts/search/public-journal-entry-search-document.json`.
 - `journal_entries` index documents may contain only the current public-safe
