@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-03.
+Last inventory: 2026-09-03. Divergence noted 2026-09-04.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -23,12 +23,12 @@ than reading a checked-in file; nothing here needs a secret to be written down.
 
 ## Status vocabulary
 
-| Status | Meaning |
-| -- | -- |
-| `applied` | every object the migration creates is present |
+| Status        | Meaning                                                                                                                |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `applied`     | every object the migration creates is present                                                                          |
 | `no_sentinel` | the migration has no probe-able object (a drop, a data fix, a constraint change); its effect is not machine-verifiable |
-| `partial` | some objects present, some absent — normal when a later migration retired part of an earlier one |
-| `missing` | none of its objects exist |
+| `partial`     | some objects present, some absent — normal when a later migration retired part of an earlier one                       |
+| `missing`     | none of its objects exist                                                                                              |
 
 `partial` and `missing` are not automatically defects. Read the `absent` list
 before acting: an object a later migration deliberately removed will always read
@@ -71,6 +71,16 @@ What the gap had been costing:
   `42P01` for missing relations, which the reader saw as an endless skeleton.
 - `0047` missing meant photos were promoted with their variants but the variants
   were never recorded, so no `srcset` and no placeholder reached a reader.
+
+## Landed on main, not applied to production
+
+| Migration | Why it is not applied                                                                                                                                                                                                                                                                                                                    |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0048`    | The capture claim-ordering index. It only matters where an observed capture runs, and OVE-254 refuses production capture, so production has the table and no rows to claim. Additive and reversible — one partial index, no column, constraint, or row — so it can be applied whenever the owner wants production converged with `sql/`. |
+
+Applied on the loopback database on 2026-09-03 through
+`scripts/apply-reviewed-migration.ts` and verified by `pg_indexes`. Whoever
+applies it to production updates the inventory above in the same pull request.
 
 ## The rule this produced
 

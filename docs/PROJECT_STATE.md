@@ -2,7 +2,7 @@
 
 Status: living document. Update it whenever production behaviour, the direction,
 or the list of known gaps changes. Read it first, then `AGENTS.md`.
-Last reviewed: 2026-09-03.
+Last reviewed: 2026-09-04.
 
 This page answers four questions for anyone returning to OverGarden: what the
 product is today, what is actually true in production right now, what is being
@@ -26,20 +26,20 @@ never override them.
 
 Verified on 2026-09-03 against `https://over.garden` and the live providers.
 
-| Area | State |
-| -- | -- |
-| Deploy | `main` at `1c8d186`, Vercel production READY, functions in `fra1` beside the database |
-| Public pages | Cache Components: shells answer `x-vercel-cache: HIT`, tags revalidate on every mutation, workspace and API stay `no-store` |
-| Indexability | Every live public page is `index, follow` with one canonical and one JSON-LD graph; sitemap index plus entries, profiles, and communities chunks |
-| Media | Browser-made WebP: 2560 primary, 1280 and 480 variants, 16 px placeholder, served as plain `<img srcset>` from `media.over.garden`, immutable and CDN-cached. No Vercel image optimizer |
-| Media upload | One session capability per composer, uploads straight to the Cloudflare Worker, two-hour lease renewed every five minutes, parallel promotion, weekly orphan sweep |
-| Sessions | Server-authoritative. The cookie-cached session decides at the moment of the mutation; no client gate |
-| Admin | Release Center, extension packs, and editions render for the sealed owner in production; `/health` is owner-only |
-| Workspace | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023) |
+| Area          | State                                                                                                                                                                                                       |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deploy        | `main` at `1c8d186`, Vercel production READY, functions in `fra1` beside the database                                                                                                                       |
+| Public pages  | Cache Components: shells answer `x-vercel-cache: HIT`, tags revalidate on every mutation, workspace and API stay `no-store`                                                                                 |
+| Indexability  | Every live public page is `index, follow` with one canonical and one JSON-LD graph; sitemap index plus entries, profiles, and communities chunks                                                            |
+| Media         | Browser-made WebP: 2560 primary, 1280 and 480 variants, 16 px placeholder, served as plain `<img srcset>` from `media.over.garden`, immutable and CDN-cached. No Vercel image optimizer                     |
+| Media upload  | One session capability per composer, uploads straight to the Cloudflare Worker, two-hour lease renewed every five minutes, parallel promotion, weekly orphan sweep                                          |
+| Sessions      | Server-authoritative. The cookie-cached session decides at the moment of the mutation; no client gate                                                                                                       |
+| Admin         | Release Center, extension packs, and editions render for the sealed owner in production; `/health` is owner-only                                                                                            |
+| Workspace     | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023)                                                 |
 | Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw |
-| Schema | Migrations `0001`–`0047` applied, minus the two deliberately skipped. See `docs/PRODUCTION_SCHEMA_STATE.md` |
-| Matching | The worker runs on the droplet and writes its heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03 |
-| Hosting | Decided 2026-09-03: the DigitalOcean managed database and the `fra1` droplet stay |
+| Schema        | Migrations `0001`–`0047` applied, minus the two deliberately skipped. See `docs/PRODUCTION_SCHEMA_STATE.md`                                                                                                 |
+| Matching      | The worker runs on the droplet and writes its heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03                                                                |
+| Hosting       | Decided 2026-09-03: the DigitalOcean managed database and the `fra1` droplet stay                                                                                                                           |
 
 The seven owner requirements have one committed production receipt:
 `docs/OWNER_MVP_RESET_PROOF_2026-09.md`, regenerated by
@@ -58,6 +58,12 @@ receipt in `docs/WORKSPACE_RESILIENCE_PROOF_2026-09.md`.
 platform: real gardeners publishing, the catalog activated from real source
 data, and organic discovery measured rather than assumed. One measurement gap
 blocks honest prioritisation; see known gaps below.
+
+`OVE-375` closed the first half of "activated from real source data": every
+documented EPPO identifier is now captured, digest-closed, and rights-classified
+in one immutable observation. What it does not do is make a catalog — that is
+Foundation construction, and it needs a decision about the one unclassified
+field the capture found before any of it can be projected publicly.
 
 **Not planned.** Private entries, drafts, offline mode, a separate admin panel,
 voice dictation, server-side image processing, an ORM. Each is a positive
@@ -84,7 +90,12 @@ decision in ADR-0022, not an omission.
 4. **The catalog is empty in production.** The Stable Registry schema landed on
    2026-09-03 and the Release Center renders, but no Foundation release has been
    built from real source data, so `/garden/catalog/registry` shows zero
-   completed captures.
+   completed captures. The source evidence now exists: one completed observed
+   capture of all 129,214 documented EPPO identifiers closed on 2026-09-04
+   (`docs/EPPO_OBSERVED_CAPTURE_PROOF_2026-09.md`). It is quarantined, it lives
+   on a loopback database, and it is the first of five admission gates — a
+   gardener still sees nothing until a Foundation release is built, approved,
+   and activated.
 5. **One owner only.** There is no role-grant interface; the single sealed owner
    is bootstrapped by CLI (ADR-0022, D5).
 6. **`matching_worker_heartbeats` has no build timestamp.** The retired API read
