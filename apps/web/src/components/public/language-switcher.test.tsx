@@ -140,3 +140,23 @@ describe("the workspace form keeps a real endpoint", () => {
     }
   });
 });
+
+describe("a language the reader has not chosen is never prefetched", () => {
+  it("marks every cross-locale option `prefetch={false}`", () => {
+    // Measured, not assumed: Next strips `Next-Router-Prefetch` before
+    // middleware runs, so `proxy.ts` cannot tell a prefetch of `/ru/…` from a
+    // reader landing there and writes the preference either way. Left
+    // prefetchable, hovering "Русский" on a `/bg/` page rewrote the saved
+    // language to `ru` — reproduced in Chromium against a production build on
+    // 2026-09-04, before this line existed.
+    const links = [...code.matchAll(/<Link\b[\s\S]*?>/g)].map((m) => m[0]!);
+    const localeOptions = links.filter((link) =>
+      link.includes("data-interface-language-option"),
+    );
+
+    expect(localeOptions.length).toBeGreaterThanOrEqual(1);
+    for (const option of localeOptions) {
+      expect(option).toMatch(/prefetch=\{false\}/);
+    }
+  });
+});

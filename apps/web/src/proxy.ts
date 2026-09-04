@@ -154,6 +154,23 @@ function isProductionInternalNamespaceRequest() {
   return process.env.VERCEL_ENV === "production";
 }
 
+/**
+ * A prefetch this layer can actually recognise.
+ *
+ * The honest limit, measured rather than assumed: Next strips its own router
+ * headers — `rsc`, `next-router-prefetch`, `next-router-state-tree`,
+ * `next-router-segment-prefetch` — before middleware runs, so the two checks
+ * below for them never fire on an App Router prefetch. They are kept because
+ * they cost nothing and a future runtime may forward them. What does reach here
+ * is browser-initiated speculation: `Purpose: prefetch` and `Sec-Purpose`, and
+ * `x-middleware-prefetch` when a runtime sets it.
+ *
+ * The consequence is that a `<Link>` to a *different* locale must not be
+ * prefetchable, because this layer cannot tell that prefetch from a landing.
+ * `language-switcher.tsx` passes `prefetch={false}` for exactly that reason, and
+ * `language-switcher.test.tsx` fails if it comes back. Verified in Chromium
+ * against a production build on 2026-09-04.
+ */
 function isPrefetchRequest(request: NextRequest) {
   const purpose = request.headers.get("purpose")?.toLowerCase() ?? "";
   const secPurpose = request.headers.get("sec-purpose")?.toLowerCase() ?? "";
@@ -168,8 +185,9 @@ function isPrefetchRequest(request: NextRequest) {
 
 /**
  * A navigation the reader performed, whether the browser fetched a document or
- * the router fetched an RSC payload. Prefetches are excluded: a link the reader
- * merely hovered must not change what language they are reading in.
+ * the router fetched an RSC payload. Browser-initiated prefetches are excluded;
+ * a router prefetch is invisible here, so cross-locale links carry
+ * `prefetch={false}` instead — see `isPrefetchRequest`.
  */
 function isNavigationRequest(request: NextRequest) {
   if (request.method !== "GET" && request.method !== "HEAD") return false;
