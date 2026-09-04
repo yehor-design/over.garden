@@ -40,8 +40,9 @@ schema digests, and drops only that generated database in `finally`.
 The worker proof covers reservation, direct upload, signed receipt, claim,
 finalize, alarm recovery, abandonment, and cleanup. The codec proof covers
 browser WebP conversion and rejects unsupported/oversized input without server
-fallback. Visual fixtures are already-final synthetic WebPs and are never
-evidence of a real gardener or upload conversion.
+fallback. (Visual fixtures were deleted by ADR-0022 D7 / OVE-363 along with
+`pnpm visual:fixtures:verify`; nothing synthetic stands in for a real upload any
+more, which was the point that sentence used to make.)
 
 ## Failure boundary
 

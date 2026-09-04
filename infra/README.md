@@ -51,7 +51,6 @@ An existing `apps/web/.env.local` may intentionally point at managed Postgres or
 ```bash
 cd apps/web
 ../../infra/run-with-local-infra-env pnpm local:bootstrap
-../../infra/run-with-local-infra-env pnpm visual:fixtures:verify
 ```
 
 `bootstrap-local.ts` independently enforces the same loopback contract. It refuses Vercel Production, a remote database host, a remote S3 endpoint, a remote public-media base, a remote app/auth origin, or a remote Meilisearch host.
@@ -86,7 +85,7 @@ infra/container-status
 
 The execute path mounts the source read-only, excludes only rebuildable `.minio.sys` and `lost+found`, copies into a newly created target, compares the complete user-bucket tree without emitting object names or bytes, proves isolated MinIO readiness, and only then records the target as active. The source volume is recorded separately as preserved and is never deleted by recovery. Source retirement requires a different exact-target maintainer decision.
 
-Health alone is not closeout. Follow the seed/restart/verify phases in `docs/LOCAL_MEDIA_RUNTIME_RECOVERY.md` to prove an actual upload, server-created metadata-free WebP, quarantine deletion, owner/public readback, visual fixture media, and Postgres/Meilisearch/MinIO persistence across a full container stop/start cycle.
+Health alone is not closeout. Follow the seed/restart/verify phases in `docs/LOCAL_MEDIA_RUNTIME_RECOVERY.md` to prove an actual upload, a **browser-made** WebP set (2560/1280/480 plus placeholder — the server never converts and there is no quarantine to delete; ADR-0022 D2), owner/public readback, visual fixture media, and Postgres/Meilisearch/MinIO persistence across a full container stop/start cycle.
 
 ## Docker Fallback
 
