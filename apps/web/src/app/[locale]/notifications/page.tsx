@@ -34,7 +34,7 @@ import {
   type NotificationFilter,
   type NotificationPreferences,
 } from "@/server/social-return-repository";
-import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 
 interface LocalizedNotificationsRouteProps {
   params: Promise<{ locale: string }>;
@@ -82,10 +82,11 @@ export default async function LocalizedNotificationsRoute({
         title={copy.notifications.title}
         description={copy.notifications.description}
       >
-        <GardenAuthPanel
-          initialMessage={copy.notifications.signIn}
-          locale={localeParam}
-        />
+        <SignInPrompt
+  locale={localeParam}
+  next={localizedPath(localeParam, "/notifications")}
+  description={copy.notifications.signIn}
+/>
       </MySocialLayout>
     );
   }

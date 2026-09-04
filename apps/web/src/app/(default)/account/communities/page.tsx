@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 
-import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { buttonVariants } from "@/components/ui/button";
 import type { OperatorCopy } from "@/lib/operator-copy";
 import { formatOperatorTemplate, getOperatorCopy } from "@/lib/operator-copy";
@@ -23,7 +23,10 @@ export default async function CommunityModerationDirectory() {
     return (
       <main className="mx-auto grid w-full max-w-5xl gap-5 px-5 py-8">
         <AdminCommunityHeader copy={copy} />
-        <GardenAuthPanel locale={locale} postAuthPath="/account/communities" />
+        <SignInPrompt
+  locale={locale}
+  next={"/account/communities"}
+/>
       </main>
     );
   }

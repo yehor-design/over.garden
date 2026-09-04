@@ -1,123 +1,89 @@
-import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
-  getRequestInterfaceLocale: vi.fn(),
-  isGoogleSignInEnabled: vi.fn(),
   redirect: vi.fn(),
   verifyAuthIntentToken: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
+// The real `redirect()` throws to stop the render. A mock that returns would
+// let execution fall through to a later branch and make the assertion lie.
+class RedirectSignal extends Error {}
+vi.mock("next/navigation", () => ({
+  redirect: (path: string) => {
+    mocks.redirect(path);
+    throw new RedirectSignal(path);
+  },
+}));
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
-}));
-vi.mock("@/server/interface-localization", () => ({
-  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
-}));
-vi.mock("@/lib/auth/google-oauth", () => ({
-  isGoogleSignInEnabled: mocks.isGoogleSignInEnabled,
 }));
 vi.mock("@/server/auth-intent-token", async () => {
   const actual = await vi.importActual<
     typeof import("@/server/auth-intent-token")
   >("@/server/auth-intent-token");
-  return {
-    ...actual,
-    verifyAuthIntentToken: mocks.verifyAuthIntentToken,
-  };
+  return { ...actual, verifyAuthIntentToken: mocks.verifyAuthIntentToken };
 });
-vi.mock("./auth-intent-surface", () => ({
-  AuthIntentSurface: (props: Record<string, unknown>) => (
-    <div data-testid="intent-surface">{JSON.stringify(props)}</div>
-  ),
-}));
 
-describe("/auth/intent page", () => {
+/**
+ * `/auth/intent` used to render a second sign-in screen of its own design.
+ * Since OVE-378 it only forwards to the single one, carrying the two things the
+ * signed token holds: where to return, and what the reader was trying to do.
+ */
+describe("/auth/intent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getCurrentSession.mockResolvedValue(null);
-    mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
-    mocks.isGoogleSignInEnabled.mockReturnValue(true);
     mocks.verifyAuthIntentToken.mockReturnValue({
-      version: 1,
       action: "comment",
-      returnTo: "/journal/balcony-tomato-check#comments",
-      target: { kind: "journal", ref: "balcony-tomato-check" },
-      issuedAt: 1,
-      expiresAt: 2,
+      returnTo: "/journal/first-public-harvest",
     });
   });
 
-  it("renders a verified guest intent without exposing provider secrets", async () => {
-    const { default: AuthIntentPage } = await import("./page");
-    const html = renderToStaticMarkup(
-      await AuthIntentPage({
-        searchParams: Promise.resolve({ intent: "opaque-intent-token" }),
+  it("sends a guest to the one sign-in screen, carrying the resume path", async () => {
+    const { default: AuthIntentRoute } = await import("./page");
+    await expect(
+      AuthIntentRoute({
+        searchParams: Promise.resolve({ intent: "opaque-token" }),
       }),
-    );
+    ).rejects.toBeInstanceOf(RedirectSignal);
 
-    expect(mocks.verifyAuthIntentToken).toHaveBeenCalledWith(
-      "opaque-intent-token",
-    );
-    expect(html).toContain("intent-surface");
-    expect(html).toContain("&quot;googleSignInEnabled&quot;:true");
-    expect(html).not.toContain("GOOGLE_CLIENT_SECRET");
+    const target = String(mocks.redirect.mock.calls.at(-1)?.[0]);
+    expect(target.startsWith("/auth/sign-in?")).toBe(true);
+    const query = new URL(target, "https://over.garden").searchParams;
+    expect(query.get("next")).toBe("/auth/intent/resume?intent=opaque-token");
+    // The action selects the heading and nothing else.
+    expect(query.get("intent")).toBe("comment");
   });
 
-  it("sends an already-authenticated visitor through the resume validator", async () => {
-    mocks.getCurrentSession.mockResolvedValue({
-      user: { id: "user-1" },
-      session: { id: "session-1" },
-    });
-    const { default: AuthIntentPage } = await import("./page");
+  it("resumes immediately when the reader already has a session", async () => {
+    mocks.getCurrentSession.mockResolvedValue({ user: { id: "u1" } });
+    const { default: AuthIntentRoute } = await import("./page");
+    await expect(
+      AuthIntentRoute({
+        searchParams: Promise.resolve({ intent: "opaque-token" }),
+      }),
+    ).rejects.toBeInstanceOf(RedirectSignal);
 
-    await AuthIntentPage({
-      searchParams: Promise.resolve({ intent: "opaque-intent-token" }),
-    });
-
-    expect(mocks.redirect).toHaveBeenCalledWith(
-      "/auth/intent/resume?intent=opaque-intent-token",
+    expect(mocks.redirect).toHaveBeenLastCalledWith(
+      "/auth/intent/resume?intent=opaque-token",
     );
   });
 
-  it("renders invalid input as a recovery state without echoing it", async () => {
+  it("falls back to the plain sign-in screen without a usable token", async () => {
     mocks.verifyAuthIntentToken.mockImplementation(() => {
-      throw new Error("invalid token details");
+      throw new Error("nope");
     });
-    const { default: AuthIntentPage } = await import("./page");
-    const html = renderToStaticMarkup(
-      await AuthIntentPage({
-        searchParams: Promise.resolve({
-          intent: "tampered-private-value",
-          state: "invalid",
-        }),
-      }),
-    );
+    const { default: AuthIntentRoute } = await import("./page");
+    await expect(
+      AuthIntentRoute({ searchParams: Promise.resolve({}) }),
+    ).rejects.toBeInstanceOf(RedirectSignal);
 
-    expect(html).toContain("&quot;state&quot;:&quot;invalid&quot;");
-    expect(html).not.toContain("tampered-private-value");
-    expect(html).not.toContain("invalid token details");
+    expect(mocks.redirect).toHaveBeenLastCalledWith("/auth/sign-in");
   });
 
-  it("localizes metadata and OAuth recovery from the request locale", async () => {
-    mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
-    const { default: AuthIntentPage, generateMetadata } =
-      await import("./page");
-    const html = renderToStaticMarkup(
-      await AuthIntentPage({
-        searchParams: Promise.resolve({
-          intent: "opaque-intent-token",
-          error: "account_not_linked",
-        }),
-      }),
-    );
-    const metadata = await generateMetadata();
-
-    expect(metadata.title).toBe("Продължаване на действието | OverGarden");
-    expect(html).toContain("&quot;locale&quot;:&quot;bg&quot;");
-    expect(html).toContain("още не е свързан");
-    expect(html).not.toContain("account_not_linked");
+  it("renders no second sign-in surface of its own", async () => {
+    const page = await import("./page");
+    expect("generateMetadata" in page).toBe(false);
   });
 });

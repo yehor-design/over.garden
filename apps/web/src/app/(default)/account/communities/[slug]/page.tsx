@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import type { OperatorCopy } from "@/lib/operator-copy";
@@ -46,10 +46,10 @@ export default async function CommunityModerationPage({
     return (
       <main className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-8">
         <ModerationHeader slug={slug} copy={copy} />
-        <GardenAuthPanel
-          locale={locale}
-          postAuthPath={`/account/communities/${slug}`}
-        />
+        <SignInPrompt
+  locale={locale}
+  next={`/account/communities/${slug}`}
+/>
       </main>
     );
   }

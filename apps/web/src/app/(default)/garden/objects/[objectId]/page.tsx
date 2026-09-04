@@ -60,7 +60,7 @@ import {
   workspaceSectionDeadlineMs,
 } from "@/server/workspace-failure";
 import { gardenObjectPath, ObjectShell } from "./object-shell";
-import { GardenAuthPanel } from "../../garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import {
   deleteJournalEntryAction,
   createLineageInvitationAction,
@@ -116,7 +116,10 @@ export default async function PlantObjectReadbackPage({
   if (viewer.status === "sign-in-required") {
     return (
       <ObjectShell locale={locale}>
-        <GardenAuthPanel locale={locale} />
+        <SignInPrompt
+  locale={locale}
+  next={`/garden/objects/${objectId}`}
+/>
       </ObjectShell>
     );
   }

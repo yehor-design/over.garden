@@ -23,8 +23,21 @@ vi.mock("@/server/interface-localization", () => ({
 vi.mock("@/server/auth/account-methods", () => ({
   getCurrentAccountMethodProjection: mocks.getCurrentAccountMethodProjection,
 }));
-vi.mock("../garden-auth-panel", () => ({
-  GardenAuthPanel: () => <section>Sign in panel</section>,
+vi.mock("@/app/(default)/auth/sign-in-prompt", () => ({
+  SignInPrompt: (props: {
+    next?: string;
+    locale?: string;
+    description?: string;
+  }) => (
+    <section
+      data-sign-in-prompt="true"
+      data-next={props.next ?? ""}
+      data-locale={props.locale ?? ""}
+    >
+      Sign in prompt
+      {props.description ?? ""}
+    </section>
+  ),
 }));
 vi.mock("../account-methods-panel", () => ({
   AccountMethodsPanel: ({
@@ -166,7 +179,7 @@ describe("/garden/profile", () => {
       await Page({ searchParams: Promise.resolve({}) }),
     );
 
-    expect(html).toContain("Sign in panel");
+    expect(html).toContain("Sign in prompt");
     expect(mocks.getOwnerProfileWorkspace).not.toHaveBeenCalled();
     expect(mocks.getCurrentAccountMethodProjection).not.toHaveBeenCalled();
     expect(html).toContain('data-garden-profile-auth-shell="guest"');

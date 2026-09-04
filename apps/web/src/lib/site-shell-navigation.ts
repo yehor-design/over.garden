@@ -198,10 +198,12 @@ export function getSiteShellNavigation(
       ]
     : [];
 
+  // "Sign in" and "My garden" pointed at the same URL until OVE-378; the one
+  // sign-in screen has its own route now.
   const signInItem = item(
     "sign-in",
     copy.navigation.signIn,
-    "/garden",
+    "/auth/sign-in",
     "utility",
   );
   const findItem = (key: SiteShellNavigationKey) =>

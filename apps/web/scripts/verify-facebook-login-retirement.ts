@@ -64,10 +64,9 @@ const RECEIPT_SOURCE_PATHS = [
   "src/lib/auth/social-oauth.test.ts",
   "src/lib/auth/social-oauth.ts",
   "src/app/api/auth/[...all]/route.ts",
-  "src/app/(default)/auth/intent/auth-intent-surface.tsx",
   "src/app/(default)/auth/intent/page.tsx",
-  "src/app/(default)/garden/garden-auth-panel.tsx",
-  "src/app/(default)/garden/garden-auth-panel.test.tsx",
+  "src/app/(default)/auth/auth-surface.tsx",
+  "src/app/(default)/auth/auth-actions.ts",
   "src/app/(default)/garden/account-methods-panel.tsx",
   "src/app/(default)/garden/account-methods-panel.test.tsx",
   "src/app/(default)/garden/(home)/page.tsx",
@@ -365,11 +364,12 @@ async function assertGoogleCredentialRegression(
     await Promise.all([
       readText(root, "src/lib/auth.ts", signal),
       readText(root, "src/lib/auth/explicit-google-linking.ts", signal),
-      readText(root, "src/app/(default)/garden/garden-auth-panel.tsx", signal),
+      readText(root, "src/app/(default)/auth/auth-surface.tsx", signal),
       readText(root, "src/lib/auth/social-account-policy.ts", signal),
     ]);
   if (
     !/emailAndPassword:\s*\{[\s\S]*?enabled:\s*true/.test(authSource) ||
+    // The one sign-in screen still offers Google beside email and password.
     !panelSource.includes("google-sign-in-button") ||
     !authSource.includes(
       "socialAccountPolicy(isExplicitGoogleLinkingEnabled())",

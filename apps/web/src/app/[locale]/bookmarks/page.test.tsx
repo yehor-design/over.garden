@@ -24,9 +24,20 @@ vi.mock("@/server/engagement-repository", () => ({
   listEngagementBookmarks: mocks.listEngagementBookmarks,
 }));
 
-vi.mock("@/app/(default)/garden/garden-auth-panel", () => ({
-  GardenAuthPanel: ({ initialMessage }: { initialMessage?: string }) => (
-    <section>{initialMessage}</section>
+vi.mock("@/app/(default)/auth/sign-in-prompt", () => ({
+  SignInPrompt: (props: {
+    next?: string;
+    locale?: string;
+    description?: string;
+  }) => (
+    <section
+      data-sign-in-prompt="true"
+      data-next={props.next ?? ""}
+      data-locale={props.locale ?? ""}
+    >
+      Sign in prompt
+      {props.description ?? ""}
+    </section>
   ),
 }));
 

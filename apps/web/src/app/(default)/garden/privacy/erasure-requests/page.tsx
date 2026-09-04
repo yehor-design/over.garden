@@ -46,7 +46,7 @@ import {
 } from "@/server/workspace-failure";
 import { ErasureRequestsShell } from "./erasure-shell";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
-import { GardenAuthPanel } from "../../garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import {
   executeApprovedErasureRequestAction,
   markErasureRequestDryRunReviewedAction,
@@ -88,7 +88,10 @@ export default async function ErasureRequestsOperatorPage() {
   if (viewer.status === "sign-in-required") {
     return (
       <ErasureRequestsShell locale={locale} accessState="sign-in-required">
-        <GardenAuthPanel locale={locale} />
+        <SignInPrompt
+  locale={locale}
+  next={"/garden/privacy/erasure-requests"}
+/>
       </ErasureRequestsShell>
     );
   }

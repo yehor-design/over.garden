@@ -35,8 +35,21 @@ vi.mock("@/server/request-scope", () => ({
     sessionId: sessionId ?? null,
   })),
 }));
-vi.mock("@/app/(default)/garden/garden-auth-panel", () => ({
-  GardenAuthPanel: () => "community-auth-panel",
+vi.mock("@/app/(default)/auth/sign-in-prompt", () => ({
+  SignInPrompt: (props: {
+    next?: string;
+    locale?: string;
+    description?: string;
+  }) => (
+    <section
+      data-sign-in-prompt="true"
+      data-next={props.next ?? ""}
+      data-locale={props.locale ?? ""}
+    >
+      Sign in prompt
+      {props.description ?? ""}
+    </section>
+  ),
 }));
 
 describe("/account/communities/:slug", () => {

@@ -6,12 +6,14 @@ import { APIError } from "better-auth/api";
 import { auth } from "@/lib/auth";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "@/lib/auth/public-identity-compatibility";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
+import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   getLocalizedAuthClientErrorMessage,
   getLocalizedEmailSignUpResult,
   getTrustSurfaceCopy,
 } from "@/lib/trust-surface-copy";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   describeWorkspaceFailure,
   recordWorkspaceSectionFailure,
@@ -24,57 +26,79 @@ import {
  * session cookie from a Server Action exactly as the route handler did. Moving
  * the call here buys four things the client path could not have:
  *
- *   * the form works with JavaScript disabled;
+ *   * the form works with JavaScript disabled — which on this site is not a
+ *     nicety: public pages do not hydrate below the shell (OVE-380, measured
+ *     2026-09-04), so a screen that needs hydration to submit does not work;
  *   * an invalid credential arrives already rendered, with no flash of an empty
  *     panel while a fetch resolves;
- *   * the redirect to `next` is decided by the server, so an untrusted value
- *     never reaches `router.push`;
+ *   * the return path is validated and followed by the server, so an untrusted
+ *     value never reaches `router.push`;
  *   * no authentication logic ships in the client bundle.
  *
- * Nothing throws. Better Auth signals a refusal with `APIError`, and everything
- * else settles into the same neutral message — a wrong password and an
- * unreachable database must not be distinguishable to somebody guessing.
+ * Each action is form-shaped — `(previousState, formData)` — because that is the
+ * one shape React gives a real endpoint to. Nothing throws: Better Auth signals
+ * a refusal with `APIError`, and everything else settles into the same neutral
+ * message, so a wrong password and an unreachable database stay
+ * indistinguishable to somebody guessing.
  */
 
-export type AuthActionResult =
-  | { ok: true; message?: string }
-  | { ok: false; message: string };
+export interface AuthFormState {
+  status: "idle" | "error" | "accepted" | "signed-in" | "redirect";
+  message: string | null;
+  /** Where the browser must go next: the return path, or a provider handshake. */
+  redirectTo?: string;
+}
 
 export async function signInAction(
-  locale: InterfaceLocale,
-  input: { email: string; password: string },
-): Promise<AuthActionResult> {
+  _previous: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const locale = await getRequestInterfaceLocale();
   const copy = getTrustSurfaceCopy(locale).authPanel;
+
   try {
     await auth.api.signInEmail({
-      body: { email: input.email.trim(), password: input.password },
+      body: {
+        email: field(formData, "email").trim(),
+        password: field(formData, "password"),
+      },
       headers: await headers(),
     });
-    return { ok: true };
+    return {
+      status: "signed-in",
+      message: null,
+      redirectTo: safeNext(formData),
+    };
   } catch (error) {
-    return { ok: false, message: authMessage(locale, error, copy.signInError) };
+    return {
+      status: "error",
+      message: authMessage(locale, error, copy.signInError),
+    };
   }
 }
 
 export async function signUpAction(
-  locale: InterfaceLocale,
-  input: { email: string; password: string },
-): Promise<AuthActionResult> {
+  _previous: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const locale = await getRequestInterfaceLocale();
   const copy = getTrustSurfaceCopy(locale).authPanel;
+
   try {
     await auth.api.signUpEmail({
       body: {
-        email: input.email.trim(),
-        password: input.password,
+        email: field(formData, "email").trim(),
+        password: field(formData, "password"),
         name: PRIVATE_AUTH_COMPATIBILITY_NAME,
       },
       headers: await headers(),
     });
-    // The accepted wording is deliberately the same whether the address was new
-    // or already had an account: the response may not tell an enumerator which.
+    // Deliberately the same wording whether the address was new or already had
+    // an account: the response may not tell an enumerator which.
     return {
-      ok: true,
+      status: "accepted",
       message: getLocalizedEmailSignUpResult(locale, null).message,
+      redirectTo: safeNext(formData),
     };
   } catch (error) {
     if (error instanceof APIError) {
@@ -83,47 +107,59 @@ export async function signUpAction(
         status: error.statusCode,
       });
       return result.kind === "accepted"
-        ? { ok: true, message: result.message }
-        : { ok: false, message: result.message };
+        ? {
+            status: "accepted",
+            message: result.message,
+            redirectTo: safeNext(formData),
+          }
+        : { status: "error", message: result.message };
     }
     record(error, "sign_up");
-    return { ok: false, message: copy.createAccountError };
+    return { status: "error", message: copy.createAccountError };
   }
 }
 
 /**
- * Starts an OAuth handshake and hands back the provider URL for the browser to
- * follow. The redirect is not performed here: a Server Action redirect would
- * lose the `Set-Cookie` the handshake needs.
+ * Starts an OAuth handshake and hands the provider URL back for the browser to
+ * follow. The redirect is not performed here: redirecting from inside the action
+ * would drop the `Set-Cookie` the handshake depends on.
  */
 export async function startSocialSignInAction(
-  locale: InterfaceLocale,
-  input: { provider: string; callbackURL: string },
-): Promise<{ ok: true; url: string } | { ok: false; message: string }> {
+  _previous: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const locale = await getRequestInterfaceLocale();
   const copy = getTrustSurfaceCopy(locale).authPanel;
-  if (!isGoogleSignInEnabled() || input.provider !== "google") {
-    return { ok: false, message: copy.socialSignInError };
+
+  if (!isGoogleSignInEnabled() || field(formData, "provider") !== "google") {
+    return { status: "error", message: copy.socialSignInError };
   }
 
   try {
+    const callbackURL = safeNext(formData);
     const result = await auth.api.signInSocial({
       body: {
         provider: "google",
-        callbackURL: input.callbackURL,
-        newUserCallbackURL: input.callbackURL,
-        errorCallbackURL: input.callbackURL,
+        callbackURL,
+        newUserCallbackURL: callbackURL,
+        errorCallbackURL: callbackURL,
         disableRedirect: true,
       },
       headers: await headers(),
     });
     const url = (result as { url?: unknown } | null)?.url;
     return typeof url === "string" && url.length > 0
-      ? { ok: true, url }
-      : { ok: false, message: copy.socialSignInError };
+      ? { status: "redirect", message: null, redirectTo: url }
+      : { status: "error", message: copy.socialSignInError };
   } catch (error) {
     record(error, "sign_in_social");
-    return { ok: false, message: copy.socialSignInError };
+    return { status: "error", message: copy.socialSignInError };
   }
+}
+
+/** The return path, through the same same-origin boundary every surface uses. */
+function safeNext(formData: FormData): string {
+  return normalizeInternalReturnPath(formData.get("next"), "/garden");
 }
 
 function authMessage(
@@ -141,6 +177,11 @@ function authMessage(
   }
   record(error, "sign_in");
   return fallback;
+}
+
+function field(formData: FormData, name: string): string {
+  const value = formData.get(name);
+  return typeof value === "string" ? value : "";
 }
 
 /** A fault the reader cannot act on still leaves one bounded line (ADR-0023). */

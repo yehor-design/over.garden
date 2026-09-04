@@ -17,7 +17,7 @@ import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getLatestErasureRequestForUser } from "@/server/erasure-request-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { scopedToUser } from "@/server/request-scope";
-import { GardenAuthPanel } from "../garden/garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { submitErasureRequestAction } from "./actions";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -153,7 +153,10 @@ export default async function ErasureRequestPage() {
           <h2 className="text-lg font-semibold text-foreground">
             {copy.signInTitle}
           </h2>
-          <GardenAuthPanel locale={locale} />
+          <SignInPrompt
+  locale={locale}
+  next={"/erasure"}
+/>
         </section>
       )}
     </main>

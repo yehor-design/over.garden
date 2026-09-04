@@ -19,7 +19,6 @@ import {
   normalizeAuthIntentResumeControl,
 } from "@/lib/auth/auth-intent-contract";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
-import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   formatGardenWorkspaceDate,
@@ -56,7 +55,7 @@ import {
 } from "./garden-home-shell";
 import { addCatalogPublicSlugToWishlistAction } from "../../wishlist/actions";
 import { FirstEntryComposer } from "../first-entry-composer";
-import { GardenAuthPanel } from "../garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { GardenWorkspaceView } from "../garden-workspace-view";
 import { SaveProgressMoment } from "../save-progress-moment";
 
@@ -300,19 +299,14 @@ async function GuestGardenEntrySection({
   engagementAuthMessage: string | null;
   engagementPostAuthPath: string | null;
 }) {
-  const [initialCatalogItem, pendingWishlistItem] = await Promise.all([
-    settledOrNull(() => resolveInitialCatalogSelection(params)),
-    settledOrNull(() => resolvePendingWishlistSelection(params)),
-  ]);
+  const pendingWishlistItem = await settledOrNull(() =>
+    resolvePendingWishlistSelection(params),
+  );
   const oauthMessage = getLocalizedOAuthErrorMessage(locale, params.error);
 
   return (
     <GuestGardenEntry
       locale={locale}
-      activationSource={normalizeActivationSourceParam(params.source, {
-        hasResolvedCatalogSelection: Boolean(initialCatalogItem),
-      })}
-      catalogName={initialCatalogItem?.displayName}
       initialMessage={
         oauthMessage ??
         engagementAuthMessage ??
@@ -330,14 +324,10 @@ async function GuestGardenEntrySection({
 
 function GuestGardenEntry({
   locale,
-  activationSource,
-  catalogName,
   initialMessage,
   postAuthPath,
 }: {
   locale: InterfaceLocale;
-  activationSource: Parameters<typeof GardenAuthPanel>[0]["activationSource"];
-  catalogName?: string | null;
   initialMessage?: string | null;
   postAuthPath?: string | null;
 }) {
@@ -363,16 +353,10 @@ function GuestGardenEntry({
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <GardenAuthPanel
-            embedded
-            activationSource={activationSource}
-            catalogName={catalogName}
-            googleSignInEnabled={isGoogleSignInEnabled()}
-            initialMessage={initialMessage}
+          <SignInPrompt
             locale={locale}
-            postAuthPath={postAuthPath}
-            title={copy.panelTitle}
-            prompt={copy.panelPrompt}
+            next={postAuthPath ?? "/garden"}
+            description={initialMessage ?? undefined}
           />
         </div>
         <aside className="border-t border-border pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">

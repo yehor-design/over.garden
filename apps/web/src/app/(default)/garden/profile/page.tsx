@@ -26,7 +26,7 @@ import {
 } from "@/server/workspace-failure";
 import { getCurrentAccountMethodProjection } from "@/server/auth/account-methods";
 import { AccountMethodsPanel } from "../account-methods-panel";
-import { GardenAuthPanel } from "../garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { unblockProfileAction } from "./actions";
 import { OwnerProfileEditor } from "./owner-profile-editor";
 import { COPY, GARDEN_PROFILE_PATH, ProfileShell } from "./profile-shell";
@@ -70,7 +70,10 @@ export default async function GardenPublicProfilePage({
   if (viewer.status === "sign-in-required") {
     return (
       <ProfileShell locale={locale} authShell="guest">
-        <GardenAuthPanel locale={locale} />
+        <SignInPrompt
+  locale={locale}
+  next={"/garden/profile"}
+/>
       </ProfileShell>
     );
   }

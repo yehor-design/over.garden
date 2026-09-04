@@ -23,7 +23,7 @@ import {
   type FollowedFeedSource,
 } from "@/server/social-return-repository";
 import { evaluateNonDiscoveryRouteIndexability } from "@/server/public-surface-indexing-policy";
-import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 
 interface LocalizedFeedRouteProps {
   params: Promise<{ locale: string }>;
@@ -65,10 +65,11 @@ export default async function LocalizedFollowedFeedRoute({
         title={copy.feed.title}
         description={copy.feed.description}
       >
-        <GardenAuthPanel
-          initialMessage={copy.feed.signIn}
-          locale={localeParam}
-        />
+        <SignInPrompt
+  locale={localeParam}
+  next={localizedPath(localeParam, "/feed")}
+  description={copy.feed.signIn}
+/>
       </MySocialLayout>
     );
   }

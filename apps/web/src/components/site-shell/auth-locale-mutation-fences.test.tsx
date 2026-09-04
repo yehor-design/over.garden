@@ -52,7 +52,6 @@ vi.mock("@/lib/meta-marketing/client", () => ({
 }));
 
 import { AccountMethodsPanel } from "@/app/(default)/garden/account-methods-panel";
-import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
 import { PasswordResetRequestForm } from "@/app/(default)/auth/help/password-reset-request-form";
 import { ResetPasswordForm } from "@/app/(default)/auth/reset-password/reset-password-form";
 import { interfaceLocaleChangeCoordinator } from "@/lib/interface-locale-change-coordinator";
@@ -62,28 +61,11 @@ describe("auth locale mutation fences", () => {
     vi.clearAllMocks();
   });
 
-  it("fences the shared email auth mutation until the client promise settles", async () => {
-    const request = deferred<{ error: null }>();
-    mocks.signInEmail.mockReturnValue(request.promise);
-    const renderer = await render(<GardenAuthPanel locale="bg" />);
-    const inputs = renderer.root.findAllByType("input");
-    await act(async () => {
-      inputs[0]?.props.onChange({ target: { value: "garden@example.test" } });
-      inputs[1]?.props.onChange({ target: { value: "password-123" } });
-    });
-
-    await act(async () => {
-      renderer.root.findByType("form").props.onSubmit({
-        preventDefault: vi.fn(),
-      });
-      await Promise.resolve();
-    });
-    expectPending("garden-auth-mutation");
-
-    await act(async () => request.resolve({ error: null }));
-    expectSettled();
-    await act(async () => renderer.unmount());
-  });
+  // The shared email auth panel used to be fenced here too. Since OVE-378 the
+  // sign-in screen is a server form with no client mutation to fence: it posts a
+  // Server Action, so there is no in-flight client promise for the locale
+  // control to wait on. The remaining panels below still hold client mutations
+  // and are still fenced.
 
   it("fences social account linking until the provider call settles", async () => {
     const request = deferred<{ error: null }>();
