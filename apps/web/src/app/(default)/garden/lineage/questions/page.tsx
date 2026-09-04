@@ -28,7 +28,7 @@ import {
   workspaceSectionDeadlineMs,
 } from "@/server/workspace-failure";
 import { LineageUpdatesShell, LINEAGE_QUESTIONS_PATH } from "./questions-shell";
-import { GardenAuthPanel } from "../../garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getOwnerLineageCopy(await getRequestInterfaceLocale());
@@ -59,7 +59,10 @@ export default async function LineageUpdatesPage() {
   if (viewer.status === "sign-in-required") {
     return (
       <LineageUpdatesShell locale={locale}>
-        <GardenAuthPanel locale={locale} />
+        <SignInPrompt
+  locale={locale}
+  next={"/garden/lineage/questions"}
+/>
       </LineageUpdatesShell>
     );
   }

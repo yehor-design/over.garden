@@ -73,10 +73,19 @@ vi.mock("../first-entry-composer", () => ({
   ),
 }));
 
-vi.mock("../garden-auth-panel", () => ({
-  GardenAuthPanel: (props: { postAuthPath?: string | null }) => (
-    <section data-post-auth-path={props.postAuthPath ?? ""}>
-      Garden auth panel
+vi.mock("@/app/(default)/auth/sign-in-prompt", () => ({
+  SignInPrompt: (props: {
+    next?: string;
+    locale?: string;
+    description?: string;
+  }) => (
+    <section
+      data-sign-in-prompt="true"
+      data-next={props.next ?? ""}
+      data-locale={props.locale ?? ""}
+    >
+      Sign in prompt
+      {props.description ?? ""}
     </section>
   ),
 }));
@@ -241,7 +250,7 @@ describe("/garden workspace V2", () => {
     );
 
     expect(html).toContain("Ваш приватний сад починається тут");
-    expect(html).toContain("Garden auth panel");
+    expect(html).toContain("Sign in prompt");
     expect(html).toContain("Продовжити читати журнали");
     expect(html).toContain('href="/journals"');
     expect(mocks.loadGardenWorkspace).not.toHaveBeenCalled();
@@ -265,7 +274,7 @@ describe("/garden workspace V2", () => {
       }),
     );
 
-    expect(html).toContain('data-post-auth-path="/garden"');
+    expect(html).toContain('data-next="/garden"');
     expect(html).not.toContain("attacker");
   });
 
@@ -298,7 +307,7 @@ describe("/garden workspace V2", () => {
 
     expect(html).toContain('data-workspace-surface="garden-home"');
     expect(html).toContain('data-section-failure="connection_unavailable"');
-    expect(html).not.toContain("Garden auth panel");
+    expect(html).not.toContain("Sign in prompt");
     expect(mocks.loadGardenWorkspace).not.toHaveBeenCalled();
   });
 });

@@ -29,7 +29,7 @@ import {
   type EngagementBookmarkShelfItem,
 } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
-import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 
 const PAGE_SIZE = 12;
 
@@ -78,10 +78,11 @@ export default async function LocalizedBookmarksRoute({
         title={copy.bookmarks.title}
         description={copy.bookmarks.description}
       >
-        <GardenAuthPanel
-          initialMessage={copy.bookmarks.signIn}
-          locale={localeParam}
-        />
+        <SignInPrompt
+  locale={localeParam}
+  next={localizedPath(localeParam, "/bookmarks")}
+  description={copy.bookmarks.signIn}
+/>
       </MySocialLayout>
     );
   }

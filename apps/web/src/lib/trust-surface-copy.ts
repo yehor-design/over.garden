@@ -22,6 +22,11 @@ type WidenCopy<T> = T extends string
 const UK_COPY = {
   authPanel: {
     title: "Простір саду",
+    signInScreenTitle: "Вхід до OverGarden",
+    signUpScreenTitle: "Створення облікового запису",
+    toSignUp: "Ще немає облікового запису? Створити",
+    toSignIn: "Уже маєте обліковий запис? Увійти",
+    cancel: "Повернутися до читання",
     email: "Електронна пошта",
     password: "Пароль",
     createAccount: "Створити обліковий запис",
@@ -463,6 +468,11 @@ export type TrustSurfaceCopy = WidenCopy<typeof UK_COPY>;
 const BG_COPY = {
   authPanel: {
     title: "Градинско пространство",
+    signInScreenTitle: "Вход в OverGarden",
+    signUpScreenTitle: "Създаване на профил",
+    toSignUp: "Нямате профил? Създайте",
+    toSignIn: "Вече имате профил? Влезте",
+    cancel: "Обратно към четенето",
     email: "Имейл",
     password: "Парола",
     createAccount: "Създаване на профил",
@@ -896,6 +906,11 @@ const BG_COPY = {
 const RU_COPY = {
   authPanel: {
     title: "Пространство сада",
+    signInScreenTitle: "Вход в OverGarden",
+    signUpScreenTitle: "Создание аккаунта",
+    toSignUp: "Нет аккаунта? Создать",
+    toSignIn: "Уже есть аккаунт? Войти",
+    cancel: "Вернуться к чтению",
     email: "Электронная почта",
     password: "Пароль",
     createAccount: "Создать аккаунт",

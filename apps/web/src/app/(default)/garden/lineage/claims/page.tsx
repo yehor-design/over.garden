@@ -28,7 +28,7 @@ import {
   workspaceSectionDeadlineMs,
 } from "@/server/workspace-failure";
 import { LineageClaimsShell, LINEAGE_CLAIMS_PATH } from "./claims-shell";
-import { GardenAuthPanel } from "../../garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import {
   confirmLineageClaimAction,
   declineLineageClaimAction,
@@ -71,7 +71,10 @@ export default async function LineageClaimInboxPage({
   if (viewer.status === "sign-in-required") {
     return (
       <LineageClaimsShell locale={locale}>
-        <GardenAuthPanel locale={locale} />
+        <SignInPrompt
+  locale={locale}
+  next={"/garden/lineage/claims"}
+/>
       </LineageClaimsShell>
     );
   }

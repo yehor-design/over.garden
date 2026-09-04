@@ -29,7 +29,7 @@ import {
   listWishlistShelfItems,
   type WishlistShelfItem,
 } from "@/server/wishlist-repository";
-import { GardenAuthPanel } from "@/app/(default)/garden/garden-auth-panel";
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { removeCatalogPublicSlugFromWishlistAction } from "@/app/(default)/wishlist/actions";
 
 const PAGE_SIZE = 12;
@@ -79,10 +79,11 @@ export default async function LocalizedWishlistRoute({
         title={copy.wishlist.title}
         description={copy.wishlist.description}
       >
-        <GardenAuthPanel
-          initialMessage={copy.wishlist.signIn}
-          locale={localeParam}
-        />
+        <SignInPrompt
+  locale={localeParam}
+  next={localizedPath(localeParam, "/wishlist")}
+  description={copy.wishlist.signIn}
+/>
       </MySocialLayout>
     );
   }

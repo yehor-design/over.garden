@@ -23,9 +23,20 @@ vi.mock("@/server/social-return-repository", () => ({
   listFollowedFeedPage: mocks.listFollowedFeedPage,
 }));
 
-vi.mock("@/app/(default)/garden/garden-auth-panel", () => ({
-  GardenAuthPanel: ({ initialMessage }: { initialMessage?: string }) => (
-    <section>{initialMessage ?? "Sign in"}</section>
+vi.mock("@/app/(default)/auth/sign-in-prompt", () => ({
+  SignInPrompt: (props: {
+    next?: string;
+    locale?: string;
+    description?: string;
+  }) => (
+    <section
+      data-sign-in-prompt="true"
+      data-next={props.next ?? ""}
+      data-locale={props.locale ?? ""}
+    >
+      Sign in prompt
+      {props.description ?? ""}
+    </section>
   ),
 }));
 

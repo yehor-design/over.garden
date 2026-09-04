@@ -61,23 +61,25 @@ describe("FacebookSurfaceRetirementReceiptV1", () => {
         now: () => Date.now(),
       });
 
-      const { GardenAuthPanel } =
-        await import("@/app/(default)/garden/garden-auth-panel");
+      const { AuthSurface } = await import("@/app/(default)/auth/auth-surface");
       const html = renderToStaticMarkup(
-        createElement(GardenAuthPanel, {
+        createElement(AuthSurface, {
+          mode: "sign-in" as const,
+          locale: "uk" as const,
+          next: "/garden",
+          intentPrompt: null,
           googleSignInEnabled: true,
-          locale: "uk",
+          submit: async () => ({ status: "idle" as const, message: null }),
+          startSocial: async () => ({ status: "idle" as const, message: null }),
         }),
       );
       expect(html).toContain('type="email"');
-      const emailSubmit = html.match(/<button[^>]*type="submit"[^>]*>/)?.[0];
-      const googleSubmit = html.match(
-        /<button[^>]*data-testid="google-sign-in-button"[^>]*>/,
-      )?.[0];
-      expect(emailSubmit).toBeDefined();
-      expect(googleSubmit).toBeDefined();
-      expect(emailSubmit).not.toMatch(/\sdisabled(?:=|\s|>)/);
-      expect(googleSubmit).not.toMatch(/\sdisabled(?:=|\s|>)/);
+      // Both ways in are offered, and neither is disabled at rest.
+      const submits = html.match(/<button[^>]*type="submit"[^>]*>/g) ?? [];
+      expect(submits.length).toBeGreaterThanOrEqual(2);
+      for (const submit of submits) {
+        expect(submit).not.toMatch(/\sdisabled(?:=|\s|>)/);
+      }
 
       await vi.advanceTimersByTimeAsync(30_000);
       await expect(pending).resolves.toMatchObject({

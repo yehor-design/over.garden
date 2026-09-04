@@ -1,84 +1,60 @@
-import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
-import type { AuthIntentDraft } from "@/lib/auth/auth-intent-contract";
-import {
-  getLocalizedOAuthErrorMessage,
-  getTrustSurfaceCopy,
-} from "@/lib/trust-surface-copy";
-import { getCurrentSession } from "@/server/auth-session";
 import {
   AuthIntentTokenError,
   verifyAuthIntentToken,
 } from "@/server/auth-intent-token";
-import { getRequestInterfaceLocale } from "@/server/interface-localization";
-import { AuthIntentSurface } from "./auth-intent-surface";
+import { getCurrentSession } from "@/server/auth-session";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const copy = getTrustSurfaceCopy(
-    await getRequestInterfaceLocale(),
-  ).authIntent;
-  return {
-    title: copy.metadataTitle,
-    description: copy.metadataDescription,
-    robots: { index: false, follow: false },
-  };
-}
-
-type AuthIntentSearchParams = Record<string, string | string[] | undefined>;
-
-export default async function AuthIntentPage({
+/**
+ * The intent screen is now a redirect, not a page.
+ *
+ * It used to render a second, differently designed sign-in surface — a centred
+ * dialog card with its own heading, its own prompt and its own cancel control —
+ * beside the full-width one at `/garden`. There is one sign-in screen now, so
+ * this route's only job is to hand it the two things the token carries: where to
+ * return, and what the reader was trying to do.
+ *
+ * The signed token itself is unchanged. It still holds the target and the exact
+ * control to resume, and `/auth/intent/resume` still consumes it, so nothing
+ * about resuming a comment, a bookmark or a follow regresses.
+ */
+export default async function AuthIntentRoute({
   searchParams,
 }: {
-  searchParams?: Promise<AuthIntentSearchParams>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [params, locale, session] = await Promise.all([
-    searchParams ?? Promise.resolve<AuthIntentSearchParams>({}),
-    getRequestInterfaceLocale(),
-    getCurrentSession(),
-  ]);
-  const token = firstParam(params.intent);
-  const requestedState = firstParam(params.state);
-  let intent: AuthIntentDraft | null = null;
-  let state: "ready" | "invalid" | "expired" = "invalid";
+  const params = await (searchParams ??
+    Promise.resolve<Record<string, string | string[] | undefined>>({}));
+  const token = first(params.intent);
 
-  if (token) {
-    try {
-      intent = verifyAuthIntentToken(token);
-      state = "ready";
-    } catch (error) {
-      if (error instanceof AuthIntentTokenError && error.code === "expired") {
-        intent = error.intent;
-        state = "expired";
-      }
-    }
+  if (!token) redirect("/auth/sign-in");
+
+  let intent;
+  try {
+    intent = verifyAuthIntentToken(token);
+  } catch (error) {
+    // An expired token still names the action and the page the reader came
+    // from, so it can send them back to where they were rather than nowhere.
+    intent =
+      error instanceof AuthIntentTokenError && error.code === "expired"
+        ? error.intent
+        : null;
   }
 
-  if (requestedState === "invalid") {
-    intent = null;
-    state = "invalid";
-  } else if (requestedState === "expired" && state !== "ready") {
-    state = "expired";
-  }
+  if (!intent) redirect("/auth/sign-in");
 
-  if (state === "ready" && token && session?.user?.id) {
+  const session = await getCurrentSession();
+  if (session?.user?.id) {
     redirect(`/auth/intent/resume?intent=${encodeURIComponent(token)}`);
-    return null;
   }
 
-  return (
-    <AuthIntentSurface
-      locale={locale}
-      intent={intent}
-      token={state === "ready" ? token : null}
-      state={state}
-      googleSignInEnabled={isGoogleSignInEnabled()}
-      initialMessage={getLocalizedOAuthErrorMessage(locale, params.error)}
-    />
+  const next = `/auth/intent/resume?intent=${encodeURIComponent(token)}`;
+  redirect(
+    `/auth/sign-in?next=${encodeURIComponent(next)}&intent=${encodeURIComponent(intent.action)}`,
   );
 }
 
-function firstParam(value: string | string[] | undefined) {
+function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 }

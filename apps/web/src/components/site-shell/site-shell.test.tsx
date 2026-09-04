@@ -54,8 +54,11 @@ describe("production site shell", () => {
     expect(html).toContain("Живі об&#x27;єкти");
     expect(html).toContain("Увійти");
     expect(html).toContain('data-site-shell-guest-actions="true"');
-    expect(html).toContain('name="action" value="create_object"');
-    expect(html).toContain('name="action" value="create_entry"');
+    // Without a target there is nothing to sign, so the trigger is a plain
+    // link to the one sign-in screen (OVE-378) rather than a POST.
+    expect(html).toContain("intent=create_object");
+    expect(html).toContain("intent=create_entry");
+    expect(html).toContain("/auth/sign-in?next=");
     expect(html).toContain('data-site-shell-action="add-guest"');
     expect(html).toContain('data-site-shell-action="sign-in-mobile"');
     expect(html).toContain('aria-label="Увійти"');

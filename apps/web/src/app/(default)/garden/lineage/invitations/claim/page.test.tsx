@@ -140,9 +140,11 @@ describe("/garden/lineage/invitations/claim page", () => {
     const html = await renderClaimPage();
 
     expect(html).toContain("Увійдіть, щоб переглянути приватне запрошення");
-    expect(html).toContain('name="action" value="claim"');
+    expect(html).toContain("intent=claim");
+    // The return path travels in the link now, not a hidden field: without a
+    // target there is nothing to sign, so the trigger is a plain link (OVE-378).
     expect(html).toContain(
-      'name="returnTo" value="/garden/lineage/invitations/claim"',
+      "next=%2Fgarden%2Flineage%2Finvitations%2Fclaim",
     );
     expect(html).not.toMatch(
       /private-payload|opaque\.sealed|name="token"|Maria saved seeds|Cherokee Purple/i,
