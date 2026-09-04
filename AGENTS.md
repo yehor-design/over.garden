@@ -109,8 +109,12 @@ Every Linear task uses this shape and nothing more:
   `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`, `docs/ADMIN_ROLE_BOOTSTRAP.md`,
   `docs/STABLE_REGISTRY.md`, `docs/MIGRATION_ALLOCATION.md` — current
   behaviour of each area.
-- `docs/product-research/` — product research; read the two to five files
-  relevant to a user-facing change, nothing more is required.
+- `docs/product-research/` — product research, written before the code existed.
+  Read `docs/product-research/PRODUCT_CANON_2026-09.md` first: it states what the
+  product is today and outranks every other file there. Then read the two to five
+  files relevant to a user-facing change. Every file carries a dated status header;
+  `SUPERSEDED_DECISIONS_LEDGER.md` lists the research decisions the product cancelled
+  and what replaced them. The corpus never overrides this page or the ADRs.
 - `docs/SDD_VERTICAL_SLICE_ROADMAP.md`, `docs/runbooks/`,
   `docs/audit-inbox/`, `docs/reviews/`, `docs/linear/` — historical receipts.
 - `apps/web/AGENTS.md` — the Next.js version notice; read the framework docs

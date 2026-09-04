@@ -1,3 +1,14 @@
+> # 🕰 STATUS 2026-09-04 · `RETROSPECTIVE`
+>
+> This corpus is product research written **before** the code existed. The repository is the
+> source of truth for the product. Canon: `PRODUCT_CANON_2026-09.md` · superseded decisions:
+> `SUPERSEDED_DECISIONS_LEDGER.md` · per-file status: `RESEARCH_STATUS_INDEX.md`.
+> Reconciled against `over.garden` @ `main` `ab52664`, 2026-09-04.
+>
+> Implementation note from 2026-07-05. The routes still exist; their rendering, caching and indexability were rewritten by ADR-0022 D3/D4 and ADR-0023.
+
+---
+
 # Journal Logbook Readback Implementation
 
 Status: OVE-149 implementation note

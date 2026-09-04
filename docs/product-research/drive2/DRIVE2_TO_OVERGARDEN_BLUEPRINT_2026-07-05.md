@@ -1,3 +1,14 @@
+> # ⚠️ STATUS 2026-09-04 · `PARTLY-SUPERSEDED`
+>
+> This corpus is product research written **before** the code existed. The repository is the
+> source of truth for the product. Canon: `PRODUCT_CANON_2026-09.md` · superseded decisions:
+> `SUPERSEDED_DECISIONS_LEDGER.md` · per-file status: `RESEARCH_STATUS_INDEX.md`.
+> Reconciled against `over.garden` @ `main` `ab52664`, 2026-09-04.
+>
+> The transferable mechanics still hold. The implementation sequence, IA and component inventory predate ADR-0022/0023/0024: no drafts, no offline, no auth modal, one sign-in screen, every live public page indexable, market-first locales. Check any concrete instruction against `PRODUCT_CANON_2026-09.md`.
+
+---
+
 # Drive2 To OverGarden Adapted Blueprint
 
 Status: OVE-147 decision artifact

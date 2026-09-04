@@ -1,3 +1,19 @@
+> # ⚠️ СТАТУС 2026-09-04 · `ЗАМІЩЕНО-ЧАСТКОВО`
+>
+> Ця тека — дослідження, написане **до** початку розробки в коді. Джерело істини про
+> продукт — репозиторій. Канон: `PRODUCT_CANON_2026-09.md` · заміщення:
+> `SUPERSEDED_DECISIONS_LEDGER.md` · статуси всіх файлів: `RESEARCH_STATUS_INDEX.md`.
+> Звірено з `over.garden` @ `main` `ab52664`, 2026-09-04.
+>
+> **Не діє:** приватнісні інваріанти §4 у частині `noindex` для профілю й повного графа —
+> усе живе публічне індексується.
+>
+> **Діє й реалізовано:** ребра провенансу, claim/confirm, інвайт не-юзера,
+> ask-the-lineage, follow. Таблиці `lineage_provenance_edges`, `lineage_questions`,
+> `lineage_node_follows`, `lineage_pending_source_identities`.
+
+---
+
 # LINEAGE_SOCIAL_GRAPH_SPEC_v0.md — родовідний соцграф (робоча фіче-спека MVP, mutable)
 **Статус:** робоча специфікація ЯДРОВОЇ MVP-фічі. Mutable (НЕ frozen, НЕ pre-reg). Джерело правди
 для PRD/ENTRY/DB_SEED/B3/B2/B5 щодо лінії. Приватнісні інваріанти (§4) і VIRALITY-узгодження (§2)

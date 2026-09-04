@@ -1,3 +1,14 @@
+> # 🕰 STATUS 2026-09-04 · `RETROSPECTIVE`
+>
+> This corpus is product research written **before** the code existed. The repository is the
+> source of truth for the product. Canon: `PRODUCT_CANON_2026-09.md` · superseded decisions:
+> `SUPERSEDED_DECISIONS_LEDGER.md` · per-file status: `RESEARCH_STATUS_INDEX.md`.
+> Reconciled against `over.garden` @ `main` `ab52664`, 2026-09-04.
+>
+> Implementation note from 2026-07-05, already superseded by OVE-181 then rebuilt again by OVE-374 (workspace resilience, ADR-0023). Current behaviour: `docs/GARDEN_WORKSPACE_SECTION_OBSERVABILITY.md`.
+
+---
+
 # Garden Workspace Redesign Implementation Note
 
 Issue: OVE-150, superseded by OVE-181
