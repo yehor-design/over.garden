@@ -3088,11 +3088,6 @@ async function scrubDeletedJournalEntryRelations(
     .where("target_kind", "=", "journal_entry")
     .where("target_ref", "=", input.publicSlug)
     .execute();
-  await executor
-    .deleteFrom("engagement_like_target_budgets")
-    .where("target_kind", "=", "journal_entry")
-    .where("target_ref", "=", input.publicSlug)
-    .execute();
 }
 
 export function buildFindExistingEntryByClientMutationQuery(

@@ -122,22 +122,19 @@ const COMMUNITY_ACTIONS = new Set([
   "blocked",
   "unavailable",
 ]);
+/**
+ * The statuses a redirect can still carry in `?engagement=`.
+ *
+ * The panel's own interactions no longer appear here: since OVE-377 like,
+ * bookmark, follow, comment and comment moderation are Server Actions that
+ * render their outcome beside the control, so they neither navigate nor put a
+ * status in the address. What is left are the three surfaces that still answer
+ * with a redirect — lineage questions, notification receipts, and notification
+ * preferences. A value not in this set is dropped rather than reflected.
+ */
 const ENGAGEMENT_STATUSES = new Set([
-  "liked",
-  "unliked",
-  "like-rate-limited",
-  "comment-rate-limited",
   "lineage-question-rate-limited",
   "interaction-unavailable",
-  "bookmarked",
-  "bookmark-removed",
-  "commented",
-  "followed",
-  "unfollowed",
-  "comment-deleted",
-  "comment-reported",
-  "comment-author-blocked",
-  "comment-unavailable",
   "preferences-saved",
   "notification-updated",
 ]);

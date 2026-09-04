@@ -249,7 +249,10 @@ describe("interface route policy", () => {
         "/journal/garden-log",
         "?from=%2Fjournals%3Fq%3Dprivate-note%26region%3DBG-23%26topic%3Droses%26token%3Dsecret&engagement=liked&authIntent=comment&authControl=reply-a7d8f9c012345678&intent=opaque-token",
       ),
-    ).toBe("?from=%2Fjournals&engagement=liked&authIntent=comment");
+      // `engagement=liked` is no longer a value any surface produces: since
+      // OVE-377 a like renders its outcome beside the control instead of
+      // navigating, so the sanitizer drops it rather than reflecting it.
+    ).toBe("?from=%2Fjournals&authIntent=comment");
     expect(
       sanitizeInterfaceRouteSearch(
         "/journal/garden-log",
@@ -304,7 +307,7 @@ describe("interface route policy", () => {
           "?from=%2Fbg%2Fjournals%3Fkind%3Dplant%26season%3Dsummer%26sort%3Doldest%26page%3D2%26q%3Dprivate-note%26region%3DBG-23%26topic%3Droses%26token%3Dsecret&engagement=liked",
       }),
     ).toBe(
-      "/ru/journal/garden-log?from=%2Fru%2Fjournals%3Fkind%3Dplant%26season%3Dsummer%26sort%3Doldest%26page%3D2&engagement=liked",
+      "/ru/journal/garden-log?from=%2Fru%2Fjournals%3Fkind%3Dplant%26season%3Dsummer%26sort%3Doldest%26page%3D2",
     );
 
     expect(

@@ -522,7 +522,7 @@ describe("app route cache guardrail", () => {
       status: "not_found",
     });
     const privateEntry = await responseFor(
-      "/bg/journal/private-entry?engagement=commented&token=opaque-journal-token",
+      "/bg/journal/private-entry?engagement=interaction-unavailable&token=opaque-journal-token",
       {
         accept: "text/html",
         "sec-fetch-dest": "document",
@@ -549,10 +549,10 @@ describe("app route cache guardrail", () => {
     const privateEntryHtml = await privateEntry.text();
     expect(privateEntryHtml).toContain("Записът не е намерен");
     expect(privateEntryHtml).toContain(
-      'href="/bg/journal/private-entry?engagement=commented"',
+      'href="/bg/journal/private-entry?engagement=interaction-unavailable"',
     );
     expect(privateEntryHtml).toContain(
-      'href="/ru/journal/private-entry?engagement=commented"',
+      'href="/ru/journal/private-entry?engagement=interaction-unavailable"',
     );
     expect(privateEntryHtml).not.toContain("opaque-journal-token");
     expect(active.status).toBe(200);
@@ -737,7 +737,7 @@ describe("app route cache guardrail", () => {
       "x-vercel-ip-country": "BG",
     });
     const journal = await responseFor(
-      "/journal/missing-entry?engagement=commented&token=opaque-token",
+      "/journal/missing-entry?engagement=interaction-unavailable&token=opaque-token",
       {
         accept: "text/html",
         "sec-fetch-dest": "document",
@@ -755,7 +755,7 @@ describe("app route cache guardrail", () => {
     );
     expect(journal.status).toBe(307);
     expect(journal.headers.get("Location")).toBe(
-      "https://over.garden/bg/journal/missing-entry?engagement=commented",
+      "https://over.garden/bg/journal/missing-entry?engagement=interaction-unavailable",
     );
     expect(mocks.getPublicCommunityLifecycleLookup).not.toHaveBeenCalled();
     expect(mocks.getPublicProfileLifecycleLookup).not.toHaveBeenCalled();

@@ -28,6 +28,7 @@ import {
   publicCatalogStatusLabel,
 } from "@/lib/public-surface-localization";
 import { getEngagementSummary } from "@/server/engagement-repository";
+import { readViewerLikeState } from "@/app/engagement/engagement-viewer";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   resolvePublicSurfacePayload,
@@ -123,7 +124,6 @@ export async function renderPublicCatalogEvidenceRoute(
   const serializedJsonLd = serializePublicSurfaceJsonLd(surface.jsonLd);
   const isPlantVariety = catalogKind === "plant_variety";
   const wishlistStatus = firstParam(query.wishlist);
-  const engagementStatus = firstParam(query.engagement);
   const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
   const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
   const engagementTarget = {
@@ -132,6 +132,9 @@ export async function renderPublicCatalogEvidenceRoute(
   };
   const engagement = isPlantVariety
     ? await getEngagementSummary(engagementTarget)
+    : null;
+  const likeState = isPlantVariety
+    ? await readViewerLikeState(engagementTarget)
     : null;
 
   return (
@@ -248,9 +251,9 @@ export async function renderPublicCatalogEvidenceRoute(
         <PublicEngagementPanel
           isAuthenticated={shellSession.isAuthenticated}
           target={engagementTarget}
+          likeState={likeState}
           summary={engagement}
           returnTo={publicPath}
-          status={engagementStatus}
           locale={locale}
           resumeAction={resumeAction}
           resumeControl={resumeControl}

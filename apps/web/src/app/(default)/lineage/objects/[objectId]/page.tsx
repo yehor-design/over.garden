@@ -1,3 +1,4 @@
+import { readViewerLikeState } from "@/app/engagement/engagement-viewer";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -152,6 +153,7 @@ export default async function PublicLineageObjectRoute({
         engagementTarget,
         firstParam(query.cursor) ?? null,
       );
+  const likeState = await readViewerLikeState(engagementTarget);
   const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
   const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
   const lineageInteractionStatus = firstParam(query.engagement) ?? null;
@@ -246,9 +248,9 @@ export default async function PublicLineageObjectRoute({
       <PublicEngagementPanel
         isAuthenticated={Boolean(userId)}
         target={engagementTarget}
+        likeState={likeState}
         summary={engagement}
         returnTo={returnTo}
-        status={firstParam(query.engagement)}
         locale={locale}
         resumeAction={resumeAction}
         resumeControl={resumeControl}

@@ -27,9 +27,10 @@ describe("PublicEngagementPanel", () => {
     );
 
     expect(html).toContain('name="action" value="comment"');
-    expect(html).not.toContain("/api/engagement/likes");
-    expect(html).not.toContain("/api/engagement/bookmarks");
-    expect(html).not.toContain("/api/engagement/follows");
+    // A contribution thread is comments only: no like, bookmark or follow.
+    expect(html).not.toContain("Подобається");
+    expect(html).not.toContain("Зберегти");
+    expect(html).not.toContain("Стежити");
     expect(html).not.toContain("anonymousToken");
   });
 
@@ -40,6 +41,7 @@ describe("PublicEngagementPanel", () => {
         locale="ru"
         target={{ kind: "variety", ref: "red-cherry" }}
         returnTo="/variety/red-cherry"
+        likeState={{ activeLikeCount: 2, viewerLiked: false }}
         summary={{
           target: { kind: "variety", ref: "red-cherry" },
           activeLikeCount: 2,
@@ -59,6 +61,7 @@ describe("PublicEngagementPanel", () => {
     );
 
     expect(html).toContain("Нравится");
+    expect(html).toContain("2 отметки");
     expect(html).toContain("Ответить");
     expect(html).toContain("Looks sturdy after rain.");
   });
@@ -70,6 +73,7 @@ describe("PublicEngagementPanel", () => {
         locale="uk"
         target={{ kind: "journal_entry", ref: "balcony-tomato-check" }}
         returnTo="/journal/balcony-tomato-check"
+        likeState={{ activeLikeCount: 0, viewerLiked: false }}
         summary={{
           target: { kind: "journal_entry", ref: "balcony-tomato-check" },
           activeLikeCount: 0,
@@ -78,12 +82,13 @@ describe("PublicEngagementPanel", () => {
       />,
     );
 
-    expect(html).toContain("/api/engagement/likes");
+    // A guest may like — that is the hybrid ownership decision of 2026-09-04 —
+    // but bookmarking and commenting still need an account.
+    expect(html).toContain("Подобається");
+    expect(html).toContain('aria-pressed="false"');
     expect(html).toContain("/auth/intent/start");
     expect(html).toContain('name="action" value="bookmark"');
     expect(html).toContain('name="action" value="comment"');
-    expect(html).not.toContain("/api/engagement/bookmarks");
-    expect(html).not.toContain("/api/engagement/comments");
     expect(html).not.toContain('name="body"');
   });
 

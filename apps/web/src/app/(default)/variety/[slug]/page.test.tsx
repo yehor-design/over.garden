@@ -118,12 +118,11 @@ describe("/variety/[slug]", () => {
     );
 
     expect(html).toContain("Сохранить в список желаний");
-    expect(html).toContain("/api/engagement/likes");
+    expect(html).toContain('aria-pressed="false"');
     expect(html).toContain("/auth/intent/start");
     expect(html).toContain('name="action" value="bookmark"');
     expect(html).toContain('name="action" value="comment"');
-    expect(html).not.toContain("/api/engagement/bookmarks");
-    expect(html).not.toContain("/api/engagement/comments");
+    expect(html).not.toContain("/api/engagement");
     expect(html).toContain('name="catalogPublicSlug"');
     expect(html).toContain('value="pomidor-cheri-0000000101"');
     expect(html).toContain("/garden?catalog=pomidor-cheri-0000000101");

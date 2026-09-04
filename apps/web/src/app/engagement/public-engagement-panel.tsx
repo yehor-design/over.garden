@@ -4,7 +4,6 @@ import {
   Ban,
   Bookmark,
   Flag,
-  Heart,
   MessageCircle,
   MoreHorizontal,
   Reply,
@@ -13,9 +12,25 @@ import {
   UserPlus,
 } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
+import {
+  addCommentAction,
+  blockCommentAuthorAction,
+  deleteCommentAction,
+  reportCommentAction,
+  setBookmarkAction,
+  setFollowAction,
+  toggleLikeAction,
+} from "./engagement-actions";
+import {
+  EngagementBookmarkControl,
+  EngagementCommentForm,
+  EngagementCommentActionButton,
+  EngagementFollowToggleControl,
+  EngagementLikeControl,
+} from "./engagement-controls";
+import type { ViewerLikeState } from "./engagement-viewer";
 import { buttonVariants } from "@/components/ui/button";
 import type {
   AuthIntentAction,
@@ -23,10 +38,7 @@ import type {
 } from "@/lib/auth/auth-intent-contract";
 import { buildAuthIntentAnchor } from "@/lib/auth/auth-intent-contract";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import {
-  formatPublicCount,
-  getPublicSurfaceCopy,
-} from "@/lib/public-surface-localization";
+import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 import type {
   EngagementTarget,
   EngagementCommentTarget,
@@ -43,7 +55,13 @@ interface PublicEngagementPanelProps {
   summary: PublicEngagementSummary | PublicEngagementCommentThread;
   returnTo: string;
   commentOnly?: boolean;
-  status?: string | null;
+  /**
+   * The count and whether this reader already liked the target. Resolved by the
+   * page beside its other reads, never inside this component: the panel renders
+   * on five surfaces and a hidden database read in a shared renderer is how a
+   * page loses track of what it costs.
+   */
+  likeState?: ViewerLikeState | null;
   resumeAction?: AuthIntentAction | null;
   resumeControl?: string | null;
 }
@@ -85,18 +103,19 @@ export function EngagementFollowControl({
   }
 
   return (
-    <EngagementButtonForm
-      action="/api/engagement/follows"
-      intentAction="follow"
-      target={target}
-      returnTo={returnTo}
-      label={label}
-      icon={icon}
-      variant="outline"
-      stateName="followState"
-      stateValue={following ? "removed" : "active"}
-      pressed={following}
+    <EngagementFollowToggleControl
+      targetKind={target.kind}
+      targetRef={target.ref}
+      initialActive={following}
       autoFocus={resumeAction === "follow"}
+      labels={{
+        inactive: copy.engagement.follow,
+        active: copy.engagement.unfollow,
+        unavailable: copy.engagement.interactionUnavailable,
+        rateLimited: copy.engagement.likeRateLimited,
+        signInRequired: copy.engagement.interactionUnavailable,
+      }}
+      submit={setFollowAction}
     />
   );
 }
@@ -107,8 +126,8 @@ export function PublicEngagementPanel({
   target,
   summary,
   returnTo,
-  status,
   commentOnly = false,
+  likeState = null,
   resumeAction = null,
   resumeControl = null,
 }: PublicEngagementPanelProps) {
@@ -122,74 +141,62 @@ export function PublicEngagementPanel({
       data-auth-intent-resumed={resumeAction ?? undefined}
       className="grid gap-4 border-y border-border py-5"
     >
-      {!commentOnly ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-2">
-            <EngagementButtonForm
-              action="/api/engagement/likes"
-              target={target}
-              returnTo={returnTo}
-              label={copy.engagement.like}
-              icon={<Heart className="size-4" />}
+      {!commentOnly && likeState ? (
+        <div className="flex flex-wrap items-start gap-3">
+          <EngagementLikeControl
+            targetKind={target.kind}
+            targetRef={target.ref}
+            initialLiked={likeState.viewerLiked}
+            initialCount={likeState.activeLikeCount}
+            locale={locale}
+            labels={{
+              like: copy.engagement.like,
+              liked: copy.engagement.likeActive,
+              unavailable: copy.engagement.interactionUnavailable,
+              rateLimited: copy.engagement.likeRateLimited,
+            }}
+            toggle={toggleLikeAction}
+          />
+          {isAuthenticated ? (
+            <EngagementBookmarkControl
+              targetKind={target.kind}
+              targetRef={target.ref}
+              initialActive={
+                "viewerBookmarked" in summary &&
+                Boolean(summary.viewerBookmarked)
+              }
+              labels={{
+                inactive: copy.engagement.bookmark,
+                active: copy.engagement.bookmarkActive,
+                unavailable: copy.engagement.interactionUnavailable,
+                rateLimited: copy.engagement.likeRateLimited,
+                signInRequired: copy.engagement.interactionUnavailable,
+              }}
+              submit={setBookmarkAction}
             />
-            {isAuthenticated ? (
-              <EngagementButtonForm
-                action="/api/engagement/bookmarks"
-                intentAction="bookmark"
-                target={{ kind: target.kind, ref: target.ref }}
-                returnTo={returnTo}
-                label={copy.engagement.bookmark}
-                icon={<Bookmark className="size-4" />}
-                variant="outline"
-                stateName="bookmarkState"
-                stateValue={
-                  "viewerBookmarked" in summary && summary.viewerBookmarked
-                    ? "removed"
-                    : "active"
-                }
-                pressed={
-                  "viewerBookmarked" in summary &&
-                  Boolean(summary.viewerBookmarked)
-                }
-                autoFocus={resumeAction === "bookmark"}
-              />
-            ) : (
-              <AuthIntentTrigger
-                action="bookmark"
-                returnTo={returnTo}
-                target={intentTarget}
-                label={copy.engagement.bookmark}
-                icon={<Bookmark className="size-4" />}
-                variant="outline"
-              />
-            )}
-            {target.kind === "lineage_object" || target.kind === "topic" ? (
-              <EngagementFollowControl
-                isAuthenticated={isAuthenticated}
-                locale={locale}
-                target={{ kind: target.kind, ref: target.ref }}
-                returnTo={returnTo}
-                following={
-                  "viewerFollowing" in summary && summary.viewerFollowing
-                }
-                resumeAction={resumeControl ? null : resumeAction}
-              />
-            ) : null}
-          </div>
-          <p className="text-sm text-muted-foreground" role="status">
-            {formatPublicCount(
-              locale,
-              "like",
-              "activeLikeCount" in summary ? summary.activeLikeCount : 0,
-            )}
-          </p>
+          ) : (
+            <AuthIntentTrigger
+              action="bookmark"
+              returnTo={returnTo}
+              target={intentTarget}
+              label={copy.engagement.bookmark}
+              icon={<Bookmark className="size-4" />}
+              variant="outline"
+            />
+          )}
+          {target.kind === "lineage_object" || target.kind === "topic" ? (
+            <EngagementFollowControl
+              isAuthenticated={isAuthenticated}
+              locale={locale}
+              target={{ kind: target.kind, ref: target.ref }}
+              returnTo={returnTo}
+              following={
+                "viewerFollowing" in summary && summary.viewerFollowing
+              }
+              resumeAction={resumeControl ? null : resumeAction}
+            />
+          ) : null}
         </div>
-      ) : null}
-
-      {status ? (
-        <p className="text-sm text-muted-foreground">
-          {engagementStatusMessage(status, locale)}
-        </p>
       ) : null}
 
       {resumeAction === "comment" ||
@@ -203,33 +210,21 @@ export function PublicEngagementPanel({
       ) : null}
 
       {isAuthenticated ? (
-        <form
-          method="post"
-          action="/api/engagement/comments"
-          className="grid gap-3"
-        >
-          <EngagementTargetFields target={target} returnTo={returnTo} />
-          <input type="hidden" name="clientMutationId" value={randomUUID()} />
-          <label className="grid gap-2 text-sm font-medium text-foreground">
-            {copy.engagement.comment}
-            <textarea
-              id="engagement-comment"
-              data-auth-intent-control="comment"
-              autoFocus={resumeAction === "comment" && !resumeControl}
-              name="body"
-              maxLength={600}
-              rows={3}
-              className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-sm leading-6 text-foreground shadow-sm transition-colors outline-none placeholder:text-muted-foreground focus:border-primary"
-            />
-          </label>
-          <button
-            type="submit"
-            className={buttonVariants({ className: "self-start" })}
-          >
-            <MessageCircle className="size-4" />
-            {copy.engagement.comment}
-          </button>
-        </form>
+        <EngagementCommentForm
+          targetKind={target.kind}
+          targetRef={target.ref}
+          clientMutationId={randomUUID()}
+          fieldId="engagement-comment"
+          autoFocus={resumeAction === "comment" && !resumeControl}
+          labels={{
+            field: copy.engagement.comment,
+            action: copy.engagement.comment,
+            unavailable: copy.engagement.interactionUnavailable,
+            rateLimited: copy.engagement.commentRateLimited,
+            signInRequired: copy.engagement.interactionUnavailable,
+          }}
+          submit={addCommentAction}
+        />
       ) : (
         <AuthIntentTrigger
           action="comment"
@@ -297,54 +292,28 @@ export function PublicEngagementPanel({
                 ) : null}
 
                 {isActiveComment(root) && isAuthenticated ? (
-                  <form
-                    method="post"
-                    action="/api/engagement/comments"
-                    className="grid gap-2"
-                  >
-                    <EngagementTargetFields
-                      target={target}
-                      returnTo={returnTo}
-                    />
-                    <input
-                      type="hidden"
-                      name="parentCommentId"
-                      value={root.replyToken}
-                    />
-                    <input
-                      type="hidden"
-                      name="clientMutationId"
-                      value={randomUUID()}
-                    />
-                    <label className="grid gap-2 text-sm font-medium text-foreground">
-                      {copy.engagement.reply}
-                      <textarea
-                        id={
-                          isResumedReply
-                            ? buildAuthIntentAnchor("comment", replyControl)
-                            : undefined
-                        }
-                        data-auth-intent-control="comment"
-                        data-auth-intent-control-ref={replyControl}
-                        autoFocus={isResumedReply}
-                        name="body"
-                        maxLength={600}
-                        rows={2}
-                        className="min-h-16 rounded-md border border-border bg-background px-3 py-2 text-sm leading-6 text-foreground shadow-sm transition-colors outline-none placeholder:text-muted-foreground focus:border-primary"
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      className={buttonVariants({
-                        variant: "outline",
-                        size: "sm",
-                        className: "self-start",
-                      })}
-                    >
-                      <Reply className="size-4" />
-                      {copy.engagement.reply}
-                    </button>
-                  </form>
+                  <EngagementCommentForm
+                    targetKind={target.kind}
+                    targetRef={target.ref}
+                    parentCommentId={root.replyToken}
+                    clientMutationId={randomUUID()}
+                    compact
+                    controlRef={replyControl}
+                    fieldId={
+                      isResumedReply
+                        ? buildAuthIntentAnchor("comment", replyControl)
+                        : undefined
+                    }
+                    autoFocus={isResumedReply}
+                    labels={{
+                      field: copy.engagement.reply,
+                      action: copy.engagement.reply,
+                      unavailable: copy.engagement.interactionUnavailable,
+                      rateLimited: copy.engagement.commentRateLimited,
+                      signInRequired: copy.engagement.interactionUnavailable,
+                    }}
+                    submit={addCommentAction}
+                  />
                 ) : isActiveComment(root) ? (
                   <AuthIntentTrigger
                     action="comment"
@@ -425,17 +394,22 @@ function CommentActions({
 
   if (comment.isOwn && isAuthenticated) {
     return (
-      <form method="post" action="/api/engagement/comments/delete">
-        <EngagementTargetFields target={target} returnTo={returnTo} />
-        <input type="hidden" name="commentId" value={comment.replyToken} />
-        <button
-          type="submit"
-          className={buttonVariants({ variant: "ghost", size: "sm" })}
-        >
-          <Trash2 className="size-4" />
-          {copy.engagement.deleteComment}
-        </button>
-      </form>
+      <EngagementCommentActionButton
+        label={copy.engagement.deleteComment}
+        icon={<Trash2 className="size-4" aria-hidden="true" />}
+        labels={{
+          unavailable: copy.engagement.interactionUnavailable,
+          rateLimited: copy.engagement.commentRateLimited,
+          signInRequired: copy.engagement.interactionUnavailable,
+        }}
+        run={() =>
+          deleteCommentAction({
+            targetKind: target.kind,
+            targetRef: target.ref,
+            commentId: comment.replyToken,
+          })
+        }
+      />
     );
   }
 
@@ -472,17 +446,23 @@ function CommentActions({
       <div className="absolute top-full left-0 z-20 mt-1 grid min-w-56 gap-2 border border-border bg-popover p-2 text-popover-foreground shadow-md">
         {isAuthenticated ? (
           <>
-            <form
-              method="post"
-              action="/api/engagement/comments/report"
-              className="grid gap-2"
+            <EngagementCommentActionButton
+              label={copy.engagement.reportComment}
+              icon={<Flag className="size-4" aria-hidden="true" />}
+              labels={{
+                unavailable: copy.engagement.interactionUnavailable,
+                rateLimited: copy.engagement.commentRateLimited,
+                signInRequired: copy.engagement.interactionUnavailable,
+              }}
+              run={(formData) =>
+                reportCommentAction({
+                  targetKind: target.kind,
+                  targetRef: target.ref,
+                  commentId: comment.replyToken,
+                  reason: String(formData.get("reason") ?? "other"),
+                })
+              }
             >
-              <EngagementTargetFields target={target} returnTo={returnTo} />
-              <input
-                type="hidden"
-                name="commentId"
-                value={comment.replyToken}
-              />
               <select
                 name="reason"
                 defaultValue="other"
@@ -505,29 +485,23 @@ function CommentActions({
                   {copy.engagement.reportReasons.other}
                 </option>
               </select>
-              <button
-                type="submit"
-                className={buttonVariants({ variant: "ghost", size: "sm" })}
-              >
-                <Flag className="size-4" />
-                {copy.engagement.reportComment}
-              </button>
-            </form>
-            <form method="post" action="/api/engagement/comments/block">
-              <EngagementTargetFields target={target} returnTo={returnTo} />
-              <input
-                type="hidden"
-                name="commentId"
-                value={comment.replyToken}
-              />
-              <button
-                type="submit"
-                className={buttonVariants({ variant: "ghost", size: "sm" })}
-              >
-                <Ban className="size-4" />
-                {copy.engagement.blockAuthor}
-              </button>
-            </form>
+            </EngagementCommentActionButton>
+            <EngagementCommentActionButton
+              label={copy.engagement.blockAuthor}
+              icon={<Ban className="size-4" aria-hidden="true" />}
+              labels={{
+                unavailable: copy.engagement.interactionUnavailable,
+                rateLimited: copy.engagement.commentRateLimited,
+                signInRequired: copy.engagement.interactionUnavailable,
+              }}
+              run={() =>
+                blockCommentAuthorAction({
+                  targetKind: target.kind,
+                  targetRef: target.ref,
+                  commentId: comment.replyToken,
+                })
+              }
+            />
           </>
         ) : (
           <>
@@ -558,61 +532,6 @@ function CommentActions({
   );
 }
 
-function EngagementButtonForm({
-  action,
-  target,
-  returnTo,
-  label,
-  icon,
-  variant,
-  intentAction,
-  autoFocus = false,
-  stateName,
-  stateValue,
-  pressed,
-}: {
-  action: string;
-  target: EngagementCommentTarget;
-  returnTo: string;
-  label: string;
-  icon: ReactNode;
-  variant?: "outline";
-  intentAction?: AuthIntentAction;
-  autoFocus?: boolean;
-  stateName?: string;
-  stateValue?: string;
-  pressed?: boolean;
-}) {
-  return (
-    <form method="post" action={action}>
-      <EngagementTargetFields target={target} returnTo={returnTo} />
-      {stateName && stateValue ? (
-        <input type="hidden" name={stateName} value={stateValue} />
-      ) : null}
-      <button
-        id={
-          intentAction === "bookmark"
-            ? "engagement-bookmark"
-            : intentAction === "follow" && autoFocus
-              ? "lineage-follow"
-              : undefined
-        }
-        data-auth-intent-control={intentAction}
-        autoFocus={autoFocus}
-        type="submit"
-        aria-pressed={pressed}
-        className={buttonVariants({
-          variant,
-          className: "self-start",
-        })}
-      >
-        {icon}
-        {label}
-      </button>
-    </form>
-  );
-}
-
 function engagementAuthIntentTarget(
   target: EngagementCommentTarget,
 ): AuthIntentTarget {
@@ -626,22 +545,6 @@ function engagementAuthIntentTarget(
     return { kind: "contribution", ref: target.ref };
   }
   return { kind: "collection", ref: target.ref };
-}
-
-function EngagementTargetFields({
-  target,
-  returnTo,
-}: {
-  target: EngagementCommentTarget;
-  returnTo: string;
-}) {
-  return (
-    <>
-      <input type="hidden" name="targetKind" value={target.kind} />
-      <input type="hidden" name="targetRef" value={target.ref} />
-      <input type="hidden" name="returnTo" value={returnTo} />
-    </>
-  );
 }
 
 function buildCommentThreads(comments: PublicEngagementComment[]) {
@@ -668,43 +571,6 @@ function appendCommentCursor(returnTo: string, cursor: string) {
   url.searchParams.set("cursor", cursor);
   url.hash = "comments";
   return `${url.pathname}${url.search}${url.hash}`;
-}
-
-function engagementStatusMessage(status: string, locale: InterfaceLocale) {
-  const copy = getPublicSurfaceCopy(locale);
-
-  switch (status) {
-    case "liked":
-      return copy.engagement.liked;
-    case "unliked":
-      return copy.engagement.unliked;
-    case "like-rate-limited":
-      return copy.engagement.likeRateLimited;
-    case "comment-rate-limited":
-      return copy.engagement.commentRateLimited;
-    case "interaction-unavailable":
-      return copy.engagement.interactionUnavailable;
-    case "bookmarked":
-      return copy.engagement.bookmarked;
-    case "bookmark-removed":
-      return copy.engagement.bookmarkRemoved;
-    case "commented":
-      return copy.engagement.commented;
-    case "followed":
-      return copy.engagement.followed;
-    case "unfollowed":
-      return copy.engagement.unfollowed;
-    case "comment-deleted":
-      return copy.engagement.commentDeleted;
-    case "comment-reported":
-      return copy.engagement.commentReported;
-    case "comment-author-blocked":
-      return copy.engagement.commentAuthorBlocked;
-    case "comment-unavailable":
-      return copy.engagement.commentUnavailable;
-    default:
-      return "";
-  }
 }
 
 function formatDate(value: Date | string, locale: InterfaceLocale) {

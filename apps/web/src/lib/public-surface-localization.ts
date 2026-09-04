@@ -51,7 +51,10 @@ interface PublicSurfaceCopy {
   };
   engagement: {
     like: string;
+    /** The button's own label once this reader has liked, not a status sentence. */
+    likeActive: string;
     bookmark: string;
+    bookmarkActive: string;
     follow: string;
     unfollow: string;
     comment: string;
@@ -212,7 +215,9 @@ const COPY = {
     },
     engagement: {
       like: "Подобається",
+      likeActive: "Вподобано",
       bookmark: "Зберегти",
+      bookmarkActive: "Збережено",
       follow: "Стежити",
       unfollow: "Не стежити",
       comment: "Коментар",
@@ -381,7 +386,9 @@ const COPY = {
     },
     engagement: {
       like: "Харесвам",
+      likeActive: "Харесано",
       bookmark: "Запази",
+      bookmarkActive: "Запазено",
       follow: "Следвай",
       unfollow: "Спри следването",
       comment: "Коментар",
@@ -551,7 +558,9 @@ const COPY = {
     },
     engagement: {
       like: "Нравится",
+      likeActive: "Понравилось",
       bookmark: "Сохранить",
+      bookmarkActive: "Сохранено",
       follow: "Подписаться",
       unfollow: "Отписаться",
       comment: "Комментарий",

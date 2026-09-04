@@ -291,13 +291,24 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     executionOwned: true,
   },
   {
-    id: "engagement_likes.anonymous_device_hash",
+    id: "engagement_likes.user_id",
     table: "engagement_likes",
-    columnOrPath: "anonymous_device_hash",
+    columnOrPath: "user_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale:
+      "ON DELETE CASCADE. A signed-in gardener's likes belong to the account and leave with it (OVE-377).",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "engagement_likes.visitor_id",
+    table: "engagement_likes",
+    columnOrPath: "visitor_id",
     kind: "soft_column",
     disposition: "not-account-linkable",
     rationale:
-      "No user_id column; hash is SHA-256 of a device token via hashAnonymousEngagementToken, not an account id.",
+      "A signed visitor id from one browser cookie. It names no account, and the schema's XOR check makes a visitor row and an account row mutually exclusive, so no account erasure can reach it.",
     dryRunOwned: true,
     executionOwned: true,
   },
@@ -961,7 +972,7 @@ export const ERASURE_SQL_DISCOVERY_REQUIRED_IDS = [
   "erasure_requests.dry_run_reviewed_by_user_id",
   "journal_entries.cover_media_asset_id",
   "media_assets.usage_role",
-  "engagement_likes.anonymous_device_hash",
+  "engagement_likes.visitor_id",
   "engagement_comment_reports.reviewed_by_user_id",
   "interaction_quota_windows.actor_user_id",
   "job_queue.payload.userId",
@@ -993,12 +1004,34 @@ export function discoverErasurePathsFromWalkingSkeletonSql(
     return lastCreate > lastDrop;
   };
 
+  // A column a later migration dropped is not a path anybody can erase. Without
+  // this the inventory has to keep classifying columns that no longer exist,
+  // which is how a manifest starts describing a schema nobody runs.
+  const droppedColumns = new Set<string>();
+  for (const match of normalizedSql.matchAll(
+    /alter table\s+"?(\w+)"?([\s\S]*?);/g,
+  )) {
+    const table = match[1] ?? "";
+    for (const drop of (match[2] ?? "").matchAll(
+      /drop column\s+(?:if exists\s+)?"?(\w+)"?/g,
+    )) {
+      droppedColumns.add(`${table}.${drop[1]}`);
+    }
+  }
+  const columnIsPresent = (table: string, column: string) =>
+    !droppedColumns.has(`${table.toLowerCase()}.${column.toLowerCase()}`);
+
   // Read the owning table from the DDL, never from the constraint name. Several
   // historical constraints abbreviate the table name.
   for (const match of sqlText.matchAll(
     /alter table\s+"?(\w+)"?[^;]{0,600}?add constraint\s+\w+\s+foreign key \((\w+)\)\s+references\s+"user"\(id\)/gi,
   )) {
-    if (match[1] && tableIsPresent(match[1])) {
+    if (
+      match[1] &&
+      match[2] &&
+      tableIsPresent(match[1]) &&
+      columnIsPresent(match[1], match[2])
+    ) {
       discovered.add(`${match[1]}.${match[2]}`);
     }
   }
@@ -1017,11 +1050,12 @@ export function discoverErasurePathsFromWalkingSkeletonSql(
       if (
         /_user_id$/.test(column) ||
         /(?:^|_)(?:email|handle|identifier)$/.test(column) ||
-        /^(?:anonymous_device_hash|cover_media_asset_id|usage_role|content_document)$/.test(
+        /^(?:anonymous_device_hash|visitor_id|cover_media_asset_id|usage_role|content_document)$/.test(
           column,
         )
       ) {
-        discovered.add(`${table}.${column}`);
+        if (columnIsPresent(table, column))
+          discovered.add(`${table}.${column}`);
       }
     }
 
@@ -1048,7 +1082,7 @@ export function discoverErasurePathsFromWalkingSkeletonSql(
     { table: "erasure_requests", column: "requester_user_id" },
     { table: "erasure_requests", column: "handled_by_user_id" },
     { table: "erasure_requests", column: "dry_run_reviewed_by_user_id" },
-    { table: "engagement_likes", column: "anonymous_device_hash" },
+    { table: "engagement_likes", column: "visitor_id" },
     { table: "lineage_provenance_edges", column: "owner_user_id" },
     { table: "lineage_provenance_edges", column: "source_owner_user_id" },
     { table: "lineage_node_follows", column: "follower_user_id" },

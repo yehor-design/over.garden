@@ -87,7 +87,7 @@ describe("/{locale}/bookmarks", () => {
     expect(html).toContain("Закладки");
     expect(html).toContain("First ripe cluster");
     expect(html).toContain("/journal/first-ripe-cluster");
-    expect(html).toContain("/api/engagement/bookmarks");
+    expect(html).toContain('aria-pressed="true"');
     expect(html).not.toMatch(
       /owner_user_id|author_user_id|quarantine|derivative_key|ip_address|user_agent|email|phone|coordinates|latitude|longitude/i,
     );
