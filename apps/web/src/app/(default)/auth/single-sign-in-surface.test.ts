@@ -19,6 +19,8 @@ const SOURCE_ROOT = join(process.cwd(), "src");
 
 /** The one screen, and the one module that renders its form. */
 const AUTH_SURFACE = "src/app/(default)/auth/auth-surface.tsx";
+const SIGN_IN_HREF = "src/lib/navigation/sign-in-href.ts";
+const SIGN_IN_HREF_RELATIVE = "lib/navigation/sign-in-href.ts";
 const AUTH_ROUTES = [
   "src/app/(default)/auth/sign-in/page.tsx",
   "src/app/(default)/auth/sign-up/page.tsx",
@@ -65,13 +67,42 @@ describe("one sign-in surface", () => {
     );
   });
 
-  it("sends the navigation's sign-in item to that one screen", () => {
+  it("lets one module decide what a sign-in link says", () => {
+    // The check that used to stand here asked whether the *navigation file*
+    // mentioned "/auth/sign-in". It did — and the site header still shipped a
+    // hard-coded `href="/garden"` beside the label it read from that same file,
+    // so the reader reached the workspace empty state and had to press "sign
+    // in" a second time. A guard that reads one file cannot see the file that
+    // is wrong. This one reads them all: nobody but `sign-in-href.ts` may spell
+    // the destination.
+    const offenders = files
+      .filter(({ path, text }) => {
+        if (path === SIGN_IN_HREF || path.includes(".test.")) return false;
+        // `/api/auth/sign-in/...` is Better Auth's own endpoint, not the screen.
+        const withoutApi = text.replace(/\/api\/auth\/sign-[a-z]+/g, "");
+        // A module specifier such as `@/app/(default)/auth/sign-in-prompt` is
+        // an import, not a URL.
+        const withoutImports = withoutApi.replace(
+          /from "[^"]*"|import\("[^"]*"\)/g,
+          "",
+        );
+        return /["'`(]\/auth\/sign-(in|up)/.test(withoutImports);
+      })
+      .map(({ path }) => path);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("routes every sign-in link through that module", () => {
+    const helper = readFileSync(join(SOURCE_ROOT, SIGN_IN_HREF_RELATIVE), "utf8");
+    expect(helper).toContain('const SIGN_IN_PATH = "/auth/sign-in"');
+    expect(helper).toContain('const SIGN_UP_PATH = "/auth/sign-up"');
+
     const navigation = readFileSync(
       join(SOURCE_ROOT, "lib/site-shell-navigation.ts"),
       "utf8",
     );
-    // "Sign in" and "My garden" pointed at `/garden` together until OVE-378.
-    expect(navigation).toContain('"/auth/sign-in"');
+    expect(navigation).toContain("buildSignInHref(");
   });
 });
 

@@ -293,3 +293,49 @@ describe("production site shell", () => {
     expect(source.match(/<SessionSignalBoundary /g)).toHaveLength(3);
   });
 });
+
+describe("every guest sign-in control reaches the form itself", () => {
+  it("never routes the reader through an intermediate page", async () => {
+    // The defect: the header's "sign in" button read this item's *label* from
+    // the navigation and hard-coded `href="/garden"` beside it, so the control
+    // landed on the workspace empty state, which offers a second "sign in"
+    // before the form. Reported by the owner on 2026-09-04, after OVE-378
+    // claimed the two URLs were no longer the same.
+    mocks.pathname = "/bg/journals";
+    const { SiteShell } = await import("./site-shell");
+    const html = renderToStaticMarkup(
+      <SiteShell locale="bg" market="bulgaria" isAuthenticated={false}>
+        <article>Route content</article>
+      </SiteShell>,
+    );
+
+    const signInControls = [
+      ...html.matchAll(/data-site-shell-action="sign-in[^"]*"[^>]*/g),
+    ].map((match) => match[0]);
+    expect(signInControls.length).toBeGreaterThanOrEqual(2);
+    for (const control of signInControls) {
+      expect(control).toMatch(/href="\/auth\/sign-in/);
+    }
+
+    // And it brings the reader back to what they were reading, rather than
+    // depositing them in the workspace — the defect OVE-378 set out to remove.
+    expect(html).toContain("/auth/sign-in?next=%2Fbg%2Fjournals");
+  });
+
+  it("offers no sign-in control at all once the reader is signed in", async () => {
+    mocks.pathname = "/bg/journals";
+    const { SiteShell } = await import("./site-shell");
+    const html = renderToStaticMarkup(
+      <SiteShell
+        locale="bg"
+        market="bulgaria"
+        isAuthenticated
+        ownerUserId="owner-1"
+      >
+        <article>Route content</article>
+      </SiteShell>,
+    );
+
+    expect(html).not.toContain('data-site-shell-action="sign-in');
+  });
+});

@@ -151,8 +151,23 @@ because there is no delay to explain and nothing to discard.
 fields: a reader could not tell which action they were performing, and
 `current-password` and `new-password` cannot both be correct on one field.
 
+One screen is only worth having if one function addresses it. It did not, at
+first: every caller assembled its own `"/auth/sign-in?next=" +
+encodeURIComponent(...)`, and the site header assembled nothing at all — it read
+the navigation item's *label* and hard-coded `href="/garden"` beside it, so
+pressing "sign in" landed on the workspace empty state, which offers a second
+"sign in" before the form. The owner found it the day after this shipped.
+`buildSignInHref` is the only place that spells the destination now, and
+`single-sign-in-surface.test.ts` fails if any other module writes one.
+
 `?next=` decides where the reader lands, through the same same-origin boundary
-every other return path uses. `?intent=` decides only the heading, from the
+every other return path uses, and it names the *thing*, not the page that
+contains it: the header carries the reader's current page, and an intent control
+carries the resume href the intent contract builds, so signing in from "new
+entry" arrives at `/garden?authIntent=create_entry#first-entry-composer` with the
+composer in front of the reader. `ACTION_ANCHORS` had always known where each
+action belongs; nothing was carrying it, so the reader paid one press to sign in
+and another to find the composer. `?intent=` decides only the heading, from the
 closed action set — a value in the address may not change which providers,
 fields, or controls exist. `/auth/intent` is a redirect; its signed token and
 `/auth/intent/resume` are unchanged, so resuming a comment or a follow does not
@@ -173,6 +188,13 @@ a production defect on the like, was caught in review on the sign-in screen, and
 was caught by the author's own pre-flight check on the language control. Only
 the third one was cheap. The source-level tests exist because the shape is
 invisible in a render.
+
+**A guard that reads one file cannot see the file that is wrong.** The check
+that was supposed to keep "sign in" and "my garden" apart asserted that the
+*navigation module* contained the string `"/auth/sign-in"`. It did, and the
+header still shipped `href="/garden"` next to the label it read from that same
+module. The replacement reads every source file and allows the destination to be
+spelled in one of them.
 
 **A guard is not a guarantee until the runtime is asked.** `isPrefetchRequest`
 read exactly the headers the App Router sends, its unit test passed, and it never

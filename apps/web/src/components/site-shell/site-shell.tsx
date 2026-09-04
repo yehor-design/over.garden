@@ -156,6 +156,7 @@ export function SiteShell({
     locale,
     isAuthenticated,
     communitiesReady,
+    pathname,
   );
   const copy = getInterfaceCopy(locale);
   const signOutCopy = getTrustSurfaceCopy(locale).signOut;
@@ -440,12 +441,8 @@ export function SiteShell({
                             render={
                               <Link
                                 data-site-shell-action="sign-in-mobile"
-                                href="/garden"
-                                aria-label={
-                                  navigation.mobileItems.find(
-                                    (item) => item.key === "sign-in",
-                                  )?.label ?? ""
-                                }
+                                href={navigation.signIn.href}
+                                aria-label={navigation.signIn.label}
                                 className={buttonVariants({
                                   variant: "ghost",
                                   size: "icon",
@@ -458,15 +455,14 @@ export function SiteShell({
                             <LogIn aria-hidden="true" />
                           </TooltipTrigger>
                           <TooltipContent>
-                            {navigation.mobileItems.find(
-                              (item) => item.key === "sign-in",
-                            )?.label ?? ""}
+                            {navigation.signIn.label}
                           </TooltipContent>
                         </Tooltip>
                       </span>
                       <span className="hidden md:inline-flex">
                         <Link
-                          href="/garden"
+                          data-site-shell-action="sign-in"
+                          href={navigation.signIn.href}
                           className={buttonVariants({
                             variant: "outline",
                             size: "sm",
@@ -474,9 +470,7 @@ export function SiteShell({
                               "border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background",
                           })}
                         >
-                          {navigation.mobileItems.find(
-                            (item) => item.key === "sign-in",
-                          )?.label ?? ""}
+                          {navigation.signIn.label}
                         </Link>
                       </span>
                     </>
