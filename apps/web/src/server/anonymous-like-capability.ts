@@ -16,6 +16,20 @@ import {
 const TOKEN_VERSION = "v1";
 export const ANONYMOUS_LIKE_CAPABILITY_TTL_SECONDS = 24 * 60 * 60;
 
+/**
+ * The one bound every consumer of a capability token shares.
+ *
+ * The payload carries `target_ref` verbatim, and that column admits 160
+ * characters of any script. A Cyrillic slug is two UTF-8 bytes per letter and
+ * base64url adds a third on top, so a token this server itself minted routinely
+ * passes 256 characters — which is what `hashAnonymousEngagementToken` used to
+ * reject, turning a like into an empty 500 on 7 of the 8 public journal entries
+ * (measured 2026-09-04). The honest invariant is "this server minted it", and
+ * the signature proves that; the length check is only a cheap input guard, so
+ * both readers now use the same generous bound and cannot drift apart again.
+ */
+export const MAX_ANONYMOUS_LIKE_CAPABILITY_TOKEN_LENGTH = 1_200;
+
 type LikeTarget = {
   kind: "journal_entry" | "lineage_object" | "variety" | "topic";
   ref: string;
@@ -63,7 +77,9 @@ export function verifyAnonymousLikeCapability(
   target: LikeTarget,
   options: { now?: Date; authSecrets?: AuthSecretConfiguration } = {},
 ): AnonymousLikeCapability | null {
-  if (!token || token.length > 1200) return null;
+  if (!token || token.length > MAX_ANONYMOUS_LIKE_CAPABILITY_TOKEN_LENGTH) {
+    return null;
+  }
   const parts = token.split(".");
   if (parts.length !== 4 || parts[0] !== TOKEN_VERSION) return null;
   const version = parseVersion(parts[1]);

@@ -7,6 +7,7 @@ import {
   parseEngagementCommentTarget,
   redirectToEngagementAuth,
   redirectWithEngagementStatus,
+  settleEngagementMutation,
 } from "../../shared";
 import {
   mutationScopeResponse,
@@ -14,8 +15,7 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 
-export async function POST(request: Request) {
-  const formData = await request.formData();
+async function runEngagementMutation(request: Request, formData: FormData) {
   const target = parseEngagementCommentTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
   const commentId = String(formData.get("commentId") ?? "");
@@ -45,5 +45,11 @@ export async function POST(request: Request) {
     request,
     returnTo,
     "comment-author-blocked",
+  );
+}
+
+export async function POST(request: Request) {
+  return settleEngagementMutation(request, "comments_block", (formData) =>
+    runEngagementMutation(request, formData),
   );
 }

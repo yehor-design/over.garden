@@ -22,6 +22,7 @@ import {
 } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
+import { MAX_ANONYMOUS_LIKE_CAPABILITY_TOKEN_LENGTH } from "@/server/anonymous-like-capability";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { blockUserId } from "@/server/profile-interaction-repository";
@@ -1728,7 +1729,10 @@ export function engagementTargetPath(target: EngagementCommentTarget) {
 
 export function hashAnonymousEngagementToken(token: string) {
   const normalizedToken = token.trim();
-  if (normalizedToken.length < 16 || normalizedToken.length > 256) {
+  if (
+    normalizedToken.length < 16 ||
+    normalizedToken.length > MAX_ANONYMOUS_LIKE_CAPABILITY_TOKEN_LENGTH
+  ) {
     throw new Error("Anonymous engagement token is not available.");
   }
 

@@ -6,6 +6,7 @@ import {
   parseEngagementTarget,
   redirectToEngagementAuth,
   redirectWithEngagementStatus,
+  settleEngagementMutation,
 } from "../shared";
 import {
   mutationScopeResponse,
@@ -13,8 +14,7 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 
-export async function POST(request: Request) {
-  const formData = await request.formData();
+async function runEngagementMutation(request: Request, formData: FormData) {
   const target = parseEngagementTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
   const admission = await resolveMutationScope({
@@ -46,5 +46,11 @@ export async function POST(request: Request) {
     request,
     returnTo,
     result.active ? "bookmarked" : "bookmark-removed",
+  );
+}
+
+export async function POST(request: Request) {
+  return settleEngagementMutation(request, "bookmarks", (formData) =>
+    runEngagementMutation(request, formData),
   );
 }
