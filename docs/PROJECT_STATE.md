@@ -130,11 +130,19 @@ decision in ADR-0022, not an omission.
    round-trip and the ADR-0022 D6 cross-tab reload are asserted by tests rather
    than observed. CI runs `tests/public-hydration.spec.ts` against a real
    Chromium on every push; the other Playwright specs still run by hand.
-4. **No frontend analytics.** Vercel Web Analytics is not enabled for the
-   project, and runtime logs are retained for about an hour, so there is no
-   denominator for "how often does a reader hit a failure". Server errors are
-   aggregated for seven days, and a degraded section now writes its own line
-   with a bounded class and the digest the reader can see on screen.
+4. **No denominator for reader-facing failures.** Vercel Web Analytics is not
+   enabled for the project, and runtime logs are retained for about an hour, so
+   there is no denominator for "how often does a reader hit a failure". Server
+   errors are aggregated for seven days, and a degraded section now writes its
+   own line with a bounded class and the digest the reader can see on screen.
+   This gap is narrower than "no analytics": GA4 and GTM are wired in
+   `root-document.tsx` behind a consent banner, and Microsoft Clarity behind an
+   env flag — but only on a marketing subset of paths (`/`, `/blog`, `/privacy`,
+   `/support`, `/first-publication-disclosure`, and the `/answers/`, `/blog/`,
+   `/guides/`, `/markets/` prefixes). Journal entries, the feed, objects and the
+   workspace send nothing, so activation and retention — how many gardeners
+   journal, how often they publish, whether anyone reads back — are not measured
+   anywhere today.
 5. **The catalog is empty in production.** The Stable Registry schema landed on
    2026-09-03 and the Release Center renders, but no Foundation release has been
    built from real source data, so `/garden/catalog/registry` shows zero
