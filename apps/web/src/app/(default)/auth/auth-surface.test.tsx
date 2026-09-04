@@ -54,8 +54,7 @@ describe("the one sign-in surface", () => {
     // form renders React's `javascript:` placeholder, so a rendered-HTML
     // assertion cannot tell a Server Action form from a client closure. Only a
     // bare `formAction` identifier from `useActionState` gets a real endpoint,
-    // and that is what makes the screen work before hydration — which public
-    // pages do not get (OVE-380).
+    // and that is what makes the screen work before hydration finishes.
     const source = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), "auth-surface.tsx"),
       "utf8",

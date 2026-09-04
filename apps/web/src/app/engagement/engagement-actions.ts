@@ -42,9 +42,9 @@ import {
  * an ordinary client function is not: React renders
  * `action="javascript:throw new Error('React form unexpectedly submitted.')"`
  * and the control does nothing until hydration replaces it. The first version of
- * this file used a client closure, and on 2026-09-04 that shipped a like button
- * that made no request at all on a page whose subtree never hydrated. The state
- * a control needs therefore travels through `formData`, never through a closure.
+ * this file used a client closure and claimed to work without JavaScript, which
+ * was false. The state a control needs therefore travels through `formData`,
+ * never through a closure.
  *
  * Two more rules hold for all of them, and both come from decisions already taken:
  *

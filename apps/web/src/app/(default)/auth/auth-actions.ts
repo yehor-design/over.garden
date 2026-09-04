@@ -26,9 +26,8 @@ import {
  * session cookie from a Server Action exactly as the route handler did. Moving
  * the call here buys four things the client path could not have:
  *
- *   * the form works with JavaScript disabled — which on this site is not a
- *     nicety: public pages do not hydrate below the shell (OVE-380, measured
- *     2026-09-04), so a screen that needs hydration to submit does not work;
+ *   * the form works with JavaScript disabled, so the screen is usable before
+ *     hydration finishes and on a client that never runs it at all;
  *   * an invalid credential arrives already rendered, with no flash of an empty
  *     panel while a fetch resolves;
  *   * the return path is validated and followed by the server, so an untrusted
