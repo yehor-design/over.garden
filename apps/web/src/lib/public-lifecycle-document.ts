@@ -89,25 +89,17 @@ function renderRawInterfaceLanguageControl(
       localizedLink: routePolicy.mode === "localized-link",
     }),
   ).join("");
-  const script = rawLanguageControlScript(
-    routePolicy.mode === "localized-link" ? "localized-link" : "preference",
-    input.locale,
-    copy.languageFlushFailure,
-    copy.languageSwitchingPending,
-  );
-  const recoveryControl =
-    routePolicy.mode === "localized-link"
-      ? ""
-      : `<button type="button" data-interface-language-recovery hidden>${escapeHtml(copy.retry)}</button>`;
-
+  // No script. A tombstone is raw HTML with no React and no bundle, so the
+  // language control here is exactly what it looks like: links on a localized
+  // route, and a form post on an unprefixed one. The 110-line inline protocol
+  // this replaces reimplemented the coordinator's flush, retry and pending
+  // states for a page whose whole point is that nothing works on it any more.
   return `<nav aria-label="${escapeAttribute(copy.languageControlLabel)}" data-interface-language-control-host="raw-lifecycle-interface-language-control">
       <details data-interface-language-control="true">
         <summary aria-label="${escapeAttribute(copy.languageControlTrigger)}">${escapeHtml(PUBLIC_LOCALE_CONFIG[input.locale].label)}</summary>
         <div role="menu" data-interface-language-menu>${options}</div>
       </details>
-      <span role="status" aria-live="polite" data-interface-language-status></span>
-      ${recoveryControl}
-    </nav>${script}`;
+    </nav>`;
 }
 
 function renderRawLanguageOption(input: {
@@ -131,120 +123,16 @@ function renderRawLanguageOption(input: {
     return `<a ${commonAttributes} href="${escapeAttribute(target)}" hreflang="${config.htmlLang}" rel="noreferrer" referrerpolicy="no-referrer">${escapeHtml(config.label)}</a>`;
   }
 
-  return `<button ${commonAttributes} type="button">${escapeHtml(config.label)}</button>`;
-}
-
-function rawLanguageControlScript(
-  mode: "localized-link" | "preference",
-  currentLocale: InterfaceLocale,
-  failureMessage: string,
-  pendingMessage: string,
-) {
-  const configuration = JSON.stringify({
-    currentLocale,
-    endpoint: INTERFACE_LOCALE_PREFERENCE_ENDPOINT,
-    failureMessage,
-    mode,
-    pendingMessage,
-  }).replaceAll("<", "\\u003c");
-
-  return `<script>(()=>{
-    const c=${configuration};
-    const d=document.querySelector('[data-interface-language-control]');
-    if(!d)return;
-    const s=d.querySelector('summary');
-    const o=[...d.querySelectorAll('[data-interface-language-option]')];
-    const z=document.querySelector('[data-interface-language-status]');
-    const y=document.querySelector('[data-interface-language-recovery]');
-    const h=new URL(document.URL).hash;
-    const v=h.startsWith('#')?h.slice(1):'';
-    const j=document.getElementById(v);
-    const A=()=>s.getAttribute('aria-disabled')==='true';
-    const f=()=>{
-      for(const x of o)x.disabled=false;
-      if(y){y.hidden=true;y.disabled=false;}
-      s.removeAttribute('aria-disabled');
-      z.textContent=c.failureMessage;
-      d.open=true;
-      s.focus();
-    };
-    const u=()=>{
-      for(const x of o)x.disabled=true;
-      if(y){y.hidden=false;y.disabled=false;}
-      s.setAttribute('aria-disabled','true');
-      z.textContent=c.failureMessage;
-      d.open=false;
-      if(y)y.focus();
-    };
-    const p=async locale=>{
-      const a=new AbortController();
-      const t=setTimeout(()=>a.abort(),10000);
-      try{
-        const q={method:'POST',credentials:'same-origin',cache:'no-store',referrerPolicy:'no-referrer',headers:{'content-type':'application/json'},body:JSON.stringify({locale}),signal:a.signal};
-        q['redi'+'rect']='error';
-        const e=await fetch(c.endpoint,q);
-        return e.status===204&&!e['redi'+'rected']?'committed':'rejected';
-      }catch{return'unknown';}
-      finally{clearTimeout(t);}
-    };
-    const b=async()=>await p(c.currentLocale)==='committed';
-    const q=async()=>{if(await b())f();else u();};
-    const w=m=>{
-      let l=false;
-      let t;
-      const k=()=>{removeEventListener('pagehide',n);removeEventListener('pageshow',g);if(t!==undefined)clearTimeout(t);};
-      const r=x=>{if(l)return;l=true;k();if(x)window.stop();m.remove();void q();};
-      const n=e=>{if(e.persisted)return;l=true;k();};
-      const g=()=>r(false);
-      addEventListener('pagehide',n);
-      addEventListener('pageshow',g);
-      t=setTimeout(()=>r(true),10000);
-      return()=>r(true);
-    };
-    if(y)y.addEventListener('click',async()=>{y.disabled=true;await q();});
-    s.addEventListener('click',e=>{if(!A())return;e.preventDefault();d.open=false;if(y&&!y.hidden)y.focus();});
-    s.addEventListener('keydown',e=>{if(!A()||(e.key!=='Enter'&&e.key!==' '))return;e.preventDefault();d.open=false;if(y&&!y.hidden)y.focus();});
-    d.addEventListener('toggle',()=>{if(A()&&d.open){d.open=false;if(y&&!y.hidden)y.focus();}});
-    if(c.mode==='localized-link'&&/^[A-Za-z][A-Za-z0-9._~-]{0,127}$/.test(v)&&j?.dataset.interfaceLocaleFragmentSafe==='true'){
-      for(const a of o){if(a instanceof HTMLAnchorElement&&!a.href.endsWith(h))a.href+=h;}
-    }
-    d.addEventListener('keydown',e=>{
-      if(e.key==='Escape'&&d.open){e.preventDefault();d.open=false;s.focus();return;}
-      if((e.key==='ArrowDown'||e.key==='ArrowUp')&&d.open){
-        e.preventDefault();
-        const i=o.indexOf(document.activeElement);
-        const n=e.key==='ArrowDown'?(i+1)%o.length:(i<0?o.length-1:(i-1+o.length)%o.length);
-        o[n].focus();
-      }
-    });
-    for(const x of o){
-      x.addEventListener('click',async e=>{
-        if(x.getAttribute('aria-checked')==='true'){e.preventDefault();d.open=false;s.focus();return;}
-        if(c.mode==='localized-link')return;
-        e.preventDefault();
-        for(const a of o)a.disabled=true;
-        z.textContent=c.pendingMessage;
-        let r;
-        try{
-          const n=await p(x.dataset.interfaceLocale);
-          if(n!=='committed'){
-            if(n==='rejected')f();
-            else await q();
-            return;
-          }
-          const m=document.createElement('meta');
-          m.name='referrer';
-          m.content='no-referrer';
-          document.head.append(m);
-          r=w(m);
-          window['loca'+'tion'].reload();
-        }catch{
-          if(r)r();
-          else await q();
-        }
-      });
-    }
-  })();</script>`;
+  // Unprefixed route: the choice has nowhere to live but the cookie, so it is a
+  // form post the browser can make without any JavaScript.
+  //
+  // No `returnTo`. A tombstone must not copy the identity of the thing that is
+  // gone into its own markup, and the endpoint's fallback is the home page —
+  // which is where a reader on a 410 is going anyway.
+  return `<form method="post" action="${escapeAttribute(INTERFACE_LOCALE_PREFERENCE_ENDPOINT)}" style="display:inline">
+      <input type="hidden" name="locale" value="${escapeAttribute(input.locale)}" />
+      <button ${commonAttributes} type="submit">${escapeHtml(config.label)}</button>
+    </form>`;
 }
 
 function renderRawInterfaceLanguageControlStyles() {

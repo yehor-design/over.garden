@@ -16,7 +16,6 @@ import {
 } from "@/components/garden/local-journal-composer-status";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
-import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import type { PlantObjectKind } from "@/db/schema";
 import { useScrollToHashOnMount } from "@/lib/browser/hash-scroll";
 import {
@@ -134,7 +133,6 @@ export function FirstEntryComposer({
     null,
   );
   const photoInputRef = useRef<HTMLInputElement | null>(null);
-  const localeMutationCountRef = useRef(0);
   const [draft, setDraft] = useState<FirstEntryDraftFields>({
     spaceId: initialSpace?.id ?? null,
     spaceName: initialSpace?.displayName ?? "",
@@ -190,7 +188,6 @@ export function FirstEntryComposer({
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState(atomicCopy.localOnly);
   const [disclosureAccepted, setDisclosureAccepted] = useState(false);
-  const [localeMutationPending, setLocaleMutationPending] = useState(false);
   const local = useLocalJournalComposer({
     enabled: localPersistenceEnabled,
     fallbackReturnTo: "/garden",
@@ -219,23 +216,11 @@ export function FirstEntryComposer({
   );
   const persistenceFrozen = local.readOnly;
 
-  useInterfaceLocaleChangeFormState({
-    id: "first-entry-composer-mutation",
-    dirty: false,
-    pending: localeMutationPending,
-  });
 
   function beginLocaleMutation() {
-    localeMutationCountRef.current += 1;
-    setLocaleMutationPending(true);
   }
 
   function endLocaleMutation() {
-    localeMutationCountRef.current = Math.max(
-      0,
-      localeMutationCountRef.current - 1,
-    );
-    if (localeMutationCountRef.current === 0) setLocaleMutationPending(false);
   }
 
   useEffect(() => {

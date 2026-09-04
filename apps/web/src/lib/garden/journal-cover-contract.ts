@@ -44,8 +44,6 @@ export type Ove207BrowserScenarioId =
 export const OVE_207_PRIMARY_BROWSER_SCENARIO_ID =
   "locale-transition-with-cover" as const satisfies Ove207BrowserScenarioId;
 
-export const OWNER_COMPOSER_COVER_UPLOAD_PARTICIPANT_ID =
-  "owner-composer-cover-upload";
 
 export interface JournalCoverCandidate {
   mediaAssetId: string;

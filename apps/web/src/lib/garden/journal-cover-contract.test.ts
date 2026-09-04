@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   JOURNAL_MEDIA_USAGE_COVER_ONLY,
   JOURNAL_MEDIA_USAGE_INLINE,
-  OWNER_COMPOSER_COVER_UPLOAD_PARTICIPANT_ID,
   OVE_207_BROWSER_SCENARIO_IDS,
   OVE_207_PRIMARY_BROWSER_SCENARIO_ID,
   inferCoverModeFromAggregate,
@@ -137,14 +136,11 @@ describe("OVE-207 journal cover contract", () => {
     ).toBe("separate");
   });
 
-  it("keeps OVE-207 scenario and locale participant ids stable", () => {
+  it("keeps the OVE-207 scenario ids stable", () => {
     expect(OVE_207_PRIMARY_BROWSER_SCENARIO_ID).toBe(
       "locale-transition-with-cover",
     );
     expect(OVE_207_BROWSER_SCENARIO_IDS).toHaveLength(8);
-    expect(OWNER_COMPOSER_COVER_UPLOAD_PARTICIPANT_ID).toBe(
-      "owner-composer-cover-upload",
-    );
   });
 
   it("has uk/bg/ru cover copy parity", () => {

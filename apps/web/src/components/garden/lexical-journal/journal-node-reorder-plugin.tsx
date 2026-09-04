@@ -29,7 +29,6 @@ import {
   createJournalBlockId,
 } from "./journal-lexical-nodes";
 import type { JournalBlockReorderCopy } from "@/components/garden/structured-journal-composer";
-import { interfaceLocaleChangeCoordinator } from "@/lib/interface-locale-change-coordinator";
 
 export const OWNER_COMPOSER_REORDER_GESTURE_PARTICIPANT_ID =
   "owner-composer-reorder-gesture";
@@ -307,10 +306,6 @@ export function JournalNodeReorderPlugin({
 
   function beginInFlight() {
     if (unregisterInFlightRef.current) return;
-    unregisterInFlightRef.current = interfaceLocaleChangeCoordinator.register({
-      id: OWNER_COMPOSER_REORDER_GESTURE_PARTICIPANT_ID,
-      kind: "in-flight",
-    });
     onReorderingChange(true);
   }
 
