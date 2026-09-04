@@ -629,11 +629,12 @@ Worker and search invariants:
 - Meilisearch is a derived public index only; Postgres remains the source of truth.
 - `MEILI_MASTER_KEY`, `MEILISEARCH_API_KEY`, and `MATCHING_SERVICE_TOKEN` must stay only in platform/env secret stores.
 - Do not expose Meilisearch keys, worker env files, database URLs, canary row identifiers, or indexed journal text in docs, Linear, or chat.
-- `matching-worker` must process the exact six-handler manifest
-  `catalog_alias_suggestions_refresh`,
-  `catalog_fuzzy_duplicate_qa_refresh`,
-  `catalog_match_suggestions_refresh`, `catalog_typeahead_reindex`,
-  `journal_entry_index`, and `journal_entry_unindex` idempotently and reclaim
+- `matching-worker` must process every kind the job queue contract declares,
+  idempotently. The set is not restated here and no document should restate it:
+  a frozen six-handler copy in five files refused seventy-six correct image
+  releases between 2026-08-28 and 2026-09-04 after the manifest grew to nine.
+  `contracts/job-queue/job-queue.contract.v1.json` is generated from
+  `apps/web/src/server/job-queue-manifest.ts` and is the readable answer. Reclaim
   stale `processing` rows after the visibility timeout. The canonical manifest
   is `services/matching/app/job_handlers.py`; dispatch, heartbeat, CI sealing,
   deployment, and runtime smoke must all use it rather than duplicating a
@@ -696,7 +697,7 @@ Immutable matching release contract (OVE-190):
   compatibility `ove190.matching-schema.v1`, queue `matching`, one exact SHA,
   and one exact digest shared by API and worker.
 - `GET /health` is API liveness only. `GET /capabilities` proves immutable
-  release identity and the exact six-handler list. `GET /ready` adds Postgres,
+  release identity and the declared handler set. `GET /ready` adds Postgres,
   queue schema, Meilisearch, and same-release worker-heartbeat parity; it returns
   HTTP `503` when any dependency or parity gate is degraded.
 - Public readiness output is deliberately bounded: dependency
@@ -787,7 +788,7 @@ matching_image_workflow_runs: 30386916883, 30387886356
 active_digest_after_forward: sha256:fd063367e46f501aee4eafe6e037cfa136581c425b5a462bf21c2660b36223a4
 database_binding: authoritative Vercel production DIRECT_URL; digest-compared without exposing the value
 application_schema: 0011_ove242_public_projection_outbox.sql additive transaction applied
-runtime_readiness: exact-sha-and-digest-pass; exact-six-handlers; all dependencies available
+runtime_readiness: exact-sha-and-digest-pass; exact-six-handlers (the set the manifest declared on that date); all dependencies available
 queue_buckets: depth=empty, lag=none, unsupportedRetryingClass=none, terminalCountClass=low
 public_index_repair_plan: reindex=4, unindexDelete=69, deleteInvalid=0
 public_index_after: zeroGap=true, expected=4, observed=4, every gap class zero

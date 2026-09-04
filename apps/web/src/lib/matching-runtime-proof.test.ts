@@ -129,7 +129,7 @@ describe("matching runtime smoke options", () => {
 });
 
 describe("matching runtime capability evidence", () => {
-  it("accepts only the exact release, six handlers, and ready dependency set", () => {
+  it("accepts only the exact release, the declared handler set, and ready dependencies", () => {
     expect(
       buildMatchingRuntimeCapabilityEvidence({
         options,
