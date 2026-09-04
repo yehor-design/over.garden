@@ -114,11 +114,14 @@ in Vercel or another deployed runtime.
   abandonment, alarm recovery, and exact capability scoping.
 - `scripts/verify-retired-journal-media-runtime.test.ts` proves the former
   server-draft/process/schema/package owners stay absent.
-- `src/lib/retirement/known-client-storage.test.ts` proves the only surviving
-  browser-storage boundary is dependency-free, exact-name, content-free, and
-  fail-closed. `tests/offline-runtime-absence.spec.ts` proves fresh and
-  returning profiles across Chromium, Firefox, and WebKit.
-- `src/server/search/documents.test.ts` proves private entries are not turned into Meilisearch documents.
+- **Both of these are gone (OVE-365, ADR-0022):** `src/lib/retirement/` and
+  `tests/offline-runtime-absence.spec.ts` were deleted with the last offline
+  residue, because nothing writes browser storage any more and there is no
+  boundary left to prove. Do not try to run them.
+- `src/server/search/documents.test.ts` proves entries that are not public are
+  not turned into Meilisearch documents. (There are no private entries to
+  exclude — every published entry is public; the test guards lifecycle states
+  such as a deleted entry inside its seven-day tombstone.)
 
 ## Next SDD Rule
 

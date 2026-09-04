@@ -18,7 +18,7 @@ Next.js App Router + TypeScript · shadcn/ui · Better Auth · Kysely · Digital
 - `docs/PROJECT_STATE.md` — production truth, current direction, known gaps. `docs/DELIVERY_LOG_2026-09.md` — what the owner MVP reset shipped and why. `docs/PRODUCTION_SCHEMA_STATE.md` — which migrations production runs.
 - `docs/SDD_VERTICAL_SLICE_ROADMAP.md` — historical roadmap and execution log; active work lives in Linear.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — live non-secret infrastructure values, provider IDs, bucket/domain names, env contracts, and dashboard links.
-- `docs/product-research/` — duplicated product research corpus for ICP, JTBD, positioning, IA, SEO/content, trust/privacy, GTM, and validation evidence.
+- `docs/product-research/` — product research written before the code existed, reconciled with the shipped product on 2026-09-04. Read `docs/product-research/PRODUCT_CANON_2026-09.md` first; `SUPERSEDED_DECISIONS_LEDGER.md` lists the research decisions the product cancelled. It is product-thinking authority (ICP, JTBD, positioning, IA, SEO/content, trust/privacy, GTM, evidence), never implementation authority.
 - `docs/adr/` — ADRs; `ADR-0022-owner-mvp-reset.md` is the current authority and lists what it supersedes in ADR-0017, ADR-0018, and ADR-0019.
 - `AGENTS.md` — operating rules for AI agents and humans.
 

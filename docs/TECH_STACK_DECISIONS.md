@@ -1,6 +1,6 @@
 # OverGarden — Technology Stack & Decisions
 
-> **Current status:** consolidated by ADR-0014, superseded for connectivity and browser-local journal persistence by ADR-0017, for the MVP refusal, media, indexability, and operator-surface posture by ADR-0018, for atomic local journal authoring and client-final media publication by ADR-0019, for the journal deletion-retention lifecycle by ADR-0021, and on 2026-09-02 by **ADR-0022 (owner MVP reset)** for the location-text firewall, media parameters, indexability, public HTML caching, sessions, admin, and process. Where a row below still describes a pre-ADR-0022 rule, ADR-0022 wins; rows are updated by the tasks OVE-362 through OVE-373 as each area ships.
+> **Current status:** consolidated by ADR-0014, superseded for connectivity and browser-local journal persistence by ADR-0017, for the MVP refusal, media, indexability, and operator-surface posture by ADR-0018, for atomic local journal authoring and client-final media publication by ADR-0019, for the journal deletion-retention lifecycle by ADR-0021, and on 2026-09-02 by **ADR-0022 (owner MVP reset)** for the location-text firewall, media parameters, indexability, public HTML caching, sessions, admin, and process; by **ADR-0023** for how a `/garden/**` page handles failure; and on 2026-09-04 by **ADR-0024** for interaction, language and sign-in. Where a row below still describes a pre-ADR-0022 rule, the current ADRs win.
 
 ## Product frame
 
@@ -20,14 +20,14 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 | Data-access posture     | Scoped repository functions remain canonical. Sessions are server-authoritative (ADR-0022, D6): the cookie-cached session decides, every mutation carries the rendered owner id, and a mismatch is refused with 401/409. No client gate, no admission protocol.                                       |
 | Object storage          | Cloudflare R2; ADR-0019 uses private ephemeral staging for direct browser upload of final WebPs and immutable public storage after atomic publication. OVE-372 issues one session capability per composer session: uploads and touches go straight to the staging Worker under a two-hour lease; nothing per photo touches Vercel. |
 | Media processing        | The browser encodes natively first (ADR-0022, D2; OVE-371): one 50 MiB source limit, a 480 px preview from the decoded bitmap, then the 2560 primary WebP at quality 85 with 1280/480 variants and a 16 px placeholder, served as plain `<img srcset>` from `media.over.garden`. Exact bytes are staged, promoted, stored, and served without Vercel byte ingress or server re-encoding; no Sharp, source-original, admission, quality-gate, or process-route runtime exists. |
-| Search/typeahead        | Meilisearch as a derived public index                                                                                                                                                                                                                                                                 |
+| Search/typeahead        | Meilisearch as a derived public index; catalog typeahead resolves in Postgres with `pg_trgm` (migration `0043`), because a derived index must not be the only thing that answers a misspelling                                                                                                                                                                                                                                                                 |
 | Matching/dedup          | Python worker using RapidFuzz, PyICU, CyrTranslit; off request path                                                                                                                                                                                                                           |
 | Queue                   | Plain Postgres `job_queue` table, consumed with `FOR UPDATE SKIP LOCKED`                                                                                                                                                                                                                              |
 | Connectivity and saves  | Online-only, network-required atomic Publish under ADR-0017/ADR-0019. Unpublished state is tab-memory only; no durable browser state, server draft, local mutation queue, PWA shell/installability promise, or connectivity-hint success claim is allowed.                                               |
 | MVP posture             | ADR-0022: online-only atomic Publish, browser-only WebP conversion, every live public page indexable, server-authoritative sessions, in-product admin under `AdminUserRole`; OVE-362 through OVE-373 own the runtime reset.                                                                           |
 | Realtime                | Deferred; canonical server fetch path first                                                                                                                                                                                                                                                           |
 | Edge/DNS                | Cloudflare DNS-only for the app: Vercel's cache serves public HTML shells (ADR-0022, D4) and Cloudflare never caches app HTML. `media.over.garden` is an R2 custom domain proxied by Cloudflare, which caches the immutable WebP objects (GET `MISS` then `HIT`).                                        |
-| Analytics               | PostHog / first-party analytics later, after privacy event review                                                                                                                                                                                                                                     |
+| Analytics               | GA4 + GTM behind a consent banner and Microsoft Clarity behind an env flag, wired in `root-document.tsx` on a marketing subset of paths only (`/`, `/blog`, `/privacy`, `/support`, `/first-publication-disclosure`, `/answers/`, `/blog/`, `/guides/`, `/markets/`); a Meta Conversions route and the `analytics_events` table exist. Journal entries, the feed, objects and the workspace send nothing, and Vercel Web Analytics is off, so activation, retention and reader-failure rates are unmeasured                                                                                                                                                                                                                                     |
 | Build method            | Walking skeleton first, then vertical SDD slices from `docs/SDD_VERTICAL_SLICE_ROADMAP.md`; no layer-ticket batches                                                                                                                                                                                   |
 | Local container runtime | Apple Container-first for local Postgres, Meilisearch, MinIO, and matching-image smoke on supported Apple Silicon/macOS 26; Docker Desktop is not required after OVE-77, except as a fallback for unsupported hosts or verified Apple Container feature gaps. See `docs/CONTAINER_RUNTIME_POLICY.md`. |
 
@@ -84,7 +84,7 @@ Do not migrate CI to Apple Container unless the replacement change documents run
 
 ## Production runtime boundary
 
-The DigitalOcean Linux worker/search droplet currently uses Docker Compose under `/opt/overgarden` for `matching-worker`, `matching-api`, `meilisearch`, and `caddy`. OVE-76 keeps that production process manager because OVE-39 live-proved restart policy, service health, and journal publish/index plus archive/unindex recovery there. Apple Container remains a supported-Mac local runtime, not the production Linux process manager. Any non-Docker production replacement must be a separate live-proven Linux migration with the restart, health, public-safe search-document, and redacted-evidence gates in `docs/CONTAINER_RUNTIME_POLICY.md`.
+The DigitalOcean Linux worker/search droplet currently uses Docker Compose under `/opt/overgarden` for `matching-worker`, `meilisearch`, and `caddy`. The `matching-api` container, its route, and `matching.over.garden` were retired on 2026-09-03 (OVE-357, `docs/MATCHING_API_RETIREMENT.md`); worker liveness is read from the `matching_worker_heartbeats` row. OVE-76 keeps that production process manager because OVE-39 live-proved restart policy, service health, and journal publish/index plus archive/unindex recovery there. Apple Container remains a supported-Mac local runtime, not the production Linux process manager. Any non-Docker production replacement must be a separate live-proven Linux migration with the restart, health, public-safe search-document, and redacted-evidence gates in `docs/CONTAINER_RUNTIME_POLICY.md`.
 
 ## ADR index
 
@@ -109,8 +109,10 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
 - ADR-0017 — Online-only product. Binding for network-required success and the
   ban on durable browser journal storage; its future server-draft target is
   superseded by ADR-0019.
-- ADR-0018 — MVP posture. Binding for serve-under-uncertainty, measured public
-  indexability, format-conversion-only media, and in-product admin boundaries.
+- ADR-0018 — MVP posture. Binding only for format-conversion-only media and the
+  in-product admin boundary, which ADR-0022 D5 completes. Its serve-under-
+  uncertainty client gates (§1) and its measured indexability threshold (§3) are
+  superseded by ADR-0022 D6 and D3.
 - ADR-0019 — Atomic local journal authoring and client-final WebP publication.
   Binding for transient pre-Publish state, exact browser-final bytes, bounded
   Cloudflare staging, and atomic create/edit publication.
@@ -125,9 +127,16 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   the clauses it lists in ADR-0017, ADR-0018, ADR-0019, and the earlier
   `AGENTS.md`.
 - ADR-0023 — Workspace failures are rendered values, never thrown exceptions
-- ADR-0024 — Interaction, language, and sign-in are platform primitives, not hand-written client protocols
   (2026-09-03). Binding for every page under `/garden/**`: shell first, data in
   streamed sections, one bounded failure vocabulary, per-surface skeletons, and
   `onRequestError` instrumentation. Records the reproduced Cache Components
   defect that makes `error.tsx` unreliable on a hard load. Accepted; OVE-374
   implements it.
+- ADR-0024 — Interaction, language, and sign-in are platform primitives, not
+  hand-written client protocols (2026-09-04). Binding: a like is a permanent row
+  owned by exactly one of `user_id` or `visitor_id`, uncapped and never expiring;
+  a control on a public page may not depend on hydration, so a form's `action`
+  is a Server Action reference and never a client closure; choosing a language is
+  a navigation, and cross-locale links carry `prefetch={false}`; there is one
+  sign-in screen and `buildSignInHref` is the only place that spells its address.
+  Accepted and implemented by OVE-376 through OVE-379.

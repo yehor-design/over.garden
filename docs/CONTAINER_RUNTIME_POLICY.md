@@ -65,7 +65,7 @@ Do not replace the CI Docker service path with Apple Container until a separate 
 OVE-76 confirms the production worker/search droplet is outside the Apple Container migration target. Apple Container is the preferred supported-Mac local runtime, not the process manager for the current DigitalOcean Linux droplet. The production surface remains `production-linux-required` because OVE-39 live-proved Docker Compose restart behavior and worker/search recovery for:
 
 - `matching-worker`, which consumes the Postgres `job_queue`;
-- `matching-api`, which exposes the matching health endpoint;
+- `matching-api` — **retired on 2026-09-03** (OVE-357): the container, its route and `matching.over.garden` are gone, and worker liveness is read from the `matching_worker_heartbeats` row instead. Kept in this list only so a host inventory that still shows it is recognised as drift;
 - `meilisearch`, which stores derived public indexes only;
 - `caddy`, which terminates TLS for the droplet services.
 

@@ -9,13 +9,17 @@ This document is the canonical owner of how a public journal projection is
 revoked or rewritten. `docs/PUBLIC_JOURNAL_INDEX_PARITY.md` remains the owner of
 how the resulting corpus is compared.
 
-## ADR-0018 successor posture
+## ADR-0018 successor posture, corrected by ADR-0022 (D3)
 
-ADR-0018 supersedes refusal-first handling of unresolved or stale derived state.
-OVE-331 will admit the row with an explicit quality class and serve it rather
-than silently dropping it; OVE-335 will apply the shared measured indexability
-threshold. Positively resolved canonical erasure or non-public state still owns
-the target projection state. The mechanics below describe the current
+ADR-0018 superseded refusal-first handling of unresolved or stale derived state:
+OVE-331 admits the row with an explicit quality class and serves it rather than
+silently dropping it. **The rest of that sentence is void.** There is no "shared
+measured indexability threshold" to apply — ADR-0022 D3 removed the word,
+staleness and quality-class thresholds, the 150 ms metadata deadline and the
+`journal_entries.public_noindex` column outright (migration `0046`). Every live
+public page is indexable; `noindex` survives only for an empty listing, the
+seven-day `410` tombstone, and signed-in workspace screens. Positively resolved
+canonical erasure or non-public state still owns the target projection state. The mechanics below describe the current
 transitional OVE-242 implementation and remain useful provenance, but they are
 not the posture new work should restate.
 

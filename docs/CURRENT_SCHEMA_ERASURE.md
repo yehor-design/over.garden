@@ -62,13 +62,13 @@ Rekey those columns to the synthetic erased subject before deleting the auth use
 
 ## Browser-local retirement and cleanup
 
-ADR-0017 forbids new durable browser journal writes. OVE-323 removed the offline
+ADR-0017 forbids durable browser journal writes. OVE-323 removed the offline
 runtime and the explicit erasure-page device control after OVE-322 completed its
-temporary migration window. The only current successor is
-`apps/web/src/lib/retirement/known-client-storage.ts`: a dependency-free,
-name-only returning-device boundary that may enumerate exact known database,
-service-worker, and cache names and delete only targets whose OVE-322 control
-state is terminal. It never hydrates journal content or writes server data.
+temporary migration window, and **OVE-365 (ADR-0022) removed the last successor
+too**: `apps/web/src/lib/retirement/` no longer exists — neither
+`known-client-storage.ts` nor `legacy-device-retirement.ts`. Nothing in the app
+enumerates or deletes browser storage today, because nothing writes any.
+A returning device has no OverGarden journal state to clean up.
 
 Server-side account erasure cannot reach IndexedDB on an absent or different
 browser and therefore must not claim that browser-local work was deleted.
@@ -97,9 +97,7 @@ cd apps/web
 pnpm erasure:schema-coverage:check
 pnpm test src/server/erasure-dry-run.test.ts src/server/erasure-execution.test.ts \
   src/server/erasure-schema-coverage.test.ts \
-  src/server/erasure-request-repository.test.ts src/server/erasure-request-access.test.ts \
-  src/lib/retirement/known-client-storage.test.ts \
-  src/lib/retirement/legacy-device-retirement.test.ts
+  src/server/erasure-request-repository.test.ts src/server/erasure-request-access.test.ts
 pnpm smoke:erasure-workflow -- --environment local --confirm-environment local
 ```
 
