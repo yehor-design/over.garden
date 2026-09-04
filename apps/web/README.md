@@ -15,9 +15,9 @@ Current stack in this package:
 - Browser-owned WebP conversion under ADR-0019; the app has no server image
   decoder or quarantine-processing runtime.
 - Network-required journal writes under ADR-0017. OVE-323 removed the Dexie,
-  PWA, service-worker, offline-replay, and local-draft runtime. A dependency-free
-  native boundary may delete only exact retired browser-storage names; it never
-  reads journal content or creates durable browser state.
+  PWA, service-worker, offline-replay, and local-draft runtime, and OVE-365
+  removed the last successor to it: `src/lib/retirement/` is gone, so nothing
+  enumerates or deletes browser storage any more. Nothing writes any.
 - Meilisearch client for derived public search.
 
 ADR-0022 (2026-09-02) is the current authority for this package: every live
