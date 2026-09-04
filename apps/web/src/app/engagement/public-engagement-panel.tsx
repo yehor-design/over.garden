@@ -395,6 +395,9 @@ function CommentActions({
   if (comment.isOwn && isAuthenticated) {
     return (
       <EngagementCommentActionButton
+        targetKind={target.kind}
+        targetRef={target.ref}
+        commentId={comment.replyToken}
         label={copy.engagement.deleteComment}
         icon={<Trash2 className="size-4" aria-hidden="true" />}
         labels={{
@@ -402,13 +405,7 @@ function CommentActions({
           rateLimited: copy.engagement.commentRateLimited,
           signInRequired: copy.engagement.interactionUnavailable,
         }}
-        run={() =>
-          deleteCommentAction({
-            targetKind: target.kind,
-            targetRef: target.ref,
-            commentId: comment.replyToken,
-          })
-        }
+        submit={deleteCommentAction}
       />
     );
   }
@@ -447,6 +444,9 @@ function CommentActions({
         {isAuthenticated ? (
           <>
             <EngagementCommentActionButton
+              targetKind={target.kind}
+              targetRef={target.ref}
+              commentId={comment.replyToken}
               label={copy.engagement.reportComment}
               icon={<Flag className="size-4" aria-hidden="true" />}
               labels={{
@@ -454,14 +454,7 @@ function CommentActions({
                 rateLimited: copy.engagement.commentRateLimited,
                 signInRequired: copy.engagement.interactionUnavailable,
               }}
-              run={(formData) =>
-                reportCommentAction({
-                  targetKind: target.kind,
-                  targetRef: target.ref,
-                  commentId: comment.replyToken,
-                  reason: String(formData.get("reason") ?? "other"),
-                })
-              }
+              submit={reportCommentAction}
             >
               <select
                 name="reason"
@@ -487,6 +480,9 @@ function CommentActions({
               </select>
             </EngagementCommentActionButton>
             <EngagementCommentActionButton
+              targetKind={target.kind}
+              targetRef={target.ref}
+              commentId={comment.replyToken}
               label={copy.engagement.blockAuthor}
               icon={<Ban className="size-4" aria-hidden="true" />}
               labels={{
@@ -494,13 +490,7 @@ function CommentActions({
                 rateLimited: copy.engagement.commentRateLimited,
                 signInRequired: copy.engagement.interactionUnavailable,
               }}
-              run={() =>
-                blockCommentAuthorAction({
-                  targetKind: target.kind,
-                  targetRef: target.ref,
-                  commentId: comment.replyToken,
-                })
-              }
+              submit={blockCommentAuthorAction}
             />
           </>
         ) : (

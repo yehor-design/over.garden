@@ -36,7 +36,17 @@ import {
 /**
  * Every interaction the public panel offers, as a Server Action.
  *
- * Two rules hold for all of them, and both come from decisions already taken:
+ * **Each one is form-shaped — `(previousState, formData)` — on purpose.** A form
+ * whose `action` is a Server Action reference is given a real endpoint by React,
+ * so the browser can post it with no JavaScript at all. A form whose `action` is
+ * an ordinary client function is not: React renders
+ * `action="javascript:throw new Error('React form unexpectedly submitted.')"`
+ * and the control does nothing until hydration replaces it. The first version of
+ * this file used a client closure, and on 2026-09-04 that shipped a like button
+ * that made no request at all on a page whose subtree never hydrated. The state
+ * a control needs therefore travels through `formData`, never through a closure.
+ *
+ * Two more rules hold for all of them, and both come from decisions already taken:
  *
  *   * **Nothing throws to the framework.** ADR-0023 established that a failure
  *     is a rendered value, because under Cache Components an exception raised
@@ -54,164 +64,206 @@ export type EngagementActionFailure =
   | "rate_limited"
   | "unavailable";
 
-export type EngagementLikeActionResult =
-  | { ok: true; liked: boolean; activeLikeCount: number }
-  | { ok: false; reason: EngagementActionFailure };
+/** What the like control renders, and what its action hands back. */
+export interface EngagementLikeState {
+  liked: boolean;
+  activeLikeCount: number;
+  failure: EngagementActionFailure | null;
+}
 
-export type EngagementActionResult =
-  | { ok: true; active: boolean }
-  | { ok: false; reason: EngagementActionFailure };
-
-export type EngagementCommentActionResult =
-  | { ok: true }
-  | { ok: false; reason: EngagementActionFailure };
-
-export async function toggleLikeAction(input: {
-  targetKind: string;
-  targetRef: string;
-}): Promise<EngagementLikeActionResult> {
-  return settle("likes", async () => {
-    const target = normalizeEngagementTarget(input.targetKind, input.targetRef);
+export async function toggleLikeAction(
+  previous: EngagementLikeState,
+  formData: FormData,
+): Promise<EngagementLikeState> {
+  const outcome = await settle("likes", async () => {
+    const target = readTarget(formData);
     const owner = await resolveLikeOwner();
     const result = await toggleEngagementLike({ target, owner });
     invalidate(target);
     return { ok: true as const, ...result };
   });
+
+  return outcome.ok
+    ? {
+        liked: outcome.liked,
+        activeLikeCount: outcome.activeLikeCount,
+        failure: null,
+      }
+    : { ...previous, failure: outcome.reason };
 }
 
-export async function setBookmarkAction(input: {
-  targetKind: string;
-  targetRef: string;
-  bookmarked: boolean;
-}): Promise<EngagementActionResult> {
-  return settle("bookmarks", async () => {
-    const target = normalizeEngagementTarget(input.targetKind, input.targetRef);
+/** What a two-state control renders, and what its action hands back. */
+export interface EngagementToggleState {
+  active: boolean;
+  failure: EngagementActionFailure | null;
+}
+
+export async function setBookmarkAction(
+  previous: EngagementToggleState,
+  formData: FormData,
+): Promise<EngagementToggleState> {
+  const outcome = await settle("bookmarks", async () => {
+    const target = readTarget(formData);
     const scope = await requireScope();
     if (!scope)
       return { ok: false as const, reason: "sign_in_required" as const };
 
     const current = await setEngagementBookmark(scope, {
       target,
-      bookmarkState: input.bookmarked ? "removed" : "active",
+      bookmarkState: previous.active ? "removed" : "active",
     });
     invalidate(target);
     return { ok: true as const, active: current.active };
   });
+
+  return outcome.ok
+    ? { active: outcome.active, failure: null }
+    : { ...previous, failure: outcome.reason };
 }
 
-export async function setFollowAction(input: {
-  targetKind: string;
-  targetRef: string;
-  following: boolean;
-}): Promise<EngagementActionResult> {
-  return settle("follows", async () => {
-    const target = normalizeEngagementTarget(input.targetKind, input.targetRef);
+export async function setFollowAction(
+  previous: EngagementToggleState,
+  formData: FormData,
+): Promise<EngagementToggleState> {
+  const outcome = await settle("follows", async () => {
+    const target = readTarget(formData);
     const scope = await requireScope();
     if (!scope)
       return { ok: false as const, reason: "sign_in_required" as const };
 
     const current = await setEngagementFollow(scope, {
       target,
-      followState: input.following ? "removed" : "active",
+      followState: previous.active ? "removed" : "active",
     });
     invalidate(target);
     return { ok: true as const, active: current.active };
   });
+
+  return outcome.ok
+    ? { active: outcome.active, failure: null }
+    : { ...previous, failure: outcome.reason };
 }
 
-export async function addCommentAction(input: {
-  targetKind: string;
-  targetRef: string;
-  body: string;
-  clientMutationId: string;
-  parentCommentId?: string | null;
-}): Promise<EngagementCommentActionResult> {
-  return settle("comments", async () => {
-    const target = normalizeEngagementCommentTarget(
-      input.targetKind,
-      input.targetRef,
-    );
+/** What a comment control renders after it runs. */
+export interface EngagementCommentState {
+  submitted: boolean;
+  failure: EngagementActionFailure | null;
+}
+
+export async function addCommentAction(
+  _previous: EngagementCommentState,
+  formData: FormData,
+): Promise<EngagementCommentState> {
+  const outcome = await settle("comments", async () => {
+    const target = readCommentTarget(formData);
     const scope = await requireScope();
     if (!scope)
       return { ok: false as const, reason: "sign_in_required" as const };
 
     await addEngagementComment(scope, {
       target,
-      body: input.body,
-      clientMutationId: input.clientMutationId,
-      parentCommentId: input.parentCommentId ?? null,
+      body: field(formData, "body"),
+      clientMutationId: field(formData, "clientMutationId"),
+      parentCommentId: field(formData, "parentCommentId") || null,
     });
     invalidateComment(target);
     return { ok: true as const };
   });
+
+  return outcome.ok
+    ? { submitted: true, failure: null }
+    : { submitted: false, failure: outcome.reason };
 }
 
-export async function deleteCommentAction(input: {
-  targetKind: string;
-  targetRef: string;
-  commentId: string;
-}): Promise<EngagementCommentActionResult> {
-  return settle("comments/delete", async () => {
-    const target = normalizeEngagementCommentTarget(
-      input.targetKind,
-      input.targetRef,
-    );
+export async function deleteCommentAction(
+  _previous: EngagementCommentState,
+  formData: FormData,
+): Promise<EngagementCommentState> {
+  const outcome = await settle("comments/delete", async () => {
+    const target = readCommentTarget(formData);
     const scope = await requireScope();
     if (!scope)
       return { ok: false as const, reason: "sign_in_required" as const };
 
-    await deleteEngagementComment(scope, input.commentId, target);
+    await deleteEngagementComment(scope, field(formData, "commentId"), target);
     invalidateComment(target);
     return { ok: true as const };
   });
+
+  return outcome.ok
+    ? { submitted: true, failure: null }
+    : { submitted: false, failure: outcome.reason };
 }
 
-export async function reportCommentAction(input: {
-  targetKind: string;
-  targetRef: string;
-  commentId: string;
-  reason: string;
-}): Promise<EngagementCommentActionResult> {
-  return settle("comments/report", async () => {
-    const target = normalizeEngagementCommentTarget(
-      input.targetKind,
-      input.targetRef,
-    );
+export async function reportCommentAction(
+  _previous: EngagementCommentState,
+  formData: FormData,
+): Promise<EngagementCommentState> {
+  const outcome = await settle("comments/report", async () => {
+    const target = readCommentTarget(formData);
     const scope = await requireScope();
     if (!scope)
       return { ok: false as const, reason: "sign_in_required" as const };
 
     await reportEngagementComment(scope, {
-      commentId: input.commentId,
-      reason: input.reason,
+      commentId: field(formData, "commentId"),
+      reason: field(formData, "reason") || "other",
       target,
     });
     invalidateComment(target);
     return { ok: true as const };
   });
+
+  return outcome.ok
+    ? { submitted: true, failure: null }
+    : { submitted: false, failure: outcome.reason };
 }
 
-export async function blockCommentAuthorAction(input: {
-  targetKind: string;
-  targetRef: string;
-  commentId: string;
-}): Promise<EngagementCommentActionResult> {
-  return settle("comments/block", async () => {
-    const target = normalizeEngagementCommentTarget(
-      input.targetKind,
-      input.targetRef,
-    );
+export async function blockCommentAuthorAction(
+  _previous: EngagementCommentState,
+  formData: FormData,
+): Promise<EngagementCommentState> {
+  const outcome = await settle("comments/block", async () => {
+    const target = readCommentTarget(formData);
     const scope = await requireScope();
     if (!scope)
       return { ok: false as const, reason: "sign_in_required" as const };
 
     await blockEngagementCommentAuthor(scope, {
-      commentId: input.commentId,
+      commentId: field(formData, "commentId"),
       target,
     });
     invalidateComment(target);
     return { ok: true as const };
   });
+
+  return outcome.ok
+    ? { submitted: true, failure: null }
+    : { submitted: false, failure: outcome.reason };
+}
+
+/**
+ * The target travels in the form, because the form is the only channel a
+ * browser without JavaScript has. Both readers normalize, so a tampered field
+ * is refused here rather than reaching a query.
+ */
+function readTarget(formData: FormData): EngagementTarget {
+  return normalizeEngagementTarget(
+    field(formData, "targetKind"),
+    field(formData, "targetRef"),
+  );
+}
+
+function readCommentTarget(formData: FormData): EngagementCommentTarget {
+  return normalizeEngagementCommentTarget(
+    field(formData, "targetKind"),
+    field(formData, "targetRef"),
+  );
+}
+
+function field(formData: FormData, name: string): string {
+  const value = formData.get(name);
+  return typeof value === "string" ? value : "";
 }
 
 async function settle<T extends { ok: boolean }>(
