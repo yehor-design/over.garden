@@ -128,7 +128,7 @@
 | Файл | Клас | Примітка |
 | --- | --- | --- |
 | `SOURCES_REGISTRY.md` | `ЗАМІЩЕНО-ЧАСТКОВО` | Ліцензійні вердикти чинні; спосіб споживання — Stable Registry, не масовий сід |
-| `DECISION_BRIEF_DATA-SOURCING.md` | `ЗАМІЩЕНО-ЧАСТКОВО` | Рішення build-vs-acquire ухвалено інакше: спостережена капчура + незмінні релізи |
+| `DECISION_BRIEF_DATA-SOURCING.md` | `ЗАМІЩЕНО-ЧАСТКОВО` | Рішення build-vs-acquire ухвалено інакше: спостережена фіксація джерела + незмінні релізи |
 | `API_SYNTHESIS_INDEX.md`, `API_TOOLS_*.md`, `API_VERIFY_RESULTS.md` | `ДОКАЗ` | Оцінка інструментів; реалізований стек вужчий |
 | `CATALOG_SOURCE_READINESS.md` (+ `_MANIFEST.json`) | `ЧИННЕ` | Живий гейт джерел: вирішує, які джерела може споживати наступний зріз ingestion. Перевірка — `pnpm catalog:sources:verify` |
 | `SPECIES_BACKBONE_POLICY.md` | `ЧИННЕ` | Політика видового кістяка й перевірених вернакулярних аліасів; секція межі Stable Registry (OVE-318) — чинна частина |
