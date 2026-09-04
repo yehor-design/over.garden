@@ -1,15 +1,23 @@
 # Runtime Scaffold — Current Status and Verification
 
-Last reconciled: 2026-08-25 (OVE-338 moved surviving moderation into the
-ordinary account shell and retired the complete `/admin` namespace; OVE-349
-retired server drafts, legacy journal-media processing, and private-then-publish
-after OVE-346/347/348 established the atomic final-WebP path)
+Last reconciled: 2026-09-04. **This page is a mirror and lags the ADRs; read
+`docs/PROJECT_STATE.md` first.** Everything shipped between 2026-09-02 and
+2026-09-04 — Cache Components on public pages, every live page indexable,
+browser-made WebP variants, one sign-in screen, owned likes, language as
+navigation, workspace failures as rendered values — is recorded in
+`docs/PROJECT_STATE.md`, `docs/DELIVERY_LOG_2026-09.md` and ADR-0022/0023/0024,
+not here. Earlier reconciliation: 2026-08-25 (OVE-338 moved surviving moderation
+into the ordinary account shell and retired the complete `/admin` namespace;
+OVE-349 retired server drafts, legacy journal-media processing, and
+private-then-publish after OVE-346/347/348 established the atomic final-WebP
+path)
 
 This file is the concise current-state mirror for the implemented OverGarden
 runtime. Authenticated Linear and the issue-specific execution contract remain
 the queue authority; `docs/SDD_VERTICAL_SLICE_ROADMAP.md` remains the vertical
-slice/dependency authority; `docs/TECH_STACK_DECISIONS.md` plus ADR-0014 as
-superseded by ADR-0017 and ADR-0019 remain the stack authority. Every Linear task uses the template in `AGENTS.md`.
+slice/dependency authority; `docs/TECH_STACK_DECISIONS.md` plus ADR-0022, ADR-0023 and
+ADR-0024 remain the stack authority (ADR-0014 as superseded by ADR-0017 and
+ADR-0019 is the layer beneath them). Every Linear task uses the template in `AGENTS.md`.
 
 ADR-0017 and ADR-0019 are the current save authority. Authoring is transient in
 the active tab, image conversion produces the final WebP in the browser, and

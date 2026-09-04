@@ -1,11 +1,41 @@
 # Session and locale convergence
 
-Status: OVE-214 canonical locale protocol; sessions are server-authoritative since ADR-0022 (D6, OVE-367)
+Status: **the locale half is history.** Sessions are server-authoritative since ADR-0022
+(D6, OVE-367) and that half is current. The locale coordinator this document specified was
+deleted by OVE-379 (ADR-0024, D4): choosing a language is a navigation now. Read
+"Choosing a language today" below before anything else on this page.
 
 This document owns the bounded recovery contract for a Bulgaria `bg`/`ru`
 interface transition and records how sessions behave without a client gate. It is deliberately a
 control-plane contract: it contains no owner identifier, draft, queue payload,
 cookie value, request body, timing sample, or private route.
+
+## Choosing a language today (ADR-0024, D4 — OVE-379)
+
+A language option is a link. On a public page the locale is in the path, so the
+option is an `<a>` carrying `prefetch={false}`, and the proxy writes the
+preference from the prefix the request lands on — including RSC navigations, so a
+soft switch persists immediately. On a route with no locale prefix the option is a
+form over a Server Action that writes the cookie; nothing replaces the document,
+so text typed into a composer survives the change. There is no status message and
+no discard dialog, because there is no delay to explain and nothing to discard.
+
+`prefetch={false}` is load-bearing and not decoration: Next strips
+`Next-Router-Prefetch` before middleware runs, so a router prefetch of `/ru/…`
+reaches the proxy looking exactly like a reader landing there. Hovering an option
+did rewrite the reader's saved language until that was fixed;
+`language-switcher.test.tsx` fails if the attribute is removed.
+
+**Everything below this section, down to "Sessions (ADR-0022, D6)", describes the
+deleted coordinator** — `interfaceLocaleChangeCoordinator`, its participant
+registry, the `idle → preparing → prepared → handing_off` epochs, the 2.25 s
+dependency deadline, the document handoff, and the safe-flush fences. None of it
+exists: `src/lib/interface-locale-change-coordinator.ts` and the two boundary
+test files named under "Verification" were removed with the 1 938 lines OVE-379
+deleted. ADR-0024 records why the pattern must not come back — it was the
+mutation registry of ADR-0022 D6 returning under another name. The text is kept
+only so the mechanism it solved for, and the cost of solving it that way, stay
+readable.
 
 ## Protected outcome
 
@@ -66,7 +96,13 @@ cancel, timeout, page-show recovery, or page-hide completion.
 
 ## Verification
 
-Focused deterministic contract and race proof:
+Focused deterministic contract and race proof. **The first command no longer runs:**
+`interface-locale-change-coordinator.test.ts`,
+`online-journal-composer-participants.test.ts`,
+`interface-locale-change-boundary.test.tsx` and `auth-locale-mutation-fences.test.tsx`
+were deleted with the coordinator. What survives is
+`src/components/public/language-switcher.test.tsx`, which holds the link shape and
+`prefetch={false}`.
 
 ```bash
 cd apps/web

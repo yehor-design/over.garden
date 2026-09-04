@@ -1,6 +1,8 @@
 # MVP Scope Recheck 2026-07-03
 
-Status: current scope reconciliation note
+Status: dated scope reconciliation note. **Its authority chain stops at ADR-0019 and it is
+three ADRs behind.** ADR-0022 (2026-09-02), ADR-0023 and ADR-0024 (2026-09-04) govern scope now;
+read `docs/PROJECT_STATE.md` first. Where a line below and a current ADR disagree, the ADR wins.
 Date: 2026-07-03; localization clarification added 2026-07-22; access/learning reconciliation added 2026-08-11; online-only reconciliation added 2026-08-20; atomic journal-media reconciliation added 2026-08-23
 Owner: founder/operator
 

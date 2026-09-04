@@ -77,7 +77,7 @@ candidate sets. Job handlers must remain idempotent.
 
 Production runtime is intentionally separate from the local Apple Container
 smoke. On the current DigitalOcean Linux worker droplet, Docker Compose remains
-the OVE-76-confirmed process manager for `matching-worker`, `matching-api`,
+the OVE-76-confirmed process manager for `matching-worker`,
 `meilisearch`, and `caddy` because OVE-39 live-proved restart policy, health,
 and journal index/unindex recovery there. Do not replace the droplet runtime
 with Apple Container. A non-Docker production replacement must be a separate

@@ -35,7 +35,9 @@ product-access `/join` flow and its grant/token/cookie storage.
 
 Lineage provides a concrete user benefit: a gardener can record where an object
 came from, connect descendants or shared material, and preserve provenance
-without exposing private journal content or precise location. Removing this
+without exposing precise location. (Written when "private journal content" was a
+category; it is not one now — every entry is public, and the only location a
+gardener can withhold is the region label. ADR-0022 D1/D3.) Removing this
 flow together with closed-pilot invitations would destroy an implemented MVP
 capability for an unrelated naming similarity.
 

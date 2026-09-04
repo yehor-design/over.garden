@@ -116,6 +116,8 @@ Every Linear task uses this shape and nothing more:
   `SUPERSEDED_DECISIONS_LEDGER.md` lists the research decisions the product cancelled
   and what replaced them. The corpus never overrides this page or the ADRs.
 - `docs/SDD_VERTICAL_SLICE_ROADMAP.md`, `docs/runbooks/`,
-  `docs/audit-inbox/`, `docs/reviews/`, `docs/linear/` — historical receipts.
+  `docs/audit-inbox/`, `docs/reviews/`, `docs/linear/`, `docs/superpowers/` —
+  historical receipts. Dated plans and specs in `docs/superpowers/` were executed
+  long ago; never pick one up as work to do.
 - `apps/web/AGENTS.md` — the Next.js version notice; read the framework docs
   in `node_modules/next/dist/docs/` before using an API from memory.

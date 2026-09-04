@@ -161,10 +161,26 @@ market/locale enums and retains the existing `HttpOnly`, `SameSite=Lax`,
 HTTPS-only `Secure`, `Path=/`, and bounded-age privacy properties. It must not
 store user content or identity.
 
-## Dirty And In-Flight Locale Change Coordinator
+## Dirty And In-Flight Locale Change Coordinator — REMOVED (ADR-0024, D4; OVE-379)
 
-A language change is a document lifecycle transition, not an independent
-product mutation. One shared coordinator owns it across all Bulgaria surfaces:
+**This section is history.** The coordinator was deleted on 2026-09-04 together
+with the 1 938 lines that implemented it. A language change is **a navigation**,
+not a document lifecycle transition: on a public page the option is a link
+carrying `prefetch={false}`, and on an unprefixed route it is a form over a
+Server Action that writes the cookie. Nothing replaces the document, so composer
+text survives a language change, and there is no stay-or-discard decision to
+make. There is no status message and no confirmation dialog.
+
+Why it is recorded rather than deleted: the coordinator replaced the global
+`fetch` (so any non-GET request anywhere disabled the control) and watched
+`input` across the whole document (so one keystroke raised a discard dialog
+before a reload destroyed that text anyway). ADR-0024 names the shape — it was
+ADR-0022 D6's mutation registry returning under another name — and forbids
+rebuilding it. Anything below in this section describes the removed design:
+
+A language change was treated as a document lifecycle transition, not an
+independent product mutation. One shared coordinator owned it across all
+Bulgaria surfaces:
 
 1. A clean page changes immediately.
 2. A registered safe local flush may finish before navigation.
