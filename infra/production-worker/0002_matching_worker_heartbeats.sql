@@ -1,5 +1,11 @@
 -- OVE-190 production-only additive migration.
 --
+-- The handler set here is the nine kinds the queue manifest declares. It said
+-- six until 2026-09-04, three Stable Registry kinds after the manifest grew,
+-- and this file only ever adds a missing constraint — so on a database that
+-- already has the six-handler check it changes nothing. Correcting an existing
+-- database is apps/web/sql/0050_matching_handler_set_catch_up.sql.
+--
 -- This is intentionally the minimal matching_worker_heartbeats excerpt of the
 -- canonical apps/web/sql/0001_walking_skeleton.sql schema. Never replay the
 -- full bootstrap SQL against production. CREATE TABLE IF NOT EXISTS is safe to
@@ -34,7 +40,10 @@ create table if not exists matching_worker_heartbeats (
       'catalog_match_suggestions_refresh',
       'catalog_typeahead_reindex',
       'journal_entry_index',
-      'journal_entry_unindex'
+      'journal_entry_unindex',
+      'stable_registry_edition_build',
+      'stable_registry_extension_pack_build',
+      'stable_registry_foundation_build'
     ]::text[]
   )
 );
@@ -97,7 +106,10 @@ begin
           'catalog_match_suggestions_refresh',
           'catalog_typeahead_reindex',
           'journal_entry_index',
-          'journal_entry_unindex'
+          'journal_entry_unindex',
+          'stable_registry_edition_build',
+          'stable_registry_extension_pack_build',
+          'stable_registry_foundation_build'
         ]::text[]
       );
   end if;

@@ -6,6 +6,7 @@ import { config as loadEnv } from "dotenv";
 import { Pool, type PoolClient } from "pg";
 
 import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
+import { MATCHING_RUNTIME_REQUIRED_HANDLERS } from "../src/lib/matching-runtime-proof";
 import { loadVersionedApplicationSql } from "./application-sql";
 import {
   assertSafeWorkerIdleReceipt,
@@ -15,8 +16,13 @@ import {
   type WorkerIdleProofReceipt,
 } from "./prove-worker-idle-contract";
 
-/** Migrations this proof owns: base schema, projection outbox, wake contract. */
-const WORKER_IDLE_MIGRATIONS = /^(0001|0011|0044)_/u;
+/**
+ * Migrations this proof owns: base schema, projection outbox, wake contract,
+ * and the handler-set catch-up. `0050` is here because the heartbeat row this
+ * proof writes carries the real handler set, and `0001` still constrains the
+ * column to the six handlers that existed when it was written.
+ */
+const WORKER_IDLE_MIGRATIONS = /^(0001|0011|0044|0050)_/u;
 
 /** The fallback the worker ships with; asserted, not assumed. */
 const FALLBACK_BOUND_SECONDS = 30;
@@ -163,7 +169,7 @@ async function applyWorkerIdleMigrations(pool: Pool) {
   const applied = migrations.filter((migration) =>
     WORKER_IDLE_MIGRATIONS.test(migration.name),
   );
-  if (applied.length !== 3) {
+  if (applied.length !== 4) {
     throw new Error("worker_idle_migrations_missing");
   }
   for (const migration of applied) {
@@ -232,14 +238,7 @@ async function proveDrainColumnContract(pool: Pool) {
     [
       "a".repeat(40),
       `sha256:${"b".repeat(64)}`,
-      [
-        "catalog_alias_suggestions_refresh",
-        "catalog_fuzzy_duplicate_qa_refresh",
-        "catalog_match_suggestions_refresh",
-        "catalog_typeahead_reindex",
-        "journal_entry_index",
-        "journal_entry_unindex",
-      ],
+      [...MATCHING_RUNTIME_REQUIRED_HANDLERS],
     ],
   );
 

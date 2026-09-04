@@ -180,9 +180,25 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ ! "$REGISTRY_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            echo "Build did not return an immutable sha256 registry digest." >&2
+          # Every gate below says what it wanted and what it got. The bare
+          # `[[ ... ]]` assertions this replaced exited 1 with no output at all,
+          # so the seventy-six consecutive failures that started on 2026-08-28
+          # showed a runner log that ended at `docker pull` and nothing else.
+          fail() {
+            printf 'matching release seal failed: %s\n' "$1" >&2
             exit 1
+          }
+
+          assert_equal() {
+            if [[ "$2" != "$3" ]]; then
+              printf 'matching release seal failed: %s\n  expected: %s\n  actual:   %s\n' \
+                "$1" "$2" "$3" >&2
+              exit 1
+            fi
+          }
+
+          if [[ ! "$REGISTRY_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            fail "build did not return an immutable sha256 registry digest"
           fi
 
           digest_ref="${IMAGE_REPOSITORY}@${REGISTRY_DIGEST}"
@@ -190,19 +206,41 @@ jobs:
           docker pull "$digest_ref"
           docker tag "$digest_ref" "$tagged_ref"
 
-          actual_revision="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$digest_ref")"
-          actual_created="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.created" }}' "$digest_ref")"
-          actual_schema="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.schema-compatibility" }}' "$digest_ref")"
-          actual_contract="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.runtime-contract" }}' "$digest_ref")"
-          actual_release_run="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.release-run" }}' "$digest_ref")"
-          archive_config_digest="$(docker image inspect --format '{{.Id}}' "$digest_ref")"
+          image_label() {
+            docker image inspect --format "{{ index .Config.Labels \"$1\" }}" "$digest_ref"
+          }
 
-          [[ "$actual_revision" == "$SOURCE_SHA" ]]
-          [[ "$actual_created" == "$BUILD_TIMESTAMP" ]]
-          [[ "$actual_schema" == "ove190.matching-schema.v1" ]]
-          [[ "$actual_contract" == "ove190-v1" ]]
-          [[ "$actual_release_run" == "$RELEASE_RUN" ]]
-          [[ "$archive_config_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          assert_equal "image revision label" \
+            "$SOURCE_SHA" "$(image_label org.opencontainers.image.revision)"
+          assert_equal "image created label" \
+            "$BUILD_TIMESTAMP" "$(image_label org.opencontainers.image.created)"
+          assert_equal "schema compatibility label" \
+            "ove190.matching-schema.v1" "$(image_label garden.over.matching.schema-compatibility)"
+          assert_equal "runtime contract label" \
+            "ove190-v1" "$(image_label garden.over.matching.runtime-contract)"
+          assert_equal "release run label" \
+            "$RELEASE_RUN" "$(image_label garden.over.matching.release-run)"
+
+          archive_config_digest="$(docker image inspect --format '{{.Id}}' "$digest_ref")"
+          if [[ ! "$archive_config_digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            fail "image config id is not an immutable sha256 digest: $archive_config_digest"
+          fi
+
+          # The handler set is read from the commit being released. It used to
+          # be six literals written here, and when the queue manifest grew to
+          # nine this step began refusing every image built from a `main` that
+          # was entirely correct. `apps/web/src/server/job-queue-manifest.ts`
+          # owns the set, `services/matching/app/job_queue_manifest.py` mirrors
+          # it, and `job-queue-manifest.test.ts` fails on drift between them.
+          expected_handlers="$(
+            cd services/matching &&
+            uv run --frozen python -c 'import json; from app.job_handlers import SUPPORTED_JOB_KINDS; print(json.dumps(sorted(SUPPORTED_JOB_KINDS)))' |
+              jq -c 'sort'
+          )"
+          if ! jq -e 'type == "array" and length > 0 and all(type == "string")' \
+            <<<"$expected_handlers" >/dev/null; then
+            fail "could not read the supported handler set from services/matching"
+          fi
 
           mkdir -p matching-release
           capability_file="matching-capabilities.json"
@@ -215,6 +253,10 @@ jobs:
             "$digest_ref" \
             python -m app.runtime capabilities > "matching-release/$capability_file"
 
+          assert_equal "queue.supportedHandlers" \
+            "$expected_handlers" \
+            "$(jq -c '.queue.supportedHandlers' "matching-release/$capability_file")"
+
           jq -e \
             --arg sha "$SOURCE_SHA" \
             --arg digest "$REGISTRY_DIGEST" \
@@ -222,16 +264,13 @@ jobs:
             '.release.commitSha == $sha
               and .release.imageDigest == $digest
               and .release.schemaCompatibilityClass == $schema
-              and .queue.name == "matching"
-              and .queue.supportedHandlers == [
-                "catalog_alias_suggestions_refresh",
-                "catalog_fuzzy_duplicate_qa_refresh",
-                "catalog_match_suggestions_refresh",
-                "catalog_typeahead_reindex",
-                "journal_entry_index",
-                "journal_entry_unindex"
-              ]' \
-            "matching-release/$capability_file" >/dev/null
+              and .queue.name == "matching"' \
+            "matching-release/$capability_file" >/dev/null \
+            || {
+              printf 'matching release seal failed: sealed capabilities do not match the released commit\n' >&2
+              jq . "matching-release/$capability_file" >&2
+              exit 1
+            }
 
           archive_file="overgarden-matching-${SOURCE_SHA}-${REGISTRY_DIGEST#sha256:}.docker.tar.zst"
           docker save "$tagged_ref" | zstd -T0 -19 -o "matching-release/$archive_file"
@@ -252,6 +291,7 @@ jobs:
             --arg archiveFile "$archive_file" \
             --arg archiveSha256 "$archive_sha256" \
             --arg capabilitiesFile "$capability_file" \
+            --argjson supportedHandlers "$expected_handlers" \
             '{
               schema: $schema,
               sourceCommit: $sourceCommit,
@@ -269,7 +309,11 @@ jobs:
                 file: $archiveFile,
                 sha256: $archiveSha256
               },
-              capabilitiesFile: $capabilitiesFile
+              capabilitiesFile: $capabilitiesFile,
+              queue: {
+                name: "matching",
+                supportedHandlers: $supportedHandlers
+              }
             }' > matching-release/release.json
 
           echo "artifact_name=matching-release-$SOURCE_SHA-run-${RELEASE_RUN//./-}" >> "$GITHUB_OUTPUT"
