@@ -226,13 +226,15 @@ describe("/lineage/objects/[objectId]", () => {
     expect(html).toContain("Хронология");
     expect(html).toContain("Прочетете последния запис");
     expect(html).toContain("Потвърден произход");
-    expect(html).toContain("/api/engagement/likes");
+    // A guest may like without an account; bookmark, comment and follow still
+    // route through the auth intent (hybrid ownership, 2026-09-04).
+    expect(html).toContain("Харесвам");
+    expect(html).toContain('aria-pressed="false"');
     expect(html).toContain("/auth/intent/start");
     expect(html).toContain('name="action" value="bookmark"');
     expect(html).toContain('name="action" value="comment"');
     expect(html).toContain('name="action" value="follow"');
-    expect(html).not.toContain("/api/engagement/bookmarks");
-    expect(html).not.toContain("/api/engagement/comments");
+    expect(html).not.toContain("/api/engagement");
     expect(html).toContain("Balcony tomato");
     expect(html).toContain("Seed mother");
     expect(html).toContain("First flowering");
@@ -275,8 +277,9 @@ describe("/lineage/objects/[objectId]", () => {
       }),
     );
 
-    expect(html).toContain("/api/engagement/bookmarks");
-    expect(html).toContain("/api/engagement/comments");
+    expect(html).toContain("Запази");
+    expect(html).toContain('name="body"');
+    expect(html).not.toContain("/api/engagement");
     expect(html).toContain('data-auth-intent-control="follow"');
     expect(html).toContain('data-auth-intent-resumed="follow"');
     expect(html).toContain(`data-auth-intent-control-ref="${followControl}"`);

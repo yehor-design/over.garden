@@ -34,7 +34,7 @@ describe("raw public lifecycle document", () => {
       locale: "bg",
       pathname: "/bg/journal/missing-entry",
       search:
-        "?engagement=commented&authIntent=comment&token=private&authIntent=follow",
+        "?engagement=interaction-unavailable&authIntent=comment&token=private&authIntent=follow",
       title: "Записът не е намерен",
       description: "Този запис не е достъпен.",
       actionHref: "/bg/journals",
@@ -56,10 +56,10 @@ describe("raw public lifecycle document", () => {
     expect(html).toContain("font-weight: 700");
     expect(html).not.toContain("font-weight: 800");
     expect(html).toContain(
-      'href="/bg/journal/missing-entry?engagement=commented&amp;authIntent=comment"',
+      'href="/bg/journal/missing-entry?engagement=interaction-unavailable&amp;authIntent=comment"',
     );
     expect(html).toContain(
-      'href="/ru/journal/missing-entry?engagement=commented&amp;authIntent=comment"',
+      'href="/ru/journal/missing-entry?engagement=interaction-unavailable&amp;authIntent=comment"',
     );
     expect(html.match(/rel="noreferrer"/g)).toHaveLength(3);
     expect(html.match(/referrerpolicy="no-referrer"/g)).toHaveLength(3);

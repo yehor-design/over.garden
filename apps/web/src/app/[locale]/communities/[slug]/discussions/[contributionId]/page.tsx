@@ -92,7 +92,6 @@ export default async function ContributionDiscussionRoute({
         summary={thread}
         returnTo={returnTo}
         commentOnly
-        status={first(query.engagement) || null}
         resumeAction={normalizeAuthIntentResumeAction(query.authIntent)}
         resumeControl={normalizeAuthIntentResumeControl(query.authControl)}
       />

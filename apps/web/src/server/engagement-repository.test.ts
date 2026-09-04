@@ -19,13 +19,15 @@ import { describe, expect, it } from "vitest";
 import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
 import {
-  buildCountActiveEngagementLikesQuery,
+  buildCountEngagementLikesQuery,
   buildActionableEngagementCommentQuery,
   buildDeleteEngagementCommentQuery,
   buildEngagementBlockStateQuery,
   buildEngagementFollowStateQuery,
   buildEngagementReplyTargetQuery,
-  buildInsertAnonymousLikeQuery,
+  buildDeleteEngagementLikeQuery,
+  buildGetEngagementLikeQuery,
+  buildInsertEngagementLikeQuery,
   buildInsertEngagementCommentQuery,
   buildListEngagementCommentRepliesQuery,
   buildListEngagementBookmarksQuery,
@@ -38,7 +40,6 @@ import {
   buildReportEngagementCommentQuery,
   buildUpsertEngagementBookmarkQuery,
   buildUpsertEngagementFollowQuery,
-  hashAnonymousEngagementToken,
   normalizeEngagementReturnTo,
   normalizeEngagementCommentTarget,
   normalizeEngagementTarget,
@@ -313,37 +314,74 @@ describe("engagement repository contracts", () => {
     expect(compiled.parameters).toContain("active");
   });
 
-  it("hashes anonymous like tokens and never stores the raw device token", () => {
-    const token = "anonymous-device-token-0001";
-    const hash = hashAnonymousEngagementToken(token);
-    const compiled = buildInsertAnonymousLikeQuery(testDb, {
-      target: journalTarget,
-      anonymousDeviceHash: hash,
-      capabilityExpiresAt: new Date("2026-07-05T08:00:00.000Z"),
-      now: new Date("2026-07-04T08:00:00.000Z"),
+  it("records an account like against the account and nothing else", () => {
+    const compiled = buildInsertEngagementLikeQuery(testDb, journalTarget, {
+      kind: "user",
+      userId: "00000000-0000-4000-8000-00000000000a",
     }).compile();
 
-    expect(hash).toMatch(/^[a-f0-9]{64}$/);
-    expect(hash).not.toContain(token);
     expect(compiled.sql).toContain('insert into "engagement_likes"');
-    expect(compiled.parameters).toContain(hash);
-    expect(compiled.sql).toContain('"capability_expires_at"');
-    expect(compiled.parameters).not.toContain(token);
-    expect(compiled.sql).not.toMatch(/ip_address|user_agent|owner_user_id/i);
+    expect(compiled.sql).toContain('"user_id"');
+    expect(compiled.parameters).toContain(
+      "00000000-0000-4000-8000-00000000000a",
+    );
+    // The retired shape: a device hash, an expiry, and a toggle-rate window.
+    expect(compiled.sql).not.toMatch(
+      /anonymous_device_hash|capability_expires_at|toggle_count|like_state/i,
+    );
+    expect(compiled.sql).not.toMatch(/ip_address|user_agent/i);
     expect(compiled.sql).not.toMatch(promotionCouplingPattern);
   });
 
-  it("counts cosmetic likes only from engagement_likes active rows", () => {
-    const compiled = buildCountActiveEngagementLikesQuery(
+  it("records a signed-out like against the browser, never the account", () => {
+    const compiled = buildInsertEngagementLikeQuery(testDb, journalTarget, {
+      kind: "visitor",
+      visitorId: "00000000-0000-4000-8000-00000000000b",
+    }).compile();
+
+    expect(compiled.sql).toContain('"visitor_id"');
+    expect(compiled.sql).not.toContain('"user_id"');
+    expect(compiled.parameters).toContain(
+      "00000000-0000-4000-8000-00000000000b",
+    );
+  });
+
+  it("withdraws a like by deleting the row rather than flagging it", () => {
+    const compiled = buildDeleteEngagementLikeQuery(testDb, journalTarget, {
+      kind: "visitor",
+      visitorId: "00000000-0000-4000-8000-00000000000b",
+    }).compile();
+
+    expect(compiled.sql).toContain('delete from "engagement_likes"');
+    expect(compiled.sql).toContain('"visitor_id" =');
+    expect(compiled.sql).not.toMatch(/like_state|set /i);
+  });
+
+  it("reads one owner's like without scanning the target", () => {
+    const compiled = buildGetEngagementLikeQuery(testDb, journalTarget, {
+      kind: "user",
+      userId: "00000000-0000-4000-8000-00000000000a",
+    }).compile();
+
+    expect(compiled.sql).toContain('from "engagement_likes"');
+    expect(compiled.sql).toContain('"target_kind" =');
+    expect(compiled.sql).toContain('"target_ref" =');
+    expect(compiled.sql).toContain('"user_id" =');
+  });
+
+  it("counts every like on a target, with no expiry and no ceiling", () => {
+    const compiled = buildCountEngagementLikesQuery(
       testDb,
       journalTarget,
     ).compile();
 
     expect(compiled.sql).toContain('from "engagement_likes"');
-    expect(compiled.sql).toContain('"like_state" =');
-    expect(compiled.sql).toContain('"capability_expires_at" >');
+    expect(compiled.sql).toContain('"target_kind" =');
+    expect(compiled.sql).toContain('"target_ref" =');
+    // A like used to stop counting 24 hours after it was cast, and the target
+    // used to refuse a 65th. Neither predicate may come back.
+    expect(compiled.sql).not.toMatch(/capability_expires_at|like_state/i);
     expect(compiled.sql).not.toMatch(promotionCouplingPattern);
-    expect(compiled.parameters).toContain("active");
   });
 
   it("validates public targets with existing public-safe page predicates", () => {

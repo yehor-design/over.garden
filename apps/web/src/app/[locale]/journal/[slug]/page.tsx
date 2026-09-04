@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
+import { readViewerLikeState } from "@/app/engagement/engagement-viewer";
 import { PublicJournalEntryView } from "@/components/public/public-journal-entry";
 import {
   normalizeAuthIntentResumeAction,
@@ -82,7 +83,7 @@ export default async function PublicJournalEntryRoute({
     kind: "journal_entry" as const,
     ref: lookup.page.entry.publicSlug,
   };
-  const [engagement, ownerControl] = await Promise.all([
+  const [engagement, ownerControl, likeState] = await Promise.all([
     scope
       ? getEngagementSummary(engagementTarget, scope, {
           commentCursor: firstParam(query.cursor),
@@ -91,6 +92,7 @@ export default async function PublicJournalEntryRoute({
     scope
       ? getOwnerJournalEntryControl(scope, lookup.page.entry.publicSlug)
       : Promise.resolve(null),
+    readViewerLikeState(engagementTarget),
   ]);
   const directoryReturnTo = normalizePublicJournalDirectoryReturnTo(
     firstParam(query.from),
@@ -126,8 +128,8 @@ export default async function PublicJournalEntryRoute({
           locale={locale}
           target={engagementTarget}
           summary={engagement}
+          likeState={likeState}
           returnTo={engagementReturnTo}
-          status={firstParam(query.engagement)}
           resumeAction={normalizeAuthIntentResumeAction(
             firstParam(query.authIntent) ?? undefined,
           )}

@@ -3,7 +3,6 @@ import {
   ArrowRight,
   Bookmark,
   ExternalLink,
-  Trash2,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -20,7 +19,10 @@ import {
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
+import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
+import { setBookmarkAction } from "@/app/engagement/engagement-actions";
+import { EngagementBookmarkControl } from "@/app/engagement/engagement-controls";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import {
   listEngagementBookmarks,
@@ -192,6 +194,7 @@ function BookmarkRow({
   locale: PublicLocale;
 }) {
   const copy = getSocialSurfaceCopy(locale);
+  const engagementCopy = getPublicSurfaceCopy(locale).engagement;
   return (
     <li className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="grid min-w-0 gap-1">
@@ -218,24 +221,19 @@ function BookmarkRow({
           <ExternalLink className="size-4" />
           <span className="sr-only">{copy.common.open}</span>
         </Link>
-        <form method="post" action="/api/engagement/bookmarks">
-          <input type="hidden" name="targetKind" value={item.target.kind} />
-          <input type="hidden" name="targetRef" value={item.target.ref} />
-          <input type="hidden" name="bookmarkState" value="removed" />
-          <input
-            type="hidden"
-            name="returnTo"
-            value={bookmarkHref(locale, "all", 1)}
-          />
-          <button
-            type="submit"
-            title={copy.common.remove}
-            className={buttonVariants({ variant: "outline", size: "icon" })}
-          >
-            <Trash2 className="size-4" />
-            <span className="sr-only">{copy.common.remove}</span>
-          </button>
-        </form>
+        <EngagementBookmarkControl
+          targetKind={item.target.kind}
+          targetRef={item.target.ref}
+          initialActive
+          labels={{
+            inactive: copy.common.remove,
+            active: copy.common.remove,
+            unavailable: engagementCopy.interactionUnavailable,
+            rateLimited: engagementCopy.likeRateLimited,
+            signInRequired: engagementCopy.interactionUnavailable,
+          }}
+          submit={setBookmarkAction}
+        />
       </div>
     </li>
   );

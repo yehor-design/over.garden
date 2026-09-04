@@ -61,11 +61,36 @@ describe("OVE-215 erasure schema coverage", () => {
     }
   });
 
-  it("classifies engagement likes as not-account-linkable", () => {
-    const entry = ERASURE_SCHEMA_COVERAGE.find(
-      (candidate) => candidate.id === "engagement_likes.anonymous_device_hash",
+  it("erases an account's own likes and leaves a visitor's alone", () => {
+    // OVE-377 split one anonymous column into two owners. The account half now
+    // leaves with the account; the visitor half names no account at all, and
+    // the schema's XOR check keeps a row from being both.
+    const account = ERASURE_SCHEMA_COVERAGE.find(
+      (candidate) => candidate.id === "engagement_likes.user_id",
     );
-    expect(entry?.disposition).toBe("not-account-linkable");
+    expect(account?.disposition).toBe("delete");
+
+    const visitor = ERASURE_SCHEMA_COVERAGE.find(
+      (candidate) => candidate.id === "engagement_likes.visitor_id",
+    );
+    expect(visitor?.disposition).toBe("not-account-linkable");
+
+    // The retired column must not linger in the manifest once 0049 drops it.
+    expect(
+      ERASURE_SCHEMA_COVERAGE.find(
+        (candidate) =>
+          candidate.id === "engagement_likes.anonymous_device_hash",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("stops discovering a column a later migration dropped", () => {
+    const discovered = discoverErasurePathsFromWalkingSkeletonSql(
+      readCurrentSchemaSql(),
+    );
+    expect(discovered).toContain("engagement_likes.visitor_id");
+    expect(discovered).toContain("engagement_likes.user_id");
+    expect(discovered).not.toContain("engagement_likes.anonymous_device_hash");
   });
 
   it("rekeys immutable Stable Registry actor attributions during erasure", () => {

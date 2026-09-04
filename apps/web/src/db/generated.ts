@@ -680,24 +680,13 @@ export interface EngagementFollows {
 }
 
 export interface EngagementLikes {
-  anonymous_device_hash: string;
-  capability_expires_at: Timestamp | null;
   created_at: Generated<Timestamp>;
   id: Generated<string>;
-  like_state: Generated<string>;
-  target_kind: string;
-  target_ref: string;
-  toggle_count: Generated<number>;
-  toggle_window_started_at: Generated<Timestamp>;
-  updated_at: Generated<Timestamp>;
-}
-
-export interface EngagementLikeTargetBudgets {
-  active_like_count: Generated<number>;
-  resident_like_count: Generated<number>;
   target_kind: string;
   target_ref: string;
   updated_at: Generated<Timestamp>;
+  user_id: string | null;
+  visitor_id: string | null;
 }
 
 export interface EngagementModerationAuditLog {
@@ -1295,7 +1284,6 @@ export interface DB {
   engagement_comment_reports: EngagementCommentReports;
   engagement_comments: EngagementComments;
   engagement_follows: EngagementFollows;
-  engagement_like_target_budgets: EngagementLikeTargetBudgets;
   engagement_likes: EngagementLikes;
   engagement_moderation_audit_log: EngagementModerationAuditLog;
   erasure_requests: ErasureRequests;
