@@ -157,25 +157,30 @@ decision in ADR-0022, not an omission.
 7. **`matching_worker_heartbeats` has no build timestamp.** The retired API read
    it from the image environment and no column holds it, so the runtime proof
    reports the image digest instead of inventing a value.
-8. **The job queue contract is generated now; two of its migrations are not in
-   production yet.** The matching image release refused seventy-six correct
-   builds between 2026-08-27 and 2026-09-04 because the expected handler set was
-   a frozen literal in five places and the manifest had grown three Stable
-   Registry kinds. `apps/web/src/server/job-queue-manifest.ts` is now the only
-   place that says what the set is: `pnpm queue:contract:build` writes the JSON
-   contract and the Python module, `queue:contract:check` fails on drift, and
-   `queue:contract:prove-database` executes the database half. Releases are green
-   again. What is still owed to production: `0051` (the heartbeat handler set is
-   checked for shape, not identity — an exact array made a mismatched worker
-   unrecordable and therefore indistinguishable from a dead one) and `0052` (the
-   four payload CHECK constraints four kinds declared and none had). `0052` must
-   land before the next matching image is deployed, or the worker's preflight
-   reports `schema_mismatch` and the release refuses to activate.
-9. **Production still runs a worker built before 2026-08-28.** The host installs
-   only sealed release artifacts, and none was produced while the release was
-   red, so the deployed worker has no handler for the three Stable Registry
-   build kinds. Until a current image is installed, a Foundation, extension-pack
-   or edition build enqueued in production terminalises as `unsupported_kind`.
+8. **The job queue contract is generated now.** The matching image release
+   refused seventy-six correct builds between 2026-08-27 and 2026-09-04 because
+   the expected handler set was a frozen literal in five places and the manifest
+   had grown three Stable Registry kinds. `apps/web/src/server/job-queue-manifest.ts`
+   is now the only place that says what the set is: `pnpm queue:contract:build`
+   writes the JSON contract and the Python module, `queue:contract:check` fails
+   on drift, and `queue:contract:prove-database` executes the database half.
+   Releases are green again. `0051` (the heartbeat handler set is checked for
+   shape, not identity — an exact array made a mismatched worker unrecordable
+   and therefore indistinguishable from a dead one) and `0052` (the four payload
+   CHECK constraints four kinds declared and none had) were applied to
+   production on 2026-09-05; `docs/PRODUCTION_SCHEMA_STATE.md` carries the
+   receipts and says why one constraint is deliberately `NOT VALID`.
+9. **Production still runs a worker built before 2026-08-28.** Read from the
+   heartbeat row on 2026-09-05: `handler_count` 6, fresh. The host installs only
+   sealed release artifacts and none was produced while the release was red, so
+   the deployed worker has no handler for the three Stable Registry build kinds.
+   Until a current image is installed, a Foundation, extension-pack or edition
+   build enqueued in production terminalises as `unsupported_kind`.
+10. **The `media_lifecycle` outbox has unfinished work.** Observed 2026-09-05:
+    five `media_derivative_revoke` rows pending for about a day and a half, four
+    `media_staging_finalize` rows pending for about three and a half days. Both
+    kinds are web-owned, so this is not the matching worker's queue; nothing
+    investigated here drains them.
 
 ## How to check any of this yourself
 

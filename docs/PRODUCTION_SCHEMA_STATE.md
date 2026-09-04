@@ -112,42 +112,76 @@ migration — which is the rule at the bottom of this file, broken by the person
 who wrote the rule down.** The gap lasted about two hours, during which this
 page said production ran a schema it no longer ran.
 
+## The 2026-09-05 application of `0051` and `0052`
+
+Both were applied to production through `scripts/apply-reviewed-migration.ts`,
+one transaction each, host class `digitalocean_managed`, database `defaultdb` —
+`0051` in 281 ms, `0052` in 178 ms.
+
+`0051` replaces `matching_worker_heartbeats_supported_handlers_check`. It pinned
+`supported_handlers` to an exact array, which made the one state worth seeing
+unrecordable: a worker whose handler set differs from the manifest could not
+write a heartbeat at all, so it read as dead rather than as
+`capability_mismatch` — and that row is the only liveness signal there is. It
+also coupled image and schema in both directions. The replacement checks shape
+(one to sixty-four lowercase snake_case names) and leaves identity to
+`app.runtime`, the web classification, and the release script.
+
+`0052` adds the four payload CHECK constraints that four kinds declared and none
+had. **Its first attempt failed and rolled back**, which is what the design
+intends: `validate constraint` refused
+`job_queue_media_derivative_revoke_payload_check` because production holds five
+`media_derivative_revoke` rows written on 2026-08-23 with no `mediaAssetId` —
+the producer did not send one yet. All five are `done`; the five written on
+2026-09-03 satisfy the contract exactly. The applied version therefore leaves
+that one constraint `NOT VALID`: every new and updated row is checked, and five
+terminal rows stay as the record of what was written, rather than being deleted
+or the contract weakened to match a shape nothing emits any more.
+
+Read back immediately after, read-only, against `digitalocean_managed` /
+`defaultdb`:
+
+```
+job_queue payload checks: all twelve present
+  validated: catalog_alias, catalog_fuzzy_duplicate, catalog_match,
+             catalog_typeahead, erasure_media_object_delete,
+             stable_registry_edition_build
+  not valid: journal_entry_index, journal_entry_unindex,
+             media_derivative_revoke, media_staging_finalize,
+             stable_registry_extension_pack_build,
+             stable_registry_foundation_build
+matching_worker_heartbeats_supported_handlers_check:
+  names no handler, checks cardinality, validated
+matching_worker_heartbeats: handler_count 6, fresh
+```
+
+Two things that read-back settles. The deployed worker really does report six
+handlers, so production has no handler for the three Stable Registry build kinds
+and one enqueued there terminalises as `unsupported_kind` — the release was red
+for eight days and the host installs only sealed artifacts. And five of the
+pre-existing payload constraints were already `NOT VALID` before this change;
+that is inherited state, not something `0052` introduced.
+
+Also observed, and outside this change: the `media_lifecycle` outbox has
+unfinished work — five `media_derivative_revoke` rows pending for about a day
+and a half, and four `media_staging_finalize` rows pending for about three and a
+half days. Both kinds are web-owned. Nothing here drains them.
+
 ## Landed on main, not applied to production
 
 | Migration | Why it is not applied                                                                                                                                                                                                                                                                                                                    |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0051`    | The heartbeat handler-set **shape** check, superseding `0050`. `matching_worker_heartbeats_supported_handlers_check` pins `supported_handlers` to an exact array — six kinds since `0001`, nine after `0050` — which makes the one state worth seeing unrecordable: a worker whose handler set differs from the manifest cannot write a heartbeat at all, so it reads as dead rather than as `capability_mismatch`, and the image and the schema have to be migrated together in both directions. `0051` replaces it with a shape check (one to sixty-four lowercase snake_case names) and leaves identity to `app.runtime`, the web classification, and the release script. Constraint replacement only. |
-| `0052`    | The four payload CHECK constraints that `stable_registry_edition_build`, `catalog_typeahead_reindex`, `erasure_media_object_delete` and `media_derivative_revoke` declared and no migration ever created. Each is added `not valid` and validated in the same transaction, so no full-table lock is taken and a legacy row rolls the whole thing back rather than half-applying. **Apply this before deploying a matching image built after 2026-09-04**: `REQUIRED_JOB_QUEUE_PAYLOAD_CONSTRAINTS` is generated from the manifest, so the worker's preflight reports `schema_mismatch` against a database missing one and the release refuses to activate. |
-| `0050`    | Superseded by `0051` before either was applied anywhere but CI. Applying it is harmless and unnecessary; `0051` is self-sufficient. |
 | `0048`    | The capture claim-ordering index. It only matters where an observed capture runs, and OVE-254 refuses production capture, so production has the table and no rows to claim. Additive and reversible — one partial index, no column, constraint, or row — so it can be applied whenever the owner wants production converged with `sql/`. |
 
 Applied on the loopback database on 2026-09-03 through
 `scripts/apply-reviewed-migration.ts` and verified by `pg_indexes`. Whoever
 applies it to production updates the inventory above in the same pull request.
 
-`0051` and `0052` were executed against Postgres 18.4 on a disposable database
-on 2026-09-04, not merely reviewed. `pnpm queue:contract:prove-database` is that
-proof, and it runs in CI: eighteen cases covering every accept and every refuse,
-including the two defects execution found in the first draft of `0051` — a
-shape check over `array_to_string(handlers, ',')` accepted the single element
-`'journal_entry_index,journal_entry_unindex'`, because after joining, one
-element containing a separator is indistinguishable from two, and it also
-accepted a NULL element, which `array_to_string` silently drops.
-
-Neither is applied to production yet. The commands, in order:
-
-```bash
-cd apps/web
-vercel env pull /tmp/production.env --environment=production
-pnpm exec tsx scripts/apply-reviewed-migration.ts --mode apply --migration 0051 --env-file /tmp/production.env
-pnpm exec tsx scripts/apply-reviewed-migration.ts --mode apply --migration 0052 --env-file /tmp/production.env
-pnpm exec tsx scripts/apply-reviewed-migration.ts --mode inventory --env-file /tmp/production.env
-```
-
-`0052` must land before the next matching image is deployed, for the reason in
-its row above. `0051` may land at any time and removes a coupling rather than
-adding one. Whoever applies them updates the inventory above in the same pull
-request.
+`0050` was superseded by `0051` before either reached production; applying it
+is unnecessary. `pnpm queue:contract:prove-database` executes both `0051` and
+`0052` against a disposable database on every CI run — nineteen accept and
+refuse cases, including the two defects execution found in the first draft of
+`0051`.
 
 ## The rule this produced
 

@@ -16,15 +16,29 @@
 -- preflight reports `schema_mismatch` against a database missing one. This file
 -- is what makes those three checks pass truthfully.
 --
--- Each constraint is added NOT VALID and then validated in the same
--- transaction: NOT VALID takes no full-table lock while the row set is scanned,
--- and VALIDATE takes only SHARE UPDATE EXCLUSIVE, so enqueueing is never
--- blocked. If VALIDATE fails, the whole transaction rolls back having changed
--- nothing and a legacy row is the reason. Find it with:
+-- Each constraint is added NOT VALID first: that takes no full-table lock, and
+-- it already enforces the contract on every row inserted or updated from then
+-- on. Three of the four are then validated in the same transaction, which takes
+-- only SHARE UPDATE EXCLUSIVE and so never blocks enqueueing.
 --
---   select id, queue_name, payload
---   from job_queue
---   where payload->>'kind' = '<kind>';
+-- The fourth is deliberately left unvalidated. Read against production on
+-- 2026-09-05: `media_derivative_revoke` has ten rows, and the five written on
+-- 2026-08-23 carry no `mediaAssetId` because the producer did not send one yet.
+-- All five are `done`. The five written on 2026-09-03 satisfy this contract
+-- exactly. Validating would therefore fail on history that is already terminal,
+-- and the only ways to make it pass are to delete rows or to weaken the
+-- contract to match a shape the producer no longer emits. NOT VALID is the
+-- honest state: every new and updated row is checked, and the five terminal
+-- rows stay as the record of what was actually written.
+--
+-- If VALIDATE fails for one of the other three, the whole transaction rolls
+-- back having changed nothing, and a legacy row is the reason. Find its shape
+-- without reading its values:
+--
+--   select payload->>'kind' as kind, status,
+--          (select array_agg(k order by k) from jsonb_object_keys(payload) k) as keys,
+--          count(*)
+--   from job_queue where payload->>'kind' = '<kind>' group by 1, 2, 3;
 --
 -- Constraint additions only: no table, column, index, or row is touched.
 
@@ -136,5 +150,5 @@ alter table job_queue
     )
   ) not valid;
 
-alter table job_queue
-  validate constraint job_queue_media_derivative_revoke_payload_check;
+-- Deliberately not validated; see the header. The constraint is live for every
+-- row written from here on.

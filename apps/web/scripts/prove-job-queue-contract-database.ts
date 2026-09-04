@@ -212,6 +212,22 @@ const CASES: readonly Case[] = [
       }),
   },
   {
+    // Production's five terminal rows from 2026-08-23 have exactly this shape,
+    // which is why 0052 leaves this one constraint NOT VALID. A NOT VALID
+    // constraint still refuses every new row, and that is the property under
+    // test here — the history it declines to rewrite is not.
+    name: "0052 refuses a newly written media_derivative_revoke with no mediaAssetId",
+    expect: "refused",
+    run: (pool) =>
+      enqueue(pool, "media_lifecycle", {
+        kind: "media_derivative_revoke",
+        bucket: "media",
+        objectKey: "a/e.webp",
+        reason: "entry_deleted",
+        journalEntryId: UUID_B,
+      }),
+  },
+  {
     // Each constraint is scoped to its own kind, so none of them may start
     // policing a payload it was never given a contract for.
     name: "0052 leaves an unrelated kind alone",
