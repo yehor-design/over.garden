@@ -14,6 +14,7 @@ import {
   getTrustSurfaceCopy,
 } from "@/lib/trust-surface-copy";
 import type { AuthFormState } from "./auth-actions";
+import { buildSignInHref } from "@/lib/navigation/sign-in-href";
 
 /**
  * The one screen that signs somebody in, and the one that creates an account.
@@ -99,9 +100,7 @@ export function AuthSurface({
 
   const isSignUp = mode === "sign-up";
   const title = isSignUp ? copy.signUpScreenTitle : copy.signInScreenTitle;
-  const otherHref = isSignUp
-    ? `/auth/sign-in${nextQuery(next)}`
-    : `/auth/sign-up${nextQuery(next)}`;
+  const otherHref = buildSignInHref({ returnTo: next, signUp: !isSignUp });
   const otherLabel = isSignUp ? copy.toSignIn : copy.toSignUp;
 
   return (
@@ -256,6 +255,3 @@ function AuthMessage({
   );
 }
 
-function nextQuery(next: string) {
-  return next === "/garden" ? "" : `?next=${encodeURIComponent(next)}`;
-}

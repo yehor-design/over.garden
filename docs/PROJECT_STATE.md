@@ -68,8 +68,14 @@ in any client closure and React renders `action="javascript:throw …"`, which
 does nothing until the bundle runs. Three source-level tests now hold that
 shape for the engagement controls, the sign-in screen, and the language control.
 
-Verifying the slice in production on 2026-09-04 found one defect the slice had
-shipped: merely *hovering* a language option rewrote the reader's saved language.
+Verifying the slice in production on 2026-09-04 found two defects the slice had
+shipped, one of them reported by the owner. Pressing "sign in" in the header
+landed on `/garden`, an empty state offering a second "sign in" before the form,
+because the header read the navigation item's label and hard-coded its own href;
+every sign-in link is built by one function now, and an intent control returns
+the reader to the composer rather than to the workspace around it.
+
+The other: merely *hovering* a language option rewrote the reader's saved language.
 The proxy reads the preference from the locale prefix a request lands on, and
 Next strips `Next-Router-Prefetch` before middleware runs, so the guard written
 to exclude prefetches never fired. Cross-locale links now carry

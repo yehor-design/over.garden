@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
+import { buildSignInHref } from "@/lib/navigation/sign-in-href";
 
 /**
  * What a signed-out reader sees on a page that needs an account.
@@ -47,7 +48,7 @@ export function SignInPrompt({
         </p>
       </div>
       <Link
-        href={`/auth/sign-in?next=${encodeURIComponent(returnTo)}`}
+        href={buildSignInHref({ returnTo })}
         className={buttonVariants({ className: "w-fit" })}
       >
         <LogIn aria-hidden="true" />

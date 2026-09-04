@@ -2,11 +2,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
-import type {
-  AuthIntentAction,
-  AuthIntentTarget,
+import {
+  buildAuthIntentResumeHref,
+  type AuthIntentAction,
+  type AuthIntentTarget,
 } from "@/lib/auth/auth-intent-contract";
 import { cn } from "@/lib/utils";
+import { buildSignInHref } from "@/lib/navigation/sign-in-href";
 
 interface AuthIntentTriggerProps {
   action: AuthIntentAction;
@@ -32,6 +34,14 @@ interface AuthIntentTriggerProps {
  * would let anyone hand somebody else a crafted resume. Without a target there
  * is nothing to sign, so it is a plain link to the one sign-in screen — which
  * also means it works with JavaScript switched off and with no round trip.
+ *
+ * Either way the reader comes back to the thing they pressed, not to the page
+ * that contains it. The return path is the resume href the intent contract
+ * builds, so `create_entry` lands on the composer at
+ * `/garden?authIntent=create_entry#first-entry-composer` and
+ * `useScrollToHashOnMount` puts it in front of them. Sending them to `/garden`
+ * bare would make signing in cost one press and then another — the same extra
+ * step the header's hard-coded `/garden` used to cost before the form.
  */
 export function AuthIntentTrigger({
   action,
@@ -52,7 +62,10 @@ export function AuthIntentTrigger({
     return (
       <Link
         id={id}
-        href={`/auth/sign-in?next=${encodeURIComponent(returnTo)}&intent=${encodeURIComponent(action)}`}
+        href={buildSignInHref({
+          returnTo: buildAuthIntentResumeHref({ action, returnTo, control }),
+          intent: action,
+        })}
         data-auth-intent-control={action}
         className={cn(buttonVariants({ variant, size }), className)}
       >

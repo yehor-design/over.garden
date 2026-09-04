@@ -5,6 +5,7 @@ import {
   verifyAuthIntentToken,
 } from "@/server/auth-intent-token";
 import { getCurrentSession } from "@/server/auth-session";
+import { buildSignInHref } from "@/lib/navigation/sign-in-href";
 
 /**
  * The intent screen is now a redirect, not a page.
@@ -28,7 +29,7 @@ export default async function AuthIntentRoute({
     Promise.resolve<Record<string, string | string[] | undefined>>({}));
   const token = first(params.intent);
 
-  if (!token) redirect("/auth/sign-in");
+  if (!token) redirect(buildSignInHref());
 
   let intent;
   try {
@@ -42,7 +43,7 @@ export default async function AuthIntentRoute({
         : null;
   }
 
-  if (!intent) redirect("/auth/sign-in");
+  if (!intent) redirect(buildSignInHref());
 
   const session = await getCurrentSession();
   if (session?.user?.id) {
@@ -50,9 +51,7 @@ export default async function AuthIntentRoute({
   }
 
   const next = `/auth/intent/resume?intent=${encodeURIComponent(token)}`;
-  redirect(
-    `/auth/sign-in?next=${encodeURIComponent(next)}&intent=${encodeURIComponent(intent.action)}`,
-  );
+  redirect(buildSignInHref({ returnTo: next, intent: intent.action }));
 }
 
 function first(value: string | string[] | undefined) {

@@ -2,6 +2,7 @@ import {
   getInterfaceCopy,
   type InterfaceLocale,
 } from "./interface-localization";
+import { buildSignInHref } from "./navigation/sign-in-href";
 import { localizedPath, stripLocalePrefix } from "./public-localization";
 
 export type SiteShellNavigationKey =
@@ -35,6 +36,8 @@ export interface SiteShellNavigation {
   publicItems: SiteShellNavigationItem[];
   personalItems: SiteShellNavigationItem[];
   mobileItems: SiteShellNavigationItem[];
+  /** The sign-in screen, with the reader's current page as its return path. */
+  signIn: SiteShellNavigationItem;
   searchHref: string;
   labels: {
     publicSection: string;
@@ -75,6 +78,11 @@ export function getSiteShellNavigation(
   locale: InterfaceLocale,
   isAuthenticated: boolean,
   communitiesReady = false,
+  /**
+   * Where the reader is right now, so signing in returns them there instead of
+   * to the workspace. Omitted, the link still works and falls back to `/garden`.
+   */
+  currentPath?: string,
 ): SiteShellNavigation {
   const copy = getInterfaceCopy(locale);
   const publicItems: SiteShellNavigationItem[] = [
@@ -198,12 +206,14 @@ export function getSiteShellNavigation(
       ]
     : [];
 
-  // "Sign in" and "My garden" pointed at the same URL until OVE-378; the one
-  // sign-in screen has its own route now.
+  // "Sign in" and "My garden" pointed at the same URL until OVE-378, and the
+  // header then kept pointing at `/garden` for another day because it read this
+  // item's *label* and hard-coded its own href. It is returned as a field now,
+  // so a caller that wants the label gets the destination with it.
   const signInItem = item(
     "sign-in",
     copy.navigation.signIn,
-    "/auth/sign-in",
+    buildSignInHref({ returnTo: currentPath }),
     "utility",
   );
   const findItem = (key: SiteShellNavigationKey) =>
@@ -222,6 +232,7 @@ export function getSiteShellNavigation(
     publicItems,
     personalItems,
     mobileItems,
+    signIn: signInItem,
     searchHref: localizedPath(locale, "/journals"),
     labels: {
       publicSection: copy.shell.exploreSection,
