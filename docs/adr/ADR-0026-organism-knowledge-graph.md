@@ -338,6 +338,9 @@ a breaking change for every later task and needs an amendment here.
 
 ## Rollout and rollback
 
+The fourteen issues are sub-issues of the umbrella issue `OVE-400`, numbered
+`24.01` to `24.14` in their titles.
+
 | Order | Issue | Slice | SQL |
 | --- | --- | --- | --- |
 | 1 | `OVE-386` | Graph foundation under the gardener catalog, zero visible change | `0054` |

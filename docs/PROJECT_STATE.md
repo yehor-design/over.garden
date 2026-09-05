@@ -95,7 +95,8 @@ assumed. One measurement gap blocks honest prioritisation; see known gaps
 below.
 
 **Decided 2026-09-05, evening.** The organism knowledge graph, ADR-0026,
-implemented as SDD Slice 24 (`OVE-386` through `OVE-399`): one canonical card
+implemented as SDD Slice 24 (umbrella `OVE-400`, sub-issues `OVE-386` through
+`OVE-399`): one canonical card
 per organism in OverGarden's own identity space over the retained source layer;
 Catalogue of Life as the classification backbone, everything else attached as
 sourced assertions; a Postgres-only picker with three one-tap outcomes where a
