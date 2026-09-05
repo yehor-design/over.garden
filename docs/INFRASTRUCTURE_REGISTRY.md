@@ -672,10 +672,13 @@ Process management and recovery (OVE-39):
 
 Immutable matching release contract (OVE-190):
 
-- Live status: pass on 2026-07-18. Production API and worker run exact tested-main
-  source `710ac0c74559cea698946be31eeea856f0644fb4` from immutable release B;
-  the exact-six canary, A/B activation, rollback, forward, final worker restart,
-  and redacted external readiness proof passed.
+- Live status: pass on 2026-09-05. The production worker runs exact tested-main
+  source `63ce91d8509265a5924968f89801a06c56415ed5`, sealed by run 33958591025
+  and activated through `install`, `migrate`, and `deploy`; the previous pointer
+  holds `003a0da6673f993432e8fe72ff035af91996e96e` for rollback. The API was
+  retired on 2026-09-03 (OVE-357). The 2026-07-18 activation, rollback, and
+  forward proofs of release B (`710ac0c74559cea698946be31eeea856f0644fb4`) are
+  history.
 - Publisher: `.github/workflows/matching-image.yml`. It accepts only an exact
   lowercase 40-character SHA contained in `origin/main`, installs
   `uv==0.11.24`, compiles all Python modules, runs frozen Ruff, and runs the full

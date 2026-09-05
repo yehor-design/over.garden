@@ -250,12 +250,45 @@ observed on its first run. The second dispatch (run 33954619247) verified,
 published, and sealed in 6m04s, with the registry digest resolved back to the
 verified image id.
 
-Still open: production runs a worker built before 28 August, because the host
-installs only sealed artifacts and none existed while the release was red
-(`docs/PROJECT_STATE.md`, known gap 9). Installing the current release is one
-owner-approved step. The seventy-eight unsealed images remain in the
-registry; deleting package versions is a provider-state change and waits for
-the owner.
+**Production runs the current worker** (PRs #289, #290). Installing the
+sealed release of `4d8cf9a` on the droplet found the next two defects, each
+visible only by deploying. Preflight refused the candidate with every
+dependency available: `queueRecovery.handlerCompatible` compared the
+candidate's handler set with the heartbeat row, which the incumbent worker
+writes, so a release that changes the set could never pass and no host state
+could satisfy it. Preflight no longer requires that field and still reports
+it; readiness after activation keeps requiring it, because by then the row is
+the candidate's own. The next release, `26ed3d1`, passed preflight and then
+restarted on every loop: `record_drain_outcome` wrote a bare NULL into
+`case when $2 is null`, psycopg binds parameters server-side, and Postgres
+could not type it. The release script restored `003a0da` on its own within its
+readiness wait, as designed. The function had been written on 31 August and
+this was its first execution against a database; every test mocked the
+connection. The placeholder is typed now, and
+`services/matching/tests/test_runtime_database.py` builds a disposable database
+from the four Better Auth tables and every versioned migration and runs the
+worker's own functions against it — heartbeat, drain outcome, state read,
+`LISTEN`, claim, wake, a full drain pass — in CI and in the release path alike;
+against the pre-fix runtime it fails with the production error. `63ce91d` then
+installed, passed preflight, and activated at about 09:50 UTC: `status` reads
+ready, the previous pointer holds `003a0da` for rollback, and both production
+proofs (`smoke:matching-queue-health`, `smoke:matching-runtime-capabilities`)
+answer ready with the nine-handler set. They were run with `.env.local` set
+aside, because `vercel env run` lets it shadow the production database, and
+with the database host class confirmed as DigitalOcean-managed first. Freed on
+the droplet to pass the capacity gate: two July transfer copies, two August
+remediation copies in `/tmp`, rotated journals, and the apt cache; no installed
+release was removed, and the host's release script and heartbeat excerpt were
+brought up to the repository's copies with the old ones kept beside them.
+
+**The registry holds only sealed releases** (owner approval, 2026-09-05). Of
+866 package versions, 208 tagged images were sealed releases and 412 untagged
+versions were their platform and attestation manifests. The 82 tagged images
+no successful run produced — the 78 of the red window and four from the
+budget-freeze day, 23 July — and their 164 child manifests were deleted, each
+child attributed by reading its parent's manifest rather than by timestamp;
+620 remain. `gh` needed `read:packages` and `delete:packages`, granted by the
+owner in a browser.
 
 ## Corrections made in this window
 
