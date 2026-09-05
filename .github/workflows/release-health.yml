@@ -26,6 +26,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  cron-methods:
+    name: Every scheduled path answers GET in the deployed build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Probe each scheduled path without credentials
+        run: |
+          set -euo pipefail
+
+          # `vercel-cron-contract.test.ts` proves the repository is right. This
+          # proves the deployed build is: a route can be correct in git and
+          # still not be what production is serving. No Authorization header is
+          # sent, so nothing runs — 401 means the handler exists and refused,
+          # 405 means Vercel Cron has been getting Method Not Allowed.
+          #
+          # `/api/cron/media-lifecycle` returned 405 for as long as it had been
+          # scheduled. The workflow behind it never ran once: nine queue rows
+          # unclaimed and five derivatives of deleted journal entries still
+          # served with HTTP 200.
+          failures=0
+          while read -r path; do
+            status="$(curl -s -o /dev/null -w '%{http_code}' "https://over.garden${path}")"
+            printf '%s -> %s\n' "$path" "$status"
+            if [[ "$status" != "401" ]]; then
+              printf '  expected 401 (handler present, credentials refused)\n' >&2
+              failures=$((failures + 1))
+            fi
+          done < <(jq -r '.crons[].path' apps/web/vercel.json)
+
+          if (( failures > 0 )); then
+            echo "$failures scheduled path(s) do not answer the method Vercel Cron sends." >&2
+            exit 1
+          fi
+
   matching-image:
     name: Newest matching image release on main
     runs-on: ubuntu-latest
