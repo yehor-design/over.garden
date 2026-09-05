@@ -3,7 +3,26 @@ import { NextResponse } from "next/server";
 import { drainMediaLifecycleQueue } from "@/server/media/media-lifecycle-consumer";
 import { runRetentionWorkflow } from "@/server/media/retention-executor";
 
+/**
+ * Vercel Cron invokes a cron path with GET.
+ *
+ * This route exported POST only, so from the day the schedule was added the
+ * daily invocation answered 405 and the whole workflow behind it never ran
+ * once: `media_lifecycle_retention_runs` held zero rows, nine queue rows sat at
+ * `attempts = 0`, and five derivatives of deleted journal entries were still
+ * being served with HTTP 200. The other three cron routes export both methods;
+ * this one was the exception, and nothing compared the schedule with the
+ * handler. `vercel-cron-contract.test.ts` does now.
+ */
+export async function GET(request: Request) {
+  return runMediaLifecycleCron(request);
+}
+
 export async function POST(request: Request) {
+  return runMediaLifecycleCron(request);
+}
+
+async function runMediaLifecycleCron(request: Request) {
   const secret = process.env.CRON_SECRET;
   const auth = request.headers.get("authorization");
   if (!secret || auth !== `Bearer ${secret}`) {

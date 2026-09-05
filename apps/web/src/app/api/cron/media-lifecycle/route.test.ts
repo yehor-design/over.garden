@@ -50,6 +50,21 @@ describe("media lifecycle cron readiness", () => {
     expect(drainMediaLifecycleQueue).not.toHaveBeenCalled();
   });
 
+  it("drains on GET, which is the method Vercel Cron actually sends", async () => {
+    // This route exported POST only. The daily schedule answered 405 and the
+    // workflow never ran once in production: the retention-run table was empty,
+    // nine queue rows sat at `attempts = 0`, and five derivatives of deleted
+    // journal entries were still served with HTTP 200.
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request("http://localhost/api/cron/media-lifecycle", {
+        headers: { authorization: "Bearer cron-secret" },
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(executionOrder).toEqual(["retention", "drain"]);
+  });
+
   it("reports ready only after zero unfinished or degraded work", async () => {
     const { POST } = await import("./route");
     const response = await POST(

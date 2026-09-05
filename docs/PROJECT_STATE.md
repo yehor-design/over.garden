@@ -176,11 +176,18 @@ decision in ADR-0022, not an omission.
    the deployed worker has no handler for the three Stable Registry build kinds.
    Until a current image is installed, a Foundation, extension-pack or edition
    build enqueued in production terminalises as `unsupported_kind`.
-10. **The `media_lifecycle` outbox has unfinished work.** Observed 2026-09-05:
-    five `media_derivative_revoke` rows pending for about a day and a half, four
-    `media_staging_finalize` rows pending for about three and a half days. Both
-    kinds are web-owned, so this is not the matching worker's queue; nothing
-    investigated here drains them.
+10. **The media-lifecycle cron had never run in production.** `vercel.json`
+    schedules `/api/cron/media-lifecycle` daily at 03:00 UTC and Vercel Cron
+    invokes a scheduled path with GET. The route exported `POST` only, so every
+    invocation since the schedule was added answered 405. Observed on
+    2026-09-05: `media_lifecycle_retention_runs` held zero rows ever, nine queue
+    rows sat at `attempts = 0` unclaimed, and the five derivatives of five
+    deleted journal entries were still served from `media.over.garden` with HTTP
+    200. An unauthenticated GET returned 405 for this path and 401 for the three
+    cron routes that export GET, which is the whole difference. Fixed by
+    exporting GET, and `src/app/api/cron/vercel-cron-contract.test.ts` now fails
+    when any scheduled path has no GET, when a cron route is unscheduled, or
+    when a scheduled route does not refuse an unauthenticated caller.
 
 ## How to check any of this yourself
 
