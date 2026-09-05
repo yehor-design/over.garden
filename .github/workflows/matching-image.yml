@@ -113,7 +113,15 @@ jobs:
           set -euo pipefail
           shellcheck infra/production-worker/matching-release
           bash -n infra/production-worker/matching-release
-          test -x infra/production-worker/matching-release
+
+          # This was `test -x`, the last gate in this workflow that could fail
+          # with no output. A lost executable bit would have ended the step at
+          # `exit code 1` with nothing above it, the same silence that hid the
+          # seal step failures for eight days.
+          if [[ ! -x infra/production-worker/matching-release ]]; then
+            echo "infra/production-worker/matching-release must be executable: the host runs it directly." >&2
+            exit 1
+          fi
 
           # Scan the files that actually declare image references. Scanning the
           # whole directory also matched infra/production-worker/meilisearch-upgrade,

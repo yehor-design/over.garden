@@ -1,4 +1,4 @@
-# Delivery log — 1 to 3 September 2026
+# Delivery log — 1 to 5 September 2026
 
 Status: dated receipt. Immutable once written; corrections are appended, not
 rewritten. Current state lives in `docs/PROJECT_STATE.md`.
@@ -182,6 +182,54 @@ failure therefore records itself in `settleSection`, where the code is still in
 hand. Verified on a closed-port production build: the panel on screen and the
 `workspace_section_degraded` line in the log carried the same reference,
 `16JQ1ET`.
+
+## 4–5 September — the matching image release, repaired and made loud
+
+**Every push to `main` failed the matching image release for eight days, and
+the failure said nothing** (PR #282). From `2d58ca5` at 23:11 UTC on
+27 August to `8ed5531` at 20:09 UTC on 4 September, seventy-eight consecutive
+runs of `matching-image.yml` built and published a correct image and then
+refused to seal it. Every log ended at `docker pull` followed by
+`Process completed with exit code 1`. The fix commit counts seventy-six; two
+more pushes failed while it was being written.
+
+The seal step demanded, as six literals, the handler set the built container
+had to report. `stable_registry_foundation_build` joined the queue manifest in
+the first failing commit and two more Stable Registry kinds followed, so every
+image answered nine. The gate was `jq -e '…' >/dev/null`: `-e` exits 1 for a
+false filter, and the redirect discarded the one word it would have printed.
+The five label checks before it were bare `[[ … ]]` tests, mute by the same
+construction; they happened to pass.
+
+The set is derived now and restated nowhere.
+`apps/web/src/server/job-queue-manifest.ts` is the single declaration. The seal
+step reads it from the commit being released through the generated Python
+module, compares it with what the built container answers, and seals it into
+`release.json`; the host release script holds the running container to the set
+its own artifact sealed; the contract test derives it as well and refuses any
+handler name written into the workflow or the release script. Every gate in
+the step prints what it expected and what it got.
+
+**A red run nobody reads is not a signal** (PRs #283, #286). The release runs
+after merge, so it can never be a required check on a pull request.
+`release-health.yml` asks once a day, at 07:10 UTC, whether the newest
+completed release on `main` succeeded and whether every scheduled cron path in
+the deployed build answers the method Vercel Cron sends; it fails when either
+is false. One red run in the Actions list, instead of one per push.
+
+Verified on 5 September: the five releases since the repair, `f467fb8` through
+`db49bdb`, each ran the seal and the upload to success (the prune step keeps
+only the newest artifact, 181 MB), and both `release-health` dispatches
+passed. The one construct left in the workflow that could still fail without a
+word, `test -x` on the host release script, now says why. GitHub notifies
+whoever triggered a failed run, so each of the seventy-eight failures produced
+its own notice; every one of them describes a run that completed before
+20:22 UTC on 4 September, and nothing since is red.
+
+Still open: production runs a worker built before 28 August, because the host
+installs only sealed artifacts and none existed while the release was red
+(`docs/PROJECT_STATE.md`, known gap 9). Installing the current release is one
+owner-approved step.
 
 ## Corrections made in this window
 
