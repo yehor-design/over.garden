@@ -44,6 +44,14 @@ another issue's number.
 | `0051` | maintainer   | Matching worker        | the heartbeat handler set is checked for shape; identity moves to code      |
 | `0052` | maintainer   | Job queue contract     | the four declared payload contracts that no CHECK constraint enforced       |
 | `0053` | OVE-385      | Stable Registry retirement | drops the empty release tables, their functions and the three retired payload contracts (ADR-0025, D4) |
+| `0054` | OVE-386      | Organism graph (ADR-0026) | graph foundation: node kinds, ranks, ancestors, identity state, names, identifiers, relations, facts, assertions, queue, actions, slug history, search misses, normalizer |
+| `0055` | OVE-387      | Organism graph (ADR-0026) | provisional cards become object labels; picker ranking columns and weight recompute function |
+| `0056` | OVE-390      | Organism graph (ADR-0026) | reconciliation job-kind payload CHECKs, thresholds table, apply and revert SQL functions |
+| `0057` | OVE-392      | Organism graph (ADR-0026) | Catalogue of Life source usages and vernaculars |
+| `0058` | OVE-394      | Organism graph (ADR-0026) | EPPO second capture endpoint classes and the country-level rights reclassification |
+| `0059` | OVE-397      | Organism graph (ADR-0026) | mention statistics table, only if the task chooses a table; otherwise released |
+| `0060` | OVE-398      | Organism graph (ADR-0026) | catalog pick events with 90-day purge |
+| `0061` | OVE-399      | Organism graph (ADR-0026) | destructive closeout: legacy catalog columns and tables, gated by inventory and owner approval |
 
 Compact range receipt:
 
@@ -63,6 +71,7 @@ Compact range receipt:
 - `0051: matching worker heartbeat handler shape`
 - `0052: job queue declared payload checks`
 - `0053: stable registry release tables retired`
+- `0054-0061: organism knowledge graph, ADR-0026, SDD Slice 24 (0059 conditional, 0061 destructive)`
 
 Rows `0036`-`0038` are reconciled after the fact under rule 4: those migrations
 landed before the ledger recorded them, and renaming a landed file to restore
