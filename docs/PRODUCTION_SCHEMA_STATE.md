@@ -266,6 +266,56 @@ retained:     every table present; counts identical to the inventory before
 `partial` — the expected residue listed above. Gap 5 in
 `docs/PROJECT_STATE.md` is closed.
 
+## The 2026-09-05 application of `0054`
+
+`0054_ove386_organism_graph_foundation.sql` (ADR-0026, the organism graph
+foundation) was applied to production on 2026-09-05 under the owner's standing
+authorization for SDD Slice 24 (ADR-0026 amendment, `docs/ORGANISM_GRAPH_EXECUTION.md`
+section 1), so no per-migration approval was requested. Applied through
+`scripts/apply-reviewed-migration.ts --mode apply --migration 0054` with the
+pulled production environment: one transaction, `lock_timeout` 30 s, host class
+`digitalocean_managed`, database `defaultdb`, 143 statements, 35,721 ms.
+
+The read-only inventory immediately before reported `0054` as `missing` with
+every one of its 8 tables, 21 columns and 17 indexes absent, and `0053` as
+`applied`. It also reported `0048` as `missing` (the capture claim-ordering
+index): production has never held a capture, and that index is not this
+migration's concern; it is noted here so the residue is not mistaken for a
+defect of `0054`.
+
+Before applying, the same file was executed forward, back and forward on a
+fresh bootstrap (`pnpm schema:organism-graph:prove-database`, now a CI step),
+replayed on the owner's loopback database around a fingerprint of every item,
+name, object and source link plus thirty typeahead answers, and compared on a
+production build: the fingerprint hashes and the warm page responses were
+identical before and after; cold responses differed only in the order of
+streamed RSC chunks, which varies between runs of the same build.
+
+Read back immediately after, read-only, aggregates only:
+
+```
+0054: applied (every table, column and index present)
+catalog_items:      15,924 cultivar / 5 breed / 5 taxon, all active;
+                    kingdom Plantae on every cultivar and on the four species
+                    of the backbone wave, Animalia on every breed
+catalog_source_assertions: 15,934 = catalog_source_links 15,934,
+                    no link without an assertion
+catalog_item_identifiers: ua_register 15,177, eu_common_catalogue 721,
+                    col / wfo / eppo / wikidata / gbif 4 each, grin 3, vbo 2
+catalog_item_slug_history: 15,914 = items with a public slug 15,914
+catalog_item_names: 61,908 rows, unchanged; name_type denomination 15,929,
+                    scientific_accepted 8, scientific_synonym 1, the rest
+                    vernacular; script Cyrl / Latn from the locale
+first_hand_content_at set on 2 items (the ones with live public entries)
+catalog_normalize_name of "Solanum lycopersicum 'De Barao'"
+                    = "solanum lycopersicum de barao"
+```
+
+Nothing a gardener or a crawler sees changed: no row was deleted or renamed,
+`catalog_kind` and `status` stay for the legacy readers until the closeout
+migration `0061`. The deploy order was migration first, then code, and the code
+in the same pull request reads nothing the old schema lacks.
+
 ## The rule this produced
 
 Production migrations are applied by hand, one command per migration, with the

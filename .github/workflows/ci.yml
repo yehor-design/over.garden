@@ -148,6 +148,9 @@ jobs:
       - name: Prove the Stable Registry retirement migration and its rollback
         run: pnpm schema:retirement:prove-database
 
+      - name: Prove the organism graph foundation migration, its backfill and its rollback
+        run: pnpm schema:organism-graph:prove-database
+
       - name: Lint
         run: pnpm lint
 

@@ -125,6 +125,35 @@ export interface CatalogAliasProjections {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CatalogCurationActions {
+  action_type: string;
+  automatic: Generated<boolean>;
+  id: Generated<string>;
+  inverse: Generated<Json>;
+  payload: Generated<Json>;
+  performed_at: Generated<Timestamp>;
+  performed_by_user_id: string | null;
+  queue_item_id: string | null;
+  reverted_by_action_id: string | null;
+  subject_catalog_item_ids: Generated<string[]>;
+}
+
+export interface CatalogCurationQueue {
+  confidence: Numeric | null;
+  created_at: Generated<Timestamp>;
+  decided_at: Timestamp | null;
+  decided_by_user_id: string | null;
+  id: Generated<string>;
+  impact_score: Generated<number>;
+  item_type: string;
+  proposal: Generated<Json>;
+  reasons: Generated<string[]>;
+  state: Generated<string>;
+  subject_catalog_item_id: string | null;
+  subject_label: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface CatalogFuzzyDuplicateSuggestions {
   generated_at: Generated<Timestamp>;
   id: Generated<string>;
@@ -142,32 +171,92 @@ export interface CatalogFuzzyDuplicateSuggestions {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CatalogItemFacts {
+  assertion_id: string;
+  catalog_item_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  predicate: string;
+  qualifiers: Generated<Json>;
+  region_code: string | null;
+  value: string;
+  value_normalized: string | null;
+}
+
+export interface CatalogItemIdentifiers {
+  assertion_id: string;
+  catalog_item_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  scheme: string;
+  value: string;
+}
+
 export interface CatalogItemNames {
+  assertion_id: string | null;
+  authorship: string | null;
   catalog_item_id: string;
   created_at: Generated<Timestamp>;
   display_name: string;
   id: Generated<string>;
   is_primary: Generated<boolean>;
   locale: Generated<string>;
+  name_type: Generated<string>;
   normalized_name: string;
+  script: Generated<string>;
+  weight: Generated<Numeric>;
+}
+
+export interface CatalogItemRelations {
+  assertion_id: string;
+  created_at: Generated<Timestamp>;
+  from_catalog_item_id: string;
+  host_class: string | null;
+  id: Generated<string>;
+  relation_type: string;
+  to_catalog_item_id: string;
 }
 
 export interface CatalogItems {
+  accepted_name_id: string | null;
+  ancestor_ids: Generated<string[]>;
   canonical_name: string;
   catalog_kind: Generated<string>;
+  content_updated_at: Generated<Timestamp>;
   created_at: Generated<Timestamp>;
   created_by_user_id: string | null;
+  first_hand_content_at: Timestamp | null;
+  has_registered_forms: Generated<boolean>;
   id: Generated<string>;
+  identity_state: Generated<string>;
+  indexable_override: boolean | null;
+  is_host: Generated<boolean>;
+  kingdom: string | null;
   locale: Generated<string>;
   merged_into_catalog_item_id: string | null;
+  node_kind: Generated<string>;
   normalized_name: string | null;
+  parent_catalog_item_id: string | null;
   public_slug: string | null;
+  rank: string | null;
+  registered_eu: Generated<boolean>;
+  registered_ua: Generated<boolean>;
   reviewed_at: Timestamp | null;
   reviewed_by_user_id: string | null;
+  search_weight: Generated<Numeric>;
   source: Generated<string>;
   source_id: string | null;
   status: Generated<string>;
   updated_at: Generated<Timestamp>;
+}
+
+export interface CatalogItemSlugHistory {
+  catalog_item_id: string;
+  id: Generated<string>;
+  namespace: string;
+  slug: string;
+  valid_from: Generated<Timestamp>;
+  valid_to: Timestamp | null;
 }
 
 export interface CatalogMatchSuggestions {
@@ -205,6 +294,31 @@ export interface CatalogMatchSuggestions {
   target_script: string | null;
   target_updated_at_snapshot: Timestamp | null;
   updated_at: Generated<Timestamp>;
+}
+
+export interface CatalogSearchMisses {
+  first_seen_at: Generated<Timestamp>;
+  last_seen_at: Generated<Timestamp>;
+  locale: string;
+  object_kind: string;
+  occurrences: Generated<number>;
+  query_normalized: string;
+  resolved_catalog_item_id: string | null;
+}
+
+export interface CatalogSourceAssertions {
+  confidence: Generated<Numeric>;
+  created_at: Generated<Timestamp>;
+  decided_at: Timestamp | null;
+  decided_by_user_id: string | null;
+  decision: Generated<string>;
+  id: Generated<string>;
+  observed_at: Generated<Timestamp>;
+  reason_codes: Generated<string[]>;
+  rights_class: Generated<string>;
+  source_record_id: string | null;
+  source_slug: string;
+  source_snapshot_id: string;
 }
 
 export interface CatalogSourceCaptureRuns {
@@ -271,6 +385,7 @@ export interface CatalogSourceCaptureUnits {
 }
 
 export interface CatalogSourceLinks {
+  assertion_id: string | null;
   catalog_item_id: string;
   created_at: Generated<Timestamp>;
   id: Generated<string>;
@@ -981,10 +1096,18 @@ export interface DB {
   analytics_events: AnalyticsEvents;
   auth_email_outbox: AuthEmailOutbox;
   catalog_alias_projections: CatalogAliasProjections;
+  catalog_curation_actions: CatalogCurationActions;
+  catalog_curation_queue: CatalogCurationQueue;
   catalog_fuzzy_duplicate_suggestions: CatalogFuzzyDuplicateSuggestions;
+  catalog_item_facts: CatalogItemFacts;
+  catalog_item_identifiers: CatalogItemIdentifiers;
   catalog_item_names: CatalogItemNames;
+  catalog_item_relations: CatalogItemRelations;
+  catalog_item_slug_history: CatalogItemSlugHistory;
   catalog_items: CatalogItems;
   catalog_match_suggestions: CatalogMatchSuggestions;
+  catalog_search_misses: CatalogSearchMisses;
+  catalog_source_assertions: CatalogSourceAssertions;
   catalog_source_capture_runs: CatalogSourceCaptureRuns;
   catalog_source_capture_units: CatalogSourceCaptureUnits;
   catalog_source_links: CatalogSourceLinks;
