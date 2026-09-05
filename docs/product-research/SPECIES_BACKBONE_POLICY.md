@@ -5,7 +5,8 @@
 > `SUPERSEDED_DECISIONS_LEDGER.md` · per-file status: `RESEARCH_STATUS_INDEX.md`.
 > Reconciled against `over.garden` @ `main` `ab52664`, 2026-09-04.
 >
-> Still binding for the species backbone and reviewed vernacular aliases. The Stable Registry boundary section (OVE-318) is the part that governs today.
+> Still binding for the species backbone and reviewed vernacular aliases. The Stable Registry boundary section (OVE-318) is history since ADR-0025.
+> ADR-0026 (2026-09-05) supersedes one rule below: country-level EPPO distribution status may reach the product (D11). Coordinates never existed at that level. The source precedence stands and is now executed by the organism graph (SDD Slice 24).
 
 ---
 

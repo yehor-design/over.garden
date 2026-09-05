@@ -5,7 +5,7 @@
 > `SUPERSEDED_DECISIONS_LEDGER.md` · per-file status: `RESEARCH_STATUS_INDEX.md`.
 > Reconciled against `over.garden` @ `main` `ab52664`, 2026-09-04.
 >
-> Live source gate. Still binding: it decides which catalog sources an ingestion slice may consume. Read it with `ADR-0016` and `docs/STABLE_REGISTRY.md`: a source that passes this gate still has to clear the observed-capture, Foundation-release, identity, product-eligibility and activation gates before a gardener sees anything. Production catalog is empty as of 2026-09-04.
+> Live source gate. Still binding: it decides which catalog sources an ingestion slice may consume. Read it with `ADR-0016` and `docs/STABLE_REGISTRY.md`: a source that passes this gate still has to clear the observed-capture, Foundation-release, identity, product-eligibility and activation gates before a gardener sees anything. Production catalog is empty as of 2026-09-04. Since ADR-0026 (2026-09-05) a source that passes this gate is consumed by the organism graph's reconciliation ladder and curation queue (SDD Slice 24); the release gates named here are history (ADR-0025).
 
 ---
 

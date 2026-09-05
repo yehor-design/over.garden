@@ -6,8 +6,9 @@ what is true in production right now, what is being worked on, and what is
 knowingly unfinished. Current decisions live in
 `docs/adr/ADR-0022-owner-mvp-reset.md`,
 `docs/adr/ADR-0023-workspace-resilience.md`,
-`docs/adr/ADR-0024-server-authoritative-interaction.md` and
-`docs/adr/ADR-0025-stable-registry-retired.md`; older ADRs and dated documents are
+`docs/adr/ADR-0024-server-authoritative-interaction.md`,
+`docs/adr/ADR-0025-stable-registry-retired.md` and
+`docs/adr/ADR-0026-organism-knowledge-graph.md`; older ADRs and dated documents are
 history and never override them.
 
 ## Product
@@ -48,7 +49,9 @@ touching DNS, R2, env, or deployment. Local infra starts with
    seven-day 410 tombstone, and signed-in workspace screens.
 5. Public pages are cached with tags and revalidated by the mutations that
    change them; workspace, account, auth, erasure, health, and API stay
-   `no-store`.
+   `no-store`. One exception (ADR-0026 D7): the public catalog typeahead route
+   under `/api/public/catalog/` reads no cookies and no personal data and may
+   carry a short public cache.
 6. Authorization happens on the server at the moment of the mutation. No
    client-side session gates, admission tokens, or pre-checks.
 7. Admin pages live in the account menu under the sealed owner role and must
@@ -114,6 +117,9 @@ Every Linear task uses this shape and nothing more:
   choice, and a sign-in are made of. `docs/adr/ADR-0025-stable-registry-retired.md` —
   the Stable Registry release model and the Release Center are retired; the EPPO
   observed capture and every table holding EPPO data stay.
+  `docs/adr/ADR-0026-organism-knowledge-graph.md` — the organism knowledge
+  graph: one canonical card per organism over the source layer, Catalogue of
+  Life as backbone, a curation queue that never blocks a gardener (SDD Slice 24).
   `docs/TECH_STACK_DECISIONS.md` — stack detail and ADR index.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — provider IDs, buckets, domains, env.
 - `docs/PRODUCTION_SCHEMA_STATE.md` — which migrations the production database

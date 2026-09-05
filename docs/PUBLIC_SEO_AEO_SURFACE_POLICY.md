@@ -1,6 +1,7 @@
 # Public SEO/AEO Surface Policy
 
-Status: active. Owner decision: ADR-0022, D3 (2026-09-02). Supersedes the
+Status: active. Owner decision: ADR-0022, D3 (2026-09-02), amended by ADR-0026
+D9 (2026-09-05) for organism cards. Supersedes the
 measured-threshold policy that this file described before OVE-368.
 
 ## Rule
@@ -10,7 +11,11 @@ Every live public page is indexable. A page is `noindex` only when it is:
 - not a public candidate: workspace, auth, and operator routes, a record that
   is gone (410 tombstone for 7 days, then 404), or a page whose load failed;
 - an empty listing: a directory, feed, topic, or catalog that lists nothing;
-- served under a locale prefix that its canonical path does not carry.
+- served under a locale prefix that its canonical path does not carry;
+- an organism card without first-hand content (ADR-0026 D9): a species,
+  cultivar or breed page whose content comes only from sources stays `noindex`
+  until a gardener publishes on it or the owner marks it indexable. Slice 24
+  implements this rule; until then organism pages follow the rules above.
 
 There is no word count, entity count, staleness, or quality-class threshold,
 no metadata deadline, no `public_noindex` column, and no private profile.

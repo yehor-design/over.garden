@@ -94,15 +94,28 @@ platform: real gardeners publishing, and organic discovery measured rather than
 assumed. One measurement gap blocks honest prioritisation; see known gaps
 below.
 
+**Decided 2026-09-05, evening.** The organism knowledge graph, ADR-0026,
+implemented as SDD Slice 24 (`OVE-386` through `OVE-399`): one canonical card
+per organism in OverGarden's own identity space over the retained source layer;
+Catalogue of Life as the classification backbone, everything else attached as
+sourced assertions; a Postgres-only picker with three one-tap outcomes where a
+gardener's own name is a text label and never a card; hierarchical permanent
+addresses with slug history and `Taxon` JSON-LD; an exception-only curation
+queue in the account menu that never blocks a gardener; sources added one full
+slice at a time, Catalogue of Life first, then Wikidata, then EPPO with a second
+capture for hosts, distribution and categorization. This supersedes the
+sentence in ADR-0025 that no source-built catalog is planned; the release
+model stays retired.
+
 **Decided 2026-09-05.** The Stable Registry release model and the Release
 Center are retired from the product and from every plan (ADR-0025). No
-Foundation release will be built and no source-built catalog is planned; the
+Foundation release will be built; a source-fed catalog curated in place was
+decided the same evening (ADR-0026); the
 catalog gardeners use — `catalog_items`, matching suggestions, the trigram
 typeahead, `/objects` and the species, variety and breed pages — is unchanged.
 The EPPO observed capture that `OVE-375` closed on 2026-09-04 stays, with every
-table that holds EPPO data, the capture tooling and the credential: the owner
-has plans for that data, and they will get their own decision record when
-stated. Removing the retired code and its empty tables is one pending slice,
+table that holds EPPO data, the capture tooling and the credential; the plans
+for that data are ADR-0026 D11. Removing the retired code and its empty tables is one pending slice,
 `OVE-385`; the destructive half waits for a read-only inventory and the owner's
 approval.
 
