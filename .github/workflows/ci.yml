@@ -87,6 +87,7 @@ jobs:
         run: |
           # This value exists only for this run and is never printed, uploaded,
           # or used outside localhost CI.
+          # shellcheck disable=SC2016
           node -e 'const { randomBytes } = require("node:crypto"); console.log(`BETTER_AUTH_SECRETS=2:${randomBytes(32).toString("base64url")}`); console.log("BETTER_AUTH_CURRENT_SECRET_VERSION=2")' >> "$GITHUB_ENV"
 
       - name: Install dependencies
@@ -102,7 +103,7 @@ jobs:
             -e MINIO_ROOT_PASSWORD=overgarden-ci-secret \
             minio/minio:latest server /data --console-address ":9001"
 
-          for attempt in {1..30}; do
+          for _ in {1..30}; do
             if curl -fsS http://localhost:9000/minio/health/ready >/dev/null 2>&1; then
               echo "MinIO is ready."
               exit 0
@@ -116,7 +117,7 @@ jobs:
 
       - name: Verify Meilisearch service
         run: |
-          for attempt in {1..30}; do
+          for _ in {1..30}; do
             if curl -fsS http://localhost:7700/health >/dev/null 2>&1; then
               echo "Meilisearch is ready."
               exit 0
@@ -180,6 +181,26 @@ jobs:
     name: Python matching tier
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      # The worker's SQL is executed, not mocked: `test_runtime_database.py`
+      # builds a disposable database from every versioned migration and runs
+      # the worker's own functions against it. Without this service those
+      # tests skip, and a statement Postgres refuses is found by the first
+      # production deploy instead — as `record_drain_outcome` was on
+      # 2026-09-05.
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: overgarden
+          POSTGRES_USER: overgarden
+          POSTGRES_PASSWORD: overgarden
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U overgarden -d overgarden"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: services/matching
@@ -210,4 +231,6 @@ jobs:
         run: uv run --frozen ruff check .
 
       - name: Test Python worker
+        env:
+          OVERGARDEN_TEST_DATABASE_URL: postgresql://overgarden:overgarden@localhost:5432/overgarden
         run: uv run --frozen pytest -q
