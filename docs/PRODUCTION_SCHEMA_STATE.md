@@ -53,6 +53,11 @@ Expected residue, no action:
   launch media-quality columns that ADR-0022 D2 removed; `0029` created the
   online journal drafts that ADR-0017 removed. Applying either would restore a
   retired concept.
+- Since 2026-09-05, `0024`, `0026`, `0027` and `0028` report `missing` and
+  `0025` and `0043` report `partial`: `0053` dropped the Stable Registry release
+  model they created (ADR-0025). `0053` itself reads `applied`. Applying any of
+  them again would restore the retired model; the EPPO half of `0025` and the
+  `catalog_item_names` index of `0043` are present and stay.
 
 ## The 2026-09-03 catch-up
 
@@ -172,7 +177,6 @@ half days. Both kinds are web-owned. Nothing here drains them.
 | Migration | Why it is not applied                                                                                                                                                                                                                                                                                                                    |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `0048`    | The capture claim-ordering index. It only matters where an observed capture runs, and OVE-254 refuses production capture, so production has the table and no rows to claim. Additive and reversible — one partial index, no column, constraint, or row — so it can be applied whenever the owner wants production converged with `sql/`. |
-| `0053`    | The Stable Registry retirement (ADR-0025, D4). Destructive by design — twenty empty tables, eighteen functions, three payload CHECK constraints — so it waits for the owner's written approval of this migration alone. Inventoried and proven below.                                                                                              |
 
 Applied on the loopback database on 2026-09-03 through
 `scripts/apply-reviewed-migration.ts` and verified by `pg_indexes`. Whoever
@@ -184,7 +188,7 @@ is unnecessary. `pnpm queue:contract:prove-database` executes both `0051` and
 refuse cases, including the two defects execution found in the first draft of
 `0051`.
 
-## `0053`, inventoried and proven, awaiting the owner's approval
+## The 2026-09-05 application of `0053`
 
 `0053_ove385_retire_stable_registry_release_tables.sql` drops the empty Stable
 Registry release tables (ADR-0025, D4 part 2): every `catalog_registry_*`
@@ -235,18 +239,32 @@ the committed baseline rather than regenerated from the loopback database,
 which carries unrelated local drift (`0038` and `0046` refuse to apply there);
 CI's `db:types:check` against a fresh bootstrap is the comparison that counts.
 
-Production application waits for the owner's written approval of this
-migration alone (`AGENTS.md` rule 10). The command, with the production
-environment injected and `apps/web/.env.local` moved aside:
+The owner approved the application in writing on 2026-09-05, for this
+migration alone (`AGENTS.md` rule 10). It was applied the same day through
+`scripts/apply-reviewed-migration.ts --mode apply --migration 0053` with the
+production environment injected and `apps/web/.env.local` moved aside: one
+transaction, `lock_timeout` 30 s, host class `digitalocean_managed`, database
+`defaultdb`, 46 statements, 339 ms. The read-only inventory immediately before
+matched the one above (twenty tables, zero rows).
 
-```bash
-cd apps/web
-pnpm exec tsx scripts/apply-reviewed-migration.ts --mode apply --migration 0053
+Read back immediately after, read-only, through `pnpm schema:retirement:inventory`:
+
+```
+alreadyApplied: true
+drop targets: 0 of 20 tables present, 0 functions, 0 constraints
+retained:     every table present; counts identical to the inventory before
+              (catalog_source_records 16,299, catalog_source_snapshots 34,
+              catalog_source_links 15,934, catalog_items 15,934,
+              catalog_item_names 61,908; the capture and EPPO read-model
+              tables 0, as before)
+              EPPO materialise trigger present; the read-model function no
+              longer names the catalog release
 ```
 
-Whoever applies it records the receipt here, reruns
-`pnpm schema:retirement:inventory` to show `alreadyApplied: true` with every
-retained table present, and closes gap 5 in `docs/PROJECT_STATE.md`.
+`scripts/apply-reviewed-migration.ts --mode inventory` now reads `0053` as
+`applied`, and `0024`, `0026`, `0027`, `0028` as `missing`, `0025` and `0043` as
+`partial` — the expected residue listed above. Gap 5 in
+`docs/PROJECT_STATE.md` is closed.
 
 ## The rule this produced
 

@@ -37,7 +37,7 @@ Verified on 2026-09-03 against `https://over.garden` and the live providers.
 | Admin         | Owner pages live in the account menu under the sealed owner role; `/health` is owner-only. The Release Center, editions and extension packs are gone (ADR-0025, `OVE-385`); the menu carries four owner links |
 | Workspace     | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023)                                                 |
 | Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw |
-| Schema        | Migrations `0001`–`0047` and `0049` applied, minus the two deliberately skipped. See `docs/PRODUCTION_SCHEMA_STATE.md`                                                                                      |
+| Schema        | Migrations `0001`–`0047`, `0049` and `0051`–`0053` applied, minus the two deliberately skipped and the two not needed in production; `0053` dropped the twenty Stable Registry tables on 2026-09-05. See `docs/PRODUCTION_SCHEMA_STATE.md` |
 | Interaction   | Like, bookmark, follow and comment are Server Actions on a form with a real endpoint, so they work before hydration and with JavaScript off. A like is a permanent row owned by an account or by one signed visitor cookie, with no expiry and no ceiling |
 | Sign-in       | One screen: `/auth/sign-in` and `/auth/sign-up` over one component and Server Actions. Every other page shows its own empty state and one link to it                                                        |
 | Matching      | The worker on the droplet runs the sealed six-handler release of `d5faee5` since 2026-09-05 with a fresh heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03 |
@@ -150,21 +150,20 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
    workspace send nothing, so activation and retention — how many gardeners
    journal, how often they publish, whether anyone reads back — are not measured
    anywhere today.
-5. **The Stable Registry is retired; its empty tables are still in the schema.**
-   ADR-0025 took the release model and the Release Center out of the plan, and
-   the first half of `OVE-385` took them out of the code: the pages, the Stable
-   Catalog explorer at `/catalog`, the three `stable_registry_*` job kinds and
+5. **Closed 2026-09-05: the Stable Registry is retired and gone.** ADR-0025
+   took the release model and the Release Center out of the plan; `OVE-385`
+   took them out of the code the same day — the pages, the Stable Catalog
+   explorer at `/catalog`, the three `stable_registry_*` job kinds and
    handlers, the pack-artifact adapters, the registry search scope and the
-   product-selection gate are gone, and the worker seals with six handlers.
-   The second half is written and proven: migration `0053` drops every
-   `catalog_registry_*`, `stable_registry_product_*` and
-   `stable_registry_public_catalog_*` table, `catalog_item_revisions`, their
-   functions and the three registry payload CHECKs on `job_queue`, with a
-   rollback that recreates every object; its executed proofs pass on a fresh
-   bootstrap and on the loopback database that holds the real capture, and the
-   read-only production inventory of 2026-09-05 found all twenty tables empty.
-   Only the owner's written approval to apply it to production is outstanding
-   (`docs/PRODUCTION_SCHEMA_STATE.md`). The EPPO observed capture — 129,214
+   product-selection gate — and the worker runs with six handlers. Migration
+   `0053` then dropped every `catalog_registry_*`, `stable_registry_product_*`
+   and `stable_registry_public_catalog_*` table, `catalog_item_revisions`,
+   their functions and the three registry payload CHECKs on `job_queue` from
+   production under the owner's written approval, after a read-only inventory
+   found all twenty tables empty; its rollback recreates every object, and its
+   executed proofs run on every CI build (`docs/PRODUCTION_SCHEMA_STATE.md`).
+   The three Release Center flags still installed in Vercel were deleted with
+   the owner's permission. The EPPO observed capture — 129,214
    identifiers, closed 2026-09-04 on the owner's loopback database, with a
    `pg_dump` kept outside it — is retained on purpose, together with
    `catalog_source_*`, the public EPPO archive at `/sources/eppo`, and the
