@@ -105,7 +105,9 @@ queue in the account menu that never blocks a gardener; sources added one full
 slice at a time, Catalogue of Life first, then Wikidata, then EPPO with a second
 capture for hosts, distribution and categorization. This supersedes the
 sentence in ADR-0025 that no source-built catalog is planned; the release
-model stays retired.
+model stays retired. Later the same evening the owner pre-authorized every
+production step of the slice; `docs/ORGANISM_GRAPH_EXECUTION.md` is the
+executor's runbook and records the scope.
 
 **Decided 2026-09-05.** The Stable Registry release model and the Release
 Center are retired from the product and from every plan (ADR-0025). No

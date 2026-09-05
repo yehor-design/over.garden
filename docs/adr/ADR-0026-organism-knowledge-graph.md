@@ -306,9 +306,11 @@ a breaking change for every later task and needs an amendment here.
   `noindex` case; the account menu has six owner links.
 - The owner's work after a source lands is a few dozen decisions at the top of
   the queue, then only what gardeners add; everything else is automatic.
-- Production steps that need the owner each time: applying a migration,
-  deploying a sealed worker release, running the second EPPO capture with the
-  stored key, and the destructive closeout migration.
+- Production steps of the slice: applying each migration, deploying each
+  sealed worker release, running the second EPPO capture with the stored key,
+  the data jobs, and the destructive closeout migration. The owner
+  pre-authorized all of them later the same evening; see the amendment at the
+  end of this record and `docs/ORGANISM_GRAPH_EXECUTION.md`.
 - Enabled later, not built by this slice: a new market is a locale, a register
   as a source and vernaculars in one more language, with no model change; a
   public read API grows out of the permalinks and the per-assertion rights
@@ -385,3 +387,24 @@ are untouched by that revert.
   keyword value.
 - A language model as the primary matcher: rejected for now; not deterministic,
   not auditable.
+
+## Amendment 2026-09-05, late evening: standing authorization
+
+After the fourteen tasks were created, the owner wrote, verbatim: «даю повне
+схвалення на автоматичне виконання без мого втручання і підпису, вкажи це в
+задачах» (full approval for automatic execution without the owner's
+intervention or signature, to be recorded in the tasks).
+
+This is the explicit approval `AGENTS.md` requires for every change to
+production data, schema or provider state, and the explicit sign-off hard
+rule 10 requires for a destructive schema change, given in advance for
+`OVE-386` through `OVE-399`: each migration `0054` through `0061` including
+the destructive closeout, each sealed worker install and deploy, the second
+EPPO capture with the stored key, the slice's data jobs in production, and the
+Vercel deploys that follow each merge. The technical gates stay: green CI,
+executed proofs, a read-only inventory before every migration and zero rows
+before the destructive one, a rollback file beside every migration. It does not
+cover anything outside the fourteen issues, deleting gardener data that is not
+the executor's own test data, credentials, Vercel environment writes, history
+rewrites or force-pushes. `docs/ORGANISM_GRAPH_EXECUTION.md` is the executor's
+runbook and records the scope and procedures.
