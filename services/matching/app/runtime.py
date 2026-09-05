@@ -74,6 +74,9 @@ _REQUIRED_HEARTBEAT_COLUMNS = frozenset(
         "supported_handlers",
         "seen_at",
         "updated_at",
+        # Written on every loop by `record_drain_outcome` (0044).
+        "last_drain_error_class",
+        "last_drain_error_at",
     }
 )
 _REQUIRED_HEARTBEAT_CONSTRAINTS = frozenset(
@@ -345,11 +348,17 @@ def record_drain_outcome(
     clears both fields, so the row always describes the latest attempt rather
     than the worst one ever seen.
     """
+    # `%s::text`, not `%s`: psycopg binds parameters server-side, and a bare
+    # NULL inside `case when $2 is null` has no column to take its type from,
+    # so Postgres answers "could not determine data type of parameter $2" and
+    # the worker dies on its first successful drain. That is how the first
+    # deploy of this code to production ended on 2026-09-05; the unit tests
+    # mock the connection and cannot see it, `test_runtime_database.py` can.
     conn.execute(
         """
         update matching_worker_heartbeats
-           set last_drain_error_class = %s,
-               last_drain_error_at = case when %s is null then null else now() end,
+           set last_drain_error_class = %s::text,
+               last_drain_error_at = case when %s::text is null then null else now() end,
                updated_at = now()
          where queue_name = %s
         """,

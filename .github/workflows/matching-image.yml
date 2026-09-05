@@ -38,6 +38,26 @@ jobs:
     name: Test, publish, and seal matching image
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    services:
+      # The worker's SQL is executed, not mocked: `test_runtime_database.py`
+      # builds a disposable database from every versioned migration and runs
+      # the worker's own functions against it. Without this service those
+      # tests skip, and a statement Postgres refuses is found by the first
+      # production deploy instead — as `record_drain_outcome` was on
+      # 2026-09-05.
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: overgarden
+          POSTGRES_USER: overgarden
+          POSTGRES_PASSWORD: overgarden
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U overgarden -d overgarden"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Check out exact source with main history
         uses: actions/checkout@v7
@@ -106,6 +126,8 @@ jobs:
 
       - name: Test frozen matching source
         working-directory: services/matching
+        env:
+          OVERGARDEN_TEST_DATABASE_URL: postgresql://overgarden:overgarden@localhost:5432/overgarden
         run: uv run --frozen pytest -q
 
       - name: Validate production release controls
