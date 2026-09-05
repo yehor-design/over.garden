@@ -1,5 +1,10 @@
 # Stable Registry Edition Lifecycle
 
+> History since 2026-09-05: the Stable Registry release model this page
+> belongs to was retired by `docs/adr/ADR-0025-stable-registry-retired.md`.
+> Nothing here is to be executed or extended; the EPPO archive surface it
+> mentions, if any, is retained under that record's D2.
+
 Status: implemented by OVE-258
 Migration: `apps/web/sql/0028_ove258_stable_registry_editions.sql`
 Flag: `STABLE_REGISTRY_EDITIONS` (ships off; only OVE-259 may enable it)

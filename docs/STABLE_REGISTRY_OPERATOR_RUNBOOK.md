@@ -1,5 +1,10 @@
 # Stable Registry Foundation operator runbook
 
+> History since 2026-09-05: the Stable Registry release model this page
+> belongs to was retired by `docs/adr/ADR-0025-stable-registry-retired.md`.
+> Nothing here is to be executed or extended; the EPPO archive surface it
+> mentions, if any, is retained under that record's D2.
+
 ## Purpose
 
 The Foundation Release Center creates a reviewable, immutable local release

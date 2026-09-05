@@ -1,5 +1,11 @@
 # EPPO observed capture proof — 2026-09
 
+> Retained under `docs/adr/ADR-0025-stable-registry-retired.md` (2026-09-05):
+> the EPPO observed capture, its tables, tooling and credential stay; the
+> Stable Registry release model that once consumed them is retired. Read the
+> capture and verify steps here as current; ignore any Foundation, edition,
+> extension-pack or Release Center step.
+
 Status: receipt for one completed capture. Re-read it with the verify command
 at the end of this page; the capture itself is immutable and is never re-run to
 reproduce this document.

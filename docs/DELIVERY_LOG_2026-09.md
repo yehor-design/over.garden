@@ -290,6 +290,35 @@ child attributed by reading its parent's manifest rather than by timestamp;
 620 remain. `gh` needed `read:packages` and `delete:packages`, granted by the
 owner in a browser.
 
+## 5 September — the Stable Registry leaves the plan
+
+**The Stable Registry release model and the Release Center are retired**
+(ADR-0025). The owner said they will not use the Release Center, then asked for
+the Release Center and the Stable Registry to be taken out of the plans
+completely, with one constraint: the downloaded EPPO data stays, because they
+have plans for it. The decision record draws the line exactly there. Retired:
+Foundation releases, editions, extension packs, the Release Center and its two
+sub-pages, the Stable Catalog explorer at `/catalog`, the three
+`stable_registry_*` job kinds and handlers, the pack adapters, the registry
+search scope and the product-selection gate — every one of their tables is
+empty in every database, and no gardener ever saw anything through them.
+Retained, and never on a drop list: the EPPO observed capture (5 runs, 387,809
+units with the raw payloads, 676 MB), the `catalog_source_*` layer the earlier
+imports also use (146,613 records, 341 MB), the public EPPO archive at
+`/sources/eppo` (121,777 records and 1,488,204 search terms, about 490 MB), the
+capture tooling and the credential. All of it lives on the owner's loopback
+scratch database and nowhere else, so a `pg_dump` of those tables now sits
+outside it at `~/Desktop/Startups/OverGarden-data/eppo/` (115 MB, custom
+format, sha256 `8547a4e0…a05e4c79`) with its restore command. The gardener catalog — `catalog_items`, matching suggestions, the
+trigram typeahead, `/objects` and the species, variety and breed pages — never
+depended on a Foundation release and does not change. The code and schema
+retirement is one Linear slice, `OVE-385`: non-destructive removal and a six-handler
+worker release first, one drop migration for the empty tables last, applied to
+production only after a read-only inventory and with the owner's approval.
+`PROJECT_STATE`, `AGENTS.md`, the ADR index, the product canon and its ledger
+say so; the seven registry documents carry a history header, and the Linear
+project "SDD Slice 20" is cancelled.
+
 ## Corrections made in this window
 
 Recorded because a wrong explanation that was quietly replaced is worse than one

@@ -1,5 +1,11 @@
 # EPPO credential bootstrap
 
+> Retained under `docs/adr/ADR-0025-stable-registry-retired.md` (2026-09-05):
+> the EPPO observed capture, its tables, tooling and credential stay; the
+> Stable Registry release model that once consumed them is retired. Read the
+> capture and verify steps here as current; ignore any Foundation, edition,
+> extension-pack or Release Center step.
+
 ## Purpose
 
 `EPPO_DATA_PORTAL_API_KEY` is the single server-only credential for the EPPO

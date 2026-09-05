@@ -1,5 +1,10 @@
 # Stable Registry Production Rollout
 
+> History since 2026-09-05: the Stable Registry release model this page
+> belongs to was retired by `docs/adr/ADR-0025-stable-registry-retired.md`.
+> Nothing here is to be executed or extended; the EPPO archive surface it
+> mentions, if any, is retained under that record's D2.
+
 Status: superseded for the owner flow (ADR-0022, D5, 2026-09-03). The
 plan-digest ceremony below is history; the owner builds, previews, confirms,
 and activates from `/garden/catalog/registry` in production, and the
