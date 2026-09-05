@@ -43,6 +43,7 @@ another issue's number.
 | `0050` | maintainer   | Matching worker        | heartbeat handler-set catch-up: six frozen kinds become the manifest's nine |
 | `0051` | maintainer   | Matching worker        | the heartbeat handler set is checked for shape; identity moves to code      |
 | `0052` | maintainer   | Job queue contract     | the four declared payload contracts that no CHECK constraint enforced       |
+| `0053` | OVE-385      | Stable Registry retirement | drops the empty release tables, their functions and the three retired payload contracts (ADR-0025, D4) |
 
 Compact range receipt:
 
@@ -61,6 +62,7 @@ Compact range receipt:
 - `0050: matching worker heartbeat handler set`
 - `0051: matching worker heartbeat handler shape`
 - `0052: job queue declared payload checks`
+- `0053: stable registry release tables retired`
 
 Rows `0036`-`0038` are reconciled after the fact under rule 4: those migrations
 landed before the ledger recorded them, and renaming a landed file to restore
@@ -74,6 +76,17 @@ rollback restores the columns and states plainly that it cannot restore rows.
 
 Rows `0050`, `0051` and `0052` have no issue owner, like `0045`. None is a
 feature.
+
+Row `0053` is the second migration in the ledger that destroys schema, and
+the first that drops tables: every `catalog_registry_*` table,
+`stable_registry_product_*`, `stable_registry_public_catalog_*`,
+`catalog_item_revisions`, their functions and triggers, and the three payload
+CHECK constraints of the retired kinds (ADR-0025, D4). It is applied to
+production only after a read-only inventory shows every table it drops empty
+and the owner has approved it in writing. Its rollback recreates every object
+from the verbatim text of the migrations that first created them, and states
+that it cannot restore rows. The retained EPPO tables of ADR-0025 D2 are absent
+from it by construction; `pnpm schema:retirement:prove-database` asserts that.
 
 `0050` was a catch-up: `matching_worker_heartbeats_supported_handlers_check`
 still pinned `supported_handlers` to the six kinds the queue manifest had in

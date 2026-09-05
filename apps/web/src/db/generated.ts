@@ -152,19 +152,6 @@ export interface CatalogItemNames {
   normalized_name: string;
 }
 
-export interface CatalogItemRevisions {
-  canonical_name: string;
-  catalog_item_id: string;
-  catalog_kind: string;
-  created_at: Generated<Timestamp>;
-  id: Generated<string>;
-  identity_relation: Generated<string>;
-  normalized_name: string;
-  revision_digest: string;
-  revision_number: number;
-  source_evidence_digest: string;
-}
-
 export interface CatalogItems {
   canonical_name: string;
   catalog_kind: Generated<string>;
@@ -217,199 +204,6 @@ export interface CatalogMatchSuggestions {
   target_matching_fingerprint: string | null;
   target_script: string | null;
   target_updated_at_snapshot: Timestamp | null;
-  updated_at: Generated<Timestamp>;
-}
-
-export interface CatalogRegistryActivations {
-  activated_by_user_id: string;
-  activation_digest: string;
-  created_at: Generated<Timestamp>;
-  id: Generated<string>;
-  prior_release_id: string | null;
-  release_id: string;
-}
-
-export interface CatalogRegistryActivationSequence {
-  actor_user_id: string;
-  affected_object_count: Generated<number>;
-  created_at: Generated<Timestamp>;
-  id: Generated<string>;
-  preview_digest: string;
-  prior_release_id: string | null;
-  receipt_digest: string;
-  release_family: string;
-  release_id: string;
-  sequence_number: number;
-  state: Generated<string>;
-  transition: string;
-}
-
-export interface CatalogRegistryActivePointers {
-  active_release_id: string | null;
-  release_family: string;
-  updated_at: Generated<Timestamp>;
-  version: Generated<number>;
-}
-
-export interface CatalogRegistryDecisions {
-  action: string;
-  created_at: Generated<Timestamp>;
-  decided_by_user_id: string;
-  decision_digest: string;
-  exception_group_id: string;
-  expected_version: number;
-  id: Generated<string>;
-  release_id: string;
-}
-
-export interface CatalogRegistryEditionDiffs {
-  affected_object_count: Generated<number>;
-  affected_object_digest: string;
-  created_at: Generated<Timestamp>;
-  diff_class: string;
-  expected_version: Generated<number>;
-  group_key: string;
-  id: Generated<string>;
-  member_count: number;
-  prior_release_id: string | null;
-  release_id: string;
-  safe_summary: Generated<Json>;
-  state: Generated<string>;
-  updated_at: Generated<Timestamp>;
-}
-
-export interface CatalogRegistryExceptionGroups {
-  created_at: Generated<Timestamp>;
-  expected_version: Generated<number>;
-  group_key: string;
-  id: Generated<string>;
-  member_count: number;
-  reason_class: string;
-  release_id: string;
-  safe_summary: Generated<Json>;
-  state: Generated<string>;
-  updated_at: Generated<Timestamp>;
-}
-
-export interface CatalogRegistryExtensionPackNames {
-  created_at: Generated<Timestamp>;
-  display_name: string;
-  locale: string;
-  name_class: string;
-  normalized_name: string;
-  pack_row_id: string;
-}
-
-export interface CatalogRegistryExtensionPackRows {
-  created_at: Generated<Timestamp>;
-  id: Generated<string>;
-  locale: string;
-  normalized_denomination: string;
-  official_denomination: string;
-  pack_id: string;
-  parent_catalog_item_id: string | null;
-  parent_evidence_class: string;
-  parent_scientific_name: string | null;
-  public_slug: string | null;
-  row_class: string;
-  source_record_key: string;
-  updated_at: Generated<Timestamp>;
-}
-
-export interface CatalogRegistryExtensionPacks {
-  activated_at: Timestamp | null;
-  activated_by_user_id: string | null;
-  adapter_version: string;
-  approved_at: Timestamp | null;
-  approved_by_user_id: string | null;
-  artifact_byte_digest: string;
-  artifact_digest: string;
-  artifact_schema_version: string;
-  created_at: Generated<Timestamp>;
-  created_by_user_id: string;
-  declared_source_version: string;
-  id: Generated<string>;
-  pack_kind: string;
-  preview_digest: string | null;
-  release_id: string | null;
-  retired_at: Timestamp | null;
-  safe_summary: Generated<Json>;
-  source_rights: string;
-  source_slug: string;
-  state: Generated<string>;
-  updated_at: Generated<Timestamp>;
-  version: Generated<number>;
-}
-
-export interface CatalogRegistryExtensionPackUserNames {
-  created_at: Generated<Timestamp>;
-  expected_version: Generated<number>;
-  id: Generated<string>;
-  locale: string;
-  normalized_name: string;
-  pack_id: string;
-  pack_row_id: string | null;
-  state: Generated<string>;
-  updated_at: Generated<Timestamp>;
-}
-
-export interface CatalogRegistryItemRelations {
-  created_at: Generated<Timestamp>;
-  decided_by_user_id: string;
-  from_catalog_item_id: string;
-  id: Generated<string>;
-  relation_digest: string;
-  relation_kind: string;
-  release_id: string;
-  to_catalog_item_id: string | null;
-}
-
-export interface CatalogRegistryReleaseMembers {
-  catalog_item_id: string;
-  catalog_item_revision_id: string;
-  created_at: Generated<Timestamp>;
-  eligibility: string;
-  id: Generated<string>;
-  membership_digest: string;
-  release_id: string;
-}
-
-export interface CatalogRegistryReleases {
-  activated_at: Timestamp | null;
-  activated_by_user_id: string | null;
-  approved_at: Timestamp | null;
-  approved_by_user_id: string | null;
-  build_digest: string;
-  build_started_at: Timestamp | null;
-  capture_id: string | null;
-  created_at: Generated<Timestamp>;
-  created_by_user_id: string;
-  id: Generated<string>;
-  policy_version: string;
-  predecessor_release_id: string | null;
-  preview_digest: string | null;
-  release_kind: string;
-  retired_at: Timestamp | null;
-  review_ready_at: Timestamp | null;
-  safe_summary: Generated<Json>;
-  source_snapshot_id: string | null;
-  state: Generated<string>;
-  updated_at: Generated<Timestamp>;
-  version: Generated<number>;
-}
-
-export interface CatalogRegistrySearchOutbox {
-  applied_at: Timestamp | null;
-  attempts: Generated<number>;
-  available_at: Generated<Timestamp>;
-  created_at: Generated<Timestamp>;
-  desired_state: string;
-  intent_digest: string;
-  last_error_class: string | null;
-  lease_expires_at: Timestamp | null;
-  lease_token: string | null;
-  release_id: string;
-  state: Generated<string>;
   updated_at: Generated<Timestamp>;
 }
 
@@ -1076,66 +870,6 @@ export interface Spaces {
   updated_at: Generated<Timestamp>;
 }
 
-export interface StableRegistryProductCatalogNames {
-  catalog_item_id: string;
-  created_at: Generated<Timestamp>;
-  display_name: string;
-  is_primary: Generated<boolean>;
-  locale: string;
-  name_class: string;
-  normalized_name: string;
-  object_kind_scope: string;
-  registry_release_id: string;
-}
-
-export interface StableRegistryProductCatalogRecords {
-  activated_at: Timestamp;
-  canonical_name: string;
-  catalog_item_id: string;
-  catalog_item_revision_id: string;
-  catalog_kind: string;
-  created_at: Generated<Timestamp>;
-  item_locale: string;
-  object_kind_scope: string;
-  public_slug: string;
-  registry_release_id: string;
-}
-
-export interface StableRegistryProductProjectionOutbox {
-  attempts: Generated<number>;
-  catalog_item_id: string;
-  catalog_item_revision_id: string;
-  created_at: Generated<Timestamp>;
-  desired_state: Generated<string>;
-  done_at: Timestamp | null;
-  last_error_class: string | null;
-  registry_release_id: string;
-  state: Generated<string>;
-  updated_at: Generated<Timestamp>;
-}
-
-export interface StableRegistryPublicCatalogRecords {
-  activated_at: Timestamp;
-  canonical_name: string;
-  catalog_item_id: string;
-  created_at: Generated<Timestamp>;
-  object_kind: string;
-  parent_display_name: string | null;
-  registry_release_id: string;
-  safe_aliases: Generated<string[]>;
-  scientific_name: string | null;
-  search_normalized: string;
-  stable_taxon: string;
-  taxonomic_rank: string | null;
-}
-
-export interface StableRegistryPublicCatalogSearchTerms {
-  normalized_term: string;
-  object_kind: string;
-  registry_release_id: string;
-  stable_taxon: string;
-}
-
 export interface StableRegistryPublicEppoRecords {
   attribution_text: string | null;
   capture_id: string;
@@ -1249,23 +983,8 @@ export interface DB {
   catalog_alias_projections: CatalogAliasProjections;
   catalog_fuzzy_duplicate_suggestions: CatalogFuzzyDuplicateSuggestions;
   catalog_item_names: CatalogItemNames;
-  catalog_item_revisions: CatalogItemRevisions;
   catalog_items: CatalogItems;
   catalog_match_suggestions: CatalogMatchSuggestions;
-  catalog_registry_activation_sequence: CatalogRegistryActivationSequence;
-  catalog_registry_activations: CatalogRegistryActivations;
-  catalog_registry_active_pointers: CatalogRegistryActivePointers;
-  catalog_registry_decisions: CatalogRegistryDecisions;
-  catalog_registry_edition_diffs: CatalogRegistryEditionDiffs;
-  catalog_registry_exception_groups: CatalogRegistryExceptionGroups;
-  catalog_registry_extension_pack_names: CatalogRegistryExtensionPackNames;
-  catalog_registry_extension_pack_rows: CatalogRegistryExtensionPackRows;
-  catalog_registry_extension_pack_user_names: CatalogRegistryExtensionPackUserNames;
-  catalog_registry_extension_packs: CatalogRegistryExtensionPacks;
-  catalog_registry_item_relations: CatalogRegistryItemRelations;
-  catalog_registry_release_members: CatalogRegistryReleaseMembers;
-  catalog_registry_releases: CatalogRegistryReleases;
-  catalog_registry_search_outbox: CatalogRegistrySearchOutbox;
   catalog_source_capture_runs: CatalogSourceCaptureRuns;
   catalog_source_capture_units: CatalogSourceCaptureUnits;
   catalog_source_links: CatalogSourceLinks;
@@ -1315,11 +1034,6 @@ export interface DB {
   public_projection_intents: PublicProjectionIntents;
   session: Session;
   spaces: Spaces;
-  stable_registry_product_catalog_names: StableRegistryProductCatalogNames;
-  stable_registry_product_catalog_records: StableRegistryProductCatalogRecords;
-  stable_registry_product_projection_outbox: StableRegistryProductProjectionOutbox;
-  stable_registry_public_catalog_records: StableRegistryPublicCatalogRecords;
-  stable_registry_public_catalog_search_terms: StableRegistryPublicCatalogSearchTerms;
   stable_registry_public_eppo_records: StableRegistryPublicEppoRecords;
   stable_registry_public_eppo_search_terms: StableRegistryPublicEppoSearchTerms;
   user: User;

@@ -96,15 +96,19 @@ export function resolveMigrationFile(sqlDirectory: string, number: string) {
 }
 
 /**
- * The schema objects a migration creates, read from its own statements:
- * `create table`, `alter table … add column`, `create index`. Checking each
- * against `information_schema`/`pg_indexes` tells which reviewed migrations a
- * database has not received, without a migration ledger (there is none).
+ * The schema objects a migration creates or drops, read from its own
+ * statements: `create table`, `alter table … add column`, `create index`, and
+ * `drop table`. Checking each against `information_schema`/`pg_indexes` tells
+ * which reviewed migrations a database has not received, without a migration
+ * ledger (there is none). A dropped table is expected absent; while it is
+ * still present the inventory also reports how many rows it holds, which is
+ * the number a destructive migration is gated on.
  */
 export type MigrationSentinel =
   | { kind: "table"; table: string }
   | { kind: "column"; table: string; column: string }
-  | { kind: "index"; index: string };
+  | { kind: "index"; index: string }
+  | { kind: "dropped_table"; table: string };
 
 export function extractMigrationSentinels(sql: string): MigrationSentinel[] {
   const body = sql
@@ -135,6 +139,11 @@ export function extractMigrationSentinels(sql: string): MigrationSentinel[] {
     /create\s+(?:unique\s+)?index\s+(?:concurrently\s+)?(?:if\s+not\s+exists\s+)?([a-z_][a-z0-9_]*)/gi,
   )) {
     sentinels.push({ kind: "index", index: match[1]!.toLowerCase() });
+  }
+  for (const match of body.matchAll(
+    /drop\s+table\s+(?:if\s+exists\s+)?([a-z_][a-z0-9_]*)/gi,
+  )) {
+    sentinels.push({ kind: "dropped_table", table: match[1]!.toLowerCase() });
   }
   return sentinels;
 }
@@ -180,10 +189,16 @@ async function main() {
         const sentinels = extractMigrationSentinels(
           readFileSync(path.join(sqlDirectory, name), "utf8"),
         );
-        const checks: Array<{ sentinel: string; present: boolean }> = [];
+        const checks: Array<{
+          sentinel: string;
+          present: boolean;
+          expectedPresent: boolean;
+          rowCount?: number;
+        }> = [];
         for (const sentinel of sentinels) {
           let present = false;
-          if (sentinel.kind === "table") {
+          let rowCount: number | undefined;
+          if (sentinel.kind === "table" || sentinel.kind === "dropped_table") {
             present =
               (
                 await client.query(
@@ -191,6 +206,17 @@ async function main() {
                   [sentinel.table],
                 )
               ).rowCount === 1;
+            if (sentinel.kind === "dropped_table" && present) {
+              // The table name comes from a reviewed migration file in `sql/`,
+              // never from input.
+              rowCount = Number(
+                (
+                  await client.query<{ count: string }>(
+                    `select count(*)::text as count from "${sentinel.table}"`,
+                  )
+                ).rows[0]?.count ?? 0,
+              );
+            }
           } else if (sentinel.kind === "column") {
             present =
               (
@@ -212,24 +238,44 @@ async function main() {
             sentinel:
               sentinel.kind === "table"
                 ? `table ${sentinel.table}`
-                : sentinel.kind === "column"
-                  ? `column ${sentinel.table}.${sentinel.column}`
-                  : `index ${sentinel.index}`,
+                : sentinel.kind === "dropped_table"
+                  ? `dropped table ${sentinel.table}`
+                  : sentinel.kind === "column"
+                    ? `column ${sentinel.table}.${sentinel.column}`
+                    : `index ${sentinel.index}`,
             present,
+            expectedPresent: sentinel.kind !== "dropped_table",
+            ...(rowCount === undefined ? {} : { rowCount }),
           });
         }
-        const absent = checks.filter((check) => !check.present);
+        // A created object counts as received when present; a dropped one
+        // when absent. `absent` keeps its documented meaning for created
+        // objects; `stillPresent` names the drop targets that survive, with
+        // their row counts.
+        const unmatched = checks.filter(
+          (check) => check.present !== check.expectedPresent,
+        );
+        const absent = unmatched.filter((check) => check.expectedPresent);
+        const stillPresent = unmatched.filter((check) => !check.expectedPresent);
         migrations.push({
           migration: name,
           status:
             checks.length === 0
               ? "no_sentinel"
-              : absent.length === 0
+              : unmatched.length === 0
                 ? "applied"
-                : absent.length === checks.length
+                : unmatched.length === checks.length
                   ? "missing"
                   : "partial",
           absent: absent.map((check) => check.sentinel),
+          ...(stillPresent.length === 0
+            ? {}
+            : {
+                stillPresent: stillPresent.map((check) => ({
+                  sentinel: check.sentinel,
+                  rowCount: check.rowCount ?? null,
+                })),
+              }),
         });
       }
       process.stdout.write(

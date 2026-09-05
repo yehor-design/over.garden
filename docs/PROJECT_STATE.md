@@ -156,10 +156,15 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
    Catalog explorer at `/catalog`, the three `stable_registry_*` job kinds and
    handlers, the pack-artifact adapters, the registry search scope and the
    product-selection gate are gone, and the worker seals with six handlers.
-   The second half — one gated migration dropping every `catalog_registry_*`,
-   `stable_registry_product_*` and `stable_registry_public_catalog_*` table and
-   the three registry payload CHECKs on `job_queue` — waits for a read-only
-   production inventory and the owner's written approval. The EPPO observed capture — 129,214
+   The second half is written and proven: migration `0053` drops every
+   `catalog_registry_*`, `stable_registry_product_*` and
+   `stable_registry_public_catalog_*` table, `catalog_item_revisions`, their
+   functions and the three registry payload CHECKs on `job_queue`, with a
+   rollback that recreates every object; its executed proofs pass on a fresh
+   bootstrap and on the loopback database that holds the real capture, and the
+   read-only production inventory of 2026-09-05 found all twenty tables empty.
+   Only the owner's written approval to apply it to production is outstanding
+   (`docs/PRODUCTION_SCHEMA_STATE.md`). The EPPO observed capture — 129,214
    identifiers, closed 2026-09-04 on the owner's loopback database, with a
    `pg_dump` kept outside it — is retained on purpose, together with
    `catalog_source_*`, the public EPPO archive at `/sources/eppo`, and the
