@@ -341,9 +341,13 @@ way were corrected rather than carried: the admin-menu verifier still expected
 a `/garden/catalog/curation` link that had been gone for weeks, and the
 knowledge pages counted `/catalog/<slug>` as a public entity of an explorer
 that no longer exists (they now count the journal directory filtered by that
-identity). The empty release tables stay until the gated second half: a
-read-only production inventory, the owner's written approval, one drop
-migration with its rollback.
+identity). Run 33968010476 sealed the six-handler image from the merge, and
+the same afternoon it went onto the droplet through `install`, `migrate`,
+`deploy` — after the four releases that were neither the current nor the
+previous pointer were removed to satisfy the capacity gate (5.3 GB to 13 GB
+free) — with both production proofs answering ready with six handlers. The
+empty release tables stay until the gated second half: a read-only production
+inventory, the owner's written approval, one drop migration with its rollback.
 
 ## Corrections made in this window
 
