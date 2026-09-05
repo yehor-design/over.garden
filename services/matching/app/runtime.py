@@ -239,6 +239,18 @@ def readiness_manifest(
 def preflight_manifest(
     release: RuntimeRelease | None = None,
 ) -> tuple[dict[str, object], bool]:
+    """Can this candidate run against the database and search index as they are?
+
+    The heartbeat row belongs to the worker that is running now, so
+    ``queueRecovery.handlerCompatible`` here compares the candidate's handler
+    set with the incumbent's. A difference there is the point of a release,
+    not a defect in the candidate, and requiring it made every release that
+    changes the set unpassable: the first deploy after the queue manifest grew
+    to nine kinds was refused on 2026-09-05 with every dependency available.
+    The field is still reported, so an operator can see that the set is about
+    to change. Readiness, run after activation, keeps requiring it, because by
+    then the row is the candidate's own.
+    """
     require_public_projection_runtime_configuration()
     resolved_release = release or RuntimeRelease.from_environment()
     postgres_state = _read_postgres_state(resolved_release)
@@ -254,7 +266,6 @@ def preflight_manifest(
         }
     recovery_ok = (
         queue_recovery.get("claimCompatible") == "available"
-        and queue_recovery.get("handlerCompatible") == "available"
         and queue_recovery.get("unsupportedRetryingClass") == "none"
     )
     ready = (
