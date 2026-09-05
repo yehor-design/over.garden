@@ -40,21 +40,6 @@ const SURFACES = [
     heading: "Простір саду",
   },
   {
-    surface: "stable-registry",
-    loading: () => import("./catalog/registry/(center)/loading"),
-    heading: "Stable Registry — Foundation",
-  },
-  {
-    surface: "stable-registry-extensions",
-    loading: () => import("./catalog/registry/extensions/loading"),
-    heading: "Stable Registry — пакети розширень",
-  },
-  {
-    surface: "stable-registry-editions",
-    loading: () => import("./catalog/registry/editions/loading"),
-    heading: "Stable Registry — видання",
-  },
-  {
     surface: "object",
     loading: () => import("./objects/[objectId]/loading"),
     heading: "Живий об",
@@ -131,16 +116,12 @@ describe("/garden route states", () => {
     },
   );
 
-  it("scopes each registry skeleton to its own page", async () => {
-    // A `loading.tsx` covers its segment and every child of it, so the Release
-    // Center's fallback was the first thing a reader saw on the extensions and
-    // editions pages — the wrong heading, which is the defect ADR-0023 exists
-    // to remove. The `(center)` group scopes it to the page it belongs to.
-    const registry = await readdir(
-      new URL("./catalog/registry/", import.meta.url),
-    );
-    expect(registry).not.toContain("loading.tsx");
-    expect(registry).toContain("(center)");
+  it("leaves no catalog segment behind under the workspace", async () => {
+    // The Release Center and its sub-pages were the `/garden/catalog/**`
+    // tree; ADR-0025 retired them. A stray segment here would render the
+    // garden home's skeleton for a page that no longer exists.
+    const garden = await readdir(new URL("./", import.meta.url));
+    expect(garden).not.toContain("catalog");
   });
 });
 

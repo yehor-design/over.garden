@@ -513,6 +513,15 @@ export function authoredContentEntityIds(
   ];
 }
 
+/**
+ * The public surface a catalog evidence slug resolves to: the journal
+ * directory filtered by that identity. The Stable Catalog explorer that once
+ * answered `/catalog/<slug>` is retired (ADR-0025).
+ */
+export function catalogEvidencePublicPath(slug: string) {
+  return `/journals?catalog=${encodeURIComponent(slug)}`;
+}
+
 export function blogPostVisibleText(post: BlogPostContent) {
   return [
     post.title,

@@ -115,7 +115,6 @@ describe("production site shell", () => {
     expect(html).not.toContain('data-site-shell-operator-menu="true"');
     expect(html).not.toContain('href="/account/communities"');
     expect(html).not.toContain('href="/account/moderation/comments"');
-    expect(html).not.toContain('href="/garden/catalog/registry"');
     expect(html).not.toContain('href="/garden/privacy/erasure-requests"');
   });
 
@@ -134,7 +133,7 @@ describe("production site shell", () => {
     expect(operatorMenuHtml).toContain('data-site-shell-operator-menu="true"');
     expect(operatorMenuHtml).toContain('href="/account/communities"');
     expect(operatorMenuHtml).toContain('href="/account/moderation/comments"');
-    expect(operatorMenuHtml).toContain('href="/garden/catalog/registry"');
+    expect(operatorMenuHtml).not.toContain("/garden/catalog/registry");
     expect(operatorMenuHtml).toContain(
       'href="/garden/privacy/erasure-requests"',
     );

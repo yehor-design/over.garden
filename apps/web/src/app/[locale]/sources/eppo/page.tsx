@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import {
-  renderStableRegistryExplorer,
-  stableRegistryExplorerMetadata,
-} from "@/app/stable-registry-public-pages";
+  eppoArchiveExplorerMetadata,
+  renderEppoArchiveExplorer,
+} from "@/app/eppo-archive-pages";
 import {
   isPublicLocale,
   PREFIXED_PUBLIC_LOCALES,
@@ -24,7 +24,7 @@ export async function generateMetadata({
 }: EppoPageProps): Promise<Metadata> {
   const { locale } = await params;
   if (!isPublicLocale(locale)) return { title: "OverGarden" };
-  return stableRegistryExplorerMetadata(locale, "eppo");
+  return eppoArchiveExplorerMetadata(locale);
 }
 
 export default async function LocalizedEppoPage({
@@ -33,9 +33,5 @@ export default async function LocalizedEppoPage({
 }: EppoPageProps) {
   const { locale } = await params;
   if (!isPublicLocale(locale)) notFound();
-  return renderStableRegistryExplorer(
-    locale,
-    "eppo",
-    (await searchParams) ?? {},
-  );
+  return renderEppoArchiveExplorer(locale, (await searchParams) ?? {});
 }

@@ -22,21 +22,8 @@ import {
   isOve330ServeClass,
   type Ove330ServeClass,
 } from "@/lib/media/presentation-contract";
-import { isStableRegistryProductSelectionEnabled } from "@/lib/stable-registry/feature-gate";
 import type { RequestScope } from "@/server/request-scope";
 import { meiliSearchClient } from "@/server/search/client";
-import {
-  filterActiveStableRegistryProductIds,
-  buildActiveStableRegistryProductTypeaheadReindexRowsQuery,
-  findActiveStableRegistryProductCatalogItem,
-  findActiveStableRegistryProductCatalogItemByPublicSlug,
-  searchActiveStableRegistryProductSuggestions,
-  searchActiveStableRegistryProductTrigramSuggestions,
-  STABLE_REGISTRY_PRODUCT_MAX_SUGGESTIONS,
-  STABLE_REGISTRY_PRODUCT_QUERY_DEADLINE_MS,
-  STABLE_REGISTRY_PRODUCT_TRIGRAM_THRESHOLD,
-  type ActiveStableRegistryProductCatalogItem,
-} from "@/server/stable-registry/product-projection-repository";
 import { booleanServerEnv } from "@/lib/env";
 import {
   catalogTypeaheadObjectKindScopeMatches,
@@ -55,14 +42,12 @@ const MAX_CATALOG_TYPEAHEAD_ROWS = MAX_CATALOG_SUGGESTIONS * 3;
 const MIN_CATALOG_QUERY_LENGTH = 2;
 
 /**
- * The trigram similarity floor for the legacy catalog fallback.
- *
- * It matches the release-scoped picker's floor deliberately: a gardener should
- * not get a different tolerance for the same typo depending on which source
- * happens to hold the identity.
+ * The trigram similarity floor, pinned in the predicate rather than inherited
+ * from a session setting, so a misspelled search cannot be quietly widened.
  */
-const CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD =
-  STABLE_REGISTRY_PRODUCT_TRIGRAM_THRESHOLD;
+const CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD = 0.3;
+/** Every catalog read settles inside this bound or reports a timeout class. */
+const CATALOG_TYPEAHEAD_QUERY_DEADLINE_MS = 500;
 const DEFAULT_USER_ADDED_LOCALE = "und";
 const MATCHING_QUEUE = "matching";
 const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
@@ -99,12 +84,7 @@ export interface CatalogSuggestion extends CatalogTrustMetadata {
   status: SelectableCatalogStatus;
   source: string;
   serveClass: Ove330ServeClass;
-  objectKind?: PlantObjectKind;
   objectKindScope?: "plant" | "animal" | "either";
-  publicSlug?: string;
-  registryReleaseId?: string;
-  revisionId?: string;
-  nameClass?: "canonical" | "scientific" | "localized" | "accepted_alias";
 }
 
 export interface SelectableCatalogItem {
@@ -208,35 +188,23 @@ function catalogTrigramTypeaheadEnabled(): boolean {
 }
 
 /**
- * Trigram counterpart of `searchCatalogSuggestionsWithCanonicalFallback`.
- *
- * It follows the same selection mode, so the approximate source always reads
- * the same table the exact source read and can never surface an identity from
- * a projection the caller is not entitled to.
+ * Trigram counterpart of `searchCatalogSuggestionsWithCanonicalFallback`: the
+ * approximate source reads the same table the exact source read, with every
+ * guard the exact search already passes.
  */
 async function searchCatalogSuggestionsWithTrigram(
   query: string,
   limit: number,
   options: CatalogTypeaheadSearchOptions,
 ): Promise<CatalogSuggestion[]> {
-  if (options.selectionMode === "stable_registry") {
-    if (!options.objectKind) return [];
-    return searchActiveStableRegistryProductTrigramSuggestions(
-      query,
-      options.objectKind,
-      Math.min(limit, STABLE_REGISTRY_PRODUCT_MAX_SUGGESTIONS),
-    );
-  }
   return searchCatalogSuggestions(query, limit, db, options.objectKind, "trigram");
 }
 
-export type CatalogSelectionMode = "compatibility" | "stable_registry";
 export type CatalogTypeaheadState = "ready" | "empty" | "degraded";
 
 export interface CatalogTypeaheadSearchOptions {
   limit?: number;
   objectKind?: PlantObjectKind;
-  selectionMode?: CatalogSelectionMode;
 }
 
 export interface CatalogTypeaheadSearchResult {
@@ -246,7 +214,6 @@ export interface CatalogTypeaheadSearchResult {
 
 export interface FindSelectableCatalogItemOptions {
   expectedObjectKind?: PlantObjectKind;
-  selectionMode?: CatalogSelectionMode;
 }
 
 export async function searchCatalogSuggestionsForTypeahead(
@@ -262,8 +229,9 @@ export async function searchCatalogSuggestionsForTypeahead(
 /**
  * Bounded typeahead owner used by the authenticated API. The canonical query
  * and Meilisearch query begin together so a derived-index timeout cannot add a
- * second wait after Postgres. A selection is never promoted from a stale
- * Meilisearch document without the canonical active-product predicate.
+ * second wait after Postgres. A stale Meilisearch document can at most be
+ * offered as a suggestion: the save path re-reads every selection through the
+ * canonical selectable predicate before an identity is attached.
  */
 export async function searchCatalogSuggestionsForTypeaheadResult(
   query: string,
@@ -278,12 +246,7 @@ export async function searchCatalogSuggestionsForTypeaheadResult(
     return { suggestions: [], state: "empty" };
   }
 
-  const selectionMode = resolveCatalogSelectionMode(options.selectionMode);
-  const effectiveOptions = {
-    ...options,
-    selectionMode,
-    limit: normalizedLimit,
-  };
+  const effectiveOptions = { ...options, limit: normalizedLimit };
   const postgresSearch = deps.searchWithPostgres
     ? deps.searchWithPostgres(normalizedQuery, normalizedLimit)
     : searchCatalogSuggestionsWithCanonicalFallback(
@@ -360,14 +323,6 @@ async function searchCatalogSuggestionsWithCanonicalFallback(
   limit: number,
   options: CatalogTypeaheadSearchOptions,
 ): Promise<CatalogSuggestion[]> {
-  if (options.selectionMode === "stable_registry") {
-    if (!options.objectKind) return [];
-    return searchActiveStableRegistryProductSuggestions(
-      query,
-      options.objectKind,
-      Math.min(limit, STABLE_REGISTRY_PRODUCT_MAX_SUGGESTIONS),
-    );
-  }
   return searchCatalogSuggestions(query, limit, db, options.objectKind);
 }
 
@@ -376,28 +331,12 @@ async function searchCatalogSuggestionsWithSafeMeili(
   limit: number,
   options: CatalogTypeaheadSearchOptions,
 ): Promise<CatalogSuggestion[]> {
-  const candidates = await searchCatalogSuggestionsWithMeili(
+  return searchCatalogSuggestionsWithMeili(
     query,
     limit,
     undefined,
     options.objectKind,
   );
-  if (options.selectionMode !== "stable_registry") return candidates;
-  if (!options.objectKind) return [];
-
-  const activeIds = await filterActiveStableRegistryProductIds(
-    db,
-    candidates
-      .filter((suggestion) => suggestion.source === "stable_registry")
-      .map((suggestion) => suggestion.id),
-    options.objectKind,
-  );
-  return candidates
-    .filter(
-      (suggestion) =>
-        suggestion.source === "stable_registry" && activeIds.has(suggestion.id),
-    )
-    .map((suggestion) => ({ ...suggestion, objectKind: options.objectKind }));
 }
 
 export async function searchCatalogSuggestionsWithMeili(
@@ -497,14 +436,9 @@ export async function searchCatalogSuggestions(
 export async function buildCatalogTypeaheadDocuments(
   executor: QueryExecutor = db,
 ) {
-  const [compatibilityRows, stableRegistryRows] = await Promise.all([
-    buildCatalogTypeaheadReindexRowsQuery(executor).execute(),
-    buildActiveStableRegistryProductTypeaheadReindexRowsQuery(
-      executor,
-    ).execute(),
-  ]);
+  const rows = await buildCatalogTypeaheadReindexRowsQuery(executor).execute();
 
-  return [...compatibilityRows, ...stableRegistryRows]
+  return rows
     .map((row) => toCatalogTypeaheadDocument(row))
     .filter((document) => document !== null);
 }
@@ -516,17 +450,6 @@ export async function findSelectableCatalogItem(
 ): Promise<SelectableCatalogItem | null> {
   const normalizedId = normalizeCatalogItemId(itemId);
   if (!normalizedId) return null;
-
-  if (
-    resolveCatalogSelectionMode(options.selectionMode) === "stable_registry"
-  ) {
-    const active = await findActiveStableRegistryProductCatalogItem(
-      executor,
-      normalizedId,
-      options.expectedObjectKind,
-    );
-    return active ? toSelectableCatalogItem(active) : null;
-  }
 
   const row = await buildFindSelectableCatalogItemQuery(
     executor,
@@ -560,17 +483,6 @@ export async function findSelectableCatalogItemByPublicSlug(
 ): Promise<SelectableCatalogItem | null> {
   const normalizedSlug = normalizeCatalogPublicSlug(publicSlug);
   if (!normalizedSlug) return null;
-
-  if (
-    resolveCatalogSelectionMode(options.selectionMode) === "stable_registry"
-  ) {
-    const active = await findActiveStableRegistryProductCatalogItemByPublicSlug(
-      normalizedSlug,
-      options.expectedObjectKind,
-      executor,
-    );
-    return active ? toSelectableCatalogItem(active) : null;
-  }
 
   const row = await buildFindSelectableCatalogItemByPublicSlugQuery(
     executor,
@@ -1019,10 +931,6 @@ function toCatalogSuggestion(input: {
   source: string;
   serveClass?: Ove330ServeClass;
   objectKindScope?: "plant" | "animal" | "either";
-  publicSlug?: string;
-  registryReleaseId?: string;
-  revisionId?: string;
-  nameClass?: "canonical" | "scientific" | "localized" | "accepted_alias";
 }): CatalogSuggestion {
   return {
     ...input,
@@ -1079,29 +987,6 @@ function normalizeCatalogTypeaheadRowLimit(limit: number) {
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_CATALOG_TYPEAHEAD_ROWS);
 }
 
-function resolveCatalogSelectionMode(
-  requested: CatalogSelectionMode | undefined,
-): CatalogSelectionMode {
-  if (requested) return requested;
-  return isStableRegistryProductSelectionEnabled()
-    ? "stable_registry"
-    : "compatibility";
-}
-
-function toSelectableCatalogItem(
-  item: ActiveStableRegistryProductCatalogItem,
-): SelectableCatalogItem {
-  return {
-    id: item.id,
-    canonicalName: item.canonicalName,
-    publicSlug: item.publicSlug,
-    catalogKind: item.catalogKind,
-    locale: item.locale,
-    status: item.status,
-    source: item.source,
-  };
-}
-
 function matchesCatalogSuggestionObjectKind(
   suggestion: CatalogSuggestion,
   objectKind: PlantObjectKind | undefined,
@@ -1122,8 +1007,8 @@ function matchesCatalogKindObjectKind(
 ) {
   if (catalogKind === "breed") return objectKind === "animal";
   if (catalogKind === "plant_variety") return objectKind === "plant";
-  // Legacy species records have no independent object-kind field. They remain
-  // compatible until the release-backed product gate is enabled.
+  // A species record has no independent object-kind field: it is selectable
+  // by a plant and by an animal alike.
   return catalogKind === "species";
 }
 
@@ -1134,7 +1019,7 @@ type CatalogDeadlineResult<T> =
 
 function settleWithinCatalogDeadline<T>(
   promise: Promise<T>,
-  deadlineMs = STABLE_REGISTRY_PRODUCT_QUERY_DEADLINE_MS,
+  deadlineMs = CATALOG_TYPEAHEAD_QUERY_DEADLINE_MS,
 ): Promise<CatalogDeadlineResult<T>> {
   return new Promise((resolve) => {
     let settled = false;

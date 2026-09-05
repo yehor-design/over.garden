@@ -1,7 +1,7 @@
 import "server-only";
 
 // Historical OVE-253 decision receipt; not an acquisition or current release
-// gate. ADR-0016 and docs/STABLE_REGISTRY.md own future observed captures.
+// gate. ADR-0025 and docs/EPPO_OBSERVED_CAPTURE.md own future observed captures.
 
 import { createHash } from "node:crypto";
 

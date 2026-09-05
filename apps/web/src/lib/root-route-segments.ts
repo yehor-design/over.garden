@@ -17,7 +17,6 @@ export const ROOT_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
   "blog",
   "bookmarks",
   "breed",
-  "catalog",
   "communities",
   "engagement",
   "erasure",

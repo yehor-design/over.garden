@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 import {
-  renderStableRegistryExplorer,
-  stableRegistryExplorerMetadata,
-} from "@/app/stable-registry-public-pages";
+  eppoArchiveExplorerMetadata,
+  renderEppoArchiveExplorer,
+} from "@/app/eppo-archive-pages";
 import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 
 interface EppoPageProps {
@@ -11,13 +11,12 @@ interface EppoPageProps {
 }
 
 export function generateMetadata(): Promise<Metadata> {
-  return stableRegistryExplorerMetadata(DEFAULT_PUBLIC_LOCALE, "eppo");
+  return eppoArchiveExplorerMetadata(DEFAULT_PUBLIC_LOCALE);
 }
 
 export default async function EppoPage({ searchParams }: EppoPageProps) {
-  return renderStableRegistryExplorer(
+  return renderEppoArchiveExplorer(
     DEFAULT_PUBLIC_LOCALE,
-    "eppo",
     (await searchParams) ?? {},
   );
 }

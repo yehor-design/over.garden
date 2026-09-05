@@ -1,10 +1,10 @@
 import { connection } from "next/server";
 
-import { isStableRegistryPublicDiscoveryEnabled } from "@/lib/stable-registry/feature-gate";
+import { isEppoArchiveEnabled } from "@/lib/catalog-source/eppo-archive-gate";
 import {
-  isPublicStableRegistryDeadlineError,
+  isEppoArchiveDeadlineError,
   listPublicEppoSourcePage,
-  parsePublicStableRegistryRequest,
+  parseEppoArchiveRequest,
 } from "@/server/catalog-source/public-eppo-explorer-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 
@@ -12,10 +12,10 @@ export async function GET(request: Request) {
   // Suggestions depend on the query string: never a prerendered response.
   await connection();
   const startedAt = performance.now();
-  if (!isStableRegistryPublicDiscoveryEnabled()) return notAvailable();
+  if (!isEppoArchiveEnabled()) return notAvailable();
 
   const url = new URL(request.url);
-  const parsed = parsePublicStableRegistryRequest({
+  const parsed = parseEppoArchiveRequest({
     q: url.searchParams.get("q"),
     kind: url.searchParams.get("kind"),
     cursor: url.searchParams.get("cursor"),
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       timingHeaders(startedAt),
     );
   } catch (error) {
-    if (isPublicStableRegistryDeadlineError(error)) {
+    if (isEppoArchiveDeadlineError(error)) {
       return publicJson({ error: "temporarily_unavailable" }, 503, {
         "Retry-After": "1",
         ...timingHeaders(startedAt),

@@ -12,10 +12,10 @@ import { Pool } from "pg";
 import type { Database } from "../src/db/schema";
 import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
 import {
-  buildActiveStableRegistryProductTypeaheadReindexRowsQuery,
-  findActiveStableRegistryProductCatalogItem,
-  searchActiveStableRegistryProductSuggestions,
-} from "../src/server/stable-registry/product-projection-repository";
+  buildCatalogTypeaheadReindexRowsQuery,
+  findSelectableCatalogItem,
+  searchCatalogSuggestions,
+} from "../src/server/catalog-repository";
 import { loadVersionedApplicationSql } from "./application-sql";
 import {
   assertSafeStackRestoreReceipt,
@@ -97,7 +97,14 @@ export async function runComposedStackRestoreDatabaseProof(input: {
     // A populated source, because a backup of an empty database proves nothing
     // about restoring a product.
     await admin.query(`create database "${source}"`);
-    const seeded = await seedProductCorpus(source);
+    await seedProductCorpus(source);
+    // What the product serves before the rehearsal is the expectation the
+    // restored target is held to. A hand-written count would only restate this
+    // file's own seeder.
+    const expected = await readBackProduct(source);
+    if (!expected.passed) {
+      throw new Error("seeded_source_did_not_serve_the_product_read_back");
+    }
     const sourceFingerprint = await productFingerprint(source);
 
     const dump = await runInPostgres(
@@ -139,7 +146,11 @@ export async function runComposedStackRestoreDatabaseProof(input: {
     if (!readBack.passed) {
       throw new Error("restored_target_did_not_serve_the_product_read_back");
     }
-    if (readBack.identityCount !== seeded.productIdentityCount) {
+    if (
+      readBack.identityCount !== expected.identityCount ||
+      readBack.indexRebuildRowCount !== expected.indexRebuildRowCount ||
+      readBack.localesServed.join(",") !== expected.localesServed.join(",")
+    ) {
       throw new Error("restored_target_lost_a_product_identity");
     }
 
@@ -258,51 +269,49 @@ async function readBackProduct(target: string): Promise<ProductReadBack> {
 
   try {
     const localesServed: string[] = [];
+    const servedIds = new Set<string>();
     let identityCount = 0;
 
     for (const locale of PRODUCT_LOCALES) {
-      const suggestions = await searchActiveStableRegistryProductSuggestions(
+      const suggestions = await searchCatalogSuggestions(
         localeProbe(locale),
-        "plant",
         8,
         db,
+        "plant",
       );
       if (suggestions.length > 0) {
         localesServed.push(locale);
         identityCount = Math.max(identityCount, suggestions.length);
       }
+      for (const suggestion of suggestions) servedIds.add(suggestion.id);
     }
 
     // Selecting a suggestion must resolve to the same stable identity, which is
     // the part a gardener would notice if a restore quietly renumbered things.
-    const anchor = await searchActiveStableRegistryProductSuggestions(
+    const anchor = await searchCatalogSuggestions(
       localeProbe("uk"),
-      "plant",
       1,
       db,
+      "plant",
     );
     const resolved = anchor[0]
-      ? await findActiveStableRegistryProductCatalogItem(
-          db,
-          anchor[0].id,
-          "plant",
-        )
+      ? await findSelectableCatalogItem(db, anchor[0].id, {
+          expectedObjectKind: "plant",
+        })
       : null;
 
     // The derived index is rebuilt from Postgres, never restored as a source.
     const reindexRows =
-      await buildActiveStableRegistryProductTypeaheadReindexRowsQuery(
-        db,
-      ).execute();
+      await buildCatalogTypeaheadReindexRowsQuery(db).execute();
 
-    // An archived or revoked identity must not come back with the rest.
-    const unsafe = await pool.query<{ count: string }>(
-      `select count(*)::text as count
-         from stable_registry_product_catalog_records as records
-         join catalog_registry_releases as releases
-           on releases.id = records.registry_release_id
-        where releases.state <> 'active'`,
+    // A merged or rejected identity comes back as history and must not reach
+    // the product: the read model has to exclude it, not merely count it.
+    const unsafe = await pool.query<{ id: string }>(
+      `select id::text as id
+         from catalog_items
+        where status in ('merged', 'rejected')`,
     );
+    const unsafeServed = unsafe.rows.some((row) => servedIds.has(row.id));
 
     return {
       // Every one of these has to hold. A restore that serves one locale, or
@@ -312,11 +321,12 @@ async function readBackProduct(target: string): Promise<ProductReadBack> {
         localesServed.length === PRODUCT_LOCALES.length &&
         resolved !== null &&
         resolved.id === anchor[0]?.id &&
-        reindexRows.length > 0,
+        reindexRows.length > 0 &&
+        !unsafeServed,
       localesServed,
       identityCount,
       indexRebuildRowCount: reindexRows.length,
-      unsafeRowsExcluded: Number(unsafe.rows[0]?.count ?? 0),
+      unsafeRowsExcluded: unsafe.rows.length,
     };
   } finally {
     await db.destroy().catch(() => undefined);
@@ -334,11 +344,11 @@ function localeProbe(locale: string): string {
   return "томат";
 }
 
-interface SeededCorpus {
-  productIdentityCount: number;
-}
-
-async function seedProductCorpus(database: string): Promise<SeededCorpus> {
+/**
+ * The catalog a backup is taken from: the tables and the predicate the picker
+ * reads, with one identity that must come back and one that must not.
+ */
+async function seedProductCorpus(database: string): Promise<void> {
   const url = new URL(requiredEnv("DATABASE_URL"));
   url.pathname = `/${database}`;
   const pool = new Pool({ connectionString: url.toString(), max: 2 });
@@ -357,140 +367,36 @@ async function seedProductCorpus(database: string): Promise<SeededCorpus> {
       await pool.query(migration.sql);
     }
 
-    const ownerId = randomUUID();
-    const snapshotId = randomUUID();
-    const captureId = randomUUID();
-    const releaseId = randomUUID();
-    const retiredReleaseId = randomUUID();
-    const digest = "a".repeat(64);
-
-    await pool.query(
-      `insert into catalog_source_snapshots (
-         id, source_slug, source_name, source_category, source_version,
-         source_url, license, parser_version, payload_sha256, fetched_at,
-         verified_at, status
-       ) values ($1,'eppo-codes','EPPO','taxonomy','ove358',
-         'https://data.eppo.int/','Open Licence','ove358',$2, now(), now(),
-         'imported')`,
-      [snapshotId, digest],
+    // One selectable identity and one rejected one. Both carry the same three
+    // localized names, so a read model that forgot the status predicate would
+    // serve the rejected row and fail the read-back rather than pass by luck.
+    const items = await pool.query<{ id: string }>(
+      `insert into catalog_items (
+         canonical_name, normalized_name, catalog_kind, public_slug, status,
+         source, locale
+       ) values
+         ('Solanum lycopersicum', 'solanum lycopersicum', 'species',
+          'ove358-tomato', 'confirmed', 'internal_seed', 'la'),
+         ('Solanum lycopersicum (withdrawn)',
+          'solanum lycopersicum (withdrawn)', 'species',
+          'ove358-tomato-withdrawn', 'rejected', 'internal_seed', 'la')
+       returning id`,
     );
-    await pool.query(
-      `insert into catalog_source_capture_runs (
-         id, source_snapshot_id, capture_schema_version, capture_tool_revision,
-         source_host, endpoint_family, request_schema_version, openapi_sha256,
-         license_sha256, observed_started_at, observed_ended_at,
-         inventory_start_total, inventory_end_total, inventory_unique_codes,
-         inventory_page_count, inventory_start_sha256, inventory_end_sha256,
-         manifest_sha256, zero_product_receipt, state
-       ) values ($1,$2,'ove358',$4,'api.eppo.int','gd/v2','v2',$3,$3, now(),
-         now(), 3, 3, 3, 1, $3, $3, $3,
-         '{"productMutationCount":0,"searchMutationCount":0}'::jsonb,
-         'completed')`,
-      [captureId, snapshotId, digest, "b".repeat(40)],
-    );
-    await pool.query(
-      `insert into catalog_registry_releases (
-         id, release_kind, state, capture_id, source_snapshot_id,
-         policy_version, build_digest, preview_digest, created_by_user_id,
-         activated_at
-       ) values ($1,'foundation','active',$2,$3,'ove358.foundation.v1',$4,$4,$5,
-         now())`,
-      [releaseId, captureId, snapshotId, digest, ownerId],
-    );
-    // A retired release in the same backup: its rows must come back as history
-    // and must not reach the product.
-    await pool.query(
-      `insert into catalog_registry_releases (
-         id, release_kind, state, capture_id, source_snapshot_id,
-         policy_version, build_digest, preview_digest, created_by_user_id
-       ) values ($1,'edition','retired',$2,$3,'ove358.retired.v1',$4,$4,$5)`,
-      [retiredReleaseId, captureId, snapshotId, digest, ownerId],
-    );
-    await pool.query(
-      `insert into catalog_registry_active_pointers (release_family, active_release_id)
-       values ('foundation', $1)
-       on conflict (release_family) do update
-         set active_release_id = excluded.active_release_id`,
-      [releaseId],
-    );
-
-    // Every product identity in the release gets all three localized names, so
-    // the read-back can ask each locale its own question rather than asking one
-    // question three times. The base schema already seeds catalog identities;
-    // this adds the localized names the picker reads them by.
     const names: Array<[string, string, string]> = [
       ["uk", "Помідор", "помідор"],
       ["bg", "Домат", "домат"],
       ["ru", "Томат", "томат"],
     ];
-    await pool.query(
-      `insert into catalog_items (
-         id, canonical_name, normalized_name, catalog_kind, public_slug,
-         status, source, locale
-       ) values (gen_random_uuid(), 'Solanum lycopersicum',
-         'solanum lycopersicum', 'species', 'ove358-tomato', 'confirmed',
-         'internal_seed', 'la')`,
-    );
-    await pool.query(
-      `insert into catalog_item_revisions (
-         catalog_item_id, revision_number, canonical_name, normalized_name,
-         catalog_kind, identity_relation, source_evidence_digest, revision_digest
-       )
-       select items.id, 1, items.canonical_name, items.normalized_name,
-              'species', 'canonical', $1,
-              md5(items.id::text) || md5(items.id::text)
-         from catalog_items as items where items.source = 'internal_seed'`,
-      [digest],
-    );
-    for (const release of [releaseId, retiredReleaseId]) {
-      await pool.query(
-        `insert into catalog_registry_release_members (
-           release_id, catalog_item_id, catalog_item_revision_id, eligibility,
-           membership_digest
-         )
-         select $1::uuid, revisions.catalog_item_id, revisions.id,
-                'product_eligible',
-                md5($1::text || revisions.id::text)
-                  || md5($1::text || revisions.id::text)
-           from catalog_item_revisions as revisions`,
-        [release],
-      );
-      await pool.query(
-        `insert into stable_registry_product_catalog_records (
-           registry_release_id, catalog_item_id, catalog_item_revision_id,
-           object_kind_scope, catalog_kind, canonical_name, item_locale,
-           public_slug, activated_at
-         )
-         select $1, members.catalog_item_id, members.catalog_item_revision_id,
-                'plant', 'species', items.canonical_name, items.locale,
-                items.public_slug, now()
-           from catalog_registry_release_members as members
-           join catalog_items as items on items.id = members.catalog_item_id
-          where members.release_id = $1`,
-        [release],
-      );
+    for (const item of items.rows) {
       for (const [locale, display, normalized] of names) {
         await pool.query(
-          `insert into stable_registry_product_catalog_names (
-             registry_release_id, catalog_item_id, object_kind_scope,
-             normalized_name, locale, display_name, name_class, is_primary
-           )
-           select $1, records.catalog_item_id, 'plant', $2, $3, $4,
-                  'localized', $3 = 'uk'
-             from stable_registry_product_catalog_records as records
-            where records.registry_release_id = $1`,
-          [release, normalized, locale, display],
+          `insert into catalog_item_names (
+             catalog_item_id, display_name, normalized_name, locale, is_primary
+           ) values ($1, $2, $3, $4, $4 = 'uk')`,
+          [item.id, display, normalized, locale],
         );
       }
     }
-
-    const identities = await pool.query<{ count: string }>(
-      `select count(*)::text as count
-         from stable_registry_product_catalog_records
-        where registry_release_id = $1`,
-      [releaseId],
-    );
-    return { productIdentityCount: Number(identities.rows[0]?.count ?? 0) };
   } finally {
     await pool.end().catch(() => undefined);
   }
@@ -508,10 +414,14 @@ async function productFingerprint(database: string): Promise<string> {
     const rows = await pool.query<{ fingerprint: string }>(
       `select coalesce(
                 md5(string_agg(
-                  records.catalog_item_id::text || records.canonical_name,
-                  '|' order by records.catalog_item_id)),
+                  items.id::text || '/' || items.status || '/'
+                    || coalesce(names.locale, '') || '/'
+                    || coalesce(names.normalized_name, ''),
+                  '|' order by items.id, names.locale, names.normalized_name)),
                 'empty') as fingerprint
-         from stable_registry_product_catalog_records as records`,
+         from catalog_items as items
+         left join catalog_item_names as names
+           on names.catalog_item_id = items.id`,
     );
     return rows.rows[0]?.fingerprint ?? "empty";
   } finally {

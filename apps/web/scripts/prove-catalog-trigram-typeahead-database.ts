@@ -11,15 +11,11 @@ import { Pool } from "pg";
 import type { Database } from "../src/db/schema";
 import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
 import {
+  buildCatalogTypeaheadQuery,
+  searchCatalogSuggestions,
   searchCatalogSuggestionsForTypeaheadResult,
   type CatalogTypeaheadDivergenceSample,
 } from "../src/server/catalog-repository";
-import {
-  buildActiveStableRegistryProductTrigramTypeaheadQuery,
-  buildActiveStableRegistryProductTypeaheadQuery,
-  searchActiveStableRegistryProductSuggestions,
-  searchActiveStableRegistryProductTrigramSuggestions,
-} from "../src/server/stable-registry/product-projection-repository";
 import { loadVersionedApplicationSql } from "./application-sql";
 import {
   assertSafeCatalogTrigramReceipt,
@@ -44,6 +40,9 @@ const TYPO_CASES = [
   { correct: "solanum lycopersicum", typed: "solanum lycopersicm" },
   { correct: "гарбуз звичайний", typed: "гарбз звичайний" },
 ] as const;
+
+/** Every row this proof seeds carries a slug under this prefix. */
+const SEED_SLUG_PREFIX = "ove355-";
 
 /**
  * Proves the trigram source against migration 0043 and a realistic corpus.
@@ -76,10 +75,10 @@ export async function runCatalogTrigramTypeaheadDatabaseProof(input: {
 
   try {
     await applyEveryMigration(pool, targetUrl.toString());
-    const seeded = await seedActiveFoundation(pool);
+    const seeded = await seedSelectableCatalog(pool);
 
     // AC-07: the planner must reach the index, not scan every name.
-    const usesTrigramIndex = await trigramPlanUsesIndex(pool, seeded.releaseId);
+    const usesTrigramIndex = await trigramPlanUsesIndex(pool);
     if (!usesTrigramIndex) {
       throw new Error("trigram_query_did_not_use_the_trigram_index");
     }
@@ -90,9 +89,10 @@ export async function runCatalogTrigramTypeaheadDatabaseProof(input: {
     let replayIdentical = true;
 
     for (const [index, typo] of TYPO_CASES.entries()) {
-      const substring = await buildActiveStableRegistryProductTypeaheadQuery(
+      const substring = await buildCatalogTypeaheadQuery(
         db,
         typo.typed,
+        8,
         "plant",
       ).execute();
       if (substring.some((row) => row.id === seeded.targetIds[index])) {
@@ -100,12 +100,13 @@ export async function runCatalogTrigramTypeaheadDatabaseProof(input: {
       }
 
       const startedAt = performance.now();
-      const trigram =
-        await buildActiveStableRegistryProductTrigramTypeaheadQuery(
-          db,
-          typo.typed,
-          "plant",
-        ).execute();
+      const trigram = await buildCatalogTypeaheadQuery(
+        db,
+        typo.typed,
+        8,
+        "plant",
+        "trigram",
+      ).execute();
       maxQueryLatencyMs = Math.max(
         maxQueryLatencyMs,
         performance.now() - startedAt,
@@ -116,12 +117,13 @@ export async function runCatalogTrigramTypeaheadDatabaseProof(input: {
 
       // AC-04: the same query returns the same ranked set.
       const ids = trigram.map((row) => row.id);
-      const replay =
-        await buildActiveStableRegistryProductTrigramTypeaheadQuery(
-          db,
-          typo.typed,
-          "plant",
-        ).execute();
+      const replay = await buildCatalogTypeaheadQuery(
+        db,
+        typo.typed,
+        8,
+        "plant",
+        "trigram",
+      ).execute();
       if (replay.map((row) => row.id).join(",") !== ids.join(",")) {
         replayIdentical = false;
       }
@@ -145,19 +147,14 @@ export async function runCatalogTrigramTypeaheadDatabaseProof(input: {
     // helper rather than the code a gardener's keystroke actually runs.
     const typed = TYPO_CASES[0]!.typed;
     const correct = TYPO_CASES[0]!.correct;
-    const canonicalRows = await searchActiveStableRegistryProductSuggestions(
-      correct,
-      "plant",
+    const canonicalRows = await searchCatalogSuggestions(correct, 8, db, "plant");
+    const trigramRows = await searchCatalogSuggestions(
+      typed,
       8,
       db,
+      "plant",
+      "trigram",
     );
-    const trigramRows =
-      await searchActiveStableRegistryProductTrigramSuggestions(
-        typed,
-        "plant",
-        8,
-        db,
-      );
     // The derived index is simulated as the source that already finds the
     // misspelling today: that is exactly the recall this measures against.
     const derivedRows = canonicalRows;
@@ -165,7 +162,7 @@ export async function runCatalogTrigramTypeaheadDatabaseProof(input: {
     let divergence: CatalogTypeaheadDivergenceSample | undefined;
     const mergedResult = await searchCatalogSuggestionsForTypeaheadResult(
       typed,
-      { limit: 8, selectionMode: "stable_registry", objectKind: "plant" },
+      { limit: 8, objectKind: "plant" },
       {
         searchWithPostgres: async () => [],
         searchWithMeili: async () => derivedRows,
@@ -252,138 +249,64 @@ async function applyEveryMigration(pool: Pool, connectionString: string) {
 }
 
 interface SeededCorpus {
-  releaseId: string;
   targetIds: string[];
 }
 
 /**
- * One active Foundation release holding a realistic corpus.
+ * A selectable catalog holding a realistic corpus.
  *
- * The filler names are generated in bulk rather than row by row: the point of
- * this corpus is to make a sequential scan expensive, and 20,000 round trips
- * would make the proof itself the slow part.
+ * The rows go through the same tables and the same predicate the picker reads:
+ * `catalog_items` with a selectable status and no owner, each with one primary
+ * `catalog_item_names` row. The filler names are generated in bulk rather than
+ * row by row: the point of this corpus is to make a sequential scan expensive,
+ * and 20,000 round trips would make the proof itself the slow part.
  */
-async function seedActiveFoundation(pool: Pool): Promise<SeededCorpus> {
-  const ownerId = randomUUID();
-  const snapshotId = randomUUID();
-  const captureId = randomUUID();
-  const releaseId = randomUUID();
-  const digest = "a".repeat(64);
-
-  await pool.query(
-    `insert into catalog_source_snapshots (
-       id, source_slug, source_name, source_category, source_version, source_url,
-       license, parser_version, payload_sha256, fetched_at, verified_at, status
-     ) values ($1,'eppo-codes','EPPO','taxonomy','ove355','https://data.eppo.int/',
-       'Open Licence','ove355',$2, now(), now(), 'imported')`,
-    [snapshotId, digest],
-  );
-  await pool.query(
-    `insert into catalog_source_capture_runs (
-       id, source_snapshot_id, capture_schema_version, capture_tool_revision,
-       source_host, endpoint_family, request_schema_version, openapi_sha256,
-       license_sha256, observed_started_at, observed_ended_at,
-       inventory_start_total, inventory_end_total, inventory_unique_codes,
-       inventory_page_count, inventory_start_sha256, inventory_end_sha256,
-       manifest_sha256, zero_product_receipt, state
-     ) values ($1,$2,'ove355',$4,'api.eppo.int','gd/v2','v2',$3,$3, now(), now(),
-       2, 2, 2, 1, $3, $3, $3,
-       '{"productMutationCount":0,"searchMutationCount":0}'::jsonb, 'completed')`,
-    [captureId, snapshotId, digest, "b".repeat(40)],
-  );
-  await pool.query(
-    `insert into catalog_registry_releases (
-       id, release_kind, state, capture_id, source_snapshot_id, policy_version,
-       build_digest, preview_digest, created_by_user_id, activated_at
-     ) values ($1,'foundation','active',$2,$3,'ove355.foundation.v1',$4,$4,$5, now())`,
-    [releaseId, captureId, snapshotId, digest, ownerId],
-  );
-  await pool.query(
-    `insert into catalog_registry_active_pointers (release_family, active_release_id)
-     values ('foundation', $1)
-     on conflict (release_family) do update set active_release_id = excluded.active_release_id`,
-    [releaseId],
-  );
-
+async function seedSelectableCatalog(pool: Pool): Promise<SeededCorpus> {
   const names = [
     ...TYPO_CASES.map((typo) => typo.correct),
     ...Array.from({ length: FILLER_NAMES }, (_, index) => fillerName(index)),
   ];
 
-  // Bulk-insert the whole corpus through one statement per table.
+  // Bulk-insert the whole corpus through one statement per table. The slug
+  // carries the 1-based ordinality, so the three targets are `ove355-1..3`.
   await pool.query(
     `insert into catalog_items (
        id, canonical_name, normalized_name, catalog_kind, public_slug,
        status, source, locale
      )
      select gen_random_uuid(), name.value, lower(name.value), 'species',
-            'ove355-' || name.ordinality::text, 'confirmed', 'internal_seed', 'la'
+            $2 || name.ordinality::text, 'confirmed', 'internal_seed', 'la'
        from unnest($1::text[]) with ordinality as name(value, ordinality)`,
-    [names],
+    [names, SEED_SLUG_PREFIX],
   );
   await pool.query(
-    `insert into catalog_item_revisions (
-       catalog_item_id, revision_number, canonical_name, normalized_name,
-       catalog_kind, identity_relation, source_evidence_digest, revision_digest
+    `insert into catalog_item_names (
+       catalog_item_id, display_name, normalized_name, locale, is_primary
      )
-     select items.id, 1, items.canonical_name, items.normalized_name, 'species',
-            'canonical', $1, md5(items.id::text) || md5(items.id::text)
+     select items.id, items.canonical_name, items.normalized_name, items.locale,
+            true
        from catalog_items as items
-      where items.source = 'internal_seed'`,
-    [digest],
-  );
-  await pool.query(
-    `insert into catalog_registry_release_members (
-       release_id, catalog_item_id, catalog_item_revision_id, eligibility, membership_digest
-     )
-     select $1, revisions.catalog_item_id, revisions.id, 'product_eligible',
-            md5(revisions.id::text) || md5(revisions.id::text)
-       from catalog_item_revisions as revisions`,
-    [releaseId],
-  );
-  await pool.query(
-    `insert into stable_registry_product_catalog_records (
-       registry_release_id, catalog_item_id, catalog_item_revision_id,
-       object_kind_scope, catalog_kind, canonical_name, item_locale,
-       public_slug, activated_at
-     )
-     select $1, members.catalog_item_id, members.catalog_item_revision_id,
-            'plant', 'species', items.canonical_name, items.locale,
-            items.public_slug, now()
-       from catalog_registry_release_members as members
-       join catalog_items as items on items.id = members.catalog_item_id
-      where members.release_id = $1`,
-    [releaseId],
-  );
-  await pool.query(
-    `insert into stable_registry_product_catalog_names (
-       registry_release_id, catalog_item_id, object_kind_scope, normalized_name,
-       locale, display_name, name_class, is_primary
-     )
-     select $1, records.catalog_item_id, 'plant', lower(records.canonical_name),
-            records.item_locale, records.canonical_name, 'canonical', true
-       from stable_registry_product_catalog_records as records
-      where records.registry_release_id = $1`,
-    [releaseId],
+      where items.public_slug like $1 || '%'`,
+    [SEED_SLUG_PREFIX],
   );
   // The planner needs statistics before it can prefer the index over a scan.
-  await pool.query("analyze stable_registry_product_catalog_names");
-  await pool.query("analyze stable_registry_product_catalog_records");
+  await pool.query("analyze catalog_item_names");
+  await pool.query("analyze catalog_items");
 
-  const targets = await pool.query<{ catalog_item_id: string }>(
-    `select catalog_item_id from stable_registry_product_catalog_names
-      where registry_release_id = $1 and normalized_name = any($2::text[])
-      order by array_position($2::text[], normalized_name)`,
-    [releaseId, TYPO_CASES.map((typo) => typo.correct)],
+  const targetSlugs = TYPO_CASES.map(
+    (_, index) => `${SEED_SLUG_PREFIX}${index + 1}`,
+  );
+  const targets = await pool.query<{ id: string }>(
+    `select id from catalog_items
+      where public_slug = any($1::text[])
+      order by array_position($1::text[], public_slug)`,
+    [targetSlugs],
   );
   if (targets.rows.length !== TYPO_CASES.length) {
     throw new Error("proof_corpus_is_missing_a_target_identity");
   }
 
-  return {
-    releaseId,
-    targetIds: targets.rows.map((row) => row.catalog_item_id),
-  };
+  return { targetIds: targets.rows.map((row) => row.id) };
 }
 
 /**
@@ -392,22 +315,18 @@ async function seedActiveFoundation(pool: Pool): Promise<SeededCorpus> {
  * An index that exists but is never chosen leaves every keystroke scanning the
  * whole name table, which is the cost this migration exists to remove.
  */
-async function trigramPlanUsesIndex(
-  pool: Pool,
-  releaseId: string,
-): Promise<boolean> {
+async function trigramPlanUsesIndex(pool: Pool): Promise<boolean> {
   const explained = await pool.query<{ "QUERY PLAN": string }>(
     `explain (analyze false, costs false)
      select names.catalog_item_id
-       from stable_registry_product_catalog_names as names
-      where names.registry_release_id = $1
-        and lower(names.normalized_name) % $2`,
-    [releaseId, TYPO_CASES[0]!.typed],
+       from catalog_item_names as names
+      where lower(names.display_name) % $1`,
+    [TYPO_CASES[0]!.typed],
   );
   const plan = explained.rows.map((row) => row["QUERY PLAN"]).join("\n");
   return (
-    plan.includes("stable_registry_product_catalog_names_trgm_idx") &&
-    !/Seq Scan on stable_registry_product_catalog_names/u.test(plan)
+    plan.includes("catalog_item_names_display_trgm_idx") &&
+    !/Seq Scan on catalog_item_names/u.test(plan)
   );
 }
 

@@ -105,7 +105,6 @@ describe("erasure dry-run preview assembly", () => {
         catalogProvisionalItems: 1,
         plantObjectsUserAdded: 1,
         catalogReviewerLinks: 1,
-        catalogRegistryActorAttributions: 5,
         searchPublicActiveEntries: 1,
         searchPendingIndexJobs: 0,
         searchPendingUnindexJobs: 0,
@@ -157,7 +156,6 @@ describe("erasure dry-run preview assembly", () => {
       )?.counts,
     ).toEqual({
       reviewer_or_author_links: 1,
-      registry_actor_attributions: 5,
     });
   });
 });

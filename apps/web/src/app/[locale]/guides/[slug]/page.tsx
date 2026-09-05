@@ -17,6 +17,7 @@ import {
 import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
 import {
   authoredContentEntityIds,
+  catalogEvidencePublicPath,
   guideVisibleText,
   listGuides,
   resolveAuthoredPublicSurfaceDiscovery,
@@ -118,9 +119,7 @@ function buildGuideSurface(locale: PublicLocale, guide: GuideContent) {
     distinctPublicEntityIds: authoredContentEntityIds(guide.path, [
       ...guide.relatedLinks.map((link) => link.href),
       ...guide.knowledge.evidence.topicSlugs.map((slug) => `/topics/${slug}`),
-      ...guide.knowledge.evidence.catalogSlugs.map(
-        (slug) => `/catalog/${slug}`,
-      ),
+      ...guide.knowledge.evidence.catalogSlugs.map(catalogEvidencePublicPath),
     ]),
     meaningfulContentAt: `${guide.editorial.updatedDate}T00:00:00.000Z`,
     candidateState: "candidate",

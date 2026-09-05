@@ -6,8 +6,8 @@ const mocks = vi.hoisted(() => ({
   getRequestInterfaceLocale: vi.fn(),
 }));
 
-vi.mock("@/lib/stable-registry/feature-gate", () => ({
-  isStableRegistryPublicDiscoveryEnabled: mocks.enabled,
+vi.mock("@/lib/catalog-source/eppo-archive-gate", () => ({
+  isEppoArchiveEnabled: mocks.enabled,
 }));
 
 vi.mock(

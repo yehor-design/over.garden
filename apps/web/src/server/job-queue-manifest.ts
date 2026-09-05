@@ -64,56 +64,10 @@ export const MEDIA_DERIVATIVE_REVOKE_KIND = "media_derivative_revoke" as const;
 export const MEDIA_STAGING_FINALIZE_KIND = "media_staging_finalize" as const;
 
 export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
-  {
-    queueName: "matching",
-    kind: "stable_registry_foundation_build",
-    consumer: "matching-python-worker",
-    maxAttempts: 3,
-    privacyClass: "catalog_ids_only",
-    coversStructuredJournalCover: false,
-    payloadContract: {
-      requiredKeys: ["kind", "releaseId"],
-      optionalKeys: [],
-      uuidKeys: ["releaseId"],
-    },
-    payloadConstraint:
-      "job_queue_stable_registry_foundation_build_payload_check",
-    notes:
-      "Foundation build receives only one opaque release UUID; worker reads bounded, rights-cleared aggregate source facts from Postgres.",
-  },
-  {
-    queueName: "matching",
-    kind: "stable_registry_extension_pack_build",
-    consumer: "matching-python-worker",
-    maxAttempts: 3,
-    privacyClass: "catalog_ids_only",
-    coversStructuredJournalCover: false,
-    payloadContract: {
-      requiredKeys: ["kind", "packId"],
-      optionalKeys: [],
-      uuidKeys: ["packId"],
-    },
-    payloadConstraint:
-      "job_queue_stable_registry_extension_pack_build_payload_check",
-    notes:
-      "Extension pack review receives only one opaque pack UUID; the worker reads aggregate row classes and advances a fully resolved pack to review_ready off-request.",
-  },
-  {
-    queueName: "matching",
-    kind: "stable_registry_edition_build",
-    consumer: "matching-python-worker",
-    maxAttempts: 3,
-    privacyClass: "catalog_ids_only",
-    coversStructuredJournalCover: false,
-    payloadContract: {
-      requiredKeys: ["kind", "releaseId"],
-      optionalKeys: [],
-      uuidKeys: ["releaseId"],
-    },
-    payloadConstraint: "job_queue_stable_registry_edition_build_payload_check",
-    notes:
-      "Edition diff receives only one opaque release UUID; the worker compares it with the release it succeeds and writes grouped aggregate counts, never an object id, owner id, or name.",
-  },
+  // The three `stable_registry_*` build kinds were retired with the release
+  // model (ADR-0025). Their payload CHECK constraints leave `job_queue` with
+  // the retirement migration; until then they are extra constraints the
+  // worker's preflight does not require.
   {
     queueName: "matching",
     kind: "catalog_alias_suggestions_refresh",

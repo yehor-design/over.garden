@@ -85,9 +85,6 @@ so a class can be attributed to the page that produced it:
 | Surface | Route |
 | -- | -- |
 | `garden-home` | `/garden` |
-| `stable-registry` | `/garden/catalog/registry` |
-| `stable-registry-extensions` | `/garden/catalog/registry/extensions` |
-| `stable-registry-editions` | `/garden/catalog/registry/editions` |
 | `object` | `/garden/objects/[objectId]` |
 | `entry-edit` | `/garden/entries/[entryId]/edit` |
 | `profile` | `/garden/profile` |
@@ -107,8 +104,8 @@ There are **two** lines, and the reason there are two is worth knowing.
 
 ```bash
 # a section that settled into a failure — the workspace case
-{"event":"workspace_section_degraded","surface":"stable-registry",
- "section":"release-center","failureClass":"schema_missing","digest":"…"}
+{"event":"workspace_section_degraded","surface":"erasure-requests",
+ "section":"requests","failureClass":"schema_missing","digest":"…"}
 
 # something that actually threw — a route handler, an action, a failed render
 {"event":"workspace_server_error","digest":"…","path":"/api/…",

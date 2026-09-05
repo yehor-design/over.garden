@@ -37,7 +37,6 @@ export function parseCatalogTypeaheadResponse(
       serveClass: isOve330ServeClass(candidate.serveClass)
         ? candidate.serveClass
         : "exact",
-      ...stableRegistrySelectionFields(candidate),
     } satisfies FirstEntryCatalogSelection;
 
     return [
@@ -47,28 +46,6 @@ export function parseCatalogTypeaheadResponse(
       },
     ];
   });
-}
-
-function stableRegistrySelectionFields(
-  candidate: Partial<FirstEntryCatalogSelection>,
-) {
-  if (candidate.source !== "stable_registry") return {};
-  if (
-    !isPlantObjectKind(candidate.objectKind) ||
-    !isPublicSlug(candidate.publicSlug) ||
-    !isUuid(candidate.registryReleaseId) ||
-    !isUuid(candidate.revisionId) ||
-    !isStableRegistryNameClass(candidate.nameClass)
-  ) {
-    return {};
-  }
-  return {
-    objectKind: candidate.objectKind,
-    publicSlug: candidate.publicSlug,
-    registryReleaseId: candidate.registryReleaseId,
-    revisionId: candidate.revisionId,
-    nameClass: candidate.nameClass,
-  };
 }
 
 export type CatalogTypeaheadClientState =
@@ -121,25 +98,3 @@ function isUuid(value: unknown): value is string {
   );
 }
 
-function isPlantObjectKind(value: unknown): value is "plant" | "animal" {
-  return value === "plant" || value === "animal";
-}
-
-function isPublicSlug(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.length <= 96 &&
-    /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(value)
-  );
-}
-
-function isStableRegistryNameClass(
-  value: unknown,
-): value is NonNullable<FirstEntryCatalogSelection["nameClass"]> {
-  return (
-    value === "canonical" ||
-    value === "scientific" ||
-    value === "localized" ||
-    value === "accepted_alias"
-  );
-}

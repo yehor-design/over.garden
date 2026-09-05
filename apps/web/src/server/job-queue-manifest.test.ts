@@ -22,9 +22,6 @@ describe("job queue manifest", () => {
   it("covers every matching, erasure, and media-lifecycle producer kind with attempt bounds", () => {
     expect(JOB_QUEUE_MANIFEST_VERSION).toBe("ove255.job-queue.v4");
     expect(matchingSupportedKinds()).toEqual([
-      "stable_registry_foundation_build",
-      "stable_registry_extension_pack_build",
-      "stable_registry_edition_build",
       "catalog_alias_suggestions_refresh",
       "catalog_fuzzy_duplicate_qa_refresh",
       "catalog_match_suggestions_refresh",

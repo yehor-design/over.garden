@@ -319,6 +319,32 @@ production only after a read-only inventory and with the owner's approval.
 say so; the seven registry documents carry a history header, and the Linear
 project "SDD Slice 20" is cancelled.
 
+The first, non-destructive half of `OVE-385` followed the same day. It removes
+what ADR-0025 D1 names: the Release Center and its two sub-pages, the Stable
+Catalog explorer at `/catalog`, the registry repositories, actions, gates and
+proof scripts, the three worker handlers and their job kinds, the pack-artifact
+adapters, the registry scope of the search documents and the product-selection
+branch of the gardener catalog — 87 files deleted, 5 renamed so the
+public EPPO archive keeps working under its own names (`eppo-archive-*`;
+`/sources/eppo` is unchanged). The job queue contract regenerates to six kinds,
+so the generated Python module, the CI database proof and the release seal
+follow without a hand-written list moving. Two proofs written against the
+registry's product projection now run against the catalog gardeners actually
+use: the trigram typeahead proof seeds 20,003 names into `catalog_items` and
+still recovers all three misspellings through the `0043` index, and the
+backup-and-restore rehearsal reads the restored product back through the real
+repository and proves a rejected identity comes back as history without
+reaching a suggestion. `/garden/catalog/**` joined the retired namespaces the
+proxy answers with a real 404, beside `/admin` and the pilot pages, because a
+streamed workspace shell would otherwise say 200 first. Two drifts found on the
+way were corrected rather than carried: the admin-menu verifier still expected
+a `/garden/catalog/curation` link that had been gone for weeks, and the
+knowledge pages counted `/catalog/<slug>` as a public entity of an explorer
+that no longer exists (they now count the journal directory filtered by that
+identity). The empty release tables stay until the gated second half: a
+read-only production inventory, the owner's written approval, one drop
+migration with its rollback.
+
 ## Corrections made in this window
 
 Recorded because a wrong explanation that was quietly replaced is worse than one

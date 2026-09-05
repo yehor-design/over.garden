@@ -20,9 +20,6 @@ TERMINAL_ERROR_CODES: Final = (
     "max_attempts_exceeded",
 )
 
-STABLE_REGISTRY_FOUNDATION_BUILD_KIND: Final = "stable_registry_foundation_build"
-STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND: Final = "stable_registry_extension_pack_build"
-STABLE_REGISTRY_EDITION_BUILD_KIND: Final = "stable_registry_edition_build"
 CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND: Final = "catalog_alias_suggestions_refresh"
 CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND: Final = "catalog_fuzzy_duplicate_qa_refresh"
 CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND: Final = "catalog_match_suggestions_refresh"
@@ -34,33 +31,6 @@ MEDIA_STAGING_FINALIZE_KIND: Final = "media_staging_finalize"
 MEDIA_DERIVATIVE_REVOKE_KIND: Final = "media_derivative_revoke"
 
 MATCHING_MANIFEST_ENTRIES: Final = (
-    {
-        "queueName": "matching",
-        "kind": STABLE_REGISTRY_FOUNDATION_BUILD_KIND,
-        "consumer": "matching-python-worker",
-        "maxAttempts": 3,
-        "privacyClass": "catalog_ids_only",
-        "coversStructuredJournalCover": False,
-        "payloadConstraint": "job_queue_stable_registry_foundation_build_payload_check",
-    },
-    {
-        "queueName": "matching",
-        "kind": STABLE_REGISTRY_EXTENSION_PACK_BUILD_KIND,
-        "consumer": "matching-python-worker",
-        "maxAttempts": 3,
-        "privacyClass": "catalog_ids_only",
-        "coversStructuredJournalCover": False,
-        "payloadConstraint": "job_queue_stable_registry_extension_pack_build_payload_check",
-    },
-    {
-        "queueName": "matching",
-        "kind": STABLE_REGISTRY_EDITION_BUILD_KIND,
-        "consumer": "matching-python-worker",
-        "maxAttempts": 3,
-        "privacyClass": "catalog_ids_only",
-        "coversStructuredJournalCover": False,
-        "payloadConstraint": "job_queue_stable_registry_edition_build_payload_check",
-    },
     {
         "queueName": "matching",
         "kind": CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
@@ -150,21 +120,6 @@ WEB_OWNED_MANIFEST_ENTRIES: Final = (
 JOB_QUEUE_MANIFEST: Final = MATCHING_MANIFEST_ENTRIES + WEB_OWNED_MANIFEST_ENTRIES
 
 JOB_QUEUE_PAYLOAD_CONTRACTS: Final = {
-    "matching:stable_registry_foundation_build": {
-        "requiredKeys": ["kind", "releaseId"],
-        "optionalKeys": [],
-        "uuidKeys": ["releaseId"],
-    },
-    "matching:stable_registry_extension_pack_build": {
-        "requiredKeys": ["kind", "packId"],
-        "optionalKeys": [],
-        "uuidKeys": ["packId"],
-    },
-    "matching:stable_registry_edition_build": {
-        "requiredKeys": ["kind", "releaseId"],
-        "optionalKeys": [],
-        "uuidKeys": ["releaseId"],
-    },
     "matching:catalog_alias_suggestions_refresh": {
         "requiredKeys": ["kind", "catalogItemId"],
         "optionalKeys": [],
@@ -219,9 +174,6 @@ SUPPORTED_JOB_KINDS: Final = (
     "catalog_typeahead_reindex",
     "journal_entry_index",
     "journal_entry_unindex",
-    "stable_registry_edition_build",
-    "stable_registry_extension_pack_build",
-    "stable_registry_foundation_build",
 )
 
 REQUIRED_JOB_QUEUE_PAYLOAD_CONSTRAINTS: Final = (
@@ -234,7 +186,4 @@ REQUIRED_JOB_QUEUE_PAYLOAD_CONSTRAINTS: Final = (
     "job_queue_journal_entry_unindex_payload_check",
     "job_queue_media_derivative_revoke_payload_check",
     "job_queue_media_staging_finalize_payload_check",
-    "job_queue_stable_registry_edition_build_payload_check",
-    "job_queue_stable_registry_extension_pack_build_payload_check",
-    "job_queue_stable_registry_foundation_build_payload_check",
 )

@@ -18,6 +18,7 @@ import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-
 import {
   answerVisibleText,
   authoredContentEntityIds,
+  catalogEvidencePublicPath,
   listAnswerPages,
   resolveAuthoredPublicSurfaceDiscovery,
   type AnswerPageContent,
@@ -121,7 +122,7 @@ function buildAnswerSurface(locale: PublicLocale, page: AnswerPageContent) {
       ...page.relatedVarieties.map((link) => link.href),
       ...page.relatedTopics.map((link) => link.href),
       ...page.knowledge.evidence.topicSlugs.map((slug) => `/topics/${slug}`),
-      ...page.knowledge.evidence.catalogSlugs.map((slug) => `/catalog/${slug}`),
+      ...page.knowledge.evidence.catalogSlugs.map(catalogEvidencePublicPath),
     ]),
     meaningfulContentAt: `${page.editorial.updatedDate}T00:00:00.000Z`,
     candidateState: "candidate",

@@ -9,8 +9,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 
-vi.mock("@/lib/stable-registry/feature-gate", () => ({
-  isStableRegistryPublicDiscoveryEnabled: mocks.enabled,
+vi.mock("@/lib/catalog-source/eppo-archive-gate", () => ({
+  isEppoArchiveEnabled: mocks.enabled,
 }));
 
 vi.mock(
@@ -74,7 +74,7 @@ describe("localized EPPO source explorer page", () => {
       { kind: "plant", query: "sollc", cursor: null },
       "ru",
     );
-    expect(html).toContain('data-stable-registry-explorer="eppo"');
+    expect(html).toContain('data-eppo-archive="explorer"');
     expect(html).toContain('id="main-content"');
     expect(html).toContain("Запись источника — не одобрено");
     expect(html).toContain("EPPO Codes");

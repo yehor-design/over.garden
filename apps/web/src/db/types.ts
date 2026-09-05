@@ -8,16 +8,8 @@ import type {
   CatalogAliasProjections as CatalogAliasProjectionsTable,
   CatalogFuzzyDuplicateSuggestions as CatalogFuzzyDuplicateSuggestionsTable,
   CatalogItemNames as CatalogItemNamesTable,
-  CatalogItemRevisions as CatalogItemRevisionsTable,
   CatalogItems as CatalogItemsTable,
   CatalogMatchSuggestions as CatalogMatchSuggestionsTable,
-  CatalogRegistryActivations as CatalogRegistryActivationsTable,
-  CatalogRegistryActivePointers as CatalogRegistryActivePointersTable,
-  CatalogRegistryDecisions as CatalogRegistryDecisionsTable,
-  CatalogRegistryExceptionGroups as CatalogRegistryExceptionGroupsTable,
-  CatalogRegistryReleaseMembers as CatalogRegistryReleaseMembersTable,
-  CatalogRegistryReleases as CatalogRegistryReleasesTable,
-  CatalogRegistrySearchOutbox as CatalogRegistrySearchOutboxTable,
   CatalogSourceCaptureRuns as CatalogSourceCaptureRunsTable,
   CatalogSourceCaptureUnits as CatalogSourceCaptureUnitsTable,
   CatalogSourceLinks as CatalogSourceLinksTable,
@@ -25,8 +17,6 @@ import type {
   CatalogSourceRefreshEvents as CatalogSourceRefreshEventsTable,
   CatalogSourceRefreshRecords as CatalogSourceRefreshRecordsTable,
   CatalogSourceSnapshots as CatalogSourceSnapshotsTable,
-  StableRegistryPublicCatalogRecords as StableRegistryPublicCatalogRecordsTable,
-  StableRegistryPublicCatalogSearchTerms as StableRegistryPublicCatalogSearchTermsTable,
   StableRegistryPublicEppoRecords as StableRegistryPublicEppoRecordsTable,
   StableRegistryPublicEppoSearchTerms as StableRegistryPublicEppoSearchTermsTable,
   Communities as CommunitiesTable,
@@ -259,20 +249,7 @@ export type NewCatalogFuzzyDuplicateSuggestion =
   Insertable<CatalogFuzzyDuplicateSuggestionsTable>;
 export type CatalogItem = Selectable<CatalogItemsTable>;
 export type CatalogItemName = Selectable<CatalogItemNamesTable>;
-export type CatalogItemRevision = Selectable<CatalogItemRevisionsTable>;
 export type CatalogMatchSuggestion = Selectable<CatalogMatchSuggestionsTable>;
-export type CatalogRegistryActivation =
-  Selectable<CatalogRegistryActivationsTable>;
-export type CatalogRegistryActivePointer =
-  Selectable<CatalogRegistryActivePointersTable>;
-export type CatalogRegistryDecision = Selectable<CatalogRegistryDecisionsTable>;
-export type CatalogRegistryExceptionGroup =
-  Selectable<CatalogRegistryExceptionGroupsTable>;
-export type CatalogRegistryReleaseMember =
-  Selectable<CatalogRegistryReleaseMembersTable>;
-export type CatalogRegistryRelease = Selectable<CatalogRegistryReleasesTable>;
-export type CatalogRegistrySearchOutbox =
-  Selectable<CatalogRegistrySearchOutboxTable>;
 export type NewCatalogMatchSuggestion =
   Insertable<CatalogMatchSuggestionsTable>;
 export type CatalogSourceLink = Selectable<CatalogSourceLinksTable>;
@@ -289,10 +266,6 @@ export type CatalogSourceRefreshEvent =
 export type CatalogSourceRefreshRecord =
   Selectable<CatalogSourceRefreshRecordsTable>;
 export type CatalogSourceSnapshot = Selectable<CatalogSourceSnapshotsTable>;
-export type StableRegistryPublicCatalogRecord =
-  Selectable<StableRegistryPublicCatalogRecordsTable>;
-export type StableRegistryPublicCatalogSearchTerm =
-  Selectable<StableRegistryPublicCatalogSearchTermsTable>;
 export type StableRegistryPublicEppoRecord =
   Selectable<StableRegistryPublicEppoRecordsTable>;
 export type StableRegistryPublicEppoSearchTerm =
@@ -320,21 +293,6 @@ export type NewCatalogAliasProjection =
   Insertable<CatalogAliasProjectionsTable>;
 export type NewCatalogItem = Insertable<CatalogItemsTable>;
 export type NewCatalogItemName = Insertable<CatalogItemNamesTable>;
-export type NewCatalogItemRevision = Insertable<CatalogItemRevisionsTable>;
-export type NewCatalogRegistryActivation =
-  Insertable<CatalogRegistryActivationsTable>;
-export type NewCatalogRegistryActivePointer =
-  Insertable<CatalogRegistryActivePointersTable>;
-export type NewCatalogRegistryDecision =
-  Insertable<CatalogRegistryDecisionsTable>;
-export type NewCatalogRegistryExceptionGroup =
-  Insertable<CatalogRegistryExceptionGroupsTable>;
-export type NewCatalogRegistryReleaseMember =
-  Insertable<CatalogRegistryReleaseMembersTable>;
-export type NewCatalogRegistryRelease =
-  Insertable<CatalogRegistryReleasesTable>;
-export type NewCatalogRegistrySearchOutbox =
-  Insertable<CatalogRegistrySearchOutboxTable>;
 export type NewCatalogSourceLink = Insertable<CatalogSourceLinksTable>;
 export type NewCatalogSourceRecord = Insertable<CatalogSourceRecordsTable>;
 export type NewCatalogSourceRefreshEvent =
@@ -342,10 +300,6 @@ export type NewCatalogSourceRefreshEvent =
 export type NewCatalogSourceRefreshRecord =
   Insertable<CatalogSourceRefreshRecordsTable>;
 export type NewCatalogSourceSnapshot = Insertable<CatalogSourceSnapshotsTable>;
-export type NewStableRegistryPublicCatalogRecord =
-  Insertable<StableRegistryPublicCatalogRecordsTable>;
-export type NewStableRegistryPublicCatalogSearchTerm =
-  Insertable<StableRegistryPublicCatalogSearchTermsTable>;
 export type NewStableRegistryPublicEppoRecord =
   Insertable<StableRegistryPublicEppoRecordsTable>;
 export type NewStableRegistryPublicEppoSearchTerm =

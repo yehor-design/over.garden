@@ -16,12 +16,6 @@ import {
   type UaStateRegisterVarietyImportDefinition,
   type UaStateRegisterVarietyProjection,
 } from "@/lib/catalog/ua-state-register-variety";
-import {
-  buildPackArtifact,
-  packDigest,
-  readPackSourceString,
-  type PackAdapterResult,
-} from "./pack-artifact-contract";
 import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -926,68 +920,4 @@ function chunkArray<T>(values: T[], size: number) {
     chunks.push(values.slice(index, index + size));
   }
   return chunks;
-}
-
-/**
- * OVE-327 — Ukraine State Register pack adapter.
- *
- * Pure: it reads the already-approved definition and returns one validated
- * artifact. It performs no SQL, no catalog mutation, and no provider call. The
- * persistence path above is unchanged, so the catalog keeps its current
- * contents until OVE-328 persists a pack.
- */
-export const UA_STATE_REGISTER_PACK_ADAPTER_VERSION =
-  "ove327.uaStateRegisterAdapter.v1";
-
-export function adaptUaStateRegisterPack(
-  input: UaStateRegisterFullImportBuildResult,
-): PackAdapterResult {
-  return buildPackArtifact({
-    adapterVersion: UA_STATE_REGISTER_PACK_ADAPTER_VERSION,
-    sourceSlug: UA_STATE_REGISTER_SOURCE.slug,
-    declaredSourceVersion: UA_STATE_REGISTER_SOURCE.version,
-    packKind: "plant_variety",
-    artifactByteDigest: packDigest(
-      input.definitions.map((definition) => definition.record.rawPayload),
-    ),
-    allowsProductProjection: [
-      ...UA_STATE_REGISTER_SOURCE.allowedUsage,
-    ].includes("canonical_product_projection"),
-    rows: input.definitions.map((definition) => {
-      const projection = definition.projection;
-      // The register names the botanical taxon on every row; that Latin name is
-      // the declared parent, never the variety denomination itself.
-      const declaredParent = readPackSourceString(
-        definition.record.rawPayload,
-        "row",
-        "taxonNameLat",
-      );
-      return {
-        sourceRecordKey: definition.record.id,
-        officialDenomination: projection.canonicalName,
-        normalizedDenomination: projection.normalizedName,
-        locale: projection.locale,
-        publicSlug: projection.publicSlug,
-        parentCandidate: declaredParent
-          ? {
-              scientificName: declaredParent,
-              evidenceClass: "declared_by_source" as const,
-            }
-          : { scientificName: null, evidenceClass: "absent" as const },
-        aliases: projection.aliases
-          .filter((alias) => alias.displayName !== projection.canonicalName)
-          .map((alias) => ({
-            displayName: alias.displayName,
-            normalizedName: alias.normalizedName,
-            locale: alias.locale,
-            // The register's `varietyNameTRL` column is an official
-            // transliteration, not a separate trade name.
-            nameClass:
-              alias.locale === "la" || alias.locale === "en"
-                ? ("transliteration" as const)
-                : ("local_name" as const),
-          })),
-      };
-    }),
-  });
 }

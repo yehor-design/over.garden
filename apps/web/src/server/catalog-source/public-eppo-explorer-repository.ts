@@ -7,66 +7,52 @@ import type { Database } from "@/db/schema";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 
+/**
+ * The public EPPO archive read model (OVE-256, retained by ADR-0025 D2).
+ *
+ * It reads `stable_registry_public_eppo_records`, the derived projection of a
+ * completed EPPO observed capture, joined to the capture that produced it. It
+ * never selects a raw payload, a source-only field, a checksum, or a
+ * coordinate, and a visible record is source evidence, never an approved
+ * OverGarden catalog identity. The table keeps the prefix it was created with
+ * in migration `0025`; the Stable Registry release model that once sat beside
+ * this archive is retired.
+ */
+
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-export const PUBLIC_STABLE_REGISTRY_PAGE_SIZE = 20;
+export const EPPO_ARCHIVE_PAGE_SIZE = 20;
 
-export type PublicStableRegistryKind = "all" | "plant" | "animal";
-
-/**
- * What the approved catalog can say about one record's kingdom.
- *
- * A `species` identity in this product is legitimately a plant or an animal,
- * and nothing in the catalog layer establishes which. `either` states that
- * honestly instead of defaulting to `plant`, and matches the vocabulary the
- * product projection already uses for the same release members.
- */
-export type PublicStableCatalogObjectKind = "plant" | "animal" | "either";
-export type PublicStableRegistrySurface = "catalog" | "eppo";
-export type PublicStableRegistryEvidenceState =
-  | "approved_stable_registry"
+export type EppoArchiveKind = "all" | "plant" | "animal";
+export type EppoArchiveEvidenceState =
   | "source_record_not_approved"
   | "superseded_source_evidence";
 
-export interface PublicStableRegistryRequest {
-  kind: PublicStableRegistryKind;
+export interface EppoArchiveRequest {
+  kind: EppoArchiveKind;
   query: string;
   cursor: string | null;
 }
 
-export interface ParsedPublicStableRegistryRequest {
-  request: PublicStableRegistryRequest;
+export interface ParsedEppoArchiveRequest {
+  request: EppoArchiveRequest;
   error: "invalid_query" | "invalid_cursor" | null;
 }
 
-export interface PublicStableRegistryCursor {
+export interface EppoArchiveCursor {
   name: string;
   key: string;
 }
 
-export interface PublicStableCatalogRecord {
-  stableTaxon: string;
-  objectKind: PublicStableCatalogObjectKind;
-  displayName: string;
-  scientificName: string | null;
-  taxonomicRank: string | null;
-  parentDisplayName: string | null;
-  aliases: string[];
-  evidenceState: "approved_stable_registry";
-  href: string;
-  qualityClass: PublicProjectionQualityClass;
-  observedAt: string;
-}
-
 export interface PublicEppoSourceRecord {
   eppoCode: string;
-  objectKind: Exclude<PublicStableRegistryKind, "all">;
+  objectKind: Exclude<EppoArchiveKind, "all">;
   displayName: string;
   scientificName: string | null;
   taxonomicRank: string | null;
   parentDisplayName: string | null;
   aliases: string[];
-  evidenceState: "source_record_not_approved" | "superseded_source_evidence";
+  evidenceState: EppoArchiveEvidenceState;
   href: string;
   qualityClass: PublicProjectionQualityClass;
   observedAt: string;
@@ -81,22 +67,11 @@ export interface PublicEppoSourceCredit {
   attribution: string | null;
 }
 
-export interface PublicStableRegistryPage<T> {
-  request: PublicStableRegistryRequest;
-  records: T[];
+export interface EppoArchivePage {
+  request: EppoArchiveRequest;
+  records: PublicEppoSourceRecord[];
   nextCursor: string | null;
   qualityClass: PublicProjectionQualityClass;
-}
-
-interface PublicCatalogRow {
-  stableTaxon: string;
-  objectKind: string;
-  canonicalName: string;
-  scientificName: string | null;
-  taxonomicRank: string | null;
-  parentDisplayName: string | null;
-  safeAliases: string[];
-  activatedAt: Date | string;
 }
 
 interface PublicEppoRow {
@@ -116,11 +91,11 @@ interface PublicEppoRow {
   attributionText: string | null;
 }
 
-export function parsePublicStableRegistryRequest(input: {
+export function parseEppoArchiveRequest(input: {
   kind?: string | string[] | null;
   q?: string | string[] | null;
   cursor?: string | string[] | null;
-}): ParsedPublicStableRegistryRequest {
+}): ParsedEppoArchiveRequest {
   const kind = firstValue(input.kind);
   const normalizedKind = normalizeKind(kind);
   const query = normalizeQuery(firstValue(input.q));
@@ -141,23 +116,21 @@ export function parsePublicStableRegistryRequest(input: {
   };
 }
 
-export function encodePublicStableRegistryCursor(
-  cursor: PublicStableRegistryCursor,
-): string {
+export function encodeEppoArchiveCursor(cursor: EppoArchiveCursor): string {
   const payload = JSON.stringify({ name: cursor.name, key: cursor.key });
   return Buffer.from(payload, "utf8").toString("base64url");
 }
 
-export function decodePublicStableRegistryCursor(
+export function decodeEppoArchiveCursor(
   value: string | null,
-): PublicStableRegistryCursor | null {
+): EppoArchiveCursor | null {
   if (!value || value.length > 512) return null;
   try {
     const parsed: unknown = JSON.parse(
       Buffer.from(value, "base64url").toString("utf8"),
     );
     if (!parsed || typeof parsed !== "object") return null;
-    const candidate = parsed as Partial<PublicStableRegistryCursor>;
+    const candidate = parsed as Partial<EppoArchiveCursor>;
     if (
       typeof candidate.name !== "string" ||
       typeof candidate.key !== "string" ||
@@ -176,44 +149,11 @@ export function decodePublicStableRegistryCursor(
   }
 }
 
-export async function listPublicStableCatalogPage(
-  request: PublicStableRegistryRequest,
-  locale: PublicLocale,
-  executor: QueryExecutor = db,
-): Promise<PublicStableRegistryPage<PublicStableCatalogRecord>> {
-  if (executor === db) {
-    return db.transaction().execute(async (transaction) => {
-      await configurePublicReadDeadline(transaction);
-      return listPublicStableCatalogPage(request, locale, transaction);
-    });
-  }
-
-  const rows = await buildPublicStableCatalogQuery(executor, request).execute();
-  const records = rows
-    .map((row) => serializePublicStableCatalogRecord(row, locale))
-    .filter((row): row is PublicStableCatalogRecord => row !== null);
-  const visible = records.slice(0, PUBLIC_STABLE_REGISTRY_PAGE_SIZE);
-  const tail = visible.at(-1);
-
-  return {
-    request,
-    records: visible,
-    nextCursor:
-      records.length > PUBLIC_STABLE_REGISTRY_PAGE_SIZE && tail
-        ? encodePublicStableRegistryCursor({
-            name: normalizeCursorName(tail.displayName),
-            key: tail.stableTaxon,
-          })
-        : null,
-    qualityClass: "verified",
-  };
-}
-
 export async function listPublicEppoSourcePage(
-  request: PublicStableRegistryRequest,
+  request: EppoArchiveRequest,
   locale: PublicLocale,
   executor: QueryExecutor = db,
-): Promise<PublicStableRegistryPage<PublicEppoSourceRecord>> {
+): Promise<EppoArchivePage> {
   if (executor === db) {
     return db.transaction().execute(async (transaction) => {
       await configurePublicReadDeadline(transaction);
@@ -225,58 +165,21 @@ export async function listPublicEppoSourcePage(
   const records = rows
     .map((row) => serializePublicEppoSourceRecord(row, locale))
     .filter((row): row is PublicEppoSourceRecord => row !== null);
-  const visible = records.slice(0, PUBLIC_STABLE_REGISTRY_PAGE_SIZE);
+  const visible = records.slice(0, EPPO_ARCHIVE_PAGE_SIZE);
   const tail = visible.at(-1);
 
   return {
     request,
     records: visible,
     nextCursor:
-      records.length > PUBLIC_STABLE_REGISTRY_PAGE_SIZE && tail
-        ? encodePublicStableRegistryCursor({
+      records.length > EPPO_ARCHIVE_PAGE_SIZE && tail
+        ? encodeEppoArchiveCursor({
             name: normalizeCursorName(tail.displayName),
             key: tail.eppoCode,
           })
         : null,
     qualityClass: "partial",
   };
-}
-
-export async function findPublicStableCatalogRecord(
-  stableTaxon: string,
-  locale: PublicLocale,
-  executor: QueryExecutor = db,
-): Promise<PublicStableCatalogRecord | null> {
-  if (!isStableTaxon(stableTaxon)) return null;
-  if (executor === db) {
-    return db.transaction().execute(async (transaction) => {
-      await configurePublicReadDeadline(transaction);
-      return findPublicStableCatalogRecord(stableTaxon, locale, transaction);
-    });
-  }
-
-  const row = await executor
-    .selectFrom("stable_registry_public_catalog_records as records")
-    .innerJoin(
-      "catalog_registry_active_pointers as pointers",
-      "pointers.active_release_id",
-      "records.registry_release_id",
-    )
-    .select([
-      "records.stable_taxon as stableTaxon",
-      "records.object_kind as objectKind",
-      "records.canonical_name as canonicalName",
-      "records.scientific_name as scientificName",
-      "records.taxonomic_rank as taxonomicRank",
-      "records.parent_display_name as parentDisplayName",
-      "records.safe_aliases as safeAliases",
-      "records.activated_at as activatedAt",
-    ])
-    .where("pointers.release_family", "=", "foundation")
-    .where("records.stable_taxon", "=", stableTaxon)
-    .executeTakeFirst();
-
-  return row ? serializePublicStableCatalogRecord(row, locale) : null;
 }
 
 export async function findPublicEppoSourceRecord(
@@ -323,72 +226,11 @@ export async function findPublicEppoSourceRecord(
   return row ? serializePublicEppoSourceRecord(row, locale) : null;
 }
 
-export function buildPublicStableCatalogQuery(
-  executor: QueryExecutor,
-  request: PublicStableRegistryRequest,
-) {
-  const cursor = decodePublicStableRegistryCursor(request.cursor);
-  let query = executor
-    .selectFrom("stable_registry_public_catalog_records as records")
-    .innerJoin(
-      "catalog_registry_active_pointers as pointers",
-      "pointers.active_release_id",
-      "records.registry_release_id",
-    )
-    .select([
-      "records.stable_taxon as stableTaxon",
-      "records.object_kind as objectKind",
-      "records.canonical_name as canonicalName",
-      "records.scientific_name as scientificName",
-      "records.taxonomic_rank as taxonomicRank",
-      "records.parent_display_name as parentDisplayName",
-      "records.safe_aliases as safeAliases",
-      "records.activated_at as activatedAt",
-    ])
-    .where("pointers.release_family", "=", "foundation");
-
-  if (request.kind !== "all") {
-    // A record whose kingdom is unresolved belongs under both filters. Dropping
-    // it from one of them would hide an approved identity from the guest who
-    // filtered for exactly the kingdom it may belong to.
-    const requestedKind = request.kind;
-    query = query.where((eb) =>
-      eb.or([
-        eb("records.object_kind", "=", requestedKind),
-        eb("records.object_kind", "=", "either"),
-      ]),
-    );
-  }
-  if (request.query) {
-    const normalizedQuery = request.query.toLocaleLowerCase("en");
-    query = query.where(
-      sql<boolean>`exists (
-        select 1
-        from stable_registry_public_catalog_search_terms as search_terms
-        where search_terms.registry_release_id = ${sql.ref("records.registry_release_id")}
-          and search_terms.stable_taxon = ${sql.ref("records.stable_taxon")}
-          and search_terms.normalized_term like ${`${normalizedQuery}%`}
-      )`,
-    );
-  }
-  if (cursor) {
-    query = query.where(
-      sql<boolean>`(lower(${sql.ref("records.canonical_name")}), ${sql.ref("records.stable_taxon")}) > (${cursor.name}, ${cursor.key})`,
-    );
-  }
-
-  return query
-    .orderBy(sql<string>`lower(${sql.ref("records.canonical_name")})`, "asc")
-    .orderBy("records.stable_taxon", "asc")
-    .limit(PUBLIC_STABLE_REGISTRY_PAGE_SIZE + 1)
-    .$castTo<PublicCatalogRow>();
-}
-
 export function buildPublicEppoSourceQuery(
   executor: QueryExecutor,
-  request: PublicStableRegistryRequest,
+  request: EppoArchiveRequest,
 ) {
-  const cursor = decodePublicStableRegistryCursor(request.cursor);
+  const cursor = decodeEppoArchiveCursor(request.cursor);
   let query = executor
     .selectFrom("stable_registry_public_eppo_records as records")
     .innerJoin(
@@ -414,6 +256,8 @@ export function buildPublicEppoSourceQuery(
     ])
     .where("captures.state", "in", ["completed", "superseded_by_new_capture"]);
 
+  // The archive keeps the two-valued vocabulary: a record's kind comes from
+  // the observed `datatype` field, which is evidence rather than inference.
   if (request.kind !== "all") {
     query = query.where("records.object_kind", "=", request.kind);
   }
@@ -438,11 +282,11 @@ export function buildPublicEppoSourceQuery(
   return query
     .orderBy(sql<string>`lower(${sql.ref("records.display_name")})`, "asc")
     .orderBy("records.eppo_code", "asc")
-    .limit(PUBLIC_STABLE_REGISTRY_PAGE_SIZE + 1)
+    .limit(EPPO_ARCHIVE_PAGE_SIZE + 1)
     .$castTo<PublicEppoRow>();
 }
 
-export function isPublicStableRegistryDeadlineError(error: unknown): boolean {
+export function isEppoArchiveDeadlineError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const candidate = error as { code?: unknown; message?: unknown };
   return (
@@ -450,33 +294,6 @@ export function isPublicStableRegistryDeadlineError(error: unknown): boolean {
     (typeof candidate.message === "string" &&
       /statement timeout|query timeout/i.test(candidate.message))
   );
-}
-
-export function serializePublicStableCatalogRecord(
-  row: PublicCatalogRow,
-  locale: PublicLocale,
-): PublicStableCatalogRecord | null {
-  const stableTaxon = row.stableTaxon.trim();
-  const displayName = sanitizePublicLabel(row.canonicalName);
-  const scientificName = sanitizeOptionalPublicLabel(row.scientificName);
-  const taxonomicRank = sanitizeOptionalPublicLabel(row.taxonomicRank);
-  const parentDisplayName = sanitizeOptionalPublicLabel(row.parentDisplayName);
-  const objectKind = normalizeCatalogObjectKind(row.objectKind);
-  if (!isStableTaxon(stableTaxon) || !displayName || !objectKind) return null;
-
-  return {
-    stableTaxon,
-    objectKind,
-    displayName,
-    scientificName,
-    taxonomicRank,
-    parentDisplayName,
-    aliases: sanitizeAliases(row.safeAliases),
-    evidenceState: "approved_stable_registry",
-    href: localizedPath(locale, `/catalog/${encodeURIComponent(stableTaxon)}`),
-    qualityClass: "verified",
-    observedAt: toIsoTimestamp(row.activatedAt),
-  };
 }
 
 export function serializePublicEppoSourceRecord(
@@ -599,23 +416,13 @@ function sanitizeHttpsUrl(value: string): string | null {
 
 function normalizeObjectKind(
   value: string,
-): Exclude<PublicStableRegistryKind, "all"> | null {
+): Exclude<EppoArchiveKind, "all"> | null {
   return value === "plant" || value === "animal" ? value : null;
-}
-
-// The source archive keeps the two-valued vocabulary: its kind comes from the
-// observed `datatype` field, which is evidence rather than inference.
-function normalizeCatalogObjectKind(
-  value: string,
-): PublicStableCatalogObjectKind | null {
-  return value === "plant" || value === "animal" || value === "either"
-    ? value
-    : null;
 }
 
 function normalizeSourceEvidenceState(
   value: string,
-): PublicEppoSourceRecord["evidenceState"] | null {
+): EppoArchiveEvidenceState | null {
   return value === "source_record_not_approved" ||
     value === "superseded_source_evidence"
     ? value
@@ -639,7 +446,7 @@ function normalizeQuery(value: string | null): {
 }
 
 function normalizeKind(value: string | null): {
-  value: PublicStableRegistryKind;
+  value: EppoArchiveKind;
   invalid: boolean;
 } {
   if (!value) return { value: "all", invalid: false };
@@ -659,7 +466,7 @@ function normalizeCursor(value: string | null): {
   invalid: boolean;
 } {
   if (!value) return { value: null, invalid: false };
-  return decodePublicStableRegistryCursor(value)
+  return decodeEppoArchiveCursor(value)
     ? { value, invalid: false }
     : { value: null, invalid: true };
 }
@@ -668,10 +475,6 @@ function firstValue(
   value: string | string[] | null | undefined,
 ): string | null {
   return typeof value === "string" ? value : null;
-}
-
-function isStableTaxon(value: string) {
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(value) && value.length <= 120;
 }
 
 function normalizeCursorName(value: string) {

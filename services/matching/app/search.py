@@ -140,43 +140,6 @@ where catalog_items.status in ('seeded', 'confirmed')
 order by catalog_item_names.is_primary desc, catalog_item_names.display_name asc
 """
 
-# OVE-257: the derived index rebuild reads the frozen active-release product
-# projection, never mutable `catalog_items` eligibility. A retired release or a
-# source-only row therefore cannot be revived by a reindex.
-STABLE_REGISTRY_PRODUCT_TYPEAHEAD_ROWS_SQL = """
-select
-  records.catalog_item_id::text as catalog_item_id,
-  records.canonical_name,
-  lower(records.canonical_name) as item_normalized_name,
-  records.catalog_kind,
-  'confirmed' as status,
-  'stable_registry' as source,
-  null::text as created_by_user_id,
-  records.item_locale,
-  names.display_name,
-  names.normalized_name as alias_normalized_name,
-  names.locale as alias_locale,
-  names.is_primary,
-  'stable_registry' as eligibility_scope,
-  records.object_kind_scope,
-  records.public_slug,
-  records.registry_release_id::text as registry_release_id,
-  records.catalog_item_revision_id::text as revision_id,
-  names.name_class
-from stable_registry_product_catalog_names as names
-inner join stable_registry_product_catalog_records as records
-  on records.registry_release_id = names.registry_release_id
- and records.catalog_item_id = names.catalog_item_id
-inner join catalog_registry_active_pointers as pointers
-  on pointers.release_family = 'foundation'
- and pointers.active_release_id = records.registry_release_id
-inner join catalog_registry_releases as releases
-  on releases.id = records.registry_release_id
- and releases.release_kind = 'foundation'
- and releases.state = 'active'
-order by names.is_primary desc, names.display_name asc
-"""
-
 JOURNAL_ENTRY_SEARCH_ROW_SQL = """
 select
   journal_entries.id::text as id,
@@ -311,19 +274,12 @@ def catalog_typeahead_document_from_row(
         return None
 
     is_primary = bool(row.get("is_primary"))
-    registry = _stable_registry_document_fields(row)
-    eligibility_scope = _text(row, "eligibility_scope", fallback="compatibility")
-    if eligibility_scope == "stable_registry" and (
-        registry is None or source != "stable_registry" or status != "confirmed"
-    ):
-        return None
 
     return {
         "id": _catalog_typeahead_document_id(
             catalog_item_id,
             alias_locale,
             normalized_name,
-            registry["registryReleaseId"] if registry else "",
         ),
         "catalogItemId": catalog_item_id,
         "displayName": display_name,
@@ -337,58 +293,6 @@ def catalog_typeahead_document_from_row(
         "isPrimary": is_primary,
         "rank": 0 if is_primary else 10,
         "kind": "catalog_item",
-        **(
-            {"eligibilityScope": "stable_registry", **registry}
-            if eligibility_scope == "stable_registry" and registry
-            else {}
-        ),
-    }
-
-
-_STABLE_REGISTRY_NAME_CLASSES = {
-    "canonical",
-    "scientific",
-    "localized",
-    "accepted_alias",
-}
-_STABLE_REGISTRY_OBJECT_KIND_SCOPES = {"plant", "animal", "either"}
-_PUBLIC_SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-_UUID_PATTERN = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-    re.IGNORECASE,
-)
-
-
-def _stable_registry_document_fields(
-    row: Mapping[str, Any],
-) -> dict[str, object] | None:
-    """Return the release-scoped facets, or None when any one is unusable.
-
-    A partially valid set is refused rather than half-projected: the picker
-    uses these fields to prove an active identity, so an incomplete document
-    must not exist at all.
-    """
-    public_slug = _text(row, "public_slug")
-    registry_release_id = _text(row, "registry_release_id")
-    revision_id = _text(row, "revision_id")
-    name_class = _text(row, "name_class")
-    object_kind_scope = _text(row, "object_kind_scope")
-
-    if (
-        not _PUBLIC_SLUG_PATTERN.match(public_slug)
-        or not _UUID_PATTERN.match(registry_release_id)
-        or not _UUID_PATTERN.match(revision_id)
-        or name_class not in _STABLE_REGISTRY_NAME_CLASSES
-        or object_kind_scope not in _STABLE_REGISTRY_OBJECT_KIND_SCOPES
-    ):
-        return None
-
-    return {
-        "objectKindScope": object_kind_scope,
-        "publicSlug": public_slug,
-        "registryReleaseId": registry_release_id,
-        "revisionId": revision_id,
-        "nameClass": name_class,
     }
 
 
@@ -406,22 +310,8 @@ def catalog_typeahead_documents_from_rows(
 
 
 def fetch_catalog_typeahead_rows(conn: Any) -> list[Mapping[str, Any]]:
-    """Compatibility rows plus the active-release product projection.
-
-    Both are read in one rebuild so a release activation and the pre-registry
-    catalog converge to one index without a second search owner.
-    """
-    rows = list(conn.execute(CATALOG_TYPEAHEAD_ROWS_SQL).fetchall())
-    rows.extend(fetch_stable_registry_product_typeahead_rows(conn))
-    return rows
-
-
-def fetch_stable_registry_product_typeahead_rows(
-    conn: Any,
-) -> list[Mapping[str, Any]]:
-    return list(
-        conn.execute(STABLE_REGISTRY_PRODUCT_TYPEAHEAD_ROWS_SQL).fetchall()
-    )
+    """The selectable catalog rows the derived typeahead index is rebuilt from."""
+    return list(conn.execute(CATALOG_TYPEAHEAD_ROWS_SQL).fetchall())
 
 
 def fetch_journal_entry_search_row(
@@ -834,13 +724,8 @@ def _catalog_typeahead_document_id(
     catalog_item_id: str,
     locale: str,
     normalized_name: str,
-    identity_scope: str = "",
 ) -> str:
-    alias_key = (
-        f"{identity_scope}\0{locale}\0{normalized_name}".encode()
-        if identity_scope
-        else f"{locale}\0{normalized_name}".encode()
-    )
+    alias_key = f"{locale}\0{normalized_name}".encode()
     alias_digest = hashlib.sha256(alias_key).hexdigest()[:24]
     return f"{catalog_item_id}-{alias_digest}"
 

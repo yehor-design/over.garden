@@ -9,7 +9,9 @@
  * element containing a separator is indistinguishable from two. Only running it
  * showed that. `0052` adds the four payload constraints that four declared
  * kinds never had, and a CHECK that accepts everything looks exactly like a
- * CHECK that works.
+ * CHECK that works. One of the four, `stable_registry_edition_build`, guards a
+ * kind retired by ADR-0025: the migration keeps it as history, and this proof
+ * exercises the three that still guard a live kind.
  *
  * It builds its own disposable database and drops it, so it never writes to the
  * database whose connection string it borrows.
@@ -37,9 +39,6 @@ const CURRENT_HANDLER_SET = [
   "catalog_typeahead_reindex",
   "journal_entry_index",
   "journal_entry_unindex",
-  "stable_registry_edition_build",
-  "stable_registry_extension_pack_build",
-  "stable_registry_foundation_build",
 ];
 
 interface Case {
@@ -108,34 +107,6 @@ const CASES: readonly Case[] = [
     name: "0051 refuses an empty-string element",
     expect: "refused",
     run: (pool) => writeHeartbeat(pool, ["journal_entry_index", ""]),
-  },
-  {
-    name: "0052 accepts a valid stable_registry_edition_build payload",
-    expect: "accepted",
-    run: (pool) =>
-      enqueue(pool, "matching", {
-        kind: "stable_registry_edition_build",
-        releaseId: UUID_A,
-      }),
-  },
-  {
-    name: "0052 refuses stable_registry_edition_build with a non-UUID releaseId",
-    expect: "refused",
-    run: (pool) =>
-      enqueue(pool, "matching", {
-        kind: "stable_registry_edition_build",
-        releaseId: "not-a-uuid",
-      }),
-  },
-  {
-    name: "0052 refuses stable_registry_edition_build carrying an undeclared key",
-    expect: "refused",
-    run: (pool) =>
-      enqueue(pool, "matching", {
-        kind: "stable_registry_edition_build",
-        releaseId: UUID_A,
-        ownerUserId: UUID_B,
-      }),
   },
   {
     name: "0052 accepts a valid catalog_typeahead_reindex payload",
