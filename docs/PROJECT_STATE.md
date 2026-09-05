@@ -188,6 +188,14 @@ decision in ADR-0022, not an omission.
     exporting GET, and `src/app/api/cron/vercel-cron-contract.test.ts` now fails
     when any scheduled path has no GET, when a cron route is unscheduled, or
     when a scheduled route does not refuse an unauthenticated caller.
+    `release-health.yml` probes the same thing against the deployed build once a
+    day, because a route can be right in git and still not be what production
+    serves. The fix is live — an unauthenticated GET now answers 401 — and the
+    nine queued jobs drain on the next 03:00 UTC pass. Nothing was triggered by
+    hand: `vercel env pull` does not return the `CRON_SECRET` value, and the
+    evidence that the runtime holds one is that the learning-attribution cron,
+    whose only production caller is its own scheduled route, advanced an outbox
+    row three and a half days ago.
 
 ## How to check any of this yourself
 
