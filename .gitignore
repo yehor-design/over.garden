@@ -25,6 +25,9 @@ CLAUDE.local.md
 .env.*
 !.env.example
 !**/.env.example
+# A downloaded OAuth client file (Google names it client_secret_<id>.json)
+# is a credential, not a document. It never belongs in the tree.
+client_secret*.json
 
 # ── Node / Next.js ───────────────────────────────────────────────────────────
 node_modules/
