@@ -14,15 +14,27 @@ exact 40-character commit already contained in `main`, it:
 1. installs the frozen Python dependency graph with `uv==0.11.24`;
 2. compiles every Python module, runs frozen Ruff, and runs the full matching
    test suite before any registry write;
-3. builds one shared API/worker image with OCI revision, creation time, schema
-   compatibility, runtime-contract, and unique workflow-run labels;
-4. pushes a unique `sha-<full-sha>-run-<run-id>-<attempt>` tag to the private
-   GitHub Container Registry and captures its immutable registry digest;
-5. executes `python -m app.runtime capabilities` inside that exact digest and
-   refuses any handler set other than the six OVE-190 handlers;
-6. uploads a 90-day GitHub Actions artifact containing `release.json`, the safe
-   capability manifest, and a checksummed compressed Docker archive of that
-   exact digest.
+3. builds one `linux/amd64` worker image onto the runner, with OCI revision,
+   creation time, schema compatibility, runtime-contract, and unique
+   workflow-run labels, and does not publish it yet;
+4. verifies the candidate there: its image id, platform, and every label, then
+   `python -m app.runtime capabilities` inside it, whose handler set must equal
+   the set the released commit declares — read from the generated
+   `job_queue_contract.py`, never from a list written into the workflow;
+5. only then pushes the unique `sha-<full-sha>-run-<run-id>-<attempt>` tag to
+   the GitHub Container Registry, reads the immutable registry digest back,
+   and resolves that digest through the registry to prove it serves the image
+   just verified;
+6. seals the release: runs `capabilities` again with the real digest, records
+   the handler set, the platform, and both digests in `release.json`, and
+   uploads a 14-day GitHub Actions artifact containing `release.json`, the
+   safe capability manifest, and a checksummed compressed Docker archive of
+   that exact image.
+
+Nothing reaches the registry before it has passed every gate, so every tag
+there is a sealed release. Tags pushed before 2026-09-05 were published first
+and verified second; the seventy-eight of them that failed verification are
+unsealed images with release-shaped names and must not be installed.
 
 No `latest` tag is produced. The droplet does not need a persistent GHCR token:
 an authenticated operator downloads the private Actions artifact and transfers

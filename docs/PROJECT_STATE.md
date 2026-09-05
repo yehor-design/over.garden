@@ -158,13 +158,17 @@ decision in ADR-0022, not an omission.
    it from the image environment and no column holds it, so the runtime proof
    reports the image digest instead of inventing a value.
 8. **The job queue contract is generated now.** The matching image release
-   refused seventy-six correct builds between 2026-08-27 and 2026-09-04 because
+   refused seventy-eight correct builds between 2026-08-27 and 2026-09-04 because
    the expected handler set was a frozen literal in five places and the manifest
    had grown three Stable Registry kinds. `apps/web/src/server/job-queue-manifest.ts`
    is now the only place that says what the set is: `pnpm queue:contract:build`
    writes the JSON contract and the Python module, `queue:contract:check` fails
    on drift, and `queue:contract:prove-database` executes the database half.
-   Releases are green again. `0051` (the heartbeat handler set is checked for
+   Releases are green again, and since 2026-09-05 a candidate image is
+   verified on the runner before the one push to the registry, so every tag in
+   GHCR is a sealed release; the seventy-eight unverified images published
+   during the red window are still there and must not be installed. `0051`
+   (the heartbeat handler set is checked for
    shape, not identity — an exact array made a mismatched worker unrecordable
    and therefore indistinguishable from a dead one) and `0052` (the four payload
    CHECK constraints four kinds declared and none had) were applied to

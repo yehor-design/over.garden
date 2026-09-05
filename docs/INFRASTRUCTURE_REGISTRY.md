@@ -60,9 +60,12 @@ Never commit `infra/.runtime/` or `apps/web/.runtime/`. Those directories contai
 
 ## GitHub Actions budget freeze (OVE-208 closeout, 2026-07-23)
 
-Status: GitHub-hosted Actions cannot start jobs (`Actions budget is preventing further use`) and spending limit cannot be raised.
+Status: ended 2026-07-27. The repository is public, GitHub-hosted runners and
+GHCR no longer draw on the Actions budget, and both workflows run on `push` and
+`pull_request` again (`ci.yml`) and on every push to `main` (`matching-image.yml`,
+OVE-233). The bypass below is kept as the record of what was in force.
 
-Operational bypass in force:
+Operational bypass that was in force:
 
 - `.github/workflows/ci.yml` and `.github/workflows/matching-image.yml` are `workflow_dispatch` only (no auto `push` / `pull_request` triggers).
 - Merge gate: green CI on the pull request (install, bootstrap, generated-types check, lint, typecheck, banned-dependency gate, tests, build) plus a `READY` Vercel deployment for the merged SHA.
@@ -631,8 +634,8 @@ Worker and search invariants:
 - Do not expose Meilisearch keys, worker env files, database URLs, canary row identifiers, or indexed journal text in docs, Linear, or chat.
 - `matching-worker` must process every kind the job queue contract declares,
   idempotently. The set is not restated here and no document should restate it:
-  a frozen six-handler copy in five files refused seventy-six correct image
-  releases between 2026-08-28 and 2026-09-04 after the manifest grew to nine.
+  a frozen six-handler copy in five files refused seventy-eight correct image
+  releases between 2026-08-27 and 2026-09-04 after the manifest grew to nine.
   `contracts/job-queue/job-queue.contract.v1.json` is generated from
   `apps/web/src/server/job-queue-manifest.ts` and is the readable answer. Reclaim
   stale `processing` rows after the visibility timeout. Within the Python tier
@@ -676,10 +679,14 @@ Immutable matching release contract (OVE-190):
 - Publisher: `.github/workflows/matching-image.yml`. It accepts only an exact
   lowercase 40-character SHA contained in `origin/main`, installs
   `uv==0.11.24`, compiles all Python modules, runs frozen Ruff, and runs the full
-  frozen matching test suite before a registry write.
+  frozen matching test suite before a registry write. Since 2026-09-05 the image
+  is built onto the runner and verified there — platform, labels, and the
+  handler set the released commit declares — before the one `docker push`, so
+  the registry holds only sealed releases; the registry digest is read back
+  after the push and resolved through the registry again before it is sealed.
 - Artifact identity: private GHCR repository class, unique
   `sha-<full-sha>-run-<run-id>-<attempt>` tag, immutable `sha256:` registry
-  digest, and a 90-day checksummed Actions artifact containing `release.json`,
+  digest, and a 14-day checksummed Actions artifact containing `release.json`,
   `matching-capabilities.json`, and the compressed exact-image archive. No
   `latest` tag is produced. The registry digest is canonical even though the
   authenticated operator transfers the sealed archive to the droplet so no
