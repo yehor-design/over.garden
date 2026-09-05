@@ -150,7 +150,7 @@ Allowed evidence:
 
 - exact public commit SHA and immutable image digest;
 - safe schema compatibility and runtime contract classes;
-- six public job-handler names;
+- the public job-handler names the release sealed;
 - dependency/readiness classes and queue count/lag buckets emitted by the safe
   runtime contract;
 - `install`, `deploy`, `rollback`, `forward`, and `status` pass/fail outcomes.

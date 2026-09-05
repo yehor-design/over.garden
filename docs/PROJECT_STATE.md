@@ -2,7 +2,7 @@
 
 Status: living document. Update it whenever production behaviour, the direction,
 or the list of known gaps changes. Read it first, then `AGENTS.md`.
-Last reviewed: 2026-09-04.
+Last reviewed: 2026-09-05.
 
 This page answers four questions for anyone returning to OverGarden: what the
 product is today, what is actually true in production right now, what is being
@@ -40,7 +40,7 @@ Verified on 2026-09-03 against `https://over.garden` and the live providers.
 | Schema        | Migrations `0001`–`0047` and `0049` applied, minus the two deliberately skipped. See `docs/PRODUCTION_SCHEMA_STATE.md`                                                                                      |
 | Interaction   | Like, bookmark, follow and comment are Server Actions on a form with a real endpoint, so they work before hydration and with JavaScript off. A like is a permanent row owned by an account or by one signed visitor cookie, with no expiry and no ceiling |
 | Sign-in       | One screen: `/auth/sign-in` and `/auth/sign-up` over one component and Server Actions. Every other page shows its own empty state and one link to it                                                        |
-| Matching      | The worker runs on the droplet and writes its heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03                                                                |
+| Matching      | The worker on the droplet runs the sealed release of `63ce91d` since 2026-09-05 with all nine handlers and a fresh heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03 |
 | Hosting       | Decided 2026-09-03: the DigitalOcean managed database and the `fra1` droplet stay                                                                                                                           |
 
 The seven owner requirements have one committed production receipt:
@@ -174,12 +174,17 @@ decision in ADR-0022, not an omission.
    CHECK constraints four kinds declared and none had) were applied to
    production on 2026-09-05; `docs/PRODUCTION_SCHEMA_STATE.md` carries the
    receipts and says why one constraint is deliberately `NOT VALID`.
-9. **Production still runs a worker built before 2026-08-28.** Read from the
-   heartbeat row on 2026-09-05: `handler_count` 6, fresh. The host installs only
-   sealed release artifacts and none was produced while the release was red, so
-   the deployed worker has no handler for the three Stable Registry build kinds.
-   Until a current image is installed, a Foundation, extension-pack or edition
-   build enqueued in production terminalises as `unsupported_kind`.
+9. **Closed 2026-09-05: production runs the current worker.** The sealed
+   release of `63ce91d` was installed and activated on the droplet after the
+   eight-day red window; the heartbeat row carries all nine handlers and both
+   production proofs answer ready. Getting there took two more defects, each
+   found only by deploying: preflight compared the candidate's handler set
+   with the incumbent worker's heartbeat, so a release that changes the set
+   could never pass (PR #289), and the drain outcome wrote a bare NULL
+   parameter that Postgres could not type, so the first nine-handler worker
+   restarted on every loop until the release script restored the prior image
+   (PR #290). The worker's SQL now executes against a real Postgres in CI and
+   in the release path: `services/matching/tests/test_runtime_database.py`.
 10. **The media-lifecycle cron had never run in production.** `vercel.json`
     schedules `/api/cron/media-lifecycle` daily at 03:00 UTC and Vercel Cron
     invokes a scheduled path with GET. The route exported `POST` only, so every
