@@ -226,10 +226,36 @@ whoever triggered a failed run, so each of the seventy-eight failures produced
 its own notice; every one of them describes a run that completed before
 20:22 UTC on 4 September, and nothing since is red.
 
+**The registry received every candidate before it was verified** (PR #288).
+The repair kept the original order — push to GHCR, then pull the digest back
+and verify it — so each of the seventy-eight refused images had already been
+published under a release-shaped tag, and a public, immutable registry holds
+seventy-eight images that are not releases. The workflow builds the candidate
+onto the runner now and verifies its id, its platform (`linux/amd64`, declared
+once as `RELEASE_PLATFORM`), every label, and the handler set the released
+commit declares; only then does the one `docker push` run. The registry digest
+is read back, resolved through the registry, and the image it serves is proved
+to be the one verified before `capabilities` is sealed with the real digest.
+The handler set is compared as the exact sequence the generated contract
+declares, both sides through one serialiser; the contract test pins the order
+(verify, then publish, then seal), refuses `push: true`, and refuses a handler
+name in any quoting; `release.json` records the platform.
+
+Proved before merge by dispatching the changed workflow from its branch against
+the head of `main`. The first dispatch (run 33954389410) refused the candidate
+on a string comparison of two JSON serialisers — Python's `", "` against jq's
+`","` — inside "Verify the candidate on the runner", before any push, so the
+refused image never reached the registry: the order the rewrite exists to keep,
+observed on its first run. The second dispatch (run 33954619247) verified,
+published, and sealed in 6m04s, with the registry digest resolved back to the
+verified image id.
+
 Still open: production runs a worker built before 28 August, because the host
 installs only sealed artifacts and none existed while the release was red
 (`docs/PROJECT_STATE.md`, known gap 9). Installing the current release is one
-owner-approved step.
+owner-approved step. The seventy-eight unsealed images remain in the
+registry; deleting package versions is a provider-state change and waits for
+the owner.
 
 ## Corrections made in this window
 
