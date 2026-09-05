@@ -72,7 +72,8 @@ export type PublicProjectionReason =
   | "catalog_identity"
   | "media_presentation"
   | "profile_visibility"
-  | "repair";
+  | "repair"
+  | "catalog_card";
 
 /**
  * Transitions that can only reduce what the public can see. They are claimed

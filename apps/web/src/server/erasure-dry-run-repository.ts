@@ -638,6 +638,12 @@ export function buildCountCatalogReviewerLinksQuery(
         where reviewed_by_user_id = ${requesterUserId})
       + (select count(*)::int from catalog_alias_projections
         where reviewed_by_user_id = ${requesterUserId})
+      + (select count(*)::int from catalog_source_assertions
+        where decided_by_user_id = ${requesterUserId})
+      + (select count(*)::int from catalog_curation_queue
+        where decided_by_user_id = ${requesterUserId})
+      + (select count(*)::int from catalog_curation_actions
+        where performed_by_user_id = ${requesterUserId})
       + (select count(*)::int from variety_seed_proofs
         where author_user_id = ${requesterUserId})
     ) as count

@@ -1,0 +1,2291 @@
+{
+  "version": "ove386.normalize-name.v1",
+  "description": "Hand-authored expectations for catalog_normalize_name. SQL (migration 0054), TypeScript (apps/web/src/lib/catalog/normalize-name.ts) and Python (services/matching/app/normalize_name.py) must all produce `expected` for `input`.",
+  "cases": [
+    {
+      "input": "Solanum lycopersicum L.",
+      "expected": "solanum lycopersicum l.",
+      "note": "scientific name with authorship keeps the abbreviation"
+    },
+    {
+      "input": "SOLANUM LYCOPERSICUM L.",
+      "expected": "solanum lycopersicum l.",
+      "note": "scientific name with authorship keeps the abbreviation (upper case)"
+    },
+    {
+      "input": "  Solanum lycopersicum L.  ",
+      "expected": "solanum lycopersicum l.",
+      "note": "scientific name with authorship keeps the abbreviation (padded)"
+    },
+    {
+      "input": "Solanum lycopersicum L.",
+      "expected": "solanum lycopersicum l.",
+      "note": "scientific name with authorship keeps the abbreviation (non-breaking spaces)"
+    },
+    {
+      "input": "Solanum\tlycopersicum\tL.",
+      "expected": "solanum lycopersicum l.",
+      "note": "scientific name with authorship keeps the abbreviation (tabs)"
+    },
+    {
+      "input": "“Solanum lycopersicum L.”",
+      "expected": "solanum lycopersicum l.",
+      "note": "scientific name with authorship keeps the abbreviation (wrapped in double quotes)"
+    },
+    {
+      "input": "Томат",
+      "expected": "томат",
+      "note": "Ukrainian title case"
+    },
+    {
+      "input": "ТОМАТ",
+      "expected": "томат",
+      "note": "Ukrainian title case (upper case)"
+    },
+    {
+      "input": "  Томат  ",
+      "expected": "томат",
+      "note": "Ukrainian title case (padded)"
+    },
+    {
+      "input": "“Томат”",
+      "expected": "томат",
+      "note": "Ukrainian title case (wrapped in double quotes)"
+    },
+    {
+      "input": "ПОМІДОР ЧЕРІ",
+      "expected": "помідор чері",
+      "note": "Ukrainian upper case with ї/і"
+    },
+    {
+      "input": "  ПОМІДОР ЧЕРІ  ",
+      "expected": "помідор чері",
+      "note": "Ukrainian upper case with ї/і (padded)"
+    },
+    {
+      "input": "ПОМІДОР ЧЕРІ",
+      "expected": "помідор чері",
+      "note": "Ukrainian upper case with ї/і (non-breaking spaces)"
+    },
+    {
+      "input": "ПОМІДОР\tЧЕРІ",
+      "expected": "помідор чері",
+      "note": "Ukrainian upper case with ї/і (tabs)"
+    },
+    {
+      "input": "“ПОМІДОР ЧЕРІ”",
+      "expected": "помідор чері",
+      "note": "Ukrainian upper case with ї/і (wrapped in double quotes)"
+    },
+    {
+      "input": "Домат чери",
+      "expected": "домат чери",
+      "note": "Bulgarian"
+    },
+    {
+      "input": "ДОМАТ ЧЕРИ",
+      "expected": "домат чери",
+      "note": "Bulgarian (upper case)"
+    },
+    {
+      "input": "  Домат чери  ",
+      "expected": "домат чери",
+      "note": "Bulgarian (padded)"
+    },
+    {
+      "input": "Домат чери",
+      "expected": "домат чери",
+      "note": "Bulgarian (non-breaking spaces)"
+    },
+    {
+      "input": "Домат\tчери",
+      "expected": "домат чери",
+      "note": "Bulgarian (tabs)"
+    },
+    {
+      "input": "“Домат чери”",
+      "expected": "домат чери",
+      "note": "Bulgarian (wrapped in double quotes)"
+    },
+    {
+      "input": "Огірок Ніжинський",
+      "expected": "огірок ніжинський",
+      "note": "Ukrainian two words"
+    },
+    {
+      "input": "ОГІРОК НІЖИНСЬКИЙ",
+      "expected": "огірок ніжинський",
+      "note": "Ukrainian two words (upper case)"
+    },
+    {
+      "input": "  Огірок Ніжинський  ",
+      "expected": "огірок ніжинський",
+      "note": "Ukrainian two words (padded)"
+    },
+    {
+      "input": "Огірок Ніжинський",
+      "expected": "огірок ніжинський",
+      "note": "Ukrainian two words (non-breaking spaces)"
+    },
+    {
+      "input": "Огірок\tНіжинський",
+      "expected": "огірок ніжинський",
+      "note": "Ukrainian two words (tabs)"
+    },
+    {
+      "input": "“Огірок Ніжинський”",
+      "expected": "огірок ніжинський",
+      "note": "Ukrainian two words (wrapped in double quotes)"
+    },
+    {
+      "input": "М'ята перцева",
+      "expected": "м'ята перцева",
+      "note": "ASCII apostrophe inside a word survives"
+    },
+    {
+      "input": "М'ЯТА ПЕРЦЕВА",
+      "expected": "м'ята перцева",
+      "note": "ASCII apostrophe inside a word survives (upper case)"
+    },
+    {
+      "input": "  М'ята перцева  ",
+      "expected": "м'ята перцева",
+      "note": "ASCII apostrophe inside a word survives (padded)"
+    },
+    {
+      "input": "М'ята перцева",
+      "expected": "м'ята перцева",
+      "note": "ASCII apostrophe inside a word survives (non-breaking spaces)"
+    },
+    {
+      "input": "М'ята\tперцева",
+      "expected": "м'ята перцева",
+      "note": "ASCII apostrophe inside a word survives (tabs)"
+    },
+    {
+      "input": "“М'ята перцева”",
+      "expected": "м'ята перцева",
+      "note": "ASCII apostrophe inside a word survives (wrapped in double quotes)"
+    },
+    {
+      "input": "М’ята перцева",
+      "expected": "м'ята перцева",
+      "note": "U+2019 becomes the ASCII apostrophe and survives inside a word"
+    },
+    {
+      "input": "М’ЯТА ПЕРЦЕВА",
+      "expected": "м'ята перцева",
+      "note": "U+2019 becomes the ASCII apostrophe and survives inside a word (upper case)"
+    },
+    {
+      "input": "  М’ята перцева  ",
+      "expected": "м'ята перцева",
+      "note": "U+2019 becomes the ASCII apostrophe and survives inside a word (padded)"
+    },
+    {
+      "input": "М’ята перцева",
+      "expected": "м'ята перцева",
+      "note": "U+2019 becomes the ASCII apostrophe and survives inside a word (non-breaking spaces)"
+    },
+    {
+      "input": "М’ята\tперцева",
+      "expected": "м'ята перцева",
+      "note": "U+2019 becomes the ASCII apostrophe and survives inside a word (tabs)"
+    },
+    {
+      "input": "“М’ята перцева”",
+      "expected": "м'ята перцева",
+      "note": "U+2019 becomes the ASCII apostrophe and survives inside a word (wrapped in double quotes)"
+    },
+    {
+      "input": "Мʼята",
+      "expected": "м'ята",
+      "note": "U+02BC modifier apostrophe inside a word"
+    },
+    {
+      "input": "МʼЯТА",
+      "expected": "м'ята",
+      "note": "U+02BC modifier apostrophe inside a word (upper case)"
+    },
+    {
+      "input": "  Мʼята  ",
+      "expected": "м'ята",
+      "note": "U+02BC modifier apostrophe inside a word (padded)"
+    },
+    {
+      "input": "“Мʼята”",
+      "expected": "м'ята",
+      "note": "U+02BC modifier apostrophe inside a word (wrapped in double quotes)"
+    },
+    {
+      "input": "Здоров’я",
+      "expected": "здоров'я",
+      "note": "U+2019 inside a word"
+    },
+    {
+      "input": "ЗДОРОВ’Я",
+      "expected": "здоров'я",
+      "note": "U+2019 inside a word (upper case)"
+    },
+    {
+      "input": "  Здоров’я  ",
+      "expected": "здоров'я",
+      "note": "U+2019 inside a word (padded)"
+    },
+    {
+      "input": "“Здоров’я”",
+      "expected": "здоров'я",
+      "note": "U+2019 inside a word (wrapped in double quotes)"
+    },
+    {
+      "input": "Ye`s",
+      "expected": "ye's",
+      "note": "backtick inside a word becomes an apostrophe"
+    },
+    {
+      "input": "YE`S",
+      "expected": "ye's",
+      "note": "backtick inside a word becomes an apostrophe (upper case)"
+    },
+    {
+      "input": "  Ye`s  ",
+      "expected": "ye's",
+      "note": "backtick inside a word becomes an apostrophe (padded)"
+    },
+    {
+      "input": "“Ye`s”",
+      "expected": "ye's",
+      "note": "backtick inside a word becomes an apostrophe (wrapped in double quotes)"
+    },
+    {
+      "input": "Solanum lycopersicum 'De Barao'",
+      "expected": "solanum lycopersicum de barao",
+      "note": "quoted cultivar name loses its quotes"
+    },
+    {
+      "input": "SOLANUM LYCOPERSICUM 'DE BARAO'",
+      "expected": "solanum lycopersicum de barao",
+      "note": "quoted cultivar name loses its quotes (upper case)"
+    },
+    {
+      "input": "  Solanum lycopersicum 'De Barao'  ",
+      "expected": "solanum lycopersicum de barao",
+      "note": "quoted cultivar name loses its quotes (padded)"
+    },
+    {
+      "input": "Solanum lycopersicum 'De Barao'",
+      "expected": "solanum lycopersicum de barao",
+      "note": "quoted cultivar name loses its quotes (non-breaking spaces)"
+    },
+    {
+      "input": "Solanum\tlycopersicum\t'De\tBarao'",
+      "expected": "solanum lycopersicum de barao",
+      "note": "quoted cultivar name loses its quotes (tabs)"
+    },
+    {
+      "input": "“Solanum lycopersicum 'De Barao'”",
+      "expected": "solanum lycopersicum de barao",
+      "note": "quoted cultivar name loses its quotes (wrapped in double quotes)"
+    },
+    {
+      "input": "Malus domestica ‘Golden Delicious’",
+      "expected": "malus domestica golden delicious",
+      "note": "typographic single quotes around a cultivar name"
+    },
+    {
+      "input": "MALUS DOMESTICA ‘GOLDEN DELICIOUS’",
+      "expected": "malus domestica golden delicious",
+      "note": "typographic single quotes around a cultivar name (upper case)"
+    },
+    {
+      "input": "  Malus domestica ‘Golden Delicious’  ",
+      "expected": "malus domestica golden delicious",
+      "note": "typographic single quotes around a cultivar name (padded)"
+    },
+    {
+      "input": "Malus domestica ‘Golden Delicious’",
+      "expected": "malus domestica golden delicious",
+      "note": "typographic single quotes around a cultivar name (non-breaking spaces)"
+    },
+    {
+      "input": "Malus\tdomestica\t‘Golden\tDelicious’",
+      "expected": "malus domestica golden delicious",
+      "note": "typographic single quotes around a cultivar name (tabs)"
+    },
+    {
+      "input": "“Malus domestica ‘Golden Delicious’”",
+      "expected": "malus domestica golden delicious",
+      "note": "typographic single quotes around a cultivar name (wrapped in double quotes)"
+    },
+    {
+      "input": "Rosa 'Peace'",
+      "expected": "rosa peace",
+      "note": "quoted single-word cultivar"
+    },
+    {
+      "input": "ROSA 'PEACE'",
+      "expected": "rosa peace",
+      "note": "quoted single-word cultivar (upper case)"
+    },
+    {
+      "input": "  Rosa 'Peace'  ",
+      "expected": "rosa peace",
+      "note": "quoted single-word cultivar (padded)"
+    },
+    {
+      "input": "Rosa 'Peace'",
+      "expected": "rosa peace",
+      "note": "quoted single-word cultivar (non-breaking spaces)"
+    },
+    {
+      "input": "Rosa\t'Peace'",
+      "expected": "rosa peace",
+      "note": "quoted single-word cultivar (tabs)"
+    },
+    {
+      "input": "“Rosa 'Peace'”",
+      "expected": "rosa peace",
+      "note": "quoted single-word cultivar (wrapped in double quotes)"
+    },
+    {
+      "input": "'Квітка' сорт",
+      "expected": "квітка сорт",
+      "note": "quotes at the start of the string"
+    },
+    {
+      "input": "'КВІТКА' СОРТ",
+      "expected": "квітка сорт",
+      "note": "quotes at the start of the string (upper case)"
+    },
+    {
+      "input": "  'Квітка' сорт  ",
+      "expected": "квітка сорт",
+      "note": "quotes at the start of the string (padded)"
+    },
+    {
+      "input": "'Квітка' сорт",
+      "expected": "квітка сорт",
+      "note": "quotes at the start of the string (non-breaking spaces)"
+    },
+    {
+      "input": "'Квітка'\tсорт",
+      "expected": "квітка сорт",
+      "note": "quotes at the start of the string (tabs)"
+    },
+    {
+      "input": "Абрикос 'Ананасовий'",
+      "expected": "абрикос ананасовий",
+      "note": "quoted Cyrillic cultivar"
+    },
+    {
+      "input": "АБРИКОС 'АНАНАСОВИЙ'",
+      "expected": "абрикос ананасовий",
+      "note": "quoted Cyrillic cultivar (upper case)"
+    },
+    {
+      "input": "  Абрикос 'Ананасовий'  ",
+      "expected": "абрикос ананасовий",
+      "note": "quoted Cyrillic cultivar (padded)"
+    },
+    {
+      "input": "Абрикос 'Ананасовий'",
+      "expected": "абрикос ананасовий",
+      "note": "quoted Cyrillic cultivar (non-breaking spaces)"
+    },
+    {
+      "input": "Абрикос\t'Ананасовий'",
+      "expected": "абрикос ананасовий",
+      "note": "quoted Cyrillic cultivar (tabs)"
+    },
+    {
+      "input": "“Абрикос 'Ананасовий'”",
+      "expected": "абрикос ананасовий",
+      "note": "quoted Cyrillic cultivar (wrapped in double quotes)"
+    },
+    {
+      "input": "Гарбуз 'Хоккайдо'",
+      "expected": "гарбуз хоккайдо",
+      "note": "quoted Cyrillic cultivar at the end"
+    },
+    {
+      "input": "ГАРБУЗ 'ХОККАЙДО'",
+      "expected": "гарбуз хоккайдо",
+      "note": "quoted Cyrillic cultivar at the end (upper case)"
+    },
+    {
+      "input": "  Гарбуз 'Хоккайдо'  ",
+      "expected": "гарбуз хоккайдо",
+      "note": "quoted Cyrillic cultivar at the end (padded)"
+    },
+    {
+      "input": "Гарбуз 'Хоккайдо'",
+      "expected": "гарбуз хоккайдо",
+      "note": "quoted Cyrillic cultivar at the end (non-breaking spaces)"
+    },
+    {
+      "input": "Гарбуз\t'Хоккайдо'",
+      "expected": "гарбуз хоккайдо",
+      "note": "quoted Cyrillic cultivar at the end (tabs)"
+    },
+    {
+      "input": "“Гарбуз 'Хоккайдо'”",
+      "expected": "гарбуз хоккайдо",
+      "note": "quoted Cyrillic cultivar at the end (wrapped in double quotes)"
+    },
+    {
+      "input": "Thuja occidentalis 'Smaragd'",
+      "expected": "thuja occidentalis smaragd",
+      "note": "quoted Latin cultivar"
+    },
+    {
+      "input": "THUJA OCCIDENTALIS 'SMARAGD'",
+      "expected": "thuja occidentalis smaragd",
+      "note": "quoted Latin cultivar (upper case)"
+    },
+    {
+      "input": "  Thuja occidentalis 'Smaragd'  ",
+      "expected": "thuja occidentalis smaragd",
+      "note": "quoted Latin cultivar (padded)"
+    },
+    {
+      "input": "Thuja occidentalis 'Smaragd'",
+      "expected": "thuja occidentalis smaragd",
+      "note": "quoted Latin cultivar (non-breaking spaces)"
+    },
+    {
+      "input": "Thuja\toccidentalis\t'Smaragd'",
+      "expected": "thuja occidentalis smaragd",
+      "note": "quoted Latin cultivar (tabs)"
+    },
+    {
+      "input": "“Thuja occidentalis 'Smaragd'”",
+      "expected": "thuja occidentalis smaragd",
+      "note": "quoted Latin cultivar (wrapped in double quotes)"
+    },
+    {
+      "input": "Buxus sempervirens ‘Suffruticosa’",
+      "expected": "buxus sempervirens suffruticosa",
+      "note": "typographic quotes, Latin cultivar"
+    },
+    {
+      "input": "BUXUS SEMPERVIRENS ‘SUFFRUTICOSA’",
+      "expected": "buxus sempervirens suffruticosa",
+      "note": "typographic quotes, Latin cultivar (upper case)"
+    },
+    {
+      "input": "  Buxus sempervirens ‘Suffruticosa’  ",
+      "expected": "buxus sempervirens suffruticosa",
+      "note": "typographic quotes, Latin cultivar (padded)"
+    },
+    {
+      "input": "Buxus sempervirens ‘Suffruticosa’",
+      "expected": "buxus sempervirens suffruticosa",
+      "note": "typographic quotes, Latin cultivar (non-breaking spaces)"
+    },
+    {
+      "input": "Buxus\tsempervirens\t‘Suffruticosa’",
+      "expected": "buxus sempervirens suffruticosa",
+      "note": "typographic quotes, Latin cultivar (tabs)"
+    },
+    {
+      "input": "“Buxus sempervirens ‘Suffruticosa’”",
+      "expected": "buxus sempervirens suffruticosa",
+      "note": "typographic quotes, Latin cultivar (wrapped in double quotes)"
+    },
+    {
+      "input": "Fragaria × ananassa 'Elsanta'",
+      "expected": "fragaria x ananassa elsanta",
+      "note": "hybrid sign and quoted cultivar"
+    },
+    {
+      "input": "FRAGARIA × ANANASSA 'ELSANTA'",
+      "expected": "fragaria x ananassa elsanta",
+      "note": "hybrid sign and quoted cultivar (upper case)"
+    },
+    {
+      "input": "  Fragaria × ananassa 'Elsanta'  ",
+      "expected": "fragaria x ananassa elsanta",
+      "note": "hybrid sign and quoted cultivar (padded)"
+    },
+    {
+      "input": "Fragaria × ananassa 'Elsanta'",
+      "expected": "fragaria x ananassa elsanta",
+      "note": "hybrid sign and quoted cultivar (non-breaking spaces)"
+    },
+    {
+      "input": "Fragaria\t×\tananassa\t'Elsanta'",
+      "expected": "fragaria x ananassa elsanta",
+      "note": "hybrid sign and quoted cultivar (tabs)"
+    },
+    {
+      "input": "“Fragaria × ananassa 'Elsanta'”",
+      "expected": "fragaria x ananassa elsanta",
+      "note": "hybrid sign and quoted cultivar (wrapped in double quotes)"
+    },
+    {
+      "input": "\"Бичаче серце\"",
+      "expected": "бичаче серце",
+      "note": "ASCII double quotes become spaces and are trimmed"
+    },
+    {
+      "input": "\"БИЧАЧЕ СЕРЦЕ\"",
+      "expected": "бичаче серце",
+      "note": "ASCII double quotes become spaces and are trimmed (upper case)"
+    },
+    {
+      "input": "  \"Бичаче серце\"  ",
+      "expected": "бичаче серце",
+      "note": "ASCII double quotes become spaces and are trimmed (padded)"
+    },
+    {
+      "input": "\"Бичаче серце\"",
+      "expected": "бичаче серце",
+      "note": "ASCII double quotes become spaces and are trimmed (non-breaking spaces)"
+    },
+    {
+      "input": "\"Бичаче\tсерце\"",
+      "expected": "бичаче серце",
+      "note": "ASCII double quotes become spaces and are trimmed (tabs)"
+    },
+    {
+      "input": "“\"Бичаче серце\"”",
+      "expected": "бичаче серце",
+      "note": "ASCII double quotes become spaces and are trimmed (wrapped in double quotes)"
+    },
+    {
+      "input": "«Де Барао»",
+      "expected": "де барао",
+      "note": "guillemets become spaces"
+    },
+    {
+      "input": "«ДЕ БАРАО»",
+      "expected": "де барао",
+      "note": "guillemets become spaces (upper case)"
+    },
+    {
+      "input": "  «Де Барао»  ",
+      "expected": "де барао",
+      "note": "guillemets become spaces (padded)"
+    },
+    {
+      "input": "«Де Барао»",
+      "expected": "де барао",
+      "note": "guillemets become spaces (non-breaking spaces)"
+    },
+    {
+      "input": "«Де\tБарао»",
+      "expected": "де барао",
+      "note": "guillemets become spaces (tabs)"
+    },
+    {
+      "input": "“«Де Барао»”",
+      "expected": "де барао",
+      "note": "guillemets become spaces (wrapped in double quotes)"
+    },
+    {
+      "input": "Vitis vinifera „Мускат“",
+      "expected": "vitis vinifera мускат",
+      "note": "low-9 and high-6 double quotes"
+    },
+    {
+      "input": "VITIS VINIFERA „МУСКАТ“",
+      "expected": "vitis vinifera мускат",
+      "note": "low-9 and high-6 double quotes (upper case)"
+    },
+    {
+      "input": "  Vitis vinifera „Мускат“  ",
+      "expected": "vitis vinifera мускат",
+      "note": "low-9 and high-6 double quotes (padded)"
+    },
+    {
+      "input": "Vitis vinifera „Мускат“",
+      "expected": "vitis vinifera мускат",
+      "note": "low-9 and high-6 double quotes (non-breaking spaces)"
+    },
+    {
+      "input": "Vitis\tvinifera\t„Мускат“",
+      "expected": "vitis vinifera мускат",
+      "note": "low-9 and high-6 double quotes (tabs)"
+    },
+    {
+      "input": "“Vitis vinifera „Мускат“”",
+      "expected": "vitis vinifera мускат",
+      "note": "low-9 and high-6 double quotes (wrapped in double quotes)"
+    },
+    {
+      "input": "Café “Wonderful”",
+      "expected": "cafe wonderful",
+      "note": "diacritic fold and typographic double quotes"
+    },
+    {
+      "input": "CAFÉ “WONDERFUL”",
+      "expected": "cafe wonderful",
+      "note": "diacritic fold and typographic double quotes (upper case)"
+    },
+    {
+      "input": "  Café “Wonderful”  ",
+      "expected": "cafe wonderful",
+      "note": "diacritic fold and typographic double quotes (padded)"
+    },
+    {
+      "input": "Café “Wonderful”",
+      "expected": "cafe wonderful",
+      "note": "diacritic fold and typographic double quotes (non-breaking spaces)"
+    },
+    {
+      "input": "Café\t“Wonderful”",
+      "expected": "cafe wonderful",
+      "note": "diacritic fold and typographic double quotes (tabs)"
+    },
+    {
+      "input": "“Café “Wonderful””",
+      "expected": "cafe wonderful",
+      "note": "diacritic fold and typographic double quotes (wrapped in double quotes)"
+    },
+    {
+      "input": "Хризантема ‚садова‘",
+      "expected": "хризантема садова",
+      "note": "low-9 single quote and U+2018 as a pair"
+    },
+    {
+      "input": "ХРИЗАНТЕМА ‚САДОВА‘",
+      "expected": "хризантема садова",
+      "note": "low-9 single quote and U+2018 as a pair (upper case)"
+    },
+    {
+      "input": "  Хризантема ‚садова‘  ",
+      "expected": "хризантема садова",
+      "note": "low-9 single quote and U+2018 as a pair (padded)"
+    },
+    {
+      "input": "Хризантема ‚садова‘",
+      "expected": "хризантема садова",
+      "note": "low-9 single quote and U+2018 as a pair (non-breaking spaces)"
+    },
+    {
+      "input": "Хризантема\t‚садова‘",
+      "expected": "хризантема садова",
+      "note": "low-9 single quote and U+2018 as a pair (tabs)"
+    },
+    {
+      "input": "“Хризантема ‚садова‘”",
+      "expected": "хризантема садова",
+      "note": "low-9 single quote and U+2018 as a pair (wrapped in double quotes)"
+    },
+    {
+      "input": "d'Anjou",
+      "expected": "d'anjou",
+      "note": "apostrophe between letters survives"
+    },
+    {
+      "input": "D'ANJOU",
+      "expected": "d'anjou",
+      "note": "apostrophe between letters survives (upper case)"
+    },
+    {
+      "input": "  d'Anjou  ",
+      "expected": "d'anjou",
+      "note": "apostrophe between letters survives (padded)"
+    },
+    {
+      "input": "“d'Anjou”",
+      "expected": "d'anjou",
+      "note": "apostrophe between letters survives (wrapped in double quotes)"
+    },
+    {
+      "input": "O'Henry",
+      "expected": "o'henry",
+      "note": "apostrophe between letters survives"
+    },
+    {
+      "input": "O'HENRY",
+      "expected": "o'henry",
+      "note": "apostrophe between letters survives (upper case)"
+    },
+    {
+      "input": "  O'Henry  ",
+      "expected": "o'henry",
+      "note": "apostrophe between letters survives (padded)"
+    },
+    {
+      "input": "“O'Henry”",
+      "expected": "o'henry",
+      "note": "apostrophe between letters survives (wrapped in double quotes)"
+    },
+    {
+      "input": "L'Oréal",
+      "expected": "l'oreal",
+      "note": "apostrophe survives, diacritic folds"
+    },
+    {
+      "input": "L'ORÉAL",
+      "expected": "l'oreal",
+      "note": "apostrophe survives, diacritic folds (upper case)"
+    },
+    {
+      "input": "  L'Oréal  ",
+      "expected": "l'oreal",
+      "note": "apostrophe survives, diacritic folds (padded)"
+    },
+    {
+      "input": "“L'Oréal”",
+      "expected": "l'oreal",
+      "note": "apostrophe survives, diacritic folds (wrapped in double quotes)"
+    },
+    {
+      "input": "Dwarf's 'Best'",
+      "expected": "dwarf's best",
+      "note": "one internal apostrophe kept, one quoted word unquoted"
+    },
+    {
+      "input": "DWARF'S 'BEST'",
+      "expected": "dwarf's best",
+      "note": "one internal apostrophe kept, one quoted word unquoted (upper case)"
+    },
+    {
+      "input": "  Dwarf's 'Best'  ",
+      "expected": "dwarf's best",
+      "note": "one internal apostrophe kept, one quoted word unquoted (padded)"
+    },
+    {
+      "input": "Dwarf's 'Best'",
+      "expected": "dwarf's best",
+      "note": "one internal apostrophe kept, one quoted word unquoted (non-breaking spaces)"
+    },
+    {
+      "input": "Dwarf's\t'Best'",
+      "expected": "dwarf's best",
+      "note": "one internal apostrophe kept, one quoted word unquoted (tabs)"
+    },
+    {
+      "input": "“Dwarf's 'Best'”",
+      "expected": "dwarf's best",
+      "note": "one internal apostrophe kept, one quoted word unquoted (wrapped in double quotes)"
+    },
+    {
+      "input": "rock 'n' roll",
+      "expected": "rock n roll",
+      "note": "apostrophes next to spaces are dropped"
+    },
+    {
+      "input": "ROCK 'N' ROLL",
+      "expected": "rock n roll",
+      "note": "apostrophes next to spaces are dropped (upper case)"
+    },
+    {
+      "input": "  rock 'n' roll  ",
+      "expected": "rock n roll",
+      "note": "apostrophes next to spaces are dropped (padded)"
+    },
+    {
+      "input": "rock 'n' roll",
+      "expected": "rock n roll",
+      "note": "apostrophes next to spaces are dropped (non-breaking spaces)"
+    },
+    {
+      "input": "rock\t'n'\troll",
+      "expected": "rock n roll",
+      "note": "apostrophes next to spaces are dropped (tabs)"
+    },
+    {
+      "input": "“rock 'n' roll”",
+      "expected": "rock n roll",
+      "note": "apostrophes next to spaces are dropped (wrapped in double quotes)"
+    },
+    {
+      "input": "Tomato -'Cherry'",
+      "expected": "tomato -cherry",
+      "note": "an apostrophe after a hyphen is dropped"
+    },
+    {
+      "input": "TOMATO -'CHERRY'",
+      "expected": "tomato -cherry",
+      "note": "an apostrophe after a hyphen is dropped (upper case)"
+    },
+    {
+      "input": "  Tomato -'Cherry'  ",
+      "expected": "tomato -cherry",
+      "note": "an apostrophe after a hyphen is dropped (padded)"
+    },
+    {
+      "input": "Tomato -'Cherry'",
+      "expected": "tomato -cherry",
+      "note": "an apostrophe after a hyphen is dropped (non-breaking spaces)"
+    },
+    {
+      "input": "Tomato\t-'Cherry'",
+      "expected": "tomato -cherry",
+      "note": "an apostrophe after a hyphen is dropped (tabs)"
+    },
+    {
+      "input": "“Tomato -'Cherry'”",
+      "expected": "tomato -cherry",
+      "note": "an apostrophe after a hyphen is dropped (wrapped in double quotes)"
+    },
+    {
+      "input": "Sorte 'A'-'B'",
+      "expected": "sorte a-b",
+      "note": "apostrophes on both sides of a hyphen are dropped"
+    },
+    {
+      "input": "SORTE 'A'-'B'",
+      "expected": "sorte a-b",
+      "note": "apostrophes on both sides of a hyphen are dropped (upper case)"
+    },
+    {
+      "input": "  Sorte 'A'-'B'  ",
+      "expected": "sorte a-b",
+      "note": "apostrophes on both sides of a hyphen are dropped (padded)"
+    },
+    {
+      "input": "Sorte 'A'-'B'",
+      "expected": "sorte a-b",
+      "note": "apostrophes on both sides of a hyphen are dropped (non-breaking spaces)"
+    },
+    {
+      "input": "Sorte\t'A'-'B'",
+      "expected": "sorte a-b",
+      "note": "apostrophes on both sides of a hyphen are dropped (tabs)"
+    },
+    {
+      "input": "“Sorte 'A'-'B'”",
+      "expected": "sorte a-b",
+      "note": "apostrophes on both sides of a hyphen are dropped (wrapped in double quotes)"
+    },
+    {
+      "input": "Prunus × domestica",
+      "expected": "prunus x domestica",
+      "note": "hybrid sign with spaces"
+    },
+    {
+      "input": "PRUNUS × DOMESTICA",
+      "expected": "prunus x domestica",
+      "note": "hybrid sign with spaces (upper case)"
+    },
+    {
+      "input": "  Prunus × domestica  ",
+      "expected": "prunus x domestica",
+      "note": "hybrid sign with spaces (padded)"
+    },
+    {
+      "input": "Prunus × domestica",
+      "expected": "prunus x domestica",
+      "note": "hybrid sign with spaces (non-breaking spaces)"
+    },
+    {
+      "input": "Prunus\t×\tdomestica",
+      "expected": "prunus x domestica",
+      "note": "hybrid sign with spaces (tabs)"
+    },
+    {
+      "input": "“Prunus × domestica”",
+      "expected": "prunus x domestica",
+      "note": "hybrid sign with spaces (wrapped in double quotes)"
+    },
+    {
+      "input": "Prunus ×domestica",
+      "expected": "prunus xdomestica",
+      "note": "hybrid sign attached to the epithet"
+    },
+    {
+      "input": "PRUNUS ×DOMESTICA",
+      "expected": "prunus xdomestica",
+      "note": "hybrid sign attached to the epithet (upper case)"
+    },
+    {
+      "input": "  Prunus ×domestica  ",
+      "expected": "prunus xdomestica",
+      "note": "hybrid sign attached to the epithet (padded)"
+    },
+    {
+      "input": "Prunus ×domestica",
+      "expected": "prunus xdomestica",
+      "note": "hybrid sign attached to the epithet (non-breaking spaces)"
+    },
+    {
+      "input": "Prunus\t×domestica",
+      "expected": "prunus xdomestica",
+      "note": "hybrid sign attached to the epithet (tabs)"
+    },
+    {
+      "input": "“Prunus ×domestica”",
+      "expected": "prunus xdomestica",
+      "note": "hybrid sign attached to the epithet (wrapped in double quotes)"
+    },
+    {
+      "input": "Citrus × sinensis (L.) Osbeck",
+      "expected": "citrus x sinensis (l.) osbeck",
+      "note": "parentheses and authorship are kept"
+    },
+    {
+      "input": "CITRUS × SINENSIS (L.) OSBECK",
+      "expected": "citrus x sinensis (l.) osbeck",
+      "note": "parentheses and authorship are kept (upper case)"
+    },
+    {
+      "input": "  Citrus × sinensis (L.) Osbeck  ",
+      "expected": "citrus x sinensis (l.) osbeck",
+      "note": "parentheses and authorship are kept (padded)"
+    },
+    {
+      "input": "Citrus × sinensis (L.) Osbeck",
+      "expected": "citrus x sinensis (l.) osbeck",
+      "note": "parentheses and authorship are kept (non-breaking spaces)"
+    },
+    {
+      "input": "Citrus\t×\tsinensis\t(L.)\tOsbeck",
+      "expected": "citrus x sinensis (l.) osbeck",
+      "note": "parentheses and authorship are kept (tabs)"
+    },
+    {
+      "input": "“Citrus × sinensis (L.) Osbeck”",
+      "expected": "citrus x sinensis (l.) osbeck",
+      "note": "parentheses and authorship are kept (wrapped in double quotes)"
+    },
+    {
+      "input": "×",
+      "expected": "x",
+      "note": "the hybrid sign alone"
+    },
+    {
+      "input": "  ×  ",
+      "expected": "x",
+      "note": "the hybrid sign alone (padded)"
+    },
+    {
+      "input": "“×”",
+      "expected": "x",
+      "note": "the hybrid sign alone (wrapped in double quotes)"
+    },
+    {
+      "input": "✕",
+      "expected": "x",
+      "note": "the multiplication x alone"
+    },
+    {
+      "input": "  ✕  ",
+      "expected": "x",
+      "note": "the multiplication x alone (padded)"
+    },
+    {
+      "input": "“✕”",
+      "expected": "x",
+      "note": "the multiplication x alone (wrapped in double quotes)"
+    },
+    {
+      "input": "  Cucumis   sativus  ",
+      "expected": "cucumis sativus",
+      "note": "outer and inner space runs"
+    },
+    {
+      "input": "  CUCUMIS   SATIVUS  ",
+      "expected": "cucumis sativus",
+      "note": "outer and inner space runs (upper case)"
+    },
+    {
+      "input": "    Cucumis   sativus    ",
+      "expected": "cucumis sativus",
+      "note": "outer and inner space runs (padded)"
+    },
+    {
+      "input": "  Cucumis   sativus  ",
+      "expected": "cucumis sativus",
+      "note": "outer and inner space runs (non-breaking spaces)"
+    },
+    {
+      "input": "\t\tCucumis\t\t\tsativus\t\t",
+      "expected": "cucumis sativus",
+      "note": "outer and inner space runs (tabs)"
+    },
+    {
+      "input": "“  Cucumis   sativus  ”",
+      "expected": "cucumis sativus",
+      "note": "outer and inner space runs (wrapped in double quotes)"
+    },
+    {
+      "input": "Helianthus\tannuus",
+      "expected": "helianthus annuus",
+      "note": "tab becomes a space"
+    },
+    {
+      "input": "HELIANTHUS\tANNUUS",
+      "expected": "helianthus annuus",
+      "note": "tab becomes a space (upper case)"
+    },
+    {
+      "input": "  Helianthus\tannuus  ",
+      "expected": "helianthus annuus",
+      "note": "tab becomes a space (padded)"
+    },
+    {
+      "input": "“Helianthus\tannuus”",
+      "expected": "helianthus annuus",
+      "note": "tab becomes a space (wrapped in double quotes)"
+    },
+    {
+      "input": "Ocimum basilicum",
+      "expected": "ocimum basilicum",
+      "note": "non-breaking space becomes a space"
+    },
+    {
+      "input": "OCIMUM BASILICUM",
+      "expected": "ocimum basilicum",
+      "note": "non-breaking space becomes a space (upper case)"
+    },
+    {
+      "input": "  Ocimum basilicum  ",
+      "expected": "ocimum basilicum",
+      "note": "non-breaking space becomes a space (padded)"
+    },
+    {
+      "input": "“Ocimum basilicum”",
+      "expected": "ocimum basilicum",
+      "note": "non-breaking space becomes a space (wrapped in double quotes)"
+    },
+    {
+      "input": "A B",
+      "expected": "a b",
+      "note": "line separator becomes a space"
+    },
+    {
+      "input": "  A B  ",
+      "expected": "a b",
+      "note": "line separator becomes a space (padded)"
+    },
+    {
+      "input": "“A B”",
+      "expected": "a b",
+      "note": "line separator becomes a space (wrapped in double quotes)"
+    },
+    {
+      "input": "A　B",
+      "expected": "a b",
+      "note": "ideographic space becomes a space"
+    },
+    {
+      "input": "  A　B  ",
+      "expected": "a b",
+      "note": "ideographic space becomes a space (padded)"
+    },
+    {
+      "input": "“A　B”",
+      "expected": "a b",
+      "note": "ideographic space becomes a space (wrapped in double quotes)"
+    },
+    {
+      "input": "Яблуня  домашня",
+      "expected": "яблуня домашня",
+      "note": "double space collapses"
+    },
+    {
+      "input": "ЯБЛУНЯ  ДОМАШНЯ",
+      "expected": "яблуня домашня",
+      "note": "double space collapses (upper case)"
+    },
+    {
+      "input": "  Яблуня  домашня  ",
+      "expected": "яблуня домашня",
+      "note": "double space collapses (padded)"
+    },
+    {
+      "input": "Яблуня  домашня",
+      "expected": "яблуня домашня",
+      "note": "double space collapses (non-breaking spaces)"
+    },
+    {
+      "input": "Яблуня\t\tдомашня",
+      "expected": "яблуня домашня",
+      "note": "double space collapses (tabs)"
+    },
+    {
+      "input": "“Яблуня  домашня”",
+      "expected": "яблуня домашня",
+      "note": "double space collapses (wrapped in double quotes)"
+    },
+    {
+      "input": "Бджола медоносна\r\n",
+      "expected": "бджола медоносна",
+      "note": "trailing CRLF is trimmed"
+    },
+    {
+      "input": "БДЖОЛА МЕДОНОСНА\r\n",
+      "expected": "бджола медоносна",
+      "note": "trailing CRLF is trimmed (upper case)"
+    },
+    {
+      "input": "  Бджола медоносна\r\n  ",
+      "expected": "бджола медоносна",
+      "note": "trailing CRLF is trimmed (padded)"
+    },
+    {
+      "input": "Бджола медоносна\r\n",
+      "expected": "бджола медоносна",
+      "note": "trailing CRLF is trimmed (non-breaking spaces)"
+    },
+    {
+      "input": "Бджола\tмедоносна\r\n",
+      "expected": "бджола медоносна",
+      "note": "trailing CRLF is trimmed (tabs)"
+    },
+    {
+      "input": "“Бджола медоносна\r\n”",
+      "expected": "бджола медоносна",
+      "note": "trailing CRLF is trimmed (wrapped in double quotes)"
+    },
+    {
+      "input": "Capsicum annuum",
+      "expected": "capsicum annuum",
+      "note": "plain Latin binomial"
+    },
+    {
+      "input": "CAPSICUM ANNUUM",
+      "expected": "capsicum annuum",
+      "note": "plain Latin binomial (upper case)"
+    },
+    {
+      "input": "  Capsicum annuum  ",
+      "expected": "capsicum annuum",
+      "note": "plain Latin binomial (padded)"
+    },
+    {
+      "input": "Capsicum annuum",
+      "expected": "capsicum annuum",
+      "note": "plain Latin binomial (non-breaking spaces)"
+    },
+    {
+      "input": "Capsicum\tannuum",
+      "expected": "capsicum annuum",
+      "note": "plain Latin binomial (tabs)"
+    },
+    {
+      "input": "“Capsicum annuum”",
+      "expected": "capsicum annuum",
+      "note": "plain Latin binomial (wrapped in double quotes)"
+    },
+    {
+      "input": "Apis mellifera carnica",
+      "expected": "apis mellifera carnica",
+      "note": "trinomial"
+    },
+    {
+      "input": "APIS MELLIFERA CARNICA",
+      "expected": "apis mellifera carnica",
+      "note": "trinomial (upper case)"
+    },
+    {
+      "input": "  Apis mellifera carnica  ",
+      "expected": "apis mellifera carnica",
+      "note": "trinomial (padded)"
+    },
+    {
+      "input": "Apis mellifera carnica",
+      "expected": "apis mellifera carnica",
+      "note": "trinomial (non-breaking spaces)"
+    },
+    {
+      "input": "Apis\tmellifera\tcarnica",
+      "expected": "apis mellifera carnica",
+      "note": "trinomial (tabs)"
+    },
+    {
+      "input": "“Apis mellifera carnica”",
+      "expected": "apis mellifera carnica",
+      "note": "trinomial (wrapped in double quotes)"
+    },
+    {
+      "input": "Tuta absoluta (Meyrick, 1917)",
+      "expected": "tuta absoluta (meyrick, 1917)",
+      "note": "authorship with a year"
+    },
+    {
+      "input": "TUTA ABSOLUTA (MEYRICK, 1917)",
+      "expected": "tuta absoluta (meyrick, 1917)",
+      "note": "authorship with a year (upper case)"
+    },
+    {
+      "input": "  Tuta absoluta (Meyrick, 1917)  ",
+      "expected": "tuta absoluta (meyrick, 1917)",
+      "note": "authorship with a year (padded)"
+    },
+    {
+      "input": "Tuta absoluta (Meyrick, 1917)",
+      "expected": "tuta absoluta (meyrick, 1917)",
+      "note": "authorship with a year (non-breaking spaces)"
+    },
+    {
+      "input": "Tuta\tabsoluta\t(Meyrick,\t1917)",
+      "expected": "tuta absoluta (meyrick, 1917)",
+      "note": "authorship with a year (tabs)"
+    },
+    {
+      "input": "“Tuta absoluta (Meyrick, 1917)”",
+      "expected": "tuta absoluta (meyrick, 1917)",
+      "note": "authorship with a year (wrapped in double quotes)"
+    },
+    {
+      "input": "Leptinotarsa decemlineata (Say)",
+      "expected": "leptinotarsa decemlineata (say)",
+      "note": "authorship in parentheses"
+    },
+    {
+      "input": "LEPTINOTARSA DECEMLINEATA (SAY)",
+      "expected": "leptinotarsa decemlineata (say)",
+      "note": "authorship in parentheses (upper case)"
+    },
+    {
+      "input": "  Leptinotarsa decemlineata (Say)  ",
+      "expected": "leptinotarsa decemlineata (say)",
+      "note": "authorship in parentheses (padded)"
+    },
+    {
+      "input": "Leptinotarsa decemlineata (Say)",
+      "expected": "leptinotarsa decemlineata (say)",
+      "note": "authorship in parentheses (non-breaking spaces)"
+    },
+    {
+      "input": "Leptinotarsa\tdecemlineata\t(Say)",
+      "expected": "leptinotarsa decemlineata (say)",
+      "note": "authorship in parentheses (tabs)"
+    },
+    {
+      "input": "“Leptinotarsa decemlineata (Say)”",
+      "expected": "leptinotarsa decemlineata (say)",
+      "note": "authorship in parentheses (wrapped in double quotes)"
+    },
+    {
+      "input": "Zea mays L. subsp. mays",
+      "expected": "zea mays l. subsp. mays",
+      "note": "subspecies marker"
+    },
+    {
+      "input": "ZEA MAYS L. SUBSP. MAYS",
+      "expected": "zea mays l. subsp. mays",
+      "note": "subspecies marker (upper case)"
+    },
+    {
+      "input": "  Zea mays L. subsp. mays  ",
+      "expected": "zea mays l. subsp. mays",
+      "note": "subspecies marker (padded)"
+    },
+    {
+      "input": "Zea mays L. subsp. mays",
+      "expected": "zea mays l. subsp. mays",
+      "note": "subspecies marker (non-breaking spaces)"
+    },
+    {
+      "input": "Zea\tmays\tL.\tsubsp.\tmays",
+      "expected": "zea mays l. subsp. mays",
+      "note": "subspecies marker (tabs)"
+    },
+    {
+      "input": "“Zea mays L. subsp. mays”",
+      "expected": "zea mays l. subsp. mays",
+      "note": "subspecies marker (wrapped in double quotes)"
+    },
+    {
+      "input": "Beta vulgaris var. saccharifera",
+      "expected": "beta vulgaris var. saccharifera",
+      "note": "variety marker"
+    },
+    {
+      "input": "BETA VULGARIS VAR. SACCHARIFERA",
+      "expected": "beta vulgaris var. saccharifera",
+      "note": "variety marker (upper case)"
+    },
+    {
+      "input": "  Beta vulgaris var. saccharifera  ",
+      "expected": "beta vulgaris var. saccharifera",
+      "note": "variety marker (padded)"
+    },
+    {
+      "input": "Beta vulgaris var. saccharifera",
+      "expected": "beta vulgaris var. saccharifera",
+      "note": "variety marker (non-breaking spaces)"
+    },
+    {
+      "input": "Beta\tvulgaris\tvar.\tsaccharifera",
+      "expected": "beta vulgaris var. saccharifera",
+      "note": "variety marker (tabs)"
+    },
+    {
+      "input": "“Beta vulgaris var. saccharifera”",
+      "expected": "beta vulgaris var. saccharifera",
+      "note": "variety marker (wrapped in double quotes)"
+    },
+    {
+      "input": "Malus domestica Borkh.",
+      "expected": "malus domestica borkh.",
+      "note": "trailing abbreviation dot is kept"
+    },
+    {
+      "input": "MALUS DOMESTICA BORKH.",
+      "expected": "malus domestica borkh.",
+      "note": "trailing abbreviation dot is kept (upper case)"
+    },
+    {
+      "input": "  Malus domestica Borkh.  ",
+      "expected": "malus domestica borkh.",
+      "note": "trailing abbreviation dot is kept (padded)"
+    },
+    {
+      "input": "Malus domestica Borkh.",
+      "expected": "malus domestica borkh.",
+      "note": "trailing abbreviation dot is kept (non-breaking spaces)"
+    },
+    {
+      "input": "Malus\tdomestica\tBorkh.",
+      "expected": "malus domestica borkh.",
+      "note": "trailing abbreviation dot is kept (tabs)"
+    },
+    {
+      "input": "“Malus domestica Borkh.”",
+      "expected": "malus domestica borkh.",
+      "note": "trailing abbreviation dot is kept (wrapped in double quotes)"
+    },
+    {
+      "input": "Pieris japonica",
+      "expected": "pieris japonica",
+      "note": "the hemihomonym that the ladder must keep apart from the butterfly"
+    },
+    {
+      "input": "PIERIS JAPONICA",
+      "expected": "pieris japonica",
+      "note": "the hemihomonym that the ladder must keep apart from the butterfly (upper case)"
+    },
+    {
+      "input": "  Pieris japonica  ",
+      "expected": "pieris japonica",
+      "note": "the hemihomonym that the ladder must keep apart from the butterfly (padded)"
+    },
+    {
+      "input": "Pieris japonica",
+      "expected": "pieris japonica",
+      "note": "the hemihomonym that the ladder must keep apart from the butterfly (non-breaking spaces)"
+    },
+    {
+      "input": "Pieris\tjaponica",
+      "expected": "pieris japonica",
+      "note": "the hemihomonym that the ladder must keep apart from the butterfly (tabs)"
+    },
+    {
+      "input": "“Pieris japonica”",
+      "expected": "pieris japonica",
+      "note": "the hemihomonym that the ladder must keep apart from the butterfly (wrapped in double quotes)"
+    },
+    {
+      "input": "Пивоварна ячмінь – сорт",
+      "expected": "пивоварна ячмінь - сорт",
+      "note": "en dash becomes a hyphen"
+    },
+    {
+      "input": "ПИВОВАРНА ЯЧМІНЬ – СОРТ",
+      "expected": "пивоварна ячмінь - сорт",
+      "note": "en dash becomes a hyphen (upper case)"
+    },
+    {
+      "input": "  Пивоварна ячмінь – сорт  ",
+      "expected": "пивоварна ячмінь - сорт",
+      "note": "en dash becomes a hyphen (padded)"
+    },
+    {
+      "input": "Пивоварна ячмінь – сорт",
+      "expected": "пивоварна ячмінь - сорт",
+      "note": "en dash becomes a hyphen (non-breaking spaces)"
+    },
+    {
+      "input": "Пивоварна\tячмінь\t–\tсорт",
+      "expected": "пивоварна ячмінь - сорт",
+      "note": "en dash becomes a hyphen (tabs)"
+    },
+    {
+      "input": "“Пивоварна ячмінь – сорт”",
+      "expected": "пивоварна ячмінь - сорт",
+      "note": "en dash becomes a hyphen (wrapped in double quotes)"
+    },
+    {
+      "input": "Сорт — Лагідний",
+      "expected": "сорт - лагідний",
+      "note": "em dash becomes a hyphen"
+    },
+    {
+      "input": "СОРТ — ЛАГІДНИЙ",
+      "expected": "сорт - лагідний",
+      "note": "em dash becomes a hyphen (upper case)"
+    },
+    {
+      "input": "  Сорт — Лагідний  ",
+      "expected": "сорт - лагідний",
+      "note": "em dash becomes a hyphen (padded)"
+    },
+    {
+      "input": "Сорт — Лагідний",
+      "expected": "сорт - лагідний",
+      "note": "em dash becomes a hyphen (non-breaking spaces)"
+    },
+    {
+      "input": "Сорт\t—\tЛагідний",
+      "expected": "сорт - лагідний",
+      "note": "em dash becomes a hyphen (tabs)"
+    },
+    {
+      "input": "“Сорт — Лагідний”",
+      "expected": "сорт - лагідний",
+      "note": "em dash becomes a hyphen (wrapped in double quotes)"
+    },
+    {
+      "input": "Dianthus caryophyllus  —  гвоздика",
+      "expected": "dianthus caryophyllus - гвоздика",
+      "note": "em dash with double spaces"
+    },
+    {
+      "input": "DIANTHUS CARYOPHYLLUS  —  ГВОЗДИКА",
+      "expected": "dianthus caryophyllus - гвоздика",
+      "note": "em dash with double spaces (upper case)"
+    },
+    {
+      "input": "  Dianthus caryophyllus  —  гвоздика  ",
+      "expected": "dianthus caryophyllus - гвоздика",
+      "note": "em dash with double spaces (padded)"
+    },
+    {
+      "input": "Dianthus caryophyllus  —  гвоздика",
+      "expected": "dianthus caryophyllus - гвоздика",
+      "note": "em dash with double spaces (non-breaking spaces)"
+    },
+    {
+      "input": "Dianthus\tcaryophyllus\t\t—\t\tгвоздика",
+      "expected": "dianthus caryophyllus - гвоздика",
+      "note": "em dash with double spaces (tabs)"
+    },
+    {
+      "input": "“Dianthus caryophyllus  —  гвоздика”",
+      "expected": "dianthus caryophyllus - гвоздика",
+      "note": "em dash with double spaces (wrapped in double quotes)"
+    },
+    {
+      "input": "-",
+      "expected": "-",
+      "note": "a lone hyphen is kept"
+    },
+    {
+      "input": "  -  ",
+      "expected": "-",
+      "note": "a lone hyphen is kept (padded)"
+    },
+    {
+      "input": "“-”",
+      "expected": "-",
+      "note": "a lone hyphen is kept (wrapped in double quotes)"
+    },
+    {
+      "input": "Ґрунтовий томат",
+      "expected": "грунтовий томат",
+      "note": "ґ folds to г"
+    },
+    {
+      "input": "ҐРУНТОВИЙ ТОМАТ",
+      "expected": "грунтовий томат",
+      "note": "ґ folds to г (upper case)"
+    },
+    {
+      "input": "  Ґрунтовий томат  ",
+      "expected": "грунтовий томат",
+      "note": "ґ folds to г (padded)"
+    },
+    {
+      "input": "Ґрунтовий томат",
+      "expected": "грунтовий томат",
+      "note": "ґ folds to г (non-breaking spaces)"
+    },
+    {
+      "input": "Ґрунтовий\tтомат",
+      "expected": "грунтовий томат",
+      "note": "ґ folds to г (tabs)"
+    },
+    {
+      "input": "“Ґрунтовий томат”",
+      "expected": "грунтовий томат",
+      "note": "ґ folds to г (wrapped in double quotes)"
+    },
+    {
+      "input": "Ёлка",
+      "expected": "елка",
+      "note": "ё folds to е"
+    },
+    {
+      "input": "ЁЛКА",
+      "expected": "елка",
+      "note": "ё folds to е (upper case)"
+    },
+    {
+      "input": "  Ёлка  ",
+      "expected": "елка",
+      "note": "ё folds to е (padded)"
+    },
+    {
+      "input": "“Ёлка”",
+      "expected": "елка",
+      "note": "ё folds to е (wrapped in double quotes)"
+    },
+    {
+      "input": "Свёкла столовая",
+      "expected": "свекла столовая",
+      "note": "ё inside a word"
+    },
+    {
+      "input": "СВЁКЛА СТОЛОВАЯ",
+      "expected": "свекла столовая",
+      "note": "ё inside a word (upper case)"
+    },
+    {
+      "input": "  Свёкла столовая  ",
+      "expected": "свекла столовая",
+      "note": "ё inside a word (padded)"
+    },
+    {
+      "input": "Свёкла столовая",
+      "expected": "свекла столовая",
+      "note": "ё inside a word (non-breaking spaces)"
+    },
+    {
+      "input": "Свёкла\tстоловая",
+      "expected": "свекла столовая",
+      "note": "ё inside a word (tabs)"
+    },
+    {
+      "input": "“Свёкла столовая”",
+      "expected": "свекла столовая",
+      "note": "ё inside a word (wrapped in double quotes)"
+    },
+    {
+      "input": "Тя ѝ каза",
+      "expected": "тя и каза",
+      "note": "Bulgarian ѝ folds to и"
+    },
+    {
+      "input": "ТЯ Ѝ КАЗА",
+      "expected": "тя и каза",
+      "note": "Bulgarian ѝ folds to и (upper case)"
+    },
+    {
+      "input": "  Тя ѝ каза  ",
+      "expected": "тя и каза",
+      "note": "Bulgarian ѝ folds to и (padded)"
+    },
+    {
+      "input": "Тя ѝ каза",
+      "expected": "тя и каза",
+      "note": "Bulgarian ѝ folds to и (non-breaking spaces)"
+    },
+    {
+      "input": "Тя\tѝ\tказа",
+      "expected": "тя и каза",
+      "note": "Bulgarian ѝ folds to и (tabs)"
+    },
+    {
+      "input": "“Тя ѝ каза”",
+      "expected": "тя и каза",
+      "note": "Bulgarian ѝ folds to и (wrapped in double quotes)"
+    },
+    {
+      "input": "ѐ",
+      "expected": "е",
+      "note": "ѐ folds to е"
+    },
+    {
+      "input": "Ѐ",
+      "expected": "е",
+      "note": "ѐ folds to е (upper case)"
+    },
+    {
+      "input": "  ѐ  ",
+      "expected": "е",
+      "note": "ѐ folds to е (padded)"
+    },
+    {
+      "input": "“ѐ”",
+      "expected": "е",
+      "note": "ѐ folds to е (wrapped in double quotes)"
+    },
+    {
+      "input": "Élodie",
+      "expected": "elodie",
+      "note": "acute accent"
+    },
+    {
+      "input": "ÉLODIE",
+      "expected": "elodie",
+      "note": "acute accent (upper case)"
+    },
+    {
+      "input": "  Élodie  ",
+      "expected": "elodie",
+      "note": "acute accent (padded)"
+    },
+    {
+      "input": "“Élodie”",
+      "expected": "elodie",
+      "note": "acute accent (wrapped in double quotes)"
+    },
+    {
+      "input": "Nüsse",
+      "expected": "nusse",
+      "note": "umlaut"
+    },
+    {
+      "input": "NÜSSE",
+      "expected": "nusse",
+      "note": "umlaut (upper case)"
+    },
+    {
+      "input": "  Nüsse  ",
+      "expected": "nusse",
+      "note": "umlaut (padded)"
+    },
+    {
+      "input": "“Nüsse”",
+      "expected": "nusse",
+      "note": "umlaut (wrapped in double quotes)"
+    },
+    {
+      "input": "Straße",
+      "expected": "strasse",
+      "note": "ß expands to ss"
+    },
+    {
+      "input": "STRASSE",
+      "expected": "strasse",
+      "note": "ß expands to ss (upper case)"
+    },
+    {
+      "input": "  Straße  ",
+      "expected": "strasse",
+      "note": "ß expands to ss (padded)"
+    },
+    {
+      "input": "“Straße”",
+      "expected": "strasse",
+      "note": "ß expands to ss (wrapped in double quotes)"
+    },
+    {
+      "input": "Æsculus hippocastanum",
+      "expected": "aesculus hippocastanum",
+      "note": "æ expands to ae"
+    },
+    {
+      "input": "ÆSCULUS HIPPOCASTANUM",
+      "expected": "aesculus hippocastanum",
+      "note": "æ expands to ae (upper case)"
+    },
+    {
+      "input": "  Æsculus hippocastanum  ",
+      "expected": "aesculus hippocastanum",
+      "note": "æ expands to ae (padded)"
+    },
+    {
+      "input": "Æsculus hippocastanum",
+      "expected": "aesculus hippocastanum",
+      "note": "æ expands to ae (non-breaking spaces)"
+    },
+    {
+      "input": "Æsculus\thippocastanum",
+      "expected": "aesculus hippocastanum",
+      "note": "æ expands to ae (tabs)"
+    },
+    {
+      "input": "“Æsculus hippocastanum”",
+      "expected": "aesculus hippocastanum",
+      "note": "æ expands to ae (wrapped in double quotes)"
+    },
+    {
+      "input": "Œillet",
+      "expected": "oeillet",
+      "note": "œ expands to oe"
+    },
+    {
+      "input": "ŒILLET",
+      "expected": "oeillet",
+      "note": "œ expands to oe (upper case)"
+    },
+    {
+      "input": "  Œillet  ",
+      "expected": "oeillet",
+      "note": "œ expands to oe (padded)"
+    },
+    {
+      "input": "“Œillet”",
+      "expected": "oeillet",
+      "note": "œ expands to oe (wrapped in double quotes)"
+    },
+    {
+      "input": "Þorn",
+      "expected": "thorn",
+      "note": "þ expands to th"
+    },
+    {
+      "input": "ÞORN",
+      "expected": "thorn",
+      "note": "þ expands to th (upper case)"
+    },
+    {
+      "input": "  Þorn  ",
+      "expected": "thorn",
+      "note": "þ expands to th (padded)"
+    },
+    {
+      "input": "“Þorn”",
+      "expected": "thorn",
+      "note": "þ expands to th (wrapped in double quotes)"
+    },
+    {
+      "input": "Eðvarð",
+      "expected": "edvard",
+      "note": "ð folds to d"
+    },
+    {
+      "input": "EÐVARÐ",
+      "expected": "edvard",
+      "note": "ð folds to d (upper case)"
+    },
+    {
+      "input": "  Eðvarð  ",
+      "expected": "edvard",
+      "note": "ð folds to d (padded)"
+    },
+    {
+      "input": "“Eðvarð”",
+      "expected": "edvard",
+      "note": "ð folds to d (wrapped in double quotes)"
+    },
+    {
+      "input": "Łódź",
+      "expected": "lodz",
+      "note": "Polish letters fold"
+    },
+    {
+      "input": "ŁÓDŹ",
+      "expected": "lodz",
+      "note": "Polish letters fold (upper case)"
+    },
+    {
+      "input": "  Łódź  ",
+      "expected": "lodz",
+      "note": "Polish letters fold (padded)"
+    },
+    {
+      "input": "“Łódź”",
+      "expected": "lodz",
+      "note": "Polish letters fold (wrapped in double quotes)"
+    },
+    {
+      "input": "Đurđevak",
+      "expected": "durdevak",
+      "note": "đ folds to d"
+    },
+    {
+      "input": "ĐURĐEVAK",
+      "expected": "durdevak",
+      "note": "đ folds to d (upper case)"
+    },
+    {
+      "input": "  Đurđevak  ",
+      "expected": "durdevak",
+      "note": "đ folds to d (padded)"
+    },
+    {
+      "input": "“Đurđevak”",
+      "expected": "durdevak",
+      "note": "đ folds to d (wrapped in double quotes)"
+    },
+    {
+      "input": "Ñame",
+      "expected": "name",
+      "note": "ñ folds to n"
+    },
+    {
+      "input": "ÑAME",
+      "expected": "name",
+      "note": "ñ folds to n (upper case)"
+    },
+    {
+      "input": "  Ñame  ",
+      "expected": "name",
+      "note": "ñ folds to n (padded)"
+    },
+    {
+      "input": "“Ñame”",
+      "expected": "name",
+      "note": "ñ folds to n (wrapped in double quotes)"
+    },
+    {
+      "input": "Ångström",
+      "expected": "angstrom",
+      "note": "å and ö fold"
+    },
+    {
+      "input": "ÅNGSTRÖM",
+      "expected": "angstrom",
+      "note": "å and ö fold (upper case)"
+    },
+    {
+      "input": "  Ångström  ",
+      "expected": "angstrom",
+      "note": "å and ö fold (padded)"
+    },
+    {
+      "input": "“Ångström”",
+      "expected": "angstrom",
+      "note": "å and ö fold (wrapped in double quotes)"
+    },
+    {
+      "input": "Çelik",
+      "expected": "celik",
+      "note": "ç folds to c"
+    },
+    {
+      "input": "ÇELIK",
+      "expected": "celik",
+      "note": "ç folds to c (upper case)"
+    },
+    {
+      "input": "  Çelik  ",
+      "expected": "celik",
+      "note": "ç folds to c (padded)"
+    },
+    {
+      "input": "“Çelik”",
+      "expected": "celik",
+      "note": "ç folds to c (wrapped in double quotes)"
+    },
+    {
+      "input": "Ștefan",
+      "expected": "stefan",
+      "note": "ș with comma below folds to s"
+    },
+    {
+      "input": "ȘTEFAN",
+      "expected": "stefan",
+      "note": "ș with comma below folds to s (upper case)"
+    },
+    {
+      "input": "  Ștefan  ",
+      "expected": "stefan",
+      "note": "ș with comma below folds to s (padded)"
+    },
+    {
+      "input": "“Ștefan”",
+      "expected": "stefan",
+      "note": "ș with comma below folds to s (wrapped in double quotes)"
+    },
+    {
+      "input": "Țară",
+      "expected": "tara",
+      "note": "ț with comma below and ă fold"
+    },
+    {
+      "input": "ȚARĂ",
+      "expected": "tara",
+      "note": "ț with comma below and ă fold (upper case)"
+    },
+    {
+      "input": "  Țară  ",
+      "expected": "tara",
+      "note": "ț with comma below and ă fold (padded)"
+    },
+    {
+      "input": "“Țară”",
+      "expected": "tara",
+      "note": "ț with comma below and ă fold (wrapped in double quotes)"
+    },
+    {
+      "input": "Žižek",
+      "expected": "zizek",
+      "note": "ž folds to z"
+    },
+    {
+      "input": "ŽIŽEK",
+      "expected": "zizek",
+      "note": "ž folds to z (upper case)"
+    },
+    {
+      "input": "  Žižek  ",
+      "expected": "zizek",
+      "note": "ž folds to z (padded)"
+    },
+    {
+      "input": "“Žižek”",
+      "expected": "zizek",
+      "note": "ž folds to z (wrapped in double quotes)"
+    },
+    {
+      "input": "Øster",
+      "expected": "oster",
+      "note": "ø folds to o"
+    },
+    {
+      "input": "ØSTER",
+      "expected": "oster",
+      "note": "ø folds to o (upper case)"
+    },
+    {
+      "input": "  Øster  ",
+      "expected": "oster",
+      "note": "ø folds to o (padded)"
+    },
+    {
+      "input": "“Øster”",
+      "expected": "oster",
+      "note": "ø folds to o (wrapped in double quotes)"
+    },
+    {
+      "input": "Ĳsselmeer",
+      "expected": "ijsselmeer",
+      "note": "NFKC splits the ĳ ligature"
+    },
+    {
+      "input": "ĲSSELMEER",
+      "expected": "ijsselmeer",
+      "note": "NFKC splits the ĳ ligature (upper case)"
+    },
+    {
+      "input": "  Ĳsselmeer  ",
+      "expected": "ijsselmeer",
+      "note": "NFKC splits the ĳ ligature (padded)"
+    },
+    {
+      "input": "“Ĳsselmeer”",
+      "expected": "ijsselmeer",
+      "note": "NFKC splits the ĳ ligature (wrapped in double quotes)"
+    },
+    {
+      "input": "ﬁcus",
+      "expected": "ficus",
+      "note": "NFKC splits the ﬁ ligature"
+    },
+    {
+      "input": "FICUS",
+      "expected": "ficus",
+      "note": "NFKC splits the ﬁ ligature (upper case)"
+    },
+    {
+      "input": "  ﬁcus  ",
+      "expected": "ficus",
+      "note": "NFKC splits the ﬁ ligature (padded)"
+    },
+    {
+      "input": "“ﬁcus”",
+      "expected": "ficus",
+      "note": "NFKC splits the ﬁ ligature (wrapped in double quotes)"
+    },
+    {
+      "input": "Ｔｏｍａｔｏ",
+      "expected": "tomato",
+      "note": "fullwidth letters become ASCII under NFKC"
+    },
+    {
+      "input": "ＴＯＭＡＴＯ",
+      "expected": "tomato",
+      "note": "fullwidth letters become ASCII under NFKC (upper case)"
+    },
+    {
+      "input": "  Ｔｏｍａｔｏ  ",
+      "expected": "tomato",
+      "note": "fullwidth letters become ASCII under NFKC (padded)"
+    },
+    {
+      "input": "“Ｔｏｍａｔｏ”",
+      "expected": "tomato",
+      "note": "fullwidth letters become ASCII under NFKC (wrapped in double quotes)"
+    },
+    {
+      "input": "Ⅷ",
+      "expected": "viii",
+      "note": "a Roman numeral decomposes under NFKC"
+    },
+    {
+      "input": "  Ⅷ  ",
+      "expected": "viii",
+      "note": "a Roman numeral decomposes under NFKC (padded)"
+    },
+    {
+      "input": "“Ⅷ”",
+      "expected": "viii",
+      "note": "a Roman numeral decomposes under NFKC (wrapped in double quotes)"
+    },
+    {
+      "input": "½",
+      "expected": "1⁄2",
+      "note": "a vulgar fraction decomposes to digits and the fraction slash"
+    },
+    {
+      "input": "  ½  ",
+      "expected": "1⁄2",
+      "note": "a vulgar fraction decomposes to digits and the fraction slash (padded)"
+    },
+    {
+      "input": "“½”",
+      "expected": "1⁄2",
+      "note": "a vulgar fraction decomposes to digits and the fraction slash (wrapped in double quotes)"
+    },
+    {
+      "input": "Ⓐ",
+      "expected": "a",
+      "note": "an enclosed letter decomposes under NFKC"
+    },
+    {
+      "input": "  Ⓐ  ",
+      "expected": "a",
+      "note": "an enclosed letter decomposes under NFKC (padded)"
+    },
+    {
+      "input": "“Ⓐ”",
+      "expected": "a",
+      "note": "an enclosed letter decomposes under NFKC (wrapped in double quotes)"
+    },
+    {
+      "input": "ǅ",
+      "expected": "dz",
+      "note": "a titlecase digraph decomposes and folds"
+    },
+    {
+      "input": "Ǆ",
+      "expected": "dz",
+      "note": "a titlecase digraph decomposes and folds (upper case)"
+    },
+    {
+      "input": "  ǅ  ",
+      "expected": "dz",
+      "note": "a titlecase digraph decomposes and folds (padded)"
+    },
+    {
+      "input": "“ǅ”",
+      "expected": "dz",
+      "note": "a titlecase digraph decomposes and folds (wrapped in double quotes)"
+    },
+    {
+      "input": "ŉ",
+      "expected": "n",
+      "note": "U+0149 decomposes to an apostrophe and n; the leading apostrophe is dropped"
+    },
+    {
+      "input": "ʼN",
+      "expected": "n",
+      "note": "U+0149 decomposes to an apostrophe and n; the leading apostrophe is dropped (upper case)"
+    },
+    {
+      "input": "  ŉ  ",
+      "expected": "n",
+      "note": "U+0149 decomposes to an apostrophe and n; the leading apostrophe is dropped (padded)"
+    },
+    {
+      "input": "“ŉ”",
+      "expected": "n",
+      "note": "U+0149 decomposes to an apostrophe and n; the leading apostrophe is dropped (wrapped in double quotes)"
+    },
+    {
+      "input": "Йошта",
+      "expected": "йошта",
+      "note": "precomposed й"
+    },
+    {
+      "input": "ЙОШТА",
+      "expected": "йошта",
+      "note": "precomposed й (upper case)"
+    },
+    {
+      "input": "  Йошта  ",
+      "expected": "йошта",
+      "note": "precomposed й (padded)"
+    },
+    {
+      "input": "“Йошта”",
+      "expected": "йошта",
+      "note": "precomposed й (wrapped in double quotes)"
+    },
+    {
+      "input": "Йошта",
+      "expected": "йошта",
+      "note": "decomposed й recomposes under NFKC"
+    },
+    {
+      "input": "ЙОШТА",
+      "expected": "йошта",
+      "note": "decomposed й recomposes under NFKC (upper case)"
+    },
+    {
+      "input": "  Йошта  ",
+      "expected": "йошта",
+      "note": "decomposed й recomposes under NFKC (padded)"
+    },
+    {
+      "input": "“Йошта”",
+      "expected": "йошта",
+      "note": "decomposed й recomposes under NFKC (wrapped in double quotes)"
+    },
+    {
+      "input": "é",
+      "expected": "e",
+      "note": "decomposed é recomposes then folds"
+    },
+    {
+      "input": "É",
+      "expected": "e",
+      "note": "decomposed é recomposes then folds (upper case)"
+    },
+    {
+      "input": "  é  ",
+      "expected": "e",
+      "note": "decomposed é recomposes then folds (padded)"
+    },
+    {
+      "input": "“é”",
+      "expected": "e",
+      "note": "decomposed é recomposes then folds (wrapped in double quotes)"
+    },
+    {
+      "input": "ЇЖАК",
+      "expected": "їжак",
+      "note": "ї is a letter, not a fold"
+    },
+    {
+      "input": "  ЇЖАК  ",
+      "expected": "їжак",
+      "note": "ї is a letter, not a fold (padded)"
+    },
+    {
+      "input": "“ЇЖАК”",
+      "expected": "їжак",
+      "note": "ї is a letter, not a fold (wrapped in double quotes)"
+    },
+    {
+      "input": "Іріс",
+      "expected": "іріс",
+      "note": "і is a letter, not a fold"
+    },
+    {
+      "input": "ІРІС",
+      "expected": "іріс",
+      "note": "і is a letter, not a fold (upper case)"
+    },
+    {
+      "input": "  Іріс  ",
+      "expected": "іріс",
+      "note": "і is a letter, not a fold (padded)"
+    },
+    {
+      "input": "“Іріс”",
+      "expected": "іріс",
+      "note": "і is a letter, not a fold (wrapped in double quotes)"
+    },
+    {
+      "input": "Мальва (Alcea rosea)",
+      "expected": "мальва (alcea rosea)",
+      "note": "mixed scripts"
+    },
+    {
+      "input": "МАЛЬВА (ALCEA ROSEA)",
+      "expected": "мальва (alcea rosea)",
+      "note": "mixed scripts (upper case)"
+    },
+    {
+      "input": "  Мальва (Alcea rosea)  ",
+      "expected": "мальва (alcea rosea)",
+      "note": "mixed scripts (padded)"
+    },
+    {
+      "input": "Мальва (Alcea rosea)",
+      "expected": "мальва (alcea rosea)",
+      "note": "mixed scripts (non-breaking spaces)"
+    },
+    {
+      "input": "Мальва\t(Alcea\trosea)",
+      "expected": "мальва (alcea rosea)",
+      "note": "mixed scripts (tabs)"
+    },
+    {
+      "input": "“Мальва (Alcea rosea)”",
+      "expected": "мальва (alcea rosea)",
+      "note": "mixed scripts (wrapped in double quotes)"
+    },
+    {
+      "input": "Вишня Лотівка",
+      "expected": "вишня лотівка",
+      "note": "Ukrainian cultivar name"
+    },
+    {
+      "input": "ВИШНЯ ЛОТІВКА",
+      "expected": "вишня лотівка",
+      "note": "Ukrainian cultivar name (upper case)"
+    },
+    {
+      "input": "  Вишня Лотівка  ",
+      "expected": "вишня лотівка",
+      "note": "Ukrainian cultivar name (padded)"
+    },
+    {
+      "input": "Вишня Лотівка",
+      "expected": "вишня лотівка",
+      "note": "Ukrainian cultivar name (non-breaking spaces)"
+    },
+    {
+      "input": "Вишня\tЛотівка",
+      "expected": "вишня лотівка",
+      "note": "Ukrainian cultivar name (tabs)"
+    },
+    {
+      "input": "“Вишня Лотівка”",
+      "expected": "вишня лотівка",
+      "note": "Ukrainian cultivar name (wrapped in double quotes)"
+    },
+    {
+      "input": "",
+      "expected": "",
+      "note": "empty stays empty"
+    },
+    {
+      "input": "    ",
+      "expected": "",
+      "note": "empty stays empty (padded)"
+    },
+    {
+      "input": "   ",
+      "expected": "",
+      "note": "spaces only collapse to empty"
+    },
+    {
+      "input": "       ",
+      "expected": "",
+      "note": "spaces only collapse to empty (padded)"
+    },
+    {
+      "input": "   ",
+      "expected": "",
+      "note": "spaces only collapse to empty (non-breaking spaces)"
+    },
+    {
+      "input": "\t\t\t",
+      "expected": "",
+      "note": "spaces only collapse to empty (tabs)"
+    },
+    {
+      "input": "''",
+      "expected": "",
+      "note": "two apostrophes at the boundary are dropped"
+    },
+    {
+      "input": "  ''  ",
+      "expected": "",
+      "note": "two apostrophes at the boundary are dropped (padded)"
+    },
+    {
+      "input": "'",
+      "expected": "",
+      "note": "a lone apostrophe is dropped"
+    },
+    {
+      "input": "  '  ",
+      "expected": "",
+      "note": "a lone apostrophe is dropped (padded)"
+    }
+  ]
+}

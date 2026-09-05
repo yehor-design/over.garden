@@ -13,6 +13,14 @@ import type {
   CatalogSourceCaptureRuns as CatalogSourceCaptureRunsTable,
   CatalogSourceCaptureUnits as CatalogSourceCaptureUnitsTable,
   CatalogSourceLinks as CatalogSourceLinksTable,
+  CatalogSourceAssertions as CatalogSourceAssertionsTable,
+  CatalogItemIdentifiers as CatalogItemIdentifiersTable,
+  CatalogItemRelations as CatalogItemRelationsTable,
+  CatalogItemFacts as CatalogItemFactsTable,
+  CatalogItemSlugHistory as CatalogItemSlugHistoryTable,
+  CatalogCurationQueue as CatalogCurationQueueTable,
+  CatalogCurationActions as CatalogCurationActionsTable,
+  CatalogSearchMisses as CatalogSearchMissesTable,
   CatalogSourceRecords as CatalogSourceRecordsTable,
   CatalogSourceRefreshEvents as CatalogSourceRefreshEventsTable,
   CatalogSourceRefreshRecords as CatalogSourceRefreshRecordsTable,
@@ -74,6 +82,106 @@ export type LocationVisibility = "region" | "hidden";
 export type { CoarseRegionCode } from "@/lib/garden/regions";
 export type VarietyState = "selected" | "unknown" | "user_added" | "free_text";
 export type CatalogKind = "plant_variety" | "species" | "breed";
+
+// The organism graph vocabulary (ADR-0026). Every set below is also a CHECK
+// constraint in migration 0054; a rename is a migration and an ADR amendment.
+export type CatalogNodeKind = "taxon" | "cultivar" | "breed";
+export type CatalogNodeRank =
+  | "kingdom"
+  | "phylum"
+  | "class"
+  | "order"
+  | "family"
+  | "subfamily"
+  | "tribe"
+  | "genus"
+  | "subgenus"
+  | "section"
+  | "species"
+  | "subspecies"
+  | "variety"
+  | "subvariety"
+  | "form"
+  | "unranked"
+  | "cultivar"
+  | "cultivar_group"
+  | "grex"
+  | "breed"
+  | "strain";
+export type CatalogKingdom =
+  | "Plantae"
+  | "Animalia"
+  | "Fungi"
+  | "Bacteria"
+  | "Viruses"
+  | "Chromista"
+  | "Protozoa"
+  | "Archaea";
+export type CatalogIdentityState = "active" | "merged" | "retired";
+export type CatalogNameType =
+  | "scientific_accepted"
+  | "scientific_synonym"
+  | "vernacular"
+  | "denomination"
+  | "trade_designation";
+export type CatalogIdentifierScheme =
+  | "col"
+  | "gbif"
+  | "wfo"
+  | "eppo"
+  | "wikidata"
+  | "ipni"
+  | "powo"
+  | "ua_register"
+  | "eu_common_catalogue"
+  | "vbo"
+  | "grin";
+export type CatalogRelationType = "form_of" | "pest_of";
+export type CatalogHostClass =
+  | "major_host"
+  | "host"
+  | "wild_weed_host"
+  | "incidental"
+  | "experimental"
+  | "artificial"
+  | "unknown";
+export type CatalogFactPredicate =
+  | "distribution_status"
+  | "categorization"
+  | "registration_status";
+export type CatalogPresence = "present" | "absent" | "transient" | "unknown";
+export type CatalogRightsClass =
+  | "source_public"
+  | "source_only"
+  | "forbidden"
+  | "unknown";
+export type CatalogAssertionDecision =
+  | "automatic"
+  | "curator_accepted"
+  | "curator_rejected"
+  | "superseded";
+export type CatalogCurationItemType =
+  | "label_link"
+  | "node_merge"
+  | "source_link"
+  | "split_review";
+export type CatalogCurationState =
+  | "open"
+  | "accepted"
+  | "rejected"
+  | "skipped"
+  | "auto_applied"
+  | "reverted";
+export type CatalogCurationActionType =
+  | "merge"
+  | "rename"
+  | "link"
+  | "unlink"
+  | "pin_name"
+  | "set_indexable"
+  | "promote_label"
+  | "revert";
+export type CatalogSlugNamespace = "species" | "form";
 export type PlantObjectKind = "plant" | "animal";
 export type CatalogItemStatus =
   | "seeded"
@@ -253,6 +361,22 @@ export type CatalogMatchSuggestion = Selectable<CatalogMatchSuggestionsTable>;
 export type NewCatalogMatchSuggestion =
   Insertable<CatalogMatchSuggestionsTable>;
 export type CatalogSourceLink = Selectable<CatalogSourceLinksTable>;
+export type CatalogSourceAssertion = Selectable<CatalogSourceAssertionsTable>;
+export type NewCatalogSourceAssertion = Insertable<CatalogSourceAssertionsTable>;
+export type CatalogItemIdentifier = Selectable<CatalogItemIdentifiersTable>;
+export type NewCatalogItemIdentifier = Insertable<CatalogItemIdentifiersTable>;
+export type CatalogItemRelation = Selectable<CatalogItemRelationsTable>;
+export type NewCatalogItemRelation = Insertable<CatalogItemRelationsTable>;
+export type CatalogItemFact = Selectable<CatalogItemFactsTable>;
+export type NewCatalogItemFact = Insertable<CatalogItemFactsTable>;
+export type CatalogItemSlugHistoryEntry = Selectable<CatalogItemSlugHistoryTable>;
+export type NewCatalogItemSlugHistoryEntry = Insertable<CatalogItemSlugHistoryTable>;
+export type CatalogCurationQueueItem = Selectable<CatalogCurationQueueTable>;
+export type NewCatalogCurationQueueItem = Insertable<CatalogCurationQueueTable>;
+export type CatalogCurationAction = Selectable<CatalogCurationActionsTable>;
+export type NewCatalogCurationAction = Insertable<CatalogCurationActionsTable>;
+export type CatalogSearchMiss = Selectable<CatalogSearchMissesTable>;
+export type NewCatalogSearchMiss = Insertable<CatalogSearchMissesTable>;
 export type CatalogSourceCaptureRun = Selectable<CatalogSourceCaptureRunsTable>;
 export type NewCatalogSourceCaptureRun =
   Insertable<CatalogSourceCaptureRunsTable>;

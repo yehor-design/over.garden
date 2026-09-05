@@ -28,7 +28,7 @@ export interface ErasureCoverageEntry {
 
 // OVE-255 and OVE-353 each extended the manifest independently from v5, so the
 // merged coverage is a new version rather than either side's v6.
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove353.erasure-schema.v8";
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove386.erasure-schema.v9";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Auth / Better Auth
@@ -686,6 +686,37 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     kind: "soft_column",
     disposition: "anonymize",
     rationale: "Alias reviewer id nulled.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "catalog_source_assertions.decided_by_user_id",
+    table: "catalog_source_assertions",
+    columnOrPath: "decided_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale: "Curator decision attribution on a graph assertion nulled (ADR-0026).",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "catalog_curation_queue.decided_by_user_id",
+    table: "catalog_curation_queue",
+    columnOrPath: "decided_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale: "Curator decision attribution on a queue item nulled (ADR-0026).",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "catalog_curation_actions.performed_by_user_id",
+    table: "catalog_curation_actions",
+    columnOrPath: "performed_by_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale:
+      "Performer of an append-only curation action nulled; the append-only trigger admits exactly this transition (ADR-0026).",
     dryRunOwned: true,
     executionOwned: true,
   },

@@ -25,6 +25,8 @@
     "queue:contract:prove-database": "tsx scripts/prove-job-queue-contract-database.ts",
     "schema:retirement:prove-database": "tsx scripts/prove-stable-registry-retirement-database.ts",
     "schema:retirement:inventory": "tsx scripts/prove-stable-registry-retirement-database.ts --inventory",
+    "schema:organism-graph:prove-database": "tsx scripts/prove-organism-graph-foundation.ts",
+    "schema:organism-graph:fingerprint": "tsx scripts/prove-organism-graph-foundation.ts --fingerprint",
     "verify:retired-journal-media-migration": "tsx scripts/verify-retired-journal-media-migration.ts",
     "catalog:sources:import-sample": "tsx scripts/import-catalog-source-sample.ts",
     "catalog:sources:import-ua-register-variety": "tsx scripts/import-ua-state-register-variety.ts",

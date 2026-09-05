@@ -198,6 +198,7 @@ export async function executeApprovedErasureRequest(
         requesterUserId,
         now,
       ).execute();
+      await buildAnonymizeCatalogGraphCuratorsForErasure(trx, requesterUserId);
       await buildAnonymizeVarietySeedProofAuthorsForErasureQuery(trx, {
         requesterUserId,
         erasedSubjectUserId,
@@ -1078,6 +1079,32 @@ export function buildAnonymizeCatalogAliasReviewersForErasureQuery(
       updated_at: now,
     })
     .where("reviewed_by_user_id", "=", requesterUserId);
+}
+
+/**
+ * The organism graph's curator attributions (ADR-0026): assertion decisions,
+ * queue decisions, and the performer of an append-only action, whose trigger
+ * admits exactly this transition.
+ */
+export async function buildAnonymizeCatalogGraphCuratorsForErasure(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  await executor
+    .updateTable("catalog_source_assertions")
+    .set({ decided_by_user_id: null })
+    .where("decided_by_user_id", "=", requesterUserId)
+    .execute();
+  await executor
+    .updateTable("catalog_curation_queue")
+    .set({ decided_by_user_id: null })
+    .where("decided_by_user_id", "=", requesterUserId)
+    .execute();
+  await executor
+    .updateTable("catalog_curation_actions")
+    .set({ performed_by_user_id: null })
+    .where("performed_by_user_id", "=", requesterUserId)
+    .execute();
 }
 
 export function buildAnonymizeVarietySeedProofAuthorsForErasureQuery(
