@@ -1,5 +1,11 @@
 # EPPO observed capture runbook
 
+> Retained under `docs/adr/ADR-0025-stable-registry-retired.md` (2026-09-05):
+> the EPPO observed capture, its tables, tooling and credential stay; the
+> Stable Registry release model that once consumed them is retired. Read the
+> capture and verify steps here as current; ignore any Foundation, edition,
+> extension-pack or Release Center step.
+
 Owner: OVE-254
 
 Authority: ADR-0016 and `docs/STABLE_REGISTRY.md`

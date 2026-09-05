@@ -1,5 +1,10 @@
 # Stable Registry Pack Artifact
 
+> History since 2026-09-05: the Stable Registry release model this page
+> belongs to was retired by `docs/adr/ADR-0025-stable-registry-retired.md`.
+> Nothing here is to be executed or extended; the EPPO archive surface it
+> mentions, if any, is retained under that record's D2.
+
 Status: implemented by OVE-327
 Owner: `apps/web/src/server/catalog-source/pack-artifact-contract.ts`
 Schema version: `ove327.packArtifact.v1`

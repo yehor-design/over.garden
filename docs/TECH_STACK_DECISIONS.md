@@ -104,8 +104,9 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
 - ADR-0014 — Current stack realignment. Binding.
 - ADR-0015 — Lexical structured-journal editor. Binding for authenticated
   authoring; preserves `JournalDocumentV1` v1 and authoring-bundle isolation.
-- ADR-0016 — Stable Registry. Binding for observed-source isolation, immutable
-  releases, stable identities, and independent product-eligibility gates.
+- ADR-0016 — Stable Registry. Superseded by ADR-0025 for immutable releases,
+  stable identities, eligibility gates and the product projection; its
+  observed-capture clauses describe retained evidence and are history.
 - ADR-0017 — Online-only product. Binding for network-required success and the
   ban on durable browser journal storage; its future server-draft target is
   superseded by ADR-0019.
@@ -116,9 +117,9 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
 - ADR-0019 — Atomic local journal authoring and client-final WebP publication.
   Binding for transient pre-Publish state, exact browser-final bytes, bounded
   Cloudflare staging, and atomic create/edit publication.
-- ADR-0020 — Stable Registry migration allocation amendment. Binding for the
-  future allocation of `0027` to OVE-328 and `0028` to OVE-258.
-  OVE-327 and OVE-259 have no SQL migration.
+- ADR-0020 — Stable Registry migration allocation amendment. Superseded by
+  ADR-0025; `0027` and `0028` were applied and are dropped by the retirement
+  migration.
 - ADR-0021 — Journal deletion is a seven-day retention-only lifecycle. Binding.
 - ADR-0022 — Owner MVP reset (2026-09-02). Binding for: no location-text
   firewall, WebP variants from a native-first browser codec, every live public
@@ -140,3 +141,10 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   a navigation, and cross-locale links carry `prefetch={false}`; there is one
   sign-in screen and `buildSignInHref` is the only place that spells its address.
   Accepted and implemented by OVE-376 through OVE-379.
+- ADR-0025 — The Stable Registry release model and the Release Center are
+  retired; the EPPO observed capture stays (2026-09-05). Binding: no Foundation
+  release, edition, extension pack, Release Center or Stable Catalog; the
+  gardener catalog is unchanged; every table holding EPPO data, the capture
+  tooling and the EPPO archive route are retained and never dropped; the code
+  and schema retirement is one slice whose destructive half needs a read-only
+  inventory and the owner's approval. Accepted; implementation pending.

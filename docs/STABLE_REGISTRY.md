@@ -1,7 +1,11 @@
 # Stable Registry
 
-Status: binding canon under ADR-0016, with migration allocation amended by
-ADR-0020
+Status: history. The release model this page specifies — Foundation releases,
+editions, extension packs, the Release Center and the Stable Catalog — was
+retired by `docs/adr/ADR-0025-stable-registry-retired.md` on 2026-09-05. The
+observed-capture vocabulary below describes evidence that exists and is
+retained; nothing here is to be extended or executed. Superseded status lines:
+binding canon under ADR-0016, with migration allocation amended by ADR-0020.
 Decision owner: OVE-318
 Implementation owners: OVE-254 through OVE-259, OVE-327, OVE-328, and their
 explicitly related extension-pack successors

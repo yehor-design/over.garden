@@ -4,9 +4,10 @@ Read this whole page before changing anything. It is the current operating
 guide for AI agents and humans. Read `docs/PROJECT_STATE.md` beside it: it says
 what is true in production right now, what is being worked on, and what is
 knowingly unfinished. Current decisions live in
-`docs/adr/ADR-0022-owner-mvp-reset.md` and
-`docs/adr/ADR-0023-workspace-resilience.md` and
-`docs/adr/ADR-0024-server-authoritative-interaction.md`; older ADRs and dated documents are
+`docs/adr/ADR-0022-owner-mvp-reset.md`,
+`docs/adr/ADR-0023-workspace-resilience.md`,
+`docs/adr/ADR-0024-server-authoritative-interaction.md` and
+`docs/adr/ADR-0025-stable-registry-retired.md`; older ADRs and dated documents are
 history and never override them.
 
 ## Product
@@ -110,14 +111,18 @@ Every Linear task uses this shape and nothing more:
   supersede. `docs/adr/ADR-0023-workspace-resilience.md` — how a workspace page
   handles failure. `docs/adr/ADR-0024-server-authoritative-interaction.md` — why
   a public control may not depend on hydration, and what a like, a language
-  choice, and a sign-in are made of. `docs/TECH_STACK_DECISIONS.md` — stack detail and ADR index.
+  choice, and a sign-in are made of. `docs/adr/ADR-0025-stable-registry-retired.md` —
+  the Stable Registry release model and the Release Center are retired; the EPPO
+  observed capture and every table holding EPPO data stay.
+  `docs/TECH_STACK_DECISIONS.md` — stack detail and ADR index.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — provider IDs, buckets, domains, env.
 - `docs/PRODUCTION_SCHEMA_STATE.md` — which migrations the production database
   actually runs, and how to check before assuming.
 - `docs/MEDIA_LIFECYCLE.md`, `docs/ONLINE_ONLY_JOURNAL.md`,
   `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`, `docs/ADMIN_ROLE_BOOTSTRAP.md`,
-  `docs/STABLE_REGISTRY.md`, `docs/MIGRATION_ALLOCATION.md` — current
-  behaviour of each area.
+  `docs/MIGRATION_ALLOCATION.md` — current behaviour of each area.
+  `docs/STABLE_REGISTRY*.md` are history (ADR-0025); `docs/EPPO_*.md` describe
+  the retained capture and are the only registry-era documents still executable.
 - `docs/product-research/` — product research, written before the code existed.
   Read `docs/product-research/PRODUCT_CANON_2026-09.md` first: it states what the
   product is today and outranks every other file there. Then read the two to five
