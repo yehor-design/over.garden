@@ -309,6 +309,12 @@ a breaking change for every later task and needs an amendment here.
 - Production steps that need the owner each time: applying a migration,
   deploying a sealed worker release, running the second EPPO capture with the
   stored key, and the destructive closeout migration.
+- Enabled later, not built by this slice: a new market is a locale, a register
+  as a source and vernaculars in one more language, with no model change; a
+  public read API grows out of the permalinks and the per-assertion rights
+  class already decides what it may return; alerts from observed pest pressure
+  by oblast; region-by-crop pages under the same first-hand-content rule; an
+  assistant that answers with provenance because every fact carries its source.
 
 ## Superseded clauses
 
