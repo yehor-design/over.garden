@@ -186,6 +186,10 @@ counts and duration on the issue for both runs.
 
 ## 5. Order, hand-offs, definition of done
 
+All fourteen are sub-issues of the umbrella issue `OVE-400`, numbered `24.01`
+to `24.14` in their titles; the umbrella closes only when every sub-issue is
+Done.
+
 | Task | Consumes | Leaves behind for the next tasks |
 | --- | --- | --- |
 | `OVE-386` foundation | the flat catalog and the source layer | `0054` everywhere; node columns, six graph tables, queue and action tables, slug history, search misses; `catalog_normalize_name` in SQL, TS and Python with one fixture; the fingerprint script and its query list; generated types |
