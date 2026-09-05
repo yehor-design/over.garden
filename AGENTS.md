@@ -59,7 +59,9 @@ touching DNS, R2, env, or deployment. Local infra starts with
 8. No voice dictation, no speech recognition.
 9. No secrets in git. `.env*` is ignored except `.env.example`.
 10. Do not touch without the owner's explicit sign-off: destructive schema
-    changes, bulk deletes, history rewrites, force-push.
+    changes, bulk deletes, history rewrites, force-push. The closeout migration
+    of SDD Slice 24 carries that sign-off in advance (ADR-0026 amendment of
+    2026-09-05).
 11. A page under `/garden/**` never awaits a `@/server/*` read outside
     `settleSection`. Settle it into a bounded failure class and render that
     value; `error.tsx` does not catch a Server Component error on a hard load
@@ -90,6 +92,9 @@ these rules in CI and in `pnpm test`.
   integration reopens it. Describe the work instead.
 - Read-only commands against production are fine; anything that changes
   production data, schema, or provider state needs one explicit approval each.
+  For SDD Slice 24 (ADR-0026) the owner gave those approvals in advance on
+  2026-09-05; `docs/ORGANISM_GRAPH_EXECUTION.md` records the scope and the
+  technical gates that still apply.
 - English for code, identifiers, commits, and repository docs.
 
 ## Task template
@@ -120,6 +125,9 @@ Every Linear task uses this shape and nothing more:
   `docs/adr/ADR-0026-organism-knowledge-graph.md` — the organism knowledge
   graph: one canonical card per organism over the source layer, Catalogue of
   Life as backbone, a curation queue that never blocks a gardener (SDD Slice 24).
+  `docs/ORGANISM_GRAPH_EXECUTION.md` — the executor's runbook for that slice:
+  the owner's standing authorization, environment quirks, production
+  procedures, hand-offs between the fourteen tasks.
   `docs/TECH_STACK_DECISIONS.md` — stack detail and ADR index.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — provider IDs, buckets, domains, env.
 - `docs/PRODUCTION_SCHEMA_STATE.md` — which migrations the production database
