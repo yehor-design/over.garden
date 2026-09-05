@@ -348,6 +348,16 @@ previous pointer were removed to satisfy the capacity gate (5.3 GB to 13 GB
 free) — with both production proofs answering ready with six handlers. The
 empty release tables stay until the gated second half: a read-only production
 inventory, the owner's written approval, one drop migration with its rollback.
+By evening the second half was written and proven as well: `0053` drops the
+twenty empty tables, their eighteen functions and the three retired payload
+contracts, and its rollback is the verbatim text of the migrations that created
+them. One executed proof runs it forward, back and forward again on a fresh
+bootstrap — in CI from now on — and inside a rolled-back transaction on the
+loopback database that holds the real capture, where every retained count came
+back identical (387,809 capture units among them); the read-only production
+inventory found all twenty tables empty and every retained table present. What
+remains is the owner's written approval, for this migration alone, before it
+touches production.
 
 ## Corrections made in this window
 

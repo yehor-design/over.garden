@@ -84,6 +84,8 @@ describe("apply-reviewed-migration", () => {
           "  add column purge_after timestamptz;",
           "alter table journal_entries drop column if exists public_noindex;",
           "create index if not exists journal_entries_deleted_idx on journal_entries (deleted_at);",
+          "-- drop table commented_out;",
+          "drop table if exists retired_table;",
         ].join("\n"),
       ),
     ).toEqual([
@@ -91,6 +93,7 @@ describe("apply-reviewed-migration", () => {
       { kind: "column", table: "journal_entries", column: "deleted_at" },
       { kind: "column", table: "journal_entries", column: "purge_after" },
       { kind: "index", index: "journal_entries_deleted_idx" },
+      { kind: "dropped_table", table: "retired_table" },
     ]);
     expect(parseReviewedMigrationArgs(["--mode", "inventory"]).mode).toBe(
       "inventory",

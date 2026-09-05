@@ -10,8 +10,9 @@
  * showed that. `0052` adds the four payload constraints that four declared
  * kinds never had, and a CHECK that accepts everything looks exactly like a
  * CHECK that works. One of the four, `stable_registry_edition_build`, guards a
- * kind retired by ADR-0025: the migration keeps it as history, and this proof
- * exercises the three that still guard a live kind.
+ * kind retired by ADR-0025; `0053` drops that constraint together with the
+ * kind, and the last case shows the database no longer polices a payload that
+ * nothing produces.
  *
  * It builds its own disposable database and drops it, so it never writes to the
  * database whose connection string it borrows.
@@ -26,8 +27,11 @@ import { Pool } from "pg";
 import { assertLoopbackDatabaseEnvironment } from "../src/lib/local-runtime-safety";
 import { loadVersionedApplicationSql } from "./application-sql";
 
-/** Migrations this proof owns: the handler set, its shape, the payload checks. */
-const CONTRACT_MIGRATIONS = /^(0050|0051|0052)_/u;
+/**
+ * Migrations this proof owns: the handler set, its shape, the payload checks,
+ * and the retirement that takes three of those checks away again.
+ */
+const CONTRACT_MIGRATIONS = /^(0050|0051|0052|0053)_/u;
 
 const UUID_A = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
 const UUID_B = "3f2504e0-4f89-41d3-9a0c-0305e82c3302";
@@ -199,6 +203,18 @@ const CASES: readonly Case[] = [
       }),
   },
   {
+    // 0053 retired the kind and the constraint with it. What 0052 refused is
+    // now just a kind the worker terminalises as unsupported; the database
+    // holds no contract for it any more.
+    name: "0053 no longer polices a stable_registry_edition_build payload",
+    expect: "accepted",
+    run: (pool) =>
+      enqueue(pool, "matching", {
+        kind: "stable_registry_edition_build",
+        releaseId: "not-a-uuid",
+      }),
+  },
+  {
     // Each constraint is scoped to its own kind, so none of them may start
     // policing a payload it was never given a contract for.
     name: "0052 leaves an unrelated kind alone",
@@ -250,7 +266,7 @@ export async function runJobQueueContractDatabaseProof() {
     const migrations = (
       await loadVersionedApplicationSql(path.join(process.cwd(), "sql"))
     ).filter((migration) => CONTRACT_MIGRATIONS.test(migration.name));
-    if (migrations.length !== 3) {
+    if (migrations.length !== 4) {
       throw new Error("job_queue_contract_migrations_missing");
     }
     for (const migration of migrations) {

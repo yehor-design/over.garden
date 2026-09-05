@@ -172,6 +172,7 @@ half days. Both kinds are web-owned. Nothing here drains them.
 | Migration | Why it is not applied                                                                                                                                                                                                                                                                                                                    |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `0048`    | The capture claim-ordering index. It only matters where an observed capture runs, and OVE-254 refuses production capture, so production has the table and no rows to claim. Additive and reversible — one partial index, no column, constraint, or row — so it can be applied whenever the owner wants production converged with `sql/`. |
+| `0053`    | The Stable Registry retirement (ADR-0025, D4). Destructive by design — twenty empty tables, eighteen functions, three payload CHECK constraints — so it waits for the owner's written approval of this migration alone. Inventoried and proven below.                                                                                              |
 
 Applied on the loopback database on 2026-09-03 through
 `scripts/apply-reviewed-migration.ts` and verified by `pg_indexes`. Whoever
@@ -182,6 +183,70 @@ is unnecessary. `pnpm queue:contract:prove-database` executes both `0051` and
 `0052` against a disposable database on every CI run — nineteen accept and
 refuse cases, including the two defects execution found in the first draft of
 `0051`.
+
+## `0053`, inventoried and proven, awaiting the owner's approval
+
+`0053_ove385_retire_stable_registry_release_tables.sql` drops the empty Stable
+Registry release tables (ADR-0025, D4 part 2): every `catalog_registry_*`
+table, `stable_registry_product_*`, `stable_registry_public_catalog_*` and
+`catalog_item_revisions` — twenty tables — together with their eighteen
+functions, the catalog materialisation trigger, and the three payload CHECK
+constraints of the retired kinds on `job_queue`. It first rewrites the shared
+read-model trigger function to keep only its EPPO branch, so the retained
+trigger on `catalog_source_capture_runs` keeps working.
+`sql/rollback/0053_ove385_retire_stable_registry_release_tables.down.sql`
+recreates every object from the verbatim text of the migrations that first
+created them, and cannot restore rows — which is why the migration runs only
+where the inventory found none.
+
+Read-only inventory of production on 2026-09-05
+(`pnpm schema:retirement:inventory` under the production environment; host
+class `digitalocean_managed`, database `defaultdb`):
+
+```
+drop targets: 20 tables present, every one 0 rows
+              18 functions present, 3 payload constraints present
+retained:     catalog_source_capture_runs 0, catalog_source_capture_units 0,
+              catalog_source_records 16,299, catalog_source_snapshots 34,
+              catalog_source_links 15,934, catalog_source_refresh_events 0,
+              catalog_source_refresh_records 0,
+              stable_registry_public_eppo_records 0,
+              stable_registry_public_eppo_search_terms 0,
+              catalog_items 15,934, catalog_item_names 61,908
+              EPPO materialise trigger present
+```
+
+Production holds no observed capture, which is why the EPPO read-model tables
+are empty there; they are retained all the same. `scripts/apply-reviewed-migration.ts
+--mode inventory` (which now understands `drop table` sentinels) reports `0053`
+as `missing` with all twenty drop targets `stillPresent` at zero rows.
+
+Executed proofs: `pnpm schema:retirement:prove-database` builds a fresh
+bootstrap up to `0052`, applies `0053`, its rollback, and `0053` again, and
+asserts every dropped object gone, every retained object present with an
+identical row count, and every dropped object back after the rollback (in CI on
+every run). `pnpm schema:retirement:prove-database --loopback-rollback` did the
+same inside a rolled-back transaction on the owner's loopback database, where
+the retained tables hold the real capture — 387,809 capture units, 121,777
+public EPPO records, 1,488,204 search terms — and every count was identical
+after `0053`. The loopback database then received `0053` for real.
+`src/db/generated.ts` was reduced by exactly the twenty retired interfaces from
+the committed baseline rather than regenerated from the loopback database,
+which carries unrelated local drift (`0038` and `0046` refuse to apply there);
+CI's `db:types:check` against a fresh bootstrap is the comparison that counts.
+
+Production application waits for the owner's written approval of this
+migration alone (`AGENTS.md` rule 10). The command, with the production
+environment injected and `apps/web/.env.local` moved aside:
+
+```bash
+cd apps/web
+pnpm exec tsx scripts/apply-reviewed-migration.ts --mode apply --migration 0053
+```
+
+Whoever applies it records the receipt here, reruns
+`pnpm schema:retirement:inventory` to show `alreadyApplied: true` with every
+retained table present, and closes gap 5 in `docs/PROJECT_STATE.md`.
 
 ## The rule this produced
 
