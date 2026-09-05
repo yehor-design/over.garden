@@ -364,6 +364,25 @@ Vercel — `STABLE_REGISTRY_RELEASE_CENTER`, `STABLE_REGISTRY_EXTENSION_PACKS`,
 `STABLE_REGISTRY_EDITIONS` — were deleted as well; nothing had read them since
 the morning. Gap 5 is closed and `OVE-385` is done.
 
+## 5 September — the Google OAuth client, audited and reset
+
+The owner asked where the Google OAuth client secret lived and whether it had
+been compromised. The audit, run with every output masked: the secret was in
+Vercel Production, the owner's Keychain and Google Cloud Console, and nowhere
+else — not in the working tree, any git ref or unreachable object, `.env.local`,
+agent transcripts, shell history or Linear; the public repository had never
+held it. What it had done was sit as a downloaded `client_secret_*.json` in the
+Desktop research corpus from about early July until 2026-09-04 — the folder a
+Python pass mirrors into `docs/product-research/`, one copy away from a public
+leak. No evidence of exposure, and a reset anyway: the owner reissued the
+secret in Google Cloud Console, updated Vercel Production (16:13 UTC),
+redeployed, deleted the Keychain copy and signed in with Google to prove the
+exchange. Three guards followed: a test that scans every tracked file for
+credential shapes and names the file and the pattern, never the value
+(falsified with a planted value first), a `.gitignore` rule for
+`client_secret*.json`, and GitHub secret scanning with push protection on the
+public repository (PR #297).
+
 ## Corrections made in this window
 
 Recorded because a wrong explanation that was quietly replaced is worse than one
