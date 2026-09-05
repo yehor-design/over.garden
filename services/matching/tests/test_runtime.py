@@ -263,6 +263,72 @@ def test_preflight_requires_schema_but_not_an_existing_worker_heartbeat(
     assert "worker" not in manifest["dependencies"]
 
 
+def test_preflight_ignores_the_incumbent_heartbeat_handler_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A release that changes the handler set must be able to pass preflight.
+
+    Before activation the heartbeat row is the running worker's, so the
+    candidate's set differs from it exactly when the release adds or removes a
+    handler. On 2026-09-05 that refused the first nine-handler deploy with every
+    dependency available. Readiness keeps the requirement, because after
+    activation the row is the candidate's own.
+    """
+    incumbent = ready_postgres_state(
+        heartbeat={
+            "release_commit_sha": "c" * 40,
+            "image_digest": f"sha256:{'d' * 64}",
+            "schema_compatibility_class": runtime.SCHEMA_COMPATIBILITY_CLASS,
+            "supported_handlers": list(SUPPORTED_JOB_KINDS)[:6],
+            "is_fresh": True,
+        },
+        queueRecovery={
+            "claimCompatible": "available",
+            "handlerCompatible": "drift",
+            "unsupportedRetryingClass": "none",
+            "terminalCountClass": "low",
+            "oldestDueAgeClass": "none",
+        },
+    )
+    monkeypatch.setattr(runtime, "_read_postgres_state", lambda _release: incumbent)
+    monkeypatch.setattr(runtime, "_read_meilisearch_status", lambda: "available")
+
+    preflight, preflight_ready = runtime.preflight_manifest(release())
+    readiness, is_ready = runtime.readiness_manifest(release())
+
+    assert preflight_ready is True
+    assert preflight["status"] == "ready"
+    # Reported, so the operator can see the set is about to change.
+    assert preflight["dependencies"]["queueRecovery"]["handlerCompatible"] == "drift"
+    assert is_ready is False
+    assert readiness["status"] == "degraded"
+    assert readiness["dependencies"]["worker"]["status"] == "release_mismatch"
+
+
+def test_preflight_refuses_a_candidate_that_cannot_handle_queued_work(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The gate that stays: work already queued for kinds this candidate lacks."""
+    queued_unsupported = ready_postgres_state(
+        queueRecovery={
+            "claimCompatible": "available",
+            "handlerCompatible": "drift",
+            "unsupportedRetryingClass": "present",
+            "terminalCountClass": "low",
+            "oldestDueAgeClass": "delayed",
+        },
+    )
+    monkeypatch.setattr(
+        runtime, "_read_postgres_state", lambda _release: queued_unsupported
+    )
+    monkeypatch.setattr(runtime, "_read_meilisearch_status", lambda: "available")
+
+    manifest, is_ready = runtime.preflight_manifest(release())
+
+    assert is_ready is False
+    assert manifest["status"] == "degraded"
+
+
 @pytest.mark.parametrize(
     "public_media_origin",
     [
