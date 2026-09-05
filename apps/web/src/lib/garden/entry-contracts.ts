@@ -1,8 +1,6 @@
-import type { CatalogKind, PlantObjectKind } from "@/db/schema";
-import type { CatalogTrustState } from "@/lib/garden/catalog-trust";
+import type { PlantObjectKind } from "@/db/schema";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
-import type { Ove330ServeClass } from "@/lib/media/presentation-contract";
 
 /** One bounded JSON budget shared by atomic create and edit publication. */
 export const JOURNAL_ENTRY_PAYLOAD_MAX_BYTES = 128 * 1024;
@@ -43,7 +41,8 @@ export type AtomicJournalCreateContext =
       plantName: string;
       objectKind?: PlantObjectKind | null;
       catalogItemId?: string | null;
-      userAddedCatalogName?: string | null;
+      /** The gardener's own name: a label on the object, never a card. */
+      catalogLabel?: string | null;
       locationVisibility?: string | null;
       coarseRegionCode?: string | null;
       entryDate?: string | null;
@@ -126,18 +125,20 @@ export interface AtomicJournalEditResponse {
   returnTo: string;
 }
 
+/** The gardener-facing kind of a catalog node: a taxon reads as a species. */
+export type CatalogPickerKind = "species" | "cultivar" | "breed";
+
+/**
+ * One organism as the picker shows it (ADR-0026 D7): the display name in the
+ * reader's locale, the name that matched when it differs, the species a form
+ * belongs to, and the public card path. No source, status or trust field:
+ * every row the picker offers is an active canonical node by construction.
+ */
 export interface FirstEntryCatalogSelection {
   id: string;
   displayName: string;
-  canonicalName: string;
-  catalogKind: CatalogKind;
-  locale: string;
-  status: "seeded" | "confirmed";
-  source: string;
-  serveClass: Ove330ServeClass;
-  trustState?: CatalogTrustState;
-  trustLabel?: string;
-  sourceLabel?: string;
-  sourceCaveat?: string;
-  disambiguationLabel?: string;
+  kind: CatalogPickerKind;
+  matchedName?: string;
+  parentDisplayName?: string;
+  publicPath?: string;
 }

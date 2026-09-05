@@ -18,6 +18,10 @@
     {
       "path": "/api/cron/media-orphans",
       "schedule": "0 5 * * 1"
+    },
+    {
+      "path": "/api/cron/catalog-search-weight",
+      "schedule": "30 3 * * *"
     }
   ]
 }

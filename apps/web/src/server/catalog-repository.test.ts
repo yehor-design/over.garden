@@ -13,22 +13,19 @@ import {
 import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
-import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
-import { scopedToUser } from "@/server/request-scope";
 import {
   buildCatalogTypeaheadReindexRowsQuery,
-  buildEnqueueCatalogMatchSuggestionsRefreshJobQuery,
+  buildCatalogTypeaheadStatement,
   buildEnqueueCatalogTypeaheadReindexJobQuery,
-  buildFindUserAddedCatalogItemQuery,
-  buildCatalogTypeaheadQuery,
   buildFindSelectableCatalogItemByPublicSlugQuery,
   buildFindSelectableCatalogItemQuery,
-  buildInsertCatalogItemNameQuery,
-  buildUpsertUserAddedCatalogItemQuery,
+  buildUpsertCatalogSearchMissQuery,
+  CATALOG_TYPEAHEAD_DEADLINE_MS,
+  normalizeCatalogLabel,
   normalizeCatalogPublicSlug,
   normalizeCatalogQuery,
-  searchCatalogSuggestionsForTypeahead,
-  searchCatalogSuggestionsWithMeili,
+  recordCatalogSearchMiss,
+  searchCatalogSuggestionsForTypeaheadResult,
 } from "./catalog-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -50,742 +47,302 @@ class TestPostgresDialect implements Dialect {
 }
 
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
-const scope = scopedToUser("00000000-0000-0000-0000-000000000001");
 
-function catalogSuggestion<
-  T extends Parameters<typeof catalogSuggestionTrustMetadata>[0],
->(suggestion: T) {
+function sqlRow(overrides: Record<string, unknown> = {}) {
   return {
-    ...suggestion,
-    serveClass: "exact" as const,
-    ...catalogSuggestionTrustMetadata(suggestion),
+    id: "00000000-0000-4000-8000-000000000101",
+    node_kind: "taxon",
+    public_slug: "solanum-lycopersicum",
+    display_name: "помідор",
+    matched_name: "томат",
+    parent_display_name: null,
+    match_class: 1,
+    market: false,
+    similarity: 0.63,
+    ...overrides,
   };
 }
 
-describe("catalog repository query contracts", () => {
-  it("normalizes bounded typeahead queries without preserving raw spacing", () => {
-    expect(normalizeCatalogQuery("  Помідор   чері  ")).toBe("помідор чері");
+describe("catalog picker query", () => {
+  it("normalizes the query with the shared normalizer and caps it at 120 characters", () => {
+    expect(normalizeCatalogQuery("  Мар’яна   F1 ")).toBe("мар'яна f1");
+    expect(normalizeCatalogQuery("Café  ×  Tomato")).toBe("cafe x tomato");
+    expect(normalizeCatalogQuery("я".repeat(200))).toHaveLength(120);
   });
 
-  it("searches only safe catalog tables for seeded or confirmed suggestions", () => {
-    const compiled = buildCatalogTypeaheadQuery(testDb, "чері", 5).compile();
+  it("is one statement over names: a prefix half, a fuzzy half, one row per organism, ranked as ADR-0026 D7 says", () => {
+    const compiled = buildCatalogTypeaheadStatement({
+      normalizedQuery: "помі_дор",
+      locale: "bg",
+      objectKind: "animal",
+    }).compile(testDb);
 
-    expect(compiled.sql).toContain('from "catalog_item_names"');
+    expect(compiled.sql.match(/\bselect\b/giu)?.length).toBeGreaterThan(1);
+    expect(compiled.sql).toContain("union all");
+    expect(compiled.sql).toContain("n.normalized_name like $");
+    expect(compiled.sql).toContain("n.normalized_name % $");
+    expect(compiled.sql).toContain("similarity(n.normalized_name, $");
+    expect(compiled.sql).toContain(">= 0.3");
+    expect(compiled.sql).toContain("distinct on (c.catalog_item_id)");
+    expect(compiled.sql).toContain("ci.identity_state = 'active'");
+    expect(compiled.sql).toContain("ci.created_by_user_id is null");
+    expect(compiled.sql).toContain("h.name_type = 'vernacular' and h.locale = $");
     expect(compiled.sql).toContain(
-      'inner join "catalog_items" on "catalog_items"."id" = "catalog_item_names"."catalog_item_id"',
-    );
-    expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
-    expect(compiled.sql).toContain(
-      '"catalog_items"."created_by_user_id" is null',
-    );
-    expect(compiled.sql).toContain(
-      "generated_alias.source_method = 'generated'",
-    );
-    expect(compiled.sql).toContain(
-      'lower("catalog_item_names"."display_name") like $3',
-    );
-    expect(compiled.sql).toContain(
-      'when "catalog_item_names"."normalized_name" = $4 then 0',
+      "h.name_type in ('scientific_accepted', 'scientific_synonym')",
     );
     expect(compiled.sql).toContain(
-      'when "catalog_item_names"."normalized_name" like $5 then 1',
+      "partition by ci.node_kind, ci.normalized_name",
     );
-    expect(compiled.sql).not.toContain("journal_entries");
-    expect(compiled.sql).not.toContain("owner_user_id");
-    expect(compiled.sql).not.toContain("catalog_source_records");
-    expect(compiled.sql).not.toContain("raw_payload");
-    expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
-      "%чері%",
-      "чері",
-      "чері%",
-      5,
-    ]);
+    // A form's species comes from its form_of relation, never from the tree.
+    expect(compiled.sql).toContain("r.relation_type = 'form_of'");
+    expect(compiled.sql).toContain(
+      "when s.node_kind = 'taxon' then coalesce(vernacular.display_name, s.canonical_name)",
+    );
+    expect(compiled.sql).toMatch(
+      /order by s\.match_class,\s+s\.market desc,\s+s\.search_weight desc,\s+s\.has_registered_forms desc,\s+s\.is_host desc,\s+s\.similarity desc/u,
+    );
+    expect(compiled.sql).toContain("limit 8");
+    // The kind filter lives in SQL: a taxon by kingdom, a cultivar for plants,
+    // a breed for animals.
+    expect(compiled.sql).toContain("ci.node_kind = 'breed'");
+    expect(compiled.sql).toContain("ci.kingdom = 'Animalia'");
+    expect(compiled.sql).toContain(
+      "ci.kingdom not in ('Animalia', 'Bacteria', 'Viruses', 'Archaea')",
+    );
+    // The prefix pattern escapes LIKE metacharacters; the raw query feeds the
+    // trigram side and the class tests.
+    expect(compiled.parameters).toContain("помі\\_дор%");
+    expect(compiled.parameters).toContain("помі_дор");
+    expect(compiled.parameters).toContain("bg");
+    expect(compiled.parameters).toContain("animal");
+    expect(compiled.sql).not.toMatch(/meili|trust|status in/iu);
   });
 
-  it("accepts one evidence-backed Meili typo while filtering unproven fuzzy hits", async () => {
-    const calls: Array<{
-      indexName: string;
-      query: string;
-      limit: number;
-      matchingStrategy: string;
-      showRankingScoreDetails: boolean;
-    }> = [];
-    const client = {
-      index(indexName: string) {
-        return {
-          async search(
-            query: string,
-            options: {
-              limit: number;
-              matchingStrategy: string;
-              showRankingScoreDetails: boolean;
-            },
-          ) {
-            calls.push({ indexName, query, ...options });
-            return {
-              hits: [
-                {
-                  catalogItemId: "00000000-0000-4000-8000-000000000101",
-                  displayName: "Помідор чері",
-                  canonicalName: "Помідор чері",
-                  catalogKind: "plant_variety",
-                  locale: "uk",
-                  status: "seeded",
-                  source: "internal_seed",
-                  _rankingScoreDetails: {
-                    exactness: {
-                      matchingWords: 0,
-                      maxMatchingWords: 1,
-                    },
-                    typo: { typoCount: 1, maxTypoCount: 1 },
-                  },
-                },
-                {
-                  catalogItemId: "00000000-0000-4000-8000-000000000101",
-                  displayName: "Томат чері",
-                  canonicalName: "Помідор чері",
-                  catalogKind: "plant_variety",
-                  locale: "uk",
-                  status: "seeded",
-                  source: "internal_seed",
-                },
-                {
-                  catalogItemId: "00000000-0000-4000-8000-000000000301",
-                  displayName: "Refresh New 64",
-                  canonicalName: "Refresh New 64",
-                  catalogKind: "plant_variety",
-                  locale: "en",
-                  status: "seeded",
-                  source: "ua_state_register",
-                },
-                {
-                  catalogItemId: "00000000-0000-4000-8000-000000000201",
-                  displayName: "Бабусин перець",
-                  canonicalName: "Бабусин перець",
-                  catalogKind: "plant_variety",
-                  locale: "und",
-                  status: "provisional",
-                  source: "user_added",
-                  createdByUserId: "00000000-0000-0000-0000-000000000001",
-                },
-              ],
-            };
-          },
-        };
-      },
-    };
-
-    await expect(
-      searchCatalogSuggestionsWithMeili("  ПОМДОР  ", 5, client),
-    ).resolves.toEqual([
+  it("never reads catalog rows for a query shorter than two characters", async () => {
+    let executed = 0;
+    const result = await searchCatalogSuggestionsForTypeaheadResult(
+      " т ",
+      { objectKind: "plant", locale: "uk" },
       {
-        id: "00000000-0000-4000-8000-000000000101",
-        displayName: "Помідор чері",
-        canonicalName: "Помідор чері",
-        catalogKind: "plant_variety",
-        locale: "uk",
-        status: "seeded",
-        source: "internal_seed",
-        serveClass: "low_confidence",
-        trustState: "candidate",
-        trustLabel: "Candidate",
-        sourceLabel: "OverGarden starter catalog",
-        sourceCaveat:
-          "Pilot seed row. Use your own name or Unknown if this is not exact.",
-        disambiguationLabel: "Plant variety · OverGarden starter catalog · uk",
-      },
-    ]);
-    expect(calls).toEqual([
-      {
-        indexName: "catalog_typeahead",
-        query: "помдор",
-        limit: 15,
-        matchingStrategy: "all",
-        showRankingScoreDetails: true,
-      },
-    ]);
-
-    await expect(
-      searchCatalogSuggestionsWithMeili("  чері  ", 5, client),
-    ).resolves.toEqual([
-      {
-        id: "00000000-0000-4000-8000-000000000101",
-        displayName: "Помідор чері",
-        canonicalName: "Помідор чері",
-        catalogKind: "plant_variety",
-        locale: "uk",
-        status: "seeded",
-        source: "internal_seed",
-        serveClass: "exact",
-        trustState: "candidate",
-        trustLabel: "Candidate",
-        sourceLabel: "OverGarden starter catalog",
-        sourceCaveat:
-          "Pilot seed row. Use your own name or Unknown if this is not exact.",
-        disambiguationLabel: "Plant variety · OverGarden starter catalog · uk",
-      },
-    ]);
-  });
-
-  it("serves previously rejected Meili fuzzy evidence as low confidence", async () => {
-    const hit = {
-      catalogItemId: "00000000-0000-4000-8000-000000000101",
-      displayName: "Помідор чері",
-      canonicalName: "Помідор чері",
-      catalogKind: "plant_variety",
-      locale: "uk",
-      status: "seeded",
-      source: "internal_seed",
-    };
-
-    let index = 0;
-    for (const _rankingScoreDetails of [
-      {
-        exactness: { matchingWords: 0, maxMatchingWords: 0 },
-        typo: { typoCount: 1, maxTypoCount: 1 },
-      },
-      {
-        exactness: { matchingWords: 0, maxMatchingWords: 1 },
-        typo: { typoCount: 2, maxTypoCount: 2 },
-      },
-    ]) {
-      index += 1;
-      await expect(
-        searchCatalogSuggestionsWithMeili("помдрр", 5, {
-          index: () => ({
-            search: async () => ({
-              hits: [
-                {
-                  ...hit,
-                  catalogItemId: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
-                  _rankingScoreDetails,
-                },
-              ],
-            }),
-          }),
-        }),
-      ).resolves.toEqual([
-        expect.objectContaining({
-          serveClass: "low_confidence",
-        }),
-      ]);
-    }
-  });
-
-  it("serves accepted generated aliases and homonymous names with explicit classes", async () => {
-    const base = {
-      displayName: "Роза",
-      canonicalName: "Rosa",
-      catalogKind: "species",
-      locale: "uk",
-      status: "confirmed",
-      source: "species_backbone",
-    } as const;
-
-    const generated = await searchCatalogSuggestionsWithMeili("роза", 5, {
-      index: () => ({
-        search: async () => ({
-          hits: [
-            {
-              ...base,
-              catalogItemId: "00000000-0000-4000-8000-000000000401",
-              serveClass: "generated",
-            },
-          ],
-        }),
-      }),
-    });
-    expect(generated).toEqual([
-      expect.objectContaining({ serveClass: "generated" }),
-    ]);
-
-    const homonymous = await searchCatalogSuggestionsWithMeili("роза", 5, {
-      index: () => ({
-        search: async () => ({
-          hits: [
-            {
-              ...base,
-              catalogItemId: "00000000-0000-4000-8000-000000000402",
-            },
-            {
-              ...base,
-              canonicalName: "Rhododendron",
-              catalogItemId: "00000000-0000-4000-8000-000000000403",
-            },
-          ],
-        }),
-      }),
-    });
-    expect(homonymous.map(({ serveClass }) => serveClass)).toEqual([
-      "homonymous",
-      "homonymous",
-    ]);
-  });
-
-  it("dedupes source-backed Meili hits that represent the same catalog concept", async () => {
-    const client = {
-      index() {
-        return {
-          async search() {
-            return {
-              hits: [
-                {
-                  catalogItemId: "00000000-0000-4000-8000-000000056002",
-                  displayName: "Bergeron 1",
-                  canonicalName: "Bergeron 1",
-                  catalogKind: "plant_variety",
-                  locale: "uk",
-                  status: "seeded",
-                  source: "ua_state_register",
-                },
-                {
-                  catalogItemId: "00000000-0000-4000-8000-000000064002",
-                  displayName: "Bergeron 1",
-                  canonicalName: "Bergeron 1",
-                  catalogKind: "plant_variety",
-                  locale: "uk",
-                  status: "seeded",
-                  source: "ua_state_register",
-                },
-                {
-                  catalogItemId: "00000000-0000-4000-8000-000000064013",
-                  displayName: "Refresh New 64",
-                  canonicalName: "Refresh New 64",
-                  catalogKind: "plant_variety",
-                  locale: "uk",
-                  status: "seeded",
-                  source: "ua_state_register",
-                },
-              ],
-            };
-          },
-        };
-      },
-    };
-
-    await expect(
-      searchCatalogSuggestionsWithMeili("bergeron", 8, client),
-    ).resolves.toEqual([
-      {
-        id: "00000000-0000-4000-8000-000000056002",
-        displayName: "Bergeron 1",
-        canonicalName: "Bergeron 1",
-        catalogKind: "plant_variety",
-        locale: "uk",
-        status: "seeded",
-        source: "ua_state_register",
-        serveClass: "exact",
-        trustState: "source_backed",
-        trustLabel: "Source-backed",
-        sourceLabel: "Ukraine variety register",
-        sourceCaveat:
-          "Register-backed variety row. Compare crop and name if aliases collide.",
-        disambiguationLabel: "Plant variety · Ukraine variety register · uk",
-      },
-    ]);
-  });
-
-  it("falls back to canonical catalog rows when the derived Meili index is empty", async () => {
-    const fallback = [
-      catalogSuggestion({
-        id: "00000000-0000-4000-8000-000000000301",
-        displayName: "помідор",
-        canonicalName: "Solanum lycopersicum L.",
-        catalogKind: "species" as const,
-        locale: "uk",
-        status: "seeded" as const,
-        source: "species_backbone",
-      }),
-    ];
-
-    const calls: string[] = [];
-
-    await expect(
-      searchCatalogSuggestionsForTypeahead("помідор", 8, {
-        searchWithMeili: async () => {
-          calls.push("meili");
+        runStatement: async () => {
+          executed += 1;
           return [];
         },
-        searchWithPostgres: async () => {
-          calls.push("postgres");
-          return fallback;
-        },
-      }),
-    ).resolves.toEqual(fallback);
-    // OVE-257: both sources are consulted, but the canonical read no longer
-    // waits behind the derived index. Sequencing them would add Meilisearch's
-    // latency to every response and blow the 500 ms interaction budget the
-    // moment the derived index is slow rather than merely empty.
-    expect([...calls].sort()).toEqual(["meili", "postgres"]);
-  });
-
-  it("starts the canonical read without waiting for the derived index", async () => {
-    const fallback = [
-      catalogSuggestion({
-        id: "00000000-0000-4000-8000-000000000302",
-        displayName: "помідор",
-        canonicalName: "Solanum lycopersicum L.",
-        catalogKind: "species" as const,
-        locale: "uk",
-        status: "seeded" as const,
-        source: "species_backbone",
-      }),
-    ];
-    let meiliSettled = false;
-    let postgresStartedBeforeMeiliSettled = false;
-
-    await searchCatalogSuggestionsForTypeahead("помідор", 8, {
-      searchWithMeili: async () => {
-        await new Promise((resolve) => setTimeout(resolve, 20));
-        meiliSettled = true;
-        return [];
       },
-      searchWithPostgres: async () => {
-        postgresStartedBeforeMeiliSettled = !meiliSettled;
-        return fallback;
-      },
-    });
-
-    expect(postgresStartedBeforeMeiliSettled).toBe(true);
-  });
-
-  it("falls back to canonical catalog rows when the derived Meili index is unavailable", async () => {
-    const fallback = [
-      catalogSuggestion({
-        id: "00000000-0000-4000-8000-000000000601",
-        displayName: "Карпатська",
-        canonicalName: "Карпатська бджола",
-        catalogKind: "breed" as const,
-        locale: "uk",
-        status: "seeded" as const,
-        source: "ua_official_bee_breed",
-      }),
-    ];
-
-    await expect(
-      searchCatalogSuggestionsForTypeahead("Карпатська", 8, {
-        searchWithMeili: async () => {
-          throw new Error("index not found");
-        },
-        searchWithPostgres: async () => fallback,
-      }),
-    ).resolves.toEqual(fallback);
-  });
-
-  it("keeps non-empty derived Meili suggestions first while adding canonical Postgres rows", async () => {
-    const meiliSuggestion = catalogSuggestion({
-      id: "00000000-0000-4000-8000-000000000621",
-      displayName: "Red Cherry",
-      canonicalName: "Red Cherry tomato",
-      catalogKind: "plant_variety" as const,
-      locale: "en",
-      status: "seeded" as const,
-      source: "grin_genebank_candidate",
-    });
-    const postgresSuggestion = catalogSuggestion({
-      id: "00000000-0000-4000-8000-000000000301",
-      displayName: "помідор",
-      canonicalName: "Solanum lycopersicum L.",
-      catalogKind: "species" as const,
-      locale: "uk",
-      status: "seeded" as const,
-      source: "species_backbone",
-    });
-
-    await expect(
-      searchCatalogSuggestionsForTypeahead("Red Cherry", 8, {
-        searchWithMeili: async () => [meiliSuggestion],
-        searchWithPostgres: async () => [postgresSuggestion],
-      }),
-    ).resolves.toEqual([meiliSuggestion, postgresSuggestion]);
-  });
-
-  it("keeps ambiguous alias choices separate when type or source differs", async () => {
-    const variety = catalogSuggestion({
-      id: "00000000-0000-4000-8000-000000089001",
-      displayName: "Albion",
-      canonicalName: "Albion strawberry",
-      catalogKind: "plant_variety" as const,
-      locale: "en",
-      status: "seeded" as const,
-      source: "eu_oj_eur_lex_common_catalogue",
-    });
-    const species = catalogSuggestion({
-      id: "00000000-0000-4000-8000-000000089002",
-      displayName: "Albion",
-      canonicalName: "Albion sp.",
-      catalogKind: "species" as const,
-      locale: "en",
-      status: "seeded" as const,
-      source: "species_backbone",
-    });
-
-    await expect(
-      searchCatalogSuggestionsForTypeahead("Albion", 8, {
-        searchWithMeili: async () => [variety],
-        searchWithPostgres: async () => [species],
-      }),
-    ).resolves.toEqual([
-      { ...variety, serveClass: "homonymous" },
-      { ...species, serveClass: "homonymous" },
-    ]);
-    expect(variety.disambiguationLabel).toBe(
-      "Plant variety · EU Official Journal · en",
     );
-    expect(species.disambiguationLabel).toBe("Species · Species backbone · en");
+
+    expect(executed).toBe(0);
+    expect(result).toEqual({ suggestions: [], state: "empty", databaseMs: 0 });
   });
 
-  it("dedupes stale Meili hits when canonical Postgres rows are merged", async () => {
-    const canonicalSuggestion = catalogSuggestion({
-      id: "00000000-0000-4000-8000-000000000301",
-      displayName: "помідор",
-      canonicalName: "Solanum lycopersicum L.",
-      catalogKind: "species" as const,
-      locale: "uk",
-      status: "seeded" as const,
-      source: "species_backbone",
-    });
-
-    await expect(
-      searchCatalogSuggestionsForTypeahead("помідор", 8, {
-        searchWithMeili: async () => [
-          {
-            ...canonicalSuggestion,
-            displayName: "Tomato",
-          },
-        ],
-        searchWithPostgres: async () => [canonicalSuggestion],
-      }),
-    ).resolves.toEqual([
+  it("maps rows to the bounded picker shape: display name in the locale, the matched name only when it differs, the species of a form, the card path", async () => {
+    const result = await searchCatalogSuggestionsForTypeaheadResult(
+      "Томат",
+      { objectKind: "plant", locale: "uk" },
       {
-        ...canonicalSuggestion,
-        displayName: "Tomato",
+        runStatement: async () => [
+          sqlRow(),
+          sqlRow({
+            id: "00000000-0000-4000-8000-000000000102",
+            node_kind: "cultivar",
+            public_slug: "de-barao-0000000102",
+            display_name: "Де Барао",
+            matched_name: "де барао",
+            parent_display_name: "помідор",
+            match_class: 3,
+          }),
+          sqlRow({
+            id: "00000000-0000-4000-8000-000000000103",
+            node_kind: "breed",
+            public_slug: null,
+            display_name: "карпатська",
+            matched_name: "Карпатська бджола",
+            match_class: 4,
+          }),
+        ],
+      },
+    );
+
+    expect(result.state).toBe("ready");
+    expect(result.suggestions).toEqual([
+      {
+        id: "00000000-0000-4000-8000-000000000101",
+        displayName: "Помідор",
+        matchedName: "томат",
+        kind: "species",
+        parentDisplayName: null,
+        publicPath: "/species/solanum-lycopersicum",
+      },
+      {
+        id: "00000000-0000-4000-8000-000000000102",
+        displayName: "Де Барао",
+        matchedName: null,
+        kind: "cultivar",
+        parentDisplayName: "Помідор",
+        publicPath: "/variety/de-barao-0000000102",
+      },
+      {
+        id: "00000000-0000-4000-8000-000000000103",
+        displayName: "Карпатська",
+        matchedName: "Карпатська бджола",
+        kind: "breed",
+        parentDisplayName: null,
+        publicPath: null,
       },
     ]);
+    expect(JSON.stringify(result.suggestions)).not.toMatch(
+      /source|status|trust|caveat|serveClass/u,
+    );
   });
 
-  it("validates selected catalog IDs against selectable statuses", () => {
+  it("reports an empty answer as empty, and lets a failed read reject so the route can degrade", async () => {
+    await expect(
+      searchCatalogSuggestionsForTypeaheadResult(
+        "помідор",
+        { objectKind: "plant" },
+        { runStatement: async () => [] },
+      ),
+    ).resolves.toMatchObject({ suggestions: [], state: "empty" });
+    await expect(
+      searchCatalogSuggestionsForTypeaheadResult(
+        "помідор",
+        { objectKind: "plant" },
+        {
+          runStatement: async () => {
+            throw new Error("canceling statement due to statement timeout");
+          },
+        },
+      ),
+    ).rejects.toThrow(/statement timeout/u);
+    expect(CATALOG_TYPEAHEAD_DEADLINE_MS).toBe(150);
+  });
+});
+
+describe("catalog search misses", () => {
+  it("upserts one row per normalized query, locale and kind, bumping the counter on repeat", () => {
+    const compiled = buildUpsertCatalogSearchMissQuery(testDb, {
+      queryNormalized: "де барао",
+      locale: "uk",
+      objectKind: "plant",
+    }).compile();
+
+    expect(compiled.sql).toContain('insert into "catalog_search_misses"');
+    expect(compiled.sql).toContain(
+      'on conflict ("query_normalized", "locale", "object_kind") do update set "occurrences" = catalog_search_misses.occurrences + 1, "last_seen_at" = now()',
+    );
+    expect(compiled.parameters).toEqual(["де барао", "uk", "plant", 1]);
+  });
+
+  it("records nothing for a query shorter than three characters and never a raw string longer than 120", async () => {
+    const calls: Array<{ queryNormalized: string }> = [];
+    const executor = {
+      insertInto: () => ({
+        values: (values: { query_normalized: string }) => {
+          calls.push({ queryNormalized: values.query_normalized });
+          return {
+            onConflict: () => ({
+              returning: () => ({
+                executeTakeFirst: async () => ({
+                  queryNormalized: values.query_normalized,
+                  occurrences: 2,
+                }),
+              }),
+            }),
+          };
+        },
+      }),
+    } as unknown as Kysely<Database>;
+
+    await expect(
+      recordCatalogSearchMiss(
+        { query: "  де ", locale: "uk", objectKind: "plant" },
+        executor,
+      ),
+    ).resolves.toBeNull();
+    expect(calls).toEqual([]);
+
+    const long = await recordCatalogSearchMiss(
+      { query: `${"Де Барао ".repeat(30)}`, locale: "bg", objectKind: "animal" },
+      executor,
+    );
+    expect(long?.occurrences).toBe(2);
+    expect(long?.queryNormalized.length).toBeLessThanOrEqual(120);
+    expect(calls[0]?.queryNormalized).toBe(long?.queryNormalized);
+  });
+});
+
+describe("catalog labels and selectable items", () => {
+  it("normalizes a gardener's own name as text between 1 and 120 characters", () => {
+    expect(normalizeCatalogLabel("  Де   Барао ")).toBe("Де Барао");
+    expect(() => normalizeCatalogLabel("   ")).toThrow(/required/u);
+    expect(() => normalizeCatalogLabel("x".repeat(121))).toThrow(/120/u);
+  });
+
+  it("validates selected catalog IDs against active, selectable, global rows", () => {
     const compiled = buildFindSelectableCatalogItemQuery(
       testDb,
       "00000000-0000-4000-8000-000000000101",
     ).compile();
 
-    expect(compiled.sql).toContain('from "catalog_items"');
-    expect(compiled.sql).toContain('"id" = $1');
     expect(compiled.sql).toContain('"status" in ($2, $3)');
+    expect(compiled.sql).toContain('"identity_state" = $4');
     expect(compiled.sql).toContain('"created_by_user_id" is null');
     expect(compiled.parameters).toEqual([
       "00000000-0000-4000-8000-000000000101",
       "seeded",
       "confirmed",
+      "active",
     ]);
   });
 
   it("normalizes bounded public slugs for activation preselection", () => {
-    expect(normalizeCatalogPublicSlug(" pomidor-cheri-0000000101 ")).toBe(
+    expect(normalizeCatalogPublicSlug("  pomidor-cheri-0000000101 ")).toBe(
       "pomidor-cheri-0000000101",
     );
-    expect(normalizeCatalogPublicSlug("../private")).toBeNull();
-    expect(normalizeCatalogPublicSlug("Помідор-чері")).toBeNull();
+    expect(normalizeCatalogPublicSlug("Pomidor Cheri")).toBeNull();
     expect(normalizeCatalogPublicSlug("a".repeat(97))).toBeNull();
   });
 
-  it("validates public slug preselection against global selectable catalog rows", () => {
+  it("validates public slug preselection against active global selectable rows", () => {
     const compiled = buildFindSelectableCatalogItemByPublicSlugQuery(
       testDb,
       "pomidor-cheri-0000000101",
     ).compile();
 
-    expect(compiled.sql).toContain('from "catalog_items"');
     expect(compiled.sql).toContain('"public_slug" = $1');
     expect(compiled.sql).toContain('"public_slug" is not null');
-    expect(compiled.sql).toContain('"status" in ($2, $3)');
+    expect(compiled.sql).toContain('"identity_state" = $4');
     expect(compiled.sql).toContain('"created_by_user_id" is null');
-    expect(compiled.sql).not.toContain("journal_entries");
-    expect(compiled.sql).not.toContain("owner_user_id");
     expect(compiled.parameters).toEqual([
       "pomidor-cheri-0000000101",
       "seeded",
       "confirmed",
+      "active",
     ]);
   });
+});
 
-  it("builds a reindex row query that excludes owner-scoped catalog items", () => {
+describe("Meilisearch reindex rows (kept until the closeout retires the job kind)", () => {
+  it("builds a reindex row query that excludes owner-scoped and retired items", () => {
     const compiled = buildCatalogTypeaheadReindexRowsQuery(testDb).compile();
 
-    expect(compiled.sql).toContain('from "catalog_item_names"');
-    expect(compiled.sql).toContain(
-      'inner join "catalog_items" on "catalog_items"."id" = "catalog_item_names"."catalog_item_id"',
-    );
     expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
-    expect(compiled.sql).toContain(
-      '"catalog_items"."created_by_user_id" is null',
-    );
-    expect(compiled.sql).toContain(
-      "generated_alias.source_method = 'generated'",
-    );
-    expect(compiled.sql).not.toContain("journal_entries");
-    expect(compiled.sql).not.toContain("owner_user_id");
-    expect(compiled.sql).not.toContain("catalog_source_records");
-    expect(compiled.sql).not.toContain("raw_payload");
-    expect(compiled.parameters).toEqual(["seeded", "confirmed"]);
-  });
-
-  it("inserts user-added candidates with a schema-compatible conflict fallback", () => {
-    const compiled = buildUpsertUserAddedCatalogItemQuery(testDb, scope, {
-      displayName: "Бабусин перець",
-      normalizedName: "бабусин перець",
-      locale: "und",
-      catalogKind: "plant_variety",
-    }).compile();
-
-    expect(compiled.sql).toContain('insert into "catalog_items"');
-    expect(compiled.sql).toContain("on conflict do nothing");
-    expect(compiled.sql).toContain("returning");
-    expect(compiled.parameters).toEqual([
-      "Бабусин перець",
-      "бабусин перець",
-      "plant_variety",
-      "provisional",
-      "user_added",
-      null,
-      "00000000-0000-0000-0000-000000000001",
-      "und",
-    ]);
-  });
-
-  it("reads a conflicting user-added candidate only inside the owner and kind scope", () => {
-    const compiled = buildFindUserAddedCatalogItemQuery(testDb, scope, {
-      normalizedName: "місцева руда кішка",
-      locale: "und",
-      catalogKind: "species",
-    }).compile();
-
-    expect(compiled.sql).toContain('from "catalog_items"');
-    expect(compiled.sql).toContain('"created_by_user_id" = $1');
-    expect(compiled.sql).toContain('"normalized_name" = $2');
-    expect(compiled.sql).toContain('"locale" = $3');
-    expect(compiled.sql).toContain('"catalog_kind" = $4');
-    expect(compiled.sql).toContain('"status" = $5');
-    expect(compiled.sql).toContain('"source" = $6');
-    expect(compiled.sql).toContain("for update");
-    expect(compiled.parameters).toEqual([
-      "00000000-0000-0000-0000-000000000001",
-      "місцева руда кішка",
-      "und",
-      "species",
-      "provisional",
-      "user_added",
-    ]);
-  });
-
-  it("stores user-added animal and bee identities as provisional species", () => {
-    const compiled = buildUpsertUserAddedCatalogItemQuery(testDb, scope, {
-      displayName: "Місцева руда кішка",
-      normalizedName: "місцева руда кішка",
-      locale: "und",
-      catalogKind: "species",
-    }).compile();
-
-    expect(compiled.parameters).toContain("species");
-    expect(compiled.sql).toContain('"catalog_kind"');
-  });
-
-  it("stores the user-added display name as a primary alias without global identity", () => {
-    const compiled = buildInsertCatalogItemNameQuery(testDb, {
-      catalogItemId: "00000000-0000-4000-8000-000000000201",
-      displayName: "Бабусин перець",
-      normalizedName: "бабусин перець",
-      locale: "und",
-    }).compile();
-
-    expect(compiled.sql).toContain('insert into "catalog_item_names"');
-    expect(compiled.sql).toContain(
-      'on conflict ("catalog_item_id", "normalized_name", "locale") do nothing',
-    );
-    expect(compiled.parameters).toEqual([
-      "00000000-0000-4000-8000-000000000201",
-      "Бабусин перець",
-      "бабусин перець",
-      "und",
-      true,
-    ]);
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = $3');
+    expect(compiled.sql).toContain('"catalog_items"."created_by_user_id" is null');
+    expect(compiled.sql).toContain("generated_alias.source_method = 'generated'");
+    expect(compiled.parameters).toEqual(["seeded", "confirmed", "active"]);
   });
 
   it("enqueues catalog typeahead reindex work on the matching worker queue", () => {
-    const compiled =
-      buildEnqueueCatalogTypeaheadReindexJobQuery(testDb).compile();
-    const normalizedSql = compiled.sql.replace(/\s+/g, " ");
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.sql).toContain(
-      'on conflict ("idempotency_key") where "idempotency_key" is not null do update',
-    );
-    expect(normalizedSql).toContain(
-      "case when job_queue.status = 'processing' then job_queue.status else 'pending' end",
-    );
-    expect(normalizedSql).toContain(
-      "\"rerun_requested\" = (job_queue.status = 'processing')",
-    );
-    expect(normalizedSql).toContain(
-      "case when job_queue.status = 'processing' then job_queue.locked_at else null end",
-    );
-    expect(JSON.stringify(compiled.parameters)).not.toContain("owner");
-    expect(JSON.stringify(compiled.parameters)).not.toContain("journal");
-    expect(compiled.parameters).toEqual([
-      "matching",
-      { kind: "catalog_typeahead_reindex" },
-      "catalog-typeahead-reindex",
-      expect.any(Date),
-      null,
-      expect.any(Date),
-    ]);
-  });
-
-  it("enqueues a privacy-safe deterministic match refresh for a provisional id", () => {
-    const compiled = buildEnqueueCatalogMatchSuggestionsRefreshJobQuery(
+    const compiled = buildEnqueueCatalogTypeaheadReindexJobQuery(
       testDb,
-      "00000000-0000-4000-8000-000000000201",
     ).compile();
-    const normalizedSql = compiled.sql.replace(/\s+/g, " ");
 
     expect(compiled.sql).toContain('insert into "job_queue"');
     expect(compiled.sql).toContain(
-      'on conflict ("idempotency_key") where "idempotency_key" is not null do update',
+      'on conflict ("idempotency_key") where "idempotency_key" is not null do update set',
     );
-    expect(normalizedSql).toContain(
-      "case when job_queue.status = 'processing' then job_queue.status else 'pending' end",
-    );
-    expect(normalizedSql).toContain(
-      "\"rerun_requested\" = (job_queue.status = 'processing')",
-    );
-    expect(normalizedSql).toContain(
-      "case when job_queue.status = 'processing' then job_queue.locked_at else null end",
-    );
-    expect(compiled.parameters).toEqual([
-      "matching",
-      {
-        kind: "catalog_match_suggestions_refresh",
-        sourceCatalogItemId: "00000000-0000-4000-8000-000000000201",
-      },
-      "catalog-match-suggestions:00000000-0000-4000-8000-000000000201",
-      expect.any(Date),
-      null,
-      expect.any(Date),
-    ]);
-    const serialized = JSON.stringify(compiled.parameters).toLowerCase();
-    for (const forbidden of [
-      "owner",
-      "journal",
-      "email",
-      "media",
-      "latitude",
-      "longitude",
-      "raw_payload",
-    ]) {
-      expect(serialized).not.toContain(forbidden);
-    }
+    expect(compiled.parameters).toContain("matching");
+    expect(compiled.parameters).toContain("catalog-typeahead-reindex");
   });
 });

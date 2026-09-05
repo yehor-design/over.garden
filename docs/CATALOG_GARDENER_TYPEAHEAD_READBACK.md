@@ -1,5 +1,11 @@
 # Catalog Gardener Typeahead And Readback
 
+> **Historical since 2026-09-06 (OVE-387, ADR-0026 D6/D7).** The gardener
+> picker answers from Postgres alone, a gardener's own name is a label and
+> never a provisional card, and the proof and smoke scripts this page names
+> (`pnpm smoke:catalog-gardener-readback`) were removed with them. The commands below no longer run;
+> the page stays as the record of what was proven at the time.
+
 Status: implemented by OVE-161; the OVE-257 release-backed selection mode was
 retired by ADR-0025 and removed in OVE-385
 Owner surfaces: `/garden`, `/garden/objects/[objectId]`

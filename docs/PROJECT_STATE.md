@@ -37,7 +37,7 @@ Verified on 2026-09-03 against `https://over.garden` and the live providers.
 | Admin         | Owner pages live in the account menu under the sealed owner role; `/health` is owner-only. The Release Center, editions and extension packs are gone (ADR-0025, `OVE-385`); the menu carries four owner links |
 | Workspace     | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023)                                                 |
 | Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw |
-| Schema        | Migrations `0001`–`0047`, `0049` and `0051`–`0054` applied, minus the two deliberately skipped and the two not needed in production; `0053` dropped the twenty Stable Registry tables and `0054` laid the organism graph foundation (ADR-0026) on 2026-09-05. See `docs/PRODUCTION_SCHEMA_STATE.md` |
+| Schema        | Migrations `0001`–`0047`, `0049` and `0051`–`0055` applied, minus the two deliberately skipped and the two not needed in production; `0053` dropped the twenty Stable Registry tables, `0054` laid the organism graph foundation (ADR-0026) on 2026-09-05 and `0055` turned provisional cards into labels and added the picker's ranking inputs on 2026-09-06. See `docs/PRODUCTION_SCHEMA_STATE.md` |
 | Interaction   | Like, bookmark, follow and comment are Server Actions on a form with a real endpoint, so they work before hydration and with JavaScript off. A like is a permanent row owned by an account or by one signed visitor cookie, with no expiry and no ceiling |
 | Sign-in       | One screen: `/auth/sign-in` and `/auth/sign-up` over one component and Server Actions. Every other page shows its own empty state and one link to it                                                        |
 | Matching      | The worker on the droplet runs the sealed six-handler release of `d5faee5` since 2026-09-05 with a fresh heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03 |
@@ -93,6 +93,22 @@ receipt in `docs/WORKSPACE_RESILIENCE_PROOF_2026-09.md`.
 platform: real gardeners publishing, and organic discovery measured rather than
 assumed. One measurement gap blocks honest prioritisation; see known gaps
 below.
+
+**Delivered 2026-09-06, OVE-387 (Slice 24, task 2 of 14).** The catalog picker
+is one Postgres statement behind the public route `/api/public/catalog/typeahead`
+(prefix index, then trigram; one row per organism; ranked by match class, the
+reader's market, gardener usage and the crop prior; 150 ms deadline; 60 s
+shared cache, the one exception to hard rule 5). Meilisearch, the trigram flag
+and the three-way merge left the pick path. A gardener's own name is a text
+label on the object (`variety_state = 'free_text'`), never a catalog card and
+never shown on a public surface; migration `0055` turned every provisional
+card into a label, retired the cards, re-normalized stored names with the
+shared normalizer and added `catalog_recompute_search_weight()`, run daily by
+`/api/cron/catalog-search-weight`. Every query that ends without a pick lands
+in `catalog_search_misses`. The composer and the object page share one
+WAI-ARIA combobox with three outcomes: a species, a form with its species
+implied, or "add as my own name". The legacy TypeScript importers still write
+the pre-0055 name form; the register task of the slice replaces them.
 
 **Decided 2026-09-05, evening.** The organism knowledge graph, ADR-0026,
 implemented as SDD Slice 24 (umbrella `OVE-400`, sub-issues `OVE-386` through

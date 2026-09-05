@@ -255,8 +255,22 @@ const NO_STORE_ROUTE_PREFIXES = [
   "/skeleton",
 ] as const;
 
+/**
+ * Public data routes that read no cookie and no personal data and set their
+ * own short public cache (ADR-0026 D7; the one exception to `AGENTS.md`
+ * hard rule 5). The route decides its `Cache-Control`; the proxy leaves it.
+ */
+const PUBLIC_CACHEABLE_ROUTE_PREFIXES = ["/api/public/catalog"] as const;
+
 export function isNoStoreAppRoute(pathname: string) {
   const path = stripLocalePrefix(pathname).path;
+  if (
+    PUBLIC_CACHEABLE_ROUTE_PREFIXES.some(
+      (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+    )
+  ) {
+    return false;
+  }
   return NO_STORE_ROUTE_PREFIXES.some(
     (prefix) => path === prefix || path.startsWith(`${prefix}/`),
   );

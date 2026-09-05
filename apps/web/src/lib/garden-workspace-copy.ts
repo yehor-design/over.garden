@@ -1,11 +1,4 @@
-import {
-  catalogSuggestionTrustMetadata,
-  catalogTrustState,
-  type CatalogTrustInput,
-  type CatalogTrustMetadata,
-} from "@/lib/garden/catalog-trust";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import type { Ove330ServeClass } from "@/lib/media/presentation-contract";
 
 type WidenCopy<T> = T extends string
   ? string
@@ -226,21 +219,11 @@ const UK_COPY = {
       coarseRegion: "Узагальнений регіон",
       chooseRegion: "Оберіть регіон",
       catalogMatch: "Відповідність каталогу",
-      catalogPlaceholder: "Знайдіть у каталозі або залиште без відповідності",
+      catalogPlaceholder: "Вид, сорт чи порода — або своя назва",
       clearCatalogMatch: "Очистити відповідність каталогу",
-      matchedInCatalog: "Знайдено в каталозі:",
-      savedWithCatalogName: "Збережено з вашою назвою в каталозі:",
       noCatalogMatch:
         "Відповідності каталогу ще немає · Можна безпечно зберегти й зіставити пізніше",
       keepWithoutMatch: "Залишити без відповідності",
-      continueWithUnknown: "Продовжити з «Невідомо»",
-      retrySearch: "Повторити пошук",
-      useThisName: "Використати цю назву",
-      searching: "Пошук…",
-      suggestionsUnavailable:
-        "Пропозиції недоступні. Збереження без відповідності все одно працює.",
-      aliasCollision:
-        "Однакова знайдена назва є в кількох варіантах каталогу. Перед вибором порівняйте тип і джерело.",
       entryTitle: "Заголовок запису",
       titlePlaceholder: "Перші квіти",
       date: "Дата",
@@ -285,7 +268,6 @@ const UK_COPY = {
     },
     varietyStates: {
       selected: "Зіставлено з каталогом",
-      userAdded: "Збережено з вашою назвою в каталозі",
       freeText: "Збережено без відповідності каталогу",
       unknown: "Відповідності каталогу ще немає",
       unset: "Відповідність каталогу не задано",
@@ -321,57 +303,25 @@ const UK_COPY = {
       fixtureDuplicate:
         "Уже збережено. Дублікат об'єкта або запису не створено.",
     },
-    catalogTrust: {
-      states: {
-        blocked: "Заблоковано",
-        curated: "Перевірено",
-        sourceBacked: "Підтверджено джерелом",
-        candidate: "Кандидат",
-        userAdded: "Ваша назва",
-        quarantined: "На карантині",
-        rejected: "Відхилено",
-      },
+    catalogPicker: {
+      listLabel: "Варіанти з каталогу",
+      outcomes:
+        "Оберіть вид, сорт чи породу зі списку або додайте свою назву. Стрілки вгору й униз рухають списком, Enter обирає, Escape закриває список.",
+      ownName: "Додати як мою назву: «{query}»",
+      ownNameSelected: "Ваша назва: {name}",
+      selected: "{kind}: {name}",
+      clear: "Очистити вибір",
       kinds: {
-        breed: "Порода",
         species: "Вид",
-        plantVariety: "Сорт рослини",
-        identity: "Ідентичність у каталозі",
+        cultivar: "Сорт",
+        breed: "Порода",
       },
-      serveClasses: {
-        lowConfidence: "Низька впевненість: перевірте назву перед вибором.",
-        generated: "Згенерований варіант: перевірте його за канонічною назвою.",
-        homonymous:
-          "Однакова назва відповідає кільком ідентичностям: порівняйте тип і джерело.",
-      },
-      caveats: {
-        curated:
-          "Перевірена ідентичність OverGarden. Перед вибором порівняйте тип і назву.",
-        userAdded:
-          "Збережено лише для вашого саду, доки назву не перевірять або не об'єднають.",
-        quarantined:
-          "Приховано з підказок і публічного каталогу до завершення перевірки.",
-        rejectedBlocked:
-          "Заблоковано в каталозі продукту, доки не вирішено проблему з джерелом або правами.",
-        rejected: "Відхилено з проєкції каталогу продукту.",
-        reviewPending:
-          "Вибір недоступний, доки перевірка не підтвердить ідентичність і застереження джерела.",
-        promoted:
-          "Додано до безпечної проєкції каталогу для підказок і публічних підтверджень.",
-        grin: "Перевірено достатньо для зіставлення; це не твердження про доступність насіння.",
-        euOfficialJournal:
-          "Рядок підтверджено Офіційним журналом; дані лише з порталу приховані до перевірки.",
-        euBg: "Початкові дані каталогу ЄС/Болгарії. Обирайте, лише якщо культура, тип і назва збігаються.",
-        uaRegister:
-          "Сорт підтверджено реєстром. Якщо псевдоніми збігаються, порівняйте культуру й назву.",
-        species: "Ідентичність на рівні виду, а не сорту.",
-        beeBreed: "Ідентичність на рівні породи, а не бджолосім'ї.",
-        animalBreed:
-          "Ідентичність з онтології порід. Перед вибором порівняйте тип об'єкта.",
-        internal:
-          "Рядок початкового каталогу. Якщо збіг неточний, використайте власну назву або залиште без відповідності.",
-        generic:
-          "Лише безпечні поля ідентичності каталогу; необроблені дані джерела не показуються.",
-      },
+      formOf: "{kind} · {parent}",
+      matched: "Знайдено за назвою «{name}»",
+      searching: "Пошук…",
+      empty: "У каталозі такого ще немає. Додайте як свою назву.",
+      unavailable:
+        "Каталог тимчасово недоступний. Свою назву можна додати й зараз.",
     },
   },
   saveProgress: {
@@ -659,21 +609,11 @@ const BG_COPY = {
       coarseRegion: "Обобщен регион",
       chooseRegion: "Изберете регион",
       catalogMatch: "Съответствие в каталога",
-      catalogPlaceholder: "Търсене в каталога или запазване без съответствие",
+      catalogPlaceholder: "Вид, сорт или порода — или собствено име",
       clearCatalogMatch: "Изчистване на съответствието в каталога",
-      matchedInCatalog: "Намерено в каталога:",
-      savedWithCatalogName: "Запазено с вашето име в каталога:",
       noCatalogMatch:
         "Все още няма съответствие · Може безопасно да запазите и да съпоставите по-късно",
       keepWithoutMatch: "Запазване без съответствие",
-      continueWithUnknown: "Продължи с „Неизвестно“",
-      retrySearch: "Повтори търсенето",
-      useThisName: "Използване на това име",
-      searching: "Търсене…",
-      suggestionsUnavailable:
-        "Предложенията не са достъпни. Запазването без съответствие продължава да работи.",
-      aliasCollision:
-        "Едно и също намерено име присъства в няколко избора. Сравнете вида и източника, преди да изберете.",
       entryTitle: "Заглавие на записа",
       titlePlaceholder: "Първи цветове",
       date: "Дата",
@@ -718,7 +658,6 @@ const BG_COPY = {
     },
     varietyStates: {
       selected: "Съпоставено с каталога",
-      userAdded: "Запазено с вашето име в каталога",
       freeText: "Запазено без съответствие в каталога",
       unknown: "Все още няма съответствие в каталога",
       unset: "Не е зададено съответствие в каталога",
@@ -754,57 +693,25 @@ const BG_COPY = {
       fixtureDuplicate:
         "Вече е запазено. Не е създаден дублиран обект или запис.",
     },
-    catalogTrust: {
-      states: {
-        blocked: "Блокирано",
-        curated: "Проверено",
-        sourceBacked: "Потвърдено от източник",
-        candidate: "Кандидат",
-        userAdded: "Вашето име",
-        quarantined: "Под карантина",
-        rejected: "Отхвърлено",
-      },
+    catalogPicker: {
+      listLabel: "Варианти от каталога",
+      outcomes:
+        "Изберете вид, сорт или порода от списъка или добавете собствено име. Стрелките нагоре и надолу движат списъка, Enter избира, Escape затваря списъка.",
+      ownName: "Добавяне като мое име: „{query}“",
+      ownNameSelected: "Вашето име: {name}",
+      selected: "{kind}: {name}",
+      clear: "Изчистване на избора",
       kinds: {
-        breed: "Порода",
         species: "Вид",
-        plantVariety: "Растителен сорт",
-        identity: "Идентичност в каталога",
+        cultivar: "Сорт",
+        breed: "Порода",
       },
-      serveClasses: {
-        lowConfidence: "Ниска увереност: проверете името, преди да изберете.",
-        generated: "Генериран вариант: проверете го спрямо каноничното име.",
-        homonymous:
-          "Едно и също име съответства на няколко идентичности: сравнете вида и източника.",
-      },
-      caveats: {
-        curated:
-          "Проверена идентичност на OverGarden. Сравнете вида и името преди избор.",
-        userAdded:
-          "Запазено само за вашата градина, докато не бъде прегледано или обединено.",
-        quarantined:
-          "Скрито от предложенията и публичния каталог до приключване на прегледа.",
-        rejectedBlocked:
-          "Блокирано в продуктовия каталог, докато проблемът с източника или правата бъде решен.",
-        rejected: "Отхвърлено от проекцията на продуктовия каталог.",
-        reviewPending:
-          "Не може да бъде избрано, докато прегледът не потвърди идентичността и ограничението на източника.",
-        promoted:
-          "Добавено към безопасната проекция за предложения и публични доказателства.",
-        grin: "Прегледано достатъчно за съпоставяне; това не твърди, че семена са налични.",
-        euOfficialJournal:
-          "Ред, подкрепен от Официалния вестник; редовете само от портала остават скрити до проверка.",
-        euBg: "Начални данни от каталога на ЕС/България. Изберете само ако културата, видът и името съвпадат.",
-        uaRegister:
-          "Сорт, подкрепен от регистър. Сравнете културата и името, ако псевдонимите съвпадат.",
-        species: "Идентичност на ниво вид, а не сорт.",
-        beeBreed: "Идентичност на ниво порода, а не пчелно семейство.",
-        animalBreed:
-          "Идентичност от онтология на породи. Сравнете вида на обекта преди избор.",
-        internal:
-          "Ред от началния каталог. Използвайте собствено име или без съответствие, ако не е точен.",
-        generic:
-          "Само безопасни полета за идентичност; необработените данни от източника не се показват.",
-      },
+      formOf: "{kind} · {parent}",
+      matched: "Намерено по името „{name}“",
+      searching: "Търсене…",
+      empty: "В каталога още няма такова. Добавете го като свое име.",
+      unavailable:
+        "Каталогът временно не е достъпен. Свое име може да добавите и сега.",
     },
   },
   saveProgress: {
@@ -1089,21 +996,11 @@ const RU_COPY = {
       coarseRegion: "Обобщённый регион",
       chooseRegion: "Выберите регион",
       catalogMatch: "Соответствие каталогу",
-      catalogPlaceholder: "Найдите в каталоге или оставьте без соответствия",
+      catalogPlaceholder: "Вид, сорт или порода — или своё название",
       clearCatalogMatch: "Очистить соответствие каталогу",
-      matchedInCatalog: "Найдено в каталоге:",
-      savedWithCatalogName: "Сохранено с вашим названием в каталоге:",
       noCatalogMatch:
         "Соответствия каталогу пока нет · Можно безопасно сохранить и сопоставить позже",
       keepWithoutMatch: "Оставить без соответствия",
-      continueWithUnknown: "Продолжить с «Неизвестно»",
-      retrySearch: "Повторить поиск",
-      useThisName: "Использовать это название",
-      searching: "Поиск…",
-      suggestionsUnavailable:
-        "Предложения недоступны. Сохранение без соответствия всё равно работает.",
-      aliasCollision:
-        "Одинаковое найденное название есть в нескольких вариантах каталога. Перед выбором сравните тип и источник.",
       entryTitle: "Заголовок записи",
       titlePlaceholder: "Первые цветы",
       date: "Дата",
@@ -1148,7 +1045,6 @@ const RU_COPY = {
     },
     varietyStates: {
       selected: "Сопоставлено с каталогом",
-      userAdded: "Сохранено с вашим названием в каталоге",
       freeText: "Сохранено без соответствия каталогу",
       unknown: "Соответствия каталогу пока нет",
       unset: "Соответствие каталогу не задано",
@@ -1183,58 +1079,25 @@ const RU_COPY = {
       fixtureCancel: "Отмена возвращает в сад без создания черновика.",
       fixtureDuplicate: "Уже сохранено. Дубликат объекта или записи не создан.",
     },
-    catalogTrust: {
-      states: {
-        blocked: "Заблокировано",
-        curated: "Проверено",
-        sourceBacked: "Подтверждено источником",
-        candidate: "Кандидат",
-        userAdded: "Ваше название",
-        quarantined: "На карантине",
-        rejected: "Отклонено",
-      },
+    catalogPicker: {
+      listLabel: "Варианты из каталога",
+      outcomes:
+        "Выберите вид, сорт или породу из списка или добавьте своё название. Стрелки вверх и вниз двигают список, Enter выбирает, Escape закрывает список.",
+      ownName: "Добавить как моё название: «{query}»",
+      ownNameSelected: "Ваше название: {name}",
+      selected: "{kind}: {name}",
+      clear: "Очистить выбор",
       kinds: {
-        breed: "Порода",
         species: "Вид",
-        plantVariety: "Сорт растения",
-        identity: "Идентичность в каталоге",
+        cultivar: "Сорт",
+        breed: "Порода",
       },
-      serveClasses: {
-        lowConfidence: "Низкая уверенность: проверьте название перед выбором.",
-        generated:
-          "Сгенерированный вариант: проверьте его по каноническому названию.",
-        homonymous:
-          "Одинаковое название соответствует нескольким идентичностям: сравните тип и источник.",
-      },
-      caveats: {
-        curated:
-          "Проверенная идентичность OverGarden. Перед выбором сравните тип и название.",
-        userAdded:
-          "Сохранено только для вашего сада, пока название не проверят или не объединят.",
-        quarantined:
-          "Скрыто из подсказок и публичного каталога до завершения проверки.",
-        rejectedBlocked:
-          "Заблокировано в каталоге продукта, пока не решена проблема с источником или правами.",
-        rejected: "Отклонено из проекции каталога продукта.",
-        reviewPending:
-          "Выбор недоступен, пока проверка не подтвердит идентичность и оговорку источника.",
-        promoted:
-          "Добавлено в безопасную проекцию каталога для подсказок и публичных подтверждений.",
-        grin: "Проверено достаточно для сопоставления; это не заявление о доступности семян.",
-        euOfficialJournal:
-          "Строка подтверждена Официальным журналом; данные только из портала скрыты до проверки.",
-        euBg: "Начальные данные каталога ЕС/Болгарии. Выбирайте, только если культура, тип и название совпадают.",
-        uaRegister:
-          "Сорт подтверждён реестром. Если псевдонимы совпадают, сравните культуру и название.",
-        species: "Идентичность на уровне вида, а не сорта.",
-        beeBreed: "Идентичность на уровне породы, а не пчелиной семьи.",
-        animalBreed:
-          "Идентичность из онтологии пород. Перед выбором сравните тип объекта.",
-        internal:
-          "Строка начального каталога. Если совпадение неточное, используйте своё название или оставьте без соответствия.",
-        generic:
-          "Только безопасные поля идентичности каталога; необработанные данные источника не показываются.",
-      },
+      formOf: "{kind} · {parent}",
+      matched: "Найдено по названию «{name}»",
+      searching: "Поиск…",
+      empty: "В каталоге такого пока нет. Добавьте как своё название.",
+      unavailable:
+        "Каталог временно недоступен. Своё название можно добавить и сейчас.",
     },
   },
   saveProgress: {
@@ -1390,108 +1253,4 @@ export function localizedJournalSaveErrorMessage(
   }
 
   return copy.messages.genericSaveError;
-}
-
-export function buildGardenCatalogTrustMetadata(
-  locale: InterfaceLocale,
-  input: CatalogTrustInput & { serveClass?: Ove330ServeClass },
-): CatalogTrustMetadata {
-  const base = catalogSuggestionTrustMetadata(input);
-  const copy = getGardenWorkspaceCopy(locale).composer.catalogTrust;
-  const state = catalogTrustState(input);
-  const trustLabel =
-    input.status === "blocked"
-      ? copy.states.blocked
-      : state === "curated"
-        ? copy.states.curated
-        : state === "source_backed"
-          ? copy.states.sourceBacked
-          : state === "candidate"
-            ? copy.states.candidate
-            : state === "user_added"
-              ? copy.states.userAdded
-              : state === "quarantined"
-                ? copy.states.quarantined
-                : copy.states.rejected;
-  const disambiguationLabel = [
-    localizedCatalogTrustKind(input.catalogKind, copy.kinds),
-    base.sourceLabel,
-    input.locale || null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-  const sourceCaveat = localizedCatalogSourceCaveat(input, state, copy.caveats);
-  const availabilityCaveat = localizedCatalogServeClass(
-    input.serveClass,
-    copy.serveClasses,
-  );
-
-  return {
-    ...base,
-    trustLabel,
-    sourceCaveat: availabilityCaveat
-      ? `${availabilityCaveat} ${sourceCaveat}`
-      : sourceCaveat,
-    disambiguationLabel,
-  };
-}
-
-function localizedCatalogServeClass(
-  serveClass: Ove330ServeClass | undefined,
-  copy: GardenWorkspaceCopy["composer"]["catalogTrust"]["serveClasses"],
-) {
-  if (serveClass === "low_confidence") return copy.lowConfidence;
-  if (serveClass === "generated") return copy.generated;
-  if (serveClass === "homonymous") return copy.homonymous;
-  return null;
-}
-
-function localizedCatalogTrustKind(
-  value: CatalogTrustInput["catalogKind"],
-  copy: GardenWorkspaceCopy["composer"]["catalogTrust"]["kinds"],
-) {
-  if (value === "breed") return copy.breed;
-  if (value === "species") return copy.species;
-  if (value === "plant_variety") return copy.plantVariety;
-  return copy.identity;
-}
-
-function localizedCatalogSourceCaveat(
-  input: CatalogTrustInput,
-  state: ReturnType<typeof catalogTrustState>,
-  copy: GardenWorkspaceCopy["composer"]["catalogTrust"]["caveats"],
-) {
-  if (state === "curated") return copy.curated;
-  if (state === "user_added") return copy.userAdded;
-  if (state === "quarantined") return copy.quarantined;
-  if (state === "rejected") {
-    return input.status === "blocked" ? copy.rejectedBlocked : copy.rejected;
-  }
-  if (input.status === "held" || input.status === "review_needed") {
-    return copy.reviewPending;
-  }
-  if (input.status === "promoted") return copy.promoted;
-
-  switch (input.source) {
-    case "grin_genebank_candidate":
-    case "grin-global":
-      return copy.grin;
-    case "eu_oj_eur_lex_common_catalogue":
-      return copy.euOfficialJournal;
-    case "eu_common_catalogue_bg":
-      return copy.euBg;
-    case "ua_state_register":
-      return copy.uaRegister;
-    case "species_backbone":
-      return copy.species;
-    case "ua_official_bee_breed":
-      return copy.beeBreed;
-    case "vertebrate_breed_ontology":
-      return copy.animalBreed;
-    case "internal_seed":
-      return copy.internal;
-    default:
-      return copy.generic;
-  }
 }

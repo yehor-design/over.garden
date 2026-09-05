@@ -1,5 +1,11 @@
 # Catalog Alias Suggestion Review
 
+> **Historical since 2026-09-06 (OVE-387, ADR-0026 D6/D7).** The gardener
+> picker answers from Postgres alone, a gardener's own name is a label and
+> never a provisional card, and the proof and smoke scripts this page names
+> (`pnpm smoke:catalog-alias-approval`) were removed with them. The commands below no longer run;
+> the page stays as the record of what was proven at the time.
+
 Status: implemented by OVE-160
 Owner surface: `/garden/catalog/curation`
 Worker job: `matching:catalog_alias_suggestions_refresh`

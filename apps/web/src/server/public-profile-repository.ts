@@ -1409,7 +1409,9 @@ function publicObjectIdentity(row: PublicProfileObjectRow): {
   if (row.catalogCanonicalName && normalizeCatalogKind(row.catalogKind)) {
     return { label: row.catalogCanonicalName, state: "confirmed" };
   }
-  if (row.varietyText?.trim()) {
+  // A gardener's own name is a private label (ADR-0026 D6); only a catalog
+  // name that lost its card is still worth showing as provisional.
+  if (row.varietyState === "selected" && row.varietyText?.trim()) {
     return { label: row.varietyText.trim(), state: "provisional" };
   }
   return { label: null, state: "unknown" };

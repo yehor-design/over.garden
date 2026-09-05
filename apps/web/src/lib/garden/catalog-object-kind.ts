@@ -1,4 +1,20 @@
 import type { CatalogKind, PlantObjectKind } from "@/db/schema";
+import type { CatalogPickerKind } from "@/lib/garden/entry-contracts";
+
+/** The legacy catalog kind a picker row maps to on the save path. */
+export function catalogKindForPickerKind(kind: CatalogPickerKind): CatalogKind {
+  if (kind === "cultivar") return "plant_variety";
+  if (kind === "breed") return "breed";
+  return "species";
+}
+
+export function pickerKindForCatalogKind(
+  catalogKind: CatalogKind | string | null | undefined,
+): CatalogPickerKind {
+  if (catalogKind === "plant_variety") return "cultivar";
+  if (catalogKind === "breed") return "breed";
+  return "species";
+}
 
 export function defaultObjectKindForCatalogSelection(
   catalogKind: CatalogKind | string | null | undefined,
@@ -18,6 +34,18 @@ export function objectKindAfterCatalogSelection(
   }
 
   return defaultObjectKindForCatalogSelection(catalogKind, source);
+}
+
+/** The object kind a picker row implies: a breed is an animal, a cultivar a plant, a species keeps the current kind. */
+export function objectKindAfterPickerSelection(
+  currentObjectKind: PlantObjectKind,
+  kind: CatalogPickerKind,
+): PlantObjectKind {
+  return objectKindAfterCatalogSelection(
+    currentObjectKind,
+    catalogKindForPickerKind(kind),
+    null,
+  );
 }
 
 export function resolveObjectKindForCatalogSelection(

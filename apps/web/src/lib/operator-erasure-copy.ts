@@ -84,7 +84,7 @@ const UK_COPY = {
     catalog_provisional: {
       label: "Тимчасові рядки каталогу",
       description:
-        "Додані користувачем кандидати каталогу й об'єкти зі статусом `user_added`.",
+        "Тимчасові картки каталогу, створені садівником до появи власних назв, та об'єкти з власною назвою як міткою.",
     },
     catalog_operator_links: {
       label: "Операторські посилання каталогу",
@@ -140,7 +140,7 @@ const UK_COPY = {
     gone_tombstones: "410 tombstones",
     events: "події",
     provisional_catalog_items: "тимчасові елементи каталогу",
-    user_added_objects: "об'єкти user_added",
+    own_name_objects: "об'єкти з власною назвою",
     reviewer_or_author_links: "посилання рецензента/автора",
     public_active_entries: "активні публічні записи",
     pending_index_jobs: "очікувані index jobs",
@@ -241,7 +241,7 @@ const BG_COPY: OperatorErasureCopy = {
     catalog_provisional: {
       label: "Временни редове на каталога",
       description:
-        "Добавени от потребителя кандидати и обекти със статус `user_added`.",
+        "Временни карти в каталога, създадени от градинаря преди собствените имена, и обекти със собствено име като етикет.",
     },
     catalog_operator_links: {
       label: "Операторски връзки в каталога",
@@ -365,7 +365,7 @@ const RU_COPY: OperatorErasureCopy = {
     catalog_provisional: {
       label: "Временные строки каталога",
       description:
-        "Добавленные пользователем кандидаты и объекты со статусом `user_added`.",
+        "Временные карточки каталога, созданные садоводом до появления своих названий, и объекты со своим названием как меткой.",
     },
     catalog_operator_links: {
       label: "Операторские ссылки каталога",

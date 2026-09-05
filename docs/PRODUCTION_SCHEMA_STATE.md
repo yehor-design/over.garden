@@ -316,6 +316,44 @@ Nothing a gardener or a crawler sees changed: no row was deleted or renamed,
 migration `0061`. The deploy order was migration first, then code, and the code
 in the same pull request reads nothing the old schema lacks.
 
+## The 2026-09-06 application of `0055`
+
+Executed by the OVE-387 executor under the owner's standing authorization of
+2026-09-05 (`docs/ORGANISM_GRAPH_EXECUTION.md`, section 1), from the PR branch
+before the merge, with `scripts/apply-reviewed-migration.ts` and the pulled
+production environment (deleted afterwards).
+
+**Before** (`--mode inventory`, host class `digitalocean_managed`, database
+`defaultdb`): `0054` applied, `0055` missing (absent: index
+`catalog_item_names_normalized_trgm_idx`); `0048` reads missing as before.
+Read-only counts: 20 provisional cards (`status = 'provisional'`), 14 objects
+in `user_added` pointing at them, 158 `selected`, 9 `unknown`; 992 of 61,908
+names not in the shared normalizer's form, 0 would collide; 37 pending match
+suggestions on provisional cards; 0 `user_provisional` alias projections;
+`catalog_search_misses` empty.
+
+**Apply** (`--mode apply --migration 0055`): 17 statements, 11,153 ms.
+
+**After** (`--mode inventory`): `0055` applied, nothing absent. Read-only
+readback: `plant_objects` 14 `free_text` (the former `user_added`, each with
+its card's name as `variety_text` and `catalog_item_id` null), 158 `selected`,
+9 `unknown`, 0 `user_added`; `catalog_items` 15,914 `active`, 20 `retired`
+(the provisional cards, `status` kept), 0 `merged`; 0 objects point at a
+retired card; 0 names differ from `catalog_normalize_name(display_name)`; the
+37 match suggestions are `stale`; `catalog_recompute_search_weight()` (run by
+the migration) left 16 nodes with `search_weight > 0`, `registered_ua` on
+15,177 and `registered_eu` on 721 (from the register identifiers of `0054`;
+`has_registered_forms` and `is_host` stay false until the register and EPPO
+tasks write relations); `pg_class.reltuples` 61,908 / 15,934 after the
+migration's `analyze`; index `catalog_item_names_normalized_trgm_idx` present.
+
+Proof before the apply: `pnpm schema:catalog-labels:prove-database` (fresh
+bootstrap, seed, forward, replay, rollback, forward; the fixed picker set;
+search misses), the same migration on the loopback scratch database (1.3 s),
+`pnpm catalog:typeahead:latency` against a production build there (P95 26.6
+ms server time over 200 queries, eight-row body 1,757 B raw / 687 B gzipped)
+and `tests/catalog-picker.spec.ts` in Chromium.
+
 ## The rule this produced
 
 Production migrations are applied by hand, one command per migration, with the

@@ -515,23 +515,14 @@ function identityFiltersForKind(
   const shared: PublicObjectCatalogIdentityFilter[] = [
     "all",
     "species",
-    "provisional",
     "unknown",
     "unavailable",
   ];
   if (kind === "plant") return ["all", "plant_variety", ...shared.slice(1)];
   if (kind === "animal") {
-    return ["all", "species", "breed", "provisional", "unknown", "unavailable"];
+    return ["all", "species", "breed", "unknown", "unavailable"];
   }
-  return [
-    "all",
-    "plant_variety",
-    "species",
-    "breed",
-    "provisional",
-    "unknown",
-    "unavailable",
-  ];
+  return ["all", "plant_variety", "species", "breed", "unknown", "unavailable"];
 }
 
 function hasActiveFilters(request: PublicObjectCatalogRequest) {

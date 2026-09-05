@@ -103,7 +103,7 @@ describe("erasure dry-run preview assembly", () => {
         publicGoneTombstones: 0,
         analyticsEvents: 5,
         catalogProvisionalItems: 1,
-        plantObjectsUserAdded: 1,
+        plantObjectsOwnName: 1,
         catalogReviewerLinks: 1,
         searchPublicActiveEntries: 1,
         searchPendingIndexJobs: 0,

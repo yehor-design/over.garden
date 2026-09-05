@@ -151,6 +151,9 @@ jobs:
       - name: Prove the organism graph foundation migration, its backfill and its rollback
         run: pnpm schema:organism-graph:prove-database
 
+      - name: Prove the label migration, its rollback and the picker ranking
+        run: pnpm schema:catalog-labels:prove-database
+
       - name: Lint
         run: pnpm lint
 
@@ -181,7 +184,7 @@ jobs:
             sleep 1
           done
           PLAYWRIGHT_BASE_URL=http://127.0.0.1:3179 \
-            pnpm exec playwright test tests/public-hydration.spec.ts
+            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts
 
   matching:
     name: Python matching tier

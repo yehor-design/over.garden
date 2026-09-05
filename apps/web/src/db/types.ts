@@ -80,7 +80,9 @@ export type JournalContentClass =
 export type JournalSourceLanguage = "uk" | "bg";
 export type LocationVisibility = "region" | "hidden";
 export type { CoarseRegionCode } from "@/lib/garden/regions";
-export type VarietyState = "selected" | "unknown" | "user_added" | "free_text";
+// `user_added` stays in the plant_objects CHECK for historic rows only; since
+// migration 0055 (ADR-0026 D6) no writer produces it and no row carries it.
+export type VarietyState = "selected" | "unknown" | "free_text";
 export type CatalogKind = "plant_variety" | "species" | "breed";
 
 // The organism graph vocabulary (ADR-0026). Every set below is also a CHECK

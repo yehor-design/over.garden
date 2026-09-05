@@ -19,9 +19,10 @@ export function buildPublicObjectPassportPresentation(
 ): PublicLivingObjectPassportPresentation {
   const copy = getLivingObjectPassportCopy(locale);
   const domain = getLivingObjectPassportDomain(locale, page.object.objectKind);
+  // ADR-0026 D6: a gardener's own name never appears on a public surface.
   const identityValue =
     page.object.catalogCanonicalName ??
-    page.object.varietyText ??
+    (page.object.varietyState === "selected" ? page.object.varietyText : null) ??
     copy.unknownIdentity;
   const entries = buildLivingObjectTimeline(
     [...page.journalPreview, ...page.journalContinuation].map((entry) => ({
@@ -107,6 +108,7 @@ export function buildPublicObjectPassportPresentation(
         locale,
         page.object.varietyState,
         Boolean(page.object.catalogCanonicalName),
+        "public",
       ),
       catalogKind: page.object.catalogKind,
       catalogPath: page.object.catalogPath,

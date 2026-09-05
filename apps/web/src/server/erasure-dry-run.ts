@@ -90,7 +90,7 @@ export interface ErasureDryRunCounts {
   publicGoneTombstones: number;
   analyticsEvents: number;
   catalogProvisionalItems: number;
-  plantObjectsUserAdded: number;
+  plantObjectsOwnName: number;
   catalogReviewerLinks: number;
   searchPublicActiveEntries: number;
   searchPendingIndexJobs: number;
@@ -226,10 +226,10 @@ function buildErasureDryRunDataClasses(
       key: "catalog_provisional",
       label: "Catalog provisional rows",
       description:
-        "User-added catalog candidates and objects still marked user_added.",
+        "Retired provisional cards the gardener created before labels replaced them, and objects carrying the gardener's own name as a label.",
       counts: {
         provisional_catalog_items: counts.catalogProvisionalItems,
-        user_added_objects: counts.plantObjectsUserAdded,
+        own_name_objects: counts.plantObjectsOwnName,
       },
     },
     {

@@ -53,10 +53,10 @@ const readyPage: PublicObjectCatalogPage = {
       mediaPublicUrl: "https://media.example/tomato.png",
     },
     {
-      key: "provisional:plant:local",
+      key: "unknown:plant",
       objectKind: "plant",
-      identityState: "provisional",
-      identityName: "Домашня червона лінія",
+      identityState: "unknown",
+      identityName: null,
       catalogKind: null,
       catalogStatus: null,
       catalogPath: null,
@@ -100,7 +100,11 @@ describe("public living-object catalog", () => {
     expect(html).toContain("2 об&#x27;єкти");
     expect(html).toContain('src="https://media.example/tomato.png"');
     expect(html).toContain("break-words");
-    expect(html).toContain("Робоча назва");
+    // An own-name object reads as unknown on the public list (ADR-0026 D6):
+    // no working-name badge, and never the label text.
+    expect(html).toContain("Не визначено");
+    expect(html).not.toContain("Робоча назва");
+    expect(html).not.toContain("Домашня червона лінія");
     expect(html).toContain(
       'href="/objects?kind=plant&amp;identity=species&amp;page=2"',
     );

@@ -78,7 +78,6 @@ const PUBLIC_OBJECT_IDENTITIES = new Set([
   "plant_variety",
   "species",
   "breed",
-  "provisional",
   "unknown",
   "unavailable",
 ]);

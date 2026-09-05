@@ -128,11 +128,6 @@ describe("job queue producer/consumer contract", () => {
       {
         source: "server/catalog-repository.ts",
         queueName: "matching",
-        kind: "catalog_match_suggestions_refresh",
-      },
-      {
-        source: "server/catalog-repository.ts",
-        queueName: "matching",
         kind: "catalog_typeahead_reindex",
       },
       {

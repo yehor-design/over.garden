@@ -1,80 +1,58 @@
-import type { Ove330ServeClass } from "@/lib/media/presentation-contract";
+import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
+import type { CatalogTypeaheadClientState } from "@/lib/garden/catalog-typeahead-contract";
 
-export interface CatalogAvailabilitySuggestion {
-  id: string;
-  displayName: string;
-  canonicalName: string;
-  serveClass?: Ove330ServeClass;
+/**
+ * What the picker can offer right now (ADR-0026 D5, D7).
+ *
+ * The list is one of three things: rows to pick from, a genuine "nothing
+ * matched", or a route that did not answer. Only the third hides the catalog
+ * rows; every state keeps the own-name outcome, so a gardener is never
+ * blocked by the catalog, the worker or the network.
+ */
+export type CatalogPickerAvailability =
+  | "idle"
+  | "searching"
+  | "ready"
+  | "empty"
+  | "unavailable";
+
+export function catalogPickerAvailabilityForResponse(input: {
+  ok: boolean;
+  state: CatalogTypeaheadClientState;
+  rowCount: number;
+}): CatalogPickerAvailability {
+  if (!input.ok || input.state === "unavailable") return "unavailable";
+  return input.rowCount > 0 && input.state === "ready" ? "ready" : "empty";
 }
 
-export function catalogMeiliServeClass(
-  hit: unknown,
-  suggestion: CatalogAvailabilitySuggestion,
-  query: string,
-): Ove330ServeClass | null {
-  const normalizedQuery = normalizeAvailabilityText(query);
-  const exactTextMatch = isRecord(hit)
-    ? [hit.normalizedName, hit.displayName, hit.canonicalName].some((value) =>
-        textMatches(value, normalizedQuery),
-      )
-    : textMatches(suggestion.displayName, normalizedQuery) ||
-      textMatches(suggestion.canonicalName, normalizedQuery);
+/** The own-name outcome is offered whenever there is a name to add. */
+export function offersOwnNameOutcome(query: string, minLength = 2) {
+  return query.trim().replace(/\s+/g, " ").length >= minLength;
+}
 
-  if (!exactTextMatch) {
-    return hasMeiliRankingEvidence(hit) ? "low_confidence" : null;
+export interface CatalogPickerRow extends FirstEntryCatalogSelection {
+  /**
+   * True when another row in the same list carries the same display name, so
+   * the row must show what tells the two apart (its kind, its species, the
+   * name that matched) rather than the name alone.
+   */
+  homonymous: boolean;
+}
+
+export function classifyHomonymousCatalogRows(
+  rows: readonly FirstEntryCatalogSelection[],
+): CatalogPickerRow[] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const key = homonymKey(row.displayName);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  return suggestion.serveClass === "generated" ? "generated" : "exact";
+  return rows.map((row) => ({
+    ...row,
+    homonymous: (counts.get(homonymKey(row.displayName)) ?? 0) > 1,
+  }));
 }
 
-export function classifyHomonymousCatalogSuggestions<
-  T extends CatalogAvailabilitySuggestion & { serveClass: Ove330ServeClass },
->(suggestions: readonly T[]): T[] {
-  const idsByName = new Map<string, Set<string>>();
-  for (const suggestion of suggestions) {
-    const key = normalizeAvailabilityText(suggestion.displayName);
-    if (!key) continue;
-    const ids = idsByName.get(key) ?? new Set<string>();
-    ids.add(suggestion.id);
-    idsByName.set(key, ids);
-  }
-
-  return suggestions.map((suggestion) => {
-    const ids = idsByName.get(
-      normalizeAvailabilityText(suggestion.displayName),
-    );
-    return ids && ids.size > 1
-      ? ({ ...suggestion, serveClass: "homonymous" } as T)
-      : suggestion;
-  });
-}
-
-function hasMeiliRankingEvidence(hit: unknown) {
-  if (!isRecord(hit)) return false;
-  const details = hit._rankingScoreDetails;
-  if (!isRecord(details)) return false;
-  const typo = details.typo;
-  const exactness = details.exactness;
-  return (
-    (isRecord(typo) &&
-      typeof typo.typoCount === "number" &&
-      Number.isFinite(typo.typoCount)) ||
-    (isRecord(exactness) &&
-      typeof exactness.maxMatchingWords === "number" &&
-      Number.isFinite(exactness.maxMatchingWords))
-  );
-}
-
-function textMatches(value: unknown, normalizedQuery: string) {
-  return (
-    typeof value === "string" &&
-    normalizeAvailabilityText(value).includes(normalizedQuery)
-  );
-}
-
-function normalizeAvailabilityText(value: string) {
-  return value.trim().replace(/\s+/g, " ").slice(0, 120).toLowerCase();
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function homonymKey(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
 }

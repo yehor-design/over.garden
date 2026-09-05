@@ -76,7 +76,7 @@ export async function collectErasureDryRunCounts(
     publicGoneTombstones,
     analyticsEvents,
     catalogProvisionalItems,
-    plantObjectsUserAdded,
+    plantObjectsOwnName,
     catalogReviewerLinks,
     searchPublicActiveEntries,
     searchPendingIndexJobs,
@@ -190,7 +190,7 @@ export async function collectErasureDryRunCounts(
     publicGoneTombstones,
     analyticsEvents,
     catalogProvisionalItems,
-    plantObjectsUserAdded,
+    plantObjectsOwnName,
     catalogReviewerLinks,
     searchPublicActiveEntries,
     searchPendingIndexJobs,
@@ -444,6 +444,10 @@ export function buildCountMediaAssetsQuery(
     .where("owner_user_id", "=", requesterUserId);
 }
 
+/**
+ * Cards a gardener created before migration 0055 retired the provisional
+ * path; they stay for history until erasure deletes them.
+ */
 export function buildCountCatalogProvisionalItemsQuery(
   executor: QueryExecutor,
   requesterUserId: string,
@@ -455,7 +459,8 @@ export function buildCountCatalogProvisionalItemsQuery(
     .where("status", "=", "provisional");
 }
 
-export function buildCountPlantObjectsUserAddedQuery(
+/** Objects that carry the gardener's own name as a label (ADR-0026 D6). */
+export function buildCountPlantObjectsOwnNameQuery(
   executor: QueryExecutor,
   requesterUserId: string,
 ) {
@@ -463,7 +468,7 @@ export function buildCountPlantObjectsUserAddedQuery(
     .selectFrom("plant_objects")
     .select(sql<number>`count(*)`.as("count"))
     .where("owner_user_id", "=", requesterUserId)
-    .where("variety_state", "=", "user_added");
+    .where("variety_state", "=", "free_text");
 }
 
 export function buildCountPendingJournalSearchJobsQuery(
@@ -888,7 +893,7 @@ async function countPlantObjectsUserAdded(
   executor: QueryExecutor,
   requesterUserId: string,
 ) {
-  const row = await buildCountPlantObjectsUserAddedQuery(
+  const row = await buildCountPlantObjectsOwnNameQuery(
     executor,
     requesterUserId,
   ).executeTakeFirst();

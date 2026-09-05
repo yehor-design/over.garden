@@ -44,7 +44,7 @@ import type { PublicProjectionQualityClass } from "@/lib/public-projection-quali
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
   SELECTABLE_CATALOG_STATUSES,
-  createUserAddedCatalogCandidate,
+  normalizeCatalogLabel,
   findSelectableCatalogItem,
 } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
@@ -143,7 +143,8 @@ export interface CreateFirstPlantEntryInput {
   plantName: string;
   objectKind?: string | null;
   catalogItemId?: string | null;
-  userAddedCatalogName?: string | null;
+  /** The gardener's own name: a text label on the object, never a card. */
+  catalogLabel?: string | null;
   varietyText?: string | null;
   title: string;
   contentDocument: unknown;
@@ -211,7 +212,9 @@ export interface DeleteJournalEntryResult {
 
 export interface ResolvePlantObjectCatalogInput {
   plantObjectId: string;
-  catalogItemId: string;
+  /** Exactly one of the two: a catalog identity, or the gardener's own name. */
+  catalogItemId?: string | null;
+  catalogLabel?: string | null;
 }
 
 export interface ResolvePlantObjectCatalogOptions {
@@ -1382,14 +1385,6 @@ export async function createFirstPlantEntry(
       throw new Error("Selected catalog item was not found.");
     }
 
-    const userAddedCatalogItem =
-      !selectedCatalogItem && normalized.userAddedCatalogName
-        ? await createUserAddedCatalogCandidate(trx, scope, {
-            displayName: normalized.userAddedCatalogName,
-            objectKind: normalized.objectKind,
-          })
-        : null;
-
     const plantObject = await trx
       .insertInto("plant_objects")
       .values({
@@ -1404,16 +1399,16 @@ export async function createFirstPlantEntry(
           selectedCatalogItem?.catalogKind,
           selectedCatalogItem?.source,
         ),
-        catalog_item_id:
-          selectedCatalogItem?.id ?? userAddedCatalogItem?.id ?? null,
+        // ADR-0026 D6: the own name is a label on the object, never a card.
+        catalog_item_id: selectedCatalogItem?.id ?? null,
         variety_text:
           selectedCatalogItem?.canonicalName ??
-          userAddedCatalogItem?.displayName ??
+          normalized.catalogLabel ??
           null,
         variety_state: selectedCatalogItem
           ? "selected"
-          : userAddedCatalogItem
-            ? "user_added"
+          : normalized.catalogLabel
+            ? "free_text"
             : "unknown",
         location_visibility: space.location_visibility,
         coarse_region_code: space.coarse_region_code,
@@ -2409,35 +2404,43 @@ export async function resolvePlantObjectCatalog(
     }
 
     if (!isResolvableVarietyState(target.varietyState)) {
-      throw new Error("Only unknown or user-added objects can be resolved.");
+      throw new Error("Only objects without a catalog identity can be resolved.");
     }
 
-    const selectedCatalogItem = await findSelectableCatalogItem(
-      trx,
-      normalized.catalogItemId,
-      { expectedObjectKind: target.objectKind as PlantObjectKind },
-    );
+    const selectedCatalogItem = normalized.catalogItemId
+      ? await findSelectableCatalogItem(trx, normalized.catalogItemId, {
+          expectedObjectKind: target.objectKind as PlantObjectKind,
+        })
+      : null;
 
-    if (!selectedCatalogItem) {
+    if (normalized.catalogItemId && !selectedCatalogItem) {
       throw new Error("Selected catalog item was not found.");
     }
 
-    const resolved = await buildResolvePlantObjectCatalogQuery(trx, scope, {
-      plantObjectId: target.objectId,
-      catalogItemId: selectedCatalogItem.id,
-      objectKind: resolvePlantObjectKind(
-        target.objectKind,
-        selectedCatalogItem.catalogKind,
-        selectedCatalogItem.source,
-      ),
-      varietyText: selectedCatalogItem.canonicalName,
-      now: new Date(),
-    }).executeTakeFirstOrThrow();
-    await options.afterResolve?.({
-      transaction: trx,
-      plantObjectId: resolved.id,
-      catalogItemId: selectedCatalogItem.id,
-    });
+    const resolved = selectedCatalogItem
+      ? await buildResolvePlantObjectCatalogQuery(trx, scope, {
+          plantObjectId: target.objectId,
+          catalogItemId: selectedCatalogItem.id,
+          objectKind: resolvePlantObjectKind(
+            target.objectKind,
+            selectedCatalogItem.catalogKind,
+            selectedCatalogItem.source,
+          ),
+          varietyText: selectedCatalogItem.canonicalName,
+          now: new Date(),
+        }).executeTakeFirstOrThrow()
+      : await buildLabelPlantObjectCatalogQuery(trx, scope, {
+          plantObjectId: target.objectId,
+          catalogLabel: normalized.catalogLabel ?? "",
+          now: new Date(),
+        }).executeTakeFirstOrThrow();
+    if (selectedCatalogItem) {
+      await options.afterResolve?.({
+        transaction: trx,
+        plantObjectId: resolved.id,
+        catalogItemId: selectedCatalogItem.id,
+      });
+    }
     await refreshJournalEntryTopicSignalsForPlantObject(trx, scope, {
       plantObjectId: resolved.id,
     });
@@ -2473,9 +2476,9 @@ export async function resolvePlantObjectCatalog(
         display_name: resolved.display_name,
         object_kind: resolved.object_kind as PlantObjectKind,
         catalog_item_id: resolved.catalog_item_id,
-        catalog_kind: selectedCatalogItem.catalogKind,
-        catalog_canonical_name: selectedCatalogItem.canonicalName,
-        catalog_public_slug: selectedCatalogItem.publicSlug,
+        catalog_kind: selectedCatalogItem?.catalogKind ?? null,
+        catalog_canonical_name: selectedCatalogItem?.canonicalName ?? null,
+        catalog_public_slug: selectedCatalogItem?.publicSlug ?? null,
         variety_text: resolved.variety_text,
         variety_state: resolved.variety_state as VarietyState,
         location_visibility: resolved.location_visibility,
@@ -3262,7 +3265,34 @@ export function buildResolvePlantObjectCatalogQuery(
     })
     .where("id", "=", input.plantObjectId)
     .where("owner_user_id", "=", scope.userId)
-    .where("variety_state", "in", ["unknown", "user_added"])
+    .where("variety_state", "in", ["unknown", "free_text"])
+    .returningAll();
+}
+
+/**
+ * The own-name outcome on an existing object (ADR-0026 D6): the label lives
+ * on the object, the link is cleared, and the state is `free_text`.
+ */
+export function buildLabelPlantObjectCatalogQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    plantObjectId: string;
+    catalogLabel: string;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("plant_objects")
+    .set({
+      catalog_item_id: null,
+      variety_text: input.catalogLabel,
+      variety_state: "free_text",
+      updated_at: input.now,
+    })
+    .where("id", "=", input.plantObjectId)
+    .where("owner_user_id", "=", scope.userId)
+    .where("variety_state", "in", ["unknown", "free_text"])
     .returningAll();
 }
 
@@ -4520,13 +4550,13 @@ function normalizeCreateFirstPlantEntryInput(
     "Catalog item id",
     200,
   );
-  const userAddedCatalogName = normalizeOptionalText(
-    input.userAddedCatalogName,
-    "Missing catalog name",
+  const catalogLabel = normalizeOptionalText(
+    input.catalogLabel,
+    "Own catalog name",
     MAX_NAME_LENGTH,
   );
-  if (catalogItemId && userAddedCatalogName) {
-    throw new Error("Choose either a catalog match or a missing catalog name.");
+  if (catalogItemId && catalogLabel) {
+    throw new Error("Choose either a catalog match or your own name.");
   }
 
   const spaceId = normalizeOptionalText(input.spaceId, "Space id", 200);
@@ -4556,12 +4586,12 @@ function normalizeCreateFirstPlantEntryInput(
     ),
     objectKind: normalizePlantObjectKind(input.objectKind),
     catalogItemId,
-    userAddedCatalogName,
+    catalogLabel: catalogLabel ? normalizeCatalogLabel(catalogLabel) : null,
     varietyText: null,
     varietyState: (catalogItemId
       ? "selected"
-      : userAddedCatalogName
-        ? "user_added"
+      : catalogLabel
+        ? "free_text"
         : "unknown") satisfies VarietyState,
     title: normalizeJournalEntryTitle(input.title),
     body: content.body,
@@ -4802,17 +4832,27 @@ function resolvePlantObjectKind(
 function normalizeResolvePlantObjectCatalogInput(
   input: ResolvePlantObjectCatalogInput,
 ) {
+  const catalogItemId = normalizeOptionalText(
+    input.catalogItemId,
+    "Catalog item id",
+    200,
+  );
+  const catalogLabel = normalizeOptionalText(
+    input.catalogLabel,
+    "Own catalog name",
+    MAX_NAME_LENGTH,
+  );
+  if (Boolean(catalogItemId) === Boolean(catalogLabel)) {
+    throw new Error("Choose either a catalog match or your own name.");
+  }
   return {
     plantObjectId: normalizeRequiredText(
       input.plantObjectId,
       "Plant object id",
       200,
     ),
-    catalogItemId: normalizeRequiredText(
-      input.catalogItemId,
-      "Catalog item id",
-      200,
-    ),
+    catalogItemId,
+    catalogLabel: catalogLabel ? normalizeCatalogLabel(catalogLabel) : null,
   };
 }
 
@@ -4870,10 +4910,14 @@ function normalizePublicSlug(value: string) {
   return normalizePublicJournalSlug(value);
 }
 
+/**
+ * An object without a catalog identity can be resolved any number of times:
+ * unknown, or carrying the gardener's own name (ADR-0026 D5).
+ */
 function isResolvableVarietyState(
   value: string,
-): value is "unknown" | "user_added" {
-  return value === "unknown" || value === "user_added";
+): value is "unknown" | "free_text" {
+  return value === "unknown" || value === "free_text";
 }
 
 function isGonePublicEntry(row: {

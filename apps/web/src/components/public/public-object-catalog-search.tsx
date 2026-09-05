@@ -221,7 +221,6 @@ function isIdentityState(
 ): value is PublicObjectCatalogIdentityState {
   return (
     value === "catalog" ||
-    value === "provisional" ||
     value === "unknown" ||
     value === "unavailable"
   );

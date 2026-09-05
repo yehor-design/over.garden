@@ -411,7 +411,8 @@ export function serializePublicJournalDirectoryPage(
         ),
         kind: objectKind,
         identityLabel: sanitizePublicIdentity(
-          row.catalogCanonicalName ?? row.varietyText,
+          row.catalogCanonicalName ??
+            (row.varietyState === "selected" ? row.varietyText : null),
         ),
         catalogKind: catalogPath ? catalogKind : null,
         catalogSlug: catalogPath ? row.catalogPublicSlug : null,

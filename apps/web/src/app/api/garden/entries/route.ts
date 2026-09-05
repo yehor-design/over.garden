@@ -366,7 +366,7 @@ function isAtomicContext(
         "plantName",
         "objectKind",
         "catalogItemId",
-        "userAddedCatalogName",
+        "catalogLabel",
         "locationVisibility",
         "coarseRegionCode",
         "entryDate",
@@ -385,7 +385,7 @@ function isAtomicContext(
       isOptionalNullableText(value, "spaceName", 200) &&
       isOptionalNullableEnum(value, "objectKind", ["plant", "animal"]) &&
       isOptionalNullableUuid(value, "catalogItemId") &&
-      isOptionalNullableText(value, "userAddedCatalogName", 200) &&
+      isOptionalNullableText(value, "catalogLabel", 120) &&
       isOptionalNullableEnum(value, "locationVisibility", [
         "hidden",
         "region",

@@ -180,7 +180,7 @@ async function main() {
             plantName: `OVE-85 BG OJ ${selectedBg.canonicalName}`,
             objectKind: "plant",
             catalogItemId: selectedBg.id,
-            userAddedCatalogName: null,
+            catalogLabel: null,
             entryDate: "2026-07-02",
             locationVisibility: "hidden",
             coarseRegionCode: null,

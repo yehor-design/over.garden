@@ -38,7 +38,9 @@ import { classifyDatabaseHost } from "./apply-reviewed-migration";
  *   * `--fingerprint`: a sha256 over what a gardener or a crawler can see on
  *     the loopback database — items, names, objects and the typeahead answers
  *     for the thirty queries in `contracts/catalog/typeahead-fingerprint-queries.json`
- *     — to run before and after applying 0054 there. It writes nothing.
+ *     — to run before and after a migration there. It writes nothing. The
+ *     typeahead half follows the picker: since OVE-387 it is the one Postgres
+ *     statement, so its hash moved once, on purpose, with that task.
  *
  * Output is aggregate: object names from this file's own lists, booleans,
  * counts and hashes. Never a connection string.
@@ -889,32 +891,38 @@ export async function runFingerprint() {
     );
     const queries = JSON.parse(
       readFileSync(path.join(process.cwd(), "..", "..", "contracts", "catalog", "typeahead-fingerprint-queries.json"), "utf8"),
-    ) as { queries: Array<{ locale: string; query: string }> };
+    ) as { queries: Array<{ locale: string; query: string; objectKind?: string }> };
     const { searchCatalogSuggestionsForTypeaheadResult } = await import(
       "../src/server/catalog-repository"
     );
-    const full: unknown[] = [];
-    const postgresOnly: unknown[] = [];
+    // Since OVE-387 the picker has one path, Postgres alone; the hash covers
+    // the ordered ids per query in the query's locale and object kind.
+    const answers: unknown[] = [];
     for (const entry of queries.queries) {
-      const real = await searchCatalogSuggestionsForTypeaheadResult(entry.query, { limit: 8 });
-      full.push({ query: entry.query, state: real.state, ids: real.suggestions.map((s) => s.id) });
-      const canonical = await searchCatalogSuggestionsForTypeaheadResult(
-        entry.query,
-        { limit: 8 },
-        { searchWithMeili: async () => [] },
-      );
-      postgresOnly.push({ query: entry.query, state: canonical.state, ids: canonical.suggestions.map((s) => s.id) });
+      const locale = entry.locale === "bg" || entry.locale === "ru" ? entry.locale : "uk";
+      const objectKind = entry.objectKind === "animal" ? "animal" : "plant";
+      const result = await searchCatalogSuggestionsForTypeaheadResult(entry.query, {
+        limit: 8,
+        locale,
+        objectKind,
+      });
+      answers.push({
+        query: entry.query,
+        locale,
+        objectKind,
+        state: result.state,
+        ids: result.suggestions.map((s) => s.id),
+      });
     }
     return {
-      schemaVersion: "ove386.organismGraphFoundation.v1",
+      schemaVersion: "ove387.organismGraphFingerprint.v2",
       mode: "fingerprint",
       hostClass,
       database,
       readOnly: true,
       countsByKindAndStatus: counts.rows,
       rowsSha256: rows,
-      typeaheadFullPathSha256: sha256(JSON.stringify(full)),
-      typeaheadPostgresOnlySha256: sha256(JSON.stringify(postgresOnly)),
+      typeaheadSha256: sha256(JSON.stringify(answers)),
       queries: queries.queries.length,
     };
   } finally {
@@ -922,7 +930,7 @@ export async function runFingerprint() {
   }
 }
 
-async function applyMigrationsBefore(pool: Pool, connectionString: string, number: string) {
+export async function applyMigrationsBefore(pool: Pool, connectionString: string, number: string) {
   const applicationSql = await loadVersionedApplicationSql(path.join(process.cwd(), "sql"));
   await pool.query(applicationSql[0]!.sql);
 
