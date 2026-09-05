@@ -264,9 +264,15 @@ jobs:
           # `apps/web/src/server/job-queue-manifest.ts` owns the set,
           # `services/matching/app/job_queue_contract.py` is generated from it,
           # and `pnpm queue:contract:check` fails on drift between them.
+          # Both sides pass through jq's compact serialiser: `assert_equal`
+          # compares strings, and two JSON serialisers of the same array are
+          # not the same string (Python writes ", ", jq writes ","). The first
+          # dispatch of this step refused a correct candidate on that comma,
+          # before the push, which is the order this step exists to keep.
           expected_handlers="$(
             cd services/matching &&
-            uv run --frozen python -c 'import json; from app.job_handlers import SUPPORTED_JOB_KINDS; print(json.dumps(list(SUPPORTED_JOB_KINDS)))'
+            uv run --frozen python -c 'import json; from app.job_handlers import SUPPORTED_JOB_KINDS; print(json.dumps(list(SUPPORTED_JOB_KINDS)))' |
+              jq -c '.'
           )"
           if ! jq -e 'type == "array" and length > 0 and all(type == "string") and . == unique' \
             <<<"$expected_handlers" >/dev/null; then
