@@ -40,7 +40,7 @@ Verified on 2026-09-03 against `https://over.garden` and the live providers.
 | Schema        | Migrations `0001`–`0047` and `0049` applied, minus the two deliberately skipped. See `docs/PRODUCTION_SCHEMA_STATE.md`                                                                                      |
 | Interaction   | Like, bookmark, follow and comment are Server Actions on a form with a real endpoint, so they work before hydration and with JavaScript off. A like is a permanent row owned by an account or by one signed visitor cookie, with no expiry and no ceiling |
 | Sign-in       | One screen: `/auth/sign-in` and `/auth/sign-up` over one component and Server Actions. Every other page shows its own empty state and one link to it                                                        |
-| Matching      | The worker on the droplet runs the sealed release of `63ce91d` since 2026-09-05 with all nine handlers and a fresh heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03 |
+| Matching      | The worker on the droplet runs the sealed six-handler release of `d5faee5` since 2026-09-05 with a fresh heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03 |
 | Hosting       | Decided 2026-09-03: the DigitalOcean managed database and the `fra1` droplet stay                                                                                                                           |
 
 The seven owner requirements have one committed production receipt:
@@ -188,8 +188,10 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
    receipts and says why one constraint is deliberately `NOT VALID`.
 9. **Closed 2026-09-05: production runs the current worker.** The sealed
    release of `63ce91d` was installed and activated on the droplet after the
-   eight-day red window; the heartbeat row carries all nine handlers and both
-   production proofs answer ready. Getting there took two more defects, each
+   eight-day red window; the heartbeat row carried all nine handlers and both
+   production proofs answered ready. The six-handler release of `d5faee5`
+   replaced it the same afternoon through the same `install`, `migrate`,
+   `deploy`, with both proofs ready again. Getting there took two more defects, each
    found only by deploying: preflight compared the candidate's handler set
    with the incumbent worker's heartbeat, so a release that changes the set
    could never pass (PR #289), and the drain outcome wrote a bare NULL

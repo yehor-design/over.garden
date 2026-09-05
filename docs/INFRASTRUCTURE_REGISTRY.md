@@ -673,9 +673,11 @@ Process management and recovery (OVE-39):
 Immutable matching release contract (OVE-190):
 
 - Live status: pass on 2026-09-05. The production worker runs exact tested-main
-  source `63ce91d8509265a5924968f89801a06c56415ed5`, sealed by run 33958591025
-  and activated through `install`, `migrate`, and `deploy`; the previous pointer
-  holds `003a0da6673f993432e8fe72ff035af91996e96e` for rollback. The API was
+  source `d5faee5fcce7f8989672c98567539a30716f9b11` (six handlers, ADR-0025),
+  sealed by run 33968010476 and activated through `install`, `migrate`, and
+  `deploy`; the previous pointer holds `63ce91d8509265a5924968f89801a06c56415ed5`
+  for rollback. The four older releases were removed from the droplet the same
+  day to satisfy the capacity gate. The API was
   retired on 2026-09-03 (OVE-357). The 2026-07-18 activation, rollback, and
   forward proofs of release B (`710ac0c74559cea698946be31eeea856f0644fb4`) are
   history.
