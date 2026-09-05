@@ -36,10 +36,10 @@ const SQL_DIRECTORY = path.join(REPOSITORY_ROOT, "apps/web/sql");
  * This file used to carry its own copy of the handler set and assert that the
  * workflow and the migration each contained those six strings. They did. The
  * queue manifest had already grown to nine, so the test passed while the
- * release workflow refused every image built from a correct `main` — seventy-six
- * consecutive failures between 2026-08-28 and 2026-09-04, each one exiting 1
- * with no output. A guard that restates the value it is guarding proves only
- * that two copies of a stale answer agree.
+ * release workflow refused every image built from a correct `main` —
+ * seventy-eight consecutive failures between 2026-08-27 and 2026-09-04, each
+ * one exiting 1 with no output. A guard that restates the value it is guarding
+ * proves only that two copies of a stale answer agree.
  */
 const REQUIRED_HANDLERS = [...matchingSupportedKinds()].sort();
 
@@ -52,18 +52,47 @@ function heartbeatHandlerConstraints(sql: string): string[][] {
   );
 }
 
+/**
+ * True when `handler` appears as a whole identifier anywhere in `contents`,
+ * whatever quotes or none surround it. The earlier guard looked only for the
+ * double-quoted form, so a single-quoted or bare restatement passed it.
+ */
+function namesHandler(contents: string, handler: string): boolean {
+  return new RegExp(`(?<![a-z0-9_])${handler}(?![a-z0-9_])`, "u").test(
+    contents,
+  );
+}
+
 describe("OVE-190 immutable matching release contract", () => {
-  it("tests the frozen source before publishing a unique exact-SHA image", async () => {
+  it("tests the frozen source, then verifies the candidate before publishing it", async () => {
     const workflow = await readFile(WORKFLOW_PATH, "utf8");
     const compile = workflow.indexOf("Compile every Python module");
     const lint = workflow.indexOf("Lint frozen matching source");
     const test = workflow.indexOf("Test frozen matching source");
-    const publish = workflow.indexOf("Build and publish exact immutable image");
+    const build = workflow.indexOf("Build the candidate image");
+    const seal = workflow.indexOf("Verify, publish, and seal the release");
+    const candidateVerified = workflow.indexOf(
+      'verify_capabilities "$RUNNER_TEMP/candidate-capabilities.json"',
+    );
+    const publish = workflow.indexOf('docker push "$tagged_ref"');
 
     expect(compile).toBeGreaterThan(0);
     expect(lint).toBeGreaterThan(compile);
     expect(test).toBeGreaterThan(lint);
-    expect(publish).toBeGreaterThan(test);
+    expect(build).toBeGreaterThan(test);
+    expect(seal).toBeGreaterThan(build);
+    // The registry is immutable and public. A candidate is built onto the
+    // runner, and its labels, platform, and handler set are verified there,
+    // before the one `docker push` in this workflow runs.
+    expect(candidateVerified).toBeGreaterThan(seal);
+    expect(publish).toBeGreaterThan(candidateVerified);
+    expect(workflow.match(/docker push /g)).toHaveLength(1);
+    expect(workflow).toContain("load: true");
+    expect(workflow).toContain("push: false");
+    expect(workflow).not.toContain("push: true");
+    expect(workflow).toContain("platforms: ${{ env.RELEASE_PLATFORM }}");
+    expect(workflow).toContain("RELEASE_PLATFORM: linux/amd64");
+    expect(workflow).toContain('assert_equal "image platform"');
     expect(workflow).toContain("python -m pip install uv==0.11.24");
     expect(workflow).toContain("uv run --frozen ruff check .");
     expect(workflow).toContain("uv run --frozen pytest -q");
@@ -71,8 +100,6 @@ describe("OVE-190 immutable matching release contract", () => {
     expect(workflow).toContain(
       "image_tag=sha-$REQUESTED_SHA-run-${RELEASE_RUN//./-}",
     );
-    expect(workflow).toContain("REGISTRY_DIGEST");
-    expect(workflow).toContain('docker pull "$digest_ref"');
     expect(workflow).not.toMatch(/(?:^|\s)(?:tag|tags:)[^\n]*latest/im);
   });
 
@@ -94,10 +121,17 @@ describe("OVE-190 immutable matching release contract", () => {
     expect(workflow).toContain('assert_equal "queue.supportedHandlers"');
     expect(workflow).toContain("--argjson supportedHandlers");
     expect(workflow).toContain("supportedHandlers: $supportedHandlers");
+    // The registry digest is read back from the registry after the push and
+    // resolved again through it: the image served under that digest must be
+    // the one verified on the runner.
+    expect(workflow).toContain('assert_sha256 "registry digest"');
+    expect(workflow).toContain('docker pull "$digest_ref"');
+    expect(workflow).toContain('assert_equal "registry image id"');
+    expect(workflow).toContain("registryDigest: $registryDigest");
+    expect(workflow).toContain("archiveConfigDigest: $archiveConfigDigest");
     expect(workflow).toContain("release.json");
     expect(workflow).toContain("matching-capabilities.json");
     expect(workflow).toContain("archive_sha256");
-    expect(workflow).toContain("archiveConfigDigest");
     expect(workflow).toContain("actions/upload-artifact");
   });
 
@@ -108,13 +142,14 @@ describe("OVE-190 immutable matching release contract", () => {
         return {
           file: path.relative(REPOSITORY_ROOT, file),
           named: REQUIRED_HANDLERS.filter((handler) =>
-            contents.includes(`"${handler}"`),
+            namesHandler(contents, handler),
           ),
         };
       }),
     );
 
-    // Falsify this by pasting one handler name back into either file.
+    // Falsify this by pasting one handler name back into either file, in any
+    // quoting or in a comment.
     expect(restatements).toEqual([
       { file: ".github/workflows/matching-image.yml", named: [] },
       { file: "infra/production-worker/matching-release", named: [] },

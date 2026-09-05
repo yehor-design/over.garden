@@ -26,6 +26,13 @@ permissions:
   packages: write
   actions: write
 
+env:
+  # The production host is an amd64 droplet, and the candidate image is loaded
+  # onto the runner for verification, which needs exactly one platform. This
+  # is the one line to change for an ARM host: every third-party image and
+  # every locked wheel already ships an arm64 build.
+  RELEASE_PLATFORM: linux/amd64
+
 jobs:
   release:
     name: Test, publish, and seal matching image
@@ -154,13 +161,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and publish exact immutable image
+      # The candidate is built onto this runner and verified here before
+      # anything is published. The registry is immutable and public; until
+      # 2026-09-05 it received every candidate first and learned afterwards
+      # whether it was a release, and seventy-eight unsealed images carry
+      # release-shaped tags there today because of it.
+      - name: Build the candidate image
         id: build
         uses: docker/build-push-action@v7
         with:
           context: services/matching
           file: services/matching/Dockerfile
-          push: true
+          platforms: ${{ env.RELEASE_PLATFORM }}
+          load: true
+          push: false
+          # The docker exporter cannot carry attestations. The release's
+          # integrity is the sealed archive, its sha256, and its config digest.
+          provenance: false
           tags: ${{ steps.release.outputs.image_repository }}:${{ steps.release.outputs.image_tag }}
           build-args: |
             OVERGARDEN_MATCHING_COMMIT_SHA=${{ steps.release.outputs.source_sha }}
@@ -176,7 +193,7 @@ jobs:
           cache-from: type=gha,scope=matching-image
           cache-to: type=gha,mode=max,scope=matching-image
 
-      - name: Verify digest, labels, and strict capability manifest
+      - name: Verify, publish, and seal the release
         id: seal
         env:
           IMAGE_REPOSITORY: ${{ steps.release.outputs.image_repository }}
@@ -184,40 +201,50 @@ jobs:
           SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
           BUILD_TIMESTAMP: ${{ steps.release.outputs.build_timestamp }}
           RELEASE_RUN: ${{ steps.release.outputs.release_run }}
-          REGISTRY_DIGEST: ${{ steps.build.outputs.digest }}
+          CANDIDATE_IMAGE_ID: ${{ steps.build.outputs.imageid }}
         run: |
           set -euo pipefail
 
           # Every gate below says what it wanted and what it got. The bare
-          # `[[ ... ]]` assertions this replaced exited 1 with no output at all,
-          # so the seventy-six consecutive failures that started on 2026-08-28
-          # showed a runner log that ended at `docker pull` and nothing else.
+          # `[[ ... ]]` tests and the `jq -e … >/dev/null` this replaced exited 1
+          # with no output at all, so the seventy-eight consecutive failures
+          # that began on 2026-08-27 showed a runner log that ended at
+          # `docker pull` and nothing else.
           fail() {
-            printf 'matching release seal failed: %s\n' "$1" >&2
+            printf 'matching release refused: %s\n' "$1" >&2
             exit 1
           }
 
           assert_equal() {
             if [[ "$2" != "$3" ]]; then
-              printf 'matching release seal failed: %s\n  expected: %s\n  actual:   %s\n' \
+              printf 'matching release refused: %s\n  expected: %s\n  actual:   %s\n' \
                 "$1" "$2" "$3" >&2
               exit 1
             fi
           }
 
-          if [[ ! "$REGISTRY_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            fail "build did not return an immutable sha256 registry digest"
-          fi
-
-          digest_ref="${IMAGE_REPOSITORY}@${REGISTRY_DIGEST}"
-          tagged_ref="${IMAGE_REPOSITORY}:${IMAGE_TAG}"
-          docker pull "$digest_ref"
-          docker tag "$digest_ref" "$tagged_ref"
-
-          image_label() {
-            docker image inspect --format "{{ index .Config.Labels \"$1\" }}" "$digest_ref"
+          assert_sha256() {
+            if [[ ! "$2" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              fail "$1 is not an immutable sha256 digest: '$2'"
+            fi
           }
 
+          image_inspect() {
+            docker image inspect --format "$1" "$2"
+          }
+
+          tagged_ref="${IMAGE_REPOSITORY}:${IMAGE_TAG}"
+
+          image_label() {
+            image_inspect "{{ index .Config.Labels \"$1\" }}" "$tagged_ref"
+          }
+
+          echo "::group::Verify the candidate on the runner"
+          assert_sha256 "candidate image id" "$CANDIDATE_IMAGE_ID"
+          assert_equal "loaded image id" \
+            "$CANDIDATE_IMAGE_ID" "$(image_inspect '{{ .Id }}' "$tagged_ref")"
+          assert_equal "image platform" \
+            "$RELEASE_PLATFORM" "$(image_inspect '{{ .Os }}/{{ .Architecture }}' "$tagged_ref")"
           assert_equal "image revision label" \
             "$SOURCE_SHA" "$(image_label org.opencontainers.image.revision)"
           assert_equal "image created label" \
@@ -229,58 +256,89 @@ jobs:
           assert_equal "release run label" \
             "$RELEASE_RUN" "$(image_label garden.over.matching.release-run)"
 
-          archive_config_digest="$(docker image inspect --format '{{.Id}}' "$digest_ref")"
-          if [[ ! "$archive_config_digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            fail "image config id is not an immutable sha256 digest: $archive_config_digest"
-          fi
-
-          # The handler set is read from the commit being released. It used to
-          # be six literals written here, and when the queue manifest grew to
-          # nine this step began refusing every image built from a `main` that
-          # was entirely correct. `apps/web/src/server/job-queue-manifest.ts`
-          # owns the set, `services/matching/app/job_queue_manifest.py` mirrors
-          # it, and `job-queue-manifest.test.ts` fails on drift between them.
+          # The handler set is read from the commit being released, in exactly
+          # the order the generated contract declares it, and the container
+          # must answer the same sequence. It used to be six literals written
+          # here, and when the queue manifest grew to nine this step refused
+          # every image built from a `main` that was entirely correct.
+          # `apps/web/src/server/job-queue-manifest.ts` owns the set,
+          # `services/matching/app/job_queue_contract.py` is generated from it,
+          # and `pnpm queue:contract:check` fails on drift between them.
+          # Both sides pass through jq's compact serialiser: `assert_equal`
+          # compares strings, and two JSON serialisers of the same array are
+          # not the same string (Python writes ", ", jq writes ","). The first
+          # dispatch of this step refused a correct candidate on that comma,
+          # before the push, which is the order this step exists to keep.
           expected_handlers="$(
             cd services/matching &&
-            uv run --frozen python -c 'import json; from app.job_handlers import SUPPORTED_JOB_KINDS; print(json.dumps(sorted(SUPPORTED_JOB_KINDS)))' |
-              jq -c 'sort'
+            uv run --frozen python -c 'import json; from app.job_handlers import SUPPORTED_JOB_KINDS; print(json.dumps(list(SUPPORTED_JOB_KINDS)))' |
+              jq -c '.'
           )"
-          if ! jq -e 'type == "array" and length > 0 and all(type == "string")' \
+          if ! jq -e 'type == "array" and length > 0 and all(type == "string") and . == unique' \
             <<<"$expected_handlers" >/dev/null; then
-            fail "could not read the supported handler set from services/matching"
+            fail "the released commit does not declare a sorted, distinct handler set: $expected_handlers"
           fi
 
+          capabilities() {
+            docker run --rm \
+              -e OVERGARDEN_MATCHING_ENVIRONMENT=production \
+              -e R2_PUBLIC_BASE_URL=https://media.over.garden \
+              -e OVERGARDEN_MATCHING_IMAGE_DIGEST="$1" \
+              -e QUEUE_NAME=matching \
+              "$tagged_ref" \
+              python -m app.runtime capabilities > "$2"
+          }
+
+          verify_capabilities() {
+            assert_equal "queue.supportedHandlers" \
+              "$expected_handlers" "$(jq -c '.queue.supportedHandlers' "$1")"
+            jq -e \
+              --arg sha "$SOURCE_SHA" \
+              --arg digest "$2" \
+              --arg schema "ove190.matching-schema.v1" \
+              '.release.commitSha == $sha
+                and .release.imageDigest == $digest
+                and .release.schemaCompatibilityClass == $schema
+                and .queue.name == "matching"' \
+              "$1" >/dev/null \
+              || {
+                printf 'matching release refused: capabilities do not match the release identity\n' >&2
+                jq . "$1" >&2
+                exit 1
+              }
+          }
+
+          # The registry digest does not exist until the image is published, so
+          # the candidate proves that it reports the digest it is given; the
+          # sealed manifest is produced again below with the real one.
+          placeholder_digest="sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          capabilities "$placeholder_digest" "$RUNNER_TEMP/candidate-capabilities.json"
+          verify_capabilities "$RUNNER_TEMP/candidate-capabilities.json" "$placeholder_digest"
+          echo "::endgroup::"
+
+          echo "::group::Publish the verified image"
+          docker push "$tagged_ref"
+          registry_digest="$(
+            image_inspect '{{ range .RepoDigests }}{{ println . }}{{ end }}' "$tagged_ref" |
+              sed -n "s|^${IMAGE_REPOSITORY}@||p"
+          )"
+          assert_sha256 "registry digest" "$registry_digest"
+          digest_ref="${IMAGE_REPOSITORY}@${registry_digest}"
+
+          # Resolve the digest back through the registry: what it serves under
+          # this immutable reference must be the image verified above.
+          docker pull "$digest_ref"
+          assert_equal "registry image id" \
+            "$CANDIDATE_IMAGE_ID" "$(image_inspect '{{ .Id }}' "$digest_ref")"
+          echo "::endgroup::"
+
+          echo "::group::Seal the release"
           mkdir -p matching-release
           capability_file="matching-capabilities.json"
+          capabilities "$registry_digest" "matching-release/$capability_file"
+          verify_capabilities "matching-release/$capability_file" "$registry_digest"
 
-          docker run --rm \
-            -e OVERGARDEN_MATCHING_ENVIRONMENT=production \
-            -e R2_PUBLIC_BASE_URL=https://media.over.garden \
-            -e OVERGARDEN_MATCHING_IMAGE_DIGEST="$REGISTRY_DIGEST" \
-            -e QUEUE_NAME=matching \
-            "$digest_ref" \
-            python -m app.runtime capabilities > "matching-release/$capability_file"
-
-          assert_equal "queue.supportedHandlers" \
-            "$expected_handlers" \
-            "$(jq -c '.queue.supportedHandlers' "matching-release/$capability_file")"
-
-          jq -e \
-            --arg sha "$SOURCE_SHA" \
-            --arg digest "$REGISTRY_DIGEST" \
-            --arg schema "ove190.matching-schema.v1" \
-            '.release.commitSha == $sha
-              and .release.imageDigest == $digest
-              and .release.schemaCompatibilityClass == $schema
-              and .queue.name == "matching"' \
-            "matching-release/$capability_file" >/dev/null \
-            || {
-              printf 'matching release seal failed: sealed capabilities do not match the released commit\n' >&2
-              jq . "matching-release/$capability_file" >&2
-              exit 1
-            }
-
-          archive_file="overgarden-matching-${SOURCE_SHA}-${REGISTRY_DIGEST#sha256:}.docker.tar.zst"
+          archive_file="overgarden-matching-${SOURCE_SHA}-${registry_digest#sha256:}.docker.tar.zst"
           docker save "$tagged_ref" | zstd -T0 -19 -o "matching-release/$archive_file"
           zstd --test "matching-release/$archive_file"
           archive_sha256="$(sha256sum "matching-release/$archive_file" | awk '{print $1}')"
@@ -294,8 +352,9 @@ jobs:
             --arg releaseRun "$RELEASE_RUN" \
             --arg imageRepository "$IMAGE_REPOSITORY" \
             --arg imageTag "$IMAGE_TAG" \
-            --arg registryDigest "$REGISTRY_DIGEST" \
-            --arg archiveConfigDigest "$archive_config_digest" \
+            --arg platform "$RELEASE_PLATFORM" \
+            --arg registryDigest "$registry_digest" \
+            --arg archiveConfigDigest "$CANDIDATE_IMAGE_ID" \
             --arg archiveFile "$archive_file" \
             --arg archiveSha256 "$archive_sha256" \
             --arg capabilitiesFile "$capability_file" \
@@ -310,6 +369,7 @@ jobs:
               image: {
                 repository: $imageRepository,
                 tag: $imageTag,
+                platform: $platform,
                 registryDigest: $registryDigest,
                 archiveConfigDigest: $archiveConfigDigest
               },
@@ -325,6 +385,7 @@ jobs:
             }' > matching-release/release.json
 
           echo "artifact_name=matching-release-$SOURCE_SHA-run-${RELEASE_RUN//./-}" >> "$GITHUB_OUTPUT"
+          echo "::endgroup::"
 
       - name: Prune stale matching-image artifacts
         env:
