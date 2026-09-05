@@ -99,12 +99,14 @@ does not extend the wait for the sources that already answered, and both
 
 ```bash
 cd apps/web
-pnpm exec tsx scripts/prove-catalog-trigram-typeahead.ts --mode verify --database
+node --conditions=react-server --import tsx \
+  scripts/prove-catalog-trigram-typeahead.ts --mode verify --database
 ```
 
-Creates its own disposable database, applies every migration, seeds one active
-Foundation release with a 20,003-name corpus, and drops the database. It never
-writes to the database whose connection string it borrows.
+Creates its own disposable database, applies every migration, seeds a
+selectable catalog of 20,003 names, and drops the database. It never writes to
+the database whose connection string it borrows. The `react-server` condition
+is needed because the proof calls the real repository, which is `server-only`.
 
 The corpus size is load-bearing: with a handful of rows Postgres scans the table
 no matter what index exists, so an index-usage assertion against a toy corpus

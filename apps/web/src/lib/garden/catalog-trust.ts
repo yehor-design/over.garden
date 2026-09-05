@@ -91,8 +91,6 @@ export function catalogTrustStateLabel(
 
 export function catalogSourceLabel(source: string | null | undefined) {
   switch (source) {
-    case "stable_registry":
-      return "OverGarden Stable Registry";
     case "internal_seed":
       return "OverGarden starter catalog";
     case "ua_state_register":
@@ -122,9 +120,6 @@ export function catalogSourceCaveat(
   state = catalogTrustState(input),
 ) {
   if (state === "curated") {
-    if (input.source === "stable_registry") {
-      return "Active immutable OverGarden identity. Compare the type and name before choosing.";
-    }
     return "Curated OverGarden identity. Compare the type and name before choosing.";
   }
   if (state === "user_added") {

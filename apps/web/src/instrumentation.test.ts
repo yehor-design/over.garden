@@ -4,13 +4,13 @@ import { postgresRejection } from "@test/postgres-rejection";
 import { buildWorkspaceErrorLogLine, onRequestError } from "./instrumentation";
 
 const REQUEST = {
-  path: "/garden/catalog/registry?token=private-value",
+  path: "/garden/privacy/erasure-requests?token=private-value",
   method: "GET",
 };
 
 const CONTEXT = {
   routerKind: "App Router",
-  routePath: "/(default)/garden/catalog/registry",
+  routePath: "/(default)/garden/privacy/erasure-requests",
   routeType: "render",
   renderSource: "react-server-components",
   renderType: "dynamic-resume",
@@ -27,10 +27,10 @@ describe("onRequestError", () => {
     expect(line).toEqual({
       event: "workspace_server_error",
       digest: "1234567890",
-      path: "/garden/catalog/registry",
+      path: "/garden/privacy/erasure-requests",
       method: "GET",
       routerKind: "App Router",
-      routePath: "/(default)/garden/catalog/registry",
+      routePath: "/(default)/garden/privacy/erasure-requests",
       routeType: "render",
       renderSource: "react-server-components",
       renderType: "dynamic-resume",
@@ -50,7 +50,7 @@ describe("onRequestError", () => {
     );
     const serialized = JSON.stringify(line);
 
-    expect(line.path).toBe("/garden/catalog/registry");
+    expect(line.path).toBe("/garden/privacy/erasure-requests");
     expect(serialized).not.toContain("token=private-value");
     expect(serialized).not.toContain("a private note");
     expect(serialized).not.toContain("permission denied for relation");

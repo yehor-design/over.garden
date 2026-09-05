@@ -2,57 +2,47 @@ import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
 import {
-  getPublicStableRegistryExplorerCopy,
-  publicStableRegistrySurfaceCopy,
-  type PublicStableRegistryExplorerCopy,
-} from "@/lib/stable-registry/public-explorer-copy";
+  getEppoArchiveCopy,
+  type EppoArchiveCopy,
+} from "@/lib/catalog-source/eppo-archive-copy";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import type {
+  EppoArchivePage,
   PublicEppoSourceRecord,
-  PublicStableCatalogRecord,
-  PublicStableRegistryPage,
-  PublicStableRegistrySurface,
 } from "@/server/catalog-source/public-eppo-explorer-repository";
 
-export type PublicStableRegistryExplorerState =
+export type EppoArchiveExplorerState =
   | "loading"
   | "ready"
   | "empty"
   | "degraded"
   | "not_found";
 
-export type PublicStableRegistryExplorerMessage =
-  | "invalid_query"
-  | "unavailable";
+export type EppoArchiveExplorerMessage = "invalid_query" | "unavailable";
 
-type ExplorerRecord = PublicStableCatalogRecord | PublicEppoSourceRecord;
-
-export function PublicStableRegistryExplorer({
+export function EppoArchiveExplorer({
   locale,
-  surface,
   page,
   state,
   message,
   jsonLd,
 }: {
   locale: PublicLocale;
-  surface: PublicStableRegistrySurface;
-  page: PublicStableRegistryPage<ExplorerRecord>;
-  state: PublicStableRegistryExplorerState;
-  message?: PublicStableRegistryExplorerMessage;
+  page: EppoArchivePage;
+  state: EppoArchiveExplorerState;
+  message?: EppoArchiveExplorerMessage;
   jsonLd?: Record<string, unknown> | null;
 }) {
-  const copy = getPublicStableRegistryExplorerCopy(locale);
-  const surfaceCopy = publicStableRegistrySurfaceCopy(copy, surface);
+  const copy = getEppoArchiveCopy(locale);
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
 
   return (
     <main
       id="main-content"
       lang={locale}
-      data-stable-registry-explorer={surface}
-      data-stable-registry-state={state}
+      data-eppo-archive="explorer"
+      data-eppo-archive-state={state}
       aria-busy={state === "loading"}
       className="mx-auto flex w-full max-w-4xl flex-col px-4 py-6 sm:px-6"
     >
@@ -62,47 +52,17 @@ export function PublicStableRegistryExplorer({
           dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
         />
       ) : null}
-      <nav
-        aria-label={copy.navigation.catalog}
-        className="mb-5 flex flex-wrap gap-2"
-      >
-        <Link
-          href={localizedPath(locale, "/catalog")}
-          aria-current={surface === "catalog" ? "page" : undefined}
-          className={buttonVariants({
-            variant: surface === "catalog" ? "default" : "outline",
-            size: "sm",
-          })}
-        >
-          {copy.navigation.catalog}
-        </Link>
-        <Link
-          href={localizedPath(locale, "/sources/eppo")}
-          aria-current={surface === "eppo" ? "page" : undefined}
-          className={buttonVariants({
-            variant: surface === "eppo" ? "default" : "outline",
-            size: "sm",
-          })}
-        >
-          {copy.navigation.eppo}
-        </Link>
-      </nav>
 
       <header className="border-b border-border pb-5">
         <h1 className="text-3xl font-semibold text-foreground">
-          {surfaceCopy.title}
+          {copy.title}
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-          {surfaceCopy.intro}
+          {copy.intro}
         </p>
       </header>
 
-      <ExplorerSearch
-        locale={locale}
-        surface={surface}
-        copy={copy}
-        page={page}
-      />
+      <ExplorerSearch locale={locale} copy={copy} page={page} />
 
       <section
         className="border-t border-border py-5"
@@ -110,7 +70,7 @@ export function PublicStableRegistryExplorer({
         aria-atomic="true"
       >
         <h2 className="text-lg font-semibold text-foreground">
-          {surfaceCopy.resultsTitle}
+          {copy.resultsTitle}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           {formatResultsCount(copy.resultsCount, page.records.length)}
@@ -120,10 +80,8 @@ export function PublicStableRegistryExplorer({
             text={
               message === "invalid_query" ? copy.invalidQuery : copy.unavailable
             }
-            retryHref={explorerHref(locale, surface, page.request)}
+            retryHref={explorerHref(locale, page.request)}
             retryLabel={copy.retry}
-            browseCatalogHref={localizedPath(locale, "/catalog")}
-            browseCatalogLabel={copy.browseCatalog}
           />
         ) : null}
         {state === "empty" ? (
@@ -132,7 +90,7 @@ export function PublicStableRegistryExplorer({
         {state === "ready" ? (
           <ol className="mt-4 grid gap-3">
             {page.records.map((record) => (
-              <li key={recordKey(record)}>
+              <li key={record.eppoCode}>
                 <ExplorerCard copy={copy} record={record} />
               </li>
             ))}
@@ -146,7 +104,7 @@ export function PublicStableRegistryExplorer({
           className="flex justify-end border-t border-border pt-4"
         >
           <Link
-            href={explorerHref(locale, surface, {
+            href={explorerHref(locale, {
               ...page.request,
               cursor: page.nextCursor,
             })}
@@ -160,26 +118,23 @@ export function PublicStableRegistryExplorer({
   );
 }
 
-export function PublicStableRegistryDetail({
+export function EppoArchiveDetail({
   locale,
-  surface,
   record,
   jsonLd,
 }: {
   locale: PublicLocale;
-  surface: PublicStableRegistrySurface;
-  record: ExplorerRecord;
+  record: PublicEppoSourceRecord;
   jsonLd?: Record<string, unknown> | null;
 }) {
-  const copy = getPublicStableRegistryExplorerCopy(locale);
-  const surfaceCopy = publicStableRegistrySurfaceCopy(copy, surface);
+  const copy = getEppoArchiveCopy(locale);
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
 
   return (
     <main
       id="main-content"
       lang={locale}
-      data-stable-registry-detail={surface}
+      data-eppo-archive="detail"
       className="mx-auto flex w-full max-w-3xl flex-col px-4 py-6 sm:px-6"
     >
       {serializedJsonLd ? (
@@ -189,19 +144,16 @@ export function PublicStableRegistryDetail({
         />
       ) : null}
       <Link
-        href={localizedPath(
-          locale,
-          surface === "catalog" ? "/catalog" : "/sources/eppo",
-        )}
+        href={localizedPath(locale, "/sources/eppo")}
         className={buttonVariants({
           variant: "ghost",
           size: "sm",
           className: "mb-5 w-fit",
         })}
       >
-        {surface === "catalog" ? copy.browseCatalog : copy.browseEppo}
+        {copy.browseArchive}
       </Link>
-      <p className="text-sm text-muted-foreground">{surfaceCopy.detailTitle}</p>
+      <p className="text-sm text-muted-foreground">{copy.detailTitle}</p>
       <h1 className="mt-1 text-3xl font-semibold text-foreground">
         {record.displayName}
       </h1>
@@ -210,32 +162,23 @@ export function PublicStableRegistryDetail({
   );
 }
 
-export function PublicStableRegistryNotFound({
-  locale,
-  surface,
-}: {
-  locale: PublicLocale;
-  surface: PublicStableRegistrySurface;
-}) {
-  const copy = getPublicStableRegistryExplorerCopy(locale);
-  const surfaceCopy = publicStableRegistrySurfaceCopy(copy, surface);
+export function EppoArchiveNotFound({ locale }: { locale: PublicLocale }) {
+  const copy = getEppoArchiveCopy(locale);
 
   return (
     <main
       id="main-content"
       lang={locale}
-      data-stable-registry-explorer={surface}
-      data-stable-registry-state="not_found"
+      data-eppo-archive="explorer"
+      data-eppo-archive-state="not_found"
       className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-5 py-16 sm:px-8"
     >
-      <p className="text-sm font-medium text-muted-foreground">
-        {surfaceCopy.title}
-      </p>
+      <p className="text-sm font-medium text-muted-foreground">{copy.title}</p>
       <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
         {copy.notFound}
       </h1>
       <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-        {surfaceCopy.intro}
+        {copy.intro}
       </p>
       <div className="flex flex-wrap gap-3">
         <form>
@@ -247,13 +190,10 @@ export function PublicStableRegistryNotFound({
           </button>
         </form>
         <Link
-          href={localizedPath(
-            locale,
-            surface === "catalog" ? "/catalog" : "/sources/eppo",
-          )}
+          href={localizedPath(locale, "/sources/eppo")}
           className={buttonVariants({ size: "sm" })}
         >
-          {surface === "catalog" ? copy.browseCatalog : copy.browseEppo}
+          {copy.browseArchive}
         </Link>
       </div>
     </main>
@@ -262,21 +202,16 @@ export function PublicStableRegistryNotFound({
 
 function ExplorerSearch({
   locale,
-  surface,
   copy,
   page,
 }: {
   locale: PublicLocale;
-  surface: PublicStableRegistrySurface;
-  copy: PublicStableRegistryExplorerCopy;
-  page: PublicStableRegistryPage<ExplorerRecord>;
+  copy: EppoArchiveCopy;
+  page: EppoArchivePage;
 }) {
   return (
     <form
-      action={localizedPath(
-        locale,
-        surface === "catalog" ? "/catalog" : "/sources/eppo",
-      )}
+      action={localizedPath(locale, "/sources/eppo")}
       method="get"
       className="grid gap-3 py-5 sm:grid-cols-3"
     >
@@ -311,10 +246,7 @@ function ExplorerSearch({
         {copy.searchButton}
       </button>
       <Link
-        href={localizedPath(
-          locale,
-          surface === "catalog" ? "/catalog" : "/sources/eppo",
-        )}
+        href={localizedPath(locale, "/sources/eppo")}
         className={buttonVariants({
           variant: "ghost",
           size: "sm",
@@ -332,11 +264,10 @@ function ExplorerCard({
   record,
   detail = false,
 }: {
-  copy: PublicStableRegistryExplorerCopy;
-  record: ExplorerRecord;
+  copy: EppoArchiveCopy;
+  record: PublicEppoSourceRecord;
   detail?: boolean;
 }) {
-  const isSource = "eppoCode" in record;
   const heading = detail ? (
     record.displayName
   ) : (
@@ -351,7 +282,7 @@ function ExplorerCard({
           {copy.badges[record.evidenceState]}
         </span>
         <span>{copy.kinds[record.objectKind]}</span>
-        {isSource ? <code>{record.eppoCode}</code> : null}
+        <code>{record.eppoCode}</code>
       </div>
       <h2 className="mt-3 text-xl font-semibold text-foreground">{heading}</h2>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -399,7 +330,7 @@ function ExplorerCard({
           new Date(record.observedAt),
         )}
       </time>
-      {isSource ? <SourceCredit copy={copy} source={record.source} /> : null}
+      <SourceCredit copy={copy} source={record.source} />
     </article>
   );
 }
@@ -408,7 +339,7 @@ function SourceCredit({
   copy,
   source,
 }: {
-  copy: PublicStableRegistryExplorerCopy;
+  copy: EppoArchiveCopy;
   source: PublicEppoSourceRecord["source"];
 }) {
   return (
@@ -463,14 +394,10 @@ function ExplorerMessage({
   text,
   retryHref,
   retryLabel,
-  browseCatalogHref,
-  browseCatalogLabel,
 }: {
   text: string;
   retryHref: string;
   retryLabel: string;
-  browseCatalogHref: string;
-  browseCatalogLabel: string;
 }) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
@@ -481,35 +408,18 @@ function ExplorerMessage({
       >
         {retryLabel}
       </Link>
-      <Link
-        href={browseCatalogHref}
-        className={buttonVariants({ variant: "ghost", size: "sm" })}
-      >
-        {browseCatalogLabel}
-      </Link>
     </div>
   );
 }
 
-function explorerHref(
-  locale: PublicLocale,
-  surface: PublicStableRegistrySurface,
-  request: PublicStableRegistryPage<ExplorerRecord>["request"],
-) {
-  const path = localizedPath(
-    locale,
-    surface === "catalog" ? "/catalog" : "/sources/eppo",
-  );
+function explorerHref(locale: PublicLocale, request: EppoArchivePage["request"]) {
+  const path = localizedPath(locale, "/sources/eppo");
   const params = new URLSearchParams();
   if (request.query) params.set("q", request.query);
   if (request.kind !== "all") params.set("kind", request.kind);
   if (request.cursor) params.set("cursor", request.cursor);
   const query = params.toString();
   return query ? `${path}?${query}` : path;
-}
-
-function recordKey(record: ExplorerRecord) {
-  return "stableTaxon" in record ? record.stableTaxon : record.eppoCode;
 }
 
 function formatResultsCount(template: string, count: number) {

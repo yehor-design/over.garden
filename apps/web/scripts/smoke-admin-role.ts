@@ -33,11 +33,6 @@ const ADMIN_SURFACE_EXPECTATIONS = [
     normalAccessState: "denied",
   },
   {
-    path: "/garden/catalog/curation",
-    normalForbiddenMarker: "Source candidates",
-    normalAccessState: "denied",
-  },
-  {
     path: "/garden/privacy/erasure-requests",
     normalForbiddenMarker: "Requests:",
     normalAccessState: "denied",
@@ -54,6 +49,8 @@ const RETIRED_UI_ROUTES = [
   "/garden/pilot-smoke",
   "/garden/pilot-learning/interviews",
   "/garden/pilot-learning/decision",
+  "/garden/catalog/registry",
+  "/garden/catalog/registry/editions",
   "/join",
 ] as const;
 const FORBIDDEN_ADMIN_MARKERS = [

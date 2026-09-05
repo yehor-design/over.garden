@@ -122,16 +122,16 @@ describe("WorkspaceAccessPanel", () => {
     const html = renderToStaticMarkup(
       <WorkspaceAccessPanel
         locale="uk"
-        surface="stable-registry-editions"
-        stateAttribute="data-edition-state"
+        surface="erasure-requests"
+        stateAttribute="data-erasure-requests-state"
         state="denied"
-        title="Видання"
-        message="Доступ до видань заборонено."
+        title="Запити на видалення"
+        message="Доступ до запитів заборонено."
       />,
     );
 
-    expect(html).toContain('data-edition-state="denied"');
-    expect(html).toContain('data-workspace-surface="stable-registry-editions"');
+    expect(html).toContain('data-erasure-requests-state="denied"');
+    expect(html).toContain('data-workspace-surface="erasure-requests"');
     expect(html).not.toContain("data-section-failure");
   });
 
@@ -140,17 +140,17 @@ describe("WorkspaceAccessPanel", () => {
     const html = renderToStaticMarkup(
       <WorkspaceAccessPanel
         locale="uk"
-        surface="stable-registry"
-        stateAttribute="data-release-center-state"
+        surface="erasure-requests"
+        stateAttribute="data-erasure-requests-state"
         state="unavailable"
-        title="Stable Registry"
-        message="Центр випусків зараз недоступний."
+        title="Запити на видалення"
+        message="Запити зараз недоступні."
         failure={failure}
-        retryHref="/garden/catalog/registry"
+        retryHref="/garden/privacy/erasure-requests"
       />,
     );
 
-    expect(html).toContain('data-release-center-state="unavailable"');
+    expect(html).toContain('data-erasure-requests-state="unavailable"');
     expect(html).toContain('data-section-failure="connection_unavailable"');
     expect(html).toContain(failure.digest);
   });

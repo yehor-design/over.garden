@@ -90,10 +90,12 @@ describe("prove:workspace-resilience", () => {
     ).toEqual(["schema_missing"]);
   });
 
-  it("covers every surface ADR-0023 names, each with its own path", () => {
+  it("covers every workspace surface left after ADR-0025, each with its own path", () => {
     const paths = WORKSPACE_SURFACE_PROBES.map((probe) => probe.path);
     expect(new Set(paths).size).toBe(paths.length);
-    expect(WORKSPACE_SURFACE_PROBES).toHaveLength(11);
+    // ADR-0023 named eleven; the three Release Center surfaces left with the
+    // Stable Registry (ADR-0025).
+    expect(WORKSPACE_SURFACE_PROBES).toHaveLength(8);
     expect(SKELETON_MARKERS).toContain('data-workspace-section="loading"');
   });
 

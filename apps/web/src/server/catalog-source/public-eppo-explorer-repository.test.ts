@@ -15,13 +15,11 @@ import { describe, expect, it } from "vitest";
 import type { Database } from "@/db/schema";
 import {
   buildPublicEppoSourceQuery,
-  buildPublicStableCatalogQuery,
-  decodePublicStableRegistryCursor,
-  encodePublicStableRegistryCursor,
-  parsePublicStableRegistryRequest,
-  PUBLIC_STABLE_REGISTRY_PAGE_SIZE,
+  decodeEppoArchiveCursor,
+  encodeEppoArchiveCursor,
+  EPPO_ARCHIVE_PAGE_SIZE,
+  parseEppoArchiveRequest,
   serializePublicEppoSourceRecord,
-  serializePublicStableCatalogRecord,
 } from "./public-eppo-explorer-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -44,41 +42,29 @@ class TestPostgresDialect implements Dialect {
 
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 
-describe("Stable Registry public explorer request contract", () => {
+describe("EPPO archive request contract", () => {
   it("accepts only the bounded query, kind, and opaque keyset cursor", () => {
-    const cursor = encodePublicStableRegistryCursor({
-      name: "tomato",
-      key: "tomato-0000000001",
-    });
+    const cursor = encodeEppoArchiveCursor({ name: "tomato", key: "SOLLC" });
 
     expect(
-      parsePublicStableRegistryRequest({
-        q: "  tomato  ",
-        kind: "plant",
-        cursor,
-      }),
+      parseEppoArchiveRequest({ q: "  tomato  ", kind: "plant", cursor }),
     ).toEqual({
       request: { query: "tomato", kind: "plant", cursor },
       error: null,
     });
-    expect(decodePublicStableRegistryCursor(cursor)).toEqual({
+    expect(decodeEppoArchiveCursor(cursor)).toEqual({
       name: "tomato",
-      key: "tomato-0000000001",
+      key: "SOLLC",
     });
   });
 
   it("fails closed without preserving an invalid query or cursor", () => {
-    expect(
-      parsePublicStableRegistryRequest({ q: "x", kind: "insects" }),
-    ).toMatchObject({
+    expect(parseEppoArchiveRequest({ q: "x", kind: "insects" })).toMatchObject({
       request: { query: "x", kind: "all", cursor: null },
       error: "invalid_query",
     });
     expect(
-      parsePublicStableRegistryRequest({
-        q: "tomato%",
-        cursor: "not-a-cursor",
-      }),
+      parseEppoArchiveRequest({ q: "tomato%", cursor: "not-a-cursor" }),
     ).toMatchObject({
       request: { query: "tomato%", cursor: null },
       error: "invalid_query",
@@ -86,50 +72,7 @@ describe("Stable Registry public explorer request contract", () => {
   });
 });
 
-describe("Stable Registry public explorer queries", () => {
-  it("reads the active approved catalog projection without source evidence joins", () => {
-    const compiled = buildPublicStableCatalogQuery(testDb, {
-      kind: "plant",
-      query: "tomato",
-      cursor: null,
-    }).compile();
-
-    expect(compiled.sql).toContain(
-      'from "stable_registry_public_catalog_records"',
-    );
-    expect(compiled.sql).toContain(
-      "from stable_registry_public_catalog_search_terms as search_terms",
-    );
-    expect(compiled.sql).toContain('join "catalog_registry_active_pointers"');
-    expect(compiled.sql).toContain('"pointers"."release_family" =');
-    expect(compiled.sql).toContain("lower");
-    expect(compiled.parameters).toContain("foundation");
-    expect(compiled.parameters).toContain("plant");
-    expect(compiled.parameters).toContain("tomato%");
-    expect(compiled.parameters).toContain(PUBLIC_STABLE_REGISTRY_PAGE_SIZE + 1);
-    expect(compiled.sql).not.toMatch(
-      /catalog_source_records|catalog_source_capture_units|raw_payload|source_only_fields|latitude|longitude|coordinates/i,
-    );
-  });
-
-  it("admits a record of unresolved kingdom under both kind filters", () => {
-    for (const kind of ["plant", "animal"] as const) {
-      const compiled = buildPublicStableCatalogQuery(testDb, {
-        kind,
-        query: "",
-        cursor: null,
-      }).compile();
-
-      // A `species` identity is legitimately a plant or an animal, and nothing
-      // in the catalog layer establishes which. Filtering it out of one
-      // kingdom would hide an approved identity from the guest who asked for
-      // exactly the kingdom it may belong to.
-      expect(compiled.sql).toContain('"records"."object_kind" =');
-      expect(compiled.parameters).toContain(kind);
-      expect(compiled.parameters).toContain("either");
-    }
-  });
-
+describe("EPPO archive queries", () => {
   it("keeps the source archive two-valued, because its kind is real evidence", () => {
     const compiled = buildPublicEppoSourceQuery(testDb, {
       kind: "animal",
@@ -159,43 +102,29 @@ describe("Stable Registry public explorer queries", () => {
     expect(compiled.parameters).toContain("completed");
     expect(compiled.parameters).toContain("superseded_by_new_capture");
     expect(compiled.parameters).toContain("abcde%");
+    expect(compiled.parameters).toContain(EPPO_ARCHIVE_PAGE_SIZE + 1);
     expect(compiled.sql).not.toMatch(
       /catalog_source_records|catalog_source_capture_units|raw_payload|source_only_fields|field_rights|checksum|latitude|longitude|coordinates/i,
     );
   });
+
+  it("touches none of the retired release tables", () => {
+    // ADR-0025 retired the Stable Registry release model. The archive is the
+    // retained reader of the capture and must not depend on a release pointer
+    // that no longer exists once the drop migration lands.
+    const compiled = buildPublicEppoSourceQuery(testDb, {
+      kind: "plant",
+      query: "tomato",
+      cursor: null,
+    }).compile();
+
+    expect(compiled.sql).not.toMatch(
+      /catalog_registry_|stable_registry_product_|stable_registry_public_catalog_/,
+    );
+  });
 });
 
-describe("Stable Registry public explorer serialization", () => {
-  it("exposes only approved catalog display fields", () => {
-    const record = serializePublicStableCatalogRecord(
-      {
-        stableTaxon: "tomato-0000000001",
-        objectKind: "plant",
-        canonicalName: "Tomato",
-        scientificName: "Solanum lycopersicum",
-        taxonomicRank: "variety",
-        parentDisplayName: null,
-        safeAliases: ["Solanum lycopersicum"],
-        activatedAt: "2026-08-28T10:00:00.000Z",
-      },
-      "bg",
-    );
-
-    expect(record).toEqual({
-      stableTaxon: "tomato-0000000001",
-      objectKind: "plant",
-      displayName: "Tomato",
-      scientificName: "Solanum lycopersicum",
-      taxonomicRank: "variety",
-      parentDisplayName: null,
-      aliases: ["Solanum lycopersicum"],
-      evidenceState: "approved_stable_registry",
-      href: "/bg/catalog/tomato-0000000001",
-      qualityClass: "verified",
-      observedAt: "2026-08-28T10:00:00.000Z",
-    });
-  });
-
+describe("EPPO archive serialization", () => {
   it("keeps source evidence distinct and drops any unsafe public label", () => {
     const record = serializePublicEppoSourceRecord(
       {
@@ -221,10 +150,11 @@ describe("Stable Registry public explorer serialization", () => {
       eppoCode: "SOLLC",
       evidenceState: "source_record_not_approved",
       href: "/sources/eppo/SOLLC",
+      qualityClass: "partial",
       source: { name: "EPPO Codes observed API capture" },
     });
     expect(JSON.stringify(record)).not.toMatch(
-      /raw|source_only|field_rights|checksum|latitude|longitude|coordinates|captureId|snapshotId/i,
+      /raw|source_only|field_rights|checksum|latitude|longitude|coordinates|captureId|snapshotId|approved_stable_registry/i,
     );
     expect(
       serializePublicEppoSourceRecord(
@@ -250,18 +180,24 @@ describe("Stable Registry public explorer serialization", () => {
   });
 
   it("drops optional labels that could carry a location or source-only marker", () => {
-    const record = serializePublicStableCatalogRecord(
+    const record = serializePublicEppoSourceRecord(
       {
-        stableTaxon: "tomato-0000000001",
+        eppoCode: "SOLLC",
         objectKind: "plant",
-        canonicalName: "Tomato",
+        displayName: "Tomato",
         scientificName: "Tomato 50.45010, 30.52340",
         taxonomicRank: "source_only",
         parentDisplayName: "Solanum",
         safeAliases: ["Tomato", "unsafe https://example.test/secret"],
-        activatedAt: "2026-08-28T10:00:00.000Z",
+        evidenceState: "superseded_source_evidence",
+        observedAt: "2026-08-28T10:00:00.000Z",
+        sourceName: "EPPO Codes",
+        sourceUrl: "https://data.eppo.int/",
+        license: "EPPO Codes Open Data Licence",
+        licenseUrl: null,
+        attributionText: null,
       },
-      "uk",
+      "bg",
     );
 
     expect(record).toMatchObject({
@@ -270,6 +206,8 @@ describe("Stable Registry public explorer serialization", () => {
       taxonomicRank: null,
       parentDisplayName: "Solanum",
       aliases: ["Tomato"],
+      evidenceState: "superseded_source_evidence",
+      href: "/bg/sources/eppo/SOLLC",
     });
   });
 

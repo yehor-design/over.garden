@@ -29,9 +29,6 @@ import {
  * the handle a proof or an operator uses to address one surface. */
 export type WorkspaceSurface =
   | "garden-home"
-  | "stable-registry"
-  | "stable-registry-extensions"
-  | "stable-registry-editions"
   | "object"
   | "entry-edit"
   | "profile"

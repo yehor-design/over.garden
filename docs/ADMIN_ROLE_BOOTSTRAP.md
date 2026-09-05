@@ -21,13 +21,11 @@ but cannot satisfy the sealed-owner boundary.
 
 Every authenticated user receives the ordinary avatar menu. After a
 server-side sealed-owner check, the same menu conditionally adds exactly these
-seven localized links (ADR-0022, D5):
+four localized links (ADR-0022, D5; the three Release Center links left with
+ADR-0025):
 
 - `/account/communities`
 - `/account/moderation/comments`
-- `/garden/catalog/registry` (Release Center; `/garden/catalog/curation` is gone)
-- `/garden/catalog/registry/extensions` (variety and breed packs)
-- `/garden/catalog/registry/editions`
 - `/garden/privacy/erasure-requests`
 - `/health` (owner-only diagnostics; a request without a session gets a real
   404 from the proxy, a signed-in non-owner gets the not-found page)
@@ -60,7 +58,7 @@ redirect. These other retired control-plane routes also remain exact `404`:
 The live role enum is exactly `owner`. Its server-side capability set protects:
 
 - community and comment moderation;
-- the catalog Release Center, extension packs, editions, and `/health`;
+- the owner-only `/health` diagnostics;
 - minimized erasure-request readback and review;
 - separately maintainer-approved irreversible erasure execution.
 
@@ -68,10 +66,7 @@ There are no grantable admin roles in the product and no environment
 allow-list: the retired `CATALOG_CURATOR_USER_IDS` variable is gone from the
 code, the env example, and this document. Historical audit rows can retain
 bounded provenance, but current runtime code accepts only current enum values
-and the configured credential-only owner. Every irreversible Release Center
-action (activate a Foundation release or a pack, move an edition pointer) needs
-the owner's explicit confirmation with the affected counts and writes one
-`admin_role_audit_log` row (`src/server/owner-action-audit.ts`).
+and the configured credential-only owner.
 
 ## Owner bootstrap
 

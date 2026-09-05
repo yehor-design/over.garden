@@ -578,13 +578,11 @@ export function FirstEntryComposer({
       withSuggestedTitle(
         {
           ...current,
-          objectKind:
-            suggestion.objectKind ??
-            objectKindAfterCatalogSelection(
-              current.objectKind,
-              suggestion.catalogKind,
-              suggestion.source,
-            ),
+          objectKind: objectKindAfterCatalogSelection(
+            current.objectKind,
+            suggestion.catalogKind,
+            suggestion.source,
+          ),
         },
         { catalogLabel: suggestion.displayName },
       ),

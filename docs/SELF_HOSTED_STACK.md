@@ -125,8 +125,12 @@ The production file keeps its own pin until a separate cutover moves it.
 
 ```bash
 cd apps/web
-pnpm exec tsx scripts/prove-composed-stack-restore.ts --mode verify --database
+node --conditions=react-server --import tsx \
+  scripts/prove-composed-stack-restore.ts --mode verify --database
 ```
+
+The `react-server` condition is needed because the read-back calls the real
+catalog repository, which is `server-only`.
 
 | Claim | How |
 | -- | -- |

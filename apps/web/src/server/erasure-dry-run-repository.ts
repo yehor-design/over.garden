@@ -78,7 +78,6 @@ export async function collectErasureDryRunCounts(
     catalogProvisionalItems,
     plantObjectsUserAdded,
     catalogReviewerLinks,
-    catalogRegistryActorAttributions,
     searchPublicActiveEntries,
     searchPendingIndexJobs,
     searchPendingUnindexJobs,
@@ -132,7 +131,6 @@ export async function collectErasureDryRunCounts(
     countCatalogProvisionalItems(executor, requesterUserId),
     countPlantObjectsUserAdded(executor, requesterUserId),
     countCatalogReviewerLinks(executor, requesterUserId),
-    countCatalogRegistryActorAttributions(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId, {
       visibility: "public",
       lifecycleState: "active",
@@ -194,7 +192,6 @@ export async function collectErasureDryRunCounts(
     catalogProvisionalItems,
     plantObjectsUserAdded,
     catalogReviewerLinks,
-    catalogRegistryActorAttributions,
     searchPublicActiveEntries,
     searchPendingIndexJobs,
     searchPendingUnindexJobs,
@@ -647,24 +644,6 @@ export function buildCountCatalogReviewerLinksQuery(
   `.execute(executor);
 }
 
-export function buildCountCatalogRegistryActorAttributionsQuery(
-  executor: QueryExecutor,
-  requesterUserId: string,
-) {
-  return sql<{ count: number }>`
-    select (
-      (select count(*)::int from catalog_registry_releases
-        where created_by_user_id = ${requesterUserId}
-           or approved_by_user_id = ${requesterUserId}
-           or activated_by_user_id = ${requesterUserId})
-      + (select count(*)::int from catalog_registry_decisions
-        where decided_by_user_id = ${requesterUserId})
-      + (select count(*)::int from catalog_registry_activations
-        where activated_by_user_id = ${requesterUserId})
-    ) as count
-  `.execute(executor);
-}
-
 export function buildCountTerminalJobQueueRowsWithUserIdQuery(
   executor: QueryExecutor,
   requesterUserId: string,
@@ -1060,17 +1039,6 @@ async function countCatalogReviewerLinks(
   requesterUserId: string,
 ) {
   const result = await buildCountCatalogReviewerLinksQuery(
-    executor,
-    requesterUserId,
-  );
-  return toCount(result.rows[0]?.count);
-}
-
-async function countCatalogRegistryActorAttributions(
-  executor: QueryExecutor,
-  requesterUserId: string,
-) {
-  const result = await buildCountCatalogRegistryActorAttributionsQuery(
     executor,
     requesterUserId,
   );

@@ -34,7 +34,7 @@ Verified on 2026-09-03 against `https://over.garden` and the live providers.
 | Media         | Browser-made WebP: 2560 primary, 1280 and 480 variants, 16 px placeholder, served as plain `<img srcset>` from `media.over.garden`, immutable and CDN-cached. No Vercel image optimizer                     |
 | Media upload  | One session capability per composer, uploads straight to the Cloudflare Worker, two-hour lease renewed every five minutes, parallel promotion, weekly orphan sweep                                          |
 | Sessions      | Server-authoritative. The cookie-cached session decides at the moment of the mutation; no client gate                                                                                                       |
-| Admin         | Owner pages live in the account menu under the sealed owner role; `/health` is owner-only. The Release Center, editions and extension packs still render but are retired by ADR-0025 and await removal |
+| Admin         | Owner pages live in the account menu under the sealed owner role; `/health` is owner-only. The Release Center, editions and extension packs are gone (ADR-0025, `OVE-385`); the menu carries four owner links |
 | Workspace     | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023)                                                 |
 | Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw |
 | Schema        | Migrations `0001`–`0047` and `0049` applied, minus the two deliberately skipped. See `docs/PRODUCTION_SCHEMA_STATE.md`                                                                                      |
@@ -150,11 +150,16 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
    workspace send nothing, so activation and retention — how many gardeners
    journal, how often they publish, whether anyone reads back — are not measured
    anywhere today.
-5. **The Stable Registry is retired but not yet removed.** ADR-0025 takes the
-   release model and the Release Center out of the plan; the pages, the three
-   `stable_registry_*` job kinds, the Stable Catalog explorer at `/catalog` and
-   the empty release tables are still in the code and the schema until the
-   retirement slice, `OVE-385`, lands. The EPPO observed capture — 129,214
+5. **The Stable Registry is retired; its empty tables are still in the schema.**
+   ADR-0025 took the release model and the Release Center out of the plan, and
+   the first half of `OVE-385` took them out of the code: the pages, the Stable
+   Catalog explorer at `/catalog`, the three `stable_registry_*` job kinds and
+   handlers, the pack-artifact adapters, the registry search scope and the
+   product-selection gate are gone, and the worker seals with six handlers.
+   The second half — one gated migration dropping every `catalog_registry_*`,
+   `stable_registry_product_*` and `stable_registry_public_catalog_*` table and
+   the three registry payload CHECKs on `job_queue` — waits for a read-only
+   production inventory and the owner's written approval. The EPPO observed capture — 129,214
    identifiers, closed 2026-09-04 on the owner's loopback database, with a
    `pg_dump` kept outside it — is retained on purpose, together with
    `catalog_source_*`, the public EPPO archive at `/sources/eppo`, and the

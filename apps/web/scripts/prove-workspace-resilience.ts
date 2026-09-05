@@ -41,21 +41,6 @@ export interface WorkspaceSurfaceProbe {
 export const WORKSPACE_SURFACE_PROBES: readonly WorkspaceSurfaceProbe[] = [
   { surface: "garden-home", path: "/garden", heading: "Простір саду" },
   {
-    surface: "stable-registry",
-    path: "/garden/catalog/registry",
-    heading: "Stable Registry — Foundation",
-  },
-  {
-    surface: "stable-registry-extensions",
-    path: "/garden/catalog/registry/extensions",
-    heading: "Stable Registry — пакети розширень",
-  },
-  {
-    surface: "stable-registry-editions",
-    path: "/garden/catalog/registry/editions",
-    heading: "Stable Registry — видання",
-  },
-  {
     surface: "object",
     path: "/garden/objects/00000000-0000-4000-8000-000000000001",
     heading: "Живий об",

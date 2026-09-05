@@ -114,6 +114,13 @@ describe("app route cache guardrail", () => {
       "/garden/pilot-learning",
       "/garden/pilot-learning/interviews",
       "/garden/pilot-learning/decision",
+      "/garden/catalog",
+      "/garden/catalog/registry",
+      "/garden/catalog/registry/editions",
+      "/garden/catalog/registry/extensions/arbitrary",
+      "/garden/catalog/curation",
+      "/bg/garden/catalog/registry",
+      "/garden/catalog%2Fregistry",
     ];
 
     for (const path of retiredPaths) {
@@ -136,7 +143,6 @@ describe("app route cache guardrail", () => {
       "/account/communities",
       "/account/communities/example",
       "/account/moderation/comments",
-      "/garden/catalog/registry",
       "/garden/privacy/erasure-requests",
       "/garden/lineage/invitations/example",
     ]) {
@@ -339,7 +345,7 @@ describe("app route cache guardrail", () => {
 
   it.each([
     "/garden",
-    "/garden/catalog/registry",
+    "/garden/privacy/erasure-requests",
     "/bg/garden",
     "/account/communities",
     "/auth/help",

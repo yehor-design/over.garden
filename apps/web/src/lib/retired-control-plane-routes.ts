@@ -5,6 +5,10 @@ const RETIRED_PATH_PREFIXES = [
   "/garden/pilot-smoke",
   "/garden/pilot-health",
   "/garden/pilot-learning",
+  // The Release Center, its editions and extension-pack pages, and the older
+  // curation path (ADR-0025). A workspace catch-all would stream a 200 shell
+  // before it could say not found, so the proxy answers first.
+  "/garden/catalog",
 ] as const;
 
 function trimTrailingSlashes(pathname: string) {

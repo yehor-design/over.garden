@@ -19,11 +19,6 @@ import {
   type BreedSeedProjection,
   type BreedSeedSource,
 } from "@/lib/catalog/breed-seed";
-import {
-  buildPackArtifact,
-  packDigest,
-  type PackAdapterResult,
-} from "./pack-artifact-contract";
 import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -998,63 +993,4 @@ function buildAliasKey(locale: string, normalizedName: string) {
 
 function jsonbParam(value: JsonValue) {
   return sql<JsonValue>`${JSON.stringify(value)}::jsonb`;
-}
-
-/**
- * OVE-327 — breed pack adapter.
- *
- * `catalogKind = breed` and its animal parent species survive the conversion.
- * The disputed Latin/subspecies candidates this importer already holds for
- * curation stay alias assertions; the adapter never promotes one to the
- * official denomination.
- */
-export const BREED_SEED_PACK_ADAPTER_VERSION = "ove327.breedSeedAdapter.v1";
-
-export function adaptBreedSeedPack(
-  definition: BreedSeedImportDefinition,
-): PackAdapterResult {
-  return buildPackArtifact({
-    adapterVersion: BREED_SEED_PACK_ADAPTER_VERSION,
-    sourceSlug: definition.source.slug,
-    declaredSourceVersion: definition.source.version,
-    packKind: "breed",
-    artifactByteDigest: packDigest(
-      definition.concepts.map((concept) => concept.record.rawPayload),
-    ),
-    allowsProductProjection: [...definition.source.allowedUsage].includes(
-      "canonical_product_projection",
-    ),
-    rows: definition.concepts.map((concept) => {
-      const projection = concept.projection;
-      // A breed always binds to its supported animal species group. That group
-      // is the declared parent; a disputed Latin candidate never is.
-      const speciesGroup = projection.sourceIds.speciesGroup.trim();
-      return {
-        sourceRecordKey: concept.record.id,
-        officialDenomination: projection.canonicalName,
-        normalizedDenomination: projection.normalizedName,
-        locale: projection.locale,
-        publicSlug: projection.publicSlug,
-        parentCandidate: speciesGroup
-          ? {
-              scientificName: speciesGroup,
-              evidenceClass: "declared_by_source" as const,
-            }
-          : { scientificName: null, evidenceClass: "absent" as const },
-        aliases: concept.aliasCandidates
-          .filter(
-            (candidate) => candidate.displayName !== projection.canonicalName,
-          )
-          .map((candidate) => ({
-            displayName: candidate.displayName,
-            normalizedName: candidate.normalizedName,
-            locale: candidate.locale,
-            nameClass:
-              candidate.status === "accepted"
-                ? ("local_name" as const)
-                : ("generated" as const),
-          })),
-      };
-    }),
-  });
 }

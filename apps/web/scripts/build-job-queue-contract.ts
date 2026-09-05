@@ -49,7 +49,7 @@ export const CONTRACT_PYTHON_PATH = path.join(
   "services/matching/app/job_queue_contract.py",
 );
 
-/** `stable_registry_foundation_build` -> `STABLE_REGISTRY_FOUNDATION_BUILD_KIND`. */
+/** `catalog_typeahead_reindex` -> `CATALOG_TYPEAHEAD_REINDEX_KIND`. */
 export function pythonKindConstant(kind: string): string {
   return `${kind.toUpperCase()}_KIND`;
 }

@@ -1,11 +1,6 @@
-import { PublicStableRegistryNotFound } from "@/components/public/public-stable-registry-explorer";
+import { EppoArchiveNotFound } from "@/components/public/public-eppo-archive-explorer";
 import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 
 export default function EppoSourceDetailNotFound() {
-  return (
-    <PublicStableRegistryNotFound
-      locale={DEFAULT_PUBLIC_LOCALE}
-      surface="eppo"
-    />
-  );
+  return <EppoArchiveNotFound locale={DEFAULT_PUBLIC_LOCALE} />;
 }

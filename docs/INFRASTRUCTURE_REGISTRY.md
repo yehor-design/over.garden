@@ -1062,36 +1062,20 @@ Vercel invariants:
   do not install it as true in any deployed environment. Exact-production proof
   belongs to the credential-free `smoke:drive2-production` result, which records
   only status classes and redaction booleans.
-- Stable Registry flags are kill switches (ADR-0022, D5): they ship
-  absent/false in the env example and are set to `true` in Vercel production by
-  the owner (`vercel env add <NAME> production`). `STABLE_REGISTRY_RELEASE_CENTER`
-  enables the owner's Release Center writes, `STABLE_REGISTRY_EXTENSION_PACKS`
-  the pack lane, `STABLE_REGISTRY_EDITIONS` the edition lane; none refuses a
-  Vercel deployment any more. `STABLE_REGISTRY_PUBLIC_DISCOVERY` enables the
-  guest catalog and EPPO source explorer reads. `STABLE_REGISTRY_PRODUCT_SELECTION` (OVE-257)
-  switches the authenticated picker, canonical fallback, and save validation
-  from the compatibility predicate to the active-release product projection;
-  turning it off returns to the compatibility predicate without changing any
-  stored `catalog_item_id`. Evidence may record only the flag name, its
-  present/absent/effective class, the active-release digest class, aggregate
-  eligibility counts, and index parity booleans. Never record catalog identity
-  names, source rows, release payloads, or user/object identifiers.
-- OVE-259 owns the Stable Registry production landing and is the only issue in
-  the program with a direct production-state mutation. Its harness cannot mutate
-  production on its own: `--environment` must equal `--confirm-environment`,
-  every mutating phase additionally requires a maintainer-approved plan digest,
-  and the live module has no apply implementation at all. Approval binds one
-  exact digest; any drift in the deployment SHA, applied migrations, source
-  inventory, release policy, capacity class, backup class, affected-object
-  count, or active release returns authorization to pending. Capacity and backup
-  freshness are read from `STABLE_REGISTRY_STORAGE_HEADROOM_CLASS` and
-  `STABLE_REGISTRY_BACKUP_FRESHNESS_CLASS`; an unmeasured value blocks the plan
-  rather than defaulting to safe. Rollout evidence may record only phase, status,
-  terminal class, environment class, approval status/reason, plan digest,
-  pending-migration count, duration, parity and orphan counts, and control
-  booleans. Never record a connection string, password, authorization header,
-  API key, catalog name, source row, object or owner identifier, journal text,
-  or coordinates. `docs/STABLE_REGISTRY_PRODUCTION_ROLLOUT.md` is the runbook.
+- `STABLE_REGISTRY_PUBLIC_DISCOVERY` is the only Stable Registry variable code
+  still reads. It gates the guest EPPO source archive at `/sources/eppo`
+  (ADR-0025, D3) and keeps its historical name because renaming a production
+  variable is a provider change. `STABLE_REGISTRY_RELEASE_CENTER`,
+  `STABLE_REGISTRY_EXTENSION_PACKS`, `STABLE_REGISTRY_EDITIONS`,
+  `STABLE_REGISTRY_PRODUCT_SELECTION`, `STABLE_REGISTRY_STORAGE_HEADROOM_CLASS`
+  and `STABLE_REGISTRY_BACKUP_FRESHNESS_CLASS` are read by nothing since
+  `OVE-385`; a value still installed in Vercel is inert, and removing it is the
+  owner's provider change to make. Evidence may record only a flag's name and
+  its present/absent/effective class.
+- The OVE-259 production-landing harness left with the release model
+  (ADR-0025); `docs/STABLE_REGISTRY_PRODUCTION_ROLLOUT.md` is history. The
+  schema retirement migration that `OVE-385` still owes is a production-state
+  change under the authorization rules of this document.
 - Do not commit Vercel tokens, protected preview URLs with nonce/share tokens, build logs containing secrets, or environment variable values.
 - Do not document or paste auth secret values. Evidence may say only whether the legacy `BETTER_AUTH_SECRET` fallback is present/blocked/local-fallback, whether the versioned policy is `versioned_current_vN`/`legacy_transition`/`local_fallback`/`closed`, and the Vercel target/name/sensitivity class. Never record secret-derived values, hashes, prefixes, or sizes.
 - Do not document or paste Google OAuth client secrets, OAuth tokens, callback query parameters, provider token responses, or signed cookies. Evidence may say only whether `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are present and whether the exact redirect URI is authorized.
