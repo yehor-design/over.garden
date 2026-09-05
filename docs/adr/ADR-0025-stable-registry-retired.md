@@ -1,8 +1,10 @@
 # ADR-0025 — The Stable Registry release model and the Release Center are retired; the EPPO observed capture stays
 
-- **Status:** Accepted (decision 2026-09-05). The code and schema retirement is
-  one pending slice, `OVE-385`; nothing in the product depends on it happening
-  today.
+- **Status:** Accepted (decision 2026-09-05) and implemented the same day by
+  `OVE-385`: the code removed and the six-handler worker deployed (part 1), the
+  empty release tables dropped from production by `0053` under the owner's
+  written approval (part 2). `docs/PRODUCTION_SCHEMA_STATE.md` holds the
+  receipts.
 - **Date:** 2026-09-05
 - **Decision owner:** founder/owner
 - **Supersedes:** ADR-0016 for everything past the observed capture — immutable

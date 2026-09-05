@@ -1071,9 +1071,14 @@ Vercel invariants:
   `STABLE_REGISTRY_EXTENSION_PACKS`, `STABLE_REGISTRY_EDITIONS`,
   `STABLE_REGISTRY_PRODUCT_SELECTION`, `STABLE_REGISTRY_STORAGE_HEADROOM_CLASS`
   and `STABLE_REGISTRY_BACKUP_FRESHNESS_CLASS` are read by nothing since
-  `OVE-385`; a value still installed in Vercel is inert, and removing it is the
-  owner's provider change to make. Evidence may record only a flag's name and
-  its present/absent/effective class.
+  `OVE-385`. On 2026-09-05, with the owner's permission, the three that were
+  installed (`STABLE_REGISTRY_RELEASE_CENTER`, `STABLE_REGISTRY_EXTENSION_PACKS`,
+  `STABLE_REGISTRY_EDITIONS`, Production) were deleted through `vercel env rm`;
+  the other three had never been installed. `STABLE_REGISTRY_PUBLIC_DISCOVERY`
+  is not installed in Vercel either, so the EPPO archive stays dark in
+  production until the owner installs it — production holds no capture to
+  show. Evidence may record only a flag's name and its
+  present/absent/effective class.
 - The OVE-259 production-landing harness left with the release model
   (ADR-0025); `docs/STABLE_REGISTRY_PRODUCTION_ROLLOUT.md` is history. The
   schema retirement migration that `OVE-385` still owes is a production-state

@@ -355,9 +355,14 @@ them. One executed proof runs it forward, back and forward again on a fresh
 bootstrap — in CI from now on — and inside a rolled-back transaction on the
 loopback database that holds the real capture, where every retained count came
 back identical (387,809 capture units among them); the read-only production
-inventory found all twenty tables empty and every retained table present. What
-remains is the owner's written approval, for this migration alone, before it
-touches production.
+inventory found all twenty tables empty and every retained table present. The
+owner gave that approval in writing the same evening, and `0053` went into
+production in one transaction of 46 statements (339 ms); the inventory
+immediately after found no drop target left and every retained count unchanged.
+With the owner's permission the three Release Center flags still installed in
+Vercel — `STABLE_REGISTRY_RELEASE_CENTER`, `STABLE_REGISTRY_EXTENSION_PACKS`,
+`STABLE_REGISTRY_EDITIONS` — were deleted as well; nothing had read them since
+the morning. Gap 5 is closed and `OVE-385` is done.
 
 ## Corrections made in this window
 
