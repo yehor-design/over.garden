@@ -7,6 +7,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database, JsonValue } from "@/db/schema";
 import {
+  EPPO_FIRST_CAPTURE_ENDPOINT_CLASSES,
   EPPO_OBSERVED_DETAIL_ENDPOINT_CLASSES,
   type EppoObservedDetailEndpointClass,
 } from "./eppo-api-constants";
@@ -22,6 +23,18 @@ export const EPPO_CAPTURE_WRITER_LOCK_KEY = `ove254:${EPPO_CAPTURE_SOURCE_SLUG}`
 const EPPO_CAPTURE_QUEUE_BATCH_CODES = 400;
 export const EPPO_DETAIL_ENDPOINT_CLASSES =
   EPPO_OBSERVED_DETAIL_ENDPOINT_CLASSES;
+
+/**
+ * The classes a capture queues, unless it says otherwise.
+ *
+ * The first capture (2026-09-03) took overview, names and taxonomy for every
+ * documented identifier; OVE-394 adds hosts, distribution and categorization
+ * for the same identifiers rather than asking EPPO for all 129,214 again. A
+ * capture therefore declares its classes, and everything that counts units per
+ * identifier counts the classes that capture declared.
+ */
+export const EPPO_DEFAULT_CAPTURE_ENDPOINT_CLASSES =
+  EPPO_FIRST_CAPTURE_ENDPOINT_CLASSES;
 export type EppoDetailEndpointClass = EppoObservedDetailEndpointClass;
 
 export const EPPO_CAPTURE_RIGHTS = [
@@ -61,9 +74,34 @@ const PUBLIC_FIELD_NAMES = new Set([
   "taxon",
   "taxonid",
   "type",
+  // OVE-394: what the EPPO Open Data Licence lets us republish. A distribution
+  // row's country, sub-national unit and pest status, a host row's class and a
+  // categorization row's quarantine list are all open reference data, and none
+  // of them is a coordinate. How much of it a card may show is a separate,
+  // narrower question that the projection guard answers: ADR-0026 D11 keeps the
+  // product at country level even though the source layer holds `state_id`.
+  "class_id",
+  "class_label",
+  "continent_id",
+  "continent_name",
+  "country_name",
+  "peststatus",
+  "peststatus_label",
+  "qlist",
+  "qlist_label",
+  "state_id",
+  "yr_erad",
+  "yr_introd",
+  "yr_situation",
+  "year_add",
+  "year_delete",
+  "year_transient",
 ]);
 
 const SOURCE_ONLY_FIELD_NAMES = new Set([
+  // A bibliographic reference is evidence for a host claim, not something a
+  // card shows; it stays in the source layer.
+  "bibref",
   "datecreate",
   "dateupdate",
   "id",
@@ -353,6 +391,8 @@ type InsertEppoInventoryPageInput = {
   limit: number;
   payload: JsonValue;
   observedAt: Date;
+  /** The detail classes this run declared; the first capture's three by default. */
+  endpointClasses?: readonly EppoObservedDetailEndpointClass[];
 };
 
 export function buildInsertEppoInventoryPageQuery(
@@ -399,12 +439,24 @@ type QueueEppoEndpointUnitsInput = {
   captureId: string;
   inventoryOrdinalStart: number;
   identifiers: Array<{ eppoCode: string; isActive: boolean }>;
+  /** The classes this capture declared; the first capture's three by default. */
+  endpointClasses?: readonly EppoObservedDetailEndpointClass[];
 };
 
 export function buildQueueEppoEndpointUnitsQuery(
   executor: QueryExecutor,
   input: QueueEppoEndpointUnitsInput,
 ) {
+  const endpointClasses =
+    input.endpointClasses ?? EPPO_DEFAULT_CAPTURE_ENDPOINT_CLASSES;
+  for (const endpointClass of endpointClasses) {
+    if (!EPPO_DETAIL_ENDPOINT_CLASSES.includes(endpointClass)) {
+      throw new Error("undocumented_endpoint_class");
+    }
+  }
+  if (endpointClasses.length === 0) {
+    throw new Error("empty_endpoint_class_set");
+  }
   if (input.identifiers.length === 0) {
     throw new Error("empty_endpoint_queue_batch");
   }
@@ -427,7 +479,7 @@ export function buildQueueEppoEndpointUnitsQuery(
     const requestable = identifierClass === "documented_eppo_code";
     const notRequestedPayload = { classification: identifierClass };
     const notRequestedPayloadSha256 = digestCanonicalJson(notRequestedPayload);
-    return EPPO_DETAIL_ENDPOINT_CLASSES.map((endpointClass) => ({
+    return endpointClasses.map((endpointClass) => ({
       capture_id: input.captureId,
       unit_kind: "taxon_endpoint",
       unit_key: safeCode,
@@ -1020,7 +1072,7 @@ export function buildMaterializeEppoSourceRecordsQuery(
         .having(
           sql<number>`count(distinct ${sql.ref("units.endpoint_class")})`,
           "=",
-          EPPO_DETAIL_ENDPOINT_CLASSES.length,
+          sql<number>`catalog_capture_declared_classes(${input.captureId}::uuid)`,
         ),
     );
 }
@@ -1058,7 +1110,7 @@ export function buildReconstructEppoSourceRecordPayloadQuery(
     .having(
       sql<number>`count(distinct ${sql.ref("units.endpoint_class")})`,
       "=",
-      EPPO_DETAIL_ENDPOINT_CLASSES.length,
+      sql<number>`catalog_capture_declared_classes(min(${sql.ref("units.capture_id")}::text)::uuid)`,
     );
 }
 
@@ -1128,7 +1180,7 @@ export function buildDeduplicateEppoSourceRecordPayloadsQuery(
         .having(
           sql<number>`count(distinct ${sql.ref("units.endpoint_class")})`,
           "=",
-          EPPO_DETAIL_ENDPOINT_CLASSES.length,
+          sql<number>`catalog_capture_declared_classes(min(${sql.ref("units.capture_id")}::text)::uuid)`,
         ),
     )
     .updateTable("catalog_source_records as target")
@@ -1180,7 +1232,7 @@ export function buildRestoreEppoSourceRecordPayloadsQuery(
         .having(
           sql<number>`count(distinct ${sql.ref("units.endpoint_class")})`,
           "=",
-          EPPO_DETAIL_ENDPOINT_CLASSES.length,
+          sql<number>`catalog_capture_declared_classes(min(${sql.ref("units.capture_id")}::text)::uuid)`,
         ),
     )
     .updateTable("catalog_source_records as target")
@@ -1376,6 +1428,9 @@ export async function recordEppoInventoryPage(
           batchOffset,
           batchOffset + EPPO_CAPTURE_QUEUE_BATCH_CODES,
         ),
+        ...(input.endpointClasses
+          ? { endpointClasses: input.endpointClasses }
+          : {}),
       }).execute();
     }
   });
@@ -1583,6 +1638,112 @@ export async function readEppoCaptureSafeStatus(
   };
 }
 
+/**
+ * The detail classes one run declared, read from the run itself (OVE-394).
+ *
+ * A resume must queue exactly what the run it resumes already declared. Taking
+ * the answer from the command line would let a second invocation widen or
+ * narrow a capture halfway through, and the manifest would then describe a set
+ * no single run ever observed. The plan receipt is written once, in the same
+ * statement that creates the run, so it is the one source that answers even
+ * before the first inventory page exists.
+ */
+export type ExtendableEppoCapture = {
+  captureId: string;
+  sourceSnapshotId: string;
+  inventoryTotal: number;
+  inventorySha256: string;
+  declaredClasses: readonly EppoObservedDetailEndpointClass[];
+};
+
+/**
+ * The precondition for a capture that extends another (OVE-394).
+ *
+ * This is deliberately narrower than `verifyCompletedEppoCapture`, which also
+ * asserts that nothing in the database has changed since the capture ended.
+ * That is the right check the hour a capture finishes and the wrong one months
+ * later: the product rows a second slice legitimately added would refuse a base
+ * capture whose own bytes are untouched. What matters here is that the base run
+ * is complete, that its inventory still reproduces the digest it recorded, and
+ * which classes it declared.
+ */
+export async function readExtendableEppoCapture(
+  captureId: string,
+  executor: QueryExecutor = db,
+): Promise<ExtendableEppoCapture> {
+  const run = await executor
+    .selectFrom("catalog_source_capture_runs")
+    .select([
+      "source_snapshot_id",
+      "manifest_sha256",
+      "inventory_start_sha256",
+      "inventory_end_sha256",
+      "inventory_start_total",
+      "inventory_end_total",
+      "inventory_unique_codes",
+      "observed_ended_at",
+    ])
+    .where("id", "=", captureId)
+    .where("source_slug", "=", EPPO_CAPTURE_SOURCE_SLUG)
+    .where("state", "=", "completed")
+    .executeTakeFirstOrThrow();
+  if (
+    !run.source_snapshot_id ||
+    !run.manifest_sha256 ||
+    !run.inventory_start_sha256 ||
+    !run.observed_ended_at
+  ) {
+    throw new Error("base_capture_shape_mismatch");
+  }
+  const inventory = await readEppoCapturedInventory(captureId, executor);
+  if (
+    inventory.sha256 !== run.inventory_start_sha256 ||
+    inventory.sha256 !== run.inventory_end_sha256 ||
+    inventory.total !== asNumber(run.inventory_start_total) ||
+    inventory.total !== asNumber(run.inventory_end_total) ||
+    inventory.total !== asNumber(run.inventory_unique_codes)
+  ) {
+    throw new Error("base_capture_inventory_readback_mismatch");
+  }
+  return {
+    captureId,
+    sourceSnapshotId: run.source_snapshot_id,
+    inventoryTotal: inventory.total,
+    inventorySha256: inventory.sha256,
+    declaredClasses: await readEppoCaptureDeclaredEndpointClasses(
+      captureId,
+      executor,
+    ),
+  };
+}
+
+export async function readEppoCaptureDeclaredEndpointClasses(
+  captureId: string,
+  executor: QueryExecutor = db,
+): Promise<readonly EppoObservedDetailEndpointClass[]> {
+  const row = await executor
+    .selectFrom("catalog_source_capture_runs")
+    .select("preflight_receipt")
+    .where("id", "=", captureId)
+    .executeTakeFirstOrThrow();
+  const receipt = row.preflight_receipt as { endpointClasses?: unknown } | null;
+  const declared = receipt?.endpointClasses;
+  if (!Array.isArray(declared)) {
+    // Runs planned before OVE-394 carry no class list; they declared the three
+    // classes that were the only ones the vocabulary held.
+    return EPPO_DEFAULT_CAPTURE_ENDPOINT_CLASSES;
+  }
+  const classes = declared.filter(
+    (value): value is EppoObservedDetailEndpointClass =>
+      typeof value === "string" &&
+      (EPPO_DETAIL_ENDPOINT_CLASSES as readonly string[]).includes(value),
+  );
+  if (classes.length !== declared.length || classes.length === 0) {
+    throw new Error("capture_declared_classes_unreadable");
+  }
+  return classes;
+}
+
 export async function readLatestResumableEppoCaptureId(
   executor: QueryExecutor = db,
 ): Promise<string | null> {
@@ -1633,6 +1794,9 @@ export async function verifyCompletedEppoCapture(
   ) {
     throw new Error("completed_capture_shape_mismatch");
   }
+  const declaredClasses = (
+    await readEppoCaptureDeclaredEndpointClasses(captureId, executor)
+  ).length;
   const inventory = await readEppoCapturedInventory(captureId, executor);
   if (
     inventory.sha256 !== run.inventory_start_sha256 ||
@@ -1693,7 +1857,7 @@ export async function verifyCompletedEppoCapture(
     manifestSha256: run.manifest_sha256,
     inventoryTotal: inventory.total,
     inventorySha256: inventory.sha256,
-    endpointUnits: inventory.total * EPPO_DETAIL_ENDPOINT_CLASSES.length,
+    endpointUnits: inventory.total * declaredClasses,
     terminalCounts,
     rightsCounts,
     normalizedSourceRecords: normalized.count,
@@ -1810,7 +1974,13 @@ export async function finalizeEppoCapture(
     }
 
     const endpointUnits =
-      input.endingInventory.total * EPPO_DETAIL_ENDPOINT_CLASSES.length;
+      input.endingInventory.total *
+      (
+        await readEppoCaptureDeclaredEndpointClasses(
+          input.captureId,
+          transaction,
+        )
+      ).length;
     const completedUnits =
       terminalCounts.captured +
       terminalCounts.source_only +
