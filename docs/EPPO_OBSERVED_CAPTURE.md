@@ -129,6 +129,82 @@ terminal:
 pnpm eppo:observed-capture -- --mode verify --environment local --confirm-environment local --concurrency 1 --request-timeout-ms 15000 --max-attempts 2 --capture-id <capture-uuid> --status-only
 ```
 
+## From a capture to a card (OVE-394, ADR-0026 D11)
+
+A capture is evidence, not product. Two jobs turn it into something a gardener
+sees, and neither of them calls the provider.
+
+### The transfer
+
+The capture tool refuses a remote host, so a capture can only be taken on a
+loopback database and has to be moved deliberately:
+
+```bash
+pnpm exec tsx scripts/transfer-eppo-capture.ts --mode inventory --env-file /abs/path/prod.env
+pnpm exec tsx scripts/transfer-eppo-capture.ts --mode transfer --env-file /abs/path/prod.env --confirm-target production
+```
+
+It copies exactly the rows two capture ids reach — the snapshots, the runs, the
+units, the source records, any source links and the two public archive tables —
+in the order the foreign keys allow, one transaction per table, with every
+insert idempotent and a before-and-after row count per table as its receipt. The
+source comes from this checkout's own `.env.local` and must be loopback; the
+target comes from the pulled production environment and must not be. Never a
+blind `pg_restore`: production already holds source snapshots from earlier
+imports whose unique keys would collide.
+
+Rows travel as JSON and Postgres rebuilds them with `jsonb_populate_record`.
+Half of what moves is a `jsonb` column that usually holds a JSON *array*, and a
+driver that sees a JavaScript array in a parameter sends a Postgres array
+literal instead — the insert would fail on the first names payload.
+
+### The reconciliation
+
+`services/matching/app/eppo_reconcile.py`, run by the worker on a
+`catalog_source_refresh` job with `source_slug = 'eppo-codes'`, or by hand:
+
+```bash
+cd services/matching
+.venv/bin/python -m scripts.reconcile_eppo --database-url "$DATABASE_URL"
+```
+
+Every active identifier climbs the deterministic ladder of ADR-0026 D4:
+
+1. the `eppo` identifier the Wikidata crosswalk already wrote;
+2. the scientific name with its authorship, inside one kingdom;
+3. the canonical name with the rank, inside one kingdom;
+4. the Catalogue of Life checklist itself — a single matching usage is
+   materialized through `catalog_col_ensure_node`, so the node arrives with the
+   backbone's classification and a `col` identifier;
+5. a species the checklist does not have at all becomes a node from EPPO, with
+   the kingdom EPPO gives and no `col` identifier. Viruses, viroids and the
+   animal pests the scoped Catalogue of Life ingest leaves out have nowhere
+   else to come from, and `pest_of` needs both ends.
+
+Anything ambiguous, and any higher taxon nothing knows, becomes a `source_link`
+item in the owner's queue ordered by how many EPPO hosts it touches. A node
+that fails to link keeps working; curation never blocks a gardener (D5).
+
+What a linked node gains: the `eppo` identifier, a source link, vernaculars in
+the four languages the ledger accepts, `pest_of` relations to its hosts with
+EPPO's host class on the closed set of migration 0054, `distribution_status`
+facts carrying EPPO's wording beside a normalized presence, and `categorization`
+facts recording the quarantine lists.
+
+One identifier is the unit of work: its ladder decision, identifier, names and
+facts land together or not at all. The worker hands its handlers an autocommit
+connection, so a run interrupted halfway leaves whole taxa behind it, and every
+write is idempotent, so the next run finishes what it started.
+
+### What a card shows
+
+A presence badge for Ukraine and Bulgaria at country level, with EPPO's verbatim
+status and the observation date beside the word; the pest or disease label from
+the kingdom and the host role; the hosts and pests sections; and the attribution
+line the licence requires, dated by the day the data was downloaded rather than
+the day it was last reconciled. Sub-national units stay in the source layer:
+D11 stops the product at the country.
+
 ## State and recovery contract
 
 Run states are `planned -> inventorying -> hydrating -> verifying -> completed`.
