@@ -345,3 +345,87 @@ export async function listOwnerActionAudit(
     reverted: row.reverted,
   }));
 }
+
+export interface OwnerCardNameOption {
+  nameId: string;
+  displayName: string;
+  locale: string;
+  nameType: string;
+  isPrimary: boolean;
+}
+
+/**
+ * The names the owner can pin, read for the card's own controls. Every name
+ * on the node, whatever its rights class: this list is shown to the owner
+ * alone and pinning one is their decision, not a projection.
+ */
+export async function listCatalogCardNames(
+  catalogItemId: string,
+  executor: QueryExecutor = db,
+): Promise<OwnerCardNameOption[]> {
+  const result = await sql<{
+    nameId: string;
+    displayName: string;
+    locale: string;
+    nameType: string;
+    isPrimary: boolean;
+  }>`
+    select
+      name.id as "nameId",
+      name.display_name as "displayName",
+      name.locale as "locale",
+      name.name_type as "nameType",
+      name.is_primary as "isPrimary"
+    from catalog_item_names as name
+    where name.catalog_item_id = ${catalogItemId}::uuid
+    order by name.is_primary desc, name.weight desc, name.display_name
+    limit 50
+  `.execute(executor);
+  return result.rows;
+}
+
+/**
+ * The owner merges this card into another node from the card itself. The
+ * merge is one decision in the same stream as every other: it becomes a
+ * `node_merge` queue item carrying the owner's proposal and is applied by
+ * `catalog_apply_queue_item`, so the inverse, the revert and the audit are
+ * the ones the queue already has. `merge_from_card` is its reason code.
+ */
+export async function mergeCatalogCardIntoNode(
+  input: {
+    loserCatalogItemId: string;
+    survivorCatalogItemId: string;
+    reason: string | null;
+    actorUserId: string;
+  },
+  executor: QueryExecutor = db,
+): Promise<{ queueItemId: string }> {
+  if (input.loserCatalogItemId === input.survivorCatalogItemId) {
+    throw new Error("A card is never merged into itself.");
+  }
+  const result = await sql<{ id: string }>`
+    insert into catalog_curation_queue (
+      item_type, subject_catalog_item_id, proposal, reasons, impact_score, state
+    )
+    select
+      'node_merge',
+      ${input.loserCatalogItemId}::uuid,
+      jsonb_build_object(
+        'survivor_id', ${input.survivorCatalogItemId}::text,
+        'reason', ${input.reason}::text
+      ),
+      array['merge_from_card'],
+      0,
+      'open'
+    where exists (
+      select 1 from catalog_items
+      where id = ${input.survivorCatalogItemId}::uuid and identity_state = 'active'
+    )
+    returning id::text as id
+  `.execute(executor);
+  const queueItemId = result.rows[0]?.id;
+  if (!queueItemId) {
+    throw new Error("The merge target is not an active node.");
+  }
+  return { queueItemId };
+}

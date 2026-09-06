@@ -67,6 +67,15 @@ export interface OperatorCatalogCopy {
     newName: string;
     reason: string;
     pinName: string;
+    pinNameHint: string;
+    merge: string;
+    mergeHint: string;
+    mergeTarget: string;
+    mergeConfirm: string;
+    audit: string;
+    auditEmpty: string;
+    undo: string;
+    reverted: string;
     indexable: string;
     indexableOn: string;
     indexableOff: string;
@@ -143,6 +152,16 @@ const UK: OperatorCatalogCopy = {
     newName: "Нова назва",
     reason: "Причина",
     pinName: "Закріпити назву",
+    pinNameHint: "Обрана назва стає тією, яку показує картка.",
+    merge: "Об'єднати з іншою карткою",
+    mergeHint:
+      "Ця картка стане синонімом обраної: об'єкти, назви й ідентифікатори переїдуть.",
+    mergeTarget: "Адреса або ідентифікатор картки",
+    mergeConfirm: "Підтвердити об'єднання",
+    audit: "Що вже зроблено з карткою",
+    auditEmpty: "Ще нічого.",
+    undo: "Скасувати",
+    reverted: "скасовано",
     indexable: "Індексація",
     indexableOn: "Дозволити",
     indexableOff: "Заборонити",
@@ -219,6 +238,16 @@ const BG: OperatorCatalogCopy = {
     newName: "Ново име",
     reason: "Причина",
     pinName: "Закачи име",
+    pinNameHint: "Избраното име става това, което картата показва.",
+    merge: "Обедини с друга карта",
+    mergeHint:
+      "Тази карта става синоним на избраната: обектите, имената и идентификаторите се преместват.",
+    mergeTarget: "Адрес или идентификатор на картата",
+    mergeConfirm: "Потвърди обединяването",
+    audit: "Какво е направено с картата",
+    auditEmpty: "Още нищо.",
+    undo: "Отмени",
+    reverted: "отменено",
     indexable: "Индексиране",
     indexableOn: "Позволи",
     indexableOff: "Забрани",
@@ -295,6 +324,16 @@ const RU: OperatorCatalogCopy = {
     newName: "Новое название",
     reason: "Причина",
     pinName: "Закрепить название",
+    pinNameHint: "Выбранное название становится тем, что показывает карточка.",
+    merge: "Объединить с другой карточкой",
+    mergeHint:
+      "Эта карточка станет синонимом выбранной: объекты, названия и идентификаторы переедут.",
+    mergeTarget: "Адрес или идентификатор карточки",
+    mergeConfirm: "Подтвердить объединение",
+    audit: "Что уже сделано с карточкой",
+    auditEmpty: "Пока ничего.",
+    undo: "Отменить",
+    reverted: "отменено",
     indexable: "Индексация",
     indexableOn: "Разрешить",
     indexableOff: "Запретить",

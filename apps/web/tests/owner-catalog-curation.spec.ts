@@ -20,7 +20,10 @@ import {
  *   3. U undoing an automatic decision, proven by the revert row and by the
  *      object going back to `free_text`;
  *   4. an accept with no JavaScript at all: a multipart POST to the Server
- *      Action endpoint, exactly as a browser without scripts would send it.
+ *      Action endpoint, exactly as a browser without scripts would send it;
+ *   5. the sources page enqueuing exactly one refresh per idempotency key;
+ *   6. the card's own controls: rendered for the owner and for nobody else,
+ *      renamed and then undone over plain HTTP.
  *
  * On (4), what is proven is the endpoint, not the visibility of the control:
  * every page here renders inside a streamed Suspense boundary, and with
@@ -45,6 +48,7 @@ const QUEUE_PATH = "/garden/catalog/queue";
 interface Fixture {
   suffix: string;
   speciesId: string;
+  speciesSlug: string;
   cultivarId: string;
   spaceId: string;
   objectIds: { keyboard: string; noScript: string; automatic: string };
@@ -55,7 +59,7 @@ interface Fixture {
 test.use({ trace: "off" });
 
 test.describe("OVE-391 owner curation", () => {
-  test("decides by keyboard, undoes an automatic decision and accepts without JavaScript", async ({
+  test("decides by keyboard, undoes, accepts without JavaScript and edits the card", async ({
     baseURL,
     context,
     page,
@@ -154,20 +158,19 @@ test.describe("OVE-391 owner curation", () => {
           headers: { accept: "text/html", cookie },
         })
       ).text();
-      const form = readAcceptForm(html, fixture.queueIds.noScript);
-      const body = new FormData();
-      for (const [name, value] of Object.entries(form.fields)) {
-        body.append(name, value);
-      }
-      const posted = await fetch(`${baseURL}${form.action}`, {
-        method: "POST",
-        headers: { accept: "text/html", cookie, origin: baseURL },
-        body,
-        redirect: "manual",
-      });
+      const form = readProgressiveForm(
+        html,
+        `data-catalog-queue-action="accept"`,
+      );
+      const posted = await postProgressiveForm(
+        baseURL,
+        QUEUE_PATH,
+        cookie,
+        form,
+      );
       expect(
-        [200, 303].includes(posted.status),
-        `Server Action POST answered ${posted.status}`,
+        [200, 303].includes(posted),
+        `Server Action POST answered ${posted}`,
       ).toBe(true);
       await expect
         .poll(() => readQueueState(pool, fixture!.queueIds.noScript), {
@@ -197,6 +200,59 @@ test.describe("OVE-391 owner curation", () => {
       await refreshAgain.click();
       await page.waitForTimeout(2_000);
       expect(await readRefreshJobCount(pool)).toBe(1);
+
+      // 6. The card's own controls: the owner sees them, a visitor does not,
+      // and a rename posted without JavaScript is audited and undoable.
+      const cardPath = `/species/${fixture.speciesSlug}`;
+      const guestCard = await (
+        await fetch(`${baseURL}${cardPath}`, { headers: { accept: "text/html" } })
+      ).text();
+      expect(guestCard).not.toContain('data-owner-card-controls="true"');
+
+      const ownerCard = await (
+        await fetch(`${baseURL}${cardPath}`, {
+          headers: { accept: "text/html", cookie },
+        })
+      ).text();
+      for (const marker of [
+        'data-owner-card-rename="true"',
+        'data-owner-card-pin="true"',
+        'data-owner-card-merge="true"',
+        'data-owner-card-audit="true"',
+      ]) {
+        expect(ownerCard, marker).toContain(marker);
+      }
+
+      const renamed = `Помідор власника ${fixture.suffix}`;
+      const renameStatus = await postProgressiveForm(
+        baseURL,
+        cardPath,
+        cookie,
+        readProgressiveForm(ownerCard, 'data-owner-card-rename="true"', {
+          displayName: renamed,
+          reason: "browser proof",
+        }),
+      );
+      expect([200, 303].includes(renameStatus), `rename answered ${renameStatus}`).toBe(true);
+      await expect
+        .poll(() => readPrimaryName(pool, fixture!.speciesId), { timeout: 20_000 })
+        .toBe(renamed);
+
+      const auditedCard = await (
+        await fetch(`${baseURL}${cardPath}`, {
+          headers: { accept: "text/html", cookie },
+        })
+      ).text();
+      const undoStatus = await postProgressiveForm(
+        baseURL,
+        cardPath,
+        cookie,
+        readProgressiveForm(auditedCard, "data-owner-card-undo="),
+      );
+      expect([200, 303].includes(undoStatus), `undo answered ${undoStatus}`).toBe(true);
+      await expect
+        .poll(() => readPrimaryName(pool, fixture!.speciesId), { timeout: 20_000 })
+        .not.toBe(renamed);
     } finally {
       if (fixture) await cleanupFixture(pool, fixture);
       await pool.end().catch(() => undefined);
@@ -313,7 +369,16 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
   await pool.query("select catalog_apply_queue_item($1::uuid, null, true)", [
     queueIds.automatic,
   ]);
-  return { suffix, speciesId, cultivarId, spaceId, objectIds, queueIds, labels };
+  return {
+    suffix,
+    speciesId,
+    speciesSlug: `ove391-${suffix}-${speciesId.slice(0, 8)}`,
+    cultivarId,
+    spaceId,
+    objectIds,
+    queueIds,
+    labels,
+  };
 }
 
 async function cleanupFixture(pool: Pool, fixture: Fixture) {
@@ -402,36 +467,57 @@ async function selectLocale(
 }
 
 /**
- * The accept form as a browser without JavaScript sees it: the fields React
+ * A form as a browser without JavaScript sees it: the fields React
  * serialized for a native submit (`$ACTION_REF_n`, `$ACTION_n:0`, and the
- * key), plus the queue item the button carries. Their absence means the form
- * needs hydration, which is exactly what this proof is here to catch.
+ * key), plus the hidden inputs the control carries. Their absence means the
+ * form needs hydration, which is exactly what this proof is here to catch.
  */
-function readAcceptForm(html: string, queueItemId: string) {
+function readProgressiveForm(
+  html: string,
+  marker: string,
+  overrides: Record<string, string> = {},
+) {
   const forms = html.match(/<form[\s\S]*?<\/form>/gu) ?? [];
-  const accept = forms.find(
-    (form) =>
-      form.includes('data-catalog-queue-action="accept"') &&
-      form.includes(queueItemId),
-  );
-  if (!accept) {
-    throw new Error(
-      `No accept form for queue item ${queueItemId} in the rendered HTML.`,
-    );
+  const found = forms.find((form) => form.includes(marker));
+  if (!found) {
+    throw new Error(`No form carrying ${marker} in the rendered HTML.`);
   }
-  const action = /<form[^>]*\baction="([^"]*)"/u.exec(accept)?.[1] ?? "";
+  const action = /<form[^>]*\baction="([^"]*)"/u.exec(found)?.[1] ?? "";
   const fields: Record<string, string> = {};
-  for (const input of accept.match(/<input\b[^>]*>/gu) ?? []) {
+  for (const input of found.match(/<input\b[^>]*>/gu) ?? []) {
     const name = /\bname="([^"]*)"/u.exec(input)?.[1];
     if (!name) continue;
-    fields[decodeHtml(name)] = decodeHtml(/\bvalue="([^"]*)"/u.exec(input)?.[1] ?? "");
-  }
-  if (!Object.keys(fields).some((name) => name.startsWith("$ACTION"))) {
-    throw new Error(
-      "The accept form carries no $ACTION field, so it needs hydration.",
+    fields[decodeHtml(name)] = decodeHtml(
+      /\bvalue="([^"]*)"/u.exec(input)?.[1] ?? "",
     );
   }
-  return { action: action === "" ? QUEUE_PATH : decodeHtml(action), fields };
+  if (!Object.keys(fields).some((name) => name.startsWith("$ACTION"))) {
+    throw new Error(`The form carrying ${marker} needs hydration.`);
+  }
+  return { action, fields: { ...fields, ...overrides } };
+}
+
+/** Posts what a scripts-off browser would post, and answers its status. */
+async function postProgressiveForm(
+  baseURL: string,
+  path: string,
+  cookie: string,
+  form: { action: string; fields: Record<string, string> },
+) {
+  const body = new FormData();
+  for (const [name, value] of Object.entries(form.fields)) {
+    body.append(name, value);
+  }
+  const response = await fetch(
+    `${baseURL}${form.action === "" ? path : form.action}`,
+    {
+      method: "POST",
+      headers: { accept: "text/html", cookie, origin: baseURL },
+      body,
+      redirect: "manual",
+    },
+  );
+  return response.status;
 }
 
 function decodeHtml(value: string) {
@@ -466,6 +552,15 @@ async function readObject(pool: Pool, id: string) {
     [id],
   );
   return result.rows[0] ?? null;
+}
+
+async function readPrimaryName(pool: Pool, catalogItemId: string) {
+  const result = await pool.query<{ display_name: string }>(
+    `select display_name from catalog_item_names
+     where catalog_item_id = $1::uuid and is_primary limit 1`,
+    [catalogItemId],
+  );
+  return result.rows[0]?.display_name ?? null;
 }
 
 async function readOwnerActionCount(pool: Pool, catalogItemId: string) {

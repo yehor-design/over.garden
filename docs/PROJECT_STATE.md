@@ -103,8 +103,12 @@ that moves more than fifty gardener objects. Under it, the week's automatic
 decisions with one-click revert. `/garden/catalog/sources` shows one card per
 source with its version, licence, counts and last refresh, and a Refresh button
 that enqueues exactly one job per idempotency key. On a public organism card
-the owner alone sees rename, pin a name, set indexable and merge; every action
-writes `catalog_curation_actions` with its inverse and revalidates the card.
+the owner alone sees rename, pin a preferred name, set indexable, merge into
+another node by its address, and the list of what has already been done to the
+card with an undo beside each entry. Every action writes
+`catalog_curation_actions` with its inverse and revalidates the card, and a
+merge from the card travels the queue's own apply function rather than a second
+implementation.
 A Monday cron enqueues one digest email through the auth outbox, which
 migration `0063` taught a second message kind. Applying and reverting still go
 through the SQL functions of `0056`, so the worker and the owner cannot drift.

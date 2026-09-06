@@ -46,6 +46,10 @@ import {
 import { buildPublicVarietyDiscoverySource } from "@/server/public-variety-repository";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
 import { isOwnerUserId } from "@/server/admin-access";
+import {
+  listCatalogCardNames,
+  listOwnerActionAudit,
+} from "@/server/owner-action-audit";
 import { CatalogOwnerCardControls } from "@/app/catalog-owner-card-controls";
 import {
   describeWorkspaceFailure,
@@ -186,6 +190,18 @@ export async function renderPublicCatalogEvidenceRoute(
   const isOwner = shellSession.ownerUserId
     ? await isOwnerUserId(shellSession.ownerUserId).catch(() => false)
     : false;
+  // Two owner-only reads, and only for the owner: the names the card can pin
+  // and what has already been done to it. A failure costs the controls their
+  // lists, never the card.
+  const [ownerNames, ownerAudit] = isOwner
+    ? await Promise.all([
+        listCatalogCardNames(address.catalogItemId).catch(() => []),
+        listOwnerActionAudit({
+          catalogItemId: address.catalogItemId,
+          limit: 8,
+        }).catch(() => []),
+      ])
+    : [[], []];
 
   const catalogKind = page.catalog.catalogKind;
   const publicCopy = getPublicSurfaceCopy(locale);
@@ -589,6 +605,8 @@ export async function renderPublicCatalogEvidenceRoute(
           catalogItemId={page.catalog.catalogItemId}
           canonicalName={page.catalog.canonicalName}
           indexableOverride={page.card.indexableOverride}
+          names={ownerNames}
+          audit={ownerAudit}
         />
       ) : null}
 

@@ -3,11 +3,18 @@
 import { organismAddressChangeTags } from "@/lib/public-cache-tags";
 import { assertAdminCapabilityForScope } from "@/server/admin-access";
 import {
+  mergeCatalogCardIntoNode,
   recordCardIndexableOverride,
   recordCardPinnedName,
   recordCardRename,
   revertCardAction,
 } from "@/server/owner-action-audit";
+import {
+  applyCatalogQueueItem,
+  countObjectsOnCatalogItem,
+  MERGE_CONFIRMATION_OBJECT_THRESHOLD,
+} from "@/server/catalog-curation-repository";
+import { resolvePublicCatalogAddress } from "@/server/public-catalog-address-repository";
 import {
   ownerUserIdFromFormData,
   resolveMutationScope,
@@ -88,6 +95,72 @@ export async function setCatalogCardIndexableAction(
     actorUserId: scope.userId,
   });
   revalidateCard(catalogItemId);
+}
+
+/**
+ * Merge this card into another node, chosen by its public address (ADR-0026
+ * D10). The address is resolved the way a reader's request is, so the owner
+ * types what the picker and the card itself show. The merge then travels the
+ * ordinary path — a `node_merge` queue item applied by
+ * `catalog_apply_queue_item` — so its inverse, its revert and its audit are
+ * the queue's, not a second implementation. A node carrying more than fifty
+ * gardener objects asks once, exactly as the queue does.
+ */
+export async function mergeCatalogCardAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
+  const scope = await ownerScope(formData);
+  if (!scope) return { mutationScope: "rejected" };
+
+  const catalogItemId = String(formData.get("catalogItemId") ?? "");
+  const address = String(formData.get("targetAddress") ?? "").trim();
+  if (!address) return { error: "empty_target" };
+
+  const survivorId = await resolveMergeTarget(address);
+  if (!survivorId) return { error: "unknown_target" };
+  if (survivorId === catalogItemId) return { error: "same_node" };
+
+  if (String(formData.get("confirmMerge") ?? "") !== "yes") {
+    const objects = await countObjectsOnCatalogItem(catalogItemId);
+    if (objects > MERGE_CONFIRMATION_OBJECT_THRESHOLD) {
+      return { confirmationRequired: true, objects };
+    }
+  }
+
+  const { queueItemId } = await mergeCatalogCardIntoNode({
+    loserCatalogItemId: catalogItemId,
+    survivorCatalogItemId: survivorId,
+    reason: normalizedReason(formData),
+    actorUserId: scope.userId,
+  });
+  const { subjectCatalogItemIds } = await applyCatalogQueueItem({
+    queueItemId,
+    actorUserId: scope.userId,
+    automatic: false,
+  });
+  for (const touched of new Set([catalogItemId, survivorId, ...subjectCatalogItemIds])) {
+    revalidateCard(touched);
+  }
+}
+
+/** A UUID, or a public address the same resolver a reader's request uses. */
+async function resolveMergeTarget(address: string) {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+  if (uuid.test(address)) return address.toLowerCase();
+  const slugs = address
+    .replace(/^https?:\/\/[^/]+/iu, "")
+    .split("/")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0 && part !== "species" && part !== "variety" && part !== "breed");
+  const speciesSlug = slugs[0];
+  if (!speciesSlug) return null;
+  const lookup = await resolvePublicCatalogAddress({
+    kind: "species",
+    speciesSlug,
+    formSlug: slugs[1] ?? null,
+  });
+  return lookup.status === "not_found" ? null : lookup.catalogItemId;
 }
 
 export async function revertCatalogCardEditAction(
