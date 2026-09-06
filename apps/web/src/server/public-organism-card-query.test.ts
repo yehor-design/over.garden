@@ -245,12 +245,14 @@ describe("assemblePublicOrganismCard", () => {
         observedAt: "2026-09-03T00:00:00.000Z",
       },
     ]);
+    // The download date, not the reconciliation date: the snapshot was fetched
+    // on the 2nd and last asserted on the 3rd.
     expect(card.attributions).toEqual([
       {
         sourceSlug: "eppo",
         sourceName: "EPPO Global Database",
         text: "Source: EPPO",
-        downloadedAt: "2026-09-03T00:00:00.000Z",
+        downloadedAt: "2026-09-02T00:00:00.000Z",
       },
     ]);
     expect(card.sourceGroups[1]!.lines[2]).toMatchObject({

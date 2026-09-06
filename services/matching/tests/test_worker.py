@@ -119,6 +119,22 @@ def test_worker_records_a_source_refresh_without_ingesting_yet(monkeypatch):
     assert calls == ["eppo"]
 
 
+def test_worker_reconciles_eppo_on_its_own_source_slug(monkeypatch):
+    calls = []
+    monkeypatch.setattr(worker, "reconcile_eppo", lambda conn: calls.append(conn))
+    monkeypatch.setattr(
+        worker,
+        "record_source_refresh",
+        lambda source_slug: pytest.fail(f"unreconciled {source_slug}"),
+    )
+
+    worker._handle("conn", {"kind": "catalog_source_refresh", "source_slug": "eppo-codes"})
+
+    # `eppo` and `eppo-codes` are different slugs: only the capture's own slug
+    # reconciles, and the other still records a refresh it cannot serve.
+    assert calls == ["conn"]
+
+
 def test_worker_terminalises_a_retired_kind_without_echoing_its_payload():
     for kind in (
         "catalog_match_suggestions_refresh",

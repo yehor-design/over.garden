@@ -291,8 +291,13 @@ def test_pest_status_normalizes_onto_the_four_words_a_card_may_say():
 
 
 def test_host_class_prefers_the_stable_id_over_the_label():
-    assert reconcile.host_class({"class_id": 1, "class_label": "Anything"}) == "major_host"
-    assert reconcile.host_class({"class_id": None, "class_label": "Wild/Weed"}) == "wild_weed_host"
+    assert (
+        reconcile.host_class({"class_id": 1, "class_label": "Anything"}) == "major_host"
+    )
+    assert (
+        reconcile.host_class({"class_id": None, "class_label": "Wild/Weed"})
+        == "wild_weed_host"
+    )
     # A class the closed set does not have becomes `unknown`, which it has.
     assert reconcile.host_class({"class_label": "Brand new class"}) == "unknown"
 
@@ -342,10 +347,20 @@ def test_the_colorado_potato_beetle_gets_its_hosts_with_classes(conn):
         code="LPTNDE",
         endpoint_class="taxon_hosts",
         payload=[
-            {"eppocode": "SOLTU", "prefname": "Solanum tuberosum", "class_id": 1,
-             "class_label": "Major host", "bibref": "EPPO A1 list"},
-            {"eppocode": "LYPES", "prefname": "Solanum lycopersicum", "class_id": 2,
-             "class_label": "Host", "bibref": None},
+            {
+                "eppocode": "SOLTU",
+                "prefname": "Solanum tuberosum",
+                "class_id": 1,
+                "class_label": "Major host",
+                "bibref": "EPPO A1 list",
+            },
+            {
+                "eppocode": "LYPES",
+                "prefname": "Solanum lycopersicum",
+                "class_id": 2,
+                "class_label": "Host",
+                "bibref": None,
+            },
         ],
     )
 
@@ -410,12 +425,30 @@ def test_tuta_absoluta_is_present_in_ukraine_with_the_status_eppo_wrote(conn):
         code="GNORAB",
         endpoint_class="taxon_distribution",
         payload=[
-            {"country_iso": "UA", "peststatus": "Present, restricted distribution",
-             "state_id": None, "yr_introd": 2010, "yr_erad": None, "yr_situation": 2021},
-            {"country_iso": "BG", "peststatus": "Present, widespread",
-             "state_id": None, "yr_introd": 2012, "yr_erad": None, "yr_situation": None},
-            {"country_iso": "US", "peststatus": "Absent, confirmed by survey",
-             "state_id": "CA", "yr_introd": None, "yr_erad": None, "yr_situation": None},
+            {
+                "country_iso": "UA",
+                "peststatus": "Present, restricted distribution",
+                "state_id": None,
+                "yr_introd": 2010,
+                "yr_erad": None,
+                "yr_situation": 2021,
+            },
+            {
+                "country_iso": "BG",
+                "peststatus": "Present, widespread",
+                "state_id": None,
+                "yr_introd": 2012,
+                "yr_erad": None,
+                "yr_situation": None,
+            },
+            {
+                "country_iso": "US",
+                "peststatus": "Absent, confirmed by survey",
+                "state_id": "CA",
+                "yr_introd": None,
+                "yr_erad": None,
+                "yr_situation": None,
+            },
         ],
     )
     seed_unit(
@@ -424,9 +457,17 @@ def test_tuta_absoluta_is_present_in_ukraine_with_the_status_eppo_wrote(conn):
         code="GNORAB",
         endpoint_class="taxon_categorization",
         payload=[
-            {"continent_id": 1, "continent_name": "Europe", "country_iso": "UA",
-             "country_name": "Ukraine", "qlist": "A2", "qlist_label": "A2 List",
-             "year_add": 2004, "year_delete": None, "year_transient": None},
+            {
+                "continent_id": 1,
+                "continent_name": "Europe",
+                "country_iso": "UA",
+                "country_name": "Ukraine",
+                "qlist": "A2",
+                "qlist_label": "A2 List",
+                "year_add": 2004,
+                "year_delete": None,
+                "year_transient": None,
+            },
         ],
     )
 

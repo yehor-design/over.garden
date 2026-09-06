@@ -45,7 +45,8 @@ from app.normalize_name import normalize_name
 log = logging.getLogger("overgarden.eppo_reconcile")
 
 EPPO_SOURCE_SLUG = "eppo-codes"
-EPPO_ATTRIBUTION = "EPPO Global Database, EPPO Open Data Licence"
+# The wording the capture itself writes on its snapshot row.
+EPPO_ATTRIBUTION = "EPPO Codes, EPPO Codes Open Data Licence."
 EPPO_PARSER_VERSION = "eppo-reconcile.v1"
 
 # What the graph calls each EPPO kingdom. EPPO names two of them differently;
@@ -612,9 +613,7 @@ def read_completed_captures(
     return captures
 
 
-def read_active_codes(
-    conn: Any, capture_ids: Sequence[str], limit: int
-) -> list[str]:
+def read_active_codes(conn: Any, capture_ids: Sequence[str], limit: int) -> list[str]:
     return [
         str(_field(row, "eppo_code"))
         for row in _rows(conn.execute(ACTIVE_CODES_SQL, (list(capture_ids), limit)))

@@ -609,7 +609,9 @@ export function assemblePublicOrganismCard(input: {
         sourceSlug: source.sourceSlug,
         sourceName: source.sourceName,
         text: source.attributionText as string,
-        downloadedAt: source.lastObservedAt ?? source.fetchedAt ?? null,
+        // The day the data was downloaded, which is when the snapshot was
+        // fetched — not when we last reconciled it onto the graph.
+        downloadedAt: source.fetchedAt ?? source.lastObservedAt ?? null,
       })),
     sources: (row?.sources ?? []).map((source) => ({
       sourceSlug: source.sourceSlug,
