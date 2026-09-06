@@ -357,17 +357,22 @@ async function main() {
 
     const startedAt = Date.now();
     const inserted: Record<string, number> = {};
-    // One transaction: a capture whose units landed but whose run did not is
-    // not a capture, and the terminal-shape constraint would not catch it.
-    await target.query("begin");
-    try {
-      for (const table of EPPO_TRANSFER_TABLES) {
+    // One transaction per table, in foreign-key order, not one for the whole
+    // transfer. The first capture alone is 2,126,969 rows and 1.36 GB; holding
+    // that in a single transaction on a one-gigabyte managed instance means a
+    // write-ahead log spike of the same order on a disk that has to carry the
+    // application as well. Every insert is idempotent, so an interrupted
+    // transfer is finished by running it again, and the row counts below say
+    // whether it finished at all.
+    for (const table of EPPO_TRANSFER_TABLES) {
+      await target.query("begin");
+      try {
         inserted[table] = await copyTable(source, target, table, captureIds);
+        await target.query("commit");
+      } catch (error) {
+        await target.query("rollback");
+        throw error;
       }
-      await target.query("commit");
-    } catch (error) {
-      await target.query("rollback");
-      throw error;
     }
 
     const after: Record<string, number> = {};
