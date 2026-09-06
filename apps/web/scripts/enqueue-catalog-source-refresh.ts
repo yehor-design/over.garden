@@ -18,6 +18,11 @@
  * It prints the job's id and status, and the queue depth beside it. Never a
  * connection string: the receipt names the host class and the database.
  */
+// The repository this reaches through is `server-only`, and a script is not a
+// server component. Without this the documented command dies on the import,
+// which no test could see: nothing imports a script's entry point.
+import "./neutralise-server-only";
+
 import { config as loadEnv } from "dotenv";
 import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
