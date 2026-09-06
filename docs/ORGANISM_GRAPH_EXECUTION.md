@@ -153,6 +153,20 @@ rewrites and force-pushes. For those, ask.
   bodies reports far more statements than it runs (0056: 150 counted, about
   twenty real). The count is a receipt field, not the execution unit; the
   whole file is sent as one statement.
+- **A migration that changes the queue contract must be applied with the
+  worker deploy, not before the merge.** Section 4.1 applies a web migration
+  from the PR branch; the worker's runtime requires every payload CHECK the
+  contract it was built from declares (`_REQUIRED_QUEUE_CONSTRAINTS`), so
+  dropping a retired kind's check puts the *incumbent* worker into
+  `schema_mismatch` and its container reports unhealthy until the new image is
+  deployed. It keeps claiming and draining (the loop never reads the
+  constraint set) and does not restart, but the health signal is wrong for the
+  whole window. For such a migration, follow 4.2's order instead: seal,
+  install, migrate, deploy. Seen on 2026-09-06 with `0056`.
+- **New table, generated types.** A migration that adds a table needs its
+  interface hand-written into `apps/web/src/db/generated.ts` (and its entry in
+  `DB`); `pnpm db:types:check` runs against a fresh CI bootstrap and is the
+  only honest check, because the scratch volume's introspection carries drift.
 - **gnparser.** The scientific-name parser is a pinned GitHub release
   installed by `services/matching/scripts/install-gnparser.sh` (version and
   both checksums live there) into the image, the CI job and the release job.
