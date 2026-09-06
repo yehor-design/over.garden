@@ -307,7 +307,7 @@ async function main() {
             plantName: "OVE-193 synthetic object",
             objectKind: "plant",
             catalogItemId: null,
-            userAddedCatalogName: "OVE-193 synthetic plant",
+            catalogLabel: "OVE-193 synthetic plant",
             locationVisibility: "hidden",
             coarseRegionCode: null,
             entryDate: "2026-07-23",

@@ -12,7 +12,11 @@ import {
   normalizeActivationSourceParam,
 } from "@/lib/garden/activation";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
-import { gardenFirstEntryPreselectionPath } from "@/lib/garden/public-paths";
+import { pickerKindForCatalogKind } from "@/lib/garden/catalog-object-kind";
+import {
+  gardenFirstEntryPreselectionPath,
+  publicCatalogEvidencePath,
+} from "@/lib/garden/public-paths";
 import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
 import {
   normalizeAuthIntentResumeAction,
@@ -629,12 +633,10 @@ async function resolveInitialCatalogSelection(
   return {
     id: item.id,
     displayName: item.canonicalName,
-    canonicalName: item.canonicalName,
-    catalogKind: item.catalogKind,
-    locale: item.locale,
-    status: item.status,
-    source: item.source,
-    serveClass: "exact",
+    kind: pickerKindForCatalogKind(item.catalogKind),
+    ...(item.publicSlug
+      ? { publicPath: publicCatalogEvidencePath(item.catalogKind, item.publicSlug) }
+      : {}),
   };
 }
 

@@ -171,11 +171,14 @@ describe("public living-object catalog serialization", () => {
           mediaDerivativeKey: "public/catalog/tomato.png",
           totalCount: 4,
         }),
+        // Objects carrying a gardener's own name (`free_text`) group as
+        // unknown on every public surface (ADR-0026 D6); the label never
+        // reaches the row, so nothing here can leak it.
         row({
-          groupKey: "provisional:animal:local",
+          groupKey: "unknown:animal",
           objectKind: "animal",
-          identityState: "provisional",
-          identityName: "Українська місцева",
+          identityState: "unknown",
+          identityName: null,
           catalogItemId: null,
           catalogKind: null,
           catalogPublicSlug: null,
@@ -184,7 +187,7 @@ describe("public living-object catalog serialization", () => {
           totalCount: 4,
         }),
         row({
-          groupKey: "provisional:animal:unsafe",
+          groupKey: "unknown:animal:legacy-provisional",
           objectKind: "animal",
           identityState: "provisional",
           identityName: "Коза +359 888 123 456 GPS 42.1, 23.3",
@@ -234,10 +237,12 @@ describe("public living-object catalog serialization", () => {
     });
     expect(page.cards[1]).toMatchObject({
       objectKind: "animal",
-      identityState: "provisional",
-      identityName: "Українська місцева",
+      identityState: "unknown",
+      identityName: null,
       catalogPath: null,
     });
+    // A row that still claims the retired state is read as unknown and its
+    // text is dropped, whatever it contains.
     expect(page.cards[2]).toMatchObject({
       identityState: "unknown",
       identityName: null,

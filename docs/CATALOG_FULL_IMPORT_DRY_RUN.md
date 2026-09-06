@@ -1,5 +1,11 @@
 # Catalog Full Import Dry-Run
 
+> **Historical since 2026-09-06 (OVE-387, ADR-0026 D6/D7).** The gardener
+> picker answers from Postgres alone, a gardener's own name is a label and
+> never a provisional card, and the proof and smoke scripts this page names
+> (`pnpm catalog:sources:production-rollout-proof`) were removed with them. The commands below no longer run;
+> the page stays as the record of what was proven at the time.
+
 Status: OVE-80 operator preflight
 Primary command: `cd apps/web && pnpm catalog:sources:dry-run`
 Readiness authority: `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json`

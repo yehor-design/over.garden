@@ -30,7 +30,7 @@ before defensive refusal.
 | Data | DigitalOcean Managed Postgres, Kysely, SQL migrations under `apps/web/sql` are the schema truth, no ORM |
 | Journal | Lexical composer, `JournalDocumentV1` is the sole persisted document contract |
 | Media | Browser converts photos to WebP variants, uploads straight to the Cloudflare staging Worker, atomic Publish promotes them to the public bucket served at `media.over.garden` |
-| Search | Meilisearch as a derived public index; Python worker for matching and reindex jobs |
+| Search | The gardener picker is one Postgres statement behind `/api/public/catalog/typeahead` (ADR-0026 D7, `src/server/catalog-repository.ts`, `src/components/garden/catalog-picker.tsx`); Meilisearch stays a derived public index for journal search; Python worker for matching and reindex jobs |
 | Queue | Postgres `job_queue` table |
 | Edge | Cloudflare DNS and R2; Vercel serves and caches HTML |
 

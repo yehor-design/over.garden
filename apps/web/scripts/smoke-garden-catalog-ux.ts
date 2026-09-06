@@ -432,7 +432,7 @@ async function main() {
               selected.source,
             ),
             catalogItemId: selected.id,
-            userAddedCatalogName: null,
+            catalogLabel: null,
             entryDate: "2026-06-30",
             locationVisibility: "hidden",
             coarseRegionCode: null,

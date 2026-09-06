@@ -32,15 +32,20 @@ describe("public living-object catalog copy", () => {
     });
   });
 
-  it("uses domain-specific trust language for provisional plant and animal identities", () => {
+  it("describes unknown and unavailable identities per domain, and knows no provisional one", () => {
     expect(
-      publicObjectCatalogIdentityDescription("uk", "plant", "provisional"),
-    ).toContain("робоча назва рослини");
+      publicObjectCatalogIdentityDescription("uk", "plant", "unknown"),
+    ).toContain("ще не визначено");
     expect(
-      publicObjectCatalogIdentityDescription("uk", "animal", "provisional"),
-    ).toContain("не підтверджена порода чи вид");
+      publicObjectCatalogIdentityDescription("uk", "animal", "unavailable"),
+    ).toContain("недоступна");
     expect(
       publicObjectCatalogIdentityDescription("bg", "animal", "unknown"),
     ).toContain("не е потвърден");
+    // A gardener's own name is a private label (ADR-0026 D6): no public
+    // filter, badge or description names it.
+    expect(JSON.stringify(getPublicObjectCatalogCopy("uk"))).not.toMatch(
+      /provisional|Робоч/u,
+    );
   });
 });

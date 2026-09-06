@@ -31,12 +31,14 @@ export type PublicObjectCatalogKind = "all" | PlantObjectKind;
 export type PublicObjectCatalogIdentityFilter =
   | "all"
   | CatalogKind
-  | "provisional"
   | "unknown"
   | "unavailable";
+/**
+ * A gardener's own name (`variety_state = 'free_text'`) is a private label
+ * (ADR-0026 D6): on every public surface such an object reads as `unknown`.
+ */
 export type PublicObjectCatalogIdentityState =
   | "catalog"
-  | "provisional"
   | "unknown"
   | "unavailable";
 
@@ -98,9 +100,6 @@ export interface PublicObjectCatalogGroupRow {
   mediaDerivativeKey: string | null;
   totalCount: number | string | bigint;
 }
-
-const UNSAFE_PUBLIC_IDENTITY_PATTERN =
-  /(?:\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|(?:\+?\d[\d\s().-]{7,}\d)|https?:\/\/|www\.|(?:^|\s)@[A-Za-z0-9_]{2,}|\b(?:latitude|longitude|gps|coordinates?|координат|широта|довгота|invite|token)\b|[-+]?\d{1,3}\.\d{3,}\s*[,;/]\s*[-+]?\d{1,3}\.\d{3,}|\b(?:chip|microchip|ear\s*tag|ring|serial|паспорт|бирк[аи]|номер)\s*[:#]?\s*[A-ZА-ЯІЇЄ0-9-]{5,}\b)/i;
 
 export function normalizePublicObjectCatalogRequest(input: {
   kind?: string | string[];
@@ -251,7 +250,10 @@ export function buildPublicObjectCatalogGroupsQuery(
     query = query.where(({ eb, exists, or, selectFrom }) =>
       or([
         eb("plant_objects.display_name", "ilike", pattern),
-        eb("plant_objects.variety_text", "ilike", pattern),
+        eb.and([
+          eb("plant_objects.variety_state", "=", "selected"),
+          eb("plant_objects.variety_text", "ilike", pattern),
+        ]),
         eb("catalog_items.canonical_name", "ilike", pattern),
         exists(
           selectFrom("catalog_item_names")
@@ -309,15 +311,7 @@ function serializePublicObjectCatalogCard(
   publicMediaUrl: (derivativeKey: string) => string,
 ): PublicObjectCatalogCard {
   const objectKind = normalizePublicObjectKind(row.objectKind);
-  const rawIdentityState = normalizePublicIdentityState(row.identityState);
-  const provisionalIdentityName =
-    rawIdentityState === "provisional"
-      ? normalizeSafePublicIdentityName(row.identityName)
-      : null;
-  const identityState =
-    rawIdentityState === "provisional" && !provisionalIdentityName
-      ? "unknown"
-      : rawIdentityState;
+  const identityState = normalizePublicIdentityState(row.identityState);
   const catalogKind =
     identityState === "catalog"
       ? normalizePublicCatalogKind(row.catalogKind)
@@ -329,9 +323,7 @@ function serializePublicObjectCatalogCard(
   const identityName =
     identityState === "catalog"
       ? normalizeCatalogIdentityName(row.identityName)
-      : identityState === "provisional"
-        ? provisionalIdentityName
-        : null;
+      : null;
   const catalogPath =
     identityState === "catalog" &&
     catalogKind &&
@@ -377,9 +369,6 @@ function publicObjectCatalogIdentityStateExpression(): RawBuilder<PublicObjectCa
     when ${sql.ref("plant_objects.variety_state")} = 'selected'
       and ${sql.ref("catalog_items.id")} is not null
       then 'unavailable'
-    when ${sql.ref("plant_objects.variety_state")} in ('user_added', 'free_text')
-      and nullif(trim(${sql.ref("plant_objects.variety_text")}), '') is not null
-      then 'provisional'
     else 'unknown'
   end`;
 }
@@ -389,7 +378,6 @@ function publicObjectCatalogGroupKeyExpression(): RawBuilder<string> {
   return sql<string>`case
     when ${state} = 'catalog' then 'catalog:' || ${sql.ref("catalog_items.id")}::text
     when ${state} = 'unavailable' then 'unavailable:' || ${sql.ref("catalog_items.id")}::text
-    when ${state} = 'provisional' then 'provisional:' || ${sql.ref("plant_objects.object_kind")} || ':' || lower(trim(${sql.ref("plant_objects.variety_text")}))
     else 'unknown:' || ${sql.ref("plant_objects.object_kind")}
   end`;
 }
@@ -400,7 +388,6 @@ function publicObjectCatalogIdentityNameExpression(): RawBuilder<
   const state = publicObjectCatalogIdentityStateExpression();
   return sql<string | null>`case
     when ${state} = 'catalog' then ${sql.ref("catalog_items.canonical_name")}
-    when ${state} = 'provisional' then ${sql.ref("plant_objects.variety_text")}
     else null
   end`;
 }
@@ -468,7 +455,6 @@ function isPublicObjectCatalogIdentityFilter(
     value === "plant_variety" ||
     value === "species" ||
     value === "breed" ||
-    value === "provisional" ||
     value === "unknown" ||
     value === "unavailable"
   );
@@ -484,12 +470,7 @@ function normalizePublicObjectKind(value: string): PlantObjectKind {
 function normalizePublicIdentityState(
   value: string,
 ): PublicObjectCatalogIdentityState {
-  if (
-    value === "catalog" ||
-    value === "provisional" ||
-    value === "unknown" ||
-    value === "unavailable"
-  ) {
+  if (value === "catalog" || value === "unknown" || value === "unavailable") {
     return value;
   }
   return "unknown";
@@ -517,10 +498,3 @@ function normalizeCatalogIdentityName(value: string | null) {
   return normalized.length > 0 ? normalized.slice(0, 120) : null;
 }
 
-function normalizeSafePublicIdentityName(value: string | null) {
-  const normalized = normalizeCatalogIdentityName(value);
-  if (!normalized || UNSAFE_PUBLIC_IDENTITY_PATTERN.test(normalized)) {
-    return null;
-  }
-  return normalized;
-}

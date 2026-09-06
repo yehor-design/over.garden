@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
-  buildGardenCatalogTrustMetadata,
   formatGardenWorkspaceTemplate,
   getGardenWorkspaceCopy,
   localizedJournalSaveErrorMessage,
@@ -53,45 +52,32 @@ describe("garden workspace copy", () => {
       getGardenWorkspaceCopy("bg").workspace.nextAction.finishFirstNoteTitle,
       { objectName },
     );
-    const trust = buildGardenCatalogTrustMetadata("ru", {
-      status: "promoted",
-      source: "eu_oj_eur_lex_common_catalogue",
-      catalogKind: "plant_variety",
-      locale: "bg",
-    });
 
     expect(sentence).toContain(objectName);
     expect(sentence).toContain("първата бележка");
-    expect(trust.sourceLabel).toBe("EU Official Journal");
-    expect(trust.disambiguationLabel).toContain("EU Official Journal");
-    expect(trust.disambiguationLabel).toContain("bg");
-    expect(trust.sourceCaveat).toContain("безопасную проекцию каталога");
   });
 
-  it("renders every degraded catalog class as locale-owned text", () => {
+  it("names the three picker outcomes in every locale without a trust word or a caveat", () => {
     const expected = {
-      uk: [/Низька впевненість/u, /Згенерований варіант/u, /Однакова назва/u],
-      bg: [/Ниска увереност/u, /Генериран вариант/u, /Едно и също име/u],
-      ru: [
-        /Низкая уверенность/u,
-        /Сгенерированный вариант/u,
-        /Одинаковое название/u,
-      ],
+      uk: { own: /Додати як мою назву: «Де Барао»/u, outcomes: /вид, сорт чи породу/u },
+      bg: { own: /Добавяне като мое име: „Де Барао“/u, outcomes: /вид, сорт или порода/u },
+      ru: { own: /Добавить как моё название: «Де Барао»/u, outcomes: /вид, сорт или породу/u },
     } as const;
 
     for (const locale of LOCALES) {
-      for (const [index, serveClass] of (
-        ["low_confidence", "generated", "homonymous"] as const
-      ).entries()) {
-        const trust = buildGardenCatalogTrustMetadata(locale, {
-          status: "promoted",
-          source: "eu_oj_eur_lex_common_catalogue",
-          catalogKind: "plant_variety",
-          locale,
-          serveClass,
-        });
-        expect(trust.sourceCaveat).toMatch(expected[locale][index]!);
-      }
+      const picker = getGardenWorkspaceCopy(locale).composer.catalogPicker;
+      expect(
+        formatGardenWorkspaceTemplate(picker.ownName, { query: "Де Барао" }),
+      ).toMatch(expected[locale].own);
+      expect(picker.outcomes).toMatch(expected[locale].outcomes);
+      expect(Object.keys(picker.kinds).sort()).toEqual([
+        "breed",
+        "cultivar",
+        "species",
+      ]);
+      expect(JSON.stringify(picker)).not.toMatch(
+        /trust|caveat|source|Перевірено|Проверено|Потвърдено|карантин|quarant/iu,
+      );
     }
   });
 

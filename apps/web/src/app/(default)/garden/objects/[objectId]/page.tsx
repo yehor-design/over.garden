@@ -761,7 +761,7 @@ async function recordProgressMomentShown(
 }
 
 function canResolveCatalogState(value: string) {
-  return value === "unknown" || value === "user_added";
+  return value === "unknown" || value === "free_text";
 }
 
 function getLineageReadbackPath(

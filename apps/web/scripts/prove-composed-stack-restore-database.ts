@@ -14,7 +14,7 @@ import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-
 import {
   buildCatalogTypeaheadReindexRowsQuery,
   findSelectableCatalogItem,
-  searchCatalogSuggestions,
+  searchCatalogSuggestionsForTypeaheadResult,
 } from "../src/server/catalog-repository";
 import { loadVersionedApplicationSql } from "./application-sql";
 import {
@@ -273,11 +273,10 @@ async function readBackProduct(target: string): Promise<ProductReadBack> {
     let identityCount = 0;
 
     for (const locale of PRODUCT_LOCALES) {
-      const suggestions = await searchCatalogSuggestions(
+      const { suggestions } = await searchCatalogSuggestionsForTypeaheadResult(
         localeProbe(locale),
-        8,
-        db,
-        "plant",
+        { objectKind: "plant", locale, limit: 8 },
+        { runStatement: async (statement) => (await statement.execute(db)).rows },
       );
       if (suggestions.length > 0) {
         localesServed.push(locale);
@@ -288,12 +287,12 @@ async function readBackProduct(target: string): Promise<ProductReadBack> {
 
     // Selecting a suggestion must resolve to the same stable identity, which is
     // the part a gardener would notice if a restore quietly renumbered things.
-    const anchor = await searchCatalogSuggestions(
-      localeProbe("uk"),
-      1,
-      db,
-      "plant",
-    );
+    const { suggestions: anchor } =
+      await searchCatalogSuggestionsForTypeaheadResult(
+        localeProbe("uk"),
+        { objectKind: "plant", locale: "uk", limit: 1 },
+        { runStatement: async (statement) => (await statement.execute(db)).rows },
+      );
     const resolved = anchor[0]
       ? await findSelectableCatalogItem(db, anchor[0].id, {
           expectedObjectKind: "plant",

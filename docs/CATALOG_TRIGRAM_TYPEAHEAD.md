@@ -1,5 +1,11 @@
 # Catalog trigram typeahead
 
+> **Retired on 2026-09-06 by OVE-387 (ADR-0026 D7).** The picker is one
+> Postgres statement, prefix index then trigram, with no feature flag and no
+> Meilisearch merge; `CATALOG_TRIGRAM_TYPEAHEAD_ENABLED` and the divergence
+> proof script no longer exist. `src/server/catalog-repository.ts` is the
+> current owner. This page stays as the record of migration `0043`.
+
 Status: executable runbook
 Owner: OVE-355
 Migration: `0043_ove355_catalog_trigram_typeahead.sql`

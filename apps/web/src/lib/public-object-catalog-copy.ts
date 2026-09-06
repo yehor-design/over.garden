@@ -10,10 +10,7 @@ export interface PublicObjectCatalogCopy {
   kindFilterLabel: string;
   identityFilterLabel: string;
   kinds: Record<"all" | PlantObjectKind, string>;
-  identities: Record<
-    "all" | CatalogKind | "provisional" | "unknown" | "unavailable",
-    string
-  >;
+  identities: Record<"all" | CatalogKind | "unknown" | "unavailable", string>;
   searchLabel: string;
   searchPlaceholder: string;
   searchSubmit: string;
@@ -64,7 +61,6 @@ const COPY = {
       plant_variety: "Сорти",
       species: "Види",
       breed: "Породи",
-      provisional: "Робочі назви",
       unknown: "Не визначено",
       unavailable: "Недоступні",
     },
@@ -97,7 +93,6 @@ const COPY = {
     journalsCountLabel: "Журнали",
     identityBadges: {
       catalog: "Каталог",
-      provisional: "Робоча назва",
       unknown: "Не визначено",
       unavailable: "Ідентичність недоступна",
     },
@@ -123,7 +118,6 @@ const COPY = {
       plant_variety: "Сортове",
       species: "Видове",
       breed: "Породи",
-      provisional: "Работни имена",
       unknown: "Неопределени",
       unavailable: "Недостъпни",
     },
@@ -156,7 +150,6 @@ const COPY = {
     journalsCountLabel: "Дневници",
     identityBadges: {
       catalog: "Каталог",
-      provisional: "Работно име",
       unknown: "Неопределено",
       unavailable: "Идентичността не е достъпна",
     },
@@ -182,7 +175,6 @@ const COPY = {
       plant_variety: "Сорта",
       species: "Виды",
       breed: "Породы",
-      provisional: "Рабочие названия",
       unknown: "Не определено",
       unavailable: "Недоступные",
     },
@@ -215,7 +207,6 @@ const COPY = {
     journalsCountLabel: "Журналы",
     identityBadges: {
       catalog: "Каталог",
-      provisional: "Рабочее название",
       unknown: "Не определено",
       unavailable: "Идентичность недоступна",
     },
@@ -231,13 +222,11 @@ const IDENTITY_DESCRIPTIONS: Record<
   uk: {
     plant: {
       catalog: "Ідентичність є в публічному каталозі.",
-      provisional: "Це робоча назва рослини, а не підтверджена таксономія.",
       unknown: "Вид або сорт цієї рослини ще не визначено.",
       unavailable: "Попередня каталожна ідентичність більше не доступна.",
     },
     animal: {
       catalog: "Вид або порода є в публічному каталозі.",
-      provisional: "Назва доглядальника; це не підтверджена порода чи вид.",
       unknown: "Вид або породу тварини ще не підтверджено.",
       unavailable: "Попередня каталожна ідентичність тварини недоступна.",
     },
@@ -245,14 +234,11 @@ const IDENTITY_DESCRIPTIONS: Record<
   bg: {
     plant: {
       catalog: "Идентичността присъства в публичния каталог.",
-      provisional:
-        "Това е работно име на растение, а не потвърдена таксономия.",
       unknown: "Видът или сортът на растението още не е потвърден.",
       unavailable: "Предишната каталожна идентичност вече не е достъпна.",
     },
     animal: {
       catalog: "Видът или породата присъства в публичния каталог.",
-      provisional: "Име от стопанина; видът или породата не е потвърден.",
       unknown: "Видът или породата на животното не е потвърден.",
       unavailable: "Предишната идентичност на животното не е достъпна.",
     },
@@ -260,14 +246,11 @@ const IDENTITY_DESCRIPTIONS: Record<
   ru: {
     plant: {
       catalog: "Идентичность есть в публичном каталоге.",
-      provisional:
-        "Это рабочее название растения, а не подтверждённая таксономия.",
       unknown: "Вид или сорт растения пока не определён.",
       unavailable: "Предыдущая каталожная идентичность больше недоступна.",
     },
     animal: {
       catalog: "Вид или порода есть в публичном каталоге.",
-      provisional: "Название владельца; вид или порода не подтверждены.",
       unknown: "Вид или порода животного пока не подтверждены.",
       unavailable: "Предыдущая идентичность животного недоступна.",
     },

@@ -172,7 +172,7 @@ async function main() {
             plantName: smokeName,
             objectKind: "plant",
             catalogItemId: selected.id,
-            userAddedCatalogName: null,
+            catalogLabel: null,
             entryDate: "2026-07-01",
             locationVisibility: "hidden",
             coarseRegionCode: null,

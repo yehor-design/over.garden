@@ -30,6 +30,7 @@ export async function resolvePlantObjectCatalogAction(formData: FormData) {
   const result = await resolvePlantObjectCatalog(scope, {
     plantObjectId: String(formData.get("objectId") ?? ""),
     catalogItemId: String(formData.get("catalogItemId") ?? ""),
+    catalogLabel: String(formData.get("catalogLabel") ?? ""),
   });
 
   revalidatePath("/garden");

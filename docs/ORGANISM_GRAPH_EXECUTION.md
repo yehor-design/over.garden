@@ -104,6 +104,20 @@ rewrites and force-pushes. For those, ask.
   production build. Signed-in flows are verified in a real browser; the
   preview browser's network panel has reported false 5xx before, so confirm a
   5xx against Vercel runtime logs before chasing it.
+- **Index builds and the planner.** On PostgreSQL 18 a `create index …
+  using gin (… gin_trgm_ops)` left `pg_class.reltuples` of the name table at
+  1.8e35 and every picker query planned as a parallel nested loop (430 ms
+  instead of 5 ms) until `analyze`. A migration that builds an index ends with
+  `analyze` of the tables it touches, and a query is measured only after it.
+  A CTE that calls `catalog_normalize_name` over a whole table must be
+  `materialized`, or the planner re-evaluates it per outer row of an update.
+- **Browser specs against the composer.** The picker sits under the closed
+  "Більше деталей" `<details>`; native `<select>`s also carry
+  `role="combobox"`, so scope to `[data-catalog-picker="true"]`; a new gardener
+  must fill the required `spaceName`; `page.addScriptTag` is blocked by the CSP
+  and hangs, so inject axe with `page.evaluate`; sign-up answers 500 on the
+  missing mail provider after the rows exist; a run killed at the test timeout
+  skips `finally`, so `tests/catalog-picker.spec.ts` cleans stale runs first.
 - **Research corpus.** `docs/product-research/` and
   `/Users/yehor/Desktop/Startups/OverGarden` must stay byte-identical except
   `README.md` and four desktop-only items. After editing a research file, copy

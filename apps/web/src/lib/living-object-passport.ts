@@ -402,13 +402,16 @@ export function livingObjectIdentityStateLabel(
   locale: InterfaceLocale,
   varietyState: VarietyState,
   hasCatalogIdentity: boolean,
+  audience: "owner" | "public" = "owner",
 ) {
   const copy = getLivingObjectPassportCopy(locale);
   if (hasCatalogIdentity && varietyState === "selected") {
     return copy.catalogConfirmed;
   }
   if (hasCatalogIdentity) return copy.catalogPilot;
-  if (varietyState === "user_added" || varietyState === "free_text") {
+  // The own name is the owner's label (ADR-0026 D6); a reader sees an
+  // identity that is still being settled, nothing about the label.
+  if (varietyState === "free_text" && audience === "owner") {
     return copy.catalogProvisional;
   }
   return copy.catalogUnknown;

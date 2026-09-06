@@ -909,7 +909,6 @@ function localizedVarietyStateLabel(
   copy: GardenWorkspaceCopy,
 ) {
   if (value === "selected") return copy.composer.varietyStates.selected;
-  if (value === "user_added") return copy.composer.varietyStates.userAdded;
   if (value === "free_text") return copy.composer.varietyStates.freeText;
   if (value === "unknown") return copy.composer.varietyStates.unknown;
   return copy.composer.varietyStates.unset;

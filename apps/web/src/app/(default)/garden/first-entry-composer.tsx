@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Search, UploadCloud, X } from "lucide-react";
+import { UploadCloud, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,10 @@ import type { StructuredJournalComposerHandle } from "@/components/garden/struct
 import type { PlantObjectKind } from "@/db/schema";
 import { useScrollToHashOnMount } from "@/lib/browser/hash-scroll";
 import {
-  buildGardenCatalogTrustMetadata,
-  getGardenWorkspaceCopy,
-  type GardenWorkspaceCopy,
-} from "@/lib/garden-workspace-copy";
+  CatalogPicker,
+  type CatalogSearchMiss,
+} from "@/components/garden/catalog-picker";
+import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
 import { getAtomicJournalCreateCopy } from "@/lib/garden/atomic-journal-create-copy";
 import {
@@ -41,10 +41,7 @@ import type {
   JournalMentionSelection,
   JournalMentionSuggestion,
 } from "@/lib/garden/journal-mentions";
-import {
-  defaultObjectKindForCatalogSelection,
-  objectKindAfterCatalogSelection,
-} from "@/lib/garden/catalog-object-kind";
+import { objectKindAfterPickerSelection } from "@/lib/garden/catalog-object-kind";
 import { COMPOSER_PHOTO_ACCEPT } from "@/lib/garden/composer-photo-selection";
 import {
   LocalJournalComposerError,
@@ -52,8 +49,8 @@ import {
 } from "@/lib/garden/use-local-journal-composer";
 import {
   catalogItemIdForSelection,
-  parseCatalogTypeaheadResponse,
-  parseCatalogTypeaheadState,
+  catalogLabelForSelection,
+  type CatalogPickerSelection,
 } from "@/lib/garden/catalog-typeahead-contract";
 import {
   nextJournalTitleValue,
@@ -71,6 +68,7 @@ import {
   type ActiveMentionToken,
   type MentionTypeaheadStatus,
 } from "./journal-mention-typeahead";
+import { recordCatalogSearchMissAction } from "./catalog-search-miss-actions";
 import { JournalObjectKindSelector } from "./journal-object-kind-selector";
 
 interface FirstEntryComposerProps {
@@ -86,18 +84,6 @@ interface FirstEntryComposerProps {
 }
 
 type SubmitState = "idle" | "publishing" | "published" | "failed";
-type CatalogStatus =
-  | "idle"
-  | "searching"
-  | "ready"
-  | "empty"
-  | "degraded"
-  | "selected"
-  | "saving"
-  | "saved"
-  | "failed";
-
-type CatalogSuggestion = FirstEntryCatalogSelection;
 
 interface FirstEntryDraftFields {
   spaceId: string | null;
@@ -138,10 +124,7 @@ export function FirstEntryComposer({
     spaceName: initialSpace?.displayName ?? "",
     plantName: "",
     objectKind: initialCatalogItem
-      ? defaultObjectKindForCatalogSelection(
-          initialCatalogItem.catalogKind,
-          initialCatalogItem.source,
-        )
+      ? objectKindAfterPickerSelection("plant", initialCatalogItem.kind)
       : ("plant" as PlantObjectKind),
     title: "",
     body: "",
@@ -156,19 +139,10 @@ export function FirstEntryComposer({
     mediaAssetId: string;
   } | null>(null);
   const coverCopy = getJournalCoverControlsCopy(locale);
-  const [catalogQuery, setCatalogQuery] = useState(
-    initialCatalogItem?.displayName ?? "",
-  );
-  const [catalogSuggestions, setCatalogSuggestions] = useState<
-    CatalogSuggestion[]
-  >([]);
-  const [selectedCatalogItem, setSelectedCatalogItem] =
-    useState<CatalogSuggestion | null>(initialCatalogItem);
-  const [userAddedCatalogName, setUserAddedCatalogName] = useState<
-    string | null
-  >(null);
-  const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("idle");
-  const [catalogSearchRevision, setCatalogSearchRevision] = useState(0);
+  const [catalogSelection, setCatalogSelection] =
+    useState<CatalogPickerSelection | null>(
+      initialCatalogItem ? { kind: "item", row: initialCatalogItem } : null,
+    );
   const [activeMentionToken, setActiveMentionToken] =
     useState<ActiveMentionToken | null>(null);
   const [mentionSelections, setMentionSelections] = useState<
@@ -197,7 +171,7 @@ export function FirstEntryComposer({
       draft.body ||
       draft.contentDocument?.blocks.length ||
       photoFile ||
-      catalogQuery,
+      catalogSelection,
     ),
   });
   const imageStates = useMemo(
@@ -216,60 +190,11 @@ export function FirstEntryComposer({
   );
   const persistenceFrozen = local.readOnly;
 
-
   function beginLocaleMutation() {
   }
 
   function endLocaleMutation() {
   }
-
-  useEffect(() => {
-    const query = catalogQuery.trim();
-
-    if (
-      query.length < 2 ||
-      (selectedCatalogItem && query === selectedCatalogItem.displayName) ||
-      (userAddedCatalogName && query === userAddedCatalogName)
-    ) {
-      return;
-    }
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setCatalogStatus("searching");
-
-      try {
-        const response = await fetch(
-          `/api/garden/catalog/typeahead?q=${encodeURIComponent(query)}&kind=${draft.objectKind}`,
-          { signal: controller.signal },
-        );
-
-        if (!response.ok) throw new Error("Catalog suggestions unavailable.");
-
-        const body = (await response.json()) as unknown;
-        setCatalogSuggestions(parseCatalogTypeaheadResponse(body));
-        setCatalogStatus(parseCatalogTypeaheadState(body));
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
-        }
-
-        setCatalogSuggestions([]);
-        setCatalogStatus("failed");
-      }
-    }, 180);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [
-    catalogQuery,
-    catalogSearchRevision,
-    draft.objectKind,
-    selectedCatalogItem,
-    userAddedCatalogName,
-  ]);
 
   useEffect(() => {
     if (!activeMentionToken) {
@@ -322,19 +247,6 @@ export function FirstEntryComposer({
     photoError,
     ready: primaryMediaAssetId !== null,
   });
-  const catalogAliasCollisionKeys = useMemo(
-    () => catalogSuggestionAliasCollisionKeys(catalogSuggestions),
-    [catalogSuggestions],
-  );
-  const selectedCatalogTrust = selectedCatalogItem
-    ? buildGardenCatalogTrustMetadata(locale, selectedCatalogItem)
-    : null;
-  const userAddedCatalogTrust = buildGardenCatalogTrustMetadata(locale, {
-    status: "provisional",
-    source: "user_added",
-    catalogKind: "plant_variety",
-    locale: "und",
-  });
 
   const hasSelectedPhoto = Boolean(photoFile || primaryMediaAssetId);
 
@@ -369,11 +281,8 @@ export function FirstEntryComposer({
             spaceName: draft.spaceName,
             plantName: draft.plantName,
             objectKind: draft.objectKind,
-            catalogItemId: catalogItemIdForSelection(selectedCatalogItem),
-            userAddedCatalogName:
-              !selectedCatalogItem && userAddedCatalogName
-                ? userAddedCatalogName
-                : null,
+            catalogItemId: catalogItemIdForSelection(catalogSelection),
+            catalogLabel: catalogLabelForSelection(catalogSelection),
             locationVisibility: draft.locationVisibility,
             coarseRegionCode:
               draft.locationVisibility === "region"
@@ -475,13 +384,8 @@ export function FirstEntryComposer({
     if (isComposerPersistenceFrozen()) return;
     setDraft((current) => ({ ...current, objectKind: value }));
 
-    if (selectedCatalogItem) {
-      setSelectedCatalogItem(null);
-      setCatalogQuery("");
-    }
-    if (userAddedCatalogName) {
-      setUserAddedCatalogName(null);
-      setCatalogQuery("");
+    if (catalogSelection) {
+      setCatalogSelection(null);
     }
   }
 
@@ -551,74 +455,42 @@ export function FirstEntryComposer({
     }));
   }
 
-  function updateCatalogQuery(value: string) {
+  function updateCatalogSelection(selection: CatalogPickerSelection | null) {
     if (isComposerPersistenceFrozen()) return;
-    setCatalogQuery(value);
-
-    if (selectedCatalogItem && value !== selectedCatalogItem.displayName) {
-      setSelectedCatalogItem(null);
+    setCatalogSelection(selection);
+    if (selection?.kind === "item") {
+      const row = selection.row;
+      setDraft((current) =>
+        withSuggestedTitle(
+          {
+            ...current,
+            objectKind: objectKindAfterPickerSelection(
+              current.objectKind,
+              row.kind,
+            ),
+          },
+          { catalogLabel: row.displayName },
+        ),
+      );
+      return;
     }
-
-    if (userAddedCatalogName && value !== userAddedCatalogName) {
-      setUserAddedCatalogName(null);
-    }
-
-    if (value.trim().length < 2) {
-      setCatalogSuggestions([]);
-      setCatalogStatus("idle");
-    }
-  }
-
-  function selectCatalogSuggestion(suggestion: CatalogSuggestion) {
-    if (isComposerPersistenceFrozen()) return;
-    setSelectedCatalogItem(suggestion);
-    setUserAddedCatalogName(null);
-    setCatalogQuery(suggestion.displayName);
     setDraft((current) =>
-      withSuggestedTitle(
-        {
-          ...current,
-          objectKind: objectKindAfterCatalogSelection(
-            current.objectKind,
-            suggestion.catalogKind,
-            suggestion.source,
-          ),
-        },
-        { catalogLabel: suggestion.displayName },
-      ),
+      withSuggestedTitle(current, {
+        catalogLabel: selection?.kind === "own_name" ? selection.name : null,
+      }),
     );
-    setCatalogSuggestions([]);
-    setCatalogStatus("selected");
-  }
-
-  function addMissingCatalogName() {
-    if (isComposerPersistenceFrozen()) return;
-    const displayName = catalogQuery.trim().replace(/\s+/g, " ");
-    if (displayName.length < 1) return;
-
-    setSelectedCatalogItem(null);
-    setUserAddedCatalogName(displayName);
-    setCatalogQuery(displayName);
-    setDraft((current) =>
-      withSuggestedTitle(current, { catalogLabel: displayName }),
-    );
-    setCatalogSuggestions([]);
-    setCatalogStatus("idle");
   }
 
   function chooseUnknownCatalog() {
-    if (isComposerPersistenceFrozen()) return;
-    setSelectedCatalogItem(null);
-    setUserAddedCatalogName(null);
-    setCatalogQuery("");
-    setDraft((current) => withSuggestedTitle(current, { catalogLabel: null }));
-    setCatalogSuggestions([]);
-    setCatalogStatus("idle");
+    updateCatalogSelection(null);
   }
 
-  function retryCatalogSearch() {
-    if (isComposerPersistenceFrozen() || catalogQuery.trim().length < 2) return;
-    setCatalogSearchRevision((current) => current + 1);
+  function reportCatalogSearchMiss(miss: CatalogSearchMiss) {
+    void recordCatalogSearchMissAction({
+      query: miss.query,
+      locale,
+      objectKind: draft.objectKind,
+    }).catch(() => undefined);
   }
 
   function handlePhotoChange(file: File | undefined) {
@@ -689,7 +561,10 @@ export function FirstEntryComposer({
     const catalogLabel =
       options.catalogLabel !== undefined
         ? options.catalogLabel
-        : (selectedCatalogItem?.displayName ?? userAddedCatalogName);
+        : catalogLabelForSelection(catalogSelection) ??
+          (catalogSelection?.kind === "item"
+            ? catalogSelection.row.displayName
+            : null);
     const suggestion = suggestJournalEntryTitle({
       entryDate: nextDraft.entryDate,
       objectLabel: nextDraft.plantName,
@@ -1033,67 +908,20 @@ export function FirstEntryComposer({
             )}
 
             <div className="flex min-w-0 flex-col gap-2">
-              <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-                {copy.composer.fields.catalogMatch}
-                <span className="relative block min-w-0">
-                  <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    name="catalogQuery"
-                    maxLength={120}
-                    value={catalogQuery}
-                    onChange={(event) => updateCatalogQuery(event.target.value)}
-                    className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
-                    placeholder={copy.composer.fields.catalogPlaceholder}
-                    autoComplete="off"
-                  />
-                  {catalogQuery ? (
-                    <button
-                      type="button"
-                      onClick={chooseUnknownCatalog}
-                      className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                      aria-label={copy.composer.fields.clearCatalogMatch}
-                    >
-                      <X className="size-4" />
-                    </button>
-                  ) : null}
-                </span>
-              </label>
-
+              <CatalogPicker
+                locale={locale}
+                objectKind={draft.objectKind}
+                copy={copy.composer.catalogPicker}
+                label={copy.composer.fields.catalogMatch}
+                placeholder={copy.composer.fields.catalogPlaceholder}
+                clearLabel={copy.composer.fields.clearCatalogMatch}
+                selection={catalogSelection}
+                onSelectionChange={updateCatalogSelection}
+                onSearchMiss={reportCatalogSearchMiss}
+                disabled={persistenceFrozen}
+              />
               <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
-                {selectedCatalogItem ? (
-                  <span
-                    className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground"
-                    data-catalog-serve-class={selectedCatalogItem.serveClass}
-                  >
-                    <span>
-                      {copy.composer.fields.matchedInCatalog}{" "}
-                      {selectedCatalogItem.displayName} ·{" "}
-                      {selectedCatalogTrust?.trustLabel} ·{" "}
-                      {localizedCatalogKindLabel(
-                        selectedCatalogItem.catalogKind,
-                        draft.objectKind,
-                        copy,
-                        selectedCatalogItem.source,
-                      )}{" "}
-                      · {localizedObjectKindLabel(draft.objectKind, copy)}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {selectedCatalogTrust?.disambiguationLabel} ·{" "}
-                      {selectedCatalogTrust?.sourceCaveat}
-                    </span>
-                  </span>
-                ) : userAddedCatalogName ? (
-                  <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
-                    <span>
-                      {copy.composer.fields.savedWithCatalogName}{" "}
-                      {userAddedCatalogName} ·{" "}
-                      {userAddedCatalogTrust.trustLabel}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {userAddedCatalogTrust.sourceCaveat}
-                    </span>
-                  </span>
-                ) : (
+                {catalogSelection ? null : (
                   <span className="max-w-full rounded-md border border-border px-2 py-1 break-words text-muted-foreground">
                     {copy.composer.fields.noCatalogMatch}
                   </span>
@@ -1101,99 +929,12 @@ export function FirstEntryComposer({
                 <button
                   type="button"
                   onClick={chooseUnknownCatalog}
+                  data-catalog-continue-unknown="true"
                   className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
                 >
                   {copy.composer.fields.keepWithoutMatch}
                 </button>
-                {!selectedCatalogItem && catalogQuery.trim().length >= 2 ? (
-                  <button
-                    type="button"
-                    onClick={addMissingCatalogName}
-                    className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
-                  >
-                    {copy.composer.fields.useThisName}
-                  </button>
-                ) : null}
-                {catalogStatus === "degraded" || catalogStatus === "failed" ? (
-                  <button
-                    type="button"
-                    onClick={retryCatalogSearch}
-                    data-catalog-retry="true"
-                    className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
-                  >
-                    {copy.composer.fields.retrySearch}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={chooseUnknownCatalog}
-                  data-catalog-continue-unknown="true"
-                  className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
-                >
-                  {copy.composer.fields.continueWithUnknown}
-                </button>
-                <span
-                  aria-live="polite"
-                  data-catalog-status={catalogStatus}
-                  className={
-                    catalogStatus === "failed"
-                      ? "text-destructive"
-                      : "text-muted-foreground"
-                  }
-                >
-                  {catalogStatus === "searching"
-                    ? copy.composer.fields.searching
-                    : catalogStatus === "degraded" || catalogStatus === "failed"
-                      ? copy.composer.fields.suggestionsUnavailable
-                      : ""}
-                </span>
               </div>
-
-              {catalogSuggestions.length > 0 ? (
-                <ul className="grid gap-2" aria-live="polite">
-                  {catalogSuggestions.map((suggestion) => {
-                    const trust = buildGardenCatalogTrustMetadata(
-                      locale,
-                      suggestion,
-                    );
-                    const hasAliasCollision = catalogAliasCollisionKeys.has(
-                      catalogSuggestionAliasCollisionKey(suggestion),
-                    );
-
-                    return (
-                      <li key={suggestion.id}>
-                        <button
-                          type="button"
-                          onClick={() => selectCatalogSuggestion(suggestion)}
-                          data-catalog-serve-class={suggestion.serveClass}
-                          className="flex min-h-11 w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate font-medium text-foreground">
-                              {suggestion.displayName}
-                            </span>
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {suggestion.canonicalName} ·{" "}
-                              {trust.disambiguationLabel}
-                            </span>
-                            {hasAliasCollision ? (
-                              <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                                {copy.composer.fields.aliasCollision}
-                              </span>
-                            ) : null}
-                            <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                              {trust.sourceCaveat}
-                            </span>
-                          </span>
-                          <span className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
-                            {trust.trustLabel}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
             </div>
 
             <div
@@ -1330,50 +1071,3 @@ function withLocalCoverPreview(
   };
 }
 
-function localizedObjectKindLabel(
-  value: PlantObjectKind,
-  copy: GardenWorkspaceCopy,
-) {
-  if (value === "animal") return copy.composer.objectKind.animal.label;
-  return copy.composer.objectKind.plant.label;
-}
-
-function localizedCatalogKindLabel(
-  value: string | null | undefined,
-  objectKind: PlantObjectKind,
-  copy: GardenWorkspaceCopy,
-  catalogSource?: string | null,
-) {
-  if (value === "breed") {
-    if (catalogSource === "ua_official_bee_breed") {
-      return copy.composer.catalogKinds.beeBreed;
-    }
-    if (
-      objectKind === "animal" ||
-      catalogSource === "vertebrate_breed_ontology"
-    ) {
-      return copy.composer.catalogKinds.animalBreed;
-    }
-    return copy.composer.catalogKinds.breed;
-  }
-  if (value === "species") return copy.composer.catalogKinds.species;
-  if (value === "plant_variety") return copy.composer.catalogKinds.plantVariety;
-  return copy.composer.catalogKinds.match;
-}
-
-function catalogSuggestionAliasCollisionKeys(suggestions: CatalogSuggestion[]) {
-  const counts = new Map<string, number>();
-
-  for (const suggestion of suggestions) {
-    const key = catalogSuggestionAliasCollisionKey(suggestion);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-
-  return new Set(
-    [...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key),
-  );
-}
-
-function catalogSuggestionAliasCollisionKey(suggestion: CatalogSuggestion) {
-  return suggestion.displayName.trim().replace(/\s+/g, " ").toLowerCase();
-}

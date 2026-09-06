@@ -843,21 +843,18 @@ export function publicVarietyStateLabel(
   const labels = {
     uk: {
       selected: "Зіставлено з каталогом",
-      userAdded: "Збережено з вашою назвою з каталогу",
       freeText: "Збережено без збігу в каталозі",
       unknown: "Збігу в каталозі ще немає",
       fallback: "Збіг у каталозі не задано",
     },
     bg: {
       selected: "Съвпада с каталога",
-      userAdded: "Запазено с вашето каталожно име",
       freeText: "Запазено без съвпадение в каталога",
       unknown: "Все още няма съвпадение в каталога",
       fallback: "Няма зададено съвпадение в каталога",
     },
     ru: {
       selected: "Сопоставлено с каталогом",
-      userAdded: "Сохранено с вашим каталоговым именем",
       freeText: "Сохранено без совпадения в каталоге",
       unknown: "Совпадения в каталоге пока нет",
       fallback: "Совпадение в каталоге не задано",
@@ -866,7 +863,6 @@ export function publicVarietyStateLabel(
   const copy = labels[locale];
 
   if (value === "selected") return copy.selected;
-  if (value === "user_added") return copy.userAdded;
   if (value === "free_text") return copy.freeText;
   if (value === "unknown") return copy.unknown;
   return copy.fallback;

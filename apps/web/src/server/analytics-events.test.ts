@@ -200,14 +200,12 @@ describe("analytics event privacy contracts", () => {
     });
   });
 
-  it("allows user-added variety state without raw catalog names", () => {
-    expect(
+  it("refuses the retired user-added variety state instead of recording it", () => {
+    expect(() =>
       normalizeAnalyticsEventProperties({
         variety_state: "user_added",
-      }),
-    ).toEqual({
-      variety_state: "user_added",
-    });
+      } as unknown as Parameters<typeof normalizeAnalyticsEventProperties>[0]),
+    ).toThrow(/Unsafe analytics event value/u);
   });
 
   it("rejects raw content, precise location, media metadata, and PII fields", () => {

@@ -499,6 +499,7 @@ function row(
     objectDisplayName: "Тестовий живий об'єкт",
     objectKind: "animal",
     varietyText: null,
+    varietyState: "unknown",
     catalogKind: null,
     catalogCanonicalName: null,
     catalogPublicSlug: null,

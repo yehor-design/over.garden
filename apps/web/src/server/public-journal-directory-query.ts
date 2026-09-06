@@ -57,6 +57,7 @@ export interface PublicJournalDirectoryEntryRow {
   objectDisplayName: string;
   objectKind: string;
   varietyText: string | null;
+  varietyState: string;
   catalogKind: string | null;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
@@ -169,6 +170,7 @@ export function buildPublicJournalDirectoryEntriesQuery(
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
       "plant_objects.variety_text as varietyText",
+      "plant_objects.variety_state as varietyState",
       "catalog_items.catalog_kind as catalogKind",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
@@ -254,7 +256,10 @@ export function buildPublicJournalDirectoryEntriesQuery(
         eb("journal_entries.title", "ilike", pattern),
         eb("journal_entries.body", "ilike", pattern),
         eb("plant_objects.display_name", "ilike", pattern),
-        eb("plant_objects.variety_text", "ilike", pattern),
+        eb.and([
+          eb("plant_objects.variety_state", "=", "selected"),
+          eb("plant_objects.variety_text", "ilike", pattern),
+        ]),
         eb("catalog_items.canonical_name", "ilike", pattern),
         exists(
           selectFrom("catalog_item_names")

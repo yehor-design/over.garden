@@ -1,7 +1,43 @@
-import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
-import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
-import { isOve330ServeClass } from "@/lib/media/presentation-contract";
+import type { PlantObjectKind } from "@/db/schema";
+import type {
+  CatalogPickerKind,
+  FirstEntryCatalogSelection,
+} from "@/lib/garden/entry-contracts";
+import type { PublicLocale } from "@/lib/public-localization";
 
+export const CATALOG_TYPEAHEAD_PUBLIC_PATH = "/api/public/catalog/typeahead";
+export const CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH = 120;
+export const CATALOG_TYPEAHEAD_MIN_QUERY_LENGTH = 2;
+/** A query this long that ends without a pick is worth recording as a miss. */
+export const CATALOG_SEARCH_MISS_MIN_QUERY_LENGTH = 3;
+
+/**
+ * What the picker holds: an organism from the list, or the gardener's own
+ * name, which is a text label on the object and never a catalog row
+ * (ADR-0026 D6).
+ */
+export type CatalogPickerSelection =
+  | { kind: "item"; row: FirstEntryCatalogSelection }
+  | { kind: "own_name"; name: string };
+
+export function buildCatalogTypeaheadUrl(input: {
+  query: string;
+  objectKind: PlantObjectKind;
+  locale: PublicLocale;
+}) {
+  const params = new URLSearchParams({
+    q: input.query.slice(0, CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH),
+    kind: input.objectKind,
+    locale: input.locale,
+  });
+  return `${CATALOG_TYPEAHEAD_PUBLIC_PATH}?${params.toString()}`;
+}
+
+/**
+ * Keeps only the row shape the picker renders. Anything else a response could
+ * carry — a source, a status, an owner, coordinates — is dropped here, so the
+ * picker state never holds more than an id, names, a kind and a path.
+ */
 export function parseCatalogTypeaheadResponse(
   value: unknown,
 ): FirstEntryCatalogSelection[] {
@@ -17,76 +53,75 @@ export function parseCatalogTypeaheadResponse(
     if (
       !isUuid(candidate.id) ||
       typeof candidate.displayName !== "string" ||
-      typeof candidate.canonicalName !== "string" ||
-      !isSelectableCatalogKind(candidate.catalogKind) ||
-      typeof candidate.locale !== "string" ||
-      !isSelectableCatalogStatus(candidate.status) ||
-      typeof candidate.source !== "string"
+      candidate.displayName.trim().length === 0 ||
+      !isCatalogPickerKind(candidate.kind)
     ) {
       return [];
     }
 
-    const safeSelection = {
+    const row: FirstEntryCatalogSelection = {
       id: candidate.id,
       displayName: candidate.displayName,
-      canonicalName: candidate.canonicalName,
-      catalogKind: candidate.catalogKind,
-      locale: candidate.locale,
-      status: candidate.status,
-      source: candidate.source,
-      serveClass: isOve330ServeClass(candidate.serveClass)
-        ? candidate.serveClass
-        : "exact",
-    } satisfies FirstEntryCatalogSelection;
-
-    return [
-      {
-        ...safeSelection,
-        ...catalogSuggestionTrustMetadata(safeSelection),
-      },
-    ];
+      kind: candidate.kind,
+    };
+    if (isNonEmptyString(candidate.matchedName)) {
+      row.matchedName = candidate.matchedName;
+    }
+    if (isNonEmptyString(candidate.parentDisplayName)) {
+      row.parentDisplayName = candidate.parentDisplayName;
+    }
+    if (isPublicPath(candidate.publicPath)) {
+      row.publicPath = candidate.publicPath;
+    }
+    return [row];
   });
 }
 
-export type CatalogTypeaheadClientState =
-  | "ready"
-  | "empty"
-  | "degraded"
-  | "failed";
+export type CatalogTypeaheadClientState = "ready" | "empty" | "unavailable";
 
 /**
- * The picker must never infer availability from an empty suggestion list: an
- * empty ready response and an unavailable derived index look identical there.
- * The server states which one it is, and anything unrecognised degrades rather
- * than claiming the catalog is genuinely empty.
+ * The picker must never infer availability from an empty list: an empty
+ * `ready` answer and a route that failed look identical there. The server
+ * says which it is, and anything unrecognised reads as unavailable, which
+ * offers the own-name outcome alone rather than claiming the catalog is
+ * empty.
  */
 export function parseCatalogTypeaheadState(
   value: unknown,
 ): CatalogTypeaheadClientState {
-  if (!value || typeof value !== "object") return "degraded";
+  if (!value || typeof value !== "object") return "unavailable";
   const state = (value as { state?: unknown }).state;
-  if (state === "ready" || state === "empty" || state === "degraded") {
-    return state;
-  }
-  return "degraded";
+  if (state === "ready" || state === "empty") return state;
+  return "unavailable";
 }
 
 export function catalogItemIdForSelection(
-  selection: FirstEntryCatalogSelection | null,
+  selection: CatalogPickerSelection | null,
 ) {
-  return selection?.id ?? null;
+  return selection?.kind === "item" ? selection.row.id : null;
 }
 
-function isSelectableCatalogKind(
-  value: unknown,
-): value is FirstEntryCatalogSelection["catalogKind"] {
-  return value === "plant_variety" || value === "species" || value === "breed";
+export function catalogLabelForSelection(
+  selection: CatalogPickerSelection | null,
+) {
+  return selection?.kind === "own_name" ? selection.name : null;
 }
 
-function isSelectableCatalogStatus(
-  value: unknown,
-): value is FirstEntryCatalogSelection["status"] {
-  return value === "seeded" || value === "confirmed";
+export function isCatalogPickerKind(value: unknown): value is CatalogPickerKind {
+  return value === "species" || value === "cultivar" || value === "breed";
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isPublicPath(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.startsWith("/") &&
+    !value.startsWith("//") &&
+    value.length <= 200
+  );
 }
 
 function isUuid(value: unknown): value is string {
@@ -97,4 +132,3 @@ function isUuid(value: unknown): value is string {
     )
   );
 }
-

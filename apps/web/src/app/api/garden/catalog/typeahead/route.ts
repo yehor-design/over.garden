@@ -1,27 +1,13 @@
-import { parseCatalogTypeaheadResponse } from "@/lib/garden/catalog-typeahead-contract";
-import { requireCurrentRequestScope } from "@/server/auth-session";
-import { searchCatalogSuggestionsForTypeaheadResult } from "@/server/catalog-repository";
+import { CATALOG_TYPEAHEAD_PUBLIC_PATH } from "@/lib/garden/catalog-typeahead-contract";
 
+/**
+ * The picker moved to `/api/public/catalog/typeahead` (ADR-0026 D7). This
+ * path answers a permanent redirect for one release so a stale client bundle
+ * keeps working, then goes.
+ */
 export async function GET(request: Request) {
-  await requireCurrentRequestScope();
-
   const url = new URL(request.url);
-  const query = url.searchParams.get("q") ?? "";
-  const kind = url.searchParams.get("kind");
-  if (kind !== "plant" && kind !== "animal") {
-    return Response.json(
-      { suggestions: [], state: "empty" },
-      { status: 400, headers: { "Cache-Control": "private, no-store" } },
-    );
-  }
-  const result = await searchCatalogSuggestionsForTypeaheadResult(query, {
-    objectKind: kind,
-  });
-
-  return Response.json({
-    suggestions: parseCatalogTypeaheadResponse({
-      suggestions: result.suggestions,
-    }),
-    state: result.state,
-  });
+  const target = new URL(CATALOG_TYPEAHEAD_PUBLIC_PATH, url.origin);
+  target.search = url.search;
+  return Response.redirect(target.toString(), 308);
 }
