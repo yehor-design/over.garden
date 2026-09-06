@@ -31,6 +31,7 @@ import type { Database } from "../src/db/types";
 import {
   REGISTER_SOURCE_SLUGS,
   attachRegisterFormsToSpecies,
+  readRegisterAttachmentInvariant,
   type RegisterSourceSlug,
 } from "../src/server/catalog-source/register-graph-attachment";
 
@@ -116,12 +117,14 @@ async function main() {
   try {
     const summaries = [];
     for (const sourceSlug of args.sources) {
-      summaries.push(
-        await attachRegisterFormsToSpecies(
-          { sourceSlug, limit: args.limit },
-          db,
-        ),
+      const summary = await attachRegisterFormsToSpecies(
+        { sourceSlug, limit: args.limit },
+        db,
       );
+      summaries.push({
+        ...summary,
+        invariant: await readRegisterAttachmentInvariant({ sourceSlug }, db),
+      });
     }
     process.stdout.write(
       `${JSON.stringify(

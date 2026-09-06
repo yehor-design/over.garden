@@ -10,7 +10,10 @@ import { Pool } from "pg";
 import type { Database } from "../src/db/schema";
 import { assertLoopbackDatabaseEnvironment } from "../src/lib/local-runtime-safety";
 import { searchCatalogSuggestionsForTypeaheadResult } from "../src/server/catalog-repository";
-import { attachRegisterFormsToSpecies } from "../src/server/catalog-source/register-graph-attachment";
+import {
+  attachRegisterFormsToSpecies,
+  readRegisterAttachmentInvariant,
+} from "../src/server/catalog-source/register-graph-attachment";
 import { applyMigrationsBefore } from "./prove-organism-graph-foundation";
 
 /**
@@ -442,15 +445,26 @@ export async function runDisposableProof() {
       );
     }
 
-    // A second run is a no-op, and the queued form is not read again.
+    // A second run attaches nothing new.
     const second = [];
     for (const sourceSlug of [UA_SLUG, EU_SLUG, BEE_SLUG] as const) {
       second.push(await attachRegisterFormsToSpecies({ sourceSlug }, kdb));
     }
+    // It does read the residue again — a form waiting for a species is
+    // re-tried, because the species it needs is usually created by another row
+    // a moment later — but it writes nothing and asks nothing twice.
     if (
-      second.some((summary) => summary.attached > 0 || summary.formsRead > 0)
+      second.some(
+        (summary) =>
+          summary.attached > 0 ||
+          summary.queuedForCuration > 0 ||
+          summary.registrationFactsWritten > 0,
+      )
     ) {
-      throw new Error("a second run read or attached something");
+      throw new Error("a second run wrote something");
+    }
+    if ((await openQueueItems(pool, seeded.orphanCultivarId)) !== 1) {
+      throw new Error("a second run asked the owner the same question twice");
     }
 
     // A refresh against a modified export: one new variety, and one that the
@@ -594,6 +608,10 @@ export async function runDisposableProof() {
       unregisteredHomonymSuppressed: true,
       hierarchicalAddress: offeredPath,
       rankedCount: rankedIds.length,
+      invariant: await readRegisterAttachmentInvariant(
+        { sourceSlug: UA_SLUG },
+        kdb,
+      ),
       refreshAttached: refreshed.attached,
       refreshWithdrew: true,
       formsAfterRefresh: Number(survivingForms.rows[0]?.count ?? 0),

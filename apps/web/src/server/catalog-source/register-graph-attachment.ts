@@ -246,7 +246,20 @@ export function readRegisterClaim(
 /** Register forms that are not yet attached to a species. */
 export function buildUnattachedRegisterFormsQuery(
   executor: QueryExecutor,
-  input: { sourceSlug: RegisterSourceSlug; limit: number },
+  input: {
+    sourceSlug: RegisterSourceSlug;
+    limit: number;
+    /**
+     * Page forward from the last form read, so one run reads each one once.
+     *
+     * The primary key, not the timestamp. Postgres stores `created_at` with
+     * microsecond precision and the driver binds a JavaScript Date with
+     * millisecond precision, so a `(created_at, id)` cursor compares against a
+     * value a few hundred microseconds in the past and hands back the same
+     * rows for ever. A uuid has no such rounding.
+     */
+    afterId?: string | null;
+  },
 ) {
   return (
     executor
@@ -290,25 +303,14 @@ export function buildUnattachedRegisterFormsQuery(
           ),
         ),
       )
-      // A form already waiting in the queue is not re-read: without this, every
-      // later run spends its whole budget on the residue it cannot resolve, and
-      // a register whose species are mostly unknown would never reach the rest.
-      .where(({ not, exists, selectFrom }) =>
-        not(
-          exists(
-            selectFrom("catalog_curation_queue as queued")
-              .select("queued.id")
-              .whereRef("queued.subject_catalog_item_id", "=", "item.id")
-              .where("queued.item_type", "=", "source_link")
-              .where("queued.state", "in", [
-                "open",
-                "auto_applied",
-                "accepted",
-              ]),
-          ),
-        ),
+      // A form waiting in the queue *is* read again. The species it needs is
+      // usually created by another row of the same register a moment later,
+      // and a rule that skipped queued forms would leave them waiting for a
+      // curator to decide something the next run decides by itself. Attaching
+      // one closes its queue item, so a form is never both.
+      .$if(Boolean(input.afterId), (query) =>
+        query.where("item.id", ">", input.afterId as string),
       )
-      .orderBy("item.created_at")
       .orderBy("item.id")
       .limit(input.limit)
   );
@@ -482,7 +484,115 @@ export interface RegisterAttachmentSummary {
   registrationFactsWritten: number;
   slugsAssigned: number;
   queuedForCuration: number;
+  /** Queue items a later run answered by attaching the form after all. */
+  queueItemsClosed: number;
   durationMs: number;
+}
+
+/**
+ * Close queue items for forms that are attached after all.
+ *
+ * A form queued by one run and attached by a later one would otherwise ask the
+ * owner to decide something already decided. Repairing it here rather than only
+ * at the moment of attachment also covers rows written before this existed.
+ */
+export async function closeAnsweredRegisterQueueItems(
+  input: { sourceSlug: RegisterSourceSlug },
+  executor: Kysely<Database> = db,
+): Promise<number> {
+  const closed = await sql<{ id: string }>`
+    update catalog_curation_queue as queued
+       set state = 'auto_applied', decided_at = now()
+     where queued.item_type = 'source_link'
+       and queued.state = 'open'
+       and queued.subject_catalog_item_id in (
+         select link.catalog_item_id
+         from catalog_source_links as link
+         join catalog_source_records as record on record.id = link.source_record_id
+         join catalog_source_snapshots as snapshot
+           on snapshot.id = record.source_snapshot_id
+         where snapshot.source_slug = ${input.sourceSlug}
+           and link.projection_kind = 'canonical_item'
+       )
+       and exists (
+         select 1 from catalog_item_relations as relation
+         where relation.from_catalog_item_id = queued.subject_catalog_item_id
+           and relation.relation_type = 'form_of'
+       )
+    returning queued.id::text as id
+  `.execute(executor);
+  return closed.rows.length;
+}
+
+/**
+ * The invariant the task is judged on: every register form has exactly one
+ * `form_of` relation or exactly one open queue item, never both and never
+ * neither.
+ *
+ * Counting it is the only way to know. A pass that attaches 9,056 of 11,940
+ * forms says nothing about the other 2,884 unless something asks where they
+ * went, and a form that is both attached and queued is a curator being asked
+ * to decide something already decided.
+ */
+export async function readRegisterAttachmentInvariant(
+  input: { sourceSlug: RegisterSourceSlug },
+  executor: Kysely<Database> = db,
+): Promise<{
+  forms: number;
+  attached: number;
+  queued: number;
+  bothAttachedAndQueued: number;
+  neither: number;
+}> {
+  const row = await sql<{
+    forms: number;
+    attached: number;
+    queued: number;
+    both: number;
+    neither: number;
+  }>`
+    with forms as (
+      select item.id,
+             exists (
+               select 1 from catalog_item_relations as relation
+               where relation.from_catalog_item_id = item.id
+                 and relation.relation_type = 'form_of'
+             ) as attached,
+             exists (
+               -- Only an open item is waiting. One this pass answered by
+               -- attaching the form later is auto_applied, which is a
+               -- decision, not a question still on the owner's desk.
+               select 1 from catalog_curation_queue as queued
+               where queued.subject_catalog_item_id = item.id
+                 and queued.item_type = 'source_link'
+                 and queued.state = 'open'
+             ) as queued
+      from catalog_source_links as link
+      join catalog_source_records as record on record.id = link.source_record_id
+      join catalog_source_snapshots as snapshot
+        on snapshot.id = record.source_snapshot_id
+      join catalog_items as item on item.id = link.catalog_item_id
+      where snapshot.source_slug = ${input.sourceSlug}
+        and link.projection_kind = 'canonical_item'
+        and item.identity_state = 'active'
+        and item.merged_into_catalog_item_id is null
+        and item.node_kind in ('cultivar', 'breed')
+    )
+    select count(*)::int as forms,
+           count(*) filter (where attached)::int as attached,
+           count(*) filter (where queued)::int as queued,
+           count(*) filter (where attached and queued)::int as both,
+           count(*) filter (where not attached and not queued)::int as neither
+    from forms
+  `.execute(executor);
+  const counts = row.rows[0];
+  return {
+    forms: counts?.forms ?? 0,
+    attached: counts?.attached ?? 0,
+    queued: counts?.queued ?? 0,
+    bothAttachedAndQueued: counts?.both ?? 0,
+    neither: counts?.neither ?? 0,
+  };
 }
 
 /**
@@ -510,6 +620,7 @@ export async function attachRegisterFormsToSpecies(
     registrationFactsWritten: 0,
     slugsAssigned: 0,
     queuedForCuration: 0,
+    queueItemsClosed: 0,
     durationMs: 0,
   };
   const limit = input.limit ?? 100_000;
@@ -521,12 +632,26 @@ export async function attachRegisterFormsToSpecies(
     { catalogItemId: string; rule: string } | { ambiguous: string[] }
   >();
 
+  summary.queueItemsClosed += await closeAnsweredRegisterQueueItems(
+    { sourceSlug: input.sourceSlug },
+    executor,
+  );
+
+  // Paged by a cursor rather than by "the first N unattached". A form this run
+  // cannot resolve stays unattached, so a limit-only query would hand back the
+  // same residue for ever and the run would spin instead of finishing.
+  let afterId: string | null = null;
   while (summary.formsRead < limit) {
-    const batch = await buildUnattachedRegisterFormsQuery(executor, {
-      sourceSlug: input.sourceSlug,
-      limit: Math.min(ATTACH_BATCH_ROWS, limit - summary.formsRead),
-    }).execute();
+    const batch: UnattachedForm[] = await buildUnattachedRegisterFormsQuery(
+      executor,
+      {
+        sourceSlug: input.sourceSlug,
+        limit: Math.min(ATTACH_BATCH_ROWS, limit - summary.formsRead),
+        afterId,
+      },
+    ).execute();
     if (batch.length === 0) break;
+    afterId = batch[batch.length - 1]!.catalogItemId;
 
     for (const form of batch) {
       summary.formsRead += 1;
@@ -611,6 +736,16 @@ async function attachOneForm(
     .onConflict((conflict) => conflict.doNothing())
     .execute();
   summary.attached += 1;
+  // The queue asked a curator a question this run has now answered.
+  const closed = await trx
+    .updateTable("catalog_curation_queue")
+    .set({ state: "auto_applied", decided_at: sql<Date>`now()` })
+    .where("subject_catalog_item_id", "=", form.catalogItemId)
+    .where("item_type", "=", "source_link")
+    .where("state", "=", "open")
+    .returning("id")
+    .execute();
+  summary.queueItemsClosed += closed.length;
   if (resolved.rule === "scientific_name")
     summary.attachedByScientificName += 1;
   if (resolved.rule === "col_usage") summary.attachedByColUsage += 1;
