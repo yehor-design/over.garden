@@ -347,9 +347,18 @@ rewrites and force-pushes. For those, ask.
 ### 4.4 Data jobs in production
 
 Source ingests, reconciliation and recomputes run through the deployed worker
-against the production database. Enqueue them from the owner's sources page
-or with a plain `pnpm exec tsx` script that inserts the `job_queue` row with an
-idempotency key. Rehearse every job on the loopback database first and record
+against the production database. Enqueue them from the owner's sources page or
+with the command that inserts the `job_queue` row through the same builder:
+
+```bash
+pnpm exec tsx scripts/enqueue-catalog-source-refresh.ts --source <slug> \
+  --env-file /abs/path/prod.env --environment production \
+  --confirm-environment production --allow-non-local-mutation
+```
+
+It refuses a remote database unless production is named three times, and
+refuses the loopback database when production *is* named — a production flag
+against a local database puts a job nobody drains on a queue nobody watches. Rehearse every job on the loopback database first and record
 counts and duration on the issue for both runs.
 
 ## 5. Order, hand-offs, definition of done
