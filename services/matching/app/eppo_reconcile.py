@@ -708,18 +708,23 @@ def read_taxa(
         if isinstance(payload, str):
             payload = json.loads(payload)
         taxon = taxa.setdefault(code, EppoTaxon(eppo_code=code))
+        objects = (
+            [entry for entry in payload if isinstance(entry, dict)]
+            if isinstance(payload, list)
+            else []
+        )
         if endpoint_class == "taxon_overview" and isinstance(payload, dict):
             taxon.overview = payload
-        elif endpoint_class == "taxon_names" and isinstance(payload, list):
-            taxon.names = [row for row in payload if isinstance(row, dict)]
-        elif endpoint_class == "taxon_taxonomy" and isinstance(payload, list):
-            taxon.taxonomy = [row for row in payload if isinstance(row, dict)]
-        elif endpoint_class == "taxon_hosts" and isinstance(payload, list):
-            taxon.hosts = [row for row in payload if isinstance(row, dict)]
-        elif endpoint_class == "taxon_distribution" and isinstance(payload, list):
-            taxon.distribution = [row for row in payload if isinstance(row, dict)]
-        elif endpoint_class == "taxon_categorization" and isinstance(payload, list):
-            taxon.categorization = [row for row in payload if isinstance(row, dict)]
+        elif endpoint_class == "taxon_names":
+            taxon.names = objects
+        elif endpoint_class == "taxon_taxonomy":
+            taxon.taxonomy = objects
+        elif endpoint_class == "taxon_hosts":
+            taxon.hosts = objects
+        elif endpoint_class == "taxon_distribution":
+            taxon.distribution = objects
+        elif endpoint_class == "taxon_categorization":
+            taxon.categorization = objects
     return taxa
 
 
@@ -735,11 +740,16 @@ class LinkOutcome:
 def climb_eppo_ladder(
     conn: Any, taxon: EppoTaxon, assertion_id: str | None = None
 ) -> LinkOutcome:
-    """Rung one, then two, then three — and nothing below three.
+    """The identifier, then the two names, then the checklist itself.
 
-    A rung that finds more than one node does not fall through to a looser
-    rung: a looser comparison cannot resolve an ambiguity a stricter one found.
+    A rung that finds more than one candidate does not fall through to a looser
+    one: a looser comparison cannot resolve an ambiguity a stricter one found.
     It stops, and the identifier goes to the queue with both candidates named.
+
+    The last rung reaches past the graph into `catalog_source_col_usages` and
+    materializes what it finds, so a taxon Catalogue of Life knows arrives as a
+    backbone node rather than as a question for the owner. It needs an
+    assertion to attribute that node to, which is why one is passed in.
     """
     owner = _field(
         conn.execute(IDENTIFIER_OWNER_SQL, (taxon.eppo_code,)).fetchone(), "id"
