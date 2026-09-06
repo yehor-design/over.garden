@@ -114,8 +114,10 @@ and its species) or the owner sets `indexable_override`
 (`organism_without_first_hand_content`). Worker-side changes revalidate
 through the outbox: migration `0062` admits `catalog_item` intents with reason
 `catalog_card` and no owner, `/api/cron/catalog-card-revalidate` drains them
-every ten minutes, `scripts/prove-catalog-card-revalidate.ts` proves the
-migration, its rollback and the drain in CI. Production apply of `0062` is
+daily (Vercel's Hobby plan refuses a cron that runs more than once a day; the
+ten-minute cadence needs the Pro plan, and the card read's hour-long cache
+profile bounds staleness meanwhile), `scripts/prove-catalog-card-revalidate.ts`
+proves the migration, its rollback and the drain in CI. Production apply of `0062` is
 recorded in `docs/PRODUCTION_SCHEMA_STATE.md`.
 
 **Delivered 2026-09-06, OVE-388 (Slice 24, task 3 of 14).** Every organism

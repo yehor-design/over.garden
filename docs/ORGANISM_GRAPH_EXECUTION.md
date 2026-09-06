@@ -138,6 +138,11 @@ rewrites and force-pushes. For those, ask.
   entries and degrades to no panel on failure, or every zero-entry register
   cultivar answers a digest error behind a streamed 200 (the server log
   shows it, the status does not).
+- **Vercel crons run at most daily on this plan.** A `vercel.json` schedule
+  that fires more often (`*/10 * * * *`) makes the deployment fail before it
+  builds, with a status link to the cron pricing page and nothing in CI; the
+  previous production build stays live. Schedule daily and let the cache
+  profile bound staleness, or ask the owner about the Pro plan.
 - **Research corpus.** `docs/product-research/` and
   `/Users/yehor/Desktop/Startups/OverGarden` must stay byte-identical except
   `README.md` and four desktop-only items. After editing a research file, copy
