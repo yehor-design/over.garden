@@ -1,4 +1,12 @@
-import { expect, test } from "playwright/test";
+import { expect, test, type Page } from "playwright/test";
+import { Pool } from "pg";
+
+import {
+  cleanupOrganismFixture,
+  requiredLocalDatabaseUrl,
+  seedOrganismFixture,
+  type OrganismFixture,
+} from "./helpers/organism-fixture";
 
 /**
  * Does a public page hydrate below the shell on a hard load?
@@ -37,62 +45,87 @@ interface HydrationProbe {
 
 const PUBLIC_PATHS = ["/journals", "/objects", "/knowledge"];
 
+async function probeHydration(page: Page, path: string) {
+  await page.goto(path, { waitUntil: "load" });
+  // Hydration is not tied to `load`; give React a real chance before
+  // concluding anything, so a slow pass is not read as a failure.
+  await page.waitForTimeout(3_000);
+
+  const probe = await page.evaluate<HydrationProbe>(() => {
+    const hydrated = (element: Element | null) =>
+      element
+        ? Object.keys(element).some((key) => key.startsWith("__react"))
+        : false;
+
+    // The deepest element carrying a fiber names where hydration stopped.
+    let deepest: Element | null = null;
+    let depth = -1;
+    for (const element of document.querySelectorAll("*")) {
+      if (!hydrated(element)) continue;
+      let current: Element | null = element;
+      let elementDepth = 0;
+      while ((current = current.parentElement)) elementDepth += 1;
+      if (elementDepth > depth) {
+        depth = elementDepth;
+        deepest = element;
+      }
+    }
+
+    return {
+      bodyFirstChild: hydrated(document.body.firstElementChild),
+      main: hydrated(document.querySelector("main")),
+      deepestHydrated: deepest
+        ? `${deepest.tagName.toLowerCase()}${deepest.id ? `#${deepest.id}` : ""}`
+        : null,
+      postponedTemplates:
+        document.querySelectorAll("template[id]").length,
+      scriptCount: document.querySelectorAll("script[src]").length,
+    };
+  });
+
+  // Reported whatever the outcome, so a failing run carries its evidence.
+  test.info().annotations.push({
+    type: "hydration probe",
+    description: JSON.stringify(probe),
+  });
+
+  expect(
+    probe.scriptCount,
+    "the page must actually load its client bundle",
+  ).toBeGreaterThan(0);
+  expect(
+    probe.main,
+    `main carried no React fiber; deepest hydrated node was ${probe.deepestHydrated}`,
+  ).toBe(true);
+  return probe;
+}
+
 test.describe("public pages hydrate below the shell", () => {
   for (const path of PUBLIC_PATHS) {
     test(`${path} hydrates its main region`, async ({ page }) => {
-      await page.goto(path, { waitUntil: "load" });
-      // Hydration is not tied to `load`; give React a real chance before
-      // concluding anything, so a slow pass is not read as a failure.
-      await page.waitForTimeout(3_000);
-
-      const probe = await page.evaluate<HydrationProbe>(() => {
-        const hydrated = (element: Element | null) =>
-          element
-            ? Object.keys(element).some((key) => key.startsWith("__react"))
-            : false;
-
-        // The deepest element carrying a fiber names where hydration stopped.
-        let deepest: Element | null = null;
-        let depth = -1;
-        for (const element of document.querySelectorAll("*")) {
-          if (!hydrated(element)) continue;
-          let current: Element | null = element;
-          let elementDepth = 0;
-          while ((current = current.parentElement)) elementDepth += 1;
-          if (elementDepth > depth) {
-            depth = elementDepth;
-            deepest = element;
-          }
-        }
-
-        return {
-          bodyFirstChild: hydrated(document.body.firstElementChild),
-          main: hydrated(document.querySelector("main")),
-          deepestHydrated: deepest
-            ? `${deepest.tagName.toLowerCase()}${deepest.id ? `#${deepest.id}` : ""}`
-            : null,
-          postponedTemplates:
-            document.querySelectorAll("template[id]").length,
-          scriptCount: document.querySelectorAll("script[src]").length,
-        };
-      });
-
-      // Reported whatever the outcome, so a failing run carries its evidence.
-      test.info().annotations.push({
-        type: "hydration probe",
-        description: JSON.stringify(probe),
-      });
-
-      expect(
-        probe.scriptCount,
-        "the page must actually load its client bundle",
-      ).toBeGreaterThan(0);
-      expect(
-        probe.main,
-        `main carried no React fiber; deepest hydrated node was ${probe.deepestHydrated}`,
-      ).toBe(true);
+      await probeHydration(page, path);
     });
   }
+
+  // The organism card (ADR-0026 D9) is a species page with one public entry,
+  // seeded here because a fresh database holds no organism.
+  test("a species card hydrates its main region and ships its panel closed", async ({
+    page,
+  }) => {
+    const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
+    let fixture: OrganismFixture | null = null;
+    try {
+      fixture = await seedOrganismFixture(pool, "ove389");
+      await probeHydration(page, `/species/${fixture.speciesSlug}`);
+      await expect(page.locator("[data-organism-fact]")).toContainText("Solanum lycopersicum");
+      await expect(
+        page.locator('details[data-organism-section="names-and-sources"]'),
+      ).toHaveJSProperty("open", false);
+    } finally {
+      if (fixture) await cleanupOrganismFixture(pool, fixture);
+      await pool.end();
+    }
+  });
 
   test("a public control acts on a hard load", async ({ page }) => {
     await page.goto("/journals", { waitUntil: "load" });

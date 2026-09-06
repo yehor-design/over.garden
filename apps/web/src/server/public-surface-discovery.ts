@@ -177,6 +177,8 @@ export interface PublicSurfaceDiscoverySource {
   distinctPublicEntityIds: readonly string[] | null;
   canonicalPath: string | null;
   equivalentLocales: readonly PublicLocale[] | null;
+  /** Organism cards only (ADR-0026 D9); absent for every other surface. */
+  organism?: { hasFirstHandContent: boolean } | null;
 }
 
 export interface PublicSurfaceDiscoveryResult {
@@ -207,6 +209,9 @@ export function resolvePublicSurfaceDiscovery(
           canonicalPath: source.canonicalPath,
           equivalentLocales: normalizeLocales(source.equivalentLocales),
           surfaceKind: owner.surfaceKind,
+          hasFirstHandContent: source.organism
+            ? source.organism.hasFirstHandContent
+            : null,
         }
       : unresolvedCandidateInput(owner.surfaceKind, candidateState);
 

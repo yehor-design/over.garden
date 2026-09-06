@@ -1,6 +1,14 @@
 import type { InterfaceLocale } from "@/lib/interface-localization";
 
-export type PublicCountKind = "entry" | "photo" | "publicEntry" | "like";
+export type PublicCountKind =
+  | "entry"
+  | "photo"
+  | "publicEntry"
+  | "like"
+  | "form"
+  | "gardener"
+  | "region"
+  | "object";
 
 interface PublicSurfaceCopy {
   accessibility: {
@@ -166,6 +174,53 @@ interface PublicSurfaceCopy {
     notFound: string;
     notFoundDescription: string;
     browseObjects: string;
+    /** Fact paragraph templates (ADR-0026 D9): structured fields only. */
+    fact: {
+      identity: string;
+      identityWithSpecies: string;
+      forms: string;
+      gardeners: string;
+      gardenersWithRegions: string;
+      noGardeners: string;
+      kind: Record<"species" | "plant_variety" | "breed", string>;
+    };
+    sections: {
+      experience: string;
+      spread: string;
+      relations: string;
+      forms: string;
+      pests: string;
+      hosts: string;
+      namesAndSources: string;
+      namesAndSourcesHint: string;
+      disagreement: string;
+      lastUpdated: string;
+      downloadedOn: string;
+      observedOn: string;
+      identifier: string;
+    };
+    hostClass: Record<
+      | "major_host"
+      | "host"
+      | "wild_weed_host"
+      | "incidental"
+      | "experimental"
+      | "artificial"
+      | "unknown",
+      string
+    >;
+    nameType: Record<
+      | "scientific_accepted"
+      | "scientific_synonym"
+      | "vernacular"
+      | "denomination"
+      | "trade_designation",
+      string
+    >;
+    predicate: Record<
+      "distribution_status" | "categorization" | "registration_status",
+      string
+    >;
   };
 }
 
@@ -346,6 +401,52 @@ const COPY = {
       notFoundDescription:
         "За цією адресою немає виду, сорту чи породи. Адреси змінюються лише з постійним перенаправленням, тому посилання, ймовірно, було введено з помилкою.",
       browseObjects: "Переглянути живі об'єкти",
+      fact: {
+        identity: "{name} — {kind}.",
+        identityWithSpecies: "{name} — {kind} виду {species}.",
+        forms: "У каталозі {forms} цього виду.",
+        gardeners: "Публічні журнали ведуть {gardeners}.",
+        gardenersWithRegions: "Публічні журнали ведуть {gardeners} у {regions}.",
+        noGardeners: "Публічних записів садівників ще немає.",
+        kind: { species: "вид", plant_variety: "сорт", breed: "порода або лінія" },
+      },
+      sections: {
+        experience: "Досвід садівників",
+        spread: "Де вирощують",
+        relations: "Зв'язки",
+        forms: "Форми цього виду",
+        pests: "Шкідники та хвороби",
+        hosts: "Живителі",
+        namesAndSources: "Назви та джерела",
+        namesAndSourcesHint:
+          "Що стверджує кожне джерело, з версією та датою спостереження.",
+        disagreement: "Джерела розходяться щодо прийнятої назви:",
+        lastUpdated: "Оновлено",
+        downloadedOn: "Завантажено",
+        observedOn: "Спостережено",
+        identifier: "Ідентифікатор",
+      },
+      hostClass: {
+        major_host: "основний живитель",
+        host: "живитель",
+        wild_weed_host: "дикий або бур'яновий живитель",
+        incidental: "випадковий живитель",
+        experimental: "експериментальний живитель",
+        artificial: "штучне зараження",
+        unknown: "клас живителя невідомий",
+      },
+      nameType: {
+        scientific_accepted: "Прийнята наукова назва",
+        scientific_synonym: "Науковий синонім",
+        vernacular: "Народна назва",
+        denomination: "Реєстрова назва",
+        trade_designation: "Торгова назва",
+      },
+      predicate: {
+        distribution_status: "Поширення",
+        categorization: "Категорія",
+        registration_status: "Реєстрація",
+      },
     },
   },
   bg: {
@@ -525,6 +626,52 @@ const COPY = {
       notFoundDescription:
         "На този адрес няма вид, сорт или порода. Адресите се променят само с постоянно пренасочване, така че връзката вероятно е въведена грешно.",
       browseObjects: "Разгледайте живите обекти",
+      fact: {
+        identity: "{name} — {kind}.",
+        identityWithSpecies: "{name} — {kind} от вида {species}.",
+        forms: "В каталога има {forms} на този вид.",
+        gardeners: "Публични дневници водят {gardeners}.",
+        gardenersWithRegions: "Публични дневници водят {gardeners} в {regions}.",
+        noGardeners: "Все още няма публични записи от градинари.",
+        kind: { species: "вид", plant_variety: "сорт", breed: "порода или линия" },
+      },
+      sections: {
+        experience: "Опит на градинарите",
+        spread: "Къде се отглежда",
+        relations: "Връзки",
+        forms: "Форми на този вид",
+        pests: "Вредители и болести",
+        hosts: "Гостоприемници",
+        namesAndSources: "Имена и източници",
+        namesAndSourcesHint:
+          "Какво твърди всеки източник, с версия и дата на наблюдение.",
+        disagreement: "Източниците се разминават относно приетото име:",
+        lastUpdated: "Обновено",
+        downloadedOn: "Изтеглено",
+        observedOn: "Наблюдавано",
+        identifier: "Идентификатор",
+      },
+      hostClass: {
+        major_host: "основен гостоприемник",
+        host: "гостоприемник",
+        wild_weed_host: "див или плевелен гостоприемник",
+        incidental: "случаен гостоприемник",
+        experimental: "експериментален гостоприемник",
+        artificial: "изкуствено заразяване",
+        unknown: "неизвестен клас гостоприемник",
+      },
+      nameType: {
+        scientific_accepted: "Прието научно име",
+        scientific_synonym: "Научен синоним",
+        vernacular: "Народно име",
+        denomination: "Регистрово име",
+        trade_designation: "Търговско име",
+      },
+      predicate: {
+        distribution_status: "Разпространение",
+        categorization: "Категория",
+        registration_status: "Регистрация",
+      },
     },
   },
   ru: {
@@ -703,6 +850,52 @@ const COPY = {
       notFoundDescription:
         "По этому адресу нет вида, сорта или породы. Адреса меняются только с постоянным перенаправлением, поэтому ссылка, вероятно, введена с ошибкой.",
       browseObjects: "Посмотреть живые объекты",
+      fact: {
+        identity: "{name} — {kind}.",
+        identityWithSpecies: "{name} — {kind} вида {species}.",
+        forms: "В каталоге {forms} этого вида.",
+        gardeners: "Публичные дневники ведут {gardeners}.",
+        gardenersWithRegions: "Публичные дневники ведут {gardeners} в {regions}.",
+        noGardeners: "Публичных записей садоводов пока нет.",
+        kind: { species: "вид", plant_variety: "сорт", breed: "порода или линия" },
+      },
+      sections: {
+        experience: "Опыт садоводов",
+        spread: "Где выращивают",
+        relations: "Связи",
+        forms: "Формы этого вида",
+        pests: "Вредители и болезни",
+        hosts: "Растения-хозяева",
+        namesAndSources: "Названия и источники",
+        namesAndSourcesHint:
+          "Что утверждает каждый источник, с версией и датой наблюдения.",
+        disagreement: "Источники расходятся в принятом названии:",
+        lastUpdated: "Обновлено",
+        downloadedOn: "Загружено",
+        observedOn: "Наблюдалось",
+        identifier: "Идентификатор",
+      },
+      hostClass: {
+        major_host: "основной хозяин",
+        host: "хозяин",
+        wild_weed_host: "дикий или сорный хозяин",
+        incidental: "случайный хозяин",
+        experimental: "экспериментальный хозяин",
+        artificial: "искусственное заражение",
+        unknown: "класс хозяина неизвестен",
+      },
+      nameType: {
+        scientific_accepted: "Принятое научное название",
+        scientific_synonym: "Научный синоним",
+        vernacular: "Народное название",
+        denomination: "Реестровое название",
+        trade_designation: "Торговое название",
+      },
+      predicate: {
+        distribution_status: "Распространение",
+        categorization: "Категория",
+        registration_status: "Регистрация",
+      },
     },
   },
 } satisfies Record<InterfaceLocale, PublicSurfaceCopy>;
@@ -719,6 +912,15 @@ const COUNT_FORMS: Record<
       other: "запису",
     },
     photo: { one: "фото", few: "фото", many: "фото", other: "фото" },
+    form: { one: "форма", few: "форми", many: "форм", other: "форми" },
+    gardener: {
+      one: "садівник",
+      few: "садівники",
+      many: "садівників",
+      other: "садівника",
+    },
+    region: { one: "області", few: "областях", many: "областях", other: "області" },
+    object: { one: "об'єкт", few: "об'єкти", many: "об'єктів", other: "об'єкта" },
     publicEntry: {
       one: "публічний запис",
       few: "публічні записи",
@@ -745,6 +947,15 @@ const COUNT_FORMS: Record<
       many: "снимки",
       other: "снимки",
     },
+    form: { one: "форма", few: "форми", many: "форми", other: "форми" },
+    gardener: {
+      one: "градинар",
+      few: "градинари",
+      many: "градинари",
+      other: "градинари",
+    },
+    region: { one: "област", few: "области", many: "области", other: "области" },
+    object: { one: "обект", few: "обекта", many: "обекта", other: "обекта" },
     publicEntry: {
       one: "публичен запис",
       few: "публични записа",
@@ -766,6 +977,15 @@ const COUNT_FORMS: Record<
       other: "записи",
     },
     photo: { one: "фото", few: "фото", many: "фото", other: "фото" },
+    form: { one: "форма", few: "формы", many: "форм", other: "формы" },
+    gardener: {
+      one: "садовод",
+      few: "садовода",
+      many: "садоводов",
+      other: "садовода",
+    },
+    region: { one: "области", few: "областях", many: "областях", other: "областях" },
+    object: { one: "объект", few: "объекта", many: "объектов", other: "объекта" },
     publicEntry: {
       one: "публичная запись",
       few: "публичные записи",

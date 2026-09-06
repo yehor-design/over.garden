@@ -957,7 +957,7 @@ export interface PublicProjectionIntents {
   last_error_class: string | null;
   lease_expires_at: Timestamp | null;
   lease_owner: string | null;
-  owner_user_id: string;
+  owner_user_id: string | null;
   privacy_reducing: Generated<boolean>;
   status: Generated<string>;
   updated_at: Generated<Timestamp>;

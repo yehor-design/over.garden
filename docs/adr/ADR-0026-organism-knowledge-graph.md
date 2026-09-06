@@ -307,6 +307,12 @@ a breaking change for every later task and needs an amendment here.
   2026-09-06 while delivering 24.03, whose text assumed the proxy touches no
   database. A form not yet linked to a species keeps its legacy
   `/variety` or `/breed` address until the registers task links it.
+- Card revalidation through the outbox needed one more migration than the
+  slice reserved: `0054` added the reason `catalog_card`, but the outbox's
+  entity-kind check admitted journal entries alone and its owner column was
+  mandatory. `0062` (24.04, taken as the next free number) admits
+  `catalog_item` intents without an owner; the worker's drain and the web
+  drain each filter by entity kind. Recorded 2026-09-06.
 - Catalogue of Life's full checklist lives in the source layer; canonical nodes
   exist only for what gardeners, registers and EPPO touch, so the primary list
   stays relevant while nothing is missing.

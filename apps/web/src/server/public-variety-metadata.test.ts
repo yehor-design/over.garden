@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { emptyPublicOrganismCard } from "./public-organism-card-query";
 import { resolvePublicSurfaceDiscoveryForRequest } from "./public-surface-discovery";
 import {
   buildPublicVarietyJsonLd,
@@ -222,6 +223,11 @@ function buildPage({ rich }: { rich: boolean }): PublicVarietyPage {
         media: null,
       },
     ],
+    card: emptyPublicOrganismCard({
+      firstHandContentAt: new Date("2026-06-20T12:00:00.000Z"),
+      hasFirstHandContent: true,
+      gardenerCount: 1,
+    }),
   } satisfies Omit<PublicVarietyPage, "indexState">;
   return {
     ...page,

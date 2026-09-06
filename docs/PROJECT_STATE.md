@@ -37,7 +37,7 @@ Verified on 2026-09-03 against `https://over.garden` and the live providers.
 | Admin         | Owner pages live in the account menu under the sealed owner role; `/health` is owner-only. The Release Center, editions and extension packs are gone (ADR-0025, `OVE-385`); the menu carries four owner links |
 | Workspace     | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023)                                                 |
 | Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw |
-| Schema        | Migrations `0001`–`0047`, `0049` and `0051`–`0055` applied, minus the two deliberately skipped and the two not needed in production; `0053` dropped the twenty Stable Registry tables, `0054` laid the organism graph foundation (ADR-0026) on 2026-09-05 and `0055` turned provisional cards into labels and added the picker's ranking inputs on 2026-09-06. See `docs/PRODUCTION_SCHEMA_STATE.md` |
+| Schema        | Migrations `0001`–`0047`, `0049`, `0051`–`0055` and `0062` applied, minus the two deliberately skipped and the two not needed in production; `0053` dropped the twenty Stable Registry tables, `0054` laid the organism graph foundation (ADR-0026) on 2026-09-05, `0055` turned provisional cards into labels and added the picker's ranking inputs on 2026-09-06, and `0062` admitted organism card intents to the outbox the same day. See `docs/PRODUCTION_SCHEMA_STATE.md` |
 | Interaction   | Like, bookmark, follow and comment are Server Actions on a form with a real endpoint, so they work before hydration and with JavaScript off. A like is a permanent row owned by an account or by one signed visitor cookie, with no expiry and no ceiling |
 | Sign-in       | One screen: `/auth/sign-in` and `/auth/sign-up` over one component and Server Actions. Every other page shows its own empty state and one link to it                                                        |
 | Matching      | The worker on the droplet runs the sealed six-handler release of `d5faee5` since 2026-09-05 with a fresh heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03 |
@@ -93,6 +93,30 @@ receipt in `docs/WORKSPACE_RESILIENCE_PROOF_2026-09.md`.
 platform: real gardeners publishing, and organic discovery measured rather than
 assumed. One measurement gap blocks honest prioritisation; see known gaps
 below.
+
+**Delivered 2026-09-06, OVE-389 (Slice 24, task 4 of 14).** The organism
+card: one cached read (`readPublicVarietyPageByCatalogItemId`, tags
+`organism:{id}` and `catalog`) assembles the page from one statement over the
+graph tables (`src/server/public-organism-card-query.ts`: names, identifiers,
+relations, facts and the snapshots behind their assertions, public and
+accepted assertions only) plus the launch-guarded gardener experience. Sections
+in D9 order: a fact-only first paragraph from structured fields (kind, species,
+number of forms, gardeners with public journals, oblasts; templates in uk, bg,
+ru), the gardener experience with the spread by oblast, relations (forms of the
+species, pests of the plant, hosts of the pest with the host class), a collapsed
+native `<details>` "Names and sources" panel that lists each source's
+assertions with version and observed date and names an accepted-name
+disagreement neutrally, and an attribution footer with the download date, the
+newest assertion date and an outbound link per source. A card whose content
+comes only from sources is reachable but `noindex` and absent from the sitemap
+until `first_hand_content_at` is set (the publish path sets it for the node
+and its species) or the owner sets `indexable_override`
+(`organism_without_first_hand_content`). Worker-side changes revalidate
+through the outbox: migration `0062` admits `catalog_item` intents with reason
+`catalog_card` and no owner, `/api/cron/catalog-card-revalidate` drains them
+every ten minutes, `scripts/prove-catalog-card-revalidate.ts` proves the
+migration, its rollback and the drain in CI. Production apply of `0062` is
+recorded in `docs/PRODUCTION_SCHEMA_STATE.md`.
 
 **Delivered 2026-09-06, OVE-388 (Slice 24, task 3 of 14).** Every organism
 has a permanent address: a species answers at `/species/{slug}`, a cultivar

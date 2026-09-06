@@ -41,6 +41,32 @@ describe("public surface indexability (ADR-0022, D3)", () => {
     ).toBe(true);
   });
 
+  it("keeps an organism card without first-hand content reachable but noindex (ADR-0026 D9)", () => {
+    const organism = candidate({
+      surfaceKind: "variety_aggregation",
+      canonicalPath: "/species/solanum-lycopersicum",
+      equivalentLocales: ["uk", "bg", "ru"],
+    });
+    expect(
+      evaluatePublicSurfaceIndexability({ ...organism, hasFirstHandContent: false }),
+    ).toMatchObject({
+      value: "noindex",
+      sitemapEligible: false,
+      robots: { index: false, follow: false },
+      reasons: ["organism_without_first_hand_content"],
+    });
+    expect(
+      evaluatePublicSurfaceIndexability({ ...organism, hasFirstHandContent: true }).isIndexable,
+    ).toBe(true);
+    expect(
+      evaluatePublicSurfaceIndexability({ ...organism, hasFirstHandContent: null }).isIndexable,
+    ).toBe(true);
+    // The rule is the organism card's alone.
+    expect(
+      evaluatePublicSurfaceIndexability(candidate({ hasFirstHandContent: false })).isIndexable,
+    ).toBe(true);
+  });
+
   it("refuses only an empty listing, a gone or non-public record, or an unresolved load", () => {
     expect(
       evaluatePublicSurfaceIndexability(candidate({ hasContent: false })),

@@ -154,6 +154,9 @@ jobs:
       - name: Prove the label migration, its rollback and the picker ranking
         run: pnpm schema:catalog-labels:prove-database
 
+      - name: Prove the card intent migration, its rollback and the revalidation drain
+        run: pnpm schema:catalog-card:prove-database
+
       - name: Lint
         run: pnpm lint
 

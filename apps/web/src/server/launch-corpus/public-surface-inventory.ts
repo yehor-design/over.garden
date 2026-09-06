@@ -23,6 +23,7 @@ export const PUBLIC_LAUNCH_JOURNAL_CALLERS = [
   ["profile", "public-profile-repository.ts", 8],
   ["lineage", "public-lineage-repository.ts", 3],
   ["variety", "public-variety-repository.ts", 3],
+  ["organism-card", "public-organism-card-query.ts", 1],
   ["social-readback", "social-readback-repository.ts", 2],
   ["community", "community-repository.ts", 8],
   ["engagement", "engagement-repository.ts", 4],

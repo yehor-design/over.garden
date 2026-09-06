@@ -69,6 +69,16 @@ test.describe("OVE-387 catalog picker", () => {
       userId = await createVerifiedCredentialSession({ baseURL, context, email, pool });
       await selectLocale(context, baseURL, "uk");
 
+      // The organism card before any first-hand content (ADR-0026 D9):
+      // reachable, noindex, nothing but the fact paragraph.
+      const speciesPath = `/species/ove387-${fixture.suffix}-${fixture.speciesId.slice(0, 8)}`;
+      const before = await page.request.get(speciesPath, { headers: { accept: "text/html" } });
+      expect(before.status()).toBe(200);
+      const beforeHtml = await before.text();
+      expect(beforeHtml).toContain("Публічних записів садівників ще немає.");
+      expect(beforeHtml).toMatch(/name="robots" content="noindex, nofollow"/u);
+      expect(beforeHtml).not.toContain('data-organism-section="experience"');
+
       // Outcome 1: a species, picked by keyboard alone.
       await openComposer(page);
       const combobox = pickerCombobox(page);
@@ -105,6 +115,33 @@ test.describe("OVE-387 catalog picker", () => {
         node_kind: "taxon",
         canonical_name: expect.stringMatching(/^Solanum lycopersicum/u),
       });
+
+      // Publishing set the species' first-hand clock and expired its card: the
+      // next load counts one gardener, is indexable, keeps the D9 section
+      // order and ships the "Names and sources" panel closed.
+      await page.goto(speciesPath, { waitUntil: "load" });
+      // The site shell renders its own loading `main`s; the card is the one
+      // carrying the fact paragraph.
+      const card = page.locator("main", { has: page.locator("[data-organism-fact]") });
+      await expect(card.locator("[data-organism-fact]")).toContainText("Публічні журнали ведуть 1 садівник");
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
+      const cardHtml = await card.innerHTML();
+      const sectionOrder = [
+        'data-organism-section="facts"',
+        'data-organism-section="experience"',
+        'data-organism-section="relations"',
+        'data-organism-section="names-and-sources"',
+        'data-organism-section="attribution"',
+      ].map((marker) => cardHtml.indexOf(marker));
+      expect(sectionOrder.every((index) => index >= 0)).toBe(true);
+      expect([...sectionOrder].sort((a, b) => a - b)).toEqual(sectionOrder);
+      const namesPanel = page.locator('details[data-organism-section="names-and-sources"]');
+      await expect(namesPanel).toHaveJSProperty("open", false);
+      await namesPanel.locator("summary").click();
+      await expect(namesPanel).toHaveJSProperty("open", true);
+      await expect(namesPanel).toContainText("Solanum lycopersicum");
+      await expect(page.locator('[data-organism-relations="forms"]')).toContainText("Де Барао");
+      await page.goto("/garden");
 
       // Outcome 2: a form, with its species implied in the row.
       await openComposer(page);
@@ -188,6 +225,7 @@ test.describe("OVE-387 catalog picker", () => {
       console.info(
         JSON.stringify({
           outcomes: 3,
+          organismCardBeforeAndAfterPublish: true,
           keyboardOnlyPick: true,
           routeUnavailableStillPublishes: true,
           objectPageReresolve: true,

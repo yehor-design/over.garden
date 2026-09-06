@@ -22,6 +22,10 @@
     {
       "path": "/api/cron/catalog-search-weight",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/catalog-card-revalidate",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

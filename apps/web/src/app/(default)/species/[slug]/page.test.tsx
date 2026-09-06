@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { emptyPublicOrganismCard } from "@/server/public-organism-card-query";
+
 const ITEM_ID = "11111111-1111-4111-8111-111111111111";
 
 const mocks = vi.hoisted(() => ({
@@ -47,7 +49,9 @@ vi.mock("@/app/(default)/wishlist/actions", () => ({
   addCatalogPublicSlugToWishlistAction: vi.fn(),
 }));
 vi.mock("@/app/(default)/variety/[slug]/source-credits", () => ({
-  PublicVarietySourceCredits: () => <section>Source credits</section>,
+  PublicVarietySourceCredits: () => (
+    <footer data-organism-section="attribution">Source credits</footer>
+  ),
 }));
 
 describe("organism addresses (ADR-0026 D8, D9)", () => {
@@ -89,6 +93,33 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     expect(html).toContain("Записати цей вид");
     expect(html).toContain('href="/objects?identity=species"');
     expect(html).not.toContain("списку бажань");
+    // D9 section order: facts, experience, relations, names and sources, attribution.
+    const markers = [
+      'data-organism-section="facts"',
+      'data-organism-section="experience"',
+      'data-organism-section="relations"',
+      'data-organism-section="names-and-sources"',
+      'data-organism-section="attribution"',
+    ];
+    const positions = Object.fromEntries(
+      markers.map((marker) => [marker, html.indexOf(marker)]),
+    );
+    expect(positions).toEqual(
+      Object.fromEntries(markers.map((marker) => [marker, expect.any(Number)])),
+    );
+    const order = markers.map((marker) => positions[marker]!);
+    expect(order.every((index) => index >= 0), JSON.stringify(positions)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(html).toContain(
+      "Solanum lycopersicum — вид. У каталозі 1 форма цього виду. Публічні журнали ведуть 2 садівники у 1 області.",
+    );
+    expect(html).toContain("Київська");
+    expect(html).toContain('href="/species/solanum-lycopersicum/de-barao"');
+    expect(html).toContain("Tuta absoluta");
+    expect(html).toContain("основний живитель");
+    expect(html).toMatch(/<details[^>]*data-organism-section="names-and-sources"/u);
+    expect(html).not.toMatch(/<details[^>]*open/u);
+    expect(html).toContain("Джерела розходяться щодо прийнятої назви:");
     expect(html).toMatch(/"@type":\s*"Taxon"/u);
     expect(html).toContain(`/id/${ITEM_ID}`);
     expect(html).toContain("https://gd.eppo.int/taxon/LYPES");
@@ -126,21 +157,28 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     });
   });
 
-  it("renders a form without public entries with Taxon JSON-LD and no engagement panel, and survives a refused panel", async () => {
+  it("renders a source-only form reachable but noindex, with no JSON-LD and no engagement panel, and survives a refused panel", async () => {
     mocks.readPublicVarietyPageByCatalogItemId.mockImplementation(async () => ({
       ...page("plant_variety", "de-barao"),
       entryCount: 0,
       entries: [],
+      card: emptyPublicOrganismCard(),
     }));
-    const { default: FormRoute } = await import("./[form]/page");
+    const { default: FormRoute, generateMetadata } = await import("./[form]/page");
     const props = {
       params: Promise.resolve({ slug: "solanum-lycopersicum", form: "de-barao" }),
     };
     const html = renderToStaticMarkup(await FormRoute(props));
 
     expect(html).toContain("Де Барао");
-    expect(html).toMatch(/"@type":\s*"Taxon"/u);
+    expect(html).toContain("Публічних записів садівників ще немає.");
+    expect(html).not.toMatch(/"@type":\s*"Taxon"/u);
+    expect(html).not.toContain('data-organism-section="experience"');
+    expect(html).not.toContain('data-organism-section="relations"');
     expect(mocks.getEngagementSummary).not.toHaveBeenCalled();
+    await expect(generateMetadata(props)).resolves.toMatchObject({
+      robots: { index: false, follow: false },
+    });
 
     mocks.readPublicVarietyPageByCatalogItemId.mockImplementation(async () =>
       page("plant_variety", "de-barao"),
@@ -308,7 +346,58 @@ function page(kind: "species" | "breed" | "plant_variety", slug: string) {
       },
     },
     seedProof: null,
-    sourceCredits: [],
+    sourceCredits: [
+      {
+        sourceSlug: "eppo",
+        sourceName: "EPPO Global Database",
+        sourceVersion: "2026-09",
+        sourceUrl: "https://gd.eppo.int/",
+        license: "EPPO",
+        licenseUrl: null,
+        attributionRequired: true,
+        attributionText: null,
+        fetchedAt: "2026-09-02T00:00:00.000Z",
+        lastObservedAt: "2026-09-03T00:00:00.000Z",
+      },
+    ],
+    card: emptyPublicOrganismCard({
+      firstHandContentAt: "2026-07-10T10:00:00.000Z",
+      hasFirstHandContent: true,
+      formCount: kind === "species" ? 1 : 0,
+      gardenerCount: 2,
+      regions: [{ code: "UA-32", label: "Київська область", objectCount: 3, gardenerCount: 2 }],
+      forms:
+        kind === "species"
+          ? [{ catalogItemId: "f1", canonicalName: "Де Барао", catalogKind: "plant_variety", publicPath: "/species/solanum-lycopersicum/de-barao", hostClass: null }]
+          : [],
+      pests:
+        kind === "species"
+          ? [{ catalogItemId: "p1", canonicalName: "Tuta absoluta", catalogKind: "species", publicPath: "/species/tuta-absoluta", hostClass: "major_host" }]
+          : [],
+      sourceGroups: [
+        {
+          sourceSlug: "col",
+          sourceName: "Catalogue of Life",
+          sourceVersion: "2026-08",
+          observedAt: "2026-09-01T00:00:00.000Z",
+          lines: [{ kind: "name", label: "scientific_accepted", value: "Solanum lycopersicum L.", qualifier: "la", observedAt: "2026-09-01T00:00:00.000Z" }],
+        },
+        {
+          sourceSlug: "eppo",
+          sourceName: "EPPO Global Database",
+          sourceVersion: "2026-09",
+          observedAt: "2026-09-03T00:00:00.000Z",
+          lines: [
+            { kind: "name", label: "scientific_accepted", value: "Lycopersicon esculentum Mill.", qualifier: "la", observedAt: "2026-09-02T00:00:00.000Z" },
+            { kind: "identifier", label: "eppo", value: "LYPES", qualifier: null, observedAt: "2026-09-02T00:00:00.000Z" },
+          ],
+        },
+      ],
+      acceptedNameClaims: [
+        { sourceName: "Catalogue of Life", name: "Solanum lycopersicum" },
+        { sourceName: "EPPO Global Database", name: "Lycopersicon esculentum" },
+      ],
+    }),
     entries: [
       {
         id: "entry-1",

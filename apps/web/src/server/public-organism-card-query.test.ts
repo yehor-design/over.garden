@@ -1,0 +1,150 @@
+import {
+  DummyDriver,
+  Kysely,
+  PostgresAdapter,
+  PostgresIntrospector,
+  PostgresQueryCompiler,
+} from "kysely";
+import { describe, expect, it } from "vitest";
+
+import {
+  assemblePublicOrganismCard,
+  buildPublicOrganismCardStatement,
+  buildPublicOrganismExperienceStatement,
+  emptyPublicOrganismCard,
+  hasAcceptedNameDisagreement,
+  type PublicOrganismCardRow,
+} from "./public-organism-card-query";
+
+const ITEM = "11111111-1111-4111-8111-111111111111";
+
+function row(overrides: Partial<PublicOrganismCardRow> = {}): PublicOrganismCardRow {
+  return {
+    firstHandContentAt: null,
+    indexableOverride: null,
+    forms: [],
+    pests: [],
+    hosts: [],
+    names: [],
+    facts: [],
+    identifiers: [],
+    sources: [],
+    ...overrides,
+  };
+}
+
+describe("organism card statements", () => {
+  it("reads only public, accepted assertions and every related node that is addressable", () => {
+    const { sql, parameters } = buildPublicOrganismCardStatement(ITEM).compile(
+      compileContext(),
+    );
+    expect(sql).toContain("assertion.rights_class = 'source_public'");
+    expect(sql).toContain("assertion.decision in ('automatic', 'curator_accepted')");
+    expect(sql).toContain("relation.relation_type = 'form_of'");
+    expect(sql).toContain("relation.relation_type = 'pest_of'");
+    expect(sql).toContain("form.identity_state = 'active' and form.created_by_user_id is null and form.public_slug is not null");
+    expect(sql).toContain('as "sources"');
+    expect(sql).toContain("max(assertion.observed_at) as last_observed_at");
+    expect(parameters).toContain(ITEM);
+  });
+
+  it("counts gardeners over the node and its forms behind the launch predicate", () => {
+    const { sql } = buildPublicOrganismExperienceStatement(ITEM).compile(
+      compileContext(),
+    );
+    expect(sql).toContain("relation.relation_type = 'form_of'");
+    expect(sql).toContain("plant_objects.variety_state = 'selected'");
+    expect(sql).toContain("journal_entries.visibility = 'public'");
+    expect(sql).toMatch(/content_class/u);
+    expect(sql).toContain("count(distinct owner_user_id)::int");
+  });
+});
+
+describe("assemblePublicOrganismCard", () => {
+  it("groups names, identifiers and facts by source, labels regions, and finds a disagreement", () => {
+    const card = assemblePublicOrganismCard({
+      locale: "uk",
+      fallbackSource: { slug: "species_backbone", name: "species_backbone" },
+      experience: [
+        { regionCode: "UA-32", objectCount: 3, gardenerCount: 2, totalGardeners: 4 },
+        { regionCode: null, objectCount: 2, gardenerCount: 2, totalGardeners: 4 },
+        { regionCode: "UA-46", objectCount: 1, gardenerCount: 1, totalGardeners: 4 },
+      ],
+      row: row({
+        firstHandContentAt: "2026-09-01T00:00:00.000Z",
+        forms: [
+          { catalogItemId: "f1", canonicalName: "Де Барао", catalogKind: "plant_variety", publicSlug: "de-barao", speciesSlug: "solanum-lycopersicum", hostClass: null },
+        ],
+        pests: [
+          { catalogItemId: "p1", canonicalName: "Tuta absoluta", catalogKind: "species", publicSlug: "tuta-absoluta", speciesSlug: null, hostClass: "major_host" },
+        ],
+        names: [
+          { displayName: "Solanum lycopersicum", nameType: "scientific_accepted", locale: "la", authorship: "L.", isPrimary: true, sourceSlug: "col", sourceName: "Catalogue of Life", sourceVersion: "2026-08", observedAt: "2026-09-01T00:00:00.000Z" },
+          { displayName: "Lycopersicon esculentum", nameType: "scientific_accepted", locale: "la", authorship: "Mill.", isPrimary: false, sourceSlug: "eppo", sourceName: "EPPO Global Database", sourceVersion: "2026-09", observedAt: "2026-09-02T00:00:00.000Z" },
+          { displayName: "помідор", nameType: "vernacular", locale: "uk", authorship: null, isPrimary: false, sourceSlug: null, sourceName: null, sourceVersion: null, observedAt: null },
+        ],
+        identifiers: [
+          { scheme: "eppo", value: "LYPES", sourceSlug: "eppo", sourceName: "EPPO Global Database", sourceVersion: "2026-09", observedAt: "2026-09-02T00:00:00.000Z" },
+        ],
+        facts: [
+          { predicate: "distribution_status", regionCode: "UA", value: "Present", valueNormalized: "present", sourceSlug: "eppo", sourceName: "EPPO Global Database", sourceVersion: "2026-09", observedAt: "2026-09-03T00:00:00.000Z" },
+        ],
+        sources: [
+          { sourceSlug: "eppo", sourceName: "EPPO Global Database", sourceVersion: "2026-09", sourceUrl: "https://gd.eppo.int/", license: "EPPO", licenseUrl: null, attributionRequired: true, attributionText: "Source: EPPO", fetchedAt: "2026-09-02T00:00:00.000Z", lastObservedAt: "2026-09-03T00:00:00.000Z" },
+        ],
+      }),
+    });
+
+    expect(card.hasFirstHandContent).toBe(true);
+    expect(card.formCount).toBe(1);
+    expect(card.gardenerCount).toBe(4);
+    expect(card.regions).toEqual([
+      { code: "UA-32", label: expect.stringContaining("Київ"), objectCount: 3, gardenerCount: 2 },
+      { code: "UA-46", label: expect.stringContaining("Львів"), objectCount: 1, gardenerCount: 1 },
+    ]);
+    expect(card.forms[0]).toMatchObject({ publicPath: "/species/solanum-lycopersicum/de-barao", hostClass: null });
+    expect(card.pests[0]).toMatchObject({ publicPath: "/species/tuta-absoluta", hostClass: "major_host" });
+    expect(card.sourceGroups.map((group) => [group.sourceName, group.sourceVersion, group.lines.length, group.observedAt])).toEqual([
+      ["Catalogue of Life", "2026-08", 1, "2026-09-01T00:00:00.000Z"],
+      ["EPPO Global Database", "2026-09", 3, "2026-09-03T00:00:00.000Z"],
+      ["species_backbone", null, 1, null],
+    ]);
+    expect(card.sourceGroups[0]!.lines[0]).toEqual({
+      kind: "name",
+      label: "scientific_accepted",
+      value: "Solanum lycopersicum L.",
+      qualifier: "la",
+      observedAt: "2026-09-01T00:00:00.000Z",
+    });
+    expect(card.sourceGroups[1]!.lines.map((line) => line.kind)).toEqual(["name", "identifier", "fact"]);
+    expect(card.sourceGroups[1]!.lines[2]).toMatchObject({ label: "distribution_status", value: "present", qualifier: "UA" });
+    expect(card.acceptedNameClaims).toEqual([
+      { sourceName: "Catalogue of Life", name: "Solanum lycopersicum" },
+      { sourceName: "EPPO Global Database", name: "Lycopersicon esculentum" },
+    ]);
+    expect(hasAcceptedNameDisagreement(card.acceptedNameClaims)).toBe(true);
+    expect(card.sources[0]).toMatchObject({ sourceSlug: "eppo", fetchedAt: "2026-09-02T00:00:00.000Z", lastObservedAt: "2026-09-03T00:00:00.000Z" });
+  });
+
+  it("treats the owner's override as first-hand content and an untouched node as an empty card", () => {
+    expect(
+      assemblePublicOrganismCard({ locale: "bg", fallbackSource: { slug: "x", name: "x" }, experience: [], row: row({ indexableOverride: true }) }).hasFirstHandContent,
+    ).toBe(true);
+    const empty = assemblePublicOrganismCard({ locale: "ru", fallbackSource: { slug: "x", name: "x" }, experience: [], row: null });
+    expect(empty).toEqual(emptyPublicOrganismCard());
+    expect(hasAcceptedNameDisagreement([{ sourceName: "a", name: "X" }, { sourceName: "b", name: "x" }])).toBe(false);
+  });
+});
+
+function compileContext() {
+  // Kysely's RawBuilder compiles against an executor; a bare Postgres
+  // compiler gives the SQL text without a database.
+  return new Kysely<never>({
+    dialect: {
+      createAdapter: () => new PostgresAdapter(),
+      createDriver: () => new DummyDriver(),
+      createIntrospector: (db) => new PostgresIntrospector(db),
+      createQueryCompiler: () => new PostgresQueryCompiler(),
+    },
+  });
+}

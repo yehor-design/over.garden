@@ -52,6 +52,7 @@ another issue's number.
 | `0059` | OVE-397      | Organism graph (ADR-0026) | mention statistics table, only if the task chooses a table; otherwise released |
 | `0060` | OVE-398      | Organism graph (ADR-0026) | catalog pick events with 90-day purge |
 | `0061` | OVE-399      | Organism graph (ADR-0026) | destructive closeout: legacy catalog columns and tables, gated by inventory and owner approval |
+| `0062` | OVE-389      | Organism graph (ADR-0026) | card revalidation through the outbox: entity kind `catalog_item` without an owner (0054 added the reason, not the kind); taken as the next free number because the slice's block was fully reserved |
 
 Compact range receipt:
 
@@ -72,6 +73,7 @@ Compact range receipt:
 - `0052: job queue declared payload checks`
 - `0053: stable registry release tables retired`
 - `0054-0061: organism knowledge graph, ADR-0026, SDD Slice 24 (0059 conditional, 0061 destructive)`
+- `0062: organism card revalidation intents (Slice 24 task 24.04, outside the reserved block)`
 
 Rows `0036`-`0038` are reconciled after the fact under rule 4: those migrations
 landed before the ledger recorded them, and renaming a landed file to restore

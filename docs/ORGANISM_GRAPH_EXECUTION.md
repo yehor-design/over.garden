@@ -229,7 +229,7 @@ Done.
 | `OVE-386` foundation | the flat catalog and the source layer | `0054` everywhere; node columns, six graph tables, queue and action tables, slug history, search misses; `catalog_normalize_name` in SQL, TS and Python with one fixture; the fingerprint script and its query list; generated types |
 | `OVE-387` picker and labels | `0054` | `0055` everywhere; `/api/public/catalog/typeahead`; labels instead of provisional cards; weight function and cron; misses filling; Playwright spec; latency script |
 | `OVE-388` addresses | slug history, identifiers | hierarchical routes, five resolvers, `src/lib/catalog/slugs.ts`, `Taxon` JSON-LD builder, one path builder, canonical sitemap URLs |
-| `OVE-389` card | routes | cached card read with tags, sections, shared attribution, `organism_without_first_hand_content`, card revalidate cron |
+| `OVE-389` card | routes | cached card read with tags, sections, shared attribution, `organism_without_first_hand_content`, card revalidate cron; `0062` (the outbox entity kind `catalog_item`, taken outside the reserved block because 0054 added the reason without the kind) |
 | `OVE-390` reconciliation | queue tables, labels | `0056` everywhere; four job kinds in the contract; `catalog_reconcile.py`; apply and revert SQL functions; thresholds; deployed worker |
 | `OVE-391` owner surfaces | apply and revert functions, job kinds | queue and sources pages, two menu links, inline edit, audit, digest cron |
 | `OVE-392` Catalogue of Life | ladder, owner pages, typeahead route | `0057` everywhere; COL usages in production; nodes with parents, ranks, kingdoms, ancestors; secondary search path; refresh diff |

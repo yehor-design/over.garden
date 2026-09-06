@@ -40,6 +40,12 @@ import {
 } from "@/server/public-surface-discovery";
 import { buildFirstProcessedMediaPerEntryQuery } from "@/server/public-media-repository";
 import {
+  assemblePublicOrganismCard,
+  readPublicOrganismCardRow,
+  readPublicOrganismExperienceRows,
+  type PublicOrganismCard,
+} from "@/server/public-organism-card-query";
+import {
   buildPublishedVarietySeedProofByCatalogItemIdQuery,
   type PublicVarietySeedProof,
 } from "@/server/variety-seed-proof-repository";
@@ -85,6 +91,8 @@ export interface PublicVarietyPage {
   seedProof: PublicVarietySeedProof | null;
   sourceCredits: PublicCatalogSourceCredit[];
   entries: PublicVarietyEntry[];
+  /** The organism card's structured facts, relations, names and sources (ADR-0026 D9). */
+  card: PublicOrganismCard;
 }
 
 export interface PublicVarietySitemapEntry {
@@ -106,6 +114,10 @@ export interface PublicCatalogSourceCredit {
   licenseUrl: string | null;
   attributionRequired: boolean;
   attributionText: string | null;
+  /** When the snapshot was downloaded: the attribution footer's date (D9). */
+  fetchedAt: Date | string | null;
+  /** The newest assertion this source contributed to the card; null for a legacy link. */
+  lastObservedAt: Date | string | null;
 }
 
 export interface PublicVarietyEntry {
@@ -175,23 +187,38 @@ export async function getPublicVarietyPageByCatalogItemId(
   ).executeTakeFirst();
   if (!item?.publicSlug) return null;
 
-  const [summary, entries, seedProof, sourceCredits, identifiers] =
-    await Promise.all([
-      buildPublicVarietySummaryQuery(executor, {
-        catalogItemId: item.id,
-      }).executeTakeFirst(),
-      buildPublicVarietyEntriesQuery(
-        executor,
-        { catalogItemId: item.id },
-        MAX_PUBLIC_VARIETY_ENTRIES,
-      ).execute(),
-      buildPublishedVarietySeedProofByCatalogItemIdQuery(
-        executor,
-        item.id,
-      ).executeTakeFirst(),
-      buildPublicVarietySourceCreditsQuery(executor, item.id).execute(),
-      buildPublicVarietyIdentifiersQuery(executor, item.id).execute(),
-    ]);
+  const [
+    summary,
+    entries,
+    seedProof,
+    sourceCredits,
+    identifiers,
+    cardRow,
+    experience,
+  ] = await Promise.all([
+    buildPublicVarietySummaryQuery(executor, {
+      catalogItemId: item.id,
+    }).executeTakeFirst(),
+    buildPublicVarietyEntriesQuery(
+      executor,
+      { catalogItemId: item.id },
+      MAX_PUBLIC_VARIETY_ENTRIES,
+    ).execute(),
+    buildPublishedVarietySeedProofByCatalogItemIdQuery(
+      executor,
+      item.id,
+    ).executeTakeFirst(),
+    buildPublicVarietySourceCreditsQuery(executor, item.id).execute(),
+    buildPublicVarietyIdentifiersQuery(executor, item.id).execute(),
+    readPublicOrganismCardRow(executor, item.id),
+    readPublicOrganismExperienceRows(executor, item.id),
+  ]);
+  const card = assemblePublicOrganismCard({
+    row: cardRow,
+    experience,
+    locale,
+    fallbackSource: { slug: item.source, name: item.source },
+  });
   const mediaExtras = await readMediaVariantExtras(
     executor,
     entries.flatMap((entry) => (entry.mediaId ? [entry.mediaId] : [])),
@@ -237,16 +264,21 @@ export async function getPublicVarietyPageByCatalogItemId(
     qualityClass: "verified" as const,
     latestMeaningfulAt: summary?.latestMeaningfulAt ?? null,
     seedProof: seedProof ?? null,
-    sourceCredits: sourceCredits.map((credit) => ({
-      sourceSlug: credit.sourceSlug,
-      sourceName: credit.sourceName,
-      sourceVersion: credit.sourceVersion,
-      sourceUrl: credit.sourceUrl,
-      license: credit.license,
-      licenseUrl: credit.licenseUrl,
-      attributionRequired: Boolean(credit.attributionRequired),
-      attributionText: credit.attributionText,
-    })),
+    sourceCredits: mergeSourceCredits(
+      sourceCredits.map((credit) => ({
+        sourceSlug: credit.sourceSlug,
+        sourceName: credit.sourceName,
+        sourceVersion: credit.sourceVersion,
+        sourceUrl: credit.sourceUrl,
+        license: credit.license,
+        licenseUrl: credit.licenseUrl,
+        attributionRequired: Boolean(credit.attributionRequired),
+        attributionText: credit.attributionText,
+        fetchedAt: credit.fetchedAt,
+        lastObservedAt: null,
+      })),
+      card.sources,
+    ),
     entries: entries.map((entry) => ({
       id: entry.entryId,
       title: entry.entryTitle,
@@ -274,6 +306,7 @@ export async function getPublicVarietyPageByCatalogItemId(
             }
           : null,
     })),
+    card,
   } satisfies Omit<PublicVarietyPage, "indexState">;
   return {
     ...page,
@@ -281,6 +314,28 @@ export async function getPublicVarietyPageByCatalogItemId(
       buildPublicVarietyDiscoverySource(page, "public_variety_repository"),
     ).decision,
   };
+}
+
+/**
+ * The attribution footer lists every source that contributed something the
+ * page shows: the legacy source links of the item and the assertions behind
+ * its names, identifiers, relations and facts, one line per snapshot.
+ */
+function mergeSourceCredits(
+  linked: readonly PublicCatalogSourceCredit[],
+  asserted: readonly PublicCatalogSourceCredit[],
+): PublicCatalogSourceCredit[] {
+  const merged = new Map<string, PublicCatalogSourceCredit>();
+  for (const credit of [...linked, ...asserted]) {
+    const key = `${credit.sourceSlug}:${credit.sourceVersion}`;
+    const existing = merged.get(key);
+    merged.set(key, existing ? { ...existing, ...credit, lastObservedAt: credit.lastObservedAt ?? existing.lastObservedAt } : credit);
+  }
+  return [...merged.values()].sort(
+    (left, right) =>
+      left.sourceName.localeCompare(right.sourceName, "en") ||
+      left.sourceVersion.localeCompare(right.sourceVersion, "en"),
+  );
 }
 
 /** The node itself: active, selectable, global, addressed. */
@@ -380,6 +435,9 @@ export function buildPublicVarietyDiscoverySource(
       `catalog:${page.catalog.catalogItemId}`,
       ...page.entries.map((entry) => entry.id),
     ],
+    // ADR-0026 D9: a card whose content comes only from sources is reachable
+    // but noindex until a gardener publishes on it or the owner marks it.
+    organism: { hasFirstHandContent: page.card.hasFirstHandContent },
     // The canonical follows the route family the page was served from (a
     // prefixed locale route or the unprefixed one), never the cookie locale.
     canonicalPath: localizedPath(routeLocale, page.catalog.canonicalPath),
@@ -412,6 +470,7 @@ export function buildPublicVarietySourceCreditsQuery(
       "catalog_source_snapshots.license_url as licenseUrl",
       "catalog_source_snapshots.attribution_required as attributionRequired",
       "catalog_source_snapshots.attribution_text as attributionText",
+      "catalog_source_snapshots.fetched_at as fetchedAt",
     ])
     .where("catalog_source_links.catalog_item_id", "=", catalogItemId)
     .where("catalog_source_links.projection_kind", "=", "canonical_item")
@@ -426,6 +485,7 @@ export function buildPublicVarietySourceCreditsQuery(
       "catalog_source_snapshots.license_url",
       "catalog_source_snapshots.attribution_required",
       "catalog_source_snapshots.attribution_text",
+      "catalog_source_snapshots.fetched_at",
     ])
     .orderBy("catalog_source_snapshots.source_name", "asc")
     .orderBy("catalog_source_snapshots.source_version", "asc");
@@ -580,6 +640,13 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
     .where("catalog_items.public_slug", "is not", null)
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
     .where("catalog_items.created_by_user_id", "is", null)
+    // ADR-0026 D9: the sitemap applies the card's own indexability predicate.
+    .where(({ eb, or }) =>
+      or([
+        eb("catalog_items.first_hand_content_at", "is not", null),
+        eb("catalog_items.indexable_override", "=", true),
+      ]),
+    )
     .where("plant_objects.variety_state", "=", "selected")
     .whereRef(
       "journal_entries.owner_user_id",
