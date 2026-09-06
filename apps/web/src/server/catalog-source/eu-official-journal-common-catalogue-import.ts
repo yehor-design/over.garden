@@ -13,6 +13,11 @@ import {
   type EuOfficialJournalCommonCatalogueSourceRecordDefinition,
 } from "@/lib/catalog/eu-official-journal-common-catalogue";
 import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
+import {
+  EU_COMMON_CATALOGUE_SLUG,
+  attachRegisterFormsToSpecies,
+  type RegisterAttachmentSummary,
+} from "./register-graph-attachment";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -22,6 +27,8 @@ const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
 const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 
 export interface EuOfficialJournalCommonCatalogueImportSummary {
+  /** What the graph attachment did after the rows landed (OVE-395). */
+  attachment?: RegisterAttachmentSummary;
   sourceSlug: typeof EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE.slug;
   sourceSnapshotsImported: number;
   sourceRecordsImported: number;
@@ -82,6 +89,20 @@ export interface EuOfficialJournalCommonCatalogueBlockedRecordProof {
 }
 
 export async function importEuOfficialJournalCommonCatalogue(
+  executor: Kysely<Database>,
+  definition: EuOfficialJournalCommonCatalogueImportDefinition,
+): Promise<EuOfficialJournalCommonCatalogueImportSummary> {
+  const imported = await importEuOfficialJournalRows(executor, definition);
+  // After the import commits, never inside it: the attachment opens one
+  // transaction per form (OVE-395).
+  const attachment = await attachRegisterFormsToSpecies(
+    { sourceSlug: EU_COMMON_CATALOGUE_SLUG },
+    executor,
+  );
+  return { ...imported, attachment };
+}
+
+async function importEuOfficialJournalRows(
   executor: Kysely<Database>,
   definition: EuOfficialJournalCommonCatalogueImportDefinition,
 ): Promise<EuOfficialJournalCommonCatalogueImportSummary> {

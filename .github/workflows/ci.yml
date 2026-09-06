@@ -160,6 +160,9 @@ jobs:
       - name: Prove the owner digest outbox migration and its rollback
         run: pnpm schema:owner-digest:prove-database
 
+      - name: Prove the register form attachment and the picker's market boost
+        run: pnpm catalog:registers:prove-database
+
       - name: Lint
         run: pnpm lint
 

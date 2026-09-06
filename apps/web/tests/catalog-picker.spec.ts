@@ -39,6 +39,8 @@ interface Fixture {
   suffix: string;
   speciesId: string;
   cultivarId: string;
+  /** OVE-395: the same denomination, in no register, for the market boost. */
+  homonymId: string;
   animalTaxonId: string;
   breedId: string;
   snapshotId: string;
@@ -146,8 +148,15 @@ test.describe("OVE-387 catalog picker", () => {
       // Outcome 2: a form, with its species implied in the row.
       await openComposer(page);
       await pickerCombobox(page).fill("де барао");
-      const cultivarOption = pickerListbox(page).locator('[data-catalog-option="cultivar"]').first();
+      const cultivarOption = pickerListbox(page)
+        .locator('[data-catalog-option="cultivar"]')
+        .first();
       await expect(cultivarOption).toBeVisible({ timeout: 10_000 });
+      // OVE-395, ADR-0026 D7: two cultivars carry exactly this denomination
+      // and only one of them is in the Ukrainian register. The row a Ukrainian
+      // reader is offered first, and publishes, is the registered one — the
+      // identity below is the assertion, not the count, because a database
+      // may legitimately hold other organisms whose names begin the same way.
       await expect(cultivarOption).toContainText(/Сорт · Помідор/u);
       await cultivarOption.click();
       await expect(page.locator("[data-catalog-availability='selected']")).toContainText(/Сорт: Де Барао/u);
@@ -156,6 +165,7 @@ test.describe("OVE-387 catalog picker", () => {
         variety_state: "selected",
         catalog_item_id: fixture.cultivarId,
       });
+      expect(second?.catalog_item_id).not.toBe(fixture.homonymId);
 
       // Outcome 3: the gardener's own name, which matches nothing.
       await openComposer(page);
@@ -373,6 +383,7 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
   const assertionId = randomUUID();
   const speciesId = randomUUID();
   const cultivarId = randomUUID();
+  const homonymId = randomUUID();
   const animalTaxonId = randomUUID();
   const breedId = randomUUID();
   await pool.query(
@@ -389,6 +400,7 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
   const items: Array<[string, string, string, string, string, string, string]> = [
     [speciesId, "Solanum lycopersicum L.", "species", "species_backbone", "la", "taxon", "Plantae"],
     [cultivarId, "Де Барао", "plant_variety", "ua_state_register", "uk", "cultivar", "Plantae"],
+    [homonymId, "Де Барао", "plant_variety", "manual", "uk", "cultivar", "Plantae"],
     [animalTaxonId, "Apis mellifera", "species", "species_backbone", "la", "taxon", "Animalia"],
     [breedId, "Карпатська", "breed", "ua_official_bee_breed", "uk", "breed", "Animalia"],
   ];
@@ -409,6 +421,7 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
     [speciesId, "помидор", "ru", false, "vernacular"],
     [speciesId, "Tomato", "en", false, "vernacular"],
     [cultivarId, "Де Барао", "uk", true, "denomination"],
+    [homonymId, "Де Барао", "uk", true, "denomination"],
     [animalTaxonId, "Apis mellifera", "la", true, "scientific_accepted"],
     [animalTaxonId, "бджола медоносна", "uk", false, "vernacular"],
     [breedId, "Карпатська", "uk", true, "denomination"],
@@ -431,20 +444,37 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
      values ($1, $2, 'form_of', $3), ($4, $5, 'form_of', $3)`,
     [cultivarId, speciesId, assertionId, breedId, animalTaxonId],
   );
+  // OVE-395: the registration fact is what `registered_ua` reads, and
+  // `registered_ua` is the first key the picker orders duplicates by.
+  await pool.query(
+    `insert into catalog_item_facts (catalog_item_id, predicate, region_code, value, value_normalized, assertion_id)
+     values ($1, 'registration_status', 'UA', 'registered', 'registered', $2)`,
+    [cultivarId, assertionId],
+  );
   await pool.query("select catalog_recompute_search_weight()");
-  return { suffix, speciesId, cultivarId, animalTaxonId, breedId, snapshotId, assertionId };
+  return {
+    suffix,
+    speciesId,
+    cultivarId,
+    homonymId,
+    animalTaxonId,
+    breedId,
+    snapshotId,
+    assertionId,
+  };
 }
 
 async function cleanupFixture(pool: Pool, fixture: Fixture) {
   await pool.query(
     `update plant_objects set catalog_item_id = null, variety_state = 'unknown', variety_text = null
      where catalog_item_id = any($1::uuid[])`,
-    [[fixture.speciesId, fixture.cultivarId, fixture.animalTaxonId, fixture.breedId]],
+    [[fixture.speciesId, fixture.cultivarId, fixture.homonymId, fixture.animalTaxonId, fixture.breedId]],
   );
   await pool.query(`delete from catalog_item_relations where assertion_id = $1`, [fixture.assertionId]);
   await pool.query(`delete from catalog_item_identifiers where assertion_id = $1`, [fixture.assertionId]);
+  await pool.query(`delete from catalog_item_facts where assertion_id = $1`, [fixture.assertionId]);
   await pool.query(`delete from catalog_items where id = any($1::uuid[])`, [
-    [fixture.speciesId, fixture.cultivarId, fixture.animalTaxonId, fixture.breedId],
+    [fixture.speciesId, fixture.cultivarId, fixture.homonymId, fixture.animalTaxonId, fixture.breedId],
   ]);
   await pool.query(`delete from catalog_source_assertions where id = $1`, [fixture.assertionId]);
   await pool.query(`delete from catalog_source_snapshots where id = $1`, [fixture.snapshotId]);

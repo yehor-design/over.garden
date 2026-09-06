@@ -30,6 +30,8 @@
     "schema:catalog-labels:prove-database": "tsx scripts/prove-catalog-picker-labels.ts",
     "schema:catalog-card:prove-database": "tsx scripts/prove-catalog-card-revalidate.ts",
     "schema:owner-digest:prove-database": "tsx scripts/prove-owner-catalog-digest-outbox.ts",
+    "catalog:registers:prove-database": "tsx scripts/prove-register-form-attachment.ts",
+    "catalog:registers:attach": "tsx scripts/attach-register-forms.ts",
     "catalog:typeahead:latency": "tsx scripts/prove-catalog-typeahead-latency.ts",
     "verify:retired-journal-media-migration": "tsx scripts/verify-retired-journal-media-migration.ts",
     "catalog:sources:import-sample": "tsx scripts/import-catalog-source-sample.ts",

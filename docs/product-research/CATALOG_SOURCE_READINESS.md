@@ -6,6 +6,8 @@
 > Reconciled against `over.garden` @ `main` `ab52664`, 2026-09-04.
 >
 > Live source gate. Still binding: it decides which catalog sources an ingestion slice may consume. Read it with `ADR-0016` and `docs/STABLE_REGISTRY.md`: a source that passes this gate still has to clear the observed-capture, Foundation-release, identity, product-eligibility and activation gates before a gardener sees anything. Production catalog is empty as of 2026-09-04. Since ADR-0026 (2026-09-05) a source that passes this gate is consumed by the organism graph's reconciliation ladder and curation queue (SDD Slice 24); the release gates named here are history (ADR-0025).
+>
+> Where the approved registers now land (OVE-395, 2026-09-06): a row from `ua-state-register`, `eu-oj-eur-lex-common-catalogue`, `vertebrate-breed-ontology` or the Ukrainian bee breeds becomes a form attached to its species by a `form_of` relation, with a registered denomination, a register identifier and a `registration_status` fact carrying the market and the year. The statuses below are unchanged: nothing here admits a source this gate blocks, and a form whose species cannot be resolved waits in the owner's queue rather than guessing.
 
 ---
 
