@@ -2,16 +2,11 @@ import { createHash } from "node:crypto";
 
 import { sql, type Kysely, type Transaction } from "kysely";
 
-import type { Database, JsonValue } from "@/db/schema";
+import type { Database } from "@/db/schema";
 import { SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES } from "@/server/search/catalog-documents";
 
 const MAX_ENTITY_RESOLUTION_ROWS = 240;
 const MAX_ENTITY_RESOLUTION_CLUSTERS = 120;
-const MATCHING_QUEUE = "matching";
-const CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND =
-  "catalog_fuzzy_duplicate_qa_refresh";
-const CATALOG_FUZZY_DUPLICATE_QA_IDEMPOTENCY_KEY =
-  "catalog-fuzzy-duplicate-qa-refresh";
 
 const ENTITY_RESOLUTION_CLUSTER_KIND_LIMITS = {
   likely_duplicate: 24,
@@ -355,46 +350,6 @@ export function buildCatalogEntityResolutionFuzzyDuplicateRowsQuery(
     .$castTo<CatalogEntityResolutionFuzzyDuplicateRow>();
 }
 
-export function buildEnqueueCatalogFuzzyDuplicateQaRefreshJobQuery(
-  executor: QueryExecutor,
-) {
-  const payload = {
-    kind: CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND,
-  } satisfies JsonValue;
-  const now = new Date();
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: CATALOG_FUZZY_DUPLICATE_QA_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          status: sql<string>`case
-            when job_queue.status = 'processing' then job_queue.status
-            else 'pending'
-          end`,
-          available_at: now,
-          locked_at: sql<Date | null>`case
-            when job_queue.status = 'processing' then job_queue.locked_at
-            else null
-          end`,
-          locked_by: sql<string | null>`case
-            when job_queue.status = 'processing' then job_queue.locked_by
-            else null
-          end`,
-          rerun_requested: sql<boolean>`(job_queue.status = 'processing')`,
-          last_error: null,
-          updated_at: now,
-        }),
-    )
-    .returningAll();
-}
 
 export function buildCatalogEntityResolutionCatalogRowsQuery(
   executor: QueryExecutor,

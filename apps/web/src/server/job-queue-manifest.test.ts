@@ -20,11 +20,12 @@ const repoRoot = path.resolve(
 
 describe("job queue manifest", () => {
   it("covers every matching, erasure, and media-lifecycle producer kind with attempt bounds", () => {
-    expect(JOB_QUEUE_MANIFEST_VERSION).toBe("ove255.job-queue.v4");
+    expect(JOB_QUEUE_MANIFEST_VERSION).toBe("ove390.job-queue.v5");
     expect(matchingSupportedKinds()).toEqual([
-      "catalog_alias_suggestions_refresh",
-      "catalog_fuzzy_duplicate_qa_refresh",
-      "catalog_match_suggestions_refresh",
+      "catalog_curation_apply",
+      "catalog_reconcile",
+      "catalog_source_refresh",
+      "catalog_threshold_recalibrate",
       "catalog_typeahead_reindex",
       "journal_entry_index",
       "journal_entry_unindex",

@@ -19,10 +19,19 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.24 /uv /uvx /bin/
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
+        ca-certificates \
+        curl \
         pkg-config \
         libicu-dev \
         python3-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# gnparser (ADR-0026 D4): the scientific-name parser behind the reconciliation
+# ladder, a pinned GitHub release verified by sha256 before it is installed.
+# The version and both checksums live in scripts/install-gnparser.sh, which
+# CI runs too, so the parser the tests exercise is the one this image runs.
+COPY scripts/install-gnparser.sh /tmp/install-gnparser.sh
+RUN /tmp/install-gnparser.sh /usr/local/bin && rm /tmp/install-gnparser.sh
 
 WORKDIR /app
 ENV UV_LINK_MODE=copy \

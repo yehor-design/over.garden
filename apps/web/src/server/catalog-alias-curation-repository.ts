@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
-import type { Database, JsonValue } from "@/db/schema";
+import type { Database } from "@/db/schema";
 import {
   buildEnqueueCatalogTypeaheadReindexJobQuery,
   normalizeCatalogItemId,
@@ -13,11 +13,6 @@ import {
 } from "@/server/catalog-repository";
 import type { RequestScope } from "@/server/request-scope";
 
-const MATCHING_QUEUE = "matching";
-const CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND =
-  "catalog_alias_suggestions_refresh";
-const CATALOG_ALIAS_SUGGESTIONS_IDEMPOTENCY_PREFIX =
-  "matching:catalog_alias_suggestions_refresh:";
 const CATALOG_ALIAS_SOURCE_SLUG = "overgarden-alias-generator";
 const CATALOG_ALIAS_SOURCE_METHOD = "generated";
 const CATALOG_ALIAS_GENERATOR_VERSION = "ove160-v1";
@@ -144,32 +139,6 @@ export async function listCatalogAliasSuggestionsForCuration(
   });
 }
 
-export async function enqueueCatalogAliasSuggestionsRefresh(input: {
-  catalogItemId: string;
-}) {
-  const catalogItemId = requireCatalogAliasIdentifier(
-    input.catalogItemId,
-    "Catalog identity",
-  );
-
-  return db.transaction().execute(async (trx) => {
-    const catalogItem = await buildCatalogAliasSuggestionTargetByIdQuery(
-      trx,
-      catalogItemId,
-    )
-      .forUpdate()
-      .executeTakeFirst();
-    if (!catalogItem) {
-      throw new Error("Catalog identity was not found.");
-    }
-
-    await buildEnqueueCatalogAliasSuggestionsRefreshJobQuery(
-      trx,
-      catalogItemId,
-    ).executeTakeFirstOrThrow();
-    return { catalogItemId };
-  });
-}
 
 export async function approveCatalogAliasSuggestion(
   scope: RequestScope,
@@ -418,48 +387,6 @@ export function buildCatalogAliasSuggestionsForCurationQuery(
     .limit(normalizeLimit(limit, MAX_ALIAS_SUGGESTIONS));
 }
 
-export function buildEnqueueCatalogAliasSuggestionsRefreshJobQuery(
-  executor: QueryExecutor,
-  catalogItemId: string,
-) {
-  const payload = {
-    kind: CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
-    catalogItemId,
-  } satisfies JsonValue;
-  const now = new Date();
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: `${CATALOG_ALIAS_SUGGESTIONS_IDEMPOTENCY_PREFIX}${catalogItemId}`,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          status: sql<string>`case
-            when job_queue.status = 'processing' then job_queue.status
-            else 'pending'
-          end`,
-          available_at: now,
-          locked_at: sql<Date | null>`case
-            when job_queue.status = 'processing' then job_queue.locked_at
-            else null
-          end`,
-          locked_by: sql<string | null>`case
-            when job_queue.status = 'processing' then job_queue.locked_by
-            else null
-          end`,
-          rerun_requested: sql<boolean>`(job_queue.status = 'processing')`,
-          last_error: null,
-          updated_at: now,
-        }),
-    )
-    .returningAll();
-}
 
 export function buildCatalogAliasSuggestionForDecisionQuery(
   executor: QueryExecutor,

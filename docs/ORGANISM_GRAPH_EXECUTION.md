@@ -143,6 +143,40 @@ rewrites and force-pushes. For those, ask.
   builds, with a status link to the cron pricing page and nothing in CI; the
   previous production build stays live. Schedule daily and let the cache
   profile bound staleness, or ask the owner about the Pro plan.
+- **plpgsql function bodies are validated at CREATE time.** A migration that
+  creates a function declaring `table%rowtype` fails on a database that holds
+  only the tables the proof under way cares about; the job-queue contract
+  proof therefore runs `set check_function_bodies = off` before applying, and
+  the functions are proven against a full schema by
+  `services/matching/tests/test_catalog_reconcile_database.py`.
+- **`apply-reviewed-migration` counts semicolons.** A migration with plpgsql
+  bodies reports far more statements than it runs (0056: 150 counted, about
+  twenty real). The count is a receipt field, not the execution unit; the
+  whole file is sent as one statement.
+- **A migration that changes the queue contract must be applied with the
+  worker deploy, not before the merge.** Section 4.1 applies a web migration
+  from the PR branch; the worker's runtime requires every payload CHECK the
+  contract it was built from declares (`_REQUIRED_QUEUE_CONSTRAINTS`), so
+  dropping a retired kind's check puts the *incumbent* worker into
+  `schema_mismatch` and its container reports unhealthy until the new image is
+  deployed. It keeps claiming and draining (the loop never reads the
+  constraint set) and does not restart, but the health signal is wrong for the
+  whole window. For such a migration, follow 4.2's order instead: seal,
+  install, migrate, deploy. Seen on 2026-09-06 with `0056`.
+- **New table, generated types.** A migration that adds a table needs its
+  interface hand-written into `apps/web/src/db/generated.ts` (and its entry in
+  `DB`); `pnpm db:types:check` runs against a fresh CI bootstrap and is the
+  only honest check, because the scratch volume's introspection carries drift.
+- **gnparser.** The scientific-name parser is a pinned GitHub release
+  installed by `services/matching/scripts/install-gnparser.sh` (version and
+  both checksums live there) into the image, the CI job and the release job.
+  A developer runs the same script; without it the ladder's second rung is
+  skipped with a reason and its tests skip, never guessing.
+- **One romanization, two implementations.** `app/romanize.py` mirrors
+  `apps/web/src/lib/catalog/slugs.ts` and both are held to
+  `contracts/catalog/form-slug.fixture.json`. The ladder matches a Latin
+  spelling of a Cyrillic denomination by the same rule the form's address
+  uses, so a link and an address can never disagree.
 - **Research corpus.** `docs/product-research/` and
   `/Users/yehor/Desktop/Startups/OverGarden` must stay byte-identical except
   `README.md` and four desktop-only items. After editing a research file, copy

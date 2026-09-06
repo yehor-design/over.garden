@@ -19,7 +19,6 @@ import {
   buildCatalogEntityResolutionCatalogRowsQuery,
   buildCatalogEntityResolutionFuzzyDuplicateRowsQuery,
   buildCatalogEntityResolutionQaReport,
-  buildEnqueueCatalogFuzzyDuplicateQaRefreshJobQuery,
   buildCatalogEntityResolutionSourceCandidateSummaryQuery,
   type CatalogEntityResolutionAliasCollisionRow,
   type CatalogEntityResolutionCatalogRow,
@@ -291,21 +290,6 @@ describe("catalog entity-resolution QA repository", () => {
     ).toBe(48);
   });
 
-  it("queues one idempotent closed-payload fuzzy refresh job", () => {
-    const compiled =
-      buildEnqueueCatalogFuzzyDuplicateQaRefreshJobQuery(testDb).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.sql).toContain("on conflict");
-    expect(compiled.parameters).toEqual([
-      "matching",
-      { kind: "catalog_fuzzy_duplicate_qa_refresh" },
-      "catalog-fuzzy-duplicate-qa-refresh",
-      expect.any(Date),
-      null,
-      expect.any(Date),
-    ]);
-  });
 
   it("fails the leak check when an unsafe field is added to report evidence", () => {
     expect(() =>

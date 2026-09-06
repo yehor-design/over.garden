@@ -296,6 +296,14 @@ export interface CatalogMatchSuggestions {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CatalogReconcileThresholds {
+  decisions_30d: Generated<number>;
+  revert_rate_30d: Generated<Numeric>;
+  rule_code: string;
+  threshold: Numeric;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface CatalogSearchMisses {
   first_seen_at: Generated<Timestamp>;
   last_seen_at: Generated<Timestamp>;
@@ -1106,6 +1114,7 @@ export interface DB {
   catalog_item_slug_history: CatalogItemSlugHistory;
   catalog_items: CatalogItems;
   catalog_match_suggestions: CatalogMatchSuggestions;
+  catalog_reconcile_thresholds: CatalogReconcileThresholds;
   catalog_search_misses: CatalogSearchMisses;
   catalog_source_assertions: CatalogSourceAssertions;
   catalog_source_capture_runs: CatalogSourceCaptureRuns;

@@ -330,9 +330,8 @@ class FakeQueueConnection:
                     seconds=int(catalog_vt_seconds)
                     if row["payload"].get("kind")
                     in {
-                        worker.CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
-                        worker.CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
-                        worker.CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND,
+                        worker.CATALOG_RECONCILE_KIND,
+                        worker.CATALOG_SOURCE_REFRESH_KIND,
                     }
                     else int(default_vt_seconds)
                 )
@@ -358,9 +357,8 @@ def test_claim_sql_predicate_matches_recovery_model():
     assert "status in ('pending', 'failed') and available_at <= now()" in normalized
     # Stale processing rows are reclaimed after the visibility timeout interval.
     assert "status = 'processing'" in normalized
-    assert "catalog_match_suggestions_refresh" in normalized
-    assert "catalog_alias_suggestions_refresh" in normalized
-    assert "catalog_fuzzy_duplicate_qa_refresh" in normalized
+    assert "catalog_reconcile" in normalized
+    assert "catalog_source_refresh" in normalized
     assert "else %s" in normalized
     # Concurrent workers never claim the same row.
     assert "for update skip locked" in normalized
@@ -391,60 +389,51 @@ def test_claim_reclaims_only_stale_processing_jobs(clock):
     assert conn.job(pending_due)["attempts"] == 2
 
 
-def test_catalog_match_job_uses_the_longer_bounded_visibility_lease(clock):
+def test_a_reconcile_scan_uses_the_longer_bounded_visibility_lease(clock):
     conn = FakeQueueConnection(clock)
-    job_id = conn.enqueue(
-        {
-            "kind": "catalog_match_suggestions_refresh",
-            "sourceCatalogItemId": "00000000-0000-4000-8000-000000000201",
-        }
-    )
+    job_id = conn.enqueue({"kind": "catalog_reconcile", "scope": "labels"})
 
     assert worker._claim(conn) is not None
     clock["now"] += timedelta(seconds=worker.VISIBILITY_TIMEOUT_SECONDS + 5)
     assert worker._claim(conn) is None
 
     clock["now"] += timedelta(
-        seconds=worker.CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS
+        seconds=worker.CATALOG_SCAN_VISIBILITY_TIMEOUT_SECONDS
         - worker.VISIBILITY_TIMEOUT_SECONDS
     )
     reclaimed = worker._claim(conn)
     assert reclaimed is not None and reclaimed["id"] == job_id
 
 
-def test_catalog_alias_job_uses_the_longer_bounded_visibility_lease(clock):
+def test_a_source_refresh_uses_the_longer_bounded_visibility_lease(clock):
     conn = FakeQueueConnection(clock)
-    job_id = conn.enqueue(
-        {
-            "kind": "catalog_alias_suggestions_refresh",
-            "catalogItemId": "00000000-0000-4000-8000-000000000301",
-        }
-    )
+    job_id = conn.enqueue({"kind": "catalog_source_refresh", "source_slug": "eppo"})
 
     assert worker._claim(conn) is not None
     clock["now"] += timedelta(seconds=worker.VISIBILITY_TIMEOUT_SECONDS + 5)
     assert worker._claim(conn) is None
 
     clock["now"] += timedelta(
-        seconds=worker.CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS
+        seconds=worker.CATALOG_SCAN_VISIBILITY_TIMEOUT_SECONDS
         - worker.VISIBILITY_TIMEOUT_SECONDS
     )
     reclaimed = worker._claim(conn)
     assert reclaimed is not None and reclaimed["id"] == job_id
 
 
-def test_catalog_fuzzy_duplicate_job_uses_the_longer_bounded_visibility_lease(clock):
+def test_a_curation_apply_keeps_the_short_lease(clock):
+    # One transaction inside catalog_apply_queue_item: a stuck claim must come
+    # back in the ordinary 30 seconds, not in five minutes.
     conn = FakeQueueConnection(clock)
-    job_id = conn.enqueue({"kind": "catalog_fuzzy_duplicate_qa_refresh"})
+    job_id = conn.enqueue(
+        {
+            "kind": "catalog_curation_apply",
+            "queue_item_id": "00000000-0000-4000-8000-000000000301",
+        }
+    )
 
     assert worker._claim(conn) is not None
     clock["now"] += timedelta(seconds=worker.VISIBILITY_TIMEOUT_SECONDS + 5)
-    assert worker._claim(conn) is None
-
-    clock["now"] += timedelta(
-        seconds=worker.CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS
-        - worker.VISIBILITY_TIMEOUT_SECONDS
-    )
     reclaimed = worker._claim(conn)
     assert reclaimed is not None and reclaimed["id"] == job_id
 
@@ -452,17 +441,11 @@ def test_catalog_fuzzy_duplicate_job_uses_the_longer_bounded_visibility_lease(cl
 @pytest.mark.parametrize(
     "payload",
     [
-        {
-            "kind": "catalog_match_suggestions_refresh",
-            "sourceCatalogItemId": "00000000-0000-4000-8000-000000000201",
-        },
-        {
-            "kind": "catalog_alias_suggestions_refresh",
-            "catalogItemId": "00000000-0000-4000-8000-000000000301",
-        },
-        {"kind": "catalog_fuzzy_duplicate_qa_refresh"},
+        {"kind": "catalog_reconcile", "scope": "labels"},
+        {"kind": "catalog_source_refresh", "source_slug": "eppo"},
+        {"kind": "catalog_threshold_recalibrate"},
     ],
-    ids=["canonical-match", "alias", "fuzzy-duplicate"],
+    ids=["reconcile", "source-refresh", "recalibrate"],
 )
 def test_catalog_refresh_during_processing_is_requeued_and_old_claim_cannot_finish_new_run(
     clock, payload

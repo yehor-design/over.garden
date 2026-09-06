@@ -37,7 +37,7 @@ Verified on 2026-09-03 against `https://over.garden` and the live providers.
 | Admin         | Owner pages live in the account menu under the sealed owner role; `/health` is owner-only. The Release Center, editions and extension packs are gone (ADR-0025, `OVE-385`); the menu carries four owner links |
 | Workspace     | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023)                                                 |
 | Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw |
-| Schema        | Migrations `0001`–`0047`, `0049`, `0051`–`0055` and `0062` applied, minus the two deliberately skipped and the two not needed in production; `0053` dropped the twenty Stable Registry tables, `0054` laid the organism graph foundation (ADR-0026) on 2026-09-05, `0055` turned provisional cards into labels and added the picker's ranking inputs on 2026-09-06, and `0062` admitted organism card intents to the outbox the same day. See `docs/PRODUCTION_SCHEMA_STATE.md` |
+| Schema        | Migrations `0001`–`0047`, `0049`, `0051`–`0056` and `0062` applied, minus the two deliberately skipped and the two not needed in production; `0053` dropped the twenty Stable Registry tables, `0054` laid the organism graph foundation (ADR-0026) on 2026-09-05, `0055` turned provisional cards into labels and added the picker's ranking inputs on 2026-09-06, `0062` admitted organism card intents to the outbox and `0056` added the reconciliation contracts, thresholds and the apply/revert functions the same day. See `docs/PRODUCTION_SCHEMA_STATE.md` |
 | Interaction   | Like, bookmark, follow and comment are Server Actions on a form with a real endpoint, so they work before hydration and with JavaScript off. A like is a permanent row owned by an account or by one signed visitor cookie, with no expiry and no ceiling |
 | Sign-in       | One screen: `/auth/sign-in` and `/auth/sign-up` over one component and Server Actions. Every other page shows its own empty state and one link to it                                                        |
 | Matching      | The worker on the droplet runs the sealed six-handler release of `d5faee5` since 2026-09-05 with a fresh heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03 |
@@ -93,6 +93,32 @@ receipt in `docs/WORKSPACE_RESILIENCE_PROOF_2026-09.md`.
 platform: real gardeners publishing, and organic discovery measured rather than
 assumed. One measurement gap blocks honest prioritisation; see known gaps
 below.
+
+**Delivered 2026-09-06, OVE-390 (Slice 24, task 5 of 14).** The
+reconciliation ladder runs in the matching worker, off every request path.
+Six rungs in order (`services/matching/app/catalog_reconcile.py`): a shared
+external identifier, the same scientific name and authorship after gnparser,
+the same canonical name within one kingdom and rank, a RapidFuzz match at
+0.92 or better inside one genus, denominations equal after the shared
+normalizer or under the official romanization, and co-usage by gardeners as a
+supporting signal that never proposes on its own. A kingdom mismatch on an
+otherwise exact name records `homonym_kingdom_conflict` and proposes nothing.
+Each proposal carries a confidence and closed reason codes; at or above the
+rule's threshold in `catalog_reconcile_thresholds` it applies itself, below it
+becomes a queue item ordered by impact. Applying and reverting are two SQL
+functions from migration `0056` (`catalog_apply_queue_item`,
+`catalog_revert_action`), so the worker and the owner's page share one
+implementation and every action carries the inverse that restores the graph.
+Thresholds recalibrate from 30-day revert rates within [0.80, 0.99]. Four job
+kinds join the matching queue (`catalog_reconcile`, `catalog_curation_apply`,
+`catalog_threshold_recalibrate`, `catalog_source_refresh`) and the three
+suggestion kinds leave it with their tables' producers; a queued job of a
+retired kind terminalises as `unsupported_kind`. gnparser is a pinned,
+checksummed release installed by `services/matching/scripts/install-gnparser.sh`
+into the image and both CI runners. The romanization of ADR-0026 D8 now exists
+in Python as well, held to the same 82-case fixture as the TypeScript module,
+so the spelling a form is addressed by and the spelling the ladder matches
+cannot drift.
 
 **Delivered 2026-09-06, OVE-389 (Slice 24, task 4 of 14).** The organism
 card: one cached read (`readPublicVarietyPageByCatalogItemId`, tags

@@ -5,7 +5,7 @@
  * Mirrored by services/matching/app/job_queue_manifest.py — drift fails tests.
  */
 
-export const JOB_QUEUE_MANIFEST_VERSION = "ove255.job-queue.v4" as const;
+export const JOB_QUEUE_MANIFEST_VERSION = "ove390.job-queue.v5" as const;
 
 export const MATCHING_DEFAULT_MAX_ATTEMPTS = 8 as const;
 
@@ -68,24 +68,58 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
   // model (ADR-0025). Their payload CHECK constraints leave `job_queue` with
   // the retirement migration; until then they are extra constraints the
   // worker's preflight does not require.
+  // ADR-0026 D4–D6 (24.05): the reconciliation ladder. Payload keys are the
+  // issue's snake_case names; 0056 restates each shape as a CHECK.
   {
     queueName: "matching",
-    kind: "catalog_alias_suggestions_refresh",
+    kind: "catalog_curation_apply",
     consumer: "matching-python-worker",
     maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,
     privacyClass: "catalog_ids_only",
     coversStructuredJournalCover: false,
     payloadContract: {
-      requiredKeys: ["kind", "catalogItemId"],
+      requiredKeys: ["kind", "queue_item_id"],
       optionalKeys: [],
-      uuidKeys: ["catalogItemId"],
+      uuidKeys: ["queue_item_id"],
     },
-    payloadConstraint: "job_queue_catalog_alias_payload_check",
-    notes: "Allowlisted catalogItemId only.",
+    payloadConstraint: "job_queue_catalog_curation_apply_payload_check",
+    notes: "Applies one open curation queue item through catalog_apply_queue_item.",
   },
   {
     queueName: "matching",
-    kind: "catalog_fuzzy_duplicate_qa_refresh",
+    kind: "catalog_reconcile",
+    consumer: "matching-python-worker",
+    maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,
+    privacyClass: "identifiers_only",
+    coversStructuredJournalCover: false,
+    payloadContract: {
+      requiredKeys: ["kind", "scope"],
+      optionalKeys: ["source_slug", "since"],
+      uuidKeys: [],
+    },
+    payloadConstraint: "job_queue_catalog_reconcile_payload_check",
+    notes:
+      "scope is one of labels, source_records, duplicates; source_slug and since narrow a run. No gardener data.",
+  },
+  {
+    queueName: "matching",
+    kind: "catalog_source_refresh",
+    consumer: "matching-python-worker",
+    maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,
+    privacyClass: "identifiers_only",
+    coversStructuredJournalCover: false,
+    payloadContract: {
+      requiredKeys: ["kind", "source_slug"],
+      optionalKeys: [],
+      uuidKeys: [],
+    },
+    payloadConstraint: "job_queue_catalog_source_refresh_payload_check",
+    notes:
+      "A source's refresh; the handler records a run until a source task implements the ingest.",
+  },
+  {
+    queueName: "matching",
+    kind: "catalog_threshold_recalibrate",
     consumer: "matching-python-worker",
     maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,
     privacyClass: "empty_payload",
@@ -95,23 +129,8 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
       optionalKeys: [],
       uuidKeys: [],
     },
-    payloadConstraint: "job_queue_catalog_fuzzy_duplicate_payload_check",
-    notes: "Kind-only payload.",
-  },
-  {
-    queueName: "matching",
-    kind: "catalog_match_suggestions_refresh",
-    consumer: "matching-python-worker",
-    maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,
-    privacyClass: "catalog_ids_only",
-    coversStructuredJournalCover: false,
-    payloadContract: {
-      requiredKeys: ["kind", "sourceCatalogItemId"],
-      optionalKeys: [],
-      uuidKeys: ["sourceCatalogItemId"],
-    },
-    payloadConstraint: "job_queue_catalog_match_payload_check",
-    notes: "Allowlisted sourceCatalogItemId only.",
+    payloadConstraint: "job_queue_catalog_threshold_recalibrate_payload_check",
+    notes: "Kind-only: recalibrates the per-rule auto-accept thresholds from revert rates.",
   },
   {
     queueName: "matching",
