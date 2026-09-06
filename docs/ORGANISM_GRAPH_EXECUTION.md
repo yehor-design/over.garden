@@ -248,6 +248,30 @@ rewrites and force-pushes. For those, ask.
   for in words: "importer must scope to plant catalog needs first". The scope
   is written into the snapshot's `source_version`, so a row always says what it
   holds. Animalia is one environment variable away once the plan is larger.
+- **Wikidata (24.08).** The property numbers are verified against the live
+  service rather than remembered: taxon name `P225`, Catalogue of Life id
+  **`P10585`**, GBIF `P846`, World Flora Online `P7715`, EPPO `P3031` — checked
+  on 2026-09-06 with *Solanum lycopersicum* (Q23501). Four things the run
+  taught:
+  1. **Match by identifier, fall back to name.** Wikidata carries the
+     Catalogue of Life id mostly on species, so a higher taxon (Cucurbitales,
+     Theria, Eukaryota) is found by `P225` or not at all. With the fallback the
+     loopback coverage went from 65 % to **98.7 %** of nodes with a Catalogue
+     of Life id; production is 100 % of 29.
+  2. **`catalog_alias_projections.reason_codes` is a closed set** belonging to
+     the alias *generator* (`cyrtranslit_forward` and four siblings), so a
+     source-backed decision cannot borrow it without a migration. The decision
+     goes in `decision_reason_code` and the trail in `projection_notes`.
+  3. **A node is indexed by its canonical name and by its name rows, which
+     usually repeat it.** Counting appearances rather than nodes made every
+     node look like a homonym of itself and nothing matched by name.
+  4. **`catalog_record_card_intents` refuses to touch one row twice in a
+     statement.** A node matched by identifier and by name in the same run must
+     be deduplicated before the call, or the whole job fails with a cardinality
+     violation.
+  A card is `noindex` until it has first-hand content, and a `noindex` page
+  carries no JSON-LD at all, so "the page shows the Wikidata `sameAs`" is only
+  visible on a node a gardener has written about.
 - **Research corpus.** `docs/product-research/` and
   `/Users/yehor/Desktop/Startups/OverGarden` must stay byte-identical except
   `README.md` and four desktop-only items. After editing a research file, copy

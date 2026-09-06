@@ -94,6 +94,29 @@ platform: real gardeners publishing, and organic discovery measured rather than
 assumed. One measurement gap blocks honest prioritisation; see known gaps
 below.
 
+**Delivered 2026-09-06, OVE-393 (Slice 24, task 8 of 14).** Every canonical
+node now carries the identifiers the other sources are addressed by. An offline
+worker job asks Wikidata for the Catalogue of Life, GBIF, World Flora Online
+and EPPO identifiers of the nodes we hold — matched on the Catalogue of Life id
+they already carry, and by taxon name for the higher taxa Wikidata does not
+give one — and writes them beside a Wikidata item id. An identifier another
+node already holds is never overwritten: it becomes a decision in the owner's
+queue, because the uniqueness of an identifier is what makes the ladder's first
+rung work at all.
+
+The same items carry the words gardeners use. Labels and aliases in Ukrainian,
+Bulgarian, Russian and English enter the alias ledger; a name in one of those
+four languages, long enough to be a name, not a restatement of the scientific
+one, and attached to exactly one node becomes a vernacular the card and the
+picker show. Everything else waits as `review_needed` with its reason. The
+card's `sameAs` gained the Wikidata link, and a card whose names changed asks
+the outbox to re-render it.
+
+In production all 29 nodes with a Catalogue of Life identifier received a
+Wikidata id, with 72 identifiers and 111 vernacular names written and no
+conflicts. Nothing on a gardener's request path calls Wikidata, and a test
+reads the whole web source to keep it that way.
+
 **Delivered 2026-09-06, OVE-392 (Slice 24, task 7 of 14).** Catalogue of Life
 is the backbone. The July 2026 release (COL26.7, doi 10.48580/dgyhw) lives in
 the source layer as `catalog_source_col_usages` and
