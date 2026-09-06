@@ -58,6 +58,7 @@ interface Seed {
   orphanCultivarId: string;
   beeBreedId: string;
   homonymId: string;
+  euHomonymId: string;
 }
 
 async function seedSpecies(
@@ -279,6 +280,23 @@ async function seed(pool: Pool): Promise<Seed> {
     },
   });
 
+  // An unregistered twin for the EU variety too: the Bulgarian half of the
+  // boost reads `registered_eu`, which a different fact sets.
+  const euHomonymId = randomUUID();
+  await pool.query(
+    `insert into catalog_items (
+       id, canonical_name, catalog_kind, normalized_name, public_slug, status,
+       source, source_id, locale, node_kind, identity_state
+     )
+     values ($1, 'Coyote', 'plant_variety', catalog_normalize_name('Coyote'),
+             $2, 'seeded', 'manual', $3, 'en', 'cultivar', 'active')`,
+    [
+      euHomonymId,
+      `ove395-eu-homonym-${euHomonymId.slice(0, 8)}`,
+      `ove395:${euHomonymId}`,
+    ],
+  );
+
   // An unregistered organism with the same name as the registered cultivar,
   // for the ranking half of the proof.
   const homonymId = randomUUID();
@@ -306,6 +324,7 @@ async function seed(pool: Pool): Promise<Seed> {
     orphanCultivarId,
     beeBreedId,
     homonymId,
+    euHomonymId,
   };
 }
 
@@ -583,6 +602,45 @@ export async function runDisposableProof() {
       );
     }
 
+    // The Bulgarian half of the same rule: a Bulgarian reader's market is the
+    // Union, so `registered_eu` is what orders the duplicate there.
+    const bulgarian = await searchCatalogSuggestionsForTypeaheadResult(
+      "Coyote",
+      { locale: "bg", objectKind: "plant", limit: 5 },
+      {
+        runStatement: async (statement) =>
+          statement.execute(kdb).then((r) => r.rows),
+      },
+    );
+    // The flag the order actually reads, so the assertion below cannot pass by
+    // luck: an EU row's market comes from its `eu_common_catalogue` identifier,
+    // not from the notifying member state, which here is Spain.
+    const registeredEu = await pool.query<{ registered_eu: boolean }>(
+      "select registered_eu from catalog_items where id = $1",
+      [seeded.euCultivarId],
+    );
+    const unregisteredEu = await pool.query<{ registered_eu: boolean }>(
+      "select registered_eu from catalog_items where id = $1",
+      [seeded.euHomonymId],
+    );
+    if (
+      registeredEu.rows[0]?.registered_eu !== true ||
+      unregisteredEu.rows[0]?.registered_eu !== false
+    ) {
+      throw new Error("the EU market flag does not separate the two varieties");
+    }
+    const bulgarianIds = bulgarian.suggestions.map((row) => row.id);
+    if (bulgarianIds[0] !== seeded.euCultivarId) {
+      throw new Error(
+        "the unregistered twin outranked the EU-registered variety",
+      );
+    }
+    if (bulgarianIds.includes(seeded.euHomonymId)) {
+      throw new Error(
+        "both spellings of one EU denomination reached the picker",
+      );
+    }
+
     return {
       schemaVersion: "ove395.registerFormAttachment.v1",
       mode: "disposable",
@@ -606,6 +664,7 @@ export async function runDisposableProof() {
       formToFormRefused,
       registeredCultivarRanksFirst: true,
       unregisteredHomonymSuppressed: true,
+      euRegisteredRanksFirstInBulgarian: true,
       hierarchicalAddress: offeredPath,
       rankedCount: rankedIds.length,
       invariant: await readRegisterAttachmentInvariant(
