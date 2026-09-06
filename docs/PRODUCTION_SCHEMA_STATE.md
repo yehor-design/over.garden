@@ -350,6 +350,45 @@ are gone. No row of `catalog_items`, `plant_objects` or `job_queue` was
 touched: the migration adds constraints, a table, its seed and three
 functions.
 
+## The 2026-09-06 application of `0058`, the second EPPO capture vocabulary
+
+Executed by the OVE-394 executor under the owner's standing authorization of
+2026-09-05 (`docs/ORGANISM_GRAPH_EXECUTION.md`, section 1), with
+`scripts/apply-reviewed-migration.ts` and the pulled production environment
+(deleted afterwards).
+
+**Before** (`--mode inventory`, host class `digitalocean_managed`, database
+`defaultdb`): `0058` reports `no_sentinel`, and it always will. It creates no
+table and adds no column, so the applier's sentinel scan has nothing to look
+for; the state is read from the constraint and the function instead. The
+database was **1,847 MB** of a 10 GiB plan, and held **no** EPPO capture: zero
+rows in `catalog_source_capture_runs` and zero in
+`catalog_source_capture_units`.
+
+**Apply** (`--mode apply --migration 0058`): 4 statements, 222 ms.
+
+**After**, read directly rather than by sentinel:
+
+- `catalog_source_capture_units_endpoint_class_check` now admits seven values —
+  `taxon_list`, `taxon_overview`, `taxon_names`, `taxon_taxonomy`, and the
+  three the second capture adds: `taxon_hosts`, `taxon_distribution`,
+  `taxon_categorization`.
+- `catalog_capture_declared_classes(uuid) returns integer` exists.
+
+**Why a function and not a wider constant.** Each capture declares three
+classes; the vocabulary now holds six. Everything that counts units per
+identifier — four completeness checks that rebuild a source record's payload
+from its units, and the closure arithmetic that decides whether a capture may
+finish — used to compare against the length of the constant. Widening the
+constant alone would have made every one of those checks stop matching, and
+since all 129,214 records of the first capture keep their payload in their
+units and nowhere else, that is silent data loss rather than a failing test.
+The function answers from the run itself, so both captures verify.
+
+The migration changes no row. The rollback narrows the constraint again and
+drops the function, and it deliberately refuses to delete captured rows: a
+capture is an observation, and an observation is not undone by a schema change.
+
 ## The 2026-09-06 application of `0057` and the first Catalogue of Life ingest
 
 Executed by the OVE-392 executor under the owner's standing authorization of
