@@ -350,6 +350,34 @@ are gone. No row of `catalog_items`, `plant_objects` or `job_queue` was
 touched: the migration adds constraints, a table, its seed and three
 functions.
 
+## The 2026-09-06 application of `0063`
+
+Executed by the OVE-391 executor under the owner's standing authorization of
+2026-09-05 (`docs/ORGANISM_GRAPH_EXECUTION.md`, section 1), from the PR branch
+before the merge, with `scripts/apply-reviewed-migration.ts` and the pulled
+production environment (deleted afterwards). `0063` is the migration the task
+allowed for: the outbox `kind` CHECK of `0015` admitted `password_reset`
+alone, so the weekly digest had nowhere to go.
+
+**Before** (`--mode inventory`, host class `digitalocean_managed`, database
+`defaultdb`): `0054`, `0055`, `0056` and `0062` applied; `0063` missing
+(absent: `auth_email_outbox.payload`, `auth_email_outbox.recipient_user_id`,
+index `auth_email_outbox_pending_digest_uidx`). Read-only:
+`auth_email_outbox` held **no rows at all**, `verification_id` was `NOT NULL`,
+and `auth_email_outbox_kind_check` read `kind = 'password_reset'`.
+
+**Apply** (`--mode apply --migration 0063`): 17 statements, 363 ms.
+
+**After** (read-only): `payload`, `recipient_user_id` and `verification_id`
+are all nullable; `auth_email_outbox_kind_check` admits `password_reset` and
+`owner_catalog_digest`; `auth_email_outbox_kind_shape_check` requires a
+password reset to carry a verification and no payload, and a digest to carry a
+recipient and a JSON object and no verification; the foreign key
+`auth_email_outbox_recipient_fkey` cascades from `"user"`; the partial unique
+index `auth_email_outbox_pending_digest_uidx` is present beside the claim,
+lease, primary-key and verification indexes. The table is still empty, so the
+tightening moved no row.
+
 ## The 2026-09-06 application of `0062`
 
 Executed by the OVE-389 executor under the owner's standing authorization of

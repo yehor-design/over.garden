@@ -7,6 +7,8 @@ export const ADMIN_MENU_LOCALES = ["uk", "bg", "ru"] as const;
 export const EXPECTED_OPERATOR_MENU_LINKS = [
   "/account/communities",
   "/account/moderation/comments",
+  "/garden/catalog/queue",
+  "/garden/catalog/sources",
   "/garden/privacy/erasure-requests",
   "/health",
 ] as const;

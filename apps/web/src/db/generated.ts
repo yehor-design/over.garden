@@ -87,11 +87,13 @@ export interface AuthEmailOutbox {
   last_error_class: string | null;
   locked_at: Timestamp | null;
   locked_by: string | null;
+  payload: Json | null;
+  recipient_user_id: string | null;
   sent_at: Timestamp | null;
   state: Generated<string>;
   terminalized_at: Timestamp | null;
   updated_at: Generated<Timestamp>;
-  verification_id: string;
+  verification_id: string | null;
 }
 
 export interface CatalogAliasProjections {

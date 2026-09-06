@@ -18,7 +18,7 @@ const retiredRouteStatuses = Object.fromEntries(
 );
 
 describe("OVE-338 admin-inside-account contract", () => {
-  it("accepts the sealed owner with exactly four localized account-menu links", () => {
+  it("accepts the sealed owner with exactly six localized account-menu links", () => {
     const receipt = evaluateAdminMenuContract({
       actorClass: "sealed_owner",
       accessStatus: "allowed",
@@ -36,7 +36,7 @@ describe("OVE-338 admin-inside-account contract", () => {
       version: ADMIN_MENU_VISIBILITY_RECEIPT_VERSION,
       status: "aligned",
       actorClass: "sealed_owner",
-      linkCount: 4,
+      linkCount: 6,
       localeCount: 3,
       accountPathCount: 3,
       violations: [],

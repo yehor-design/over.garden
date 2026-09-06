@@ -27,8 +27,9 @@ export interface ErasureCoverageEntry {
 }
 
 // OVE-255 and OVE-353 each extended the manifest independently from v5, so the
-// merged coverage is a new version rather than either side's v6.
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove386.erasure-schema.v9";
+// merged coverage is a new version rather than either side's v6. v10 adds the
+// owner digest recipient, the first outbox row addressed to an account.
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove391.erasure-schema.v10";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Auth / Better Auth
@@ -814,6 +815,17 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     disposition: "delete",
     rationale:
       "Owner mutation receipts are deleted before journal ownership is rekeyed.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "auth_email_outbox.recipient_user_id",
+    table: "auth_email_outbox",
+    columnOrPath: "recipient_user_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale:
+      "OVE-391 owner digests are addressed to one account; the foreign key cascades, so an erased subject's unsent digest leaves with the account.",
     dryRunOwned: true,
     executionOwned: true,
   },

@@ -177,6 +177,36 @@ rewrites and force-pushes. For those, ask.
   `contracts/catalog/form-slug.fixture.json`. The ladder matches a Latin
   spelling of a Cyrillic denomination by the same rule the form's address
   uses, so a link and an address can never disagree.
+- **Owner curation (24.06).** The owner surfaces are gated on a user id the
+  server reads at start (`OVERGARDEN_ADMIN_OWNER_USER_ID`), so a browser proof
+  cannot create the account it needs: `pnpm owner:seed-browser-fixture` writes
+  the sealed owner with a fixed id before the server starts, and CI passes the
+  same id to `next start`. Three things only executing the page could find:
+  1. **`OwnerScopedActionForm` needs hydration.** It wrapped the action in a
+     client closure for `useActionState`, and React answered with
+     `action="javascript:throw new Error('React form unexpectedly
+     submitted.')"`. `OwnerScopedProgressiveForm` passes the reference through
+     and takes an action shaped `(previousState, formData)`; the queue, the
+     sources page and the card controls use it, and
+     `src/components/auth/owner-scope.progressive.test.ts` reads the source to
+     keep it that way. The other nineteen call sites of the old form still
+     need hydration.
+  2. **A statement cannot read the rows a function it calls has just
+     inserted.** `applyCatalogQueueItem` and `revertCatalogAction` joined
+     `catalog_curation_actions` in the same statement as
+     `catalog_apply_queue_item(...)`: the query's snapshot predates the insert,
+     so every decision applied and then threw "returned no action" with a 500.
+     Two statements now; the mocked test pins the shape, and only the browser
+     run against Postgres could see the original.
+  3. **Playwright's `request.post` is not a browser's form post.** The same
+     multipart body sent through `context.request.post` answered "Failed to
+     find Server Action" while `fetch` and `curl` with the identical fields
+     succeeded. Prove a no-JavaScript control with plain `fetch` and the
+     context's cookies.
+  A decided queue row and the node under it cannot be deleted afterwards:
+  `catalog_curation_actions.queue_item_id` is `on delete set null` and the
+  audit table refuses every update, so the cascade behind the delete is
+  refused. Fixtures clean what is open and leave the decided rows.
 - **Research corpus.** `docs/product-research/` and
   `/Users/yehor/Desktop/Startups/OverGarden` must stay byte-identical except
   `README.md` and four desktop-only items. After editing a research file, copy

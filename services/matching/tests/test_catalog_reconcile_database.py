@@ -672,6 +672,61 @@ def test_the_duplicates_scope_queues_a_same_name_pair_and_never_crosses_a_kingdo
     ).fetchone()["identity_state"] == "active"
 
 
+def test_an_owner_decision_and_its_undo_restore_the_graph(conn):
+    """The owner's Yes and Undo are the worker's two functions (ADR-0026 D10).
+
+    The owner's page calls `catalog_apply_queue_item` with `automatic = false`
+    and an actor, then `catalog_revert_action`. Nothing about the decision
+    differs from the worker's except who is recorded as deciding it, and the
+    fingerprint before the decision must come back after the undo.
+    """
+    cultivar = seed_item(conn, "Де Барао", node_kind="cultivar", catalog_kind="plant_variety")
+    owner_id = str(uuid.uuid4())
+    conn.execute(
+        'insert into "user" (id, name, email, "emailVerified") values (%s, %s, %s, true)',
+        (owner_id, "ove391 owner", f"ove391-{owner_id[:8]}@example.test"),
+    )
+    conn.execute(
+        "insert into admin_user_roles (user_id, role) values (%s, 'owner') on conflict do nothing",
+        (owner_id,),
+    )
+    gardener = seed_gardener(conn)
+    seed_object(conn, gardener, label="Де Барао", entries=1)
+    before = graph_fingerprint(conn)
+
+    item = queue_item(
+        conn,
+        item_type="label_link",
+        subject_catalog_item_id=cultivar,
+        subject_label="Де Барао",
+        proposal={"catalog_item_id": cultivar, "object_kind": "plant"},
+    )
+    action_id = conn.execute(
+        "select catalog_apply_queue_item(%s::uuid, %s::uuid, false)::text as action_id",
+        (item, owner_id),
+    ).fetchone()["action_id"]
+
+    decided = conn.execute(
+        "select state, decided_by_user_id::text as decided_by from catalog_curation_queue where id = %s",
+        (item,),
+    ).fetchone()
+    assert decided["state"] == "accepted", "an owner decision is accepted, not auto_applied"
+    assert decided["decided_by"] == owner_id
+    action = conn.execute(
+        "select automatic, performed_by_user_id::text as actor from catalog_curation_actions where id = %s",
+        (action_id,),
+    ).fetchone()
+    assert action["automatic"] is False
+    assert action["actor"] == owner_id
+
+    conn.execute("select catalog_revert_action(%s::uuid, %s::uuid)", (action_id, owner_id))
+
+    assert graph_fingerprint(conn) == before
+    assert conn.execute(
+        "select state from catalog_curation_queue where id = %s", (item,)
+    ).fetchone()["state"] == "reverted"
+
+
 def test_a_source_record_reaches_its_node_by_a_shared_identifier(conn):
     node = seed_item(conn, "Solanum lycopersicum", slug="ove390-solanum-3")
     snapshot, assertion = seed_assertion(conn)

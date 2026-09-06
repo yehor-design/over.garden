@@ -94,6 +94,30 @@ platform: real gardeners publishing, and organic discovery measured rather than
 assumed. One measurement gap blocks honest prioritisation; see known gaps
 below.
 
+**Delivered 2026-09-06, OVE-391 (Slice 24, task 6 of 14).** The owner curates
+from two links in the account menu. `/garden/catalog/queue` shows one decision
+at a time, highest impact first: the two nodes side by side with their reasons
+and confidence, Yes, No and Skip as Server Action forms, J and K walking the
+stream without deciding, U undoing, and a confirmation step only for a merge
+that moves more than fifty gardener objects. Under it, the week's automatic
+decisions with one-click revert. `/garden/catalog/sources` shows one card per
+source with its version, licence, counts and last refresh, and a Refresh button
+that enqueues exactly one job per idempotency key. On a public organism card
+the owner alone sees rename, pin a name, set indexable and merge; every action
+writes `catalog_curation_actions` with its inverse and revalidates the card.
+A Monday cron enqueues one digest email through the auth outbox, which
+migration `0063` taught a second message kind. Applying and reverting still go
+through the SQL functions of `0056`, so the worker and the owner cannot drift.
+
+Two defects only a real browser against Postgres could show, both fixed here:
+the owner forms rendered React's placeholder action and needed hydration (a
+client closure around the action; `OwnerScopedProgressiveForm` passes the
+reference through, and the queue, sources and card controls use it), and the
+apply and revert wrappers read a row in the same statement that inserted it,
+so every decision committed and then answered 500. The nineteen other call
+sites of `OwnerScopedActionForm` still need hydration; that is recorded, not
+fixed here.
+
 **Delivered 2026-09-06, OVE-390 (Slice 24, task 5 of 14).** The
 reconciliation ladder runs in the matching worker, off every request path.
 Six rungs in order (`services/matching/app/catalog_reconcile.py`): a shared

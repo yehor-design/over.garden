@@ -11,6 +11,17 @@ const RETIRED_PATH_PREFIXES = [
   "/garden/catalog",
 ] as const;
 
+/**
+ * The owner's two curation surfaces live under a retired namespace
+ * (ADR-0026 D10): they are named here rather than un-retiring
+ * `/garden/catalog`, so `/garden/catalog/registry` and every other retired
+ * descendant keeps answering 404.
+ */
+const REINSTATED_PATHS = [
+  "/garden/catalog/queue",
+  "/garden/catalog/sources",
+] as const;
+
 function trimTrailingSlashes(pathname: string) {
   if (pathname === "/") return pathname;
   return pathname.replace(/\/+$/, "");
@@ -27,6 +38,8 @@ export function isRetiredControlPlanePath(pathname: string) {
 
   if (canonicalPath === "/admin" || canonicalPath.startsWith("/admin/"))
     return true;
+
+  if (REINSTATED_PATHS.some((path) => canonicalPath === path)) return false;
 
   return RETIRED_PATH_PREFIXES.some(
     (prefix) =>

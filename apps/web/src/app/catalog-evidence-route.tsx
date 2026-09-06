@@ -45,6 +45,8 @@ import {
 } from "@/server/public-organism-card-query";
 import { buildPublicVarietyDiscoverySource } from "@/server/public-variety-repository";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
+import { isOwnerUserId } from "@/server/admin-access";
+import { CatalogOwnerCardControls } from "@/app/catalog-owner-card-controls";
 import {
   describeWorkspaceFailure,
   recordWorkspaceSectionFailure,
@@ -178,6 +180,12 @@ export async function renderPublicCatalogEvidenceRoute(
     getCachedPublicCatalogEvidencePage(address.catalogItemId, locale),
   ]);
   if (!page) notFound();
+
+  // The owner's edit controls (ADR-0026 D10) render only for the owner's own
+  // session; a signed-in gardener and a guest see the same card without them.
+  const isOwner = shellSession.ownerUserId
+    ? await isOwnerUserId(shellSession.ownerUserId).catch(() => false)
+    : false;
 
   const catalogKind = page.catalog.catalogKind;
   const publicCopy = getPublicSurfaceCopy(locale);
@@ -573,6 +581,15 @@ export async function renderPublicCatalogEvidenceRoute(
             })}
           </div>
         </details>
+      ) : null}
+
+      {isOwner ? (
+        <CatalogOwnerCardControls
+          locale={locale}
+          catalogItemId={page.catalog.catalogItemId}
+          canonicalName={page.catalog.canonicalName}
+          indexableOverride={page.card.indexableOverride}
+        />
       ) : null}
 
       <PublicVarietySourceCredits

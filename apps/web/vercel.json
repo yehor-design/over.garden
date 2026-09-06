@@ -26,6 +26,10 @@
     {
       "path": "/api/cron/catalog-card-revalidate",
       "schedule": "50 3 * * *"
+    },
+    {
+      "path": "/api/cron/catalog-digest",
+      "schedule": "0 6 * * 1"
     }
   ]
 }

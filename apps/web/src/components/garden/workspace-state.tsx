@@ -35,7 +35,9 @@ export type WorkspaceSurface =
   | "lineage-claims"
   | "lineage-questions"
   | "lineage-invitation-claim"
-  | "erasure-requests";
+  | "erasure-requests"
+  | "catalog-queue"
+  | "catalog-sources";
 
 const SHELL_WIDTH = {
   narrow: "max-w-3xl",
