@@ -20,6 +20,12 @@ import {
   type BreedSeedSource,
 } from "@/lib/catalog/breed-seed";
 import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
+import {
+  UA_BEE_BREED_SLUG,
+  VERTEBRATE_BREED_SLUG,
+  attachRegisterFormsToSpecies,
+  type RegisterAttachmentSummary,
+} from "./register-graph-attachment";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -58,6 +64,8 @@ export interface BreedSeedImportedConceptSummary {
 }
 
 export interface BreedSeedImportSummary {
+  /** What the graph attachment did after the rows landed (OVE-395). */
+  attachments?: RegisterAttachmentSummary[];
   sourceSnapshotIds: string[];
   sourceRecordIds: string[];
   catalogItemIds: string[];
@@ -147,6 +155,26 @@ export interface BreedSeedAliasCurationProof {
 }
 
 export async function importBreedSeed(
+  executor: Kysely<Database>,
+  definition = breedSeedDefinition(),
+): Promise<BreedSeedImportSummary> {
+  const imported = await importBreedSeedRows(executor, definition);
+  // After the import commits, never inside it: the attachment opens one
+  // transaction per breed (OVE-395). Breeds come from two registers, so both
+  // are attached.
+  const attachments: RegisterAttachmentSummary[] = [];
+  for (const sourceSlug of [
+    VERTEBRATE_BREED_SLUG,
+    UA_BEE_BREED_SLUG,
+  ] as const) {
+    attachments.push(
+      await attachRegisterFormsToSpecies({ sourceSlug }, executor),
+    );
+  }
+  return { ...imported, attachments };
+}
+
+async function importBreedSeedRows(
   executor: Kysely<Database>,
   definition = breedSeedDefinition(),
 ): Promise<BreedSeedImportSummary> {

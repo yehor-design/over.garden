@@ -16,6 +16,11 @@ import {
   type UaStateRegisterVarietyImportDefinition,
   type UaStateRegisterVarietyProjection,
 } from "@/lib/catalog/ua-state-register-variety";
+import {
+  UA_STATE_REGISTER_SLUG,
+  attachRegisterFormsToSpecies,
+  type RegisterAttachmentSummary,
+} from "./register-graph-attachment";
 import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -47,6 +52,8 @@ export interface UaStateRegisterImportSummary {
 }
 
 export interface UaStateRegisterFullImportSummary extends UaStateRegisterImportSummary {
+  /** What the graph attachment did after the rows landed (OVE-395). */
+  attachment?: RegisterAttachmentSummary;
   varieties: UaStateRegisterImportSummary[];
   importedVarieties: number;
   sourceRowsImported: number;
@@ -127,6 +134,22 @@ export async function importUaStateRegisterVarieties(
     throw new Error("UA State Register full import has no accepted rows.");
   }
 
+  const imported = await importUaStateRegisterRows(executor, input);
+  // The graph attachment runs after the import commits, never inside it: it
+  // opens a transaction per form so an interrupted attachment leaves whole
+  // cultivars behind it, and it reads the source rows the import just wrote
+  // (OVE-395).
+  const attachment = await attachRegisterFormsToSpecies(
+    { sourceSlug: UA_STATE_REGISTER_SLUG },
+    executor,
+  );
+  return { ...imported, attachment };
+}
+
+async function importUaStateRegisterRows(
+  executor: Kysely<Database>,
+  input: UaStateRegisterFullImportBuildResult,
+): Promise<UaStateRegisterFullImportSummary> {
   return executor.transaction().execute(async (trx) => {
     const firstDefinition = input.definitions[0];
     const sourceFileSha256 = uaStateRegisterSnapshotChecksum(firstDefinition);
