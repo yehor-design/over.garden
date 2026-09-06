@@ -729,9 +729,15 @@ def reconcile_eppo(
 ) -> EppoReconcileReceipt:
     """Put both captures onto the graph and return what it did.
 
-    One transaction per identifier is deliberately *not* what happens here: the
-    caller owns the transaction, because a half-written taxon (an identifier
-    with no facts, or hosts with no relation) is worse than none.
+    One transaction per identifier, not one for the run. The worker hands its
+    handlers an autocommit connection, so a run wrapped in a single transaction
+    would be one the worker never actually opens — and on a one-gigabyte
+    managed database a transaction holding 129,214 identifiers' worth of new
+    rows is the wrong shape anyway. An identifier is the honest unit: its
+    ladder decision, its identifier row, its names and its facts land together
+    or not at all, and a run interrupted halfway leaves whole taxa behind it
+    rather than half of one. Everything here is idempotent, so the next run
+    finishes what this one started.
     """
     started_at = time.monotonic()
     receipt = EppoReconcileReceipt()
@@ -774,29 +780,30 @@ def reconcile_eppo(
                 else snapshot_ids[-1]
             )
 
-            outcome = climb_eppo_ladder(conn, taxon)
-            if outcome.catalog_item_id is None and outcome.ambiguous_ids:
-                _queue_for_curation(conn, taxon, outcome, receipt)
-                continue
-            if outcome.catalog_item_id is None:
-                created = _create_node_from_eppo(conn, taxon, receipt)
-                if created is None:
+            with conn.transaction():
+                outcome = climb_eppo_ladder(conn, taxon)
+                if outcome.catalog_item_id is None and outcome.ambiguous_ids:
+                    _queue_for_curation(conn, taxon, outcome, receipt)
                     continue
-                node_by_code[code] = created
-                pending_facts.append(code)
-                continue
+                if outcome.catalog_item_id is None:
+                    created = _create_node_from_eppo(conn, taxon, receipt)
+                    if created is None:
+                        continue
+                    node_by_code[code] = created
+                    pending_facts.append(code)
+                    continue
 
-            node_by_code[code] = outcome.catalog_item_id
-            pending_facts.append(code)
-            if outcome.rule == "eppo_identifier":
-                receipt.linked_by_identifier += 1
-            elif outcome.rule == "scientific_name":
-                receipt.linked_by_scientific_name += 1
-            elif outcome.rule == "canonical_name":
-                receipt.linked_by_canonical_name += 1
-            _write_identity(
-                conn, taxon, node_by_code[code], outcome.rule or "eppo", receipt
-            )
+                node_by_code[code] = outcome.catalog_item_id
+                pending_facts.append(code)
+                if outcome.rule == "eppo_identifier":
+                    receipt.linked_by_identifier += 1
+                elif outcome.rule == "scientific_name":
+                    receipt.linked_by_scientific_name += 1
+                elif outcome.rule == "canonical_name":
+                    receipt.linked_by_canonical_name += 1
+                _write_identity(
+                    conn, taxon, node_by_code[code], outcome.rule or "eppo", receipt
+                )
 
     receipt.active_codes_linked = len(node_by_code)
 
@@ -816,7 +823,8 @@ def reconcile_eppo(
                 if record
                 else snapshot_ids[-1]
             )
-            _write_facts(conn, taxon, node_id, node_by_code, receipt)
+            with conn.transaction():
+                _write_facts(conn, taxon, node_id, node_by_code, receipt)
 
     if recompute_weights:
         conn.execute(RECOMPUTE_WEIGHT_SQL)

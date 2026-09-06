@@ -57,9 +57,10 @@ def main() -> int:
     # that exports them without unescaping hands psycopg a DSN ending in a
     # literal backslash-n, and Postgres refuses `sslmode=require\n`.
     database_url = options.database_url.strip().removesuffix("\\n").strip()
-    # One transaction for the whole run: a half-linked EPPO taxon — an
-    # identifier with no facts, or hosts with no relation — is worse than none.
-    with psycopg.connect(database_url, row_factory=dict_row) as conn:
+    # Autocommit, exactly as the worker connects: the unit of work is one
+    # identifier, opened and closed inside the job, so this entry point and the
+    # deployed worker cannot behave differently on the same data.
+    with psycopg.connect(database_url, autocommit=True, row_factory=dict_row) as conn:
         capture_ids = [
             value.strip() for value in options.capture_ids.split(",") if value.strip()
         ]
@@ -69,7 +70,6 @@ def main() -> int:
             recompute_weights=not options.skip_weight_recompute,
             capture_ids=capture_ids or None,
         )
-        conn.commit()
     print(json.dumps(receipt.as_dict(), indent=2))
     return 0
 

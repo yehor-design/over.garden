@@ -651,6 +651,60 @@ def test_an_ambiguous_name_goes_to_the_queue_and_links_nothing(conn):
     assert len(item["proposal"]["candidates"]) == 2
 
 
+def test_one_identifier_is_the_unit_of_work(conn, monkeypatch):
+    """A run that dies halfway leaves whole taxa behind it, never half of one."""
+    first, _second, first_snapshot, _ = seed_two_captures(conn)
+    for code, name in (("AAAA01", "Alpha alpha"), ("ZZZZ99", "Omega omega")):
+        seed_unit(
+            conn,
+            capture_id=first,
+            code=code,
+            endpoint_class="taxon_overview",
+            payload=overview(code, name),
+        )
+        seed_unit(
+            conn,
+            capture_id=first,
+            code=code,
+            endpoint_class="taxon_taxonomy",
+            payload=taxonomy(code, name, "Animalia"),
+        )
+        seed_record(conn, first_snapshot, code)
+
+    original = reconcile._create_node_from_eppo
+    calls: list[str] = []
+
+    def fail_on_the_second(conn_, taxon, receipt):
+        calls.append(taxon.eppo_code)
+        if len(calls) == 2:
+            raise RuntimeError("the provider's database blinked")
+        return original(conn_, taxon, receipt)
+
+    monkeypatch.setattr(reconcile, "_create_node_from_eppo", fail_on_the_second)
+
+    with pytest.raises(RuntimeError, match="blinked"):
+        reconcile.reconcile_eppo(conn)
+
+    # The first identifier is whole; the second left nothing at all.
+    rows = conn.execute(
+        """
+        select identifier.value
+        from catalog_item_identifiers as identifier
+        where identifier.scheme = 'eppo'
+        order by identifier.value
+        """
+    ).fetchall()
+    assert [row["value"] for row in rows] == ["AAAA01"]
+    names = conn.execute(
+        """
+        select count(*)::int as count
+        from catalog_items
+        where source_id like 'eppo-global-database:%'
+        """
+    ).fetchone()
+    assert names["count"] == 1
+
+
 def test_an_inactive_eppo_code_is_never_linked(conn):
     first, _second, first_snapshot, _ = seed_two_captures(conn)
     seed_node(conn, "Lycopersicon esculentum", kingdom="Plantae")
