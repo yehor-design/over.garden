@@ -176,6 +176,118 @@ export function readCatalogSourceReadinessManifest(): CatalogSourceReadinessMani
   return cachedManifest;
 }
 
+/**
+ * The second axis of the same guard: not which source, but which leaf.
+ *
+ * A capture classifies every field it observed as `source_public`,
+ * `source_only`, `forbidden` or `unknown`. The first list may reach a product
+ * surface; the other three may not, and `unknown` is refused for the same
+ * reason `forbidden` is — a field nobody has classified is a field nobody has
+ * checked the licence for. This walks what is about to be projected and
+ * refuses on the first leaf that is not public, naming the path.
+ *
+ * Field paths are the ones `classifyEppoResponseFields` writes: `country_iso`
+ * for an object at the root, `[].country_iso` for an array of them. A path the
+ * rights map does not hold is treated as `unknown`, so a payload that grew a
+ * field since the capture is refused rather than published (OVE-394,
+ * ADR-0026 D11).
+ */
+export type CatalogSourceLeafRight =
+  | "source_public"
+  | "source_only"
+  | "forbidden"
+  | "unknown";
+
+export interface CatalogSourceLeafProjectionRequest {
+  sourceSlug: string;
+  payload: unknown;
+  fieldRights: Readonly<Record<string, string>>;
+  productSurface?: CatalogSourceProductSurface;
+}
+
+export type CatalogSourceLeafProjectionDecision =
+  | { allowed: true; leafCount: number }
+  | {
+      allowed: false;
+      path: string;
+      right: CatalogSourceLeafRight;
+      message: string;
+    };
+
+const MAX_PROJECTION_DEPTH = 24;
+
+export function checkCatalogSourceLeafProjection(
+  request: CatalogSourceLeafProjectionRequest,
+): CatalogSourceLeafProjectionDecision {
+  let leafCount = 0;
+  let refusal: Extract<
+    CatalogSourceLeafProjectionDecision,
+    { allowed: false }
+  > | null = null;
+
+  const visit = (value: unknown, path: string, depth: number): void => {
+    if (refusal) return;
+    if (depth > MAX_PROJECTION_DEPTH) {
+      refusal = {
+        allowed: false,
+        path,
+        right: "unknown",
+        message: `${request.sourceSlug}: a projected payload nested deeper than ${MAX_PROJECTION_DEPTH} levels is refused.`,
+      };
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item, `${path}[]`, depth + 1);
+      return;
+    }
+    if (value !== null && typeof value === "object") {
+      for (const [key, child] of Object.entries(
+        value as Record<string, unknown>,
+      )) {
+        visit(child, path ? `${path}.${key}` : key, depth + 1);
+      }
+      return;
+    }
+    if (value === null || value === undefined) return;
+
+    leafCount += 1;
+    const right = request.fieldRights[path];
+    if (right === "source_public") return;
+    refusal = {
+      allowed: false,
+      path,
+      right:
+        right === "source_only" || right === "forbidden" ? right : "unknown",
+      message: `${request.sourceSlug}: the leaf "${path}" is ${right ?? "unclassified"} and must not reach ${request.productSurface ?? "a product surface"}.`,
+    };
+  };
+
+  visit(request.payload, "", 0);
+  return refusal ?? { allowed: true, leafCount };
+}
+
+export function assertCatalogSourceLeafProjectionAllowed(
+  request: CatalogSourceLeafProjectionRequest,
+): Extract<CatalogSourceLeafProjectionDecision, { allowed: true }> {
+  const decision = checkCatalogSourceLeafProjection(request);
+  if (!decision.allowed) {
+    throw new CatalogSourceLeafProjectionBlockedError(decision);
+  }
+  return decision;
+}
+
+export class CatalogSourceLeafProjectionBlockedError extends Error {
+  constructor(
+    readonly decision: Extract<
+      CatalogSourceLeafProjectionDecision,
+      { allowed: false }
+    >,
+  ) {
+    super(decision.message);
+    this.name = "CatalogSourceLeafProjectionBlockedError";
+  }
+}
+
 export function checkCatalogSourceProductProjection(
   request: CatalogSourceProductProjectionRequest,
 ): CatalogSourceProjectionDecision {

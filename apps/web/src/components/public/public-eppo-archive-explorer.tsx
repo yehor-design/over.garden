@@ -54,9 +54,7 @@ export function EppoArchiveExplorer({
       ) : null}
 
       <header className="border-b border-border pb-5">
-        <h1 className="text-3xl font-semibold text-foreground">
-          {copy.title}
-        </h1>
+        <h1 className="text-3xl font-semibold text-foreground">{copy.title}</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
           {copy.intro}
         </p>
@@ -122,10 +120,13 @@ export function EppoArchiveDetail({
   locale,
   record,
   jsonLd,
+  canonicalCard,
 }: {
   locale: PublicLocale;
   record: PublicEppoSourceRecord;
   jsonLd?: Record<string, unknown> | null;
+  /** OVE-394: present once the reconciliation linked this code to a node. */
+  canonicalCard?: { canonicalName: string; publicPath: string } | null;
 }) {
   const copy = getEppoArchiveCopy(locale);
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
@@ -157,6 +158,19 @@ export function EppoArchiveDetail({
       <h1 className="mt-1 text-3xl font-semibold text-foreground">
         {record.displayName}
       </h1>
+      {canonicalCard ? (
+        <Link
+          data-eppo-canonical-card
+          href={canonicalCard.publicPath}
+          className={buttonVariants({
+            variant: "outline",
+            size: "sm",
+            className: "mt-3 w-fit",
+          })}
+        >
+          {copy.canonicalCard}: {canonicalCard.canonicalName}
+        </Link>
+      ) : null}
       <ExplorerCard copy={copy} record={record} detail />
     </main>
   );
@@ -412,7 +426,10 @@ function ExplorerMessage({
   );
 }
 
-function explorerHref(locale: PublicLocale, request: EppoArchivePage["request"]) {
+function explorerHref(
+  locale: PublicLocale,
+  request: EppoArchivePage["request"],
+) {
   const path = localizedPath(locale, "/sources/eppo");
   const params = new URLSearchParams();
   if (request.query) params.set("q", request.query);

@@ -62,6 +62,72 @@ describe("EPPO observed capture command", () => {
     ).toEqual({ databaseHost: "loopback", environment: "local" });
   });
 
+  it("declares the second capture's classes and the run it extends", () => {
+    expect(
+      parseEppoCaptureOptions([
+        ...baseArgs,
+        "--endpoint-classes",
+        "taxon_hosts,taxon_distribution,taxon_categorization",
+        "--base-capture",
+        "df3852ea-3233-4883-8886-92d9e68f5193",
+      ]),
+    ).toMatchObject({
+      endpointClasses: [
+        "taxon_hosts",
+        "taxon_distribution",
+        "taxon_categorization",
+      ],
+      baseCapture: "df3852ea-3233-4883-8886-92d9e68f5193",
+    });
+    // Absent, the run declares whatever the queue defaults to: the first
+    // capture's three. Nothing silently widens to the whole vocabulary.
+    expect(parseEppoCaptureOptions(baseArgs)).not.toHaveProperty(
+      "endpointClasses",
+    );
+  });
+
+  it("accepts the short class names the runbook writes", () => {
+    expect(
+      parseEppoCaptureOptions([
+        ...baseArgs,
+        "--endpoint-classes",
+        "hosts,distribution,categorization",
+      ]).endpointClasses,
+    ).toEqual(["taxon_hosts", "taxon_distribution", "taxon_categorization"]);
+  });
+
+  it("refuses a class the provider never documented, and a repeated one", () => {
+    expect(() =>
+      parseEppoCaptureOptions([
+        ...baseArgs,
+        "--endpoint-classes",
+        "taxon_hosts,taxon_pesticides",
+      ]),
+    ).toThrow("undocumented_endpoint_class:taxon_pesticides");
+    expect(() =>
+      parseEppoCaptureOptions([
+        ...baseArgs,
+        "--endpoint-classes",
+        "taxon_hosts,taxon_hosts",
+      ]),
+    ).toThrow("duplicate_endpoint_class");
+    expect(() =>
+      parseEppoCaptureOptions([...baseArgs, "--base-capture", "df3852ea"]),
+    ).toThrow("invalid_base_capture");
+  });
+
+  it("constructs every documented detail endpoint URL", () => {
+    expect(buildEppoEndpointUrl("ABCD01", "taxon_hosts")).toBe(
+      "https://api.eppo.int/gd/v2/taxons/taxon/ABCD01/hosts",
+    );
+    expect(buildEppoEndpointUrl("ABCD01", "taxon_distribution")).toBe(
+      "https://api.eppo.int/gd/v2/taxons/taxon/ABCD01/distribution",
+    );
+    expect(buildEppoEndpointUrl("ABCD01", "taxon_categorization")).toBe(
+      "https://api.eppo.int/gd/v2/taxons/taxon/ABCD01/categorization",
+    );
+  });
+
   it("constructs only the three documented detail endpoint URLs", () => {
     expect(buildEppoEndpointUrl("ABCD01", "taxon_overview")).toBe(
       "https://api.eppo.int/gd/v2/taxons/taxon/ABCD01/overview",

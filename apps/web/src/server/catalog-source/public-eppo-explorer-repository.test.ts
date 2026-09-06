@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
 import {
+  buildPublicEppoCanonicalCardQuery,
   buildPublicEppoSourceQuery,
   decodeEppoArchiveCursor,
   encodeEppoArchiveCursor,
@@ -233,5 +234,25 @@ describe("EPPO archive serialization", () => {
     );
 
     expect(record).toBeNull();
+  });
+});
+
+describe("the canonical card an EPPO code links to (OVE-394)", () => {
+  it("reads the node the identifier names, never a merged or private one", () => {
+    const compiled = buildPublicEppoCanonicalCardQuery(
+      testDb,
+      "LPTNDE",
+    ).compile();
+
+    expect(compiled.sql).toContain('"catalog_item_identifiers"');
+    expect(compiled.sql).toContain('"catalog_items"');
+    expect(compiled.parameters).toContain("eppo");
+    expect(compiled.parameters).toContain("LPTNDE");
+    // A node the graph retired, merged away or never gave an address to is
+    // not a destination: the archive page then shows no link at all.
+    expect(compiled.sql).toContain('"identity_state" = ');
+    expect(compiled.sql).toContain('"merged_into_catalog_item_id" is null');
+    expect(compiled.sql).toContain('"public_slug" is not null');
+    expect(compiled.sql).toContain("limit");
   });
 });

@@ -56,7 +56,7 @@ For every planned OVE-82 species concept, OverGarden uses these source roles:
 1. `catalogue-of-life-checklistbank` is the canonical accepted scientific-name authority for the product projection.
 2. `world-flora-online` corroborates plant taxonomy and WFO identity. A WFO candidate with conflicting authorship stays source-only until curation.
 3. `gbif-backbone` corroborates the species concept and preserves `gbif_taxon_key`. GBIF occurrence data is out of scope and remains raw/source-only.
-4. `eppo-codes` preserves `eppo_code` and exact synonym/code support. Distribution/native-range text remains raw/source-only.
+4. `eppo-codes` preserves `eppo_code` and exact synonym/code support. Distribution/native-range text remains raw/source-only, **except** country-level distribution status, which ADR-0026 D11 admits to the product as a `distribution_status` fact with EPPO's wording beside a normalized presence; the sub-national units EPPO publishes stay in the source layer.
 5. `wikidata` supplies safe vernacular aliases only after the species identity is corroborated by backbone sources.
 
 ## Projection Rules
@@ -81,7 +81,7 @@ The product catalog projection must not include:
 - Raw source payload blobs.
 - Source-only fields.
 - GBIF occurrence records or coordinates.
-- EPPO distribution/native-range text.
+- EPPO distribution/native-range text, other than the country-level status ADR-0026 D11 admits (see rule 4).
 - Wikidata/EPPO aliases that have not been reviewed for local gardener language fit, including `garden tomato` and `gherkin` while they are `review_needed`.
 - Rejected aliases such as `love apple`, `pickle`, `обикновен слънчоглед`, and `holy basil`.
 - Generated aliases such as `помидор`, `огурец`, `соняхи`, or `базилик` unless a later explicit curation step promotes them.

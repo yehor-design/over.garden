@@ -66,6 +66,8 @@ export interface PublicVarietyPage {
     catalogKind: CatalogKind;
     nodeKind: string;
     rank: string | null;
+    /** ADR-0026 D11: with the pest role, this is what makes a card say pest or disease. */
+    kingdom: string | null;
     canonicalName: string;
     /** The accepted scientific name without authorship when a name row says so. */
     scientificName: string;
@@ -232,6 +234,7 @@ export async function getPublicVarietyPageByCatalogItemId(
       catalogKind,
       nodeKind: item.nodeKind,
       rank: item.rank,
+      kingdom: item.kingdom ?? null,
       canonicalName: item.canonicalName,
       scientificName: item.scientificName ?? item.canonicalName,
       publicSlug: item.publicSlug,
@@ -331,7 +334,16 @@ function mergeSourceCredits(
   for (const credit of [...linked, ...asserted]) {
     const key = `${credit.sourceSlug}:${credit.sourceVersion}`;
     const existing = merged.get(key);
-    merged.set(key, existing ? { ...existing, ...credit, lastObservedAt: credit.lastObservedAt ?? existing.lastObservedAt } : credit);
+    merged.set(
+      key,
+      existing
+        ? {
+            ...existing,
+            ...credit,
+            lastObservedAt: credit.lastObservedAt ?? existing.lastObservedAt,
+          }
+        : credit,
+    );
   }
   return [...merged.values()].sort(
     (left, right) =>
@@ -352,6 +364,7 @@ export function buildPublicVarietyItemQuery(
       "catalog_items.catalog_kind as catalogKind",
       "catalog_items.node_kind as nodeKind",
       "catalog_items.rank as rank",
+      "catalog_items.kingdom as kingdom",
       "catalog_items.canonical_name as canonicalName",
       "catalog_items.public_slug as publicSlug",
       "catalog_items.status as status",
@@ -611,63 +624,67 @@ export function buildPublicVarietySummaryQuery(
 export function buildIndexablePublicVarietySitemapRowsQuery(
   executor: QueryExecutor,
 ) {
-  return executor
-    .selectFrom("catalog_items")
-    .innerJoin(
-      "plant_objects",
-      "plant_objects.catalog_item_id",
-      "catalog_items.id",
-    )
-    .innerJoin(
-      "journal_entries",
-      "journal_entries.plant_object_id",
-      "plant_objects.id",
-    )
-    .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
-    .select(({ fn }) => [
-      "catalog_items.id as catalogItemId",
-      "catalog_items.catalog_kind as catalogKind",
-      "catalog_items.public_slug as publicSlug",
-      catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
-      // The card changed when its names, links or facts did, or when a
-      // gardener published on it: whichever is later is the sitemap lastmod.
-      sql<Date | string>`greatest(${fn.max("journal_entries.updated_at")}, ${sql.ref("catalog_items.content_updated_at")})`.as(
-        "lastModified",
-      ),
-      fn.count<number>("journal_entries.id").as("entryCount"),
-      sql<number>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0)`.as(
-        "aggregateBodyLength",
-      ),
-    ])
-    .where("catalog_items.public_slug", "is not", null)
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
-    .where("catalog_items.created_by_user_id", "is", null)
-    // ADR-0026 D9: the sitemap applies the card's own indexability predicate.
-    .where(({ eb, or }) =>
-      or([
-        eb("catalog_items.first_hand_content_at", "is not", null),
-        eb("catalog_items.indexable_override", "=", true),
-      ]),
-    )
-    .where("plant_objects.variety_state", "=", "selected")
-    .whereRef(
-      "journal_entries.owner_user_id",
-      "=",
-      "plant_objects.owner_user_id",
-    )
-    .whereRef("journal_entries.owner_user_id", "=", "spaces.owner_user_id")
-    .where("journal_entries.visibility", "=", "public")
-    .where("journal_entries.lifecycle_state", "=", "active")
-    .where("journal_entries.public_gone_at", "is", null)
-    .where("journal_entries.public_slug", "is not", null)
-    .where(publicLaunchSurfacePredicates())
-    .groupBy([
-      "catalog_items.id",
-      "catalog_items.catalog_kind",
-      "catalog_items.public_slug",
-    ])
-    .orderBy("catalog_items.public_slug", "asc")
-    .$narrowType<{ catalogKind: CatalogKind; publicSlug: string }>();
+  return (
+    executor
+      .selectFrom("catalog_items")
+      .innerJoin(
+        "plant_objects",
+        "plant_objects.catalog_item_id",
+        "catalog_items.id",
+      )
+      .innerJoin(
+        "journal_entries",
+        "journal_entries.plant_object_id",
+        "plant_objects.id",
+      )
+      .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
+      .select(({ fn }) => [
+        "catalog_items.id as catalogItemId",
+        "catalog_items.catalog_kind as catalogKind",
+        "catalog_items.public_slug as publicSlug",
+        catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
+        // The card changed when its names, links or facts did, or when a
+        // gardener published on it: whichever is later is the sitemap lastmod.
+        sql<
+          Date | string
+        >`greatest(${fn.max("journal_entries.updated_at")}, ${sql.ref("catalog_items.content_updated_at")})`.as(
+          "lastModified",
+        ),
+        fn.count<number>("journal_entries.id").as("entryCount"),
+        sql<number>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0)`.as(
+          "aggregateBodyLength",
+        ),
+      ])
+      .where("catalog_items.public_slug", "is not", null)
+      .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+      .where("catalog_items.created_by_user_id", "is", null)
+      // ADR-0026 D9: the sitemap applies the card's own indexability predicate.
+      .where(({ eb, or }) =>
+        or([
+          eb("catalog_items.first_hand_content_at", "is not", null),
+          eb("catalog_items.indexable_override", "=", true),
+        ]),
+      )
+      .where("plant_objects.variety_state", "=", "selected")
+      .whereRef(
+        "journal_entries.owner_user_id",
+        "=",
+        "plant_objects.owner_user_id",
+      )
+      .whereRef("journal_entries.owner_user_id", "=", "spaces.owner_user_id")
+      .where("journal_entries.visibility", "=", "public")
+      .where("journal_entries.lifecycle_state", "=", "active")
+      .where("journal_entries.public_gone_at", "is", null)
+      .where("journal_entries.public_slug", "is not", null)
+      .where(publicLaunchSurfacePredicates())
+      .groupBy([
+        "catalog_items.id",
+        "catalog_items.catalog_kind",
+        "catalog_items.public_slug",
+      ])
+      .orderBy("catalog_items.public_slug", "asc")
+      .$narrowType<{ catalogKind: CatalogKind; publicSlug: string }>()
+  );
 }
 
 export function buildPublicVarietyEntriesQuery(

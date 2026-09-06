@@ -55,10 +55,82 @@ licence digests, the four documented capability classes, the start and tail
 list boundaries, one bounded detail sample, projected request volume, database
 size, and filesystem headroom.
 
-`capture` creates a new UUID, inventories all ordered pages, queues three
-detail units per observed identifier, hydrates documented identifiers
-serially, re-reads the full ending inventory, materializes quarantined source
-records, and completes only when every count and digest closes.
+`capture` creates a new UUID, inventories all ordered pages, queues one detail
+unit per observed identifier for each class the run declares, hydrates
+documented identifiers serially, re-reads the full ending inventory,
+materializes quarantined source records, and completes only when every count
+and digest closes.
+
+## A capture that extends another (OVE-394, ADR-0026 D11)
+
+The 2026-09-03 capture took overview, names and taxonomy. Hosts, distribution
+and categorization are the three surfaces no taxonomic backbone carries, and
+the reason EPPO is on the graph at all, so a second run takes them for the same
+identifiers rather than asking the provider for all 129,214 a second time:
+
+```bash
+pnpm eppo:observed-capture -- --mode capture --environment local --confirm-environment local --concurrency 1 --request-timeout-ms 15000 --max-attempts 2 --endpoint-classes hosts,distribution,categorization --base-capture df3852ea-3233-4883-8886-92d9e68f5193
+```
+
+`--endpoint-classes` takes the short names above or the full class names
+(`taxon_hosts`, `taxon_distribution`, `taxon_categorization`); both reach the
+database as the full form. Omitted, a run declares the first capture's three.
+Every class must be one the API documents, none may repeat, and the plan probes
+only the classes the run will queue, so its storage projection describes the
+run rather than the vocabulary.
+
+`--base-capture` names the completed run this one extends. Before anything is
+written the base capture must be complete, its inventory must still reproduce
+the digest it recorded from its own stored pages, and its classes must be
+disjoint from the new run's. This is deliberately narrower than `--mode verify`,
+which also asserts that nothing in the database changed since that capture
+ended: that is the right check the hour a capture finishes and the wrong one
+months later, when other slices have legitimately added product rows.
+
+Each capture declares its classes in its plan receipt, and everything that
+counts units per identifier reads that declaration through the SQL function
+`catalog_capture_declared_classes` rather than the vocabulary. That is what
+lets the vocabulary hold six classes while each run holds three: the four
+completeness checks that rebuild a source record's payload from its units keep
+matching, and a resume queues exactly what the run it resumes declared, never
+what a later command line says.
+
+### The capture needs a database nobody else writes to
+
+A capture takes a fingerprint of the product surface — `catalog_items`,
+`catalog_item_names`, `catalog_source_links`, `plant_objects`,
+`journal_entries`, `job_queue` — when it starts, and refuses to finalize unless
+the same fingerprint comes back at the end. That is the zero-product
+guarantee: a capture creates evidence and no product.
+
+The check is database-wide, not capture-scoped. **Anything else that writes a
+product row while a capture is open makes it impossible for that capture to
+finish.** A failed run is immutable by trigger, so there is no recovery: the
+units are retained for diagnosis and the run can never be completed.
+
+That is not hypothetical. The first attempt at the second capture,
+`19fc0b98-fe02-4c16-bab8-3af55a1e240e`, hydrated all 387,772 units over eight
+and a half hours with zero failures and then refused to finalize with
+`zero_product_effect_mismatch`, because reconciliation rehearsals on the same
+scratch database had added 103,384 catalog items, 183,565 names and 116,213
+source links while it ran. The capture had created none of them.
+
+So a capture gets its own database, not the shared scratch one:
+
+```bash
+# once, from apps/web
+node -e '…create overgarden_eppo_capture and apply every migration…'
+pnpm exec tsx scripts/transfer-eppo-capture.ts --mode transfer   --env-file /abs/path/capture-db.env --allow-target-host-class loopback   --confirm-target production --capture-ids <the base capture>
+# then point the pinned worktree's own .env.local at that database and run
+```
+
+The base capture has to be transferred in first, because `--base-capture`
+verifies it where the new run will write. Rehearsals, browser proofs and
+reconciliation runs keep using the shared database and cannot reach this one.
+
+The second capture ran on 2026-09-07 as `03cb6ee2-0a87-4ea5-a151-627eaf2b260d`
+with 387,772 projected provider requests, from a git worktree pinned at the
+commit that carries this tooling, on its own database.
 
 Inventory requests pin the documented `orderBy=eppocode&orderAsc=true`
 contract, and the capture preserves the returned sequence byte-for-byte. It
@@ -89,6 +161,82 @@ terminal:
 ```bash
 pnpm eppo:observed-capture -- --mode verify --environment local --confirm-environment local --concurrency 1 --request-timeout-ms 15000 --max-attempts 2 --capture-id <capture-uuid> --status-only
 ```
+
+## From a capture to a card (OVE-394, ADR-0026 D11)
+
+A capture is evidence, not product. Two jobs turn it into something a gardener
+sees, and neither of them calls the provider.
+
+### The transfer
+
+The capture tool refuses a remote host, so a capture can only be taken on a
+loopback database and has to be moved deliberately:
+
+```bash
+pnpm exec tsx scripts/transfer-eppo-capture.ts --mode inventory --env-file /abs/path/prod.env
+pnpm exec tsx scripts/transfer-eppo-capture.ts --mode transfer --env-file /abs/path/prod.env --confirm-target production
+```
+
+It copies exactly the rows two capture ids reach — the snapshots, the runs, the
+units, the source records, any source links and the two public archive tables —
+in the order the foreign keys allow, one transaction per table, with every
+insert idempotent and a before-and-after row count per table as its receipt. The
+source comes from this checkout's own `.env.local` and must be loopback; the
+target comes from the pulled production environment and must not be. Never a
+blind `pg_restore`: production already holds source snapshots from earlier
+imports whose unique keys would collide.
+
+Rows travel as JSON and Postgres rebuilds them with `jsonb_populate_record`.
+Half of what moves is a `jsonb` column that usually holds a JSON *array*, and a
+driver that sees a JavaScript array in a parameter sends a Postgres array
+literal instead — the insert would fail on the first names payload.
+
+### The reconciliation
+
+`services/matching/app/eppo_reconcile.py`, run by the worker on a
+`catalog_source_refresh` job with `source_slug = 'eppo-codes'`, or by hand:
+
+```bash
+cd services/matching
+.venv/bin/python -m scripts.reconcile_eppo --database-url "$DATABASE_URL"
+```
+
+Every active identifier climbs the deterministic ladder of ADR-0026 D4:
+
+1. the `eppo` identifier the Wikidata crosswalk already wrote;
+2. the scientific name with its authorship, inside one kingdom;
+3. the canonical name with the rank, inside one kingdom;
+4. the Catalogue of Life checklist itself — a single matching usage is
+   materialized through `catalog_col_ensure_node`, so the node arrives with the
+   backbone's classification and a `col` identifier;
+5. a species the checklist does not have at all becomes a node from EPPO, with
+   the kingdom EPPO gives and no `col` identifier. Viruses, viroids and the
+   animal pests the scoped Catalogue of Life ingest leaves out have nowhere
+   else to come from, and `pest_of` needs both ends.
+
+Anything ambiguous, and any higher taxon nothing knows, becomes a `source_link`
+item in the owner's queue ordered by how many EPPO hosts it touches. A node
+that fails to link keeps working; curation never blocks a gardener (D5).
+
+What a linked node gains: the `eppo` identifier, a source link, vernaculars in
+the four languages the ledger accepts, `pest_of` relations to its hosts with
+EPPO's host class on the closed set of migration 0054, `distribution_status`
+facts carrying EPPO's wording beside a normalized presence, and `categorization`
+facts recording the quarantine lists.
+
+One identifier is the unit of work: its ladder decision, identifier, names and
+facts land together or not at all. The worker hands its handlers an autocommit
+connection, so a run interrupted halfway leaves whole taxa behind it, and every
+write is idempotent, so the next run finishes what it started.
+
+### What a card shows
+
+A presence badge for Ukraine and Bulgaria at country level, with EPPO's verbatim
+status and the observation date beside the word; the pest or disease label from
+the kingdom and the host role; the hosts and pests sections; and the attribution
+line the licence requires, dated by the day the data was downloaded rather than
+the day it was last reconciled. Sub-national units stay in the source layer:
+D11 stops the product at the country.
 
 ## State and recovery contract
 

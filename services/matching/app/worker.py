@@ -30,6 +30,7 @@ from app.catalog_reconcile import (
 )
 from app.col_ingest import COL_SOURCE_SLUG, ingest_catalogue_of_life
 from app.job_handlers import SUPPORTED_JOB_KINDS
+from app.eppo_reconcile import EPPO_SOURCE_SLUG, reconcile_eppo
 from app.wikidata_crosswalk import WIKIDATA_SOURCE_SLUG, crosswalk_wikidata
 # Every kind literal comes from the generated contract rather than from the
 # module that happens to handle it, so dispatch and the manifest cannot disagree
@@ -283,6 +284,12 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
             # Identifiers and local names from Wikidata, off every request
             # path and serial upstream, as Wikimedia's policy asks.
             crosswalk_wikidata(conn)
+            return
+        if source_slug == EPPO_SOURCE_SLUG:
+            # Both observed EPPO captures onto the graph. This one calls
+            # nothing upstream: the captures already sit in the source layer of
+            # the database the worker is connected to.
+            reconcile_eppo(conn)
             return
         record_source_refresh(source_slug)
         return

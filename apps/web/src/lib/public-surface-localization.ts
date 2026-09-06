@@ -183,6 +183,8 @@ interface PublicSurfaceCopy {
       gardenersWithRegions: string;
       noGardeners: string;
       kind: Record<"species" | "plant_variety" | "breed", string>;
+      /** ADR-0026 D11: what an organism with hosts is called on its card. */
+      role: Record<"pest" | "disease", string>;
     };
     sections: {
       experience: string;
@@ -191,6 +193,8 @@ interface PublicSurfaceCopy {
       forms: string;
       pests: string;
       hosts: string;
+      /** ADR-0026 D11: country-level presence, for Ukraine and Bulgaria. */
+      presence: string;
       namesAndSources: string;
       namesAndSourcesHint: string;
       disagreement: string;
@@ -199,6 +203,10 @@ interface PublicSurfaceCopy {
       observedOn: string;
       identifier: string;
     };
+    /** The four words a presence badge may say, and nothing else (D11). */
+    presence: Record<"present" | "absent" | "transient" | "unknown", string>;
+    /** The two countries OverGarden serves, named for a badge. */
+    presenceRegion: Record<"UA" | "BG", string>;
     hostClass: Record<
       | "major_host"
       | "host"
@@ -406,9 +414,15 @@ const COPY = {
         identityWithSpecies: "{name} — {kind} виду {species}.",
         forms: "У каталозі {forms} цього виду.",
         gardeners: "Публічні журнали ведуть {gardeners}.",
-        gardenersWithRegions: "Публічні журнали ведуть {gardeners} у {regions}.",
+        gardenersWithRegions:
+          "Публічні журнали ведуть {gardeners} у {regions}.",
         noGardeners: "Публічних записів садівників ще немає.",
-        kind: { species: "вид", plant_variety: "сорт", breed: "порода або лінія" },
+        kind: {
+          species: "вид",
+          plant_variety: "сорт",
+          breed: "порода або лінія",
+        },
+        role: { pest: "шкідник", disease: "хвороба" },
       },
       sections: {
         experience: "Досвід садівників",
@@ -417,6 +431,7 @@ const COPY = {
         forms: "Форми цього виду",
         pests: "Шкідники та хвороби",
         hosts: "Живителі",
+        presence: "Присутність за даними EPPO",
         namesAndSources: "Назви та джерела",
         namesAndSourcesHint:
           "Що стверджує кожне джерело, з версією та датою спостереження.",
@@ -434,6 +449,16 @@ const COPY = {
         experimental: "експериментальний живитель",
         artificial: "штучне зараження",
         unknown: "клас живителя невідомий",
+      },
+      presence: {
+        present: "присутній",
+        absent: "відсутній",
+        transient: "тимчасово присутній",
+        unknown: "статус невідомий",
+      },
+      presenceRegion: {
+        UA: "Україна",
+        BG: "Болгарія",
       },
       nameType: {
         scientific_accepted: "Прийнята наукова назва",
@@ -631,9 +656,15 @@ const COPY = {
         identityWithSpecies: "{name} — {kind} от вида {species}.",
         forms: "В каталога има {forms} на този вид.",
         gardeners: "Публични дневници водят {gardeners}.",
-        gardenersWithRegions: "Публични дневници водят {gardeners} в {regions}.",
+        gardenersWithRegions:
+          "Публични дневници водят {gardeners} в {regions}.",
         noGardeners: "Все още няма публични записи от градинари.",
-        kind: { species: "вид", plant_variety: "сорт", breed: "порода или линия" },
+        kind: {
+          species: "вид",
+          plant_variety: "сорт",
+          breed: "порода или линия",
+        },
+        role: { pest: "вредител", disease: "болест" },
       },
       sections: {
         experience: "Опит на градинарите",
@@ -642,6 +673,7 @@ const COPY = {
         forms: "Форми на този вид",
         pests: "Вредители и болести",
         hosts: "Гостоприемници",
+        presence: "Присъствие според EPPO",
         namesAndSources: "Имена и източници",
         namesAndSourcesHint:
           "Какво твърди всеки източник, с версия и дата на наблюдение.",
@@ -659,6 +691,16 @@ const COPY = {
         experimental: "експериментален гостоприемник",
         artificial: "изкуствено заразяване",
         unknown: "неизвестен клас гостоприемник",
+      },
+      presence: {
+        present: "присъства",
+        absent: "отсъства",
+        transient: "временно присъства",
+        unknown: "статусът е неизвестен",
+      },
+      presenceRegion: {
+        UA: "Украйна",
+        BG: "България",
       },
       nameType: {
         scientific_accepted: "Прието научно име",
@@ -855,9 +897,15 @@ const COPY = {
         identityWithSpecies: "{name} — {kind} вида {species}.",
         forms: "В каталоге {forms} этого вида.",
         gardeners: "Публичные дневники ведут {gardeners}.",
-        gardenersWithRegions: "Публичные дневники ведут {gardeners} в {regions}.",
+        gardenersWithRegions:
+          "Публичные дневники ведут {gardeners} в {regions}.",
         noGardeners: "Публичных записей садоводов пока нет.",
-        kind: { species: "вид", plant_variety: "сорт", breed: "порода или линия" },
+        kind: {
+          species: "вид",
+          plant_variety: "сорт",
+          breed: "порода или линия",
+        },
+        role: { pest: "вредитель", disease: "болезнь" },
       },
       sections: {
         experience: "Опыт садоводов",
@@ -866,6 +914,7 @@ const COPY = {
         forms: "Формы этого вида",
         pests: "Вредители и болезни",
         hosts: "Растения-хозяева",
+        presence: "Присутствие по данным EPPO",
         namesAndSources: "Названия и источники",
         namesAndSourcesHint:
           "Что утверждает каждый источник, с версией и датой наблюдения.",
@@ -883,6 +932,16 @@ const COPY = {
         experimental: "экспериментальный хозяин",
         artificial: "искусственное заражение",
         unknown: "класс хозяина неизвестен",
+      },
+      presence: {
+        present: "присутствует",
+        absent: "отсутствует",
+        transient: "временно присутствует",
+        unknown: "статус неизвестен",
+      },
+      presenceRegion: {
+        UA: "Украина",
+        BG: "Болгария",
       },
       nameType: {
         scientific_accepted: "Принятое научное название",
@@ -919,8 +978,18 @@ const COUNT_FORMS: Record<
       many: "садівників",
       other: "садівника",
     },
-    region: { one: "області", few: "областях", many: "областях", other: "області" },
-    object: { one: "об'єкт", few: "об'єкти", many: "об'єктів", other: "об'єкта" },
+    region: {
+      one: "області",
+      few: "областях",
+      many: "областях",
+      other: "області",
+    },
+    object: {
+      one: "об'єкт",
+      few: "об'єкти",
+      many: "об'єктів",
+      other: "об'єкта",
+    },
     publicEntry: {
       one: "публічний запис",
       few: "публічні записи",
@@ -954,7 +1023,12 @@ const COUNT_FORMS: Record<
       many: "градинари",
       other: "градинари",
     },
-    region: { one: "област", few: "области", many: "области", other: "области" },
+    region: {
+      one: "област",
+      few: "области",
+      many: "области",
+      other: "области",
+    },
     object: { one: "обект", few: "обекта", many: "обекта", other: "обекта" },
     publicEntry: {
       one: "публичен запис",
@@ -984,8 +1058,18 @@ const COUNT_FORMS: Record<
       many: "садоводов",
       other: "садовода",
     },
-    region: { one: "области", few: "областях", many: "областях", other: "областях" },
-    object: { one: "объект", few: "объекта", many: "объектов", other: "объекта" },
+    region: {
+      one: "области",
+      few: "областях",
+      many: "областях",
+      other: "областях",
+    },
+    object: {
+      one: "объект",
+      few: "объекта",
+      many: "объектов",
+      other: "объекта",
+    },
     publicEntry: {
       one: "публичная запись",
       few: "публичные записи",

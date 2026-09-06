@@ -8,6 +8,8 @@ import { resolveDatabaseConnection } from "../src/db/connection";
 import {
   EPPO_API_BASE_URL,
   EPPO_API_KEY_HEADER,
+  EPPO_DETAIL_ENDPOINT_SUFFIX,
+  EPPO_FIRST_CAPTURE_ENDPOINT_CLASSES,
   EPPO_OBSERVED_DETAIL_ENDPOINT_CLASSES as EPPO_DETAIL_ENDPOINT_CLASSES,
   type EppoObservedDetailEndpointClass as EppoDetailEndpointClass,
 } from "../src/server/catalog-source/eppo-api-constants";
@@ -100,6 +102,12 @@ const readLatestCompletedEppoCaptureId = lazyCaptureRepositoryMethod(
 const verifyCompletedEppoCapture = lazyCaptureRepositoryMethod(
   "verifyCompletedEppoCapture",
 );
+const readEppoCaptureDeclaredEndpointClasses = lazyCaptureRepositoryMethod(
+  "readEppoCaptureDeclaredEndpointClasses",
+);
+const readExtendableEppoCapture = lazyCaptureRepositoryMethod(
+  "readExtendableEppoCapture",
+);
 const withEppoCaptureWriterLock = lazyCaptureRepositoryMethod(
   "withEppoCaptureWriterLock",
 );
@@ -117,6 +125,10 @@ export type EppoCaptureOptions = {
   maxAttempts: 2;
   captureId?: string;
   fixture?: EppoCaptureFixture;
+  /** OVE-394: the detail classes this run declares. */
+  endpointClasses?: readonly EppoDetailEndpointClass[];
+  /** OVE-394: the completed capture this one extends, for lineage. */
+  baseCapture?: string;
   statusOnly: boolean;
 };
 
@@ -155,6 +167,8 @@ export function parseEppoCaptureOptions(args: string[]): EppoCaptureOptions {
         "--max-attempts",
         "--capture-id",
         "--fixture",
+        "--endpoint-classes",
+        "--base-capture",
       ].includes(name)
     ) {
       throw new Error(`unknown_argument:${name}`);
@@ -191,6 +205,47 @@ export function parseEppoCaptureOptions(args: string[]): EppoCaptureOptions {
   ) {
     throw new Error("invalid_capture_id");
   }
+  // OVE-394: which detail classes this run queues. The first capture took
+  // overview, names and taxonomy; the second takes hosts, distribution and
+  // categorization for the same identifiers rather than asking EPPO for
+  // 129,214 identifiers all over again.
+  const endpointClassesArgument = parsed.get("--endpoint-classes");
+  const endpointClasses = endpointClassesArgument
+    ? endpointClassesArgument.split(",").map((value) => {
+        const name = value.trim();
+        // `hosts` and `taxon_hosts` name the same class. The runbook writes the
+        // short form; the vocabulary stores the long one, and only the long one
+        // ever reaches the database.
+        return (EPPO_DETAIL_ENDPOINT_CLASSES as readonly string[]).includes(
+          `taxon_${name}`,
+        )
+          ? `taxon_${name}`
+          : name;
+      })
+    : null;
+  if (endpointClasses) {
+    if (endpointClasses.length === 0) throw new Error("empty_endpoint_classes");
+    for (const value of endpointClasses) {
+      if (
+        !(EPPO_DETAIL_ENDPOINT_CLASSES as readonly string[]).includes(value)
+      ) {
+        throw new Error(`undocumented_endpoint_class:${value}`);
+      }
+    }
+    if (new Set(endpointClasses).size !== endpointClasses.length) {
+      throw new Error("duplicate_endpoint_class");
+    }
+  }
+  const baseCapture = parsed.get("--base-capture");
+  if (
+    baseCapture &&
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      baseCapture,
+    )
+  ) {
+    throw new Error("invalid_base_capture");
+  }
+
   const fixture = parsed.get("--fixture");
   if (
     fixture &&
@@ -210,6 +265,13 @@ export function parseEppoCaptureOptions(args: string[]): EppoCaptureOptions {
     maxAttempts: 2,
     ...(captureId ? { captureId } : {}),
     ...(fixture ? { fixture: fixture as EppoCaptureFixture } : {}),
+    ...(endpointClasses
+      ? {
+          endpointClasses:
+            endpointClasses as unknown as readonly EppoDetailEndpointClass[],
+        }
+      : {}),
+    ...(baseCapture ? { baseCapture } : {}),
     statusOnly,
   };
 }
@@ -258,12 +320,7 @@ export function buildEppoEndpointUrl(
   if (!EPPO_DETAIL_ENDPOINT_CLASSES.includes(endpointClass)) {
     throw new Error("undocumented_endpoint_class");
   }
-  const suffix: Record<EppoDetailEndpointClass, string> = {
-    taxon_overview: "overview",
-    taxon_names: "names",
-    taxon_taxonomy: "taxonomy",
-  };
-  return `${EPPO_API_BASE_URL}/taxons/taxon/${eppoCode}/${suffix[endpointClass]}`;
+  return `${EPPO_API_BASE_URL}/taxons/taxon/${eppoCode}/${EPPO_DETAIL_ENDPOINT_SUFFIX[endpointClass]}`;
 }
 
 export type EppoRequestErrorCode =
@@ -527,7 +584,12 @@ type SafeEppoPlanReceipt = {
   inventoryPageCount: number;
   openApiSha256: string;
   licenseSha256: string;
-  documentedSourceClasses: 4;
+  /** The detail classes this run declares, in the order it probed them. */
+  endpointClasses: EppoDetailEndpointClass[];
+  /** The completed capture this run extends, or null when it stands alone. */
+  baseCaptureId: string | null;
+  /** Inventory plus the declared detail classes. */
+  documentedSourceClasses: number;
   projectedProviderRequests: number;
   projectedStorageBytes: number;
   filesystemAvailableBytes: number;
@@ -668,8 +730,12 @@ async function runOfficialPlan(
 
   const sampleCode = firstPage.codes[0];
   if (!sampleCode) throw new Error("provider_inventory_empty");
+  // Probe only what this run will queue. Sizing a three-class capture from six
+  // sampled endpoints would refuse headroom the run never needs.
+  const endpointClasses =
+    options.endpointClasses ?? EPPO_FIRST_CAPTURE_ENDPOINT_CLASSES;
   let projectedBytesPerCode = 1_024;
-  for (const endpointClass of EPPO_DETAIL_ENDPOINT_CLASSES) {
+  for (const endpointClass of endpointClasses) {
     const response = await requestEppoJson(
       buildEppoEndpointUrl(sampleCode, endpointClass),
       credential,
@@ -686,6 +752,7 @@ async function runOfficialPlan(
   // A third copy-equivalent covers indexes, TOAST overhead, and variance.
   const projectedStorageBytes =
     firstPage.total * projectedBytesPerCode * 3 + 512 * 1024 * 1024;
+  const baseCaptureId = options.baseCapture ?? null;
   const filesystem = statfsSync(process.cwd(), { bigint: true });
   const filesystemAvailableBytes = Number(filesystem.bavail * filesystem.bsize);
   const databaseSizeBytes = await readDatabaseSizeBytes();
@@ -708,9 +775,12 @@ async function runOfficialPlan(
     inventoryPageCount: Math.ceil(firstPage.total / INVENTORY_PAGE_LIMIT),
     openApiSha256: contract.openApiDigest,
     licenseSha256: contract.licenseDocumentDigest,
-    documentedSourceClasses: 4,
+    endpointClasses: [...endpointClasses],
+    baseCaptureId,
+    documentedSourceClasses: endpointClasses.length + 1,
     projectedProviderRequests:
-      Math.ceil(firstPage.total / INVENTORY_PAGE_LIMIT) + firstPage.total * 3,
+      Math.ceil(firstPage.total / INVENTORY_PAGE_LIMIT) +
+      firstPage.total * endpointClasses.length,
     projectedStorageBytes,
     filesystemAvailableBytes,
     databaseSizeBytes,
@@ -758,6 +828,9 @@ async function fetchOfficialInventory(
           limit: INVENTORY_PAGE_LIMIT,
           payload: response.payload as never,
           observedAt: new Date(),
+          ...(options.endpointClasses
+            ? { endpointClasses: options.endpointClasses }
+            : {}),
         },
         input.executor,
       );
@@ -988,6 +1061,27 @@ async function runNewOfficialCapture(
   executor: EppoCaptureExecutor,
 ): Promise<EppoCaptureFinalReceipt> {
   const captureId = randomUUID();
+  if (plan.baseCaptureId) {
+    // A run that extends another must find that one intact and disjoint before
+    // it spends a day on the provider: the base capture is where the classes
+    // this one does not take still live, and reconciliation reads both.
+    const base = await readExtendableEppoCapture(plan.baseCaptureId, executor);
+    const overlap = plan.endpointClasses.filter((endpointClass) =>
+      base.declaredClasses.includes(endpointClass),
+    );
+    if (overlap.length > 0) throw new Error("base_capture_class_overlap");
+    if (base.inventoryTotal !== plan.taxonomyTotal) {
+      console.log(
+        JSON.stringify({
+          class: "observed_capture_base_drift",
+          captureId,
+          baseCaptureId: plan.baseCaptureId,
+          baseInventoryTotal: base.inventoryTotal,
+          plannedInventoryTotal: plan.taxonomyTotal,
+        }),
+      );
+    }
+  }
   const baseline = await readEppoZeroProductFingerprint(executor);
   await createEppoCapture(
     {
@@ -1123,6 +1217,26 @@ async function resumeOfficialCapture(
     options.captureId ?? (await readLatestResumableEppoCaptureId(executor));
   if (!captureId) throw new Error("resumable_capture_missing");
   let status = await readEppoCaptureSafeStatus(captureId, executor);
+  // A resume queues exactly what the run it resumes declared. Taking the set
+  // from the command line would let one capture change shape halfway through,
+  // and its manifest would then describe a set no single run ever observed.
+  const declaredClasses = await readEppoCaptureDeclaredEndpointClasses(
+    captureId,
+    executor,
+  );
+  if (
+    options.endpointClasses &&
+    (options.endpointClasses.length !== declaredClasses.length ||
+      options.endpointClasses.some(
+        (endpointClass) => !declaredClasses.includes(endpointClass),
+      ))
+  ) {
+    throw new Error("resume_endpoint_class_drift");
+  }
+  const resumeOptions: EppoCaptureOptions = {
+    ...options,
+    endpointClasses: declaredClasses,
+  };
   if (
     status.captureToolRevision !== currentGitRevision() ||
     status.openApiSha256 !== plan.openApiSha256 ||
@@ -1146,11 +1260,15 @@ async function resumeOfficialCapture(
       status.captureState === "inventorying" ||
       (status.captureState === "paused" && status.inventoryStartTotal === null)
     ) {
-      const inventory = await fetchOfficialInventory(credential, options, {
-        captureId,
-        signal,
-        executor,
-      });
+      const inventory = await fetchOfficialInventory(
+        credential,
+        resumeOptions,
+        {
+          captureId,
+          signal,
+          executor,
+        },
+      );
       if (inventory.total !== plan.taxonomyTotal) {
         throw new Error("inventory_plan_total_drift");
       }
@@ -1186,7 +1304,7 @@ async function resumeOfficialCapture(
       await hydrateOfficialEndpoints({
         captureId,
         credential,
-        options,
+        options: resumeOptions,
         signal,
         jobStartedAt,
         executor,
@@ -1202,10 +1320,14 @@ async function resumeOfficialCapture(
     } else if (status.captureState !== "verifying") {
       throw new Error(`capture_not_resumable:${status.captureState}`);
     }
-    const endingInventory = await fetchOfficialInventory(credential, options, {
-      signal,
-      executor,
-    });
+    const endingInventory = await fetchOfficialInventory(
+      credential,
+      resumeOptions,
+      {
+        signal,
+        executor,
+      },
+    );
     return await finalizeEppoCapture(
       {
         captureId,
@@ -1270,6 +1392,33 @@ function fixturePayload(code: string, endpointClass: EppoDetailEndpointClass) {
   if (endpointClass === "taxon_names") {
     return [{ name: `Fixture ${code}`, language: "en" }];
   }
+  // The three OVE-394 classes, shaped as the provider answers them: an array
+  // of flat objects, with the field names the rights map classifies.
+  if (endpointClass === "taxon_hosts") {
+    return [
+      {
+        eppocode: code,
+        prefname: `Fixture ${code}`,
+        class_id: 1,
+        class_label: "Major host",
+      },
+    ];
+  }
+  if (endpointClass === "taxon_distribution") {
+    return [
+      { country_iso: "UA", peststatus: "Present, no details", state_id: null },
+    ];
+  }
+  if (endpointClass === "taxon_categorization") {
+    return [
+      {
+        country_iso: "UA",
+        qlist: "A2",
+        qlist_label: "A2 List",
+        year_add: 2004,
+      },
+    ];
+  }
   return [{ eppocode: code, name: `Fixture ${code}`, rank: "species" }];
 }
 
@@ -1299,7 +1448,9 @@ async function competingEppoCaptureWriterIsBlocked(): Promise<boolean> {
   }
 }
 
-async function runCompleteFixture(): Promise<
+async function runCompleteFixture(
+  endpointClasses?: readonly EppoDetailEndpointClass[],
+): Promise<
   EppoCaptureFinalReceipt & {
     replay: "verified";
     inventoryResume: "verified";
@@ -1348,6 +1499,7 @@ async function runCompleteFixture(): Promise<
         limit: 3,
         payload: inventoryPayload,
         observedAt: new Date(),
+        ...(endpointClasses ? { endpointClasses } : {}),
       },
       executor,
     );
@@ -1369,6 +1521,7 @@ async function runCompleteFixture(): Promise<
         limit: 3,
         payload: inventoryPayload,
         observedAt: new Date(),
+        ...(endpointClasses ? { endpointClasses } : {}),
       },
       executor,
     );
@@ -1471,6 +1624,7 @@ async function runCompleteFixture(): Promise<
 async function seedTransportFixtureCapture(
   executor: EppoCaptureExecutor,
   label: string,
+  endpointClasses?: readonly EppoDetailEndpointClass[],
 ): Promise<{ captureId: string; inventory: EppoCapturedInventory }> {
   const captureId = randomUUID();
   const baseline = await readEppoZeroProductFingerprint(executor);
@@ -1504,6 +1658,7 @@ async function seedTransportFixtureCapture(
         ],
       },
       observedAt: new Date(),
+      ...(endpointClasses ? { endpointClasses } : {}),
     },
     executor,
   );
@@ -1588,11 +1743,14 @@ async function exhaustOneTransportBudget(
  * evidence is never returned: it keeps its failure and the capture stays
  * closed against it.
  */
-async function runTransportFixture() {
+async function runTransportFixture(
+  endpointClasses?: readonly EppoDetailEndpointClass[],
+) {
   return withEppoCaptureWriterLock(async (executor) => {
     const interrupted = await seedTransportFixtureCapture(
       executor,
       "transport_interrupted",
+      endpointClasses,
     );
     const spent = await exhaustOneTransportBudget(
       executor,
@@ -1689,6 +1847,7 @@ async function runTransportFixture() {
     const refused = await seedTransportFixtureCapture(
       executor,
       "transport_refused",
+      endpointClasses,
     );
     await exhaustOneTransportBudget(
       executor,
@@ -1746,7 +1905,9 @@ async function runTransportFixture() {
   });
 }
 
-async function runDriftFixture() {
+async function runDriftFixture(
+  endpointClasses?: readonly EppoDetailEndpointClass[],
+) {
   return withEppoCaptureWriterLock(async (executor) => {
     const captureId = randomUUID();
     await createEppoCapture(
@@ -1783,6 +1944,7 @@ async function runDriftFixture() {
         limit: 2,
         payload: baseline,
         observedAt: new Date(),
+        ...(endpointClasses ? { endpointClasses } : {}),
       },
       executor,
     );
@@ -1801,6 +1963,7 @@ async function runDriftFixture() {
             ],
           },
           observedAt: new Date(),
+          ...(endpointClasses ? { endpointClasses } : {}),
         },
         executor,
       );
@@ -1845,9 +2008,14 @@ export async function runEppoObservedCapture(options: EppoCaptureOptions) {
   }
   assertLocalEppoCaptureEnvironment(options);
   await loadCaptureRepository();
-  if (options.fixture === "complete") return runCompleteFixture();
-  if (options.fixture === "drift") return runDriftFixture();
-  if (options.fixture === "transport") return runTransportFixture();
+  if (options.fixture === "complete") {
+    return runCompleteFixture(options.endpointClasses);
+  }
+  if (options.fixture === "drift")
+    return runDriftFixture(options.endpointClasses);
+  if (options.fixture === "transport") {
+    return runTransportFixture(options.endpointClasses);
+  }
 
   if (options.statusOnly) {
     const captureId =

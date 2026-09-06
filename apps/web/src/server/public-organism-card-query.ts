@@ -317,7 +317,8 @@ export async function readPublicOrganismCardRow(
   executor: QueryExecutor,
   catalogItemId: string,
 ): Promise<PublicOrganismCardRow | null> {
-  const result = await buildPublicOrganismCardStatement(catalogItemId).execute(executor);
+  const result =
+    await buildPublicOrganismCardStatement(catalogItemId).execute(executor);
   return result.rows[0] ?? null;
 }
 
@@ -325,7 +326,10 @@ export async function readPublicOrganismExperienceRows(
   executor: QueryExecutor,
   catalogItemId: string,
 ): Promise<PublicOrganismExperienceRow[]> {
-  const result = await buildPublicOrganismExperienceStatement(catalogItemId).execute(executor);
+  const result =
+    await buildPublicOrganismExperienceStatement(catalogItemId).execute(
+      executor,
+    );
   return result.rows;
 }
 
@@ -382,6 +386,44 @@ export interface PublicOrganismSource {
   lastObservedAt: Date | string | null;
 }
 
+/**
+ * "Present in Ukraine", from EPPO, at country level only.
+ *
+ * ADR-0026 D11 lets country-level distribution status reach the product and
+ * stops there: the source layer holds EPPO's sub-national units, and a card
+ * never shows them. `verbatim` is the status EPPO wrote, kept beside the word
+ * the product reasons about, so a badge can never be more certain than its
+ * source.
+ */
+export interface PublicOrganismPresence {
+  regionCode: string;
+  status: "present" | "absent" | "transient" | "unknown";
+  verbatim: string;
+  sourceName: string;
+  observedAt: string | null;
+}
+
+/** One licence's attribution line, with the day the data was downloaded. */
+export interface PublicOrganismAttribution {
+  sourceSlug: string;
+  sourceName: string;
+  text: string;
+  downloadedAt: Date | string | null;
+}
+
+/** The countries a presence badge is shown for; the two OverGarden serves. */
+export const PUBLIC_PRESENCE_REGION_CODES = ["UA", "BG"] as const;
+
+export type PublicPresenceRegionCode =
+  (typeof PUBLIC_PRESENCE_REGION_CODES)[number];
+
+const PRESENCE_STATUSES = new Set([
+  "present",
+  "absent",
+  "transient",
+  "unknown",
+]);
+
 export interface PublicOrganismCard {
   firstHandContentAt: Date | string | null;
   indexableOverride: boolean | null;
@@ -397,6 +439,10 @@ export interface PublicOrganismCard {
   sourceGroups: PublicOrganismSourceGroup[];
   /** Every distinct accepted scientific name and who says so; two or more is a disagreement shown neutrally (D2). */
   acceptedNameClaims: PublicOrganismAcceptedNameClaim[];
+  /** Country-level presence for the two countries OverGarden serves (D11). */
+  presence: PublicOrganismPresence[];
+  /** Attribution the licence requires, with the download date (D11). */
+  attributions: PublicOrganismAttribution[];
   sources: PublicOrganismSource[];
 }
 
@@ -419,7 +465,9 @@ export function assemblePublicOrganismCard(input: {
       gardenerCount: Number(entry.gardenerCount),
     }));
   const gardenerCount = Number(input.experience[0]?.totalGardeners ?? 0);
-  const toRelated = (related: PublicOrganismRelatedRow): PublicOrganismRelatedItem => ({
+  const toRelated = (
+    related: PublicOrganismRelatedRow,
+  ): PublicOrganismRelatedItem => ({
     catalogItemId: related.catalogItemId,
     canonicalName: related.canonicalName,
     catalogKind: related.catalogKind,
@@ -452,7 +500,10 @@ export function assemblePublicOrganismCard(input: {
       };
       groups.set(key, group);
     }
-    if (source.observedAt && (!group.observedAt || source.observedAt > group.observedAt)) {
+    if (
+      source.observedAt &&
+      (!group.observedAt || source.observedAt > group.observedAt)
+    ) {
       group.observedAt = source.observedAt;
     }
     return group;
@@ -461,7 +512,9 @@ export function assemblePublicOrganismCard(input: {
     groupFor(name).lines.push({
       kind: "name",
       label: name.nameType,
-      value: name.authorship ? `${name.displayName} ${name.authorship}` : name.displayName,
+      value: name.authorship
+        ? `${name.displayName} ${name.authorship}`
+        : name.displayName,
       qualifier: name.locale === "und" ? null : name.locale,
       observedAt: name.observedAt,
     });
@@ -485,6 +538,42 @@ export function assemblePublicOrganismCard(input: {
     });
   }
 
+  // One badge per country, from the fact whose region is exactly that country.
+  // A sub-national row (`UA-30`) is not a country row and never becomes one.
+  const presence = new Map<string, PublicOrganismPresence>();
+  for (const fact of row?.facts ?? []) {
+    if (fact.predicate !== "distribution_status") continue;
+    const regionCode = (fact.regionCode ?? "").trim().toUpperCase();
+    if (
+      !(PUBLIC_PRESENCE_REGION_CODES as readonly string[]).includes(regionCode)
+    ) {
+      continue;
+    }
+    const normalized = (fact.valueNormalized ?? "").trim().toLowerCase();
+    const status = PRESENCE_STATUSES.has(normalized)
+      ? (normalized as PublicOrganismPresence["status"])
+      : "unknown";
+    const existing = presence.get(regionCode);
+    // Two sources for one country: the more recent observation wins, and a
+    // definite word wins over "unknown" at the same moment.
+    if (
+      existing &&
+      !(
+        (fact.observedAt ?? "") > (existing.observedAt ?? "") ||
+        (existing.status === "unknown" && status !== "unknown")
+      )
+    ) {
+      continue;
+    }
+    presence.set(regionCode, {
+      regionCode,
+      status,
+      verbatim: fact.value,
+      sourceName: fact.sourceName ?? input.fallbackSource.name,
+      observedAt: fact.observedAt ?? null,
+    });
+  }
+
   const acceptedNameClaims = new Map<string, PublicOrganismAcceptedNameClaim>();
   for (const name of row?.names ?? []) {
     if (name.nameType !== "scientific_accepted") continue;
@@ -499,7 +588,8 @@ export function assemblePublicOrganismCard(input: {
   return {
     firstHandContentAt,
     indexableOverride,
-    hasFirstHandContent: firstHandContentAt !== null || indexableOverride === true,
+    hasFirstHandContent:
+      firstHandContentAt !== null || indexableOverride === true,
     formCount: row?.forms.length ?? 0,
     gardenerCount,
     regions,
@@ -510,6 +600,19 @@ export function assemblePublicOrganismCard(input: {
       left.sourceName.localeCompare(right.sourceName, "en"),
     ),
     acceptedNameClaims: [...acceptedNameClaims.values()],
+    presence: PUBLIC_PRESENCE_REGION_CODES.map((code) =>
+      presence.get(code),
+    ).filter((entry): entry is PublicOrganismPresence => entry !== undefined),
+    attributions: (row?.sources ?? [])
+      .filter((source) => source.attributionRequired && source.attributionText)
+      .map((source) => ({
+        sourceSlug: source.sourceSlug,
+        sourceName: source.sourceName,
+        text: source.attributionText as string,
+        // The day the data was downloaded, which is when the snapshot was
+        // fetched — not when we last reconciled it onto the graph.
+        downloadedAt: source.fetchedAt ?? source.lastObservedAt ?? null,
+      })),
     sources: (row?.sources ?? []).map((source) => ({
       sourceSlug: source.sourceSlug,
       sourceName: source.sourceName,
@@ -541,6 +644,8 @@ export function emptyPublicOrganismCard(
     hosts: [],
     sourceGroups: [],
     acceptedNameClaims: [],
+    presence: [],
+    attributions: [],
     sources: [],
     ...overrides,
   };

@@ -14,6 +14,7 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
+  findPublicEppoCanonicalCard,
   findPublicEppoSourceRecord,
   listPublicEppoSourcePage,
   parseEppoArchiveRequest,
@@ -84,8 +85,9 @@ export async function eppoArchiveExplorerMetadata(
   if (!isEppoArchiveEnabled()) {
     return {
       title: "OverGarden",
-      robots: resolveUnresolvedPublicSurfaceDiscovery(BROWSE_CONSUMER_ID)
-        .decision.robots,
+      robots:
+        resolveUnresolvedPublicSurfaceDiscovery(BROWSE_CONSUMER_ID).decision
+          .robots,
     };
   }
   const request = parseEppoArchiveRequest({}).request;
@@ -94,7 +96,7 @@ export async function eppoArchiveExplorerMetadata(
   return buildExplorerSurfaceMetadata(locale, page, resolved).metadata;
 }
 
-export function renderEppoArchiveDetail(
+export async function renderEppoArchiveDetail(
   locale: PublicLocale,
   record: PublicEppoSourceRecord,
 ) {
@@ -110,21 +112,29 @@ export function renderEppoArchiveDetail(
     locale,
     contentLocale: null,
     title: `${record.displayName} | OverGarden`,
-    description: getEppoArchiveCopy(locale).evidenceDescription[
-      record.evidenceState
-    ],
+    description:
+      getEppoArchiveCopy(locale).evidenceDescription[record.evidenceState],
     visibleFacts: {
       type: "ItemPage",
       name: record.displayName,
-      description: getEppoArchiveCopy(locale).evidenceDescription[
-        record.evidenceState
-      ],
+      description:
+        getEppoArchiveCopy(locale).evidenceDescription[record.evidenceState],
       dateModified: record.observedAt,
     },
   });
 
+  const canonicalCard = await findPublicEppoCanonicalCard(
+    record.eppoCode,
+    locale,
+  ).catch(() => null);
+
   return (
-    <EppoArchiveDetail locale={locale} record={record} jsonLd={metadata.jsonLd} />
+    <EppoArchiveDetail
+      locale={locale}
+      record={record}
+      jsonLd={metadata.jsonLd}
+      canonicalCard={canonicalCard}
+    />
   );
 }
 
@@ -148,8 +158,9 @@ export async function eppoArchiveDetailMetadata(
   if (!record) {
     return {
       title: "OverGarden",
-      robots: resolveUnresolvedPublicSurfaceDiscovery(DETAIL_CONSUMER_ID)
-        .decision.robots,
+      robots:
+        resolveUnresolvedPublicSurfaceDiscovery(DETAIL_CONSUMER_ID).decision
+          .robots,
     };
   }
   const discovery = resolveDetailDiscovery(
@@ -160,15 +171,13 @@ export async function eppoArchiveDetailMetadata(
     locale,
     contentLocale: null,
     title: `${record.displayName} | OverGarden`,
-    description: getEppoArchiveCopy(locale).evidenceDescription[
-      record.evidenceState
-    ],
+    description:
+      getEppoArchiveCopy(locale).evidenceDescription[record.evidenceState],
     visibleFacts: {
       type: "ItemPage",
       name: record.displayName,
-      description: getEppoArchiveCopy(locale).evidenceDescription[
-        record.evidenceState
-      ],
+      description:
+        getEppoArchiveCopy(locale).evidenceDescription[record.evidenceState],
       dateModified: record.observedAt,
     },
   }).metadata;

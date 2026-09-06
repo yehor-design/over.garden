@@ -43,6 +43,7 @@ import {
   parseEppoInventoryPage,
   splitEppoResponseByRights,
 } from "./eppo-observed-capture-repository";
+import type { EppoObservedDetailEndpointClass } from "./eppo-api-constants";
 
 class TestPostgresDialect implements Dialect {
   createDriver(): Driver {
@@ -608,6 +609,81 @@ describe("source payload single home", () => {
     expect(compiled.sql).toContain("sha256");
     expect(compiled.parameters).toContain("taxon_endpoint");
     expect(compiled.parameters).toContain(SNAPSHOT_ID);
+  });
+
+  it("asks each capture how many classes it declared, never the vocabulary", () => {
+    // The vocabulary is six classes since OVE-394; each capture declares three.
+    // A completeness check pinned to the constant would match no record at all
+    // and quietly stop reconstructing every payload the first capture evicted.
+    const reconstruct = buildReconstructEppoSourceRecordPayloadQuery(testDb, {
+      sourceSnapshotId: SNAPSHOT_ID,
+      sourceRecordId: "LYPES",
+    }).compile();
+    expect(reconstruct.sql).toContain("catalog_capture_declared_classes");
+    expect(reconstruct.sql).not.toMatch(/having[\s\S]*= \$\d+\)?$/u);
+
+    const restore = buildRestoreEppoSourceRecordPayloadsQuery(testDb, {
+      recordIds: [SNAPSHOT_ID],
+    }).compile();
+    expect(restore.sql).toContain("catalog_capture_declared_classes");
+
+    const evict = buildDeduplicateEppoSourceRecordPayloadsQuery(testDb, {
+      recordIds: [SNAPSHOT_ID],
+    }).compile();
+    expect(evict.sql).toContain("catalog_capture_declared_classes");
+
+    const materialize = buildMaterializeEppoSourceRecordsQuery(testDb, {
+      captureId,
+      sourceSnapshotId: SNAPSHOT_ID,
+    }).compile();
+    expect(materialize.sql).toContain("catalog_capture_declared_classes");
+    expect(materialize.parameters).toContain(captureId);
+  });
+
+  it("queues the classes a second capture declares, and refuses an unknown one", () => {
+    const parsed = parseEppoInventoryPage(
+      {
+        pagination: { offset: 0, limit: 1, count: 1, total: 1 },
+        data: [{ eppocode: "ABCD01", is_active: true }],
+      },
+      { offset: 0, limit: 1 },
+    );
+    const queued = buildQueueEppoEndpointUnitsQuery(testDb, {
+      captureId,
+      inventoryOrdinalStart: 0,
+      identifiers: parsed.identifiers,
+      endpointClasses: [
+        "taxon_hosts",
+        "taxon_distribution",
+        "taxon_categorization",
+      ],
+    }).compile();
+    expect(queued.parameters).toContain("taxon_hosts");
+    expect(queued.parameters).toContain("taxon_distribution");
+    expect(queued.parameters).toContain("taxon_categorization");
+    // Nothing the first capture already holds is asked for a second time.
+    expect(queued.parameters).not.toContain("taxon_overview");
+    expect(queued.parameters).not.toContain("taxon_names");
+    expect(queued.parameters).not.toContain("taxon_taxonomy");
+
+    expect(() =>
+      buildQueueEppoEndpointUnitsQuery(testDb, {
+        captureId,
+        inventoryOrdinalStart: 0,
+        identifiers: parsed.identifiers,
+        endpointClasses: [
+          "taxon_pesticides",
+        ] as unknown as EppoObservedDetailEndpointClass[],
+      }),
+    ).toThrow("undocumented_endpoint_class");
+    expect(() =>
+      buildQueueEppoEndpointUnitsQuery(testDb, {
+        captureId,
+        inventoryOrdinalStart: 0,
+        identifiers: parsed.identifiers,
+        endpointClasses: [],
+      }),
+    ).toThrow("empty_endpoint_class_set");
   });
 
   it("claims a bounded batch at one home without waiting on another run", () => {
