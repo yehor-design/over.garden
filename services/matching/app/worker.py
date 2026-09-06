@@ -30,6 +30,7 @@ from app.catalog_reconcile import (
 )
 from app.col_ingest import COL_SOURCE_SLUG, ingest_catalogue_of_life
 from app.job_handlers import SUPPORTED_JOB_KINDS
+from app.wikidata_crosswalk import WIKIDATA_SOURCE_SLUG, crosswalk_wikidata
 # Every kind literal comes from the generated contract rather than from the
 # module that happens to handle it, so dispatch and the manifest cannot disagree
 # about what a kind is called.
@@ -277,6 +278,11 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
             # The Catalogue of Life release: about a gigabyte and millions of
             # rows, so it runs under the long scan lease like the other scans.
             ingest_catalogue_of_life(conn)
+            return
+        if source_slug == WIKIDATA_SOURCE_SLUG:
+            # Identifiers and local names from Wikidata, off every request
+            # path and serial upstream, as Wikimedia's policy asks.
+            crosswalk_wikidata(conn)
             return
         record_source_refresh(source_slug)
         return

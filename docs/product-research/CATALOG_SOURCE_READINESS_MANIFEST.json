@@ -1310,7 +1310,32 @@
           ],
           "notes": "Small EntityData sample."
         }
-      ]
+      ],
+      "crosswalkRun": {
+        "issue": "OVE-393",
+        "date": "2026-09-06",
+        "endpoints": [
+          "https://query.wikidata.org/sparql",
+          "https://www.wikidata.org/w/api.php (wbgetentities)"
+        ],
+        "propertiesVerifiedLive": {
+          "taxonName": "P225",
+          "catalogueOfLifeId": "P10585",
+          "gbifTaxonId": "P846",
+          "worldFloraOnlineId": "P7715",
+          "eppoCode": "P3031"
+        },
+        "projection": "identifiers and labels/aliases in uk, bg, ru, en; nothing else",
+        "productionResult": {
+          "nodesConsidered": 29,
+          "itemsMatched": 29,
+          "identifiersWritten": 72,
+          "vernacularNamesWritten": 111,
+          "aliasesAwaitingReview": 85,
+          "identifierConflicts": 0
+        },
+        "requestPath": "never; the matching worker runs it offline"
+      }
     },
     {
       "slug": "grin-global",
