@@ -8,6 +8,14 @@
 > Still binding for the species backbone and reviewed vernacular aliases. The Stable Registry boundary section (OVE-318) is history since ADR-0025.
 > ADR-0026 (2026-09-05) supersedes one rule below: country-level EPPO distribution status may reach the product (D11). Coordinates never existed at that level. The source precedence stands and is now executed by the organism graph (SDD Slice 24).
 
+> ADR-0026 and SDD Slice 24 executed this policy on 2026-09-06 (OVE-392): the
+> Catalogue of Life release named below is ingested verbatim into the source
+> layer, canonical nodes are materialized only for what gardeners, the
+> registers or EPPO already touch, and everything else is reached through the
+> picker's secondary path. The production ingest is scoped to the plant
+> kingdoms because the managed database has 10 GiB of disk; the scope is
+> recorded on each snapshot row.
+
 ---
 
 # Species Backbone Policy

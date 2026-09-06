@@ -331,6 +331,29 @@ export interface CatalogSourceAssertions {
   source_snapshot_id: string;
 }
 
+export interface CatalogSourceColUsages {
+  authorship: string | null;
+  canonical_name: string;
+  col_id: string;
+  kingdom: string | null;
+  normalized_name: Generated<string | null>;
+  normalized_scientific_name: Generated<string | null>;
+  parent_col_id: string | null;
+  rank: string | null;
+  scientific_name: string;
+  source_snapshot_id: string;
+  status: string;
+}
+
+export interface CatalogSourceColVernaculars {
+  col_id: string;
+  id: Generated<string>;
+  language: string | null;
+  name: string;
+  normalized_name: Generated<string | null>;
+  source_snapshot_id: string;
+}
+
 export interface CatalogSourceCaptureRuns {
   capture_schema_version: string;
   capture_tool_revision: string;
@@ -1121,6 +1144,8 @@ export interface DB {
   catalog_source_assertions: CatalogSourceAssertions;
   catalog_source_capture_runs: CatalogSourceCaptureRuns;
   catalog_source_capture_units: CatalogSourceCaptureUnits;
+  catalog_source_col_usages: CatalogSourceColUsages;
+  catalog_source_col_vernaculars: CatalogSourceColVernaculars;
   catalog_source_links: CatalogSourceLinks;
   catalog_source_records: CatalogSourceRecords;
   catalog_source_refresh_events: CatalogSourceRefreshEvents;

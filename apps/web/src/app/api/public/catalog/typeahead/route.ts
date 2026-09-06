@@ -6,6 +6,10 @@ import {
   searchCatalogSuggestionsForTypeaheadResult,
   type CatalogSuggestion,
 } from "@/server/catalog-repository";
+import {
+  searchColUsages,
+  type ColUsageRow,
+} from "@/server/catalog-source/col-repository";
 
 /**
  * The picker's read (ADR-0026 D7). Public data only: catalog identities, in
@@ -38,6 +42,33 @@ export async function GET(request: Request) {
   }
   const locale: PublicLocale = isPublicLocale(localeParam) ? localeParam : "uk";
 
+  // The secondary path (ADR-0026 D7): the whole Catalogue of Life release
+  // rather than canonical nodes. A row here is not a node — it carries a
+  // `colId`, and picking it is what creates one.
+  if (url.searchParams.get("scope") === "full") {
+    try {
+      const rows = await searchColUsages(query, { objectKind: kind });
+      return publicJson(
+        {
+          suggestions: rows.map(serializeColUsage),
+          state: rows.length > 0 ? "ready" : "empty",
+          scope: "full",
+        },
+        200,
+        {
+          "Cache-Control": PUBLIC_CATALOG_TYPEAHEAD_CACHE_CONTROL,
+          ...timingHeaders(startedAt, 0),
+        },
+      );
+    } catch {
+      return publicJson({ suggestions: [], state: "unavailable", scope: "full" }, 503, {
+        "Cache-Control": "no-store",
+        "Retry-After": "5",
+        ...timingHeaders(startedAt, 0),
+      });
+    }
+  }
+
   try {
     const result = await searchCatalogSuggestionsForTypeaheadResult(query, {
       objectKind: kind,
@@ -61,6 +92,17 @@ export async function GET(request: Request) {
       ...timingHeaders(startedAt, 0),
     });
   }
+}
+
+/** A checklist row as the picker reads it: an identifier, names, a rank. */
+function serializeColUsage(row: ColUsageRow) {
+  return {
+    colId: row.colId,
+    displayName: row.canonicalName,
+    scientificName: row.scientificName,
+    ...(row.rank ? { rank: row.rank } : {}),
+    ...(row.acceptedName ? { acceptedName: row.acceptedName } : {}),
+  };
 }
 
 /** Null fields are omitted: eight rows must fit in a kilobyte. */

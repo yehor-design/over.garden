@@ -24,13 +24,68 @@ export function buildCatalogTypeaheadUrl(input: {
   query: string;
   objectKind: PlantObjectKind;
   locale: PublicLocale;
+  /** `full` searches the whole Catalogue of Life release (ADR-0026 D7). */
+  scope?: CatalogTypeaheadScope;
 }) {
   const params = new URLSearchParams({
     q: input.query.slice(0, CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH),
     kind: input.objectKind,
     locale: input.locale,
   });
+  if (input.scope === "full") params.set("scope", "full");
   return `${CATALOG_TYPEAHEAD_PUBLIC_PATH}?${params.toString()}`;
+}
+
+/**
+ * The two lists behind the picker (ADR-0026 D7): canonical nodes first, and
+ * the whole checklist one tap away. A full-catalogue row is not a node yet —
+ * it carries a Catalogue of Life identifier, and picking it is what creates
+ * the node.
+ */
+export type CatalogTypeaheadScope = "canonical" | "full";
+
+export interface CatalogFullCatalogueRow {
+  colId: string;
+  displayName: string;
+  scientificName: string;
+  rank: string | null;
+  /** The accepted name, when the row a gardener recognised is a synonym. */
+  acceptedName: string | null;
+}
+
+export function parseCatalogFullCatalogueResponse(
+  value: unknown,
+): CatalogFullCatalogueRow[] {
+  if (!value || typeof value !== "object") return [];
+  const suggestions = (value as { suggestions?: unknown }).suggestions;
+  if (!Array.isArray(suggestions)) return [];
+
+  return suggestions.flatMap((suggestion) => {
+    if (!suggestion || typeof suggestion !== "object") return [];
+    const candidate = suggestion as Record<string, unknown>;
+    if (
+      !isColIdentifier(candidate.colId) ||
+      !isNonEmptyString(candidate.displayName) ||
+      !isNonEmptyString(candidate.scientificName)
+    ) {
+      return [];
+    }
+    return [
+      {
+        colId: candidate.colId,
+        displayName: candidate.displayName,
+        scientificName: candidate.scientificName,
+        rank: isNonEmptyString(candidate.rank) ? candidate.rank : null,
+        acceptedName: isNonEmptyString(candidate.acceptedName)
+          ? candidate.acceptedName
+          : null,
+      },
+    ];
+  });
+}
+
+export function isColIdentifier(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9._:-]{1,64}$/u.test(value);
 }
 
 /**

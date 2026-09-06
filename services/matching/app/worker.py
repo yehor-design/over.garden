@@ -28,6 +28,7 @@ from app.catalog_reconcile import (
     reconcile,
     record_source_refresh,
 )
+from app.col_ingest import COL_SOURCE_SLUG, ingest_catalogue_of_life
 from app.job_handlers import SUPPORTED_JOB_KINDS
 # Every kind literal comes from the generated contract rather than from the
 # module that happens to handle it, so dispatch and the manifest cannot disagree
@@ -271,9 +272,13 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
 
     if kind == CATALOG_SOURCE_REFRESH_KIND:
         _require_exact_payload_shape(payload, CATALOG_SOURCE_REFRESH_KIND)
-        record_source_refresh(
-            _payload_text(payload, "source_slug", CATALOG_SOURCE_REFRESH_KIND),
-        )
+        source_slug = _payload_text(payload, "source_slug", CATALOG_SOURCE_REFRESH_KIND)
+        if source_slug == COL_SOURCE_SLUG:
+            # The Catalogue of Life release: about a gigabyte and millions of
+            # rows, so it runs under the long scan lease like the other scans.
+            ingest_catalogue_of_life(conn)
+            return
+        record_source_refresh(source_slug)
         return
 
     if kind == JOURNAL_ENTRY_INDEX_KIND:

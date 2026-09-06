@@ -94,6 +94,36 @@ platform: real gardeners publishing, and organic discovery measured rather than
 assumed. One measurement gap blocks honest prioritisation; see known gaps
 below.
 
+**Delivered 2026-09-06, OVE-392 (Slice 24, task 7 of 14).** Catalogue of Life
+is the backbone. The July 2026 release (COL26.7, doi 10.48580/dgyhw) lives in
+the source layer as `catalog_source_col_usages` and
+`catalog_source_col_vernaculars`, two snapshots at a time: one to serve, one to
+diff against. The worker's `catalog_source_refresh` job downloads the ColDP
+archive, verifies its checksum, streams `NameUsage` and `VernacularName` into
+Postgres, places every node gardeners, the registers or EPPO already touch on
+the tree, diffs the release against the one it replaces and prunes what is no
+longer needed.
+
+Nodes gain their parent, rank, kingdom and ancestors from the checklist: the
+tomato now resolves through Solanaceae to Plantae. A node the release does not
+know becomes an owner decision rather than a guess, and two nodes claiming one
+Catalogue of Life identifier become a merge in the queue. The refresh applies
+ADR-0026 D4's classes: a rename renames and keeps the old spelling as a
+synonym, an accepted name that became a synonym merges itself when no gardener
+depends on it and waits in the queue when one does, and a usage that left the
+release supersedes its assertions without deleting anything.
+
+The picker gained its secondary path: when the canonical list is thin the
+composer offers the whole checklist, and picking a row there creates the node,
+its ancestors and its identifier from that moment. Picking the same organism
+again reuses it.
+
+**Scope in production.** The managed database has 10 GiB of disk, and the whole
+release is 3.3 GB per snapshot. Production ingests the plant kingdoms —
+Plantae, Fungi and Chromista, 1,976,974 usages — which is what the source
+readiness manifest asked for. Animals keep the canonical picker, and one
+environment variable adds them when the database is larger.
+
 **Delivered 2026-09-06, OVE-391 (Slice 24, task 6 of 14).** The owner curates
 from two links in the account menu. `/garden/catalog/queue` shows one decision
 at a time, highest impact first: the two nodes side by side with their reasons

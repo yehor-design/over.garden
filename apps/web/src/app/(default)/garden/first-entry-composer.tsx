@@ -22,6 +22,7 @@ import {
   CatalogPicker,
   type CatalogSearchMiss,
 } from "@/components/garden/catalog-picker";
+import { materializeCatalogNodeAction } from "@/app/(default)/garden/catalog-full-catalogue-actions";
 import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
 import { getAtomicJournalCreateCopy } from "@/lib/garden/atomic-journal-create-copy";
@@ -918,6 +919,7 @@ export function FirstEntryComposer({
                 selection={catalogSelection}
                 onSelectionChange={updateCatalogSelection}
                 onSearchMiss={reportCatalogSearchMiss}
+                materializeFromCatalogue={materializeCatalogNodeAction}
                 disabled={persistenceFrozen}
               />
               <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
