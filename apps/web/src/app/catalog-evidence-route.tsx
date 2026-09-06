@@ -35,6 +35,14 @@ import {
 } from "@/server/public-surface-discovery";
 import { buildPublicVarietySurfaceMetadata } from "@/server/public-variety-metadata";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import {
+  formatOrganismDate,
+  formatOrganismFactParagraph,
+} from "@/lib/public-organism-copy";
+import {
+  hasAcceptedNameDisagreement,
+  type PublicOrganismAssertionLine,
+} from "@/server/public-organism-card-query";
 import { buildPublicVarietyDiscoverySource } from "@/server/public-variety-repository";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
 import {
@@ -204,6 +212,26 @@ export async function renderPublicCatalogEvidenceRoute(
     ? await readViewerLikeState(engagementTarget)
     : null;
 
+  const cardCopy = publicCopy.organism;
+  const factParagraph = formatOrganismFactParagraph(locale, {
+    canonicalName: page.catalog.canonicalName,
+    catalogKind,
+    speciesName: page.catalog.species?.canonicalName ?? null,
+    formCount: page.card.formCount,
+    gardenerCount: page.card.gardenerCount,
+    regionCount: page.card.regions.length,
+  });
+  const hasExperience =
+    page.entries.length > 0 || page.card.regions.length > 0;
+  const relationGroups = [
+    { key: "forms", heading: cardCopy.sections.forms, items: page.card.forms },
+    { key: "pests", heading: cardCopy.sections.pests, items: page.card.pests },
+    { key: "hosts", heading: cardCopy.sections.hosts, items: page.card.hosts },
+  ].filter((group) => group.items.length > 0);
+  const disagreement = hasAcceptedNameDisagreement(
+    page.card.acceptedNameClaims,
+  );
+
   return (
     <main
       lang={locale}
@@ -215,7 +243,10 @@ export async function renderPublicCatalogEvidenceRoute(
           dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
         />
       ) : null}
-      <header className="flex flex-col gap-5 border-b border-border pb-6">
+      <header
+        data-organism-section="facts"
+        className="flex flex-col gap-5 border-b border-border pb-6"
+      >
         <Link
           href={`/objects?identity=${catalogKind}`}
           className="self-start rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
@@ -229,6 +260,12 @@ export async function renderPublicCatalogEvidenceRoute(
           <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
             {page.catalog.canonicalName}
           </h1>
+          <p
+            data-organism-fact
+            className="max-w-3xl text-base leading-7 text-foreground"
+          >
+            {factParagraph}
+          </p>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border px-2 py-1">
               {formatPublicCount(locale, "entry", page.entryCount)}
@@ -309,80 +346,258 @@ export async function renderPublicCatalogEvidenceRoute(
         </section>
       ) : null}
 
+      {hasExperience ? (
+        <section
+          aria-labelledby="organism-experience-heading"
+          data-organism-section="experience"
+          className="grid gap-5 border-b border-border pb-6"
+        >
+          <h2
+            id="organism-experience-heading"
+            className="text-2xl font-semibold tracking-tight text-foreground"
+          >
+            {cardCopy.sections.experience}
+          </h2>
+
+          {isPlantVariety && engagement ? (
+            <PublicEngagementPanel
+              isAuthenticated={shellSession.isAuthenticated}
+              target={engagementTarget}
+              likeState={likeState}
+              summary={engagement}
+              returnTo={publicPath}
+              locale={locale}
+              resumeAction={resumeAction}
+              resumeControl={resumeControl}
+            />
+          ) : null}
+
+          {page.card.regions.length > 0 ? (
+            <div className="grid gap-2">
+              <h3 className="text-lg font-semibold text-foreground">
+                {cardCopy.sections.spread}
+              </h3>
+              <ul
+                data-organism-spread
+                className="grid gap-1 text-sm text-foreground sm:grid-cols-2"
+              >
+                {page.card.regions.map((region) => (
+                  <li
+                    key={region.code}
+                    className="flex flex-wrap justify-between gap-2 rounded-md border border-border px-3 py-2"
+                  >
+                    <span>{region.label ?? region.code}</span>
+                    <span className="text-muted-foreground">
+                      {formatPublicCount(locale, "object", region.objectCount)}
+                      {" · "}
+                      {formatPublicCount(locale, "gardener", region.gardenerCount)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {page.entries.length > 0 ? (
+            <ol className="grid gap-4">
+              {page.entries.map((entry) => (
+                <li
+                  key={entry.id}
+                  className={`grid gap-4 rounded-lg border border-border p-4 ${
+                    entry.media ? "sm:grid-cols-3" : ""
+                  }`}
+                >
+                  <article
+                    className={`flex min-w-0 flex-col gap-3 ${
+                      entry.media ? "sm:col-span-2" : ""
+                    }`}
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <time>{formatDate(entry.entryDate, locale)}</time>
+                        {entry.safeLocationLabel ? (
+                          <span>{entry.safeLocationLabel}</span>
+                        ) : null}
+                        <span>
+                          {entry.varietyText ?? page.catalog.canonicalName}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {entry.title}
+                      </h3>
+                    </div>
+                    <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
+                      {entry.body}
+                    </p>
+                    <Link
+                      href={entry.publicPath}
+                      className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      {publicCopy.variety.openSourceEntry}
+                    </Link>
+                  </article>
+
+                  {entry.media ? (
+                    <SubjectAwareMediaImage
+                      src={entry.media.publicUrl}
+                      srcSet={buildPublicMediaSourceSet(entry.media).srcSet}
+                      placeholderDataUri={entry.media.placeholderDataUri}
+                      alt={`${entry.title} · ${publicCopy.passport.publicPhotoSuffix}`}
+                      width={448}
+                      height={252}
+                      sizes="(min-width: 640px) 14rem, 100vw"
+                      presentationMode="cover"
+                      intrinsicWidth={entry.media.intrinsicWidth}
+                      intrinsicHeight={entry.media.intrinsicHeight}
+                      className="aspect-video w-full rounded-md border border-border sm:w-56"
+                    />
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          ) : null}
+        </section>
+      ) : null}
+
+      {relationGroups.length > 0 ? (
+        <section
+          aria-labelledby="organism-relations-heading"
+          data-organism-section="relations"
+          className="grid gap-4 border-b border-border pb-6"
+        >
+          <h2
+            id="organism-relations-heading"
+            className="text-2xl font-semibold tracking-tight text-foreground"
+          >
+            {cardCopy.sections.relations}
+          </h2>
+          {relationGroups.map((group) => (
+            <div key={group.key} className="grid gap-2">
+              <h3 className="text-lg font-semibold text-foreground">
+                {group.heading}
+              </h3>
+              <ul
+                data-organism-relations={group.key}
+                className="flex flex-wrap gap-2"
+              >
+                {group.items.map((item) => (
+                  <li key={item.catalogItemId}>
+                    <Link
+                      href={localizedPath(routeLocale, item.publicPath)}
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+                    >
+                      <span>{item.canonicalName}</span>
+                      {item.hostClass ? (
+                        <span className="text-xs text-muted-foreground">
+                          · {hostClassLabel(cardCopy, item.hostClass)}
+                        </span>
+                      ) : null}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      {page.card.sourceGroups.length > 0 ? (
+        <details
+          data-organism-section="names-and-sources"
+          className="rounded-lg border border-border p-4"
+        >
+          <summary className="cursor-pointer">
+            <h2 className="inline text-2xl font-semibold tracking-tight text-foreground">
+              {cardCopy.sections.namesAndSources}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {cardCopy.sections.namesAndSourcesHint}
+            </p>
+          </summary>
+          <div className="mt-4 grid gap-5">
+            {disagreement ? (
+              <div
+                data-organism-disagreement
+                className="rounded-md border border-border bg-muted px-3 py-2 text-sm"
+              >
+                <p className="font-medium text-foreground">
+                  {cardCopy.sections.disagreement}
+                </p>
+                <ul className="mt-1 grid gap-1 text-muted-foreground">
+                  {page.card.acceptedNameClaims.map((claim) => (
+                    <li key={`${claim.sourceName}:${claim.name}`}>
+                      {claim.sourceName}:{" "}
+                      <span className="italic text-foreground">{claim.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {page.card.sourceGroups.map((group) => {
+              const observed = formatOrganismDate(locale, group.observedAt);
+              return (
+                <div
+                  key={`${group.sourceSlug ?? "catalog"}:${group.sourceVersion ?? ""}`}
+                  className="grid gap-2"
+                >
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {group.sourceName}
+                    {group.sourceVersion ? (
+                      <span className="ml-2 text-sm font-normal text-muted-foreground">
+                        {publicCopy.sourceCredits.versionLabel}: {group.sourceVersion}
+                      </span>
+                    ) : null}
+                    {observed ? (
+                      <span className="ml-2 text-sm font-normal text-muted-foreground">
+                        {cardCopy.sections.observedOn}: {observed}
+                      </span>
+                    ) : null}
+                  </h3>
+                  <ul className="grid gap-1 text-sm">
+                    {group.lines.map((line, index) => (
+                      <li key={`${line.kind}:${line.label}:${index}`} className="flex flex-wrap gap-x-2">
+                        <span className="text-muted-foreground">
+                          {assertionLabel(cardCopy, line)}:
+                        </span>
+                        <span className="text-foreground">{line.value}</span>
+                        {line.qualifier ? (
+                          <span className="text-muted-foreground">
+                            ({line.qualifier})
+                          </span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      ) : null}
+
       <PublicVarietySourceCredits
         locale={locale}
         credits={page.sourceCredits}
+        contentUpdatedAt={page.catalog.contentUpdatedAt}
       />
-
-      {isPlantVariety && engagement ? (
-        <PublicEngagementPanel
-          isAuthenticated={shellSession.isAuthenticated}
-          target={engagementTarget}
-          likeState={likeState}
-          summary={engagement}
-          returnTo={publicPath}
-          locale={locale}
-          resumeAction={resumeAction}
-          resumeControl={resumeControl}
-        />
-      ) : null}
-
-      <ol className="grid gap-4">
-        {page.entries.map((entry) => (
-          <li
-            key={entry.id}
-            className={`grid gap-4 rounded-lg border border-border p-4 ${
-              entry.media ? "sm:grid-cols-3" : ""
-            }`}
-          >
-            <article
-              className={`flex min-w-0 flex-col gap-3 ${
-                entry.media ? "sm:col-span-2" : ""
-              }`}
-            >
-              <div className="flex flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <time>{formatDate(entry.entryDate, locale)}</time>
-                  {entry.safeLocationLabel ? (
-                    <span>{entry.safeLocationLabel}</span>
-                  ) : null}
-                  <span>{entry.varietyText ?? page.catalog.canonicalName}</span>
-                </div>
-                <h2 className="text-lg font-semibold text-foreground">
-                  {entry.title}
-                </h2>
-              </div>
-              <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
-                {entry.body}
-              </p>
-              <Link
-                href={entry.publicPath}
-                className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
-              >
-                {publicCopy.variety.openSourceEntry}
-              </Link>
-            </article>
-
-            {entry.media ? (
-              <SubjectAwareMediaImage
-                src={entry.media.publicUrl}
-                srcSet={buildPublicMediaSourceSet(entry.media).srcSet}
-                placeholderDataUri={entry.media.placeholderDataUri}
-                alt={`${entry.title} · ${publicCopy.passport.publicPhotoSuffix}`}
-                width={448}
-                height={252}
-                sizes="(min-width: 640px) 14rem, 100vw"
-                presentationMode="cover"
-                intrinsicWidth={entry.media.intrinsicWidth}
-                intrinsicHeight={entry.media.intrinsicHeight}
-                className="aspect-video w-full rounded-md border border-border sm:w-56"
-              />
-            ) : null}
-          </li>
-        ))}
-      </ol>
     </main>
   );
+}
+
+type OrganismCopy = ReturnType<typeof getPublicSurfaceCopy>["organism"];
+
+function hostClassLabel(copy: OrganismCopy, hostClass: string) {
+  return (copy.hostClass as Record<string, string>)[hostClass] ?? hostClass;
+}
+
+function assertionLabel(copy: OrganismCopy, line: PublicOrganismAssertionLine) {
+  if (line.kind === "name") {
+    return (copy.nameType as Record<string, string>)[line.label] ?? line.label;
+  }
+  if (line.kind === "fact") {
+    return (copy.predicate as Record<string, string>)[line.label] ?? line.label;
+  }
+  return `${copy.sections.identifier} ${line.label}`;
 }
 
 function getCatalogEvidenceCopy(

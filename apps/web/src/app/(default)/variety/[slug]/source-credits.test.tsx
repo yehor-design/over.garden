@@ -18,6 +18,8 @@ describe("PublicVarietySourceCredits", () => {
             license: "Creative Commons Attribution 4.0 International",
             licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
             attributionRequired: true,
+            fetchedAt: "2026-07-01T00:00:00.000Z",
+            lastObservedAt: null,
             attributionText:
               "Ukraine State Register of Plant Varieties, Creative Commons Attribution 4.0 International.",
             sourceRecordKey: "RegisterVarietis:83070006",
@@ -35,6 +37,10 @@ describe("PublicVarietySourceCredits", () => {
     expect(html).toContain("Creative Commons Attribution 4.0 International");
     expect(html).toContain("creativecommons.org/licenses/by/4.0");
     expect(html).toContain("Посочването на източника е задължително");
+    // The attribution footer carries the download date (ADR-0026 D9).
+    expect(html).toContain("Изтеглено");
+    expect(html).toContain("1 юли 2026 г.");
+    expect(html).toContain('data-organism-section="attribution"');
     expect(html).not.toContain("RegisterVarietis");
     expect(html).not.toContain("rawPayload");
     expect(html).not.toContain("sourceOnlyFields");

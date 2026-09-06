@@ -316,6 +316,34 @@ Nothing a gardener or a crawler sees changed: no row was deleted or renamed,
 migration `0061`. The deploy order was migration first, then code, and the code
 in the same pull request reads nothing the old schema lacks.
 
+## The 2026-09-06 application of `0062`
+
+Executed by the OVE-389 executor under the owner's standing authorization of
+2026-09-05 (`docs/ORGANISM_GRAPH_EXECUTION.md`, section 1), from the PR branch
+before the merge, with `scripts/apply-reviewed-migration.ts` and the pulled
+production environment (deleted afterwards). `0062` takes the next free number
+outside the slice's reserved block (`docs/MIGRATION_ALLOCATION.md`): `0054`
+added the outbox reason `catalog_card` without an entity kind for it.
+
+**Before** (`--mode inventory`, host class `digitalocean_managed`, database
+`defaultdb`): `0054` and `0055` applied, `0062` not present (no sentinel
+object; the migration changes constraints and a column's nullability only);
+`0048` reads missing as before. `public_projection_intents.owner_user_id` was
+`NOT NULL`; the entity-kind check admitted `journal_entry` alone.
+
+**Apply** (`--mode apply --migration 0062`): 7 statements, 259 ms.
+
+**After** (read-only): `owner_user_id` is nullable; the checks
+`public_projection_intents_entity_kind_check` (`journal_entry`,
+`catalog_item`), `public_projection_intents_owner_scope_check` (an owner
+exactly for journal entries) and `public_projection_intents_catalog_card_shape_check`
+(a card intent is `catalog_card`, `present`, never privacy-reducing) are
+present beside the unchanged status, state, reason, generation and
+convergence checks. The table holds 15 `journal_entry` intents `applied` and
+1 `dead` (a pre-existing dead letter of the journal drain, untouched), and no
+`catalog_item` intent yet: the worker writes those from the reconciliation
+task on; `/api/cron/catalog-card-revalidate` drains them every ten minutes.
+
 ## The 2026-09-06 application of `0055`
 
 Executed by the OVE-387 executor under the owner's standing authorization of

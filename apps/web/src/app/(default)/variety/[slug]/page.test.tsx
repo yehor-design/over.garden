@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { emptyPublicOrganismCard } from "@/server/public-organism-card-query";
+
 const ITEM_ID = "11111111-1111-4111-8111-111111111111";
 
 const mocks = vi.hoisted(() => ({
@@ -94,6 +96,11 @@ describe("/variety/[slug]", () => {
       },
       seedProof: null,
       sourceCredits: [],
+      card: emptyPublicOrganismCard({
+        firstHandContentAt: "2026-06-20T10:00:00.000Z",
+        hasFirstHandContent: true,
+        gardenerCount: 1,
+      }),
       entries: [
         {
           id: "entry-1",

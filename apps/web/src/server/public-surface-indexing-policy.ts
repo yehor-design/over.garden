@@ -34,13 +34,17 @@ export type PublicSurfaceCandidateState =
  * ADR-0022, D3: every live public page is indexable. The only refusals are a
  * page that is not a public candidate (workspace, auth, operator, a record
  * that is gone), a listing with nothing on it, a load that could not resolve
- * the page at all, or a canonical path that does not match the locale.
+ * the page at all, a canonical path that does not match the locale, or an
+ * organism card whose content comes only from sources (ADR-0026 D9): it is
+ * reachable but `noindex` until a gardener publishes on it or the owner
+ * marks it indexable.
  */
 export type PublicSurfaceIndexReason =
   | "not_public_candidate"
   | "empty_listing"
   | "candidate_input_unresolved"
   | "non_equivalent_locale"
+  | "organism_without_first_hand_content"
   | "workspace_route_noindex"
   | "auth_route_noindex"
   | "operator_route_noindex";
@@ -52,6 +56,11 @@ export interface PublicSurfaceCandidateInput {
   canonicalPath: string | null;
   equivalentLocales: readonly PublicLocale[] | null;
   surfaceKind: PublicSurfaceKind;
+  /**
+   * Organism cards only (ADR-0026 D9): true once `first_hand_content_at` is
+   * set or `indexable_override` is true; null for every other surface.
+   */
+  hasFirstHandContent?: boolean | null;
 }
 
 export interface PublicSurfaceIndexState {
@@ -95,6 +104,12 @@ export function evaluatePublicSurfaceIndexability(
   }
   if (!input.hasContent) {
     reasons.push("empty_listing");
+  }
+  if (
+    input.surfaceKind === "variety_aggregation" &&
+    input.hasFirstHandContent === false
+  ) {
+    reasons.push("organism_without_first_hand_content");
   }
 
   return reasons.length === 0 ? indexable() : noindex(reasons);

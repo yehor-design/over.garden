@@ -81,6 +81,28 @@ describe("public surface discovery adapter", () => {
     ).toBe(true);
   });
 
+  it("carries an organism's first-hand flag into the decision and nothing else's (ADR-0026 D9)", () => {
+    const sourceOnly = resolvePublicSurfaceDiscovery(
+      richSource({
+        consumerId: "catalog_evidence",
+        canonicalPath: "/species/solanum-lycopersicum",
+        organism: { hasFirstHandContent: false },
+      }),
+    );
+    expect(sourceOnly.candidateInput.hasFirstHandContent).toBe(false);
+    expect(sourceOnly.decision.reasons).toEqual(["organism_without_first_hand_content"]);
+    expect(
+      resolvePublicSurfaceDiscovery(
+        richSource({
+          consumerId: "catalog_evidence",
+          canonicalPath: "/species/solanum-lycopersicum",
+          organism: { hasFirstHandContent: true },
+        }),
+      ).decision.isIndexable,
+    ).toBe(true);
+    expect(resolvePublicSurfaceDiscovery(richSource()).candidateInput.hasFirstHandContent).toBeNull();
+  });
+
   it("marks a listing with nothing on it noindex and a non-candidate route noindex", () => {
     expect(
       resolvePublicSurfaceDiscovery(

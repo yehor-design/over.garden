@@ -6,6 +6,7 @@ import {
   buildPublicVarietyDiscoverySource,
   type PublicVarietyPage,
 } from "@/server/public-variety-repository";
+import { emptyPublicOrganismCard } from "@/server/public-organism-card-query";
 import { resolvePublicSurfaceDiscoveryForRequest } from "@/server/public-surface-discovery";
 import type { CatalogTypeaheadRow } from "@/server/search/catalog-documents";
 import type { JournalEntrySearchContractRow } from "@/server/search/documents";
@@ -304,6 +305,11 @@ export function publicVarietyPage(
         },
       },
     ],
+    card: emptyPublicOrganismCard({
+      firstHandContentAt: JOURNEY.publishedAt,
+      hasFirstHandContent: true,
+      gardenerCount: 1,
+    }),
   } satisfies Omit<PublicVarietyPage, "indexState">;
   return {
     ...page,

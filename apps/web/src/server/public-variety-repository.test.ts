@@ -244,15 +244,15 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
-    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $3');
+    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $4');
     expect(compiled.sql).toContain(
       '"journal_entries"."owner_user_id" = "plant_objects"."owner_user_id"',
     );
     expect(compiled.sql).toContain(
       '"journal_entries"."owner_user_id" = "spaces"."owner_user_id"',
     );
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $4');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $6');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -268,6 +268,10 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain(
       'greatest(max("journal_entries"."updated_at"), "catalog_items"."content_updated_at") as "lastModified"',
     );
+    // ADR-0026 D9: the sitemap applies the card's indexability predicate.
+    expect(compiled.sql).toContain(
+      '("catalog_items"."first_hand_content_at" is not null or "catalog_items"."indexable_override" = $',
+    );
     expect(compiled.sql).not.toContain("having count");
     expect(compiled.sql).not.toContain('join "media_assets"');
     expect(compiled.sql).not.toContain("variety_seed_proofs");
@@ -281,6 +285,7 @@ describe("public variety repository query contracts", () => {
     expect(compiled.parameters).toEqual([
       "seeded",
       "confirmed",
+      true,
       "selected",
       "public",
       "active",

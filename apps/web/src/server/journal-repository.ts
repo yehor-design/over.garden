@@ -4343,6 +4343,7 @@ async function recordAtomicPublicationEffects(
     desiredState: "present",
     reason: "publish",
   });
+  await touchCatalogFirstHandContent(executor, journalEntryId);
   if (atomic.handoff) {
     await buildEnqueueMediaStagingFinalizeJobQuery(executor, {
       publishId: atomic.publishId,
@@ -4350,6 +4351,39 @@ async function recordAtomicPublicationEffects(
       receiptSetDigest: atomic.handoff.receiptSetDigest,
     }).execute();
   }
+}
+
+/**
+ * ADR-0026 D9: a public entry on a linked object is first-hand content for
+ * the organism and for its species. The clock is the newest publication, as
+ * the 0054 backfill set it; the card and the sitemap read it as the
+ * indexability predicate.
+ */
+export async function touchCatalogFirstHandContent(
+  executor: QueryExecutor,
+  journalEntryId: string,
+) {
+  await sql`
+    with linked as (
+      select plant_objects.catalog_item_id as id
+      from journal_entries
+      join plant_objects on plant_objects.id = journal_entries.plant_object_id
+      where journal_entries.id = ${journalEntryId}::uuid
+        and plant_objects.catalog_item_id is not null
+        and plant_objects.variety_state = 'selected'
+      union
+      select relation.to_catalog_item_id
+      from journal_entries
+      join plant_objects on plant_objects.id = journal_entries.plant_object_id
+      join catalog_item_relations as relation
+        on relation.from_catalog_item_id = plant_objects.catalog_item_id
+       and relation.relation_type = 'form_of'
+      where journal_entries.id = ${journalEntryId}::uuid
+    )
+    update catalog_items
+    set first_hand_content_at = greatest(coalesce(first_hand_content_at, now()), now())
+    where id in (select id from linked)
+  `.execute(executor);
 }
 
 async function assertAtomicPublicationReplayComplete(
