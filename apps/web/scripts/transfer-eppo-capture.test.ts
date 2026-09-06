@@ -52,17 +52,23 @@ describe("the EPPO capture transfer (OVE-394)", () => {
   });
 
   it("orders the tables so every foreign key is satisfied when it is written", () => {
-    // The snapshot before the run that references it, the run before its
-    // units, the records before the links and the archive, the archive records
-    // before their search terms. This order is the transfer's correctness.
+    // The snapshot before the run that references it, the run before its units
+    // and its records, the archive records before their search terms. This
+    // order is the transfer's correctness.
     expect([...EPPO_TRANSFER_TABLES]).toEqual([
       "catalog_source_snapshots",
       "catalog_source_capture_runs",
       "catalog_source_capture_units",
       "catalog_source_records",
-      "catalog_source_links",
       "stable_registry_public_eppo_records",
       "stable_registry_public_eppo_search_terms",
     ]);
+  });
+
+  it("never carries a source link, because a link names a node of one database", () => {
+    // Which node an identifier belongs to is a decision each database makes
+    // for itself. Copying a rehearsal's links into production would import its
+    // identity decisions, and the foreign key refuses them anyway.
+    expect([...EPPO_TRANSFER_TABLES]).not.toContain("catalog_source_links");
   });
 });

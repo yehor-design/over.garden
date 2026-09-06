@@ -95,9 +95,42 @@ completeness checks that rebuild a source record's payload from its units keep
 matching, and a resume queues exactly what the run it resumes declared, never
 what a later command line says.
 
-The second capture ran on 2026-09-06 as `19fc0b98-fe02-4c16-bab8-3af55a1e240e`
+### The capture needs a database nobody else writes to
+
+A capture takes a fingerprint of the product surface — `catalog_items`,
+`catalog_item_names`, `catalog_source_links`, `plant_objects`,
+`journal_entries`, `job_queue` — when it starts, and refuses to finalize unless
+the same fingerprint comes back at the end. That is the zero-product
+guarantee: a capture creates evidence and no product.
+
+The check is database-wide, not capture-scoped. **Anything else that writes a
+product row while a capture is open makes it impossible for that capture to
+finish.** A failed run is immutable by trigger, so there is no recovery: the
+units are retained for diagnosis and the run can never be completed.
+
+That is not hypothetical. The first attempt at the second capture,
+`19fc0b98-fe02-4c16-bab8-3af55a1e240e`, hydrated all 387,772 units over eight
+and a half hours with zero failures and then refused to finalize with
+`zero_product_effect_mismatch`, because reconciliation rehearsals on the same
+scratch database had added 103,384 catalog items, 183,565 names and 116,213
+source links while it ran. The capture had created none of them.
+
+So a capture gets its own database, not the shared scratch one:
+
+```bash
+# once, from apps/web
+node -e '…create overgarden_eppo_capture and apply every migration…'
+pnpm exec tsx scripts/transfer-eppo-capture.ts --mode transfer   --env-file /abs/path/capture-db.env --allow-target-host-class loopback   --confirm-target production --capture-ids <the base capture>
+# then point the pinned worktree's own .env.local at that database and run
+```
+
+The base capture has to be transferred in first, because `--base-capture`
+verifies it where the new run will write. Rehearsals, browser proofs and
+reconciliation runs keep using the shared database and cannot reach this one.
+
+The second capture ran on 2026-09-07 as `03cb6ee2-0a87-4ea5-a151-627eaf2b260d`
 with 387,772 projected provider requests, from a git worktree pinned at the
-commit that carries this tooling.
+commit that carries this tooling, on its own database.
 
 Inventory requests pin the documented `orderBy=eppocode&orderAsc=true`
 contract, and the capture preserves the returned sequence byte-for-byte. It

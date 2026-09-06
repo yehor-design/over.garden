@@ -16,9 +16,15 @@
  *   catalog_source_capture_runs     the runs
  *   catalog_source_capture_units    every unit, including the payloads
  *   catalog_source_records          the quarantined records they materialized
- *   catalog_source_links            any link already made to those records
  *   stable_registry_public_eppo_records        the public archive
  *   stable_registry_public_eppo_search_terms   and its prefix terms
+ *
+ * Not `catalog_source_links`. A link binds a source record to a *node in that
+ * database*, and which node an identifier belongs to is a decision each
+ * database makes for itself: production's reconciliation builds its own links
+ * against production's own nodes. Copying them would import a rehearsal's
+ * identity decisions, and the foreign key would refuse them anyway — which is
+ * how this was found, on a source database whose reconciliation had run.
  *
  * Every insert is `on conflict do nothing`, so a re-run adds what is missing
  * and changes nothing that is there. The receipt is a before and after row
@@ -57,16 +63,14 @@ export type EppoTransferMode = (typeof EPPO_TRANSFER_MODES)[number];
  * The tables, in the order their foreign keys allow.
  *
  * `catalog_source_snapshots` must exist before the runs that reference it, the
- * runs before their units, the records before the links and the archive rows,
- * and the archive records before their search terms. Reordering this list is
- * how a transfer half-lands.
+ * runs before their units and their records, and the archive records before
+ * their search terms. Reordering this list is how a transfer half-lands.
  */
 export const EPPO_TRANSFER_TABLES = [
   "catalog_source_snapshots",
   "catalog_source_capture_runs",
   "catalog_source_capture_units",
   "catalog_source_records",
-  "catalog_source_links",
   "stable_registry_public_eppo_records",
   "stable_registry_public_eppo_search_terms",
 ] as const;
@@ -133,10 +137,7 @@ export function parseEppoTransferArgs(
  * Which rows of one table belong to the given captures.
  *
  * Each clause reaches the capture ids by the shortest path the schema offers,
- * so a table is never copied wholesale. `catalog_source_links` is included for
- * completeness: today the EPPO records are quarantined and have none, and a
- * later reconciliation in production creates its own rather than importing the
- * loopback rehearsal's.
+ * so a table is never copied wholesale.
  */
 export function buildSelectForTable(table: EppoTransferTable): string {
   switch (table) {
@@ -157,15 +158,6 @@ export function buildSelectForTable(table: EppoTransferTable): string {
               where record.source_snapshot_id in (
                 select run.source_snapshot_id from catalog_source_capture_runs as run
                 where run.id = any($1::uuid[]) and run.source_snapshot_id is not null
-              )`;
-    case "catalog_source_links":
-      return `select link.* from catalog_source_links as link
-              where link.source_record_id in (
-                select record.id from catalog_source_records as record
-                where record.source_snapshot_id in (
-                  select run.source_snapshot_id from catalog_source_capture_runs as run
-                  where run.id = any($1::uuid[]) and run.source_snapshot_id is not null
-                )
               )`;
     case "stable_registry_public_eppo_records":
       return `select archive.* from stable_registry_public_eppo_records as archive
@@ -434,6 +426,7 @@ if (isEntrypoint) {
           /^[a-z0-9_]+(?::[a-z0-9_,]+)?$/u.test(error.message)
             ? error.message
             : "unknown_error",
+        detail: error instanceof Error ? error.message : String(error),
       })}\n`,
     );
     process.exitCode = 1;
