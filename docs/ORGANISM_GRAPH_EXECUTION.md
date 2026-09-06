@@ -207,6 +207,47 @@ rewrites and force-pushes. For those, ask.
   `catalog_curation_actions.queue_item_id` is `on delete set null` and the
   audit table refuses every update, so the cascade behind the delete is
   refused. Fixtures clean what is open and leave the decided rows.
+- **Catalogue of Life (24.07).** The July 2026 release is 5,413,595 usages,
+  a 1.0 GB ColDP archive, and 3.3 GB in Postgres with its indexes. Five things
+  only the real archive and a real browser could show:
+  1. **Python's csv module refuses a field over 128 KiB.** One free-text field
+     in the release is larger; `csv.field_size_limit` is raised in
+     `app/col_ingest.py`. A ten-thousand-row fixture never comes close.
+  2. **Load without the search indexes.** Keeping the trigram and prefix
+     indexes during the COPY turned the load into more than an hour and it
+     never finished on the container; dropping them inside the ingest's
+     transaction and recreating them after made it **115 seconds**. On failure
+     the transaction rolls back and the indexes come back with it, so the
+     rebuild runs only on success — rebuilding inside a failed transaction
+     replaces the real error with `InFailedSqlTransaction`.
+  3. **A statement still cannot read what its own function inserted.** The
+     create-on-pick path joined `catalog_items` in the same statement that
+     called `catalog_col_materialize`, so the node was created and the read
+     came back empty; the picker silently kept the query. Two statements, as
+     in 24.06.
+  4. **A new node needs its address cache expired.** `readPublicCatalogAddress`
+     is `use cache` for hours, so a node created by a gardener's pick answered
+     404 on its own card until the action revalidated
+     `organismAddressChangeTags(id)`.
+  5. **Match on both spellings.** OverGarden names nodes with their authority
+     ("Solanum lycopersicum L."); Catalogue of Life keeps the authorship in a
+     column. Comparing against a computed expression made the scoped
+     materialization take 176 s for 300 nodes; a stored generated column with
+     an index made it **297 ms**.
+  **The job outlives its lease.** A scan's visibility timeout is 300 s
+  (`CATALOG_MATCH_WORKER_VT_SECONDS`) and a release takes longer than that
+  against a managed database, so another worker could claim the same job.
+  `pg_try_advisory_lock` in the ingest is what makes that safe: a second run
+  answers `alreadyRunning` and writes nothing. Raise the lease on the droplet
+  rather than removing the lock.
+
+  **Production is scoped.** The managed database has 10 GiB of disk and held
+  342 MB before this task, so the whole release does not fit beside the
+  application's own data. `COL_INGEST_KINGDOMS=Plantae,Fungi,Chromista` keeps
+  1,976,974 usages (about 1.2 GB), which is what the readiness manifest asked
+  for in words: "importer must scope to plant catalog needs first". The scope
+  is written into the snapshot's `source_version`, so a row always says what it
+  holds. Animalia is one environment variable away once the plan is larger.
 - **Research corpus.** `docs/product-research/` and
   `/Users/yehor/Desktop/Startups/OverGarden` must stay byte-identical except
   `README.md` and four desktop-only items. After editing a research file, copy

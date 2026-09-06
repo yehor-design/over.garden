@@ -22,6 +22,7 @@ import {
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getOwnerObjectCopy } from "@/lib/owner-object-copy";
 
+import { materializeCatalogNodeAction } from "../../catalog-full-catalogue-actions";
 import { recordCatalogSearchMissAction } from "../../catalog-search-miss-actions";
 
 interface CatalogResolveControlProps {
@@ -99,6 +100,7 @@ export function CatalogResolveControl({
           selection={selection}
           onSelectionChange={setSelection}
           onSearchMiss={reportSearchMiss}
+          materializeFromCatalogue={materializeCatalogNodeAction}
         />
 
         {selection ? null : (

@@ -350,6 +350,57 @@ are gone. No row of `catalog_items`, `plant_objects` or `job_queue` was
 touched: the migration adds constraints, a table, its seed and three
 functions.
 
+## The 2026-09-06 application of `0057` and the first Catalogue of Life ingest
+
+Executed by the OVE-392 executor under the owner's standing authorization of
+2026-09-05 (`docs/ORGANISM_GRAPH_EXECUTION.md`, section 1), with
+`scripts/apply-reviewed-migration.ts` and the pulled production environment
+(deleted afterwards).
+
+**Before** (`--mode inventory`, host class `digitalocean_managed`, database
+`defaultdb`): `0057` missing (absent: both `catalog_source_col_*` tables, the
+`normalized_scientific_name` column and its index). The database was **342 MB**
+of a 10 GiB plan; its largest table was `catalog_source_records` at 209 MB.
+
+**Apply** (`--mode apply --migration 0057`): 182 statements, 375 ms.
+
+**The ingest.** `COL_INGEST_KINGDOMS=Plantae,Fungi,Chromista` with the pinned
+release: COL26.7 Base Release, dataset key 315777, doi 10.48580/dgyhw, archive
+`https://download.checklistbank.org/col/monthly/2026-07-14_coldp.zip`,
+sha256 `3fac0cd59be401fdd48df0e5b0dd6215cb87269ecfa066af6e9a6d9bfcd6de36`,
+1,047,658,887 bytes.
+
+**Why scoped.** The whole release is 5,413,595 usages and 3.3 GB in Postgres
+with its indexes; two snapshots are kept, so the full checklist would need
+about 6.6 GB of a 10 GiB disk that also carries the application's data and its
+write-ahead log. The plant kingdoms are 1,976,974 usages, about 1.2 GB. The
+source readiness manifest asked for exactly this ("importer must scope to plant
+catalog needs first"), and each snapshot row records its scope in
+`source_version`, so a row always says what it holds. Adding Animalia is one
+environment variable once the plan is larger.
+
+**After.** Snapshot `b7870919-7d61-43a9-b8f8-a0e735a7502c`, version
+`COL26.7, key 315777, doi 10.48580/dgyhw, kingdoms Chromista+Fungi+Plantae`,
+licence CC BY 4.0 with attribution. **1,976,977** usages (the three kingdom
+rows are carried by name: Catalogue of Life leaves `kingdom` blank on a
+kingdom's own row, and without them a plant's classification stops one rank
+below Plantae) and **38,415** vernaculars. `catalog_source_col_usages` is
+1,447 MB and the database went from 342 MB to **1,846 MB** of the 10 GiB plan.
+
+The materialization placed every node production had on the tree: 4 species
+became **29 taxon nodes**, 28 of them with a parent, all 29 carrying a `col`
+identifier, and no queue item — nothing was left unmatched. The tomato resolves
+Plantae → Pteridobiotina → Tracheophyta → Magnoliopsida → Solanales →
+**Solanaceae** → Solanoideae → Solaneae → Solanum.
+
+**Two corrections during the run, both now in the migration.** The first
+attempt of the scoped ingest raised `unknown usage P` when a plant's chain
+reached a row above kingdom that the scope had dropped; `catalog_col_ensure_node`
+now ends a chain at the edge of the snapshot instead of failing. Ancestor
+arrays are copied from a parent as it stands, so a node attached before its
+parent gained one carried a short chain; the pass now recomputes every array
+from the roots in one recursive statement.
+
 ## The 2026-09-06 application of `0063`
 
 Executed by the OVE-391 executor under the owner's standing authorization of

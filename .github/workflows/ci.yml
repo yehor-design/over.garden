@@ -192,7 +192,10 @@ jobs:
         # Auth checks the request origin against BETTER_AUTH_URL: it must be the
         # origin the server answers on, not the build-time value. The address
         # spec asserts real HTTP statuses (200, 308, 404) over HTTP alone. The
-        # curation spec needs the sealed owner id the step above wrote.
+        # curation spec needs the sealed owner id the step above wrote. The
+        # full-catalogue spec skips itself here: a Catalogue of Life release is
+        # a gigabyte, so CI holds no snapshot and the Python database tests
+        # cover the ingest and the materialization instead.
         env:
           BETTER_AUTH_URL: http://127.0.0.1:3179
           PUBLIC_SITE_URL: http://127.0.0.1:3179
@@ -204,7 +207,7 @@ jobs:
             sleep 1
           done
           PLAYWRIGHT_BASE_URL=http://127.0.0.1:3179 \
-            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/owner-catalog-curation.spec.ts
+            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/owner-catalog-curation.spec.ts tests/catalog-full-catalogue.spec.ts
 
   matching:
     name: Python matching tier

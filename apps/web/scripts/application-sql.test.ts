@@ -56,6 +56,7 @@ describe("versioned application SQL bootstrap", () => {
       "0054_ove386_organism_graph_foundation.sql",
       "0055_ove387_labels_instead_of_provisional_cards.sql",
       "0056_ove390_reconciliation_contracts.sql",
+      "0057_ove392_col_source_usages.sql",
       "0062_ove389_catalog_card_intents.sql",
       "0063_ove391_owner_catalog_digest_outbox.sql",
     ]);

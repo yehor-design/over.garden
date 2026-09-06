@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   searchCatalogSuggestionsForTypeaheadResult: vi.fn(),
+  searchColUsages: vi.fn(),
   connection: vi.fn(async () => undefined),
 }));
 
@@ -12,6 +13,10 @@ vi.mock("next/server", () => ({
 vi.mock("@/server/catalog-repository", () => ({
   searchCatalogSuggestionsForTypeaheadResult:
     mocks.searchCatalogSuggestionsForTypeaheadResult,
+}));
+
+vi.mock("@/server/catalog-source/col-repository", () => ({
+  searchColUsages: mocks.searchColUsages,
 }));
 
 describe("GET /api/public/catalog/typeahead", () => {
@@ -142,5 +147,81 @@ describe("GET /api/public/catalog/typeahead", () => {
       suggestions: [],
       state: "unavailable",
     });
+  });
+});
+
+describe("GET /api/public/catalog/typeahead?scope=full", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it("answers checklist rows carrying an identifier, not a node id", async () => {
+    mocks.searchColUsages.mockResolvedValue([
+      {
+        colId: "6MK7J",
+        canonicalName: "Hydrochoerus hydrochaeris",
+        scientificName: "Hydrochoerus hydrochaeris (Linnaeus, 1766)",
+        authorship: "(Linnaeus, 1766)",
+        rank: "species",
+        kingdom: "Animalia",
+        status: "accepted",
+        acceptedName: null,
+      },
+      {
+        colId: "LYCES",
+        canonicalName: "Lycopersicon esculentum",
+        scientificName: "Lycopersicon esculentum Mill.",
+        authorship: "Mill.",
+        rank: "species",
+        kingdom: null,
+        status: "synonym",
+        acceptedName: "Solanum lycopersicum",
+      },
+    ]);
+
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request(
+        "https://over.garden/api/public/catalog/typeahead?q=hydro&kind=animal&scope=full",
+      ),
+    );
+    const body = (await response.json()) as {
+      suggestions: Record<string, unknown>[];
+      state: string;
+      scope: string;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.state).toBe("ready");
+    expect(body.scope).toBe("full");
+    expect(body.suggestions[0]).toEqual({
+      colId: "6MK7J",
+      displayName: "Hydrochoerus hydrochaeris",
+      scientificName: "Hydrochoerus hydrochaeris (Linnaeus, 1766)",
+      rank: "species",
+    });
+    // A synonym says which accepted name it leads to, and no row carries an id.
+    expect(body.suggestions[1]).toMatchObject({
+      colId: "LYCES",
+      acceptedName: "Solanum lycopersicum",
+    });
+    expect(body.suggestions.every((row) => !("id" in row))).toBe(true);
+    expect(mocks.searchCatalogSuggestionsForTypeaheadResult).not.toHaveBeenCalled();
+  });
+
+  it("answers 503 without caching when the checklist read fails", async () => {
+    mocks.searchColUsages.mockRejectedValue(new Error("no snapshot"));
+
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request(
+        "https://over.garden/api/public/catalog/typeahead?q=hydro&kind=plant&scope=full",
+      ),
+    );
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect((await response.json()).state).toBe("unavailable");
   });
 });
