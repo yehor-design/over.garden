@@ -176,7 +176,13 @@ jobs:
       - name: Install Chromium for the browser proof
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Public hydration proof
+      - name: Public hydration and catalog picker proofs
+        # The picker spec signs a synthetic gardener in over the API, and Better
+        # Auth checks the request origin against BETTER_AUTH_URL: it must be the
+        # origin the server answers on, not the build-time value.
+        env:
+          BETTER_AUTH_URL: http://127.0.0.1:3179
+          PUBLIC_SITE_URL: http://127.0.0.1:3179
         run: |
           pnpm next start -p 3179 &
           for _ in $(seq 1 60); do
