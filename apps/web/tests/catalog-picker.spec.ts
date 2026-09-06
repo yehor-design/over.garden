@@ -245,7 +245,13 @@ async function publishEntry(page: Page, plantName: string, body: string) {
     ),
     composer.getByRole("button", { name: /Опублікувати/u }).click(),
   ]);
-  expect(response.status(), await response.text()).toBeLessThan(400);
+  // The composer navigates as soon as the publish answers, and the body of a
+  // response whose page has moved on is not always retrievable; it is read
+  // only to explain a failure.
+  if (response.status() >= 400) {
+    const body = await response.text().catch(() => "(body unavailable)");
+    throw new Error(`Publish answered ${response.status()}: ${body}`);
+  }
   await page.waitForURL((url) => !url.pathname.endsWith("/garden") || url.search.length > 0, { timeout: 30_000 }).catch(() => undefined);
   const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
   try {
