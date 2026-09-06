@@ -1392,6 +1392,33 @@ function fixturePayload(code: string, endpointClass: EppoDetailEndpointClass) {
   if (endpointClass === "taxon_names") {
     return [{ name: `Fixture ${code}`, language: "en" }];
   }
+  // The three OVE-394 classes, shaped as the provider answers them: an array
+  // of flat objects, with the field names the rights map classifies.
+  if (endpointClass === "taxon_hosts") {
+    return [
+      {
+        eppocode: code,
+        prefname: `Fixture ${code}`,
+        class_id: 1,
+        class_label: "Major host",
+      },
+    ];
+  }
+  if (endpointClass === "taxon_distribution") {
+    return [
+      { country_iso: "UA", peststatus: "Present, no details", state_id: null },
+    ];
+  }
+  if (endpointClass === "taxon_categorization") {
+    return [
+      {
+        country_iso: "UA",
+        qlist: "A2",
+        qlist_label: "A2 List",
+        year_add: 2004,
+      },
+    ];
+  }
   return [{ eppocode: code, name: `Fixture ${code}`, rank: "species" }];
 }
 
@@ -1421,7 +1448,9 @@ async function competingEppoCaptureWriterIsBlocked(): Promise<boolean> {
   }
 }
 
-async function runCompleteFixture(): Promise<
+async function runCompleteFixture(
+  endpointClasses?: readonly EppoDetailEndpointClass[],
+): Promise<
   EppoCaptureFinalReceipt & {
     replay: "verified";
     inventoryResume: "verified";
@@ -1470,6 +1499,7 @@ async function runCompleteFixture(): Promise<
         limit: 3,
         payload: inventoryPayload,
         observedAt: new Date(),
+        ...(endpointClasses ? { endpointClasses } : {}),
       },
       executor,
     );
@@ -1491,6 +1521,7 @@ async function runCompleteFixture(): Promise<
         limit: 3,
         payload: inventoryPayload,
         observedAt: new Date(),
+        ...(endpointClasses ? { endpointClasses } : {}),
       },
       executor,
     );
@@ -1593,6 +1624,7 @@ async function runCompleteFixture(): Promise<
 async function seedTransportFixtureCapture(
   executor: EppoCaptureExecutor,
   label: string,
+  endpointClasses?: readonly EppoDetailEndpointClass[],
 ): Promise<{ captureId: string; inventory: EppoCapturedInventory }> {
   const captureId = randomUUID();
   const baseline = await readEppoZeroProductFingerprint(executor);
@@ -1626,6 +1658,7 @@ async function seedTransportFixtureCapture(
         ],
       },
       observedAt: new Date(),
+      ...(endpointClasses ? { endpointClasses } : {}),
     },
     executor,
   );
@@ -1710,11 +1743,14 @@ async function exhaustOneTransportBudget(
  * evidence is never returned: it keeps its failure and the capture stays
  * closed against it.
  */
-async function runTransportFixture() {
+async function runTransportFixture(
+  endpointClasses?: readonly EppoDetailEndpointClass[],
+) {
   return withEppoCaptureWriterLock(async (executor) => {
     const interrupted = await seedTransportFixtureCapture(
       executor,
       "transport_interrupted",
+      endpointClasses,
     );
     const spent = await exhaustOneTransportBudget(
       executor,
@@ -1811,6 +1847,7 @@ async function runTransportFixture() {
     const refused = await seedTransportFixtureCapture(
       executor,
       "transport_refused",
+      endpointClasses,
     );
     await exhaustOneTransportBudget(
       executor,
@@ -1868,7 +1905,9 @@ async function runTransportFixture() {
   });
 }
 
-async function runDriftFixture() {
+async function runDriftFixture(
+  endpointClasses?: readonly EppoDetailEndpointClass[],
+) {
   return withEppoCaptureWriterLock(async (executor) => {
     const captureId = randomUUID();
     await createEppoCapture(
@@ -1905,6 +1944,7 @@ async function runDriftFixture() {
         limit: 2,
         payload: baseline,
         observedAt: new Date(),
+        ...(endpointClasses ? { endpointClasses } : {}),
       },
       executor,
     );
@@ -1923,6 +1963,7 @@ async function runDriftFixture() {
             ],
           },
           observedAt: new Date(),
+          ...(endpointClasses ? { endpointClasses } : {}),
         },
         executor,
       );
@@ -1967,9 +2008,14 @@ export async function runEppoObservedCapture(options: EppoCaptureOptions) {
   }
   assertLocalEppoCaptureEnvironment(options);
   await loadCaptureRepository();
-  if (options.fixture === "complete") return runCompleteFixture();
-  if (options.fixture === "drift") return runDriftFixture();
-  if (options.fixture === "transport") return runTransportFixture();
+  if (options.fixture === "complete") {
+    return runCompleteFixture(options.endpointClasses);
+  }
+  if (options.fixture === "drift")
+    return runDriftFixture(options.endpointClasses);
+  if (options.fixture === "transport") {
+    return runTransportFixture(options.endpointClasses);
+  }
 
   if (options.statusOnly) {
     const captureId =
