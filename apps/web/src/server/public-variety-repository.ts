@@ -289,7 +289,9 @@ export async function getPublicVarietyPageByCatalogItemId(
         entry.entryPublicSlug,
       ),
       plantObjectDisplayName: entry.objectDisplayName,
-      varietyText: entry.varietyText,
+      // ADR-0026 D6: an object linked by curation keeps the gardener's own
+      // name in variety_text; the public page names the card, never the label.
+      varietyText: item.canonicalName,
       safeLocationLabel: getPublicLocationLabel(entry),
       media:
         entry.mediaDerivativeKey && entry.mediaId

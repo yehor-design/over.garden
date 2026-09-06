@@ -316,6 +316,40 @@ Nothing a gardener or a crawler sees changed: no row was deleted or renamed,
 migration `0061`. The deploy order was migration first, then code, and the code
 in the same pull request reads nothing the old schema lacks.
 
+## The 2026-09-06 application of `0056`
+
+Executed by the OVE-390 executor under the owner's standing authorization of
+2026-09-05 (`docs/ORGANISM_GRAPH_EXECUTION.md`, section 1), from the PR branch
+before the merge, with `scripts/apply-reviewed-migration.ts` and the pulled
+production environment (deleted afterwards).
+
+**Before** (`--mode inventory`, host class `digitalocean_managed`, database
+`defaultdb`): `0054`, `0055` and `0062` applied, `0056` missing (absent: table
+`catalog_reconcile_thresholds`). Read-only counts: 24 jobs of the three
+retired kinds, every one of them `done` (16 `catalog_match_suggestions_refresh`,
+4 `catalog_alias_suggestions_refresh`, 4 `catalog_fuzzy_duplicate_qa_refresh`),
+so retiring the kinds strands nothing; `catalog_curation_queue` and
+`catalog_curation_actions` empty; 14 objects carrying a gardener's own name
+with no card; 0 unlinked source records; 15,914 active, addressed, global
+nodes; the heartbeat's six-handler set.
+
+**Apply** (`--mode apply --migration 0056`): 358 ms. The applier's
+`statementCount` counts semicolons and reported 150; the file holds about
+twenty statements, three of them plpgsql bodies, and is sent as one.
+
+**After** (`--mode inventory`: applied, nothing absent; read-only readback):
+the functions `catalog_apply_queue_item`, `catalog_revert_action` and
+`catalog_record_card_intents` exist; `catalog_reconcile_thresholds` holds six
+rules at 0.9500; the payload checks are
+`job_queue_catalog_reconcile_payload_check`,
+`job_queue_catalog_curation_apply_payload_check`,
+`job_queue_catalog_threshold_recalibrate_payload_check`,
+`job_queue_catalog_source_refresh_payload_check` beside the unchanged
+`job_queue_catalog_typeahead_payload_check`; the three retired kinds' checks
+are gone. No row of `catalog_items`, `plant_objects` or `job_queue` was
+touched: the migration adds constraints, a table, its seed and three
+functions.
+
 ## The 2026-09-06 application of `0062`
 
 Executed by the OVE-389 executor under the owner's standing authorization of

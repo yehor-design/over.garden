@@ -91,28 +91,6 @@ describe("catalog alias curation repository", () => {
     }
   });
 
-  it("enqueues one exact idempotent worker job per catalog identity", async () => {
-    const repository = await loadRepository();
-    const catalogItemId = "00000000-0000-4000-8000-000000000101";
-    const compiled = (
-      repository.buildEnqueueCatalogAliasSuggestionsRefreshJobQuery as unknown as (
-        executor: Kysely<Database>,
-        catalogItemId: string,
-      ) => { compile(): { sql: string; parameters: readonly unknown[] } }
-    )(testDb, catalogItemId).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.sql).toContain("on conflict");
-    expect(compiled.sql).toContain("rerun_requested");
-    expect(compiled.parameters).toContain("matching");
-    expect(compiled.parameters).toContain(
-      "matching:catalog_alias_suggestions_refresh:" + catalogItemId,
-    );
-    expect(JSON.stringify(compiled.parameters)).toContain(
-      "catalog_alias_suggestions_refresh",
-    );
-    expect(JSON.stringify(compiled.parameters)).not.toContain("journalBody");
-  });
 
   it("locks the proposal, source name, and catalog identity before approval", async () => {
     const repository = await loadRepository();

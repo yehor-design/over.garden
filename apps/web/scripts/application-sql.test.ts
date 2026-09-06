@@ -55,6 +55,7 @@ describe("versioned application SQL bootstrap", () => {
       "0053_ove385_retire_stable_registry_release_tables.sql",
       "0054_ove386_organism_graph_foundation.sql",
       "0055_ove387_labels_instead_of_provisional_cards.sql",
+      "0056_ove390_reconciliation_contracts.sql",
       "0062_ove389_catalog_card_intents.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);

@@ -16,121 +16,118 @@ def test_worker_handles_catalog_reindex(monkeypatch):
     assert calls == ["conn"]
 
 
-def test_worker_handles_catalog_match_suggestion_refresh(monkeypatch):
+def test_worker_handles_catalog_reconcile_with_and_without_its_optional_keys(monkeypatch):
     calls = []
+    monkeypatch.setattr(
+        worker,
+        "reconcile",
+        lambda conn, scope, source_slug, since: calls.append(
+            (conn, scope, source_slug, since)
+        ),
+    )
 
-    def fake_refresh(conn, source_catalog_item_id):
-        calls.append((conn, source_catalog_item_id))
-
-    monkeypatch.setattr(worker, "refresh_catalog_match_suggestions", fake_refresh)
-
+    worker._handle("conn", {"kind": "catalog_reconcile", "scope": "labels"})
     worker._handle(
         "conn",
         {
-            "kind": "catalog_match_suggestions_refresh",
-            "sourceCatalogItemId": "00000000-0000-4000-8000-000000000201",
+            "kind": "catalog_reconcile",
+            "scope": "source_records",
+            "source_slug": "ua-state-register",
+            "since": "2026-09-06T00:00:00Z",
         },
     )
 
     assert calls == [
-        ("conn", "00000000-0000-4000-8000-000000000201"),
+        ("conn", "labels", None, None),
+        ("conn", "source_records", "ua-state-register", "2026-09-06T00:00:00Z"),
     ]
 
 
-def test_worker_handles_catalog_alias_suggestion_refresh(monkeypatch):
-    calls = []
+def test_worker_refuses_a_reconcile_scope_outside_the_closed_set(monkeypatch):
+    monkeypatch.setattr(worker, "reconcile", lambda **_kwargs: None)
 
+    with pytest.raises(ValueError, match="closed set"):
+        worker._handle("conn", {"kind": "catalog_reconcile", "scope": "everything"})
+
+
+def test_worker_rejects_extra_reconcile_payload_keys_without_echoing_them():
+    with pytest.raises(ValueError, match="unsupported payload shape") as error:
+        worker._handle(
+            "conn",
+            {
+                "kind": "catalog_reconcile",
+                "scope": "labels",
+                "journalBody": "do-not-leak",
+            },
+        )
+
+    assert "do-not-leak" not in str(error.value)
+
+
+def test_worker_handles_catalog_curation_apply(monkeypatch):
+    calls = []
     monkeypatch.setattr(
         worker,
-        "refresh_catalog_alias_suggestions",
-        lambda conn, catalog_item_id: calls.append((conn, catalog_item_id)),
-        raising=False,
+        "apply_queue_item",
+        lambda conn, queue_item_id: calls.append((conn, queue_item_id)),
     )
 
     worker._handle(
         "conn",
         {
-            "kind": "catalog_alias_suggestions_refresh",
-            "catalogItemId": "00000000-0000-4000-8000-000000000101",
+            "kind": "catalog_curation_apply",
+            "queue_item_id": "00000000-0000-4000-8000-000000000301",
         },
     )
 
-    assert calls == [
-        ("conn", "00000000-0000-4000-8000-000000000101"),
-    ]
+    assert calls == [("conn", "00000000-0000-4000-8000-000000000301")]
 
 
-def test_worker_handles_catalog_fuzzy_duplicate_qa_refresh(monkeypatch):
-    calls = []
-    monkeypatch.setattr(
-        worker,
-        "refresh_catalog_fuzzy_duplicate_suggestions",
-        lambda conn: calls.append(conn),
-        raising=False,
-    )
-
-    worker._handle("conn", {"kind": "catalog_fuzzy_duplicate_qa_refresh"})
-
-    assert calls == ["conn"]
-
-
-def test_worker_rejects_extra_fuzzy_qa_payload_keys_without_echoing_them():
-    with pytest.raises(ValueError, match="unsupported payload shape") as error:
-        worker._handle(
-            "conn",
-            {
-                "kind": "catalog_fuzzy_duplicate_qa_refresh",
-                "journalBody": "do-not-leak",
-            },
-        )
-
-    assert "do-not-leak" not in str(error.value)
-
-
-def test_worker_rejects_private_fields_in_catalog_alias_payload(monkeypatch):
-    monkeypatch.setattr(
-        worker,
-        "refresh_catalog_alias_suggestions",
-        lambda *_args: None,
-        raising=False,
-    )
-
-    with pytest.raises(ValueError, match="unsupported payload shape") as error:
-        worker._handle(
-            "conn",
-            {
-                "kind": "catalog_alias_suggestions_refresh",
-                "catalogItemId": "00000000-0000-4000-8000-000000000101",
-                "journalBody": "do-not-leak",
-            },
-        )
-
-    assert "do-not-leak" not in str(error.value)
-
-
-def test_worker_rejects_extra_catalog_match_payload_keys_without_echoing_them():
-    with pytest.raises(ValueError, match="unsupported payload shape") as error:
-        worker._handle(
-            "conn",
-            {
-                "kind": "catalog_match_suggestions_refresh",
-                "sourceCatalogItemId": "00000000-0000-4000-8000-000000000201",
-                "journalBody": "do-not-leak",
-            },
-        )
-
-    assert "do-not-leak" not in str(error.value)
-
-
-def test_worker_requires_a_uuid_catalog_match_source_id():
+def test_worker_requires_a_uuid_curation_queue_item():
     with pytest.raises(ValueError, match="valid UUID"):
         worker._handle(
             "conn",
-            {
-                "kind": "catalog_match_suggestions_refresh",
-                "sourceCatalogItemId": "not-a-uuid",
-            },
+            {"kind": "catalog_curation_apply", "queue_item_id": "item-1"},
         )
+
+
+def test_worker_handles_threshold_recalibration_and_refuses_extra_keys(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        worker, "recalibrate_thresholds", lambda conn: calls.append(conn)
+    )
+
+    worker._handle("conn", {"kind": "catalog_threshold_recalibrate"})
+    assert calls == ["conn"]
+
+    with pytest.raises(ValueError, match="unsupported payload shape") as error:
+        worker._handle(
+            "conn",
+            {"kind": "catalog_threshold_recalibrate", "journalBody": "do-not-leak"},
+        )
+    assert "do-not-leak" not in str(error.value)
+
+
+def test_worker_records_a_source_refresh_without_ingesting_yet(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        worker, "record_source_refresh", lambda source_slug: calls.append(source_slug)
+    )
+
+    worker._handle("conn", {"kind": "catalog_source_refresh", "source_slug": "eppo"})
+
+    assert calls == ["eppo"]
+
+
+def test_worker_terminalises_a_retired_kind_without_echoing_its_payload():
+    for kind in (
+        "catalog_match_suggestions_refresh",
+        "catalog_alias_suggestions_refresh",
+        "catalog_fuzzy_duplicate_qa_refresh",
+    ):
+        with pytest.raises(ValueError, match="unsupported job kind") as error:
+            worker._handle("conn", {"kind": kind, "journalBody": "do-not-leak"})
+        assert "do-not-leak" not in str(error.value)
 
 
 JOURNAL_ENTRY_ID = "9f9a1f0c-0f1a-4a2b-8c3d-4e5f60718293"
@@ -306,13 +303,10 @@ def test_worker_requires_journal_payload_fields_without_echoing_values():
             },
         )
 
-    with pytest.raises(ValueError, match="sourceCatalogItemId is required"):
+    with pytest.raises(ValueError, match="source_slug is required"):
         worker._handle(
             "conn",
-            {
-                "kind": "catalog_match_suggestions_refresh",
-                "sourceCatalogItemId": " ",
-            },
+            {"kind": "catalog_source_refresh", "source_slug": " "},
         )
 
     with pytest.raises(ValueError, match="userId is required"):
@@ -330,8 +324,8 @@ def test_claim_sql_reclaims_stale_processing_jobs():
     assert "status = 'processing'" in worker.CLAIM_JOB_SQL
     assert "locked_at <= now()" in worker.CLAIM_JOB_SQL
     assert "for update skip locked" in worker.CLAIM_JOB_SQL.lower()
-    assert "catalog_match_suggestions_refresh" in worker.CLAIM_JOB_SQL
-    assert "catalog_fuzzy_duplicate_qa_refresh" in worker.CLAIM_JOB_SQL
+    assert "catalog_reconcile" in worker.CLAIM_JOB_SQL
+    assert "catalog_source_refresh" in worker.CLAIM_JOB_SQL
     normalized_renewal = " ".join(worker.RENEW_CLAIM_LEASE_SQL.split()).lower()
     assert "set locked_at = now()" in normalized_renewal
     assert "status = 'processing'" in normalized_renewal

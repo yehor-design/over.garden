@@ -21,17 +21,22 @@ from uuid import UUID, uuid4
 import psycopg
 from psycopg.rows import dict_row
 
-from app.catalog_aliases import refresh_catalog_alias_suggestions
-from app.catalog_matching import refresh_catalog_match_suggestions
-from app.catalog_fuzzy_duplicates import refresh_catalog_fuzzy_duplicate_suggestions
+from app.catalog_reconcile import (
+    SCOPES as RECONCILE_SCOPES,
+    apply_queue_item,
+    recalibrate_thresholds,
+    reconcile,
+    record_source_refresh,
+)
 from app.job_handlers import SUPPORTED_JOB_KINDS
 # Every kind literal comes from the generated contract rather than from the
 # module that happens to handle it, so dispatch and the manifest cannot disagree
 # about what a kind is called.
 from app.job_queue_contract import (
-    CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
-    CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND,
-    CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
+    CATALOG_CURATION_APPLY_KIND,
+    CATALOG_RECONCILE_KIND,
+    CATALOG_SOURCE_REFRESH_KIND,
+    CATALOG_THRESHOLD_RECALIBRATE_KIND,
     CATALOG_TYPEAHEAD_REINDEX_KIND,
     JOURNAL_ENTRY_INDEX_KIND,
     JOURNAL_ENTRY_UNINDEX_KIND,
@@ -73,8 +78,15 @@ WORKER_NOTIFY_CHANNEL = os.environ.get(
     "WORKER_NOTIFY_CHANNEL", "matching_worker_wake"
 )
 VISIBILITY_TIMEOUT_SECONDS = int(os.environ.get("WORKER_VT_SECONDS", "30"))
-CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS = int(
-    os.environ.get("CATALOG_MATCH_WORKER_VT_SECONDS", "300")
+# The catalog scans hold their claim far longer than an index write: the
+# reconciliation ladder reads the whole graph, and a source refresh will read a
+# whole snapshot. The historic env name still wins so the deployed worker.env
+# needs no edit (ADR-0026 D4).
+CATALOG_SCAN_VISIBILITY_TIMEOUT_SECONDS = int(
+    os.environ.get(
+        "CATALOG_MATCH_WORKER_VT_SECONDS",
+        os.environ.get("CATALOG_SCAN_WORKER_VT_SECONDS", "300"),
+    )
 )
 MAX_BACKOFF_SECONDS = int(os.environ.get("WORKER_MAX_BACKOFF_SECONDS", "3600"))
 PUBLIC_PROJECTION_DRAIN_BATCH = int(
@@ -127,9 +139,8 @@ where queue_name = %s
       and locked_at <= now() - (
         case
           when payload->>'kind' in (
-            '{CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND}',
-            '{CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND}',
-            '{CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND}'
+            '{CATALOG_RECONCILE_KIND}',
+            '{CATALOG_SOURCE_REFRESH_KIND}'
           ) then %s
           else %s
         end || ' seconds'
@@ -227,42 +238,42 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
         reindex_catalog_typeahead(conn)
         return
 
-    if kind == CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND:
-        _require_exact_payload_shape(
-            payload,
-            CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
-        )
-        refresh_catalog_match_suggestions(
+    if kind == CATALOG_RECONCILE_KIND:
+        _require_exact_payload_shape(payload, CATALOG_RECONCILE_KIND)
+        scope = _payload_text(payload, "scope", CATALOG_RECONCILE_KIND)
+        if scope not in RECONCILE_SCOPES:
+            raise TerminalJobError(
+                "invalid_payload",
+                f"scope is outside the closed set for {CATALOG_RECONCILE_KIND}",
+            )
+        source_slug = payload.get("source_slug")
+        since = payload.get("since")
+        reconcile(
             conn,
-            _payload_uuid_text(
-                payload,
-                "sourceCatalogItemId",
-                CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
-            ),
+            scope=scope,
+            source_slug=source_slug if isinstance(source_slug, str) else None,
+            since=since if isinstance(since, str) else None,
         )
         return
 
-    if kind == CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND:
-        _require_exact_payload_shape(
-            payload,
-            CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
-        )
-        refresh_catalog_alias_suggestions(
+    if kind == CATALOG_CURATION_APPLY_KIND:
+        _require_exact_payload_shape(payload, CATALOG_CURATION_APPLY_KIND)
+        apply_queue_item(
             conn,
-            _payload_uuid_text(
-                payload,
-                "catalogItemId",
-                CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
-            ),
+            _payload_uuid_text(payload, "queue_item_id", CATALOG_CURATION_APPLY_KIND),
         )
         return
 
-    if kind == CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND:
-        _require_exact_payload_shape(
-            payload,
-            CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND,
+    if kind == CATALOG_THRESHOLD_RECALIBRATE_KIND:
+        _require_exact_payload_shape(payload, CATALOG_THRESHOLD_RECALIBRATE_KIND)
+        recalibrate_thresholds(conn)
+        return
+
+    if kind == CATALOG_SOURCE_REFRESH_KIND:
+        _require_exact_payload_shape(payload, CATALOG_SOURCE_REFRESH_KIND)
+        record_source_refresh(
+            _payload_text(payload, "source_slug", CATALOG_SOURCE_REFRESH_KIND),
         )
-        refresh_catalog_fuzzy_duplicate_suggestions(conn)
         return
 
     if kind == JOURNAL_ENTRY_INDEX_KIND:
@@ -343,7 +354,7 @@ def _claim(conn: psycopg.Connection) -> dict[str, Any] | None:
             CLAIM_JOB_SQL,
             (
                 QUEUE_NAME,
-                CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS,
+                CATALOG_SCAN_VISIBILITY_TIMEOUT_SECONDS,
                 VISIBILITY_TIMEOUT_SECONDS,
             ),
         ).fetchone()

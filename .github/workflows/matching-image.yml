@@ -115,6 +115,8 @@ jobs:
           sudo apt-get install -y build-essential jq pkg-config libicu-dev python3-dev shellcheck zstd
           python -m pip install uv==0.11.24
           uv sync --frozen
+          scripts/install-gnparser.sh "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Compile every Python module
         working-directory: services/matching

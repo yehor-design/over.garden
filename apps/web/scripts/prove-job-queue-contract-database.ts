@@ -31,7 +31,7 @@ import { loadVersionedApplicationSql } from "./application-sql";
  * Migrations this proof owns: the handler set, its shape, the payload checks,
  * and the retirement that takes three of those checks away again.
  */
-const CONTRACT_MIGRATIONS = /^(0050|0051|0052|0053)_/u;
+const CONTRACT_MIGRATIONS = /^(0050|0051|0052|0053|0056)_/u;
 
 const UUID_A = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
 const UUID_B = "3f2504e0-4f89-41d3-9a0c-0305e82c3302";
@@ -215,6 +215,75 @@ const CASES: readonly Case[] = [
       }),
   },
   {
+    name: "0056 accepts a catalog_reconcile payload with its optional keys",
+    expect: "accepted",
+    run: (pool) =>
+      enqueue(pool, "matching", {
+        kind: "catalog_reconcile",
+        scope: "labels",
+        source_slug: "ua-state-register",
+        since: "2026-09-06T00:00:00Z",
+      }),
+  },
+  {
+    name: "0056 refuses a catalog_reconcile scope outside the closed set",
+    expect: "refused",
+    run: (pool) =>
+      enqueue(pool, "matching", { kind: "catalog_reconcile", scope: "everything" }),
+  },
+  {
+    name: "0056 refuses catalog_reconcile carrying a key outside its contract",
+    expect: "refused",
+    run: (pool) =>
+      enqueue(pool, "matching", { kind: "catalog_reconcile", scope: "labels", userId: UUID_A }),
+  },
+  {
+    name: "0056 accepts catalog_curation_apply with a UUID queue item",
+    expect: "accepted",
+    run: (pool) =>
+      enqueue(pool, "matching", { kind: "catalog_curation_apply", queue_item_id: UUID_A }),
+  },
+  {
+    name: "0056 refuses catalog_curation_apply with a non-UUID queue item",
+    expect: "refused",
+    run: (pool) =>
+      enqueue(pool, "matching", { kind: "catalog_curation_apply", queue_item_id: "item-1" }),
+  },
+  {
+    name: "0056 accepts the kind-only catalog_threshold_recalibrate and refuses extras",
+    expect: "accepted",
+    run: (pool) => enqueue(pool, "matching", { kind: "catalog_threshold_recalibrate" }),
+  },
+  {
+    name: "0056 refuses catalog_threshold_recalibrate carrying anything else",
+    expect: "refused",
+    run: (pool) =>
+      enqueue(pool, "matching", { kind: "catalog_threshold_recalibrate", rule: "x" }),
+  },
+  {
+    name: "0056 accepts catalog_source_refresh with a source slug",
+    expect: "accepted",
+    run: (pool) =>
+      enqueue(pool, "matching", { kind: "catalog_source_refresh", source_slug: "eppo" }),
+  },
+  {
+    name: "0056 refuses catalog_source_refresh with a malformed slug",
+    expect: "refused",
+    run: (pool) =>
+      enqueue(pool, "matching", { kind: "catalog_source_refresh", source_slug: "EPPO Global" }),
+  },
+  {
+    // 0056 retired the three suggestion kinds with their constraints; the
+    // worker terminalises any such job as unsupported_kind.
+    name: "0056 no longer polices a catalog_match_suggestions_refresh payload",
+    expect: "accepted",
+    run: (pool) =>
+      enqueue(pool, "matching", {
+        kind: "catalog_match_suggestions_refresh",
+        sourceCatalogItemId: "not-a-uuid",
+      }),
+  },
+  {
     // Each constraint is scoped to its own kind, so none of them may start
     // policing a payload it was never given a contract for.
     name: "0052 leaves an unrelated kind alone",
@@ -262,11 +331,18 @@ export async function runJobQueueContractDatabaseProof() {
 
   try {
     await pool.query(MINIMAL_SCHEMA);
+    // This proof holds two tables and the CHECK constraints over them. `0056`
+    // also creates the curation functions, whose plpgsql validator resolves
+    // the catalog tables at CREATE time and would fail here for a reason that
+    // has nothing to do with a payload contract. The functions are proven
+    // against a full schema by the worker's executed tests
+    // (`services/matching/tests/test_catalog_reconcile_database.py`).
+    await pool.query("set check_function_bodies = off");
 
     const migrations = (
       await loadVersionedApplicationSql(path.join(process.cwd(), "sql"))
     ).filter((migration) => CONTRACT_MIGRATIONS.test(migration.name));
-    if (migrations.length !== 4) {
+    if (migrations.length !== 5) {
       throw new Error("job_queue_contract_migrations_missing");
     }
     for (const migration of migrations) {

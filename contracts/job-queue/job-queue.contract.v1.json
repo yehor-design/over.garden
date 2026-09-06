@@ -1,6 +1,6 @@
 {
   "schema": "overgarden.jobQueueContract.v1",
-  "manifestVersion": "ove255.job-queue.v4",
+  "manifestVersion": "ove390.job-queue.v5",
   "matchingQueueName": "matching",
   "matchingDefaultMaxAttempts": 8,
   "terminalErrorCodes": [
@@ -9,9 +9,10 @@
     "max_attempts_exceeded"
   ],
   "supportedMatchingKinds": [
-    "catalog_alias_suggestions_refresh",
-    "catalog_fuzzy_duplicate_qa_refresh",
-    "catalog_match_suggestions_refresh",
+    "catalog_curation_apply",
+    "catalog_reconcile",
+    "catalog_source_refresh",
+    "catalog_threshold_recalibrate",
     "catalog_typeahead_reindex",
     "journal_entry_index",
     "journal_entry_unindex"
@@ -19,7 +20,7 @@
   "entries": [
     {
       "queueName": "matching",
-      "kind": "catalog_alias_suggestions_refresh",
+      "kind": "catalog_curation_apply",
       "consumer": "matching-python-worker",
       "maxAttempts": 8,
       "privacyClass": "catalog_ids_only",
@@ -27,19 +28,58 @@
       "payloadContract": {
         "requiredKeys": [
           "kind",
-          "catalogItemId"
+          "queue_item_id"
         ],
         "optionalKeys": [],
         "uuidKeys": [
-          "catalogItemId"
+          "queue_item_id"
         ]
       },
-      "payloadConstraint": "job_queue_catalog_alias_payload_check",
-      "notes": "Allowlisted catalogItemId only."
+      "payloadConstraint": "job_queue_catalog_curation_apply_payload_check",
+      "notes": "Applies one open curation queue item through catalog_apply_queue_item."
     },
     {
       "queueName": "matching",
-      "kind": "catalog_fuzzy_duplicate_qa_refresh",
+      "kind": "catalog_reconcile",
+      "consumer": "matching-python-worker",
+      "maxAttempts": 8,
+      "privacyClass": "identifiers_only",
+      "coversStructuredJournalCover": false,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "scope"
+        ],
+        "optionalKeys": [
+          "source_slug",
+          "since"
+        ],
+        "uuidKeys": []
+      },
+      "payloadConstraint": "job_queue_catalog_reconcile_payload_check",
+      "notes": "scope is one of labels, source_records, duplicates; source_slug and since narrow a run. No gardener data."
+    },
+    {
+      "queueName": "matching",
+      "kind": "catalog_source_refresh",
+      "consumer": "matching-python-worker",
+      "maxAttempts": 8,
+      "privacyClass": "identifiers_only",
+      "coversStructuredJournalCover": false,
+      "payloadContract": {
+        "requiredKeys": [
+          "kind",
+          "source_slug"
+        ],
+        "optionalKeys": [],
+        "uuidKeys": []
+      },
+      "payloadConstraint": "job_queue_catalog_source_refresh_payload_check",
+      "notes": "A source's refresh; the handler records a run until a source task implements the ingest."
+    },
+    {
+      "queueName": "matching",
+      "kind": "catalog_threshold_recalibrate",
       "consumer": "matching-python-worker",
       "maxAttempts": 8,
       "privacyClass": "empty_payload",
@@ -51,28 +91,8 @@
         "optionalKeys": [],
         "uuidKeys": []
       },
-      "payloadConstraint": "job_queue_catalog_fuzzy_duplicate_payload_check",
-      "notes": "Kind-only payload."
-    },
-    {
-      "queueName": "matching",
-      "kind": "catalog_match_suggestions_refresh",
-      "consumer": "matching-python-worker",
-      "maxAttempts": 8,
-      "privacyClass": "catalog_ids_only",
-      "coversStructuredJournalCover": false,
-      "payloadContract": {
-        "requiredKeys": [
-          "kind",
-          "sourceCatalogItemId"
-        ],
-        "optionalKeys": [],
-        "uuidKeys": [
-          "sourceCatalogItemId"
-        ]
-      },
-      "payloadConstraint": "job_queue_catalog_match_payload_check",
-      "notes": "Allowlisted sourceCatalogItemId only."
+      "payloadConstraint": "job_queue_catalog_threshold_recalibrate_payload_check",
+      "notes": "Kind-only: recalibrates the per-rule auto-accept thresholds from revert rates."
     },
     {
       "queueName": "matching",

@@ -35,26 +35,34 @@ const consumedJobContracts = new Map<
     },
   ],
   [
-    "matching:catalog_alias_suggestions_refresh",
+    "matching:catalog_reconcile",
     {
       consumer: "services/matching/app/worker.py",
-      consumerToken: "CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND",
+      consumerToken: "CATALOG_RECONCILE_KIND",
       testedBy: "services/matching/tests/test_worker.py",
     },
   ],
   [
-    "matching:catalog_match_suggestions_refresh",
+    "matching:catalog_curation_apply",
     {
       consumer: "services/matching/app/worker.py",
-      consumerToken: "CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND",
+      consumerToken: "CATALOG_CURATION_APPLY_KIND",
       testedBy: "services/matching/tests/test_worker.py",
     },
   ],
   [
-    "matching:catalog_fuzzy_duplicate_qa_refresh",
+    "matching:catalog_threshold_recalibrate",
     {
       consumer: "services/matching/app/worker.py",
-      consumerToken: "CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND",
+      consumerToken: "CATALOG_THRESHOLD_RECALIBRATE_KIND",
+      testedBy: "services/matching/tests/test_worker.py",
+    },
+  ],
+  [
+    "matching:catalog_source_refresh",
+    {
+      consumer: "services/matching/app/worker.py",
+      consumerToken: "CATALOG_SOURCE_REFRESH_KIND",
       testedBy: "services/matching/tests/test_worker.py",
     },
   ],
@@ -121,9 +129,19 @@ describe("job queue producer/consumer contract", () => {
     expect(unsupported).toEqual([]);
     expect(producers).toEqual([
       {
-        source: "server/catalog-alias-curation-repository.ts",
+        source: "server/catalog-curation-repository.ts",
         queueName: "matching",
-        kind: "catalog_alias_suggestions_refresh",
+        kind: "catalog_curation_apply",
+      },
+      {
+        source: "server/catalog-curation-repository.ts",
+        queueName: "matching",
+        kind: "catalog_reconcile",
+      },
+      {
+        source: "server/catalog-curation-repository.ts",
+        queueName: "matching",
+        kind: "catalog_threshold_recalibrate",
       },
       {
         source: "server/catalog-repository.ts",
@@ -139,11 +157,6 @@ describe("job queue producer/consumer contract", () => {
         source: "server/catalog-source/breed-seed-import.ts",
         queueName: "matching",
         kind: "catalog_typeahead_reindex",
-      },
-      {
-        source: "server/catalog-source/entity-resolution-qa-repository.ts",
-        queueName: "matching",
-        kind: "catalog_fuzzy_duplicate_qa_refresh",
       },
       {
         source:
