@@ -141,6 +141,11 @@ describe("job queue producer/consumer contract", () => {
       {
         source: "server/catalog-curation-repository.ts",
         queueName: "matching",
+        kind: "catalog_source_refresh",
+      },
+      {
+        source: "server/catalog-curation-repository.ts",
+        queueName: "matching",
         kind: "catalog_threshold_recalibrate",
       },
       {

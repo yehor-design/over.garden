@@ -159,6 +159,45 @@ export function OwnerScopedActionForm({
   );
 }
 
+/**
+ * The same form, for an action already shaped `(previousState, formData)`.
+ *
+ * React gives a `<form>` a real endpoint only from a Server Action reference
+ * or the `formAction` `useActionState` derives from one. `OwnerScopedActionForm`
+ * adapts a `(formData)` action inside a client closure, and React answers with
+ * `action="javascript:throw new Error('React form unexpectedly submitted.')"` —
+ * a placeholder it replaces on hydration and never before. This variant passes
+ * the reference straight through, so the control decides before the bundle
+ * runs (ADR-0024 D3, ADR-0026 D10). Prefer it for every new owner surface.
+ */
+export function OwnerScopedProgressiveForm({
+  action,
+  children,
+  ...props
+}: Omit<React.ComponentProps<"form">, "action"> & {
+  action: (previousState: unknown, formData: FormData) => Promise<unknown>;
+}) {
+  const ownerScope = useOptionalOwnerScope();
+  const handledStateRef = useRef<unknown>(undefined);
+  const [state, formAction] = useActionState<unknown, FormData>(
+    action,
+    undefined,
+  );
+
+  useEffect(() => {
+    if (state === undefined || handledStateRef.current === state) return;
+    handledStateRef.current = state;
+    ownerScope?.handleActionResult(state);
+  }, [ownerScope, state]);
+
+  return (
+    <form {...props} action={formAction}>
+      <OwnerUserIdField />
+      {children}
+    </form>
+  );
+}
+
 export function readMutationScopeCode(
   result: unknown,
 ): MutationScopeCode | null {

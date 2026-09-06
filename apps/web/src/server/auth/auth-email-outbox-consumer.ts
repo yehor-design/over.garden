@@ -5,18 +5,24 @@ import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
 
 import { db } from "@/db";
-import { sendAuthPasswordResetEmail } from "@/lib/auth/resend-auth-email-delivery";
+import {
+  sendAuthPasswordResetEmail,
+  sendOwnerCatalogDigestEmail,
+} from "@/lib/auth/resend-auth-email-delivery";
 import { resetUrlForVerification } from "@/server/auth/auth-email-outbox";
 
 const LEASE_SECONDS = 180;
 const MAX_ATTEMPTS = 8;
 const PROVIDER_TIMEOUT_MS = 20_000;
 export const AUTH_EMAIL_OUTBOX_INVOCATION_BUDGET_MS = 45_000;
+/** The second message kind the outbox carries (ADR-0026 D10, migration 0063). */
+export const OWNER_CATALOG_DIGEST_KIND = "owner_catalog_digest";
 
 interface ClaimedOutboxRow {
   id: string;
   attempts: number;
   leaseToken: string;
+  kind: string;
 }
 
 interface DeliverableOutboxRow {
@@ -24,6 +30,13 @@ interface DeliverableOutboxRow {
   identifier: string;
   email: string;
   expiresAt: Date;
+}
+
+/** The owner's weekly catalog digest (ADR-0026 D10, migration 0063). */
+interface DeliverableDigestRow {
+  id: string;
+  email: string;
+  payload: Record<string, unknown>;
 }
 
 export interface AuthEmailOutboxDrainResult {
@@ -67,6 +80,33 @@ export async function drainAuthEmailOutbox(
     if (claim.reclaimed) reclaimed += 1;
 
     try {
+      const signal = AbortSignal.timeout(
+        Math.max(
+          1,
+          Math.min(PROVIDER_TIMEOUT_MS, budgetMs - (now() - startedAt)),
+        ),
+      );
+
+      if (claim.kind === OWNER_CATALOG_DIGEST_KIND) {
+        const digest = await loadDeliverableDigest(claim.id);
+        // A digest whose owner is gone is cancelled, not retried: nothing
+        // about it can become deliverable later.
+        if (!digest) {
+          await settleClaim(claim, "cancelled", null);
+          cancelled += 1;
+          continue;
+        }
+        await sendOwnerCatalogDigestEmail({
+          email: digest.email,
+          signal,
+          summary: digest.payload,
+          userId: digest.id,
+        });
+        await settleClaim(claim, "sent", null);
+        sent += 1;
+        continue;
+      }
+
       const deliverable = await loadDeliverable(claim.id);
       const resetUrl = deliverable
         ? resetUrlForVerification(deliverable.identifier)
@@ -79,12 +119,7 @@ export async function drainAuthEmailOutbox(
 
       await sendAuthPasswordResetEmail({
         email: deliverable.email,
-        signal: AbortSignal.timeout(
-          Math.max(
-            1,
-            Math.min(PROVIDER_TIMEOUT_MS, budgetMs - (now() - startedAt)),
-          ),
-        ),
+        signal,
         url: resetUrl,
         userId: deliverable.id,
       });
@@ -130,6 +165,7 @@ async function claimNextAuthEmailOutboxRow(
     id: string;
     attempts: number;
     previous_state: string;
+    kind: string;
   }>`
     with next_row as (
       select id, state as previous_state
@@ -151,7 +187,7 @@ async function claimNextAuthEmailOutboxRow(
         updated_at = now()
     from next_row
     where outbox.id = next_row.id
-    returning outbox.id, outbox.attempts, next_row.previous_state
+    returning outbox.id, outbox.attempts, outbox.kind, next_row.previous_state
   `.execute(db);
 
   const row = result.rows[0];
@@ -159,10 +195,29 @@ async function claimNextAuthEmailOutboxRow(
     ? {
         id: row.id,
         attempts: row.attempts,
+        kind: row.kind,
         leaseToken,
         reclaimed: row.previous_state === "processing",
       }
     : null;
+}
+
+async function loadDeliverableDigest(
+  id: string,
+): Promise<DeliverableDigestRow | null> {
+  const result = await sql<{
+    id: string;
+    email: string;
+    payload: Record<string, unknown>;
+  }>`
+    select outbox.id, "user".email, outbox.payload
+    from auth_email_outbox as outbox
+    join "user" on "user".id = outbox.recipient_user_id
+    where outbox.id = ${id}
+      and outbox.kind = ${OWNER_CATALOG_DIGEST_KIND}
+    limit 1
+  `.execute(db);
+  return result.rows[0] ?? null;
 }
 
 async function loadDeliverable(

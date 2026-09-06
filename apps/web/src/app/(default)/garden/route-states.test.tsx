@@ -116,12 +116,20 @@ describe("/garden route states", () => {
     },
   );
 
-  it("leaves no catalog segment behind under the workspace", async () => {
+  it("keeps the catalog segment to the owner's two curation surfaces", async () => {
     // The Release Center and its sub-pages were the `/garden/catalog/**`
-    // tree; ADR-0025 retired them. A stray segment here would render the
-    // garden home's skeleton for a page that no longer exists.
+    // tree; ADR-0025 retired them, and a stray segment would render the
+    // garden home's skeleton for a page that no longer exists. ADR-0026 D10
+    // put exactly two owner surfaces back, so the segment exists again and
+    // this asserts what may live under it.
     const garden = await readdir(new URL("./", import.meta.url));
-    expect(garden).not.toContain("catalog");
+    expect(garden).toContain("catalog");
+    const catalog = await readdir(new URL("./catalog/", import.meta.url), {
+      withFileTypes: true,
+    });
+    expect(
+      catalog.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort(),
+    ).toEqual(["queue", "sources"]);
   });
 });
 

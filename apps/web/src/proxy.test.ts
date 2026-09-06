@@ -148,6 +148,20 @@ describe("app route cache guardrail", () => {
       expect(response.headers.get("set-cookie"), path).toBeNull();
     }
 
+    // ADR-0026 D10: two owner surfaces live inside the retired namespace and
+    // must reach the workspace, while every retired sibling stays a 404.
+    for (const path of [
+      "/garden/catalog/queue",
+      "/garden/catalog/sources",
+      "/bg/garden/catalog/queue",
+    ]) {
+      const response = await responseFor(path, {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      });
+      expect(response.status, path).toBe(200);
+    }
+
     for (const preservedPath of [
       "/account/communities",
       "/account/communities/example",

@@ -29,6 +29,7 @@
     "schema:organism-graph:fingerprint": "tsx scripts/prove-organism-graph-foundation.ts --fingerprint",
     "schema:catalog-labels:prove-database": "tsx scripts/prove-catalog-picker-labels.ts",
     "schema:catalog-card:prove-database": "tsx scripts/prove-catalog-card-revalidate.ts",
+    "schema:owner-digest:prove-database": "tsx scripts/prove-owner-catalog-digest-outbox.ts",
     "catalog:typeahead:latency": "tsx scripts/prove-catalog-typeahead-latency.ts",
     "verify:retired-journal-media-migration": "tsx scripts/verify-retired-journal-media-migration.ts",
     "catalog:sources:import-sample": "tsx scripts/import-catalog-source-sample.ts",
@@ -122,7 +123,8 @@
     "identity:dry-run": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode dry-run",
     "identity:apply": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode apply",
     "identity:verify": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode verify",
-    "identity:rollback-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode rollback-proof"
+    "identity:rollback-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode rollback-proof",
+    "owner:seed-browser-fixture": "tsx scripts/seed-browser-owner-fixture.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",

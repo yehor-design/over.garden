@@ -78,8 +78,22 @@ export function verifyAdminMenuRepository() {
     .filter((absolutePath) =>
       /["'`]\/admin(?:\/|["'`])/.test(readFileSync(absolutePath, "utf8")),
     );
+  /**
+   * The property is that role resolution is bounded, not that the bound is a
+   * particular number: the deadline was widened from 250 ms to 2 s with the
+   * workspace shell work, and the pinned literal here kept failing this gate
+   * on a clean tree long after. Read the value and require it to be finite
+   * and small.
+   */
+  const roleDeadlineMs = Number(
+    /ADMIN_ROLE_RESOLUTION_DEADLINE_MS = ([\d_]+)/u
+      .exec(accessSource)?.[1]
+      ?.replaceAll("_", "") ?? Number.NaN,
+  );
   const roleBoundaryAligned =
-    accessSource.includes("ADMIN_ROLE_RESOLUTION_DEADLINE_MS = 250") &&
+    Number.isFinite(roleDeadlineMs) &&
+    roleDeadlineMs > 0 &&
+    roleDeadlineMs <= 2_500 &&
     accessSource.includes("resolveAdminCapabilityAccessBounded") &&
     communityRepositorySource.includes(
       'assertAdminCapabilityForScope(scope, "operator:mutate", executor)',

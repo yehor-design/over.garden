@@ -75,17 +75,28 @@ describe("catalog curation repository (ADR-0026 D4)", () => {
         { queueItemId: ITEM, actorUserId: ACTOR, automatic: false },
         db,
       ),
-    ).resolves.toEqual({ actionId: ACTION });
+    ).resolves.toEqual({ actionId: ACTION, subjectCatalogItemIds: [] });
     expect(log[0]!.sql).toContain("select catalog_apply_queue_item(");
     expect(log[0]!.parameters).toEqual([ITEM, ACTOR, false]);
+    /**
+     * Two statements, and it matters: a query's snapshot predates the rows the
+     * function inserts, so a join on `catalog_curation_actions` in the same
+     * statement finds nothing and the decision throws after committing. Only
+     * a browser run against Postgres saw that; this pins the shape.
+     */
+    expect(log).toHaveLength(2);
+    expect(log[1]!.sql).toContain("from catalog_curation_actions");
+    expect(log[0]!.sql).not.toContain("join catalog_curation_actions");
 
     const revertLog: CompiledQuery[] = [];
     const revertDb = scriptedDb([{ revert_id: ACTION }], revertLog);
     await expect(
       revertCatalogAction({ actionId: ITEM, actorUserId: null }, revertDb),
-    ).resolves.toEqual({ revertActionId: ACTION });
+    ).resolves.toEqual({ revertActionId: ACTION, subjectCatalogItemIds: [] });
     expect(revertLog[0]!.sql).toContain("select catalog_revert_action(");
     expect(revertLog[0]!.parameters).toEqual([ITEM, null]);
+    expect(revertLog).toHaveLength(2);
+    expect(revertLog[0]!.sql).not.toContain("join catalog_curation_actions");
 
     // A function that returns nothing is a broken contract, not an empty result.
     const emptyDb = scriptedDb([], []);

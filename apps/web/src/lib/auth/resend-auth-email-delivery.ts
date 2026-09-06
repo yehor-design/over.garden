@@ -100,6 +100,76 @@ export function sendAuthVerificationEmail({
   });
 }
 
+/**
+ * The owner's weekly curation digest (ADR-0026 D10). It carries counts and a
+ * link to the queue, never a gardener's name, label or entry: the digest says
+ * how many decisions wait, not what anyone wrote.
+ */
+export function sendOwnerCatalogDigestEmail({
+  email,
+  env = process.env,
+  fetcher = fetch,
+  signal,
+  summary,
+  userId,
+}: {
+  email: string;
+  env?: EnvLike;
+  fetcher?: Fetcher;
+  signal?: AbortSignal;
+  summary: Record<string, unknown>;
+  userId?: string;
+}): Promise<void> {
+  const config = resolveResendAuthEmailConfig(env);
+  const queueUrl = canonicalizeAuthEmailUrl(
+    new URL("/garden/catalog/queue", publicSiteOrigin(env)).toString(),
+    env,
+  );
+  const content = buildOwnerCatalogDigestEmail(queueUrl, summary);
+
+  return sendResendAuthEmail({
+    category: "owner-catalog-digest",
+    config,
+    content,
+    email,
+    fetcher,
+    signal,
+    url: queueUrl,
+    userId,
+  });
+}
+
+/** Counts only, and every one of them a number this codebase computed. */
+export function buildOwnerCatalogDigestEmail(
+  queueUrl: string,
+  summary: Record<string, unknown>,
+): AuthEmailContent {
+  const escapedUrl = escapeHtml(queueUrl);
+  const lines = [
+    ["Open decisions", summary.openItems],
+    ["New this week", summary.newItems],
+    ["Carrying gardener objects", summary.withGardenerObjects],
+    ["Applied automatically this week", summary.autoAppliedItems],
+  ]
+    .filter((entry): entry is [string, number] => typeof entry[1] === "number")
+    .map(([label, value]) => `${label}: ${value}`);
+
+  return {
+    subject: "OverGarden catalog: this week's decisions",
+    text: [...lines, "", "Open the queue:", queueUrl].join("\n"),
+    html: [
+      "<p>This week in the OverGarden catalog:</p>",
+      `<ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`,
+      `<p><a href="${escapedUrl}">Open the curation queue</a></p>`,
+    ].join(""),
+  };
+}
+
+function publicSiteOrigin(env: EnvLike): string {
+  const configured = configuredEnvValue(env.PUBLIC_SITE_URL);
+  return configured ?? DEFAULT_PUBLIC_SITE_URL;
+}
+
 export function resolveResendAuthEmailConfig(
   env: EnvLike = process.env,
 ): ResendAuthEmailConfig {

@@ -157,6 +157,9 @@ jobs:
       - name: Prove the card intent migration, its rollback and the revalidation drain
         run: pnpm schema:catalog-card:prove-database
 
+      - name: Prove the owner digest outbox migration and its rollback
+        run: pnpm schema:owner-digest:prove-database
+
       - name: Lint
         run: pnpm lint
 
@@ -179,14 +182,21 @@ jobs:
       - name: Install Chromium for the browser proof
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Public hydration, catalog picker and organism address proofs
+      # The owner surfaces are gated on a user id the server reads at start, so
+      # the account exists before the server does.
+      - name: Seal the browser proof's owner account
+        run: pnpm owner:seed-browser-fixture
+
+      - name: Public hydration, catalog picker, organism address and owner curation proofs
         # The picker spec signs a synthetic gardener in over the API, and Better
         # Auth checks the request origin against BETTER_AUTH_URL: it must be the
         # origin the server answers on, not the build-time value. The address
-        # spec asserts real HTTP statuses (200, 308, 404) over HTTP alone.
+        # spec asserts real HTTP statuses (200, 308, 404) over HTTP alone. The
+        # curation spec needs the sealed owner id the step above wrote.
         env:
           BETTER_AUTH_URL: http://127.0.0.1:3179
           PUBLIC_SITE_URL: http://127.0.0.1:3179
+          OVERGARDEN_ADMIN_OWNER_USER_ID: 0ce39100-1ce3-4ce3-8ce3-0ce391000391
         run: |
           pnpm next start -p 3179 &
           for _ in $(seq 1 60); do
@@ -194,7 +204,7 @@ jobs:
             sleep 1
           done
           PLAYWRIGHT_BASE_URL=http://127.0.0.1:3179 \
-            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts
+            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/owner-catalog-curation.spec.ts
 
   matching:
     name: Python matching tier

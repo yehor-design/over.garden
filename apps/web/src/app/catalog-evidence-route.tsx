@@ -45,6 +45,12 @@ import {
 } from "@/server/public-organism-card-query";
 import { buildPublicVarietyDiscoverySource } from "@/server/public-variety-repository";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
+import { isOwnerUserId } from "@/server/admin-access";
+import {
+  listCatalogCardNames,
+  listOwnerActionAudit,
+} from "@/server/owner-action-audit";
+import { CatalogOwnerCardControls } from "@/app/catalog-owner-card-controls";
 import {
   describeWorkspaceFailure,
   recordWorkspaceSectionFailure,
@@ -178,6 +184,24 @@ export async function renderPublicCatalogEvidenceRoute(
     getCachedPublicCatalogEvidencePage(address.catalogItemId, locale),
   ]);
   if (!page) notFound();
+
+  // The owner's edit controls (ADR-0026 D10) render only for the owner's own
+  // session; a signed-in gardener and a guest see the same card without them.
+  const isOwner = shellSession.ownerUserId
+    ? await isOwnerUserId(shellSession.ownerUserId).catch(() => false)
+    : false;
+  // Two owner-only reads, and only for the owner: the names the card can pin
+  // and what has already been done to it. A failure costs the controls their
+  // lists, never the card.
+  const [ownerNames, ownerAudit] = isOwner
+    ? await Promise.all([
+        listCatalogCardNames(address.catalogItemId).catch(() => []),
+        listOwnerActionAudit({
+          catalogItemId: address.catalogItemId,
+          limit: 8,
+        }).catch(() => []),
+      ])
+    : [[], []];
 
   const catalogKind = page.catalog.catalogKind;
   const publicCopy = getPublicSurfaceCopy(locale);
@@ -573,6 +597,17 @@ export async function renderPublicCatalogEvidenceRoute(
             })}
           </div>
         </details>
+      ) : null}
+
+      {isOwner ? (
+        <CatalogOwnerCardControls
+          locale={locale}
+          catalogItemId={page.catalog.catalogItemId}
+          canonicalName={page.catalog.canonicalName}
+          indexableOverride={page.card.indexableOverride}
+          names={ownerNames}
+          audit={ownerAudit}
+        />
       ) : null}
 
       <PublicVarietySourceCredits

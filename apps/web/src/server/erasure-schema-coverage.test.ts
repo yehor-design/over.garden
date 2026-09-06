@@ -13,7 +13,7 @@ import {
 
 describe("OVE-215 erasure schema coverage", () => {
   it("exposes a versioned owned coverage manifest", () => {
-    expect(ERASURE_SCHEMA_COVERAGE_VERSION).toBe("ove386.erasure-schema.v9");
+    expect(ERASURE_SCHEMA_COVERAGE_VERSION).toBe("ove391.erasure-schema.v10");
     expect(listErasureCoverageEntries().length).toBeGreaterThan(40);
     const sql = readCurrentSchemaSql();
     assertErasureCoverageCompleteness({

@@ -75,6 +75,25 @@ export async function readAdminRoleForUser(
   return row.role;
 }
 
+/**
+ * Is this signed-in visitor the sealed owner? A read, not a gate: the pages
+ * and mutations keep asserting their capability, and this only decides
+ * whether a card shows the owner's edit controls (ADR-0026 D10). Any failure
+ * answers no.
+ */
+export async function isOwnerUserId(
+  userId: string,
+  database: Kysely<Database> = defaultDb,
+): Promise<boolean> {
+  try {
+    const role = await readAdminRoleForUser(database, userId);
+    if (role !== "owner") return false;
+    return userId === resolveSealedAdminOwnerUserId();
+  } catch {
+    return false;
+  }
+}
+
 export async function assertAdminAccess(
   scope: RequestScope,
   database: Kysely<Database> = defaultDb,
