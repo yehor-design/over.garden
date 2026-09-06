@@ -172,6 +172,7 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
         catalogKind: "plant_variety",
         catalogCanonicalName: JOURNEY.catalogCanonicalName,
         catalogPublicSlug: JOURNEY.catalogPublicSlug,
+        catalogSpeciesSlug: null,
         publicPath: `/lineage/objects/${JOURNEY.plantObjectId}`,
         varietyText: "Помідор чері",
         varietyState: "selected",
@@ -250,9 +251,19 @@ export function publicVarietyPage(
 
   const page = {
     catalog: {
+      catalogItemId: JOURNEY.catalogItemId,
       catalogKind: "plant_variety",
+      nodeKind: "cultivar",
+      rank: null,
       canonicalName: JOURNEY.catalogCanonicalName,
+      scientificName: JOURNEY.catalogCanonicalName,
       publicSlug: JOURNEY.catalogPublicSlug,
+      speciesSlug: null,
+      species: null,
+      canonicalPath: `/variety/${JOURNEY.catalogPublicSlug}`,
+      permalinkPath: `/id/${JOURNEY.catalogItemId}`,
+      contentUpdatedAt: JOURNEY.publishedAt,
+      identifiers: [],
       status: "seeded",
       source: "ua_state_register",
       locale: "uk",

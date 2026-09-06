@@ -635,7 +635,13 @@ async function resolveInitialCatalogSelection(
     displayName: item.canonicalName,
     kind: pickerKindForCatalogKind(item.catalogKind),
     ...(item.publicSlug
-      ? { publicPath: publicCatalogEvidencePath(item.catalogKind, item.publicSlug) }
+      ? {
+          publicPath: publicCatalogEvidencePath({
+            catalogKind: item.catalogKind,
+            publicSlug: item.publicSlug,
+            speciesSlug: item.speciesSlug,
+          }),
+        }
       : {}),
   };
 }

@@ -3,6 +3,7 @@ import "server-only";
 import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type {
   CatalogItemStatus,
@@ -89,6 +90,7 @@ export interface PublicObjectCatalogGroupRow {
   catalogKind: string | null;
   identityName: string | null;
   catalogPublicSlug: string | null;
+  catalogSpeciesSlug: string | null;
   catalogStatus: string | null;
   objectCount: number | string | bigint;
   journalCount: number | string | bigint;
@@ -142,6 +144,7 @@ export function buildPublicObjectCatalogGroupsQuery(
   const identityName = publicObjectCatalogIdentityNameExpression();
   const catalogKind = publicObjectCatalogKindExpression();
   const catalogPublicSlug = publicObjectCatalogPublicSlugExpression();
+  const catalogSpeciesSlug = publicObjectCatalogSpeciesSlugExpression();
   const catalogStatus = publicObjectCatalogStatusExpression();
   const objectCount = sql<number>`count(distinct ${sql.ref("plant_objects.id")})`;
   const journalCount = sql<number>`count(distinct ${sql.ref("journal_entries.id")})`;
@@ -184,6 +187,7 @@ export function buildPublicObjectCatalogGroupsQuery(
       catalogKind.as("catalogKind"),
       identityName.as("identityName"),
       catalogPublicSlug.as("catalogPublicSlug"),
+      catalogSpeciesSlug.as("catalogSpeciesSlug"),
       catalogStatus.as("catalogStatus"),
       objectCount.as("objectCount"),
       journalCount.as("journalCount"),
@@ -226,6 +230,7 @@ export function buildPublicObjectCatalogGroupsQuery(
       catalogKind,
       identityName,
       catalogPublicSlug,
+      catalogSpeciesSlug,
       catalogStatus,
     ]);
 
@@ -329,7 +334,11 @@ function serializePublicObjectCatalogCard(
     catalogKind &&
     catalogStatus &&
     row.catalogPublicSlug
-      ? publicCatalogEvidencePath(catalogKind, row.catalogPublicSlug)
+      ? publicCatalogEvidencePath({
+          catalogKind,
+          publicSlug: row.catalogPublicSlug,
+          speciesSlug: row.catalogSpeciesSlug,
+        })
       : null;
 
   return {
@@ -388,6 +397,16 @@ function publicObjectCatalogIdentityNameExpression(): RawBuilder<
   const state = publicObjectCatalogIdentityStateExpression();
   return sql<string | null>`case
     when ${state} = 'catalog' then ${sql.ref("catalog_items.canonical_name")}
+    else null
+  end`;
+}
+
+function publicObjectCatalogSpeciesSlugExpression(): RawBuilder<
+  string | null
+> {
+  const state = publicObjectCatalogIdentityStateExpression();
+  return sql<string | null>`case
+    when ${state} = 'catalog' then ${catalogSpeciesSlugSql("catalog_items")}
     else null
   end`;
 }

@@ -32,6 +32,11 @@ const mocks = vi.hoisted(() => ({
   getPublicCommunityLifecycleLookup: vi.fn().mockResolvedValue({
     status: "found",
   }),
+  resolvePublicCatalogAddress: vi.fn().mockResolvedValue({
+    status: "canonical",
+    catalogItemId: "11111111-1111-4111-8111-111111111111",
+    canonicalPath: "/species/solanum-lycopersicum",
+  }),
   getSession: vi.fn().mockResolvedValue(null),
 }));
 
@@ -54,6 +59,10 @@ vi.mock("@/server/public-profile-repository", () => ({
 
 vi.mock("@/server/community-repository", () => ({
   getPublicCommunityLifecycleLookup: mocks.getPublicCommunityLifecycleLookup,
+}));
+
+vi.mock("@/server/public-catalog-address-repository", () => ({
+  resolvePublicCatalogAddress: mocks.resolvePublicCatalogAddress,
 }));
 
 async function responseFor(
@@ -1248,5 +1257,70 @@ describe("unknown root segments", () => {
       const response = await responseFor(path, documentHeaders);
       expect(response.status, path).not.toBe(404);
     }
+  });
+});
+
+describe("organism addresses (ADR-0026 D8)", () => {
+  const document = { accept: "text/html", "sec-fetch-dest": "document" };
+
+  it("answers 308 to the canonical path for a historical or legacy address, keeping the locale prefix", async () => {
+    mocks.resolvePublicCatalogAddress.mockResolvedValueOnce({
+      status: "redirect",
+      catalogItemId: "22222222-2222-4222-8222-222222222222",
+      canonicalPath: "/species/solanum-lycopersicum/de-barao",
+    });
+    const legacy = await responseFor("/variety/de-barao-0000000101", document);
+
+    mocks.resolvePublicCatalogAddress.mockResolvedValueOnce({
+      status: "redirect",
+      catalogItemId: "11111111-1111-4111-8111-111111111111",
+      canonicalPath: "/species/solanum-lycopersicum",
+    });
+    const localized = await responseFor("/bg/species/lycopersicon-esculentum", document);
+
+    expect(legacy.status).toBe(308);
+    expect(legacy.headers.get("location")).toBe(
+      "https://over.garden/species/solanum-lycopersicum/de-barao",
+    );
+    expect(mocks.resolvePublicCatalogAddress).toHaveBeenCalledWith({
+      kind: "legacy",
+      catalogKind: "plant_variety",
+      slug: "de-barao-0000000101",
+    });
+    expect(localized.status).toBe(308);
+    expect(localized.headers.get("location")).toBe(
+      "https://over.garden/bg/species/solanum-lycopersicum",
+    );
+    expect(mocks.resolvePublicCatalogAddress).toHaveBeenCalledWith({
+      kind: "species",
+      speciesSlug: "lycopersicon-esculentum",
+      formSlug: null,
+    });
+  });
+
+  it("answers a real localized 404 for an unknown organism and passes canonical, RSC and failed lookups through", async () => {
+    mocks.resolvePublicCatalogAddress.mockResolvedValueOnce({ status: "not_found" });
+    const missing = await responseFor("/bg/species/no-such-organism", document);
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(missing.headers.get("Content-Language")).toBe("bg");
+    const missingHtml = await missing.text();
+    expect(missingHtml).toContain(getPublicSurfaceCopy("bg").organism.notFound);
+    expect(missingHtml).toContain('href="/bg/objects"');
+
+    const canonical = await responseFor("/species/solanum-lycopersicum", document);
+    expect(canonical.status).toBe(200);
+
+    mocks.resolvePublicCatalogAddress.mockClear();
+    const rsc = await responseFor("/species/solanum-lycopersicum", {
+      accept: "text/x-component",
+      rsc: "1",
+    });
+    expect(rsc.status).toBe(200);
+    expect(mocks.resolvePublicCatalogAddress).not.toHaveBeenCalled();
+
+    mocks.resolvePublicCatalogAddress.mockRejectedValueOnce(new Error("database away"));
+    const failed = await responseFor("/species/solanum-lycopersicum", document);
+    expect(failed.status).toBe(200);
   });
 });

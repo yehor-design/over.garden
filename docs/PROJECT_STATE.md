@@ -94,10 +94,34 @@ platform: real gardeners publishing, and organic discovery measured rather than
 assumed. One measurement gap blocks honest prioritisation; see known gaps
 below.
 
+**Delivered 2026-09-06, OVE-388 (Slice 24, task 3 of 14).** Every organism
+has a permanent address: a species answers at `/species/{slug}`, a cultivar
+or breed at `/species/{species}/{form}`, in every locale; `/id/{uuid}` is the
+permalink, and `/eppo`, `/col`, `/gbif` and `/wikidata` resolve external
+identifiers. Every slug a card ever had, every old `/variety` and `/breed`
+path and every merged card answer HTTP 308 to the canonical path; an unknown
+slug answers a real 404. The status is decided in `src/proxy.ts` with one
+bounded lookup before any shell streams (the Cache Components soft-404 rule,
+recorded in ADR-0026's consequences) and again by the page for client-side
+navigations. Form slugs are romanized from the registered denomination
+(resolution 55/2010 for Ukrainian, the 2009 law for Bulgarian) by
+`src/lib/catalog/slugs.ts`; `assignCatalogSlug` never reuses a slug and the
+`0054` trigger writes the history. A form without a linked species keeps its
+legacy address until the registers task links it. One builder,
+`publicCatalogEvidencePath`, spells every catalog path. Organism pages emit
+`Taxon` JSON-LD (`@id` = permalink, `scientificName`, `taxonRank`,
+`parentTaxon`, `sameAs`, `dateModified`) with a `BreadcrumbList` and uk/bg/ru
+`hreflang`; the sitemap's catalog chunk lists canonical addresses only,
+`lastmod` from the content clock or the newest entry. Proofs:
+`tests/catalog-addresses.spec.ts` against `next start` (CI), the address
+repository, proxy and page unit tests, the 82-case slug fixture. No SQL of
+its own; the picker's statement deadline went from 150 to 400 ms in the same
+change after production showed a cold 503 at ~160 ms.
+
 **Delivered 2026-09-06, OVE-387 (Slice 24, task 2 of 14).** The catalog picker
 is one Postgres statement behind the public route `/api/public/catalog/typeahead`
 (prefix index, then trigram; one row per organism; ranked by match class, the
-reader's market, gardener usage and the crop prior; 150 ms deadline; 60 s
+reader's market, gardener usage and the crop prior; a 100 ms P95 budget with a 400 ms deadline; 60 s
 shared cache, the one exception to hard rule 5). Meilisearch, the trigram flag
 and the three-way merge left the pick path. A gardener's own name is a text
 label on the object (`variety_state = 'free_text'`), never a catalog card and

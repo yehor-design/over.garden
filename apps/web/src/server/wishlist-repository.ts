@@ -14,7 +14,7 @@ import type {
 } from "@/db/schema";
 import {
   gardenFirstEntryPreselectionPath,
-  publicVarietyPath,
+  publicCatalogEvidencePath,
 } from "@/lib/garden/public-paths";
 import {
   findSelectableCatalogItem,
@@ -22,6 +22,7 @@ import {
   SELECTABLE_CATALOG_STATUSES,
   type SelectableCatalogItem,
 } from "@/server/catalog-repository";
+import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -70,6 +71,7 @@ export interface WishlistShelfRow {
   catalogItemId: string;
   catalogCanonicalName: string;
   catalogPublicSlug: string | null;
+  catalogSpeciesSlug: string | null;
   catalogKind: string;
   catalogLocale: string;
   catalogStatus: string;
@@ -195,6 +197,7 @@ export function buildListWishlistShelfItemsQuery(
       "catalog_items.id as catalogItemId",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
+      catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
       "catalog_items.catalog_kind as catalogKind",
       "catalog_items.locale as catalogLocale",
       "catalog_items.status as catalogStatus",
@@ -228,7 +231,13 @@ export function serializeWishlistShelfItem(
     sourceSurface: normalizeWishlistSourceSurface(row.sourceSurface),
     addedAt: row.addedAt,
     updatedAt: row.updatedAt,
-    publicPath: publicSlug ? publicVarietyPath(publicSlug) : null,
+    publicPath: publicSlug
+      ? publicCatalogEvidencePath({
+          catalogKind: row.catalogKind as CatalogKind,
+          publicSlug,
+          speciesSlug: row.catalogSpeciesSlug,
+        })
+      : null,
     activationPath: publicSlug
       ? gardenFirstEntryPreselectionPath(publicSlug)
       : null,
@@ -271,6 +280,7 @@ function toWishlistShelfRow(
     catalogItemId: catalogItem.id,
     catalogCanonicalName: catalogItem.canonicalName,
     catalogPublicSlug: catalogItem.publicSlug,
+    catalogSpeciesSlug: catalogItem.speciesSlug,
     catalogKind: catalogItem.catalogKind,
     catalogLocale: catalogItem.locale,
     catalogStatus: catalogItem.status,

@@ -987,6 +987,7 @@ describe("journal repository query contracts", () => {
         catalogKind: "plant_variety",
         catalogCanonicalName: "Помідор чері",
         catalogPublicSlug: "pomidor-cheri",
+        catalogSpeciesSlug: null,
         varietyText: "Помідор чері",
         varietyState: "selected",
         objectLocationVisibility: "region",

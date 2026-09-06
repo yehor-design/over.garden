@@ -3,6 +3,7 @@ import "server-only";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import type {
   CatalogKind,
   Database,
@@ -27,6 +28,7 @@ export interface PublicLineageNode {
   catalogKind: CatalogKind | null;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
+  catalogSpeciesSlug: string | null;
   safeLocationLabel: string | null;
 }
 
@@ -54,6 +56,7 @@ interface PublicLineageNodeRow {
   catalogKind: string | null;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
+  catalogSpeciesSlug: string | null;
   locationVisibility: string;
   coarseRegionCode: string | null;
 }
@@ -108,6 +111,7 @@ export async function getPublicLineageGraphPage(
         catalogKind: row.subjectCatalogKind,
         catalogCanonicalName: row.subjectCatalogCanonicalName,
         catalogPublicSlug: row.subjectCatalogPublicSlug,
+        catalogSpeciesSlug: row.subjectCatalogSpeciesSlug,
         locationVisibility: row.subjectLocationVisibility,
         coarseRegionCode: row.subjectCoarseRegionCode,
       });
@@ -120,6 +124,7 @@ export async function getPublicLineageGraphPage(
         catalogKind: row.sourceCatalogKind,
         catalogCanonicalName: row.sourceCatalogCanonicalName,
         catalogPublicSlug: row.sourceCatalogPublicSlug,
+        catalogSpeciesSlug: row.sourceCatalogSpeciesSlug,
         locationVisibility: row.sourceLocationVisibility,
         coarseRegionCode: row.sourceCoarseRegionCode,
       });
@@ -190,6 +195,7 @@ export function buildPublicLineageRootObjectQuery(
       "catalog_items.catalog_kind as catalogKind",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
+      catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
     ])
     .where("plant_objects.id", "=", plantObjectId)
     .groupBy([
@@ -200,6 +206,7 @@ export function buildPublicLineageRootObjectQuery(
       "plant_objects.variety_state",
       "plant_objects.location_visibility",
       "plant_objects.coarse_region_code",
+      "catalog_items.id",
       "catalog_items.catalog_kind",
       "catalog_items.canonical_name",
       "catalog_items.public_slug",
@@ -312,6 +319,7 @@ export function buildPublicLineageEdgesForSubjectsQuery(
       "subject_catalog_items.catalog_kind as subjectCatalogKind",
       "subject_catalog_items.canonical_name as subjectCatalogCanonicalName",
       "subject_catalog_items.public_slug as subjectCatalogPublicSlug",
+      catalogSpeciesSlugSql("subject_catalog_items").as("subjectCatalogSpeciesSlug"),
       "source_objects.display_name as sourceDisplayName",
       "source_objects.object_kind as sourceObjectKind",
       "source_objects.variety_text as sourceVarietyText",
@@ -321,6 +329,7 @@ export function buildPublicLineageEdgesForSubjectsQuery(
       "source_catalog_items.catalog_kind as sourceCatalogKind",
       "source_catalog_items.canonical_name as sourceCatalogCanonicalName",
       "source_catalog_items.public_slug as sourceCatalogPublicSlug",
+      catalogSpeciesSlugSql("source_catalog_items").as("sourceCatalogSpeciesSlug"),
     ])
     .where("lineage_provenance_edges.subject_plant_object_id", "in", subjects)
     .where("lineage_provenance_edges.source_kind", "=", "own_object")
@@ -344,6 +353,7 @@ export function buildPublicLineageEdgesForSubjectsQuery(
       "subject_objects.variety_state",
       "subject_objects.location_visibility",
       "subject_objects.coarse_region_code",
+      "subject_catalog_items.id",
       "subject_catalog_items.catalog_kind",
       "subject_catalog_items.canonical_name",
       "subject_catalog_items.public_slug",
@@ -353,6 +363,7 @@ export function buildPublicLineageEdgesForSubjectsQuery(
       "source_objects.variety_state",
       "source_objects.location_visibility",
       "source_objects.coarse_region_code",
+      "source_catalog_items.id",
       "source_catalog_items.catalog_kind",
       "source_catalog_items.canonical_name",
       "source_catalog_items.public_slug",
@@ -381,6 +392,7 @@ function mapPublicLineageNode(row: PublicLineageNodeRow): PublicLineageNode {
     catalogKind: row.catalogKind as CatalogKind | null,
     catalogCanonicalName: row.catalogCanonicalName,
     catalogPublicSlug: row.catalogPublicSlug,
+    catalogSpeciesSlug: row.catalogSpeciesSlug,
     safeLocationLabel: publicLineageNodeLocationLabel({
       locationVisibility: row.locationVisibility,
       coarseRegionCode: row.coarseRegionCode,

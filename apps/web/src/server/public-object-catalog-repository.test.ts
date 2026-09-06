@@ -325,6 +325,7 @@ function row(
     catalogKind: null,
     identityName: null,
     catalogPublicSlug: null,
+    catalogSpeciesSlug: null,
     catalogStatus: null,
     objectCount: 1,
     journalCount: 1,

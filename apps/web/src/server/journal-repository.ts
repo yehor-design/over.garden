@@ -5,6 +5,7 @@ import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
 import { cache } from "react";
 
 import { db } from "@/db";
+import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import type {
   Database,
   CatalogKind,
@@ -302,6 +303,8 @@ export interface PlantObjectPage {
     catalog_kind: CatalogKind | null;
     catalog_canonical_name: string | null;
     catalog_public_slug: string | null;
+    /** The current slug of the species a form belongs to, for its address. */
+    catalog_species_slug: string | null;
     variety_text: PlantObject["variety_text"];
     variety_state: VarietyState;
     location_visibility: PlantObject["location_visibility"];
@@ -415,6 +418,7 @@ export interface PublicJournalEntryObject {
   catalogKind: CatalogKind | null;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
+  catalogSpeciesSlug: string | null;
   publicPath: string;
   varietyText: string | null;
   varietyState: VarietyState;
@@ -428,6 +432,7 @@ export interface PublicJournalEntryMentionedObject {
   objectKind: PlantObjectKind;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
+  catalogSpeciesSlug: string | null;
   publicPath: string;
   varietyText: string | null;
   varietyState: VarietyState;
@@ -487,6 +492,7 @@ interface PublicJournalEntryRootRow {
   catalogKind: string | null;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
+  catalogSpeciesSlug: string | null;
   varietyText: string | null;
   varietyState: string | null;
   objectLocationVisibility: string | null;
@@ -516,6 +522,7 @@ interface PublicJournalEntryMentionedObjectRow {
   varietyState: string;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
+  catalogSpeciesSlug: string | null;
 }
 
 interface PublicJournalEntryMentionedProfileRow {
@@ -1483,6 +1490,7 @@ export async function createFirstPlantEntry(
           catalog_kind: selectedCatalogItem?.catalogKind ?? null,
           catalog_canonical_name: selectedCatalogItem?.canonicalName ?? null,
           catalog_public_slug: selectedCatalogItem?.publicSlug ?? null,
+          catalog_species_slug: selectedCatalogItem?.speciesSlug ?? null,
           variety_text: plantObject.variety_text,
           variety_state: plantObject.variety_state as VarietyState,
           location_visibility: plantObject.location_visibility,
@@ -1955,6 +1963,7 @@ export async function getPlantObjectPage(
       catalog_kind: objectRow.catalogKind as CatalogKind | null,
       catalog_canonical_name: objectRow.catalogCanonicalName,
       catalog_public_slug: objectRow.catalogPublicSlug,
+      catalog_species_slug: objectRow.catalogSpeciesSlug,
       variety_text: objectRow.varietyText,
       variety_state: objectRow.varietyState as VarietyState,
       location_visibility: objectRow.objectLocationVisibility,
@@ -2146,6 +2155,7 @@ export async function createPlantObjectJournalEntry(
           catalog_kind: target.catalogKind as CatalogKind | null,
           catalog_canonical_name: target.catalogCanonicalName,
           catalog_public_slug: target.catalogPublicSlug,
+          catalog_species_slug: target.catalogSpeciesSlug,
           variety_text: target.varietyText,
           variety_state: target.varietyState as VarietyState,
           location_visibility: target.objectLocationVisibility,
@@ -2197,6 +2207,7 @@ export async function createPlantObjectJournalEntry(
         catalog_kind: target.catalogKind as CatalogKind | null,
         catalog_canonical_name: target.catalogCanonicalName,
         catalog_public_slug: target.catalogPublicSlug,
+        catalog_species_slug: target.catalogSpeciesSlug,
         variety_text: target.varietyText,
         variety_state: target.varietyState as VarietyState,
         location_visibility: target.objectLocationVisibility,
@@ -2479,6 +2490,7 @@ export async function resolvePlantObjectCatalog(
         catalog_kind: selectedCatalogItem?.catalogKind ?? null,
         catalog_canonical_name: selectedCatalogItem?.canonicalName ?? null,
         catalog_public_slug: selectedCatalogItem?.publicSlug ?? null,
+        catalog_species_slug: selectedCatalogItem?.speciesSlug ?? null,
         variety_text: resolved.variety_text,
         variety_state: resolved.variety_state as VarietyState,
         location_visibility: resolved.location_visibility,
@@ -2775,6 +2787,7 @@ export function serializePublicJournalEntryPage(input: {
             catalogKind: root.catalogKind as CatalogKind | null,
             catalogCanonicalName: root.catalogCanonicalName,
             catalogPublicSlug: root.catalogPublicSlug,
+            catalogSpeciesSlug: root.catalogSpeciesSlug,
             publicPath: publicLineageObjectPath(root.plantObjectId),
             varietyText: root.varietyText,
             varietyState: root.varietyState as VarietyState,
@@ -2792,6 +2805,7 @@ export function serializePublicJournalEntryPage(input: {
             objectKind: row.objectKind as PlantObjectKind,
             catalogCanonicalName: row.catalogCanonicalName,
             catalogPublicSlug: row.catalogPublicSlug,
+            catalogSpeciesSlug: row.catalogSpeciesSlug,
             publicPath: publicLineageObjectPath(row.plantObjectId),
             varietyText: row.varietyText,
             varietyState: row.varietyState as VarietyState,
@@ -3386,6 +3400,7 @@ export function buildPlantObjectPageObjectQuery(
       "catalog_items.catalog_kind as catalogKind",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
+      catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as objectLocationVisibility",
@@ -3750,6 +3765,7 @@ export function buildPublicJournalEntryLookupQuery(
       "catalog_items.catalog_kind as catalogKind",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
+      catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as objectLocationVisibility",
@@ -3952,6 +3968,7 @@ export function buildPublicMentionedObjectsForEntryQuery(
       "plant_objects.variety_state as varietyState",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
+      catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
     ])
     .where("journal_entries.id", "=", entryId)
     .where("journal_entries.entry_scope", "=", "space")

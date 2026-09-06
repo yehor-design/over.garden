@@ -162,6 +162,11 @@ interface PublicSurfaceCopy {
     title: string;
     home: string;
   };
+  organism: {
+    notFound: string;
+    notFoundDescription: string;
+    browseObjects: string;
+  };
 }
 
 type CountForms = Record<"one" | "few" | "many" | "other", string>;
@@ -336,6 +341,12 @@ const COPY = {
       title: "Сторінку не знайдено",
       home: "До OverGarden",
     },
+    organism: {
+      notFound: "Організм не знайдено",
+      notFoundDescription:
+        "За цією адресою немає виду, сорту чи породи. Адреси змінюються лише з постійним перенаправленням, тому посилання, ймовірно, було введено з помилкою.",
+      browseObjects: "Переглянути живі об'єкти",
+    },
   },
   bg: {
     accessibility: { languageSwitcher: "Смяна на езика" },
@@ -509,6 +520,12 @@ const COPY = {
       title: "Страницата не е намерена",
       home: "Към OverGarden",
     },
+    organism: {
+      notFound: "Организмът не е намерен",
+      notFoundDescription:
+        "На този адрес няма вид, сорт или порода. Адресите се променят само с постоянно пренасочване, така че връзката вероятно е въведена грешно.",
+      browseObjects: "Разгледайте живите обекти",
+    },
   },
   ru: {
     accessibility: { languageSwitcher: "Сменить язык" },
@@ -680,6 +697,12 @@ const COPY = {
     notFound: {
       title: "Страница не найдена",
       home: "К OverGarden",
+    },
+    organism: {
+      notFound: "Организм не найден",
+      notFoundDescription:
+        "По этому адресу нет вида, сорта или породы. Адреса меняются только с постоянным перенаправлением, поэтому ссылка, вероятно, введена с ошибкой.",
+      browseObjects: "Посмотреть живые объекты",
     },
   },
 } satisfies Record<InterfaceLocale, PublicSurfaceCopy>;

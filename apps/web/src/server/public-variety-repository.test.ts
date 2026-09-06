@@ -260,7 +260,13 @@ describe("public variety repository query contracts", () => {
       '"journal_entries"."public_slug" is not null',
     );
     expect(compiled.sql).toContain(
-      'group by "catalog_items"."catalog_kind", "catalog_items"."public_slug"',
+      'group by "catalog_items"."id", "catalog_items"."catalog_kind", "catalog_items"."public_slug"',
+    );
+    // The hierarchical address needs the species of a form, and `lastmod` is
+    // the content clock or the newest entry, whichever is later (ADR-0026 D8).
+    expect(compiled.sql).toContain("form_relation.relation_type = 'form_of'");
+    expect(compiled.sql).toContain(
+      'greatest(max("journal_entries"."updated_at"), "catalog_items"."content_updated_at") as "lastModified"',
     );
     expect(compiled.sql).not.toContain("having count");
     expect(compiled.sql).not.toContain('join "media_assets"');

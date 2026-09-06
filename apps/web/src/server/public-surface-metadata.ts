@@ -17,7 +17,8 @@ export type PublicSurfaceVisibleFactType =
   | "BlogPosting"
   | "CollectionPage"
   | "ProfilePage"
-  | "ItemPage";
+  | "ItemPage"
+  | "Taxon";
 
 export interface PublicSurfaceVisibleFacts {
   type: PublicSurfaceVisibleFactType;
@@ -30,6 +31,17 @@ export interface PublicSurfaceVisibleFacts {
   image?: string;
   questions?: readonly { question: string; answer: string }[];
   itemNames?: readonly string[];
+  /** `Taxon` (ADR-0026 D9): the organism's structured facts. */
+  taxon?: {
+    /** The permalink URL: the `@id` that survives renames and merges. */
+    id: string;
+    scientificName: string;
+    taxonRank: string;
+    parentTaxon?: { name: string; url: string };
+    sameAs: readonly string[];
+  };
+  /** Home → species → form, as absolute URLs; two or three items. */
+  breadcrumbs?: readonly { name: string; url: string }[];
 }
 
 export interface PublicSurfaceMetadataResult {
@@ -87,13 +99,39 @@ export function buildPublicSurfaceMetadata(input: {
     ...(contentLocale ? { inLanguage: contentLocale } : {}),
   };
   const factNode = buildVisibleFactNode(input.visibleFacts, pageUrl);
+  const breadcrumbNode = buildBreadcrumbNode(input.visibleFacts, pageUrl);
+  const mainEntityRef =
+    input.visibleFacts.type === "Taxon" && input.visibleFacts.taxon
+      ? { mainEntity: { "@id": input.visibleFacts.taxon.id } }
+      : {};
 
   return {
     metadata,
     jsonLd: {
       "@context": "https://schema.org",
-      "@graph": factNode ? [pageNode, factNode] : [pageNode],
+      "@graph": [
+        { ...pageNode, ...mainEntityRef },
+        ...(factNode ? [factNode] : []),
+        ...(breadcrumbNode ? [breadcrumbNode] : []),
+      ],
     },
+  };
+}
+
+function buildBreadcrumbNode(
+  facts: PublicSurfaceVisibleFacts,
+  pageUrl: string,
+) {
+  if (!facts.breadcrumbs || facts.breadcrumbs.length === 0) return null;
+  return {
+    "@type": "BreadcrumbList",
+    "@id": `${pageUrl}#breadcrumb`,
+    itemListElement: facts.breadcrumbs.map((crumb, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: crumb.name,
+      item: crumb.url,
+    })),
   };
 }
 
@@ -102,6 +140,29 @@ function buildVisibleFactNode(
   pageUrl: string,
 ) {
   if (facts.type === "WebPage") return null;
+  if (facts.type === "Taxon") {
+    if (!facts.taxon) return null;
+    return {
+      "@type": "Taxon",
+      "@id": facts.taxon.id,
+      url: pageUrl,
+      name: facts.name,
+      scientificName: facts.taxon.scientificName,
+      taxonRank: facts.taxon.taxonRank,
+      ...(facts.description ? { description: facts.description } : {}),
+      ...(facts.taxon.parentTaxon
+        ? {
+            parentTaxon: {
+              "@type": "Taxon",
+              name: facts.taxon.parentTaxon.name,
+              url: facts.taxon.parentTaxon.url,
+            },
+          }
+        : {}),
+      ...(facts.taxon.sameAs.length > 0 ? { sameAs: facts.taxon.sameAs } : {}),
+      ...(facts.dateModified ? { dateModified: facts.dateModified } : {}),
+    };
+  }
   if (facts.type === "FAQPage") {
     return {
       "@type": "FAQPage",

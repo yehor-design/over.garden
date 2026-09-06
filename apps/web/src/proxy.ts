@@ -23,8 +23,11 @@ import {
 } from "@/lib/interface-route-policy";
 import {
   DEFAULT_PUBLIC_LOCALE,
+  localizedPath,
   stripLocalePrefix,
 } from "@/lib/public-localization";
+import { matchPublicCatalogAddressPath } from "@/lib/catalog/addresses";
+import { renderNotFoundPublicCatalogHtml } from "@/lib/public-catalog-lifecycle";
 import { isRetiredControlPlanePath } from "@/lib/retired-control-plane-routes";
 import {
   matchPublicObjectPassportPath,
@@ -700,6 +703,51 @@ export async function proxy(request: NextRequest) {
       return withAppRouteContract(
         new NextResponse(
           renderNotFoundPublicJournalEntryHtml(locale, lifecycleLocation),
+          {
+            status: 404,
+            headers: {
+              "content-type": "text/html; charset=utf-8",
+              "X-Robots-Tag": "noindex, nofollow",
+            },
+          },
+        ),
+        request,
+        localization,
+      );
+    }
+  }
+
+  // Organism addresses (ADR-0026 D8): a historical slug, an old `/variety` or
+  // `/breed` path, a form under a stale species slug or a merged node answers
+  // 308 to the canonical address; an address nothing resolves answers 404.
+  // Decided here, before any shell streams, so the status is real; a failed
+  // lookup lets the page decide rather than answering an error itself.
+  const catalogAddress = isDocumentNavigationRequest(request)
+    ? matchPublicCatalogAddressPath(request.nextUrl.pathname)
+    : null;
+  if (catalogAddress) {
+    const { resolvePublicCatalogAddress } =
+      await import("@/server/public-catalog-address-repository");
+    const lookup = await resolvePublicCatalogAddress(catalogAddress).catch(
+      () => null,
+    );
+    if (lookup?.status === "redirect") {
+      const prefixLocale = stripLocalePrefix(request.nextUrl.pathname).locale;
+      const url = request.nextUrl.clone();
+      url.pathname = localizedPath(
+        prefixLocale ?? DEFAULT_PUBLIC_LOCALE,
+        lookup.canonicalPath,
+      );
+      return withAppRouteContract(
+        NextResponse.redirect(url, { status: 308 }),
+        request,
+        localization,
+      );
+    }
+    if (lookup?.status === "not_found") {
+      return withAppRouteContract(
+        new NextResponse(
+          renderNotFoundPublicCatalogHtml(locale, lifecycleLocation),
           {
             status: 404,
             headers: {

@@ -33,6 +33,39 @@ source shape: `visibleText`, `distinctPublicEntityIds`, `canonicalPath`,
 - A listing counts only what it lists. Static headings and intros never make
   an empty listing indexable.
 
+## Organism addresses (ADR-0026 D8, D9)
+
+- A species answers at `/species/{slug}`; a cultivar or breed at
+  `/species/{species-slug}/{form-slug}`; each in every locale (`/bg/…`,
+  `/ru/…`). The species slug is the accepted scientific name in ASCII; the
+  form slug is the registered denomination romanized per the Cabinet of
+  Ministers resolution 55 (2010) for Ukrainian and the 2009 transliteration
+  law for Bulgarian (`src/lib/catalog/slugs.ts`). Vernaculars never appear
+  in a slug. A slug is never reused: `assignCatalogSlug`
+  (`src/server/catalog-slug-repository.ts`) appends `-2`, `-3` past every
+  slug another organism ever held, and the `0054` trigger writes the history.
+- `/id/{uuid}` is the permalink and the JSON-LD `@id`; `/eppo/{code}`,
+  `/col/{id}`, `/gbif/{key}` and `/wikidata/{qid}` resolve an external
+  identifier. All five answer HTTP 308 to the canonical path in the requested
+  locale, or a real 404 document (route handlers under `src/app/(default)`
+  and `src/app/[locale]`, `src/app/catalog-alias-route.ts`).
+- Every slug a card ever had, every old `/variety/{slug}` and `/breed/{slug}`
+  path and every merged card answer 308; an unknown slug answers a real 404.
+  The status is decided in `src/proxy.ts` by one bounded lookup
+  (`src/server/public-catalog-address-repository.ts`) before any shell
+  streams; the page repeats the lookup through `use cache` for client-side
+  navigations. A form not yet linked to a species keeps its legacy address
+  until the link exists.
+- One builder spells every catalog path: `publicCatalogEvidencePath` in
+  `src/lib/garden/public-paths.ts`.
+- The canonical of an organism page follows the route family it was served
+  from (unprefixed, `/bg`, `/ru`), never the cookie locale; `hreflang`
+  alternates list uk, bg and ru. The JSON-LD graph is `WebPage` →
+  `Taxon` (`@id`, `scientificName`, `taxonRank`, `parentTaxon` for a form,
+  `sameAs` from `catalog_item_identifiers`, `dateModified` from
+  `content_updated_at`) plus a `BreadcrumbList` of two or three items
+  (`src/server/public-variety-metadata.ts`).
+
 ## Sitemap
 
 `/sitemap.xml` is a sitemap index; `/sitemaps/<chunk>.xml` serves one chunk
@@ -40,7 +73,9 @@ source shape: `visibleText`, `distinctPublicEntityIds`, `canonicalPath`,
 5 000 URLs per chunk). Both are route handlers that read the database at
 request time (`src/server/public-sitemap.ts`,
 `src/server/public-sitemap-repository.ts`); nothing is generated at build.
-Every indexable public page belongs to exactly one chunk.
+Every indexable public page belongs to exactly one chunk. The `catalog`
+chunk lists canonical organism addresses only, never a 308 target, with
+`lastmod` the later of `content_updated_at` and the newest public entry.
 
 ## Robots
 

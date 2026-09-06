@@ -19,7 +19,7 @@ import type { PublicProjectionQualityClass } from "@/lib/public-projection-quali
 import {
   localizedPublicJournalEvidencePath,
   publicProfilePath,
-  publicVarietyPath,
+  publicCatalogEvidencePath,
 } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
@@ -28,6 +28,7 @@ import {
   type MediaVariantExtras,
 } from "@/server/media/media-variant-schema";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
+import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { buildFirstProcessedMediaPerEntryQuery } from "@/server/public-media-repository";
 
@@ -47,6 +48,7 @@ export interface PublicObjectPassportPage {
     catalogKind: CatalogKind | null;
     catalogCanonicalName: string | null;
     catalogPublicSlug: string | null;
+    catalogSpeciesSlug: string | null;
     catalogPath: string | null;
     safeLocationLabel: string | null;
     publicEntryCount: number;
@@ -116,6 +118,7 @@ interface PublicObjectPassportRootRow {
   catalogKind: string | null;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
+  catalogSpeciesSlug: string | null;
   objectLocationVisibility: string;
   objectCoarseRegionCode: string | null;
   spaceLocationVisibility: string;
@@ -365,6 +368,7 @@ export function buildPublicObjectPassportRootQuery(
       "catalog_items.catalog_kind as catalogKind",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
+      catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
       "user_public_profiles.handle as authorHandle",
       "user_public_profiles.display_name as authorDisplayName",
       "user_public_profiles.avatar_url as authorAvatarUrl",
@@ -544,9 +548,15 @@ export function serializePublicObjectPassportPage(
     PUBLIC_OBJECT_JOURNAL_PREVIEW_PAGE_SIZE,
     MAX_PUBLIC_OBJECT_JOURNAL_PREVIEW,
   );
-  const catalogPath = root.catalogPublicSlug
-    ? publicVarietyPath(root.catalogPublicSlug)
-    : null;
+  const catalogKind = normalizePassportCatalogKind(root.catalogKind);
+  const catalogPath =
+    root.catalogPublicSlug && catalogKind
+      ? publicCatalogEvidencePath({
+          catalogKind,
+          publicSlug: root.catalogPublicSlug,
+          speciesSlug: root.catalogSpeciesSlug,
+        })
+      : null;
   const author = root.authorHandle
     ? {
         handle: root.authorHandle,
@@ -582,6 +592,7 @@ export function serializePublicObjectPassportPage(
       catalogKind: root.catalogKind as CatalogKind | null,
       catalogCanonicalName: root.catalogCanonicalName,
       catalogPublicSlug: root.catalogPublicSlug,
+      catalogSpeciesSlug: root.catalogSpeciesSlug,
       catalogPath,
       safeLocationLabel: publicObjectPassportLocationLabel({
         objectLocationVisibility: root.objectLocationVisibility,
@@ -679,5 +690,11 @@ function normalizePublicObjectPassportId(value: string) {
     normalized,
   )
     ? normalized
+    : null;
+}
+
+function normalizePassportCatalogKind(value: string | null): CatalogKind | null {
+  return value === "plant_variety" || value === "species" || value === "breed"
+    ? value
     : null;
 }

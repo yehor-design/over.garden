@@ -132,6 +132,48 @@ describe("public sitemap", () => {
     await expect(buildPublicSitemapChunk("catalog")).resolves.toEqual([]);
   });
 
+  it("emits canonical hierarchical organism addresses only, never a 308 target (ADR-0026 D8)", async () => {
+    mocks.listVariety.mockResolvedValue([
+      {
+        catalogKind: "species",
+        publicSlug: "solanum-lycopersicum",
+        speciesSlug: null,
+        lastModified: "2026-09-01T00:00:00.000Z",
+      },
+      {
+        catalogKind: "plant_variety",
+        publicSlug: "de-barao",
+        speciesSlug: "solanum-lycopersicum",
+        lastModified: "2026-09-02T00:00:00.000Z",
+      },
+      {
+        catalogKind: "plant_variety",
+        publicSlug: "orphan-form",
+        speciesSlug: null,
+        lastModified: "2026-09-03T00:00:00.000Z",
+      },
+      {
+        catalogKind: "breed",
+        publicSlug: "carpathian-bee",
+        speciesSlug: "apis-mellifera",
+        lastModified: "2026-09-04T00:00:00.000Z",
+      },
+    ]);
+
+    await expect(buildPublicSitemapChunk("catalog")).resolves.toEqual([
+      { url: "/species/solanum-lycopersicum", lastModified: new Date("2026-09-01T00:00:00.000Z") },
+      {
+        url: "/species/solanum-lycopersicum/de-barao",
+        lastModified: new Date("2026-09-02T00:00:00.000Z"),
+      },
+      { url: "/variety/orphan-form", lastModified: new Date("2026-09-03T00:00:00.000Z") },
+      {
+        url: "/species/apis-mellifera/carpathian-bee",
+        lastModified: new Date("2026-09-04T00:00:00.000Z"),
+      },
+    ]);
+  });
+
   it("lists only topics that list something (ADR-0022, D3)", async () => {
     mocks.listTopics.mockResolvedValue([{ slug: "rich" }, { slug: "empty" }]);
     mocks.getTopicPage.mockImplementation(async (slug: string) => ({

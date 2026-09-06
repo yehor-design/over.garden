@@ -278,6 +278,7 @@ describe("public object passport repository query contracts", () => {
         catalogKind: "plant_variety",
         catalogCanonicalName: "Red Cherry tomato",
         catalogPublicSlug: "red-cherry-tomato-0000000101",
+        catalogSpeciesSlug: null,
         objectLocationVisibility: "region",
         objectCoarseRegionCode: "UA-30",
         spaceLocationVisibility: "region",

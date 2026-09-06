@@ -17,21 +17,39 @@ export function localizedPublicJournalEvidencePath(
   return localizedPath(locale, publicJournalEntryPath(publicSlug));
 }
 
-export function publicVarietyPath(publicSlug: string): string {
-  return publicCatalogEvidencePath("plant_variety", publicSlug);
+/**
+ * Where an organism lives (ADR-0026 D8). A species answers at
+ * `/species/{slug}`; a cultivar or breed at `/species/{species}/{form}` once
+ * it is a form of a species with an address, and at its legacy `/variety/*`
+ * or `/breed/*` path until then. This is the one place a catalog path is
+ * spelled: every surface, sitemap and picker row passes through it.
+ */
+export interface PublicCatalogAddress {
+  catalogKind: CatalogKind;
+  publicSlug: string;
+  /** The current slug of the species the form belongs to, when known. */
+  speciesSlug?: string | null;
 }
 
-export function publicCatalogEvidencePath(
-  catalogKind: CatalogKind,
-  publicSlug: string,
-): string {
-  const routeSegment: Record<CatalogKind, string> = {
-    plant_variety: "variety",
-    species: "species",
-    breed: "breed",
-  };
+export function publicCatalogEvidencePath(address: PublicCatalogAddress): string {
+  const slug = encodeURIComponent(address.publicSlug);
+  if (address.catalogKind === "species") return `/species/${slug}`;
+  if (address.speciesSlug) {
+    return `/species/${encodeURIComponent(address.speciesSlug)}/${slug}`;
+  }
+  return `/${address.catalogKind === "breed" ? "breed" : "variety"}/${slug}`;
+}
 
-  return `/${routeSegment[catalogKind]}/${encodeURIComponent(publicSlug)}`;
+/** A plant variety by its legacy or hierarchical address. */
+export function publicVarietyPath(
+  publicSlug: string,
+  speciesSlug: string | null = null,
+): string {
+  return publicCatalogEvidencePath({
+    catalogKind: "plant_variety",
+    publicSlug,
+    speciesSlug,
+  });
 }
 
 export function gardenFirstEntryHomepagePath(): string {

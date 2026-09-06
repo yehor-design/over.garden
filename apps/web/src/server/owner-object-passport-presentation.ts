@@ -10,7 +10,7 @@ import {
 } from "@/lib/living-object-passport";
 import {
   localizedPublicJournalEvidencePath,
-  publicVarietyPath,
+  publicCatalogEvidencePath,
 } from "@/lib/garden/public-paths";
 import { getLocalizedCoarseRegionLabel } from "@/lib/garden/regions";
 
@@ -59,9 +59,14 @@ export function buildOwnerObjectPassportPresentation(
   const latestEntry = timelineEntries[0] ?? null;
   const oldestEntry = timelineEntries.at(-1) ?? null;
   const locationLabel = ownerLocationLabel(page, locale);
-  const catalogPath = object.catalog_public_slug
-    ? publicVarietyPath(object.catalog_public_slug)
-    : null;
+  const catalogPath =
+    object.catalog_public_slug && object.catalog_kind
+      ? publicCatalogEvidencePath({
+          catalogKind: object.catalog_kind,
+          publicSlug: object.catalog_public_slug,
+          speciesSlug: object.catalog_species_slug,
+        })
+      : null;
   const gallery = (
     page.gallery_media.length > 0
       ? page.gallery_media.map((media, index) => ({

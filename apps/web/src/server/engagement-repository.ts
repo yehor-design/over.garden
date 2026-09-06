@@ -22,6 +22,7 @@ import {
 import type { PublicLocale } from "@/lib/public-localization";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
+import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { blockUserId } from "@/server/profile-interaction-repository";
 import { assertAdminCapabilityForScope } from "@/server/admin-access";
@@ -903,7 +904,7 @@ export async function findPublicEngagementTarget(
             kind: target.kind,
             ref: row.publicSlug,
             label: row.canonicalName,
-            href: publicVarietyPath(row.publicSlug),
+            href: publicVarietyPath(row.publicSlug, row.speciesSlug),
           }
         : null;
     }
@@ -1494,6 +1495,7 @@ export function buildPublicVarietyTargetQuery(
     .select([
       "catalog_items.public_slug as publicSlug",
       "catalog_items.canonical_name as canonicalName",
+      catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
     ])
     .where("catalog_items.public_slug", "=", publicSlug)
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
@@ -1510,7 +1512,11 @@ export function buildPublicVarietyTargetQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where(publicLaunchSurfacePredicates())
-    .groupBy(["catalog_items.public_slug", "catalog_items.canonical_name"])
+    .groupBy([
+      "catalog_items.id",
+      "catalog_items.public_slug",
+      "catalog_items.canonical_name",
+    ])
     .$narrowType<{ publicSlug: string }>();
 }
 

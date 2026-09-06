@@ -6,6 +6,7 @@ import {
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
+import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 
 export type PublicJournalDirectoryQueryExecutor =
@@ -61,6 +62,7 @@ export interface PublicJournalDirectoryEntryRow {
   catalogKind: string | null;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
+  catalogSpeciesSlug: string | null;
   catalogStatus: string | null;
   safeRegionCode: string | null;
   authorHandle: string | null;
@@ -174,6 +176,7 @@ export function buildPublicJournalDirectoryEntriesQuery(
       "catalog_items.catalog_kind as catalogKind",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
+      catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
       "catalog_items.status as catalogStatus",
       safeRegion.as("safeRegionCode"),
       "user_public_profiles.handle as authorHandle",

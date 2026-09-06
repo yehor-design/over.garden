@@ -15,6 +15,7 @@ import { normalizeCatalogName } from "@/lib/catalog/normalize-name";
 import { catalogKindForPickerKind } from "@/lib/garden/catalog-object-kind";
 import type { CatalogPickerKind } from "@/lib/garden/entry-contracts";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
+import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import type { PublicLocale } from "@/lib/public-localization";
 import {
   toCatalogTypeaheadDocument,
@@ -36,9 +37,13 @@ const CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD = 0.3;
  * The one deadline of the picker (ADR-0026 D7): the statement itself is
  * cancelled by Postgres at this bound, and a connection that never answers is
  * abandoned at the same bound, so the route can degrade to the own-name
- * outcome instead of waiting.
+ * outcome instead of waiting. The budget the route is measured against is
+ * 100 ms at P95; the deadline only bounds the tail. Measured in production on
+ * 2026-09-06 with the managed database, a 150 ms bound turned the heaviest
+ * crop prefixes ("соняшник", 1,500 register names) into 503s at about 160 ms,
+ * so the bound sits well above the budget.
  */
-export const CATALOG_TYPEAHEAD_DEADLINE_MS = 150;
+export const CATALOG_TYPEAHEAD_DEADLINE_MS = 400;
 const MATCHING_QUEUE = "matching";
 const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
 const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
@@ -67,6 +72,8 @@ export interface SelectableCatalogItem {
   id: string;
   canonicalName: string;
   publicSlug: string | null;
+  /** The current slug of the species a form belongs to, for its address. */
+  speciesSlug: string | null;
   catalogKind: CatalogKind;
   locale: string;
   status: SelectableCatalogStatus;
@@ -109,6 +116,7 @@ interface CatalogTypeaheadSqlRow {
   id: string;
   node_kind: CatalogNodeKind | string;
   public_slug: string | null;
+  species_slug: string | null;
   display_name: string;
   matched_name: string;
   parent_display_name: string | null;
@@ -258,6 +266,7 @@ export function buildCatalogTypeaheadStatement(input: {
              when parent.id is null then null
              else coalesce(parent_vernacular.display_name, parent.canonical_name)
            end as parent_display_name,
+           case when parent.node_kind = 'taxon' then parent.public_slug else null end as species_slug,
            s.match_class,
            s.market,
            s.similarity
@@ -390,10 +399,11 @@ function toCatalogSuggestion(
       ? capitalizeFirst(row.parent_display_name, locale)
       : null,
     publicPath: row.public_slug
-      ? publicCatalogEvidencePath(
-          catalogKindForPickerKind(kind),
-          row.public_slug,
-        )
+      ? publicCatalogEvidencePath({
+          catalogKind: catalogKindForPickerKind(kind),
+          publicSlug: row.public_slug,
+          speciesSlug: row.species_slug,
+        })
       : null,
   };
 }
@@ -493,6 +503,7 @@ export async function findSelectableCatalogItem(
     id: row.id,
     canonicalName: row.canonicalName,
     publicSlug: row.publicSlug,
+    speciesSlug: row.speciesSlug,
     catalogKind: row.catalogKind as CatalogKind,
     locale: row.locale,
     status: row.status as SelectableCatalogStatus,
@@ -526,6 +537,7 @@ export async function findSelectableCatalogItemByPublicSlug(
     id: row.id,
     canonicalName: row.canonicalName,
     publicSlug: row.publicSlug,
+    speciesSlug: row.speciesSlug,
     catalogKind: row.catalogKind as CatalogKind,
     locale: row.locale,
     status: row.status as SelectableCatalogStatus,
@@ -584,6 +596,7 @@ export function buildFindSelectableCatalogItemQuery(
       "id",
       "canonical_name as canonicalName",
       "public_slug as publicSlug",
+      catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
       "catalog_kind as catalogKind",
       "locale",
       "status",
@@ -605,6 +618,7 @@ export function buildFindSelectableCatalogItemByPublicSlugQuery(
       "id",
       "canonical_name as canonicalName",
       "public_slug as publicSlug",
+      catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
       "catalog_kind as catalogKind",
       "locale",
       "status",

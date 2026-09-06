@@ -262,18 +262,24 @@ function renderPublicJournalEntry(
 }
 
 describe("OVE-40 privacy invariant sweep — public variety JSON-LD", () => {
-  it("publishes only bounded creative-work metadata", () => {
+  it("publishes only the organism's bounded facts: a Taxon keyed by its permalink, no entry text", () => {
     const jsonLd = buildPublicVarietyJsonLd(publicVarietyPage());
     expect(jsonLd).not.toBeNull();
     if (!jsonLd) return;
 
     expectPublicPayloadIsClean("variety JSON-LD", jsonLd);
     const graph = jsonLd["@graph"] as Array<Record<string, unknown>>;
-    const collection = graph.find((node) => node["@type"] === "CollectionPage");
-    expect(collection?.hasPart).toEqual([
-      { "@type": "Thing", name: JOURNEY.safeTitle },
-    ]);
-    expect(JSON.stringify(jsonLd)).not.toContain(JOURNEY.safeBody);
+    const taxon = graph.find((node) => node["@type"] === "Taxon");
+    expect(taxon).toMatchObject({
+      "@id": expect.stringContaining(`/id/${JOURNEY.catalogItemId}`),
+      name: JOURNEY.catalogCanonicalName,
+      taxonRank: "cultivar",
+    });
+    expect(taxon).not.toHaveProperty("hasPart");
+    expect(graph.some((node) => node["@type"] === "BreadcrumbList")).toBe(true);
+    const serialized = JSON.stringify(jsonLd);
+    expect(serialized).not.toContain(JOURNEY.safeBody);
+    expect(serialized).not.toContain(JOURNEY.safeTitle);
   });
 
   it("returns a graph for thin variety pages: every live page is indexable (ADR-0022, D3)", () => {
