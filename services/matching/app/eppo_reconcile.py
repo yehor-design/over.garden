@@ -566,6 +566,31 @@ returning id::text as id
 
 RECOMPUTE_WEIGHT_SQL = "select catalog_recompute_search_weight()"
 
+# An assertion nothing points at is a row that says a source claimed something
+# and then names nothing it claimed. A second run over 121,777 identifiers
+# whose identifiers and names are all already written would otherwise add a
+# quarter of a million of them and never remove one.
+DELETE_UNREFERENCED_ASSERTIONS_FOR_RECORD_SQL = """
+delete from catalog_source_assertions as assertion
+where assertion.source_slug = %s
+  and assertion.source_record_id = %s::uuid
+  and not exists (select 1 from catalog_item_identifiers as i where i.assertion_id = assertion.id)
+  and not exists (select 1 from catalog_item_names as n where n.assertion_id = assertion.id)
+  and not exists (select 1 from catalog_item_facts as f where f.assertion_id = assertion.id)
+  and not exists (select 1 from catalog_item_relations as r where r.assertion_id = assertion.id)
+  and not exists (select 1 from catalog_source_links as l where l.assertion_id = assertion.id)
+"""
+
+DELETE_UNREFERENCED_ASSERTION_SQL = """
+delete from catalog_source_assertions as assertion
+where assertion.id = %s::uuid
+  and not exists (select 1 from catalog_item_identifiers as i where i.assertion_id = assertion.id)
+  and not exists (select 1 from catalog_item_names as n where n.assertion_id = assertion.id)
+  and not exists (select 1 from catalog_item_facts as f where f.assertion_id = assertion.id)
+  and not exists (select 1 from catalog_item_relations as r where r.assertion_id = assertion.id)
+  and not exists (select 1 from catalog_source_links as l where l.assertion_id = assertion.id)
+"""
+
 
 def _field(row: Any, name: str) -> Any:
     if row is None:
@@ -702,6 +727,29 @@ def climb_eppo_ladder(conn: Any, taxon: EppoTaxon) -> LinkOutcome:
     if len(canonical) > 1:
         return LinkOutcome(None, None, tuple(canonical))
     return LinkOutcome(None, None)
+
+
+def _drop_unreferenced_assertion(conn: Any, assertion_id: str) -> None:
+    """Remove an assertion this run created and then found nothing to say."""
+    conn.execute(DELETE_UNREFERENCED_ASSERTION_SQL, (assertion_id,))
+
+
+def _drop_unreferenced_assertions_for_record(
+    conn: Any, source_record_id: str | None
+) -> None:
+    """Remove this source's assertions for one record that now say nothing.
+
+    Replacing a fact orphans the assertion the *previous* run wrote for it, so
+    cleaning only this run's own assertion would still grow the table once per
+    run. The scope is one source and one record, so nothing another source or
+    a curator wrote is touched.
+    """
+    if not source_record_id:
+        return
+    conn.execute(
+        DELETE_UNREFERENCED_ASSERTIONS_FOR_RECORD_SQL,
+        (EPPO_SOURCE_SLUG, source_record_id),
+    )
 
 
 def _insert_assertion(
@@ -877,6 +925,7 @@ def _write_identity(
         ).fetchone()
         if row is not None:
             receipt.names_written += 1
+    _drop_unreferenced_assertion(conn, assertion_id)
 
 
 def _create_node_from_eppo(
@@ -1043,6 +1092,8 @@ def _write_facts(
             ).fetchone()
             if written is not None:
                 receipt.categorization_facts_written += 1
+
+    _drop_unreferenced_assertions_for_record(conn, taxon.source_record_id)
 
 
 def _queue_for_curation(

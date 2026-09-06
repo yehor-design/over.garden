@@ -538,6 +538,40 @@ def test_a_second_run_replaces_its_own_facts_and_writes_no_duplicate(conn):
     assert identifiers["count"] == 1
 
 
+def test_a_second_run_leaves_no_assertion_behind(conn):
+    """A run that finds everything already written must write nothing at all."""
+    first, second, first_snapshot, _ = seed_two_captures(conn)
+    seed_node(conn, "Phthorimaea absoluta", kingdom="Animalia", eppo_code="GNORAB")
+    seed_unit(
+        conn,
+        capture_id=first,
+        code="GNORAB",
+        endpoint_class="taxon_overview",
+        payload=overview("GNORAB", "Tuta absoluta"),
+    )
+    seed_record(conn, first_snapshot, "GNORAB")
+    seed_unit(
+        conn,
+        capture_id=second,
+        code="GNORAB",
+        endpoint_class="taxon_distribution",
+        payload=[{"country_iso": "UA", "peststatus": "Present, widespread"}],
+    )
+
+    reconcile.reconcile_eppo(conn)
+    after_first = conn.execute(
+        "select count(*)::int as count from catalog_source_assertions where source_slug = 'eppo-codes'"
+    ).fetchone()["count"]
+    reconcile.reconcile_eppo(conn)
+    after_second = conn.execute(
+        "select count(*)::int as count from catalog_source_assertions where source_slug = 'eppo-codes'"
+    ).fetchone()["count"]
+
+    # 121,777 identifiers whose names and identifiers are already written would
+    # otherwise add a quarter of a million assertions that name nothing.
+    assert after_second == after_first
+
+
 def test_a_virus_eppo_has_and_the_backbone_lacks_becomes_its_own_node(conn):
     first, _second, first_snapshot, _ = seed_two_captures(conn)
     seed_unit(
