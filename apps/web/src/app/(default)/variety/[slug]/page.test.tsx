@@ -65,6 +65,7 @@ describe("/variety/[slug]", () => {
         catalogKind: "plant_variety",
         nodeKind: "cultivar",
         rank: null,
+        kingdom: null,
         canonicalName: "Pomidor Cheri",
         scientificName: "Pomidor Cheri",
         publicSlug: "pomidor-cheri-0000000101",
@@ -180,7 +181,9 @@ describe("/variety/[slug]", () => {
   });
 
   it("keeps missing public variety metadata noindex", async () => {
-    mocks.readPublicCatalogAddress.mockResolvedValueOnce({ status: "not_found" });
+    mocks.readPublicCatalogAddress.mockResolvedValueOnce({
+      status: "not_found",
+    });
     const { generateMetadata } = await import("./page");
 
     await expect(

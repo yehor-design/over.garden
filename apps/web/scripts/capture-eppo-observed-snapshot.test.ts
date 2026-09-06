@@ -86,6 +86,16 @@ describe("EPPO observed capture command", () => {
     );
   });
 
+  it("accepts the short class names the runbook writes", () => {
+    expect(
+      parseEppoCaptureOptions([
+        ...baseArgs,
+        "--endpoint-classes",
+        "hosts,distribution,categorization",
+      ]).endpointClasses,
+    ).toEqual(["taxon_hosts", "taxon_distribution", "taxon_categorization"]);
+  });
+
   it("refuses a class the provider never documented, and a repeated one", () => {
     expect(() =>
       parseEppoCaptureOptions([

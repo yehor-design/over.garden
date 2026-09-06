@@ -4,6 +4,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
+import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 
@@ -224,6 +225,71 @@ export async function findPublicEppoSourceRecord(
     .executeTakeFirst();
 
   return row ? serializePublicEppoSourceRecord(row, locale) : null;
+}
+
+/**
+ * The canonical card an EPPO code now belongs to, if any (OVE-394).
+ *
+ * The archive page describes source evidence, never an OverGarden identity.
+ * Once the reconciliation links a code to a node, the two facts sit side by
+ * side and a reader should be able to walk from one to the other, so the
+ * archive page offers the card as a link. A code that links to nothing, or to
+ * a node with no public address, simply has no link.
+ */
+export interface PublicEppoCanonicalCard {
+  canonicalName: string;
+  publicPath: string;
+}
+
+export function buildPublicEppoCanonicalCardQuery(
+  executor: QueryExecutor,
+  eppoCode: string,
+) {
+  return executor
+    .selectFrom("catalog_item_identifiers as identifier")
+    .innerJoin("catalog_items as item", "item.id", "identifier.catalog_item_id")
+    .leftJoin("catalog_items as species", (join) =>
+      join
+        .onRef("species.id", "=", "item.parent_catalog_item_id")
+        .on("species.catalog_kind", "=", "species"),
+    )
+    .select([
+      "item.canonical_name as canonicalName",
+      "item.catalog_kind as catalogKind",
+      "item.public_slug as publicSlug",
+      "species.public_slug as speciesSlug",
+    ])
+    .where("identifier.scheme", "=", "eppo")
+    .where("identifier.value", "=", eppoCode)
+    .where("item.identity_state", "=", "active")
+    .where("item.merged_into_catalog_item_id", "is", null)
+    .where("item.public_slug", "is not", null)
+    .limit(1);
+}
+
+export async function findPublicEppoCanonicalCard(
+  eppoCode: string,
+  locale: PublicLocale,
+  executor: QueryExecutor = db,
+): Promise<PublicEppoCanonicalCard | null> {
+  const normalizedCode = eppoCode.trim().toUpperCase();
+  if (!/^[0-9A-Z]{5,6}$/u.test(normalizedCode)) return null;
+  const row = await buildPublicEppoCanonicalCardQuery(
+    executor,
+    normalizedCode,
+  ).executeTakeFirst();
+  if (!row?.publicSlug) return null;
+  return {
+    canonicalName: row.canonicalName,
+    publicPath: localizedPath(
+      locale,
+      publicCatalogEvidencePath({
+        catalogKind: row.catalogKind as "species" | "plant_variety" | "breed",
+        publicSlug: row.publicSlug,
+        speciesSlug: row.speciesSlug,
+      }),
+    ),
+  };
 }
 
 export function buildPublicEppoSourceQuery(

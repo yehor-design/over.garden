@@ -256,6 +256,7 @@ export function publicVarietyPage(
       catalogKind: "plant_variety",
       nodeKind: "cultivar",
       rank: null,
+      kingdom: null,
       canonicalName: JOURNEY.catalogCanonicalName,
       scientificName: JOURNEY.catalogCanonicalName,
       publicSlug: JOURNEY.catalogPublicSlug,
@@ -313,7 +314,9 @@ export function publicVarietyPage(
   } satisfies Omit<PublicVarietyPage, "indexState">;
   return {
     ...page,
-    indexState: resolvePublicSurfaceDiscoveryForRequest(buildPublicVarietyDiscoverySource(page, "public_variety_repository")).decision,
+    indexState: resolvePublicSurfaceDiscoveryForRequest(
+      buildPublicVarietyDiscoverySource(page, "public_variety_repository"),
+    ).decision,
   };
 }
 

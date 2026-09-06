@@ -55,10 +55,49 @@ licence digests, the four documented capability classes, the start and tail
 list boundaries, one bounded detail sample, projected request volume, database
 size, and filesystem headroom.
 
-`capture` creates a new UUID, inventories all ordered pages, queues three
-detail units per observed identifier, hydrates documented identifiers
-serially, re-reads the full ending inventory, materializes quarantined source
-records, and completes only when every count and digest closes.
+`capture` creates a new UUID, inventories all ordered pages, queues one detail
+unit per observed identifier for each class the run declares, hydrates
+documented identifiers serially, re-reads the full ending inventory,
+materializes quarantined source records, and completes only when every count
+and digest closes.
+
+## A capture that extends another (OVE-394, ADR-0026 D11)
+
+The 2026-09-03 capture took overview, names and taxonomy. Hosts, distribution
+and categorization are the three surfaces no taxonomic backbone carries, and
+the reason EPPO is on the graph at all, so a second run takes them for the same
+identifiers rather than asking the provider for all 129,214 a second time:
+
+```bash
+pnpm eppo:observed-capture -- --mode capture --environment local --confirm-environment local --concurrency 1 --request-timeout-ms 15000 --max-attempts 2 --endpoint-classes hosts,distribution,categorization --base-capture df3852ea-3233-4883-8886-92d9e68f5193
+```
+
+`--endpoint-classes` takes the short names above or the full class names
+(`taxon_hosts`, `taxon_distribution`, `taxon_categorization`); both reach the
+database as the full form. Omitted, a run declares the first capture's three.
+Every class must be one the API documents, none may repeat, and the plan probes
+only the classes the run will queue, so its storage projection describes the
+run rather than the vocabulary.
+
+`--base-capture` names the completed run this one extends. Before anything is
+written the base capture must be complete, its inventory must still reproduce
+the digest it recorded from its own stored pages, and its classes must be
+disjoint from the new run's. This is deliberately narrower than `--mode verify`,
+which also asserts that nothing in the database changed since that capture
+ended: that is the right check the hour a capture finishes and the wrong one
+months later, when other slices have legitimately added product rows.
+
+Each capture declares its classes in its plan receipt, and everything that
+counts units per identifier reads that declaration through the SQL function
+`catalog_capture_declared_classes` rather than the vocabulary. That is what
+lets the vocabulary hold six classes while each run holds three: the four
+completeness checks that rebuild a source record's payload from its units keep
+matching, and a resume queues exactly what the run it resumes declared, never
+what a later command line says.
+
+The second capture ran on 2026-09-06 as `19fc0b98-fe02-4c16-bab8-3af55a1e240e`
+with 387,772 projected provider requests, from a git worktree pinned at the
+commit that carries this tooling.
 
 Inventory requests pin the documented `orderBy=eppocode&orderAsc=true`
 contract, and the capture preserves the returned sequence byte-for-byte. It

@@ -38,6 +38,7 @@ import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import {
   formatOrganismDate,
   formatOrganismFactParagraph,
+  organismRoleFor,
 } from "@/lib/public-organism-copy";
 import {
   hasAcceptedNameDisagreement,
@@ -224,19 +225,27 @@ export async function renderPublicCatalogEvidenceRoute(
   // no panel, and a refused panel never takes the page down.
   const engagement =
     isPlantVariety && page.entryCount > 0
-      ? await getEngagementSummary(engagementTarget).catch((reason: unknown) => {
-          recordWorkspaceSectionFailure(describeWorkspaceFailure(reason), {
-            surface: "engagement_panel",
-            section: "summary",
-          });
-          return null;
-        })
+      ? await getEngagementSummary(engagementTarget).catch(
+          (reason: unknown) => {
+            recordWorkspaceSectionFailure(describeWorkspaceFailure(reason), {
+              surface: "engagement_panel",
+              section: "summary",
+            });
+            return null;
+          },
+        )
       : null;
   const likeState = engagement
     ? await readViewerLikeState(engagementTarget)
     : null;
 
   const cardCopy = publicCopy.organism;
+  // ADR-0026 D11: a node EPPO says is a pest of something is called a pest or
+  // a disease, not "species". The hosts are the role; the kingdom is the word.
+  const organismRole = organismRoleFor({
+    kingdom: page.catalog.kingdom,
+    hostCount: page.card.hosts.length,
+  });
   const factParagraph = formatOrganismFactParagraph(locale, {
     canonicalName: page.catalog.canonicalName,
     catalogKind,
@@ -244,9 +253,9 @@ export async function renderPublicCatalogEvidenceRoute(
     formCount: page.card.formCount,
     gardenerCount: page.card.gardenerCount,
     regionCount: page.card.regions.length,
+    organismRole,
   });
-  const hasExperience =
-    page.entries.length > 0 || page.card.regions.length > 0;
+  const hasExperience = page.entries.length > 0 || page.card.regions.length > 0;
   const relationGroups = [
     { key: "forms", heading: cardCopy.sections.forms, items: page.card.forms },
     { key: "pests", heading: cardCopy.sections.pests, items: page.card.pests },
@@ -414,7 +423,11 @@ export async function renderPublicCatalogEvidenceRoute(
                     <span className="text-muted-foreground">
                       {formatPublicCount(locale, "object", region.objectCount)}
                       {" · "}
-                      {formatPublicCount(locale, "gardener", region.gardenerCount)}
+                      {formatPublicCount(
+                        locale,
+                        "gardener",
+                        region.gardenerCount,
+                      )}
                     </span>
                   </li>
                 ))}
@@ -525,6 +538,46 @@ export async function renderPublicCatalogEvidenceRoute(
         </section>
       ) : null}
 
+      {page.card.presence.length > 0 ? (
+        <section
+          aria-labelledby="organism-presence-heading"
+          data-organism-section="presence"
+          className="grid gap-3 border-b border-border pb-6"
+        >
+          <h2
+            id="organism-presence-heading"
+            className="text-2xl font-semibold tracking-tight text-foreground"
+          >
+            {cardCopy.sections.presence}
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {page.card.presence.map((entry) => {
+              const observed = formatOrganismDate(locale, entry.observedAt);
+              return (
+                <li
+                  key={entry.regionCode}
+                  data-organism-presence={entry.regionCode}
+                  data-organism-presence-status={entry.status}
+                  className="rounded-md border border-border px-3 py-2 text-sm text-foreground"
+                >
+                  <span className="font-medium">
+                    {presenceRegionLabel(cardCopy, entry.regionCode)}
+                  </span>{" "}
+                  <span>{cardCopy.presence[entry.status]}</span>
+                  {/* What EPPO wrote, so a badge is never surer than its source. */}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {entry.sourceName}: {entry.verbatim}
+                    {observed
+                      ? ` · ${cardCopy.sections.observedOn}: ${observed}`
+                      : ""}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
       {page.card.sourceGroups.length > 0 ? (
         <details
           data-organism-section="names-and-sources"
@@ -551,7 +604,9 @@ export async function renderPublicCatalogEvidenceRoute(
                   {page.card.acceptedNameClaims.map((claim) => (
                     <li key={`${claim.sourceName}:${claim.name}`}>
                       {claim.sourceName}:{" "}
-                      <span className="italic text-foreground">{claim.name}</span>
+                      <span className="text-foreground italic">
+                        {claim.name}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -568,7 +623,8 @@ export async function renderPublicCatalogEvidenceRoute(
                     {group.sourceName}
                     {group.sourceVersion ? (
                       <span className="ml-2 text-sm font-normal text-muted-foreground">
-                        {publicCopy.sourceCredits.versionLabel}: {group.sourceVersion}
+                        {publicCopy.sourceCredits.versionLabel}:{" "}
+                        {group.sourceVersion}
                       </span>
                     ) : null}
                     {observed ? (
@@ -579,7 +635,10 @@ export async function renderPublicCatalogEvidenceRoute(
                   </h3>
                   <ul className="grid gap-1 text-sm">
                     {group.lines.map((line, index) => (
-                      <li key={`${line.kind}:${line.label}:${index}`} className="flex flex-wrap gap-x-2">
+                      <li
+                        key={`${line.kind}:${line.label}:${index}`}
+                        className="flex flex-wrap gap-x-2"
+                      >
                         <span className="text-muted-foreground">
                           {assertionLabel(cardCopy, line)}:
                         </span>
@@ -595,6 +654,30 @@ export async function renderPublicCatalogEvidenceRoute(
                 </div>
               );
             })}
+            {page.card.attributions.length > 0 ? (
+              <ul
+                data-organism-attributions
+                className="grid gap-1 border-t border-border pt-3 text-xs text-muted-foreground"
+              >
+                {page.card.attributions.map((attribution) => {
+                  const downloaded = formatOrganismDate(
+                    locale,
+                    attribution.downloadedAt,
+                  );
+                  return (
+                    <li
+                      key={attribution.sourceSlug}
+                      data-organism-attribution={attribution.sourceSlug}
+                    >
+                      {attribution.text}
+                      {downloaded
+                        ? ` · ${cardCopy.sections.downloadedOn}: ${downloaded}`
+                        : ""}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
           </div>
         </details>
       ) : null}
@@ -623,6 +706,12 @@ type OrganismCopy = ReturnType<typeof getPublicSurfaceCopy>["organism"];
 
 function hostClassLabel(copy: OrganismCopy, hostClass: string) {
   return (copy.hostClass as Record<string, string>)[hostClass] ?? hostClass;
+}
+
+function presenceRegionLabel(copy: OrganismCopy, regionCode: string) {
+  return (
+    (copy.presenceRegion as Record<string, string>)[regionCode] ?? regionCode
+  );
 }
 
 function assertionLabel(copy: OrganismCopy, line: PublicOrganismAssertionLine) {

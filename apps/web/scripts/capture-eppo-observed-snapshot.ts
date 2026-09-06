@@ -211,7 +211,17 @@ export function parseEppoCaptureOptions(args: string[]): EppoCaptureOptions {
   // 129,214 identifiers all over again.
   const endpointClassesArgument = parsed.get("--endpoint-classes");
   const endpointClasses = endpointClassesArgument
-    ? endpointClassesArgument.split(",").map((value) => value.trim())
+    ? endpointClassesArgument.split(",").map((value) => {
+        const name = value.trim();
+        // `hosts` and `taxon_hosts` name the same class. The runbook writes the
+        // short form; the vocabulary stores the long one, and only the long one
+        // ever reaches the database.
+        return (EPPO_DETAIL_ENDPOINT_CLASSES as readonly string[]).includes(
+          `taxon_${name}`,
+        )
+          ? `taxon_${name}`
+          : name;
+      })
     : null;
   if (endpointClasses) {
     if (endpointClasses.length === 0) throw new Error("empty_endpoint_classes");

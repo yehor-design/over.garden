@@ -13,6 +13,26 @@ export interface OrganismFactParagraphInput {
   formCount: number;
   gardenerCount: number;
   regionCount: number;
+  /**
+   * ADR-0026 D11: what this organism is to a garden, when EPPO says it is a
+   * pest of something. The kingdom decides the word: an animal is a pest, a
+   * fungus, bacterium or virus is a disease. Absent, the card says species.
+   */
+  organismRole?: "pest" | "disease" | null;
+}
+
+/** The word a card uses for an organism that is a pest of something (D11). */
+export function organismRoleFor(input: {
+  kingdom: string | null;
+  hostCount: number;
+}): "pest" | "disease" | null {
+  if (input.hostCount <= 0) return null;
+  if (!input.kingdom) return null;
+  // A gardener calls the beetle a pest and the blight a disease; the kingdom
+  // is the only structured field that tells the two apart.
+  return input.kingdom === "Animalia" || input.kingdom === "Plantae"
+    ? "pest"
+    : "disease";
 }
 
 /**
@@ -26,7 +46,9 @@ export function formatOrganismFactParagraph(
 ): string {
   const copy = getPublicSurfaceCopy(locale).organism.fact;
   const sentences: string[] = [];
-  const kind = copy.kind[input.catalogKind];
+  const kind = input.organismRole
+    ? copy.role[input.organismRole]
+    : copy.kind[input.catalogKind];
   sentences.push(
     input.catalogKind !== "species" && input.speciesName
       ? fill(copy.identityWithSpecies, {
@@ -44,7 +66,11 @@ export function formatOrganismFactParagraph(
     );
   }
   if (input.gardenerCount > 0) {
-    const gardeners = formatPublicCount(locale, "gardener", input.gardenerCount);
+    const gardeners = formatPublicCount(
+      locale,
+      "gardener",
+      input.gardenerCount,
+    );
     sentences.push(
       input.regionCount > 0
         ? fill(copy.gardenersWithRegions, {

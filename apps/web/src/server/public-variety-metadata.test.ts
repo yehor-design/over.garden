@@ -58,7 +58,8 @@ describe("public variety metadata", () => {
           "@type": "WebPage",
           url: "https://example.test/variety/pomidor-cheri-0000000101",
           mainEntity: {
-            "@id": "https://example.test/id/00000000-0000-4000-8000-000000000101",
+            "@id":
+              "https://example.test/id/00000000-0000-4000-8000-000000000101",
           },
         },
         {
@@ -86,7 +87,9 @@ describe("public variety metadata", () => {
         },
       ],
     });
-    const taxon = (jsonLd as { "@graph": Record<string, unknown>[] })["@graph"][1];
+    const taxon = (jsonLd as { "@graph": Record<string, unknown>[] })[
+      "@graph"
+    ][1];
     expect(taxon).not.toHaveProperty("parentTaxon");
     const serialized = JSON.stringify(jsonLd);
     expect(serialized).not.toMatch(
@@ -107,7 +110,9 @@ describe("public variety metadata", () => {
 
     expect(jsonLd).toMatchObject({
       "@graph": [
-        { url: "https://example.test/bg/species/solanum-lycopersicum/pomidor-cheri" },
+        {
+          url: "https://example.test/bg/species/solanum-lycopersicum/pomidor-cheri",
+        },
         {
           "@type": "Taxon",
           parentTaxon: {
@@ -187,6 +192,7 @@ function buildPage({ rich }: { rich: boolean }): PublicVarietyPage {
       catalogKind: "plant_variety" as const,
       nodeKind: "cultivar",
       rank: null,
+      kingdom: null,
       canonicalName: "Pomidor Cheri",
       scientificName: "Pomidor Cheri",
       publicSlug: "pomidor-cheri-0000000101",
@@ -231,6 +237,8 @@ function buildPage({ rich }: { rich: boolean }): PublicVarietyPage {
   } satisfies Omit<PublicVarietyPage, "indexState">;
   return {
     ...page,
-    indexState: resolvePublicSurfaceDiscoveryForRequest(buildPublicVarietyDiscoverySource(page, "public_variety_repository")).decision,
+    indexState: resolvePublicSurfaceDiscoveryForRequest(
+      buildPublicVarietyDiscoverySource(page, "public_variety_repository"),
+    ).decision,
   };
 }

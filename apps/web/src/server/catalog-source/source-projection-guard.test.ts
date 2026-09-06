@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CatalogSourceLeafProjectionBlockedError,
   CatalogSourceProjectionBlockedError,
+  assertCatalogSourceLeafProjectionAllowed,
   assertCatalogSourceProductProjectionAllowed,
+  checkCatalogSourceLeafProjection,
   checkCatalogSourceProductProjection,
   type CatalogSourceReadinessManifest,
 } from "./source-projection-guard";
@@ -363,5 +366,103 @@ describe("catalog source product projection guard", () => {
     }
     expect(rawOnly.verdict).toBe("USE");
     expect(rawOnly.nextAction).toContain("canonical_product_projection");
+  });
+});
+
+describe("the leaf-rights half of the guard (OVE-394, ADR-0026 D11)", () => {
+  // The shape `classifyEppoResponseFields` writes for one distribution row.
+  const distributionRights = {
+    "[].country_iso": "source_public",
+    "[].peststatus": "source_public",
+    "[].state_id": "source_public",
+    "[].yr_introd": "source_public",
+  } as const;
+
+  it("passes a distribution payload whose every leaf is public", () => {
+    const decision = checkCatalogSourceLeafProjection({
+      sourceSlug: "eppo-codes",
+      payload: [
+        {
+          country_iso: "UA",
+          peststatus: "Present, restricted distribution",
+          state_id: null,
+          yr_introd: 2010,
+        },
+      ],
+      fieldRights: distributionRights,
+      productSurface: "catalog_items",
+    });
+
+    expect(decision).toEqual({ allowed: true, leafCount: 3 });
+  });
+
+  it("refuses a source-only leaf, naming the path", () => {
+    const decision = checkCatalogSourceLeafProjection({
+      sourceSlug: "eppo-codes",
+      payload: [
+        { eppocode: "XYLEFA", bibref: "EPPO Reporting Service 2019/123" },
+      ],
+      fieldRights: {
+        "[].eppocode": "source_public",
+        "[].bibref": "source_only",
+      },
+    });
+
+    expect(decision.allowed).toBe(false);
+    if (decision.allowed) throw new Error("a source-only leaf must be refused");
+    expect(decision.path).toBe("[].bibref");
+    expect(decision.right).toBe("source_only");
+  });
+
+  it("refuses a forbidden leaf even among public ones", () => {
+    expect(() =>
+      assertCatalogSourceLeafProjectionAllowed({
+        sourceSlug: "eppo-codes",
+        payload: { country_iso: "UA", latitude: "50.45" },
+        fieldRights: { country_iso: "source_public", latitude: "forbidden" },
+      }),
+    ).toThrow(CatalogSourceLeafProjectionBlockedError);
+  });
+
+  it("refuses a leaf the capture never classified", () => {
+    // EPPO adding a field between the capture and the projection must not
+    // publish it by default: unclassified is unknown, and unknown is refused.
+    const decision = checkCatalogSourceLeafProjection({
+      sourceSlug: "eppo-codes",
+      payload: { country_iso: "UA", collector_name: "someone" },
+      fieldRights: { country_iso: "source_public" },
+    });
+
+    expect(decision.allowed).toBe(false);
+    if (decision.allowed)
+      throw new Error("an unclassified leaf must be refused");
+    expect(decision.path).toBe("collector_name");
+    expect(decision.right).toBe("unknown");
+  });
+
+  it("walks into nested arrays and objects rather than trusting the top level", () => {
+    const decision = checkCatalogSourceLeafProjection({
+      sourceSlug: "eppo-codes",
+      payload: [{ hosts: [{ eppocode: "SOLTU", bibref: "a reference" }] }],
+      fieldRights: {
+        "[].hosts[].eppocode": "source_public",
+        "[].hosts[].bibref": "source_only",
+      },
+    });
+
+    expect(decision.allowed).toBe(false);
+    if (decision.allowed)
+      throw new Error("a nested source-only leaf must be refused");
+    expect(decision.path).toBe("[].hosts[].bibref");
+  });
+
+  it("treats a null as no leaf at all, so an absent value is never refused", () => {
+    const decision = checkCatalogSourceLeafProjection({
+      sourceSlug: "eppo-codes",
+      payload: { country_iso: "UA", state_id: null },
+      fieldRights: { country_iso: "source_public" },
+    });
+
+    expect(decision).toEqual({ allowed: true, leafCount: 1 });
   });
 });

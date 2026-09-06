@@ -9,6 +9,8 @@ export interface EppoArchiveCopy {
   intro: string;
   resultsTitle: string;
   detailTitle: string;
+  /** OVE-394: the archive record now has a canonical card to walk to. */
+  canonicalCard: string;
   searchLabel: string;
   searchPlaceholder: string;
   searchButton: string;
@@ -42,6 +44,7 @@ const COPY: Record<PublicLocale, EppoArchiveCopy> = {
       "Спостережені публічні дані EPPO Codes. Запис у цьому архіві не є схваленим ідентифікатором продуктового каталогу OverGarden.",
     resultsTitle: "Записи джерела",
     detailTitle: "Запис джерела EPPO",
+    canonicalCard: "Картка організму в OverGarden",
     searchLabel: "Пошук за назвою або кодом",
     searchPlaceholder: "Введіть щонайменше 2 символи",
     searchButton: "Шукати",
@@ -87,6 +90,7 @@ const COPY: Record<PublicLocale, EppoArchiveCopy> = {
       "Наблюдавани публични данни от EPPO Codes. Записът тук не е одобрена продуктова идентичност в каталога на OverGarden.",
     resultsTitle: "Записи от източника",
     detailTitle: "Запис от източника EPPO",
+    canonicalCard: "Картa на организма в OverGarden",
     searchLabel: "Търсене по име или код",
     searchPlaceholder: "Въведете поне 2 знака",
     searchButton: "Търсене",
@@ -132,6 +136,7 @@ const COPY: Record<PublicLocale, EppoArchiveCopy> = {
       "Наблюдаемые публичные данные EPPO Codes. Запись в этом архиве не является одобренной продуктовой идентичностью каталога OverGarden.",
     resultsTitle: "Записи источника",
     detailTitle: "Запись источника EPPO",
+    canonicalCard: "Карточка организма в OverGarden",
     searchLabel: "Поиск по названию или коду",
     searchPlaceholder: "Введите минимум 2 символа",
     searchButton: "Найти",
