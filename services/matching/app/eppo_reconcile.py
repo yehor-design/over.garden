@@ -169,6 +169,7 @@ class EppoReconcileReceipt:
     linked_by_identifier: int = 0
     linked_by_scientific_name: int = 0
     linked_by_canonical_name: int = 0
+    linked_by_col_usage: int = 0
     nodes_created: int = 0
     queued_for_curation: int = 0
     identifiers_written: int = 0
@@ -188,6 +189,7 @@ class EppoReconcileReceipt:
             self.linked_by_identifier
             + self.linked_by_scientific_name
             + self.linked_by_canonical_name
+            + self.linked_by_col_usage
             + self.nodes_created
         )
 
@@ -206,6 +208,7 @@ class EppoReconcileReceipt:
             "linkedByIdentifier": self.linked_by_identifier,
             "linkedByScientificName": self.linked_by_scientific_name,
             "linkedByCanonicalName": self.linked_by_canonical_name,
+            "linkedByColUsage": self.linked_by_col_usage,
             "nodesCreated": self.nodes_created,
             "queuedForCuration": self.queued_for_curation,
             "identifiersWritten": self.identifiers_written,
@@ -307,6 +310,24 @@ class EppoTaxon:
             seen.add(key)
             out.append((language, display))
         return out
+
+
+def canonical_name_of(scientific_name: str) -> str:
+    """The binomial inside a scientific name, without its authorship.
+
+    EPPO writes "Solanum lycopersicum"; a checklist stores the canonical name
+    and the authored scientific name in different columns. Taking the first two
+    tokens when the second is lower case is the shape of every binomial and of
+    nothing else here, and what it produces is only ever compared for exact
+    equality.
+    """
+    tokens = [token for token in scientific_name.split() if token]
+    if len(tokens) < 2:
+        return scientific_name.strip()
+    genus, epithet = tokens[0], tokens[1]
+    if not epithet.isalpha() or not epithet.islower():
+        return genus
+    return f"{genus} {epithet}"
 
 
 def normalized_presence(status: Any) -> str:
@@ -427,6 +448,35 @@ where name.normalized_name = catalog_normalize_name(%s)
     or catalog_normalize_name(name.authorship) = catalog_normalize_name(%s)
   )
 limit 3
+"""
+
+# The backbone's own checklist, which holds millions of names the graph has no
+# node for yet. Two lookups rather than one `or`: `normalized_scientific_name`
+# has its own btree, and `normalized_name` is served by a prefix index whose
+# `text_pattern_ops` class answers `like` but not `=`, so a wildcard-free
+# `like` is that equality (OVE-392 built both).
+COL_USAGE_BY_SCIENTIFIC_NAME_SQL = """
+select usage.col_id
+from catalog_source_col_usages as usage
+where usage.source_snapshot_id = catalog_col_current_snapshot()
+  and usage.status in ('accepted', 'provisionally_accepted')
+  and usage.normalized_scientific_name = catalog_normalize_name(%s)
+  and (%s::text is null or usage.kingdom is null or usage.kingdom = %s::text)
+limit 3
+"""
+
+COL_USAGE_BY_CANONICAL_NAME_SQL = """
+select usage.col_id
+from catalog_source_col_usages as usage
+where usage.source_snapshot_id = catalog_col_current_snapshot()
+  and usage.status in ('accepted', 'provisionally_accepted')
+  and usage.normalized_name like catalog_normalize_name(%s)
+  and (%s::text is null or usage.kingdom is null or usage.kingdom = %s::text)
+limit 3
+"""
+
+ENSURE_COL_NODE_SQL = """
+select catalog_col_ensure_node(%s, %s::uuid)::text as id
 """
 
 CANONICAL_NAME_MATCH_SQL = """
@@ -682,7 +732,9 @@ class LinkOutcome:
     ambiguous_ids: tuple[str, ...] = ()
 
 
-def climb_eppo_ladder(conn: Any, taxon: EppoTaxon) -> LinkOutcome:
+def climb_eppo_ladder(
+    conn: Any, taxon: EppoTaxon, assertion_id: str | None = None
+) -> LinkOutcome:
     """Rung one, then two, then three — and nothing below three.
 
     A rung that finds more than one node does not fall through to a looser
@@ -726,6 +778,43 @@ def climb_eppo_ladder(conn: Any, taxon: EppoTaxon) -> LinkOutcome:
         return LinkOutcome(canonical[0], "canonical_name")
     if len(canonical) > 1:
         return LinkOutcome(None, None, tuple(canonical))
+
+    # The backbone's checklist, not only the nodes built from it. Catalogue of
+    # Life holds millions of names the graph has no node for yet, and 23,696 of
+    # EPPO's 121,777 active identifiers are genera and families that no node
+    # carries. Materializing one through `catalog_col_ensure_node` gives it the
+    # backbone's classification and a `col` identifier — the right home for a
+    # taxon Catalogue of Life knows, and far better than a node invented from
+    # EPPO alone (ADR-0026 D2).
+    if assertion_id:
+        usages = [
+            str(_field(row, "col_id"))
+            for row in _rows(
+                conn.execute(COL_USAGE_BY_SCIENTIFIC_NAME_SQL, (name, kingdom, kingdom))
+            )
+        ]
+        if not usages:
+            usages = [
+                str(_field(row, "col_id"))
+                for row in _rows(
+                    conn.execute(
+                        COL_USAGE_BY_CANONICAL_NAME_SQL,
+                        (canonical_name_of(name), kingdom, kingdom),
+                    )
+                )
+            ]
+        if len(usages) > 1:
+            return LinkOutcome(None, None)
+        if len(usages) == 1:
+            # Two statements: the function inserts rows the calling statement's
+            # snapshot cannot see, so its result is read back.
+            ensured = _field(
+                conn.execute(ENSURE_COL_NODE_SQL, (usages[0], assertion_id)).fetchone(),
+                "id",
+            )
+            if ensured:
+                return LinkOutcome(str(ensured), "col_usage")
+
     return LinkOutcome(None, None)
 
 
@@ -829,13 +918,24 @@ def reconcile_eppo(
             )
 
             with conn.transaction():
-                outcome = climb_eppo_ladder(conn, taxon)
+                # One assertion per identifier per pass, created before the
+                # ladder because materializing a Catalogue of Life node needs
+                # one, and removed at the end if it turns out to say nothing.
+                assertion_id = _insert_assertion(
+                    conn,
+                    snapshot_id=taxon.source_snapshot_id or "",
+                    record_id=taxon.source_record_id,
+                    reasons=["eppo_ladder"],
+                )
+                outcome = climb_eppo_ladder(conn, taxon, assertion_id)
                 if outcome.catalog_item_id is None and outcome.ambiguous_ids:
                     _queue_for_curation(conn, taxon, outcome, receipt)
+                    _drop_unreferenced_assertion(conn, assertion_id)
                     continue
                 if outcome.catalog_item_id is None:
-                    created = _create_node_from_eppo(conn, taxon, receipt)
+                    created = _create_node_from_eppo(conn, taxon, receipt, assertion_id)
                     if created is None:
+                        _drop_unreferenced_assertion(conn, assertion_id)
                         continue
                     node_by_code[code] = created
                     pending_facts.append(code)
@@ -849,8 +949,15 @@ def reconcile_eppo(
                     receipt.linked_by_scientific_name += 1
                 elif outcome.rule == "canonical_name":
                     receipt.linked_by_canonical_name += 1
+                elif outcome.rule == "col_usage":
+                    receipt.linked_by_col_usage += 1
                 _write_identity(
-                    conn, taxon, node_by_code[code], outcome.rule or "eppo", receipt
+                    conn,
+                    taxon,
+                    node_by_code[code],
+                    outcome.rule or "eppo",
+                    receipt,
+                    assertion_id,
                 )
 
     receipt.active_codes_linked = len(node_by_code)
@@ -886,14 +993,10 @@ def _write_identity(
     node_id: str,
     rule: str,
     receipt: EppoReconcileReceipt,
+    assertion_id: str,
 ) -> None:
     """The identifier, the source link and the vernaculars for one linked node."""
-    assertion_id = _insert_assertion(
-        conn,
-        snapshot_id=taxon.source_snapshot_id or "",
-        record_id=taxon.source_record_id,
-        reasons=[f"eppo_{rule}"],
-    )
+    del rule
     written = conn.execute(
         INSERT_IDENTIFIER_SQL, (node_id, taxon.eppo_code, assertion_id)
     ).fetchone()
@@ -929,7 +1032,10 @@ def _write_identity(
 
 
 def _create_node_from_eppo(
-    conn: Any, taxon: EppoTaxon, receipt: EppoReconcileReceipt
+    conn: Any,
+    taxon: EppoTaxon,
+    receipt: EppoReconcileReceipt,
+    assertion_id: str,
 ) -> str | None:
     """A node for a taxon EPPO has and Catalogue of Life does not.
 
@@ -950,12 +1056,6 @@ def _create_node_from_eppo(
         return None
     node_id = str(_field(row, "id"))
     receipt.nodes_created += 1
-    assertion_id = _insert_assertion(
-        conn,
-        snapshot_id=taxon.source_snapshot_id or "",
-        record_id=taxon.source_record_id,
-        reasons=["eppo_node_created"],
-    )
     conn.execute(INSERT_IDENTIFIER_SQL, (node_id, taxon.eppo_code, assertion_id))
     receipt.identifiers_written += 1
     conn.execute(

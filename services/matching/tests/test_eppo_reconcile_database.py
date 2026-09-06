@@ -572,6 +572,83 @@ def test_a_second_run_leaves_no_assertion_behind(conn):
     assert after_second == after_first
 
 
+def test_a_genus_the_checklist_knows_is_built_from_the_checklist(conn):
+    """The backbone owns the taxon; EPPO only says which one it means."""
+    first, _second, first_snapshot, _ = seed_two_captures(conn)
+    snapshot = conn.execute(
+        """
+        insert into catalog_source_snapshots (
+          source_slug, source_name, source_category, source_version, source_url,
+          license, parser_version, payload_sha256, fetched_at, verified_at, status
+        )
+        values ('catalogue-of-life-checklistbank', 'Catalogue of Life',
+                'species_backbone', 'ove395-proof', 'https://example.test/',
+                'CC BY 4.0', 'test', %s, now(), now(), 'imported')
+        returning id::text as id
+        """,
+        ("c" * 64,),
+    ).fetchone()["id"]
+    for col_id, canonical, scientific, rank, parent in (
+        ("PLANT", "Plantae", "Plantae", "kingdom", None),
+        ("ABIES", "Abies", "Abies Mill.", "genus", "PLANT"),
+    ):
+        conn.execute(
+            """
+            insert into catalog_source_col_usages (
+              source_snapshot_id, col_id, parent_col_id, canonical_name,
+              scientific_name, authorship, rank, status, kingdom
+            )
+            values (%s::uuid, %s, %s, %s, %s, null, %s, 'accepted', 'Plantae')
+            """,
+            (snapshot, col_id, parent, canonical, scientific, rank),
+        )
+
+    seed_unit(
+        conn,
+        capture_id=first,
+        code="1ABIG",
+        endpoint_class="taxon_overview",
+        payload=overview("1ABIG", "Abies"),
+    )
+    seed_unit(
+        conn,
+        capture_id=first,
+        code="1ABIG",
+        endpoint_class="taxon_taxonomy",
+        payload=[
+            {"type": "Kingdom", "level": 1, "eppocode": "1PLAK", "prefname": "Plantae"},
+            {"type": "Genus", "level": 6, "eppocode": "1ABIG", "prefname": "Abies"},
+        ],
+    )
+    seed_record(conn, first_snapshot, "1ABIG")
+
+    receipt = reconcile.reconcile_eppo(conn)
+
+    # 17,630 of EPPO's active identifiers are genera. One the checklist knows
+    # becomes a Catalogue of Life node with its classification and a `col`
+    # identifier, not a node invented from EPPO and not a queue item.
+    assert receipt.linked_by_col_usage == 1
+    assert receipt.nodes_created == 0
+    assert receipt.queued_for_curation == 0
+    node = conn.execute(
+        """
+        select item.canonical_name, item.rank, item.kingdom,
+               (select count(*)::int from catalog_item_identifiers as i
+                 where i.catalog_item_id = item.id and i.scheme = 'col') as col_ids,
+               (select count(*)::int from catalog_item_identifiers as i
+                 where i.catalog_item_id = item.id and i.scheme = 'eppo') as eppo_ids
+        from catalog_items as item
+        join catalog_item_identifiers as identifier
+          on identifier.catalog_item_id = item.id
+        where identifier.scheme = 'eppo' and identifier.value = '1ABIG'
+        """
+    ).fetchone()
+    assert node["canonical_name"] == "Abies"
+    assert node["rank"] == "genus"
+    assert node["col_ids"] == 1
+    assert node["eppo_ids"] == 1
+
+
 def test_a_virus_eppo_has_and_the_backbone_lacks_becomes_its_own_node(conn):
     first, _second, first_snapshot, _ = seed_two_captures(conn)
     seed_unit(
@@ -708,11 +785,11 @@ def test_one_identifier_is_the_unit_of_work(conn, monkeypatch):
     original = reconcile._create_node_from_eppo
     calls: list[str] = []
 
-    def fail_on_the_second(conn_, taxon, receipt):
+    def fail_on_the_second(conn_, taxon, receipt, assertion_id):
         calls.append(taxon.eppo_code)
         if len(calls) == 2:
             raise RuntimeError("the provider's database blinked")
-        return original(conn_, taxon, receipt)
+        return original(conn_, taxon, receipt, assertion_id)
 
     monkeypatch.setattr(reconcile, "_create_node_from_eppo", fail_on_the_second)
 
