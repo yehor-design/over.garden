@@ -52,6 +52,12 @@ async function main() {
   const admin = new Pool({ connectionString: adminUrl.toString(), max: 1 });
   await admin.query(`create database "${disposable}"`);
   const pool = new Pool({ connectionString: targetUrl.toString(), max: 2 });
+  // `drop database … with (force)` terminates whatever is still connected, and
+  // pg raises that as an `error` event on the pool. Unhandled, it crashes the
+  // process after the receipt has already printed — which is how this proof
+  // failed in CI while passing locally, purely on teardown timing.
+  pool.on("error", () => undefined);
+  admin.on("error", () => undefined);
   const db = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
   const receipt: Record<string, unknown> = { migration: MIGRATION, database: "disposable" };
   try {
@@ -76,9 +82,12 @@ async function main() {
     await cleanupItems(pool, itemIds);
     console.log(JSON.stringify({ ok: true, ...receipt }));
   } finally {
-    await db.destroy();
-    await admin.query(`drop database if exists "${disposable}" with (force)`);
-    await admin.end();
+    await db.destroy().catch(() => undefined);
+    await pool.end().catch(() => undefined);
+    await admin
+      .query(`drop database if exists "${disposable}" with (force)`)
+      .catch(() => undefined);
+    await admin.end().catch(() => undefined);
   }
 }
 
