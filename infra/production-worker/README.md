@@ -8,6 +8,20 @@ OverGarden development remains Apple Container-first.
 
 ## Release contract
 
+The image carries one third-party binary beside the Python environment:
+gnparser, the scientific-name parser the reconciliation ladder's second rung
+needs (ADR-0026 D4). `services/matching/scripts/install-gnparser.sh` pins the
+release and both platform checksums, and the Dockerfile, the CI job and the
+release job all run that one script, so the parser a test exercised is the
+parser production runs.
+
+A migration that changes the job-queue payload contract must be applied
+between `install` and `deploy`, not before the release is sealed: the running
+worker requires every payload CHECK the contract it was built from declares,
+so dropping a retired kind's check makes the incumbent report
+`schema_mismatch` and its container unhealthy until the new image is active.
+It keeps claiming and draining throughout, but the health signal is wrong.
+
 `.github/workflows/matching-image.yml` is the only supported publisher. For one
 exact 40-character commit already contained in `main`, it:
 
