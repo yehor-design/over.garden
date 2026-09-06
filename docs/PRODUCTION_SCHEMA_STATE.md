@@ -342,7 +342,8 @@ present beside the unchanged status, state, reason, generation and
 convergence checks. The table holds 15 `journal_entry` intents `applied` and
 1 `dead` (a pre-existing dead letter of the journal drain, untouched), and no
 `catalog_item` intent yet: the worker writes those from the reconciliation
-task on; `/api/cron/catalog-card-revalidate` drains them every ten minutes.
+task on; `/api/cron/catalog-card-revalidate` drains them daily (the Hobby
+plan's cron limit; ten minutes on Pro).
 
 ## The 2026-09-06 application of `0055`
 

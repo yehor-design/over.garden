@@ -6,8 +6,11 @@ import {
 } from "@/server/catalog-card-outbox";
 
 /**
- * Every ten minutes: drain the organism card intents the worker wrote
- * (ADR-0026 D9, migration 0062) and expire each card's cache tags. Vercel
+ * Drain the organism card intents the worker wrote (ADR-0026 D9, migration
+ * 0062) and expire each card's cache tags. Scheduled daily: Vercel's Hobby
+ * plan refuses a deployment whose cron runs more than once a day (the
+ * ten-minute cadence the task named needs the Pro plan), and the card read's
+ * `cacheLife("hours")` bounds staleness to about an hour meanwhile. Vercel
  * Cron sends GET; the same handler answers a manual POST.
  */
 export async function GET(request: Request) {
