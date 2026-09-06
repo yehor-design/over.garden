@@ -40,7 +40,12 @@ import {
   getPublicTopicAggregationPage,
   listPublicKnowledgeTopics,
 } from "@/server/public-topic-repository";
-import { getPublicVarietyPage } from "@/server/public-variety-repository";
+import type { PublicCatalogAddressRequest } from "@/lib/catalog/addresses";
+import { resolvePublicCatalogAddress } from "@/server/public-catalog-address-repository";
+import {
+  getPublicVarietyPage,
+  getPublicVarietyPageByCatalogItemId,
+} from "@/server/public-variety-repository";
 
 /**
  * The cached public reads (ADR-0022, D4). Every function here is a
@@ -202,12 +207,43 @@ export async function readPublicVarietyPage(
   "use cache";
   cacheLife("hours");
   cacheTag(PUBLIC_CACHE_TAGS.catalog);
-  return getPublicVarietyPage(
+  const page = await getPublicVarietyPage(
     publicSlug,
     expectedCatalogKind,
     undefined,
     locale,
   );
+  if (page) cacheTag(publicCacheTag.organism(page.catalog.catalogItemId));
+  return page;
+}
+
+/** One organism's card by its permanent identity (ADR-0026 D8, D9). */
+export async function readPublicVarietyPageByCatalogItemId(
+  catalogItemId: string,
+  locale: PublicLocale,
+) {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(PUBLIC_CACHE_TAGS.catalog, publicCacheTag.organism(catalogItemId));
+  return getPublicVarietyPageByCatalogItemId(catalogItemId, undefined, locale);
+}
+
+/**
+ * Where an address request leads: the canonical page, a permanent redirect
+ * to it, or nothing. Tagged with every organism address, and with the
+ * organism it resolves to, so a slug assignment or a merge drops it.
+ */
+export async function readPublicCatalogAddress(
+  request: PublicCatalogAddressRequest,
+) {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(PUBLIC_CACHE_TAGS.organismSlugs);
+  const lookup = await resolvePublicCatalogAddress(request);
+  if (lookup.status !== "not_found") {
+    cacheTag(publicCacheTag.organism(lookup.catalogItemId));
+  }
+  return lookup;
 }
 
 /** Likes and comment counts as a guest sees them. */

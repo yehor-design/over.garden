@@ -1,0 +1,416 @@
+{
+  "version": "ove388.form-slug.v1",
+  "description": "Form slugs (ADR-0026 D8): Ukrainian per resolution 55 of 2010, Bulgarian per the 2009 law, Latin folded. Hand-authored expectations; the first block is the resolution's own examples.",
+  "cases": [
+    {
+      "denomination": "Алушта",
+      "language": "uk",
+      "slug": "alushta"
+    },
+    {
+      "denomination": "Андрій",
+      "language": "uk",
+      "slug": "andrii"
+    },
+    {
+      "denomination": "Борщагівка",
+      "language": "uk",
+      "slug": "borshchahivka"
+    },
+    {
+      "denomination": "Вінниця",
+      "language": "uk",
+      "slug": "vinnytsia"
+    },
+    {
+      "denomination": "Гадяч",
+      "language": "uk",
+      "slug": "hadiach"
+    },
+    {
+      "denomination": "Богдан",
+      "language": "uk",
+      "slug": "bohdan"
+    },
+    {
+      "denomination": "Згурський",
+      "language": "uk",
+      "slug": "zghurskyi"
+    },
+    {
+      "denomination": "Ґалаґан",
+      "language": "uk",
+      "slug": "galagan"
+    },
+    {
+      "denomination": "Донецьк",
+      "language": "uk",
+      "slug": "donetsk"
+    },
+    {
+      "denomination": "Рівне",
+      "language": "uk",
+      "slug": "rivne"
+    },
+    {
+      "denomination": "Єнакієве",
+      "language": "uk",
+      "slug": "yenakiieve"
+    },
+    {
+      "denomination": "Наєнко",
+      "language": "uk",
+      "slug": "naienko"
+    },
+    {
+      "denomination": "Житомир",
+      "language": "uk",
+      "slug": "zhytomyr"
+    },
+    {
+      "denomination": "Закарпаття",
+      "language": "uk",
+      "slug": "zakarpattia"
+    },
+    {
+      "denomination": "Медвин",
+      "language": "uk",
+      "slug": "medvyn"
+    },
+    {
+      "denomination": "Іванків",
+      "language": "uk",
+      "slug": "ivankiv"
+    },
+    {
+      "denomination": "Їжакевич",
+      "language": "uk",
+      "slug": "yizhakevych"
+    },
+    {
+      "denomination": "Кадиївка",
+      "language": "uk",
+      "slug": "kadyivka"
+    },
+    {
+      "denomination": "Йосипівка",
+      "language": "uk",
+      "slug": "yosypivka"
+    },
+    {
+      "denomination": "Стрий",
+      "language": "uk",
+      "slug": "stryi"
+    },
+    {
+      "denomination": "Київ",
+      "language": "uk",
+      "slug": "kyiv"
+    },
+    {
+      "denomination": "Лебедин",
+      "language": "uk",
+      "slug": "lebedyn"
+    },
+    {
+      "denomination": "Миколаїв",
+      "language": "uk",
+      "slug": "mykolaiv"
+    },
+    {
+      "denomination": "Ніжин",
+      "language": "uk",
+      "slug": "nizhyn"
+    },
+    {
+      "denomination": "Одеса",
+      "language": "uk",
+      "slug": "odesa"
+    },
+    {
+      "denomination": "Полтава",
+      "language": "uk",
+      "slug": "poltava"
+    },
+    {
+      "denomination": "Решетилівка",
+      "language": "uk",
+      "slug": "reshetylivka"
+    },
+    {
+      "denomination": "Суми",
+      "language": "uk",
+      "slug": "sumy"
+    },
+    {
+      "denomination": "Тернопіль",
+      "language": "uk",
+      "slug": "ternopil"
+    },
+    {
+      "denomination": "Ужгород",
+      "language": "uk",
+      "slug": "uzhhorod"
+    },
+    {
+      "denomination": "Фастів",
+      "language": "uk",
+      "slug": "fastiv"
+    },
+    {
+      "denomination": "Харків",
+      "language": "uk",
+      "slug": "kharkiv"
+    },
+    {
+      "denomination": "Біла Церква",
+      "language": "uk",
+      "slug": "bila-tserkva"
+    },
+    {
+      "denomination": "Чернівці",
+      "language": "uk",
+      "slug": "chernivtsi"
+    },
+    {
+      "denomination": "Шостка",
+      "language": "uk",
+      "slug": "shostka"
+    },
+    {
+      "denomination": "Щербухи",
+      "language": "uk",
+      "slug": "shcherbukhy"
+    },
+    {
+      "denomination": "Юрій",
+      "language": "uk",
+      "slug": "yurii"
+    },
+    {
+      "denomination": "Крюківка",
+      "language": "uk",
+      "slug": "kriukivka"
+    },
+    {
+      "denomination": "Яготин",
+      "language": "uk",
+      "slug": "yahotyn"
+    },
+    {
+      "denomination": "Ічня",
+      "language": "uk",
+      "slug": "ichnia"
+    },
+    {
+      "denomination": "Знам'янка",
+      "language": "uk",
+      "slug": "znamianka"
+    },
+    {
+      "denomination": "Взірець",
+      "language": "uk",
+      "slug": "vzirets"
+    },
+    {
+      "denomination": "Ніжність",
+      "language": "uk",
+      "slug": "nizhnist"
+    },
+    {
+      "denomination": "Промінь",
+      "language": "uk",
+      "slug": "promin"
+    },
+    {
+      "denomination": "Лебідь харківський",
+      "language": "uk",
+      "slug": "lebid-kharkivskyi"
+    },
+    {
+      "denomination": "Мар’яна",
+      "language": "uk",
+      "slug": "mariana"
+    },
+    {
+      "denomination": "Де Барао",
+      "language": "uk",
+      "slug": "de-barao"
+    },
+    {
+      "denomination": "Українська степова",
+      "language": "uk",
+      "slug": "ukrainska-stepova"
+    },
+    {
+      "denomination": "Пізньостиглий",
+      "language": "uk",
+      "slug": "piznostyhlyi"
+    },
+    {
+      "denomination": "Ярославна",
+      "language": "uk",
+      "slug": "yaroslavna"
+    },
+    {
+      "denomination": "Явір",
+      "language": "uk",
+      "slug": "yavir"
+    },
+    {
+      "denomination": "Єва",
+      "language": "uk",
+      "slug": "yeva"
+    },
+    {
+      "denomination": "Їжак",
+      "language": "uk",
+      "slug": "yizhak"
+    },
+    {
+      "denomination": "Юність",
+      "language": "uk",
+      "slug": "yunist"
+    },
+    {
+      "denomination": "Згода",
+      "language": "uk",
+      "slug": "zghoda"
+    },
+    {
+      "denomination": "Полум'я",
+      "language": "uk",
+      "slug": "polumia"
+    },
+    {
+      "denomination": "Об'єднання",
+      "language": "uk",
+      "slug": "obiednannia"
+    },
+    {
+      "denomination": "Медовий спас F1",
+      "language": "uk",
+      "slug": "medovyi-spas-f1"
+    },
+    {
+      "denomination": "Сорт № 7",
+      "language": "uk",
+      "slug": "sort-7"
+    },
+    {
+      "denomination": "Йоко",
+      "language": "uk",
+      "slug": "yoko"
+    },
+    {
+      "denomination": "Ліщина зелена",
+      "language": "uk",
+      "slug": "lishchyna-zelena"
+    },
+    {
+      "denomination": "Щедрий",
+      "language": "uk",
+      "slug": "shchedryi"
+    },
+    {
+      "denomination": "Гайдамацький",
+      "language": "uk",
+      "slug": "haidamatskyi"
+    },
+    {
+      "denomination": "Ґрунтовий",
+      "language": "uk",
+      "slug": "gruntovyi"
+    },
+    {
+      "denomination": "Зорька",
+      "language": "uk",
+      "slug": "zorka"
+    },
+    {
+      "denomination": "Червона рута",
+      "language": "uk",
+      "slug": "chervona-ruta"
+    },
+    {
+      "denomination": "Домат",
+      "language": "bg",
+      "slug": "domat"
+    },
+    {
+      "denomination": "Търново",
+      "language": "bg",
+      "slug": "tarnovo"
+    },
+    {
+      "denomination": "Щастливец",
+      "language": "bg",
+      "slug": "shtastlivets"
+    },
+    {
+      "denomination": "Ябълка",
+      "language": "bg",
+      "slug": "yabalka"
+    },
+    {
+      "denomination": "Черешово",
+      "language": "bg",
+      "slug": "chereshovo"
+    },
+    {
+      "denomination": "Пловдив",
+      "language": "bg",
+      "slug": "plovdiv"
+    },
+    {
+      "denomination": "Юбилейна",
+      "language": "bg",
+      "slug": "yubileyna"
+    },
+    {
+      "denomination": "Ръжен",
+      "language": "bg",
+      "slug": "razhen"
+    },
+    {
+      "denomination": "София",
+      "language": "bg",
+      "slug": "sofia"
+    },
+    {
+      "denomination": "Йордан",
+      "language": "bg",
+      "slug": "yordan"
+    },
+    {
+      "denomination": "Bergeron 1",
+      "language": "latin",
+      "slug": "bergeron-1"
+    },
+    {
+      "denomination": "Café Noir",
+      "language": "latin",
+      "slug": "cafe-noir"
+    },
+    {
+      "denomination": "Tomatina",
+      "language": "latin",
+      "slug": "tomatina"
+    },
+    {
+      "denomination": "Ōtsuka",
+      "language": "latin",
+      "slug": "otsuka"
+    },
+    {
+      "denomination": "Solanum lycopersicum × S. pimpinellifolium",
+      "language": "latin",
+      "slug": "solanum-lycopersicum-x-s-pimpinellifolium"
+    },
+    {
+      "denomination": "Red Cherry",
+      "language": "latin",
+      "slug": "red-cherry"
+    }
+  ]
+}

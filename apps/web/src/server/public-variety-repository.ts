@@ -20,9 +20,16 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
+import { publicCatalogPermalinkPath } from "@/lib/catalog/addresses";
+import { localizedPath, PUBLIC_LOCALES } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { readMediaVariantExtras } from "@/server/media/media-variant-schema";
+import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
+import {
+  buildCatalogSlugHistoryLookupQuery,
+  readPublicCatalogCanonicalAddress,
+} from "@/server/public-catalog-address-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 import type { PublicSurfaceIndexState } from "@/server/public-surface-indexing-policy";
@@ -42,11 +49,29 @@ const MAX_PUBLIC_VARIETY_ENTRIES = 20;
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
+export interface PublicVarietyPageIdentifier {
+  scheme: string;
+  value: string;
+}
+
 export interface PublicVarietyPage {
   catalog: {
+    catalogItemId: string;
     catalogKind: CatalogKind;
+    nodeKind: string;
+    rank: string | null;
     canonicalName: string;
+    /** The accepted scientific name without authorship when a name row says so. */
+    scientificName: string;
     publicSlug: string;
+    /** The current slug of the species a form belongs to, for its address. */
+    speciesSlug: string | null;
+    species: { canonicalName: string; publicSlug: string } | null;
+    /** The hierarchical address (ADR-0026 D8) and the permalink `/id/{uuid}`. */
+    canonicalPath: string;
+    permalinkPath: string;
+    contentUpdatedAt: Date | string;
+    identifiers: PublicVarietyPageIdentifier[];
     status: Extract<CatalogItemStatus, "seeded" | "confirmed">;
     source: string;
     locale: string;
@@ -63,8 +88,10 @@ export interface PublicVarietyPage {
 }
 
 export interface PublicVarietySitemapEntry {
+  catalogItemId: string;
   catalogKind: CatalogKind;
   publicSlug: string;
+  speciesSlug: string | null;
   lastModified: Date | string;
   entryCount: number;
   aggregateBodyLength: number;
@@ -101,6 +128,13 @@ export interface PublicVarietyEntry {
   } | null;
 }
 
+/**
+ * The organism page behind a slug (ADR-0026 D8). Any slug the history holds
+ * resolves, so a client-side navigation to a retired address still renders
+ * the organism; the proxy already answered 308 on the hard load. A node
+ * without first-hand content still renders: it is reachable, and `noindex`
+ * until a gardener publishes on it (D9).
+ */
 export async function getPublicVarietyPage(
   publicSlug: string,
   expectedCatalogKind?: CatalogKind,
@@ -110,53 +144,98 @@ export async function getPublicVarietyPage(
   const slug = normalizeCatalogPublicSlug(publicSlug);
   if (!slug) return null;
 
-  const summary = await buildPublicVarietySummaryQuery(
+  const history = await buildCatalogSlugHistoryLookupQuery(executor, slug, [
+    "species",
+    "form",
+  ]).executeTakeFirst();
+  if (!history) return null;
+  const address = await readPublicCatalogCanonicalAddress(
     executor,
-    slug,
-    expectedCatalogKind,
+    history.catalogItemId,
+  );
+  if (!address) return null;
+  if (expectedCatalogKind && address.catalogKind !== expectedCatalogKind) {
+    return null;
+  }
+  return getPublicVarietyPageByCatalogItemId(
+    address.catalogItemId,
+    executor,
+    locale,
+  );
+}
+
+export async function getPublicVarietyPageByCatalogItemId(
+  catalogItemId: string,
+  executor: QueryExecutor = db,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
+): Promise<PublicVarietyPage | null> {
+  const item = await buildPublicVarietyItemQuery(
+    executor,
+    catalogItemId,
   ).executeTakeFirst();
+  if (!item?.publicSlug) return null;
 
-  if (!summary?.catalogPublicSlug) return null;
-
-  const [entries, seedProof, sourceCredits] = await Promise.all([
-    buildPublicVarietyEntriesQuery(
-      executor,
-      slug,
-      MAX_PUBLIC_VARIETY_ENTRIES,
-      expectedCatalogKind,
-    ).execute(),
-    buildPublishedVarietySeedProofByCatalogItemIdQuery(
-      executor,
-      summary.catalogItemId,
-    ).executeTakeFirst(),
-    buildPublicVarietySourceCreditsQuery(
-      executor,
-      summary.catalogItemId,
-    ).execute(),
-  ]);
+  const [summary, entries, seedProof, sourceCredits, identifiers] =
+    await Promise.all([
+      buildPublicVarietySummaryQuery(executor, {
+        catalogItemId: item.id,
+      }).executeTakeFirst(),
+      buildPublicVarietyEntriesQuery(
+        executor,
+        { catalogItemId: item.id },
+        MAX_PUBLIC_VARIETY_ENTRIES,
+      ).execute(),
+      buildPublishedVarietySeedProofByCatalogItemIdQuery(
+        executor,
+        item.id,
+      ).executeTakeFirst(),
+      buildPublicVarietySourceCreditsQuery(executor, item.id).execute(),
+      buildPublicVarietyIdentifiersQuery(executor, item.id).execute(),
+    ]);
   const mediaExtras = await readMediaVariantExtras(
     executor,
     entries.flatMap((entry) => (entry.mediaId ? [entry.mediaId] : [])),
   );
-  const entryCount = Number(summary.entryCount);
-  const aggregateBodyLength = Number(summary.aggregateBodyLength);
+  const entryCount = Number(summary?.entryCount ?? 0);
+  const aggregateBodyLength = Number(summary?.aggregateBodyLength ?? 0);
+  const catalogKind = item.catalogKind as CatalogKind;
   const page = {
     catalog: {
-      catalogKind: summary.catalogKind,
-      canonicalName: summary.catalogCanonicalName,
-      publicSlug: summary.catalogPublicSlug,
-      status: summary.catalogStatus as Extract<
-        CatalogItemStatus,
-        "seeded" | "confirmed"
-      >,
-      source: summary.catalogSource,
-      locale: summary.catalogLocale,
+      catalogItemId: item.id,
+      catalogKind,
+      nodeKind: item.nodeKind,
+      rank: item.rank,
+      canonicalName: item.canonicalName,
+      scientificName: item.scientificName ?? item.canonicalName,
+      publicSlug: item.publicSlug,
+      speciesSlug: item.speciesSlug,
+      species:
+        item.speciesSlug && item.speciesCanonicalName
+          ? {
+              canonicalName: item.speciesCanonicalName,
+              publicSlug: item.speciesSlug,
+            }
+          : null,
+      canonicalPath: publicCatalogEvidencePath({
+        catalogKind,
+        publicSlug: item.publicSlug,
+        speciesSlug: item.speciesSlug,
+      }),
+      permalinkPath: publicCatalogPermalinkPath(item.id),
+      contentUpdatedAt: item.contentUpdatedAt,
+      identifiers: identifiers.map((row) => ({
+        scheme: row.scheme,
+        value: row.value,
+      })),
+      status: item.status as Extract<CatalogItemStatus, "seeded" | "confirmed">,
+      source: item.source,
+      locale: item.locale,
     },
     entryCount,
-    photoCount: Number(summary.photoCount),
+    photoCount: Number(summary?.photoCount ?? 0),
     aggregateBodyLength,
     qualityClass: "verified" as const,
-    latestMeaningfulAt: summary.latestMeaningfulAt,
+    latestMeaningfulAt: summary?.latestMeaningfulAt ?? null,
     seedProof: seedProof ?? null,
     sourceCredits: sourceCredits.map((credit) => ({
       sourceSlug: credit.sourceSlug,
@@ -204,12 +283,76 @@ export async function getPublicVarietyPage(
   };
 }
 
+/** The node itself: active, selectable, global, addressed. */
+export function buildPublicVarietyItemQuery(
+  executor: QueryExecutor,
+  catalogItemId: string,
+) {
+  return executor
+    .selectFrom("catalog_items")
+    .select([
+      "catalog_items.id as id",
+      "catalog_items.catalog_kind as catalogKind",
+      "catalog_items.node_kind as nodeKind",
+      "catalog_items.rank as rank",
+      "catalog_items.canonical_name as canonicalName",
+      "catalog_items.public_slug as publicSlug",
+      "catalog_items.status as status",
+      "catalog_items.source as source",
+      "catalog_items.locale as locale",
+      "catalog_items.content_updated_at as contentUpdatedAt",
+      catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
+      sql<string | null>`(
+        select parent.canonical_name
+        from catalog_item_relations as form_relation
+        join catalog_items as parent on parent.id = form_relation.to_catalog_item_id
+        where form_relation.from_catalog_item_id = ${sql.ref("catalog_items.id")}
+          and form_relation.relation_type = 'form_of'
+          and parent.node_kind = 'taxon'
+          and parent.identity_state = 'active'
+          and parent.public_slug is not null
+        order by form_relation.created_at, form_relation.id
+        limit 1
+      )`.as("speciesCanonicalName"),
+      sql<string | null>`(
+        select accepted.display_name
+        from catalog_item_names as accepted
+        where accepted.catalog_item_id = ${sql.ref("catalog_items.id")}
+          and accepted.name_type = 'scientific_accepted'
+        order by accepted.is_primary desc, accepted.created_at, accepted.id
+        limit 1
+      )`.as("scientificName"),
+    ])
+    .where("catalog_items.id", "=", catalogItemId)
+    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
+    .where("catalog_items.created_by_user_id", "is", null)
+    .where("catalog_items.public_slug", "is not", null);
+}
+
+/** External identifiers, for `sameAs` and the alias resolvers' inverse. */
+export function buildPublicVarietyIdentifiersQuery(
+  executor: QueryExecutor,
+  catalogItemId: string,
+) {
+  return executor
+    .selectFrom("catalog_item_identifiers")
+    .select([
+      "catalog_item_identifiers.scheme as scheme",
+      "catalog_item_identifiers.value as value",
+    ])
+    .where("catalog_item_identifiers.catalog_item_id", "=", catalogItemId)
+    .orderBy("catalog_item_identifiers.scheme", "asc")
+    .orderBy("catalog_item_identifiers.value", "asc");
+}
+
 export function buildPublicVarietyDiscoverySource(
   page: Omit<PublicVarietyPage, "indexState">,
   consumerId: Extract<
     PublicSurfaceDiscoveryConsumerId,
     "catalog_evidence" | "variety_sitemap" | "public_variety_repository"
   >,
+  routeLocale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): PublicSurfaceDiscoverySource {
   return {
     consumerId,
@@ -234,14 +377,13 @@ export function buildPublicVarietyDiscoverySource(
       ]),
     ],
     distinctPublicEntityIds: [
-      `catalog:${page.catalog.catalogKind}:${page.catalog.publicSlug}`,
+      `catalog:${page.catalog.catalogItemId}`,
       ...page.entries.map((entry) => entry.id),
     ],
-    canonicalPath: publicCatalogEvidencePath(
-      page.catalog.catalogKind,
-      page.catalog.publicSlug,
-    ),
-    equivalentLocales: [],
+    // The canonical follows the route family the page was served from (a
+    // prefixed locale route or the unprefixed one), never the cookie locale.
+    canonicalPath: localizedPath(routeLocale, page.catalog.canonicalPath),
+    equivalentLocales: [...PUBLIC_LOCALES],
   };
 }
 
@@ -298,9 +440,8 @@ export async function listIndexablePublicVarietySitemapEntries(
   const resolved = await Promise.all(
     rows.map(async (row) => ({
       row,
-      page: await getPublicVarietyPage(
-        row.publicSlug,
-        row.catalogKind,
+      page: await getPublicVarietyPageByCatalogItemId(
+        row.catalogItemId,
         executor,
       ),
     })),
@@ -313,8 +454,10 @@ export async function listIndexablePublicVarietySitemapEntries(
     if (!decision.sitemapEligible) return [];
     return [
       {
+        catalogItemId: row.catalogItemId,
         catalogKind: row.catalogKind,
         publicSlug: row.publicSlug,
+        speciesSlug: row.speciesSlug,
         lastModified: row.lastModified,
         entryCount: page.entryCount,
         aggregateBodyLength: page.aggregateBodyLength,
@@ -323,9 +466,11 @@ export async function listIndexablePublicVarietySitemapEntries(
   });
 }
 
+export type PublicVarietySelector = string | { catalogItemId: string };
+
 export function buildPublicVarietySummaryQuery(
   executor: QueryExecutor,
-  publicSlug: string,
+  selector: PublicVarietySelector,
   expectedCatalogKind?: CatalogKind,
 ) {
   let query = executor
@@ -346,6 +491,7 @@ export function buildPublicVarietySummaryQuery(
       "catalog_items.catalog_kind as catalogKind",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
+      catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
       "catalog_items.status as catalogStatus",
       "catalog_items.source as catalogSource",
       "catalog_items.locale as catalogLocale",
@@ -364,7 +510,11 @@ export function buildPublicVarietySummaryQuery(
         .max<Date | string>("journal_entries.updated_at")
         .as("latestMeaningfulAt"),
     ])
-    .where("catalog_items.public_slug", "=", publicSlug)
+    .where(({ eb }) =>
+      typeof selector === "string"
+        ? eb("catalog_items.public_slug", "=", selector)
+        : eb("catalog_items.id", "=", selector.catalogItemId),
+    )
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
     .where("catalog_items.created_by_user_id", "is", null)
     .where("plant_objects.variety_state", "=", "selected")
@@ -413,9 +563,15 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
     )
     .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
     .select(({ fn }) => [
+      "catalog_items.id as catalogItemId",
       "catalog_items.catalog_kind as catalogKind",
       "catalog_items.public_slug as publicSlug",
-      fn.max<Date | string>("journal_entries.updated_at").as("lastModified"),
+      catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
+      // The card changed when its names, links or facts did, or when a
+      // gardener published on it: whichever is later is the sitemap lastmod.
+      sql<Date | string>`greatest(${fn.max("journal_entries.updated_at")}, ${sql.ref("catalog_items.content_updated_at")})`.as(
+        "lastModified",
+      ),
       fn.count<number>("journal_entries.id").as("entryCount"),
       sql<number>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0)`.as(
         "aggregateBodyLength",
@@ -436,14 +592,18 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where(publicLaunchSurfacePredicates())
-    .groupBy(["catalog_items.catalog_kind", "catalog_items.public_slug"])
+    .groupBy([
+      "catalog_items.id",
+      "catalog_items.catalog_kind",
+      "catalog_items.public_slug",
+    ])
     .orderBy("catalog_items.public_slug", "asc")
     .$narrowType<{ catalogKind: CatalogKind; publicSlug: string }>();
 }
 
 export function buildPublicVarietyEntriesQuery(
   executor: QueryExecutor,
-  publicSlug: string,
+  selector: PublicVarietySelector,
   limit = MAX_PUBLIC_VARIETY_ENTRIES,
   expectedCatalogKind?: CatalogKind,
 ) {
@@ -489,7 +649,11 @@ export function buildPublicVarietyEntriesQuery(
       "first_public_media.intrinsicWidth as mediaIntrinsicWidth",
       "first_public_media.intrinsicHeight as mediaIntrinsicHeight",
     ])
-    .where("catalog_items.public_slug", "=", publicSlug)
+    .where(({ eb }) =>
+      typeof selector === "string"
+        ? eb("catalog_items.public_slug", "=", selector)
+        : eb("catalog_items.id", "=", selector.catalogItemId),
+    )
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
     .where("catalog_items.created_by_user_id", "is", null)
     .where("plant_objects.variety_state", "=", "selected")

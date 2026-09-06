@@ -176,10 +176,11 @@ jobs:
       - name: Install Chromium for the browser proof
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Public hydration and catalog picker proofs
+      - name: Public hydration, catalog picker and organism address proofs
         # The picker spec signs a synthetic gardener in over the API, and Better
         # Auth checks the request origin against BETTER_AUTH_URL: it must be the
-        # origin the server answers on, not the build-time value.
+        # origin the server answers on, not the build-time value. The address
+        # spec asserts real HTTP statuses (200, 308, 404) over HTTP alone.
         env:
           BETTER_AUTH_URL: http://127.0.0.1:3179
           PUBLIC_SITE_URL: http://127.0.0.1:3179
@@ -190,7 +191,7 @@ jobs:
             sleep 1
           done
           PLAYWRIGHT_BASE_URL=http://127.0.0.1:3179 \
-            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts
+            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts
 
   matching:
     name: Python matching tier

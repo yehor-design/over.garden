@@ -671,8 +671,9 @@ function serializeDate(value: Date | string) {
 
 export function getJournalEntryCatalogPath(object: PublicJournalEntryObject) {
   if (!object.catalogKind || !object.catalogPublicSlug) return null;
-  return publicCatalogEvidencePath(
-    object.catalogKind,
-    object.catalogPublicSlug,
-  );
+  return publicCatalogEvidencePath({
+    catalogKind: object.catalogKind,
+    publicSlug: object.catalogPublicSlug,
+    speciesSlug: object.catalogSpeciesSlug,
+  });
 }

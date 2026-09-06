@@ -109,6 +109,7 @@ describe("wishlist repository contracts", () => {
       catalogItemId,
       catalogCanonicalName: "Pomidor Cheri",
       catalogPublicSlug: "pomidor-cheri-0000000101",
+      catalogSpeciesSlug: null,
       catalogKind: "plant_variety",
       catalogLocale: "uk",
       catalogStatus: "seeded",

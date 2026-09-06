@@ -1,19 +1,22 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const ITEM_ID = "11111111-1111-4111-8111-111111111111";
+
 const mocks = vi.hoisted(() => ({
-  getPublicVarietyPage: vi.fn(),
+  readPublicCatalogAddress: vi.fn(),
+  readPublicVarietyPageByCatalogItemId: vi.fn(),
   getEngagementSummary: vi.fn(),
   addCatalogPublicSlugToWishlistAction: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   getSiteShellSessionState: vi.fn(),
 }));
 
-vi.mock("@/server/public-variety-repository", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("@/server/public-variety-repository")
-  >()),
-  getPublicVarietyPage: mocks.getPublicVarietyPage,
+vi.mock("@/server/public-cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/server/public-cache")>()),
+  readPublicCatalogAddress: mocks.readPublicCatalogAddress,
+  readPublicVarietyPageByCatalogItemId:
+    mocks.readPublicVarietyPageByCatalogItemId,
 }));
 
 vi.mock("@/server/engagement-repository", () => ({
@@ -49,11 +52,26 @@ describe("/variety/[slug]", () => {
       activeLikeCount: 0,
       comments: [],
     });
-    mocks.getPublicVarietyPage.mockResolvedValue({
+    mocks.readPublicCatalogAddress.mockResolvedValue({
+      status: "canonical",
+      catalogItemId: ITEM_ID,
+      canonicalPath: "/variety/pomidor-cheri-0000000101",
+    });
+    mocks.readPublicVarietyPageByCatalogItemId.mockResolvedValue({
       catalog: {
+        catalogItemId: ITEM_ID,
         catalogKind: "plant_variety",
+        nodeKind: "cultivar",
+        rank: null,
         canonicalName: "Pomidor Cheri",
+        scientificName: "Pomidor Cheri",
         publicSlug: "pomidor-cheri-0000000101",
+        speciesSlug: null,
+        species: null,
+        canonicalPath: "/variety/pomidor-cheri-0000000101",
+        permalinkPath: `/id/${ITEM_ID}`,
+        contentUpdatedAt: new Date("2026-06-20T10:00:00.000Z"),
+        identifiers: [],
         status: "seeded",
         source: "seed",
         locale: "uk",
@@ -155,7 +173,7 @@ describe("/variety/[slug]", () => {
   });
 
   it("keeps missing public variety metadata noindex", async () => {
-    mocks.getPublicVarietyPage.mockResolvedValueOnce(null);
+    mocks.readPublicCatalogAddress.mockResolvedValueOnce({ status: "not_found" });
     const { generateMetadata } = await import("./page");
 
     await expect(

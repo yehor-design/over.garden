@@ -125,6 +125,7 @@ function ownerPage({
       catalog_kind: objectKind === "plant" ? "species" : "breed",
       catalog_canonical_name: null,
       catalog_public_slug: null,
+      catalog_species_slug: null,
       variety_text: null,
       variety_state: "unknown",
       location_visibility: "hidden",

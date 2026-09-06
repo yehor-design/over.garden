@@ -125,7 +125,7 @@ describe("GET /api/public/catalog/typeahead", () => {
 
   it("answers 503 without a cache when the read fails or misses its deadline", async () => {
     mocks.searchCatalogSuggestionsForTypeaheadResult.mockRejectedValue(
-      new Error("Catalog typeahead exceeded 150 ms."),
+      new Error("Catalog typeahead exceeded 400 ms."),
     );
     const { GET } = await import("./route");
 

@@ -50,16 +50,37 @@ describe("garden public paths", () => {
     expect(path).not.toContain("referrer");
   });
 
-  it("routes catalog evidence through a domain-correct canonical path", () => {
-    expect(publicCatalogEvidencePath("plant_variety", "cherry-tomato")).toBe(
-      "/variety/cherry-tomato",
-    );
-    expect(publicCatalogEvidencePath("species", "solanum-lycopersicum")).toBe(
-      "/species/solanum-lycopersicum",
-    );
-    expect(publicCatalogEvidencePath("breed", "carpathian-bee")).toBe(
-      "/breed/carpathian-bee",
-    );
+  it("routes catalog evidence through one address builder: hierarchical once a form has its species, legacy until then", () => {
+    expect(
+      publicCatalogEvidencePath({
+        catalogKind: "plant_variety",
+        publicSlug: "cherry-tomato",
+      }),
+    ).toBe("/variety/cherry-tomato");
+    expect(
+      publicCatalogEvidencePath({
+        catalogKind: "plant_variety",
+        publicSlug: "cherry-tomato",
+        speciesSlug: "solanum-lycopersicum",
+      }),
+    ).toBe("/species/solanum-lycopersicum/cherry-tomato");
+    expect(
+      publicCatalogEvidencePath({
+        catalogKind: "species",
+        publicSlug: "solanum-lycopersicum",
+        speciesSlug: "ignored-for-a-species",
+      }),
+    ).toBe("/species/solanum-lycopersicum");
+    expect(
+      publicCatalogEvidencePath({
+        catalogKind: "breed",
+        publicSlug: "carpathian-bee",
+        speciesSlug: "apis-mellifera",
+      }),
+    ).toBe("/species/apis-mellifera/carpathian-bee");
+    expect(
+      publicCatalogEvidencePath({ catalogKind: "breed", publicSlug: "carpathian-bee" }),
+    ).toBe("/breed/carpathian-bee");
   });
 
   it("keeps interactive journal evidence in the resolved public locale", () => {

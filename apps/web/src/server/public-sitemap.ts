@@ -89,7 +89,11 @@ export async function buildPublicSitemapChunk(
   }
   if (id === "catalog") {
     return (await listIndexablePublicVarietySitemapEntries()).map((entry) => ({
-      url: publicCatalogEvidencePath(entry.catalogKind, entry.publicSlug),
+      url: publicCatalogEvidencePath({
+        catalogKind: entry.catalogKind,
+        publicSlug: entry.publicSlug,
+        speciesSlug: entry.speciesSlug,
+      }),
       lastModified: new Date(entry.lastModified),
     }));
   }

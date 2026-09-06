@@ -297,6 +297,16 @@ a breaking change for every later task and needs an amendment here.
 - Public catalog URLs change once, to hierarchical paths, with permanent
   redirects from every old path; this is done before the catalog gains
   indexation, and never again.
+- The HTTP status of an organism address (200, 308, 404) is decided in
+  `src/proxy.ts` by one bounded database lookup before any shell streams, the
+  way journal, object, community and profile lifecycles already are: under
+  Cache Components a page-level `notFound()` or `permanentRedirect()` runs
+  after the root loading boundary has answered 200. The page repeats the
+  lookup through `use cache` for client-side navigations; the alias
+  resolvers are route handlers, whose status is their own. Recorded
+  2026-09-06 while delivering 24.03, whose text assumed the proxy touches no
+  database. A form not yet linked to a species keeps its legacy
+  `/variety` or `/breed` address until the registers task links it.
 - Catalogue of Life's full checklist lives in the source layer; canonical nodes
   exist only for what gardeners, registers and EPPO touch, so the primary list
   stays relevant while nothing is missing.

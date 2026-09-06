@@ -68,6 +68,7 @@ function publicPassport(
       catalogKind: "plant_variety",
       catalogCanonicalName: "Помідор чері",
       catalogPublicSlug: "visual-pomidor-cheri",
+      catalogSpeciesSlug: null,
       catalogPath: "/variety/visual-pomidor-cheri",
       safeLocationLabel: "Region: Ukraine - Kyiv City",
       publicEntryCount: 2,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   PUBLIC_CACHE_TAGS,
+  organismAddressChangeTags,
   publicCacheTag,
   publicEntryChangeTags,
   publicProfileChangeTags,
@@ -57,5 +58,14 @@ describe("public cache tags", () => {
         PUBLIC_CACHE_TAGS.profiles,
       ]),
     );
+  });
+
+  it("touches the organism, every address lookup, the catalog and the sitemap on a slug change (ADR-0026 D8)", () => {
+    expect(organismAddressChangeTags("11111111-1111-4111-8111-111111111111")).toEqual([
+      "organism:11111111-1111-4111-8111-111111111111",
+      PUBLIC_CACHE_TAGS.organismSlugs,
+      "catalog",
+      "sitemap",
+    ]);
   });
 });

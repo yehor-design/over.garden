@@ -118,6 +118,26 @@ rewrites and force-pushes. For those, ask.
   and hangs, so inject axe with `page.evaluate`; sign-up answers 500 on the
   missing mail provider after the rows exist; a run killed at the test timeout
   skips `finally`, so `tests/catalog-picker.spec.ts` cleans stale runs first.
+- **Organism addresses (24.03).** The HTTP status of `/species/…`,
+  `/variety/…` and `/breed/…` is decided in `src/proxy.ts` with one bounded
+  lookup: under Cache Components a page-level `notFound()` or
+  `permanentRedirect()` answers 200 on a hard load (ADR-0026, consequences).
+  The canonical and every redirect target follow the route family
+  (unprefixed, `/bg`, `/ru`), never the cookie locale, so a unit test that
+  sets the interface locale to `bg` on the unprefixed page still expects an
+  unprefixed canonical. `readPublicCatalogAddress` and
+  `readPublicVarietyPageByCatalogItemId` are `use cache` for hours: a slug
+  assignment or a merge must revalidate `organismAddressChangeTags(id)`
+  (`src/lib/public-cache-tags.ts`), because a form's cached page carries its
+  species' slug. `toMatchObject` on a JSON-LD `@graph` array needs every node
+  listed. `tests/catalog-addresses.spec.ts` is request-only (no browser) and
+  seeds a species, a form, an orphan form, an EPPO identifier and one public
+  entry per organism so the sitemap rows and the engagement panel exist; it
+  cleans stale `ove388-` runs first. A variety without public entries is not
+  a public engagement target: the page asks for the panel only when it has
+  entries and degrades to no panel on failure, or every zero-entry register
+  cultivar answers a digest error behind a streamed 200 (the server log
+  shows it, the status does not).
 - **Research corpus.** `docs/product-research/` and
   `/Users/yehor/Desktop/Startups/OverGarden` must stay byte-identical except
   `README.md` and four desktop-only items. After editing a research file, copy

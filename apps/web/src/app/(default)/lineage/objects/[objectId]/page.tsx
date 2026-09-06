@@ -22,7 +22,7 @@ import {
 } from "@/lib/auth/auth-intent-contract";
 import {
   publicLineageObjectPath,
-  publicVarietyPath,
+  publicCatalogEvidencePath,
 } from "@/lib/garden/public-paths";
 import {
   getPublicSurfaceCopy,
@@ -583,9 +583,13 @@ function PublicLineageNodeMeta({
           {item}
         </span>
       ))}
-      {node.catalogPublicSlug ? (
+      {node.catalogPublicSlug && node.catalogKind ? (
         <Link
-          href={publicVarietyPath(node.catalogPublicSlug)}
+          href={publicCatalogEvidencePath({
+            catalogKind: node.catalogKind,
+            publicSlug: node.catalogPublicSlug,
+            speciesSlug: node.catalogSpeciesSlug,
+          })}
           className="rounded-md border border-border px-2 py-1 font-medium text-primary underline-offset-4 hover:underline"
         >
           {node.catalogCanonicalName ??
@@ -609,6 +613,7 @@ function buildPublicLineageNodeMap(
     catalogKind: passport.object.catalogKind,
     catalogCanonicalName: passport.object.catalogCanonicalName,
     catalogPublicSlug: passport.object.catalogPublicSlug,
+    catalogSpeciesSlug: passport.object.catalogSpeciesSlug,
     safeLocationLabel: passport.object.safeLocationLabel,
   };
   const nodes = lineagePage?.nodes ?? [rootNode];

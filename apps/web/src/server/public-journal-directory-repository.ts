@@ -391,7 +391,11 @@ export function serializePublicJournalDirectoryPage(
       catalogStatus &&
       row.catalogPublicSlug &&
       normalizeSlug(row.catalogPublicSlug)
-        ? publicCatalogEvidencePath(catalogKind, row.catalogPublicSlug)
+        ? publicCatalogEvidencePath({
+            catalogKind,
+            publicSlug: row.catalogPublicSlug,
+            speciesSlug: row.catalogSpeciesSlug,
+          })
         : null;
     const authorHandle = normalizePublicHandle(row.authorHandle);
 

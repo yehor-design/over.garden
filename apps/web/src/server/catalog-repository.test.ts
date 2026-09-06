@@ -53,6 +53,7 @@ function sqlRow(overrides: Record<string, unknown> = {}) {
     id: "00000000-0000-4000-8000-000000000101",
     node_kind: "taxon",
     public_slug: "solanum-lycopersicum",
+    species_slug: null,
     display_name: "помідор",
     matched_name: "томат",
     parent_display_name: null,
@@ -146,6 +147,7 @@ describe("catalog picker query", () => {
             id: "00000000-0000-4000-8000-000000000102",
             node_kind: "cultivar",
             public_slug: "de-barao-0000000102",
+            species_slug: "solanum-lycopersicum",
             display_name: "Де Барао",
             matched_name: "де барао",
             parent_display_name: "помідор",
@@ -179,7 +181,7 @@ describe("catalog picker query", () => {
         matchedName: null,
         kind: "cultivar",
         parentDisplayName: "Помідор",
-        publicPath: "/variety/de-barao-0000000102",
+        publicPath: "/species/solanum-lycopersicum/de-barao-0000000102",
       },
       {
         id: "00000000-0000-4000-8000-000000000103",
@@ -214,7 +216,7 @@ describe("catalog picker query", () => {
         },
       ),
     ).rejects.toThrow(/statement timeout/u);
-    expect(CATALOG_TYPEAHEAD_DEADLINE_MS).toBe(150);
+    expect(CATALOG_TYPEAHEAD_DEADLINE_MS).toBe(400);
   });
 });
 

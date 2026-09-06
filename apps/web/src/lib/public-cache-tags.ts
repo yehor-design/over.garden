@@ -13,6 +13,8 @@ export const PUBLIC_CACHE_TAGS = {
   knowledge: "knowledge",
   profiles: "profiles",
   sitemap: "sitemap",
+  /** Every organism address: a slug assignment or a merge changes them all. */
+  organismSlugs: "organism-slugs",
 } as const;
 
 export const publicCacheTag = {
@@ -23,6 +25,8 @@ export const publicCacheTag = {
   topic: (slug: string) => `topic:${slug}`,
   community: (slug: string) => `community:${slug}`,
   object: (plantObjectId: string) => `object:${plantObjectId}`,
+  /** One organism card and its address (ADR-0026 D8, D9). */
+  organism: (catalogItemId: string) => `organism:${catalogItemId}`,
   engagement: (kind: string, ref: string) => `engagement:${kind}:${ref}`,
 } as const;
 
@@ -70,6 +74,20 @@ export function publicProfileChangeTags(input: {
     PUBLIC_CACHE_TAGS.communities,
     PUBLIC_CACHE_TAGS.sitemap,
   ]);
+}
+
+/**
+ * The tags an organism's address change touches (ADR-0026 D8): its own
+ * page, every address lookup (a form's path carries its species' slug), the
+ * catalog listings and the sitemap.
+ */
+export function organismAddressChangeTags(catalogItemId: string): string[] {
+  return [
+    publicCacheTag.organism(catalogItemId),
+    PUBLIC_CACHE_TAGS.organismSlugs,
+    PUBLIC_CACHE_TAGS.catalog,
+    PUBLIC_CACHE_TAGS.sitemap,
+  ];
 }
 
 export function publicCommunityChangeTags(slug: string): string[] {
