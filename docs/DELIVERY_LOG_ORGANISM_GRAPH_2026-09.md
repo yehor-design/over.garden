@@ -183,6 +183,30 @@ Recorded here so the next reader does not have to rediscover it:
   decemlineata* today, matched through the Russian vernacular EPPO carries
   (`колорадский жук`) by the shared normalizer. `OVE-397`'s criterion is met
   without the Wikidata names.
-* **The picker's production budget is unmeasured on the real dataset.** The
-  26.6 ms P95 recorded for `OVE-387` was measured against a local production
-  build over about 15,900 nodes. Production now holds more than 100,000.
+* **The picker misses its P95 budget on the real dataset.** Now measured, and
+  the answer is not the one the earlier receipt implied. Against production,
+  every sample forced to the origin:
+
+  | | median | P95 | 503 |
+  | -- | -- | -- | -- |
+  | warm, one query repeated | 69 ms | 129 ms | 0 of 50 |
+  | fifty distinct queries | 63 ms | 409 ms | 4 of 50 |
+
+  The statement is not the problem: explained against production it runs in
+  26 ms, 8 of them planning, and the candidate scan is 12 ms. The median is
+  inside D7's 100 ms budget and the tail is not, and a cold serverless instance
+  pays connection setup before the statement runs — which is why the deadline
+  went from 150 to 400 ms during `OVE-387` and why a few requests still reach
+  it and answer 503.
+
+  The 26.6 ms recorded for `OVE-387` was measured against a local production
+  build over about 15,900 nodes; production holds 114,669 and 242,120 names.
+  That is the same trap as every other number measured on the wrong database.
+
+  Two false starts are worth recording so nobody repeats them. The failures
+  were first blamed on the reconciliation loading the database; they persisted
+  with the database idle. Then the measurement itself turned out to be reading
+  Vercel's edge cache — the route carries a 60 s shared cache and
+  `Server-Timing` is cached with the body, so a repeated URL returns the timing
+  of whenever the entry was written, and a `no-cache` request header does not
+  defeat a shared cache.
