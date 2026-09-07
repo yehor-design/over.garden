@@ -619,23 +619,51 @@ export function buildPublicVarietySummaryQuery(
   return query.$narrowType<{ catalogKind: CatalogKind }>();
 }
 
+/**
+ * The organism pages the sitemap lists.
+ *
+ * D9 gives a card two ways to be indexable: a gardener published on it, or the
+ * owner marked it. The predicate below says both — but the gardener half used
+ * to be an inner join, which made the owner half unreachable: a card the owner
+ * marked, with no entries on it, answered `index, follow` and carried its
+ * `Taxon` graph while the sitemap left it out. A page and the sitemap
+ * disagreeing about the same rule is the defect; the joins are what a
+ * `lastmod` and an entry count need, not what admission needs, so they are
+ * left joins and the predicate alone decides.
+ */
 export function buildIndexablePublicVarietySitemapRowsQuery(
   executor: QueryExecutor,
 ) {
   return (
     executor
       .selectFrom("catalog_items")
-      .innerJoin(
-        "plant_objects",
-        "plant_objects.catalog_item_id",
-        "catalog_items.id",
+      .leftJoin("plant_objects", (join) =>
+        join
+          .onRef("plant_objects.catalog_item_id", "=", "catalog_items.id")
+          .on("plant_objects.variety_state", "=", "selected"),
       )
-      .innerJoin(
-        "journal_entries",
-        "journal_entries.plant_object_id",
-        "plant_objects.id",
+      .leftJoin("journal_entries", (join) =>
+        join
+          .onRef("journal_entries.plant_object_id", "=", "plant_objects.id")
+          .onRef(
+            "journal_entries.owner_user_id",
+            "=",
+            "plant_objects.owner_user_id",
+          )
+          .on("journal_entries.visibility", "=", "public")
+          .on("journal_entries.lifecycle_state", "=", "active")
+          .on("journal_entries.public_gone_at", "is", null)
+          .on("journal_entries.public_slug", "is not", null)
+          // A launch-surface gate on the entry, so it stays with the entry:
+          // in the `where` it would exclude every card that has no entry at
+          // all, which is exactly the owner-marked case this join admits.
+          .on(publicLaunchSurfacePredicates()),
       )
-      .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
+      .leftJoin("spaces", (join) =>
+        join
+          .onRef("spaces.id", "=", "journal_entries.space_id")
+          .onRef("spaces.owner_user_id", "=", "journal_entries.owner_user_id"),
+      )
       .select(({ fn }) => [
         "catalog_items.id as catalogItemId",
         catalogKindSql("catalog_items").as("catalogKind"),
@@ -663,18 +691,6 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
           eb("catalog_items.indexable_override", "=", true),
         ]),
       )
-      .where("plant_objects.variety_state", "=", "selected")
-      .whereRef(
-        "journal_entries.owner_user_id",
-        "=",
-        "plant_objects.owner_user_id",
-      )
-      .whereRef("journal_entries.owner_user_id", "=", "spaces.owner_user_id")
-      .where("journal_entries.visibility", "=", "public")
-      .where("journal_entries.lifecycle_state", "=", "active")
-      .where("journal_entries.public_gone_at", "is", null)
-      .where("journal_entries.public_slug", "is not", null)
-      .where(publicLaunchSurfacePredicates())
       .groupBy([
         "catalog_items.id",
         catalogKindSql("catalog_items"),

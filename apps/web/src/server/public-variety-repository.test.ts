@@ -227,15 +227,21 @@ describe("public variety repository query contracts", () => {
       buildIndexablePublicVarietySitemapRowsQuery(testDb).compile();
 
     expect(compiled.sql).toContain('from "catalog_items"');
-    expect(compiled.sql).toContain(
-      'inner join "plant_objects" on "plant_objects"."catalog_item_id" = "catalog_items"."id"',
-    );
-    expect(compiled.sql).toContain(
-      'inner join "journal_entries" on "journal_entries"."plant_object_id" = "plant_objects"."id"',
-    );
-    expect(compiled.sql).toContain(
-      'inner join "spaces" on "spaces"."id" = "journal_entries"."space_id"',
-    );
+    // Left joins, not inner: D9 admits a card the owner marked even when no
+    // gardener has published on it, and an inner join made that half of the
+    // predicate unreachable. The joins carry `lastmod` and the entry count;
+    // the predicate below decides admission.
+    expect(compiled.sql).toContain('left join "plant_objects" on ');
+    expect(compiled.sql).toContain('left join "journal_entries" on ');
+    expect(compiled.sql).toContain('left join "spaces" on ');
+    expect(compiled.sql).not.toContain("inner join");
+    // Every entry predicate travels with the entry, in the join's `on`, so a
+    // card with no entry at all is not filtered out by a condition about
+    // entries. The tail after the last join is the admission clause.
+    const admission = compiled.sql.slice(compiled.sql.lastIndexOf("left join"));
+    expect(admission).not.toContain('"journal_entries"."visibility"');
+    expect(admission).not.toContain('"plant_objects"."variety_state"');
+    expect(admission).not.toContain("content_class");
     expect(compiled.sql).toContain('"catalog_items"."public_slug" is not null');
     expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
     expect(compiled.sql).not.toContain('"catalog_items"."source" in');
@@ -247,7 +253,7 @@ describe("public variety repository query contracts", () => {
       '"journal_entries"."owner_user_id" = "plant_objects"."owner_user_id"',
     );
     expect(compiled.sql).toContain(
-      '"journal_entries"."owner_user_id" = "spaces"."owner_user_id"',
+      '"spaces"."owner_user_id" = "journal_entries"."owner_user_id"',
     );
     expect(compiled.sql).toContain('"journal_entries"."visibility" = ');
     expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
@@ -280,12 +286,15 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).not.toContain("coordinates");
     expect(compiled.sql).not.toContain("latitude");
     expect(compiled.sql).not.toContain("longitude");
+    // The order follows the clauses: the join predicates bind before the
+    // admission clause, which is why `selected` and the entry states come
+    // first and the card's own state and override come last.
     expect(compiled.parameters).toEqual([
-      "active",
-      true,
       "selected",
       "public",
       "active",
+      "active",
+      true,
     ]);
   });
 });
