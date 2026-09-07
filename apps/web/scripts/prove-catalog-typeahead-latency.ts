@@ -16,6 +16,15 @@ import { gzipSync } from "node:zlib";
  * the raw and the compressed sizes are printed. Prints aggregates only: no
  * query text leaves this process except in the JSON it prints, and every
  * query comes from the checked-in fingerprint list.
+ *
+ * Pointed at a deployed origin it must defeat the shared cache, or it reports
+ * a fiction. The route carries `s-maxage=60` and `Server-Timing` is cached
+ * with the body, so a repeated URL returns the timing of whenever the entry
+ * was written — and a `cache-control: no-cache` *request* header does not
+ * defeat a shared cache: on 2026-09-07 fifty such requests to production all
+ * answered `x-vercel-cache: HIT` and reported one frozen number as a P95.
+ * Only a different URL reaches the origin, so every sample carries an ignored
+ * `probe` parameter and the report records what the cache actually said.
  */
 const DEFAULT_BASE_URL = "http://127.0.0.1:3011";
 const QUERY_COUNT = 200;
@@ -85,17 +94,23 @@ async function main() {
   const { baseUrl, count, reportOnly } = parseArgs(process.argv.slice(2));
   const queries = loadQueries(count);
   const samples: Sample[] = [];
+  const startedAtEpoch = Date.now();
 
   // A warm-up pass so the first sample is not the route's cold start.
-  await fetch(`${baseUrl}/api/public/catalog/typeahead?q=%D1%82%D0%BE&kind=plant&locale=uk`).catch(() => undefined);
+  await fetch(`${baseUrl}/api/public/catalog/typeahead?q=%D1%82%D0%BE&kind=plant&locale=uk&probe=warmup`).catch(() => undefined);
 
-  for (const query of queries) {
-    const url = `${baseUrl}/api/public/catalog/typeahead?${new URLSearchParams({ q: query.q, kind: query.kind, locale: query.locale }).toString()}`;
+  const caches = new Map<string, number>();
+  for (const [ordinal, query] of queries.entries()) {
+    // `probe` is ignored by the route and makes every sample reach the origin.
+    // See the note above: without it this measures Vercel, not the query.
+    const url = `${baseUrl}/api/public/catalog/typeahead?${new URLSearchParams({ q: query.q, kind: query.kind, locale: query.locale, probe: `${startedAtEpoch}-${ordinal}` }).toString()}`;
     const startedAt = performance.now();
     const response = await fetch(url, { headers: { "cache-control": "no-cache" } });
     const text = await response.text();
     const totalMs = performance.now() - startedAt;
     const body = safeParse(text);
+    const cache = response.headers.get("x-vercel-cache") ?? "none";
+    caches.set(cache, (caches.get(cache) ?? 0) + 1);
     samples.push({
       serverMs: serverTimingMs(response.headers.get("server-timing")),
       totalMs,
@@ -117,6 +132,10 @@ async function main() {
       ok: ok.length,
       other: samples.length - ok.length,
     },
+    // A reader has to be able to see that the samples reached the origin.
+    // Anything but MISS (or `none`, on a loopback build) means the numbers
+    // below describe a cache entry rather than this build.
+    cacheClasses: Object.fromEntries([...caches.entries()].sort(([a], [b]) => a.localeCompare(b))),
     serverMs: {
       p50: round(percentile(serverTimes, 0.5)),
       p95: round(percentile(serverTimes, 0.95)),

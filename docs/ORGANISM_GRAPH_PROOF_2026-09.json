@@ -2,7 +2,7 @@
   "schemaVersion": "ove399.organismGraphProof.v1",
   "issue": "OVE-399",
   "baseUrlClass": "production",
-  "generatedAt": "2026-09-07T18:49:33.234Z",
+  "generatedAt": "2026-09-07T22:06:10.804Z",
   "checks": [
     {
       "area": "addresses",
@@ -61,14 +61,14 @@
     {
       "area": "picker",
       "check": "typeahead P95 under 100 ms, warm",
-      "class": "fail",
-      "detail": "50/50 answered 200 (200x50), cache MISSx50, P95 198 ms server time, median 69 ms"
+      "class": "pass",
+      "detail": "50/50 answered 200 (200x50), cache MISSx50, P95 39 ms server time, median 22 ms"
     },
     {
       "area": "picker",
       "check": "50 distinct queries, cold instances included",
       "class": "fail",
-      "detail": "44/50 answered 200 (200x44 503x6), cache MISSx50, P95 408 ms server time, median 66 ms"
+      "detail": "45/50 answered 200 (200x45 503x5), cache MISSx50, P95 427 ms server time, median 37 ms"
     },
     {
       "area": "worker",
@@ -84,8 +84,8 @@
     }
   ],
   "summary": {
-    "pass": 10,
-    "fail": 2,
+    "pass": 11,
+    "fail": 1,
     "pending": 0,
     "skipped": 1
   },
