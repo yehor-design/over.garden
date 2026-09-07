@@ -568,12 +568,23 @@ where relation.assertion_id = assertion.id
   and assertion.source_slug = %s
 """
 
+# One EPPO payload can name the same region twice — a country row beside its
+# own sub-region row, or a categorization added and later made transient — and
+# both reduce to the same `(predicate, region, value)`. Without this clause the
+# second insert raises `unique_violation` on `catalog_item_facts_uidx` and
+# takes the whole two-hour run down with it, which is what happened to the
+# second capture's reconciliation on 2026-09-07. The relation insert above
+# already guarded itself the same way; this one was missed. The conflict target
+# repeats the index expression exactly, `coalesce` included, because Postgres
+# matches a partial or expression index by its expression and not by name.
 INSERT_FACT_SQL = """
 insert into catalog_item_facts (
   catalog_item_id, predicate, region_code, value, value_normalized, qualifiers,
   assertion_id
 )
 values (%s::uuid, %s, %s, %s, %s, %s::jsonb, %s::uuid)
+on conflict (catalog_item_id, predicate, coalesce(region_code, ''), value, assertion_id)
+  do nothing
 returning id::text as id
 """
 

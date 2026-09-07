@@ -538,6 +538,80 @@ def test_a_second_run_replaces_its_own_facts_and_writes_no_duplicate(conn):
     assert identifiers["count"] == 1
 
 
+def test_one_payload_naming_a_region_twice_does_not_kill_the_run(conn):
+    """EPPO repeats itself, and a repeat must not end a two-hour job.
+
+    A country listed beside its own sub-region, or a categorization added and
+    later made transient, reduces to the same `(predicate, region, value)` and
+    lands on `catalog_item_facts_uidx` under one assertion. Before the insert
+    guarded itself the second row raised `unique_violation` and took the whole
+    run down; the second capture's reconciliation failed that way in
+    production on 2026-09-07, roughly 85% through.
+    """
+    first, second, first_snapshot, _ = seed_two_captures(conn)
+    seed_node(conn, "Phthorimaea absoluta", kingdom="Animalia", eppo_code="GNORAB")
+    seed_unit(
+        conn,
+        capture_id=first,
+        code="GNORAB",
+        endpoint_class="taxon_overview",
+        payload=overview("GNORAB", "Tuta absoluta"),
+    )
+    seed_record(conn, first_snapshot, "GNORAB")
+    seed_unit(
+        conn,
+        capture_id=second,
+        code="GNORAB",
+        endpoint_class="taxon_distribution",
+        payload=[
+            {"country_iso": "UA", "peststatus": "Present, widespread"},
+            {"country_iso": "UA", "peststatus": "Present, widespread"},
+        ],
+    )
+
+    receipt = reconcile.reconcile_eppo(conn)
+
+    facts = conn.execute(
+        "select count(*)::int as count from catalog_item_facts"
+        " where predicate = 'distribution_status'"
+    ).fetchone()
+    assert facts["count"] == 1
+    # The receipt counts what it wrote, not what it was handed.
+    assert receipt.distribution_facts_written == 1
+
+
+def test_one_payload_repeating_a_categorization_does_not_kill_the_run(conn):
+    first, second, first_snapshot, _ = seed_two_captures(conn)
+    seed_node(conn, "Phthorimaea absoluta", kingdom="Animalia", eppo_code="GNORAB")
+    seed_unit(
+        conn,
+        capture_id=first,
+        code="GNORAB",
+        endpoint_class="taxon_overview",
+        payload=overview("GNORAB", "Tuta absoluta"),
+    )
+    seed_record(conn, first_snapshot, "GNORAB")
+    seed_unit(
+        conn,
+        capture_id=second,
+        code="GNORAB",
+        endpoint_class="taxon_categorization",
+        payload=[
+            {"qlist_label": "A2 list", "qlist": "A2", "year_add": "2004"},
+            {"qlist_label": "A2 list", "qlist": "A2", "year_transient": "2019"},
+        ],
+    )
+
+    receipt = reconcile.reconcile_eppo(conn)
+
+    facts = conn.execute(
+        "select count(*)::int as count from catalog_item_facts"
+        " where predicate = 'categorization'"
+    ).fetchone()
+    assert facts["count"] == 1
+    assert receipt.categorization_facts_written == 1
+
+
 def test_a_second_run_leaves_no_assertion_behind(conn):
     """A run that finds everything already written must write nothing at all."""
     first, second, first_snapshot, _ = seed_two_captures(conn)
