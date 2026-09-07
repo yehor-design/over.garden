@@ -326,7 +326,35 @@ rewrites and force-pushes. For those, ask.
    without it the smoke loads `.env.local`, reads the loopback heartbeat, and
    reports the handler set of a worker nobody deployed.
 6. Record the release digest, the run id and the heartbeat handler set on the
-   issue. `infra/production-worker/README.md` is the full runbook.
+   issue. `infra/production-worker/README.md` is the full runbook. The digest
+   the smoke wants is the whole `sha256:…`, not a prefix; a truncated one is
+   refused with `--expected-digest must be a lowercase sha256 digest`.
+
+**When `deploy` says `candidate schema or dependency preflight failed`.** It
+runs `python -m app.runtime preflight` in the candidate container and discards
+the output, so the refusal names nothing. Rebuild the candidate env by hand —
+the seven lines `write_candidate_env` writes from the release manifest — and
+run the same command with the output visible:
+
+```bash
+docker compose --project-name overgarden --env-file /root/candidate.env \
+  --file /opt/overgarden/docker-compose.release.yml \
+  run --rm --no-deps matching-worker python -m app.runtime preflight
+```
+
+Anything but `"status":"ready"` is the refusal. `handlerCompatible: "drift"` is
+normal during a deploy — it only means the running heartbeat still declares the
+old handler set. On 2026-09-07 the real cause was
+`"meilisearch":{"status":"unavailable"}`: `worker.env` still named
+`meilisearch:7700`, the alias of the container the OVE-198 upgrade replaced on
+2026-07-23. `worker.env` is hand-maintained and derived from nothing in the
+repository, so a container rename leaves it behind silently.
+
+**The Caddyfile is bind-mounted as a file.** `sed -i` replaces the inode and
+the container keeps the original, so the edit looks applied on the host while
+`caddy reload` answers `config is unchanged`. Write with `cat new > Caddyfile`,
+or restart the container. Caddy fronts only `meili.over.garden`, so that
+restart is contained.
 
 ### 4.3 The second EPPO capture
 
