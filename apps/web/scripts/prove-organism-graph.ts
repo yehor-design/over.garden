@@ -63,7 +63,13 @@ function parseArgs(argv: readonly string[]): Options {
       valueOf(argv, "--species") ??
       "/species/solanum-lycopersicum-species-backbone",
     formPath: valueOf(argv, "--form") ?? "",
-    legacyVarietyPath: valueOf(argv, "--legacy-variety") ?? "",
+    // A registered form whose species the register attachment resolved: its
+    // old `/variety/*` address is exactly the link a crawler or a reader still
+    // holds. A form the attachment could not resolve keeps its legacy address
+    // by design, so naming one of those would prove the opposite of the rule.
+    legacyVarietyPath:
+      valueOf(argv, "--legacy-variety") ??
+      "/variety/uh722m-ua-register-12004202",
     permalinkPath: valueOf(argv, "--permalink"),
     eppoPath: valueOf(argv, "--eppo") ?? "/eppo/LYPES",
     missingPath:
