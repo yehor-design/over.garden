@@ -212,30 +212,66 @@ Recorded here so the next reader does not have to rediscover it:
   decemlineata* today, matched through the Russian vernacular EPPO carries
   (`колорадский жук`) by the shared normalizer. `OVE-397`'s criterion is met
   without the Wikidata names.
-* **The picker misses its P95 budget on the real dataset.** Now measured, and
-  the answer is not the one the earlier receipt implied. Against production,
-  every sample forced to the origin:
+* **The picker missed its P95 budget on the real dataset, and three
+  explanations were needed before the right one.** Against production, every
+  sample forced to the origin:
 
   | | median | P95 | 503 |
   | -- | -- | -- | -- |
-  | warm, one query repeated | 69 ms | 129 ms | 0 of 50 |
-  | fifty distinct queries | 63 ms | 409 ms | 4 of 50 |
+  | warm, before | 69–85 ms | 129–216 ms | 0 of 50 |
+  | fifty distinct queries, before | 63–98 ms | 408–419 ms | 4–9 of 50 |
+  | warm, after | 17–22 ms | **32–108 ms** | 0 of 50 |
+  | fifty distinct queries, after | 32–37 ms | **158–266 ms** | 0–5 of 50 |
 
-  The statement is not the problem: explained against production it runs in
-  26 ms, 8 of them planning, and the candidate scan is 12 ms. The median is
-  inside D7's 100 ms budget and the tail is not, and a cold serverless instance
-  pays connection setup before the statement runs — which is why the deadline
-  went from 150 to 400 ms during `OVE-387` and why a few requests still reach
-  it and answer 503.
+  The 503s were never cold instances. They were **one query shape**, and it is
+  the shape a Ukrainian gardener types most: walking the fingerprint prefixes
+  three times, every prefix of `соняшник` failed every round, while `том`
+  answered in 10 ms. Explained against production: `соняшник` 442 ms, `со`
+  364 ms, `том` 10.7 ms, against a 400 ms deadline.
+
+  Two defects, both invisible to any test on a fixture:
+
+  1. **The statement decorated every candidate, then took eight.** Four lateral
+     joins — a vernacular, a `form_of` relation, the parent, the parent's
+     vernacular — ran once per row of `scored`. `соняшник` matches 2,395 names,
+     because the Ukrainian state register lists thousands of sunflower hybrids,
+     so the plan did about 9,600 index searches to build display names for rows
+     `limit 8` discarded: roughly 410 of the 442 ms. Every column the ordering
+     reads already sat in `scored`, so a `shortlist` CTE now applies the
+     duplicate filter, the ordering and the limit first (`loops=8`, from 2,395).
+  2. **The trigram arm was asked about queries it cannot answer.** A
+     two-character query has one trigram: for `so` the `%` operator read 45,095
+     index entries and 4,520 heap pages to contribute one row. Measured rather
+     than assumed — across all 28 two-character prefixes in the fingerprint
+     fixture, removing the arm changed nothing; at three characters and above
+     it changes answers throughout, so it is skipped only below three.
+
+  Proven against production on all 173 prefixes the fixture expands to, run in
+  both orders so neither statement got the other's warm buffers: **rows
+  identical 173/173**, P95 418–472 → 190–226 ms, slowest 875–908 → 262–303 ms,
+  and **0 of 173 over the deadline** against 12–17 before.
+
+  What remains is connection setup — the tail that the first explanation
+  claimed was all of it. `pg` closes a pooled connection after ten idle
+  seconds, so a gardener typing every few minutes paid a fresh TCP and TLS
+  handshake inside the keystroke; the pool now holds it for five minutes with
+  keep-alive. After both changes 500 samples across three probes, including
+  bursts five minutes apart so instances go cold, returned no 503; the proof's
+  own spread phase, a hundred requests back to back, still saw 6 of 200. `баз`
+  reports 404 ms of database time over HTTP and explains in 110 ms, which is
+  where the difference sits.
 
   The 26.6 ms recorded for `OVE-387` was measured against a local production
-  build over about 15,900 nodes; production holds 114,669 and 242,120 names.
+  build over about 15,900 nodes; production holds 114,669 and 246,888 names.
   That is the same trap as every other number measured on the wrong database.
 
-  Two false starts are worth recording so nobody repeats them. The failures
+  Three false starts are worth recording so nobody repeats them. The failures
   were first blamed on the reconciliation loading the database; they persisted
   with the database idle. Then the measurement itself turned out to be reading
   Vercel's edge cache — the route carries a 60 s shared cache and
   `Server-Timing` is cached with the body, so a repeated URL returns the timing
   of whenever the entry was written, and a `no-cache` request header does not
-  defeat a shared cache.
+  defeat a shared cache. Then the tail was attributed to cold instances on the
+  strength of one `explain` of `том` — a query that happens to be cheap. Each
+  time the correction came from measuring the thing itself: which queries fail,
+  not which explanation is plausible.

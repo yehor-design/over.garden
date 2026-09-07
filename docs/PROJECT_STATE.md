@@ -117,8 +117,8 @@ costs 17,700 → 17.47 and the rate went to about 3,300 a minute); and `0061`
 made six earlier migrations un-replayable, which `prove-migration-reapply.ts`
 found and each site now guards. The slice's dated receipt is
 `docs/DELIVERY_LOG_ORGANISM_GRAPH_2026-09.md`, and the production proof it
-leaves behind is `docs/ORGANISM_GRAPH_PROOF_2026-09.json`: ten checks pass, two
-fail on the picker's P95, none pending.
+leaves behind is `docs/ORGANISM_GRAPH_PROOF_2026-09.json`: eleven checks pass,
+one fails on the picker's P95 across cold instances, none pending.
 
 **Delivered 2026-09-07, OVE-395 (Slice 24, task 10 of 14).** Every registered
 cultivar and breed is attached to its species. The three register importers
@@ -318,7 +318,9 @@ legacy address until the registers task links it. One builder,
 `tests/catalog-addresses.spec.ts` against `next start` (CI), the address
 repository, proxy and page unit tests, the 82-case slug fixture. No SQL of
 its own; the picker's statement deadline went from 150 to 400 ms in the same
-change after production showed a cold 503 at ~160 ms.
+change after production showed a cold 503 at ~160 ms. The statement was
+rewritten on 2026-09-07 to choose its eight rows before decorating them; see
+known gap 0 for what that fixed and what it did not.
 
 **Delivered 2026-09-06, OVE-387 (Slice 24, task 2 of 14).** The catalog picker
 is one Postgres statement behind the public route `/api/public/catalog/typeahead`
@@ -371,17 +373,39 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
 
 ## Known gaps, stated deliberately
 
-0. **The picker misses its P95 budget in production, and the number in its own
-   receipt cannot be compared with it.** Measured repeatedly on 2026-09-07 with
-   every sample forced past the 60 s shared cache: median 69–85 ms, but P95
-   between 129 and 198 ms warm and around 410 ms across fifty distinct queries,
-   with four to ten of fifty answering `503` at the 400 ms deadline. D7's budget is a 100 ms P95. The statement is not the
-   cause — `explain analyze` against production gives 26 ms, 8 of them
-   planning — the tail is a cold serverless instance paying connection setup.
-   `OVE-387`'s receipt records 26.6 ms, measured on a loopback database holding
-   about 15,900 nodes against production's 114,669. The remedy is connection
-   handling on the request path; it is recorded on that card, not fixed in the
-   closeout.
+0. **The picker meets its budget warm and not across cold instances.** Fixed
+   far enough on 2026-09-07 to be worth stating precisely, because two earlier
+   explanations of this gap were wrong. Before: P95 129–216 ms warm, about
+   410 ms across fifty distinct queries, four to ten of fifty answering `503`.
+   After: **P95 32–108 ms warm, 158–266 ms across distinct queries**, and the
+   `503`s all but gone. D7's budget is a 100 ms P95.
+
+   Two defects were behind it, and only production could show either. The
+   statement decorated every candidate before taking eight: four lateral joins
+   an index search apiece, once per row of `scored`. The Ukrainian prefix for
+   sunflower matches 2,395 names — the state register lists thousands of
+   hybrids — so it spent about 410 of its 442 ms building display names for
+   rows the limit discarded, and **every prefix of `соняшник` answered `503` in
+   three consecutive runs** while `том` answered in 10 ms. And the trigram arm
+   was asked about two-character queries, where one trigram matches tens of
+   thousands of names: `so` read 45,095 index entries and 4,520 heap pages to
+   contribute one row, and across all twenty-eight two-character prefixes in
+   the fingerprint fixture it never changed the answer. A `shortlist` CTE now
+   limits before decorating, and the arm is skipped below three characters.
+   Proven row-identical on all 173 fingerprint prefixes, run in both orders:
+   nothing exceeds the 400 ms deadline any more, against 12–17 of 173 before.
+
+   What is left is connection setup, which is what the tail always was — just
+   not what it was mostly. `pg` was closing the pooled connection after ten
+   idle seconds, so a gardener typing every few minutes paid a fresh TCP and
+   TLS handshake inside the keystroke; the pool now holds it for five minutes
+   with keep-alive on. After both changes, 500 samples across three probes,
+   including bursts five minutes apart so instances go cold, returned **no
+   `503` at all**; the proof's own spread phase, which fires a hundred requests
+   back to back and makes Vercel scale out, still saw 6 of 200. The slowest
+   surviving samples say where that time goes: `баз` reported 404 ms of
+   database time over HTTP and explains against production in 110 ms.
+   `docs/ORGANISM_GRAPH_PROOF_2026-09.json` carries the run as generated.
 
 1. **The framework defect itself is unfixed, and unreported.** Under Cache
    Components a thrown Server Component error during a postponed resume never
