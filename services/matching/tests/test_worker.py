@@ -624,9 +624,38 @@ def test_process_claimed_job_clears_lease_after_failure(monkeypatch) -> None:
     worker._process_claimed_job("conn", job, active_claim)  # type: ignore[arg-type]
 
     assert failures == [
-        ("internal-job-id", "internal-claim-token", "transient_handler_error", 1),
+        ("internal-job-id", "internal-claim-token", "handler:runtime_error@worker", 1),
     ]
+    assert "private backend detail" not in str(failures)
     assert active_claim.snapshot() is None
+
+
+def test_handler_error_class_names_the_module_it_was_raised_in() -> None:
+    """A retrying job says which exception fired and in which of our modules."""
+    try:
+        worker._handle("conn", {"kind": "catalog_source_refresh"})
+    except Exception as error:  # noqa: BLE001 - the class is the assertion
+        recorded = worker._handler_error_class(error)
+    else:  # pragma: no cover - the payload has no source_slug, so it raises
+        raise AssertionError("expected the handler to raise")
+
+    assert recorded.startswith("handler:")
+    assert recorded.endswith("@worker")
+    assert len(recorded) <= 200
+
+
+def test_handler_error_class_never_carries_the_message_or_a_dependency_path() -> None:
+    class LeakyError(Exception):
+        pass
+
+    try:
+        raise LeakyError("gardener wrote this and it must not be stored")
+    except LeakyError as error:
+        recorded = worker._handler_error_class(error)
+
+    assert recorded == "handler:leaky_error@test_worker" or recorded == "handler:leaky_error"
+    assert "gardener" not in recorded
+    assert "/" not in recorded
 
 
 def test_process_claimed_job_terminals_unsupported_without_handler(

@@ -546,6 +546,33 @@ def _drain_error_class(error: BaseException) -> str:
     return (token or "unknown_error")[:80]
 
 
+def _handler_error_class(error: BaseException) -> str:
+    """What failed and where, in two bounded tokens and nothing else.
+
+    A retrying job used to record the constant `transient_handler_error`, which
+    says only that a handler raised. On 2026-09-07 the second EPPO
+    reconciliation failed at about 85% of a two-hour run and that constant was
+    the whole of the evidence: no message, no module, and the worker writes
+    nothing to stdout. Diagnosis needed a deploy, which is the wrong price for
+    knowing which exception fired.
+
+    The message is still never recorded — a psycopg error carries the failing
+    statement, and a statement can carry a gardener's text. The class and the
+    module cannot: both are code identifiers this repository owns. Anything
+    raised outside `app.` reports its class alone, so a dependency's file
+    layout never reaches the column either.
+    """
+    module = ""
+    frame = error.__traceback__
+    while frame is not None:
+        candidate = frame.tb_frame.f_globals.get("__name__", "")
+        if isinstance(candidate, str) and candidate.startswith("app."):
+            module = candidate.split(".")[-1]
+        frame = frame.tb_next
+    token = _drain_error_class(error)
+    return f"handler:{token}@{module}"[:200] if module else f"handler:{token}"[:200]
+
+
 def _process_claimed_job(
     conn: psycopg.Connection,
     job: dict[str, Any],
@@ -568,7 +595,7 @@ def _process_claimed_job(
             _handle(conn, payload)
         except TerminalJobError as error:
             _mark_dead(conn, job["id"], job["claimToken"], error.code)
-        except Exception:
+        except Exception as error:
             max_attempts = max_attempts_for_kind(str(kind))
             if attempts >= max_attempts:
                 _mark_dead(
@@ -582,7 +609,7 @@ def _process_claimed_job(
                     conn,
                     job["id"],
                     job["claimToken"],
-                    "transient_handler_error",
+                    _handler_error_class(error),
                     attempts,
                 )
         else:
