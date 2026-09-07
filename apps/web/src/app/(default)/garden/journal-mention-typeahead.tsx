@@ -96,6 +96,10 @@ export function parseJournalMentionSuggestions(
         detail: candidate.detail,
         disambiguationLabel: candidate.disambiguationLabel,
         catalogKind: candidate.catalogKind ?? null,
+        nodeRole:
+          candidate.nodeRole === "pest" || candidate.nodeRole === "organism"
+            ? candidate.nodeRole
+            : null,
       },
     ];
   });

@@ -43,6 +43,7 @@ import {
   assemblePublicOrganismCard,
   readPublicOrganismCardRow,
   readPublicOrganismExperienceRows,
+  readPublicOrganismMentionRows,
   type PublicOrganismCard,
 } from "@/server/public-organism-card-query";
 import {
@@ -197,6 +198,7 @@ export async function getPublicVarietyPageByCatalogItemId(
     identifiers,
     cardRow,
     experience,
+    mentions,
   ] = await Promise.all([
     buildPublicVarietySummaryQuery(executor, {
       catalogItemId: item.id,
@@ -214,10 +216,13 @@ export async function getPublicVarietyPageByCatalogItemId(
     buildPublicVarietyIdentifiersQuery(executor, item.id).execute(),
     readPublicOrganismCardRow(executor, item.id),
     readPublicOrganismExperienceRows(executor, item.id),
+    readPublicOrganismMentionRows(executor, item.id),
   ]);
   const card = assemblePublicOrganismCard({
+    catalogItemId: item.id,
     row: cardRow,
     experience,
+    mentions,
     locale,
     fallbackSource: { slug: item.source, name: item.source },
   });

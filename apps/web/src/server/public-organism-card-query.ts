@@ -86,6 +86,17 @@ export interface PublicOrganismSourceRow {
   lastObservedAt: string;
 }
 
+/** How far back a card looks for what gardeners wrote. */
+export const MENTION_PRESSURE_WEEKS = 12;
+
+export interface PublicOrganismMentionRow {
+  catalogItemId: string;
+  regionCode: string | null;
+  isoWeek: string;
+  mentions: number;
+  gardeners: number;
+}
+
 export interface PublicOrganismExperienceRow {
   regionCode: string | null;
   objectCount: number;
@@ -313,6 +324,82 @@ export function buildPublicOrganismExperienceStatement(catalogItemId: string) {
   `;
 }
 
+/**
+ * Observed pest pressure, from what gardeners wrote (OVE-397, ADR-0026 D13).
+ *
+ * Every source on this card says where a pest *may* occur. Only this says
+ * where somebody saw one, in which week, and it is the one dataset no
+ * checklist has. It is assembled from mentions a gardener chose to make while
+ * writing — never from prose, and never required (D5).
+ *
+ * The subjects are this node and every pest of it, so one statement serves
+ * both cards: a plant's pest section gets a count per pest, and a pest's own
+ * card gets its spread. A mention counts only from a public entry, and a
+ * region counts only where the object shows one — the same rules the gardener
+ * experience section is held to, because these are the same entries.
+ */
+export function buildPublicOrganismMentionPressureStatement(
+  catalogItemId: string,
+  weeks = MENTION_PRESSURE_WEEKS,
+) {
+  return sql<PublicOrganismMentionRow>`
+    with subjects as (
+      select ${catalogItemId}::uuid as id
+      union
+      select relation.from_catalog_item_id
+      from catalog_item_relations as relation
+      where relation.to_catalog_item_id = ${catalogItemId}::uuid
+        and relation.relation_type = 'pest_of'
+    ),
+    visible as (
+      select
+        mention.catalog_item_id as subject_id,
+        journal_entries.id as entry_id,
+        journal_entries.owner_user_id,
+        case
+          when plant_objects.location_visibility = 'region' then coalesce(
+            plant_objects.coarse_region_code,
+            case when spaces.location_visibility = 'region' then spaces.coarse_region_code end
+          )
+        end as region_code,
+        to_char(journal_entries.entry_date, 'IYYY-"W"IW') as iso_week
+      from journal_entry_catalog_mentions as mention
+      join journal_entries on journal_entries.id = mention.journal_entry_id
+      join plant_objects on plant_objects.id = journal_entries.plant_object_id
+      join spaces on spaces.id = journal_entries.space_id
+      where mention.catalog_item_id in (select id from subjects)
+        and journal_entries.owner_user_id = plant_objects.owner_user_id
+        and journal_entries.owner_user_id = spaces.owner_user_id
+        and journal_entries.visibility = 'public'
+        and journal_entries.lifecycle_state = 'active'
+        and journal_entries.public_gone_at is null
+        and journal_entries.public_slug is not null
+        and journal_entries.entry_date >= current_date - ${weeks} * interval '7 days'
+        and ${publicLaunchSurfacePredicates()}
+    )
+    select
+      subject_id as "catalogItemId",
+      region_code as "regionCode",
+      iso_week as "isoWeek",
+      count(distinct entry_id)::int as "mentions",
+      count(distinct owner_user_id)::int as "gardeners"
+    from visible
+    group by subject_id, region_code, iso_week
+    order by count(distinct entry_id) desc, iso_week desc, region_code nulls last
+  `;
+}
+
+export async function readPublicOrganismMentionRows(
+  executor: QueryExecutor,
+  catalogItemId: string,
+): Promise<PublicOrganismMentionRow[]> {
+  const result =
+    await buildPublicOrganismMentionPressureStatement(catalogItemId).execute(
+      executor,
+    );
+  return result.rows;
+}
+
 export async function readPublicOrganismCardRow(
   executor: QueryExecutor,
   catalogItemId: string,
@@ -424,6 +511,30 @@ const PRESENCE_STATUSES = new Set([
   "unknown",
 ]);
 
+export interface PublicOrganismMentionPressure {
+  /** The node the mentions are about: this card's own, or a pest of it. */
+  catalogItemId: string;
+  /** Null on the card's own node; the pest's name when the pest is another node. */
+  name: string | null;
+  publicPath: string | null;
+  weeks: PublicOrganismMentionWeek[];
+  regions: PublicOrganismMentionRegion[];
+  mentions: number;
+  gardeners: number;
+}
+
+export interface PublicOrganismMentionWeek {
+  isoWeek: string;
+  mentions: number;
+}
+
+export interface PublicOrganismMentionRegion {
+  code: string | null;
+  label: string | null;
+  mentions: number;
+  gardeners: number;
+}
+
 export interface PublicOrganismCard {
   firstHandContentAt: Date | string | null;
   indexableOverride: boolean | null;
@@ -443,12 +554,18 @@ export interface PublicOrganismCard {
   presence: PublicOrganismPresence[];
   /** Attribution the licence requires, with the download date (D11). */
   attributions: PublicOrganismAttribution[];
+  /** What gardeners mentioned, by oblast and week — the only first-hand layer (D13). */
+  mentionPressure: PublicOrganismMentionPressure[];
   sources: PublicOrganismSource[];
 }
 
 export function assemblePublicOrganismCard(input: {
+  /** The node this card is about, so its own mentions sort ahead of a pest's. */
+  catalogItemId?: string;
   row: PublicOrganismCardRow | null;
   experience: readonly PublicOrganismExperienceRow[];
+  /** Empty is the ordinary case: most nodes nobody has written about yet. */
+  mentions?: readonly PublicOrganismMentionRow[];
   locale: PublicLocale;
   /** The card's own source label for names that no assertion backs. */
   fallbackSource: { slug: string; name: string };
@@ -585,6 +702,60 @@ export function assemblePublicOrganismCard(input: {
     }
   }
 
+  // What gardeners wrote, folded per node. The card's own node comes first and
+  // carries no name — it is the thing the page is about; every other subject is
+  // a pest of it and says which one.
+  const pressure = new Map<string, PublicOrganismMentionPressure>();
+  const pestsById = new Map(
+    (row?.pests ?? []).map((pest) => [pest.catalogItemId, pest]),
+  );
+  for (const mention of input.mentions ?? []) {
+    const known = pestsById.get(mention.catalogItemId);
+    const entry = pressure.get(mention.catalogItemId) ?? {
+      catalogItemId: mention.catalogItemId,
+      name: known?.canonicalName ?? null,
+      publicPath: known ? toRelated(known).publicPath : null,
+      weeks: [],
+      regions: [],
+      mentions: 0,
+      gardeners: 0,
+    };
+    entry.mentions += Number(mention.mentions);
+    const week = entry.weeks.find((row) => row.isoWeek === mention.isoWeek);
+    if (week) week.mentions += Number(mention.mentions);
+    else
+      entry.weeks.push({
+        isoWeek: mention.isoWeek,
+        mentions: Number(mention.mentions),
+      });
+    const region = entry.regions.find((row) => row.code === mention.regionCode);
+    if (region) {
+      region.mentions += Number(mention.mentions);
+      region.gardeners = Math.max(region.gardeners, Number(mention.gardeners));
+    } else {
+      entry.regions.push({
+        code: mention.regionCode,
+        label: mention.regionCode
+          ? getLocalizedCoarseRegionLabel(input.locale, mention.regionCode)
+          : null,
+        mentions: Number(mention.mentions),
+        gardeners: Number(mention.gardeners),
+      });
+    }
+    pressure.set(mention.catalogItemId, entry);
+  }
+  for (const entry of pressure.values()) {
+    entry.weeks.sort((left, right) => right.isoWeek.localeCompare(left.isoWeek));
+    entry.regions.sort((left, right) => right.mentions - left.mentions);
+    // Gardeners are counted per bucket, so the node's own total is the largest
+    // bucket rather than their sum: one gardener writing from two oblasts is
+    // one gardener.
+    entry.gardeners = entry.regions.reduce(
+      (most, region) => Math.max(most, region.gardeners),
+      0,
+    );
+  }
+
   return {
     firstHandContentAt,
     indexableOverride,
@@ -613,6 +784,12 @@ export function assemblePublicOrganismCard(input: {
         // fetched — not when we last reconciled it onto the graph.
         downloadedAt: source.fetchedAt ?? source.lastObservedAt ?? null,
       })),
+    mentionPressure: [...pressure.values()].sort(
+      (left, right) =>
+        Number(right.catalogItemId === input.catalogItemId) -
+          Number(left.catalogItemId === input.catalogItemId) ||
+        right.mentions - left.mentions,
+    ),
     sources: (row?.sources ?? []).map((source) => ({
       sourceSlug: source.sourceSlug,
       sourceName: source.sourceName,
@@ -646,6 +823,7 @@ export function emptyPublicOrganismCard(
     acceptedNameClaims: [],
     presence: [],
     attributions: [],
+    mentionPressure: [],
     sources: [],
     ...overrides,
   };
