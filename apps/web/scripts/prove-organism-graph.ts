@@ -123,9 +123,16 @@ async function main() {
   }
 
   // 2. The three redirects and the one refusal.
+  // The permalink is the `@id` of the page's own `Taxon` node — the card does
+  // not link it in prose, so reading it from the graph is how the proof finds
+  // the address the product itself publishes as permanent.
+  const speciesTaxon = findTaxonNode(speciesHtml);
   const permalink =
     options.permalinkPath ??
-    firstMatch(speciesHtml, /href="(?:https:\/\/[^"]*)?(\/id\/[0-9a-f-]{36})"/u);
+    firstMatch(speciesHtml, /href="(?:https:\/\/[^"]*)?(\/id\/[0-9a-f-]{36})"/u) ??
+    (typeof speciesTaxon?.["@id"] === "string"
+      ? new URL(speciesTaxon["@id"]).pathname
+      : null);
   const legacyPath = options.legacyVarietyPath || null;
   for (const [label, path] of [
     ["permalink", permalink],
@@ -193,9 +200,12 @@ async function main() {
         "the catalog sitemap is empty: no organism has first-hand content yet (D9)",
     });
   }
+  // The invariant, not the state: whichever way D9 decides for this page, the
+  // page and its graph must agree. Naming it "is noindex" would be a check
+  // that quietly starts asserting the opposite the day the owner marks a card.
   checks.push({
     area: "identity",
-    check: "a source-only organism page is noindex and carries no JSON-LD",
+    check: "the page's indexability and its JSON-LD agree",
     class:
       /<meta name="robots" content="noindex/u.test(speciesHtml) ===
       !/application\/ld\+json/u.test(speciesHtml)
