@@ -361,6 +361,24 @@ refuses the loopback database when production *is* named — a production flag
 against a local database puts a job nobody drains on a queue nobody watches. Rehearse every job on the loopback database first and record
 counts and duration on the issue for both runs.
 
+Two source slugs pull a whole release before they write anything, so their
+first run is a download and not a query: `world-flora-online` fetches a 122 MB
+Zenodo zip and `gbif-backbone` a 466 MB hosted export, both pinned by version
+and sha256 in `services/matching/app/wfo_gbif_crosswalk.py`. Either can also be
+run by hand, which is what a rehearsal does:
+
+```bash
+cd services/matching
+uv run --frozen python -m scripts.crosswalk_wfo_gbif --source world-flora-online
+uv run --frozen python -m scripts.crosswalk_wfo_gbif --source gbif-backbone \
+  --release-path /abs/path/simple.txt.gz
+```
+
+`--release-path` reads a copy already on disk instead of downloading it again;
+the pinned digest is still checked, so it can shorten a rehearsal but never
+change what the run reads. A digest that does not match is
+`release_digest_mismatch` and nothing is written.
+
 ## 5. Order, hand-offs, definition of done
 
 All fourteen are sub-issues of the umbrella issue `OVE-400`, numbered `24.01`

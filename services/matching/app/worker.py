@@ -31,6 +31,7 @@ from app.catalog_reconcile import (
 from app.col_ingest import COL_SOURCE_SLUG, ingest_catalogue_of_life
 from app.job_handlers import SUPPORTED_JOB_KINDS
 from app.eppo_reconcile import EPPO_SOURCE_SLUG, reconcile_eppo
+from app.wfo_gbif_crosswalk import SOURCES as CROSSWALK_SOURCES, crosswalk_source
 from app.wikidata_crosswalk import WIKIDATA_SOURCE_SLUG, crosswalk_wikidata
 # Every kind literal comes from the generated contract rather than from the
 # module that happens to handle it, so dispatch and the manifest cannot disagree
@@ -290,6 +291,13 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
             # nothing upstream: the captures already sit in the source layer of
             # the database the worker is connected to.
             reconcile_eppo(conn)
+            return
+        if source_slug in CROSSWALK_SOURCES:
+            # World Flora Online and the GBIF backbone: two pinned releases
+            # read once each, matched by identifier and then by name, and
+            # stored only where they reached a node. Long enough to need the
+            # scan lease, like every other release this worker reads.
+            crosswalk_source(conn, source_slug)
             return
         record_source_refresh(source_slug)
         return

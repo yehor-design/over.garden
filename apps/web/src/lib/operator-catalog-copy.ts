@@ -1,3 +1,4 @@
+import type { CatalogSourceRefreshCadence } from "@/lib/catalog/source-cadence";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 
 /**
@@ -59,6 +60,8 @@ export interface OperatorCatalogCopy {
     lastRefresh: string;
     attribution: string;
     openSource: string;
+    cadence: string;
+    cadenceNames: Record<CatalogSourceRefreshCadence, string>;
   };
   card: {
     ownerTools: string;
@@ -144,6 +147,11 @@ const UK: OperatorCatalogCopy = {
     lastRefresh: "Останнє оновлення",
     attribution: "Зазначення джерела",
     openSource: "Відкрити джерело",
+    cadence: "Оновлюють",
+    cadenceNames: {
+      twice_a_year: "двічі на рік",
+      as_released: "коли виходить нове видання",
+    },
   },
   card: {
     ownerTools: "Інструменти власника",
@@ -230,6 +238,11 @@ const BG: OperatorCatalogCopy = {
     lastRefresh: "Последно обновяване",
     attribution: "Посочване на източника",
     openSource: "Отвори източника",
+    cadence: "Обновява се",
+    cadenceNames: {
+      twice_a_year: "два пъти годишно",
+      as_released: "когато излезе ново издание",
+    },
   },
   card: {
     ownerTools: "Инструменти на собственика",
@@ -316,6 +329,11 @@ const RU: OperatorCatalogCopy = {
     lastRefresh: "Последнее обновление",
     attribution: "Указание источника",
     openSource: "Открыть источник",
+    cadence: "Обновляют",
+    cadenceNames: {
+      twice_a_year: "дважды в год",
+      as_released: "когда выходит новое издание",
+    },
   },
   card: {
     ownerTools: "Инструменты владельца",
