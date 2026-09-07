@@ -2,7 +2,7 @@
 
 Status: living document. Update it whenever production behaviour, the direction,
 or the list of known gaps changes. Read it first, then `AGENTS.md`.
-Last reviewed: 2026-09-05.
+Last reviewed: 2026-09-07.
 
 This page answers four questions for anyone returning to OverGarden: what the
 product is today, what is actually true in production right now, what is being
@@ -93,6 +93,49 @@ receipt in `docs/WORKSPACE_RESILIENCE_PROOF_2026-09.md`.
 platform: real gardeners publishing, and organic discovery measured rather than
 assumed. One measurement gap blocks honest prioritisation; see known gaps
 below.
+
+**Delivered 2026-09-07, OVE-395 (Slice 24, task 10 of 14).** Every registered
+cultivar and breed is attached to its species. The three register importers
+already wrote what a register says — a source row, a catalog item, its names
+and a link — but none of them wrote the one fact a gardener sees: that this
+denomination is a form *of* something. One pass now turns a row from any of the
+registers into the same claim (which species, under which denomination,
+registered where and when) and writes a `form_of` relation, a denomination, a
+register identifier, a `registration_status` fact with the market and the year,
+and a form slug from the romanized denomination.
+
+In production 15,900 register forms became 15,457 attachments and 443 queue
+items, with none both and none neither. The tomato species page says it has 621
+forms and lists them; a registered cultivar answers at
+`/species/solanum-lycopersicum-species-backbone/suomy-ua-register-14115052`
+with its registration recorded as `registered UA 2025`. The picker prefers what
+is registered in the reader's market, in Ukrainian and in Bulgarian.
+
+It never guesses: two candidate species is a decision for the owner, not a coin
+toss, and a variety the Official Journal has removed gets a `withdrawn`
+registration fact beside its unchanged node and relation. Nothing is deleted.
+
+**Delivered 2026-09-07, OVE-394 (Slice 24, task 9 of 14).** EPPO is on the
+graph. The 2026-09-03 observed capture holds overview, names and taxonomy for
+129,214 identifiers, and a second capture takes hosts, distribution and
+categorization for the same ones. Both live in the source layer; a job reads
+them and calls nothing upstream.
+
+Each identifier climbs the deterministic ladder — the EPPO code the Wikidata
+crosswalk wrote, the scientific name with its authorship, the canonical name
+with its rank, and then the Catalogue of Life checklist itself, which
+materializes a node with the backbone's classification. Only a species the
+checklist does not carry at all is created from EPPO: viruses, viroids and the
+animal pests the scoped ingest leaves out. In production 108,770 of 121,777
+active codes linked automatically and the graph grew from 15,959 nodes to
+114,525.
+
+Cards gained a presence badge for Ukraine and Bulgaria at country level, with
+EPPO's verbatim status beside the word; the pest or disease label from the
+kingdom and the host role; and the attribution line the licence requires, dated
+by the day the data was downloaded. The projection guard gained its second
+axis: a leaf that is source-only, forbidden, or that the capture never
+classified never reaches a product surface.
 
 **Delivered 2026-09-06, OVE-393 (Slice 24, task 8 of 14).** Every canonical
 node now carries the identifiers the other sources are addressed by. An offline
