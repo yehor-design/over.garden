@@ -26,7 +26,6 @@ import {
   uaStateRegisterSnapshotChecksum,
 } from "@/lib/catalog/ua-state-register-variety";
 import {
-  buildEnqueueUaStateRegisterTypeaheadReindexJobQuery,
   buildInsertUaStateRegisterSourceLinkQuery,
   buildUaStateRegisterSourceProvenanceProofQuery,
   buildUaStateRegisterTypeaheadProofQuery,
@@ -368,16 +367,4 @@ describe("UA State Register official variety import", () => {
     ]);
   });
 
-  it("queues a derived typeahead reindex after import", () => {
-    const compiled =
-      buildEnqueueUaStateRegisterTypeaheadReindexJobQuery(testDb).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.parameters).toEqual([
-      "matching",
-      { kind: "catalog_typeahead_reindex" },
-      "catalog-typeahead-reindex",
-      expect.any(Date),
-    ]);
-  });
 });

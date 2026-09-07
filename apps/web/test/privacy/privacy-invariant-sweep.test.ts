@@ -32,14 +32,11 @@ import { buildCountJournalEntriesQuery } from "@/server/erasure-dry-run-reposito
 import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
 import { scopedToUser } from "@/server/request-scope";
 import { parseCatalogTypeaheadResponse } from "@/lib/garden/catalog-typeahead-contract";
-import { toCatalogTypeaheadDocument } from "@/server/search/catalog-documents";
 import { buildJournalEntrySearchDocumentContractFixture } from "@/server/search/documents";
 
 import {
-  ALLOWED_CATALOG_DOCUMENT_KEYS,
   ALLOWED_SEARCH_DOCUMENT_KEYS,
   JOURNEY,
-  catalogTypeaheadRow,
   hiddenLocationJournalEntryPage,
   markupJournalEntryPage,
   poisonedTypeaheadHit,
@@ -134,25 +131,12 @@ describe("OVE-40 privacy invariant sweep — search index", () => {
 });
 
 describe("OVE-40 privacy invariant sweep — catalog typeahead", () => {
-  it("emits a bounded catalog document with no private keys or values", () => {
-    const doc = toCatalogTypeaheadDocument(catalogTypeaheadRow());
-    expect(doc).not.toBeNull();
-    if (!doc) return;
-
-    expectPublicPayloadIsClean("catalog typeahead document", doc);
-    for (const key of Object.keys(doc)) {
-      expect(ALLOWED_CATALOG_DOCUMENT_KEYS).toContain(key);
-    }
-    expect(doc.serveClass).toBe("exact");
-  });
-
-  it("never indexes user-created catalog rows", () => {
-    expect(
-      toCatalogTypeaheadDocument(
-        catalogTypeaheadRow({ createdByUserId: POISON.ownerUserId }),
-      ),
-    ).toBeNull();
-  });
+  // The two tests that stood here checked the Meilisearch catalog document:
+  // that it carried no private key, and that it refused a gardener's own row.
+  // Meilisearch left the pick path with the closeout (OVE-399, ADR-0026 D7)
+  // and the document does not exist. The invariant did not leave with it — it
+  // moved to the answer the picker actually returns, which the next test reads
+  // from the response contract itself.
 
   it("drops every key the picker row shape does not name, poison included", () => {
     const rows = parseCatalogTypeaheadResponse({

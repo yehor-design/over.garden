@@ -11,7 +11,6 @@ import {
   genebankLongTailProjectionForRecord,
 } from "@/lib/catalog/genebank-long-tail";
 import {
-  buildEnqueueGenebankTypeaheadReindexJobQuery,
   buildInsertGenebankSourceLinkQuery,
   buildMarkGenebankRecordProjectedQuery,
   buildUpsertGenebankCatalogItemQuery,
@@ -238,9 +237,6 @@ export async function promoteCatalogSourceCandidate(
       sourceRecordId: candidate.sourceRecordId,
     }).executeTakeFirstOrThrow();
 
-    await buildEnqueueGenebankTypeaheadReindexJobQuery(
-      trx,
-    ).executeTakeFirstOrThrow();
 
     return {
       sourceRecordId: candidate.sourceRecordId,

@@ -41,7 +41,6 @@ from app.job_queue_contract import (
     CATALOG_RECONCILE_KIND,
     CATALOG_SOURCE_REFRESH_KIND,
     CATALOG_THRESHOLD_RECALIBRATE_KIND,
-    CATALOG_TYPEAHEAD_REINDEX_KIND,
     JOURNAL_ENTRY_INDEX_KIND,
     JOURNAL_ENTRY_UNINDEX_KIND,
 )
@@ -49,7 +48,6 @@ from app.public_projection import drain_public_projection_intents
 from app.job_queue_manifest import max_attempts_for_kind, payload_contract_for_kind
 from app.search import (
     index_journal_entry,
-    reindex_catalog_typeahead,
     unindex_journal_entry_for_owner,
 )
 from app.runtime import (
@@ -236,11 +234,6 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
     kind = payload.get("kind")
     if kind not in SUPPORTED_JOB_KINDS:
         raise TerminalJobError("unsupported_kind", "unsupported job kind")
-
-    if kind == CATALOG_TYPEAHEAD_REINDEX_KIND:
-        _require_exact_payload_shape(payload, CATALOG_TYPEAHEAD_REINDEX_KIND)
-        reindex_catalog_typeahead(conn)
-        return
 
     if kind == CATALOG_RECONCILE_KIND:
         _require_exact_payload_shape(payload, CATALOG_RECONCILE_KIND)

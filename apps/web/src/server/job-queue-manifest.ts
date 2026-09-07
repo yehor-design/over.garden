@@ -134,21 +134,6 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
   },
   {
     queueName: "matching",
-    kind: "catalog_typeahead_reindex",
-    consumer: "matching-python-worker",
-    maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,
-    privacyClass: "empty_payload",
-    coversStructuredJournalCover: false,
-    payloadContract: {
-      requiredKeys: ["kind"],
-      optionalKeys: [],
-      uuidKeys: [],
-    },
-    payloadConstraint: "job_queue_catalog_typeahead_payload_check",
-    notes: "Kind-only typeahead rebuild.",
-  },
-  {
-    queueName: "matching",
     kind: "journal_entry_index",
     consumer: "matching-python-worker",
     maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,

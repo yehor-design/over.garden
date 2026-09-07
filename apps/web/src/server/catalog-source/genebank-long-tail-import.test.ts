@@ -23,7 +23,6 @@ import {
 } from "@/lib/catalog/genebank-long-tail";
 import {
   buildGenebankProofHarnessIsolation,
-  buildEnqueueGenebankTypeaheadReindexJobQuery,
   buildGenebankCandidateQueueQuery,
   buildGenebankSourceProvenanceProofQuery,
   buildGenebankTypeaheadProofQuery,
@@ -475,19 +474,4 @@ describe("genebank long-tail candidate import", () => {
     ]);
   });
 
-  it("queues a derived typeahead reindex after promotion", () => {
-    const compiled =
-      buildEnqueueGenebankTypeaheadReindexJobQuery(testDb).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.sql).toContain(
-      'on conflict ("idempotency_key") where "idempotency_key" is not null do update',
-    );
-    expect(compiled.parameters).toEqual([
-      "matching",
-      { kind: "catalog_typeahead_reindex" },
-      "catalog-typeahead-reindex",
-      expect.any(Date),
-    ]);
-  });
 });

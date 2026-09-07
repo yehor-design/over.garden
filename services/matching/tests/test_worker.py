@@ -5,17 +5,6 @@ import pytest
 from app import worker
 
 
-def test_worker_handles_catalog_reindex(monkeypatch):
-    calls = []
-    monkeypatch.setattr(
-        worker, "reindex_catalog_typeahead", lambda conn: calls.append(conn)
-    )
-
-    worker._handle("conn", {"kind": "catalog_typeahead_reindex"})
-
-    assert calls == ["conn"]
-
-
 def test_worker_handles_catalog_reconcile_with_and_without_its_optional_keys(monkeypatch):
     calls = []
     monkeypatch.setattr(
@@ -583,7 +572,7 @@ def test_process_claimed_job_clears_lease_after_success(monkeypatch) -> None:
         "id": "internal-job-id",
         "claimToken": "internal-claim-token",
         "attempts": 1,
-        "payload": {"kind": "catalog_typeahead_reindex"},
+        "payload": {"kind": "catalog_threshold_recalibrate"},
     }
 
     monkeypatch.setattr(
@@ -613,7 +602,7 @@ def test_process_claimed_job_clears_lease_after_failure(monkeypatch) -> None:
         "id": "internal-job-id",
         "claimToken": "internal-claim-token",
         "attempts": 1,
-        "payload": {"kind": "catalog_typeahead_reindex"},
+        "payload": {"kind": "catalog_threshold_recalibrate"},
     }
 
     def fail_handler(_conn, _payload):
@@ -680,7 +669,7 @@ def test_process_claimed_job_terminals_at_max_attempts(monkeypatch) -> None:
         "id": "exhausted-job-id",
         "claimToken": "exhausted-claim-token",
         "attempts": 8,
-        "payload": {"kind": "catalog_typeahead_reindex"},
+        "payload": {"kind": "catalog_threshold_recalibrate"},
     }
 
     monkeypatch.setattr(

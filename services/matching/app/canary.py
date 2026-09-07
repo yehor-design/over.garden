@@ -245,7 +245,6 @@ def run_handler_canaries(
             "kind": "catalog_match_suggestions_refresh",
             "sourceCatalogItemId": catalog_match_source,
         },
-        "catalog_typeahead_reindex": {"kind": "catalog_typeahead_reindex"},
         "journal_entry_index": {
             "kind": "journal_entry_index",
             "journalEntryId": str(journal_source["journal_entry_id"]),
@@ -449,7 +448,6 @@ def run_dead_letter_canaries(
         _ENQUEUE_SQL,
         (
             release.queue_name,
-            Jsonb({"kind": "catalog_typeahead_reindex"}),
             typeahead_key,
         ),
     ).fetchone()

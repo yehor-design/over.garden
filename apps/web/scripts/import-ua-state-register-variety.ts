@@ -225,7 +225,6 @@ async function main() {
       aliasesProjected: primaryImported.aliasesProjected,
       importedVarieties: imported.importedVarieties,
       sourceRowsImported: imported.sourceRowsImported,
-      reindexQueued: imported.reindexQueued,
     },
     idempotencyProof: {
       rerunCatalogItemId: primaryRerun.catalogItemId,

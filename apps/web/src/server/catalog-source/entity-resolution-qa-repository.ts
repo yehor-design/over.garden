@@ -3,7 +3,21 @@ import { createHash } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import type { Database } from "@/db/schema";
-import { SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES } from "@/server/search/catalog-documents";
+
+/**
+ * Sources whose duplicate rows the entity-resolution QA compares by concept;
+ * the picker no longer dedupes by source (one row per organism, ADR-0026 D7).
+ */
+export const SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES = [
+  "ua_state_register",
+  "species_backbone",
+  "ua_official_bee_breed",
+  "vertebrate_breed_ontology",
+  "eu_common_catalogue_bg",
+  "eu_oj_eur_lex_common_catalogue",
+  "grin_genebank_candidate",
+] as const;
+
 
 const MAX_ENTITY_RESOLUTION_ROWS = 240;
 const MAX_ENTITY_RESOLUTION_CLUSTERS = 120;

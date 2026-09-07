@@ -24,8 +24,6 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 const MATCHING_QUEUE = "matching";
-const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
-const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000058000";
 const SPECIES_BACKBONE_APPROVED_SOURCE_SLUGS = [
   "catalogue-of-life-checklistbank",
@@ -53,7 +51,6 @@ export interface SpeciesBackboneConceptImportSummary {
   aliasesProjected: number;
   aliasesRecorded: number;
   aliasStatusCounts: Record<SpeciesBackboneAliasCandidate["status"], number>;
-  reindexQueued: boolean;
 }
 
 export interface SpeciesBackboneImportSummary
@@ -133,14 +130,8 @@ export async function importSpeciesBackboneSeed(
       conceptSummaries.push(await importSpeciesBackboneConcept(trx, concept));
     }
 
-    const reindexJob =
-      await buildEnqueueSpeciesBackboneTypeaheadReindexJobQuery(
-        trx,
-      ).executeTakeFirstOrThrow();
-    const reindexQueued = reindexJob.id.length > 0;
     const concepts = conceptSummaries.map((summary) => ({
       ...summary,
-      reindexQueued,
     }));
     const primaryConcept = concepts[0];
     if (!primaryConcept) {
@@ -155,7 +146,6 @@ export async function importSpeciesBackboneSeed(
         (total, concept) => total + concept.sourceRecordKeys.length,
         0,
       ),
-      reindexQueued,
     };
   });
 }
@@ -283,7 +273,6 @@ async function importSpeciesBackboneConcept(
     aliasesProjected: projection.aliases.length,
     aliasesRecorded: concept.aliasCandidates.length,
     aliasStatusCounts,
-    reindexQueued: false,
   };
 }
 
@@ -710,30 +699,6 @@ export function buildInsertSpeciesBackboneSourceLinkQuery(
     );
 }
 
-export function buildEnqueueSpeciesBackboneTypeaheadReindexJobQuery(
-  executor: QueryExecutor,
-) {
-  const payload = {
-    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          updated_at: new Date(),
-        }),
-    )
-    .returning("id");
-}
 
 export function buildSpeciesBackboneTypeaheadProofQuery(
   executor: QueryExecutor,

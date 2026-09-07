@@ -12,7 +12,6 @@ import { Pool } from "pg";
 import type { Database } from "../src/db/schema";
 import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
 import {
-  buildCatalogTypeaheadReindexRowsQuery,
   findSelectableCatalogItem,
   searchCatalogSuggestionsForTypeaheadResult,
 } from "../src/server/catalog-repository";
@@ -77,7 +76,7 @@ export async function runComposedStackRestoreDatabaseProof(input: {
         productReadBackPassed: readBack.passed,
         localesServed: readBack.localesServed,
         restoredIdentityCount: readBack.identityCount,
-        indexRebuildRowCount: readBack.indexRebuildRowCount,
+        offerableNameCount: readBack.offerableNameCount,
         unsafeRowsExcluded: readBack.unsafeRowsExcluded,
         disposableTargetsRemaining: 0,
         liveSourceUnchanged: true,
@@ -148,7 +147,7 @@ export async function runComposedStackRestoreDatabaseProof(input: {
     }
     if (
       readBack.identityCount !== expected.identityCount ||
-      readBack.indexRebuildRowCount !== expected.indexRebuildRowCount ||
+      readBack.offerableNameCount !== expected.offerableNameCount ||
       readBack.localesServed.join(",") !== expected.localesServed.join(",")
     ) {
       throw new Error("restored_target_lost_a_product_identity");
@@ -179,7 +178,7 @@ export async function runComposedStackRestoreDatabaseProof(input: {
       productReadBackPassed: readBack.passed,
       localesServed: readBack.localesServed,
       restoredIdentityCount: readBack.identityCount,
-      indexRebuildRowCount: readBack.indexRebuildRowCount,
+      offerableNameCount: readBack.offerableNameCount,
       unsafeRowsExcluded: readBack.unsafeRowsExcluded,
       replayedEffectCount,
       concurrentRestoreRefused,
@@ -246,7 +245,7 @@ interface ProductReadBack {
   passed: boolean;
   localesServed: string[];
   identityCount: number;
-  indexRebuildRowCount: number;
+  offerableNameCount: number;
   unsafeRowsExcluded: number;
 }
 
@@ -299,16 +298,24 @@ async function readBackProduct(target: string): Promise<ProductReadBack> {
         })
       : null;
 
-    // The derived index is rebuilt from Postgres, never restored as a source.
-    const reindexRows =
-      await buildCatalogTypeaheadReindexRowsQuery(db).execute();
+    // The names the picker reads come back with the rows. Meilisearch left the
+    // pick path with the closeout (D7), so what a restore has to reproduce is
+    // the Postgres side: one row per name a gardener can be offered.
+    const offerable = await pool.query<{ n: string }>(
+      `select count(*) as n
+         from catalog_item_names as name
+         join catalog_items as item on item.id = name.catalog_item_id
+        where item.identity_state = 'active'
+          and item.merged_into_catalog_item_id is null
+          and item.created_by_user_id is null`,
+    );
 
-    // A merged or rejected identity comes back as history and must not reach
+    // A merged or retired identity comes back as history and must not reach
     // the product: the read model has to exclude it, not merely count it.
     const unsafe = await pool.query<{ id: string }>(
       `select id::text as id
          from catalog_items
-        where status in ('merged', 'rejected')`,
+        where identity_state in ('merged', 'retired')`,
     );
     const unsafeServed = unsafe.rows.some((row) => servedIds.has(row.id));
 
@@ -320,11 +327,11 @@ async function readBackProduct(target: string): Promise<ProductReadBack> {
         localesServed.length === PRODUCT_LOCALES.length &&
         resolved !== null &&
         resolved.id === anchor[0]?.id &&
-        reindexRows.length > 0 &&
+        Number(offerable.rows[0]?.n ?? 0) > 0 &&
         !unsafeServed,
       localesServed,
       identityCount,
-      indexRebuildRowCount: reindexRows.length,
+      offerableNameCount: Number(offerable.rows[0]?.n ?? 0),
       unsafeRowsExcluded: unsafe.rows.length,
     };
   } finally {

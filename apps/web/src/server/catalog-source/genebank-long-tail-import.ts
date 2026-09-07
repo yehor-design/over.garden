@@ -20,8 +20,6 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 const MATCHING_QUEUE = "matching";
-const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
-const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000062000";
 
 export interface GenebankLongTailImportSummary {
@@ -68,7 +66,6 @@ export interface GenebankLongTailPromotionSummary {
   publicSlug: string;
   aliasesProjected: number;
   projectionStatus: "projected";
-  reindexQueued: boolean;
 }
 
 export interface GenebankCandidateQueueRow {
@@ -354,10 +351,6 @@ export async function promoteGenebankLongTailCandidate(
       sourceRecordId: candidate.sourceRecordId,
     }).executeTakeFirstOrThrow();
 
-    const reindexJob =
-      await buildEnqueueGenebankTypeaheadReindexJobQuery(
-        trx,
-      ).executeTakeFirstOrThrow();
 
     return {
       sourceRecordId: candidate.sourceRecordId,
@@ -370,7 +363,6 @@ export async function promoteGenebankLongTailCandidate(
       publicSlug: catalogItem.publicSlug ?? projection.publicSlug,
       aliasesProjected: projection.aliases.length,
       projectionStatus: "projected",
-      reindexQueued: reindexJob.id.length > 0,
     };
   });
 }
@@ -773,30 +765,6 @@ export function buildMarkGenebankRecordProjectedQuery(
     .returning("projection_status as projectionStatus");
 }
 
-export function buildEnqueueGenebankTypeaheadReindexJobQuery(
-  executor: QueryExecutor,
-) {
-  const payload = {
-    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          updated_at: new Date(),
-        }),
-    )
-    .returning("id");
-}
 
 export function buildGenebankCandidateQueueQuery(executor: QueryExecutor) {
   return executor

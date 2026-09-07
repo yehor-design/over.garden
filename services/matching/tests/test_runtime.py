@@ -125,7 +125,6 @@ def test_capabilities_are_exact_sorted_and_redacted() -> None:
                 "catalog_reconcile",
                 "catalog_source_refresh",
                 "catalog_threshold_recalibrate",
-                "catalog_typeahead_reindex",
                 "journal_entry_index",
                 "journal_entry_unindex",
             ],

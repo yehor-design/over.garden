@@ -121,14 +121,14 @@ def test_enqueue_uses_release_scoped_key_without_returning_payload() -> None:
     job_id = canary._enqueue(
         FakeConnection(),  # type: ignore[arg-type]
         release(),
-        {"kind": "catalog_typeahead_reindex"},
+        {"kind": "catalog_threshold_recalibrate"},
         phase="initial",
     )
 
     assert job_id == "internal-id"
     assert calls[0][1][2] == (
         "ove190:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:initial:"
-        "catalog_typeahead_reindex"
+        "catalog_threshold_recalibrate"
     )
 
 

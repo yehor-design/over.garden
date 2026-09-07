@@ -23,8 +23,6 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 const MATCHING_QUEUE = "matching";
-const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
-const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 
 export interface EuOfficialJournalCommonCatalogueImportSummary {
   /** What the graph attachment did after the rows landed (OVE-395). */
@@ -38,7 +36,6 @@ export interface EuOfficialJournalCommonCatalogueImportSummary {
   aliasesProjected: number;
   parserVersion: string;
   extractionVersion: string;
-  reindexQueued: boolean;
   sampleProjectedCatalogItemId: string | null;
   sampleProjectedCanonicalName: string | null;
   sampleProjectedSourceUrl: string | null;
@@ -185,13 +182,6 @@ async function importEuOfficialJournalRows(
       }
     }
 
-    const reindexJob =
-      projectedConcepts > 0
-        ? await buildEnqueueEuOfficialJournalCommonCatalogueTypeaheadReindexJobQuery(
-            trx,
-          ).executeTakeFirstOrThrow()
-        : null;
-
     return {
       sourceSlug: definition.sourceSlug,
       sourceSnapshotsImported: definition.snapshots.length,
@@ -202,7 +192,6 @@ async function importEuOfficialJournalRows(
       aliasesProjected,
       parserVersion: definition.parserVersion,
       extractionVersion: definition.extractionVersion,
-      reindexQueued: Boolean(reindexJob?.id),
       sampleProjectedCatalogItemId,
       sampleProjectedCanonicalName,
       sampleProjectedSourceUrl,
@@ -489,42 +478,6 @@ export function buildInsertEuOfficialJournalCommonCatalogueSourceLinkQuery(
     );
 }
 
-export function buildEnqueueEuOfficialJournalCommonCatalogueTypeaheadReindexJobQuery(
-  executor: QueryExecutor,
-) {
-  const now = new Date();
-  const payload = {
-    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      status: "pending",
-      available_at: now,
-      locked_at: null,
-      locked_by: null,
-      last_error: null,
-      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          payload,
-          status: "pending",
-          available_at: now,
-          locked_at: null,
-          locked_by: null,
-          last_error: null,
-          updated_at: now,
-        }),
-    )
-    .returning("id");
-}
 
 export function buildEuOfficialJournalCommonCatalogueTypeaheadProofQuery(
   executor: QueryExecutor,

@@ -216,7 +216,6 @@ async function main() {
       aliasesProjected: imported.aliasesProjected,
       parserVersion: imported.parserVersion,
       extractionVersion: imported.extractionVersion,
-      reindexQueued: imported.reindexQueued,
       sampleProjectedCatalogItemId: imported.sampleProjectedCatalogItemId,
       sampleProjectedCanonicalName: imported.sampleProjectedCanonicalName,
       sampleProjectedSourceVersion: imported.sampleProjectedSourceVersion,

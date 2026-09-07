@@ -7,7 +7,6 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
 import {
-  buildEnqueueCatalogTypeaheadReindexJobQuery,
   normalizeCatalogItemId,
   SELECTABLE_CATALOG_STATUSES,
 } from "@/server/catalog-repository";
@@ -216,10 +215,6 @@ export async function approveCatalogAliasSuggestion(
         decisionResult,
         now,
       }).executeTakeFirstOrThrow();
-      await buildEnqueueCatalogTypeaheadReindexJobQuery(
-        trx,
-      ).executeTakeFirstOrThrow();
-
       return { outcome: "approved", catalogItemNameId };
     });
 }

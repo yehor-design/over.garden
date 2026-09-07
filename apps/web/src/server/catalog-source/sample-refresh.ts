@@ -24,8 +24,6 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 const MATCHING_QUEUE = "matching";
-const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
-const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000064000";
 
 type CatalogSourceRecordProjectionStatus =
@@ -59,7 +57,6 @@ export interface CatalogSourceRefreshSummary {
   changedCatalogItemId: string | null;
   reviewCatalogItemId: string | null;
   removedCatalogItemId: string | null;
-  reindexQueued: boolean;
 }
 
 export interface CatalogSourceRefreshReadbackRow {
@@ -428,30 +425,6 @@ export function buildInsertCatalogSourceRefreshLinkQuery(
     );
 }
 
-export function buildEnqueueCatalogSourceRefreshTypeaheadReindexJobQuery(
-  executor: QueryExecutor,
-) {
-  const payload = {
-    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          updated_at: new Date(),
-        }),
-    )
-    .returning("id");
-}
 
 export function buildUpsertCatalogSourceRefreshEventQuery(
   executor: QueryExecutor,
@@ -630,7 +603,6 @@ async function executeCatalogSourceSampleRefresh(
   );
   const refreshedRecordIdsByKey = new Map<string, string>();
   const catalogItemIdsByKey = new Map<string, string>();
-  let reindexQueued = false;
 
   for (const planRow of planRows) {
     const incoming = incomingByKey.get(planRow.sourceRecordKey);
@@ -658,7 +630,6 @@ async function executeCatalogSourceSampleRefresh(
         sourceRecordKey: incoming.id,
       }).execute();
       catalogItemIdsByKey.set(planRow.sourceRecordKey, catalogItem.id);
-      reindexQueued = true;
       continue;
     }
 
@@ -676,7 +647,6 @@ async function executeCatalogSourceSampleRefresh(
             ...alias,
           }).execute();
         }
-        reindexQueued = true;
       }
 
       await buildInsertCatalogSourceRefreshLinkQuery(executor, {
@@ -704,11 +674,6 @@ async function executeCatalogSourceSampleRefresh(
     }
   }
 
-  if (reindexQueued) {
-    await buildEnqueueCatalogSourceRefreshTypeaheadReindexJobQuery(
-      executor,
-    ).executeTakeFirstOrThrow();
-  }
 
   const event = await buildUpsertCatalogSourceRefreshEventQuery(executor, {
     sourceSlug: refreshedDefinition.source.slug,
@@ -752,7 +717,6 @@ async function executeCatalogSourceSampleRefresh(
       catalogItemIdsByKey.get("RegisterVarietis:24256011") ?? null,
     removedCatalogItemId:
       catalogItemIdsByKey.get("RegisterVarietis:24256012") ?? null,
-    reindexQueued,
   };
 }
 

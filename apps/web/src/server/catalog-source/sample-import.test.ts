@@ -21,7 +21,6 @@ import {
 } from "@/lib/catalog/source-sample";
 import {
   buildCatalogSourceSampleTypeaheadProofQuery,
-  buildEnqueueCatalogSourceTypeaheadReindexJobQuery,
   buildInsertCatalogSourceLinkQuery,
   buildUpsertCatalogSourceCatalogItemQuery,
   buildUpsertCatalogSourceCatalogNameQuery,
@@ -201,19 +200,4 @@ describe("catalog source sample import", () => {
     ]);
   });
 
-  it("queues a derived typeahead reindex after import", () => {
-    const compiled =
-      buildEnqueueCatalogSourceTypeaheadReindexJobQuery(testDb).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.sql).toContain(
-      'on conflict ("idempotency_key") where "idempotency_key" is not null do update',
-    );
-    expect(compiled.parameters).toEqual([
-      "matching",
-      { kind: "catalog_typeahead_reindex" },
-      "catalog-typeahead-reindex",
-      expect.any(Date),
-    ]);
-  });
 });

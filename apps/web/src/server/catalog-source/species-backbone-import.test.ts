@@ -22,7 +22,6 @@ import {
   speciesBackboneSnapshotChecksum,
 } from "@/lib/catalog/species-backbone-seed";
 import {
-  buildEnqueueSpeciesBackboneTypeaheadReindexJobQuery,
   buildInsertSpeciesBackboneSourceLinkQuery,
   buildSpeciesBackboneAliasCurationProofQuery,
   buildSpeciesBackboneSourceProvenanceProofQuery,
@@ -507,16 +506,4 @@ describe("species backbone seed import", () => {
     ]);
   });
 
-  it("queues a derived typeahead reindex after import", () => {
-    const compiled =
-      buildEnqueueSpeciesBackboneTypeaheadReindexJobQuery(testDb).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.parameters).toEqual([
-      "matching",
-      { kind: "catalog_typeahead_reindex" },
-      "catalog-typeahead-reindex",
-      expect.any(Date),
-    ]);
-  });
 });

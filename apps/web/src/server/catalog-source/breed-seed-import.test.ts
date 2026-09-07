@@ -22,7 +22,6 @@ import {
 import {
   buildBreedSeedAliasCurationProofQuery,
   buildBreedSeedTypeaheadProofQuery,
-  buildEnqueueBreedSeedTypeaheadReindexJobQuery,
   buildInsertBreedSeedSourceLinkQuery,
   buildUpsertBreedSeedAliasProjectionQuery,
   buildUpsertBreedSeedCatalogItemQuery,
@@ -276,16 +275,4 @@ describe("UA official bee breed seed import", () => {
     expect(compiled.parameters).toEqual([catalogItemId, "breed"]);
   });
 
-  it("queues a derived typeahead reindex after import", () => {
-    const compiled =
-      buildEnqueueBreedSeedTypeaheadReindexJobQuery(testDb).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.parameters).toEqual([
-      "matching",
-      { kind: "catalog_typeahead_reindex" },
-      "catalog-typeahead-reindex",
-      expect.any(Date),
-    ]);
-  });
 });

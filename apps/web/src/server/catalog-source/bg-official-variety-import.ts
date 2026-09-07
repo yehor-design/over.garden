@@ -18,8 +18,6 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 const MATCHING_QUEUE = "matching";
-const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
-const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000061000";
 const BG_OFFICIAL_VARIETY_PROJECTION_GATE = {
   issueKey: "OVE-61",
@@ -44,7 +42,6 @@ export interface BgOfficialVarietyImportSummary {
   canonicalName: string;
   publicSlug: string;
   aliasesProjected: number;
-  reindexQueued: boolean;
 }
 
 export interface BgOfficialVarietyTypeaheadProof {
@@ -163,10 +160,6 @@ export async function importBgOfficialVariety(
       sourceRecordId: projectedRecord.id,
     }).execute();
 
-    const reindexJob =
-      await buildEnqueueBgOfficialVarietyTypeaheadReindexJobQuery(
-        trx,
-      ).executeTakeFirstOrThrow();
 
     return {
       sourceSnapshotId: snapshot.id,
@@ -185,7 +178,6 @@ export async function importBgOfficialVariety(
       canonicalName: catalogItem.canonicalName,
       publicSlug: catalogItem.publicSlug ?? projection.publicSlug,
       aliasesProjected: projection.aliases.length,
-      reindexQueued: reindexJob.id.length > 0,
     };
   });
 }
@@ -552,30 +544,6 @@ export function buildInsertBgOfficialVarietySourceLinkQuery(
     );
 }
 
-export function buildEnqueueBgOfficialVarietyTypeaheadReindexJobQuery(
-  executor: QueryExecutor,
-) {
-  const payload = {
-    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          updated_at: new Date(),
-        }),
-    )
-    .returning("id");
-}
 
 export function buildBgOfficialVarietyTypeaheadProofQuery(
   executor: QueryExecutor,

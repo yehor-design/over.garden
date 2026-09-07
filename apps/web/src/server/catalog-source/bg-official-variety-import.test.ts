@@ -24,7 +24,6 @@ import {
   buildBgOfficialVarietyBlockedRecordProofQuery,
   buildBgOfficialVarietySourceProvenanceProofQuery,
   buildBgOfficialVarietyTypeaheadProofQuery,
-  buildEnqueueBgOfficialVarietyTypeaheadReindexJobQuery,
   buildInsertBgOfficialVarietySourceLinkQuery,
   buildUpsertBgOfficialVarietyCatalogItemQuery,
   buildUpsertBgOfficialVarietyCatalogNameQuery,
@@ -267,16 +266,4 @@ describe("BG official variety import", () => {
     ]);
   });
 
-  it("queues a derived typeahead reindex after import", () => {
-    const compiled =
-      buildEnqueueBgOfficialVarietyTypeaheadReindexJobQuery(testDb).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.parameters).toEqual([
-      "matching",
-      { kind: "catalog_typeahead_reindex" },
-      "catalog-typeahead-reindex",
-      expect.any(Date),
-    ]);
-  });
 });

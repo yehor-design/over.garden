@@ -59,6 +59,7 @@ describe("versioned application SQL bootstrap", () => {
       "0057_ove392_col_source_usages.sql",
       "0058_ove394_eppo_second_capture.sql",
       "0060_ove398_catalog_pick_events.sql",
+      "0061_ove399_retire_legacy_catalog_shape.sql",
       "0062_ove389_catalog_card_intents.sql",
       "0063_ove391_owner_catalog_digest_outbox.sql",
     ]);

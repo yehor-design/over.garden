@@ -31,8 +31,6 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 const MATCHING_QUEUE = "matching";
-const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
-const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000060000";
 const OVE60_BEE_PROJECTION_GATE = {
   issueKey: "OVE-60",
@@ -87,7 +85,6 @@ export interface BreedSeedImportSummary {
   aliasesProjected: number;
   aliasesRecorded: number;
   aliasStatusCounts: Record<BreedSeedAliasCandidate["status"], number>;
-  reindexQueued: boolean;
 }
 
 export interface BreedSeedTypeaheadProof {
@@ -280,10 +277,6 @@ async function importBreedSeedRows(
       });
     }
 
-    const reindexJob =
-      await buildEnqueueBreedSeedTypeaheadReindexJobQuery(
-        trx,
-      ).executeTakeFirstOrThrow();
     const primary = importedConcepts[0];
 
     return {
@@ -321,7 +314,6 @@ async function importBreedSeedRows(
           mergeAliasStatusCounts(counts, concept.aliasStatusCounts),
         emptyAliasStatusCounts(),
       ),
-      reindexQueued: reindexJob.id.length > 0,
     };
   });
 }
@@ -798,30 +790,6 @@ export function buildInsertBreedSeedSourceLinkQuery(
     );
 }
 
-export function buildEnqueueBreedSeedTypeaheadReindexJobQuery(
-  executor: QueryExecutor,
-) {
-  const payload = {
-    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          updated_at: new Date(),
-        }),
-    )
-    .returning("id");
-}
 
 export function buildBreedSeedTypeaheadProofQuery(
   executor: QueryExecutor,
