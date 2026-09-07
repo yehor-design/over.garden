@@ -42,6 +42,24 @@ export interface CatalogSearchMiss {
   reason: "own_name" | "abandoned";
 }
 
+/**
+ * How one attempt to name a plant ended (OVE-398, ADR-0026 D12).
+ *
+ * The product has never measured whether picking works, and the four outcomes
+ * below are the whole question. `abandoned` is the one that matters most and
+ * the one a metric built only from successful picks would silently drop.
+ *
+ * What is reported is a length, never the text: the query is a gardener's own
+ * words about their own garden, and a number cannot be read back into one.
+ */
+export interface CatalogPickOutcome {
+  outcome: "picked_species" | "picked_form" | "own_label" | "abandoned";
+  queryLength: number;
+  /** From the first keystroke to the decision; null when nothing was typed. */
+  msToPick: number | null;
+  catalogItemId: string | null;
+}
+
 export interface CatalogPickerFetchResult {
   rows: FirstEntryCatalogSelection[];
   availability: CatalogPickerAvailability;
@@ -58,6 +76,8 @@ export interface CatalogPickerProps {
   onSelectionChange: (selection: CatalogPickerSelection | null) => void;
   /** Fired once per query that ends in the own-name outcome or is abandoned. */
   onSearchMiss?: (miss: CatalogSearchMiss) => void;
+  /** Fired once per attempt that ends, however it ends (OVE-398). */
+  onPickOutcome?: (outcome: CatalogPickOutcome) => void;
   disabled?: boolean;
   /** Test seam: replaces the network read. */
   fetchRows?: (
@@ -104,6 +124,7 @@ export function CatalogPicker({
   selection,
   onSelectionChange,
   onSearchMiss,
+  onPickOutcome,
   disabled = false,
   fetchRows = fetchCatalogRows,
   fetchFullCatalogue = fetchFullCatalogueRows,
@@ -123,6 +144,11 @@ export function CatalogPicker({
   const [fullRows, setFullRows] = useState<CatalogFullCatalogueRow[] | null>(null);
   const [fullSearching, setFullSearching] = useState(false);
   const reportedMissRef = useRef<string | null>(null);
+  // When the gardener started typing, and whether this attempt has already
+  // been reported. One attempt is one row: a picker that reported on every
+  // keystroke would measure the component, not the person.
+  const firstKeystrokeRef = useRef<number | null>(null);
+  const reportedOutcomeRef = useRef(false);
   const selectionRef = useRef(selection);
   useEffect(() => {
     selectionRef.current = selection;
@@ -236,6 +262,28 @@ export function CatalogPicker({
   // list never points past its end.
   const clampedActiveIndex = activeIndex < options.length ? activeIndex : -1;
 
+  const reportOutcome = useCallback(
+    (
+      outcome: CatalogPickOutcome["outcome"],
+      catalogItemId: string | null,
+    ) => {
+      if (!onPickOutcome) return;
+      if (reportedOutcomeRef.current) return;
+      const startedAt = firstKeystrokeRef.current;
+      // Nothing typed is not an attempt. An empty field a gardener tabbed past
+      // would otherwise land in the table as an abandonment.
+      if (startedAt === null) return;
+      reportedOutcomeRef.current = true;
+      onPickOutcome({
+        outcome,
+        queryLength: trimmedQuery.length,
+        msToPick: Math.max(0, Math.round(performance.now() - startedAt)),
+        catalogItemId,
+      });
+    },
+    [onPickOutcome, trimmedQuery],
+  );
+
   const reportMiss = useCallback(
     (reason: CatalogSearchMiss["reason"]) => {
       const text = trimmedQuery;
@@ -255,6 +303,10 @@ export function CatalogPicker({
       // the route sent it.
       const { homonymous, ...row } = option.row;
       void homonymous;
+      reportOutcome(
+        row.kind === "species" ? "picked_species" : "picked_form",
+        row.id,
+      );
       onSelectionChange({ kind: "item", row });
     } else if (option.kind === "full") {
       // Create-on-pick (ADR-0026 D7): the checklist row becomes a node, and
@@ -264,6 +316,7 @@ export function CatalogPicker({
       return;
     } else {
       reportMiss("own_name");
+      reportOutcome("own_label", null);
       onSelectionChange({ kind: "own_name", name: option.name });
     }
     setOpen(false);
@@ -307,6 +360,8 @@ export function CatalogPicker({
   function clear() {
     if (disabled) return;
     reportedMissRef.current = null;
+    firstKeystrokeRef.current = null;
+    reportedOutcomeRef.current = false;
     setQuery("");
     setRows([]);
     setFullRows(null);
@@ -318,6 +373,9 @@ export function CatalogPicker({
 
   function updateQuery(value: string) {
     if (disabled) return;
+    if (firstKeystrokeRef.current === null && value.trim().length > 0) {
+      firstKeystrokeRef.current = performance.now();
+    }
     setQuery(value.slice(0, CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH));
     setActiveIndex(-1);
     if (selection && value !== selectionText(selection)) {
@@ -377,7 +435,10 @@ export function CatalogPicker({
     window.setTimeout(() => {
       setOpen(false);
       setActiveIndex(-1);
-      if (!selectionRef.current) reportMiss("abandoned");
+      if (!selectionRef.current) {
+        reportMiss("abandoned");
+        reportOutcome("abandoned", null);
+      }
     }, 120);
   }
 

@@ -19,6 +19,12 @@ import {
   hasAdminCapability,
 } from "@/server/admin-access";
 import { listCatalogSourceCards } from "@/server/catalog-curation-repository";
+import {
+  readCatalogAutoAcceptPrecision,
+  readCatalogPickHealth,
+  readOldestOpenQueueItemAgeDays,
+  readTopCatalogSearchMisses,
+} from "@/server/catalog-health-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   resolveWorkspaceAdminAccess,
@@ -30,7 +36,10 @@ import {
 } from "@/server/workspace-failure";
 
 import { CatalogOperatorShell } from "../catalog-operator-shell";
-import { refreshCatalogSourceAction } from "./actions";
+import {
+  makeQueueItemFromMissAction,
+  refreshCatalogSourceAction,
+} from "./actions";
 
 export const CATALOG_SOURCES_PATH = "/garden/catalog/sources";
 
@@ -110,14 +119,240 @@ export default async function CatalogSourcesPage() {
     );
   }
 
+  const canMutate = hasAdminCapability(access.access, "operator:mutate");
+
   return shell(
     "allowed",
-    <Suspense fallback={<WorkspaceSectionSkeleton locale={locale} rows={2} />}>
-      <CatalogSourcesSection
+    <div className="grid gap-8">
+      <Suspense fallback={<WorkspaceSectionSkeleton locale={locale} rows={2} />}>
+        <CatalogSourcesSection locale={locale} canMutate={canMutate} />
+      </Suspense>
+      {/* The health figures settle on their own, so a slow percentile never
+          holds the source cards back (ADR-0023). */}
+      <Suspense fallback={<WorkspaceSectionSkeleton locale={locale} rows={2} />}>
+        <CatalogHealthSection locale={locale} canMutate={canMutate} />
+      </Suspense>
+    </div>,
+  );
+}
+
+/**
+ * The catalog's own numbers (OVE-398, ADR-0026 D12).
+ *
+ * Not a third menu link and not a separate page: the owner already comes here
+ * to look at sources, and "is picking working" is the same question as "which
+ * source deserves attention next".
+ */
+async function CatalogHealthSection({
+  locale,
+  canMutate,
+}: {
+  locale: InterfaceLocale;
+  canMutate: boolean;
+}) {
+  const copy = getOperatorCatalogCopy(locale);
+  const settled = await settleSection(
+    async () => ({
+      health: await readCatalogPickHealth(),
+      misses: await readTopCatalogSearchMisses(),
+      precision: await readCatalogAutoAcceptPrecision(),
+      queueAgeDays: await readOldestOpenQueueItemAgeDays(),
+    }),
+    {
+      deadlineMs: workspaceSectionDeadlineMs(3),
+      surface: "catalog-sources",
+      section: "health",
+    },
+  );
+
+  if (settled.status === "error") {
+    return (
+      <WorkspaceSectionError
         locale={locale}
-        canMutate={hasAdminCapability(access.access, "operator:mutate")}
+        failure={settled}
+        title={copy.health.title}
+        retryHref={CATALOG_SOURCES_PATH}
+        technicalHint={workspaceSchemaMissingHint(locale, settled)}
       />
-    </Suspense>,
+    );
+  }
+
+  const { health, misses, precision, queueAgeDays } = settled.value;
+  const duration = (value: number | null) =>
+    value === null ? copy.health.notMeasured : `${Math.round(value)} ms`;
+  const share = (part: number, whole: number) =>
+    whole === 0 ? "—" : `${Math.round((part / whole) * 100)}%`;
+
+  return (
+    <section
+      aria-labelledby="catalog-health-heading"
+      data-catalog-health="true"
+      className="grid gap-4"
+    >
+      <div className="grid gap-1">
+        <h2
+          id="catalog-health-heading"
+          className="text-xl font-semibold tracking-tight text-foreground"
+        >
+          {copy.health.title}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {copy.health.description}
+        </p>
+      </div>
+
+      {health.every((row) => row.attempts === 0) ? (
+        <p
+          data-catalog-health-empty="true"
+          className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground"
+        >
+          {copy.health.empty}
+        </p>
+      ) : (
+        <ol className="grid gap-3 md:grid-cols-2">
+          {health.map((row) => (
+            <li
+              key={row.windowDays}
+              data-catalog-health-window={row.windowDays}
+              className="grid gap-2 rounded-lg border border-border p-4"
+            >
+              <p className="font-medium text-foreground">
+                {copy.health.window[String(row.windowDays) as "7" | "30"]} ·{" "}
+                <span data-catalog-health-attempts={row.attempts}>
+                  {row.attempts}
+                </span>{" "}
+                {copy.health.attempts}
+              </p>
+              <dl className="grid gap-1 text-sm text-muted-foreground">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt>{copy.health.pickSuccess}</dt>
+                  <dd data-catalog-health-picked={row.picked}>
+                    {row.picked} · {share(row.picked, row.attempts)}
+                  </dd>
+                </div>
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt>{copy.health.ownLabel}</dt>
+                  <dd data-catalog-health-own-label={row.ownLabel}>
+                    {row.ownLabel} · {share(row.ownLabel, row.attempts)}
+                  </dd>
+                </div>
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt>{copy.health.abandoned}</dt>
+                  <dd data-catalog-health-abandoned={row.abandoned}>
+                    {row.abandoned} · {share(row.abandoned, row.attempts)}
+                  </dd>
+                </div>
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt>{copy.health.medianTimeToPick}</dt>
+                  <dd>{duration(row.medianMsToPick)}</dd>
+                </div>
+                <div className="flex flex-wrap justify-between gap-2">
+                  <dt>{copy.health.p95TimeToPick}</dt>
+                  <dd data-catalog-health-p95={row.p95MsToPick ?? ""}>
+                    {duration(row.p95MsToPick)}
+                  </dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <div className="grid gap-2">
+        <h3 className="font-medium text-foreground">{copy.health.misses}</h3>
+        <p className="text-sm text-muted-foreground">
+          {copy.health.missesHint}
+        </p>
+        {misses.length === 0 ? (
+          <p
+            data-catalog-health-misses-empty="true"
+            className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground"
+          >
+            {copy.health.missesEmpty}
+          </p>
+        ) : (
+          <ol className="grid gap-2" data-catalog-health-misses="true">
+            {misses.map((miss) => (
+              <li
+                key={`${miss.queryNormalized}:${miss.locale}:${miss.objectKind}`}
+                data-catalog-health-miss={miss.queryNormalized}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+              >
+                <span className="min-w-0 break-words text-foreground">
+                  {miss.queryNormalized}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {miss.occurrences} {copy.health.occurrences} ·{" "}
+                  {formatOperatorDate(locale, miss.lastSeenAt)}
+                </span>
+                {canMutate ? (
+                  <OwnerScopedProgressiveForm action={makeQueueItemFromMissAction}>
+                    <input
+                      type="hidden"
+                      name="queryNormalized"
+                      value={miss.queryNormalized}
+                    />
+                    <input type="hidden" name="locale" value={miss.locale} />
+                    <input
+                      type="hidden"
+                      name="objectKind"
+                      value={miss.objectKind}
+                    />
+                    <button
+                      type="submit"
+                      data-catalog-health-miss-queue={miss.queryNormalized}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                      })}
+                    >
+                      {copy.health.makeQueueItem}
+                    </button>
+                  </OwnerScopedProgressiveForm>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+
+      <div className="grid gap-2">
+        <h3 className="font-medium text-foreground">{copy.health.precision}</h3>
+        <p className="text-sm text-muted-foreground">
+          {copy.health.precisionHint}
+        </p>
+        {precision.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {copy.health.precisionEmpty}
+          </p>
+        ) : (
+          <ul className="grid gap-1 text-sm" data-catalog-health-precision="true">
+            {precision.map((rule) => (
+              <li
+                key={rule.ruleCode}
+                data-catalog-health-rule={rule.ruleCode}
+                className="flex flex-wrap justify-between gap-2 text-muted-foreground"
+              >
+                <span className="text-foreground">{rule.ruleCode}</span>
+                <span>
+                  {rule.applied} {copy.health.applied} · {rule.reverted}{" "}
+                  {copy.health.reverted} ·{" "}
+                  {share(rule.reverted, rule.applied + rule.reverted)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-sm text-muted-foreground">
+          {copy.health.queueAge}:{" "}
+          <span data-catalog-health-queue-age={queueAgeDays ?? ""}>
+            {queueAgeDays === null
+              ? copy.health.queueAgeEmpty
+              : `${queueAgeDays} ${copy.health.days}`}
+          </span>
+        </p>
+      </div>
+    </section>
   );
 }
 

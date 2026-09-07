@@ -298,6 +298,18 @@ export interface CatalogMatchSuggestions {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CatalogPickEvents {
+  catalog_item_id: string | null;
+  id: Generated<string>;
+  locale: string;
+  ms_to_pick: number | null;
+  object_kind: string;
+  occurred_at: Generated<Timestamp>;
+  outcome: string;
+  owner_user_id: string;
+  query_length: Generated<number>;
+}
+
 export interface CatalogReconcileThresholds {
   decisions_30d: Generated<number>;
   revert_rate_30d: Generated<Numeric>;
@@ -1139,6 +1151,7 @@ export interface DB {
   catalog_item_slug_history: CatalogItemSlugHistory;
   catalog_items: CatalogItems;
   catalog_match_suggestions: CatalogMatchSuggestions;
+  catalog_pick_events: CatalogPickEvents;
   catalog_reconcile_thresholds: CatalogReconcileThresholds;
   catalog_search_misses: CatalogSearchMisses;
   catalog_source_assertions: CatalogSourceAssertions;

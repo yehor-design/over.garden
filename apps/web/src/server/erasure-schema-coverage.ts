@@ -29,7 +29,7 @@ export interface ErasureCoverageEntry {
 // OVE-255 and OVE-353 each extended the manifest independently from v5, so the
 // merged coverage is a new version rather than either side's v6. v10 adds the
 // owner digest recipient, the first outbox row addressed to an account.
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove391.erasure-schema.v10";
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove398.erasure-schema.v11";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Auth / Better Auth
@@ -533,6 +533,17 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     kind: "soft_column",
     disposition: "delete",
     rationale: "Owned catalog mention rows are deleted before journal rekey.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "catalog_pick_events.owner_user_id",
+    table: "catalog_pick_events",
+    columnOrPath: "owner_user_id",
+    kind: "soft_column",
+    disposition: "delete",
+    rationale:
+      "A gardener's pick measurements are deleted with them; nothing reads the owner and the rows expire after ninety days anyway (ADR-0026 D12).",
     dryRunOwned: true,
     executionOwned: true,
   },

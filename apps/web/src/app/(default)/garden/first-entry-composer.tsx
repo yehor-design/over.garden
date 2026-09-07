@@ -20,6 +20,7 @@ import type { PlantObjectKind } from "@/db/schema";
 import { useScrollToHashOnMount } from "@/lib/browser/hash-scroll";
 import {
   CatalogPicker,
+  type CatalogPickOutcome,
   type CatalogSearchMiss,
 } from "@/components/garden/catalog-picker";
 import { materializeCatalogNodeAction } from "@/app/(default)/garden/catalog-full-catalogue-actions";
@@ -69,6 +70,7 @@ import {
   type ActiveMentionToken,
   type MentionTypeaheadStatus,
 } from "./journal-mention-typeahead";
+import { recordCatalogPickEventAction } from "./catalog-pick-event-actions";
 import { recordCatalogSearchMissAction } from "./catalog-search-miss-actions";
 import { JournalObjectKindSelector } from "./journal-object-kind-selector";
 
@@ -491,6 +493,17 @@ export function FirstEntryComposer({
       query: miss.query,
       locale,
       objectKind: draft.objectKind,
+    }).catch(() => undefined);
+  }
+
+  function reportCatalogPickOutcome(outcome: CatalogPickOutcome) {
+    void recordCatalogPickEventAction({
+      outcome: outcome.outcome,
+      queryLength: outcome.queryLength,
+      msToPick: outcome.msToPick,
+      locale,
+      objectKind: draft.objectKind,
+      catalogItemId: outcome.catalogItemId,
     }).catch(() => undefined);
   }
 
@@ -919,6 +932,7 @@ export function FirstEntryComposer({
                 selection={catalogSelection}
                 onSelectionChange={updateCatalogSelection}
                 onSearchMiss={reportCatalogSearchMiss}
+                onPickOutcome={reportCatalogPickOutcome}
                 materializeFromCatalogue={materializeCatalogNodeAction}
                 disabled={persistenceFrozen}
               />

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import {
   CatalogPicker,
+  type CatalogPickOutcome,
   type CatalogSearchMiss,
 } from "@/components/garden/catalog-picker";
 import { buttonVariants } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getOwnerObjectCopy } from "@/lib/owner-object-copy";
 
 import { materializeCatalogNodeAction } from "../../catalog-full-catalogue-actions";
+import { recordCatalogPickEventAction } from "../../catalog-pick-event-actions";
 import { recordCatalogSearchMissAction } from "../../catalog-search-miss-actions";
 
 interface CatalogResolveControlProps {
@@ -59,6 +61,17 @@ export function CatalogResolveControl({
       query: miss.query,
       locale,
       objectKind,
+    }).catch(() => undefined);
+  }
+
+  function reportPickOutcome(outcome: CatalogPickOutcome) {
+    void recordCatalogPickEventAction({
+      outcome: outcome.outcome,
+      queryLength: outcome.queryLength,
+      msToPick: outcome.msToPick,
+      locale,
+      objectKind,
+      catalogItemId: outcome.catalogItemId,
     }).catch(() => undefined);
   }
 
@@ -100,6 +113,7 @@ export function CatalogResolveControl({
           selection={selection}
           onSelectionChange={setSelection}
           onSearchMiss={reportSearchMiss}
+          onPickOutcome={reportPickOutcome}
           materializeFromCatalogue={materializeCatalogNodeAction}
         />
 
