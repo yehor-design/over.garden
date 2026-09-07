@@ -649,6 +649,81 @@ def test_a_genus_the_checklist_knows_is_built_from_the_checklist(conn):
     assert node["eppo_ids"] == 1
 
 
+def test_a_name_the_checklist_holds_as_a_synonym_reaches_its_accepted_node(conn):
+    """A synonym is not a failure; it is a name on the accepted node."""
+    first, _second, first_snapshot, _ = seed_two_captures(conn)
+    snapshot = conn.execute(
+        """
+        insert into catalog_source_snapshots (
+          source_slug, source_name, source_category, source_version, source_url,
+          license, parser_version, payload_sha256, fetched_at, verified_at, status
+        )
+        values ('catalogue-of-life-checklistbank', 'Catalogue of Life',
+                'species_backbone', 'ove394-synonym', 'https://example.test/',
+                'CC BY 4.0', 'test', %s, now(), now(), 'imported')
+        returning id::text as id
+        """,
+        ("d" * 64,),
+    ).fetchone()["id"]
+    for col_id, parent, canonical, rank, status in (
+        ("PLANT", None, "Plantae", "kingdom", "accepted"),
+        ("GLADI", "PLANT", "Gladiolus", "genus", "accepted"),
+        # Catalogue of Life carries the EPPO spelling only as a synonym of it.
+        ("ACIDA", "GLADI", "Acidanthera", "genus", "synonym"),
+    ):
+        conn.execute(
+            """
+            insert into catalog_source_col_usages (
+              source_snapshot_id, col_id, parent_col_id, canonical_name,
+              scientific_name, authorship, rank, status, kingdom
+            )
+            values (%s::uuid, %s, %s, %s, %s, null, %s, %s, 'Plantae')
+            """,
+            (snapshot, col_id, parent, canonical, canonical, rank, status),
+        )
+
+    seed_unit(
+        conn,
+        capture_id=first,
+        code="1ACFG",
+        endpoint_class="taxon_overview",
+        payload=overview("1ACFG", "Acidanthera"),
+    )
+    seed_unit(
+        conn,
+        capture_id=first,
+        code="1ACFG",
+        endpoint_class="taxon_taxonomy",
+        payload=[
+            {"type": "Kingdom", "level": 1, "eppocode": "1PLAK", "prefname": "Plantae"},
+            {
+                "type": "Genus",
+                "level": 6,
+                "eppocode": "1ACFG",
+                "prefname": "Acidanthera",
+            },
+        ],
+    )
+    seed_record(conn, first_snapshot, "1ACFG")
+
+    receipt = reconcile.reconcile_eppo(conn)
+
+    assert receipt.linked_by_col_usage == 1
+    assert receipt.queued_for_curation == 0
+    node = conn.execute(
+        """
+        select item.canonical_name
+        from catalog_items as item
+        join catalog_item_identifiers as identifier
+          on identifier.catalog_item_id = item.id
+        where identifier.scheme = 'eppo' and identifier.value = '1ACFG'
+        """
+    ).fetchone()
+    # The identifier lands on the accepted genus, not on a second node named
+    # after the synonym.
+    assert node["canonical_name"] == "Gladiolus"
+
+
 def test_a_virus_eppo_has_and_the_backbone_lacks_becomes_its_own_node(conn):
     first, _second, first_snapshot, _ = seed_two_captures(conn)
     seed_unit(
