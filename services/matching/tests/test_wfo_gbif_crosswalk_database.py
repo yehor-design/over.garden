@@ -386,12 +386,16 @@ def test_a_matched_node_is_queued_for_its_card_to_be_rebuilt(conn):
     )
 
     # Without this the card keeps the `sameAs` set it had, for as long as the
-    # cache lives.
-    intents = conn.execute(
+    # cache lives. `catalog_record_card_intents` writes the outbox row the
+    # worker drains, keyed by entity kind and id.
+    intent = conn.execute(
         """
-        select count(*)::int as n from catalog_card_projection_intents
-        where catalog_item_id = %s::uuid
+        select desired_state, desired_reason, status
+        from public_projection_intents
+        where entity_kind = 'catalog_item' and entity_id = %s::uuid
         """,
         (tomato,),
-    ).fetchone()["n"]
-    assert intents == 1
+    ).fetchone()
+    assert intent is not None
+    assert intent["desired_state"] == "present"
+    assert intent["desired_reason"] == "catalog_card"
