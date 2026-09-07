@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "ove399.organismGraphProof.v1",
+  "issue": "OVE-399",
+  "baseUrlClass": "production",
+  "generatedAt": "2026-09-07T18:49:33.234Z",
+  "checks": [
+    {
+      "area": "addresses",
+      "check": "species /species/solanum-lycopersicum-species-backbone answers 200",
+      "class": "pass",
+      "detail": "status 200"
+    },
+    {
+      "area": "addresses",
+      "check": "form /species/solanum-lycopersicum-species-backbone/6-punto-7-f1-ua-register-08040055 answers 200",
+      "class": "pass",
+      "detail": "status 200"
+    },
+    {
+      "area": "addresses",
+      "check": "permalink /id/0a512046-b52d-46d8-9f67-e785895b1806 answers 308",
+      "class": "pass",
+      "detail": "status 308 to /species/solanum-lycopersicum-species-backbone"
+    },
+    {
+      "area": "addresses",
+      "check": "eppo code /eppo/LYPES answers 308",
+      "class": "pass",
+      "detail": "status 308 to /species/solanum-lycopersicum-species-backbone"
+    },
+    {
+      "area": "addresses",
+      "check": "legacy /variety /variety/uh722m-ua-register-12004202 answers 308",
+      "class": "pass",
+      "detail": "status 308 to /species/zea-mays/uh722m-ua-register-12004202"
+    },
+    {
+      "area": "addresses",
+      "check": "unknown slug answers 404, noindex",
+      "class": "pass",
+      "detail": "status 404, x-robots-tag noindex, nofollow"
+    },
+    {
+      "area": "identity",
+      "check": "/species/solanum-lycopersicum-species-backbone carries Taxon JSON-LD with sameAs",
+      "class": "pass",
+      "detail": "8 sameAs, taxonRank species"
+    },
+    {
+      "area": "identity",
+      "check": "the page's indexability and its JSON-LD agree",
+      "class": "pass",
+      "detail": "/species/solanum-lycopersicum-species-backbone is indexable and carries JSON-LD"
+    },
+    {
+      "area": "licence",
+      "check": "species page shows a source attribution",
+      "class": "pass",
+      "detail": "9 source(s): catalogue-of-life-checklistbank, eppo-codes, eu-oj-eur-lex-common-catalogue, gbif-backbone, ua-state-register, wikidata"
+    },
+    {
+      "area": "picker",
+      "check": "typeahead P95 under 100 ms, warm",
+      "class": "fail",
+      "detail": "50/50 answered 200 (200x50), cache MISSx50, P95 198 ms server time, median 69 ms"
+    },
+    {
+      "area": "picker",
+      "check": "50 distinct queries, cold instances included",
+      "class": "fail",
+      "detail": "44/50 answered 200 (200x44 503x6), cache MISSx50, P95 408 ms server time, median 66 ms"
+    },
+    {
+      "area": "worker",
+      "check": "deployed handler set equals the manifest",
+      "class": "pass",
+      "detail": "6 deployed, 6 declared, equal, heartbeat fresh"
+    },
+    {
+      "area": "owner",
+      "check": "curation queue renders for the owner",
+      "class": "skipped",
+      "detail": "no --cookie-file"
+    }
+  ],
+  "summary": {
+    "pass": 10,
+    "fail": 2,
+    "pending": 0,
+    "skipped": 1
+  },
+  "leakCheck": "passed"
+}
