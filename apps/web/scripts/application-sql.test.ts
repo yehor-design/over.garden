@@ -62,6 +62,7 @@ describe("versioned application SQL bootstrap", () => {
       "0061_ove399_retire_legacy_catalog_shape.sql",
       "0062_ove389_catalog_card_intents.sql",
       "0063_ove391_owner_catalog_digest_outbox.sql",
+      "0064_ove399_assertion_reference_indexes.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });
