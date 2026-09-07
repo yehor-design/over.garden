@@ -143,9 +143,16 @@ Recorded here so the next reader does not have to rediscover it:
   sitemap is empty and no page carries `Taxon` JSON-LD. The mechanism is
   correct and live — a gardener picking an organism and publishing on it sets
   the flag — but the data condition has not happened.
-* **The production Wikidata crosswalk reached 29 nodes.** The run was
-  under-scoped; the identifier rung of `OVE-396` and the `uk` vernaculars
-  `OVE-397` wants both rest on a fuller run.
+* **Three crosswalks barely ran in production.** On 114,669 nodes there are 29
+  Wikidata identifiers, 20 GBIF and 17 WFO, against 109,514 EPPO and 15,177 UA
+  register. The shared-identifier rung of the reconciliation ladder has almost
+  nothing to work with until those runs are repeated at full scope.
+
+  What this does *not* block, contrary to the note written while the run was
+  in progress: typing `колорадськ` in the picker does find *Leptinotarsa
+  decemlineata* today, matched through the Russian vernacular EPPO carries
+  (`колорадский жук`) by the shared normalizer. `OVE-397`'s criterion is met
+  without the Wikidata names.
 * **The picker's production budget is unmeasured on the real dataset.** The
   26.6 ms P95 recorded for `OVE-387` was measured against a local production
   build over about 15,900 nodes. Production now holds more than 100,000.
