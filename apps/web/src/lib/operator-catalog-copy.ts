@@ -63,6 +63,33 @@ export interface OperatorCatalogCopy {
     cadence: string;
     cadenceNames: Record<CatalogSourceRefreshCadence, string>;
   };
+  /** ADR-0026 D12: the catalog's own numbers, where the owner already works. */
+  health: {
+    title: string;
+    description: string;
+    empty: string;
+    window: Record<"7" | "30", string>;
+    attempts: string;
+    pickSuccess: string;
+    ownLabel: string;
+    abandoned: string;
+    medianTimeToPick: string;
+    p95TimeToPick: string;
+    notMeasured: string;
+    misses: string;
+    missesHint: string;
+    missesEmpty: string;
+    makeQueueItem: string;
+    occurrences: string;
+    precision: string;
+    precisionHint: string;
+    precisionEmpty: string;
+    applied: string;
+    reverted: string;
+    queueAge: string;
+    queueAgeEmpty: string;
+    days: string;
+  };
   card: {
     ownerTools: string;
     rename: string;
@@ -152,6 +179,33 @@ const UK: OperatorCatalogCopy = {
       twice_a_year: "двічі на рік",
       as_released: "коли виходить нове видання",
     },
+  },
+  health: {
+    title: "Чи працює вибір",
+    description:
+      "Що відбувається, коли садівник шукає рослину: скільки разів знайшов, скільки разів написав свою назву, скільки разів пішов ні з чим.",
+    empty: "Ще жодного вибору не виміряно.",
+    window: { "7": "За тиждень", "30": "За місяць" },
+    attempts: "спроб",
+    pickSuccess: "Знайшли в каталозі",
+    ownLabel: "Написали свою назву",
+    abandoned: "Пішли ні з чим",
+    medianTimeToPick: "Медіанний час вибору",
+    p95TimeToPick: "P95 часу вибору",
+    notMeasured: "не виміряно",
+    misses: "Чого шукали і не знайшли",
+    missesHint: "Найчастіші запити без результату. Кожен можна перетворити на рішення.",
+    missesEmpty: "Немає невирішених запитів без результату.",
+    makeQueueItem: "У чергу рішень",
+    occurrences: "разів",
+    precision: "Точність автоматичних рішень",
+    precisionHint: "Скасовані до застосованих за 30 днів, за правилом.",
+    precisionEmpty: "За 30 днів автоматичних рішень не було.",
+    applied: "застосовано",
+    reverted: "скасовано",
+    queueAge: "Вік найстарішого відкритого рішення",
+    queueAgeEmpty: "Черга порожня.",
+    days: "дн.",
   },
   card: {
     ownerTools: "Інструменти власника",
@@ -244,6 +298,33 @@ const BG: OperatorCatalogCopy = {
       as_released: "когато излезе ново издание",
     },
   },
+  health: {
+    title: "Работи ли изборът",
+    description:
+      "Какво става, когато градинар търси растение: колко пъти е намерил, колко пъти е написал свое име, колко пъти си е тръгнал с нищо.",
+    empty: "Още нито един избор не е измерен.",
+    window: { "7": "За седмица", "30": "За месец" },
+    attempts: "опита",
+    pickSuccess: "Намерени в каталога",
+    ownLabel: "Написали свое име",
+    abandoned: "Тръгнали си с нищо",
+    medianTimeToPick: "Медианно време за избор",
+    p95TimeToPick: "P95 на времето за избор",
+    notMeasured: "не е измерено",
+    misses: "Какво са търсили и не са намерили",
+    missesHint: "Най-честите заявки без резултат. Всяка може да стане решение.",
+    missesEmpty: "Няма нерешени заявки без резултат.",
+    makeQueueItem: "В опашката с решения",
+    occurrences: "пъти",
+    precision: "Точност на автоматичните решения",
+    precisionHint: "Отменени спрямо приложени за 30 дни, по правило.",
+    precisionEmpty: "За 30 дни няма автоматични решения.",
+    applied: "приложени",
+    reverted: "отменени",
+    queueAge: "Възраст на най-старото отворено решение",
+    queueAgeEmpty: "Опашката е празна.",
+    days: "дни",
+  },
   card: {
     ownerTools: "Инструменти на собственика",
     rename: "Преименувай",
@@ -334,6 +415,33 @@ const RU: OperatorCatalogCopy = {
       twice_a_year: "дважды в год",
       as_released: "когда выходит новое издание",
     },
+  },
+  health: {
+    title: "Работает ли выбор",
+    description:
+      "Что происходит, когда садовод ищет растение: сколько раз нашёл, сколько раз написал своё название, сколько раз ушёл ни с чем.",
+    empty: "Ещё ни один выбор не измерен.",
+    window: { "7": "За неделю", "30": "За месяц" },
+    attempts: "попыток",
+    pickSuccess: "Нашли в каталоге",
+    ownLabel: "Написали своё название",
+    abandoned: "Ушли ни с чем",
+    medianTimeToPick: "Медианное время выбора",
+    p95TimeToPick: "P95 времени выбора",
+    notMeasured: "не измерено",
+    misses: "Что искали и не нашли",
+    missesHint: "Самые частые запросы без результата. Каждый можно превратить в решение.",
+    missesEmpty: "Нет нерешённых запросов без результата.",
+    makeQueueItem: "В очередь решений",
+    occurrences: "раз",
+    precision: "Точность автоматических решений",
+    precisionHint: "Отменённые к применённым за 30 дней, по правилу.",
+    precisionEmpty: "За 30 дней автоматических решений не было.",
+    applied: "применено",
+    reverted: "отменено",
+    queueAge: "Возраст самого старого открытого решения",
+    queueAgeEmpty: "Очередь пуста.",
+    days: "дн.",
   },
   card: {
     ownerTools: "Инструменты владельца",

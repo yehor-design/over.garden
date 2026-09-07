@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
   assertAdminCapabilityForScope: vi.fn(),
   hasAdminCapability: vi.fn(() => true),
   listCatalogSourceCards: vi.fn(),
+  readCatalogPickHealth: vi.fn(),
+  readTopCatalogSearchMisses: vi.fn(),
+  readCatalogAutoAcceptPrecision: vi.fn(),
+  readOldestOpenQueueItemAgeDays: vi.fn(),
 }));
 
 vi.mock("@/server/interface-localization", () => ({
@@ -25,7 +29,16 @@ vi.mock("@/server/catalog-curation-repository", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/server/catalog-curation-repository")>()),
   listCatalogSourceCards: mocks.listCatalogSourceCards,
 }));
-vi.mock("./actions", () => ({ refreshCatalogSourceAction: vi.fn() }));
+vi.mock("@/server/catalog-health-repository", () => ({
+  readCatalogPickHealth: mocks.readCatalogPickHealth,
+  readTopCatalogSearchMisses: mocks.readTopCatalogSearchMisses,
+  readCatalogAutoAcceptPrecision: mocks.readCatalogAutoAcceptPrecision,
+  readOldestOpenQueueItemAgeDays: mocks.readOldestOpenQueueItemAgeDays,
+}));
+vi.mock("./actions", () => ({
+  refreshCatalogSourceAction: vi.fn(),
+  makeQueueItemFromMissAction: vi.fn(),
+}));
 
 const EPPO = {
   sourceSlug: "eppo",
@@ -65,6 +78,10 @@ describe("owner catalog sources (ADR-0026 D10)", () => {
     });
     mocks.hasAdminCapability.mockReturnValue(true);
     mocks.listCatalogSourceCards.mockResolvedValue([EPPO]);
+    mocks.readCatalogPickHealth.mockResolvedValue([]);
+    mocks.readTopCatalogSearchMisses.mockResolvedValue([]);
+    mocks.readCatalogAutoAcceptPrecision.mockResolvedValue([]);
+    mocks.readOldestOpenQueueItemAgeDays.mockResolvedValue(null);
   });
 
   it("shows one card per source with its version, licence, counts and a refresh button", async () => {
@@ -123,5 +140,119 @@ describe("owner catalog sources (ADR-0026 D10)", () => {
     expect(html).toContain('data-operator-access-state="allowed"');
     expect(html).toContain("/garden/catalog/sources");
     expect(html).not.toContain("data-catalog-source=");
+  });
+});
+
+describe("the catalog health figures (OVE-398, ADR-0026 D12)", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
+    mocks.resolveWorkspaceViewer.mockResolvedValue({
+      status: "ready",
+      scope: { userId: "owner-1" },
+    });
+    mocks.resolveWorkspaceAdminAccess.mockResolvedValue({
+      status: "allowed",
+      access: { role: "owner", mode: "sealed", capabilities: [] },
+    });
+    mocks.hasAdminCapability.mockReturnValue(true);
+    mocks.listCatalogSourceCards.mockResolvedValue([EPPO]);
+    mocks.readCatalogAutoAcceptPrecision.mockResolvedValue([]);
+    mocks.readOldestOpenQueueItemAgeDays.mockResolvedValue(null);
+  });
+
+  it("shows five of six picks successful, the P95, and the miss with a button", async () => {
+    mocks.readCatalogPickHealth.mockResolvedValue([
+      {
+        windowDays: 7,
+        attempts: 6,
+        picked: 5,
+        ownLabel: 1,
+        abandoned: 0,
+        medianMsToPick: 800,
+        p95MsToPick: 4200,
+      },
+      {
+        windowDays: 30,
+        attempts: 6,
+        picked: 5,
+        ownLabel: 1,
+        abandoned: 0,
+        medianMsToPick: 800,
+        p95MsToPick: 4200,
+      },
+    ]);
+    mocks.readTopCatalogSearchMisses.mockResolvedValue([
+      {
+        queryNormalized: "поiмдор",
+        locale: "uk",
+        objectKind: "plant",
+        occurrences: 9,
+        firstSeenAt: new Date("2026-09-01T00:00:00.000Z"),
+        lastSeenAt: new Date("2026-09-06T00:00:00.000Z"),
+      },
+    ]);
+
+    const html = await render();
+
+    expect(html).toContain('data-catalog-health="true"');
+    expect(html).toContain('data-catalog-health-window="7"');
+    expect(html).toContain('data-catalog-health-picked="5"');
+    expect(html).toContain('data-catalog-health-own-label="1"');
+    expect(html).toContain("83%");
+    expect(html).toContain('data-catalog-health-p95="4200"');
+    expect(html).toContain('data-catalog-health-miss="поiмдор"');
+    expect(html).toContain('data-catalog-health-miss-queue="поiмдор"');
+  });
+
+  it("says nothing has been measured rather than showing a zero that reads as an instant", async () => {
+    mocks.readCatalogPickHealth.mockResolvedValue([
+      {
+        windowDays: 7,
+        attempts: 0,
+        picked: 0,
+        ownLabel: 0,
+        abandoned: 0,
+        medianMsToPick: null,
+        p95MsToPick: null,
+      },
+      {
+        windowDays: 30,
+        attempts: 0,
+        picked: 0,
+        ownLabel: 0,
+        abandoned: 0,
+        medianMsToPick: null,
+        p95MsToPick: null,
+      },
+    ]);
+    mocks.readTopCatalogSearchMisses.mockResolvedValue([]);
+
+    const html = await render();
+
+    expect(html).toContain('data-catalog-health-empty="true"');
+    expect(html).toContain('data-catalog-health-misses-empty="true"');
+    expect(html).not.toContain("0 ms");
+  });
+
+  it("offers no button to a reader who cannot decide anything", async () => {
+    mocks.hasAdminCapability.mockReturnValue(false);
+    mocks.readCatalogPickHealth.mockResolvedValue([]);
+    mocks.readTopCatalogSearchMisses.mockResolvedValue([
+      {
+        queryNormalized: "поiмдор",
+        locale: "uk",
+        objectKind: "plant",
+        occurrences: 9,
+        firstSeenAt: new Date("2026-09-01T00:00:00.000Z"),
+        lastSeenAt: new Date("2026-09-06T00:00:00.000Z"),
+      },
+    ]);
+
+    const html = await render();
+
+    expect(html).toContain('data-catalog-health-miss="поiмдор"');
+    expect(html).not.toContain("data-catalog-health-miss-queue");
   });
 });

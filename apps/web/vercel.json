@@ -30,6 +30,10 @@
     {
       "path": "/api/cron/catalog-digest",
       "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/catalog-pick-events-purge",
+      "schedule": "10 4 * * *"
     }
   ]
 }
