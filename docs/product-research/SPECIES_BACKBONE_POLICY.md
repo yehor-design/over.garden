@@ -16,6 +16,17 @@
 > kingdoms because the managed database has 10 GiB of disk; the scope is
 > recorded on each snapshot row.
 
+> Rules 2 and 3 were executed on 2026-09-07 (OVE-396). Both corroborate through
+> identifiers and neither reclassifies anything: the WFO Plant List (June 2026,
+> CC0) and the GBIF Backbone (2023-08-28, CC BY 4.0) are pinned by version and
+> sha256, read once per refresh, and stored only where a row reached a node —
+> identifier, scientific name, authorship and status, and nothing else. A node
+> is matched by the identifier Wikidata already gave it, or by its scientific
+> name with the kingdom deciding between homonyms; two release rows of equal
+> standing under one name are counted as a homonym and left alone, and an
+> identifier another node holds becomes a `source_link` decision rather than a
+> move.
+
 ---
 
 # Species Backbone Policy
