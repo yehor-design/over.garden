@@ -29,6 +29,21 @@ const MIN_CATALOG_SEARCH_MISS_LENGTH = 3;
  */
 const CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD = 0.3;
 /**
+ * The shortest query the trigram arm is asked about.
+ *
+ * A two-character query has one trigram, so the `%` operator matches tens of
+ * thousands of names and the recheck throws nearly all of them away. Measured
+ * against production on 2026-09-07, the prefix "so" read 45,095 index entries
+ * and 4,520 heap pages to contribute one row — and across all twenty-eight
+ * two-character prefixes in the fingerprint fixture the arm never once changed
+ * the eight rows the picker returns, while costing 214 ms of a 270 ms median.
+ *
+ * From three characters it earns its keep: it is what finds томат for "тома"
+ * and the accepted name behind a misspelt Lycopersicon, and there it does
+ * change the answer. So the arm is skipped only where it provably cannot help.
+ */
+const MIN_FUZZY_QUERY_LENGTH = 3;
+/**
  * The one deadline of the picker (ADR-0026 D7): the statement itself is
  * cancelled by Postgres at this bound, and a connection that never answers is
  * abandoned at the same bound, so the route can degrade to the own-name
@@ -147,6 +162,25 @@ export function buildCatalogTypeaheadStatement(input: {
   const locale = input.locale;
   const objectKind = input.objectKind;
   const threshold = sql.lit(CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD);
+  // See MIN_FUZZY_QUERY_LENGTH: below it this arm reads a large part of the
+  // trigram index to contribute rows that never reach the reader.
+  const fuzzyArm =
+    Array.from(query).length >= MIN_FUZZY_QUERY_LENGTH
+      ? sql`
+      union all
+      select n.catalog_item_id,
+             n.id,
+             n.display_name,
+             n.normalized_name,
+             n.name_type,
+             n.locale,
+             similarity(n.normalized_name, ${query}),
+             true
+      from catalog_item_names as n
+      where n.normalized_name % ${query}
+        and similarity(n.normalized_name, ${query}) >= ${threshold}
+        and n.normalized_name not like ${prefixPattern}`
+      : sql.raw("");
 
   return sql<CatalogTypeaheadSqlRow>`
     with hits as (
@@ -160,19 +194,7 @@ export function buildCatalogTypeaheadStatement(input: {
              false as fuzzy
       from catalog_item_names as n
       where n.normalized_name like ${prefixPattern}
-      union all
-      select n.catalog_item_id,
-             n.id,
-             n.display_name,
-             n.normalized_name,
-             n.name_type,
-             n.locale,
-             similarity(n.normalized_name, ${query}),
-             true
-      from catalog_item_names as n
-      where n.normalized_name % ${query}
-        and similarity(n.normalized_name, ${query}) >= ${threshold}
-        and n.normalized_name not like ${prefixPattern}
+      ${fuzzyArm}
     ),
     classified as (
       select h.catalog_item_id,
@@ -239,6 +261,29 @@ export function buildCatalogTypeaheadStatement(input: {
                  or (ci.node_kind = 'taxon'
                      and (ci.kingdom is null or ci.kingdom = 'Animalia'))))
         )
+    ),
+    shortlist as (
+      -- Every column the ordering below reads already sits in scored, so the
+      -- eight rows that survive can be chosen here and decorated afterwards.
+      -- The decoration is four index searches a row — a vernacular, a form_of
+      -- relation, the parent, the parent's vernacular — and before this CTE it
+      -- ran for every candidate. Measured against production on 2026-09-07:
+      -- the prefix soniashnyk matches 2,395 names, because the Ukrainian
+      -- register lists thousands of sunflower hybrids, and the statement spent
+      -- about 410 of its 442 ms decorating rows the limit then threw away.
+      -- That is the 503 a gardener sees when typing a common crop.
+      select s.*
+      from scored as s
+      where s.duplicate_rank = 1
+      order by s.match_class,
+               s.market desc,
+               s.search_weight desc,
+               s.has_registered_forms desc,
+               s.is_host desc,
+               s.similarity desc,
+               s.canonical_name,
+               s.id
+      limit ${sql.lit(limit)}
     )
     select s.id,
            s.node_kind,
@@ -258,7 +303,7 @@ export function buildCatalogTypeaheadStatement(input: {
            s.match_class,
            s.market,
            s.similarity
-    from scored as s
+    from shortlist as s
     left join lateral (
       select v.display_name
       from catalog_item_names as v
@@ -288,7 +333,6 @@ export function buildCatalogTypeaheadStatement(input: {
       order by v.is_primary desc, v.weight desc, v.created_at, v.id
       limit 1
     ) as parent_vernacular on true
-    where s.duplicate_rank = 1
     order by s.match_class,
              s.market desc,
              s.search_weight desc,

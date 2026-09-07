@@ -117,6 +117,62 @@ describe("catalog picker query", () => {
     expect(compiled.sql).not.toMatch(/meili|trust|status in/iu);
   });
 
+  it("chooses the eight rows before decorating them, not after", () => {
+    // The four lateral joins below cost an index search each, per row. Before
+    // the shortlist they ran for every candidate: against production the
+    // Ukrainian prefix for sunflower matches 2,395 names, because the state
+    // register lists thousands of hybrids, and the statement spent about 410
+    // of its 442 ms building display names for rows the limit then discarded —
+    // which is the 503 a gardener saw when typing a common crop.
+    const compiled = buildCatalogTypeaheadStatement({
+      normalizedQuery: "соняшник",
+      locale: "uk",
+      objectKind: "plant",
+    }).compile(testDb);
+
+    const shortlist = compiled.sql.indexOf("shortlist as (");
+    const decoration = compiled.sql.indexOf("from shortlist as s");
+    expect(shortlist).toBeGreaterThan(-1);
+    expect(decoration).toBeGreaterThan(shortlist);
+    // The duplicate filter and the limit belong to the shortlist, so the
+    // decoration below can only ever see the rows that survive.
+    expect(compiled.sql.slice(shortlist, decoration)).toContain(
+      "s.duplicate_rank = 1",
+    );
+    expect(compiled.sql.slice(shortlist, decoration)).toContain("limit 8");
+    // Nothing the final ordering reads comes from a joined table: that is what
+    // makes choosing first and decorating second give the same eight rows.
+    const finalOrderBy = compiled.sql.slice(compiled.sql.lastIndexOf("order by"));
+    expect(finalOrderBy).toContain("s.match_class");
+    expect(finalOrderBy).not.toMatch(/\b(vernacular|parent|parent_vernacular|form)\./u);
+  });
+
+  it("asks the trigram index only where it can change the answer", () => {
+    // A two-character query has one trigram, so `%` matches tens of thousands
+    // of names and the recheck throws nearly all away: measured against
+    // production, the prefix "so" read 45,095 index entries and 4,520 heap
+    // pages to contribute one row, and across every two-character prefix in
+    // the fingerprint fixture it never changed the eight rows returned.
+    const short = buildCatalogTypeaheadStatement({
+      normalizedQuery: "со",
+      locale: "uk",
+      objectKind: "plant",
+    }).compile(testDb);
+    expect(short.sql).not.toContain("union all");
+    expect(short.sql).not.toContain("n.normalized_name % $");
+
+    // From three characters it earns its keep — it is what finds томат for a
+    // half-typed or misspelt name — so the arm stays.
+    const long = buildCatalogTypeaheadStatement({
+      normalizedQuery: "сон",
+      locale: "uk",
+      objectKind: "plant",
+    }).compile(testDb);
+    expect(long.sql).toContain("union all");
+    expect(long.sql).toContain("n.normalized_name % $");
+    expect(long.sql).toContain(">= 0.3");
+  });
+
   it("never reads catalog rows for a query shorter than two characters", async () => {
     let executed = 0;
     const result = await searchCatalogSuggestionsForTypeaheadResult(
