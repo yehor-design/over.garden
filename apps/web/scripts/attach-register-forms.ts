@@ -12,13 +12,19 @@
  *   pnpm exec tsx scripts/attach-register-forms.ts --source ua-state-register
  *   pnpm exec tsx scripts/attach-register-forms.ts --source all --limit 500
  *   pnpm exec tsx scripts/attach-register-forms.ts --source all \
- *     --environment production --confirm-environment production \
- *     --allow-non-local-mutation
+ *     --env-file /abs/path/prod.env --environment production \
+ *     --confirm-environment production --allow-non-local-mutation
  *
  * The production flags are the ones every importer in this repository already
  * takes, and they are checked the same way: a non-local database without them
  * is refused before a row is read.
  */
+// The attachment module is `server-only`, and a script is not a server
+// component. Without this the documented command dies on the import, which no
+// test could see: nothing imports a script's entry point.
+import "./neutralise-server-only";
+
+import { config as loadEnv } from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 
@@ -38,6 +44,8 @@ import {
 export interface AttachRegisterFormsArgs {
   sources: readonly RegisterSourceSlug[];
   limit: number;
+  /** Where a non-local database's credentials come from, as every production script takes it. */
+  envFile: string | undefined;
   environment: "local" | "production";
   confirmEnvironment: "local" | "production";
   allowNonLocalMutation: boolean;
@@ -76,6 +84,7 @@ export function parseAttachRegisterFormsArgs(
   return {
     sources: sources as RegisterSourceSlug[],
     limit,
+    envFile: valueFor("--env-file"),
     environment,
     confirmEnvironment,
     allowNonLocalMutation: argv.includes("--allow-non-local-mutation"),
@@ -102,6 +111,8 @@ export function assertAttachEnvironment(
 
 async function main() {
   const args = parseAttachRegisterFormsArgs(process.argv.slice(2));
+  if (args.envFile) loadEnv({ path: args.envFile, override: true });
+  if (process.env.DATABASE_SSL_CA) process.env.DATABASE_SSL = "true";
   const resolution = resolveDatabaseConnection(process.env);
   const connectionString = resolvePgConnectionString(process.env, resolution);
   if (!connectionString) throw new Error("attach_database_url_missing");
