@@ -220,17 +220,35 @@ async function main() {
         : "none rendered",
   });
 
-  // 4. The picker's budget, measured the way a gardener types.
-  const latency = await measureTypeahead(options.base);
+  // 4. The picker's budget, measured twice, because the two numbers answer
+  //    different questions and only one of them is about the picker.
+  //
+  //    Fifty distinct queries land on fifty possibly-cold serverless
+  //    instances, and a cold instance pays connection setup before the
+  //    statement runs — which is why the deadline went from 150 to 400 ms
+  //    during OVE-387 and why some of these still reach it. The same query
+  //    repeated stays on a warm instance and measures what a gardener's
+  //    second keystroke costs. Report both: a single number here would either
+  //    hide the cold answers or blame the statement for them.
+  const spread = await measureTypeahead(options.base, "spread");
+  const warm = await measureTypeahead(options.base, "warm");
   checks.push({
     area: "picker",
-    check: `typeahead P95 under ${TYPEAHEAD_P95_BUDGET_MS} ms over ${TYPEAHEAD_QUERIES} queries`,
+    check: `typeahead P95 under ${TYPEAHEAD_P95_BUDGET_MS} ms, warm`,
     class:
-      latency.ok === TYPEAHEAD_QUERIES &&
-      latency.p95Ms <= TYPEAHEAD_P95_BUDGET_MS
+      warm.ok === TYPEAHEAD_QUERIES && warm.p95Ms <= TYPEAHEAD_P95_BUDGET_MS
         ? "pass"
         : "fail",
-    detail: `${latency.ok}/${TYPEAHEAD_QUERIES} answered 200 (${latency.statuses}), P95 ${latency.p95Ms} ms server time, median ${latency.medianMs} ms`,
+    detail: `${warm.ok}/${TYPEAHEAD_QUERIES} answered 200 (${warm.statuses}), cache ${warm.caches}, P95 ${warm.p95Ms} ms server time, median ${warm.medianMs} ms`,
+  });
+  checks.push({
+    area: "picker",
+    check: `${TYPEAHEAD_QUERIES} distinct queries, cold instances included`,
+    class:
+      spread.ok === TYPEAHEAD_QUERIES && spread.p95Ms <= TYPEAHEAD_P95_BUDGET_MS
+        ? "pass"
+        : "fail",
+    detail: `${spread.ok}/${TYPEAHEAD_QUERIES} answered 200 (${spread.statuses}), cache ${spread.caches}, P95 ${spread.p95Ms} ms server time, median ${spread.medianMs} ms`,
   });
 
   // 5. The worker the queue is actually talking to.
@@ -329,7 +347,7 @@ async function proveOwnerQueue(
   };
 }
 
-async function measureTypeahead(base: string) {
+async function measureTypeahead(base: string, mode: "spread" | "warm") {
   const contract = JSON.parse(
     readFileSync(
       new URL(
@@ -353,27 +371,40 @@ async function measureTypeahead(base: string) {
   }
 
   // One warm request so the first sample is not a cold route.
-  await fetch(`${base}/api/public/catalog/typeahead?q=%D1%82%D0%BE&kind=plant&locale=uk`, {
+  await fetch(`${base}/api/public/catalog/typeahead?q=%D1%82%D0%BE&kind=plant&locale=uk&probe=warmup`, {
     headers: { "user-agent": USER_AGENT },
   }).catch(() => undefined);
 
   const serverTimes: number[] = [];
   const statuses = new Map<number, number>();
+  const caches = new Map<string, number>();
   let ok = 0;
   for (let index = 0; index < TYPEAHEAD_QUERIES; index += 1) {
-    const query = expanded[index % expanded.length]!;
+    // `warm` repeats one query so every request after the first lands on an
+    // instance that already holds a connection; `spread` walks the fixture.
+    const query = mode === "warm" ? expanded[0]! : expanded[index % expanded.length]!;
+    // The route carries a 60 s shared cache (the one exception to hard rule 5),
+    // and `Server-Timing` is cached with the body — so a repeated URL returns
+    // the timing of whenever the entry was written, forever. A request header
+    // does not defeat a shared cache; only a different URL does. `probe` is
+    // ignored by the route and makes every sample reach the origin, which is
+    // the only thing worth measuring here. `x-vercel-cache` is recorded so a
+    // reader can see that it worked.
     const url = `${base}/api/public/catalog/typeahead?${new URLSearchParams({
       q: query.q,
       kind: query.kind,
       locale: query.locale,
+      probe: `${Date.now()}-${index}`,
     }).toString()}`;
     const response = await fetch(url, {
-      headers: { "user-agent": USER_AGENT, "cache-control": "no-cache" },
+      headers: { "user-agent": USER_AGENT },
       signal: AbortSignal.timeout(20_000),
     });
     await response.text();
     if (response.status === 200) ok += 1;
     statuses.set(response.status, (statuses.get(response.status) ?? 0) + 1);
+    const cache = response.headers.get("x-vercel-cache") ?? "none";
+    caches.set(cache, (caches.get(cache) ?? 0) + 1);
     const duration = /total;dur=([\d.]+)/u.exec(
       response.headers.get("server-timing") ?? "",
     );
@@ -381,6 +412,10 @@ async function measureTypeahead(base: string) {
   }
   return {
     ok,
+    caches: [...caches.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, count]) => `${name}x${count}`)
+      .join(" "),
     // A picker that answers 503 under its own deadline is a different failure
     // from one that answers slowly, and the receipt has to say which.
     statuses: [...statuses.entries()]
