@@ -700,8 +700,10 @@ def _absorb(
         receipt.release_rows += 1
         held = by_identifier.get(row.identifier)
         if held is not None:
+            # Rung one outranks every name match, but it does not end the row:
+            # a second node answering to the same name is exactly the conflict
+            # the owner needs to see, and stopping here would bury it.
             _offer(matches, str(held["id"]), Match(row, "identifier", (9,)))
-            continue
         for node in by_name.get(normalize_name(row.scientific_name), ()):
             if not _kingdoms_agree(node, row, source):
                 continue
@@ -889,6 +891,14 @@ def _write_identifier(
 
 
 def _field(row: Any, key: str) -> Any:
+    """One column of a row, or None when there was no row.
+
+    `fetchone()` answers None for "nobody holds this identifier", which is the
+    ordinary case rather than an error — and the version of this that did not
+    say so crashed on the first node it tried to write.
+    """
+    if row is None:
+        return None
     if isinstance(row, Mapping):
         return row.get(key)
     return getattr(row, key)

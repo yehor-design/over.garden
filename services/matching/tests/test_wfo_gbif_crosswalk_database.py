@@ -251,27 +251,48 @@ def test_the_release_only_corroborates_an_identifier_the_node_already_carries(co
 
 
 def test_an_identifier_another_node_holds_becomes_a_decision_and_never_a_move(conn):
+    # Two nodes answer to one scientific name — a duplicate the merge queue
+    # exists for — and one of them already carries the WFO id from Wikidata.
     incumbent = seed_node(
         conn, "Solanum lycopersicum", identifier=("wfo", "wfo-0001029216")
     )
-    homonym = seed_node(conn, "Lycopersicon esculentum")
+    duplicate = seed_node(conn, "Solanum lycopersicum")
 
     receipt = crosswalk.crosswalk_world_flora_online(
-        conn,
-        rows=[
-            wfo_row("wfo-0001029216", "Solanum lycopersicum"),
-            wfo_row("wfo-0001029216", "Lycopersicon esculentum", status="synonym"),
-        ],
+        conn, rows=[wfo_row("wfo-0001029216", "Solanum lycopersicum")]
     )
 
     assert identifier_of(conn, incumbent, "wfo") == "wfo-0001029216"
-    assert identifier_of(conn, homonym, "wfo") is None
+    assert identifier_of(conn, duplicate, "wfo") is None
+    assert receipt.identifiers_corroborated == 1
     assert receipt.identifier_conflicts == 1
-    queued = open_queue_items(conn, homonym)
+    queued = open_queue_items(conn, duplicate)
     assert len(queued) == 1
     assert queued[0]["item_type"] == "source_link"
     assert queued[0]["proposal"]["held_by_catalog_item_id"] == incumbent
     assert queued[0]["reasons"] == ["wfo_identifier_conflict"]
+    # And the node that already had it keeps a clean queue.
+    assert open_queue_items(conn, incumbent) == []
+
+
+def test_one_release_row_two_nodes_of_one_name_gives_the_identifier_to_exactly_one(conn):
+    left = seed_node(conn, "Beta vulgaris")
+    right = seed_node(conn, "Beta vulgaris")
+
+    receipt = crosswalk.crosswalk_world_flora_online(
+        conn, rows=[wfo_row("wfo-0000564998", "Beta vulgaris")]
+    )
+
+    holders = [
+        node
+        for node in (left, right)
+        if identifier_of(conn, node, "wfo") == "wfo-0000564998"
+    ]
+    assert len(holders) == 1
+    other = right if holders[0] == left else left
+    assert receipt.identifiers_written == 1
+    assert receipt.identifier_conflicts == 1
+    assert len(open_queue_items(conn, other)) == 1
 
 
 def test_two_release_rows_of_equal_standing_under_one_name_are_a_homonym_not_a_match(conn):
