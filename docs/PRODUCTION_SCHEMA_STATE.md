@@ -440,6 +440,60 @@ arrays are copied from a parent as it stands, so a node attached before its
 parent gained one carried a short chain; the pass now recomputes every array
 from the roots in one recursive statement.
 
+## The 2026-09-07 application of `0060` and `0061`, the closeout
+
+Executed by the OVE-399 executor under the owner's standing authorization of
+2026-09-05 (`docs/ORGANISM_GRAPH_EXECUTION.md`, section 1) plus the owner's
+explicit decision of 2026-09-07 to delete the legacy suggestion rows, with
+`scripts/apply-reviewed-migration.ts` and the pulled production environment
+(deleted afterwards). Applied after the sealed worker release of `7b0a287` was
+deployed, because the incumbent worker still wrote the columns `0061` drops.
+
+**The read-only inventory `0061` is gated on** (host class
+`digitalocean_managed`, database `defaultdb`):
+
+```
+catalog_match_suggestions            37 rows   generated 2026-07-18 … 2026-08-13
+catalog_fuzzy_duplicate_suggestions  2,230     generated 2026-07-23 (one pass)
+plant_objects variety_state='user_added'    0
+journal_entry_topic_signals 'catalog_kind'  0
+job_queue catalog_typeahead_reindex, not terminal   0
+catalog_items                        114,669 nodes
+  distinct catalog_kind              3
+  distinct status                    2
+```
+
+2,267 rows in total, none of them a gardener's: a pair of catalog identifiers
+and a score, with no gardener text and no reference to a person. Every
+`catalog_typeahead_reindex` job ever queued is `done`, so retiring the kind
+stranded nothing. No object carried `user_added`, and no topic signal carried
+`catalog_kind`, so both narrowings moved no row.
+
+**Apply.** `0060` first, because OVE-398's pick events had never been applied:
+13 statements, 320 ms. Then `0061`: 50 statements, 5,377 ms.
+
+**After** (read-only readback):
+
+```
+catalog_items columns catalog_kind, status           0 of 2 present
+catalog_match_suggestions                            absent
+catalog_fuzzy_duplicate_suggestions                  absent
+catalog_items_owner_normalized_locale_node_uidx      present
+catalog_items_owner_normalized_locale_kind_uidx      absent
+catalog_pick_events                                  present
+job_queue_catalog_typeahead_payload_check            absent
+plant_objects_variety_state_check   selected, free_text, unknown
+journal_entry_topic_signals_source_check   explicit_tag, object_kind,
+                                           catalog_node_kind, catalog_mention,
+                                           operator_curated
+catalog_items                                        114,669 nodes, unchanged
+```
+
+**Served state, immediately after.** A species page `200`, a pest card `200`,
+a registered form's old `/variety/*` address `308`, `/eppo/LYPES` `308`, an
+unknown slug `404`, and the picker answers "томат" with the tomato species
+first. Nothing a gardener or a crawler sees changed.
+
 ## The 2026-09-07 application of `0064`, the reconciliation's missing indexes
 
 Executed by the OVE-399 executor under the owner's standing authorization of
