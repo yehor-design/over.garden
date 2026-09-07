@@ -5,6 +5,8 @@ import { Pool } from "pg";
 
 import { numberServerEnv } from "@/lib/env";
 import {
+  DATABASE_IDLE_TIMEOUT_MS,
+  DATABASE_KEEPALIVE_INITIAL_DELAY_MS,
   defaultDatabasePoolMax,
   resolveDatabaseConnection,
   resolveDatabaseSslConfig,
@@ -33,6 +35,14 @@ function createPool() {
     connectionString,
     max: numberServerEnv("DATABASE_POOL_MAX", defaultDatabasePoolMax()),
     ssl: resolveDatabaseSslConfig(process.env, resolution),
+    // The pool outlives one request; without these two it does not outlive the
+    // pause between two. See `DATABASE_IDLE_TIMEOUT_MS` for the measurement.
+    idleTimeoutMillis: numberServerEnv(
+      "DATABASE_IDLE_TIMEOUT_MS",
+      DATABASE_IDLE_TIMEOUT_MS,
+    ),
+    keepAlive: true,
+    keepAliveInitialDelayMillis: DATABASE_KEEPALIVE_INITIAL_DELAY_MS,
   });
 }
 

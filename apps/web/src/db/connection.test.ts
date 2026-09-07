@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DATABASE_IDLE_TIMEOUT_MS,
+  DATABASE_KEEPALIVE_INITIAL_DELAY_MS,
   DIRECT_SERVERLESS_DATABASE_POOL_MAX,
   LOCAL_DATABASE_POOL_MAX,
   POOLED_DATABASE_POOL_MAX,
@@ -222,5 +224,28 @@ describe("database connection resolution", () => {
         resolution,
       ),
     ).toBe("postgresql://app:secret@db.example.test:25060/app");
+  });
+});
+
+describe("holding a pooled connection between requests", () => {
+  it("keeps an idle connection far longer than pg's ten seconds", () => {
+    // A gardener types into the picker every few minutes. At pg's default a
+    // connection is closed after every one of those gaps, and the next
+    // keystroke pays a fresh TCP and TLS handshake inside the request:
+    // measured against production, 433 ms of database time against the 26 ms
+    // the statement itself costs.
+    expect(DATABASE_IDLE_TIMEOUT_MS).toBeGreaterThan(60_000);
+    // And not so long that an instance about to be discarded sits on a slot
+    // the pooler counts against its limit.
+    expect(DATABASE_IDLE_TIMEOUT_MS).toBeLessThanOrEqual(600_000);
+  });
+
+  it("keeps the socket alive well inside that window", () => {
+    // Holding a connection for minutes only helps if something keeps the path
+    // open; a pooler or a NAT drops a silent socket long before the timeout.
+    expect(DATABASE_KEEPALIVE_INITIAL_DELAY_MS).toBeGreaterThan(0);
+    expect(DATABASE_KEEPALIVE_INITIAL_DELAY_MS).toBeLessThan(
+      DATABASE_IDLE_TIMEOUT_MS,
+    );
   });
 });
