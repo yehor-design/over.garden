@@ -26,7 +26,6 @@ import {
   uaStateRegisterSnapshotChecksum,
 } from "@/lib/catalog/ua-state-register-variety";
 import {
-  buildEnqueueUaStateRegisterTypeaheadReindexJobQuery,
   buildInsertUaStateRegisterSourceLinkQuery,
   buildUaStateRegisterSourceProvenanceProofQuery,
   buildUaStateRegisterTypeaheadProofQuery,
@@ -275,10 +274,8 @@ describe("UA State Register official variety import", () => {
       "Prunus armeniaca L. Botsadivs`kyi",
     ]);
     expect(item.sql).toContain('on conflict ("source", "source_id") do update');
-    expect(item.sql).toContain('"catalog_kind"');
     expect(item.parameters).toContain("Ботсадівський");
     expect(item.parameters).toContain("ua_state_register");
-    expect(item.parameters).toContain("plant_variety");
     expect(JSON.stringify(item.parameters)).not.toContain("varietyDescription");
     expect(alias.parameters).toEqual([
       catalogItemId,
@@ -321,8 +318,7 @@ describe("UA State Register official variety import", () => {
     expect(compiled.sql).not.toContain("catalog_source_records");
     expect(compiled.sql).not.toContain('"raw_payload"');
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "ua_state_register",
       "%ботсадівський%",
       8,
@@ -336,8 +332,7 @@ describe("UA State Register official variety import", () => {
     ).compile();
 
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "ua_state_register",
       "%botsadivs`kyi%",
       8,
@@ -368,16 +363,4 @@ describe("UA State Register official variety import", () => {
     ]);
   });
 
-  it("queues a derived typeahead reindex after import", () => {
-    const compiled =
-      buildEnqueueUaStateRegisterTypeaheadReindexJobQuery(testDb).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.parameters).toEqual([
-      "matching",
-      { kind: "catalog_typeahead_reindex" },
-      "catalog-typeahead-reindex",
-      expect.any(Date),
-    ]);
-  });
 });

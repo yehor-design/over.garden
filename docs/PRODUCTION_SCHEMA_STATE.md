@@ -440,6 +440,50 @@ arrays are copied from a parent as it stands, so a node attached before its
 parent gained one carried a short chain; the pass now recomputes every array
 from the roots in one recursive statement.
 
+## The 2026-09-07 application of `0064`, the reconciliation's missing indexes
+
+Executed by the OVE-399 executor under the owner's standing authorization of
+2026-09-05 (`docs/ORGANISM_GRAPH_EXECUTION.md`, section 1), from the PR branch
+before the merge, with `scripts/apply-reviewed-migration.ts` and the pulled
+production environment (deleted afterwards). Applied **while the second EPPO
+reconciliation was running**, because it is what let that job finish.
+
+**Why.** The reconciliation deletes an assertion nothing points at, asking with
+five `not exists` subqueries — one per table that can reference an assertion —
+once per source record. Three of those columns had no index at all, and the two
+that appear inside a composite unique index carry `assertion_id` as the *last*
+key, which a probe by `assertion_id` alone cannot use. The plan production ran:
+
+```
+Seq Scan on catalog_item_identifiers  (cost=0.00..4608.16)
+Seq Scan on catalog_item_names        (cost=0.00..8137.33)
+Index Scan using catalog_item_facts_uidx      (cost=0.29..292.69)
+Index Scan using catalog_item_relations_uidx  (cost=0.29..258.41)
+Seq Scan on catalog_source_links      (cost=0.00..4433.07)
+```
+
+About 470,000 rows read to delete one row, on a one-vCPU managed database, for
+every one of 258,433 EPPO source records. Measured rate before the fix:
+**roughly thirty-five assertions a minute**, with the database at full load —
+which is also why the public picker was answering `503` under its own 400 ms
+deadline while the job ran (20 of 50 sampled queries, P95 454 ms of server
+time).
+
+**Before** (`--mode inventory`, host class `digitalocean_managed`, database
+`defaultdb`): `0056`, `0057` and `0063` applied, `0058` and `0062`
+`no_sentinel`, `0060` and `0061` missing, `0064` missing (absent: all five
+indexes).
+
+**Apply** (`--mode apply --migration 0064`): 10 statements, 8,585 ms — five
+`create index` and five `analyze`, because a fresh index is invisible to the
+planner's estimates until the table is analyzed and this migration exists to
+change a plan.
+
+**After.** The same delete plans as six index scans, `cost=2.25..17.47`, and
+the measured rate went to **about 4,350 assertions a minute** — the job moved
+from days to minutes. Rollback drops the five indexes; nothing depends on them
+for correctness, so reverting is only slow.
+
 ## The 2026-09-06 application of `0063`
 
 Executed by the OVE-391 executor under the owner's standing authorization of

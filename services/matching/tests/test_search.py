@@ -1,5 +1,4 @@
 import json
-import re
 from datetime import date, datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -305,63 +304,3 @@ def test_journal_entry_document_indexes_space_entry_with_bounded_scope():
     assert "spaceId" not in document
 
 
-def test_catalog_typeahead_document_uses_meili_safe_id_for_cyrillic_alias():
-    document = search.catalog_typeahead_document_from_row(
-        {
-            "catalog_item_id": "00000000-0000-4000-8000-000000000101",
-            "canonical_name": "Помідор чері",
-            "catalog_kind": "plant_variety",
-            "status": "seeded",
-            "source": "internal_seed",
-            "created_by_user_id": None,
-            "item_locale": "uk",
-            "display_name": "Помідор чері",
-            "alias_normalized_name": "помідор чері",
-            "alias_locale": "uk",
-            "is_primary": True,
-        }
-    )
-
-    assert document is not None
-    assert document["catalogItemId"] == "00000000-0000-4000-8000-000000000101"
-    assert document["displayName"] == "Помідор чері"
-    assert document["catalogKind"] == "plant_variety"
-    assert document["normalizedName"] == "помідор чері"
-    assert re.fullmatch(r"[A-Za-z0-9_-]+", str(document["id"]))
-
-
-def test_catalog_typeahead_document_carries_exactly_the_selectable_shape():
-    document = search.catalog_typeahead_document_from_row(
-        {
-            "catalog_item_id": "00000000-0000-4000-8000-000000257010",
-            "canonical_name": "Sadovo 1",
-            "catalog_kind": "plant_variety",
-            "status": "seeded",
-            "source": "internal_seed",
-            "created_by_user_id": None,
-            "item_locale": "bg",
-            "display_name": "Sadovo 1",
-            "alias_normalized_name": "sadovo 1",
-            "alias_locale": "bg",
-            "is_primary": True,
-        }
-    )
-
-    assert document is not None
-    # The producer and the web parser describe one document. A field that only
-    # one of them knows about is drift, so the key set is pinned exactly.
-    assert set(document) == {
-        "id",
-        "catalogItemId",
-        "displayName",
-        "canonicalName",
-        "catalogKind",
-        "normalizedName",
-        "locale",
-        "itemLocale",
-        "status",
-        "source",
-        "isPrimary",
-        "rank",
-        "kind",
-    }

@@ -122,7 +122,7 @@ function ownerPage({
       display_name: "Тестовий об'єкт",
       object_kind: objectKind,
       catalog_item_id: null,
-      catalog_kind: objectKind === "plant" ? "species" : "breed",
+      catalogKind: objectKind === "plant" ? "species" : "breed",
       catalog_canonical_name: null,
       catalog_public_slug: null,
       catalog_species_slug: null,

@@ -35,6 +35,7 @@ import {
 } from "@/server/identity-policy";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { RequestScope } from "@/server/request-scope";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -1073,14 +1074,14 @@ export function buildPublicProfileObjectEvidenceQuery(
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
         .on("catalog_items.created_by_user_id", "is", null)
-        .on("catalog_items.status", "in", ["seeded", "confirmed"]),
+        .on("catalog_items.identity_state", "=", "active"),
     )
     .select([
       "plant_objects.id as objectId",
       "plant_objects.display_name as displayName",
       "plant_objects.object_kind as objectKind",
       "catalog_items.canonical_name as catalogCanonicalName",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       sql<Date | string>`max(${sql.ref("journal_entries.entry_date")})`.as(
@@ -1096,7 +1097,7 @@ export function buildPublicProfileObjectEvidenceQuery(
       "plant_objects.display_name",
       "plant_objects.object_kind",
       "catalog_items.canonical_name",
-      "catalog_items.catalog_kind",
+      catalogKindSql("catalog_items"),
       "plant_objects.variety_text",
       "plant_objects.variety_state",
     ])

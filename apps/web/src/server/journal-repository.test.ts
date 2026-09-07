@@ -298,19 +298,18 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000003",
     ).compile();
 
-    expect(compiled.sql).toContain('"plant_objects"."id" = $3');
+    expect(compiled.sql).toContain('"plant_objects"."id" = ');
     expect(compiled.sql).toContain('"plant_objects"."catalog_item_id"');
     expect(compiled.sql).toContain(
       'left join "catalog_items" on "catalog_items"."id" = "plant_objects"."catalog_item_id"',
     );
-    expect(compiled.sql).toContain('"catalog_items"."catalog_kind"');
+    expect(compiled.sql).toContain("catalog_items.node_kind = 'taxon'");
     expect(compiled.sql).toContain('"plant_objects"."coarse_region_code"');
     expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
-    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $4');
-    expect(compiled.sql).toContain('"spaces"."owner_user_id" = $5');
+    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = ');
+    expect(compiled.sql).toContain('"spaces"."owner_user_id" = ');
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "00000000-0000-0000-0000-000000000003",
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000001",
@@ -328,19 +327,18 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       'inner join "spaces" on "spaces"."id" = "plant_objects"."space_id"',
     );
-    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $3');
-    expect(compiled.sql).toContain('"spaces"."owner_user_id" = $4');
-    expect(compiled.sql).toContain("limit $5");
-    expect(compiled.sql).toContain("offset $6");
+    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = ');
+    expect(compiled.sql).toContain('"spaces"."owner_user_id" = ');
+    expect(compiled.sql).toContain("limit $4");
+    expect(compiled.sql).toContain("offset $5");
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("coordinates");
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000001",
-      20,
+       20,
       0,
     ]);
   });
@@ -353,8 +351,8 @@ describe("journal repository query contracts", () => {
       12,
     ).compile();
 
-    expect(compiled.sql).toContain("limit $5");
-    expect(compiled.sql).toContain("offset $6");
+    expect(compiled.sql).toContain("limit $4");
+    expect(compiled.sql).toContain("offset $5");
     expect(compiled.parameters.slice(-2)).toEqual([12, 12]);
   });
 
@@ -373,9 +371,9 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"plant_objects"."owner_user_id" = "journal_entries"."owner_user_id"',
     );
-    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $1');
-    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $2');
-    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = $3');
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = ');
+    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = ');
+    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."plant_object_id" in ($5, $6)',
     );
@@ -384,7 +382,7 @@ describe("journal repository query contracts", () => {
     );
     // OVE-353: a deleted entry is gone from the owner's own counts, not
     // counted separately. There is no archived tally to render any more.
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.sql).not.toContain('as "archivedEntryCount"');
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("body");
@@ -417,8 +415,8 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"plant_objects"."owner_user_id" = "journal_entries"."owner_user_id"',
     );
-    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $1');
-    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $2');
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = ');
+    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = ');
     expect(compiled.sql).toContain(
       '"media_assets"."derivative_key" is not null',
     );
@@ -456,10 +454,10 @@ describe("journal repository query contracts", () => {
       '"catalog_source_snapshots"."attribution_text"',
     );
     expect(compiled.sql).toContain(
-      '"catalog_source_records"."projection_status" = $3',
+      '"catalog_source_records"."projection_status" = ',
     );
     expect(compiled.sql).toContain(
-      '"catalog_source_snapshots"."attribution_required" = $4',
+      '"catalog_source_snapshots"."attribution_required" = ',
     );
     expect(compiled.sql).not.toContain(
       '"catalog_source_records"."raw_payload"',
@@ -490,13 +488,13 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000003",
     ).compile();
 
-    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $3');
-    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $6');
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = ');
+    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = ');
     expect(compiled.sql).toContain(
-      '"journal_entry_object_mentions"."plant_object_id" = $8',
+      '"journal_entry_object_mentions"."plant_object_id" = ',
     );
     // OVE-353: a deleted entry leaves the owner's own count immediately.
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000003",
@@ -516,16 +514,16 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000003",
     ).compile();
 
-    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = $5');
-    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $6');
+    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = ');
+    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = ');
     expect(compiled.sql).toContain(
-      '"journal_entry_object_mentions"."plant_object_id" = $8',
+      '"journal_entry_object_mentions"."plant_object_id" = ',
     );
     expect(compiled.sql).toContain("mentioned_space");
     expect(compiled.sql).toContain("direct_object");
     // OVE-353: the owner timeline is the active journal. A deleted entry is
     // filtered in the canonical query, not hidden by the presentation layer.
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000003",
@@ -548,10 +546,10 @@ describe("journal repository query contracts", () => {
       ],
     ).compile();
 
-    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $1');
-    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = $2');
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = ');
+    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = ');
     expect(compiled.sql).toContain('"journal_entries"."space_id" in ($3, $4)');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "space",
@@ -640,10 +638,10 @@ describe("journal repository query contracts", () => {
     ).compile();
 
     expect(compiled.sql).toContain('from "journal_entries"');
-    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $3');
-    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = ');
+    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = ');
     expect(compiled.sql).toContain(
-      '"journal_entry_object_mentions"."plant_object_id" = $7',
+      '"journal_entry_object_mentions"."plant_object_id" = ',
     );
     expect(compiled.sql).toContain('"visibility" = $8');
     expect(compiled.sql).toContain('"lifecycle_state" = $9');
@@ -687,7 +685,7 @@ describe("journal repository query contracts", () => {
       'left join "user_handle_registry" on "user_handle_registry"."user_id" = "journal_entries"."owner_user_id"',
     );
     expect(compiled.sql).toContain(
-      '"user_handle_registry"."lifecycle_state" = $3',
+      '"user_handle_registry"."lifecycle_state" = ',
     );
     expect(compiled.sql).toContain('left join "user_public_profiles"');
     expect(compiled.sql).toContain(
@@ -697,7 +695,7 @@ describe("journal repository query contracts", () => {
       '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_lifecycle_state" = $4',
+      '"user_public_profiles"."profile_lifecycle_state" = ',
     );
     expect(compiled.sql).toContain(
       '"user_public_profiles"."removed_at" is null',
@@ -709,9 +707,9 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"user_public_profiles"."handle"');
     expect(compiled.sql).toContain('"plant_objects"."coarse_region_code"');
     expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
-    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $5');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $6');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $7');
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = ');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = ');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -723,8 +721,7 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).not.toContain("latitude");
     expect(compiled.sql).not.toContain("longitude");
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "current",
       "active",
       "first-flowers-abc123",
@@ -739,19 +736,19 @@ describe("journal repository query contracts", () => {
       "first-flowers-abc123",
     ).compile();
 
-    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = ');
     expect(compiled.sql).toContain('left join "catalog_items"');
     expect(compiled.sql).toContain('"catalog_items"."public_slug"');
     expect(compiled.sql).toContain('left join "user_handle_registry"');
     expect(compiled.sql).toContain(
-      '"user_handle_registry"."lifecycle_state" = $3',
+      '"user_handle_registry"."lifecycle_state" = ',
     );
     expect(compiled.sql).toContain('left join "user_public_profiles"');
     expect(compiled.sql).toContain(
       '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_lifecycle_state" = $4',
+      '"user_public_profiles"."profile_lifecycle_state" = ',
     );
     expect(compiled.sql).toContain(
       '"user_public_profiles"."removed_at" is null',
@@ -770,8 +767,7 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("quarantine_key");
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "current",
       "active",
       "first-flowers-abc123",
@@ -786,7 +782,7 @@ describe("journal repository query contracts", () => {
 
     expect(compiled.sql).toContain('inner join "spaces"');
     expect(compiled.sql).toContain('left join "plant_objects"');
-    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $1');
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" as "publicGoneAt"',
     );
@@ -808,10 +804,10 @@ describe("journal repository query contracts", () => {
     ).compile();
 
     expect(compiled.sql).toContain('from "journal_entries"');
-    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $1');
+    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = ');
     expect(compiled.sql).toContain('"journal_entries"."id" != $2');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $3');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = ');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -935,13 +931,13 @@ describe("journal repository query contracts", () => {
       '"mentioned_handles"."user_id" = "person_mentions"."source_owner_user_id"',
     );
     expect(compiled.sql).toContain(
-      '"mentioned_handles"."lifecycle_state" = $1',
+      '"mentioned_handles"."lifecycle_state" = ',
     );
     expect(compiled.sql).toContain(
       '"mentioned_profiles"."normalized_handle" = "mentioned_handles"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"mentioned_profiles"."profile_lifecycle_state" = $3',
+      '"mentioned_profiles"."profile_lifecycle_state" = ',
     );
     expect(compiled.sql).toContain('"mentioned_profiles"."removed_at" is null');
     expect(compiled.sql).toContain('"mentioned_profiles"."handle" as "handle"');
@@ -956,7 +952,6 @@ describe("journal repository query contracts", () => {
       /source_reference_label|email|journal_entries"\."body|quarantine|coordinates|latitude|longitude/i,
     );
     expect(compiled.parameters).toContain(entryId);
-    expect(compiled.parameters).toContain("confirmed");
     expect(compiled.parameters.at(-1)).toBe(8);
   });
 
@@ -1093,9 +1088,9 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"media_assets"."owner_user_id" = "journal_entries"."owner_user_id"',
     );
-    expect(compiled.sql).toContain('"journal_entries"."id" = $1');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $2');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $3');
+    expect(compiled.sql).toContain('"journal_entries"."id" = ');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = ');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );

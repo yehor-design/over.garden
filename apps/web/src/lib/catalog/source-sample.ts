@@ -67,7 +67,6 @@ export const CATALOG_SOURCE_SAMPLE = {
     canonicalName: "Bergeron 1",
     normalizedName: "bergeron 1",
     publicSlug: "bergeron-1-ua-register-24256002",
-    status: "seeded",
     source: "ua_state_register",
     sourceId: "ua-state-register:2025-07-15:RegisterVarietis:24256002",
     locale: "uk",
@@ -98,7 +97,6 @@ export interface CatalogSourceSampleProjection {
   canonicalName: string;
   normalizedName: string;
   publicSlug: string;
-  status: "seeded";
   source: string;
   sourceId: string;
   locale: string;

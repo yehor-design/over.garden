@@ -14,8 +14,13 @@ Every live public page is indexable. A page is `noindex` only when it is:
 - served under a locale prefix that its canonical path does not carry;
 - an organism card without first-hand content (ADR-0026 D9): a species,
   cultivar or breed page whose content comes only from sources stays `noindex`
-  until a gardener publishes on it or the owner marks it indexable. Slice 24
-  implements this rule; until then organism pages follow the rules above.
+  until a gardener publishes on it or the owner marks it indexable
+  (`catalog_items.first_hand_content_at`, `indexable_override`). Live since
+  Slice 24. A `noindex` organism page also carries no JSON-LD and no
+  `lastmod` line in the catalog sitemap — the graph and the sitemap are built
+  from the same decision, so there is no second rule to keep in step. This is
+  what keeps 101,619 source-built organism pages out of the index without a
+  word count or a quality class.
 
 There is no word count, entity count, staleness, or quality-class threshold,
 no metadata deadline, no `public_noindex` column, and no private profile.

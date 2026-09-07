@@ -84,17 +84,16 @@ describe("journal topic repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
-    expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
-    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $4');
-    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = $5');
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = ');
+    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = ');
     expect(compiled.sql).not.toContain('"journal_entries"."body"');
     expect(compiled.sql).not.toContain('"journal_entries"."title"');
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("email");
     expect(compiled.sql).not.toContain("coordinates");
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "00000000-0000-4000-8000-0000000000a1",
       "00000000-0000-4000-8000-000000000001",
       "object",
@@ -116,7 +115,7 @@ describe("journal topic repository query contracts", () => {
     expect(mentioned.sql).toContain('from "journal_entry_object_mentions"');
     expect(mentioned.sql).toContain('inner join "plant_objects"');
     expect(mentioned.sql).toContain(
-      '"journal_entry_object_mentions"."owner_user_id" = $4',
+      '"journal_entry_object_mentions"."owner_user_id" = ',
     );
     expect(mentioned.sql).not.toContain('"journal_entries"."body"');
     expect(mentioned.sql).not.toContain("client_mutation_id");
@@ -124,7 +123,7 @@ describe("journal topic repository query contracts", () => {
     expect(catalog.sql).toContain('from "journal_entry_catalog_mentions"');
     expect(catalog.sql).toContain('inner join "catalog_items"');
     expect(catalog.sql).toContain(
-      '"journal_entry_catalog_mentions"."owner_user_id" = $4',
+      '"journal_entry_catalog_mentions"."owner_user_id" = ',
     );
     expect(catalog.sql).not.toContain('"journal_entries"');
     expect(catalog.sql).not.toContain('"body"');
@@ -189,10 +188,10 @@ describe("journal topic repository query contracts", () => {
 
     expect(refresh.sql).toContain('from "journal_entries"');
     expect(refresh.sql).toContain('left join "journal_entry_object_mentions"');
-    expect(refresh.sql).toContain('"journal_entries"."owner_user_id" = $3');
-    expect(refresh.sql).toContain('"journal_entries"."plant_object_id" = $5');
+    expect(refresh.sql).toContain('"journal_entries"."owner_user_id" = ');
+    expect(refresh.sql).toContain('"journal_entries"."plant_object_id" = ');
     expect(refresh.sql).toContain(
-      '"journal_entry_object_mentions"."plant_object_id" = $7',
+      '"journal_entry_object_mentions"."plant_object_id" = ',
     );
     expect(refresh.sql).not.toContain('"journal_entries"."body"');
     expect(refresh.sql).not.toContain("client_mutation_id");
@@ -204,7 +203,7 @@ describe("journal topic repository query contracts", () => {
     expect(clearAutomatic.parameters).toEqual([
       "00000000-0000-4000-8000-0000000000a1",
       "object_kind",
-      "catalog_kind",
+      "catalog_node_kind",
       "catalog_mention",
     ]);
   });

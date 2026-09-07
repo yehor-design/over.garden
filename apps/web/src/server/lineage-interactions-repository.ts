@@ -24,6 +24,7 @@ import {
   utcDayWindow,
 } from "@/server/interaction-admission";
 import type { RequestScope } from "@/server/request-scope";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -518,7 +519,7 @@ export function buildLineageQuestionInboxQuery(
       "target_objects.id as targetObjectId",
       "target_objects.display_name as targetObjectDisplayName",
       "target_objects.object_kind as targetObjectKind",
-      "target_catalog_items.catalog_kind as targetCatalogKind",
+      catalogKindSql("target_catalog_items").as("targetCatalogKind"),
       "target_objects.variety_text as targetVarietyText",
       "target_objects.variety_state as targetVarietyState",
     ])
@@ -575,7 +576,7 @@ export function buildLineageFollowReadbackQuery(
       "target_objects.id as targetObjectId",
       "target_objects.display_name as targetObjectDisplayName",
       "target_objects.object_kind as targetObjectKind",
-      "target_catalog_items.catalog_kind as targetCatalogKind",
+      catalogKindSql("target_catalog_items").as("targetCatalogKind"),
       "target_objects.variety_text as targetVarietyText",
       "target_objects.variety_state as targetVarietyState",
     ])
@@ -587,7 +588,7 @@ export function buildLineageFollowReadbackQuery(
       "target_objects.id",
       "target_objects.display_name",
       "target_objects.object_kind",
-      "target_catalog_items.catalog_kind",
+      catalogKindSql("target_catalog_items"),
       "target_objects.variety_text",
       "target_objects.variety_state",
     ])

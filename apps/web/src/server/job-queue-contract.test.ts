@@ -67,14 +67,6 @@ const consumedJobContracts = new Map<
     },
   ],
   [
-    "matching:catalog_typeahead_reindex",
-    {
-      consumer: "services/matching/app/worker.py",
-      consumerToken: "CATALOG_TYPEAHEAD_REINDEX_KIND",
-      testedBy: "services/matching/tests/test_worker.py",
-    },
-  ],
-  [
     "matching:journal_entry_index",
     {
       consumer: "services/matching/app/worker.py",
@@ -147,52 +139,6 @@ describe("job queue producer/consumer contract", () => {
         source: "server/catalog-curation-repository.ts",
         queueName: "matching",
         kind: "catalog_threshold_recalibrate",
-      },
-      {
-        source: "server/catalog-repository.ts",
-        queueName: "matching",
-        kind: "catalog_typeahead_reindex",
-      },
-      {
-        source: "server/catalog-source/bg-official-variety-import.ts",
-        queueName: "matching",
-        kind: "catalog_typeahead_reindex",
-      },
-      {
-        source: "server/catalog-source/breed-seed-import.ts",
-        queueName: "matching",
-        kind: "catalog_typeahead_reindex",
-      },
-      {
-        source:
-          "server/catalog-source/eu-official-journal-common-catalogue-import.ts",
-        queueName: "matching",
-        kind: "catalog_typeahead_reindex",
-      },
-      {
-        source: "server/catalog-source/genebank-long-tail-import.ts",
-        queueName: "matching",
-        kind: "catalog_typeahead_reindex",
-      },
-      {
-        source: "server/catalog-source/sample-import.ts",
-        queueName: "matching",
-        kind: "catalog_typeahead_reindex",
-      },
-      {
-        source: "server/catalog-source/sample-refresh.ts",
-        queueName: "matching",
-        kind: "catalog_typeahead_reindex",
-      },
-      {
-        source: "server/catalog-source/species-backbone-import.ts",
-        queueName: "matching",
-        kind: "catalog_typeahead_reindex",
-      },
-      {
-        source: "server/catalog-source/ua-state-register-import.ts",
-        queueName: "matching",
-        kind: "catalog_typeahead_reindex",
       },
       {
         source: "server/erasure-execution.ts",

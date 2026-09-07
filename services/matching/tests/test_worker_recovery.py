@@ -371,7 +371,7 @@ def clock() -> dict[str, datetime]:
 
 def test_claim_reclaims_only_stale_processing_jobs(clock):
     conn = FakeQueueConnection(clock)
-    pending_due = conn.enqueue({"kind": "catalog_typeahead_reindex"})
+    pending_due = conn.enqueue({"kind": "catalog_threshold_recalibrate"})
 
     # A fresh worker claims the due pending job and locks it.
     claimed = worker._claim(conn)
@@ -473,7 +473,7 @@ def test_catalog_refresh_during_processing_is_requeued_and_old_claim_cannot_fini
 
 def test_pending_job_not_claimed_before_available_at(clock):
     conn = FakeQueueConnection(clock)
-    job_id = conn.enqueue({"kind": "catalog_typeahead_reindex"})
+    job_id = conn.enqueue({"kind": "catalog_threshold_recalibrate"})
     conn.job(job_id)["available_at"] = conn.now + timedelta(seconds=30)
 
     assert worker._claim(conn) is None

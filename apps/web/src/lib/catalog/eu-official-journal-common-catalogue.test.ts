@@ -89,7 +89,6 @@ describe("EU Official Journal Common Catalogue projection model", () => {
     expect(projected.projection).toMatchObject({
       canonicalName: "Cincinnati",
       normalizedName: "cincinnati",
-      status: "seeded",
       source: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
       sourceId: projected.id,
       catalogKind: "plant_variety",

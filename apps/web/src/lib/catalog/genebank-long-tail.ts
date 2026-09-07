@@ -359,7 +359,6 @@ export interface GenebankLongTailProjection {
   canonicalName: string;
   normalizedName: string;
   publicSlug: string;
-  status: "seeded";
   source: "grin_genebank_candidate";
   sourceId: string;
   catalogKind: "plant_variety";
@@ -511,7 +510,6 @@ function buildGenebankLongTailProjection(
     canonicalName: row.canonicalName,
     normalizedName: normalizeName(row.canonicalName),
     publicSlug: buildGenebankPublicSlug(row),
-    status: "seeded",
     source: "grin_genebank_candidate",
     sourceId: row.id,
     catalogKind: "plant_variety",

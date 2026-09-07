@@ -13,7 +13,6 @@
     "catalog_reconcile",
     "catalog_source_refresh",
     "catalog_threshold_recalibrate",
-    "catalog_typeahead_reindex",
     "journal_entry_index",
     "journal_entry_unindex"
   ],
@@ -93,23 +92,6 @@
       },
       "payloadConstraint": "job_queue_catalog_threshold_recalibrate_payload_check",
       "notes": "Kind-only: recalibrates the per-rule auto-accept thresholds from revert rates."
-    },
-    {
-      "queueName": "matching",
-      "kind": "catalog_typeahead_reindex",
-      "consumer": "matching-python-worker",
-      "maxAttempts": 8,
-      "privacyClass": "empty_payload",
-      "coversStructuredJournalCover": false,
-      "payloadContract": {
-        "requiredKeys": [
-          "kind"
-        ],
-        "optionalKeys": [],
-        "uuidKeys": []
-      },
-      "payloadConstraint": "job_queue_catalog_typeahead_payload_check",
-      "notes": "Kind-only typeahead rebuild."
     },
     {
       "queueName": "matching",

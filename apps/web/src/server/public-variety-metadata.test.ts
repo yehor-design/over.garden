@@ -202,7 +202,6 @@ function buildPage({ rich }: { rich: boolean }): PublicVarietyPage {
       permalinkPath: "/id/00000000-0000-4000-8000-000000000101",
       contentUpdatedAt: new Date("2026-08-23T00:00:00.000Z"),
       identifiers: [],
-      status: "seeded" as const,
       source: "internal_seed",
       locale: "uk",
     },

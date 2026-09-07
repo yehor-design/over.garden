@@ -210,9 +210,9 @@ async function seedItems(pool: Pool, count: number) {
   for (let index = 0; index < count; index += 1) {
     const id = randomUUID();
     await pool.query(
-      `insert into catalog_items (id, canonical_name, catalog_kind, normalized_name, public_slug, status, source,
+      `insert into catalog_items (id, canonical_name, normalized_name, public_slug, source,
          source_id, locale, node_kind, kingdom, identity_state)
-       values ($1, $2, 'species', catalog_normalize_name($2), $3, 'seeded', 'species_backbone', $4, 'la', 'taxon', 'Plantae', 'active')`,
+       values ($1, $2, catalog_normalize_name($2), $3, 'species_backbone', $4, 'la', 'taxon', 'Plantae', 'active')`,
       [id, `Ove389 proof ${id.slice(0, 8)}`, `ove389-proof-${id.slice(0, 8)}`, `species_backbone:ove389:${id}`],
     );
     ids.push(id);

@@ -60,9 +60,9 @@ export function buildOwnerObjectPassportPresentation(
   const oldestEntry = timelineEntries.at(-1) ?? null;
   const locationLabel = ownerLocationLabel(page, locale);
   const catalogPath =
-    object.catalog_public_slug && object.catalog_kind
+    object.catalog_public_slug && object.catalogKind
       ? publicCatalogEvidencePath({
-          catalogKind: object.catalog_kind,
+          catalogKind: object.catalogKind,
           publicSlug: object.catalog_public_slug,
           speciesSlug: object.catalog_species_slug,
         })
@@ -116,7 +116,7 @@ export function buildOwnerObjectPassportPresentation(
         object.variety_state,
         Boolean(object.catalog_item_id),
       ),
-      catalogKind: object.catalog_kind,
+      catalogKind: object.catalogKind,
       catalogPath,
     },
     caretaker: {

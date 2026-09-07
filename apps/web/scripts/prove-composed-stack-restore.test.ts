@@ -34,7 +34,7 @@ const SAFE_RECEIPT: StackRestoreProofReceipt = {
   productReadBackPassed: true,
   localesServed: ["uk", "bg", "ru"],
   restoredIdentityCount: 4,
-  indexRebuildRowCount: 12,
+  offerableNameCount: 12,
   unsafeRowsExcluded: 4,
   disposableTargetsRemaining: 0,
   liveSourceUnchanged: true,

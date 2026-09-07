@@ -55,7 +55,14 @@ alter table matching_worker_heartbeats
       ]::text[]
     );
 
-alter table catalog_match_suggestions
-  drop constraint if exists catalog_match_suggestions_source_matching_fingerprint_check,
-  drop constraint if exists catalog_match_suggestions_target_matching_fingerprint_check,
-  drop constraint if exists catalog_match_suggestions_decision_affected_object_count_check;
+-- Keep bootstrap repeatable: migration 0061 (OVE-399) drops the table these
+-- constraints belong to, and a replay reaches this line with it already gone.
+do $$
+begin
+  if to_regclass('catalog_match_suggestions') is not null then
+    alter table catalog_match_suggestions
+      drop constraint if exists catalog_match_suggestions_source_matching_fingerprint_check,
+      drop constraint if exists catalog_match_suggestions_target_matching_fingerprint_check,
+      drop constraint if exists catalog_match_suggestions_decision_affected_object_count_check;
+  end if;
+end $$;

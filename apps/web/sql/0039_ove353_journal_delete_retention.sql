@@ -73,22 +73,48 @@ create index if not exists journal_entries_due_purge_idx
 alter table public_projection_intents
   drop constraint if exists public_projection_intents_reason_check;
 
-alter table public_projection_intents
-  add constraint public_projection_intents_reason_check
-  check (
-    desired_reason in (
-      'publish',
-      'edit',
-      'journal_delete',
-      'archive',
-      'erasure',
-      'moderation',
-      'location_change',
-      'catalog_identity',
-      'media_presentation',
-      'profile_visibility',
-      'repair'
+-- Keep bootstrap repeatable: later migrations widen this vocabulary (0054
+-- adds `journal_delete` and `catalog_card`), and a replay reaches this line
+-- with rows already carrying the wider values. Re-narrowing it would refuse
+-- rows the current schema accepts, so the older vocabulary is restored only
+-- while nothing has moved past it; the widening migration runs again later in
+-- the same replay.
+do $$
+begin
+  if not exists (
+    select 1 from public_projection_intents
+    where desired_reason not in (
+          'publish',
+          'edit',
+          'journal_delete',
+          'archive',
+          'erasure',
+          'moderation',
+          'location_change',
+          'catalog_identity',
+          'media_presentation',
+          'profile_visibility',
+          'repair'
     )
-  );
+  ) then
+    alter table public_projection_intents
+      add constraint public_projection_intents_reason_check
+      check (
+        desired_reason in (
+          'publish',
+          'edit',
+          'journal_delete',
+          'archive',
+          'erasure',
+          'moderation',
+          'location_change',
+          'catalog_identity',
+          'media_presentation',
+          'profile_visibility',
+          'repair'
+        )
+      );
+  end if;
+end $$;
 
 commit;

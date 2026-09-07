@@ -16,12 +16,13 @@ import type {
 } from "@/db/schema";
 import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
 import type { RequestScope } from "@/server/request-scope";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 const AUTOMATIC_TOPIC_SIGNAL_SOURCES = [
   "object_kind",
-  "catalog_kind",
+  "catalog_node_kind",
   "catalog_mention",
 ] as const satisfies readonly JournalEntryTopicSignalSource[];
 
@@ -164,11 +165,11 @@ export function buildDirectObjectTopicContextQuery(
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
         .on("catalog_items.created_by_user_id", "is", null)
-        .on("catalog_items.status", "in", ["seeded", "confirmed"]),
+        .on("catalog_items.identity_state", "=", "active"),
     )
     .select([
       "plant_objects.object_kind as objectKind",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
     ])
     .where("journal_entries.id", "=", journalEntryId)
     .where("journal_entries.owner_user_id", "=", scope.userId)
@@ -204,11 +205,11 @@ export function buildMentionedObjectTopicContextQuery(
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
         .on("catalog_items.created_by_user_id", "is", null)
-        .on("catalog_items.status", "in", ["seeded", "confirmed"]),
+        .on("catalog_items.identity_state", "=", "active"),
     )
     .select([
       "plant_objects.object_kind as objectKind",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
     ])
     .where("journal_entry_object_mentions.journal_entry_id", "=", journalEntryId)
     .where("journal_entry_object_mentions.owner_user_id", "=", scope.userId);
@@ -229,9 +230,9 @@ export function buildCatalogMentionTopicContextQuery(
           "journal_entry_catalog_mentions.catalog_item_id",
         )
         .on("catalog_items.created_by_user_id", "is", null)
-        .on("catalog_items.status", "in", ["seeded", "confirmed"]),
+        .on("catalog_items.identity_state", "=", "active"),
     )
-    .select("catalog_items.catalog_kind as catalogKind")
+    .select(catalogKindSql("catalog_items").as("catalogKind"))
     .where("journal_entry_catalog_mentions.journal_entry_id", "=", journalEntryId)
     .where("journal_entry_catalog_mentions.owner_user_id", "=", scope.userId);
 }
@@ -399,7 +400,7 @@ async function buildTopicSignalCandidates(
 
     const catalogTopic = topicDefinitionForCatalogKind(row.catalogKind);
     if (catalogTopic) {
-      candidates.push({ topic: catalogTopic, source: "catalog_kind" });
+      candidates.push({ topic: catalogTopic, source: "catalog_node_kind" });
     }
   }
 

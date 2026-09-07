@@ -13,6 +13,7 @@ import type {
 } from "@/db/schema";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 const MAX_PUBLIC_LINEAGE_DEPTH = 5;
 const MAX_PUBLIC_LINEAGE_FRONTIER = 40;
@@ -192,7 +193,7 @@ export function buildPublicLineageRootObjectQuery(
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as locationVisibility",
       "plant_objects.coarse_region_code as coarseRegionCode",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
@@ -207,7 +208,7 @@ export function buildPublicLineageRootObjectQuery(
       "plant_objects.location_visibility",
       "plant_objects.coarse_region_code",
       "catalog_items.id",
-      "catalog_items.catalog_kind",
+      catalogKindSql("catalog_items"),
       "catalog_items.canonical_name",
       "catalog_items.public_slug",
     ]);
@@ -316,7 +317,7 @@ export function buildPublicLineageEdgesForSubjectsQuery(
       "subject_objects.variety_state as subjectVarietyState",
       "subject_objects.location_visibility as subjectLocationVisibility",
       "subject_objects.coarse_region_code as subjectCoarseRegionCode",
-      "subject_catalog_items.catalog_kind as subjectCatalogKind",
+      catalogKindSql("subject_catalog_items").as("subjectCatalogKind"),
       "subject_catalog_items.canonical_name as subjectCatalogCanonicalName",
       "subject_catalog_items.public_slug as subjectCatalogPublicSlug",
       catalogSpeciesSlugSql("subject_catalog_items").as("subjectCatalogSpeciesSlug"),
@@ -326,7 +327,7 @@ export function buildPublicLineageEdgesForSubjectsQuery(
       "source_objects.variety_state as sourceVarietyState",
       "source_objects.location_visibility as sourceLocationVisibility",
       "source_objects.coarse_region_code as sourceCoarseRegionCode",
-      "source_catalog_items.catalog_kind as sourceCatalogKind",
+      catalogKindSql("source_catalog_items").as("sourceCatalogKind"),
       "source_catalog_items.canonical_name as sourceCatalogCanonicalName",
       "source_catalog_items.public_slug as sourceCatalogPublicSlug",
       catalogSpeciesSlugSql("source_catalog_items").as("sourceCatalogSpeciesSlug"),
@@ -354,7 +355,7 @@ export function buildPublicLineageEdgesForSubjectsQuery(
       "subject_objects.location_visibility",
       "subject_objects.coarse_region_code",
       "subject_catalog_items.id",
-      "subject_catalog_items.catalog_kind",
+      catalogKindSql("subject_catalog_items"),
       "subject_catalog_items.canonical_name",
       "subject_catalog_items.public_slug",
       "source_objects.display_name",
@@ -364,7 +365,7 @@ export function buildPublicLineageEdgesForSubjectsQuery(
       "source_objects.location_visibility",
       "source_objects.coarse_region_code",
       "source_catalog_items.id",
-      "source_catalog_items.catalog_kind",
+      catalogKindSql("source_catalog_items"),
       "source_catalog_items.canonical_name",
       "source_catalog_items.public_slug",
     ])

@@ -37,7 +37,6 @@ export interface EuOfficialJournalCommonCatalogueProjection {
   canonicalName: string;
   normalizedName: string;
   publicSlug: string;
-  status: "seeded";
   source: typeof EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE;
   sourceId: string;
   catalogKind: "plant_variety";
@@ -264,7 +263,6 @@ function buildProjection(
     canonicalName,
     normalizedName,
     publicSlug: buildPublicSlug(canonicalName, sourceRecordKey),
-    status: "seeded",
     source: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
     sourceId: sourceRecordKey,
     catalogKind: "plant_variety",

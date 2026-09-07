@@ -16,10 +16,6 @@ import { assertCatalogSourceProductProjectionAllowed } from "./source-projection
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
-const MATCHING_QUEUE = "matching";
-const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
-const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000056000";
 
 export interface CatalogSourceSampleImportSummary {
@@ -35,7 +31,6 @@ export interface CatalogSourceSampleImportSummary {
   canonicalName: string;
   publicSlug: string;
   aliasesProjected: number;
-  reindexQueued: boolean;
 }
 
 export interface CatalogSourceSampleTypeaheadProof {
@@ -43,7 +38,6 @@ export interface CatalogSourceSampleTypeaheadProof {
   displayName: string;
   canonicalName: string;
   locale: string;
-  status: string;
   source: string;
 }
 
@@ -89,10 +83,6 @@ export async function importCatalogSourceSample(
       sourceRecordId: record.id,
     }).execute();
 
-    const reindexJob =
-      await buildEnqueueCatalogSourceTypeaheadReindexJobQuery(
-        trx,
-      ).executeTakeFirstOrThrow();
 
     return {
       sourceSnapshotId: snapshot.id,
@@ -107,7 +97,6 @@ export async function importCatalogSourceSample(
       canonicalName: catalogItem.canonicalName,
       publicSlug: catalogItem.publicSlug ?? projection.publicSlug,
       aliasesProjected: projection.aliases.length,
-      reindexQueued: reindexJob.id.length > 0,
     };
   });
 }
@@ -125,7 +114,6 @@ export async function readCatalogSourceSampleTypeaheadProof(
     displayName: row.displayName,
     canonicalName: row.canonicalName,
     locale: row.locale,
-    status: row.status,
     source: row.source,
   }));
 }
@@ -317,7 +305,6 @@ export function buildUpsertCatalogSourceCatalogItemQuery(
       canonical_name: projection.canonicalName,
       normalized_name: projection.normalizedName,
       public_slug: projection.publicSlug,
-      status: projection.status,
       source: projection.source,
       source_id: projection.sourceId,
       created_by_user_id: null,
@@ -328,7 +315,6 @@ export function buildUpsertCatalogSourceCatalogItemQuery(
         canonical_name: projection.canonicalName,
         normalized_name: projection.normalizedName,
         public_slug: projection.publicSlug,
-        status: projection.status,
         created_by_user_id: null,
         locale: projection.locale,
         updated_at: now,
@@ -395,30 +381,6 @@ export function buildInsertCatalogSourceLinkQuery(
     );
 }
 
-export function buildEnqueueCatalogSourceTypeaheadReindexJobQuery(
-  executor: QueryExecutor,
-) {
-  const payload = {
-    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          updated_at: new Date(),
-        }),
-    )
-    .returning("id");
-}
 
 export function buildCatalogSourceSampleTypeaheadProofQuery(
   executor: QueryExecutor,
@@ -438,10 +400,9 @@ export function buildCatalogSourceSampleTypeaheadProofQuery(
       "catalog_item_names.display_name as displayName",
       "catalog_items.canonical_name as canonicalName",
       "catalog_item_names.locale as locale",
-      "catalog_items.status as status",
       "catalog_items.source as source",
     ])
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("catalog_items.source", "=", CATALOG_SOURCE_SAMPLE.projection.source)
     .where(

@@ -55,14 +55,13 @@ describe("variety seed proof repository", () => {
 
     expect(compiled.sql).toContain('from "catalog_items"');
     expect(compiled.sql).toContain('"id" = $1');
-    expect(compiled.sql).toContain('"status" in ($2, $3)');
+    expect(compiled.sql).toContain('"identity_state" = ');
     expect(compiled.sql).toContain('"created_by_user_id" is null');
     expect(compiled.sql).toContain('"public_slug" is not null');
     expect(compiled.sql).not.toContain("provisional");
     expect(compiled.parameters).toEqual([
       catalogItemId,
-      "seeded",
-      "confirmed",
+      "active",
     ]);
   });
 
@@ -120,7 +119,7 @@ describe("variety seed proof repository", () => {
 
     expect(compiled.sql).toContain('from "variety_seed_proofs"');
     expect(compiled.sql).toContain('inner join "catalog_items"');
-    expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
@@ -130,7 +129,7 @@ describe("variety seed proof repository", () => {
     expect(compiled.sql).not.toContain("quarantine_key");
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("email");
-    expect(compiled.parameters).toEqual(["seeded", "confirmed", 9]);
+    expect(compiled.parameters).toEqual(["active", 9]);
   });
 
   it("selects only published seed proof fields for the public variety page", () => {

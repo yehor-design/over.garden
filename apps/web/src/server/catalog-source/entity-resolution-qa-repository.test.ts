@@ -17,12 +17,10 @@ import {
   assertCatalogEntityResolutionEvidenceSafe,
   buildCatalogEntityResolutionAliasCollisionRowsQuery,
   buildCatalogEntityResolutionCatalogRowsQuery,
-  buildCatalogEntityResolutionFuzzyDuplicateRowsQuery,
   buildCatalogEntityResolutionQaReport,
   buildCatalogEntityResolutionSourceCandidateSummaryQuery,
   type CatalogEntityResolutionAliasCollisionRow,
   type CatalogEntityResolutionCatalogRow,
-  type CatalogEntityResolutionFuzzyDuplicateRow,
   type CatalogEntityResolutionSourceCandidateSummaryRow,
 } from "./entity-resolution-qa-repository";
 
@@ -52,7 +50,6 @@ const catalogRows: CatalogEntityResolutionCatalogRow[] = [
     canonicalName: "Bergeron 1",
     normalizedName: "bergeron 1",
     catalogKind: "plant_variety",
-    status: "seeded",
     source: "ua_state_register",
     publicSlug: "bergeron-1-ua-state-register",
     typeaheadNameCount: 4,
@@ -65,7 +62,6 @@ const catalogRows: CatalogEntityResolutionCatalogRow[] = [
     canonicalName: "Bergeron 1",
     normalizedName: "bergeron 1",
     catalogKind: "plant_variety",
-    status: "seeded",
     source: "eu_oj_eur_lex_common_catalogue",
     publicSlug: "bergeron-1-eu-oj",
     typeaheadNameCount: 2,
@@ -78,7 +74,6 @@ const catalogRows: CatalogEntityResolutionCatalogRow[] = [
     canonicalName: "Bergeron 1",
     normalizedName: "bergeron 1",
     catalogKind: "species",
-    status: "seeded",
     source: "species_backbone",
     publicSlug: "bergeron-1-species-backbone",
     typeaheadNameCount: 1,
@@ -126,41 +121,6 @@ const sourceCandidateRows: CatalogEntityResolutionSourceCandidateSummaryRow[] =
     },
   ];
 
-const fuzzyDuplicateRows: CatalogEntityResolutionFuzzyDuplicateRow[] = [
-  {
-    pairKey: "ove162-red-cherry-pair",
-    leftCatalogItemId: "00000000-0000-4000-8000-000000162001",
-    leftCanonicalName: "Red Cherry",
-    leftNormalizedName: "red cherry",
-    leftCatalogKind: "plant_variety",
-    leftStatus: "seeded",
-    leftSource: "ua_state_register",
-    leftPublicSlug: "red-cherry-ua",
-    leftLocale: "uk",
-    rightCatalogItemId: "00000000-0000-4000-8000-000000162002",
-    rightCanonicalName: "Red Chery",
-    rightNormalizedName: "red chery",
-    rightCatalogKind: "plant_variety",
-    rightStatus: "seeded",
-    rightSource: "eu_oj_eur_lex_common_catalogue",
-    rightPublicSlug: "red-chery-eu",
-    rightLocale: "uk",
-    score: 95,
-    scoreBucket: "high",
-    reasonCodes: [
-      "rapidfuzz_name_similarity",
-      "same_catalog_kind",
-      "same_locale",
-    ],
-    localeRelation: "same_locale",
-    recommendedAction: "merge_review",
-    matcherVersion: "ove162-v1",
-    generatedAt: new Date("2026-07-15T12:00:00.000Z"),
-    evidenceStatus: "current",
-    totalCount: 1,
-  },
-];
-
 describe("catalog entity-resolution QA repository", () => {
   it("builds report queries from safe catalog/source projection fields only", () => {
     const catalog =
@@ -169,11 +129,7 @@ describe("catalog entity-resolution QA repository", () => {
       buildCatalogEntityResolutionAliasCollisionRowsQuery(testDb).compile();
     const source =
       buildCatalogEntityResolutionSourceCandidateSummaryQuery(testDb).compile();
-    const fuzzy =
-      buildCatalogEntityResolutionFuzzyDuplicateRowsQuery(testDb).compile();
-    const combinedSql = [catalog.sql, alias.sql, source.sql, fuzzy.sql].join(
-      "\n",
-    );
+    const combinedSql = [catalog.sql, alias.sql, source.sql].join("\n");
 
     expect(combinedSql).toContain('from "catalog_items"');
     expect(combinedSql).toContain('from "catalog_item_names"');
@@ -185,8 +141,6 @@ describe("catalog entity-resolution QA repository", () => {
     expect(combinedSql).not.toContain("media_assets");
     expect(combinedSql).not.toContain("owner_user_id");
     expect(combinedSql).not.toContain("raw_payload");
-    expect(fuzzy.sql).not.toContain("source_record_id");
-    expect(fuzzy.sql).toContain('from "catalog_fuzzy_duplicate_suggestions"');
     expect(catalog.parameters).toContain("eu_oj_eur_lex_common_catalogue");
     expect(catalog.parameters).toContain("vertebrate_breed_ontology");
   });
@@ -197,13 +151,10 @@ describe("catalog entity-resolution QA repository", () => {
       catalogRows,
       aliasCollisionRows: aliasRows,
       sourceCandidateRows,
-      fuzzyDuplicateRows,
     });
 
-    expect(report.schemaVersion).toBe("ove162.catalogEntityResolutionQa.v2");
+    expect(report.schemaVersion).toBe("ove399.catalogEntityResolutionQa.v3");
     expect(report.leakCheck).toBe("passed");
-    expect(report.summary.fuzzyDuplicatePairCount).toBe(1);
-    expect(report.summary.fuzzyDuplicateRowsReviewed).toBe(1);
     expect(
       report.summary.groups.find((group) => group.kind === "likely_duplicate")
         ?.count,
@@ -212,10 +163,6 @@ describe("catalog entity-resolution QA repository", () => {
       report.summary.groups.find(
         (group) => group.kind === "source_disagreement",
       )?.count,
-    ).toBe(1);
-    expect(
-      report.summary.groups.find((group) => group.kind === "fuzzy_duplicate")
-        ?.count,
     ).toBe(1);
     expect(
       report.summary.groups.find((group) => group.kind === "alias_collision")
@@ -233,21 +180,6 @@ describe("catalog entity-resolution QA repository", () => {
     expect(
       report.clusters.some((cluster) => cluster.kind === "canonical_concept"),
     ).toBe(true);
-    expect(
-      report.clusters.find((cluster) => cluster.kind === "fuzzy_duplicate"),
-    ).toMatchObject({
-      fuzzyScore: 95,
-      fuzzyScoreBucket: "high",
-      localeRelation: "same_locale",
-      evidenceStatus: "current",
-      recommendedAction: "merge_review",
-      reasonCodes: expect.arrayContaining(["rapidfuzz_name_similarity"]),
-      members: [
-        expect.objectContaining({ label: "Red Cherry", locale: "uk" }),
-        expect.objectContaining({ label: "Red Chery", locale: "uk" }),
-      ],
-    });
-
     const serialized = JSON.stringify(report);
     expect(serialized).not.toContain("raw_payload");
     expect(serialized).not.toContain("source_only_fields");
@@ -272,7 +204,6 @@ describe("catalog entity-resolution QA repository", () => {
       catalogRows,
       aliasCollisionRows: manyAliasRows,
       sourceCandidateRows,
-      fuzzyDuplicateRows,
     });
 
     expect(report.clusters.length).toBeLessThanOrEqual(120);
@@ -294,7 +225,7 @@ describe("catalog entity-resolution QA repository", () => {
   it("fails the leak check when an unsafe field is added to report evidence", () => {
     expect(() =>
       assertCatalogEntityResolutionEvidenceSafe({
-        schemaVersion: "ove162.catalogEntityResolutionQa.v2",
+        schemaVersion: "ove399.catalogEntityResolutionQa.v3",
         clusters: [{ ownerUserId: "do-not-leak" }],
       }),
     ).toThrow("ownerUserId");

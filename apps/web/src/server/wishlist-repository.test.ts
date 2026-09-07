@@ -91,7 +91,7 @@ describe("wishlist repository contracts", () => {
       'inner join "catalog_items" on "catalog_items"."id" = "wishlist_items"."catalog_item_id"',
     );
     expect(compiled.sql).toContain('"wishlist_items"."owner_user_id" =');
-    expect(compiled.sql).toContain('"catalog_items"."status" in');
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
@@ -112,7 +112,6 @@ describe("wishlist repository contracts", () => {
       catalogSpeciesSlug: null,
       catalogKind: "plant_variety",
       catalogLocale: "uk",
-      catalogStatus: "seeded",
       catalogSource: "seed",
     });
 

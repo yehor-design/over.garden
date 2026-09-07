@@ -203,7 +203,6 @@ describe("public profile handle contracts", () => {
     expect(lineageSummary.sql).toContain('"source_kind" =');
     expect(lineageSummary.sql).toContain('"consent_state" =');
     expect(lineageSummary.sql).toContain('"erasure_state" =');
-    expect(lineageSummary.parameters).toContain("confirmed");
     expect(lineageSummary.parameters).toContain("active");
     expect(lineageSummary.sql).not.toMatch(forbiddenPublicProfilePattern);
   });

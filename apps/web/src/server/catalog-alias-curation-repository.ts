@@ -7,15 +7,18 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
 import {
-  buildEnqueueCatalogTypeaheadReindexJobQuery,
   normalizeCatalogItemId,
-  SELECTABLE_CATALOG_STATUSES,
 } from "@/server/catalog-repository";
 import type { RequestScope } from "@/server/request-scope";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 const CATALOG_ALIAS_SOURCE_SLUG = "overgarden-alias-generator";
 const CATALOG_ALIAS_SOURCE_METHOD = "generated";
-const CATALOG_ALIAS_GENERATOR_VERSION = "ove160-v1";
+// The fingerprint below is over the generator's inputs, and OVE-399 removed
+// one of them: `catalog_items.status` said "seeded" for every row a generator
+// ever saw. A stored fingerprint from the old inputs must not silently match
+// the new ones, so the version moves with them.
+const CATALOG_ALIAS_GENERATOR_VERSION = "ove399-v2";
 const MAX_ALIAS_TARGETS = 12;
 const MAX_ALIAS_SUGGESTIONS = 50;
 const MAX_ALIAS_QUERY_LENGTH = 120;
@@ -27,7 +30,6 @@ export interface CatalogAliasSuggestionTarget {
   canonicalName: string;
   catalogKind: string;
   locale: string;
-  status: string;
   source: string;
   acceptedNameCount: number;
 }
@@ -92,7 +94,6 @@ export async function listCatalogAliasSuggestionTargets(
     canonicalName: row.canonicalName,
     catalogKind: row.catalogKind,
     locale: row.locale,
-    status: row.status,
     source: row.source,
     acceptedNameCount: Number(row.acceptedNameCount),
   }));
@@ -216,10 +217,6 @@ export async function approveCatalogAliasSuggestion(
         decisionResult,
         now,
       }).executeTakeFirstOrThrow();
-      await buildEnqueueCatalogTypeaheadReindexJobQuery(
-        trx,
-      ).executeTakeFirstOrThrow();
-
       return { outcome: "approved", catalogItemNameId };
     });
 }
@@ -270,9 +267,8 @@ export function buildCatalogAliasSuggestionTargetsQuery(
     .select([
       "catalog_items.id as id",
       "catalog_items.canonical_name as canonicalName",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.locale as locale",
-      "catalog_items.status as status",
       "catalog_items.source as source",
       sql<number>`(
         select count(*)::integer
@@ -280,7 +276,7 @@ export function buildCatalogAliasSuggestionTargetsQuery(
         where catalog_item_names.catalog_item_id = catalog_items.id
       )`.as("acceptedNameCount"),
     ])
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where(
       sql<boolean>`(
@@ -309,7 +305,7 @@ export function buildCatalogAliasSuggestionTargetByIdQuery(
       "catalog_items.canonical_name as canonicalName",
     ])
     .where("catalog_items.id", "=", catalogItemId)
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null);
 }
 
@@ -336,7 +332,7 @@ export function buildCatalogAliasSuggestionsForCurationQuery(
       "catalog_alias_projections.catalog_item_id as catalogItemId",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.source as catalogSource",
       "source_names.display_name as generatedFromDisplayName",
       "catalog_alias_projections.display_name as displayName",
@@ -369,7 +365,7 @@ export function buildCatalogAliasSuggestionsForCurationQuery(
       "rejected",
       "accepted",
     ])
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("catalog_alias_projections.generator_version", "is not", null)
     .orderBy(
@@ -416,8 +412,7 @@ export function buildCatalogAliasSuggestionForDecisionQuery(
       "catalog_alias_projections.source_name_fingerprint as sourceNameFingerprint",
       "catalog_alias_projections.generator_version as generatorVersion",
       "catalog_items.canonical_name as catalogCanonicalName",
-      "catalog_items.catalog_kind as catalogKind",
-      "catalog_items.status as catalogStatus",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.created_by_user_id as catalogCreatedByUserId",
       "source_names.id as sourceNameId",
       "source_names.catalog_item_id as sourceNameCatalogItemId",
@@ -467,7 +462,7 @@ export function buildCatalogAliasCollisionQuery(
     .select("catalog_item_names.id as id")
     .where("catalog_item_names.normalized_name", "=", input.normalizedName)
     .where("catalog_item_names.catalog_item_id", "!=", input.catalogItemId)
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .orderBy("catalog_item_names.id", "asc")
     .limit(1)
@@ -628,7 +623,6 @@ function isCurrentCatalogAliasSuggestion(input: {
   catalogItemId: string;
   catalogCanonicalName: string;
   catalogKind: string;
-  catalogStatus: string;
   catalogCreatedByUserId: string | null;
   sourceNameId: string;
   sourceNameCatalogItemId: string;
@@ -642,9 +636,6 @@ function isCurrentCatalogAliasSuggestion(input: {
   if (
     input.catalogCreatedByUserId !== null ||
     !input.sourceNameEligible ||
-    !SELECTABLE_CATALOG_STATUSES.includes(
-      input.catalogStatus as (typeof SELECTABLE_CATALOG_STATUSES)[number],
-    ) ||
     input.catalogItemId !== input.sourceNameCatalogItemId ||
     input.generatorVersion !== CATALOG_ALIAS_GENERATOR_VERSION
   ) {
@@ -657,7 +648,6 @@ function isCurrentCatalogAliasSuggestion(input: {
       input.catalogItemId,
       input.catalogCanonicalName,
       input.catalogKind,
-      input.catalogStatus,
       input.sourceNameId,
       input.sourceDisplayName,
       input.sourceNormalizedName,

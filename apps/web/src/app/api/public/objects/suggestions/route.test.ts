@@ -38,7 +38,6 @@ describe("GET /api/public/objects/suggestions", () => {
           identityState: "catalog",
           identityName: "Помідор чері",
           catalogKind: "plant_variety",
-          catalogStatus: "seeded",
           catalogPath: "/variety/tomato",
           objectCount: 2,
           journalCount: 5,

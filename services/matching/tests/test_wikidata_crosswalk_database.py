@@ -70,10 +70,10 @@ def seed_node(
     conn.execute(
         """
         insert into catalog_items (
-          id, canonical_name, catalog_kind, normalized_name, public_slug, status,
+          id, canonical_name, normalized_name, public_slug,
           source, source_id, locale, node_kind, kingdom, rank, identity_state
         )
-        values (%s, %s, 'species', catalog_normalize_name(%s), %s, 'seeded',
+        values (%s, %s, catalog_normalize_name(%s), %s,
                 'species_backbone', %s, 'la', 'taxon', %s, 'species', 'active')
         """,
         (item_id, name, name, f"ove393-{item_id[:8]}", f"ove393:{item_id}", kingdom),

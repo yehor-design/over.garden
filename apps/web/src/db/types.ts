@@ -6,10 +6,8 @@ import type {
   AdminUserRoles as AdminUserRolesTable,
   AnalyticsEvents as AnalyticsEventsTable,
   CatalogAliasProjections as CatalogAliasProjectionsTable,
-  CatalogFuzzyDuplicateSuggestions as CatalogFuzzyDuplicateSuggestionsTable,
   CatalogItemNames as CatalogItemNamesTable,
   CatalogItems as CatalogItemsTable,
-  CatalogMatchSuggestions as CatalogMatchSuggestionsTable,
   CatalogSourceCaptureRuns as CatalogSourceCaptureRunsTable,
   CatalogSourceCaptureUnits as CatalogSourceCaptureUnitsTable,
   CatalogSourceLinks as CatalogSourceLinksTable,
@@ -185,23 +183,6 @@ export type CatalogCurationActionType =
   | "revert";
 export type CatalogSlugNamespace = "species" | "form";
 export type PlantObjectKind = "plant" | "animal";
-export type CatalogItemStatus =
-  | "seeded"
-  | "confirmed"
-  | "provisional"
-  | "merged"
-  | "rejected";
-export type CatalogMatchSuggestionStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "stale";
-export type CatalogMatchConfidenceBucket = "high" | "medium" | "low" | "none";
-export type CatalogMatchType =
-  | "normalized_exact"
-  | "transliteration_exact"
-  | "fuzzy_name"
-  | "no_safe_match";
 export type JobStatus = "pending" | "processing" | "done" | "failed";
 export type VarietySeedProofStatus = "draft" | "published";
 export type ErasureRequestStatus =
@@ -325,7 +306,7 @@ export type JournalTopicTrustState = "curated" | "provisional" | "rejected";
 export type JournalEntryTopicSignalSource =
   | "explicit_tag"
   | "object_kind"
-  | "catalog_kind"
+  | "catalog_node_kind"
   | "catalog_mention"
   | "operator_curated";
 export type JournalEntryTopicReviewState =
@@ -353,15 +334,8 @@ export type AdminRoleAuditEntry = Selectable<AdminRoleAuditLogTable>;
 export type NewAdminRoleAuditEntry = Insertable<AdminRoleAuditLogTable>;
 export type AnalyticsEvent = Selectable<AnalyticsEventsTable>;
 export type CatalogAliasProjection = Selectable<CatalogAliasProjectionsTable>;
-export type CatalogFuzzyDuplicateSuggestion =
-  Selectable<CatalogFuzzyDuplicateSuggestionsTable>;
-export type NewCatalogFuzzyDuplicateSuggestion =
-  Insertable<CatalogFuzzyDuplicateSuggestionsTable>;
 export type CatalogItem = Selectable<CatalogItemsTable>;
 export type CatalogItemName = Selectable<CatalogItemNamesTable>;
-export type CatalogMatchSuggestion = Selectable<CatalogMatchSuggestionsTable>;
-export type NewCatalogMatchSuggestion =
-  Insertable<CatalogMatchSuggestionsTable>;
 export type CatalogSourceLink = Selectable<CatalogSourceLinksTable>;
 export type CatalogSourceAssertion = Selectable<CatalogSourceAssertionsTable>;
 export type NewCatalogSourceAssertion = Insertable<CatalogSourceAssertionsTable>;

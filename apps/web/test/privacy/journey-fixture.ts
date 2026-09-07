@@ -8,7 +8,6 @@ import {
 } from "@/server/public-variety-repository";
 import { emptyPublicOrganismCard } from "@/server/public-organism-card-query";
 import { resolvePublicSurfaceDiscoveryForRequest } from "@/server/public-surface-discovery";
-import type { CatalogTypeaheadRow } from "@/server/search/catalog-documents";
 import type { JournalEntrySearchContractRow } from "@/server/search/documents";
 
 import { POISON } from "./poison";
@@ -90,42 +89,7 @@ export const ALLOWED_SEARCH_DOCUMENT_KEYS: readonly string[] = JSON.parse(
   ),
 ).allowedFields;
 
-export function catalogTypeaheadRow(
-  overrides: Partial<CatalogTypeaheadRow> = {},
-): CatalogTypeaheadRow {
-  return seedPrivateColumns({
-    id: JOURNEY.catalogItemId,
-    canonicalName: JOURNEY.catalogCanonicalName,
-    normalizedName: "помідор чері",
-    catalogKind: "plant_variety",
-    status: "seeded",
-    source: "internal_seed",
-    createdByUserId: null,
-    itemLocale: "uk",
-    displayName: "Помідор чері",
-    aliasNormalizedName: "помідор чері",
-    aliasLocale: "uk",
-    isPrimary: true,
-    ...overrides,
-  });
-}
 
-export const ALLOWED_CATALOG_DOCUMENT_KEYS: readonly string[] = [
-  "id",
-  "catalogItemId",
-  "displayName",
-  "canonicalName",
-  "normalizedName",
-  "catalogKind",
-  "locale",
-  "itemLocale",
-  "status",
-  "source",
-  "isPrimary",
-  "rank",
-  "kind",
-  "serveClass",
-];
 
 // A Meilisearch hit that an attacker (or a misconfigured index) stuffed with
 // private keys. The suggestion mapper must reject it wholesale.
@@ -136,7 +100,6 @@ export function poisonedTypeaheadHit(): Record<string, unknown> {
     canonicalName: "Помідор чері",
     catalogKind: "plant_variety",
     locale: "uk",
-    status: "seeded",
     source: "internal_seed",
     ownerUserId: POISON.ownerUserId,
     email: POISON.email,
@@ -266,7 +229,6 @@ export function publicVarietyPage(
       permalinkPath: `/id/${JOURNEY.catalogItemId}`,
       contentUpdatedAt: JOURNEY.publishedAt,
       identifiers: [],
-      status: "seeded",
       source: "ua_state_register",
       locale: "uk",
     },

@@ -70,7 +70,6 @@ interface CatalogSuggestion {
   canonicalName: string;
   catalogKind: CatalogKind;
   locale: string;
-  status: "seeded" | "confirmed";
   source: string;
 }
 
@@ -446,9 +445,9 @@ function buildBgOjSmokeTargetQuery(db: Kysely<Database>) {
       "=",
       EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
     )
-    .where("catalog_items.status", "=", "seeded")
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
-    .where("catalog_items.catalog_kind", "=", "plant_variety")
+    .where("catalog_items.node_kind", "=", "cultivar")
     .where("catalog_item_names.is_primary", "=", true)
     .where(
       "catalog_source_links.source_slug",

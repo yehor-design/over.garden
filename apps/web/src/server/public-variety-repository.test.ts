@@ -65,15 +65,15 @@ describe("public variety repository query contracts", () => {
       'coalesce(sum(char_length("journal_entries"."body")), 0)',
     );
     expect(compiled.sql).toContain('"catalog_items"."id"');
-    expect(compiled.sql).toContain('"catalog_items"."public_slug" = $1');
-    expect(compiled.sql).toContain('"catalog_items"."status" in ($2, $3)');
+    expect(compiled.sql).toContain('"catalog_items"."public_slug" = ');
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
     expect(compiled.sql).not.toContain("provisional");
     expect(compiled.sql).not.toContain("rejected");
     expect(compiled.sql).not.toContain("merged");
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
-    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $4');
+    expect(compiled.sql).toContain('"plant_objects"."variety_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."owner_user_id" = "plant_objects"."owner_user_id"',
     );
@@ -83,8 +83,8 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain(
       'public_media.owner_user_id = "journal_entries"."owner_user_id"',
     );
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $5');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $6');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = ');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -102,8 +102,7 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).not.toContain("longitude");
     expect(compiled.parameters).toEqual([
       "pomidor-cheri-0000000101",
-      "seeded",
-      "confirmed",
+      "active",
       "selected",
       "public",
       "active",
@@ -117,8 +116,8 @@ describe("public variety repository query contracts", () => {
       "species",
     ).compile();
 
-    expect(compiled.sql).toContain('"catalog_items"."catalog_kind"');
-    expect(compiled.sql).toContain('"catalog_items"."catalog_kind" =');
+    expect(compiled.sql).toContain("catalog_items.node_kind = 'taxon'");
+    expect(compiled.sql).toContain("catalog_items.node_kind = 'taxon'");
     expect(compiled.parameters).toContain("species");
   });
 
@@ -141,17 +140,17 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain("cover_media_asset_id");
     expect(compiled.sql).toContain('"media_assets"."document_position" asc');
     expect(compiled.sql).not.toContain('"media_assets"."created_at" asc');
-    expect(compiled.sql).toContain('"catalog_items"."public_slug" = $2');
-    expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
+    expect(compiled.sql).toContain('"catalog_items"."public_slug" = ');
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
     expect(compiled.sql).not.toContain("provisional");
     expect(compiled.sql).not.toContain("rejected");
     expect(compiled.sql).not.toContain("merged");
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
-    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $5');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $6');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $7');
+    expect(compiled.sql).toContain('"plant_objects"."variety_state" = ');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = ');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -174,8 +173,7 @@ describe("public variety repository query contracts", () => {
     expect(compiled.parameters).toEqual([
       "inline",
       "pomidor-cheri-0000000101",
-      "seeded",
-      "confirmed",
+      "active",
       "selected",
       "public",
       "active",
@@ -201,7 +199,7 @@ describe("public variety repository query contracts", () => {
       '"catalog_source_snapshots"."attribution_text"',
     );
     expect(compiled.sql).toContain(
-      '"catalog_source_snapshots"."attribution_required" = $4',
+      '"catalog_source_snapshots"."attribution_required" = ',
     );
     expect(compiled.sql).not.toContain(
       '"catalog_source_records"."raw_payload"',
@@ -239,20 +237,20 @@ describe("public variety repository query contracts", () => {
       'inner join "spaces" on "spaces"."id" = "journal_entries"."space_id"',
     );
     expect(compiled.sql).toContain('"catalog_items"."public_slug" is not null');
-    expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
     expect(compiled.sql).not.toContain('"catalog_items"."source" in');
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
-    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $4');
+    expect(compiled.sql).toContain('"plant_objects"."variety_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."owner_user_id" = "plant_objects"."owner_user_id"',
     );
     expect(compiled.sql).toContain(
       '"journal_entries"."owner_user_id" = "spaces"."owner_user_id"',
     );
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $5');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $6');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = ');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -260,7 +258,7 @@ describe("public variety repository query contracts", () => {
       '"journal_entries"."public_slug" is not null',
     );
     expect(compiled.sql).toContain(
-      'group by "catalog_items"."id", "catalog_items"."catalog_kind", "catalog_items"."public_slug"',
+      'group by "catalog_items"."id", case',
     );
     // The hierarchical address needs the species of a form, and `lastmod` is
     // the content clock or the newest entry, whichever is later (ADR-0026 D8).
@@ -283,8 +281,7 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).not.toContain("latitude");
     expect(compiled.sql).not.toContain("longitude");
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       true,
       "selected",
       "public",

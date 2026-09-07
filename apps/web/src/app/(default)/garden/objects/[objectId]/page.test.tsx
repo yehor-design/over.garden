@@ -637,7 +637,7 @@ function plantObjectPage(
       id: "object-1",
       display_name: "Cherry tomato",
       object_kind: "plant",
-      catalog_kind: "plant_variety",
+      catalogKind: "plant_variety",
       catalog_item_id: null,
       catalog_canonical_name: null,
       catalog_public_slug: null,

@@ -8,6 +8,7 @@ import {
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 export type PublicJournalDirectoryQueryExecutor =
   | Kysely<Database>
@@ -15,10 +16,6 @@ export type PublicJournalDirectoryQueryExecutor =
 
 export const PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE = 8;
 export const PUBLIC_JOURNAL_DIRECTORY_FALLBACK_CANDIDATE_LIMIT = 256;
-export const PUBLIC_JOURNAL_DIRECTORY_SELECTABLE_CATALOG_STATUSES = [
-  "seeded",
-  "confirmed",
-] as const;
 const MAX_PUBLIC_JOURNAL_DIRECTORY_PAGE = 1_000;
 const MAX_PUBLIC_JOURNAL_DIRECTORY_QUERY_LENGTH = 120;
 const UUID_PATTERN =
@@ -63,7 +60,6 @@ export interface PublicJournalDirectoryEntryRow {
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
   catalogSpeciesSlug: string | null;
-  catalogStatus: string | null;
   safeRegionCode: string | null;
   authorHandle: string | null;
   authorDisplayName: string | null;
@@ -132,9 +128,7 @@ export function buildPublicJournalDirectoryEntriesQuery(
     .leftJoin("catalog_items", (join) =>
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
-        .on("catalog_items.status", "in", [
-          ...PUBLIC_JOURNAL_DIRECTORY_SELECTABLE_CATALOG_STATUSES,
-        ])
+        .on("catalog_items.identity_state", "=", "active")
         .on("catalog_items.created_by_user_id", "is", null),
     )
     .leftJoin("user_handle_registry", (join) =>
@@ -173,11 +167,10 @@ export function buildPublicJournalDirectoryEntriesQuery(
       "plant_objects.object_kind as objectKind",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
-      "catalog_items.status as catalogStatus",
       safeRegion.as("safeRegionCode"),
       "user_public_profiles.handle as authorHandle",
       "user_public_profiles.display_name as authorDisplayName",

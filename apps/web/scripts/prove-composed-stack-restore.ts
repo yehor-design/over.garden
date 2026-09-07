@@ -49,7 +49,7 @@ export interface StackRestoreProofReceipt {
   productReadBackPassed: boolean;
   localesServed: string[];
   restoredIdentityCount: number;
-  indexRebuildRowCount: number;
+  offerableNameCount: number;
   unsafeRowsExcluded: number;
   replayedEffectCount?: number;
   concurrentRestoreRefused?: boolean;
@@ -135,7 +135,7 @@ export async function runBackupFetchTimeoutFixture(input: {
     productReadBackPassed: false,
     localesServed: [],
     restoredIdentityCount: 0,
-    indexRebuildRowCount: 0,
+    offerableNameCount: 0,
     unsafeRowsExcluded: 0,
     disposableTargetsRemaining: 0,
     liveSourceUnchanged: true,

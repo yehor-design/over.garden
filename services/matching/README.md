@@ -321,6 +321,16 @@ rows into `journal_entries`, writes a public-safe document shape, and deletes an
 stale document when the source row is no longer indexable. Unknown job kinds fail
 with `last_error`; they must not be marked done silently.
 
+`last_error` on a *retrying* job carries `handler:<exception class>@<module>` —
+two code identifiers this repository owns and nothing else. It never carries
+the exception's message: a psycopg error quotes the failing statement, and a
+statement can quote a gardener's text. An exception raised outside `app.`
+reports its class alone, so a dependency's file layout never reaches the column
+either. Before 2026-09-07 the value was the constant `transient_handler_error`,
+which cost a deploy to learn anything at all: the second EPPO reconciliation
+failed at about 85% of a two-hour run and that constant was the whole of the
+evidence.
+
 ## Restart / recovery
 
 `tests/test_worker_recovery.py` is the durability proof for the pilot journal

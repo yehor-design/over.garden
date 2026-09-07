@@ -3,14 +3,28 @@ import { createHash } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import type { Database } from "@/db/schema";
-import { SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES } from "@/server/search/catalog-documents";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
+
+/**
+ * Sources whose duplicate rows the entity-resolution QA compares by concept;
+ * the picker no longer dedupes by source (one row per organism, ADR-0026 D7).
+ */
+export const SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES = [
+  "ua_state_register",
+  "species_backbone",
+  "ua_official_bee_breed",
+  "vertebrate_breed_ontology",
+  "eu_common_catalogue_bg",
+  "eu_oj_eur_lex_common_catalogue",
+  "grin_genebank_candidate",
+] as const;
+
 
 const MAX_ENTITY_RESOLUTION_ROWS = 240;
 const MAX_ENTITY_RESOLUTION_CLUSTERS = 120;
 
 const ENTITY_RESOLUTION_CLUSTER_KIND_LIMITS = {
   likely_duplicate: 24,
-  fuzzy_duplicate: 24,
   source_disagreement: 24,
   alias_collision: 48,
   manual_review_required: 24,
@@ -23,7 +37,6 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 export type CatalogEntityResolutionClusterKind =
   | "canonical_concept"
   | "likely_duplicate"
-  | "fuzzy_duplicate"
   | "alias_collision"
   | "source_disagreement"
   | "blocked_projection"
@@ -41,7 +54,6 @@ export interface CatalogEntityResolutionCatalogRow {
   canonicalName: string;
   normalizedName: string | null;
   catalogKind: string;
-  status: string;
   source: string;
   publicSlug: string | null;
   typeaheadNameCount: number | string | bigint;
@@ -72,35 +84,6 @@ export interface CatalogEntityResolutionSourceCandidateSummaryRow {
   rowCount: number | string | bigint;
 }
 
-export interface CatalogEntityResolutionFuzzyDuplicateRow {
-  pairKey: string;
-  leftCatalogItemId: string;
-  leftCanonicalName: string;
-  leftNormalizedName: string | null;
-  leftCatalogKind: string;
-  leftStatus: string;
-  leftSource: string;
-  leftPublicSlug: string | null;
-  leftLocale: string;
-  rightCatalogItemId: string;
-  rightCanonicalName: string;
-  rightNormalizedName: string | null;
-  rightCatalogKind: string;
-  rightStatus: string;
-  rightSource: string;
-  rightPublicSlug: string | null;
-  rightLocale: string;
-  score: number | string | bigint;
-  scoreBucket: string;
-  reasonCodes: string[];
-  localeRelation: string;
-  recommendedAction: string;
-  matcherVersion: string;
-  generatedAt: Date | string;
-  evidenceStatus: "current" | "stale";
-  totalCount: number | string | bigint;
-}
-
 export interface CatalogEntityResolutionClusterMember {
   label: string;
   normalizedLabel?: string;
@@ -121,16 +104,12 @@ export interface CatalogEntityResolutionCluster {
   riskLevel: "info" | "review_needed" | "blocked";
   reason: string;
   recommendedAction: CatalogEntityResolutionRecommendedAction;
-  fuzzyScore?: number;
-  fuzzyScoreBucket?: string;
   reasonCodes?: string[];
-  localeRelation?: "same_locale" | "cross_locale";
-  evidenceStatus?: "current" | "stale";
   members: CatalogEntityResolutionClusterMember[];
 }
 
 export interface CatalogEntityResolutionQaReport {
-  schemaVersion: "ove162.catalogEntityResolutionQa.v2";
+  schemaVersion: "ove399.catalogEntityResolutionQa.v3";
   issue: "OVE-162";
   generatedAt: string;
   evidenceSafety: "linear_safe_redacted";
@@ -139,8 +118,6 @@ export interface CatalogEntityResolutionQaReport {
     sourceBackedCatalogRowsReviewed: number;
     aliasCollisionRowsReviewed: number;
     sourceCandidateGroupsReviewed: number;
-    fuzzyDuplicatePairCount: number;
-    fuzzyDuplicateRowsReviewed: number;
     groups: Array<{
       kind: CatalogEntityResolutionClusterKind;
       label: string;
@@ -157,11 +134,6 @@ export const CATALOG_ENTITY_RESOLUTION_CLUSTER_GROUPS: Array<{
   label: string;
   nextAction: string;
 }> = [
-  {
-    kind: "fuzzy_duplicate",
-    label: "Fuzzy duplicate",
-    nextAction: "Merge review or hold",
-  },
   {
     kind: "likely_duplicate",
     label: "Likely duplicate",
@@ -238,17 +210,11 @@ export async function readCatalogEntityResolutionQaReport(
     await buildCatalogEntityResolutionSourceCandidateSummaryQuery(
       executor,
     ).execute();
-  const fuzzyDuplicateRows =
-    await buildCatalogEntityResolutionFuzzyDuplicateRowsQuery(
-      executor,
-    ).execute();
-
   return buildCatalogEntityResolutionQaReport({
     generatedAt: new Date().toISOString(),
     catalogRows,
     aliasCollisionRows,
     sourceCandidateRows,
-    fuzzyDuplicateRows,
   });
 }
 
@@ -257,17 +223,15 @@ export function buildCatalogEntityResolutionQaReport(input: {
   catalogRows: CatalogEntityResolutionCatalogRow[];
   aliasCollisionRows: CatalogEntityResolutionAliasCollisionRow[];
   sourceCandidateRows: CatalogEntityResolutionSourceCandidateSummaryRow[];
-  fuzzyDuplicateRows: CatalogEntityResolutionFuzzyDuplicateRow[];
 }): CatalogEntityResolutionQaReport {
   const clusters = limitEntityResolutionClusters([
     ...buildCatalogConceptClusters(input.catalogRows),
     ...buildAliasCollisionClusters(input.aliasCollisionRows),
     ...buildSourceCandidateClusters(input.sourceCandidateRows),
-    ...buildFuzzyDuplicateClusters(input.fuzzyDuplicateRows),
   ]);
 
   const report: CatalogEntityResolutionQaReport = {
-    schemaVersion: "ove162.catalogEntityResolutionQa.v2",
+    schemaVersion: "ove399.catalogEntityResolutionQa.v3",
     issue: "OVE-162",
     generatedAt: input.generatedAt,
     evidenceSafety: "linear_safe_redacted",
@@ -276,10 +240,6 @@ export function buildCatalogEntityResolutionQaReport(input: {
       sourceBackedCatalogRowsReviewed: input.catalogRows.length,
       aliasCollisionRowsReviewed: input.aliasCollisionRows.length,
       sourceCandidateGroupsReviewed: input.sourceCandidateRows.length,
-      fuzzyDuplicatePairCount: input.fuzzyDuplicateRows[0]
-        ? numberValue(input.fuzzyDuplicateRows[0].totalCount)
-        : 0,
-      fuzzyDuplicateRowsReviewed: input.fuzzyDuplicateRows.length,
       groups: CATALOG_ENTITY_RESOLUTION_CLUSTER_GROUPS.map((group) => ({
         ...group,
         count: clusters.filter((cluster) => cluster.kind === group.kind).length,
@@ -291,63 +251,6 @@ export function buildCatalogEntityResolutionQaReport(input: {
 
   assertCatalogEntityResolutionEvidenceSafe(report);
   return report;
-}
-
-export function buildCatalogEntityResolutionFuzzyDuplicateRowsQuery(
-  executor: QueryExecutor,
-  limit = MAX_ENTITY_RESOLUTION_ROWS,
-) {
-  return executor
-    .selectFrom("catalog_fuzzy_duplicate_suggestions")
-    .innerJoin(
-      "catalog_items as fuzzy_left_catalog_item",
-      "fuzzy_left_catalog_item.id",
-      "catalog_fuzzy_duplicate_suggestions.left_catalog_item_id",
-    )
-    .innerJoin(
-      "catalog_items as fuzzy_right_catalog_item",
-      "fuzzy_right_catalog_item.id",
-      "catalog_fuzzy_duplicate_suggestions.right_catalog_item_id",
-    )
-    .select([
-      "catalog_fuzzy_duplicate_suggestions.pair_key as pairKey",
-      "fuzzy_left_catalog_item.id as leftCatalogItemId",
-      "fuzzy_left_catalog_item.canonical_name as leftCanonicalName",
-      "fuzzy_left_catalog_item.normalized_name as leftNormalizedName",
-      "fuzzy_left_catalog_item.catalog_kind as leftCatalogKind",
-      "fuzzy_left_catalog_item.status as leftStatus",
-      "fuzzy_left_catalog_item.source as leftSource",
-      "fuzzy_left_catalog_item.public_slug as leftPublicSlug",
-      "fuzzy_left_catalog_item.locale as leftLocale",
-      "fuzzy_right_catalog_item.id as rightCatalogItemId",
-      "fuzzy_right_catalog_item.canonical_name as rightCanonicalName",
-      "fuzzy_right_catalog_item.normalized_name as rightNormalizedName",
-      "fuzzy_right_catalog_item.catalog_kind as rightCatalogKind",
-      "fuzzy_right_catalog_item.status as rightStatus",
-      "fuzzy_right_catalog_item.source as rightSource",
-      "fuzzy_right_catalog_item.public_slug as rightPublicSlug",
-      "fuzzy_right_catalog_item.locale as rightLocale",
-      "catalog_fuzzy_duplicate_suggestions.score as score",
-      "catalog_fuzzy_duplicate_suggestions.score_bucket as scoreBucket",
-      "catalog_fuzzy_duplicate_suggestions.reason_codes as reasonCodes",
-      "catalog_fuzzy_duplicate_suggestions.locale_relation as localeRelation",
-      "catalog_fuzzy_duplicate_suggestions.recommended_action as recommendedAction",
-      "catalog_fuzzy_duplicate_suggestions.matcher_version as matcherVersion",
-      "catalog_fuzzy_duplicate_suggestions.generated_at as generatedAt",
-      sql<number | string | bigint>`count(*) over()`.as("totalCount"),
-      sql<"current" | "stale">`case
-        when ${sql.ref("fuzzy_left_catalog_item.updated_at")}
-          = ${sql.ref("catalog_fuzzy_duplicate_suggestions.left_updated_at_snapshot")}
-         and ${sql.ref("fuzzy_right_catalog_item.updated_at")}
-          = ${sql.ref("catalog_fuzzy_duplicate_suggestions.right_updated_at_snapshot")}
-        then 'current'
-        else 'stale'
-      end`.as("evidenceStatus"),
-    ])
-    .orderBy("catalog_fuzzy_duplicate_suggestions.score", "desc")
-    .orderBy("catalog_fuzzy_duplicate_suggestions.pair_key", "asc")
-    .limit(normalizeEntityResolutionLimit(limit))
-    .$castTo<CatalogEntityResolutionFuzzyDuplicateRow>();
 }
 
 
@@ -381,8 +284,7 @@ export function buildCatalogEntityResolutionCatalogRowsQuery(
       "catalog_items.id as catalogItemId",
       "catalog_items.canonical_name as canonicalName",
       "catalog_items.normalized_name as normalizedName",
-      "catalog_items.catalog_kind as catalogKind",
-      "catalog_items.status as status",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.source as source",
       "catalog_items.public_slug as publicSlug",
       sql<number>`count(distinct ${sql.ref("catalog_item_names.id")})::int`.as(
@@ -398,7 +300,7 @@ export function buildCatalogEntityResolutionCatalogRowsQuery(
         "sourceSlugs",
       ),
     ])
-    .where("catalog_items.status", "in", ["seeded", "confirmed"])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("catalog_items.source", "in", [
       ...SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES,
@@ -407,8 +309,7 @@ export function buildCatalogEntityResolutionCatalogRowsQuery(
       "catalog_items.id",
       "catalog_items.canonical_name",
       "catalog_items.normalized_name",
-      "catalog_items.catalog_kind",
-      "catalog_items.status",
+      catalogKindSql("catalog_items"),
       "catalog_items.source",
       "catalog_items.public_slug",
     ])
@@ -442,14 +343,14 @@ export function buildCatalogEntityResolutionAliasCollisionRowsQuery(
       sql<string>`string_agg(distinct ${sql.ref("catalog_items.canonical_name")}, ' | ')`.as(
         "canonicalNames",
       ),
-      sql<string>`string_agg(distinct ${sql.ref("catalog_items.catalog_kind")}, ', ')`.as(
+      sql<string>`string_agg(distinct ${catalogKindSql("catalog_items")}, ', ')`.as(
         "catalogKinds",
       ),
       sql<string>`string_agg(distinct ${sql.ref("catalog_items.source")}, ', ')`.as(
         "sources",
       ),
     ])
-    .where("catalog_items.status", "in", ["seeded", "confirmed"])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("catalog_items.source", "in", [
       ...SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES,
@@ -646,61 +547,6 @@ function buildSourceCandidateClusters(
   });
 }
 
-function buildFuzzyDuplicateClusters(
-  rows: CatalogEntityResolutionFuzzyDuplicateRow[],
-): CatalogEntityResolutionCluster[] {
-  return rows.map((row) => {
-    const evidenceStatus =
-      row.evidenceStatus === "current" ? "current" : "stale";
-    const localeRelation =
-      row.localeRelation === "same_locale" ? "same_locale" : "cross_locale";
-    const recommendedAction =
-      evidenceStatus === "stale" || localeRelation === "cross_locale"
-        ? "hold"
-        : "merge_review";
-    const score = numberValue(row.score);
-
-    return {
-      id: clusterId("fuzzy_duplicate", [row.pairKey]),
-      kind: "fuzzy_duplicate",
-      title: `${row.leftCanonicalName} and ${row.rightCanonicalName} are a ${score}% near match`,
-      riskLevel: "review_needed",
-      reason:
-        evidenceStatus === "stale"
-          ? "Catalog inputs changed after this RapidFuzz run. Hold the pair and refresh evidence before any review decision."
-          : localeRelation === "cross_locale"
-            ? "RapidFuzz found a cross-locale near-name match. Keep the concepts separate until locale and source provenance are reviewed."
-            : "RapidFuzz found a deterministic same-locale near-name match. Review the pair manually; this evidence cannot merge catalog rows.",
-      recommendedAction,
-      fuzzyScore: score,
-      fuzzyScoreBucket: row.scoreBucket,
-      reasonCodes: row.reasonCodes,
-      localeRelation,
-      evidenceStatus,
-      members: [
-        fuzzyCatalogRowMember({
-          label: row.leftCanonicalName,
-          normalizedLabel: row.leftNormalizedName,
-          catalogKind: row.leftCatalogKind,
-          source: row.leftSource,
-          status: row.leftStatus,
-          publicSlug: row.leftPublicSlug,
-          locale: row.leftLocale,
-        }),
-        fuzzyCatalogRowMember({
-          label: row.rightCanonicalName,
-          normalizedLabel: row.rightNormalizedName,
-          catalogKind: row.rightCatalogKind,
-          source: row.rightSource,
-          status: row.rightStatus,
-          publicSlug: row.rightPublicSlug,
-          locale: row.rightLocale,
-        }),
-      ],
-    } satisfies CatalogEntityResolutionCluster;
-  });
-}
-
 function limitEntityResolutionClusters(
   clusters: CatalogEntityResolutionCluster[],
 ) {
@@ -747,30 +593,9 @@ function catalogRowMember(
     label: row.canonicalName,
     catalogKind: row.catalogKind,
     source: row.source,
-    status: row.status,
     publicSlug: row.publicSlug,
     typeaheadNameCount: numberValue(row.typeaheadNameCount),
     sourceLinkCount: numberValue(row.sourceLinkCount),
-  };
-}
-
-function fuzzyCatalogRowMember(input: {
-  label: string;
-  normalizedLabel: string | null;
-  catalogKind: string;
-  source: string;
-  status: string;
-  publicSlug: string | null;
-  locale: string;
-}): CatalogEntityResolutionClusterMember {
-  return {
-    label: input.label,
-    normalizedLabel: input.normalizedLabel ?? undefined,
-    catalogKind: input.catalogKind,
-    source: input.source,
-    status: input.status,
-    publicSlug: input.publicSlug,
-    locale: input.locale,
   };
 }
 

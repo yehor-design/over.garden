@@ -56,7 +56,11 @@ select
   po.object_kind as "objectKind",
   po.catalog_item_id as "catalogItemId",
   po.variety_state as "varietyState",
-  ci.catalog_kind as "catalogKind",
+  case
+    when ci.node_kind = 'taxon' then 'species'
+    when ci.node_kind = 'cultivar' then 'plant_variety'
+    else 'breed'
+  end as "catalogKind",
   ci.source as "catalogSource"
 from plant_objects po
 left join catalog_items ci on ci.id = po.catalog_item_id
@@ -180,7 +184,7 @@ export function formatObjectKindInventoryReport(
           `object_kind=${row.objectKind}`,
           `catalog_item_id=${row.catalogItemId ?? "null"}`,
           `variety_state=${row.varietyState}`,
-          `catalog_kind=${row.catalogKind ?? "null"}`,
+          `catalogKind=${row.catalogKind ?? "null"}`,
           `catalog_source=${row.catalogSource ?? "null"}`,
         ].join(" "),
       );

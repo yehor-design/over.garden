@@ -24,7 +24,6 @@ import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   formatPublicCount,
   getPublicSurfaceCopy,
-  publicCatalogStatusLabel,
 } from "@/lib/public-surface-localization";
 import { getEngagementSummary } from "@/server/engagement-repository";
 import { readViewerLikeState } from "@/app/engagement/engagement-viewer";
@@ -305,9 +304,6 @@ export async function renderPublicCatalogEvidenceRoute(
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               {formatPublicCount(locale, "photo", page.photoCount)}
-            </span>
-            <span className="rounded-md border border-border px-2 py-1">
-              {publicCatalogStatusLabel(locale, page.catalog.status)}
             </span>
           </div>
           <Link

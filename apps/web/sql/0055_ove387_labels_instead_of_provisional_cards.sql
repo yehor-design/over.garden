@@ -30,23 +30,9 @@
 -- 1. Labels instead of provisional cards
 -- ======================================================================
 
-with retired as (
-  select id, canonical_name
-  from catalog_items
-  where status = 'provisional'
-     or source = 'user_added'
-     or created_by_user_id is not null
-)
-update plant_objects as po
-set variety_text = coalesce(nullif(btrim(po.variety_text), ''), retired.canonical_name),
-    variety_state = 'free_text',
-    catalog_item_id = null,
-    updated_at = now()
-from retired
-where po.catalog_item_id = retired.id;
-
 -- Historic rows that carried the retired state without a card (the card was
--- deleted or never linked): the text they hold is already the label.
+-- deleted or never linked): the text they hold is already the label. This one
+-- reads no retired column, so it stays outside the guard below.
 update plant_objects
 set variety_state = case
       when nullif(btrim(variety_text), '') is null then 'unknown'
@@ -55,23 +41,56 @@ set variety_state = case
     updated_at = now()
 where variety_state = 'user_added';
 
-update catalog_items
-set identity_state = 'retired'
-where (status = 'provisional' or source = 'user_added' or created_by_user_id is not null)
-  and identity_state <> 'retired';
+-- Keep bootstrap repeatable: migration 0061 (OVE-399) drops `status` once
+-- `identity_state` owns the answer, and a replay reaches this section with the
+-- column already gone. Everything it would retire is already retired, so the
+-- whole section is skipped rather than rewritten to read a column that no
+-- longer says anything.
+do $$
+begin
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'catalog_items'
+      and column_name = 'status'
+  ) then
+    return;
+  end if;
 
-update catalog_alias_projections
-set status = 'stale', updated_at = now()
-where alias_kind = 'user_provisional'
-  and status <> 'stale';
+  with retired as (
+    select id, canonical_name
+    from catalog_items
+    where status = 'provisional'
+       or source = 'user_added'
+       or created_by_user_id is not null
+  )
+  update plant_objects as po
+  set variety_text = coalesce(nullif(btrim(po.variety_text), ''), retired.canonical_name),
+      variety_state = 'free_text',
+      catalog_item_id = null,
+      updated_at = now()
+  from retired
+  where po.catalog_item_id = retired.id;
 
-update catalog_match_suggestions as cms
-set status = 'stale', updated_at = now()
-from catalog_items as ci
-where ci.id = cms.source_catalog_item_id
-  and ci.identity_state = 'retired'
-  and (ci.status = 'provisional' or ci.source = 'user_added' or ci.created_by_user_id is not null)
-  and cms.status = 'pending';
+  update catalog_items
+  set identity_state = 'retired'
+  where (status = 'provisional' or source = 'user_added' or created_by_user_id is not null)
+    and identity_state <> 'retired';
+
+  update catalog_alias_projections
+  set status = 'stale', updated_at = now()
+  where alias_kind = 'user_provisional'
+    and status <> 'stale';
+
+  update catalog_match_suggestions as cms
+  set status = 'stale', updated_at = now()
+  from catalog_items as ci
+  where ci.id = cms.source_catalog_item_id
+    and ci.identity_state = 'retired'
+    and (ci.status = 'provisional' or ci.source = 'user_added' or ci.created_by_user_id is not null)
+    and cms.status = 'pending';
+end $$;
 
 -- ======================================================================
 -- 2. One normalizer for stored names

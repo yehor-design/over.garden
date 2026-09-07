@@ -6,8 +6,8 @@ import type { CatalogKind, Database } from "@/db/schema";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import { getLocalizedCoarseRegionLabel } from "@/lib/garden/regions";
 import type { PublicLocale } from "@/lib/public-localization";
-import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -106,14 +106,10 @@ export interface PublicOrganismExperienceRow {
 
 const PUBLIC_ASSERTION = sql`assertion.rights_class = 'source_public' and assertion.decision in ('automatic', 'curator_accepted')`;
 
-function selectableStatuses() {
-  return sql.join(SELECTABLE_CATALOG_STATUSES.map((status) => sql`${status}`));
-}
-
 /** A related node the card may link to: active, selectable, global, addressed. */
 function publicNode(alias: string) {
   const node = sql.raw(alias);
-  return sql`${node}.identity_state = 'active' and ${node}.created_by_user_id is null and ${node}.public_slug is not null and ${node}.status in (${selectableStatuses()})`;
+  return sql`${node}.identity_state = 'active' and ${node}.merged_into_catalog_item_id is null and ${node}.created_by_user_id is null and ${node}.public_slug is not null`;
 }
 
 function speciesSlugOf(alias: string) {
@@ -137,7 +133,7 @@ function relatedJson(alias: string, hostClass: boolean) {
   return sql`json_build_object(
     'catalogItemId', ${node}.id,
     'canonicalName', ${node}.canonical_name,
-    'catalogKind', ${node}.catalog_kind,
+    'catalogKind', ${catalogKindSql(alias)},
     'publicSlug', ${node}.public_slug,
     'speciesSlug', ${speciesSlugOf(alias)},
     'hostClass', ${hostClass ? sql`relation.host_class` : sql`null`}

@@ -188,11 +188,6 @@ export async function executeApprovedErasureRequest(
         requesterUserId,
         now,
       ).execute();
-      await buildAnonymizeCatalogMatchReviewersForErasureQuery(
-        trx,
-        requesterUserId,
-        now,
-      ).execute();
       await buildAnonymizeCatalogAliasReviewersForErasureQuery(
         trx,
         requesterUserId,
@@ -625,7 +620,7 @@ export function buildDeleteOwnedProvisionalCatalogItemsForErasureQuery(
   return executor
     .deleteFrom("catalog_items")
     .where("created_by_user_id", "=", requesterUserId)
-    .where("status", "=", "provisional");
+    .where("identity_state", "=", "retired");
 }
 
 export function buildAnonymizeOwnedCatalogOperatorFieldsForErasureQuery(
@@ -1051,20 +1046,6 @@ export function buildRekeyCommunityModerationActorsForErasureQuery(
         .execute();
     },
   };
-}
-
-export function buildAnonymizeCatalogMatchReviewersForErasureQuery(
-  executor: QueryExecutor,
-  requesterUserId: string,
-  now: Date,
-) {
-  return executor
-    .updateTable("catalog_match_suggestions")
-    .set({
-      reviewed_by_user_id: null,
-      updated_at: now,
-    })
-    .where("reviewed_by_user_id", "=", requesterUserId);
 }
 
 export function buildAnonymizeCatalogAliasReviewersForErasureQuery(

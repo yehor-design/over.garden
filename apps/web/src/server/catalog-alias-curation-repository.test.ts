@@ -54,7 +54,7 @@ describe("catalog alias curation repository", () => {
     )(testDb, { query: "rosa", limit: 8 }).compile();
 
     expect(compiled.sql).toContain('from "catalog_items"');
-    expect(compiled.sql).toContain('"catalog_items"."status" in');
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );

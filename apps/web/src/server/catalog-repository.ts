@@ -4,11 +4,9 @@ import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
-  CatalogItemStatus,
   CatalogKind,
   CatalogNodeKind,
   Database,
-  JsonValue,
   PlantObjectKind,
 } from "@/db/schema";
 import { normalizeCatalogName } from "@/lib/catalog/normalize-name";
@@ -17,10 +15,7 @@ import type { CatalogPickerKind } from "@/lib/garden/entry-contracts";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import type { PublicLocale } from "@/lib/public-localization";
-import {
-  toCatalogTypeaheadDocument,
-  type CatalogTypeaheadRow,
-} from "@/server/search/catalog-documents";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 const MAX_CATALOG_QUERY_LENGTH = 120;
 const MAX_CATALOG_PUBLIC_SLUG_LENGTH = 96;
@@ -44,14 +39,8 @@ const CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD = 0.3;
  * so the bound sits well above the budget.
  */
 export const CATALOG_TYPEAHEAD_DEADLINE_MS = 400;
-const MATCHING_QUEUE = "matching";
-const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
-const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
-
-export const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
-type SelectableCatalogStatus = (typeof SELECTABLE_CATALOG_STATUSES)[number];
 
 /**
  * One row of the picker: one organism, its display name in the reader's
@@ -76,7 +65,6 @@ export interface SelectableCatalogItem {
   speciesSlug: string | null;
   catalogKind: CatalogKind;
   locale: string;
-  status: SelectableCatalogStatus;
   source: string;
 }
 
@@ -467,16 +455,6 @@ export async function recordCatalogSearchMiss(
     : null;
 }
 
-export async function buildCatalogTypeaheadDocuments(
-  executor: QueryExecutor = db,
-) {
-  const rows = await buildCatalogTypeaheadReindexRowsQuery(executor).execute();
-
-  return rows
-    .map((row) => toCatalogTypeaheadDocument(row))
-    .filter((document) => document !== null);
-}
-
 export async function findSelectableCatalogItem(
   executor: QueryExecutor,
   itemId: string,
@@ -506,7 +484,6 @@ export async function findSelectableCatalogItem(
     speciesSlug: row.speciesSlug,
     catalogKind: row.catalogKind as CatalogKind,
     locale: row.locale,
-    status: row.status as SelectableCatalogStatus,
     source: row.source,
   };
 }
@@ -540,50 +517,8 @@ export async function findSelectableCatalogItemByPublicSlug(
     speciesSlug: row.speciesSlug,
     catalogKind: row.catalogKind as CatalogKind,
     locale: row.locale,
-    status: row.status as SelectableCatalogStatus,
     source: row.source,
   };
-}
-
-/**
- * Rows the Meilisearch reindex job still publishes until the closeout task
- * retires the `catalog_typeahead_reindex` kind. Not on the pick path.
- */
-export function buildCatalogTypeaheadReindexRowsQuery(executor: QueryExecutor) {
-  return executor
-    .selectFrom("catalog_item_names")
-    .innerJoin(
-      "catalog_items",
-      "catalog_items.id",
-      "catalog_item_names.catalog_item_id",
-    )
-    .select([
-      "catalog_items.id as id",
-      "catalog_items.canonical_name as canonicalName",
-      "catalog_items.normalized_name as normalizedName",
-      "catalog_items.catalog_kind as catalogKind",
-      "catalog_items.status as status",
-      "catalog_items.source as source",
-      "catalog_items.created_by_user_id as createdByUserId",
-      "catalog_items.locale as itemLocale",
-      "catalog_item_names.display_name as displayName",
-      "catalog_item_names.normalized_name as aliasNormalizedName",
-      "catalog_item_names.locale as aliasLocale",
-      "catalog_item_names.is_primary as isPrimary",
-      sql<boolean>`exists (
-        select 1
-        from catalog_alias_projections as generated_alias
-        where generated_alias.catalog_item_name_id = catalog_item_names.id
-          and generated_alias.status = 'accepted'
-          and generated_alias.source_method = 'generated'
-      )`.as("isGeneratedAlias"),
-    ])
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
-    .where("catalog_items.identity_state", "=", "active")
-    .where("catalog_items.created_by_user_id", "is", null)
-    .orderBy("catalog_item_names.is_primary", "desc")
-    .orderBy("catalog_item_names.display_name", "asc")
-    .$castTo<CatalogTypeaheadRow>();
 }
 
 export function buildFindSelectableCatalogItemQuery(
@@ -597,13 +532,11 @@ export function buildFindSelectableCatalogItemQuery(
       "canonical_name as canonicalName",
       "public_slug as publicSlug",
       catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
-      "catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "locale",
-      "status",
       "source",
     ])
     .where("id", "=", itemId)
-    .where("status", "in", [...SELECTABLE_CATALOG_STATUSES])
     .where("identity_state", "=", "active")
     .where("created_by_user_id", "is", null);
 }
@@ -619,59 +552,17 @@ export function buildFindSelectableCatalogItemByPublicSlugQuery(
       "canonical_name as canonicalName",
       "public_slug as publicSlug",
       catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
-      "catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "locale",
-      "status",
       "source",
     ])
     .where("public_slug", "=", publicSlug)
     .where("public_slug", "is not", null)
-    .where("status", "in", [...SELECTABLE_CATALOG_STATUSES])
     .where("identity_state", "=", "active")
     .where("created_by_user_id", "is", null)
     .$narrowType<{ publicSlug: string }>();
 }
 
-export function buildEnqueueCatalogTypeaheadReindexJobQuery(
-  executor: QueryExecutor,
-) {
-  const payload = {
-    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
-  } satisfies JsonValue;
-  const now = new Date();
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          status: sql<string>`case
-            when job_queue.status = 'processing' then job_queue.status
-            else 'pending'
-          end`,
-          available_at: now,
-          locked_at: sql<Date | null>`case
-            when job_queue.status = 'processing' then job_queue.locked_at
-            else null
-          end`,
-          locked_by: sql<string | null>`case
-            when job_queue.status = 'processing' then job_queue.locked_by
-            else null
-          end`,
-          rerun_requested: sql<boolean>`(job_queue.status = 'processing')`,
-          last_error: null,
-          updated_at: now,
-        }),
-    )
-    .returningAll();
-}
 
 /**
  * The query in the form the stored names carry: the shared normalizer, capped
@@ -731,12 +622,4 @@ function matchesCatalogKindObjectKind(
   // A species record has no independent object-kind field: it is selectable
   // by a plant and by an animal alike.
   return catalogKind === "species";
-}
-
-export function isSelectableCatalogStatus(
-  status: CatalogItemStatus | string,
-): status is SelectableCatalogStatus {
-  return SELECTABLE_CATALOG_STATUSES.includes(
-    status as SelectableCatalogStatus,
-  );
 }

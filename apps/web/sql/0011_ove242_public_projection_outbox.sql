@@ -47,9 +47,22 @@ create table if not exists public_projection_intents (
 
 alter table public_projection_intents
   drop constraint if exists public_projection_intents_entity_kind_check;
-alter table public_projection_intents
-  add constraint public_projection_intents_entity_kind_check
-  check (entity_kind in ('journal_entry'));
+-- Keep bootstrap repeatable: migration 0062 (OVE-389) widened this vocabulary
+-- to admit `catalog_item`, and a replay reaches this line with those rows
+-- already in the table. Re-narrowing it would refuse rows the current schema
+-- accepts, so the original vocabulary is restored only while nothing has moved
+-- past it; 0062 widens it again later in the same replay.
+do $$
+begin
+  if not exists (
+    select 1 from public_projection_intents
+    where entity_kind <> 'journal_entry'
+  ) then
+    alter table public_projection_intents
+      add constraint public_projection_intents_entity_kind_check
+      check (entity_kind in ('journal_entry'));
+  end if;
+end $$;
 
 alter table public_projection_intents
   drop constraint if exists public_projection_intents_desired_state_check;
@@ -71,22 +84,47 @@ alter table public_projection_intents
 
 alter table public_projection_intents
   drop constraint if exists public_projection_intents_reason_check;
-alter table public_projection_intents
-  add constraint public_projection_intents_reason_check
-  check (
-    desired_reason in (
-      'publish',
-      'edit',
-      'archive',
-      'erasure',
-      'moderation',
-      'location_change',
-      'catalog_identity',
-      'media_presentation',
-      'profile_visibility',
-      'repair'
+-- Keep bootstrap repeatable: later migrations widen this vocabulary (0054
+-- adds `journal_delete` and `catalog_card`), and a replay reaches this line
+-- with rows already carrying the wider values. Re-narrowing it would refuse
+-- rows the current schema accepts, so the older vocabulary is restored only
+-- while nothing has moved past it; the widening migration runs again later in
+-- the same replay.
+do $$
+begin
+  if not exists (
+    select 1 from public_projection_intents
+    where desired_reason not in (
+          'publish',
+          'edit',
+          'archive',
+          'erasure',
+          'moderation',
+          'location_change',
+          'catalog_identity',
+          'media_presentation',
+          'profile_visibility',
+          'repair'
     )
-  );
+  ) then
+    alter table public_projection_intents
+      add constraint public_projection_intents_reason_check
+      check (
+        desired_reason in (
+          'publish',
+          'edit',
+          'archive',
+          'erasure',
+          'moderation',
+          'location_change',
+          'catalog_identity',
+          'media_presentation',
+          'profile_visibility',
+          'repair'
+        )
+      );
+  end if;
+end $$;
 
 -- An applier may never record progress beyond the generation it claimed, and a
 -- generation is always drawn from the shared sequence, so it is always > 0.

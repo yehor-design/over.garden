@@ -11,13 +11,13 @@ import {
   genebankLongTailProjectionForRecord,
 } from "@/lib/catalog/genebank-long-tail";
 import {
-  buildEnqueueGenebankTypeaheadReindexJobQuery,
   buildInsertGenebankSourceLinkQuery,
   buildMarkGenebankRecordProjectedQuery,
   buildUpsertGenebankCatalogItemQuery,
   buildUpsertGenebankCatalogNameQuery,
 } from "@/server/catalog-source/genebank-long-tail-import";
 import type { RequestScope } from "@/server/request-scope";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 const MAX_SOURCE_CANDIDATES = 40;
 const REVIEW_STATUS_GROUPS: Array<{
@@ -72,7 +72,6 @@ export interface CatalogSourceCandidateReviewRow {
   catalogItemId: string | null;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
-  catalogStatus: string | null;
   catalogKind: string | null;
   typeaheadNameCount: number | string | bigint;
 }
@@ -119,7 +118,6 @@ export interface CatalogSourceCandidateReviewItem {
     catalogItemId: string;
     canonicalName: string;
     publicSlug: string | null;
-    status: string;
     catalogKind: string;
     typeaheadNameCount: number;
   } | null;
@@ -138,7 +136,6 @@ export interface CatalogSourceCandidateDecisionInput {
 export interface CatalogSourceCandidateDecisionResult {
   sourceRecordId: string;
   sourceRecordKey: string;
-  status: CatalogSourceCandidateReviewStatus;
   catalogItemId: string | null;
   catalogPublicSlug: string | null;
 }
@@ -201,7 +198,6 @@ export async function promoteCatalogSourceCandidate(
       catalogItemId: null,
       catalogCanonicalName: null,
       catalogPublicSlug: null,
-      catalogStatus: null,
       catalogKind: null,
       typeaheadNameCount: 0,
     });
@@ -238,9 +234,6 @@ export async function promoteCatalogSourceCandidate(
       sourceRecordId: candidate.sourceRecordId,
     }).executeTakeFirstOrThrow();
 
-    await buildEnqueueGenebankTypeaheadReindexJobQuery(
-      trx,
-    ).executeTakeFirstOrThrow();
 
     return {
       sourceRecordId: candidate.sourceRecordId,
@@ -269,7 +262,6 @@ export async function holdCatalogSourceCandidate(
       catalogItemId: null,
       catalogCanonicalName: null,
       catalogPublicSlug: null,
-      catalogStatus: null,
       catalogKind: null,
       typeaheadNameCount: 0,
     });
@@ -286,7 +278,6 @@ export async function holdCatalogSourceCandidate(
     return {
       sourceRecordId,
       sourceRecordKey: held.sourceRecordKey,
-      status: candidate.status,
       catalogItemId: null,
       catalogPublicSlug: null,
     };
@@ -310,7 +301,6 @@ export async function rejectCatalogSourceCandidate(
       catalogItemId: null,
       catalogCanonicalName: null,
       catalogPublicSlug: null,
-      catalogStatus: null,
       catalogKind: null,
       typeaheadNameCount: 0,
     });
@@ -386,8 +376,7 @@ export function buildCatalogSourceCandidatesForReviewQuery(
       "catalog_items.id as catalogItemId",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
-      "catalog_items.status as catalogStatus",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       fn
         .count<number>("catalog_item_names.id")
         .distinct()
@@ -414,8 +403,7 @@ export function buildCatalogSourceCandidatesForReviewQuery(
       "catalog_items.id",
       "catalog_items.canonical_name",
       "catalog_items.public_slug",
-      "catalog_items.status",
-      "catalog_items.catalog_kind",
+      catalogKindSql("catalog_items"),
     ]);
 
   if (status) {
@@ -586,15 +574,11 @@ export function toCatalogSourceCandidateReviewItem(
     review,
     promotionPreview,
     projectedCatalog:
-      row.catalogItemId &&
-      row.catalogCanonicalName &&
-      row.catalogStatus &&
-      row.catalogKind
+      row.catalogItemId && row.catalogCanonicalName && row.catalogKind
         ? {
             catalogItemId: row.catalogItemId,
             canonicalName: row.catalogCanonicalName,
             publicSlug: row.catalogPublicSlug,
-            status: row.catalogStatus,
             catalogKind: row.catalogKind,
             typeaheadNameCount: Number(row.typeaheadNameCount),
           }

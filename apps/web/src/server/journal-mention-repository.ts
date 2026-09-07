@@ -18,7 +18,6 @@ import type {
 } from "@/lib/garden/journal-mentions";
 import { normalizeJournalMentionSelections } from "@/lib/garden/journal-mentions";
 import {
-  SELECTABLE_CATALOG_STATUSES,
   findSelectableCatalogItem,
 } from "@/server/catalog-repository";
 import {
@@ -31,6 +30,7 @@ import {
   unsealPublicHandleMentionTarget,
 } from "@/server/public-handle-mention-token";
 import type { RequestScope } from "@/server/request-scope";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -303,14 +303,14 @@ export function buildOwnObjectMentionSuggestionsQuery(
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
         .on("catalog_items.created_by_user_id", "is", null)
-        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES]),
+        .on("catalog_items.identity_state", "=", "active"),
     )
     .select([
       "plant_objects.id as id",
       "plant_objects.display_name as displayName",
       "plant_objects.variety_text as varietyText",
       "catalog_items.canonical_name as catalogCanonicalName",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "spaces.display_name as spaceDisplayName",
     ])
     .where("plant_objects.owner_user_id", "=", scope.userId)
@@ -365,7 +365,7 @@ export function buildPublicObjectMentionSuggestionsQuery(
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
         .on("catalog_items.created_by_user_id", "is", null)
-        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES]),
+        .on("catalog_items.identity_state", "=", "active"),
     )
     .select([
       "plant_objects.id as id",
@@ -375,7 +375,7 @@ export function buildPublicObjectMentionSuggestionsQuery(
       "plant_objects.coarse_region_code as coarseRegionCode",
       "plant_objects.variety_text as varietyText",
       "catalog_items.canonical_name as catalogCanonicalName",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       sql<Date>`max(${sql.ref("journal_entries.published_at")})`.as(
         "lastPublishedAt",
       ),
@@ -402,7 +402,7 @@ export function buildPublicObjectMentionSuggestionsQuery(
       "plant_objects.coarse_region_code",
       "plant_objects.variety_text",
       "catalog_items.canonical_name",
-      "catalog_items.catalog_kind",
+      catalogKindSql("catalog_items"),
     ])
     .orderBy(
       sql<number>`case
@@ -487,7 +487,7 @@ export function buildCatalogMentionSuggestionsQuery(
     .select([
       "catalog_items.id as id",
       "catalog_items.canonical_name as canonicalName",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_item_names.display_name as displayName",
       // What the node is to a gardener writing about it. A node EPPO files as
       // a pest of something, or files under a pest category at all, is offered
@@ -504,7 +504,7 @@ export function buildCatalogMentionSuggestionsQuery(
           and categorization.predicate = 'categorization'
       )`.as("isPest"),
     ])
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     // A merged or retired node still carries its names, and offering one would
     // put a mention on a card the reader can no longer reach.
     .where("catalog_items.identity_state", "=", "active")

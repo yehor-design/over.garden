@@ -94,6 +94,30 @@ platform: real gardeners publishing, and organic discovery measured rather than
 assumed. One measurement gap blocks honest prioritisation; see known gaps
 below.
 
+**Delivered 2026-09-07, OVE-399 (Slice 24, task 14 of 14).** The slice is
+closed: nothing of the old shape remains to confuse the next reader. Migration
+`0061` drops `catalog_items.catalog_kind` and `catalog_items.status` (the graph
+answers both with `node_kind`, `identity_state` and
+`merged_into_catalog_item_id`), the old matcher's `catalog_match_suggestions`
+and `catalog_fuzzy_duplicate_suggestions`, the retired job kind's payload check,
+and `user_added` from `plant_objects.variety_state`; it renames the topic signal
+that was named after the dropped column. Every reader and writer went first; the
+three words the interface uses — species, sort, breed — survive as one
+derivation in `src/server/catalog-kind-sql.ts`, because that vocabulary belongs
+to the reader even though it is no longer a column. Meilisearch and the
+`catalog_typeahead_reindex` job kind left the pick path with `OVE-387`'s
+successor commit, and the retired smoke scripts and their Python counterparts
+went with them. `pnpm prove:organism-graph` is the one command that checks the
+delivered slice against production. Two defects surfaced on the way: the
+reconciliation's assertion cleanup asked five `not exists` questions per source
+record with three of the columns unindexed, so one delete read about 470,000
+rows and the job cleared roughly thirty-five assertions a minute while
+saturating the one-vCPU database (migration `0064` indexes them; the same plan
+costs 17,700 → 17.47 and the rate went to about 3,300 a minute); and `0061`
+made six earlier migrations un-replayable, which `prove-migration-reapply.ts`
+found and each site now guards. The slice's dated receipt is
+`docs/DELIVERY_LOG_ORGANISM_GRAPH_2026-09.md`.
+
 **Delivered 2026-09-07, OVE-395 (Slice 24, task 10 of 14).** Every registered
 cultivar and breed is attached to its species. The three register importers
 already wrote what a register says — a source row, a catalog item, its names

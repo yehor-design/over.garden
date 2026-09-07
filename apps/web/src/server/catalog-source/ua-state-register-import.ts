@@ -25,10 +25,6 @@ import { assertCatalogSourceProductProjectionAllowed } from "./source-projection
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
-const MATCHING_QUEUE = "matching";
-const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
-const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000057000";
 const UA_STATE_REGISTER_BATCH_SIZE = 500;
 
@@ -48,7 +44,6 @@ export interface UaStateRegisterImportSummary {
   transliterationName: string | null;
   publicSlug: string;
   aliasesProjected: number;
-  reindexQueued: boolean;
 }
 
 export interface UaStateRegisterFullImportSummary extends UaStateRegisterImportSummary {
@@ -65,7 +60,6 @@ export interface UaStateRegisterTypeaheadProof {
   displayName: string;
   canonicalName: string;
   locale: string;
-  status: string;
   source: string;
 }
 
@@ -80,7 +74,6 @@ export interface UaStateRegisterGardenReadbackProof {
 export interface UaStateRegisterSourceProvenanceProof {
   catalogItemId: string;
   canonicalName: string;
-  status: string;
   source: string;
   sourceSlug: string;
   sourceName: string;
@@ -227,18 +220,11 @@ async function importUaStateRegisterRows(
         transliterationName: transliteration,
         publicSlug: catalogItem.publicSlug ?? projection.publicSlug,
         aliasesProjected: projection.aliases.length,
-        reindexQueued: false,
       };
     });
 
-    const reindexJob =
-      await buildEnqueueUaStateRegisterTypeaheadReindexJobQuery(
-        trx,
-      ).executeTakeFirstOrThrow();
-    const reindexQueued = reindexJob.id.length > 0;
     const importedVarieties = varieties.map((summary) => ({
       ...summary,
-      reindexQueued,
     }));
     const primary = importedVarieties[0];
     if (!primary) {
@@ -251,7 +237,6 @@ async function importUaStateRegisterRows(
       importedVarieties: importedVarieties.length,
       sourceRowsImported: importedVarieties.length,
       audit: input.audit,
-      reindexQueued,
     };
   });
 }
@@ -270,7 +255,6 @@ export async function readUaStateRegisterTypeaheadProof(
     displayName: row.displayName,
     canonicalName: row.canonicalName,
     locale: row.locale,
-    status: row.status,
     source: row.source,
   }));
 }
@@ -289,7 +273,6 @@ export async function readUaStateRegisterSourceProvenanceProof(
   return {
     catalogItemId: row.catalogItemId,
     canonicalName: row.canonicalName,
-    status: row.status,
     source: row.source,
     sourceSlug: row.sourceSlug,
     sourceName: row.sourceName,
@@ -555,10 +538,8 @@ export function buildUpsertUaStateRegisterCatalogItemQuery(
       canonical_name: projection.canonicalName,
       normalized_name: projection.normalizedName,
       public_slug: projection.publicSlug,
-      status: projection.status,
       source: projection.source,
       source_id: projection.sourceId,
-      catalog_kind: projection.catalogKind,
       created_by_user_id: null,
       locale: projection.locale,
     })
@@ -567,8 +548,6 @@ export function buildUpsertUaStateRegisterCatalogItemQuery(
         canonical_name: projection.canonicalName,
         normalized_name: projection.normalizedName,
         public_slug: projection.publicSlug,
-        status: projection.status,
-        catalog_kind: projection.catalogKind,
         created_by_user_id: null,
         locale: projection.locale,
         updated_at: now,
@@ -605,10 +584,8 @@ async function upsertUaStateRegisterCatalogItemsInChunks(
             canonical_name: projection.canonicalName,
             normalized_name: projection.normalizedName,
             public_slug: projection.publicSlug,
-            status: projection.status,
             source: projection.source,
             source_id: projection.sourceId,
-            catalog_kind: projection.catalogKind,
             created_by_user_id: null,
             locale: projection.locale,
           };
@@ -619,8 +596,6 @@ async function upsertUaStateRegisterCatalogItemsInChunks(
           canonical_name: sql`excluded.canonical_name`,
           normalized_name: sql`excluded.normalized_name`,
           public_slug: sql`excluded.public_slug`,
-          status: sql`excluded.status`,
-          catalog_kind: sql`excluded.catalog_kind`,
           created_by_user_id: null,
           locale: sql`excluded.locale`,
           updated_at: now,
@@ -793,30 +768,6 @@ async function insertUaStateRegisterSourceLinksInChunks(
   }
 }
 
-export function buildEnqueueUaStateRegisterTypeaheadReindexJobQuery(
-  executor: QueryExecutor,
-) {
-  const payload = {
-    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          updated_at: new Date(),
-        }),
-    )
-    .returning("id");
-}
 
 export function buildUaStateRegisterTypeaheadProofQuery(
   executor: QueryExecutor,
@@ -836,10 +787,9 @@ export function buildUaStateRegisterTypeaheadProofQuery(
       "catalog_item_names.display_name as displayName",
       "catalog_items.canonical_name as canonicalName",
       "catalog_item_names.locale as locale",
-      "catalog_items.status as status",
       "catalog_items.source as source",
     ])
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("catalog_items.source", "=", "ua_state_register")
     .where(
@@ -874,7 +824,6 @@ export function buildUaStateRegisterSourceProvenanceProofQuery(
     .select([
       "catalog_items.id as catalogItemId",
       "catalog_items.canonical_name as canonicalName",
-      "catalog_items.status as status",
       "catalog_items.source as source",
       "catalog_source_links.source_slug as sourceSlug",
       "catalog_source_snapshots.source_name as sourceName",

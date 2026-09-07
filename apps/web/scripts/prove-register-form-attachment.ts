@@ -70,10 +70,10 @@ async function seedSpecies(
   const id = randomUUID();
   await pool.query(
     `insert into catalog_items (
-       id, canonical_name, catalog_kind, normalized_name, public_slug, status,
+       id, canonical_name, normalized_name, public_slug,
        source, source_id, locale, node_kind, kingdom, rank, identity_state
      )
-     values ($1, $2, 'species', catalog_normalize_name($2), $3, 'seeded',
+     values ($1, $2, catalog_normalize_name($2), $3,
              'species_backbone', $4, 'la', 'taxon', $5, 'species', 'active')`,
     [id, canonicalName, slug, `ove395:${id}`, kingdom],
   );
@@ -140,14 +140,13 @@ async function seedRegisterRow(
   const itemId = randomUUID();
   await pool.query(
     `insert into catalog_items (
-       id, canonical_name, catalog_kind, normalized_name, public_slug, status,
+       id, canonical_name, normalized_name, public_slug,
        source, source_id, locale, node_kind, identity_state
      )
-     values ($1, $2, $3, catalog_normalize_name($2), $4, 'seeded', $5, $6, $7, $8, 'active')`,
+     values ($1, $2, catalog_normalize_name($2), $3, $4, $5, $6, $7, 'active')`,
     [
       itemId,
       input.canonicalName,
-      input.nodeKind === "breed" ? "breed" : "plant_variety",
       input.publicSlug === undefined
         ? `ove395-${itemId.slice(0, 8)}`
         : input.publicSlug,
@@ -285,11 +284,11 @@ async function seed(pool: Pool): Promise<Seed> {
   const euHomonymId = randomUUID();
   await pool.query(
     `insert into catalog_items (
-       id, canonical_name, catalog_kind, normalized_name, public_slug, status,
+       id, canonical_name, normalized_name, public_slug,
        source, source_id, locale, node_kind, identity_state
      )
-     values ($1, 'Coyote', 'plant_variety', catalog_normalize_name('Coyote'),
-             $2, 'seeded', 'manual', $3, 'en', 'cultivar', 'active')`,
+     values ($1, 'Coyote', catalog_normalize_name('Coyote'),
+             $2, 'manual', $3, 'en', 'cultivar', 'active')`,
     [
       euHomonymId,
       `ove395-eu-homonym-${euHomonymId.slice(0, 8)}`,
@@ -302,11 +301,11 @@ async function seed(pool: Pool): Promise<Seed> {
   const homonymId = randomUUID();
   await pool.query(
     `insert into catalog_items (
-       id, canonical_name, catalog_kind, normalized_name, public_slug, status,
+       id, canonical_name, normalized_name, public_slug,
        source, source_id, locale, node_kind, identity_state
      )
-     values ($1, 'Іскорка', 'plant_variety', catalog_normalize_name('Іскорка'),
-             $2, 'seeded', 'manual', $3, 'uk', 'cultivar', 'active')`,
+     values ($1, 'Іскорка', catalog_normalize_name('Іскорка'),
+             $2, 'manual', $3, 'uk', 'cultivar', 'active')`,
     [
       homonymId,
       `ove395-homonym-${homonymId.slice(0, 8)}`,

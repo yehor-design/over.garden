@@ -22,10 +22,6 @@ import { assertCatalogSourcesProductProjectionAllowed } from "./source-projectio
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
-const MATCHING_QUEUE = "matching";
-const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
-const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000058000";
 const SPECIES_BACKBONE_APPROVED_SOURCE_SLUGS = [
   "catalogue-of-life-checklistbank",
@@ -53,7 +49,6 @@ export interface SpeciesBackboneConceptImportSummary {
   aliasesProjected: number;
   aliasesRecorded: number;
   aliasStatusCounts: Record<SpeciesBackboneAliasCandidate["status"], number>;
-  reindexQueued: boolean;
 }
 
 export interface SpeciesBackboneImportSummary
@@ -68,7 +63,6 @@ export interface SpeciesBackboneTypeaheadProof {
   displayName: string;
   canonicalName: string;
   locale: string;
-  status: string;
   source: string;
 }
 
@@ -83,7 +77,6 @@ export interface SpeciesBackboneGardenReadbackProof {
 export interface SpeciesBackboneSourceProvenanceProof {
   catalogItemId: string;
   canonicalName: string;
-  status: string;
   source: string;
   sourceSlug: string;
   sourceName: string;
@@ -133,14 +126,8 @@ export async function importSpeciesBackboneSeed(
       conceptSummaries.push(await importSpeciesBackboneConcept(trx, concept));
     }
 
-    const reindexJob =
-      await buildEnqueueSpeciesBackboneTypeaheadReindexJobQuery(
-        trx,
-      ).executeTakeFirstOrThrow();
-    const reindexQueued = reindexJob.id.length > 0;
     const concepts = conceptSummaries.map((summary) => ({
       ...summary,
-      reindexQueued,
     }));
     const primaryConcept = concepts[0];
     if (!primaryConcept) {
@@ -155,7 +142,6 @@ export async function importSpeciesBackboneSeed(
         (total, concept) => total + concept.sourceRecordKeys.length,
         0,
       ),
-      reindexQueued,
     };
   });
 }
@@ -283,7 +269,6 @@ async function importSpeciesBackboneConcept(
     aliasesProjected: projection.aliases.length,
     aliasesRecorded: concept.aliasCandidates.length,
     aliasStatusCounts,
-    reindexQueued: false,
   };
 }
 
@@ -301,7 +286,6 @@ export async function readSpeciesBackboneTypeaheadProof(
     displayName: row.displayName,
     canonicalName: row.canonicalName,
     locale: row.locale,
-    status: row.status,
     source: row.source,
   }));
 }
@@ -318,7 +302,6 @@ export async function readSpeciesBackboneSourceProvenanceProof(
   return rows.map((row) => ({
     catalogItemId: row.catalogItemId,
     canonicalName: row.canonicalName,
-    status: row.status,
     source: row.source,
     sourceSlug: row.sourceSlug,
     sourceName: row.sourceName,
@@ -570,10 +553,8 @@ export function buildUpsertSpeciesBackboneCatalogItemQuery(
       canonical_name: projection.canonicalName,
       normalized_name: projection.normalizedName,
       public_slug: projection.publicSlug,
-      status: projection.status,
       source: projection.source,
       source_id: projection.sourceId,
-      catalog_kind: projection.catalogKind,
       created_by_user_id: null,
       locale: projection.locale,
     })
@@ -582,8 +563,6 @@ export function buildUpsertSpeciesBackboneCatalogItemQuery(
         canonical_name: projection.canonicalName,
         normalized_name: projection.normalizedName,
         public_slug: projection.publicSlug,
-        status: projection.status,
-        catalog_kind: projection.catalogKind,
         created_by_user_id: null,
         locale: projection.locale,
         updated_at: now,
@@ -710,30 +689,6 @@ export function buildInsertSpeciesBackboneSourceLinkQuery(
     );
 }
 
-export function buildEnqueueSpeciesBackboneTypeaheadReindexJobQuery(
-  executor: QueryExecutor,
-) {
-  const payload = {
-    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          updated_at: new Date(),
-        }),
-    )
-    .returning("id");
-}
 
 export function buildSpeciesBackboneTypeaheadProofQuery(
   executor: QueryExecutor,
@@ -753,10 +708,9 @@ export function buildSpeciesBackboneTypeaheadProofQuery(
       "catalog_item_names.display_name as displayName",
       "catalog_items.canonical_name as canonicalName",
       "catalog_item_names.locale as locale",
-      "catalog_items.status as status",
       "catalog_items.source as source",
     ])
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("catalog_items.source", "=", "species_backbone")
     .where(
@@ -791,7 +745,6 @@ export function buildSpeciesBackboneSourceProvenanceProofQuery(
     .select([
       "catalog_items.id as catalogItemId",
       "catalog_items.canonical_name as canonicalName",
-      "catalog_items.status as status",
       "catalog_items.source as source",
       "catalog_source_links.source_slug as sourceSlug",
       "catalog_source_snapshots.source_name as sourceName",
@@ -837,6 +790,7 @@ export function buildSpeciesBackboneAliasCurationProofQuery(
       "catalog_alias_projections.locale as locale",
       "catalog_alias_projections.script as script",
       "catalog_alias_projections.alias_kind as aliasKind",
+      "catalog_alias_projections.status as status",
       "catalog_alias_projections.status as status",
       "catalog_alias_projections.source_slug as sourceSlug",
       "catalog_alias_projections.source_method as sourceMethod",

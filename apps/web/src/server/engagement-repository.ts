@@ -21,7 +21,6 @@ import {
 } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
-import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { blockUserId } from "@/server/profile-interaction-repository";
@@ -1498,7 +1497,7 @@ export function buildPublicVarietyTargetQuery(
       catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
     ])
     .where("catalog_items.public_slug", "=", publicSlug)
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("plant_objects.variety_state", "=", "selected")
     .whereRef(

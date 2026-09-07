@@ -25,7 +25,6 @@ import {
 import {
   buildCatalogSourceRefreshReadbackQuery,
   buildCatalogSourceRefreshTypeaheadProofQuery,
-  buildEnqueueCatalogSourceRefreshTypeaheadReindexJobQuery,
   buildInsertCatalogSourceRefreshLinkQuery,
   buildUpsertCatalogSourceRefreshCatalogItemQuery,
   buildUpsertCatalogSourceRefreshCatalogNameQuery,
@@ -320,26 +319,11 @@ describe("catalog source sample refresh", () => {
     expect(compiled.sql).not.toContain("catalog_source_records");
     expect(compiled.sql).not.toContain("catalog_source_refresh_records");
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "ua_state_register",
       "%refresh new 64%",
       8,
     ]);
   });
 
-  it("queues a derived typeahead reindex only through the matching queue", () => {
-    const compiled =
-      buildEnqueueCatalogSourceRefreshTypeaheadReindexJobQuery(
-        testDb,
-      ).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.parameters).toEqual([
-      "matching",
-      { kind: "catalog_typeahead_reindex" },
-      "catalog-typeahead-reindex",
-      expect.any(Date),
-    ]);
-  });
 });

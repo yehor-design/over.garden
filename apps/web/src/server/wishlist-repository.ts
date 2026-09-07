@@ -7,7 +7,6 @@ import { type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type {
   CatalogKind,
-  CatalogItemStatus,
   Database,
   WishlistItem,
   WishlistSourceSurface,
@@ -19,11 +18,11 @@ import {
 import {
   findSelectableCatalogItem,
   findSelectableCatalogItemByPublicSlug,
-  SELECTABLE_CATALOG_STATUSES,
   type SelectableCatalogItem,
 } from "@/server/catalog-repository";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import type { RequestScope } from "@/server/request-scope";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -44,7 +43,6 @@ export interface WishlistShelfItem {
     publicSlug: string | null;
     catalogKind: CatalogKind;
     locale: string;
-    status: Extract<CatalogItemStatus, "seeded" | "confirmed">;
     source: string;
   };
   sourceSurface: WishlistSourceSurface;
@@ -74,7 +72,6 @@ export interface WishlistShelfRow {
   catalogSpeciesSlug: string | null;
   catalogKind: string;
   catalogLocale: string;
-  catalogStatus: string;
   catalogSource: string;
 }
 
@@ -198,13 +195,12 @@ export function buildListWishlistShelfItemsQuery(
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.locale as catalogLocale",
-      "catalog_items.status as catalogStatus",
       "catalog_items.source as catalogSource",
     ])
     .where("wishlist_items.owner_user_id", "=", scope.userId)
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .orderBy("wishlist_items.created_at", "desc")
     .orderBy("wishlist_items.id", "asc");
@@ -222,10 +218,6 @@ export function serializeWishlistShelfItem(
       publicSlug,
       catalogKind: row.catalogKind as CatalogKind,
       locale: row.catalogLocale,
-      status: row.catalogStatus as Extract<
-        CatalogItemStatus,
-        "seeded" | "confirmed"
-      >,
       source: row.catalogSource,
     },
     sourceSurface: normalizeWishlistSourceSurface(row.sourceSurface),
@@ -283,7 +275,6 @@ function toWishlistShelfRow(
     catalogSpeciesSlug: catalogItem.speciesSlug,
     catalogKind: catalogItem.catalogKind,
     catalogLocale: catalogItem.locale,
-    catalogStatus: catalogItem.status,
     catalogSource: catalogItem.source,
   };
 }

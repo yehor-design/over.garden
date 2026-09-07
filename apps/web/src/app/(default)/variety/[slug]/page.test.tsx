@@ -75,7 +75,6 @@ describe("/variety/[slug]", () => {
         permalinkPath: `/id/${ITEM_ID}`,
         contentUpdatedAt: new Date("2026-06-20T10:00:00.000Z"),
         identifiers: [],
-        status: "seeded",
         source: "seed",
         locale: "uk",
       },
@@ -122,7 +121,7 @@ describe("/variety/[slug]", () => {
     });
   });
 
-  it("renders catalog status through user-facing labels", async () => {
+  it("never shows a reader a raw identity word", async () => {
     const { default: PublicVarietyRoute } = await import("./page");
     const html = renderToStaticMarkup(
       await PublicVarietyRoute({
@@ -130,9 +129,13 @@ describe("/variety/[slug]", () => {
       }),
     );
 
-    expect(html).toContain("Пилотный каталог");
+    // The status badge went with `catalog_items.status` (OVE-399): both
+    // selectable values meant "in the catalog", so the badge said the same
+    // thing on every card. What must still hold is that no internal word
+    // reaches a reader.
     expect(html).not.toContain(">seeded<");
     expect(html).not.toContain(">confirmed<");
+    expect(html).not.toContain(">active<");
   });
 
   it("renders a wishlist action without gating public variety reading", async () => {

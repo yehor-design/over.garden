@@ -397,19 +397,19 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
     `insert into catalog_source_assertions (id, source_slug, source_snapshot_id) values ($1, 'ua-state-register', $2)`,
     [assertionId, snapshotId],
   );
-  const items: Array<[string, string, string, string, string, string, string]> = [
-    [speciesId, "Solanum lycopersicum L.", "species", "species_backbone", "la", "taxon", "Plantae"],
-    [cultivarId, "Де Барао", "plant_variety", "ua_state_register", "uk", "cultivar", "Plantae"],
-    [homonymId, "Де Барао", "plant_variety", "manual", "uk", "cultivar", "Plantae"],
-    [animalTaxonId, "Apis mellifera", "species", "species_backbone", "la", "taxon", "Animalia"],
-    [breedId, "Карпатська", "breed", "ua_official_bee_breed", "uk", "breed", "Animalia"],
+  const items: Array<[string, string, string, string, string, string]> = [
+    [speciesId, "Solanum lycopersicum L.", "species_backbone", "la", "taxon", "Plantae"],
+    [cultivarId, "Де Барао", "ua_state_register", "uk", "cultivar", "Plantae"],
+    [homonymId, "Де Барао", "manual", "uk", "cultivar", "Plantae"],
+    [animalTaxonId, "Apis mellifera", "species_backbone", "la", "taxon", "Animalia"],
+    [breedId, "Карпатська", "ua_official_bee_breed", "uk", "breed", "Animalia"],
   ];
-  for (const [id, name, kind, source, locale, nodeKind, kingdom] of items) {
+  for (const [id, name, source, locale, nodeKind, kingdom] of items) {
     await pool.query(
-      `insert into catalog_items (id, canonical_name, catalog_kind, normalized_name, public_slug, status, source,
+      `insert into catalog_items (id, canonical_name, normalized_name, public_slug, source,
          source_id, locale, node_kind, kingdom, identity_state, search_weight)
-       values ($1, $2, $3, catalog_normalize_name($2), $4, 'seeded', $5, $6, $7, $8, $9, 'active', 5)`,
-      [id, name, kind, `ove387-${suffix}-${id.slice(0, 8)}`, source, `${source}:ove387:${id}`, locale, nodeKind, kingdom],
+       values ($1, $2, catalog_normalize_name($2), $3, $4, $5, $6, $7, $8, 'active', 5)`,
+      [id, name, `ove387-${suffix}-${id.slice(0, 8)}`, source, `${source}:ove387:${id}`, locale, nodeKind, kingdom],
     );
   }
   const names: Array<[string, string, string, boolean, string]> = [

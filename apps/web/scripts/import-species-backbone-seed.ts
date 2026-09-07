@@ -149,7 +149,6 @@ async function main() {
       blockedAliasProof.push({
         conceptKey: concept.key,
         displayName: alias.displayName,
-        status: alias.status,
         projectedToTypeahead: false,
       });
     }
@@ -213,7 +212,6 @@ async function main() {
       importedConcepts: imported.importedConcepts,
       sourceRowsImported: imported.sourceRowsImported,
       concepts: imported.concepts.map(redactConceptSummary),
-      reindexQueued: imported.reindexQueued,
     },
     idempotencyProof: {
       rerunImportedConcepts: rerun.importedConcepts,

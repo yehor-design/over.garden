@@ -90,7 +90,6 @@ export interface UaStateRegisterVarietyProjection {
   canonicalName: string;
   normalizedName: string;
   publicSlug: string;
-  status: "seeded";
   source: "ua_state_register";
   sourceId: string;
   catalogKind: "plant_variety";
@@ -387,7 +386,6 @@ function buildUaStateRegisterProjection(
     canonicalName: row.varietyName,
     normalizedName: normalizeCatalogName(row.varietyName),
     publicSlug: buildUaStateRegisterPublicSlug(row),
-    status: "seeded",
     source: "ua_state_register",
     sourceId: `ua-state-register:${UA_STATE_REGISTER_SOURCE.version}:RegisterVarietis:${row.applicationNumber}`,
     catalogKind: "plant_variety",

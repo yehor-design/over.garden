@@ -375,7 +375,6 @@ function page(kind: "species" | "breed" | "plant_variety", slug: string) {
       permalinkPath: `/id/${ITEM_ID}`,
       contentUpdatedAt: new Date("2026-07-10T10:00:00.000Z"),
       identifiers: [{ scheme: "eppo", value: "LYPES" }],
-      status: "seeded",
       source:
         kind === "species"
           ? "species_backbone"

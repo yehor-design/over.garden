@@ -6,7 +6,6 @@ import { db } from "@/db";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type {
-  CatalogItemStatus,
   CatalogKind,
   Database,
   PlantObjectKind,
@@ -20,13 +19,13 @@ import type { PublicLocale } from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { buildFirstProcessedMediaPerEntryQuery } from "@/server/public-media-repository";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 export const PUBLIC_OBJECT_CATALOG_PAGE_SIZE = 6;
 const MAX_PUBLIC_OBJECT_CATALOG_PAGE = 1_000;
 const MAX_PUBLIC_OBJECT_CATALOG_QUERY_LENGTH = 120;
-const SELECTABLE_PUBLIC_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 
 export type PublicObjectCatalogKind = "all" | PlantObjectKind;
 export type PublicObjectCatalogIdentityFilter =
@@ -56,7 +55,6 @@ export interface PublicObjectCatalogCard {
   identityState: PublicObjectCatalogIdentityState;
   identityName: string | null;
   catalogKind: CatalogKind | null;
-  catalogStatus: Extract<CatalogItemStatus, "seeded" | "confirmed"> | null;
   catalogPath: string | null;
   objectCount: number;
   journalCount: number;
@@ -91,7 +89,6 @@ export interface PublicObjectCatalogGroupRow {
   identityName: string | null;
   catalogPublicSlug: string | null;
   catalogSpeciesSlug: string | null;
-  catalogStatus: string | null;
   objectCount: number | string | bigint;
   journalCount: number | string | bigint;
   representativeObjectId: string;
@@ -145,7 +142,6 @@ export function buildPublicObjectCatalogGroupsQuery(
   const catalogKind = publicObjectCatalogKindExpression();
   const catalogPublicSlug = publicObjectCatalogPublicSlugExpression();
   const catalogSpeciesSlug = publicObjectCatalogSpeciesSlugExpression();
-  const catalogStatus = publicObjectCatalogStatusExpression();
   const objectCount = sql<number>`count(distinct ${sql.ref("plant_objects.id")})`;
   const journalCount = sql<number>`count(distinct ${sql.ref("journal_entries.id")})`;
   const latestOrder = sql`order by ${sql.ref("journal_entries.published_at")} desc, ${sql.ref("journal_entries.id")} asc`;
@@ -188,7 +184,6 @@ export function buildPublicObjectCatalogGroupsQuery(
       identityName.as("identityName"),
       catalogPublicSlug.as("catalogPublicSlug"),
       catalogSpeciesSlug.as("catalogSpeciesSlug"),
-      catalogStatus.as("catalogStatus"),
       objectCount.as("objectCount"),
       journalCount.as("journalCount"),
       sql<string>`(array_agg(${sql.ref("plant_objects.id")} ${latestOrder}))[1]`.as(
@@ -231,7 +226,6 @@ export function buildPublicObjectCatalogGroupsQuery(
       identityName,
       catalogPublicSlug,
       catalogSpeciesSlug,
-      catalogStatus,
     ]);
 
   if (request.kind !== "all") {
@@ -245,7 +239,7 @@ export function buildPublicObjectCatalogGroupsQuery(
   ) {
     query = query
       .where(identityState, "=", "catalog")
-      .where("catalog_items.catalog_kind", "=", request.identity);
+      .where(catalogKindSql("catalog_items"), "=", request.identity);
   } else if (request.identity !== "all") {
     query = query.where(identityState, "=", request.identity);
   }
@@ -321,19 +315,12 @@ function serializePublicObjectCatalogCard(
     identityState === "catalog"
       ? normalizePublicCatalogKind(row.catalogKind)
       : null;
-  const catalogStatus =
-    identityState === "catalog"
-      ? normalizeSelectableCatalogStatus(row.catalogStatus)
-      : null;
   const identityName =
     identityState === "catalog"
       ? normalizeCatalogIdentityName(row.identityName)
       : null;
   const catalogPath =
-    identityState === "catalog" &&
-    catalogKind &&
-    catalogStatus &&
-    row.catalogPublicSlug
+    identityState === "catalog" && catalogKind && row.catalogPublicSlug
       ? publicCatalogEvidencePath({
           catalogKind,
           publicSlug: row.catalogPublicSlug,
@@ -347,7 +334,6 @@ function serializePublicObjectCatalogCard(
     identityState,
     identityName,
     catalogKind,
-    catalogStatus,
     catalogPath,
     objectCount: Number(row.objectCount),
     journalCount: Number(row.journalCount),
@@ -373,7 +359,7 @@ function publicObjectCatalogIdentityStateExpression(): RawBuilder<PublicObjectCa
   return sql<PublicObjectCatalogIdentityState>`case
     when ${sql.ref("plant_objects.variety_state")} = 'selected'
       and ${sql.ref("catalog_items.id")} is not null
-      and ${sql.ref("catalog_items.status")} in ('seeded', 'confirmed')
+      and ${sql.ref("catalog_items.identity_state")} = 'active'
       then 'catalog'
     when ${sql.ref("plant_objects.variety_state")} = 'selected'
       and ${sql.ref("catalog_items.id")} is not null
@@ -415,7 +401,7 @@ function publicObjectCatalogKindExpression(): RawBuilder<string | null> {
   const state = publicObjectCatalogIdentityStateExpression();
   return sql<
     string | null
-  >`case when ${state} = 'catalog' then ${sql.ref("catalog_items.catalog_kind")} else null end`;
+  >`case when ${state} = 'catalog' then ${catalogKindSql("catalog_items")} else null end`;
 }
 
 function publicObjectCatalogPublicSlugExpression(): RawBuilder<string | null> {
@@ -425,12 +411,6 @@ function publicObjectCatalogPublicSlugExpression(): RawBuilder<string | null> {
   >`case when ${state} = 'catalog' then ${sql.ref("catalog_items.public_slug")} else null end`;
 }
 
-function publicObjectCatalogStatusExpression(): RawBuilder<string | null> {
-  const state = publicObjectCatalogIdentityStateExpression();
-  return sql<
-    string | null
-  >`case when ${state} = 'catalog' then ${sql.ref("catalog_items.status")} else null end`;
-}
 
 function normalizeFilterValue(value: string | string[] | undefined) {
   if (typeof value !== "string") return "";
@@ -500,16 +480,6 @@ function normalizePublicCatalogKind(value: string | null): CatalogKind | null {
     return value;
   }
   return null;
-}
-
-function normalizeSelectableCatalogStatus(
-  value: string | null,
-): Extract<CatalogItemStatus, "seeded" | "confirmed"> | null {
-  return SELECTABLE_PUBLIC_CATALOG_STATUSES.includes(
-    value as (typeof SELECTABLE_PUBLIC_CATALOG_STATUSES)[number],
-  )
-    ? (value as Extract<CatalogItemStatus, "seeded" | "confirmed">)
-    : null;
 }
 
 function normalizeCatalogIdentityName(value: string | null) {

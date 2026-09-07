@@ -25,7 +25,6 @@ import {
   euOfficialJournalCommonCatalogueSnapshotChecksum,
 } from "@/lib/catalog/eu-official-journal-common-catalogue";
 import {
-  buildEnqueueEuOfficialJournalCommonCatalogueTypeaheadReindexJobQuery,
   buildEuOfficialJournalCommonCatalogueBlockedRecordProofQuery,
   buildEuOfficialJournalCommonCatalogueSourceProvenanceProofQuery,
   buildEuOfficialJournalCommonCatalogueTypeaheadProofQuery,
@@ -199,7 +198,6 @@ describe("EU Official Journal Common Catalogue import", () => {
 
     expect(item.sql).toContain('on conflict ("source", "source_id") do update');
     expect(item.parameters).toContain("Cincinnati");
-    expect(item.parameters).toContain("plant_variety");
     expect(item.parameters).toContain(
       EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
     );
@@ -252,9 +250,8 @@ describe("EU Official Journal Common Catalogue import", () => {
     expect(compiled.sql).not.toContain('"raw_payload"');
     expect(compiled.sql).not.toContain("source_only_fields");
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
-      "plant_variety",
+      "active",
+      "cultivar",
       EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
       "%cincinnati%",
       8,
@@ -278,7 +275,7 @@ describe("EU Official Journal Common Catalogue import", () => {
     expect(compiled.sql).not.toContain("source_only_fields");
     expect(compiled.parameters).toEqual([
       catalogItemId,
-      "plant_variety",
+      "cultivar",
       EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
       EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE.slug,
       "canonical_item",
@@ -312,35 +309,4 @@ describe("EU Official Journal Common Catalogue import", () => {
     ]);
   });
 
-  it("queues a derived typeahead reindex after product projection", () => {
-    const compiled =
-      buildEnqueueEuOfficialJournalCommonCatalogueTypeaheadReindexJobQuery(
-        testDb,
-      ).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.sql).toContain('"payload" = $9');
-    expect(compiled.sql).toContain('"status" = $10');
-    expect(compiled.sql).toContain('"available_at" = $11');
-    expect(compiled.sql).toContain('"locked_at" = $12');
-    expect(compiled.sql).toContain('"locked_by" = $13');
-    expect(compiled.sql).toContain('"last_error" = $14');
-    expect(compiled.parameters).toEqual([
-      "matching",
-      { kind: "catalog_typeahead_reindex" },
-      "pending",
-      expect.any(Date),
-      null,
-      null,
-      null,
-      "catalog-typeahead-reindex",
-      { kind: "catalog_typeahead_reindex" },
-      "pending",
-      expect.any(Date),
-      null,
-      null,
-      null,
-      expect.any(Date),
-    ]);
-  });
 });

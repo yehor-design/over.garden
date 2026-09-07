@@ -24,6 +24,7 @@ import {
   type LineageInviteVerification,
 } from "@/server/lineage-invite-token";
 import type { RequestScope } from "@/server/request-scope";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type CreateProvenanceSourceKind = Extract<
@@ -581,7 +582,7 @@ export function buildLineagePlantObjectByIdQuery(
       "plant_objects.id as id",
       "plant_objects.display_name as displayName",
       "plant_objects.object_kind as objectKind",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
     ])
@@ -605,7 +606,7 @@ export function buildLineageSourceObjectOptionsQuery(
       "plant_objects.id as id",
       "plant_objects.display_name as displayName",
       "plant_objects.object_kind as objectKind",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
     ])
@@ -689,7 +690,7 @@ export function buildObjectProvenanceEdgesQuery(
       "source_objects.id as sourceObjectId",
       "source_objects.display_name as sourceObjectDisplayName",
       "source_objects.object_kind as sourceObjectKind",
-      "source_catalog_items.catalog_kind as sourceCatalogKind",
+      catalogKindSql("source_catalog_items").as("sourceCatalogKind"),
       "source_objects.variety_text as sourceVarietyText",
       "source_objects.variety_state as sourceVarietyState",
       "pending_identities.id as pendingIdentityId",
@@ -789,13 +790,13 @@ export function buildLineageClaimInboxQuery(
       "subject_objects.id as subjectObjectId",
       "subject_objects.display_name as subjectObjectDisplayName",
       "subject_objects.object_kind as subjectObjectKind",
-      "subject_catalog_items.catalog_kind as subjectCatalogKind",
+      catalogKindSql("subject_catalog_items").as("subjectCatalogKind"),
       "subject_objects.variety_text as subjectVarietyText",
       "subject_objects.variety_state as subjectVarietyState",
       "source_objects.id as sourceObjectId",
       "source_objects.display_name as sourceObjectDisplayName",
       "source_objects.object_kind as sourceObjectKind",
-      "source_catalog_items.catalog_kind as sourceCatalogKind",
+      catalogKindSql("source_catalog_items").as("sourceCatalogKind"),
       "source_objects.variety_text as sourceVarietyText",
       "source_objects.variety_state as sourceVarietyState",
     ])
@@ -914,7 +915,7 @@ export function buildLineageInvitationClaimPreviewQuery(
       "subject_objects.id as subjectObjectId",
       "subject_objects.display_name as subjectObjectDisplayName",
       "subject_objects.object_kind as subjectObjectKind",
-      "subject_catalog_items.catalog_kind as subjectCatalogKind",
+      catalogKindSql("subject_catalog_items").as("subjectCatalogKind"),
       "subject_objects.variety_text as subjectVarietyText",
       "subject_objects.variety_state as subjectVarietyState",
     ])

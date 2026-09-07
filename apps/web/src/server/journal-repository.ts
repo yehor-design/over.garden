@@ -44,7 +44,6 @@ import {
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
-  SELECTABLE_CATALOG_STATUSES,
   normalizeCatalogLabel,
   findSelectableCatalogItem,
 } from "@/server/catalog-repository";
@@ -105,6 +104,7 @@ import {
   DELETED_JOURNAL_ENTRY_BODY,
   DELETED_JOURNAL_ENTRY_TITLE,
 } from "@/server/journal-deletion-retention";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 export { JournalAggregateConflictError, readJournalDocumentFromEntry };
 
@@ -300,7 +300,7 @@ export interface PlantObjectPage {
     display_name: PlantObject["display_name"];
     object_kind: PlantObjectKind;
     catalog_item_id: PlantObject["catalog_item_id"];
-    catalog_kind: CatalogKind | null;
+    catalogKind: CatalogKind | null;
     catalog_canonical_name: string | null;
     catalog_public_slug: string | null;
     /** The current slug of the species a form belongs to, for its address. */
@@ -1487,7 +1487,7 @@ export async function createFirstPlantEntry(
           display_name: plantObject.display_name,
           object_kind: plantObject.object_kind as PlantObjectKind,
           catalog_item_id: plantObject.catalog_item_id,
-          catalog_kind: selectedCatalogItem?.catalogKind ?? null,
+          catalogKind: selectedCatalogItem?.catalogKind ?? null,
           catalog_canonical_name: selectedCatalogItem?.canonicalName ?? null,
           catalog_public_slug: selectedCatalogItem?.publicSlug ?? null,
           catalog_species_slug: selectedCatalogItem?.speciesSlug ?? null,
@@ -1662,7 +1662,7 @@ export function buildMyPlantObjectsQuery(
     .leftJoin("catalog_items", (join) =>
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
-        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+        .on("catalog_items.identity_state", "=", "active")
         .on("catalog_items.created_by_user_id", "is", null),
     )
     .select([
@@ -1670,7 +1670,7 @@ export function buildMyPlantObjectsQuery(
       "plant_objects.display_name as displayName",
       "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.created_at as createdAt",
@@ -1960,7 +1960,7 @@ export async function getPlantObjectPage(
       display_name: objectRow.objectDisplayName,
       object_kind: objectRow.objectKind as PlantObjectKind,
       catalog_item_id: objectRow.catalogItemId,
-      catalog_kind: objectRow.catalogKind as CatalogKind | null,
+      catalogKind: objectRow.catalogKind as CatalogKind | null,
       catalog_canonical_name: objectRow.catalogCanonicalName,
       catalog_public_slug: objectRow.catalogPublicSlug,
       catalog_species_slug: objectRow.catalogSpeciesSlug,
@@ -2152,7 +2152,7 @@ export async function createPlantObjectJournalEntry(
           display_name: target.objectDisplayName,
           object_kind: target.objectKind as PlantObjectKind,
           catalog_item_id: target.catalogItemId,
-          catalog_kind: target.catalogKind as CatalogKind | null,
+          catalogKind: target.catalogKind as CatalogKind | null,
           catalog_canonical_name: target.catalogCanonicalName,
           catalog_public_slug: target.catalogPublicSlug,
           catalog_species_slug: target.catalogSpeciesSlug,
@@ -2204,7 +2204,7 @@ export async function createPlantObjectJournalEntry(
         display_name: target.objectDisplayName,
         object_kind: target.objectKind as PlantObjectKind,
         catalog_item_id: target.catalogItemId,
-        catalog_kind: target.catalogKind as CatalogKind | null,
+        catalogKind: target.catalogKind as CatalogKind | null,
         catalog_canonical_name: target.catalogCanonicalName,
         catalog_public_slug: target.catalogPublicSlug,
         catalog_species_slug: target.catalogSpeciesSlug,
@@ -2487,7 +2487,7 @@ export async function resolvePlantObjectCatalog(
         display_name: resolved.display_name,
         object_kind: resolved.object_kind as PlantObjectKind,
         catalog_item_id: resolved.catalog_item_id,
-        catalog_kind: selectedCatalogItem?.catalogKind ?? null,
+        catalogKind: selectedCatalogItem?.catalogKind ?? null,
         catalog_canonical_name: selectedCatalogItem?.canonicalName ?? null,
         catalog_public_slug: selectedCatalogItem?.publicSlug ?? null,
         catalog_species_slug: selectedCatalogItem?.speciesSlug ?? null,
@@ -3389,7 +3389,7 @@ export function buildPlantObjectPageObjectQuery(
     .leftJoin("catalog_items", (join) =>
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
-        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+        .on("catalog_items.identity_state", "=", "active")
         .on("catalog_items.created_by_user_id", "is", null),
     )
     .select([
@@ -3397,7 +3397,7 @@ export function buildPlantObjectPageObjectQuery(
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
@@ -3445,7 +3445,7 @@ export function buildSpaceTimelineObjectsQuery(
     .leftJoin("catalog_items", (join) =>
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
-        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+        .on("catalog_items.identity_state", "=", "active")
         .on("catalog_items.created_by_user_id", "is", null),
     )
     .select([
@@ -3453,7 +3453,7 @@ export function buildSpaceTimelineObjectsQuery(
       "plant_objects.space_id as spaceId",
       "plant_objects.display_name as displayName",
       "plant_objects.object_kind as objectKind",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
     ])
@@ -3712,7 +3712,7 @@ export function buildPublicJournalEntryLookupQuery(
     .leftJoin("catalog_items", (join) =>
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
-        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+        .on("catalog_items.identity_state", "=", "active")
         .on("catalog_items.created_by_user_id", "is", null)
         .on("catalog_items.public_slug", "is not", null),
     )
@@ -3762,7 +3762,7 @@ export function buildPublicJournalEntryLookupQuery(
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
@@ -3956,7 +3956,7 @@ export function buildPublicMentionedObjectsForEntryQuery(
     .leftJoin("catalog_items", (join) =>
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
-        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+        .on("catalog_items.identity_state", "=", "active")
         .on("catalog_items.created_by_user_id", "is", null)
         .on("catalog_items.public_slug", "is not", null),
     )

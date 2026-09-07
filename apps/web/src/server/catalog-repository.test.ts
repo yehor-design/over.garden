@@ -14,9 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
 import {
-  buildCatalogTypeaheadReindexRowsQuery,
   buildCatalogTypeaheadStatement,
-  buildEnqueueCatalogTypeaheadReindexJobQuery,
   buildFindSelectableCatalogItemByPublicSlugQuery,
   buildFindSelectableCatalogItemQuery,
   buildUpsertCatalogSearchMissQuery,
@@ -286,14 +284,11 @@ describe("catalog labels and selectable items", () => {
       "00000000-0000-4000-8000-000000000101",
     ).compile();
 
-    expect(compiled.sql).toContain('"status" in ($2, $3)');
-    expect(compiled.sql).toContain('"identity_state" = $4');
+    expect(compiled.sql).toContain('"identity_state" = ');
+    expect(compiled.sql).toContain('"identity_state" = ');
     expect(compiled.sql).toContain('"created_by_user_id" is null');
     expect(compiled.parameters).toEqual([
-      "00000000-0000-4000-8000-000000000101",
-      "seeded",
-      "confirmed",
-      "active",
+      "00000000-0000-4000-8000-000000000101",      "active",
     ]);
   });
 
@@ -313,38 +308,11 @@ describe("catalog labels and selectable items", () => {
 
     expect(compiled.sql).toContain('"public_slug" = $1');
     expect(compiled.sql).toContain('"public_slug" is not null');
-    expect(compiled.sql).toContain('"identity_state" = $4');
+    expect(compiled.sql).toContain('"identity_state" = ');
     expect(compiled.sql).toContain('"created_by_user_id" is null');
     expect(compiled.parameters).toEqual([
-      "pomidor-cheri-0000000101",
-      "seeded",
-      "confirmed",
-      "active",
+      "pomidor-cheri-0000000101",      "active",
     ]);
   });
 });
 
-describe("Meilisearch reindex rows (kept until the closeout retires the job kind)", () => {
-  it("builds a reindex row query that excludes owner-scoped and retired items", () => {
-    const compiled = buildCatalogTypeaheadReindexRowsQuery(testDb).compile();
-
-    expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
-    expect(compiled.sql).toContain('"catalog_items"."identity_state" = $3');
-    expect(compiled.sql).toContain('"catalog_items"."created_by_user_id" is null');
-    expect(compiled.sql).toContain("generated_alias.source_method = 'generated'");
-    expect(compiled.parameters).toEqual(["seeded", "confirmed", "active"]);
-  });
-
-  it("enqueues catalog typeahead reindex work on the matching worker queue", () => {
-    const compiled = buildEnqueueCatalogTypeaheadReindexJobQuery(
-      testDb,
-    ).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.sql).toContain(
-      'on conflict ("idempotency_key") where "idempotency_key" is not null do update set',
-    );
-    expect(compiled.parameters).toContain("matching");
-    expect(compiled.parameters).toContain("catalog-typeahead-reindex");
-  });
-});

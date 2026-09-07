@@ -10,6 +10,7 @@ import {
 
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -260,7 +261,7 @@ const NODE_SUMMARY_SQL = sql`
   json_build_object(
     'catalogItemId', node.id,
     'canonicalName', node.canonical_name,
-    'catalogKind', node.catalog_kind,
+    'catalogKind', ${catalogKindSql("node")},
     'nodeKind', node.node_kind,
     'kingdom', node.kingdom,
     'rank', node.rank,

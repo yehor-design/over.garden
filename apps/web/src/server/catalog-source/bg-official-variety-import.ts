@@ -13,13 +13,10 @@ import {
   type BgOfficialVarietySourceRecordDefinition,
 } from "@/lib/catalog/bg-official-variety";
 import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
-const MATCHING_QUEUE = "matching";
-const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
-const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000061000";
 const BG_OFFICIAL_VARIETY_PROJECTION_GATE = {
   issueKey: "OVE-61",
@@ -44,7 +41,6 @@ export interface BgOfficialVarietyImportSummary {
   canonicalName: string;
   publicSlug: string;
   aliasesProjected: number;
-  reindexQueued: boolean;
 }
 
 export interface BgOfficialVarietyTypeaheadProof {
@@ -53,7 +49,6 @@ export interface BgOfficialVarietyTypeaheadProof {
   canonicalName: string;
   catalogKind: string;
   locale: string;
-  status: string;
   source: string;
 }
 
@@ -71,7 +66,6 @@ export interface BgOfficialVarietySourceProvenanceProof {
   catalogItemId: string;
   canonicalName: string;
   catalogKind: string;
-  status: string;
   source: string;
   sourceSlug: string;
   sourceName: string;
@@ -163,10 +157,6 @@ export async function importBgOfficialVariety(
       sourceRecordId: projectedRecord.id,
     }).execute();
 
-    const reindexJob =
-      await buildEnqueueBgOfficialVarietyTypeaheadReindexJobQuery(
-        trx,
-      ).executeTakeFirstOrThrow();
 
     return {
       sourceSnapshotId: snapshot.id,
@@ -185,7 +175,6 @@ export async function importBgOfficialVariety(
       canonicalName: catalogItem.canonicalName,
       publicSlug: catalogItem.publicSlug ?? projection.publicSlug,
       aliasesProjected: projection.aliases.length,
-      reindexQueued: reindexJob.id.length > 0,
     };
   });
 }
@@ -205,7 +194,6 @@ export async function readBgOfficialVarietyTypeaheadProof(
     canonicalName: row.canonicalName,
     catalogKind: row.catalogKind,
     locale: row.locale,
-    status: row.status,
     source: row.source,
   }));
 }
@@ -225,7 +213,6 @@ export async function readBgOfficialVarietySourceProvenanceProof(
     catalogItemId: row.catalogItemId,
     canonicalName: row.canonicalName,
     catalogKind: row.catalogKind,
-    status: row.status,
     source: row.source,
     sourceSlug: row.sourceSlug,
     sourceName: row.sourceName,
@@ -328,7 +315,7 @@ export async function proveBgOfficialVarietyGardenReadback(
           "plant_objects.variety_text as varietyText",
           "plant_objects.variety_state as varietyState",
           "catalog_items.canonical_name as catalogCanonicalName",
-          "catalog_items.catalog_kind as catalogKind",
+          catalogKindSql("catalog_items").as("catalogKind"),
           "catalog_items.source as catalogSource",
         ])
         .where("plant_objects.id", "=", plantObject.id)
@@ -464,10 +451,8 @@ export function buildUpsertBgOfficialVarietyCatalogItemQuery(
       canonical_name: projection.canonicalName,
       normalized_name: projection.normalizedName,
       public_slug: projection.publicSlug,
-      status: projection.status,
       source: projection.source,
       source_id: projection.sourceId,
-      catalog_kind: projection.catalogKind,
       created_by_user_id: null,
       locale: projection.locale,
     })
@@ -476,8 +461,6 @@ export function buildUpsertBgOfficialVarietyCatalogItemQuery(
         canonical_name: projection.canonicalName,
         normalized_name: projection.normalizedName,
         public_slug: projection.publicSlug,
-        status: projection.status,
-        catalog_kind: projection.catalogKind,
         created_by_user_id: null,
         locale: projection.locale,
         updated_at: now,
@@ -552,30 +535,6 @@ export function buildInsertBgOfficialVarietySourceLinkQuery(
     );
 }
 
-export function buildEnqueueBgOfficialVarietyTypeaheadReindexJobQuery(
-  executor: QueryExecutor,
-) {
-  const payload = {
-    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE,
-      payload,
-      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          updated_at: new Date(),
-        }),
-    )
-    .returning("id");
-}
 
 export function buildBgOfficialVarietyTypeaheadProofQuery(
   executor: QueryExecutor,
@@ -594,14 +553,13 @@ export function buildBgOfficialVarietyTypeaheadProofQuery(
       "catalog_items.id as catalogItemId",
       "catalog_item_names.display_name as displayName",
       "catalog_items.canonical_name as canonicalName",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_item_names.locale as locale",
-      "catalog_items.status as status",
       "catalog_items.source as source",
     ])
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
-    .where("catalog_items.catalog_kind", "=", "plant_variety")
+    .where("catalog_items.node_kind", "=", "cultivar")
     .where("catalog_items.source", "=", "eu_common_catalogue_bg")
     .where(
       sql<boolean>`lower(${sql.ref("catalog_item_names.display_name")}) like ${pattern}`,
@@ -635,8 +593,7 @@ export function buildBgOfficialVarietySourceProvenanceProofQuery(
     .select([
       "catalog_items.id as catalogItemId",
       "catalog_items.canonical_name as canonicalName",
-      "catalog_items.catalog_kind as catalogKind",
-      "catalog_items.status as status",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.source as source",
       "catalog_source_links.source_slug as sourceSlug",
       "catalog_source_snapshots.source_name as sourceName",
@@ -659,7 +616,7 @@ export function buildBgOfficialVarietySourceProvenanceProofQuery(
     ])
     .where("catalog_items.id", "=", catalogItemId)
     .where("catalog_items.created_by_user_id", "is", null)
-    .where("catalog_items.catalog_kind", "=", "plant_variety")
+    .where("catalog_items.node_kind", "=", "cultivar")
     .where("catalog_items.source", "=", "eu_common_catalogue_bg")
     .where(
       "catalog_source_links.source_slug",

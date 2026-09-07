@@ -63,7 +63,6 @@ describe("/{locale}/wishlist", () => {
           publicSlug: "pomidor-cheri-0000000101",
           catalogKind: "plant_variety",
           locale: "uk",
-          status: "seeded",
           source: "seed",
         },
         sourceSurface: "public_variety",
