@@ -243,6 +243,27 @@ Neither touched the evidence; both are worth recording because both cost hours.
    The manifest digest above is the one that run produced and that an
    independent `--mode verify` reproduced from the database alone.
 
+### Into production
+
+```
+2026-09-07T09:18 UTC   transfer-eppo-capture.ts --mode transfer
+source                 overgarden_eppo_capture (loopback)
+target                 defaultdb (digitalocean_managed)
+elapsed                20 m 02 s
+```
+
+| Table                         | Source  | Target before | Inserted | Target after |
+| ----------------------------- | ------: | ------------: | -------: | -----------: |
+| `catalog_source_snapshots`    |       1 |             0 |        1 |            1 |
+| `catalog_source_capture_runs` |       1 |             0 |        1 |            1 |
+| `catalog_source_capture_units`| 387,772 |             0 |  387,772 |      387,772 |
+| `catalog_source_records`      | 129,214 |             0 |  129,214 |      129,214 |
+| `catalog_source_links`        |       0 |             0 |        0 |            0 |
+
+`closure: verified`. The production database went from 3,460 MB to 3,848 MB of
+its 10 GiB. `catalog_source_links` is zero on both sides on purpose: production
+builds its own against its own nodes.
+
 ### An extending capture needs a database of its own
 
 The first attempt at this capture, `19fc0b98-fe02-4c16-bab8-3af55a1e240e`,
