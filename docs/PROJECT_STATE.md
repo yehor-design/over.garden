@@ -24,23 +24,23 @@ never override them.
 
 ## What is true in production
 
-Verified on 2026-09-03 against `https://over.garden` and the live providers.
+Verified on 2026-09-07 against `https://over.garden` and the live providers.
 
 | Area          | State                                                                                                                                                                                                       |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Deploy        | `main` at `1c8d186`, Vercel production READY, functions in `fra1` beside the database                                                                                                                       |
 | Public pages  | Cache Components: shells answer `x-vercel-cache: HIT`, tags revalidate on every mutation, workspace and API stay `no-store`                                                                                 |
-| Indexability  | Every live public page is `index, follow` with one canonical and one JSON-LD graph; sitemap index plus entries, profiles, and communities chunks                                                            |
+| Indexability  | Every live public page is `index, follow` with one canonical and one JSON-LD graph; sitemap index plus entries, profiles, and communities chunks. The catalog chunk is empty and every organism page is `noindex`: under ADR-0026 D9 a card whose content comes only from sources waits for a gardener to publish on it, and none of the 114,669 nodes has that yet |
 | Media         | Browser-made WebP: 2560 primary, 1280 and 480 variants, 16 px placeholder, served as plain `<img srcset>` from `media.over.garden`, immutable and CDN-cached. No Vercel image optimizer                     |
 | Media upload  | One session capability per composer, uploads straight to the Cloudflare Worker, two-hour lease renewed every five minutes, parallel promotion, weekly orphan sweep                                          |
 | Sessions      | Server-authoritative. The cookie-cached session decides at the moment of the mutation; no client gate                                                                                                       |
 | Admin         | Owner pages live in the account menu under the sealed owner role; `/health` is owner-only. The Release Center, editions and extension packs are gone (ADR-0025, `OVE-385`); the menu carries four owner links |
 | Workspace     | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023)                                                 |
 | Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw |
-| Schema        | Migrations `0001`–`0047`, `0049`, `0051`–`0056` and `0062` applied, minus the two deliberately skipped and the two not needed in production; `0053` dropped the twenty Stable Registry tables, `0054` laid the organism graph foundation (ADR-0026) on 2026-09-05, `0055` turned provisional cards into labels and added the picker's ranking inputs on 2026-09-06, `0062` admitted organism card intents to the outbox and `0056` added the reconciliation contracts, thresholds and the apply/revert functions the same day. See `docs/PRODUCTION_SCHEMA_STATE.md` |
+| Schema        | Migrations `0001`–`0047`, `0049`, `0051`–`0058` and `0060`–`0064` applied, minus the two deliberately skipped and the two not needed in production. Slice 24 landed `0054` (the graph foundation) through `0061` (the closeout, 2026-09-07): `catalog_items.catalog_kind` and `status` are gone, and so are `catalog_match_suggestions` and `catalog_fuzzy_duplicate_suggestions` with the 2,267 rows they held. `0064` indexes the five columns the reconciliation's cleanup reads. See `docs/PRODUCTION_SCHEMA_STATE.md` |
 | Interaction   | Like, bookmark, follow and comment are Server Actions on a form with a real endpoint, so they work before hydration and with JavaScript off. A like is a permanent row owned by an account or by one signed visitor cookie, with no expiry and no ceiling |
 | Sign-in       | One screen: `/auth/sign-in` and `/auth/sign-up` over one component and Server Actions. Every other page shows its own empty state and one link to it                                                        |
-| Matching      | The worker on the droplet runs the sealed six-handler release of `d5faee5` since 2026-09-05 with a fresh heartbeat; the API container, its route, and `matching.over.garden` were retired on 2026-09-03 |
+| Matching      | The worker on the droplet runs the sealed release of `7b0a287` since 2026-09-07 with a fresh heartbeat, declaring the manifest's six handlers exactly; the API container, its route, and `matching.over.garden` were retired on 2026-09-03. Its `MEILISEARCH_HOST` and Caddy's upstream both named a container that stopped on 2026-07-23 until the same day, so the worker could not reach Meilisearch for six and a half weeks |
 | Hosting       | Decided 2026-09-03: the DigitalOcean managed database and the `fra1` droplet stay                                                                                                                           |
 
 The seven owner requirements have one committed production receipt:
@@ -368,6 +368,18 @@ catalog through Foundation releases, editions, extension packs or a Release
 Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
 
 ## Known gaps, stated deliberately
+
+0. **The picker misses its P95 budget in production, and the number in its own
+   receipt cannot be compared with it.** Measured 2026-09-07 with every sample
+   forced past the 60 s shared cache: median 63–69 ms, but P95 129 ms warm and
+   409 ms across fifty distinct queries, with four of fifty answering `503` at
+   the 400 ms deadline. D7's budget is a 100 ms P95. The statement is not the
+   cause — `explain analyze` against production gives 26 ms, 8 of them
+   planning — the tail is a cold serverless instance paying connection setup.
+   `OVE-387`'s receipt records 26.6 ms, measured on a loopback database holding
+   about 15,900 nodes against production's 114,669. The remedy is connection
+   handling on the request path; it is recorded on that card, not fixed in the
+   closeout.
 
 1. **The framework defect itself is unfixed, and unreported.** Under Cache
    Components a thrown Server Component error during a postponed resume never
