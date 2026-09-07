@@ -84,6 +84,9 @@ describe("GET /api/garden/mentions/typeahead", () => {
           detail: "Public gardener handle",
           disambiguationLabel: "Green Garden",
           catalogKind: null,
+          // A handle is nobody's pest; the field is still present so the
+          // client parses one shape (OVE-397).
+          nodeRole: null,
         },
       ],
     });

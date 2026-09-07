@@ -299,6 +299,28 @@ describe("journal mention repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
+    // A merged or retired node still carries its names, and offering one would
+    // put a mention on a card the reader can no longer reach.
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
+    expect(compiled.sql).toContain(
+      '"catalog_items"."merged_into_catalog_item_id" is null',
+    );
+    expect(compiled.sql).not.toMatch(privateFieldPattern);
+  });
+
+  it("says which suggestions are pests, so the chip is worth offering (OVE-397)", () => {
+    const compiled = buildCatalogMentionSuggestionsQuery(
+      testDb,
+      normalizeMentionQuery("колорад"),
+      3,
+    ).compile();
+
+    // A node EPPO files as a pest of something, or files under a pest category
+    // at all. "Catalog · species" would tell a gardener nothing about why the
+    // beetle is in the list.
+    expect(compiled.sql).toContain("pest_relation.relation_type = 'pest_of'");
+    expect(compiled.sql).toContain("categorization.predicate = 'categorization'");
+    expect(compiled.sql).toContain('as "isPest"');
     expect(compiled.sql).not.toMatch(privateFieldPattern);
   });
 

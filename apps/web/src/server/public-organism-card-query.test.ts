@@ -14,6 +14,8 @@ import {
   emptyPublicOrganismCard,
   hasAcceptedNameDisagreement,
   type PublicOrganismCardRow,
+  MENTION_PRESSURE_WEEKS,
+  buildPublicOrganismMentionPressureStatement,
 } from "./public-organism-card-query";
 
 const ITEM = "11111111-1111-4111-8111-111111111111";
@@ -61,6 +63,99 @@ describe("organism card statements", () => {
     expect(sql).toContain("journal_entries.visibility = 'public'");
     expect(sql).toMatch(/content_class/u);
     expect(sql).toContain("count(distinct owner_user_id)::int");
+  });
+});
+
+describe("observed pest pressure (OVE-397, ADR-0026 D13)", () => {
+  it("counts only public entries, only inside the window, and only where a region is shown", () => {
+    const { sql, parameters } =
+      buildPublicOrganismMentionPressureStatement(ITEM).compile(
+        compileContext(),
+      );
+    // The subjects are this node and every pest of it, so one statement serves
+    // a plant's pest section and a pest's own card.
+    expect(sql).toContain("relation.relation_type = 'pest_of'");
+    expect(sql).toContain("journal_entries.visibility = 'public'");
+    expect(sql).toContain("journal_entries.lifecycle_state = 'active'");
+    expect(sql).toContain("journal_entries.public_gone_at is null");
+    // A region counts only where the object shows one — the same rule the
+    // gardener experience section is held to, on the same entries.
+    expect(sql).toContain("plant_objects.location_visibility = 'region'");
+    expect(sql).toContain("spaces.coarse_region_code");
+    expect(sql).toMatch(/entry_date >= current_date - \$\d+ \* interval/u);
+    expect(parameters).toContain(MENTION_PRESSURE_WEEKS);
+    expect(parameters).toContain(ITEM);
+  });
+
+  it("folds a subject's buckets, puts the card's own node first, and counts a gardener once", () => {
+    const pest = "00000000-0000-4000-8000-0000000397a1";
+    const card = assemblePublicOrganismCard({
+      catalogItemId: ITEM,
+      locale: "uk",
+      fallbackSource: { slug: "species_backbone", name: "Species backbone" },
+      experience: [],
+      row: {
+        firstHandContentAt: null,
+        indexableOverride: null,
+        forms: [],
+        pests: [
+          {
+            catalogItemId: pest,
+            canonicalName: "Leptinotarsa decemlineata",
+            catalogKind: "species",
+            publicSlug: "leptinotarsa-decemlineata",
+            speciesSlug: null,
+            hostClass: "major_host",
+          },
+        ],
+        hosts: [],
+        names: [],
+        facts: [],
+        identifiers: [],
+        sources: [],
+      },
+      mentions: [
+        { catalogItemId: pest, regionCode: "UA-32", isoWeek: "2026-W36", mentions: 2, gardeners: 1 },
+        { catalogItemId: pest, regionCode: "UA-32", isoWeek: "2026-W35", mentions: 1, gardeners: 1 },
+        { catalogItemId: pest, regionCode: "UA-51", isoWeek: "2026-W36", mentions: 1, gardeners: 1 },
+        { catalogItemId: ITEM, regionCode: null, isoWeek: "2026-W36", mentions: 1, gardeners: 1 },
+      ],
+    });
+
+    // The card's own node leads, however few mentions it has: the page is
+    // about it.
+    expect(card.mentionPressure.map((entry) => entry.catalogItemId)).toEqual([
+      ITEM,
+      pest,
+    ]);
+    const [own, beetle] = card.mentionPressure;
+    expect(own?.name).toBeNull();
+    expect(beetle?.name).toBe("Leptinotarsa decemlineata");
+    expect(beetle?.publicPath).toContain("leptinotarsa-decemlineata");
+    expect(beetle?.mentions).toBe(4);
+    expect(beetle?.weeks).toEqual([
+      { isoWeek: "2026-W36", mentions: 3 },
+      { isoWeek: "2026-W35", mentions: 1 },
+    ]);
+    expect(beetle?.regions.map((region) => region.code)).toEqual([
+      "UA-32",
+      "UA-51",
+    ]);
+    expect(beetle?.regions[0]?.label).toBeTruthy();
+    // One gardener writing from two oblasts is one gardener, so the node's
+    // total is the largest bucket rather than their sum.
+    expect(beetle?.gardeners).toBe(1);
+  });
+
+  it("is empty on a node nobody has written about, which is most of them", () => {
+    const card = assemblePublicOrganismCard({
+      catalogItemId: ITEM,
+      locale: "uk",
+      fallbackSource: { slug: "species_backbone", name: "Species backbone" },
+      experience: [],
+      row: null,
+    });
+    expect(card.mentionPressure).toEqual([]);
   });
 });
 

@@ -578,6 +578,68 @@ export async function renderPublicCatalogEvidenceRoute(
         </section>
       ) : null}
 
+      {page.card.mentionPressure.length > 0 ? (
+        <section
+          aria-labelledby="organism-mentions-heading"
+          data-organism-section="mentions"
+          className="grid gap-3 border-b border-border pb-6"
+        >
+          <h2
+            id="organism-mentions-heading"
+            className="text-2xl font-semibold tracking-tight text-foreground"
+          >
+            {cardCopy.sections.mentions}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {cardCopy.sections.mentionsHint}
+          </p>
+          {page.card.mentionPressure.map((subject) => (
+            <div
+              key={subject.catalogItemId}
+              data-organism-mentions={subject.catalogItemId}
+              className="grid gap-2 rounded-lg border border-border p-4"
+            >
+              {subject.name ? (
+                <p className="font-medium text-foreground">
+                  {subject.publicPath ? (
+                    <Link
+                      href={localizedPath(routeLocale, subject.publicPath)}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {subject.name}
+                    </Link>
+                  ) : (
+                    subject.name
+                  )}
+                </p>
+              ) : null}
+              <ul className="flex flex-wrap gap-2">
+                {subject.regions.map((region) => (
+                  <li
+                    key={region.code ?? "unknown"}
+                    data-organism-mention-region={region.code ?? ""}
+                    className="rounded-md border border-border px-3 py-2 text-sm text-foreground"
+                  >
+                    <span className="font-medium">
+                      {region.label ?? cardCopy.sections.spread}
+                    </span>{" "}
+                    <span data-organism-mention-count={region.mentions}>
+                      {region.mentions}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground">
+                {cardCopy.sections.mentionWeeks}:{" "}
+                {subject.weeks
+                  .map((week) => `${week.isoWeek} · ${week.mentions}`)
+                  .join(", ")}
+              </p>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
       {page.card.sourceGroups.length > 0 ? (
         <details
           data-organism-section="names-and-sources"

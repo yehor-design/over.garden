@@ -49,7 +49,7 @@ another issue's number.
 | `0056` | OVE-390      | Organism graph (ADR-0026) | reconciliation job-kind payload CHECKs, thresholds table, apply and revert SQL functions |
 | `0057` | OVE-392      | Organism graph (ADR-0026) | Catalogue of Life source usages and vernaculars |
 | `0058` | OVE-394      | Organism graph (ADR-0026) | EPPO second capture endpoint classes and the country-level rights reclassification |
-| `0059` | OVE-397      | Organism graph (ADR-0026) | mention statistics table, only if the task chooses a table; otherwise released |
+| `0059` | —            | **released**              | reserved for a mention statistics table; not needed. Production holds 16 journal entries and 0 mentions, so the card reads them with a `use cache` query and its tags rather than a nightly table nobody would fill. Free for the next migration that needs a number. |
 | `0060` | OVE-398      | Organism graph (ADR-0026) | catalog pick events with 90-day purge |
 | `0061` | OVE-399      | Organism graph (ADR-0026) | destructive closeout: legacy catalog columns and tables, gated by inventory and owner approval |
 | `0062` | OVE-389      | Organism graph (ADR-0026) | card revalidation through the outbox: entity kind `catalog_item` without an owner (0054 added the reason, not the kind); taken as the next free number because the slice's block was fully reserved |
@@ -73,7 +73,7 @@ Compact range receipt:
 - `0051: matching worker heartbeat handler shape`
 - `0052: job queue declared payload checks`
 - `0053: stable registry release tables retired`
-- `0054-0061: organism knowledge graph, ADR-0026, SDD Slice 24 (0059 conditional, 0061 destructive)`
+- `0054-0061: organism knowledge graph, ADR-0026, SDD Slice 24 (0059 released unused, 0061 destructive)`
 - `0062: organism card revalidation intents (Slice 24 task 24.04, outside the reserved block)`
 - `0063: the owner's weekly catalog digest in the auth email outbox (Slice 24 task 24.06, outside the reserved block)`
 
