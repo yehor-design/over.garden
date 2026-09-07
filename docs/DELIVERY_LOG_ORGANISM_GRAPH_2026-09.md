@@ -163,6 +163,23 @@ dependencies, and no `journal_entry_index` job had been enqueued in that
 window, so the one code path that would have failed was never taken. The
 `matching-release deploy` preflight refused the release and is what found it.
 
+## The sitemap disagreed with the page, and using the lever found it
+
+D9 gives an organism card two ways to be indexable: a gardener publishes on it,
+or the owner marks it. The page honoured both. The sitemap query said it
+honoured both — the `or` is there with a comment naming the decision — and then
+required an inner join to a public entry, which made the owner's half
+unreachable.
+
+So the owner marked the tomato from the controls on its own card, the page
+answered `index, follow` with a `Taxon` graph carrying eight `sameAs`, and
+`/sitemaps/catalog.xml` stayed empty. Two places, one rule, different answers.
+
+The joins are what `lastmod` and the entry count need, not what admission
+needs; they are left joins now and every predicate about an entry travels with
+the entry. No test could have found this — it needed someone to press the
+button.
+
 ## What is not finished
 
 Recorded here so the next reader does not have to rediscover it:
@@ -173,10 +190,22 @@ Recorded here so the next reader does not have to rediscover it:
   sitemap is empty and no page carries `Taxon` JSON-LD. The mechanism is
   correct and live — a gardener picking an organism and publishing on it sets
   the flag — but the data condition has not happened.
-* **Three crosswalks barely ran in production.** On 114,669 nodes there are 29
-  Wikidata identifiers, 20 GBIF and 17 WFO, against 109,514 EPPO and 15,177 UA
-  register. The shared-identifier rung of the reconciliation ladder has almost
-  nothing to work with until those runs are repeated at full scope.
+* ~~Three crosswalks barely ran in production.~~ **Closed the same day, and
+  the reason was different for each.** WFO and GBIF had simply never been
+  repeated; Wikidata *could not* run at all, because a five-hundred-name SPARQL
+  query is about nine thousand characters as a URI and the service answers
+  `414 Request-URI Too Large` — not a retryable status, so no amount of
+  patience helped. Queries are posted now.
+
+  | | before | after |
+  | -- | -- | -- |
+  | gbif | 20 | **81,847** |
+  | wfo | 17 | **54,587** |
+  | wikidata | 29 | **4,900** |
+  | col | 57,803 | 58,300 |
+
+  With them came the local names the picker searches: 35,933 Ukrainian, 21,002
+  Russian, 5,066 Bulgarian vernaculars.
 
   What this does *not* block, contrary to the note written while the run was
   in progress: typing `колорадськ` in the picker does find *Leptinotarsa
