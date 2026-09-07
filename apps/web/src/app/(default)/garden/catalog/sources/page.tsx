@@ -10,6 +10,7 @@ import {
   workspaceSchemaMissingHint,
 } from "@/components/garden/workspace-state";
 import { buttonVariants } from "@/components/ui/button";
+import { catalogSourceRefreshCadence } from "@/lib/catalog/source-cadence";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getOperatorCatalogCopy } from "@/lib/operator-catalog-copy";
 import { formatOperatorDate, getOperatorCopy } from "@/lib/operator-copy";
@@ -158,9 +159,16 @@ async function CatalogSourcesSection({
     );
   }
 
+  // How often the upstream publishes, so the refresh button says whether
+  // pressing it again this week could find anything.
+  const cards = sources.map((source) => ({
+    ...source,
+    cadence: catalogSourceRefreshCadence(source.sourceSlug),
+  }));
+
   return (
     <ol className="grid gap-3 md:grid-cols-2" data-catalog-sources="true">
-      {sources.map((source) => (
+      {cards.map((source) => (
         <li
           key={source.sourceSlug}
           data-catalog-source={source.sourceSlug}
@@ -186,6 +194,15 @@ async function CatalogSourcesSection({
               {copy.sources.fetchedAt}:{" "}
               {formatOperatorDate(locale, source.fetchedAt)}
             </span>
+            {source.cadence ? (
+              <span
+                data-catalog-source-cadence={source.cadence}
+                className="rounded-md border border-border px-2 py-1"
+              >
+                {copy.sources.cadence}:{" "}
+                {copy.sources.cadenceNames[source.cadence]}
+              </span>
+            ) : null}
           </div>
           <p className="text-sm text-muted-foreground">
             {source.recordCount} {copy.sources.records} · {source.linkedCount}{" "}

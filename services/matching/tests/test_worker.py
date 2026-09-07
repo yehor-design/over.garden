@@ -135,6 +135,41 @@ def test_worker_reconciles_eppo_on_its_own_source_slug(monkeypatch):
     assert calls == ["conn"]
 
 
+def test_worker_crosswalks_wfo_and_gbif_on_their_own_source_slugs(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        worker, "crosswalk_source", lambda conn, slug: calls.append((conn, slug))
+    )
+    monkeypatch.setattr(
+        worker,
+        "record_source_refresh",
+        lambda source_slug: pytest.fail(f"uncrosswalked {source_slug}"),
+    )
+
+    for slug in ("world-flora-online", "gbif-backbone"):
+        worker._handle("conn", {"kind": "catalog_source_refresh", "source_slug": slug})
+
+    assert calls == [("conn", "world-flora-online"), ("conn", "gbif-backbone")]
+
+
+def test_worker_still_only_records_a_source_it_has_no_handler_for(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        worker, "crosswalk_source", lambda conn, slug: pytest.fail(f"crosswalked {slug}")
+    )
+    monkeypatch.setattr(
+        worker, "record_source_refresh", lambda source_slug: calls.append(source_slug)
+    )
+
+    # A near miss: the readiness manifest also names `world-flora-online` in
+    # prose, and a slug one character away must not reach a release download.
+    worker._handle(
+        "conn", {"kind": "catalog_source_refresh", "source_slug": "world-flora"}
+    )
+
+    assert calls == ["world-flora"]
+
+
 def test_worker_terminalises_a_retired_kind_without_echoing_its_payload():
     for kind in (
         "catalog_match_suggestions_refresh",
