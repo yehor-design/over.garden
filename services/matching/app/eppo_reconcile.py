@@ -459,7 +459,7 @@ COL_USAGE_BY_SCIENTIFIC_NAME_SQL = """
 select usage.col_id
 from catalog_source_col_usages as usage
 where usage.source_snapshot_id = catalog_col_current_snapshot()
-  and usage.status in ('accepted', 'provisionally_accepted')
+  and (%s::boolean is false or usage.status in ('accepted', 'provisionally_accepted'))
   and usage.normalized_scientific_name = catalog_normalize_name(%s)
   and (%s::text is null or usage.kingdom is null or usage.kingdom = %s::text)
 limit 3
@@ -469,7 +469,7 @@ COL_USAGE_BY_CANONICAL_NAME_SQL = """
 select usage.col_id
 from catalog_source_col_usages as usage
 where usage.source_snapshot_id = catalog_col_current_snapshot()
-  and usage.status in ('accepted', 'provisionally_accepted')
+  and (%s::boolean is false or usage.status in ('accepted', 'provisionally_accepted'))
   and usage.normalized_name like catalog_normalize_name(%s)
   and (%s::text is null or usage.kingdom is null or usage.kingdom = %s::text)
 limit 3
@@ -797,35 +797,56 @@ def climb_eppo_ladder(
     # taxon Catalogue of Life knows, and far better than a node invented from
     # EPPO alone (ADR-0026 D2).
     if assertion_id:
-        usages = [
-            str(_field(row, "col_id"))
-            for row in _rows(
-                conn.execute(COL_USAGE_BY_SCIENTIFIC_NAME_SQL, (name, kingdom, kingdom))
-            )
-        ]
-        if not usages:
-            usages = [
-                str(_field(row, "col_id"))
-                for row in _rows(
-                    conn.execute(
-                        COL_USAGE_BY_CANONICAL_NAME_SQL,
-                        (canonical_name_of(name), kingdom, kingdom),
-                    )
-                )
-            ]
+        usages = _read_col_usages(conn, name, kingdom)
         if len(usages) > 1:
             return LinkOutcome(None, None)
         if len(usages) == 1:
-            # Two statements: the function inserts rows the calling statement's
-            # snapshot cannot see, so its result is read back.
-            ensured = _field(
-                conn.execute(ENSURE_COL_NODE_SQL, (usages[0], assertion_id)).fetchone(),
-                "id",
-            )
+            # A synonym is not a failure. `catalog_col_ensure_node` resolves it
+            # to the accepted usage and puts the synonym on that node as a
+            # name, which is what a backbone is for. It refuses when a
+            # synonym's accepted usage is outside a scoped snapshot, and that
+            # refusal aborts only its own savepoint, so the identifier goes to
+            # the queue instead of taking the whole run down.
+            try:
+                with conn.transaction():
+                    ensured = _field(
+                        conn.execute(
+                            ENSURE_COL_NODE_SQL, (usages[0], assertion_id)
+                        ).fetchone(),
+                        "id",
+                    )
+            except Exception:  # noqa: BLE001 - any refusal means "not this rung"
+                ensured = None
             if ensured:
                 return LinkOutcome(str(ensured), "col_usage")
 
     return LinkOutcome(None, None)
+
+
+def _read_col_usages(conn: Any, name: str, kingdom: str | None) -> list[str]:
+    """The checklist usages one EPPO name reaches, accepted names first.
+
+    Accepted before synonym, and the scientific name before the authorless
+    binomial: a name Catalogue of Life accepts is the one to attach to, and a
+    name it holds only as a synonym still belongs on the accepted node rather
+    than in the owner's queue. In production 701 plant genera queued for
+    exactly this reason — EPPO's "Acidanthera" is Catalogue of Life's synonym
+    of Gladiolus, and no accepted usage carries that spelling.
+    """
+    for accepted_only in (True, False):
+        for statement, subject in (
+            (COL_USAGE_BY_SCIENTIFIC_NAME_SQL, name),
+            (COL_USAGE_BY_CANONICAL_NAME_SQL, canonical_name_of(name)),
+        ):
+            usages = [
+                str(_field(row, "col_id"))
+                for row in _rows(
+                    conn.execute(statement, (accepted_only, subject, kingdom, kingdom))
+                )
+            ]
+            if usages:
+                return usages
+    return []
 
 
 def _drop_unreferenced_assertion(conn: Any, assertion_id: str) -> None:
