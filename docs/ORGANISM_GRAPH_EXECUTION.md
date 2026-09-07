@@ -320,9 +320,11 @@ rewrites and force-pushes. For those, ask.
    `journalctl --rotate && journalctl --vacuum-size=200M`. Installed releases
    and the images of the current and previous pointer are not.
 5. Verify from `apps/web`:
-   `pnpm smoke:matching-queue-health -- --environment production --confirm-environment production`
+   `pnpm smoke:matching-queue-health -- --environment production --confirm-environment production --env-file /abs/path/prod.env --expected-commit <sha> --expected-digest <sha256:…>`
    and `pnpm smoke:matching-runtime-capabilities`. The heartbeat row must show
-   the handler set the manifest declares.
+   the handler set the manifest declares. **`--env-file` is not optional**:
+   without it the smoke loads `.env.local`, reads the loopback heartbeat, and
+   reports the handler set of a worker nobody deployed.
 6. Record the release digest, the run id and the heartbeat handler set on the
    issue. `infra/production-worker/README.md` is the full runbook.
 
