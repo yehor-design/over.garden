@@ -29,6 +29,7 @@ import json
 import logging
 import os
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
@@ -69,6 +70,7 @@ REQUEST_TIMEOUT_SECONDS = 60
 # Wikimedia asks for serial requests from a single agent; this is the pause
 # between them, not a retry backoff.
 REQUEST_PAUSE_SECONDS = float(os.environ.get("WIKIDATA_REQUEST_PAUSE", "1"))
+MAX_RETRY_WAIT_SECONDS = 60.0
 
 
 class WikidataCrosswalkError(RuntimeError):
@@ -89,6 +91,7 @@ class WikidataCrosswalkReceipt:
     ambiguous_names: int = 0
     duration_seconds: float = 0.0
     requests: int = 0
+    upstream_retries: int = 0
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -104,6 +107,7 @@ class WikidataCrosswalkReceipt:
             "ambiguousNames": self.ambiguous_names,
             "durationSeconds": round(self.duration_seconds, 3),
             "requests": self.requests,
+            "upstreamRetries": self.upstream_retries,
         }
 
 
@@ -150,14 +154,47 @@ def user_agent() -> str:
 # ----------------------------------------------------------------------
 
 
+# Wikidata's query service answers 429 when it wants a slower caller and 500 or
+# 503 when a query outran its own limit or a node is restarting. Both are
+# ordinary on a run of thousands of serial requests, and until 2026-09-07 the
+# first one ended the whole crosswalk: production held 29 identifiers because
+# every attempt died early. Retry the statuses that mean "later", give up on
+# the ones that mean "no", and let the pause grow so a rate limit is answered
+# with patience rather than with the same request.
+RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
+MAX_REQUEST_ATTEMPTS = int(os.environ.get("WIKIDATA_MAX_ATTEMPTS", "4"))
+
+
 def fetch_json(url: str, *, receipt: WikidataCrosswalkReceipt) -> Any:
     request = urllib.request.Request(
         url,
         headers={"user-agent": user_agent(), "accept": "application/json"},
     )
     receipt.requests += 1
-    with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:  # noqa: S310
-        payload = response.read().decode("utf8")
+    payload: str | None = None
+    for attempt in range(1, MAX_REQUEST_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(  # noqa: S310
+                request, timeout=REQUEST_TIMEOUT_SECONDS
+            ) as response:
+                payload = response.read().decode("utf8")
+            break
+        except urllib.error.HTTPError as error:
+            if error.code not in RETRYABLE_STATUSES or attempt == MAX_REQUEST_ATTEMPTS:
+                raise
+            receipt.upstream_retries += 1
+            # `Retry-After` is what the service asks for; the doubling pause is
+            # what to do when it does not say.
+            after = error.headers.get("Retry-After") if error.headers else None
+            wait = float(after) if after and after.isdigit() else REQUEST_PAUSE_SECONDS * (2**attempt)
+            time.sleep(min(wait, MAX_RETRY_WAIT_SECONDS))
+        except urllib.error.URLError:
+            if attempt == MAX_REQUEST_ATTEMPTS:
+                raise
+            receipt.upstream_retries += 1
+            time.sleep(min(REQUEST_PAUSE_SECONDS * (2**attempt), MAX_RETRY_WAIT_SECONDS))
+    if payload is None:
+        raise WikidataCrosswalkError("wikidata did not answer")
     time.sleep(REQUEST_PAUSE_SECONDS)
     try:
         return json.loads(payload)
