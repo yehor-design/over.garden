@@ -602,6 +602,29 @@ Runtime classification: this production worker/search surface is `production-lin
 - Reverse proxy/TLS: Caddy on the Droplet, serving the Meilisearch site only
 - Containers: active Meilisearch (`overgarden-meilisearch-next` after OVE-198), legacy Meilisearch retained stopped, `matching-worker`, `caddy`
 - Meilisearch health returned status `available` on 2026-06-29.
+- **2026-09-07, the OVE-198 rename left two consumers behind.** Both Caddy's
+  `reverse_proxy` and the worker's `MEILISEARCH_HOST` still named
+  `meilisearch:7700`, the alias of `overgarden-meilisearch-1`, which stopped on
+  2026-07-23. The worker had therefore been unable to reach Meilisearch for six
+  and a half weeks: from inside its container `http://meilisearch:7700` gave
+  `000` while `http://meilisearch-next:7700` gave `200`. Nothing reported it,
+  because the worker's heartbeat is honest about the worker and silent about
+  its dependencies, and no `journal_entry_index` job had been enqueued in that
+  window. The `matching-release deploy` preflight refused the OVE-399 release
+  and is what found it. Both consumers now name `meilisearch-next:7700`.
+- **The Caddyfile is bind-mounted as a file, so `sed -i` does not reach the
+  container.** In-place editing replaces the inode; Caddy keeps the original
+  and `caddy reload` answers `config is unchanged`. Write with
+  `cat new > Caddyfile` before the first `sed -i`, or restart the container
+  afterwards. Caddy fronts only `meili.over.garden`, so that restart is
+  contained.
+- **Meilisearch master key rotated on 2026-09-07.** The same value is the
+  master key, the worker's client key and Vercel's `MEILISEARCH_API_KEY`; all
+  three were changed. Rotation is `/root/rotate-meili-key.sh` on the Droplet,
+  which backs both env files up as `*.pre-rotation-<stamp>` and never prints
+  the key; the Vercel half is set by the owner by hand, because env writes are
+  gated. Verified after: `/health` 200, unauthenticated `/indexes` 401, the
+  previous key 403, the new key 200.
 
 Meilisearch version pin (OVE-198):
 
