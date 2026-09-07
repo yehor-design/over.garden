@@ -87,17 +87,17 @@ export async function seedOrganismFixture(pool: Pool, prefix: string): Promise<O
     `insert into catalog_source_assertions (id, source_slug, source_snapshot_id) values ($1, 'ua-state-register', $2)`,
     [assertionId, snapshotId],
   );
-  const items: Array<[string, string, string, string, string, string, string, string]> = [
-    [speciesId, "Solanum lycopersicum L.", "species", "species_backbone", "la", "taxon", "Plantae", speciesSlug],
-    [formId, "Де Барао", "plant_variety", "ua_state_register", "uk", "cultivar", "Plantae", formSlug],
-    [orphanId, "Сирота", "plant_variety", "ua_state_register", "uk", "cultivar", "Plantae", orphanSlug],
+  const items: Array<[string, string, string, string, string, string, string]> = [
+    [speciesId, "Solanum lycopersicum L.", "species_backbone", "la", "taxon", "Plantae", speciesSlug],
+    [formId, "Де Барао", "ua_state_register", "uk", "cultivar", "Plantae", formSlug],
+    [orphanId, "Сирота", "ua_state_register", "uk", "cultivar", "Plantae", orphanSlug],
   ];
-  for (const [id, name, kind, source, locale, nodeKind, kingdom, slug] of items) {
+  for (const [id, name, source, locale, nodeKind, kingdom, slug] of items) {
     await pool.query(
-      `insert into catalog_items (id, canonical_name, catalog_kind, normalized_name, public_slug, status, source,
+      `insert into catalog_items (id, canonical_name, normalized_name, public_slug, source,
          source_id, locale, node_kind, kingdom, identity_state, search_weight)
-       values ($1, $2, $3, catalog_normalize_name($2), $4, 'seeded', $5, $6, $7, $8, $9, 'active', 5)`,
-      [id, name, kind, slug, source, `${source}:${prefix}:${id}`, locale, nodeKind, kingdom],
+       values ($1, $2, catalog_normalize_name($2), $3, $4, $5, $6, $7, $8, 'active', 5)`,
+      [id, name, slug, source, `${source}:${prefix}:${id}`, locale, nodeKind, kingdom],
     );
   }
   const names: Array<[string, string, string, boolean, string]> = [

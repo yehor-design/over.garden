@@ -318,16 +318,16 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
     `insert into catalog_source_assertions (id, source_slug, source_snapshot_id) values ($1, 'eppo', $2)`,
     [assertionId, snapshotId],
   );
-  for (const [id, name, kind, nodeKind] of [
-    [speciesId, "Solanum lycopersicum L.", "species", "taxon"],
-    [cultivarId, `Де Барао ${suffix}`, "plant_variety", "cultivar"],
+  for (const [id, name, nodeKind] of [
+    [speciesId, "Solanum lycopersicum L.", "taxon"],
+    [cultivarId, `Де Барао ${suffix}`, "cultivar"],
   ] as const) {
     await pool.query(
-      `insert into catalog_items (id, canonical_name, catalog_kind, normalized_name, public_slug, status,
+      `insert into catalog_items (id, canonical_name, normalized_name, public_slug,
          source, source_id, locale, node_kind, kingdom, rank, identity_state, search_weight)
-       values ($1, $2, $3, catalog_normalize_name($2), $4, 'seeded', 'species_backbone', $5, 'la', $6,
+       values ($1, $2, catalog_normalize_name($2), $3, 'species_backbone', $4, 'la', $5,
                'Plantae', 'species', 'active', 5)`,
-      [id, name, kind, `ove391-${suffix}-${id.slice(0, 8)}`, `ove391:${id}`, nodeKind],
+      [id, name, `ove391-${suffix}-${id.slice(0, 8)}`, `ove391:${id}`, nodeKind],
     );
   }
   await pool.query(
