@@ -118,7 +118,27 @@ check and `user_added` all leave the schema, and every line of code that served
 them leaves with them. `pnpm prove:organism-graph` is what lets anyone returning
 cold check the whole slice in one command.
 
-## Two defects the slice found in its own tooling
+## Three defects the slice found by running itself in production
+
+**EPPO repeats itself, and a repeat ended the run** (`OVE-394`, fixed in the
+closeout). The second capture's reconciliation failed three times, each about
+85% through a two-hour run, reporting only `transient_handler_error` — the
+worker's redacted constant, which says a handler raised and nothing more.
+Teaching it to record `handler:<exception class>@<module>` named the fault on
+the next failure: `handler:unique_violation@eppo_reconcile`.
+
+`INSERT_FACT_SQL` had no conflict clause. One EPPO payload can name the same
+region twice — a country row beside its own sub-region row, or a
+categorization added and later made transient — and both reduce to the same
+`(predicate, region, value)` under one assertion, which is exactly
+`catalog_item_facts_uidx`. The relation insert beside it already guarded itself
+that way; the fact insert was missed. A two-hour job died on the first taxon
+that repeated itself, and nothing in the receipt could say why.
+
+Worth keeping: the fix was one clause, but finding it needed a deploy, because
+the only evidence the system kept was a constant.
+
+### Two more, in the slice's own tooling
 
 **The deploy's verification smoke read the wrong database** (PR #323). It loaded
 `.env.local`, which names the loopback database, so a production run reported
@@ -132,6 +152,16 @@ run. The second pass died on the first of them. Each site got the guard `0001`
 already used elsewhere. A sixth failure found on the way was older than this
 slice: `0001` creates a partial index on `engagement_likes.like_state`, dropped
 by `0049` in the interaction slice.
+
+**The worker had not been able to reach Meilisearch since 23 July** (found by
+the closeout deploy). Both Caddy's `reverse_proxy` and the worker's
+`MEILISEARCH_HOST` still named `meilisearch:7700`, the alias of the container
+the OVE-198 upgrade replaced. From inside the worker container that host gave
+`000` and `meilisearch-next:7700` gave `200`. Nothing reported it for six and a
+half weeks: the heartbeat is honest about the worker and silent about its
+dependencies, and no `journal_entry_index` job had been enqueued in that
+window, so the one code path that would have failed was never taken. The
+`matching-release deploy` preflight refused the release and is what found it.
 
 ## What is not finished
 
