@@ -63,6 +63,37 @@ export const POOLED_DATABASE_POOL_MAX = 5;
 export const DIRECT_SERVERLESS_DATABASE_POOL_MAX = 1;
 export const LOCAL_DATABASE_POOL_MAX = 10;
 
+/**
+ * How long an idle connection is kept before the pool closes it.
+ *
+ * `pg` defaults to ten seconds. On a serverless instance that is short enough
+ * to be invisible under load and expensive the rest of the time: the pool is a
+ * module-level singleton, so a warm instance should be able to answer without
+ * connecting — but a gardener types into the picker every few minutes, every
+ * gap is longer than ten seconds, and every keystroke after a gap pays a fresh
+ * TCP and TLS handshake to the pooler inside the request.
+ *
+ * Measured against production on 2026-09-07, twenty sequential picker
+ * requests with three-hundred-millisecond gaps: the first cost 433 ms of
+ * database time and the rest settled to 20–45 ms. The statement itself is
+ * 26 ms. The difference is the connection, and this is what keeps it.
+ *
+ * Five minutes, not longer: the pooler counts an idle client against its
+ * limit, and an instance Vercel is about to discard should not hold one for
+ * an hour. `DATABASE_IDLE_TIMEOUT_MS` overrides it without a deployment.
+ */
+export const DATABASE_IDLE_TIMEOUT_MS = 300_000;
+
+/**
+ * TCP keep-alive on a pooled connection.
+ *
+ * Holding a connection idle for minutes only helps if something keeps the path
+ * open: a pooler, a load balancer or a NAT will drop a silent socket long
+ * before the timeout above, and the next query then fails or reconnects — the
+ * cost this is meant to avoid. `pg` leaves keep-alive off by default.
+ */
+export const DATABASE_KEEPALIVE_INITIAL_DELAY_MS = 30_000;
+
 export function defaultDatabasePoolMax(env: EnvLike = process.env): number {
   const serverless =
     env.VERCEL === "1" || env.VERCEL === "true" || env.NODE_ENV === "production";
