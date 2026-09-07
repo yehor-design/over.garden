@@ -573,6 +573,29 @@ describe("EPPO observed capture repository", () => {
       /(?:insert into|update) "(?:catalog_items|catalog_item_names|catalog_source_links|job_queue)"/u,
     );
   });
+
+  it("asks the database how many classes the run declared once, not once per taxon", () => {
+    const records = buildMaterializeEppoSourceRecordsQuery(testDb, {
+      captureId: "00000000-0000-4000-8000-000000254010",
+      sourceSnapshotId: "00000000-0000-4000-8000-000000254011",
+    }).compile();
+
+    // `catalog_capture_declared_classes` is `stable`, not `immutable`, so
+    // Postgres will not fold it at plan time. Written bare in a `having` it
+    // becomes part of the group filter and runs once per group: on the second
+    // capture that is 129,214 calls of 244 ms, and the finalize takes eight
+    // hours and forty minutes with nothing left to compute. Wrapped in a
+    // scalar subquery the planner lifts it into an InitPlan.
+    //
+    // Falsify by removing the parentheses: the plan's filter stops reading
+    // `(InitPlan 1).col1` and names the function again.
+    expect(records.sql).toContain(
+      "(select catalog_capture_declared_classes(",
+    );
+    expect(records.sql).not.toMatch(
+      /=\s*catalog_capture_declared_classes\(\$/u,
+    );
+  });
 });
 
 describe("source payload single home", () => {

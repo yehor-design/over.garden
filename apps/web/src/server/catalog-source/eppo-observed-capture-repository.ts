@@ -1072,7 +1072,14 @@ export function buildMaterializeEppoSourceRecordsQuery(
         .having(
           sql<number>`count(distinct ${sql.ref("units.endpoint_class")})`,
           "=",
-          sql<number>`catalog_capture_declared_classes(${input.captureId}::uuid)`,
+          // The parentheses are the whole point. `catalog_capture_declared_classes`
+          // is `stable`, not `immutable`, so Postgres will not fold it at plan
+          // time: written bare it lands in the group filter and is called once
+          // per group. On the second capture that is 129,214 calls of 244 ms —
+          // eight hours and forty minutes of a finalize that has nothing left to
+          // compute. As a scalar subquery the planner makes it an InitPlan and
+          // calls it once.
+          sql<number>`(select catalog_capture_declared_classes(${input.captureId}::uuid))`,
         ),
     );
 }
@@ -1107,6 +1114,9 @@ export function buildReconstructEppoSourceRecordPayloadQuery(
     .where("units.unit_kind", "=", "taxon_endpoint")
     .where("units.state", "in", EPPO_TERMINAL_CAPTURE_UNIT_STATES)
     .groupBy("units.eppo_code")
+    // One record is one group, so the class count is called once here. Where a
+    // query groups by the hundred thousand — the materialize above — the call
+    // has to be a scalar subquery instead, or Postgres runs it per group.
     .having(
       sql<number>`count(distinct ${sql.ref("units.endpoint_class")})`,
       "=",
