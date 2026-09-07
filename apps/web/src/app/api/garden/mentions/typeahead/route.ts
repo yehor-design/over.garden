@@ -27,6 +27,7 @@ export async function GET(request: Request) {
         detail: suggestion.detail,
         disambiguationLabel: suggestion.disambiguationLabel,
         catalogKind: suggestion.catalogKind ?? null,
+        nodeRole: suggestion.nodeRole ?? null,
       })),
     },
     {

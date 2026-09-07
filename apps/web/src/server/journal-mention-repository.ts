@@ -12,6 +12,7 @@ import type {
 } from "@/db/schema";
 import type {
   JournalMentionSelection,
+  JournalMentionNodeRole,
   JournalMentionSuggestion,
   JournalMentionTargetKind,
 } from "@/lib/garden/journal-mentions";
@@ -142,9 +143,10 @@ export async function searchJournalMentionSuggestions(
       id: row.id,
       label: row.displayName,
       insertText: mentionInsertText(row.displayName),
-      detail: `Catalog · ${catalogKindMentionLabel(row.catalogKind)}`,
+      detail: `Catalog · ${row.isPest ? "pest" : catalogKindMentionLabel(row.catalogKind)}`,
       disambiguationLabel: row.canonicalName,
       catalogKind: row.catalogKind as CatalogKind,
+      nodeRole: (row.isPest ? "pest" : "organism") as JournalMentionNodeRole,
     })),
   ]).slice(0, boundedLimit);
 }
@@ -487,8 +489,26 @@ export function buildCatalogMentionSuggestionsQuery(
       "catalog_items.canonical_name as canonicalName",
       "catalog_items.catalog_kind as catalogKind",
       "catalog_item_names.display_name as displayName",
+      // What the node is to a gardener writing about it. A node EPPO files as
+      // a pest of something, or files under a pest category at all, is offered
+      // as a pest chip rather than as one more species: "@колорадский жук" is
+      // the word someone types, and "Catalog · species" would tell them
+      // nothing about why it is in the list (OVE-397, ADR-0026 D13).
+      sql<boolean>`exists (
+        select 1 from catalog_item_relations as pest_relation
+        where pest_relation.from_catalog_item_id = ${sql.ref("catalog_items.id")}
+          and pest_relation.relation_type = 'pest_of'
+      ) or exists (
+        select 1 from catalog_item_facts as categorization
+        where categorization.catalog_item_id = ${sql.ref("catalog_items.id")}
+          and categorization.predicate = 'categorization'
+      )`.as("isPest"),
     ])
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    // A merged or retired node still carries its names, and offering one would
+    // put a mention on a card the reader can no longer reach.
+    .where("catalog_items.identity_state", "=", "active")
+    .where("catalog_items.merged_into_catalog_item_id", "is", null)
     .where("catalog_items.created_by_user_id", "is", null)
     .where(
       sql<boolean>`lower(${sql.ref("catalog_item_names.display_name")}) like ${query.pattern}`,

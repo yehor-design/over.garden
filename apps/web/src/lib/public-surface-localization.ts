@@ -195,6 +195,10 @@ interface PublicSurfaceCopy {
       hosts: string;
       /** ADR-0026 D11: country-level presence, for Ukraine and Bulgaria. */
       presence: string;
+      /** ADR-0026 D13: what gardeners wrote, which no source has. */
+      mentions: string;
+      mentionsHint: string;
+      mentionWeeks: string;
       namesAndSources: string;
       namesAndSourcesHint: string;
       disagreement: string;
@@ -432,6 +436,10 @@ const COPY = {
         pests: "Шкідники та хвороби",
         hosts: "Живителі",
         presence: "Присутність за даними EPPO",
+        mentions: "Про що пишуть садівники",
+        mentionsHint:
+          "Згадки у публічних записах за останні дванадцять тижнів. Це єдине, чого немає в жодному довіднику.",
+        mentionWeeks: "За тижнями",
         namesAndSources: "Назви та джерела",
         namesAndSourcesHint:
           "Що стверджує кожне джерело, з версією та датою спостереження.",
@@ -674,6 +682,10 @@ const COPY = {
         pests: "Вредители и болести",
         hosts: "Гостоприемници",
         presence: "Присъствие според EPPO",
+        mentions: "За какво пишат градинарите",
+        mentionsHint:
+          "Споменавания в публични записи през последните дванадесет седмици. Това е единственото, което няма в нито един справочник.",
+        mentionWeeks: "По седмици",
         namesAndSources: "Имена и източници",
         namesAndSourcesHint:
           "Какво твърди всеки източник, с версия и дата на наблюдение.",
@@ -915,6 +927,10 @@ const COPY = {
         pests: "Вредители и болезни",
         hosts: "Растения-хозяева",
         presence: "Присутствие по данным EPPO",
+        mentions: "О чём пишут садоводы",
+        mentionsHint:
+          "Упоминания в публичных записях за последние двенадцать недель. Это единственное, чего нет ни в одном справочнике.",
+        mentionWeeks: "По неделям",
         namesAndSources: "Названия и источники",
         namesAndSourcesHint:
           "Что утверждает каждый источник, с версией и датой наблюдения.",

@@ -12,11 +12,22 @@ export interface JournalMentionSelection {
   label: string;
 }
 
+/**
+ * What a catalog node is to a gardener writing about it (OVE-397).
+ *
+ * The composer offers the same chip for a tomato and for the beetle that eats
+ * it, and the difference is the whole reason someone types the second one. A
+ * node EPPO files as a pest of something, or files under a pest category at
+ * all, says so; everything else is an organism.
+ */
+export type JournalMentionNodeRole = "pest" | "organism";
+
 export interface JournalMentionSuggestion extends JournalMentionSelection {
   insertText: `@${string}`;
   detail: string;
   disambiguationLabel: string;
   catalogKind?: CatalogKind | null;
+  nodeRole?: JournalMentionNodeRole | null;
 }
 
 const MAX_MENTION_SELECTIONS = 12;
