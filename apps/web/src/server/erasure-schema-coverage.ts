@@ -28,8 +28,10 @@ export interface ErasureCoverageEntry {
 
 // OVE-255 and OVE-353 each extended the manifest independently from v5, so the
 // merged coverage is a new version rather than either side's v6. v10 adds the
-// owner digest recipient, the first outbox row addressed to an account.
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove398.erasure-schema.v11";
+// owner digest recipient, the first outbox row addressed to an account. v12
+// drops the retired matcher's reviewer path with its table (OVE-399): a path
+// nobody can walk is not a path the manifest should keep classifying.
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove399.erasure-schema.v12";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Auth / Better Auth
@@ -682,16 +684,6 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     executionOwned: true,
   },
   {
-    id: "catalog_match_suggestions.reviewed_by_user_id",
-    table: "catalog_match_suggestions",
-    columnOrPath: "reviewed_by_user_id",
-    kind: "soft_column",
-    disposition: "anonymize",
-    rationale: "Curator reviewer id nulled.",
-    dryRunOwned: true,
-    executionOwned: true,
-  },
-  {
     id: "catalog_alias_projections.reviewed_by_user_id",
     table: "catalog_alias_projections",
     columnOrPath: "reviewed_by_user_id",
@@ -905,7 +897,6 @@ export const ERASURE_SQL_DISCOVERY_REQUIRED_IDS = [
   "community_contribution_reports.resolved_by_user_id",
   "community_moderation_audit_log.actor_user_id",
   "catalog_alias_projections.reviewed_by_user_id",
-  "catalog_match_suggestions.reviewed_by_user_id",
   "variety_seed_proofs.author_user_id",
   "erasure_requests.handled_by_user_id",
   "erasure_requests.dry_run_reviewed_by_user_id",
@@ -1015,7 +1006,6 @@ export function discoverErasurePathsFromWalkingSkeletonSql(
     { table: "analytics_events", column: "owner_user_id" },
     { table: "catalog_items", column: "created_by_user_id" },
     { table: "catalog_items", column: "reviewed_by_user_id" },
-    { table: "catalog_match_suggestions", column: "reviewed_by_user_id" },
     { table: "catalog_alias_projections", column: "reviewed_by_user_id" },
     { table: "variety_seed_proofs", column: "author_user_id" },
     { table: "erasure_requests", column: "requester_user_id" },

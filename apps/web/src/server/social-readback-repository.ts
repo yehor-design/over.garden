@@ -19,6 +19,7 @@ import {
 } from "@/lib/public-localization";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { RequestScope } from "@/server/request-scope";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -255,7 +256,7 @@ export function buildFollowedFeedStoriesQuery(
       "target_owner_profiles.handle as ownerHandle",
       "target_objects.display_name as targetObjectDisplayName",
       "target_objects.object_kind as targetObjectKind",
-      "target_catalog_items.catalog_kind as targetCatalogKind",
+      catalogKindSql("target_catalog_items").as("targetCatalogKind"),
       "target_objects.variety_text as targetVarietyText",
       "target_objects.variety_state as targetVarietyState",
     ])
@@ -340,12 +341,12 @@ export function buildNotificationClaimRequestEventsQuery(
       "lineage_provenance_edges.created_at as createdAt",
       "subject_objects.display_name as subjectObjectDisplayName",
       "subject_objects.object_kind as subjectObjectKind",
-      "subject_catalog_items.catalog_kind as subjectCatalogKind",
+      catalogKindSql("subject_catalog_items").as("subjectCatalogKind"),
       "subject_objects.variety_text as subjectVarietyText",
       "subject_objects.variety_state as subjectVarietyState",
       "source_objects.display_name as sourceObjectDisplayName",
       "source_objects.object_kind as sourceObjectKind",
-      "source_catalog_items.catalog_kind as sourceCatalogKind",
+      catalogKindSql("source_catalog_items").as("sourceCatalogKind"),
       "source_objects.variety_text as sourceVarietyText",
       "source_objects.variety_state as sourceVarietyState",
     ])
@@ -415,12 +416,12 @@ export function buildNotificationClaimDecisionEventsQuery(
       "audit_events.created_at as createdAt",
       "subject_objects.display_name as subjectObjectDisplayName",
       "subject_objects.object_kind as subjectObjectKind",
-      "subject_catalog_items.catalog_kind as subjectCatalogKind",
+      catalogKindSql("subject_catalog_items").as("subjectCatalogKind"),
       "subject_objects.variety_text as subjectVarietyText",
       "subject_objects.variety_state as subjectVarietyState",
       "source_objects.display_name as sourceObjectDisplayName",
       "source_objects.object_kind as sourceObjectKind",
-      "source_catalog_items.catalog_kind as sourceCatalogKind",
+      catalogKindSql("source_catalog_items").as("sourceCatalogKind"),
       "source_objects.variety_text as sourceVarietyText",
       "source_objects.variety_state as sourceVarietyState",
     ])
@@ -471,7 +472,7 @@ export function buildNotificationQuestionEventsQuery(
       "lineage_questions.created_at as createdAt",
       "target_objects.display_name as targetObjectDisplayName",
       "target_objects.object_kind as targetObjectKind",
-      "target_catalog_items.catalog_kind as targetCatalogKind",
+      catalogKindSql("target_catalog_items").as("targetCatalogKind"),
       "target_objects.variety_text as targetVarietyText",
       "target_objects.variety_state as targetVarietyState",
     ])
@@ -568,7 +569,7 @@ export function buildNotificationFollowEventsQuery(
       "follower_profiles.handle as followerHandle",
       "target_objects.display_name as targetObjectDisplayName",
       "target_objects.object_kind as targetObjectKind",
-      "target_catalog_items.catalog_kind as targetCatalogKind",
+      catalogKindSql("target_catalog_items").as("targetCatalogKind"),
       "target_objects.variety_text as targetVarietyText",
       "target_objects.variety_state as targetVarietyState",
     ])
@@ -601,7 +602,7 @@ export function buildNotificationFollowEventsQuery(
       "follower_profiles.handle",
       "target_objects.display_name",
       "target_objects.object_kind",
-      "target_catalog_items.catalog_kind",
+      catalogKindSql("target_catalog_items"),
       "target_objects.variety_text",
       "target_objects.variety_state",
     ])

@@ -95,7 +95,6 @@ export interface BgOfficialVarietyProjection {
   canonicalName: string;
   normalizedName: string;
   publicSlug: string;
-  status: "seeded";
   source: "eu_common_catalogue_bg";
   sourceId: string;
   catalogKind: "plant_variety";
@@ -189,7 +188,6 @@ function buildBgOfficialVarietyProjection(
     canonicalName: row.denomination,
     normalizedName: normalizeName(row.denomination),
     publicSlug: "sadovo-1-bg-official-variety",
-    status: "seeded",
     source: "eu_common_catalogue_bg",
     sourceId: row.id,
     catalogKind: "plant_variety",

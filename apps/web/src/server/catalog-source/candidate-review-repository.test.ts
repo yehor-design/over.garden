@@ -89,7 +89,6 @@ function candidateRow(
     catalogItemId: null,
     catalogCanonicalName: null,
     catalogPublicSlug: null,
-    catalogStatus: null,
     catalogKind: null,
     typeaheadNameCount: 0,
     ...overrides,
@@ -142,7 +141,7 @@ describe("catalog source candidate review repository", () => {
       "00000000-0000-4000-8000-000000066001",
     ).compile();
 
-    expect(compiled.sql).toContain('"catalog_source_records"."id" = $1');
+    expect(compiled.sql).toContain('"catalog_source_records"."id" = ');
     expect(compiled.sql).toContain('"allowed_projection"');
     expect(compiled.sql).not.toContain("raw_payload");
     expect(compiled.sql).not.toContain("source_only_fields");
@@ -166,7 +165,6 @@ describe("catalog source candidate review repository", () => {
         catalogItemId: "00000000-0000-4000-8000-000000066003",
         catalogCanonicalName: "Red Cherry tomato",
         catalogPublicSlug: "red-cherry-tomato-grin-genebank-candidate",
-        catalogStatus: "seeded",
         catalogKind: "plant_variety",
         typeaheadNameCount: 3,
       }),
@@ -177,7 +175,6 @@ describe("catalog source candidate review repository", () => {
         catalogItemId: null,
         catalogCanonicalName: null,
         catalogPublicSlug: null,
-        catalogStatus: null,
         catalogKind: null,
       }),
     );

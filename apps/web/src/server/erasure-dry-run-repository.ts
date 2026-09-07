@@ -456,7 +456,7 @@ export function buildCountCatalogProvisionalItemsQuery(
     .selectFrom("catalog_items")
     .select(sql<number>`count(*)`.as("count"))
     .where("created_by_user_id", "=", requesterUserId)
-    .where("status", "=", "provisional");
+    .where("identity_state", "=", "retired");
 }
 
 /** Objects that carry the gardener's own name as a label (ADR-0026 D6). */
@@ -639,8 +639,6 @@ export function buildCountCatalogReviewerLinksQuery(
       (select count(*)::int from catalog_items
         where reviewed_by_user_id = ${requesterUserId}
            or created_by_user_id = ${requesterUserId})
-      + (select count(*)::int from catalog_match_suggestions
-        where reviewed_by_user_id = ${requesterUserId})
       + (select count(*)::int from catalog_alias_projections
         where reviewed_by_user_id = ${requesterUserId})
       + (select count(*)::int from catalog_source_assertions

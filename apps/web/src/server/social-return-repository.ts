@@ -19,6 +19,7 @@ import type { PublicLocale } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { buildPublicFeedMediaQuery } from "@/server/public-feed-repository";
 import type { RequestScope } from "@/server/request-scope";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -317,7 +318,7 @@ export function buildFollowedFeedCandidatesQuery(
       "objects.display_name as objectDisplayName",
       "objects.object_kind as objectKind",
       "objects.variety_text as varietyText",
-      "catalog.catalog_kind as catalogKind",
+      catalogKindSql("catalog").as("catalogKind"),
       profileFollow.as("followedByProfile"),
       objectFollow.as("followedByObject"),
       topicFollow.as("followedByTopic"),

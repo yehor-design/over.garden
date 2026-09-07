@@ -9,7 +9,6 @@ import { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import {
   normalizePublicJournalDirectoryEntryIds,
-  PUBLIC_JOURNAL_DIRECTORY_SELECTABLE_CATALOG_STATUSES,
 } from "@/server/public-journal-directory-query";
 import {
   listPublicJournalDirectoryPage,
@@ -112,9 +111,7 @@ export function buildPublicKnowledgeEvidenceEntryIdsQuery(
     .leftJoin("catalog_items", (join) =>
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
-        .on("catalog_items.status", "in", [
-          ...PUBLIC_JOURNAL_DIRECTORY_SELECTABLE_CATALOG_STATUSES,
-        ])
+        .on("catalog_items.identity_state", "=", "active")
         .on("catalog_items.created_by_user_id", "is", null),
     )
     .select([

@@ -71,7 +71,6 @@ def seed_item(
     name: str,
     *,
     node_kind: str = "taxon",
-    catalog_kind: str = "species",
     kingdom: str = "Plantae",
     slug: str | None = None,
 ) -> str:
@@ -79,16 +78,15 @@ def seed_item(
     conn.execute(
         """
         insert into catalog_items (
-          id, canonical_name, catalog_kind, normalized_name, public_slug, status, source,
+          id, canonical_name, normalized_name, public_slug, source,
           source_id, locale, node_kind, kingdom, identity_state
         )
-        values (%s, %s, %s, catalog_normalize_name(%s), %s, 'seeded', 'species_backbone',
+        values (%s, %s, catalog_normalize_name(%s), %s, 'species_backbone',
                 %s, 'la', %s, %s, 'active')
         """,
         (
             item_id,
             name,
-            catalog_kind,
             name,
             slug or f"ove390-{item_id[:8]}",
             f"species_backbone:ove390:{item_id}",
@@ -273,7 +271,7 @@ def apply_item(conn: psycopg.Connection, item_id: str, *, automatic: bool = True
 
 
 def test_a_label_link_moves_every_object_with_that_label_and_keeps_the_gardener_name(conn):
-    cultivar = seed_item(conn, "Бичаче серце", node_kind="cultivar", catalog_kind="plant_variety")
+    cultivar = seed_item(conn, "Бичаче серце", node_kind="cultivar")
     owner = seed_gardener(conn)
     mine = seed_object(conn, owner, label="Бичаче  серце", entries=2)
     spaced = seed_object(conn, owner, label="бичаче серце")
@@ -332,7 +330,7 @@ def test_a_label_link_moves_every_object_with_that_label_and_keeps_the_gardener_
 
 
 def test_a_decided_item_is_never_applied_twice(conn):
-    cultivar = seed_item(conn, "Слава", node_kind="cultivar", catalog_kind="plant_variety")
+    cultivar = seed_item(conn, "Слава", node_kind="cultivar")
     owner = seed_gardener(conn)
     seed_object(conn, owner, label="Слава")
     item = queue_item(
@@ -349,7 +347,7 @@ def test_a_decided_item_is_never_applied_twice(conn):
 
 
 def test_an_action_is_reverted_at_most_once(conn):
-    cultivar = seed_item(conn, "Слава", node_kind="cultivar", catalog_kind="plant_variety")
+    cultivar = seed_item(conn, "Слава", node_kind="cultivar")
     owner = seed_gardener(conn)
     seed_object(conn, owner, label="Слава")
     item = queue_item(
@@ -367,7 +365,7 @@ def test_an_action_is_reverted_at_most_once(conn):
 
 
 def test_a_retired_target_is_refused(conn):
-    cultivar = seed_item(conn, "Слава", node_kind="cultivar", catalog_kind="plant_variety")
+    cultivar = seed_item(conn, "Слава", node_kind="cultivar")
     conn.execute("update catalog_items set identity_state = 'retired' where id = %s", (cultivar,))
     item = queue_item(
         conn,
@@ -389,7 +387,7 @@ def test_a_retired_target_is_refused(conn):
 def test_a_merge_moves_everything_to_the_survivor_and_the_inverse_restores_it(conn):
     survivor = seed_item(conn, "Solanum lycopersicum", slug="ove390-solanum")
     loser = seed_item(conn, "Lycopersicon esculentum", slug="ove390-lycopersicon")
-    form = seed_item(conn, "Де Барао", node_kind="cultivar", catalog_kind="plant_variety", slug="ove390-de-barao")
+    form = seed_item(conn, "Де Барао", node_kind="cultivar", slug="ove390-de-barao")
     _, assertion = seed_assertion(conn)
     owner = seed_gardener(conn)
     obj = seed_object(conn, owner, catalog_item_id=loser, entries=1)
@@ -589,7 +587,7 @@ def test_thresholds_are_seeded_for_every_rule_and_recalibrate_within_bounds(conn
 
 
 def test_the_labels_scope_auto_applies_above_the_threshold_and_queues_below_it(conn):
-    cultivar = seed_item(conn, "Бичаче серце", node_kind="cultivar", catalog_kind="plant_variety")
+    cultivar = seed_item(conn, "Бичаче серце", node_kind="cultivar")
     owner = seed_gardener(conn)
     seed_object(conn, owner, label="Бичаче серце", entries=1)
     seed_object(conn, owner, label="Моя рідкісна ягода")
@@ -612,7 +610,7 @@ def test_the_labels_scope_auto_applies_above_the_threshold_and_queues_below_it(c
     conn.execute(
         "update catalog_reconcile_thresholds set threshold = 0.99 where rule_code = 'denomination_equal'"
     )
-    seed_item(conn, "Моя рідкісна ягода", node_kind="cultivar", catalog_kind="plant_variety")
+    seed_item(conn, "Моя рідкісна ягода", node_kind="cultivar")
     second = ladder.reconcile(conn, "labels")
     assert second["proposals"] == 1
     assert second["autoApplied"] == 0
@@ -680,7 +678,7 @@ def test_an_owner_decision_and_its_undo_restore_the_graph(conn):
     differs from the worker's except who is recorded as deciding it, and the
     fingerprint before the decision must come back after the undo.
     """
-    cultivar = seed_item(conn, "Де Барао", node_kind="cultivar", catalog_kind="plant_variety")
+    cultivar = seed_item(conn, "Де Барао", node_kind="cultivar")
     owner_id = str(uuid.uuid4())
     conn.execute(
         'insert into "user" (id, name, email, "emailVerified") values (%s, %s, %s, true)',

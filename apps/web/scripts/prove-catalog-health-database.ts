@@ -228,11 +228,11 @@ export async function runCatalogHealthDatabaseProof() {
     const resolvedNode = randomUUID();
     await pool.query(
       `insert into catalog_items (
-         id, canonical_name, catalog_kind, normalized_name, status, source,
+         id, canonical_name, normalized_name, source,
          source_id, locale, node_kind, identity_state
        )
-       values ($1, 'Rosa canina', 'species', catalog_normalize_name('Rosa canina'),
-               'seeded', 'species_backbone', $2, 'la', 'taxon', 'active')`,
+       values ($1, 'Rosa canina', catalog_normalize_name('Rosa canina'),
+               'species_backbone', $2, 'la', 'taxon', 'active')`,
       [resolvedNode, `ove398:${resolvedNode}`],
     );
     await pool.query(

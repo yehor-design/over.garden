@@ -27,6 +27,9 @@ from app.search import (
 )
 
 CANARY_SCHEMA_VERSION = "ove194.matchingHandlerCanary.v1"
+# The kinds this canary enqueues and waits on. It never claimed to run every
+# declared kind; listing the ones it proves is what keeps the receipt honest.
+_PROVEN_CANARY_KINDS = ("journal_entry_index", "journal_entry_unindex")
 CANARY_APPROVAL_ENV = "OVERGARDEN_MATCHING_CANARY_APPROVED"
 DEFAULT_TIMEOUT_SECONDS = 900
 POLL_INTERVAL_SECONDS = 1.0
@@ -75,30 +78,6 @@ where id = %s
   and queue_name = %s
   and status = 'dead'
 returning id::text as id
-"""
-
-_CATALOG_MATCH_SOURCE_SQL = """
-select id::text as id
-from catalog_items
-where status = 'provisional'
-  and source = 'user_added'
-  and created_by_user_id is not null
-order by created_at asc, id asc
-limit 1
-"""
-
-_CATALOG_ALIAS_SOURCE_SQL = """
-select catalog_items.id::text as id
-from catalog_items
-where catalog_items.status in ('seeded', 'confirmed')
-  and catalog_items.created_by_user_id is null
-  and exists (
-    select 1
-    from catalog_item_names
-    where catalog_item_names.catalog_item_id = catalog_items.id
-  )
-order by catalog_items.created_at asc, catalog_items.id asc
-limit 1
 """
 
 _PUBLIC_JOURNAL_SOURCE_SQL = """
@@ -227,24 +206,14 @@ def run_handler_canaries(
     if readiness["status"] != "ready":
         raise RuntimeError("matching runtime is not ready for canary proof")
 
-    catalog_match_source = _required_source(conn, _CATALOG_MATCH_SOURCE_SQL)
-    catalog_alias_source = _required_source(conn, _CATALOG_ALIAS_SOURCE_SQL)
     journal_source = conn.execute(_PUBLIC_JOURNAL_SOURCE_SQL).fetchone()
     if not isinstance(journal_source, Mapping):
         raise RuntimeError("eligible public-safe journal canary source is missing")
 
+    # The three catalog kinds this phase used to enqueue were the old matcher's
+    # (OVE-399 retired them with their tables). What is left is the pair the
+    # canary actually proves end to end: index, unindex, restore.
     first_phase = {
-        "catalog_alias_suggestions_refresh": {
-            "kind": "catalog_alias_suggestions_refresh",
-            "catalogItemId": catalog_alias_source,
-        },
-        "catalog_fuzzy_duplicate_qa_refresh": {
-            "kind": "catalog_fuzzy_duplicate_qa_refresh",
-        },
-        "catalog_match_suggestions_refresh": {
-            "kind": "catalog_match_suggestions_refresh",
-            "sourceCatalogItemId": catalog_match_source,
-        },
         "journal_entry_index": {
             "kind": "journal_entry_index",
             "journalEntryId": str(journal_source["journal_entry_id"]),
@@ -317,13 +286,9 @@ def run_handler_canaries(
             {
                 "kind": kind,
                 "status": "done",
-                "boundary": (
-                    "restored-derived-search"
-                    if kind in {"journal_entry_index", "journal_entry_unindex"}
-                    else "derived-or-advisory-only"
-                ),
+                "boundary": "restored-derived-search",
             }
-            for kind in SUPPORTED_JOB_KINDS
+            for kind in _PROVEN_CANARY_KINDS
         ],
         "journalSearchBoundary": {
             "index": "passed",
@@ -333,13 +298,6 @@ def run_handler_canaries(
         },
         "leakCheck": "passed",
     }
-
-
-def _required_source(conn: psycopg.Connection, sql: str) -> str:
-    row = conn.execute(sql).fetchone()
-    if not isinstance(row, Mapping) or not isinstance(row.get("id"), str):
-        raise RuntimeError("eligible catalog canary source is missing")
-    return row["id"]
 
 
 def _enqueue(

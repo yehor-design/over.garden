@@ -198,7 +198,6 @@ describe("EU Official Journal Common Catalogue import", () => {
 
     expect(item.sql).toContain('on conflict ("source", "source_id") do update');
     expect(item.parameters).toContain("Cincinnati");
-    expect(item.parameters).toContain("plant_variety");
     expect(item.parameters).toContain(
       EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
     );
@@ -251,9 +250,8 @@ describe("EU Official Journal Common Catalogue import", () => {
     expect(compiled.sql).not.toContain('"raw_payload"');
     expect(compiled.sql).not.toContain("source_only_fields");
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
-      "plant_variety",
+      "active",
+      "cultivar",
       EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
       "%cincinnati%",
       8,
@@ -277,7 +275,7 @@ describe("EU Official Journal Common Catalogue import", () => {
     expect(compiled.sql).not.toContain("source_only_fields");
     expect(compiled.parameters).toEqual([
       catalogItemId,
-      "plant_variety",
+      "cultivar",
       EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
       EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE.slug,
       "canonical_item",

@@ -69,8 +69,8 @@ describe("public object passport repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"public_entries"."owner_user_id" = "plant_objects"."owner_user_id"',
     );
-    expect(compiled.sql).toContain('"public_entries"."visibility" = $1');
-    expect(compiled.sql).toContain('"public_entries"."lifecycle_state" = $2');
+    expect(compiled.sql).toContain('"public_entries"."visibility" = ');
+    expect(compiled.sql).toContain('"public_entries"."lifecycle_state" = ');
     expect(compiled.sql).toContain('"public_entries"."public_gone_at" is null');
     expect(compiled.sql).toContain(
       '"public_entries"."public_slug" is not null',
@@ -79,7 +79,7 @@ describe("public object passport repository query contracts", () => {
       'left join "user_handle_registry" on "user_handle_registry"."user_id" = "plant_objects"."owner_user_id"',
     );
     expect(compiled.sql).toContain(
-      '"user_handle_registry"."lifecycle_state" = $5',
+      '"user_handle_registry"."lifecycle_state" = ',
     );
     expect(compiled.sql).toContain(
       '"user_public_profiles"."user_id" = "user_handle_registry"."user_id"',
@@ -88,21 +88,20 @@ describe("public object passport repository query contracts", () => {
       '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
     );
     expect(compiled.sql).toContain(
-      '"user_public_profiles"."profile_lifecycle_state" = $6',
+      '"user_public_profiles"."profile_lifecycle_state" = ',
     );
     expect(compiled.sql).toContain(
       '"user_public_profiles"."removed_at" is null',
     );
-    expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
-    expect(compiled.sql).toContain('"plant_objects"."id" = $7');
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
+    expect(compiled.sql).toContain('"plant_objects"."id" = ');
     expect(compiled.sql).not.toMatch(
       /journal_entries"\."title|journal_entries"\."body|media_assets|quarantine_key|derivative_key|ip_address|user_agent|email|phone|coordinates|latitude|longitude|source_reference_label|client_mutation_id|pending_identity/i,
     );
     expect(compiled.parameters).toEqual([
       "public",
       "active",
-      "seeded",
-      "confirmed",
+      "active",
       "current",
       "active",
       plantObjectId,
@@ -182,8 +181,8 @@ describe("public object passport repository query contracts", () => {
     expect(compiled.sql).toContain("cover_media_asset_id");
     expect(compiled.sql).toContain('"media_assets"."document_position" asc');
     expect(compiled.sql).not.toContain('"media_assets"."created_at" asc');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $3');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = ');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -216,8 +215,8 @@ describe("public object passport repository query contracts", () => {
     );
     expect(compiled.sql).toContain('"media_assets"."revoked_at" is null');
     expect(compiled.sql).not.toContain('"media_assets"."status"');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $3');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = ');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );

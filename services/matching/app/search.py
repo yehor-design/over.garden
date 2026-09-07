@@ -116,28 +116,6 @@ SUPPORTED_COARSE_REGION_CODES = {
     "BG-28",
 }
 
-CATALOG_TYPEAHEAD_ROWS_SQL = """
-select
-  catalog_items.id::text as catalog_item_id,
-  catalog_items.canonical_name,
-  catalog_items.normalized_name as item_normalized_name,
-  catalog_items.catalog_kind,
-  catalog_items.status,
-  catalog_items.source,
-  catalog_items.created_by_user_id::text as created_by_user_id,
-  catalog_items.locale as item_locale,
-  catalog_item_names.display_name,
-  catalog_item_names.normalized_name as alias_normalized_name,
-  catalog_item_names.locale as alias_locale,
-  catalog_item_names.is_primary
-from catalog_item_names
-inner join catalog_items
-  on catalog_items.id = catalog_item_names.catalog_item_id
-where catalog_items.status in ('seeded', 'confirmed')
-  and catalog_items.created_by_user_id is null
-order by catalog_item_names.is_primary desc, catalog_item_names.display_name asc
-"""
-
 JOURNAL_ENTRY_SEARCH_ROW_SQL = """
 select
   journal_entries.id::text as id,

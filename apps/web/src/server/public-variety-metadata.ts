@@ -72,7 +72,10 @@ export function buildPublicVarietySurfaceMetadata(
       name: page.catalog.canonicalName,
       description: `${suffix}: ${page.catalog.canonicalName}.`,
       dateModified: toIsoDate(page.catalog.contentUpdatedAt),
-      trustQualifier: `Catalog status: ${page.catalog.status}`,
+      // A node reaches a public page only while its identity is active, so
+      // this says what publication already guarantees rather than echoing a
+      // column that used to say "seeded" for every row (OVE-399).
+      trustQualifier: "Catalog identity: active",
       taxon: {
         id: absolutePublicUrl(page.catalog.permalinkPath),
         scientificName: page.catalog.scientificName,

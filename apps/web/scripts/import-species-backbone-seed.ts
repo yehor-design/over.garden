@@ -149,7 +149,6 @@ async function main() {
       blockedAliasProof.push({
         conceptKey: concept.key,
         displayName: alias.displayName,
-        status: alias.status,
         projectedToTypeahead: false,
       });
     }

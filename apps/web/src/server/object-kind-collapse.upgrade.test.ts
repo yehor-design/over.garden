@@ -43,8 +43,8 @@ describeIfDb("OVE-211 live object-kind upgrade path", () => {
 
     await pool.query(
       `insert into catalog_items (
-         id, catalog_kind, canonical_name, normalized_name, source, status
-       ) values ($1, 'breed', 'OVE-211 Carpathian', 'ove-211 carpathian', 'ua_official_bee_breed', 'seeded')`,
+         id, node_kind, canonical_name, normalized_name, source, identity_state
+       ) values ($1, 'breed', 'OVE-211 Carpathian', 'ove-211 carpathian', 'ua_official_bee_breed', 'active')`,
       [catalogItemId],
     );
 

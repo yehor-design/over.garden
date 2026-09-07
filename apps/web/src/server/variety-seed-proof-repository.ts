@@ -4,12 +4,10 @@ import { type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
-  CatalogItemStatus,
   Database,
   VarietySeedProof,
   VarietySeedProofStatus,
 } from "@/db/schema";
-import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import type { RequestScope } from "@/server/request-scope";
 
 const MAX_SEED_PROOFS_FOR_CURATION = 25;
@@ -66,7 +64,6 @@ export interface SeedProofCatalogItem {
   id: string;
   canonicalName: string;
   publicSlug: string;
-  status: Extract<CatalogItemStatus, "seeded" | "confirmed">;
   source: string;
   locale: string;
 }
@@ -76,7 +73,6 @@ export interface VarietySeedProofCurationRow {
   catalogItemId: string;
   catalogCanonicalName: string;
   catalogPublicSlug: string;
-  catalogStatus: Extract<CatalogItemStatus, "seeded" | "confirmed">;
   catalogLocale: string;
   title: string;
   summary: string;
@@ -115,10 +111,6 @@ export async function listVarietySeedProofsForCuration(
     catalogItemId: row.catalogItemId,
     catalogCanonicalName: row.catalogCanonicalName,
     catalogPublicSlug: row.catalogPublicSlug,
-    catalogStatus: row.catalogStatus as Extract<
-      CatalogItemStatus,
-      "seeded" | "confirmed"
-    >,
     catalogLocale: row.catalogLocale,
     title: row.title,
     summary: row.summary,
@@ -163,12 +155,11 @@ export function buildFindSeedProofCatalogItemQuery(
       "id",
       "canonical_name as canonicalName",
       "public_slug as publicSlug",
-      "status",
       "source",
       "locale",
     ])
     .where("id", "=", catalogItemId)
-    .where("status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("identity_state", "=", "active")
     .where("created_by_user_id", "is", null)
     .where("public_slug", "is not", null)
     .$narrowType<{ publicSlug: string }>();
@@ -226,7 +217,6 @@ export function buildListVarietySeedProofsForCurationQuery(
       "variety_seed_proofs.catalog_item_id as catalogItemId",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
-      "catalog_items.status as catalogStatus",
       "catalog_items.locale as catalogLocale",
       "variety_seed_proofs.title as title",
       "variety_seed_proofs.summary as summary",
@@ -236,7 +226,7 @@ export function buildListVarietySeedProofsForCurationQuery(
       "variety_seed_proofs.published_at as publishedAt",
       "variety_seed_proofs.updated_at as updatedAt",
     ])
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("catalog_items.public_slug", "is not", null)
     .orderBy("variety_seed_proofs.updated_at", "desc")
@@ -320,7 +310,6 @@ async function requireSeedProofCatalogItem(
     id: row.id,
     canonicalName: row.canonicalName,
     publicSlug: row.publicSlug,
-    status: row.status as Extract<CatalogItemStatus, "seeded" | "confirmed">,
     source: row.source,
     locale: row.locale,
   };

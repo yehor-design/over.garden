@@ -509,7 +509,6 @@ async function seedSmokeRows() {
       id: CATALOG_ITEM_ID,
       canonical_name: "OVE-97 provisional tomato",
       normalized_name: "ove-97 provisional tomato",
-      status: "provisional",
       source: "user_added",
       source_id: "ove-97-smoke-source",
       created_by_user_id: REQUESTER_USER_ID,

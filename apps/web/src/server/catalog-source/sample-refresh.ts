@@ -22,8 +22,6 @@ import { assertCatalogSourceProductProjectionAllowed } from "./source-projection
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
-const MATCHING_QUEUE = "matching";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000064000";
 
 type CatalogSourceRecordProjectionStatus =
@@ -78,7 +76,6 @@ export interface CatalogSourceRefreshTypeaheadProof {
   displayName: string;
   canonicalName: string;
   locale: string;
-  status: string;
   source: string;
 }
 
@@ -137,7 +134,6 @@ export async function readCatalogSourceRefreshTypeaheadProof(
     displayName: row.displayName,
     canonicalName: row.canonicalName,
     locale: row.locale,
-    status: row.status,
     source: row.source,
   }));
 }
@@ -344,7 +340,6 @@ export function buildUpsertCatalogSourceRefreshCatalogItemQuery(
       canonical_name: projection.canonicalName,
       normalized_name: projection.normalizedName,
       public_slug: projection.publicSlug,
-      status: projection.status,
       source: projection.source,
       source_id: projection.sourceId,
       created_by_user_id: null,
@@ -355,7 +350,6 @@ export function buildUpsertCatalogSourceRefreshCatalogItemQuery(
         canonical_name: projection.canonicalName,
         normalized_name: projection.normalizedName,
         public_slug: projection.publicSlug,
-        status: projection.status,
         created_by_user_id: null,
         locale: projection.locale,
         updated_at: now,
@@ -567,10 +561,9 @@ export function buildCatalogSourceRefreshTypeaheadProofQuery(
       "catalog_item_names.display_name as displayName",
       "catalog_items.canonical_name as canonicalName",
       "catalog_item_names.locale as locale",
-      "catalog_items.status as status",
       "catalog_items.source as source",
     ])
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("catalog_items.source", "=", "ua_state_register")
     .where(

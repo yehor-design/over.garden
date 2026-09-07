@@ -48,7 +48,7 @@ describe("organism card statements", () => {
     expect(sql).toContain("relation.relation_type = 'form_of'");
     expect(sql).toContain("relation.relation_type = 'pest_of'");
     expect(sql).toContain(
-      "form.identity_state = 'active' and form.created_by_user_id is null and form.public_slug is not null",
+      "form.identity_state = 'active' and form.merged_into_catalog_item_id is null and form.created_by_user_id is null and form.public_slug is not null",
     );
     expect(sql).toContain('as "sources"');
     expect(sql).toContain("max(assertion.observed_at) as last_observed_at");

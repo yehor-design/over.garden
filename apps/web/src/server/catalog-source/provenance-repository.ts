@@ -4,7 +4,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database, JsonValue } from "@/db/schema";
-import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 const MAX_SOURCE_PROVENANCE_ROWS = 25;
 const SOURCE_PROVENANCE_HISTORY_MULTIPLIER = 4;
@@ -16,7 +16,6 @@ export interface CatalogSourceProvenanceHistoryRow {
   catalogCanonicalName: string;
   catalogPublicSlug: string | null;
   catalogKind: string;
-  catalogStatus: string;
   catalogSource: string;
   sourceSlug: string;
   sourceName: string;
@@ -80,7 +79,6 @@ export async function listCatalogSourceProvenanceForCuration(
     catalogCanonicalName: row.catalogCanonicalName,
     catalogPublicSlug: row.catalogPublicSlug,
     catalogKind: row.catalogKind,
-    catalogStatus: row.catalogStatus,
     catalogSource: row.catalogSource,
     sourceSlug: row.sourceSlug,
     sourceName: row.sourceName,
@@ -126,8 +124,7 @@ export function buildCatalogSourceProvenanceForCurationQuery(
       "catalog_items.id as catalogItemId",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
-      "catalog_items.catalog_kind as catalogKind",
-      "catalog_items.status as catalogStatus",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.source as catalogSource",
       "catalog_source_links.source_slug as sourceSlug",
       "catalog_source_snapshots.source_name as sourceName",
@@ -144,7 +141,7 @@ export function buildCatalogSourceProvenanceForCurationQuery(
       "catalog_source_snapshots.verified_at as verifiedAt",
       "catalog_source_records.projection_status as projectionStatus",
     ])
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("catalog_source_links.projection_kind", "=", "canonical_item")
     .orderBy("catalog_source_snapshots.verified_at", "desc")
@@ -202,6 +199,7 @@ export function buildCatalogSourceProjectedAliasesForCurationQuery(
       "catalog_alias_projections.locale as locale",
       "catalog_alias_projections.script as script",
       "catalog_alias_projections.alias_kind as aliasKind",
+      "catalog_alias_projections.status as status",
       "catalog_alias_projections.status as status",
       "catalog_alias_projections.source_slug as sourceSlug",
       "catalog_alias_projections.source_method as sourceMethod",

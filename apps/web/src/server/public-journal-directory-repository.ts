@@ -8,7 +8,6 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
-  CatalogItemStatus,
   CatalogKind,
   Database,
   PlantObjectKind,
@@ -39,7 +38,6 @@ import {
   normalizePublicJournalDirectoryEntryIds,
   publicJournalSafeRegionExpression,
   PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE,
-  PUBLIC_JOURNAL_DIRECTORY_SELECTABLE_CATALOG_STATUSES,
   type PublicJournalDirectoryEntryRow,
   type PublicJournalDirectoryRequest,
   type PublicJournalDirectorySeason,
@@ -61,6 +59,7 @@ export type {
   PublicJournalDirectorySeason,
   PublicJournalDirectorySort,
 } from "@/server/public-journal-directory-query";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type SearchCandidates = (
@@ -258,15 +257,13 @@ export async function listPublicJournalDirectoryFacets(
       .innerJoin("catalog_items", (join) =>
         join
           .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
-          .on("catalog_items.status", "in", [
-            ...PUBLIC_JOURNAL_DIRECTORY_SELECTABLE_CATALOG_STATUSES,
-          ])
+          .on("catalog_items.identity_state", "=", "active")
           .on("catalog_items.created_by_user_id", "is", null),
       )
       .select([
         "catalog_items.public_slug as slug",
         "catalog_items.canonical_name as label",
-        "catalog_items.catalog_kind as kind",
+        catalogKindSql("catalog_items").as("kind"),
         sql<number>`count(distinct ${sql.ref("journal_entries.id")})`.as(
           "count",
         ),
@@ -276,7 +273,7 @@ export async function listPublicJournalDirectoryFacets(
         "catalog_items.id",
         "catalog_items.public_slug",
         "catalog_items.canonical_name",
-        "catalog_items.catalog_kind",
+        catalogKindSql("catalog_items"),
       ])
       .orderBy("count", "desc")
       .orderBy("catalog_items.canonical_name", "asc")
@@ -385,10 +382,8 @@ export function serializePublicJournalDirectoryPage(
   const cards = visibleRows.map((row): PublicJournalDirectoryCard => {
     const objectKind = normalizeObjectKind(row.objectKind) ?? "plant";
     const catalogKind = normalizeCatalogKind(row.catalogKind);
-    const catalogStatus = normalizeCatalogStatus(row.catalogStatus);
     const catalogPath =
       catalogKind &&
-      catalogStatus &&
       row.catalogPublicSlug &&
       normalizeSlug(row.catalogPublicSlug)
         ? publicCatalogEvidencePath({
@@ -525,12 +520,6 @@ function normalizeObjectKind(value: string | null | undefined) {
 function normalizeCatalogKind(value: string | null | undefined) {
   return value === "plant_variety" || value === "species" || value === "breed"
     ? value
-    : null;
-}
-
-function normalizeCatalogStatus(value: string | null | undefined) {
-  return value === "seeded" || value === "confirmed"
-    ? (value as Extract<CatalogItemStatus, "seeded" | "confirmed">)
     : null;
 }
 

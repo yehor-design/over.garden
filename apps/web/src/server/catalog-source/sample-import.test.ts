@@ -192,8 +192,7 @@ describe("catalog source sample import", () => {
     expect(compiled.sql).not.toContain("catalog_source_snapshots");
     expect(compiled.sql).not.toContain("raw_payload");
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "ua_state_register",
       "%bergeron%",
       8,

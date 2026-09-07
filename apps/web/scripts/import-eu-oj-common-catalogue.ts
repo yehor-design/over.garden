@@ -242,7 +242,6 @@ async function main() {
       catalogItemId: provenanceProof.catalogItemId,
       canonicalName: provenanceProof.canonicalName,
       catalogKind: provenanceProof.catalogKind,
-      status: provenanceProof.status,
       source: provenanceProof.source,
       sourceSlug: provenanceProof.sourceSlug,
       sourceName: provenanceProof.sourceName,

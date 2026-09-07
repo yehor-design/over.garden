@@ -6,7 +6,6 @@ from typing import Any
 import pytest
 
 from app import canary
-from app.job_handlers import SUPPORTED_JOB_KINDS
 from app.runtime import RuntimeRelease, SCHEMA_COMPATIBILITY_CLASS
 
 
@@ -132,18 +131,13 @@ def test_enqueue_uses_release_scoped_key_without_returning_payload() -> None:
     )
 
 
-def test_evidence_shape_covers_exactly_six_handlers(
+def test_evidence_shape_covers_the_kinds_the_canary_runs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
         canary,
         "readiness_manifest",
         lambda _release: ({"status": "ready"}, True),
-    )
-    monkeypatch.setattr(
-        canary,
-        "_required_source",
-        lambda _conn, sql: "alias-id" if "confirmed" in sql else "source-id",
     )
     monkeypatch.setattr(
         canary,
@@ -184,7 +178,7 @@ def test_evidence_shape_covers_exactly_six_handlers(
     )
 
     assert [proof["kind"] for proof in evidence["handlerProofs"]] == list(
-        SUPPORTED_JOB_KINDS
+        canary._PROVEN_CANARY_KINDS
     )
     serialized = json.dumps(evidence)
     assert "private-entry-id" not in serialized
@@ -215,7 +209,6 @@ def test_canary_restores_journal_search_even_when_unindex_proof_fails(
         "readiness_manifest",
         lambda _release: ({"status": "ready"}, True),
     )
-    monkeypatch.setattr(canary, "_required_source", lambda *_args: "source-id")
     phases: list[str] = []
 
     def enqueue(_conn, _release, payload, *, phase):

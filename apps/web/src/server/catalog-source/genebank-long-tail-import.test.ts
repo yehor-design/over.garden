@@ -201,7 +201,6 @@ describe("genebank long-tail candidate import", () => {
           canonicalName: "Red Cherry tomato",
           catalogKind: "plant_variety",
           locale: "en",
-          status: "seeded",
           source: "grin_genebank_candidate",
         },
       ],
@@ -238,7 +237,6 @@ describe("genebank long-tail candidate import", () => {
             canonicalName: "Red Cherry tomato",
             catalogKind: "plant_variety",
             locale: "en",
-            status: "seeded",
             source: "grin_genebank_candidate",
           },
         ],
@@ -381,7 +379,6 @@ describe("genebank long-tail candidate import", () => {
     expect(item.sql).toContain('on conflict ("source", "source_id") do update');
     expect(item.parameters).toContain("Red Cherry tomato");
     expect(item.parameters).toContain("grin_genebank_candidate");
-    expect(item.parameters).toContain("plant_variety");
     expect(JSON.stringify(item.parameters)).not.toContain(
       "accessionIdentifier",
     );
@@ -438,13 +435,12 @@ describe("genebank long-tail candidate import", () => {
 
     expect(compiled.sql).toContain('from "catalog_item_names"');
     expect(compiled.sql).toContain('inner join "catalog_items"');
-    expect(compiled.sql).toContain('"catalog_items"."catalog_kind" = $3');
+    expect(compiled.sql).toContain('"catalog_items"."node_kind" = ');
     expect(compiled.sql).not.toContain("catalog_source_records");
     expect(compiled.sql).not.toContain('"raw_payload"');
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
-      "plant_variety",
+      "active",
+      "cultivar",
       "grin_genebank_candidate",
       "%red cherry%",
       8,
@@ -466,7 +462,7 @@ describe("genebank long-tail candidate import", () => {
     expect(compiled.sql).not.toContain("source_only_fields");
     expect(compiled.parameters).toEqual([
       catalogItemId,
-      "plant_variety",
+      "cultivar",
       "grin_genebank_candidate",
       "grin-global",
       "canonical_item",

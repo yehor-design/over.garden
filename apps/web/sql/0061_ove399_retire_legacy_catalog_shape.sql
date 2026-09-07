@@ -191,3 +191,30 @@ alter table plant_objects
 alter table plant_objects
   add constraint plant_objects_variety_state_check
   check (variety_state in ('selected', 'free_text', 'unknown'));
+
+-- ----------------------------------------------------------------------
+-- 6. A topic signal named after the dropped column.
+-- ----------------------------------------------------------------------
+--
+-- `journal_entry_topic_signals.signal_source` had a value called
+-- `catalog_kind`: "this entry belongs to this topic because of what kind of
+-- thing its object is". The reason survives; only the column it was named
+-- after is gone, so the value is renamed for the same reason the column is —
+-- one name, one meaning.
+
+alter table journal_entry_topic_signals
+  drop constraint if exists journal_entry_topic_signals_source_check;
+
+update journal_entry_topic_signals
+set signal_source = 'catalog_node_kind'
+where signal_source = 'catalog_kind';
+
+alter table journal_entry_topic_signals
+  add constraint journal_entry_topic_signals_source_check
+  check (signal_source in (
+    'explicit_tag',
+    'object_kind',
+    'catalog_node_kind',
+    'catalog_mention',
+    'operator_curated'
+  ));

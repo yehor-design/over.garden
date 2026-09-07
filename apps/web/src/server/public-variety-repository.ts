@@ -5,7 +5,6 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type {
   CatalogKind,
-  CatalogItemStatus,
   Database,
   LocationVisibility,
   VarietyState,
@@ -25,7 +24,6 @@ import { localizedPath, PUBLIC_LOCALES } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { readMediaVariantExtras } from "@/server/media/media-variant-schema";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
-import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import {
   buildCatalogSlugHistoryLookupQuery,
   readPublicCatalogCanonicalAddress,
@@ -50,6 +48,7 @@ import {
   buildPublishedVarietySeedProofByCatalogItemIdQuery,
   type PublicVarietySeedProof,
 } from "@/server/variety-seed-proof-repository";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 const MAX_CATALOG_PUBLIC_SLUG_LENGTH = 96;
 const MAX_PUBLIC_VARIETY_ENTRIES = 20;
@@ -81,7 +80,6 @@ export interface PublicVarietyPage {
     permalinkPath: string;
     contentUpdatedAt: Date | string;
     identifiers: PublicVarietyPageIdentifier[];
-    status: Extract<CatalogItemStatus, "seeded" | "confirmed">;
     source: string;
     locale: string;
   };
@@ -262,7 +260,6 @@ export async function getPublicVarietyPageByCatalogItemId(
         scheme: row.scheme,
         value: row.value,
       })),
-      status: item.status as Extract<CatalogItemStatus, "seeded" | "confirmed">,
       source: item.source,
       locale: item.locale,
     },
@@ -366,13 +363,12 @@ export function buildPublicVarietyItemQuery(
     .selectFrom("catalog_items")
     .select([
       "catalog_items.id as id",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.node_kind as nodeKind",
       "catalog_items.rank as rank",
       "catalog_items.kingdom as kingdom",
       "catalog_items.canonical_name as canonicalName",
       "catalog_items.public_slug as publicSlug",
-      "catalog_items.status as status",
       "catalog_items.source as source",
       "catalog_items.locale as locale",
       "catalog_items.content_updated_at as contentUpdatedAt",
@@ -399,7 +395,6 @@ export function buildPublicVarietyItemQuery(
       )`.as("scientificName"),
     ])
     .where("catalog_items.id", "=", catalogItemId)
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
     .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("catalog_items.public_slug", "is not", null);
@@ -568,11 +563,10 @@ export function buildPublicVarietySummaryQuery(
     .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
     .select(({ fn }) => [
       "catalog_items.id as catalogItemId",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
-      "catalog_items.status as catalogStatus",
       "catalog_items.source as catalogSource",
       "catalog_items.locale as catalogLocale",
       fn.count<number>("journal_entries.id").as("entryCount"),
@@ -595,7 +589,7 @@ export function buildPublicVarietySummaryQuery(
         ? eb("catalog_items.public_slug", "=", selector)
         : eb("catalog_items.id", "=", selector.catalogItemId),
     )
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("plant_objects.variety_state", "=", "selected")
     .whereRef(
@@ -613,14 +607,13 @@ export function buildPublicVarietySummaryQuery(
       "catalog_items.canonical_name",
       "catalog_items.id",
       "catalog_items.public_slug",
-      "catalog_items.status",
       "catalog_items.source",
       "catalog_items.locale",
-      "catalog_items.catalog_kind",
+      catalogKindSql("catalog_items"),
     ]);
 
   if (expectedCatalogKind) {
-    query = query.where("catalog_items.catalog_kind", "=", expectedCatalogKind);
+    query = query.where(catalogKindSql("catalog_items"), "=", expectedCatalogKind);
   }
 
   return query.$narrowType<{ catalogKind: CatalogKind }>();
@@ -645,7 +638,7 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
       .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
       .select(({ fn }) => [
         "catalog_items.id as catalogItemId",
-        "catalog_items.catalog_kind as catalogKind",
+        catalogKindSql("catalog_items").as("catalogKind"),
         "catalog_items.public_slug as publicSlug",
         catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
         // The card changed when its names, links or facts did, or when a
@@ -661,7 +654,7 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
         ),
       ])
       .where("catalog_items.public_slug", "is not", null)
-      .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+      .where("catalog_items.identity_state", "=", "active")
       .where("catalog_items.created_by_user_id", "is", null)
       // ADR-0026 D9: the sitemap applies the card's own indexability predicate.
       .where(({ eb, or }) =>
@@ -684,7 +677,7 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
       .where(publicLaunchSurfacePredicates())
       .groupBy([
         "catalog_items.id",
-        "catalog_items.catalog_kind",
+        catalogKindSql("catalog_items"),
         "catalog_items.public_slug",
       ])
       .orderBy("catalog_items.public_slug", "asc")
@@ -745,7 +738,7 @@ export function buildPublicVarietyEntriesQuery(
         ? eb("catalog_items.public_slug", "=", selector)
         : eb("catalog_items.id", "=", selector.catalogItemId),
     )
-    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.identity_state", "=", "active")
     .where("catalog_items.created_by_user_id", "is", null)
     .where("plant_objects.variety_state", "=", "selected")
     .whereRef(
@@ -761,7 +754,7 @@ export function buildPublicVarietyEntriesQuery(
     .where(publicLaunchSurfacePredicates());
 
   if (expectedCatalogKind) {
-    query = query.where("catalog_items.catalog_kind", "=", expectedCatalogKind);
+    query = query.where(catalogKindSql("catalog_items"), "=", expectedCatalogKind);
   }
 
   return query

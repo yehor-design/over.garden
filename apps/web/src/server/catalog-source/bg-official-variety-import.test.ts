@@ -169,7 +169,6 @@ describe("BG official variety import", () => {
     expect(projection.source).toBe("eu_common_catalogue_bg");
     expect(item.sql).toContain('on conflict ("source", "source_id") do update');
     expect(item.parameters).toContain("Садово 1");
-    expect(item.parameters).toContain("plant_variety");
     expect(item.parameters).toContain("eu_common_catalogue_bg");
     expect(JSON.stringify(item.parameters)).not.toContain("nationalId");
     expect(alias.parameters).toEqual([
@@ -210,13 +209,12 @@ describe("BG official variety import", () => {
 
     expect(compiled.sql).toContain('from "catalog_item_names"');
     expect(compiled.sql).toContain('inner join "catalog_items"');
-    expect(compiled.sql).toContain('"catalog_items"."catalog_kind" = $3');
+    expect(compiled.sql).toContain('"catalog_items"."node_kind" = ');
     expect(compiled.sql).not.toContain("catalog_source_records");
     expect(compiled.sql).not.toContain('"raw_payload"');
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
-      "plant_variety",
+      "active",
+      "cultivar",
       "eu_common_catalogue_bg",
       "%садово%",
       8,
@@ -239,7 +237,7 @@ describe("BG official variety import", () => {
     expect(compiled.sql).not.toContain("source_only_fields");
     expect(compiled.parameters).toEqual([
       catalogItemId,
-      "plant_variety",
+      "cultivar",
       "eu_common_catalogue_bg",
       "eu-common-catalogue",
       "canonical_item",

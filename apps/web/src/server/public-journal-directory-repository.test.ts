@@ -168,7 +168,7 @@ describe("public journal directory query", () => {
     expect(compiled.sql).toContain('"journal_entries"."entry_scope" =');
     expect(compiled.sql).toContain('from "journal_entry_topic_signals"');
     expect(compiled.sql).toContain('"journal_topics"."trust_state" =');
-    expect(compiled.sql).toContain('"catalog_items"."status" in');
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
@@ -319,7 +319,6 @@ describe("public journal directory serialization", () => {
           catalogCanonicalName: "Помідор чері",
           catalogPublicSlug: "pomidor-cheri",
           catalogSpeciesSlug: null,
-          catalogStatus: "confirmed",
           safeRegionCode: "UA-30",
           authorHandle: "demo_olena",
           authorDisplayName: "Олена",
@@ -334,7 +333,6 @@ describe("public journal directory serialization", () => {
           catalogKind: "species",
           catalogCanonicalName: "Apis mellifera",
           catalogPublicSlug: "apis-mellifera",
-          catalogStatus: "seeded",
           safeRegionCode: "hidden backyard address",
           authorHandle: null,
           authorDisplayName: null,
@@ -505,7 +503,6 @@ function row(
     catalogCanonicalName: null,
     catalogPublicSlug: null,
     catalogSpeciesSlug: null,
-    catalogStatus: null,
     safeRegionCode: null,
     authorHandle: null,
     authorDisplayName: null,

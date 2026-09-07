@@ -11,7 +11,7 @@ import {
 } from "@/lib/catalog/addresses";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
-import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -70,11 +70,10 @@ export function buildCatalogItemAddressQuery(
     .selectFrom("catalog_items")
     .select([
       "catalog_items.id as id",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.node_kind as nodeKind",
       "catalog_items.public_slug as publicSlug",
       "catalog_items.identity_state as identityState",
-      "catalog_items.status as status",
       "catalog_items.created_by_user_id as createdByUserId",
       "catalog_items.merged_into_catalog_item_id as mergedIntoCatalogItemId",
       catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
@@ -200,9 +199,9 @@ export async function readPublicCatalogCanonicalAddress(
     }
     if (
       item.identityState !== "active" ||
+      item.mergedIntoCatalogItemId !== null ||
       item.createdByUserId !== null ||
-      !item.publicSlug ||
-      !isSelectableStatus(item.status)
+      !item.publicSlug
     ) {
       return null;
     }
@@ -252,10 +251,6 @@ export function normalizeCatalogAliasValue(
     default:
       return null;
   }
-}
-
-function isSelectableStatus(status: string) {
-  return (SELECTABLE_CATALOG_STATUSES as readonly string[]).includes(status);
 }
 
 function isUuid(value: string) {

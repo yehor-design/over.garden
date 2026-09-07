@@ -48,7 +48,6 @@ function provenanceRow(
     catalogCanonicalName: "Solanum lycopersicum L.",
     catalogPublicSlug: "solanum-lycopersicum",
     catalogKind: "species",
-    catalogStatus: "seeded",
     catalogSource: "species_backbone",
     sourceSlug: "gbif-backbone",
     sourceName: "GBIF Backbone Taxonomy",
@@ -92,8 +91,7 @@ describe("catalog source provenance repository", () => {
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.sql).not.toContain("owner_user_id");
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "canonical_item",
       10,
     ]);

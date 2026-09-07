@@ -319,8 +319,7 @@ describe("catalog source sample refresh", () => {
     expect(compiled.sql).not.toContain("catalog_source_records");
     expect(compiled.sql).not.toContain("catalog_source_refresh_records");
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "ua_state_register",
       "%refresh new 64%",
       8,

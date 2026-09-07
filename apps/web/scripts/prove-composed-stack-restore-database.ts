@@ -373,19 +373,20 @@ async function seedProductCorpus(database: string): Promise<void> {
       await pool.query(migration.sql);
     }
 
-    // One selectable identity and one rejected one. Both carry the same three
-    // localized names, so a read model that forgot the status predicate would
-    // serve the rejected row and fail the read-back rather than pass by luck.
+    // One live identity and one retired one. Both carry the same three
+    // localized names, so a read model that forgot the identity predicate
+    // would serve the retired row and fail the read-back rather than pass by
+    // luck.
     const items = await pool.query<{ id: string }>(
       `insert into catalog_items (
-         canonical_name, normalized_name, catalog_kind, public_slug, status,
-         source, locale
+         canonical_name, normalized_name, node_kind, public_slug,
+         identity_state, source, locale
        ) values
-         ('Solanum lycopersicum', 'solanum lycopersicum', 'species',
-          'ove358-tomato', 'confirmed', 'internal_seed', 'la'),
+         ('Solanum lycopersicum', 'solanum lycopersicum', 'taxon',
+          'ove358-tomato', 'active', 'internal_seed', 'la'),
          ('Solanum lycopersicum (withdrawn)',
-          'solanum lycopersicum (withdrawn)', 'species',
-          'ove358-tomato-withdrawn', 'rejected', 'internal_seed', 'la')
+          'solanum lycopersicum (withdrawn)', 'taxon',
+          'ove358-tomato-withdrawn', 'retired', 'internal_seed', 'la')
        returning id`,
     );
     const names: Array<[string, string, string]> = [
@@ -420,7 +421,7 @@ async function productFingerprint(database: string): Promise<string> {
     const rows = await pool.query<{ fingerprint: string }>(
       `select coalesce(
                 md5(string_agg(
-                  items.id::text || '/' || items.status || '/'
+                  items.id::text || '/' || items.identity_state || '/'
                     || coalesce(names.locale, '') || '/'
                     || coalesce(names.normalized_name, ''),
                   '|' order by items.id, names.locale, names.normalized_name)),

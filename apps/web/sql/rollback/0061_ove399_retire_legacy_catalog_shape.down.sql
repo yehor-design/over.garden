@@ -257,3 +257,24 @@ begin
   return node;
 end;
 $function$;
+
+-- ----------------------------------------------------------------------
+-- 6. The topic signal returns to its old name.
+-- ----------------------------------------------------------------------
+
+alter table journal_entry_topic_signals
+  drop constraint if exists journal_entry_topic_signals_source_check;
+
+update journal_entry_topic_signals
+set signal_source = 'catalog_kind'
+where signal_source = 'catalog_node_kind';
+
+alter table journal_entry_topic_signals
+  add constraint journal_entry_topic_signals_source_check
+  check (signal_source in (
+    'explicit_tag',
+    'object_kind',
+    'catalog_kind',
+    'catalog_mention',
+    'operator_curated'
+  ));

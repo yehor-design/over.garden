@@ -583,17 +583,17 @@ returning id::text as id
 # capture that produced it, which is what makes the row traceable to bytes.
 INSERT_NODE_SQL = """
 insert into catalog_items (
-  canonical_name, catalog_kind, normalized_name, public_slug, status, source,
+  canonical_name, normalized_name, public_slug, source,
   source_id, locale, node_kind, kingdom, rank, identity_state,
   content_updated_at
 )
 values (
-  left(%s, 120), 'species', catalog_normalize_name(left(%s, 120)),
+  left(%s, 120), catalog_normalize_name(left(%s, 120)),
   case
     when %s in ('species', 'subspecies', 'variety', 'subvariety', 'form')
     then catalog_col_free_slug(catalog_col_slug(left(%s, 120)))
   end,
-  'seeded', 'species_backbone', 'eppo-global-database:' || %s, 'la',
+  'species_backbone', 'eppo-global-database:' || %s, 'la',
   'taxon', %s, %s, 'active', now()
 )
 returning id::text as id

@@ -104,7 +104,6 @@ function item(
     nodeKind: "taxon",
     publicSlug: "solanum-lycopersicum",
     identityState: "active",
-    status: "seeded",
     createdByUserId: null,
     mergedIntoCatalogItemId: null,
     speciesSlug: null,

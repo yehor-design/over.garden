@@ -104,7 +104,7 @@ describe("public living-object catalog query", () => {
       '"journal_entries"."published_at" is not null',
     );
     expect(compiled.sql).toContain('"plant_objects"."object_kind" =');
-    expect(compiled.sql).toContain('"catalog_items"."catalog_kind" =');
+    expect(compiled.sql).toContain("catalog_items.node_kind = 'taxon'");
     expect(compiled.sql).toContain("count(distinct");
     expect(compiled.sql).toContain("count(*) over()");
     expect(compiled.sql).toContain("ilike");
@@ -165,7 +165,6 @@ describe("public living-object catalog serialization", () => {
           catalogKind: "plant_variety",
           identityName: "Помідор чері",
           catalogPublicSlug: "pomidor-cheri-0000000101",
-          catalogStatus: "confirmed",
           objectCount: 2,
           journalCount: 5,
           mediaDerivativeKey: "public/catalog/tomato.png",
@@ -182,7 +181,6 @@ describe("public living-object catalog serialization", () => {
           catalogItemId: null,
           catalogKind: null,
           catalogPublicSlug: null,
-          catalogStatus: null,
           mediaDerivativeKey: null,
           totalCount: 4,
         }),
@@ -194,7 +192,6 @@ describe("public living-object catalog serialization", () => {
           catalogItemId: null,
           catalogKind: null,
           catalogPublicSlug: null,
-          catalogStatus: null,
           totalCount: 4,
         }),
         row({
@@ -205,7 +202,6 @@ describe("public living-object catalog serialization", () => {
           catalogItemId: null,
           catalogKind: null,
           catalogPublicSlug: null,
-          catalogStatus: null,
           totalCount: 4,
         }),
       ],
@@ -285,7 +281,6 @@ describe("public living-object catalog serialization", () => {
         row({
           identityState: "catalog",
           catalogKind: "species",
-          catalogStatus: "seeded",
           catalogItemId: "00000000-0000-4000-8000-000000000401",
           catalogPublicSlug: "solanum-lycopersicum",
           identityName: "Solanum lycopersicum",
@@ -299,7 +294,6 @@ describe("public living-object catalog serialization", () => {
         row({
           identityState: "catalog",
           catalogKind: "breed",
-          catalogStatus: "seeded",
           catalogItemId: "00000000-0000-4000-8000-000000000402",
           catalogPublicSlug: "carpathian-bee",
           identityName: "Карпатська бджола",
@@ -326,7 +320,6 @@ function row(
     identityName: null,
     catalogPublicSlug: null,
     catalogSpeciesSlug: null,
-    catalogStatus: null,
     objectCount: 1,
     journalCount: 1,
     representativeObjectId: "00000000-0000-4000-8000-000000000201",

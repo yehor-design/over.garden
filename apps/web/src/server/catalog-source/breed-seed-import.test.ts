@@ -131,7 +131,7 @@ describe("UA official bee breed seed import", () => {
     );
   });
 
-  it("projects the breed item as catalog_kind breed, not a plant variety", () => {
+  it("projects the breed item as a breed node, not a plant variety", () => {
     const projection = breedSeedAllowedProjection();
     const item = buildUpsertBreedSeedCatalogItemQuery(
       testDb,
@@ -151,8 +151,7 @@ describe("UA official bee breed seed import", () => {
     );
     expect(item.sql).toContain('on conflict ("source", "source_id") do update');
     expect(item.parameters).toContain("Карпатська бджола");
-    expect(item.parameters).toContain("breed");
-    expect(item.parameters).toContain("ua_official_bee_breed");
+        expect(item.parameters).toContain("ua_official_bee_breed");
     expect(JSON.stringify(item.parameters)).not.toContain("dadIsRef");
     expect(alias.parameters).toEqual([
       catalogItemId,
@@ -222,12 +221,11 @@ describe("UA official bee breed seed import", () => {
 
     expect(compiled.sql).toContain('from "catalog_item_names"');
     expect(compiled.sql).toContain('inner join "catalog_items"');
-    expect(compiled.sql).toContain('"catalog_items"."catalog_kind" = $3');
+    expect(compiled.sql).toContain('"catalog_items"."node_kind" = ');
     expect(compiled.sql).not.toContain("catalog_source_records");
     expect(compiled.sql).not.toContain('"raw_payload"');
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "breed",
       "ua_official_bee_breed",
       "vertebrate_breed_ontology",
@@ -245,8 +243,7 @@ describe("UA official bee breed seed import", () => {
     expect(compiled.sql).toContain('from "catalog_source_links"');
     expect(compiled.sql).toContain('inner join "catalog_source_records"');
     expect(compiled.sql).toContain('inner join "catalog_source_snapshots"');
-    expect(compiled.sql).toContain("catalog_kind");
-    expect(compiled.sql).toContain("source_record_key");
+        expect(compiled.sql).toContain("source_record_key");
     expect(compiled.sql).toContain("license");
     expect(compiled.sql).not.toContain('"raw_payload"');
     expect(compiled.sql).not.toContain("source_only_fields");
@@ -270,7 +267,7 @@ describe("UA official bee breed seed import", () => {
 
     expect(compiled.sql).toContain('from "catalog_alias_projections"');
     expect(compiled.sql).toContain('inner join "catalog_items"');
-    expect(compiled.sql).toContain('"catalog_items"."catalog_kind" = $2');
+    expect(compiled.sql).toContain('"catalog_items"."node_kind" = ');
     expect(compiled.sql).not.toContain('"raw_payload"');
     expect(compiled.parameters).toEqual([catalogItemId, "breed"]);
   });

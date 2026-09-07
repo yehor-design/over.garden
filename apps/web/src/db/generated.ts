@@ -156,23 +156,6 @@ export interface CatalogCurationQueue {
   updated_at: Generated<Timestamp>;
 }
 
-export interface CatalogFuzzyDuplicateSuggestions {
-  generated_at: Generated<Timestamp>;
-  id: Generated<string>;
-  left_catalog_item_id: string;
-  left_updated_at_snapshot: Timestamp;
-  locale_relation: string;
-  matcher_version: string;
-  pair_key: string;
-  reason_codes: string[];
-  recommended_action: string;
-  right_catalog_item_id: string;
-  right_updated_at_snapshot: Timestamp;
-  score: number;
-  score_bucket: string;
-  updated_at: Generated<Timestamp>;
-}
-
 export interface CatalogItemFacts {
   assertion_id: string;
   catalog_item_id: string;
@@ -223,7 +206,6 @@ export interface CatalogItems {
   accepted_name_id: string | null;
   ancestor_ids: Generated<string[]>;
   canonical_name: string;
-  catalog_kind: Generated<string>;
   content_updated_at: Generated<Timestamp>;
   created_at: Generated<Timestamp>;
   created_by_user_id: string | null;
@@ -248,7 +230,6 @@ export interface CatalogItems {
   search_weight: Generated<Numeric>;
   source: Generated<string>;
   source_id: string | null;
-  status: Generated<string>;
   updated_at: Generated<Timestamp>;
 }
 
@@ -259,43 +240,6 @@ export interface CatalogItemSlugHistory {
   slug: string;
   valid_from: Generated<Timestamp>;
   valid_to: Timestamp | null;
-}
-
-export interface CatalogMatchSuggestions {
-  affected_object_count: Generated<number>;
-  candidate_key: string;
-  catalog_kind: string;
-  confidence_bucket: string;
-  created_at: Generated<Timestamp>;
-  decision_affected_object_count: number | null;
-  decision_reason_code: string | null;
-  decision_result: string | null;
-  generated_at: Generated<Timestamp>;
-  id: Generated<string>;
-  match_type: string;
-  matched_name: string | null;
-  matcher_version: string;
-  normalized_input: string;
-  reason_codes: Generated<string[]>;
-  reviewed_at: Timestamp | null;
-  reviewed_by_user_id: string | null;
-  safe_evidence: Json;
-  score: number;
-  source_catalog_item_id: string;
-  source_locale: Generated<string>;
-  source_matching_fingerprint: string | null;
-  source_script: string;
-  source_updated_at_snapshot: Timestamp | null;
-  status: Generated<string>;
-  suggestion_kind: Generated<string>;
-  target_canonical_name: string | null;
-  target_catalog_item_id: string | null;
-  target_catalog_item_name_id: string | null;
-  target_locale: string | null;
-  target_matching_fingerprint: string | null;
-  target_script: string | null;
-  target_updated_at_snapshot: Timestamp | null;
-  updated_at: Generated<Timestamp>;
 }
 
 export interface CatalogPickEvents {
@@ -1143,14 +1087,12 @@ export interface DB {
   catalog_alias_projections: CatalogAliasProjections;
   catalog_curation_actions: CatalogCurationActions;
   catalog_curation_queue: CatalogCurationQueue;
-  catalog_fuzzy_duplicate_suggestions: CatalogFuzzyDuplicateSuggestions;
   catalog_item_facts: CatalogItemFacts;
   catalog_item_identifiers: CatalogItemIdentifiers;
   catalog_item_names: CatalogItemNames;
   catalog_item_relations: CatalogItemRelations;
   catalog_item_slug_history: CatalogItemSlugHistory;
   catalog_items: CatalogItems;
-  catalog_match_suggestions: CatalogMatchSuggestions;
   catalog_pick_events: CatalogPickEvents;
   catalog_reconcile_thresholds: CatalogReconcileThresholds;
   catalog_search_misses: CatalogSearchMisses;

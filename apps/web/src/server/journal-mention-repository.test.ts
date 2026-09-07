@@ -63,8 +63,8 @@ describe("journal mention repository query contracts", () => {
       3,
     ).compile();
 
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $1');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $2');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = ');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -90,8 +90,8 @@ describe("journal mention repository query contracts", () => {
       ["00000000-0000-0000-0000-000000000010"],
     ).compile();
 
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $1');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $2');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = ');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = ');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -295,7 +295,7 @@ describe("journal mention repository query contracts", () => {
       3,
     ).compile();
 
-    expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
+    expect(compiled.sql).toContain('"catalog_items"."identity_state" = ');
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );

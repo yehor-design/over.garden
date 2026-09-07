@@ -32,7 +32,6 @@ export interface CatalogSourceRefreshProjection {
   canonicalName: string;
   normalizedName: string;
   publicSlug: string;
-  status: "seeded";
   source: "ua_state_register";
   sourceId: string;
   locale: "uk";
@@ -598,7 +597,6 @@ function buildProjection(input: {
     canonicalName: input.canonicalName,
     normalizedName: normalizeCatalogName(input.canonicalName),
     publicSlug: `ove-64-${slugify(input.canonicalName)}-ua-register-${input.applicationNumber}`,
-    status: "seeded",
     source: "ua_state_register",
     sourceId: `ua-state-register:${input.sourceRecordId}`,
     locale: "uk",

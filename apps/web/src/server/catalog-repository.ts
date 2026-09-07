@@ -4,11 +4,9 @@ import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
-  CatalogItemStatus,
   CatalogKind,
   CatalogNodeKind,
   Database,
-  JsonValue,
   PlantObjectKind,
 } from "@/db/schema";
 import { normalizeCatalogName } from "@/lib/catalog/normalize-name";
@@ -17,6 +15,7 @@ import type { CatalogPickerKind } from "@/lib/garden/entry-contracts";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import type { PublicLocale } from "@/lib/public-localization";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 const MAX_CATALOG_QUERY_LENGTH = 120;
 const MAX_CATALOG_PUBLIC_SLUG_LENGTH = 96;
@@ -40,12 +39,8 @@ const CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD = 0.3;
  * so the bound sits well above the budget.
  */
 export const CATALOG_TYPEAHEAD_DEADLINE_MS = 400;
-const MATCHING_QUEUE = "matching";
-
-export const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
-type SelectableCatalogStatus = (typeof SELECTABLE_CATALOG_STATUSES)[number];
 
 /**
  * One row of the picker: one organism, its display name in the reader's
@@ -70,7 +65,6 @@ export interface SelectableCatalogItem {
   speciesSlug: string | null;
   catalogKind: CatalogKind;
   locale: string;
-  status: SelectableCatalogStatus;
   source: string;
 }
 
@@ -490,7 +484,6 @@ export async function findSelectableCatalogItem(
     speciesSlug: row.speciesSlug,
     catalogKind: row.catalogKind as CatalogKind,
     locale: row.locale,
-    status: row.status as SelectableCatalogStatus,
     source: row.source,
   };
 }
@@ -524,7 +517,6 @@ export async function findSelectableCatalogItemByPublicSlug(
     speciesSlug: row.speciesSlug,
     catalogKind: row.catalogKind as CatalogKind,
     locale: row.locale,
-    status: row.status as SelectableCatalogStatus,
     source: row.source,
   };
 }
@@ -540,13 +532,11 @@ export function buildFindSelectableCatalogItemQuery(
       "canonical_name as canonicalName",
       "public_slug as publicSlug",
       catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
-      "catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "locale",
-      "status",
       "source",
     ])
     .where("id", "=", itemId)
-    .where("status", "in", [...SELECTABLE_CATALOG_STATUSES])
     .where("identity_state", "=", "active")
     .where("created_by_user_id", "is", null);
 }
@@ -562,14 +552,12 @@ export function buildFindSelectableCatalogItemByPublicSlugQuery(
       "canonical_name as canonicalName",
       "public_slug as publicSlug",
       catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
-      "catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "locale",
-      "status",
       "source",
     ])
     .where("public_slug", "=", publicSlug)
     .where("public_slug", "is not", null)
-    .where("status", "in", [...SELECTABLE_CATALOG_STATUSES])
     .where("identity_state", "=", "active")
     .where("created_by_user_id", "is", null)
     .$narrowType<{ publicSlug: string }>();
@@ -634,12 +622,4 @@ function matchesCatalogKindObjectKind(
   // A species record has no independent object-kind field: it is selectable
   // by a plant and by an animal alike.
   return catalogKind === "species";
-}
-
-export function isSelectableCatalogStatus(
-  status: CatalogItemStatus | string,
-): status is SelectableCatalogStatus {
-  return SELECTABLE_CATALOG_STATUSES.includes(
-    status as SelectableCatalogStatus,
-  );
 }

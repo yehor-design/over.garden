@@ -27,10 +27,10 @@ import {
   readMediaVariantExtras,
   type MediaVariantExtras,
 } from "@/server/media/media-variant-schema";
-import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { buildFirstProcessedMediaPerEntryQuery } from "@/server/public-media-repository";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 const PUBLIC_OBJECT_JOURNAL_PREVIEW_PAGE_SIZE = 5;
 const MAX_PUBLIC_OBJECT_JOURNAL_PREVIEW = 40;
@@ -328,7 +328,7 @@ export function buildPublicObjectPassportRootQuery(
     .leftJoin("catalog_items", (join) =>
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
-        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+        .on("catalog_items.identity_state", "=", "active")
         .on("catalog_items.created_by_user_id", "is", null),
     )
     .leftJoin("user_handle_registry", (join) =>
@@ -365,7 +365,7 @@ export function buildPublicObjectPassportRootQuery(
       "plant_objects.coarse_region_code as objectCoarseRegionCode",
       "spaces.location_visibility as spaceLocationVisibility",
       "spaces.coarse_region_code as spaceCoarseRegionCode",
-      "catalog_items.catalog_kind as catalogKind",
+      catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
@@ -387,7 +387,7 @@ export function buildPublicObjectPassportRootQuery(
       "plant_objects.coarse_region_code",
       "spaces.location_visibility",
       "spaces.coarse_region_code",
-      "catalog_items.catalog_kind",
+      catalogKindSql("catalog_items"),
       "catalog_items.canonical_name",
       "catalog_items.public_slug",
       "user_public_profiles.handle",

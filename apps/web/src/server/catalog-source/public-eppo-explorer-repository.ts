@@ -7,6 +7,7 @@ import type { Database } from "@/db/schema";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
+import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 /**
  * The public EPPO archive read model (OVE-256, retained by ADR-0025 D2).
@@ -251,11 +252,11 @@ export function buildPublicEppoCanonicalCardQuery(
     .leftJoin("catalog_items as species", (join) =>
       join
         .onRef("species.id", "=", "item.parent_catalog_item_id")
-        .on("species.catalog_kind", "=", "species"),
+        .on(catalogKindSql("species"), "=", "species"),
     )
     .select([
       "item.canonical_name as canonicalName",
-      "item.catalog_kind as catalogKind",
+      catalogKindSql("item").as("catalogKind"),
       "item.public_slug as publicSlug",
       "species.public_slug as speciesSlug",
     ])

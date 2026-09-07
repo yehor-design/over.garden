@@ -56,7 +56,6 @@ export interface BreedSeedProjection {
   normalizedName: string;
   publicSlug: string;
   catalogKind: "breed";
-  status: "seeded";
   source: BreedSeedProductSource;
   sourceId: string;
   locale: "uk" | "en";
@@ -391,7 +390,6 @@ function buildOfficialBeeBreedProjection(
         ? "karpatska-bdzhola-ua-official-breed"
         : `${breed.key}-ua-official-breed`,
     catalogKind: "breed",
-    status: "seeded",
     source: "ua_official_bee_breed",
     sourceId: `ua-official-bee-breeds:${breed.key}`,
     locale: "uk",
@@ -544,7 +542,6 @@ function buildVboBreedProjection(breed: VboBreedInput): BreedSeedProjection {
     normalizedName: normalizeCatalogName(breed.canonicalName),
     publicSlug: breed.publicSlug,
     catalogKind: "breed",
-    status: "seeded",
     source: "vertebrate_breed_ontology",
     sourceId: breed.vboId,
     locale: "en",

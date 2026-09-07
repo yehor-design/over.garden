@@ -356,11 +356,9 @@ describe("species backbone seed import", () => {
     }).compile();
 
     expect(item.sql).toContain('on conflict ("source", "source_id") do update');
-    expect(item.sql).toContain('"catalog_kind"');
     expect(item.parameters).toContain("Solanum lycopersicum L.");
     expect(item.parameters).toContain("species_backbone");
-    expect(item.parameters).toContain("species");
-    expect(item.parameters).toContain("species-backbone:col-3LR:4Y369");
+        expect(item.parameters).toContain("species-backbone:col-3LR:4Y369");
     expect(JSON.stringify(item.parameters)).not.toContain("decimalLatitude");
     expect(alias.parameters).toEqual([
       catalogItemId,
@@ -439,8 +437,7 @@ describe("species backbone seed import", () => {
     expect(compiled.sql).not.toContain("catalog_source_records");
     expect(compiled.sql).not.toContain('"raw_payload"');
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "species_backbone",
       "%solanum lycopersicum%",
       8,
@@ -454,8 +451,7 @@ describe("species backbone seed import", () => {
     ).compile();
 
     expect(compiled.parameters).toEqual([
-      "seeded",
-      "confirmed",
+      "active",
       "species_backbone",
       "%помідор%",
       8,

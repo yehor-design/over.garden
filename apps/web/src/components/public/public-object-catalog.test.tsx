@@ -37,7 +37,6 @@ const readyPage: PublicObjectCatalogPage = {
       identityName:
         "Solanum lycopersicum з винятково довгою перевірочною назвою для перенесення без виходу за межі картки",
       catalogKind: "species",
-      catalogStatus: "seeded",
       catalogPath: "/variety/solanum-lycopersicum",
       objectCount: 2,
       journalCount: 5,
@@ -58,7 +57,6 @@ const readyPage: PublicObjectCatalogPage = {
       identityState: "unknown",
       identityName: null,
       catalogKind: null,
-      catalogStatus: null,
       catalogPath: null,
       objectCount: 1,
       journalCount: 1,

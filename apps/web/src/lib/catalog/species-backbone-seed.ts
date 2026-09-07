@@ -59,7 +59,6 @@ export interface SpeciesBackboneProjection {
   canonicalName: string;
   normalizedName: string;
   publicSlug: string;
-  status: "seeded";
   source: "species_backbone";
   sourceId: string;
   catalogKind: "species";
@@ -458,7 +457,6 @@ function buildPlannedSpeciesBackboneProjection(
     canonicalName: input.canonicalName,
     normalizedName: normalizeCatalogName(input.canonicalName),
     publicSlug: `${input.key}-species-backbone`,
-    status: "seeded",
     source: "species_backbone",
     sourceId: `species-backbone:col-${input.sourceIds.colDatasetAlias}:${input.sourceIds.colId}`,
     catalogKind: "species",
@@ -921,7 +919,6 @@ export function buildSpeciesBackboneProjection(): SpeciesBackboneProjection {
     canonicalName: "Solanum lycopersicum L.",
     normalizedName: normalizeCatalogName("Solanum lycopersicum L."),
     publicSlug: "solanum-lycopersicum-species-backbone",
-    status: "seeded",
     source: "species_backbone",
     sourceId: `species-backbone:col-${SPECIES_BACKBONE_SOURCE_IDS.colDatasetAlias}:${SPECIES_BACKBONE_SOURCE_IDS.colId}`,
     catalogKind: "species",
