@@ -115,6 +115,7 @@
     "media:staging:types": "wrangler types --config cloudflare/media-staging/wrangler.jsonc cloudflare/media-staging/worker-configuration.d.ts",
     "media:staging:dry-run": "wrangler deploy --config cloudflare/media-staging/wrangler.jsonc --dry-run --outdir /tmp/overgarden-media-staging-dry-run",
     "media:staging:verify": "tsx scripts/verify-ephemeral-media-handoff.ts",
+    "prove:organism-graph": "tsx scripts/prove-organism-graph.ts",
     "prove:owner-mvp-reset": "tsx scripts/prove-owner-mvp-reset.ts",
     "prove:workspace-resilience": "tsx scripts/prove-workspace-resilience.ts",
     "test:watch": "vitest",
