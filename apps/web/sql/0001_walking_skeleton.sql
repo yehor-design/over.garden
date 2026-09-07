@@ -1403,11 +1403,25 @@ begin
   end if;
 end $$;
 
-create index if not exists catalog_items_status_created_idx
-  on catalog_items (status, created_at desc);
-
-create index if not exists catalog_items_kind_status_idx
-  on catalog_items (catalog_kind, status, created_at desc);
+-- Keep bootstrap repeatable: migration 0061 (OVE-399) drops `status` and
+-- `catalog_kind`, and a replay reaches these lines with the columns already
+-- gone. On a first install both exist and the indexes are created exactly as
+-- they always were; 0061 drops them again at the end of the same replay.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'catalog_items'
+      and column_name = 'status'
+  ) then
+    create index if not exists catalog_items_status_created_idx
+      on catalog_items (status, created_at desc);
+    create index if not exists catalog_items_kind_status_idx
+      on catalog_items (catalog_kind, status, created_at desc);
+  end if;
+end $$;
 
 create unique index if not exists catalog_items_public_slug_uidx
   on catalog_items (public_slug)
@@ -1419,8 +1433,19 @@ create index if not exists catalog_items_merged_into_idx
 
 drop index if exists catalog_items_owner_normalized_locale_uidx;
 
-create unique index if not exists catalog_items_owner_normalized_locale_kind_uidx
-  on catalog_items (created_by_user_id, normalized_name, locale, catalog_kind);
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'catalog_items'
+      and column_name = 'catalog_kind'
+  ) then
+    create unique index if not exists catalog_items_owner_normalized_locale_kind_uidx
+      on catalog_items (created_by_user_id, normalized_name, locale, catalog_kind);
+  end if;
+end $$;
 
 create unique index if not exists catalog_items_source_source_id_uidx
   on catalog_items (source, source_id);
@@ -2363,9 +2388,22 @@ create index if not exists engagement_bookmarks_owner_created_idx
   on engagement_bookmarks (owner_user_id, created_at desc)
   where bookmark_state = 'active';
 
-create index if not exists engagement_likes_target_active_idx
-  on engagement_likes (target_kind, target_ref, updated_at desc)
-  where like_state = 'active';
+-- Keep bootstrap repeatable: migration 0049 (OVE-377) drops `like_state`, and a replay
+-- reaches this line with the column already gone.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'engagement_likes'
+      and column_name = 'like_state'
+  ) then
+    create index if not exists engagement_likes_target_active_idx
+      on engagement_likes (target_kind, target_ref, updated_at desc)
+      where like_state = 'active';
+  end if;
+end $$;
 
 create index if not exists engagement_follows_actor_updated_idx
   on engagement_follows (follower_user_id, updated_at desc)
@@ -2888,21 +2926,35 @@ create unique index if not exists variety_seed_proofs_catalog_item_uidx
 create index if not exists variety_seed_proofs_status_updated_idx
   on variety_seed_proofs (status, updated_at desc);
 
-insert into catalog_items (
-  id,
-  canonical_name,
-  normalized_name,
-  public_slug,
-  status,
-  source,
-  source_id,
-  locale
-)
-values
-  ('00000000-0000-4000-8000-000000000101', 'Помідор чері', lower('Помідор чері'), 'pomidor-cheri-0000000101', 'seeded', 'internal_seed', 'ove-seed-uk-cherry-tomato', 'uk'),
-  ('00000000-0000-4000-8000-000000000102', 'Огірок Ніжинський', lower('Огірок Ніжинський'), 'nizhyn-cucumber-0000000102', 'seeded', 'internal_seed', 'ove-seed-uk-nizhyn-cucumber', 'uk'),
-  ('00000000-0000-4000-8000-000000000103', 'Домат чери', lower('Домат чери'), 'domat-cheri-0000000103', 'seeded', 'internal_seed', 'ove-seed-bg-cherry-tomato', 'bg')
-on conflict (id) do nothing;
+-- Keep bootstrap repeatable: migration 0061 (OVE-399) drops `status`, and a
+-- replay reaches this seed with the column already gone. The three rows are
+-- already there by then, so the insert is skipped rather than rewritten.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'catalog_items'
+      and column_name = 'status'
+  ) then
+    insert into catalog_items (
+      id,
+      canonical_name,
+      normalized_name,
+      public_slug,
+      status,
+      source,
+      source_id,
+      locale
+    )
+    values
+      ('00000000-0000-4000-8000-000000000101', 'Помідор чері', lower('Помідор чері'), 'pomidor-cheri-0000000101', 'seeded', 'internal_seed', 'ove-seed-uk-cherry-tomato', 'uk'),
+      ('00000000-0000-4000-8000-000000000102', 'Огірок Ніжинський', lower('Огірок Ніжинський'), 'nizhyn-cucumber-0000000102', 'seeded', 'internal_seed', 'ove-seed-uk-nizhyn-cucumber', 'uk'),
+      ('00000000-0000-4000-8000-000000000103', 'Домат чери', lower('Домат чери'), 'domat-cheri-0000000103', 'seeded', 'internal_seed', 'ove-seed-bg-cherry-tomato', 'bg')
+    on conflict (id) do nothing;
+  end if;
+end $$;
 
 update catalog_items
 set public_slug = seed_slugs.public_slug

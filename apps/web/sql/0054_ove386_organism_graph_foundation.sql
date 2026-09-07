@@ -493,14 +493,30 @@ $$;
 -- ======================================================================
 
 -- 10a. Node kind and rank from the legacy catalog kind.
-update catalog_items
-set node_kind = case catalog_kind
-      when 'species' then 'taxon'
-      when 'plant_variety' then 'cultivar'
-      when 'breed' then 'breed'
-    end
-where node_kind = 'taxon'
-  and catalog_kind in ('plant_variety', 'breed');
+--
+-- Keep bootstrap repeatable: migration 0061 (OVE-399) drops `catalog_kind`
+-- once the graph owns the answer, and a replay reaches this backfill with the
+-- column already gone. There is nothing left to backfill from at that point —
+-- `node_kind` is already the truth.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'catalog_items'
+      and column_name = 'catalog_kind'
+  ) then
+    update catalog_items
+    set node_kind = case catalog_kind
+          when 'species' then 'taxon'
+          when 'plant_variety' then 'cultivar'
+          when 'breed' then 'breed'
+        end
+    where node_kind = 'taxon'
+      and catalog_kind in ('plant_variety', 'breed');
+  end if;
+end $$;
 
 update catalog_items
 set rank = case node_kind
@@ -522,13 +538,28 @@ where kingdom is null
   and node_kind = 'breed';
 
 -- 10c. Identity state from the legacy status.
-update catalog_items
-set identity_state = case status
-      when 'merged' then 'merged'
-      when 'rejected' then 'retired'
-    end
-where identity_state = 'active'
-  and status in ('merged', 'rejected');
+--
+-- Keep bootstrap repeatable: migration 0061 (OVE-399) drops `status` once
+-- `identity_state` owns the answer, and a replay reaches this backfill with
+-- the column already gone. Nothing is left to translate at that point.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'catalog_items'
+      and column_name = 'status'
+  ) then
+    update catalog_items
+    set identity_state = case status
+          when 'merged' then 'merged'
+          when 'rejected' then 'retired'
+        end
+    where identity_state = 'active'
+      and status in ('merged', 'rejected');
+  end if;
+end $$;
 
 -- 10d. First-hand content: the newest live public entry on a linked object.
 update catalog_items as item
