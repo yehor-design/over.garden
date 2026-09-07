@@ -1,3 +1,9 @@
+// The handler-set check reaches `@/db` through the heartbeat reader, and every
+// `@/server/*` module opens with `import "server-only"`. This resolves that
+// guard to an empty module, exactly as the other operator proofs do, and must
+// come before any import that leads there.
+import "./neutralise-server-only";
+
 import { readFileSync } from "node:fs";
 import process from "node:process";
 
