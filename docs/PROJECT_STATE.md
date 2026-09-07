@@ -30,7 +30,7 @@ Verified on 2026-09-07 against `https://over.garden` and the live providers.
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Deploy        | `main` at `1c8d186`, Vercel production READY, functions in `fra1` beside the database                                                                                                                       |
 | Public pages  | Cache Components: shells answer `x-vercel-cache: HIT`, tags revalidate on every mutation, workspace and API stay `no-store`                                                                                 |
-| Indexability  | Every live public page is `index, follow` with one canonical and one JSON-LD graph; sitemap index plus entries, profiles, and communities chunks. The catalog chunk is empty and every organism page is `noindex`: under ADR-0026 D9 a card whose content comes only from sources waits for a gardener to publish on it, and none of the 114,669 nodes has that yet |
+| Indexability  | Every live public page is `index, follow` with one canonical and one JSON-LD graph; sitemap index plus entries, profiles, communities and catalog chunks. Under ADR-0026 D9 an organism card whose content comes only from sources stays `noindex` until a gardener publishes on it or the owner marks it: one of the 114,669 nodes is marked, carries `Taxon` JSON-LD with eight `sameAs`, and is the catalog chunk's only entry |
 | Media         | Browser-made WebP: 2560 primary, 1280 and 480 variants, 16 px placeholder, served as plain `<img srcset>` from `media.over.garden`, immutable and CDN-cached. No Vercel image optimizer                     |
 | Media upload  | One session capability per composer, uploads straight to the Cloudflare Worker, two-hour lease renewed every five minutes, parallel promotion, weekly orphan sweep                                          |
 | Sessions      | Server-authoritative. The cookie-cached session decides at the moment of the mutation; no client gate                                                                                                       |
@@ -116,7 +116,9 @@ saturating the one-vCPU database (migration `0064` indexes them; the same plan
 costs 17,700 → 17.47 and the rate went to about 3,300 a minute); and `0061`
 made six earlier migrations un-replayable, which `prove-migration-reapply.ts`
 found and each site now guards. The slice's dated receipt is
-`docs/DELIVERY_LOG_ORGANISM_GRAPH_2026-09.md`.
+`docs/DELIVERY_LOG_ORGANISM_GRAPH_2026-09.md`, and the production proof it
+leaves behind is `docs/ORGANISM_GRAPH_PROOF_2026-09.json`: ten checks pass, two
+fail on the picker's P95, none pending.
 
 **Delivered 2026-09-07, OVE-395 (Slice 24, task 10 of 14).** Every registered
 cultivar and breed is attached to its species. The three register importers
@@ -370,10 +372,10 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
 ## Known gaps, stated deliberately
 
 0. **The picker misses its P95 budget in production, and the number in its own
-   receipt cannot be compared with it.** Measured 2026-09-07 with every sample
-   forced past the 60 s shared cache: median 63–69 ms, but P95 129 ms warm and
-   409 ms across fifty distinct queries, with four of fifty answering `503` at
-   the 400 ms deadline. D7's budget is a 100 ms P95. The statement is not the
+   receipt cannot be compared with it.** Measured repeatedly on 2026-09-07 with
+   every sample forced past the 60 s shared cache: median 69–85 ms, but P95
+   between 129 and 198 ms warm and around 410 ms across fifty distinct queries,
+   with four to ten of fifty answering `503` at the 400 ms deadline. D7's budget is a 100 ms P95. The statement is not the
    cause — `explain analyze` against production gives 26 ms, 8 of them
    planning — the tail is a cold serverless instance paying connection setup.
    `OVE-387`'s receipt records 26.6 ms, measured on a loopback database holding
