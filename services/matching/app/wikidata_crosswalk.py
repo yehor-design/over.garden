@@ -165,11 +165,23 @@ RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
 MAX_REQUEST_ATTEMPTS = int(os.environ.get("WIKIDATA_MAX_ATTEMPTS", "4"))
 
 
-def fetch_json(url: str, *, receipt: WikidataCrosswalkReceipt) -> Any:
-    request = urllib.request.Request(
-        url,
-        headers={"user-agent": user_agent(), "accept": "application/json"},
-    )
+def fetch_json(
+    url: str, *, receipt: WikidataCrosswalkReceipt, form: dict[str, str] | None = None
+) -> Any:
+    """One request, retried on the answers that mean "later".
+
+    `form` sends the payload as a POST body instead of a query string. A SPARQL
+    query naming five hundred taxon names is about nine thousand characters as
+    a URI, and Wikidata's nginx answers `414 Request-URI Too Large` — which is
+    not retryable, so no amount of patience helps. The service documents POST
+    for exactly this, and it has no length limit.
+    """
+    headers = {"user-agent": user_agent(), "accept": "application/json"}
+    data: bytes | None = None
+    if form is not None:
+        data = urllib.parse.urlencode(form).encode("utf8")
+        headers["content-type"] = "application/x-www-form-urlencoded"
+    request = urllib.request.Request(url, data=data, headers=headers)
     receipt.requests += 1
     payload: str | None = None
     for attempt in range(1, MAX_REQUEST_ATTEMPTS + 1):
@@ -229,8 +241,9 @@ def build_identifier_query(*, col_ids: Sequence[str], names: Sequence[str]) -> s
 def read_identifiers(
     query: str, *, receipt: WikidataCrosswalkReceipt, endpoint: str = SPARQL_ENDPOINT
 ) -> list[WikidataItem]:
-    url = f"{endpoint}?{urllib.parse.urlencode({'query': query, 'format': 'json'})}"
-    payload = fetch_json(url, receipt=receipt)
+    # POST, not GET: see `fetch_json`. The name branch is the common one here,
+    # because only half the graph carries a Catalogue of Life identifier.
+    payload = fetch_json(endpoint, receipt=receipt, form={"query": query, "format": "json"})
     bindings = (payload or {}).get("results", {}).get("bindings", [])
     items: dict[str, WikidataItem] = {}
     for binding in bindings:

@@ -85,6 +85,37 @@ def test_a_service_that_never_recovers_still_gives_up(monkeypatch) -> None:
     assert receipt.upstream_retries == crosswalk.MAX_REQUEST_ATTEMPTS - 1
 
 
+def test_a_long_query_is_posted_rather_than_put_in_the_uri(monkeypatch) -> None:
+    """Five hundred taxon names is about nine thousand characters as a URI.
+
+    Wikidata's nginx answers `414 Request-URI Too Large`, which is not a
+    retryable status — no amount of patience helps. Production held 29
+    identifiers partly for this reason: only half the graph carries a
+    Catalogue of Life id, so the name branch is the common one and it always
+    exceeded the limit.
+    """
+    receipt = crosswalk.WikidataCrosswalkReceipt()
+    seen: dict[str, object] = {}
+
+    def fake_urlopen(request, timeout=None):  # noqa: ANN001, ARG001
+        seen["url"] = request.full_url
+        seen["data"] = request.data
+        seen["method"] = request.get_method()
+        return _Answer('{"results": {"bindings": []}}')
+
+    monkeypatch.setattr(crosswalk.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(crosswalk.time, "sleep", lambda _seconds: None)
+
+    names = [f"Genus species{index}" for index in range(crosswalk.SPARQL_BATCH)]
+    query = crosswalk.build_identifier_query(col_ids=[], names=names)
+    crosswalk.read_identifiers(query, receipt=receipt)
+
+    assert seen["method"] == "POST"
+    # The query travels in the body, so the URI stays the bare endpoint.
+    assert seen["url"] == crosswalk.SPARQL_ENDPOINT
+    assert b"Genus+species499" in seen["data"]  # type: ignore[operator]
+
+
 def test_a_wait_is_capped_however_long_the_service_asks(monkeypatch) -> None:
     receipt = crosswalk.WikidataCrosswalkReceipt()
     waits: list[float] = []
