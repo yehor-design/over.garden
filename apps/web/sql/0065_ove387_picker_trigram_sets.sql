@@ -13,10 +13,15 @@
 -- The trigram set of a name never changes unless the name does, so it is
 -- stored once, as a generated column. `show_trgm` renders each trigram in the
 -- same compact three-byte form pg_trgm compares internally — printable ASCII
--- as three characters, anything else as the hex of its hash — and
--- `catalog_trigram_ints` maps that form to one integer per trigram, hash
--- collisions included, so the stored set is exactly the set `similarity()`
--- counts. With `intarray`, the count of shared trigrams is `icount(a & b)`
+-- as exactly three characters, anything else as "0x" and six hex digits of
+-- its hash — and `catalog_trigram_ints` maps that form to one integer per
+-- trigram, hash collisions included, so the stored set is exactly the set
+-- `similarity()` counts. The two renderings are told apart by length, never
+-- by prefix: a name containing the word "0x" yields the printable trigram
+-- "0x ", three characters long. (The first version of this function looked
+-- at the prefix and failed on exactly that; the equivalence proof found it on
+-- a sampled register name before any such name was stored.)
+-- With `intarray`, the count of shared trigrams is `icount(a & b)`
 -- on two sorted arrays, about a microsecond, and
 --
 --   shared::float4 / (|T(query)| + |T(name)| - shared)::float4
@@ -50,7 +55,7 @@ as $$
   select coalesce(
     array_agg(
       case
-        when t like '0x%' then ('x' || substr(t, 3))::bit(24)::int
+        when length(t) = 8 and t like '0x%' then ('x' || substr(t, 3))::bit(24)::int
         else (ascii(substr(t, 1, 1)) << 16)
              | (ascii(substr(t, 2, 1)) << 8)
              | ascii(substr(t, 3, 1))
