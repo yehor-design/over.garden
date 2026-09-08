@@ -494,6 +494,16 @@ a registered form's old `/variety/*` address `308`, `/eppo/LYPES` `308`, an
 unknown slug `404`, and the picker answers "томат" with the tomato species
 first. Nothing a gardener or a crawler sees changed.
 
+## 2026-09-08: `pg_stat_statements` installed
+
+Not a migration — `create extension pg_stat_statements`, run by the closeout
+executor to tell database-side execution time from everything around it while
+the picker's P95 flipped between runs. It answered: the picker statement's mean
+is 25 ms and its maximum 273 ms with zero blocks read, so the variance is CPU
+on the host, not the query. The extension stays; it costs little and it is the
+first thing to read the next time a number looks wrong. Nothing in the
+repository depends on it.
+
 ## The 2026-09-08 application of `0066`, the index over the trigram sets
 
 Executed the same night as `0065`, by the same executor under the same
