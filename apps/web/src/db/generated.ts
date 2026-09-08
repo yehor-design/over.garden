@@ -189,6 +189,7 @@ export interface CatalogItemNames {
   name_type: Generated<string>;
   normalized_name: string;
   script: Generated<string>;
+  search_trigrams: Generated<number[]>;
   weight: Generated<Numeric>;
 }
 

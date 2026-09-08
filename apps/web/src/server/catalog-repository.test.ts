@@ -115,6 +115,26 @@ describe("catalog picker query", () => {
     expect(compiled.parameters).toContain("bg");
     expect(compiled.parameters).toContain("animal");
     expect(compiled.sql).not.toMatch(/meili|trust|status in/iu);
+
+    // Similarity on the prefix side is an intersection count over the stored
+    // trigram sets of migration 0065, in pg_trgm's own float4 formula —
+    // never `similarity()` per row, which re-tokenises every name.
+    expect(compiled.sql).toContain("catalog_trigram_ints(show_trgm($");
+    expect(compiled.sql).toContain("icount(n.search_trigrams & (select trigrams from q))");
+    expect(compiled.sql).toMatch(
+      /h\.shared::float4\s+\/ \(\(select trigram_count from q\) \+ h\.trigram_count - h\.shared\)::float4/u,
+    );
+    // The fuzzy side runs only when the prefix side cannot fill the list, as a
+    // one-time filter Postgres evaluates before the trigram scan.
+    expect(compiled.sql).toContain(
+      "where (select count(*) from prefix_scored where duplicate_rank = 1) < 8",
+    );
+    // A fuzzy organism is merged in only when no prefix name found it and no
+    // prefix organism already represents its duplicate cluster.
+    expect(compiled.sql).toContain("not exists (select 1 from prefix_scored as p where p.id = f.id)");
+    expect(compiled.sql).toContain("where p.node_kind = f.node_kind and p.normalized_name = f.normalized_name");
+    // The duplicate window partitions by byte equality, without strcoll.
+    expect(compiled.sql).toContain('partition by ci.node_kind, ci.normalized_name collate "C"');
   });
 
   it("chooses the eight rows before decorating them, not after", () => {
@@ -137,7 +157,7 @@ describe("catalog picker query", () => {
     // The duplicate filter and the limit belong to the shortlist, so the
     // decoration below can only ever see the rows that survive.
     expect(compiled.sql.slice(shortlist, decoration)).toContain(
-      "s.duplicate_rank = 1",
+      "p.duplicate_rank = 1",
     );
     expect(compiled.sql.slice(shortlist, decoration)).toContain("limit 8");
     // Nothing the final ordering reads comes from a joined table: that is what

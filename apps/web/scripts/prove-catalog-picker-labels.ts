@@ -21,7 +21,8 @@ import { applyMigrationsBefore } from "./prove-organism-graph-foundation";
  * misspelling-shaped competitor, a name with a curly apostrophe, an animal
  * taxon with a breed, a merged card, two provisional cards a gardener created
  * and the objects that point at them, objects in every other state, journal
- * entries for the weights), then 0055, its replay, its rollback and 0055 again.
+ * entries for the weights), then 0055 and the trigram sets of 0065 the picker
+ * reads, then 0055's replay, its rollback and 0055 again.
  *
  * What it proves:
  *   * every object that pointed at a provisional card keeps the card's name
@@ -47,6 +48,10 @@ import { applyMigrationsBefore } from "./prove-organism-graph-foundation";
 const MIGRATION = "0055";
 const MIGRATION_FILE = "0055_ove387_labels_instead_of_provisional_cards.sql";
 const ROLLBACK_FILE = "0055_ove387_labels_instead_of_provisional_cards.down.sql";
+// The picker statement reads the stored trigram sets 0065 adds, so the ranking
+// is asserted on a schema that carries both. 0065 touches nothing 0055's
+// rollback drops, and updating a normalized name recomputes its set.
+const TRIGRAM_SETS_FILE = "0065_ove387_picker_trigram_sets.sql";
 
 type Queryable = Pool | PoolClient;
 
@@ -440,6 +445,44 @@ async function assertWeights(queryable: Queryable, seed: Seed, label: string) {
   if (Number(again.rows[0]?.touched) !== 0) throw new Error(`${label}: a second recompute changed ${again.rows[0]?.touched} rows`);
 }
 
+/**
+ * The stored trigram sets of 0065 must count exactly what pg_trgm counts: for
+ * every name in the database and a handful of queries, the float4 from the
+ * intersection count has to equal `similarity()` bit for bit. One name is
+ * inserted for the check and removed again: its word "0x" yields the printable
+ * trigram "0x ", which the first version of the function mistook for a hash.
+ */
+async function assertTrigramSets(queryable: Queryable, seed: Seed) {
+  const probe = await queryable.query<{ id: string }>(
+    `insert into catalog_item_names (catalog_item_id, display_name, normalized_name, locale, name_type)
+     values ($1, '0x 0xy 0x0', '0x 0xy 0x0', 'und', 'vernacular') returning id`,
+    [seed.speciesId],
+  );
+  try {
+    for (const query of ["томат", "tomato", "0x", "0x ", "0xy", "so", "мар'яна f1", "ябълка"]) {
+      const result = await queryable.query<{ total: number; mismatches: number }>(
+        `with q as (select catalog_trigram_ints(show_trgm($1::text)) as t, cardinality(show_trgm($1::text)) as c)
+         select count(*)::int as total,
+                count(*) filter (
+                  where similarity(n.normalized_name, $1::text) <> (
+                    icount(n.search_trigrams & (select t from q))::float4
+                    / ((select c from q) + cardinality(n.search_trigrams) - icount(n.search_trigrams & (select t from q)))::float4
+                  )
+                )::int as mismatches
+         from catalog_item_names as n`,
+        [query],
+      );
+      const row = result.rows[0]!;
+      if (row.total === 0) throw new Error("trigram sets: no names to check");
+      if (row.mismatches !== 0) {
+        throw new Error(`trigram sets: ${row.mismatches} of ${row.total} names disagree with similarity() for ${JSON.stringify(query)}`);
+      }
+    }
+  } finally {
+    await queryable.query("delete from catalog_item_names where id = $1", [probe.rows[0]!.id]);
+  }
+}
+
 async function assertPicker(kdb: Kysely<Database>, seed: Seed) {
   // Imported here, after the environment is loaded, so the shared `db` module
   // does not warn about a missing connection at import time.
@@ -605,6 +648,10 @@ function rollbackSql() {
   return readFileSync(path.join(process.cwd(), "sql", "rollback", ROLLBACK_FILE), "utf8");
 }
 
+function trigramSetsSql() {
+  return readFileSync(path.join(process.cwd(), "sql", TRIGRAM_SETS_FILE), "utf8");
+}
+
 function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -640,6 +687,8 @@ export async function runDisposableProof() {
     const namesBefore = await displayNameFingerprint(pool);
 
     await pool.query(migrationSql());
+    await pool.query(trigramSetsSql());
+    await assertTrigramSets(pool, seed);
     const after = await structure(pool);
     if (!after.functionPresent || !after.indexPresent) throw new Error("after: 0055 objects missing");
     await assertLabels(pool, seed, "after");
