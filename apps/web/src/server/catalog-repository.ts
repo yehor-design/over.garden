@@ -44,6 +44,18 @@ const CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD = 0.3;
  */
 const MIN_FUZZY_QUERY_LENGTH = 3;
 /**
+ * The largest query, in trigrams, whose fuzzy candidates come from the
+ * intarray index over the stored sets (migration 0066) rather than from
+ * pg_trgm's `%`.
+ *
+ * The candidate rule — share at least ceil(0.3 n) of the query's n trigrams —
+ * is spelt out as an OR of every k-subset, and the index evaluates that tree
+ * per candidate. At n = 6 it is fifteen terms and "де ба" goes from 118 to
+ * 47 ms; at n = 10 it is 120 terms and "helianth" goes from 98 to 362 ms.
+ * Six is where the two arms crossed on production on 2026-09-08.
+ */
+const MAX_INDEXED_FUZZY_TRIGRAMS = 6;
+/**
  * The one deadline of the picker (ADR-0026 D7): the statement itself is
  * cancelled by Postgres at this bound, and a connection that never answers is
  * abandoned at the same bound, so the route can degrade to the own-name
@@ -242,18 +254,42 @@ export function buildCatalogTypeaheadStatement(input: {
   // See MIN_FUZZY_QUERY_LENGTH: below it this arm reads a large part of the
   // trigram index to contribute rows that never reach the reader.
   const fuzzy = Array.from(query).length >= MIN_FUZZY_QUERY_LENGTH;
+  // The similarity a stored set yields: pg_trgm's CALCSML over the counts.
+  const storedSimilarity = sql`(icount(n.search_trigrams & (select trigrams from q))::float4
+             / ((select trigram_count from q) + cardinality(n.search_trigrams)
+                - icount(n.search_trigrams & (select trigrams from q)))::float4)`;
   const fuzzyCtes = fuzzy
     ? sql`,
     fuzzy_hits as materialized (
+      -- A fuzzy row ranks last by class, so it can only be offered when fewer
+      -- organisms than requested matched by prefix. Postgres evaluates that
+      -- once and skips both scans when it is false. Which scan runs depends
+      -- on the query's trigram count: up to six, the candidates come from the
+      -- intarray index over the stored sets (a name can only reach the
+      -- threshold if it shares ceil(0.3 n) of the query's n trigrams, spelt
+      -- out by catalog_trigram_query) with a microsecond recheck; from seven,
+      -- from pg_trgm's own index, whose recheck re-tokenises every candidate
+      -- but whose trigrams are by then selective enough for that to be cheap.
+      select n.catalog_item_id,
+             n.id as name_id,
+             n.display_name,
+             ${storedSimilarity} as similarity
+      from catalog_item_names as n
+      where (select count(*) from prefix_scored) < ${limitLiteral}
+        and (select trigram_count from q) <= ${sql.lit(MAX_INDEXED_FUZZY_TRIGRAMS)}
+        and n.search_trigrams @@ (
+          select catalog_trigram_query(trigrams, (3 * trigram_count + 9) / 10) from q
+        )
+        and ${storedSimilarity} >= ${threshold}
+        and n.normalized_name not like ${prefixPattern}
+      union all
       select n.catalog_item_id,
              n.id as name_id,
              n.display_name,
              similarity(n.normalized_name, ${query}) as similarity
       from catalog_item_names as n
-      -- A fuzzy row ranks last by class, so it can only be offered when fewer
-      -- organisms than requested matched by prefix. Postgres evaluates this
-      -- once and skips the scan when it is false.
       where (select count(*) from prefix_scored) < ${limitLiteral}
+        and (select trigram_count from q) > ${sql.lit(MAX_INDEXED_FUZZY_TRIGRAMS)}
         and n.normalized_name % ${query}
         and similarity(n.normalized_name, ${query}) >= ${threshold}
         and n.normalized_name not like ${prefixPattern}

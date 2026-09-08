@@ -64,6 +64,7 @@ describe("versioned application SQL bootstrap", () => {
       "0063_ove391_owner_catalog_digest_outbox.sql",
       "0064_ove399_assertion_reference_indexes.sql",
       "0065_ove387_picker_trigram_sets.sql",
+      "0066_ove387_picker_trigram_set_index.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

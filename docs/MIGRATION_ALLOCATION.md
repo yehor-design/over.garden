@@ -56,6 +56,7 @@ another issue's number.
 | `0063` | OVE-391      | Organism graph (ADR-0026) | the auth email outbox carries the owner's weekly catalog digest: a second kind, an optional verification key, a payload and one shape CHECK per kind |
 | `0064` | OVE-399      | Organism graph (ADR-0026) | five indexes on `assertion_id`: the reconciliation's cleanup asked five `not exists` questions per source record and three of them had no index, so one delete scanned about 470,000 rows |
 | `0065` | OVE-387      | Organism graph (ADR-0026) | the picker's trigram sets: `intarray`, `catalog_trigram_ints` and a stored generated `int[]` on `catalog_item_names`, so similarity is an intersection count instead of a re-tokenisation of every name on every keystroke |
+| `0066` | OVE-387      | Organism graph (ADR-0026) | a GIN index over the stored trigram sets and `catalog_trigram_query`, so a short query's fuzzy candidates come with a microsecond recheck instead of pg_trgm's re-tokenising one |
 
 Compact range receipt:
 
@@ -78,6 +79,7 @@ Compact range receipt:
 - `0054-0061: organism knowledge graph, ADR-0026, SDD Slice 24 (0059 released unused, 0061 destructive)`
 - `0064: the reconciliation's assertion-reference indexes, found by running it in production`
 - `0065: the picker's stored trigram sets, found by asking which query answers 503`
+- `0066: the index over those sets for the fuzzy arm's short queries`
 - `0062: organism card revalidation intents (Slice 24 task 24.04, outside the reserved block)`
 - `0063: the owner's weekly catalog digest in the auth email outbox (Slice 24 task 24.06, outside the reserved block)`
 

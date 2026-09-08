@@ -129,6 +129,12 @@ describe("catalog picker query", () => {
     expect(compiled.sql).toContain(
       "where (select count(*) from prefix_scored) < 8",
     );
+    // Short queries take their fuzzy candidates from the intarray index over
+    // the stored sets, with the same threshold; longer ones from pg_trgm.
+    expect(compiled.sql).toContain("(select trigram_count from q) <= 6");
+    expect(compiled.sql).toContain("n.search_trigrams @@ (");
+    expect(compiled.sql).toContain("catalog_trigram_query(trigrams, (3 * trigram_count + 9) / 10)");
+    expect(compiled.sql).toContain("(select trigram_count from q) > 6");
     // A fuzzy organism is merged in only when no prefix name found it and no
     // prefix organism already represents its duplicate cluster.
     expect(compiled.sql).toContain("not exists (select 1 from prefix_scored as p where p.id = f.id)");
