@@ -21,7 +21,8 @@ import { applyMigrationsBefore } from "./prove-organism-graph-foundation";
  * misspelling-shaped competitor, a name with a curly apostrophe, an animal
  * taxon with a breed, a merged card, two provisional cards a gardener created
  * and the objects that point at them, objects in every other state, journal
- * entries for the weights), then 0055, its replay, its rollback and 0055 again.
+ * entries for the weights), then 0055 and the trigram sets of 0065 the picker
+ * reads, then 0055's replay, its rollback and 0055 again.
  *
  * What it proves:
  *   * every object that pointed at a provisional card keeps the card's name
@@ -47,6 +48,10 @@ import { applyMigrationsBefore } from "./prove-organism-graph-foundation";
 const MIGRATION = "0055";
 const MIGRATION_FILE = "0055_ove387_labels_instead_of_provisional_cards.sql";
 const ROLLBACK_FILE = "0055_ove387_labels_instead_of_provisional_cards.down.sql";
+// The picker statement reads the stored trigram sets 0065 adds, so the ranking
+// is asserted on a schema that carries both. 0065 touches nothing 0055's
+// rollback drops, and updating a normalized name recomputes its set.
+const TRIGRAM_SETS_FILE = "0065_ove387_picker_trigram_sets.sql";
 
 type Queryable = Pool | PoolClient;
 
@@ -605,6 +610,10 @@ function rollbackSql() {
   return readFileSync(path.join(process.cwd(), "sql", "rollback", ROLLBACK_FILE), "utf8");
 }
 
+function trigramSetsSql() {
+  return readFileSync(path.join(process.cwd(), "sql", TRIGRAM_SETS_FILE), "utf8");
+}
+
 function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -640,6 +649,7 @@ export async function runDisposableProof() {
     const namesBefore = await displayNameFingerprint(pool);
 
     await pool.query(migrationSql());
+    await pool.query(trigramSetsSql());
     const after = await structure(pool);
     if (!after.functionPresent || !after.indexPresent) throw new Error("after: 0055 objects missing");
     await assertLabels(pool, seed, "after");

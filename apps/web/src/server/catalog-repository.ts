@@ -146,9 +146,33 @@ interface CatalogTypeaheadSearchDeps {
  * scientific, any prefix, fuzzy), the reader's market, gardener usage, the
  * crop prior (registered forms, host relations) and similarity; two active
  * rows with one name and one kind collapse to the better-ranked one until the
- * reconciliation task merges them. The object kind is applied to the node: a taxon by kingdom, a
- * cultivar for plants, a breed for animals. Retired, merged and
- * gardener-created rows never leave the database.
+ * reconciliation task merges them. The object kind is applied to the node: a
+ * taxon by kingdom, a cultivar for plants, a breed for animals. Retired,
+ * merged and gardener-created rows never leave the database.
+ *
+ * Three things about its shape were decided by measuring it against
+ * production on 2026-09-07, when every prefix of соняшник answered 503:
+ *
+ *   * Similarity is an intersection count over stored trigram sets
+ *     (migration 0065), not `similarity()` per row: pg_trgm re-tokenises the
+ *     name on every call, about 26 µs on Cyrillic, and the prefix "со" has
+ *     3,451 names. The count and the float4 it yields are bit for bit what
+ *     pg_trgm returns — checked against every name in production.
+ *   * The fuzzy arm runs only when the prefix arm cannot fill the list. A
+ *     fuzzy hit ranks last by class, so once the requested number of
+ *     organisms already match by prefix no fuzzy row can be offered, and the
+ *     trigram scan — 45,095 index entries for "so", 130 ms for "де ба" — is
+ *     skipped as a one-time filter. It also stays off below three characters.
+ *   * The eight rows are chosen before they are decorated: every column the
+ *     ordering reads is already in `prefix_scored`, so the four lateral joins
+ *     run eight times instead of once per candidate.
+ *
+ * The prefix and fuzzy sides are scored separately and merged with two
+ * exclusions — an organism already found by prefix, and a duplicate cluster
+ * already represented by one — which is exactly the set a single window over
+ * both sides would keep, because a prefix row always outranks a fuzzy row in
+ * the same cluster. The partition key compares with the "C" collation: the
+ * groups are byte equality either way, and the sort no longer pays strcoll.
  */
 export function buildCatalogTypeaheadStatement(input: {
   normalizedQuery: string;
@@ -162,93 +186,12 @@ export function buildCatalogTypeaheadStatement(input: {
   const locale = input.locale;
   const objectKind = input.objectKind;
   const threshold = sql.lit(CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD);
-  // See MIN_FUZZY_QUERY_LENGTH: below it this arm reads a large part of the
-  // trigram index to contribute rows that never reach the reader.
-  const fuzzyArm =
-    Array.from(query).length >= MIN_FUZZY_QUERY_LENGTH
-      ? sql`
-      union all
-      select n.catalog_item_id,
-             n.id,
-             n.display_name,
-             n.normalized_name,
-             n.name_type,
-             n.locale,
-             similarity(n.normalized_name, ${query}),
-             true
-      from catalog_item_names as n
-      where n.normalized_name % ${query}
-        and similarity(n.normalized_name, ${query}) >= ${threshold}
-        and n.normalized_name not like ${prefixPattern}`
-      : sql.raw("");
+  const limitLiteral = sql.lit(limit);
 
-  return sql<CatalogTypeaheadSqlRow>`
-    with hits as (
-      select n.catalog_item_id,
-             n.id as name_id,
-             n.display_name,
-             n.normalized_name,
-             n.name_type,
-             n.locale,
-             similarity(n.normalized_name, ${query}) as similarity,
-             false as fuzzy
-      from catalog_item_names as n
-      where n.normalized_name like ${prefixPattern}
-      ${fuzzyArm}
-    ),
-    classified as (
-      select h.catalog_item_id,
-             h.name_id,
-             h.display_name as matched_name,
-             h.similarity,
-             case
-               when not h.fuzzy and h.normalized_name = ${query}
-                    and h.name_type = 'vernacular' and h.locale = ${locale} then 0
-               when not h.fuzzy and h.name_type = 'vernacular' and h.locale = ${locale} then 1
-               when not h.fuzzy and h.normalized_name = ${query}
-                    and h.name_type in ('scientific_accepted', 'scientific_synonym') then 2
-               when not h.fuzzy then 3
-               else 4
-             end as match_class
-      from hits as h
-    ),
-    ranked as (
-      select distinct on (c.catalog_item_id)
-             c.catalog_item_id,
-             c.matched_name,
-             c.similarity,
-             c.match_class
-      from classified as c
-      order by c.catalog_item_id, c.match_class, c.similarity desc, c.name_id
-    ),
-    scored as (
-      select ci.id,
-             ci.node_kind,
-             ci.public_slug,
-             ci.canonical_name,
-             ci.search_weight,
-             ci.has_registered_forms,
-             ci.is_host,
-             r.matched_name,
-             r.match_class,
-             case when ${locale} = 'uk' then ci.registered_ua else ci.registered_eu end as market,
-             r.similarity,
-             -- Two active rows with one name and one kind are the merge backlog
-             -- of the reconciliation task, not two organisms: the picker shows
-             -- the better-ranked one until they are merged.
-             row_number() over (
-               partition by ci.node_kind, ci.normalized_name
-               order by r.match_class,
-                        (case when ${locale} = 'uk' then ci.registered_ua else ci.registered_eu end) desc,
-                        ci.search_weight desc,
-                        ci.has_registered_forms desc,
-                        ci.is_host desc,
-                        r.similarity desc,
-                        ci.id
-             ) as duplicate_rank
-      from ranked as r
-      join catalog_items as ci on ci.id = r.catalog_item_id
-      where ci.identity_state = 'active'
+  // What the picker may offer: an active canonical node nobody created by
+  // hand, of the kind the object is. Written once, read by both sides.
+  const offerable = sql`
+      ci.identity_state = 'active'
         and ci.created_by_user_id is null
         and (
           (${objectKind} = 'plant'
@@ -260,30 +203,161 @@ export function buildCatalogTypeaheadStatement(input: {
             and (ci.node_kind = 'breed'
                  or (ci.node_kind = 'taxon'
                      and (ci.kingdom is null or ci.kingdom = 'Animalia'))))
-        )
+        )`;
+  // The organism's ranking key, shared by the duplicate window and the final
+  // ordering: match class, the reader's market, gardener usage, the crop
+  // prior, similarity, then the identity.
+  const market = sql`case when ${locale} = 'uk' then ci.registered_ua else ci.registered_eu end`;
+  const scoreColumns = sql`
+      select ci.id,
+             ci.node_kind,
+             ci.public_slug,
+             ci.canonical_name,
+             ci.normalized_name,
+             ci.search_weight,
+             ci.has_registered_forms,
+             ci.is_host,
+             r.matched_name,
+             r.match_class,
+             ${market} as market,
+             r.similarity,
+             -- Two active rows with one name and one kind are the merge backlog
+             -- of the reconciliation task, not two organisms: the picker shows
+             -- the better-ranked one until they are merged.
+             row_number() over (
+               partition by ci.node_kind, ci.normalized_name collate "C"
+               order by r.match_class,
+                        (${market}) desc,
+                        ci.search_weight desc,
+                        ci.has_registered_forms desc,
+                        ci.is_host desc,
+                        r.similarity desc,
+                        ci.id
+             ) as duplicate_rank`;
+
+  // See MIN_FUZZY_QUERY_LENGTH: below it this arm reads a large part of the
+  // trigram index to contribute rows that never reach the reader.
+  const fuzzy = Array.from(query).length >= MIN_FUZZY_QUERY_LENGTH;
+  const fuzzyCtes = fuzzy
+    ? sql`,
+    fuzzy_hits as materialized (
+      select n.catalog_item_id,
+             n.id as name_id,
+             n.display_name,
+             similarity(n.normalized_name, ${query}) as similarity
+      from catalog_item_names as n
+      -- A fuzzy row ranks last by class, so it can only be offered when fewer
+      -- organisms than requested matched by prefix. Postgres evaluates this
+      -- once and skips the scan when it is false.
+      where (select count(*) from prefix_scored where duplicate_rank = 1) < ${limitLiteral}
+        and n.normalized_name % ${query}
+        and similarity(n.normalized_name, ${query}) >= ${threshold}
+        and n.normalized_name not like ${prefixPattern}
     ),
+    fuzzy_ranked as (
+      select distinct on (h.catalog_item_id)
+             h.catalog_item_id,
+             h.display_name as matched_name,
+             h.similarity,
+             4 as match_class
+      from fuzzy_hits as h
+      order by h.catalog_item_id, h.similarity desc, h.name_id
+    ),
+    fuzzy_scored as (
+      ${scoreColumns}
+      from fuzzy_ranked as r
+      join catalog_items as ci on ci.id = r.catalog_item_id
+      where ${offerable}
+    )`
+    : sql.raw("");
+  const fuzzyCandidates = fuzzy
+    ? sql`
+      union all
+      select f.id, f.node_kind, f.public_slug, f.canonical_name, f.search_weight,
+             f.has_registered_forms, f.is_host, f.matched_name, f.match_class,
+             f.market, f.similarity
+      from fuzzy_scored as f
+      where f.duplicate_rank = 1
+        -- An organism a prefix name already found keeps that name, and a
+        -- cluster a prefix organism already represents is represented by it.
+        and not exists (select 1 from prefix_scored as p where p.id = f.id)
+        and not exists (
+          select 1 from prefix_scored as p
+          where p.node_kind = f.node_kind and p.normalized_name = f.normalized_name
+        )`
+    : sql.raw("");
+
+  return sql<CatalogTypeaheadSqlRow>`
+    with q as (
+      -- The query's trigram set, once, in the compact form pg_trgm compares.
+      select catalog_trigram_ints(show_trgm(${query})) as trigrams,
+             cardinality(show_trgm(${query})) as trigram_count
+    ),
+    prefix_hits as materialized (
+      select n.catalog_item_id,
+             n.id as name_id,
+             n.display_name,
+             n.normalized_name,
+             n.name_type,
+             n.locale,
+             icount(n.search_trigrams & (select trigrams from q)) as shared,
+             cardinality(n.search_trigrams) as trigram_count
+      from catalog_item_names as n
+      where n.normalized_name like ${prefixPattern}
+    ),
+    prefix_classified as (
+      select h.catalog_item_id,
+             h.name_id,
+             h.display_name as matched_name,
+             -- pg_trgm's CALCSML: shared over the union, as float4.
+             (h.shared::float4
+               / ((select trigram_count from q) + h.trigram_count - h.shared)::float4) as similarity,
+             case
+               when h.normalized_name = ${query}
+                    and h.name_type = 'vernacular' and h.locale = ${locale} then 0
+               when h.name_type = 'vernacular' and h.locale = ${locale} then 1
+               when h.normalized_name = ${query}
+                    and h.name_type in ('scientific_accepted', 'scientific_synonym') then 2
+               else 3
+             end as match_class
+      from prefix_hits as h
+    ),
+    prefix_ranked as (
+      select distinct on (c.catalog_item_id)
+             c.catalog_item_id,
+             c.matched_name,
+             c.similarity,
+             c.match_class
+      from prefix_classified as c
+      order by c.catalog_item_id, c.match_class, c.similarity desc, c.name_id
+    ),
+    prefix_scored as materialized (
+      ${scoreColumns}
+      from prefix_ranked as r
+      join catalog_items as ci on ci.id = r.catalog_item_id
+      where ${offerable}
+    )${fuzzyCtes},
     shortlist as (
-      -- Every column the ordering below reads already sits in scored, so the
-      -- eight rows that survive can be chosen here and decorated afterwards.
-      -- The decoration is four index searches a row — a vernacular, a form_of
-      -- relation, the parent, the parent's vernacular — and before this CTE it
-      -- ran for every candidate. Measured against production on 2026-09-07:
-      -- the prefix soniashnyk matches 2,395 names, because the Ukrainian
-      -- register lists thousands of sunflower hybrids, and the statement spent
-      -- about 410 of its 442 ms decorating rows the limit then threw away.
-      -- That is the 503 a gardener sees when typing a common crop.
-      select s.*
-      from scored as s
-      where s.duplicate_rank = 1
-      order by s.match_class,
-               s.market desc,
-               s.search_weight desc,
-               s.has_registered_forms desc,
-               s.is_host desc,
-               s.similarity desc,
-               s.canonical_name,
-               s.id
-      limit ${sql.lit(limit)}
+      -- The rows that survive are chosen here and decorated afterwards: the
+      -- decoration below is four index searches a row, and before this CTE it
+      -- ran for every candidate — 2,395 of them for соняшник.
+      select *
+      from (
+        select p.id, p.node_kind, p.public_slug, p.canonical_name, p.search_weight,
+               p.has_registered_forms, p.is_host, p.matched_name, p.match_class,
+               p.market, p.similarity
+        from prefix_scored as p
+        where p.duplicate_rank = 1${fuzzyCandidates}
+      ) as candidates
+      order by match_class,
+               market desc,
+               search_weight desc,
+               has_registered_forms desc,
+               is_host desc,
+               similarity desc,
+               canonical_name,
+               id
+      limit ${limitLiteral}
     )
     select s.id,
            s.node_kind,
@@ -341,7 +415,7 @@ export function buildCatalogTypeaheadStatement(input: {
              s.similarity desc,
              s.canonical_name,
              s.id
-    limit ${sql.lit(limit)}
+    limit ${limitLiteral}
   `;
 }
 

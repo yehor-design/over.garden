@@ -35,10 +35,15 @@ const db = new Kysely<never>({
     createQueryCompiler: () => new PostgresQueryCompiler(),
   },
 });
+// Optional second and third arguments: the reader's locale and the object
+// kind, so a bg or an animal fixture query compiles the statement it actually
+// runs. Without them the old defaults stand.
+const localeArg = process.argv[3];
+const kindArg = process.argv[4];
 const compiled = buildCatalogTypeaheadStatement({
   normalizedQuery: process.argv[2] ?? "том",
-  locale: "uk",
-  objectKind: "plant",
+  locale: localeArg === "bg" || localeArg === "ru" ? localeArg : "uk",
+  objectKind: kindArg === "animal" ? "animal" : "plant",
   limit: 8,
 }).compile(db);
 process.stdout.write(
