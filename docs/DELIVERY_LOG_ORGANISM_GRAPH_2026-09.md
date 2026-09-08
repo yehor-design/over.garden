@@ -265,6 +265,47 @@ Recorded here so the next reader does not have to rediscover it:
   build over about 15,900 nodes; production holds 114,669 and 246,888 names.
   That is the same trap as every other number measured on the wrong database.
 
+  **8 September — closed.** The remaining tail was measured one cost centre at
+  a time, against production, for the prefix `со` (3,451 names): the scan
+  itself 3 ms; the same scan projecting `similarity()` 46–99 ms; the join
+  38 ms; the duplicate window's sort, `en_US.UTF-8` strcoll on Cyrillic,
+  31 ms. pg_trgm re-tokenises the name on every call. Migration `0065` stores
+  each name's trigram set once, in the compact form pg_trgm compares, and
+  `intarray` counts the intersection in a microsecond — the float4 is bit for
+  bit pg_trgm's on every one of 246,888 names, for fourteen queries. The fuzzy
+  arm became a one-time filter that never executes when the prefix arm fills
+  the list, and for queries of up to six trigrams takes its candidates from a
+  GIN index over those sets (`0066`) — the recheck is `icount`, not a
+  re-tokenisation, and `де ба`, the one query in the proof's fifty that was
+  over budget on every run, went from 118 to 46 ms; one row per duplicate
+  cluster comes from `distinct on` under the `"C"` collation. `explain
+  analyze` for `со`: 195 → 52 ms; for the sunflower prefix 52 → 43 ms. Every
+  rewrite proven row-identical on 178 fixture prefixes and 1,798 prefixes of
+  sampled names, both orders.
+
+  Two defects the proof itself found on the way: the first
+  `catalog_trigram_ints` told a hashed trigram from a printable one by its
+  `0x` prefix and failed on a name containing the word `0x` (a sampled register
+  denomination; no stored name had one, which is why the column built), and
+  the migration order list pinned in `application-sql.test.ts` did not know
+  the new file. Both are covered in CI now: the labels proof compares the
+  stored sets with `similarity()` on every run, with such a name inserted.
+
+  After the deploy, 5 consecutive proof runs: **P95 30–58 ms warm,
+  80–161 ms across fifty distinct queries, 0 `503` in 250 samples,
+  2 of 5 runs fully green**; 150 per-query samples in the same hour:
+  0 non-200, P95 119 ms, P99 184 ms, slowest 223 ms.
+
+  Why the spread check still flips: the host. The same statement forty times
+  back to back, buffers hot, nothing else running — thirty runs within 44–53
+  ms, then 57–70, then 98, 115, 190 and 214, and in the slowest run every
+  plan node uniformly four to five times slower with zero blocks read.
+  `pg_stat_statements` (installed on production for this) records mean 25 ms,
+  maximum 273 ms, no reads. That is CPU contention on a shared one-vCPU
+  database; the remedy is a dedicated-CPU plan, which is the owner's cost
+  decision. A pasted sixty-character denomination still takes the fuzzy arm
+  past the deadline, as before; that is a limit, not a regression.
+
   Three false starts are worth recording so nobody repeats them. The failures
   were first blamed on the reconciliation loading the database; they persisted
   with the database idle. Then the measurement itself turned out to be reading

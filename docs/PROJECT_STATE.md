@@ -117,8 +117,9 @@ costs 17,700 → 17.47 and the rate went to about 3,300 a minute); and `0061`
 made six earlier migrations un-replayable, which `prove-migration-reapply.ts`
 found and each site now guards. The slice's dated receipt is
 `docs/DELIVERY_LOG_ORGANISM_GRAPH_2026-09.md`, and the production proof it
-leaves behind is `docs/ORGANISM_GRAPH_PROOF_2026-09.json`: eleven checks pass,
-one fails on the picker's P95 across cold instances, none pending.
+leaves behind is `docs/ORGANISM_GRAPH_PROOF_2026-09.json`: 12 checks pass,
+0 fail, none pending — see known gap 0 for the
+distribution behind that number.
 
 **Delivered 2026-09-07, OVE-395 (Slice 24, task 10 of 14).** Every registered
 cultivar and breed is attached to its species. The three register importers
@@ -373,40 +374,50 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
 
 ## Known gaps, stated deliberately
 
-0. **The picker meets its budget warm and not across cold instances.** Fixed
-   far enough on 2026-09-07 to be worth stating precisely, because two earlier
-   explanations of this gap were wrong. Before: P95 129–216 ms warm, about
-   410 ms across fifty distinct queries, four to ten of fifty answering `503`.
-   After: **P95 32–108 ms warm, 158–266 ms across distinct queries**, and the
-   `503`s all but gone. D7's budget is a 100 ms P95.
+0. **The picker's P95 budget is met when the database host is quiet, and
+   the spread check still flips when it is not.** Before: P95 129–216 ms
+   warm, about 410 ms across fifty distinct queries, four to ten of fifty
+   answering `503`. After, 5 consecutive runs of `pnpm prove:organism-graph`
+   against production on 2026-09-08, every sample forced past the shared
+   cache: **P95 30–58 ms warm, 80–161 ms across fifty distinct
+   queries** (median 25–38 ms), **0 `503` in 250 spread samples**,
+   2 of 5 runs with every check passing; 150 per-query samples in the
+   same hour answered 0 non-200 with P95 119 ms and P99 184 ms.
 
-   Two defects were behind it, and only production could show either. The
-   statement decorated every candidate before taking eight: four lateral joins
-   an index search apiece, once per row of `scored`. The Ukrainian prefix for
-   sunflower matches 2,395 names — the state register lists thousands of
-   hybrids — so it spent about 410 of its 442 ms building display names for
-   rows the limit discarded, and **every prefix of `соняшник` answered `503` in
-   three consecutive runs** while `том` answered in 10 ms. And the trigram arm
-   was asked about two-character queries, where one trigram matches tens of
-   thousands of names: `so` read 45,095 index entries and 4,520 heap pages to
-   contribute one row, and across all twenty-eight two-character prefixes in
-   the fingerprint fixture it never changed the answer. A `shortlist` CTE now
-   limits before decorating, and the arm is skipped below three characters.
-   Proven row-identical on all 173 fingerprint prefixes, run in both orders:
-   nothing exceeds the 400 ms deadline any more, against 12–17 of 173 before.
+   What it took, each measured against production rather than reasoned about:
+   the statement decorated 2,395 candidates before taking eight (PR #335);
+   `similarity()` re-tokenised every name on every keystroke, about 26 µs on
+   Cyrillic — 46–99 ms of a 3 ms scan for `со` — so migration `0065` stores
+   each name's trigram set and `intarray` counts the intersection, bit for bit
+   pg_trgm's float4 on every one of 246,888 names (PR #337); the fuzzy arm
+   runs only when the prefix arm cannot fill the list — `(never executed)`
+   for the sunflower family — and, for queries of up to six trigrams, takes
+   its candidates from a GIN index over those sets with a microsecond recheck
+   (migration `0066`, PR #338: `де ба` 118 → 46 ms); one row per duplicate
+   cluster comes from `distinct on` under the `"C"` collation instead of a
+   window paying strcoll; and `pg` holds the pooled connection for five
+   minutes instead of ten seconds (PR #334). Every rewrite was proven
+   row-identical on 178 fixture prefixes and 1,798 prefixes of sampled
+   production names, in both execution orders. The heaviest crop prefix
+   explains at 43–52 ms hot, against 442 ms and a `503` at the start.
 
-   What is left is connection setup, which is what the tail always was — just
-   not what it was mostly. `pg` was closing the pooled connection after ten
-   idle seconds, so a gardener typing every few minutes paid a fresh TCP and
-   TLS handshake inside the keystroke; the pool now holds it for five minutes
-   with keep-alive on. After both changes, 500 samples across three probes,
-   including bursts five minutes apart so instances go cold, returned **no
-   `503` at all**; the proof's own spread phase, which fires a hundred requests
-   back to back and makes Vercel scale out, still saw 6 of 200. The slowest
-   surviving samples say where that time goes: `баз` reported 404 ms of
-   database time over HTTP and explains against production in 110 ms.
-   `docs/ORGANISM_GRAPH_PROOF_2026-09.json` carries the run as generated.
+   **What remains is the host, not the query.** The same statement, forty
+   times back to back with every buffer hot and nothing else running: thirty
+   runs within 44–53 ms, then 57–70, then 98, 115, 190 and 214 ms — and in
+   the slowest run every plan node is uniformly four to five times slower,
+   with zero blocks read. `pg_stat_statements`, installed for this, agrees:
+   mean 25 ms, maximum 273 ms, no reads. That is CPU contention on a shared
+   one-vCPU database, which no statement can engineer around; it is what makes
+   a spread P95 of 80 ms in one minute 160 ms in the next. The remedy is a
+   dedicated-CPU database plan, which is a cost decision and the owner's.
+   Gardeners are shielded by the route's 60 s shared cache; the proof
+   deliberately is not.
 
+   Two things stay true and written down: a pasted register denomination of
+   sixty characters takes the fuzzy arm past the 400 ms deadline and answers
+   `503`, as it did before — the composer falls back to the own-name outcome
+   by design; and the 26.6 ms in `OVE-387`'s original receipt was measured on
+   a loopback database of about 15,900 nodes, never comparable.
 1. **The framework defect itself is unfixed, and unreported.** Under Cache
    Components a thrown Server Component error during a postponed resume never
    completes or errors its Suspense boundary on a hard load, so `error.tsx`
