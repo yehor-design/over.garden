@@ -90,7 +90,7 @@ describe("catalog picker query", () => {
       "h.name_type in ('scientific_accepted', 'scientific_synonym')",
     );
     expect(compiled.sql).toContain(
-      "partition by ci.node_kind, ci.normalized_name",
+      'distinct on (ci.node_kind collate "C", ci.normalized_name collate "C")',
     );
     // A form's species comes from its form_of relation, never from the tree.
     expect(compiled.sql).toContain("r.relation_type = 'form_of'");
@@ -127,14 +127,14 @@ describe("catalog picker query", () => {
     // The fuzzy side runs only when the prefix side cannot fill the list, as a
     // one-time filter Postgres evaluates before the trigram scan.
     expect(compiled.sql).toContain(
-      "where (select count(*) from prefix_scored where duplicate_rank = 1) < 8",
+      "where (select count(*) from prefix_scored) < 8",
     );
     // A fuzzy organism is merged in only when no prefix name found it and no
     // prefix organism already represents its duplicate cluster.
     expect(compiled.sql).toContain("not exists (select 1 from prefix_scored as p where p.id = f.id)");
     expect(compiled.sql).toContain("where p.node_kind = f.node_kind and p.normalized_name = f.normalized_name");
-    // The duplicate window partitions by byte equality, without strcoll.
-    expect(compiled.sql).toContain('partition by ci.node_kind, ci.normalized_name collate "C"');
+    // One row per duplicate cluster, the cluster compared by byte equality.
+    expect(compiled.sql.match(/distinct on \(ci\.node_kind collate "C", ci\.normalized_name collate "C"\)/gu)?.length).toBe(2);
   });
 
   it("chooses the eight rows before decorating them, not after", () => {
@@ -154,11 +154,9 @@ describe("catalog picker query", () => {
     const decoration = compiled.sql.indexOf("from shortlist as s");
     expect(shortlist).toBeGreaterThan(-1);
     expect(decoration).toBeGreaterThan(shortlist);
-    // The duplicate filter and the limit belong to the shortlist, so the
-    // decoration below can only ever see the rows that survive.
-    expect(compiled.sql.slice(shortlist, decoration)).toContain(
-      "p.duplicate_rank = 1",
-    );
+    // The limit belongs to the shortlist, so the decoration below can only
+    // ever see the rows that survive.
+    expect(compiled.sql.slice(shortlist, decoration)).toContain("from prefix_scored as p");
     expect(compiled.sql.slice(shortlist, decoration)).toContain("limit 8");
     // Nothing the final ordering reads comes from a joined table: that is what
     // makes choosing first and decorating second give the same eight rows.
