@@ -44,6 +44,18 @@ const CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD = 0.3;
  */
 const MIN_FUZZY_QUERY_LENGTH = 3;
 /**
+ * The largest query, in trigrams, whose fuzzy candidates come from the
+ * intarray index over the stored sets (migration 0066) rather than from
+ * pg_trgm's `%`.
+ *
+ * The candidate rule — share at least ceil(0.3 n) of the query's n trigrams —
+ * is spelt out as an OR of every k-subset, and the index evaluates that tree
+ * per candidate. At n = 6 it is fifteen terms and "де ба" goes from 118 to
+ * 47 ms; at n = 10 it is 120 terms and "helianth" goes from 98 to 362 ms.
+ * Six is where the two arms crossed on production on 2026-09-08.
+ */
+const MAX_INDEXED_FUZZY_TRIGRAMS = 6;
+/**
  * The one deadline of the picker (ADR-0026 D7): the statement itself is
  * cancelled by Postgres at this bound, and a connection that never answers is
  * abandoned at the same bound, so the route can degrade to the own-name
@@ -171,7 +183,7 @@ interface CatalogTypeaheadSearchDeps {
  * exclusions — an organism already found by prefix, and a duplicate cluster
  * already represented by one — which is exactly the set a single window over
  * both sides would keep, because a prefix row always outranks a fuzzy row in
- * the same cluster. The partition key compares with the "C" collation: the
+ * the same cluster. The cluster key compares with the "C" collation: the
  * groups are byte equality either way, and the sort no longer pays strcoll.
  */
 export function buildCatalogTypeaheadStatement(input: {
@@ -208,8 +220,15 @@ export function buildCatalogTypeaheadStatement(input: {
   // ordering: match class, the reader's market, gardener usage, the crop
   // prior, similarity, then the identity.
   const market = sql`case when ${locale} = 'uk' then ci.registered_ua else ci.registered_eu end`;
-  const scoreColumns = sql`
-      select ci.id,
+  // Two active rows with one name and one kind are the merge backlog of the
+  // reconciliation task, not two organisms: the picker shows the better-ranked
+  // one until they are merged. `distinct on` the cluster, ordered by the
+  // ranking key, keeps exactly the row a window's rank 1 would — and reads the
+  // cluster key with the "C" collation, which is the same byte equality
+  // without strcoll on every comparison of the sort.
+  const scoreSelect = sql`
+      select distinct on (ci.node_kind collate "C", ci.normalized_name collate "C")
+             ci.id,
              ci.node_kind,
              ci.public_slug,
              ci.canonical_name,
@@ -220,36 +239,57 @@ export function buildCatalogTypeaheadStatement(input: {
              r.matched_name,
              r.match_class,
              ${market} as market,
-             r.similarity,
-             -- Two active rows with one name and one kind are the merge backlog
-             -- of the reconciliation task, not two organisms: the picker shows
-             -- the better-ranked one until they are merged.
-             row_number() over (
-               partition by ci.node_kind, ci.normalized_name collate "C"
-               order by r.match_class,
-                        (${market}) desc,
-                        ci.search_weight desc,
-                        ci.has_registered_forms desc,
-                        ci.is_host desc,
-                        r.similarity desc,
-                        ci.id
-             ) as duplicate_rank`;
+             r.similarity`;
+  const scoreOrder = sql`
+      order by ci.node_kind collate "C",
+               ci.normalized_name collate "C",
+               r.match_class,
+               (${market}) desc,
+               ci.search_weight desc,
+               ci.has_registered_forms desc,
+               ci.is_host desc,
+               r.similarity desc,
+               ci.id`;
 
   // See MIN_FUZZY_QUERY_LENGTH: below it this arm reads a large part of the
   // trigram index to contribute rows that never reach the reader.
   const fuzzy = Array.from(query).length >= MIN_FUZZY_QUERY_LENGTH;
+  // The similarity a stored set yields: pg_trgm's CALCSML over the counts.
+  const storedSimilarity = sql`(icount(n.search_trigrams & (select trigrams from q))::float4
+             / ((select trigram_count from q) + cardinality(n.search_trigrams)
+                - icount(n.search_trigrams & (select trigrams from q)))::float4)`;
   const fuzzyCtes = fuzzy
     ? sql`,
     fuzzy_hits as materialized (
+      -- A fuzzy row ranks last by class, so it can only be offered when fewer
+      -- organisms than requested matched by prefix. Postgres evaluates that
+      -- once and skips both scans when it is false. Which scan runs depends
+      -- on the query's trigram count: up to six, the candidates come from the
+      -- intarray index over the stored sets (a name can only reach the
+      -- threshold if it shares ceil(0.3 n) of the query's n trigrams, spelt
+      -- out by catalog_trigram_query) with a microsecond recheck; from seven,
+      -- from pg_trgm's own index, whose recheck re-tokenises every candidate
+      -- but whose trigrams are by then selective enough for that to be cheap.
+      select n.catalog_item_id,
+             n.id as name_id,
+             n.display_name,
+             ${storedSimilarity} as similarity
+      from catalog_item_names as n
+      where (select count(*) from prefix_scored) < ${limitLiteral}
+        and (select trigram_count from q) <= ${sql.lit(MAX_INDEXED_FUZZY_TRIGRAMS)}
+        and n.search_trigrams @@ (
+          select catalog_trigram_query(trigrams, (3 * trigram_count + 9) / 10) from q
+        )
+        and ${storedSimilarity} >= ${threshold}
+        and n.normalized_name not like ${prefixPattern}
+      union all
       select n.catalog_item_id,
              n.id as name_id,
              n.display_name,
              similarity(n.normalized_name, ${query}) as similarity
       from catalog_item_names as n
-      -- A fuzzy row ranks last by class, so it can only be offered when fewer
-      -- organisms than requested matched by prefix. Postgres evaluates this
-      -- once and skips the scan when it is false.
-      where (select count(*) from prefix_scored where duplicate_rank = 1) < ${limitLiteral}
+      where (select count(*) from prefix_scored) < ${limitLiteral}
+        and (select trigram_count from q) > ${sql.lit(MAX_INDEXED_FUZZY_TRIGRAMS)}
         and n.normalized_name % ${query}
         and similarity(n.normalized_name, ${query}) >= ${threshold}
         and n.normalized_name not like ${prefixPattern}
@@ -264,10 +304,11 @@ export function buildCatalogTypeaheadStatement(input: {
       order by h.catalog_item_id, h.similarity desc, h.name_id
     ),
     fuzzy_scored as (
-      ${scoreColumns}
+      ${scoreSelect}
       from fuzzy_ranked as r
       join catalog_items as ci on ci.id = r.catalog_item_id
       where ${offerable}
+      ${scoreOrder}
     )`
     : sql.raw("");
   const fuzzyCandidates = fuzzy
@@ -277,10 +318,9 @@ export function buildCatalogTypeaheadStatement(input: {
              f.has_registered_forms, f.is_host, f.matched_name, f.match_class,
              f.market, f.similarity
       from fuzzy_scored as f
-      where f.duplicate_rank = 1
-        -- An organism a prefix name already found keeps that name, and a
-        -- cluster a prefix organism already represents is represented by it.
-        and not exists (select 1 from prefix_scored as p where p.id = f.id)
+      -- An organism a prefix name already found keeps that name, and a
+      -- cluster a prefix organism already represents is represented by it.
+      where not exists (select 1 from prefix_scored as p where p.id = f.id)
         and not exists (
           select 1 from prefix_scored as p
           where p.node_kind = f.node_kind and p.normalized_name = f.normalized_name
@@ -293,7 +333,7 @@ export function buildCatalogTypeaheadStatement(input: {
       select catalog_trigram_ints(show_trgm(${query})) as trigrams,
              cardinality(show_trgm(${query})) as trigram_count
     ),
-    prefix_hits as materialized (
+    prefix_hits as (
       select n.catalog_item_id,
              n.id as name_id,
              n.display_name,
@@ -332,10 +372,11 @@ export function buildCatalogTypeaheadStatement(input: {
       order by c.catalog_item_id, c.match_class, c.similarity desc, c.name_id
     ),
     prefix_scored as materialized (
-      ${scoreColumns}
+      ${scoreSelect}
       from prefix_ranked as r
       join catalog_items as ci on ci.id = r.catalog_item_id
       where ${offerable}
+      ${scoreOrder}
     )${fuzzyCtes},
     shortlist as (
       -- The rows that survive are chosen here and decorated afterwards: the
@@ -346,8 +387,7 @@ export function buildCatalogTypeaheadStatement(input: {
         select p.id, p.node_kind, p.public_slug, p.canonical_name, p.search_weight,
                p.has_registered_forms, p.is_host, p.matched_name, p.match_class,
                p.market, p.similarity
-        from prefix_scored as p
-        where p.duplicate_rank = 1${fuzzyCandidates}
+        from prefix_scored as p${fuzzyCandidates}
       ) as candidates
       order by match_class,
                market desc,

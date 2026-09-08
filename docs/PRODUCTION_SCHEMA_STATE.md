@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-05. Divergences noted 2026-09-04 and 2026-09-05.
+Last inventory: 2026-09-08. Divergences noted 2026-09-04 and 2026-09-05.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -493,6 +493,91 @@ catalog_items                                        114,669 nodes, unchanged
 a registered form's old `/variety/*` address `308`, `/eppo/LYPES` `308`, an
 unknown slug `404`, and the picker answers "томат" with the tomato species
 first. Nothing a gardener or a crawler sees changed.
+
+## The 2026-09-08 application of `0066`, the index over the trigram sets
+
+Executed the same night as `0065`, by the same executor under the same
+authorization, from the PR branch before the merge.
+
+**Why.** The picker's fuzzy arm asked pg_trgm's `%`, whose index is lossy:
+every candidate is fetched and rechecked with `similarity()`, which tokenises
+the name again. For `де ба` that was 118 ms for three rows, and the arm runs
+exactly when the prefix arm cannot fill the list — when a gardener is
+mid-word. A name can only reach similarity 0.3 if it shares at least
+⌈0.3 n⌉ of the query's n trigrams, which is the rule pg_trgm's index applies;
+`catalog_trigram_query` spells it out as an `intarray` `query_int` over the
+stored sets, and a GIN index (`gin__int_ops`) answers it with a microsecond
+recheck. Used below seven trigrams only: the query has C(n, k) terms and the
+index evaluates that tree per candidate, so at ten trigrams it is slower than
+`%`. Measured beforehand in a rolled-back transaction: candidate sets identical
+on every query tried; `де ба` 118 → 47 ms.
+
+**Apply** (`--mode apply --migration 0066`): 3 statements, **10,243 ms** — the
+GIN build over 246,888 sets, about 15 MB, under a `SHARE` lock (writes wait,
+reads do not).
+
+**Inventory after**: `0065` applied, `0066` applied, nothing absent.
+
+**What depends on it.** The statement on `main` after PR #338 calls
+`catalog_trigram_query` for queries of up to six trigrams; without the index it
+would still be correct, only slow; without the function it does not run. The
+rollback (`sql/rollback/0066_ove387_picker_trigram_set_index.down.sql`) belongs
+with the code that preceded it.
+
+## The 2026-09-08 application of `0065`, the picker's stored trigram sets
+
+Executed by the OVE-400 closeout executor under the owner's standing
+authorization of 2026-09-05 (`docs/ORGANISM_GRAPH_EXECUTION.md`, section 1),
+from the PR branch before the merge, with `scripts/apply-reviewed-migration.ts`
+and the pulled production environment (deleted afterwards).
+
+**Why.** The picker computed `similarity(n.normalized_name, <query>)` for every
+name its prefix scan returned, and pg_trgm answers that by tokenising the name
+again on every call — about 26 µs on Cyrillic. Measured against production for
+the prefix `со`: the scan returns 3,451 names in 3 ms, and the same scan
+projecting `similarity()` takes 46–99 ms. The Ukrainian register lists
+thousands of sunflower hybrids, so the most common crop a gardener types was the
+slowest query in the product, and every prefix of `соняшник` answered `503`
+under the route's 400 ms deadline.
+
+`0065` stores each name's trigram set once, as a stored generated column
+`catalog_item_names.search_trigrams int[] not null`, in the compact form
+pg_trgm compares internally (`catalog_trigram_ints(show_trgm(normalized_name))`,
+hash collisions included), and installs `intarray` so the count of shared
+trigrams is `icount(a & b)`. The float4 the statement derives from that count is
+bit for bit what pg_trgm's `CALCSML` returns: checked against every one of
+production's 246,888 names for fourteen queries, zero mismatches.
+
+**Inventory before** (`--mode inventory`): host class `digitalocean_managed`,
+database `defaultdb`; `0064` applied; `0065` **missing** — absent:
+`column catalog_item_names.search_trigrams`.
+
+**Apply** (`--mode apply --migration 0065`): 4 statements, **60,610 ms**. The
+stored generated column rewrites the table under an `ACCESS EXCLUSIVE` lock —
+about 47 s of that time, measured beforehand in a rolled-back transaction — so
+it was applied at night, once. `catalog_item_names` grew from about 40 MB of
+heap to about 55 MB.
+
+**Inventory after**: `0065` **applied**, nothing absent.
+
+**Re-applied** once, the same night, after the equivalence proof found a defect
+in `catalog_trigram_ints`: it told a hashed trigram from a printable one by its
+`0x` prefix, and a name containing the word `0x` yields the printable trigram
+`0x ` — three characters — which the first version mistook for a hash. No stored
+name carried such a trigram, which is why the column built; a sampled register
+denomination did. The dispatch is by length now. The re-application is
+idempotent — the extension and the column already existed, `create or replace`
+swapped the function body — and took 1,901 ms. The stored values did not
+change and did not need to: for every trigram that is not a printable `0x?`,
+both versions agree, and no stored row had one.
+
+**What depends on it.** The picker statement on `main` after PR #337 reads
+`search_trigrams` and calls `icount`, so the rollback
+(`sql/rollback/0065_ove387_picker_trigram_sets.down.sql`) belongs with the code
+that preceded it. `catalog_trigram_ints` must never change meaning while the
+column exists — a generated column is not recomputed when its function is;
+change it only by dropping and re-adding the column. The picker labels proof in
+CI compares the stored sets with `similarity()` on every run.
 
 ## The 2026-09-07 application of `0064`, the reconciliation's missing indexes
 

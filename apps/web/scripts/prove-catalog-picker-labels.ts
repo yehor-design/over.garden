@@ -21,8 +21,8 @@ import { applyMigrationsBefore } from "./prove-organism-graph-foundation";
  * misspelling-shaped competitor, a name with a curly apostrophe, an animal
  * taxon with a breed, a merged card, two provisional cards a gardener created
  * and the objects that point at them, objects in every other state, journal
- * entries for the weights), then 0055 and the trigram sets of 0065 the picker
- * reads, then 0055's replay, its rollback and 0055 again.
+ * entries for the weights), then 0055 and the trigram sets of 0065 and 0066
+ * the picker reads, then 0055's replay, its rollback and 0055 again.
  *
  * What it proves:
  *   * every object that pointed at a provisional card keeps the card's name
@@ -48,10 +48,14 @@ import { applyMigrationsBefore } from "./prove-organism-graph-foundation";
 const MIGRATION = "0055";
 const MIGRATION_FILE = "0055_ove387_labels_instead_of_provisional_cards.sql";
 const ROLLBACK_FILE = "0055_ove387_labels_instead_of_provisional_cards.down.sql";
-// The picker statement reads the stored trigram sets 0065 adds, so the ranking
-// is asserted on a schema that carries both. 0065 touches nothing 0055's
-// rollback drops, and updating a normalized name recomputes its set.
-const TRIGRAM_SETS_FILE = "0065_ove387_picker_trigram_sets.sql";
+// The picker statement reads the stored trigram sets 0065 adds and, for short
+// queries, the index and query builder of 0066, so the ranking is asserted on
+// a schema that carries all three. Neither touches anything 0055's rollback
+// drops, and updating a normalized name recomputes its set.
+const TRIGRAM_SETS_FILES = [
+  "0065_ove387_picker_trigram_sets.sql",
+  "0066_ove387_picker_trigram_set_index.sql",
+];
 
 type Queryable = Pool | PoolClient;
 
@@ -649,7 +653,7 @@ function rollbackSql() {
 }
 
 function trigramSetsSql() {
-  return readFileSync(path.join(process.cwd(), "sql", TRIGRAM_SETS_FILE), "utf8");
+  return TRIGRAM_SETS_FILES.map((file) => readFileSync(path.join(process.cwd(), "sql", file), "utf8")).join("\n");
 }
 
 function sha256(value: string) {
