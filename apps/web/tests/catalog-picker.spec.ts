@@ -178,7 +178,9 @@ test.describe("OVE-387 catalog picker", () => {
       await expect(page.locator("[data-catalog-availability='selected']")).toContainText(
         new RegExp(`Ваша назва: ${escapeRegExp(ownName)}`, "u"),
       );
-      const third = await publishEntry(page, `Ягода ${fixture.suffix}`, "Перший запис про ягоду.");
+      // No rename: the own name the gardener just declared is the object's
+      // name, and publishing must carry exactly it.
+      const third = await publishEntry(page, null, "Перший запис про ягоду.");
       expect(third).toMatchObject({
         variety_state: "free_text",
         variety_text: ownName,
@@ -204,7 +206,8 @@ test.describe("OVE-387 catalog picker", () => {
       await expect(offlineOptions).toHaveCount(1);
       await expect(offlineOptions.first()).toHaveAttribute("data-catalog-option", "own_name");
       await offlineOptions.first().click();
-      const fourth = await publishEntry(page, `Офлайн ${fixture.suffix}`, "Запис без каталогу.");
+      // Same as above: the declared own name is the object's name.
+      const fourth = await publishEntry(page, null, "Запис без каталогу.");
       expect(fourth).toMatchObject({
         variety_state: "free_text",
         variety_text: offlineName,
@@ -265,17 +268,31 @@ async function openComposer(page: Page) {
   const composer = page.locator("#first-entry-composer");
   await expect(composer).toBeVisible({ timeout: 15_000 });
   await composer.scrollIntoViewIfNeeded();
-  // The picker lives under "More details", a closed <details> by default.
-  const details = composer.locator("details").first();
-  if (!(await details.evaluate((element) => (element as HTMLDetailsElement).open))) {
-    await details.locator("summary").first().click();
-  }
+  // The name field is the picker, so nothing has to be opened to reach it.
+  // It used to sit under a closed "More details", which is how the graph went
+  // unnoticed in the product for a week.
   await expect(pickerCombobox(page)).toBeVisible({ timeout: 10_000 });
 }
 
-async function publishEntry(page: Page, plantName: string, body: string) {
+/**
+ * Publishes the composer. `plantName` renames the object first; `null` keeps
+ * whatever the picker already holds, which is what the own-name outcome needs
+ * — the name field *is* the picker, so renaming after declaring an own name
+ * would be declaring a different one.
+ */
+async function publishEntry(page: Page, plantName: string | null, body: string) {
   const composer = page.locator("#first-entry-composer");
-  await composer.locator('input[name="plantName"]').fill(plantName);
+  const nameField = composer.locator('input[name="plantName"]');
+  if (plantName !== null) {
+    // Typing opens the picker's listbox, and the list can cover the fields
+    // below it on a narrow viewport; Escape closes it and keeps the text.
+    await nameField.fill(plantName);
+    await nameField.press("Escape");
+  }
+  // The object is read back by the name it is actually published under, which
+  // is whatever the field holds — the picker fills it on a pick, and keeps the
+  // gardener's own name when there is none.
+  const publishedName = await nameField.inputValue();
   // A gardener without a space names the first one; the field is required.
   const spaceName = composer.locator('input[name="spaceName"]');
   if ((await spaceName.count()) > 0 && !(await spaceName.inputValue())) {
@@ -311,9 +328,11 @@ async function publishEntry(page: Page, plantName: string, body: string) {
     }>(
       `select id::text as id, variety_state, variety_text, catalog_item_id::text as catalog_item_id
        from plant_objects where display_name = $1 order by created_at desc limit 1`,
-      [plantName],
+      [publishedName],
     );
-    if (!row.rows[0]) throw new Error(`Object "${plantName}" was not persisted.`);
+    if (!row.rows[0]) {
+      throw new Error(`Object "${publishedName}" was not persisted.`);
+    }
     return row.rows[0];
   } finally {
     await pool.end();

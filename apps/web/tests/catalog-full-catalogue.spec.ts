@@ -262,14 +262,7 @@ async function openComposer(page: Page) {
   // A capybara is an animal, and the picker's kingdoms follow the object kind.
   const animal = composer.locator('[data-object-kind="animal"]');
   if ((await animal.count()) > 0) await animal.first().click();
-  const details = composer.locator("details").first();
-  if (
-    !(await details.evaluate(
-      (element) => (element as HTMLDetailsElement).open,
-    ))
-  ) {
-    await details.locator("summary").first().click();
-  }
+  // The name field is the picker; nothing has to be opened to reach it.
   await expect(pickerCombobox(page)).toBeVisible({ timeout: 10_000 });
 }
 
@@ -280,7 +273,10 @@ async function publishEntry(
   pool: Pool,
 ) {
   const composer = page.locator("#first-entry-composer");
+  // Typing in the name field opens the picker's listbox; Escape closes it and
+  // keeps the typed name, which is the own-name outcome this helper wants.
   await composer.locator('input[name="plantName"]').fill(plantName);
+  await composer.locator('input[name="plantName"]').press("Escape");
   const spaceName = composer.locator('input[name="spaceName"]');
   if ((await spaceName.count()) > 0 && !(await spaceName.inputValue())) {
     await spaceName.fill("Сад OVE-392");

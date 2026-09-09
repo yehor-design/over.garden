@@ -218,8 +218,6 @@ const UK_COPY = {
       region: "Регіон",
       coarseRegion: "Узагальнений регіон",
       chooseRegion: "Оберіть регіон",
-      catalogMatch: "Відповідність каталогу",
-      catalogPlaceholder: "Вид, сорт чи порода — або своя назва",
       clearCatalogMatch: "Очистити відповідність каталогу",
       noCatalogMatch:
         "Відповідності каталогу ще немає · Можна безпечно зберегти й зіставити пізніше",
@@ -613,8 +611,6 @@ const BG_COPY = {
       region: "Регион",
       coarseRegion: "Обобщен регион",
       chooseRegion: "Изберете регион",
-      catalogMatch: "Съответствие в каталога",
-      catalogPlaceholder: "Вид, сорт или порода — или собствено име",
       clearCatalogMatch: "Изчистване на съответствието в каталога",
       noCatalogMatch:
         "Все още няма съответствие · Може безопасно да запазите и да съпоставите по-късно",
@@ -1005,8 +1001,6 @@ const RU_COPY = {
       region: "Регион",
       coarseRegion: "Обобщённый регион",
       chooseRegion: "Выберите регион",
-      catalogMatch: "Соответствие каталогу",
-      catalogPlaceholder: "Вид, сорт или порода — или своё название",
       clearCatalogMatch: "Очистить соответствие каталогу",
       noCatalogMatch:
         "Соответствия каталогу пока нет · Можно безопасно сохранить и сопоставить позже",

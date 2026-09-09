@@ -467,6 +467,10 @@ export function FirstEntryComposer({
         withSuggestedTitle(
           {
             ...current,
+            // The picker is the name field, so a pick names the object. The
+            // gardener can still edit it afterwards, which clears the
+            // selection back to their own name — the same escape as before.
+            plantName: row.displayName,
             objectKind: objectKindAfterPickerSelection(
               current.objectKind,
               row.kind,
@@ -634,23 +638,55 @@ export function FirstEntryComposer({
         />
 
         <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-          <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-            {copy.composer.fields.name}
-            <input
-              name="plantName"
-              data-auth-intent-control="create_object"
-              required
-              maxLength={120}
-              value={draft.plantName}
-              onChange={(event) => updateDraft("plantName", event.target.value)}
-              className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+          {/*
+            The name field is the picker (ADR-0026 D7). A gardener types the
+            name of their plant once; the graph offers a species, a form with
+            its species implied, or their own name, and typing past all three
+            leaves exactly the free-text label it always did. It used to be a
+            plain input with the picker collapsed inside "more details", so
+            the graph was two steps and a second typing away and most objects
+            never reached it.
+          */}
+          <div className="flex min-w-0 flex-col gap-2">
+            <CatalogPicker
+              locale={locale}
+              objectKind={draft.objectKind}
+              copy={copy.composer.catalogPicker}
+              label={copy.composer.fields.name}
               placeholder={
                 draft.objectKind === "animal"
                   ? copy.composer.fields.animalPlaceholder
                   : copy.composer.fields.plantPlaceholder
               }
+              clearLabel={copy.composer.fields.clearCatalogMatch}
+              inputName="plantName"
+              required
+              authIntentControl="create_object"
+              query={draft.plantName}
+              onQueryChange={(value) => updateDraft("plantName", value)}
+              selection={catalogSelection}
+              onSelectionChange={updateCatalogSelection}
+              onSearchMiss={reportCatalogSearchMiss}
+              onPickOutcome={reportCatalogPickOutcome}
+              materializeFromCatalogue={materializeCatalogNodeAction}
+              disabled={persistenceFrozen}
             />
-          </label>
+            <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
+              {catalogSelection ? null : (
+                <span className="max-w-full rounded-md border border-border px-2 py-1 break-words text-muted-foreground">
+                  {copy.composer.fields.noCatalogMatch}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={chooseUnknownCatalog}
+                data-catalog-continue-unknown="true"
+                className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
+              >
+                {copy.composer.fields.keepWithoutMatch}
+              </button>
+            </div>
+          </div>
 
           {initialSpace ? (
             <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
@@ -920,38 +956,6 @@ export function FirstEntryComposer({
                 </label>
               </div>
             )}
-
-            <div className="flex min-w-0 flex-col gap-2">
-              <CatalogPicker
-                locale={locale}
-                objectKind={draft.objectKind}
-                copy={copy.composer.catalogPicker}
-                label={copy.composer.fields.catalogMatch}
-                placeholder={copy.composer.fields.catalogPlaceholder}
-                clearLabel={copy.composer.fields.clearCatalogMatch}
-                selection={catalogSelection}
-                onSelectionChange={updateCatalogSelection}
-                onSearchMiss={reportCatalogSearchMiss}
-                onPickOutcome={reportCatalogPickOutcome}
-                materializeFromCatalogue={materializeCatalogNodeAction}
-                disabled={persistenceFrozen}
-              />
-              <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
-                {catalogSelection ? null : (
-                  <span className="max-w-full rounded-md border border-border px-2 py-1 break-words text-muted-foreground">
-                    {copy.composer.fields.noCatalogMatch}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={chooseUnknownCatalog}
-                  data-catalog-continue-unknown="true"
-                  className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
-                >
-                  {copy.composer.fields.keepWithoutMatch}
-                </button>
-              </div>
-            </div>
 
             <div
               data-composer-details-grid="entry-metadata"

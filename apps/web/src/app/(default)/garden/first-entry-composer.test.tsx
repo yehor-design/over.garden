@@ -23,7 +23,6 @@ const localeExpectations = [
       saveOnline: "Опублікувати",
       region: "Київ",
       choosePhoto: "Обрати фото",
-      catalogMatch: "Відповідність каталогу",
       keepWithoutMatch: "Залишити без відповідності",
     },
   ],
@@ -35,7 +34,6 @@ const localeExpectations = [
       saveOnline: "Публикувай",
       region: "Киев",
       choosePhoto: "Избор на снимка",
-      catalogMatch: "Съответствие в каталога",
       keepWithoutMatch: "Запазване без съответствие",
     },
   ],
@@ -47,7 +45,6 @@ const localeExpectations = [
       saveOnline: "Опубликовать",
       region: "Киев",
       choosePhoto: "Выбрать фото",
-      catalogMatch: "Соответствие каталогу",
       keepWithoutMatch: "Оставить без соответствия",
     },
   ],
@@ -59,7 +56,6 @@ const localeExpectations = [
     saveOnline: string;
     region: string;
     choosePhoto: string;
-    catalogMatch: string;
     keepWithoutMatch: string;
   },
 ][];
@@ -104,8 +100,19 @@ describe("first entry composer localization", () => {
       expect(html).toContain(expected.saveOnline);
       expect(html).toContain(expected.region);
       expect(html).toContain(expected.choosePhoto);
-      expect(html).toContain(expected.catalogMatch);
+      // The name field is the picker (ADR-0026 D7): one control, under the
+      // name label, not a plain input above a second one collapsed inside
+      // "more details" — which is where the graph was unreachable from.
+      expect(html).toMatch(
+        new RegExp(
+          `${expected.name}</label>[\\s\\S]*?role="combobox"[\\s\\S]*?name="plantName"`,
+          "u",
+        ),
+      );
+      expect(html).toContain('data-auth-intent-control="create_object"');
       expect(html).toContain(expected.keepWithoutMatch);
+      const details = html.slice(html.indexOf("<details"));
+      expect(details).not.toContain('data-catalog-picker="true"');
       expect(html).toContain('type="file"');
       expect(html).toContain('class="hidden"');
       expect(html).toContain('data-photo-picker-control="true"');

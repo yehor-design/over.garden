@@ -74,6 +74,27 @@ export interface CatalogPickerProps {
   clearLabel: string;
   selection: CatalogPickerSelection | null;
   onSelectionChange: (selection: CatalogPickerSelection | null) => void;
+  /**
+   * Renders the picker's own input as this form field.
+   *
+   * ADR-0026 D7 gives the picker three one-tap outcomes and no new step, and
+   * a composer that shows a plain name field above a separate picker has two:
+   * name the plant, then find it again. With `inputName` the two are one
+   * control — what the gardener types is the object's name, and the rows are
+   * offered under it.
+   */
+  inputName?: string;
+  required?: boolean;
+  /** Marks the input for the auth-intent resume path. */
+  authIntentControl?: string;
+  /**
+   * Controlled query text. Given with `onQueryChange`, the caller owns what is
+   * typed — and therefore also owns following a selection made elsewhere; the
+   * picker stops mirroring it, because writing a parent's state during render
+   * is not something React allows.
+   */
+  query?: string;
+  onQueryChange?: (value: string) => void;
   /** Fired once per query that ends in the own-name outcome or is abandoned. */
   onSearchMiss?: (miss: CatalogSearchMiss) => void;
   /** Fired once per attempt that ends, however it ends (OVE-398). */
@@ -123,6 +144,11 @@ export function CatalogPicker({
   clearLabel,
   selection,
   onSelectionChange,
+  inputName,
+  required = false,
+  authIntentControl,
+  query: controlledQuery,
+  onQueryChange,
   onSearchMiss,
   onPickOutcome,
   disabled = false,
@@ -134,7 +160,18 @@ export function CatalogPicker({
   const listboxId = `${inputId}-listbox`;
   const outcomesId = `${inputId}-outcomes`;
   const statusId = `${inputId}-status`;
-  const [query, setQuery] = useState(() => selectionText(selection));
+  const [uncontrolledQuery, setUncontrolledQuery] = useState(() =>
+    selectionText(selection),
+  );
+  const controlled = controlledQuery !== undefined && onQueryChange !== undefined;
+  const query = controlled ? controlledQuery : uncontrolledQuery;
+  const setQuery = useCallback(
+    (value: string) => {
+      if (controlled) onQueryChange(value);
+      else setUncontrolledQuery(value);
+    },
+    [controlled, onQueryChange],
+  );
   const [rows, setRows] = useState<FirstEntryCatalogSelection[]>([]);
   const [availability, setAvailability] =
     useState<CatalogPickerAvailability>("idle");
@@ -159,7 +196,7 @@ export function CatalogPicker({
   // the way React documents for state that follows a prop.
   if (selection !== syncedSelection) {
     setSyncedSelection(selection);
-    setQuery(selectionText(selection));
+    if (!controlled) setUncontrolledQuery(selectionText(selection));
     if (selection) {
       setRows([]);
       setOpen(false);
@@ -168,8 +205,21 @@ export function CatalogPicker({
   }
 
   const trimmedQuery = query.trim().replace(/\s+/g, " ");
+  /**
+   * As the form's own name field, the text and the identity are separate
+   * things: the text is what a gardener calls their plant, the selection is
+   * which organism it is. So "Васька" can be a tomato — renaming does not
+   * unpick the species, and typing keeps searching so a gardener can still
+   * change their mind. The status line names the picked organism and the
+   * clear button removes it; those are the only ways it goes.
+   *
+   * On its own — the object page's resolve control — the field *is* the
+   * search box, and a selection ends the search, as it always did.
+   */
+  const identityFollowsText = inputName === undefined;
   const searchable =
-    !selection && trimmedQuery.length >= CATALOG_TYPEAHEAD_MIN_QUERY_LENGTH;
+    (!selection || !identityFollowsText) &&
+    trimmedQuery.length >= CATALOG_TYPEAHEAD_MIN_QUERY_LENGTH;
   // Below the minimum, or once something is picked, whatever the last read
   // returned is not shown; the read itself only starts when searchable.
   const effectiveAvailability: CatalogPickerAvailability = searchable
@@ -376,10 +426,21 @@ export function CatalogPicker({
     if (firstKeystrokeRef.current === null && value.trim().length > 0) {
       firstKeystrokeRef.current = performance.now();
     }
-    setQuery(value.slice(0, CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH));
+    const next = value.slice(0, CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH);
+    setQuery(next);
     setActiveIndex(-1);
-    if (selection && value !== selectionText(selection)) {
+    if (!selection || next === selectionText(selection)) return;
+    if (identityFollowsText) {
       onSelectionChange(null);
+      return;
+    }
+    // As the name field: a picked organism survives the gardener naming their
+    // own plant, and an own name *is* the name, so it follows what they type
+    // rather than being dropped — refining a letter is not withdrawing the
+    // decision. Emptying the field is, and `clear()` handles the button.
+    if (selection.kind === "own_name") {
+      const trimmed = next.trim().replace(/\s+/g, " ");
+      onSelectionChange(trimmed ? { kind: "own_name", name: trimmed } : null);
     }
   }
 
@@ -442,7 +503,8 @@ export function CatalogPicker({
     }, 120);
   }
 
-  const listVisible = open && !selection && options.length > 0;
+  const listVisible =
+    open && (!selection || !identityFollowsText) && options.length > 0;
   const activeOption =
     clampedActiveIndex >= 0 ? options[clampedActiveIndex] : undefined;
   const statusText = selection
@@ -474,6 +536,9 @@ export function CatalogPicker({
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <input
           id={inputId}
+          name={inputName}
+          required={required}
+          data-auth-intent-control={authIntentControl}
           type="text"
           role="combobox"
           aria-autocomplete="list"
