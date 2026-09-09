@@ -131,7 +131,7 @@ async function main() {
     detail: markerHits.length === 0 ? "none found" : markerHits.join(", "),
   });
 
-  // D5: admin surfaces are the product, /health belongs to the owner.
+  // D5: admin surfaces are the product; /health was retired by ADR-0027.
   const closed: string[] = [];
   let closedOk = 0;
   for (const path of ["/admin", "/health", "/api/media/staging/reservations"]) {
@@ -142,7 +142,7 @@ async function main() {
   }
   checks.push({
     requirement: "D5 admin, D2 session contract",
-    check: "/admin, anonymous /health, and the retired reservations route answer 404",
+    check: "/admin, the retired /health page, and the retired reservations route answer 404",
     class: closedOk === 3 ? "pass" : "fail",
     detail: closed.join("; "),
   });

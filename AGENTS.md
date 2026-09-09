@@ -8,8 +8,9 @@ knowingly unfinished. Current decisions live in
 `docs/adr/ADR-0023-workspace-resilience.md`,
 `docs/adr/ADR-0024-server-authoritative-interaction.md`,
 `docs/adr/ADR-0025-stable-registry-retired.md` and
-`docs/adr/ADR-0026-organism-knowledge-graph.md`; older ADRs and dated documents are
-history and never override them.
+`docs/adr/ADR-0026-organism-knowledge-graph.md` and
+`docs/adr/ADR-0027-owner-health-page-retired.md`; older ADRs and dated documents
+are history and never override them.
 
 ## Product
 
@@ -48,10 +49,10 @@ touching DNS, R2, env, or deployment. Local infra starts with
 4. Everything public is indexable. `noindex` only for empty listings, the
    seven-day 410 tombstone, and signed-in workspace screens.
 5. Public pages are cached with tags and revalidated by the mutations that
-   change them; workspace, account, auth, erasure, health, and API stay
-   `no-store`. One exception (ADR-0026 D7): the public catalog typeahead route
-   under `/api/public/catalog/` reads no cookies and no personal data and may
-   carry a short public cache.
+   change them; workspace, account, auth, erasure, and API stay `no-store`. One
+   exception (ADR-0026 D7): the public catalog typeahead route under
+   `/api/public/catalog/` reads no cookies and no personal data and may carry a
+   short public cache.
 6. Authorization happens on the server at the moment of the mutation. No
    client-side session gates, admission tokens, or pre-checks.
 7. Admin pages live in the account menu under the sealed owner role and must
@@ -125,6 +126,9 @@ Every Linear task uses this shape and nothing more:
   `docs/adr/ADR-0026-organism-knowledge-graph.md` — the organism knowledge
   graph: one canonical card per organism over the source layer, Catalogue of
   Life as backbone, a curation queue that never blocks a gardener (SDD Slice 24).
+  `docs/adr/ADR-0027-owner-health-page-retired.md` — the owner's `/health`
+  diagnostics page is retired and the route answers 404 for everyone;
+  `/api/health` stays as the monitor endpoint.
   `docs/ORGANISM_GRAPH_EXECUTION.md` — the executor's runbook for that slice:
   the owner's standing authorization, environment quirks, production
   procedures, hand-offs between the fourteen tasks.

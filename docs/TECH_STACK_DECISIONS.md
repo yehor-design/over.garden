@@ -161,3 +161,11 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   Accepted and implemented: SDD Slice 24 (`OVE-386`–`OVE-399`) delivered it
   between 2026-09-05 and 2026-09-07, closing with migration `0061`, which
   retired the flat catalog's identity columns and the old matcher's tables.
+- ADR-0027 — The owner `/health` diagnostics page is retired (2026-09-09).
+  Binding: `/health` is not a route in any locale and answers the proxy's real
+  404 for every visitor including the owner; the account menu carries five owner
+  links; `GET /api/health` remains the liveness endpoint monitors read;
+  `pingDatabase` stays because `workspace-access.ts` uses it; the `health` table
+  from `0001` keeps its rows until a separate gated migration drops it.
+  Supersedes the "`/health` is owner-only" clause of ADR-0022 D5. Accepted and
+  implemented on 2026-09-09 by `OVE-410`.

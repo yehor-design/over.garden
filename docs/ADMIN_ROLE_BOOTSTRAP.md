@@ -21,14 +21,15 @@ but cannot satisfy the sealed-owner boundary.
 
 Every authenticated user receives the ordinary avatar menu. After a
 server-side sealed-owner check, the same menu conditionally adds exactly these
-four localized links (ADR-0022, D5; the three Release Center links left with
-ADR-0025):
+five localized links (ADR-0022, D5; the three Release Center links left with
+ADR-0025, the two catalog curation links returned with ADR-0026 D10, and the
+`/health` diagnostics page left with ADR-0027):
 
 - `/account/communities`
 - `/account/moderation/comments`
+- `/garden/catalog/queue`
+- `/garden/catalog/sources`
 - `/garden/privacy/erasure-requests`
-- `/health` (owner-only diagnostics; a request without a session gets a real
-  404 from the proxy, a signed-in non-owner gets the not-found page)
 
 An ordinary gardener, guest, session-error state, non-sealed `owner` role row,
 or owner lookup failure receives no owner links and no empty owner section. The
@@ -52,13 +53,15 @@ redirect. These other retired control-plane routes also remain exact `404`:
 
 - `/garden/pilot-health`
 - `/garden/pilot-smoke`
+- `/health` (retired by ADR-0027; the proxy answers it as an unknown root path,
+  so every locale prefix and descendant is a real 404 for the owner too)
 
 ## Capabilities
 
 The live role enum is exactly `owner`. Its server-side capability set protects:
 
 - community and comment moderation;
-- the owner-only `/health` diagnostics;
+- the catalog decision queue and the catalog sources;
 - minimized erasure-request readback and review;
 - separately maintainer-approved irreversible erasure execution.
 

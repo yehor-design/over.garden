@@ -19,7 +19,6 @@ export type InterfaceLanguageControlPlacement =
   | "none";
 
 export const INTERFACE_UTILITY_CONTROL_PREFIXES = [
-  "/health",
   "/garden/privacy/erasure-requests",
 ] as const;
 

@@ -76,11 +76,6 @@ type InternalNamespacePath = {
   representation: "canonical" | "encoded";
 };
 
-export function isOwnerHealthPath(pathname: string) {
-  const path = stripLocalePrefix(pathname).path;
-  return path === "/health" || path.startsWith("/health/");
-}
-
 function getHardNotFoundResponse() {
   return new NextResponse(null, {
     status: 404,
@@ -254,7 +249,6 @@ const NO_STORE_ROUTE_PREFIXES = [
   "/auth",
   "/erasure",
   "/api",
-  "/health",
   "/skeleton",
 ] as const;
 
@@ -514,16 +508,6 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isRetiredControlPlanePath(request.nextUrl.pathname)) {
-    return getHardNotFoundResponse();
-  }
-
-  // `/health` belongs to the sealed owner (ADR-0022, D5). A request that
-  // carries no session cannot be the owner, so it gets a real 404 here; a
-  // signed-in visitor is checked by the page with the full role budget.
-  if (
-    isOwnerHealthPath(request.nextUrl.pathname) &&
-    !request.headers.get("cookie")?.includes(`${SESSION_COOKIE_NAME}=`)
-  ) {
     return getHardNotFoundResponse();
   }
 

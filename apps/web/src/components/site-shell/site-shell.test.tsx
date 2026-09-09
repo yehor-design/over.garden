@@ -221,23 +221,6 @@ describe("production site shell", () => {
     expect(html).not.toContain("data-sign-out-control");
   });
 
-  it("renders the compact Bulgaria control on guest denied and health boundaries", async () => {
-    const { SiteShell } = await import("./site-shell");
-    for (const pathname of ["/health"]) {
-      mocks.pathname = pathname;
-      const html = renderToStaticMarkup(
-        <SiteShell locale="ru" market="bulgaria" isAuthenticated={false}>
-          <main>Boundary</main>
-        </SiteShell>,
-      );
-
-      expect(html).toContain('data-site-shell="excluded"');
-      expect(html.match(/data-interface-language-control=/g)).toHaveLength(1);
-      expect(html).not.toContain("data-sign-out-control");
-      expect(html).not.toContain('data-site-shell-region="header"');
-    }
-  });
-
   it("keeps privacy reachable from the mobile menu utilities", async () => {
     const { SiteShellMobileUtilities } =
       await import("./site-shell-navigation");

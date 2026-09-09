@@ -10,7 +10,6 @@ export const EXPECTED_OPERATOR_MENU_LINKS = [
   "/garden/catalog/queue",
   "/garden/catalog/sources",
   "/garden/privacy/erasure-requests",
-  "/health",
 ] as const;
 export const EXPECTED_ACCOUNT_MODERATION_PATHS = [
   "/account/communities",

@@ -353,8 +353,8 @@ async function readLiveHealth(
     throw new Error("Live base URL must be the canonical OverGarden origin.");
   }
   const startedAt = performance.now();
-  const response = await fetchImpl(`${url.origin}/health`, {
-    headers: { Accept: "text/html" },
+  const response = await fetchImpl(`${url.origin}/api/health`, {
+    headers: { Accept: "application/json" },
     redirect: "error",
     signal: AbortSignal.timeout(LIVE_PROBE_TIMEOUT_MS),
   });

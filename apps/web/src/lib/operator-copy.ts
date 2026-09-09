@@ -103,33 +103,6 @@ const UK_COPY = {
       "Захищена черга скарг без приватного вмісту саду та даних автентифікації.",
     empty: "Відкритих скарг на коментарі немає.",
   },
-  health: {
-    metadataTitle: "Стан інфраструктури | OverGarden",
-    metadataDescription:
-      "Публічний noindex-маршрут діагностики доступності OverGarden і ручних smoke-перевірок.",
-    title: "Стан інфраструктури",
-    description:
-      "Публічна noindex-діагностика доступності та ручних smoke-перевірок. Це не інтерфейс продукту.",
-    renderedAt: "Сформовано на сервері о",
-    utf8: "UTF-8 / кирилиця",
-    auth: "Автентифікація (Better Auth)",
-    database: "База даних (Kysely / Postgres)",
-    authVersionedCurrent:
-      "Маршрут Better Auth підключено — versioned_current_v{version}",
-    authLegacyTransition:
-      "Маршрут Better Auth підключено — legacy_transition; потрібна підготовлена versioned-конфігурація",
-    authClosed:
-      "Маршрут Better Auth підключено — secret відсутній або схожий на placeholder, вхід закрито",
-    authWeakSecret:
-      "Маршрут Better Auth обслуговує трафік — weak_secret; виправте versioned-конфігурацію",
-    authLocalFallback:
-      "Маршрут Better Auth підключено — активний лише локальний fallback",
-    dbOk: "Читання Kysely успішне — ping={ping} · рядків стану: {count}",
-    dbUnavailable:
-      "Діагностику показано в обмеженому режимі; доступні перевірки продовжуються без відповіді бази даних",
-    primaryButton: "Кнопка shadcn (SSR)",
-    outlineButton: "Контурна",
-  },
 } as const;
 
 export type OperatorCopy = WidenCopy<typeof UK_COPY>;
@@ -226,33 +199,6 @@ const BG_COPY = {
       "Защитена опашка със сигнали без лично съдържание от градината или данни за удостоверяване.",
     empty: "Няма отворени сигнали за коментари.",
   },
-  health: {
-    metadataTitle: "Състояние на инфраструктурата | OverGarden",
-    metadataDescription:
-      "Публичен noindex диагностичен маршрут за достъпност на OverGarden и ръчни smoke проверки.",
-    title: "Състояние на инфраструктурата",
-    description:
-      "Публична noindex диагностика за достъпност и ръчни smoke проверки. Това не е продуктов интерфейс.",
-    renderedAt: "Генерирано на сървъра в",
-    utf8: "UTF-8 / кирилица",
-    auth: "Автентикация (Better Auth)",
-    database: "База данни (Kysely / Postgres)",
-    authVersionedCurrent:
-      "Маршрутът на Better Auth е свързан — versioned_current_v{version}",
-    authLegacyTransition:
-      "Маршрутът на Better Auth е свързан — legacy_transition; нужна е подготвена versioned конфигурация",
-    authClosed:
-      "Маршрутът на Better Auth е свързан — secret липсва или прилича на placeholder, входът е затворен",
-    authWeakSecret:
-      "Маршрутът на Better Auth обслужва трафик — weak_secret; коригирайте versioned конфигурацията",
-    authLocalFallback:
-      "Маршрутът на Better Auth е свързан — активен е само локалният fallback",
-    dbOk: "Четенето с Kysely е успешно — ping={ping} · редове за състояние: {count}",
-    dbUnavailable:
-      "Диагностиката е показана в ограничен режим; наличните проверки продължават без отговор от базата данни",
-    primaryButton: "Бутон shadcn (SSR)",
-    outlineButton: "Контурен",
-  },
 } as const satisfies OperatorCopy;
 
 const RU_COPY = {
@@ -347,33 +293,6 @@ const RU_COPY = {
       "Защищённая очередь жалоб без личного содержимого сада и данных аутентификации.",
     empty: "Открытых жалоб на комментарии нет.",
   },
-  health: {
-    metadataTitle: "Состояние инфраструктуры | OverGarden",
-    metadataDescription:
-      "Публичный noindex-маршрут диагностики доступности OverGarden и ручных smoke-проверок.",
-    title: "Состояние инфраструктуры",
-    description:
-      "Публичная noindex-диагностика доступности и ручных smoke-проверок. Это не интерфейс продукта.",
-    renderedAt: "Сформировано на сервере в",
-    utf8: "UTF-8 / кириллица",
-    auth: "Аутентификация (Better Auth)",
-    database: "База данных (Kysely / Postgres)",
-    authVersionedCurrent:
-      "Маршрут Better Auth подключён — versioned_current_v{version}",
-    authLegacyTransition:
-      "Маршрут Better Auth подключён — legacy_transition; нужна подготовленная versioned-конфигурация",
-    authClosed:
-      "Маршрут Better Auth подключён — secret отсутствует или похож на placeholder, вход закрыт",
-    authWeakSecret:
-      "Маршрут Better Auth обслуживает трафик — weak_secret; исправьте versioned-конфигурацию",
-    authLocalFallback:
-      "Маршрут Better Auth подключён — активен только локальный fallback",
-    dbOk: "Чтение Kysely успешно — ping={ping} · строк состояния: {count}",
-    dbUnavailable:
-      "Диагностика показана в ограниченном режиме; доступные проверки продолжаются без ответа базы данных",
-    primaryButton: "Кнопка shadcn (SSR)",
-    outlineButton: "Контурная",
-  },
 } as const satisfies OperatorCopy;
 
 const COPY_BY_LOCALE = {
@@ -390,13 +309,6 @@ const DATE_LOCALE_BY_INTERFACE_LOCALE: Record<InterfaceLocale, string> = {
 
 export function getOperatorCopy(locale: InterfaceLocale): OperatorCopy {
   return COPY_BY_LOCALE[locale];
-}
-
-export function getOperatorDatabaseAvailabilityCopy(locale: InterfaceLocale) {
-  return {
-    message: getOperatorCopy(locale).health.dbUnavailable,
-    serveClass: "seam_unmet" as const,
-  };
 }
 
 export function formatOperatorTemplate(
