@@ -418,6 +418,36 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
    `503`, as it did before — the composer falls back to the own-name outcome
    by design; and the 26.6 ms in `OVE-387`'s original receipt was measured on
    a loopback database of about 15,900 nodes, never comparable.
+0a. **A species can display its genus's name, because equal weights are
+   broken by import date.** Found on 2026-09-09 from the live product: typing
+   `соняшник` offers **Соняхи** first — the Ukrainian name of the *genus*
+   *Helianthus*, in the plural — for a node that is correctly *Helianthus
+   annuus* (`/species/helianthus-annuus-species-backbone`). A gardener looking
+   for a sunflower is shown a category.
+
+   The card and the picker take a node's display name from the first uk
+   vernacular by `is_primary desc, weight desc, created_at, id`. That node has
+   four, and the top two are tied:
+
+   | name | weight | source | created |
+   | -- | -- | -- | -- |
+   | соняхи | 2.0 | wikidata | 2026-09-06 |
+   | соняшник однорічний | 2.0 | eppo-codes | 2026-09-07 |
+   | сонях | 0.0 | — | 2026-07-02 |
+   | соняшник | 0.0 | — | 2026-07-02 |
+
+   So the tie is decided by `created_at`, and **which name a reader sees is
+   decided by which import ran first** — a day apart, in this case. The genus
+   label reached a species node through the Wikidata crosswalk.
+
+   Measured scope: **five** species nodes carry a uk vernacular that is also a
+   genus's uk vernacular. The narrow fix is to demote those five; the general
+   one is to break the weight tie by something that means something — source
+   precision, or rank agreement — rather than arrival order. Neither is done:
+   both are production data changes and belong with their own receipt. The
+   picker does show the matched name beneath the display name, so the row is
+   findable; it is the wrong word in the largest type.
+
 1. **The framework defect itself is unfixed, and unreported.** Under Cache
    Components a thrown Server Component error during a postponed resume never
    completes or errors its Suspense boundary on a hard load, so `error.tsx`
