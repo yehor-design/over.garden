@@ -163,8 +163,11 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   retired the flat catalog's identity columns and the old matcher's tables.
 - ADR-0027 — The owner `/health` diagnostics page is retired (2026-09-09).
   Binding: `/health` is not a route in any locale and answers the proxy's real
-  404 for every visitor including the owner; the account menu carries five owner
-  links; `GET /api/health` remains the liveness endpoint monitors read;
+  404 for every visitor including the owner, through the retired-namespace list
+  rather than through the unknown-root-segment path, because a locale prefix
+  would otherwise reach `[locale]/[handle]` and stream a soft 404 at 200; the
+  account menu carries five owner links; `GET /api/health` remains the liveness
+  endpoint monitors read;
   `pingDatabase` stays because `workspace-access.ts` uses it; the `health` table
   from `0001` keeps its rows until a separate gated migration drops it.
   Supersedes the "`/health` is owner-only" clause of ADR-0022 D5. Accepted and

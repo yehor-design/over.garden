@@ -9,6 +9,12 @@ const RETIRED_PATH_PREFIXES = [
   // curation path (ADR-0025). A workspace catch-all would stream a 200 shell
   // before it could say not found, so the proxy answers first.
   "/garden/catalog",
+  // The owner's diagnostics page (ADR-0027). Removing the route directory is
+  // enough for `/health`, which `isUnknownRootPath` then answers, but not for
+  // `/bg/health`: a locale prefix is a segment the App Router can serve, so the
+  // path reaches `[locale]/[handle]` and streams a profile not-found shell at
+  // HTTP 200.
+  "/health",
 ] as const;
 
 /**
