@@ -53,8 +53,9 @@ redirect. These other retired control-plane routes also remain exact `404`:
 
 - `/garden/pilot-health`
 - `/garden/pilot-smoke`
-- `/health` (retired by ADR-0027; the proxy answers it as an unknown root path,
-  so every locale prefix and descendant is a real 404 for the owner too)
+- `/health` (retired by ADR-0027; it is in the proxy's retired-namespace list, so
+  every locale prefix, descendant and encoded representation is a body-less 404
+  for the owner too)
 
 ## Capabilities
 
