@@ -247,6 +247,120 @@ async function press(renderer: ReactTestRenderer, key: string) {
   });
 }
 
+describe("CatalogPicker as the composer's name field", () => {
+  // The suite runs in the node environment; the picker's debounce reaches for
+  // window, as the behaviour suite above documents.
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.stubGlobal("window", { clearTimeout, setTimeout });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  // A gardener picks the species, then names their own plant. The two fields
+  // used to be separate, so renaming could not unpick anything; now they are
+  // one control and the identity has to survive the rename on its own. The
+  // browser proof caught this as an object saved with variety_state
+  // "unknown" after a pick, which is the whole graph quietly lost.
+  it("keeps a picked organism when the gardener renames their plant", async () => {
+    const changes: (CatalogPickerSelection | null)[] = [];
+    const picked: CatalogPickerSelection = { kind: "item", row: ROWS[0]! };
+    const html = renderToStaticMarkup(
+      <CatalogPicker
+        locale="uk"
+        objectKind="plant"
+        copy={copy}
+        label="Назва"
+        placeholder=""
+        clearLabel="Очистити"
+        inputName="plantName"
+        required
+        query="Помідор"
+        onQueryChange={() => undefined}
+        selection={picked}
+        onSelectionChange={(selection) => changes.push(selection)}
+      />,
+    );
+    // The picked organism stays named beside the field a gardener is editing.
+    expect(html).toContain('data-catalog-availability="selected"');
+
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <CatalogPicker
+          locale="uk"
+          objectKind="plant"
+          copy={copy}
+          label="Назва"
+          placeholder=""
+          clearLabel="Очистити"
+          inputName="plantName"
+          required
+          query="Помідор"
+          onQueryChange={() => undefined}
+          selection={picked}
+          onSelectionChange={(selection) => changes.push(selection)}
+        />,
+      );
+    });
+    await act(async () => {
+      comboboxOf(renderer!).props.onChange({ target: { value: "Васька" } });
+    });
+    expect(changes).toEqual([]);
+    await act(async () => renderer!.unmount());
+  });
+
+  it("replaces an own name, because the own name is the text", async () => {
+    const changes: (CatalogPickerSelection | null)[] = [];
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <CatalogPicker
+          locale="uk"
+          objectKind="plant"
+          copy={copy}
+          label="Назва"
+          placeholder=""
+          clearLabel="Очистити"
+          inputName="plantName"
+          required
+          query="Васька"
+          onQueryChange={() => undefined}
+          selection={{ kind: "own_name", name: "Васька" }}
+          onSelectionChange={(selection) => changes.push(selection)}
+        />,
+      );
+    });
+    await act(async () => {
+      comboboxOf(renderer!).props.onChange({ target: { value: "Мурка" } });
+    });
+    expect(changes).toEqual([null]);
+    await act(async () => renderer!.unmount());
+  });
+
+  it("still ends the search on a pick when it is not the name field", async () => {
+    // The object page's resolve control keeps the behaviour it always had.
+    const html = renderToStaticMarkup(
+      <CatalogPicker
+        locale="uk"
+        objectKind="plant"
+        copy={copy}
+        label="Відповідність каталогу"
+        placeholder=""
+        clearLabel="Очистити"
+        selection={{ kind: "item", row: ROWS[0]! }}
+        onSelectionChange={() => undefined}
+      />,
+    );
+    expect(html).not.toContain('name="plantName"');
+    expect(html).toContain('data-catalog-availability="selected"');
+  });
+});
+
 describe("CatalogPicker secondary path (ADR-0026 D7)", () => {
   beforeEach(() => {
     vi.useFakeTimers();

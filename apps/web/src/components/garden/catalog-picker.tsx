@@ -205,8 +205,21 @@ export function CatalogPicker({
   }
 
   const trimmedQuery = query.trim().replace(/\s+/g, " ");
+  /**
+   * As the form's own name field, the text and the identity are separate
+   * things: the text is what a gardener calls their plant, the selection is
+   * which organism it is. So "Васька" can be a tomato — renaming does not
+   * unpick the species, and typing keeps searching so a gardener can still
+   * change their mind. The status line names the picked organism and the
+   * clear button removes it; those are the only ways it goes.
+   *
+   * On its own — the object page's resolve control — the field *is* the
+   * search box, and a selection ends the search, as it always did.
+   */
+  const identityFollowsText = inputName === undefined;
   const searchable =
-    !selection && trimmedQuery.length >= CATALOG_TYPEAHEAD_MIN_QUERY_LENGTH;
+    (!selection || !identityFollowsText) &&
+    trimmedQuery.length >= CATALOG_TYPEAHEAD_MIN_QUERY_LENGTH;
   // Below the minimum, or once something is picked, whatever the last read
   // returned is not shown; the read itself only starts when searchable.
   const effectiveAvailability: CatalogPickerAvailability = searchable
@@ -415,7 +428,10 @@ export function CatalogPicker({
     }
     setQuery(value.slice(0, CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH));
     setActiveIndex(-1);
-    if (selection && value !== selectionText(selection)) {
+    if (!selection || value === selectionText(selection)) return;
+    // An own name *is* the text, so editing the text replaces it. A picked
+    // organism is not, and survives a gardener naming their own plant.
+    if (identityFollowsText || selection.kind === "own_name") {
       onSelectionChange(null);
     }
   }
@@ -479,7 +495,8 @@ export function CatalogPicker({
     }, 120);
   }
 
-  const listVisible = open && !selection && options.length > 0;
+  const listVisible =
+    open && (!selection || !identityFollowsText) && options.length > 0;
   const activeOption =
     clampedActiveIndex >= 0 ? options[clampedActiveIndex] : undefined;
   const statusText = selection
