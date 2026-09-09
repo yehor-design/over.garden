@@ -74,6 +74,27 @@ export interface CatalogPickerProps {
   clearLabel: string;
   selection: CatalogPickerSelection | null;
   onSelectionChange: (selection: CatalogPickerSelection | null) => void;
+  /**
+   * Renders the picker's own input as this form field.
+   *
+   * ADR-0026 D7 gives the picker three one-tap outcomes and no new step, and
+   * a composer that shows a plain name field above a separate picker has two:
+   * name the plant, then find it again. With `inputName` the two are one
+   * control — what the gardener types is the object's name, and the rows are
+   * offered under it.
+   */
+  inputName?: string;
+  required?: boolean;
+  /** Marks the input for the auth-intent resume path. */
+  authIntentControl?: string;
+  /**
+   * Controlled query text. Given with `onQueryChange`, the caller owns what is
+   * typed — and therefore also owns following a selection made elsewhere; the
+   * picker stops mirroring it, because writing a parent's state during render
+   * is not something React allows.
+   */
+  query?: string;
+  onQueryChange?: (value: string) => void;
   /** Fired once per query that ends in the own-name outcome or is abandoned. */
   onSearchMiss?: (miss: CatalogSearchMiss) => void;
   /** Fired once per attempt that ends, however it ends (OVE-398). */
@@ -123,6 +144,11 @@ export function CatalogPicker({
   clearLabel,
   selection,
   onSelectionChange,
+  inputName,
+  required = false,
+  authIntentControl,
+  query: controlledQuery,
+  onQueryChange,
   onSearchMiss,
   onPickOutcome,
   disabled = false,
@@ -134,7 +160,18 @@ export function CatalogPicker({
   const listboxId = `${inputId}-listbox`;
   const outcomesId = `${inputId}-outcomes`;
   const statusId = `${inputId}-status`;
-  const [query, setQuery] = useState(() => selectionText(selection));
+  const [uncontrolledQuery, setUncontrolledQuery] = useState(() =>
+    selectionText(selection),
+  );
+  const controlled = controlledQuery !== undefined && onQueryChange !== undefined;
+  const query = controlled ? controlledQuery : uncontrolledQuery;
+  const setQuery = useCallback(
+    (value: string) => {
+      if (controlled) onQueryChange(value);
+      else setUncontrolledQuery(value);
+    },
+    [controlled, onQueryChange],
+  );
   const [rows, setRows] = useState<FirstEntryCatalogSelection[]>([]);
   const [availability, setAvailability] =
     useState<CatalogPickerAvailability>("idle");
@@ -159,7 +196,7 @@ export function CatalogPicker({
   // the way React documents for state that follows a prop.
   if (selection !== syncedSelection) {
     setSyncedSelection(selection);
-    setQuery(selectionText(selection));
+    if (!controlled) setUncontrolledQuery(selectionText(selection));
     if (selection) {
       setRows([]);
       setOpen(false);
@@ -474,6 +511,9 @@ export function CatalogPicker({
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <input
           id={inputId}
+          name={inputName}
+          required={required}
+          data-auth-intent-control={authIntentControl}
           type="text"
           role="combobox"
           aria-autocomplete="list"

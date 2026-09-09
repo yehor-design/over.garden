@@ -265,17 +265,19 @@ async function openComposer(page: Page) {
   const composer = page.locator("#first-entry-composer");
   await expect(composer).toBeVisible({ timeout: 15_000 });
   await composer.scrollIntoViewIfNeeded();
-  // The picker lives under "More details", a closed <details> by default.
-  const details = composer.locator("details").first();
-  if (!(await details.evaluate((element) => (element as HTMLDetailsElement).open))) {
-    await details.locator("summary").first().click();
-  }
+  // The name field is the picker, so nothing has to be opened to reach it.
+  // It used to sit under a closed "More details", which is how the graph went
+  // unnoticed in the product for a week.
   await expect(pickerCombobox(page)).toBeVisible({ timeout: 10_000 });
 }
 
 async function publishEntry(page: Page, plantName: string, body: string) {
   const composer = page.locator("#first-entry-composer");
+  // The name field is the picker: typing opens its listbox, and the list can
+  // cover the fields below it on a narrow viewport. Escape closes it and
+  // leaves the typed name, which is the own-name outcome this helper wants.
   await composer.locator('input[name="plantName"]').fill(plantName);
+  await composer.locator('input[name="plantName"]').press("Escape");
   // A gardener without a space names the first one; the field is required.
   const spaceName = composer.locator('input[name="spaceName"]');
   if ((await spaceName.count()) > 0 && !(await spaceName.inputValue())) {
