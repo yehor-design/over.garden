@@ -314,7 +314,7 @@ describe("CatalogPicker as the composer's name field", () => {
     await act(async () => renderer!.unmount());
   });
 
-  it("replaces an own name, because the own name is the text", async () => {
+  it("keeps an own name in step with the text, rather than dropping it", async () => {
     const changes: (CatalogPickerSelection | null)[] = [];
     let renderer: ReactTestRenderer;
     await act(async () => {
@@ -338,7 +338,12 @@ describe("CatalogPicker as the composer's name field", () => {
     await act(async () => {
       comboboxOf(renderer!).props.onChange({ target: { value: "Мурка" } });
     });
-    expect(changes).toEqual([null]);
+    // Refining the name is not withdrawing the decision; emptying it is.
+    expect(changes).toEqual([{ kind: "own_name", name: "Мурка" }]);
+    await act(async () => {
+      comboboxOf(renderer!).props.onChange({ target: { value: "  " } });
+    });
+    expect(changes).toEqual([{ kind: "own_name", name: "Мурка" }, null]);
     await act(async () => renderer!.unmount());
   });
 

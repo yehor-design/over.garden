@@ -178,7 +178,9 @@ test.describe("OVE-387 catalog picker", () => {
       await expect(page.locator("[data-catalog-availability='selected']")).toContainText(
         new RegExp(`Ваша назва: ${escapeRegExp(ownName)}`, "u"),
       );
-      const third = await publishEntry(page, `Ягода ${fixture.suffix}`, "Перший запис про ягоду.");
+      // No rename: the own name the gardener just declared is the object's
+      // name, and publishing must carry exactly it.
+      const third = await publishEntry(page, null, "Перший запис про ягоду.");
       expect(third).toMatchObject({
         variety_state: "free_text",
         variety_text: ownName,
@@ -204,7 +206,8 @@ test.describe("OVE-387 catalog picker", () => {
       await expect(offlineOptions).toHaveCount(1);
       await expect(offlineOptions.first()).toHaveAttribute("data-catalog-option", "own_name");
       await offlineOptions.first().click();
-      const fourth = await publishEntry(page, `Офлайн ${fixture.suffix}`, "Запис без каталогу.");
+      // Same as above: the declared own name is the object's name.
+      const fourth = await publishEntry(page, null, "Запис без каталогу.");
       expect(fourth).toMatchObject({
         variety_state: "free_text",
         variety_text: offlineName,
@@ -271,13 +274,20 @@ async function openComposer(page: Page) {
   await expect(pickerCombobox(page)).toBeVisible({ timeout: 10_000 });
 }
 
-async function publishEntry(page: Page, plantName: string, body: string) {
+/**
+ * Publishes the composer. `plantName` renames the object first; `null` keeps
+ * whatever the picker already holds, which is what the own-name outcome needs
+ * — the name field *is* the picker, so renaming after declaring an own name
+ * would be declaring a different one.
+ */
+async function publishEntry(page: Page, plantName: string | null, body: string) {
   const composer = page.locator("#first-entry-composer");
-  // The name field is the picker: typing opens its listbox, and the list can
-  // cover the fields below it on a narrow viewport. Escape closes it and
-  // leaves the typed name, which is the own-name outcome this helper wants.
-  await composer.locator('input[name="plantName"]').fill(plantName);
-  await composer.locator('input[name="plantName"]').press("Escape");
+  if (plantName !== null) {
+    // Typing opens the picker's listbox, and the list can cover the fields
+    // below it on a narrow viewport; Escape closes it and keeps the text.
+    await composer.locator('input[name="plantName"]').fill(plantName);
+    await composer.locator('input[name="plantName"]').press("Escape");
+  }
   // A gardener without a space names the first one; the field is required.
   const spaceName = composer.locator('input[name="spaceName"]');
   if ((await spaceName.count()) > 0 && !(await spaceName.inputValue())) {

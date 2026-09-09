@@ -426,13 +426,21 @@ export function CatalogPicker({
     if (firstKeystrokeRef.current === null && value.trim().length > 0) {
       firstKeystrokeRef.current = performance.now();
     }
-    setQuery(value.slice(0, CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH));
+    const next = value.slice(0, CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH);
+    setQuery(next);
     setActiveIndex(-1);
-    if (!selection || value === selectionText(selection)) return;
-    // An own name *is* the text, so editing the text replaces it. A picked
-    // organism is not, and survives a gardener naming their own plant.
-    if (identityFollowsText || selection.kind === "own_name") {
+    if (!selection || next === selectionText(selection)) return;
+    if (identityFollowsText) {
       onSelectionChange(null);
+      return;
+    }
+    // As the name field: a picked organism survives the gardener naming their
+    // own plant, and an own name *is* the name, so it follows what they type
+    // rather than being dropped — refining a letter is not withdrawing the
+    // decision. Emptying the field is, and `clear()` handles the button.
+    if (selection.kind === "own_name") {
+      const trimmed = next.trim().replace(/\s+/g, " ");
+      onSelectionChange(trimmed ? { kind: "own_name", name: trimmed } : null);
     }
   }
 
