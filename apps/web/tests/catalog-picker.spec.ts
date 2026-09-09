@@ -282,12 +282,17 @@ async function openComposer(page: Page) {
  */
 async function publishEntry(page: Page, plantName: string | null, body: string) {
   const composer = page.locator("#first-entry-composer");
+  const nameField = composer.locator('input[name="plantName"]');
   if (plantName !== null) {
     // Typing opens the picker's listbox, and the list can cover the fields
     // below it on a narrow viewport; Escape closes it and keeps the text.
-    await composer.locator('input[name="plantName"]').fill(plantName);
-    await composer.locator('input[name="plantName"]').press("Escape");
+    await nameField.fill(plantName);
+    await nameField.press("Escape");
   }
+  // The object is read back by the name it is actually published under, which
+  // is whatever the field holds — the picker fills it on a pick, and keeps the
+  // gardener's own name when there is none.
+  const publishedName = await nameField.inputValue();
   // A gardener without a space names the first one; the field is required.
   const spaceName = composer.locator('input[name="spaceName"]');
   if ((await spaceName.count()) > 0 && !(await spaceName.inputValue())) {
@@ -323,9 +328,11 @@ async function publishEntry(page: Page, plantName: string | null, body: string) 
     }>(
       `select id::text as id, variety_state, variety_text, catalog_item_id::text as catalog_item_id
        from plant_objects where display_name = $1 order by created_at desc limit 1`,
-      [plantName],
+      [publishedName],
     );
-    if (!row.rows[0]) throw new Error(`Object "${plantName}" was not persisted.`);
+    if (!row.rows[0]) {
+      throw new Error(`Object "${publishedName}" was not persisted.`);
+    }
     return row.rows[0];
   } finally {
     await pool.end();
