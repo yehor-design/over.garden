@@ -2,8 +2,8 @@ import type { InterfaceLocale } from "@/lib/interface-localization";
 
 /**
  * The owner's tools in the account menu (ADR-0022, D5). The Release Center,
- * extension packs and editions left this menu with ADR-0025; `/health` is the
- * owner-only diagnostics page.
+ * extension packs and editions left this menu with ADR-0025; the `/health`
+ * diagnostics page left it with ADR-0027, and the page itself is gone.
  */
 export const OPERATOR_MENU_LINKS = [
   {
@@ -26,10 +26,6 @@ export const OPERATOR_MENU_LINKS = [
     key: "erasure",
     href: "/garden/privacy/erasure-requests",
   },
-  {
-    key: "health",
-    href: "/health",
-  },
 ] as const;
 
 type OperatorMenuLinkKey = (typeof OPERATOR_MENU_LINKS)[number]["key"];
@@ -48,7 +44,6 @@ const COPY: Record<InterfaceLocale, OperatorMenuCopy> = {
       "catalog-queue": "Черга рішень каталогу",
       "catalog-sources": "Джерела каталогу",
       erasure: "Запити на видалення",
-      health: "Стан системи",
     },
   },
   bg: {
@@ -59,7 +54,6 @@ const COPY: Record<InterfaceLocale, OperatorMenuCopy> = {
       "catalog-queue": "Опашка с решения за каталога",
       "catalog-sources": "Източници на каталога",
       erasure: "Заявки за изтриване",
-      health: "Състояние на системата",
     },
   },
   ru: {
@@ -70,7 +64,6 @@ const COPY: Record<InterfaceLocale, OperatorMenuCopy> = {
       "catalog-queue": "Очередь решений каталога",
       "catalog-sources": "Источники каталога",
       erasure: "Запросы на удаление",
-      health: "Состояние системы",
     },
   },
 };

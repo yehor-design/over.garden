@@ -373,8 +373,8 @@ describe("app route cache guardrail", () => {
     "/account/communities",
     "/auth/help",
     "/erasure",
-    "/health",
     "/api/garden/entries",
+    "/api/health",
   ])("sends explicit no-store cache control for %s", async (path) => {
     expect((await responseFor(path)).headers.get("Cache-Control")).toBe(
       APP_ROUTE_CACHE_CONTROL,

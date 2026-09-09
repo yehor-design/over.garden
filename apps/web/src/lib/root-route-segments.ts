@@ -27,7 +27,6 @@ export const ROOT_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
   "garden",
   "gbif",
   "guides",
-  "health",
   "id",
   "journal",
   "journals",

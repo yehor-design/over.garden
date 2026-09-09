@@ -320,7 +320,10 @@ async function executePlan(implementationSha: string, approvalDigest: string) {
     await runParity(context, "plan");
     await runParity(context, "apply");
     context.app = startApp(context.runtimeEnv);
-    await waitForHttp(`http://127.0.0.1:${APP_PORT}/health`, APP_TIMEOUT_MS);
+    await waitForHttp(
+      `http://127.0.0.1:${APP_PORT}/api/health`,
+      APP_TIMEOUT_MS,
+    );
     await assertFreshProviderBinding(provider, context, databaseUrl, secret.ca);
     const product = await runProductSmoke(context);
     await updateState(context, "product_proved");
@@ -462,7 +465,7 @@ async function runProductSmoke(context: ExecuteContext) {
   if (!context.runtimeEnv) throw new Error("target runtime unavailable");
   const base = `http://127.0.0.1:${APP_PORT}`;
   const [health, landing] = await Promise.all([
-    fetch(`${base}/health`, { signal: AbortSignal.timeout(30_000) }),
+    fetch(`${base}/api/health`, { signal: AbortSignal.timeout(30_000) }),
     fetch(base, { signal: AbortSignal.timeout(30_000) }),
   ]);
   if (!health.ok || !landing.ok) {
@@ -822,7 +825,7 @@ async function assertProductionHealth(
   ) {
     throw new Error(`production database health failed ${phase}`);
   }
-  const response = await fetch("https://over.garden/health", {
+  const response = await fetch("https://over.garden/api/health", {
     signal: AbortSignal.timeout(30_000),
   });
   if (!response.ok) throw new Error(`canonical health failed ${phase}`);

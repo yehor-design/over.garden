@@ -2,7 +2,7 @@
 
 Status: living document. Update it whenever production behaviour, the direction,
 or the list of known gaps changes. Read it first, then `AGENTS.md`.
-Last reviewed: 2026-09-07.
+Last reviewed: 2026-09-09.
 
 This page answers four questions for anyone returning to OverGarden: what the
 product is today, what is actually true in production right now, what is being
@@ -34,7 +34,7 @@ Verified on 2026-09-07 against `https://over.garden` and the live providers.
 | Media         | Browser-made WebP: 2560 primary, 1280 and 480 variants, 16 px placeholder, served as plain `<img srcset>` from `media.over.garden`, immutable and CDN-cached. No Vercel image optimizer                     |
 | Media upload  | One session capability per composer, uploads straight to the Cloudflare Worker, two-hour lease renewed every five minutes, parallel promotion, weekly orphan sweep                                          |
 | Sessions      | Server-authoritative. The cookie-cached session decides at the moment of the mutation; no client gate                                                                                                       |
-| Admin         | Owner pages live in the account menu under the sealed owner role; `/health` is owner-only. The Release Center, editions and extension packs are gone (ADR-0025, `OVE-385`); the menu carries four owner links |
+| Admin         | Owner pages live in the account menu under the sealed owner role. The Release Center, editions and extension packs are gone (ADR-0025, `OVE-385`) and the `/health` diagnostics page with them (ADR-0027, `OVE-410`, 2026-09-09), so `/health` now answers 404 for everyone; the menu carries five owner links |
 | Workspace     | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023)                                                 |
 | Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw |
 | Schema        | Migrations `0001`–`0047`, `0049`, `0051`–`0058` and `0060`–`0064` applied, minus the two deliberately skipped and the two not needed in production. Slice 24 landed `0054` (the graph foundation) through `0061` (the closeout, 2026-09-07): `catalog_items.catalog_kind` and `status` are gone, and so are `catalog_match_suggestions` and `catalog_fuzzy_duplicate_suggestions` with the 2,267 rows they held. `0064` indexes the five columns the reconciliation's cleanup reads. See `docs/PRODUCTION_SCHEMA_STATE.md` |

@@ -503,7 +503,6 @@ describe("OVE-314 active caller and schema retirement", () => {
       "/garden/catalog/queue",
       "/garden/catalog/sources",
       "/garden/privacy/erasure-requests",
-      "/health",
     ]);
     expect(JSON.stringify(OPERATOR_MENU_LINKS)).not.toMatch(
       /\/admin(?:"|\/users)|pilot|\/join/,

@@ -58,7 +58,7 @@ describe("authenticated utility region", () => {
       <AuthenticatedUtilityRegion
         locale="ru"
         market="bulgaria"
-        pathname="/health"
+        pathname="/garden/privacy/erasure-requests"
         isAuthenticated={false}
       />,
     );

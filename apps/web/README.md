@@ -64,8 +64,10 @@ Database type generation after a DB is available:
 pnpm db:types
 ```
 
-`/health` is an infrastructure tracer, not a product-readiness signal. The
-canonical product and authentication entry is `/garden`.
+`/api/health` is a liveness tracer for monitors, not a product-readiness
+signal; the owner-facing `/health` page it used to sit beside was retired by
+ADR-0027 and the route answers 404. The canonical product and authentication
+entry is `/garden`.
 
 ## Walking Skeleton
 
