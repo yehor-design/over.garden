@@ -66,8 +66,18 @@ hard-404s an anonymous request to it, and the `readRecentHealth` and
 `writeHealth` repository functions, whose only caller was the page.
 
 `/health`, `/bg/health`, `/ru/health` and `/health/anything` now answer the
-proxy's real 404 for every visitor, the owner included, through
-`isUnknownRootPath` — the same answer the retired `/admin` namespace gives.
+proxy's real 404 for every visitor, the owner included, because `/health` joins
+`RETIRED_PATH_PREFIXES` in `src/lib/retired-control-plane-routes.ts` — the same
+mechanism, and the same body-less 404, as the retired `/admin` namespace.
+
+Deleting the route directory alone is not enough, and the production read-back
+after the first deploy proved it. Unprefixed `/health` did fall to
+`isUnknownRootPath` and answer 404, but `/bg/health` did not: a locale prefix is
+a first segment the App Router can serve, so `isUnknownRootPath` passes it
+through, `[locale]/[handle]` treats `health` as a profile handle, and the
+profile's not-found document streams at HTTP 200. It carried `noindex, nofollow`
+and leaked nothing, but a soft 404 is not the answer this project gives a retired
+route. `/admin` has always been in the retired list for exactly this reason.
 
 ### D2. Retained
 
@@ -103,7 +113,9 @@ pages and is not taken here.
   moderation, the catalog decision queue, the catalog sources, and the erasure
   requests.
 - `scripts/prove-owner-mvp-reset.ts` keeps probing `/health` and still expects
-  404 — the assertion now guards the retirement instead of the owner gate.
+  404 — the assertion now guards the retirement instead of the owner gate. It
+  probes the unprefixed path only, which is why it could not have caught the
+  locale-prefixed soft 404; `proxy.test.ts` now asserts every representation.
 - `scripts/smoke-restore-readiness.ts` and
   `scripts/smoke-fail-open-projection.ts` probe `/api/health`. This also fixes
   them: they asserted a 200 from a route that answered 404 to an anonymous

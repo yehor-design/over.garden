@@ -130,6 +130,13 @@ describe("app route cache guardrail", () => {
       "/garden/catalog/curation",
       "/bg/garden/catalog/registry",
       "/garden/catalog%2Fregistry",
+      "/health",
+      "/health/",
+      "/health/anything",
+      "/bg/health",
+      "/ru/health",
+      "/bg/health/anything",
+      "/%68ealth",
     ];
 
     for (const path of retiredPaths) {
@@ -168,6 +175,9 @@ describe("app route cache guardrail", () => {
       "/account/moderation/comments",
       "/garden/privacy/erasure-requests",
       "/garden/lineage/invitations/example",
+      // ADR-0027 retired the `/health` page, not the liveness endpoint that
+      // shares its name.
+      "/api/health",
     ]) {
       expect((await responseFor(preservedPath)).status, preservedPath).toBe(
         200,
