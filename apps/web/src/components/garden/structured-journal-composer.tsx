@@ -50,6 +50,7 @@ export interface JournalBlockCommandCopy {
   turnInto: string;
   duplicate: string;
   duplicatedAnnouncement: string;
+  noResults: string;
   placeholder: string;
   placeholderFirst: string;
   commands: Record<JournalBlockCommandId, string>;

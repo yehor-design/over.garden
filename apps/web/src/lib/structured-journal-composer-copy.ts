@@ -76,6 +76,7 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       turnInto: "Перетворити на",
       duplicate: "Дублювати",
       duplicatedAnnouncement: "Блок продубльовано: {type}",
+      noResults: "Нічого не знайдено",
       placeholder: "Напишіть щось або натисніть «/» для команд",
       placeholderFirst: "Як минув день у саду? Натисніть «/» для команд",
       commands: {
@@ -168,6 +169,7 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       turnInto: "Преобразувай в",
       duplicate: "Дублирай",
       duplicatedAnnouncement: "Блокът е дублиран: {type}",
+      noResults: "Нищо не е намерено",
       placeholder: "Напишете нещо или натиснете «/» за команди",
       placeholderFirst: "Как мина денят в градината? Натиснете «/» за команди",
       commands: {
@@ -259,6 +261,7 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       turnInto: "Преобразовать в",
       duplicate: "Дублировать",
       duplicatedAnnouncement: "Блок продублирован: {type}",
+      noResults: "Ничего не найдено",
       placeholder: "Напишите что-нибудь или нажмите «/» для команд",
       placeholderFirst: "Как прошёл день в саду? Нажмите «/» для команд",
       commands: {

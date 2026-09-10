@@ -24,6 +24,7 @@ import { createJournalLexicalExtension } from "./journal-lexical-extensions";
 import { JournalLexicalToolbar } from "./journal-lexical-toolbar";
 import { JournalBlockGutter } from "./journal-block-gutter";
 import { JournalPlaceholderPlugin } from "./journal-placeholder-plugin";
+import { JournalSlashMenu } from "./journal-slash-menu";
 import {
   moveJournalBlockById,
   moveJournalBlockToIndex,
@@ -615,6 +616,12 @@ function JournalLexicalClientBody({
           placeholder={labels.blocks.placeholder}
           firstPlaceholder={labels.blocks.placeholderFirst}
           disabled={disabled}
+        />
+        <JournalSlashMenu
+          containerRef={containerRef}
+          copy={labels.blocks}
+          disabled={disabled}
+          onChooseImage={chooseImage}
         />
         <JournalBlockGutter
           containerRef={containerRef}

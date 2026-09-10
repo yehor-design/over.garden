@@ -59,6 +59,8 @@ import {
   OverGardenQuoteNode,
 } from "./journal-lexical-nodes";
 import { registerJournalNodeReorder } from "./journal-block-order";
+import { registerJournalInputRules } from "./journal-input-rules";
+import { registerJournalShortcuts } from "./journal-shortcuts";
 import {
   $hydrateJournalDocumentV1,
   JOURNAL_HYDRATION_TAG,
@@ -163,6 +165,8 @@ export function createJournalLexicalExtension({
         registerList(editor),
         registerCheckList(editor),
         registerJournalNodeReorder(editor),
+        registerJournalInputRules(editor),
+        registerJournalShortcuts(editor),
         editor.registerCommand(
           KEY_ENTER_COMMAND,
           (event) => $handleJournalCodeEnter(event),
