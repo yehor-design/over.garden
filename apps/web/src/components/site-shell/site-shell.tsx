@@ -68,6 +68,7 @@ import {
   type SiteShellContextRailModule,
 } from "./site-shell-context-rail";
 import { SiteShellLocaleProvider } from "./site-shell-locale-context";
+import { OverGardenLogo } from "./over-garden-logo";
 
 export function SiteShell({
   children,
@@ -268,9 +269,10 @@ export function SiteShell({
                 <Link
                   data-site-shell-brand="true"
                   href={navigation.publicItems[0]?.href ?? "/"}
-                  className="site-shell-brand flex min-w-0 items-center bg-primary font-semibold text-primary-foreground lg:ml-0 lg:w-56"
+                  className="site-shell-brand flex min-w-0 items-center bg-primary text-primary-foreground lg:ml-0 lg:w-56"
                 >
-                  <span className="truncate">OverGarden</span>
+                  <OverGardenLogo className="site-shell-brand-logo w-auto shrink-0" />
+                  <span className="sr-only">OverGarden</span>
                 </Link>
 
                 <div className="site-shell-header-actions ml-auto flex items-center">

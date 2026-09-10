@@ -22,7 +22,9 @@ function files(url: URL) {
 }
 
 const APP_FILE_CONVENTIONS: Record<string, string> = {
+  "apple-icon.png": "apple-icon.png",
   "favicon.ico": "favicon.ico",
+  "icon.svg": "icon.svg",
   "robots.ts": "robots.txt",
 };
 
@@ -78,6 +80,7 @@ describe("root route segments", () => {
       "/sitemap.xml",
       "/sitemaps/entries-0.xml",
       "/favicon.ico",
+      "/icon.svg",
       "/apple-icon.png",
       "/next.svg",
       "/licenses/GoogleSans-OFL.txt",
