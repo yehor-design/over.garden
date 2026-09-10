@@ -47,6 +47,7 @@ import {
   moveJournalBlockToIndex,
   removeJournalBlockById,
 } from "./journal-block-order";
+import { JournalInsertionLine } from "./journal-insertion-line";
 import {
   Menu,
   MenuContent,
@@ -125,7 +126,6 @@ export function JournalBlockGutter({
   const gutterRef = useRef<HTMLDivElement | null>(null);
   const handleRef = useRef<HTMLButtonElement | null>(null);
   const addRef = useRef<HTMLButtonElement | null>(null);
-  const indicatorRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const gestureRef = useRef<PointerGesture | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -183,6 +183,15 @@ export function JournalBlockGutter({
     });
   }, [positionGutter]);
 
+  // `positionGutter` closes over the active block, so `schedulePosition` has a
+  // new identity on every render. Reading it through a ref keeps it out of the
+  // subscription effect's dependencies, which would otherwise re-subscribe —
+  // and re-read — on every render.
+  const schedulePositionRef = useRef(schedulePosition);
+  useEffect(() => {
+    schedulePositionRef.current = schedulePosition;
+  });
+
   const onReorderingChangeRef = useRef(onReorderingChange);
   useEffect(() => {
     onReorderingChangeRef.current = onReorderingChange;
@@ -195,22 +204,28 @@ export function JournalBlockGutter({
       frameRef.current = null;
     }
     const sync = () => {
-      setItems(readItems());
+      // A fresh array on every commit would re-render, which re-runs this
+      // effect, which reads again: the browser reported "Maximum update depth
+      // exceeded" until this bailed on an unchanged tree.
+      setItems((current) => {
+        const next = readItems();
+        return sameGutterItems(current, next) ? current : next;
+      });
       editor.getEditorState().read(() => {
         const selection = $getSelection();
         if (!$isRangeSelection(selection)) return;
         const top = selection.anchor.getNode().getTopLevelElement();
         setCaretBlockId(top ? $getJournalBlockId(top) : null);
       });
-      schedulePosition();
+      schedulePositionRef.current();
     };
     sync();
     return editor.registerUpdateListener(sync);
-  }, [editor, readItems, schedulePosition]);
+  }, [editor, readItems]);
 
   useEffect(() => {
-    schedulePosition();
-  }, [activeBlockId, items, schedulePosition]);
+    schedulePositionRef.current();
+  }, [activeBlockId, items]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -264,12 +279,6 @@ export function JournalBlockGutter({
       container.removeEventListener("pointerleave", onPointerLeave);
     };
   }, [containerRef, disabled, editor, items, pinned]);
-
-  useEffect(() => {
-    const indicator = indicatorRef.current;
-    if (!indicator || indicatorTop === null) return;
-    indicator.style.transform = `translateY(${indicatorTop}px)`;
-  }, [indicatorTop]);
 
   // The block menu has a keyboard route, because the gutter's own buttons sit
   // outside the editor's tab order (ADR-0028 D6).
@@ -562,12 +571,7 @@ export function JournalBlockGutter({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10">
-      <div
-        ref={indicatorRef}
-        data-lexical-reorder-indicator="true"
-        className="pointer-events-none absolute inset-x-0 h-0.5 rounded-full bg-primary motion-reduce:transition-none forced-colors:border-t-2"
-        hidden={indicatorTop === null}
-      />
+      <JournalInsertionLine top={indicatorTop} purpose="reorder" />
       <div
         ref={gutterRef}
         data-journal-block-gutter="true"
@@ -715,6 +719,24 @@ export function JournalBlockGutter({
       />
     </div>
   );
+}
+
+function sameGutterItems(
+  current: readonly GutterItem[],
+  next: readonly GutterItem[],
+): boolean {
+  if (current.length !== next.length) return false;
+  return current.every((item, index) => {
+    const candidate = next[index];
+    return (
+      candidate !== undefined &&
+      item.blockId === candidate.blockId &&
+      item.key === candidate.key &&
+      item.type === candidate.type &&
+      item.commandId === candidate.commandId &&
+      item.hasQuoteAttribution === candidate.hasQuoteAttribution
+    );
+  });
 }
 
 function blockIdAtClientY(

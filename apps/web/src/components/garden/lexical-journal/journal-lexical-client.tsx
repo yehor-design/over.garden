@@ -23,6 +23,7 @@ import {
 import { createJournalLexicalExtension } from "./journal-lexical-extensions";
 import { JournalBlockGutter } from "./journal-block-gutter";
 import { JournalPlaceholderPlugin } from "./journal-placeholder-plugin";
+import { JournalFileDropPlugin } from "./journal-file-drop-plugin";
 import { JournalSelectionToolbar } from "./journal-selection-toolbar";
 import { JournalSlashMenu } from "./journal-slash-menu";
 import {
@@ -610,6 +611,10 @@ function JournalLexicalClientBody({
         <JournalPlaceholderPlugin
           placeholder={labels.blocks.placeholder}
           firstPlaceholder={labels.blocks.placeholderFirst}
+          disabled={disabled}
+        />
+        <JournalFileDropPlugin
+          containerRef={containerRef}
           disabled={disabled}
         />
         <JournalSelectionToolbar
