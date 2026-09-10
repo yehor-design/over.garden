@@ -26,23 +26,35 @@ import {
   $isParagraphNode,
   $isTextNode,
   createEditor,
+  IS_BOLD,
+  IS_CODE,
+  IS_ITALIC,
+  IS_STRIKETHROUGH,
+  IS_UNDERLINE,
   type EditorState,
   type ElementNode,
   type LexicalNode,
 } from "lexical";
+import type { ListType } from "@lexical/list";
 
 import {
+  $createOverGardenCalloutNode,
+  $createOverGardenCodeNode,
   $createOverGardenImageNode,
   $createOverGardenQuoteAttributionNode,
   $createOverGardenQuoteBodyNode,
   $createOverGardenQuoteNode,
   $getJournalBlockId,
+  $isOverGardenCalloutNode,
+  $isOverGardenCodeNode,
   $isOverGardenImageNode,
   $isOverGardenQuoteAttributionNode,
   $isOverGardenQuoteBodyNode,
   $isOverGardenQuoteNode,
   $setJournalBlockId,
   createJournalBlockId,
+  OverGardenCalloutNode,
+  OverGardenCodeNode,
   OverGardenImageNode,
   OverGardenListNode,
   OverGardenQuoteAttributionNode,
@@ -56,12 +68,30 @@ import {
   JournalDocumentValidationError,
   normalizeJournalDocumentOrThrow,
   normalizeSafeHref,
+  type JournalCodeLanguage,
   type JournalDocumentBlock,
   type JournalDocumentV1,
+  type JournalHeadingBlock,
   type JournalInlineMark,
+  type JournalListBlock,
   type JournalListItem,
   type JournalTextSpan,
 } from "@/lib/garden/journal-document";
+
+const JOURNAL_HEADING_TAGS: Record<
+  JournalHeadingBlock["level"],
+  "h1" | "h2" | "h3"
+> = {
+  1: "h1",
+  2: "h2",
+  3: "h3",
+};
+
+const JOURNAL_HEADING_LEVELS: Record<string, JournalHeadingBlock["level"]> = {
+  h1: 1,
+  h2: 2,
+  h3: 3,
+};
 
 export type JournalLexicalAdapterErrorCode =
   | "invalid_canonical_document"
@@ -90,9 +120,37 @@ export const JOURNAL_LEXICAL_NODE_CLASSES = [
   OverGardenQuoteNode,
   OverGardenQuoteBodyNode,
   OverGardenQuoteAttributionNode,
+  OverGardenCalloutNode,
+  OverGardenCodeNode,
 ] as const;
 
 export const JOURNAL_HYDRATION_TAG = "overgarden-journal-hydration";
+
+/**
+ * The five Lexical text formats this grammar admits, and the exact bit mask
+ * they occupy. Anything outside the mask — subscript, superscript, highlight,
+ * lowercase and the rest — is a tree the canonical document cannot express, so
+ * it is refused rather than dropped.
+ */
+const JOURNAL_TEXT_FORMATS = [
+  "bold",
+  "italic",
+  "underline",
+  "strikethrough",
+  "code",
+] as const;
+
+const JOURNAL_TEXT_FORMAT_MASK =
+  IS_BOLD | IS_ITALIC | IS_STRIKETHROUGH | IS_UNDERLINE | IS_CODE;
+
+/** The contract's canonical order, minus `link`, which carries an href. */
+const JOURNAL_MARK_ORDERED_FORMATS = [
+  "code",
+  "bold",
+  "italic",
+  "underline",
+  "strikethrough",
+] as const;
 
 export function journalDocumentV1ToLexicalEditorState(
   document: JournalDocumentV1,
@@ -181,21 +239,15 @@ function $journalBlockToLexicalNode(block: JournalDocumentBlock): LexicalNode {
     }
     case "heading": {
       const node = $setJournalBlockId(
-        $createHeadingNode(block.level === 2 ? "h2" : "h3"),
+        $createHeadingNode(JOURNAL_HEADING_TAGS[block.level]),
         block.id,
       );
       $appendSpans(node, block.spans);
       return node;
     }
     case "list": {
-      if (block.style === "todo") {
-        throw new JournalLexicalAdapterError(
-          "unsupported_node",
-          "To-do lists are outside the editor grammar.",
-        );
-      }
       const node = $setJournalBlockId(
-        $createListNode(block.style === "ordered" ? "number" : "bullet"),
+        $createListNode(journalListType(block.style)),
         block.id,
       );
       $appendJournalListItems(node, block.items, 1, block.style);
@@ -213,14 +265,16 @@ function $journalBlockToLexicalNode(block: JournalDocumentBlock): LexicalNode {
       }
       return quote;
     }
-    // The contract admits these; the editor grammar does not yet. A document
-    // carrying one fails closed here rather than being silently reshaped.
-    case "callout":
-    case "code":
-      throw new JournalLexicalAdapterError(
-        "unsupported_node",
-        `Canonical block is outside the editor grammar: ${block.type}.`,
-      );
+    case "callout": {
+      const node = $createOverGardenCalloutNode(block.id, block.icon);
+      $appendSpans(node, block.spans);
+      return node;
+    }
+    case "code": {
+      const node = $createOverGardenCodeNode(block.id, block.language);
+      $appendJournalCodeText(node, block.text);
+      return node;
+    }
     case "delimiter":
       return $setJournalBlockId($createHorizontalRuleNode(), block.id);
     case "image":
@@ -242,7 +296,7 @@ function $appendJournalListItems(
   list: ListNode,
   items: readonly JournalListItem[],
   depth: number,
-  style: "ordered" | "unordered",
+  style: JournalListBlock["style"],
 ): void {
   if (depth > MAX_JOURNAL_LIST_DEPTH) {
     throw new JournalLexicalAdapterError(
@@ -251,17 +305,36 @@ function $appendJournalListItems(
     );
   }
   for (const item of items) {
-    const node = $createListItemNode();
+    // `ListItemNode.getChecked()` derives from the parent list's type, so the
+    // flag is only ever set for a to-do list and reads back as `undefined`
+    // everywhere else.
+    const node =
+      style === "todo"
+        ? $createListItemNode(item.checked ?? false)
+        : $createListItemNode();
     $appendSpans(node, item.spans);
     list.append(node);
     if (item.items?.length) {
       const wrapper = $createListItemNode();
-      const nested = $createListNode(style === "ordered" ? "number" : "bullet");
+      const nested = $createListNode(journalListType(style));
       $appendJournalListItems(nested, item.items, depth + 1, style);
       wrapper.append(nested);
       list.append(wrapper);
     }
   }
+}
+
+function journalListType(style: JournalListBlock["style"]): ListType {
+  if (style === "ordered") return "number";
+  return style === "todo" ? "check" : "bullet";
+}
+
+function $appendJournalCodeText(code: OverGardenCodeNode, text: string): void {
+  const lines = text.split("\n");
+  lines.forEach((line, index) => {
+    if (index > 0) code.append($createLineBreakNode());
+    if (line) code.append($createTextNode(line));
+  });
 }
 
 function $appendSpans(node: ElementNode, spans: readonly JournalTextSpan[]) {
@@ -273,11 +346,10 @@ function $appendSpans(node: ElementNode, spans: readonly JournalTextSpan[]) {
       if (index > 0) parent.append($createLineBreakNode());
       if (text || textParts.length === 1) {
         const textNode = $createTextNode(text);
-        if (span.marks?.some((mark) => mark.type === "bold")) {
-          textNode.toggleFormat("bold");
-        }
-        if (span.marks?.some((mark) => mark.type === "italic")) {
-          textNode.toggleFormat("italic");
+        for (const format of JOURNAL_TEXT_FORMATS) {
+          if (span.marks?.some((mark) => mark.type === format)) {
+            textNode.toggleFormat(format);
+          }
         }
         parent.append(textNode);
       }
@@ -295,28 +367,24 @@ function $lexicalNodeToJournalBlock(node: LexicalNode): JournalDocumentBlock {
   if ($isHeadingNode(node)) {
     $assertCanonicalElementState(node, "Heading");
     const id = $requireBlockId(node);
-    const tag = node.getTag();
-    if (tag !== "h2" && tag !== "h3") {
+    const level = JOURNAL_HEADING_LEVELS[node.getTag()];
+    if (!level) {
       throw new JournalLexicalAdapterError(
         "unsupported_node",
-        "Only H2 and H3 headings are supported.",
+        "Only H1, H2, and H3 headings are supported.",
       );
     }
-    return {
-      id,
-      type: "heading",
-      level: tag === "h2" ? 2 : 3,
-      spans: $elementToSpans(node),
-    };
+    return { id, type: "heading", level, spans: $elementToSpans(node) };
   }
   if ($isListNode(node)) {
     $assertCanonicalElementState(node, "List");
     const id = $requireBlockId(node);
     const listType = node.getListType();
-    if (listType !== "bullet" && listType !== "number") {
+    const style = JOURNAL_LIST_STYLES[listType];
+    if (!style) {
       throw new JournalLexicalAdapterError(
         "unsupported_node",
-        "Checklists are not supported.",
+        `Unsupported list type: ${listType}.`,
       );
     }
     if (node.getStart() !== 1) {
@@ -328,7 +396,7 @@ function $lexicalNodeToJournalBlock(node: LexicalNode): JournalDocumentBlock {
     return {
       id,
       type: "list",
-      style: listType === "number" ? "ordered" : "unordered",
+      style,
       items: $lexicalListToJournalItems(node, 1, listType),
     };
   }
@@ -357,6 +425,25 @@ function $lexicalNodeToJournalBlock(node: LexicalNode): JournalDocumentBlock {
         : {}),
     };
   }
+  if ($isOverGardenCalloutNode(node)) {
+    const id = $requireBlockId(node);
+    return {
+      id,
+      type: "callout",
+      icon: node.getIcon(),
+      spans: $elementToSpans(node),
+    };
+  }
+  if ($isOverGardenCodeNode(node)) {
+    $assertCanonicalElementState(node, "Code");
+    const id = $requireBlockId(node);
+    return {
+      id,
+      type: "code",
+      language: node.getLanguage() as JournalCodeLanguage,
+      text: $journalCodeToText(node),
+    };
+  }
   if ($isHorizontalRuleNode(node)) {
     const id = $requireBlockId(node);
     return { id, type: "delimiter" };
@@ -378,10 +465,47 @@ function $lexicalNodeToJournalBlock(node: LexicalNode): JournalDocumentBlock {
   );
 }
 
+const JOURNAL_LIST_STYLES: Partial<
+  Record<ListType, JournalListBlock["style"]>
+> = {
+  bullet: "unordered",
+  check: "todo",
+  number: "ordered",
+};
+
+function $journalCodeToText(code: OverGardenCodeNode): string {
+  let text = "";
+  for (const child of code.getChildren()) {
+    if ($isLineBreakNode(child)) {
+      text += "\n";
+      continue;
+    }
+    if (!$isTextNode(child)) {
+      throw new JournalLexicalAdapterError(
+        "unsupported_node",
+        "Code block contains a non-text child.",
+      );
+    }
+    if (
+      child.getFormat() !== 0 ||
+      child.getStyle() !== "" ||
+      child.getDetail() !== 0 ||
+      child.getMode() !== "normal"
+    ) {
+      throw new JournalLexicalAdapterError(
+        "unsupported_mark",
+        "Code text cannot carry marks.",
+      );
+    }
+    text += child.getTextContent();
+  }
+  return text;
+}
+
 function $lexicalListToJournalItems(
   list: ListNode,
   depth: number,
-  expectedListType: "bullet" | "number",
+  expectedListType: ListType,
 ): JournalListItem[] {
   if (depth > MAX_JOURNAL_LIST_DEPTH) {
     throw new JournalLexicalAdapterError(
@@ -396,8 +520,14 @@ function $lexicalListToJournalItems(
     );
   }
   const items: JournalListItem[] = [];
+  const isTodo = expectedListType === "check";
   for (const child of list.getChildren()) {
-    if (!$isListItemNode(child) || child.getChecked() !== undefined) {
+    // `getChecked()` is derived from the parent list type, so a flag outside a
+    // to-do list is a tree that cannot be expressed and never a silent drop.
+    if (
+      !$isListItemNode(child) ||
+      (!isTodo && child.getChecked() !== undefined)
+    ) {
       throw new JournalLexicalAdapterError(
         "invalid_tree",
         "List contains an unsupported item.",
@@ -439,9 +569,12 @@ function $lexicalListToJournalItems(
       continue;
     }
 
+    // Key order matches the contract's normalizer, whose stable serialization
+    // is `JSON.stringify`.
     const item: JournalListItem = {
       spans: $inlineChildrenToSpans(inlineChildren),
     };
+    if (isTodo) item.checked = child.getChecked() ?? false;
     if (nestedItems) item.items = nestedItems;
     items.push(item);
   }
@@ -518,7 +651,7 @@ function $pushTextSpan(
   href: string | undefined,
 ) {
   if (
-    (textNode.getFormat() & ~3) !== 0 ||
+    (textNode.getFormat() & ~JOURNAL_TEXT_FORMAT_MASK) !== 0 ||
     textNode.getDetail() !== 0 ||
     textNode.getMode() !== "normal" ||
     textNode.getStyle() !== ""
@@ -528,9 +661,13 @@ function $pushTextSpan(
       "Text contains unsupported formatting or behavior.",
     );
   }
+  // Pushed in the contract's canonical mark order, which is also what
+  // normalization sorts to; `marksKey` below relies on that order to merge
+  // adjacent spans carrying the same emphasis.
   const marks: JournalInlineMark[] = [];
-  if (textNode.hasFormat("bold")) marks.push({ type: "bold" });
-  if (textNode.hasFormat("italic")) marks.push({ type: "italic" });
+  for (const format of JOURNAL_MARK_ORDERED_FORMATS) {
+    if (textNode.hasFormat(format)) marks.push({ type: format });
+  }
   if (href) marks.push({ type: "link", href });
   $pushSpan(spans, {
     text: textNode.getTextContent(),

@@ -198,6 +198,64 @@
     scrollbar-width: none;
   }
 
+  /* The composer's callout draws its icon from `data-icon` so the node's DOM
+     children stay exactly the ones Lexical manages (ADR-0028). */
+  .journal-callout::before {
+    content: attr(data-icon);
+    flex: none;
+    line-height: 1.75rem;
+    user-select: none;
+  }
+
+  /* Lexical marks a leaf to-do item with role=checkbox and aria-checked; the
+     box lives in the item's own left margin, so the text keeps the same left
+     edge as every other list. */
+  .journal-checklist-item {
+    position: relative;
+    list-style: none;
+  }
+
+  .journal-checklist-item[role="checkbox"]::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: -1.5rem;
+    top: 0.3125rem;
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.1875rem;
+    background-color: var(--background);
+    cursor: pointer;
+  }
+
+  .journal-checklist-item[aria-checked="true"] {
+    color: var(--muted-foreground);
+    text-decoration: line-through;
+  }
+
+  .journal-checklist-item[aria-checked="true"]::before {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .journal-checklist-item[aria-checked="true"]::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: -1.0625rem;
+    top: 0.5rem;
+    width: 0.3125rem;
+    height: 0.5625rem;
+    border-color: var(--primary-foreground);
+    border-style: solid;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .journal-checklist-item[role="checkbox"]:focus-visible::before {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
   .feed-filter-scroll::-webkit-scrollbar {
     display: none;
   }

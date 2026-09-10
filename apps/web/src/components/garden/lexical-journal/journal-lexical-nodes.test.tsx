@@ -9,15 +9,20 @@ import {
   createEditor,
   DELETE_CHARACTER_COMMAND,
   INSERT_PARAGRAPH_COMMAND,
+  KEY_ENTER_COMMAND,
 } from "lexical";
 import { describe, expect, it } from "vitest";
 
 import {
+  $createOverGardenCalloutNode,
+  $createOverGardenCodeNode,
   $createOverGardenImageNode,
   $createOverGardenQuoteAttributionNode,
   $createOverGardenQuoteBodyNode,
   $createOverGardenQuoteNode,
   $getJournalBlockId,
+  $isOverGardenCalloutNode,
+  $isOverGardenCodeNode,
   $isOverGardenQuoteBodyNode,
   $isOverGardenQuoteNode,
   $setJournalBlockId,
@@ -373,5 +378,120 @@ describe("OverGarden Lexical nodes", () => {
       expect.objectContaining({ type: "paragraph", spans: [{ text: "B" }] }),
     );
     expect(blocks[1].id).toMatch(JOURNAL_BLOCK_ID_PATTERN);
+  });
+});
+
+describe("Callout and code nodes (ADR-0028)", () => {
+  it("carries the callout icon in NodeState, changeable in place", () => {
+    using editor = buildEditorFromExtensions(
+      createJournalLexicalExtension({
+        initialDocument: {
+          schemaVersion: 1,
+          blocks: [
+            {
+              id: "c1",
+              type: "callout",
+              icon: "🌱",
+              spans: [{ text: "тінь" }],
+            },
+          ],
+        },
+      }),
+    );
+
+    editor.update(
+      () => {
+        const callout = $getRoot().getFirstChildOrThrow();
+        if (!$isOverGardenCalloutNode(callout)) {
+          throw new Error("expected a callout");
+        }
+        expect(callout.getIcon()).toBe("🌱");
+        callout.setIcon("⚠️");
+      },
+      { discrete: true },
+    );
+
+    // The icon is node state, not a DOM child: the callout's content is
+    // exactly the inline run Lexical reconciles, and the icon rides beside it.
+    expect(
+      lexicalEditorStateToJournalDocumentV1(editor.getEditorState()).blocks[0],
+    ).toEqual({
+      id: "c1",
+      type: "callout",
+      icon: "⚠️",
+      spans: [{ text: "тінь" }],
+    });
+  });
+
+  it("keeps Enter inside a code block, and lets the second Enter leave it", () => {
+    using editor = buildEditorFromExtensions(
+      createJournalLexicalExtension({
+        initialDocument: {
+          schemaVersion: 1,
+          blocks: [
+            { id: "k1", type: "code", language: "plain", text: "select 1;" },
+          ],
+        },
+      }),
+    );
+
+    const pressEnter = () => {
+      editor.update(
+        () => {
+          editor.dispatchCommand(KEY_ENTER_COMMAND, null);
+        },
+        { discrete: true },
+      );
+    };
+
+    editor.update(
+      () => {
+        const code = $getRoot().getFirstChildOrThrow();
+        if (!$isElementNode(code)) throw new Error("expected the code block");
+        code.selectEnd();
+      },
+      { discrete: true },
+    );
+
+    pressEnter();
+    expect(
+      lexicalEditorStateToJournalDocumentV1(editor.getEditorState()).blocks,
+    ).toEqual([
+      { id: "k1", type: "code", language: "plain", text: "select 1;\n" },
+    ]);
+
+    // The Enter that follows the now-empty last line leaves the block and
+    // takes the trailing break with it, so the caret is never trapped.
+    pressEnter();
+    const blocks = lexicalEditorStateToJournalDocumentV1(
+      editor.getEditorState(),
+    ).blocks;
+    expect(blocks[0]).toEqual({
+      id: "k1",
+      type: "code",
+      language: "plain",
+      text: "select 1;",
+    });
+    expect(blocks[1]?.type).toBe("paragraph");
+    expect(blocks[1]?.id).toMatch(JOURNAL_BLOCK_ID_PATTERN);
+  });
+
+  it("gives a callout and a code block their own application IDs", () => {
+    const editor = createEditor({ namespace: "journal-new-ids", nodes: NODES });
+    editor.update(
+      () => {
+        const callout = $createOverGardenCalloutNode("c1");
+        const code = $createOverGardenCodeNode("k1", "json");
+        $getRoot().clear().append(callout, code);
+      },
+      { discrete: true },
+    );
+
+    editor.getEditorState().read(() => {
+      const [callout, code] = $getRoot().getChildren();
+      expect($getJournalBlockId(callout!)).toBe("c1");
+      expect($getJournalBlockId(code!)).toBe("k1");
+      expect($isOverGardenCodeNode(code)).toBe(true);
+    });
   });
 });

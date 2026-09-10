@@ -224,7 +224,7 @@ function JournalDocumentBlockView({
           data-block-id={block.id}
           data-block-type="code"
           data-language={block.language}
-          className="overflow-x-auto rounded-md border border-border bg-muted/40 p-3 font-mono text-sm leading-6"
+          className="overflow-x-auto rounded-md border border-border bg-muted/40 p-3 font-mono text-sm leading-6 whitespace-pre-wrap"
         >
           <code className={`language-${block.language}`}>{block.text}</code>
         </pre>

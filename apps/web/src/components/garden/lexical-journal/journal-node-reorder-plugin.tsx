@@ -580,6 +580,10 @@ function mapLexicalNodeType(
       return "list";
     case "overgarden-quote":
       return "quote";
+    case "overgarden-callout":
+      return "callout";
+    case "overgarden-code":
+      return "code";
     case "horizontalrule":
       return "delimiter";
     case "overgarden-image":
