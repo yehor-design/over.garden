@@ -16,7 +16,74 @@ export const MAX_JOURNAL_BLOCK_ID_CHARS = 64;
 export const JOURNAL_BLOCK_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 export const MAX_JOURNAL_MEDIA_ALT_CHARS = 300;
 export const MAX_JOURNAL_MEDIA_CAPTION_CHARS = 500;
-export type JournalInlineMarkType = "bold" | "italic" | "link";
+
+/**
+ * Notion's basic blocks joined the closed grammar (ADR-0028). Both of these
+ * lists stay closed: an icon and a language are chosen from them by the
+ * composer, never typed, so neither field can ever carry arbitrary text.
+ */
+export const JOURNAL_CALLOUT_ICONS = [
+  "💡",
+  "🌱",
+  "💧",
+  "☀️",
+  "❄️",
+  "🐛",
+  "🌡️",
+  "📅",
+  "📌",
+  "⚠️",
+  "✅",
+  "❗",
+] as const;
+export type JournalCalloutIcon = (typeof JOURNAL_CALLOUT_ICONS)[number];
+export const DEFAULT_JOURNAL_CALLOUT_ICON: JournalCalloutIcon =
+  JOURNAL_CALLOUT_ICONS[0];
+
+export const JOURNAL_CODE_LANGUAGES = [
+  "plain",
+  "bash",
+  "css",
+  "html",
+  "javascript",
+  "json",
+  "markdown",
+  "python",
+  "sql",
+  "typescript",
+  "yaml",
+] as const;
+export type JournalCodeLanguage = (typeof JOURNAL_CODE_LANGUAGES)[number];
+export const DEFAULT_JOURNAL_CODE_LANGUAGE: JournalCodeLanguage =
+  JOURNAL_CODE_LANGUAGES[0];
+
+export type JournalInlineMarkType =
+  | "bold"
+  | "italic"
+  | "underline"
+  | "strikethrough"
+  | "code"
+  | "link";
+
+/**
+ * One canonical mark order. Normalization sorts by it, so the same emphasis
+ * always serializes to the same bytes and `semanticJournalDocumentHash` cannot
+ * move when only the order does. It is also the nesting order a renderer
+ * applies, innermost first: `<code>` hugs the text, a link wraps everything.
+ */
+const JOURNAL_MARK_ORDER: readonly JournalInlineMarkType[] = [
+  "code",
+  "bold",
+  "italic",
+  "underline",
+  "strikethrough",
+  "link",
+];
+
+export function journalMarkRank(type: JournalInlineMarkType): number {
+  const index = JOURNAL_MARK_ORDER.indexOf(type);
+  return index < 0 ? JOURNAL_MARK_ORDER.length : index;
+}
 
 export interface JournalTextSpan {
   text: string;
@@ -31,6 +98,18 @@ export interface JournalItalicMark {
   type: "italic";
 }
 
+export interface JournalUnderlineMark {
+  type: "underline";
+}
+
+export interface JournalStrikethroughMark {
+  type: "strikethrough";
+}
+
+export interface JournalCodeMark {
+  type: "code";
+}
+
 export interface JournalLinkMark {
   type: "link";
   href: string;
@@ -39,6 +118,9 @@ export interface JournalLinkMark {
 export type JournalInlineMark =
   | JournalBoldMark
   | JournalItalicMark
+  | JournalUnderlineMark
+  | JournalStrikethroughMark
+  | JournalCodeMark
   | JournalLinkMark;
 
 export interface JournalParagraphBlock {
@@ -50,19 +132,21 @@ export interface JournalParagraphBlock {
 export interface JournalHeadingBlock {
   id: string;
   type: "heading";
-  level: 2 | 3;
+  level: 1 | 2 | 3;
   spans: JournalTextSpan[];
 }
 
 export interface JournalListItem {
   spans: JournalTextSpan[];
+  /** Present exactly on the items of a `todo` list, never on the others. */
+  checked?: boolean;
   items?: JournalListItem[];
 }
 
 export interface JournalListBlock {
   id: string;
   type: "list";
-  style: "unordered" | "ordered";
+  style: "unordered" | "ordered" | "todo";
   items: JournalListItem[];
 }
 
@@ -71,6 +155,22 @@ export interface JournalQuoteBlock {
   type: "quote";
   spans: JournalTextSpan[];
   attributionSpans?: JournalTextSpan[];
+}
+
+export interface JournalCalloutBlock {
+  id: string;
+  type: "callout";
+  /** Always present after normalization; an omitted icon takes the default. */
+  icon: JournalCalloutIcon;
+  spans: JournalTextSpan[];
+}
+
+export interface JournalCodeBlock {
+  id: string;
+  type: "code";
+  /** Always present after normalization; an omitted language means `plain`. */
+  language: JournalCodeLanguage;
+  text: string;
 }
 
 export interface JournalDelimiterBlock {
@@ -89,6 +189,8 @@ export type JournalDocumentBlock =
   | JournalHeadingBlock
   | JournalListBlock
   | JournalQuoteBlock
+  | JournalCalloutBlock
+  | JournalCodeBlock
   | JournalDelimiterBlock
   | JournalImageBlock;
 
@@ -302,6 +404,12 @@ export function journalDocumentHasMeaningfulBody(
           return true;
         }
         break;
+      case "callout":
+        if (spansHaveMeaningfulText(block.spans)) return true;
+        break;
+      case "code":
+        if (block.text.trim().length > 0) return true;
+        break;
       case "list":
         if (listItemsHaveMeaningfulText(block.items)) return true;
         break;
@@ -350,6 +458,12 @@ export function extractJournalDocumentPlainText(
         parts.push(attribution ? `${quote}\n${attribution}` : quote);
         break;
       }
+      case "callout":
+        parts.push(spansToPlainText(block.spans));
+        break;
+      case "code":
+        parts.push(block.text);
+        break;
       case "list":
         parts.push(listItemsToPlainText(block.items));
         break;
@@ -420,6 +534,8 @@ export function journalDocumentHasFormatting(
       case "heading":
       case "list":
       case "quote":
+      case "callout":
+      case "code":
       case "delimiter":
         return true;
       case "paragraph":
@@ -494,6 +610,10 @@ function blockIsMeaningfulWithoutCaption(block: JournalDocumentBlock): boolean {
         spansHaveMeaningfulText(block.spans) ||
         spansHaveMeaningfulText(block.attributionSpans ?? [])
       );
+    case "callout":
+      return spansHaveMeaningfulText(block.spans);
+    case "code":
+      return block.text.trim().length > 0;
     case "list":
       return listItemsHaveMeaningfulText(block.items);
     case "image":
@@ -535,10 +655,10 @@ function normalizeBlock(
     case "heading": {
       assertOnlyKeys(record, ["id", "type", "level", "spans"]);
       const level = record.level;
-      if (level !== 2 && level !== 3) {
+      if (level !== 1 && level !== 2 && level !== 3) {
         throw new JournalDocumentValidationError(
           "invalid_block",
-          "Heading level must be 2 or 3.",
+          "Heading level must be 1, 2, or 3.",
         );
       }
       return {
@@ -551,17 +671,17 @@ function normalizeBlock(
     case "list": {
       assertOnlyKeys(record, ["id", "type", "style", "items"]);
       const style = record.style;
-      if (style !== "unordered" && style !== "ordered") {
+      if (style !== "unordered" && style !== "ordered" && style !== "todo") {
         throw new JournalDocumentValidationError(
           "invalid_block",
-          "List style must be unordered or ordered.",
+          "List style must be unordered, ordered, or todo.",
         );
       }
       return {
         id,
         type: "list",
         style,
-        items: normalizeListItems(record.items, 1),
+        items: normalizeListItems(record.items, 1, style),
       };
     }
     case "quote": {
@@ -579,6 +699,22 @@ function normalizeBlock(
           : {}),
       };
     }
+    case "callout":
+      assertOnlyKeys(record, ["id", "type", "icon", "spans"]);
+      return {
+        id,
+        type: "callout",
+        icon: normalizeCalloutIcon(record.icon),
+        spans: normalizeSpans(record.spans),
+      };
+    case "code":
+      assertOnlyKeys(record, ["id", "type", "language", "text"]);
+      return {
+        id,
+        type: "code",
+        language: normalizeCodeLanguage(record.language),
+        text: normalizeCodeText(record.text),
+      };
     case "delimiter":
       assertOnlyKeys(record, ["id", "type"]);
       return { id, type: "delimiter" };
@@ -670,14 +806,17 @@ function normalizeMarks(value: unknown): JournalInlineMark[] {
     );
   }
   const marks: JournalInlineMark[] = [];
-  const seen = new Set<string>();
+  const seen = new Set<JournalInlineMarkType>();
   for (const raw of value) {
     const mark = normalizeMark(raw);
-    const key = mark.type === "link" ? `link:${mark.href}` : mark.type;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    // At most one mark of each type. A span carrying two links would render as
+    // nested anchors, which is invalid HTML, so the first href wins and the
+    // rest are dropped rather than refused: normalization repairs here.
+    if (seen.has(mark.type)) continue;
+    seen.add(mark.type);
     marks.push(mark);
   }
+  marks.sort((a, b) => journalMarkRank(a.type) - journalMarkRank(b.type));
   return marks;
 }
 
@@ -696,6 +835,15 @@ function normalizeMark(value: unknown): JournalInlineMark {
     case "italic":
       assertOnlyKeys(record, ["type"]);
       return { type: "italic" };
+    case "underline":
+      assertOnlyKeys(record, ["type"]);
+      return { type: "underline" };
+    case "strikethrough":
+      assertOnlyKeys(record, ["type"]);
+      return { type: "strikethrough" };
+    case "code":
+      assertOnlyKeys(record, ["type"]);
+      return { type: "code" };
     case "link": {
       assertOnlyKeys(record, ["type", "href"]);
       return { type: "link", href: normalizeSafeHref(record.href) };
@@ -708,7 +856,11 @@ function normalizeMark(value: unknown): JournalInlineMark {
   }
 }
 
-function normalizeListItems(value: unknown, depth: number): JournalListItem[] {
+function normalizeListItems(
+  value: unknown,
+  depth: number,
+  style: JournalListBlock["style"],
+): JournalListItem[] {
   if (depth > MAX_JOURNAL_LIST_DEPTH) {
     throw new JournalDocumentValidationError(
       "invalid_block",
@@ -729,14 +881,80 @@ function normalizeListItems(value: unknown, depth: number): JournalListItem[] {
       );
     }
     const record = item as Record<string, unknown>;
-    assertOnlyKeys(record, ["spans", "items"]);
+    assertOnlyKeys(record, ["spans", "checked", "items"]);
     const spans = normalizeSpans(record.spans);
     const nested =
       record.items === undefined
         ? undefined
-        : normalizeListItems(record.items, depth + 1);
-    return nested && nested.length > 0 ? { spans, items: nested } : { spans };
+        : normalizeListItems(record.items, depth + 1, style);
+    // Key order is fixed here because `stableSerializeJournalDocument` is
+    // `JSON.stringify`, which serializes in insertion order.
+    const normalized: JournalListItem = { spans };
+    if (style === "todo") {
+      normalized.checked = normalizeListItemChecked(record.checked);
+    } else if (record.checked !== undefined) {
+      throw new JournalDocumentValidationError(
+        "invalid_block",
+        "Only a to-do list item may carry a checked flag.",
+      );
+    }
+    if (nested && nested.length > 0) normalized.items = nested;
+    return normalized;
   });
+}
+
+function normalizeListItemChecked(value: unknown): boolean {
+  if (value === undefined) return false;
+  if (typeof value !== "boolean") {
+    throw new JournalDocumentValidationError(
+      "invalid_block",
+      "List item checked must be a boolean.",
+    );
+  }
+  return value;
+}
+
+function normalizeCalloutIcon(value: unknown): JournalCalloutIcon {
+  if (value === undefined) return DEFAULT_JOURNAL_CALLOUT_ICON;
+  const icon = typeof value === "string" ? value.normalize("NFC") : null;
+  if (!icon || !(JOURNAL_CALLOUT_ICONS as readonly string[]).includes(icon)) {
+    throw new JournalDocumentValidationError(
+      "invalid_block",
+      "Callout icon is outside the closed set.",
+    );
+  }
+  return icon as JournalCalloutIcon;
+}
+
+function normalizeCodeLanguage(value: unknown): JournalCodeLanguage {
+  if (value === undefined) return DEFAULT_JOURNAL_CODE_LANGUAGE;
+  if (
+    typeof value !== "string" ||
+    !(JOURNAL_CODE_LANGUAGES as readonly string[]).includes(value)
+  ) {
+    throw new JournalDocumentValidationError(
+      "invalid_block",
+      "Code language is outside the closed set.",
+    );
+  }
+  return value as JournalCodeLanguage;
+}
+
+function normalizeCodeText(value: unknown): string {
+  if (typeof value !== "string") {
+    throw new JournalDocumentValidationError(
+      "invalid_block",
+      "Code text must be a string.",
+    );
+  }
+  const text = value.normalize("NFC").replace(/\r\n/g, "\n");
+  if (text.includes("\0")) {
+    throw new JournalDocumentValidationError(
+      "invalid_block",
+      "Text may not contain null bytes.",
+    );
+  }
+  return text;
 }
 
 export function normalizeSafeHref(value: unknown): string {

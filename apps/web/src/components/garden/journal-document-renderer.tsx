@@ -2,12 +2,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
-import type {
-  JournalDocumentBlock,
-  JournalDocumentV1,
-  JournalInlineMark,
-  JournalListItem,
-  JournalTextSpan,
+import {
+  journalMarkRank,
+  type JournalDocumentBlock,
+  type JournalDocumentV1,
+  type JournalInlineMark,
+  type JournalListBlock,
+  type JournalListItem,
+  type JournalTextSpan,
 } from "@/lib/garden/journal-document";
 import { cn } from "@/lib/utils";
 
@@ -98,6 +100,22 @@ function JournalDocumentBlockView({
         </p>
       );
     case "heading":
+      // The page's one `h1` is the entry title, so the document's largest
+      // heading is an `h2` that is merely typeset larger. `data-level` keeps
+      // the document's own level addressable; levels 2 and 3 render exactly the
+      // tags and classes they always have.
+      if (block.level === 1) {
+        return (
+          <h2
+            data-block-id={block.id}
+            data-block-type="heading"
+            data-level={1}
+            className="text-2xl font-semibold tracking-tight"
+          >
+            <RichText spans={block.spans} />
+          </h2>
+        );
+      }
       if (block.level === 2) {
         return (
           <h2
@@ -120,30 +138,49 @@ function JournalDocumentBlockView({
           <RichText spans={block.spans} />
         </h3>
       );
-    case "list":
-      return block.style === "ordered" ? (
-        <ol
-          data-block-id={block.id}
-          data-block-type="list"
-          data-list-style="ordered"
-          className="list-decimal space-y-1 pl-5"
-        >
-          {block.items.map((item, index) => (
-            <ListItemView key={`${block.id}-${index}`} item={item} />
-          ))}
-        </ol>
-      ) : (
+    case "list": {
+      const items = block.items.map((item, index) => (
+        <ListItemView
+          key={`${block.id}-${index}`}
+          item={item}
+          listStyle={block.style}
+        />
+      ));
+      if (block.style === "ordered") {
+        return (
+          <ol
+            data-block-id={block.id}
+            data-block-type="list"
+            data-list-style="ordered"
+            className="list-decimal space-y-1 pl-5"
+          >
+            {items}
+          </ol>
+        );
+      }
+      if (block.style === "todo") {
+        return (
+          <ul
+            data-block-id={block.id}
+            data-block-type="list"
+            data-list-style="todo"
+            className="grid list-none gap-1 pl-0"
+          >
+            {items}
+          </ul>
+        );
+      }
+      return (
         <ul
           data-block-id={block.id}
           data-block-type="list"
           data-list-style="unordered"
           className="list-disc space-y-1 pl-5"
         >
-          {block.items.map((item, index) => (
-            <ListItemView key={`${block.id}-${index}`} item={item} />
-          ))}
+          {items}
         </ul>
       );
+    }
     case "quote":
       return (
         <blockquote
@@ -155,11 +192,42 @@ function JournalDocumentBlockView({
             <RichText spans={block.spans} />
           </p>
           {block.attributionSpans && block.attributionSpans.length > 0 ? (
-            <footer className="mt-2 text-sm not-italic text-muted-foreground">
+            <footer className="mt-2 text-sm text-muted-foreground not-italic">
               <RichText spans={block.attributionSpans} />
             </footer>
           ) : null}
         </blockquote>
+      );
+    case "callout":
+      // `role="note"` rather than `aside`: several callouts in one entry would
+      // otherwise each become a complementary landmark in a screen reader's
+      // landmark list, which is noise, not structure.
+      return (
+        <div
+          data-block-id={block.id}
+          data-block-type="callout"
+          data-icon={block.icon}
+          role="note"
+          className="flex gap-3 rounded-md border border-border bg-muted/40 p-3"
+        >
+          <span aria-hidden="true" className="shrink-0 select-none">
+            {block.icon}
+          </span>
+          <p className="min-w-0">
+            <RichText spans={block.spans} />
+          </p>
+        </div>
+      );
+    case "code":
+      return (
+        <pre
+          data-block-id={block.id}
+          data-block-type="code"
+          data-language={block.language}
+          className="overflow-x-auto rounded-md border border-border bg-muted/40 p-3 font-mono text-sm leading-6"
+        >
+          <code className={`language-${block.language}`}>{block.text}</code>
+        </pre>
       );
     case "delimiter":
       return (
@@ -216,17 +284,59 @@ function JournalDocumentBlockView({
   }
 }
 
-function ListItemView({ item }: { item: JournalListItem }) {
+function ListItemView({
+  item,
+  listStyle,
+}: {
+  item: JournalListItem;
+  listStyle: JournalListBlock["style"];
+}) {
+  const nested =
+    item.items && item.items.length > 0 ? (
+      <ul
+        className={
+          listStyle === "todo"
+            ? "mt-1 grid list-none gap-1 pl-6"
+            : "mt-1 list-disc space-y-1 pl-5"
+        }
+      >
+        {item.items.map((child, index) => (
+          <ListItemView key={index} item={child} listStyle={listStyle} />
+        ))}
+      </ul>
+    ) : null;
+
+  if (listStyle === "todo") {
+    const checked = item.checked ?? false;
+    return (
+      <li data-checked={checked ? "true" : "false"}>
+        {/* The label gives the disabled checkbox its accessible name, so the
+            state is announced with the text it belongs to and no script runs. */}
+        <label className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            checked={checked}
+            disabled
+            readOnly
+            className="mt-1.5 size-4 shrink-0 accent-primary"
+          />
+          <span
+            className={
+              checked ? "min-w-0 text-muted-foreground line-through" : "min-w-0"
+            }
+          >
+            <RichText spans={item.spans} />
+          </span>
+        </label>
+        {nested}
+      </li>
+    );
+  }
+
   return (
     <li>
       <RichText spans={item.spans} />
-      {item.items && item.items.length > 0 ? (
-        <ul className="mt-1 list-disc space-y-1 pl-5">
-          {item.items.map((nested, index) => (
-            <ListItemView key={index} item={nested} />
-          ))}
-        </ul>
-      ) : null}
+      {nested}
     </li>
   );
 }
@@ -251,8 +361,11 @@ function SpanView({ span }: { span: JournalTextSpan }) {
   ));
 
   const marks = span.marks ?? [];
-  // Innermost first for nesting: bold -> italic -> link.
-  const ordered = [...marks].sort((a, b) => markNestRank(a) - markNestRank(b));
+  // Innermost first: code -> bold -> italic -> underline -> strikethrough ->
+  // link, the one order the contract also normalizes to.
+  const ordered = [...marks].sort(
+    (a, b) => journalMarkRank(a.type) - journalMarkRank(b.type),
+  );
   for (const mark of ordered) {
     node = wrapMark(node, mark);
   }
@@ -265,13 +378,17 @@ function wrapMark(node: ReactNode, mark: JournalInlineMark): ReactNode {
       return <strong>{node}</strong>;
     case "italic":
       return <em>{node}</em>;
+    case "underline":
+      return <u>{node}</u>;
+    case "strikethrough":
+      return <s>{node}</s>;
+    case "code":
+      return (
+        <code className="rounded bg-muted px-1 py-0.5 font-mono">{node}</code>
+      );
     case "link":
       return isExternalHref(mark.href) ? (
-        <a
-          href={mark.href}
-          rel="nofollow noopener noreferrer"
-          target="_blank"
-        >
+        <a href={mark.href} rel="nofollow noopener noreferrer" target="_blank">
           {node}
         </a>
       ) : (
@@ -281,22 +398,6 @@ function wrapMark(node: ReactNode, mark: JournalInlineMark): ReactNode {
       const _exhaustive: never = mark;
       void _exhaustive;
       return node;
-    }
-  }
-}
-
-function markNestRank(mark: JournalInlineMark): number {
-  switch (mark.type) {
-    case "bold":
-      return 0;
-    case "italic":
-      return 1;
-    case "link":
-      return 2;
-    default: {
-      const _exhaustive: never = mark;
-      void _exhaustive;
-      return 9;
     }
   }
 }

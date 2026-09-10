@@ -188,6 +188,12 @@ function $journalBlockToLexicalNode(block: JournalDocumentBlock): LexicalNode {
       return node;
     }
     case "list": {
+      if (block.style === "todo") {
+        throw new JournalLexicalAdapterError(
+          "unsupported_node",
+          "To-do lists are outside the editor grammar.",
+        );
+      }
       const node = $setJournalBlockId(
         $createListNode(block.style === "ordered" ? "number" : "bullet"),
         block.id,
@@ -207,6 +213,14 @@ function $journalBlockToLexicalNode(block: JournalDocumentBlock): LexicalNode {
       }
       return quote;
     }
+    // The contract admits these; the editor grammar does not yet. A document
+    // carrying one fails closed here rather than being silently reshaped.
+    case "callout":
+    case "code":
+      throw new JournalLexicalAdapterError(
+        "unsupported_node",
+        `Canonical block is outside the editor grammar: ${block.type}.`,
+      );
     case "delimiter":
       return $setJournalBlockId($createHorizontalRuleNode(), block.id);
     case "image":
