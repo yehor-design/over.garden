@@ -1,10 +1,9 @@
 "use client";
 
-import {
-  AriaLiveRegionExtension,
-  FocusManagerExtension,
-  RovingTabIndexExtension,
-} from "@lexical/a11y";
+// The focus-manager and roving-tabindex extensions went with the button row
+// they served (ADR-0028 D6): the slash menu is an `aria-activedescendant`
+// listbox and the block menu is a base-ui menu, and neither needs them.
+import { AriaLiveRegionExtension } from "@lexical/a11y";
 import {
   configExtension,
   defineExtension,
@@ -149,8 +148,6 @@ export function createJournalLexicalExtension({
         maxDepth: 100,
       }),
       AriaLiveRegionExtension,
-      FocusManagerExtension,
-      RovingTabIndexExtension,
     ],
     $initialEditorState: () => {
       $hydrateJournalDocumentV1(normalized);

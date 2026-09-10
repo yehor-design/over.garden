@@ -33,8 +33,8 @@ import {
   lexicalEditorStateToJournalDocumentV1,
 } from "@/lib/garden/journal-document-lexical-adapter";
 import { JOURNAL_BLOCK_ID_PATTERN } from "@/lib/garden/journal-document";
+import { $turnJournalBlockInto } from "./journal-block-commands";
 import { createJournalLexicalExtension } from "./journal-lexical-extensions";
-import { $formatSelectedJournalBlockAsList } from "./journal-lexical-toolbar";
 
 const NODES = [...JOURNAL_LEXICAL_NODE_CLASSES];
 
@@ -282,7 +282,7 @@ describe("OverGarden Lexical nodes", () => {
         const selected = $getRoot().getChildAtIndex(1);
         if (!$isElementNode(selected)) throw new Error("Expected paragraph");
         selected.selectStart();
-        expect($formatSelectedJournalBlockAsList("bullet")).toBe(true);
+        expect($turnJournalBlockInto("bulletList")).toBe(true);
       },
       { discrete: true },
     );

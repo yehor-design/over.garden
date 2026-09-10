@@ -24,6 +24,7 @@ import {
 import {
   $createOverGardenCalloutNode,
   $createOverGardenCodeNode,
+  $createOverGardenQuoteAttributionNode,
   $createOverGardenQuoteBodyNode,
   $createOverGardenQuoteNode,
   $getJournalBlockId,
@@ -200,6 +201,35 @@ export function $replaceJournalBlockWithDelimiter(
   block.replace(rule);
   rule.insertAfter(paragraph);
   paragraph.selectStart();
+  return true;
+}
+
+/**
+ * A quote's attribution is the one field no block type carries, so it is a
+ * toggle on the quote rather than a command in the registry. The retired
+ * button row was its only route; the block menu is its route now.
+ */
+export function $journalQuoteHasAttribution(block: ElementNode): boolean {
+  return (
+    $isOverGardenQuoteNode(block) &&
+    block.getChildren().some($isOverGardenQuoteAttributionNode)
+  );
+}
+
+export function $toggleJournalQuoteAttribution(
+  block: ElementNode | null = $selectedJournalTopLevelBlock(),
+): boolean {
+  if (!block || !$isOverGardenQuoteNode(block)) return false;
+  const existing = block.getChildren().find($isOverGardenQuoteAttributionNode);
+  if (existing) {
+    const body = block.getFirstChild();
+    existing.remove();
+    if ($isElementNode(body)) body.selectEnd();
+    return true;
+  }
+  const attribution = $createOverGardenQuoteAttributionNode();
+  block.append(attribution);
+  attribution.selectStart();
   return true;
 }
 

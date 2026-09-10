@@ -31,6 +31,10 @@ const HEADING_BY_DIGIT: Record<string, JournalBlockCommandId> = {
   "0": "paragraph",
 };
 
+/** The blocks a shortcut alone can reach, for the coverage test. */
+export const JOURNAL_SHORTCUT_COMMAND_IDS: readonly JournalBlockCommandId[] =
+  Object.values(HEADING_BY_DIGIT);
+
 export const JOURNAL_SHORTCUTS: readonly JournalShortcut[] = [
   {
     key: "s",

@@ -80,30 +80,21 @@ export interface StructuredJournalComposerLabels {
   dateLabel: string;
   saveLabel: string;
   tools: {
+    /** Accessible name of the floating selection toolbar. */
     toolbar: string;
     editor: string;
-    paragraph: string;
-    header: string;
-    heading2: string;
-    heading3: string;
-    list: string;
-    unorderedList: string;
-    orderedList: string;
-    indentList: string;
-    outdentList: string;
-    quote: string;
-    quoteAttribution: string;
-    removeQuoteAttribution: string;
-    delimiter: string;
-    image: string;
     bold: string;
     italic: string;
+    underline: string;
+    strikethrough: string;
+    code: string;
     link: string;
     applyLink: string;
     cancelLink: string;
-    undo: string;
-    redo: string;
+    quoteAttribution: string;
+    removeQuoteAttribution: string;
   };
+
   reorder: JournalBlockReorderCopy;
   blocks: JournalBlockCommandCopy;
 }

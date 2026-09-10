@@ -21,9 +21,9 @@ import {
   JournalImagePreviewProvider,
 } from "./journal-lexical-nodes";
 import { createJournalLexicalExtension } from "./journal-lexical-extensions";
-import { JournalLexicalToolbar } from "./journal-lexical-toolbar";
 import { JournalBlockGutter } from "./journal-block-gutter";
 import { JournalPlaceholderPlugin } from "./journal-placeholder-plugin";
+import { JournalSelectionToolbar } from "./journal-selection-toolbar";
 import { JournalSlashMenu } from "./journal-slash-menu";
 import {
   moveJournalBlockById,
@@ -596,11 +596,6 @@ function JournalLexicalClientBody({
       data-reorder-ready={lifecycle === "ready" ? "true" : "false"}
       lang={locale}
     >
-      <JournalLexicalToolbar
-        labels={labels}
-        disabled={disabled}
-        onChooseImage={chooseImage}
-      />
       <div
         ref={containerRef}
         className="journal-composer-canvas group/canvas relative mx-auto min-h-40 w-full pr-2 pl-14"
@@ -617,6 +612,11 @@ function JournalLexicalClientBody({
           firstPlaceholder={labels.blocks.placeholderFirst}
           disabled={disabled}
         />
+        <JournalSelectionToolbar
+          containerRef={containerRef}
+          labels={labels}
+          disabled={disabled}
+        />
         <JournalSlashMenu
           containerRef={containerRef}
           copy={labels.blocks}
@@ -627,6 +627,7 @@ function JournalLexicalClientBody({
           containerRef={containerRef}
           copy={labels.blocks}
           reorderCopy={labels.reorder}
+          tools={labels.tools}
           disabled={disabled}
           onReorderingChange={updateReordering}
           onAnnouncement={announce}
