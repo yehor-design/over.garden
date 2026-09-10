@@ -308,6 +308,12 @@
   font-size: 0.75rem;
 }
 
+/* The lockup stacks two lines of wordmark, so it needs about twice the height
+   the single-line wordmark sat at to keep the same per-line legibility. */
+.site-shell-brand-logo {
+  height: 28px;
+}
+
 .site-shell-header-actions {
   gap: 6px;
   padding-left: 12px;
@@ -328,6 +334,10 @@
   .site-shell-brand {
     padding-inline: 16px;
     font-size: 0.875rem;
+  }
+
+  .site-shell-brand-logo {
+    height: 34px;
   }
 
   .analytics-consent-banner {

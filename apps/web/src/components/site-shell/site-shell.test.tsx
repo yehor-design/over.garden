@@ -72,6 +72,25 @@ describe("production site shell", () => {
     expect(html).not.toContain("data-interface-language-control");
   });
 
+  it("draws the brand lockup in the prerendered header and keeps its accessible name", async () => {
+    const { SiteShell } = await import("./site-shell");
+    const html = renderToStaticMarkup(
+      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+        <article>Route content</article>
+      </SiteShell>,
+    );
+
+    // The lockup is inline, so the header of the prerendered shell carries the
+    // logo itself rather than a request for one.
+    expect(html).toContain("site-shell-brand-logo");
+    expect(html).toContain('viewBox="0 0 469 235"');
+    expect(html).toContain('fill="currentColor"');
+    // The mark is decorative; the link's name has to come from real text, or a
+    // screen reader reads an unlabelled link to the home page.
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).toContain('<span class="sr-only">OverGarden</span>');
+  });
+
   it("adds the complete Bulgarian My rail without serializing account data", async () => {
     mocks.pathname = "/garden";
     const { SiteShell } = await import("./site-shell");
