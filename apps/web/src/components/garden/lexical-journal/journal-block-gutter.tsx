@@ -48,10 +48,10 @@ import {
 import {
   Menu,
   MenuContent,
+  MenuGroup,
+  MenuGroupLabel,
   MenuItem,
   MenuSeparator,
-  MenuSubmenu,
-  MenuSubTrigger,
 } from "@/components/ui/menu";
 import type {
   JournalBlockCommandCopy,
@@ -174,8 +174,17 @@ export function JournalBlockGutter({
     });
   }, [positionGutter]);
 
+  const onReorderingChangeRef = useRef(onReorderingChange);
+  useEffect(() => {
+    onReorderingChangeRef.current = onReorderingChange;
+  }, [onReorderingChange]);
+
   useEffect(() => {
     destroyedRef.current = false;
+    if (frameRef.current !== null) {
+      window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
     const sync = () => {
       setItems(readItems());
       editor.getEditorState().read(() => {
@@ -210,15 +219,20 @@ export function JournalBlockGutter({
     };
   }, [containerRef, editor, schedulePosition]);
 
+  // Teardown runs on unmount only. Keying it on the callback would make React
+  // cancel the pending frame every time the callback's identity changed, and a
+  // cancelled frame whose id is left in the ref stops every later reposition —
+  // which is exactly what a development double-mount used to do here.
   useEffect(
     () => () => {
       destroyedRef.current = true;
       if (frameRef.current !== null) {
         window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
       }
-      onReorderingChange(false, { serialize: false });
+      onReorderingChangeRef.current(false, { serialize: false });
     },
-    [onReorderingChange],
+    [],
   );
 
   // Hover decides which block owns the gutter while the pointer is inside the
@@ -530,7 +544,7 @@ export function JournalBlockGutter({
         ref={gutterRef}
         data-journal-block-gutter="true"
         data-block-id={activeItem?.blockId}
-        className="pointer-events-auto absolute left-0 flex items-start"
+        className="pointer-events-auto absolute left-0 flex items-start gap-0.5"
         hidden={!showGutter}
       >
         <button
@@ -608,28 +622,8 @@ export function JournalBlockGutter({
           align="start"
           side="bottom"
           aria-label={copy.menu}
+          className="max-h-96 overflow-y-auto"
         >
-          <MenuSubmenu>
-            <MenuSubTrigger>{copy.turnInto}</MenuSubTrigger>
-            <MenuContent
-              align="start"
-              side="right"
-              aria-label={copy.turnInto}
-              className="max-h-80 overflow-y-auto"
-            >
-              {JOURNAL_TURN_INTO_COMMAND_IDS.map((commandId) => (
-                <MenuItem
-                  key={commandId}
-                  onClick={() => turnInto(commandId)}
-                  data-journal-turn-into={commandId}
-                  disabled={activeItem?.commandId === commandId}
-                >
-                  {copy.commands[commandId]}
-                </MenuItem>
-              ))}
-            </MenuContent>
-          </MenuSubmenu>
-          <MenuSeparator />
           <MenuItem onClick={duplicate} disabled={activeItem?.type === "image"}>
             <Copy aria-hidden="true" className="size-4" />
             {copy.duplicate}
@@ -650,6 +644,23 @@ export function JournalBlockGutter({
             <Trash2 aria-hidden="true" className="size-4" />
             {reorderCopy.deleteBlock}
           </MenuItem>
+          <MenuSeparator />
+          {/* A flat group rather than a submenu: base-ui closes the parent menu
+              with reason `sibling-open` when a nested root opens inside a
+              controlled, trigger-less menu, and one list is simpler anyway. */}
+          <MenuGroup>
+            <MenuGroupLabel>{copy.turnInto}</MenuGroupLabel>
+            {JOURNAL_TURN_INTO_COMMAND_IDS.map((commandId) => (
+              <MenuItem
+                key={commandId}
+                onClick={() => turnInto(commandId)}
+                data-journal-turn-into={commandId}
+                disabled={activeItem?.commandId === commandId}
+              >
+                {copy.commands[commandId]}
+              </MenuItem>
+            ))}
+          </MenuGroup>
         </MenuContent>
       </Menu>
 

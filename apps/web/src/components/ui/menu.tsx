@@ -105,8 +105,24 @@ function MenuSeparator({ className, ...props }: MenuPrimitive.Separator.Props) {
   );
 }
 
-function MenuSubmenu(props: MenuPrimitive.SubmenuRoot.Props) {
-  return <MenuPrimitive.SubmenuRoot data-slot="menu-submenu" {...props} />;
+function MenuGroup(props: MenuPrimitive.Group.Props) {
+  return <MenuPrimitive.Group data-slot="menu-group" {...props} />;
+}
+
+function MenuGroupLabel({
+  className,
+  ...props
+}: MenuPrimitive.GroupLabel.Props) {
+  return (
+    <MenuPrimitive.GroupLabel
+      data-slot="menu-group-label"
+      className={cn(
+        "px-2.5 py-1.5 text-xs font-medium text-muted-foreground",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 function MenuSubTrigger({
@@ -129,7 +145,8 @@ function MenuSubTrigger({
 export {
   Menu,
   MenuContent,
-  MenuSubmenu,
+  MenuGroup,
+  MenuGroupLabel,
   MenuItem,
   MenuLinkItem,
   MenuRadioGroup,

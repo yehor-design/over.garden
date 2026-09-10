@@ -99,7 +99,8 @@ repairs that rather than making the entry unrenderable.
 
 The composer adopts Notion's spatial and interaction model:
 
-- one 708 px column with a 40 px gutter;
+- one 708 px column with a 56 px gutter — Notion's own numbers, and 56 px is
+  what the add button and the drag handle actually occupy beside the text;
 - Notion's type scale and block rhythm;
 - on the hovered *or focused* block, two gutter controls — `+` to add a block
   below, `⠿` to drag it;

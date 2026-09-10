@@ -602,7 +602,7 @@ function JournalLexicalClientBody({
       />
       <div
         ref={containerRef}
-        className="journal-composer-canvas group/canvas relative mx-auto min-h-40 w-full pr-2 pl-10"
+        className="journal-composer-canvas group/canvas relative mx-auto min-h-40 w-full pr-2 pl-14"
         data-lexical-journal-canvas="true"
       >
         <ContentEditable
