@@ -29,10 +29,12 @@ import {
 
 import {
   $journalBlockCommandIdOf,
+  $journalQuoteHasAttribution,
+  $replaceJournalBlockWithDelimiter,
+  $toggleJournalQuoteAttribution,
   $turnJournalBlockInto,
   JOURNAL_BLOCK_COMMANDS,
   JOURNAL_TURN_INTO_COMMAND_IDS,
-  $replaceJournalBlockWithDelimiter,
   type JournalBlockCommandId,
 } from "./journal-block-commands";
 import {
@@ -56,6 +58,7 @@ import {
 import type {
   JournalBlockCommandCopy,
   JournalBlockReorderCopy,
+  StructuredJournalComposerLabels,
 } from "@/components/garden/structured-journal-composer";
 import { COMPOSER_PHOTO_ACCEPT } from "@/lib/garden/composer-photo-selection";
 import { $createParagraphNode } from "lexical";
@@ -71,6 +74,8 @@ interface GutterItem {
   type: keyof JournalBlockReorderCopy["blockType"];
   /** null for a block "turn into" cannot produce, such as a delimiter. */
   commandId: JournalBlockCommandId | null;
+  /** Only a quote can carry one, and only the block menu can toggle it. */
+  hasQuoteAttribution: boolean;
 }
 
 interface PointerGesture {
@@ -86,6 +91,7 @@ export interface JournalBlockGutterProps {
   containerRef: RefObject<HTMLDivElement | null>;
   copy: JournalBlockCommandCopy;
   reorderCopy: JournalBlockReorderCopy;
+  tools: StructuredJournalComposerLabels["tools"];
   disabled: boolean;
   onReorderingChange(value: boolean, options?: { serialize?: boolean }): void;
   onAnnouncement(message: string): void;
@@ -102,6 +108,7 @@ export function JournalBlockGutter({
   containerRef,
   copy,
   reorderCopy,
+  tools,
   disabled,
   onReorderingChange,
   onAnnouncement,
@@ -142,6 +149,8 @@ export function JournalBlockGutter({
           commandId: $isElementNode(node)
             ? $journalBlockCommandIdOf(node)
             : null,
+          hasQuoteAttribution:
+            $isElementNode(node) && $journalQuoteHasAttribution(node),
         });
       }
     });
@@ -354,6 +363,25 @@ export function JournalBlockGutter({
       setHoverBlockId(null);
       window.requestAnimationFrame(() => editor.focus());
     });
+  }
+
+  function toggleQuoteAttribution() {
+    if (!activeItem) return;
+    withReordering(() => {
+      editor.update(
+        () => {
+          const block = $getRoot()
+            .getChildren()
+            .find(
+              (candidate) =>
+                $getJournalBlockId(candidate) === activeItem.blockId,
+            );
+          if ($isElementNode(block)) $toggleJournalQuoteAttribution(block);
+        },
+        { discrete: true },
+      );
+    });
+    window.requestAnimationFrame(() => editor.focus());
   }
 
   function turnInto(commandId: JournalBlockCommandId) {
@@ -624,6 +652,13 @@ export function JournalBlockGutter({
           aria-label={copy.menu}
           className="max-h-96 overflow-y-auto"
         >
+          {activeItem?.commandId === "quote" ? (
+            <MenuItem onClick={toggleQuoteAttribution}>
+              {activeItem.hasQuoteAttribution
+                ? tools.removeQuoteAttribution
+                : tools.quoteAttribution}
+            </MenuItem>
+          ) : null}
           <MenuItem onClick={duplicate} disabled={activeItem?.type === "image"}>
             <Copy aria-hidden="true" className="size-4" />
             {copy.duplicate}
