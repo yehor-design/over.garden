@@ -230,7 +230,15 @@ export function lexicalEditorStateToJournalDocumentV1(
   return document;
 }
 
-function $journalBlockToLexicalNode(block: JournalDocumentBlock): LexicalNode {
+/**
+ * Exported so a block can be duplicated by the one route that is already
+ * proven to be lossless: serialize it, give the copy a fresh application ID,
+ * and hydrate it back. A tree the contract cannot express therefore cannot be
+ * duplicated either.
+ */
+export function $journalBlockToLexicalNode(
+  block: JournalDocumentBlock,
+): LexicalNode {
   switch (block.type) {
     case "paragraph": {
       const node = $setJournalBlockId($createParagraphNode(), block.id);
@@ -358,7 +366,9 @@ function $appendSpans(node: ElementNode, spans: readonly JournalTextSpan[]) {
   }
 }
 
-function $lexicalNodeToJournalBlock(node: LexicalNode): JournalDocumentBlock {
+export function $lexicalNodeToJournalBlock(
+  node: LexicalNode,
+): JournalDocumentBlock {
   if ($isParagraphNode(node)) {
     $assertCanonicalElementState(node, "Paragraph");
     const id = $requireBlockId(node);

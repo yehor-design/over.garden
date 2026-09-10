@@ -67,7 +67,9 @@ describe("OverGarden Lexical image controls", () => {
     });
 
     expect(
-      renderer!.root.findAllByType("button").every((button) => button.props.disabled),
+      renderer!.root
+        .findAllByType("button")
+        .every((button) => button.props.disabled),
     ).toBe(true);
     await act(async () => renderer!.unmount());
   });
@@ -127,10 +129,23 @@ describe("OverGarden Lexical image controls", () => {
     );
     const buttons = renderer!.root.findAllByType("button");
     expect(buttons.map((button) => button.children.join(""))).toEqual(
-      expect.arrayContaining(["Retry photo", "Replace photo", "Remove photo", "Use as cover"]),
+      expect.arrayContaining([
+        "Retry photo",
+        "Replace photo",
+        "Remove photo",
+        "Use as cover",
+      ]),
     );
-    await act(async () => buttons.find((button) => button.children.join("") === "Retry photo")!.props.onClick());
-    await act(async () => buttons.find((button) => button.children.join("") === "Use as cover")!.props.onClick());
+    await act(async () =>
+      buttons
+        .find((button) => button.children.join("") === "Retry photo")!
+        .props.onClick(),
+    );
+    await act(async () =>
+      buttons
+        .find((button) => button.children.join("") === "Use as cover")!
+        .props.onClick(),
+    );
     expect(onRetry).toHaveBeenCalledWith(
       "00000000-0000-4000-8000-000000000002",
     );

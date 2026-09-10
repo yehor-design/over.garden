@@ -58,7 +58,7 @@ import {
   OverGardenQuoteBodyNode,
   OverGardenQuoteNode,
 } from "./journal-lexical-nodes";
-import { registerJournalNodeReorder } from "./journal-node-reorder-plugin";
+import { registerJournalNodeReorder } from "./journal-block-order";
 import {
   $hydrateJournalDocumentV1,
   JOURNAL_HYDRATION_TAG,
@@ -75,30 +75,34 @@ export interface CreateJournalLexicalExtensionOptions {
   onError?: (error: Error) => void;
 }
 
+/**
+ * Notion's canvas in OverGarden's tokens (ADR-0028 D3). The numbers are
+ * Notion's own: 16 px body at 1.5, a 30/24/20 px heading scale, 2 px between
+ * sibling text blocks and a wide gap above a heading, a 24 px list indent.
+ */
 const JOURNAL_THEME: EditorThemeClasses = {
-  callout:
-    "journal-callout my-3 flex gap-3 rounded-md border border-border bg-muted/40 p-3",
-  code: "my-3 overflow-x-auto rounded-md border border-border bg-muted/40 p-3 font-mono text-sm leading-6 whitespace-pre-wrap",
+  callout: "journal-callout mt-1.5 flex gap-3 rounded-md bg-muted/50 p-4",
+  code: "mt-1.5 overflow-x-auto rounded-md bg-muted/50 p-4 font-mono text-sm leading-6 whitespace-pre-wrap",
   heading: {
-    h1: "text-2xl font-semibold leading-8",
-    h2: "text-xl font-semibold leading-7",
-    h3: "text-lg font-semibold leading-7",
+    h1: "mt-8 mb-1 text-3xl leading-tight font-semibold first:mt-0",
+    h2: "mt-6 mb-1 text-2xl leading-snug font-semibold first:mt-0",
+    h3: "mt-4 mb-1 text-xl leading-snug font-semibold first:mt-0",
   },
-  image: "my-3",
+  image: "my-2",
   link: "underline underline-offset-2",
   list: {
-    checklist: "grid list-none gap-1 pl-0",
+    checklist: "mt-0.5 grid list-none gap-0.5 pl-0",
     listitem: "ml-6",
     listitemChecked: "journal-checklist-item",
     listitemUnchecked: "journal-checklist-item",
     nested: { listitem: "ml-5" },
-    ol: "list-decimal space-y-1",
-    ul: "list-disc space-y-1",
+    ol: "mt-0.5 list-decimal space-y-0.5",
+    ul: "mt-0.5 list-disc space-y-0.5",
   },
-  paragraph: "min-h-6 leading-7",
-  quote: "border-l-2 border-border pl-4 italic",
+  paragraph: "mt-0.5 min-h-6 leading-normal",
+  quote: "mt-1.5 border-l-2 border-border pl-3.5 italic",
   quoteAttribution: "mt-2 block text-sm not-italic text-muted-foreground",
-  quoteBody: "leading-7",
+  quoteBody: "leading-normal",
   text: {
     bold: "font-semibold",
     code: "rounded bg-muted px-1 py-0.5 font-mono",

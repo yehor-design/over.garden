@@ -198,6 +198,25 @@
     scrollbar-width: none;
   }
 
+  /* Notion's content column and gutter, in the numbers Notion uses: a 708 px
+     column beside a 40 px gutter for the add button and the drag handle. */
+  .journal-composer-canvas {
+    max-width: 44.25rem;
+  }
+
+  .journal-composer-canvas [data-journal-block-dragging="true"] {
+    opacity: 0.4;
+  }
+
+  .journal-composer-canvas [data-journal-placeholder]::before {
+    content: attr(data-journal-placeholder);
+    color: var(--muted-foreground);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    user-select: none;
+  }
+
   /* The composer's callout draws its icon from `data-icon` so the node's DOM
      children stay exactly the ones Lexical manages (ADR-0028). */
   .journal-callout::before {

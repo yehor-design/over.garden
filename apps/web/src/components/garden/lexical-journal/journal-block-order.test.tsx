@@ -4,10 +4,11 @@ import { describe, expect, it } from "vitest";
 
 import { createJournalLexicalExtension } from "./journal-lexical-extensions";
 import {
+  duplicateJournalBlockById,
   moveJournalBlockById,
   moveJournalBlockToIndex,
   removeJournalBlockById,
-} from "./journal-node-reorder-plugin";
+} from "./journal-block-order";
 import { lexicalEditorStateToJournalDocumentV1 } from "@/lib/garden/journal-document-lexical-adapter";
 
 const INITIAL = {
@@ -132,3 +133,54 @@ function readIds(editor: Parameters<typeof moveJournalBlockById>[0]): string[] {
     editor.getEditorState(),
   ).blocks.map(({ id }) => id);
 }
+
+describe("duplicating a block", () => {
+  it("copies a block through the contract, with a fresh application ID", () => {
+    using editor = buildEditorFromExtensions(
+      createJournalLexicalExtension({
+        initialDocument: {
+          schemaVersion: 1,
+          blocks: [
+            {
+              id: "t1",
+              type: "list",
+              style: "todo",
+              items: [{ spans: [{ text: "полити" }], checked: true }],
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(duplicateJournalBlockById(editor, "t1")).toBe("duplicated");
+
+    const blocks = lexicalEditorStateToJournalDocumentV1(
+      editor.getEditorState(),
+    ).blocks;
+    expect(blocks).toHaveLength(2);
+    expect(blocks[1]).toEqual({ ...blocks[0], id: blocks[1]!.id });
+    expect(blocks[1]!.id).not.toBe("t1");
+  });
+
+  it("refuses to duplicate a photo, which may appear once in a document", () => {
+    using editor = buildEditorFromExtensions(
+      createJournalLexicalExtension({
+        initialDocument: {
+          schemaVersion: 1,
+          blocks: [
+            {
+              id: "i1",
+              type: "image",
+              mediaAssetId: "00000000-0000-4000-8000-000000000001",
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(duplicateJournalBlockById(editor, "i1")).toBe("noop");
+    expect(
+      lexicalEditorStateToJournalDocumentV1(editor.getEditorState()).blocks,
+    ).toHaveLength(1);
+  });
+});
