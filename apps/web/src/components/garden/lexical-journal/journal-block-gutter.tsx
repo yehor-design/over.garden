@@ -32,7 +32,7 @@ import {
   $turnJournalBlockInto,
   JOURNAL_BLOCK_COMMANDS,
   JOURNAL_TURN_INTO_COMMAND_IDS,
-  insertJournalDelimiter,
+  $replaceJournalBlockWithDelimiter,
   type JournalBlockCommandId,
 } from "./journal-block-commands";
 import {
@@ -403,7 +403,7 @@ export function JournalBlockGutter({
           block.insertAfter(paragraph);
           paragraph.selectStart();
           if (commandId === "delimiter") {
-            insertJournalDelimiter(editor);
+            $replaceJournalBlockWithDelimiter(paragraph);
           } else if (commandId !== "paragraph") {
             $turnJournalBlockInto(commandId, paragraph);
           }

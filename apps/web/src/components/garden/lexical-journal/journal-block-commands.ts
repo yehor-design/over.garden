@@ -1,6 +1,6 @@
 "use client";
 
-import { INSERT_HORIZONTAL_RULE_COMMAND } from "@lexical/extension";
+import { $createHorizontalRuleNode } from "@lexical/extension";
 import {
   $createListItemNode,
   $createListNode,
@@ -18,7 +18,6 @@ import {
   $isLineBreakNode,
   $isRangeSelection,
   type ElementNode,
-  type LexicalEditor,
   type LexicalNode,
 } from "lexical";
 
@@ -180,8 +179,28 @@ export function $turnJournalBlockInto(
   return true;
 }
 
-export function insertJournalDelimiter(editor: LexicalEditor): void {
-  editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined);
+/**
+ * A divider replaces the block it was asked for and leaves the caret in a
+ * fresh paragraph under it — the way Notion behaves, and the reason this does
+ * not go through `INSERT_HORIZONTAL_RULE_COMMAND`, which would leave the empty
+ * block standing above the rule.
+ */
+export function $replaceJournalBlockWithDelimiter(
+  block: ElementNode | null = $selectedJournalTopLevelBlock(),
+): boolean {
+  if (!block) return false;
+  const rule = $setJournalBlockId(
+    $createHorizontalRuleNode(),
+    $getJournalBlockId(block) || createJournalBlockId(),
+  );
+  const paragraph = $setJournalBlockId(
+    $createParagraphNode(),
+    createJournalBlockId(),
+  );
+  block.replace(rule);
+  rule.insertAfter(paragraph);
+  paragraph.selectStart();
+  return true;
 }
 
 /**
