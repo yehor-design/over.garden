@@ -16,6 +16,7 @@ import {
 } from "@/lib/garden/journal-document";
 import type { PublicLocale } from "@/lib/public-localization";
 import { cn } from "@/lib/utils";
+import type { JournalBlockCommandId } from "./lexical-journal/journal-block-commands";
 import type { JournalImageUiState } from "./lexical-journal/journal-lexical-image-node";
 
 export type JournalReorderBlockTypeClass =
@@ -37,6 +38,21 @@ export interface JournalBlockReorderCopy {
   movedAnnouncement: string;
   deletedAnnouncement: string;
   blockType: Record<JournalReorderBlockTypeClass, string>;
+}
+
+/**
+ * The gutter, the block menu and the slash menu all speak these words. One
+ * record per command id, so a command cannot exist without a name (ADR-0028).
+ */
+export interface JournalBlockCommandCopy {
+  add: string;
+  menu: string;
+  turnInto: string;
+  duplicate: string;
+  duplicatedAnnouncement: string;
+  placeholder: string;
+  placeholderFirst: string;
+  commands: Record<JournalBlockCommandId, string>;
 }
 
 export interface StructuredJournalComposerLabels {
@@ -88,6 +104,7 @@ export interface StructuredJournalComposerLabels {
     redo: string;
   };
   reorder: JournalBlockReorderCopy;
+  blocks: JournalBlockCommandCopy;
 }
 
 export interface StructuredJournalComposerProps {

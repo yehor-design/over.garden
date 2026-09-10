@@ -22,11 +22,12 @@ import {
 } from "./journal-lexical-nodes";
 import { createJournalLexicalExtension } from "./journal-lexical-extensions";
 import { JournalLexicalToolbar } from "./journal-lexical-toolbar";
+import { JournalBlockGutter } from "./journal-block-gutter";
+import { JournalPlaceholderPlugin } from "./journal-placeholder-plugin";
 import {
-  JournalNodeReorderPlugin,
   moveJournalBlockById,
   moveJournalBlockToIndex,
-} from "./journal-node-reorder-plugin";
+} from "./journal-block-order";
 import { JournalSafePastePlugin } from "./journal-safe-paste-plugin";
 import type {
   StructuredJournalComposerHandle,
@@ -197,8 +198,7 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
       onRetry: (mediaAssetId: string) => onRetryImage?.(mediaAssetId),
       onReplace: (mediaAssetId: string, file: File) =>
         onReplaceImage?.(mediaAssetId, file),
-      onSetCover: (mediaAssetId: string) =>
-        onSetImageAsCover?.(mediaAssetId),
+      onSetCover: (mediaAssetId: string) => onSetImageAsCover?.(mediaAssetId),
     }),
     [
       imageStates,
@@ -377,7 +377,9 @@ function JournalLexicalClientBody({
       const refusal = classifyComposerPhotoRefusal(file);
       if (refusal) {
         setMediaMessage(
-          refusal === "too_large" ? labels.imageTooLarge : labels.imageUnsupported,
+          refusal === "too_large"
+            ? labels.imageTooLarge
+            : labels.imageUnsupported,
         );
         return;
       }
@@ -600,20 +602,28 @@ function JournalLexicalClientBody({
       />
       <div
         ref={containerRef}
-        className="relative min-h-40 rounded-md border border-input bg-background py-3 pr-3 pl-14 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+        className="journal-composer-canvas group/canvas relative mx-auto min-h-40 w-full pr-2 pl-10"
         data-lexical-journal-canvas="true"
       >
         <ContentEditable
           aria-label={labels.tools.editor}
-          className="min-h-32 outline-none"
+          aria-keyshortcuts="Control+Shift+M Meta+Shift+M"
+          className="min-h-32 text-base leading-normal outline-none"
           spellCheck
         />
-        <JournalNodeReorderPlugin
+        <JournalPlaceholderPlugin
+          placeholder={labels.blocks.placeholder}
+          firstPlaceholder={labels.blocks.placeholderFirst}
+          disabled={disabled}
+        />
+        <JournalBlockGutter
           containerRef={containerRef}
-          copy={labels.reorder}
+          copy={labels.blocks}
+          reorderCopy={labels.reorder}
           disabled={disabled}
           onReorderingChange={updateReordering}
           onAnnouncement={announce}
+          onChooseImage={chooseImage}
         />
       </div>
       <JournalSafePastePlugin

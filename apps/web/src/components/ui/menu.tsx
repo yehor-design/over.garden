@@ -17,19 +17,21 @@ function MenuContent({
   className,
   align = "end",
   alignOffset = 0,
+  anchor,
   side = "bottom",
   sideOffset = 6,
   ...props
 }: MenuPrimitive.Popup.Props &
   Pick<
     MenuPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
+    "align" | "alignOffset" | "anchor" | "side" | "sideOffset"
   >) {
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}
+        anchor={anchor}
         side={side}
         sideOffset={sideOffset}
         className="isolate z-50 outline-hidden"
@@ -103,6 +105,10 @@ function MenuSeparator({ className, ...props }: MenuPrimitive.Separator.Props) {
   );
 }
 
+function MenuSubmenu(props: MenuPrimitive.SubmenuRoot.Props) {
+  return <MenuPrimitive.SubmenuRoot data-slot="menu-submenu" {...props} />;
+}
+
 function MenuSubTrigger({
   className,
   children,
@@ -123,6 +129,7 @@ function MenuSubTrigger({
 export {
   Menu,
   MenuContent,
+  MenuSubmenu,
   MenuItem,
   MenuLinkItem,
   MenuRadioGroup,
