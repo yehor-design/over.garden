@@ -13,13 +13,7 @@ import {
 import { COMPOSER_PHOTO_ACCEPT } from "@/lib/garden/composer-photo-selection";
 
 export interface JournalImageUiState {
-  status:
-    | "selected"
-    | "decoding"
-    | "encoding"
-    | "staging"
-    | "ready"
-    | "failed";
+  status: "selected" | "decoding" | "encoding" | "staging" | "ready" | "failed";
   previewUrl: string | null;
   failureCode: string | null;
 }
@@ -76,9 +70,12 @@ export function JournalLexicalImageNodeView({
   const failed = state?.status === "failed";
   const busy = Boolean(state && state.status !== "ready" && !failed);
 
+  const action =
+    "flex h-8 items-center rounded border border-border bg-background/90 px-2 text-xs backdrop-blur-sm hover:bg-accent hover:text-accent-foreground disabled:opacity-40";
+
   return (
     <div
-      className="grid gap-2 rounded-md border border-border bg-muted/20 p-2"
+      className="group/photo relative grid gap-2"
       data-lexical-journal-image-content="true"
       data-media-status={state?.status ?? "ready"}
       aria-busy={busy || undefined}
@@ -90,10 +87,13 @@ export function JournalLexicalImageNodeView({
         <img
           src={previewUrl}
           alt=""
-          className="max-h-96 w-full rounded object-contain"
+          className="max-h-128 w-full rounded-md object-contain"
         />
       ) : (
-        <div className="h-24 animate-pulse rounded bg-muted" aria-hidden="true" />
+        <div
+          className="h-40 animate-pulse rounded-md bg-muted"
+          aria-hidden="true"
+        />
       )}
 
       {busy && context ? (
@@ -102,18 +102,24 @@ export function JournalLexicalImageNodeView({
         </p>
       ) : null}
       {failed && context ? (
-        <p id={`${inputId}-error`} className="text-sm text-destructive" role="alert">
+        <p
+          id={`${inputId}-error`}
+          className="text-sm text-destructive"
+          role="alert"
+        >
           {context.labels.failed}
         </p>
       ) : null}
 
       {context ? (
-        <div className="flex flex-wrap gap-2">
+        // Notion shows a photo, not a card of buttons: the controls appear on
+        // hover, and on focus so a keyboard reaches them just as well.
+        <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition-opacity group-focus-within/photo:opacity-100 group-hover/photo:opacity-100 motion-reduce:transition-none">
           {failed ? (
             <button
               type="button"
               disabled={context.disabled}
-              className="min-h-11 rounded border border-border px-3 text-sm disabled:opacity-40"
+              className={action}
               onClick={() => context.onRetry(mediaAssetId)}
             >
               {context.labels.retry}
@@ -122,7 +128,7 @@ export function JournalLexicalImageNodeView({
           <button
             type="button"
             disabled={context.disabled}
-            className="min-h-11 rounded border border-border px-3 text-sm disabled:opacity-40"
+            className={action}
             onClick={() => replacementInputRef.current?.click()}
           >
             {context.labels.replace}
@@ -130,7 +136,7 @@ export function JournalLexicalImageNodeView({
           <button
             type="button"
             disabled={context.disabled}
-            className="min-h-11 rounded border border-border px-3 text-sm disabled:opacity-40"
+            className={action}
             onClick={() => context.onSetCover(mediaAssetId)}
           >
             {context.labels.setCover}
@@ -138,7 +144,7 @@ export function JournalLexicalImageNodeView({
           <button
             type="button"
             disabled={context.disabled && !failed}
-            className="min-h-11 rounded border border-border px-3 text-sm disabled:opacity-40"
+            className={action}
             onClick={() => {
               if (context.disabled && !failed) return;
               editor.update(() => {

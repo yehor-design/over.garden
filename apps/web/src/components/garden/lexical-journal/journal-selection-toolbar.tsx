@@ -64,6 +64,16 @@ export interface JournalSelectionToolbarProps {
  * never takes the caret: the selection is what every one of its buttons acts
  * on, so a button that stole focus would act on nothing.
  */
+function sameFormats(
+  current: ReadonlySet<TextFormatType>,
+  next: ReadonlySet<TextFormatType>,
+): boolean {
+  return (
+    current.size === next.size &&
+    [...next].every((format) => current.has(format))
+  );
+}
+
 export function JournalSelectionToolbar({
   containerRef,
   labels,
@@ -91,10 +101,15 @@ export function JournalSelectionToolbar({
     const rect = domSelection.getRangeAt(0).getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) return;
     const containerRect = container.getBoundingClientRect();
-    setPosition({
-      top: rect.top - containerRect.top,
-      left: rect.left - containerRect.left + rect.width / 2,
-    });
+    const top = rect.top - containerRect.top;
+    const left = rect.left - containerRect.left + rect.width / 2;
+    // A fresh object on every commit is a render per keystroke for a pill that
+    // is usually not even on screen.
+    setPosition((current) =>
+      current && current.top === top && current.left === left
+        ? current
+        : { top, left },
+    );
   }, [containerRef]);
 
   const sync = useCallback(() => {
@@ -102,6 +117,7 @@ export function JournalSelectionToolbar({
       setVisible(false);
       return;
     }
+    let measured = false;
     editor.getEditorState().read(() => {
       const selection = $getSelection();
       if (
@@ -117,12 +133,13 @@ export function JournalSelectionToolbar({
       for (const { format } of JOURNAL_SELECTION_FORMATS) {
         if (selection.hasFormat(format)) next.add(format);
       }
-      setFormats(next);
+      setFormats((current) => (sameFormats(current, next) ? current : next));
       const link = $getNearestNodeOfType(selection.anchor.getNode(), LinkNode);
       setLinkValue($isLinkNode(link) ? link.getURL() : "");
       setVisible(true);
+      measured = true;
     });
-    measure();
+    if (measured) measure();
   }, [disabled, editor, measure]);
 
   // No initial read: the pill only has work when there is a selection, and a

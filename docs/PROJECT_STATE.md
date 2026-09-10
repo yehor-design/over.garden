@@ -49,7 +49,31 @@ The seven owner requirements have one committed production receipt:
 
 ## Where the project is heading
 
-**Just delivered.** SDD Slice 22 (`OVE-376`–`OVE-379`) — the interaction,
+**Just delivered, 2026-09-10.** SDD Slice 26 (`OVE-411`–`OVE-417`) — the
+composer takes Notion's shape. The owner asked for the editor to look and behave
+like Notion, and answered the two questions that ask carried: which blocks, and
+how literal the look. `JournalDocumentV1` grew heading level 1, a to-do list, a
+callout, a code block and the marks underline, strikethrough and monospace,
+additively at schema version 1 with **no SQL** — `content_document` is `jsonb`
+whose only constraint is that it is an object, and the block allowlist has
+always lived in TypeScript. The composer lost its row of thirteen glyph buttons
+and gained a 708 px column with a gutter, a drag handle with an insertion line,
+a `/` command menu, a floating selection pill, markdown-shaped input rules and
+the keyboard shortcuts that go with them, painted in OverGarden's tokens and
+Google Sans rather than Notion's greys. The public entry keeps its typography
+and learns the four new blocks; a level-1 heading renders as an `h2` so the
+entry title stays the page's one `h1`, and every entry published before the
+slice produces byte-identical HTML. Decisions are ADR-0028; the browser proof is
+`apps/web/tests/journal-notion-composer.spec.ts`.
+
+Three defects had no headless expression and were found by running it: a
+cancelled animation frame whose id stayed in its ref froze the gutter on the
+first block; a state setter returning a fresh array on every commit made React
+report "Maximum update depth exceeded"; and base-ui closes a controlled,
+trigger-less menu with reason `sibling-open` when a submenu opens inside it, so
+the block menu is one flat list.
+
+**Previously delivered.** SDD Slice 22 (`OVE-376`–`OVE-379`) — the interaction,
 language and sign-in surfaces stop layering hand-written client protocols over
 platform primitives. Clicking Like answered `500` with an empty body on 7 of the
 8 public journal entries because the capability token embedded the slug and
@@ -82,7 +106,7 @@ to exclude prefetches never fired. Cross-locale links now carry
 `prefetch={false}`; a source test and a browser test hold it, and ADR-0024 D4
 records the mechanism.
 
-**Previously delivered.** `OVE-374` — workspace resilience. Every page under
+**Before that.** `OVE-374` — workspace resilience. Every page under
 `/garden/**` renders its own shell immediately, streams its data in sections, and
 turns every failure into a designed state with a retry and a reference code. It
 existed because a verified framework defect leaves a skeleton on screen forever

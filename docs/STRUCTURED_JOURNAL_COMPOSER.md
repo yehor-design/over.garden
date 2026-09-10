@@ -1,12 +1,7 @@
 # Structured Journal Composer
 
-Status: current implementation contract for the runtime, lifecycle, media and
-safe-input sections. The "Closed grammar and identity" section below is being
-superseded block by block by ADR-0028 (SDD Slice 26): the document already
-carries heading level 1, a `todo` list style, a callout and a code block, and
-the marks underline, strikethrough and code. Read ADR-0028 first for the
-grammar; this page is rewritten when the slice closes.
-Owner: OVE-317
+Status: current implementation contract
+Owner: OVE-317, rewritten by SDD Slice 26
 Decision: ADR-0015, amended by ADR-0028
 
 ## Runtime decision
@@ -24,13 +19,23 @@ never cross that boundary.
 
 ## Closed grammar and identity
 
-- Top-level nodes are paragraph, H2/H3 heading, ordered/unordered list with at
-  most two levels, quote, delimiter, and image. An exact-version
-  `OverGardenListNode extends ListNode` replacement keeps adjacent same-style
-  canonical list blocks and IDs separate while retaining native list editing
-  and numbering.
-- Inline marks are bold, italic, and normalized safe links only.
-- Quote has exactly one body and zero or one attribution in the same tree.
+- Top-level nodes are paragraph, H1/H2/H3 heading, ordered/unordered/to-do list
+  with at most two levels, quote, callout, code, delimiter, and image. An
+  exact-version `OverGardenListNode extends ListNode` replacement keeps adjacent
+  same-style canonical list blocks and IDs separate while retaining native list
+  editing and numbering. A to-do list is Lexical's `check` list type, whose
+  `getChecked()` derives from the parent list, so a checked flag cannot exist
+  outside one.
+- Inline marks are bold, italic, underline, strikethrough, monospace, and
+  normalized safe links only. Normalization keeps at most one mark of each type
+  per span and sorts them into one canonical order, so the same emphasis always
+  serializes to the same bytes.
+- Quote has exactly one body and zero or one attribution in the same tree. The
+  attribution is toggled from the block menu.
+- A callout carries its icon in NodeState, drawn by CSS from `data-icon` so the
+  node's DOM children stay exactly the ones Lexical reconciles. A code block
+  carries plain text and line breaks only; a transform clears any format a
+  paste or a shortcut managed to set.
 - Image state stores only the application block ID and durable media asset ID;
   preview URLs remain ephemeral UI state.
 - NodeState `overgardenBlockId` carries the stable application block ID.
@@ -89,27 +94,60 @@ retry controls.
 - Public and owner read surfaces continue to use `JournalDocumentRenderer` and
   load no authoring engine.
 
+## The Notion shape (ADR-0028)
+
+There is no permanent toolbar. The canvas is one 708 px column beside a 56 px
+gutter, in Notion's type scale and block rhythm and in OverGarden's tokens.
+
+| affordance | what it is |
+| --- | --- |
+| the gutter | on the hovered *or focused* block: `+` adds a block below, `⠿` drags it |
+| the block menu | a press on `⠿` that never travelled, or Cmd/Ctrl+Shift+M: duplicate, move, delete, and a "turn into" group |
+| the slash menu | `/` at the start of a word: a WAI-ARIA listbox the editor owns, filtered by localized name and latin alias |
+| the selection pill | a non-collapsed selection: the five marks and the link editor |
+| the input rules | `# `, `## `, `### `, `- `, `* `, `+ `, `1. `, `1) `, `[] `, `[ ] `, `[x] `, `> `, ` ``` `, `--- `, and `**bold**`, `~~strike~~`, `*italic*`, `` `code` `` |
+| the shortcuts | Cmd/Ctrl+B/I/U from Lexical's core, plus Shift+S, E, and Shift+0…3 |
+| a dropped photo | lands at the block the pointer is over, with an insertion line to say where |
+
+`journal-block-commands.ts` declares each block once. The add menu, the block
+menu's turn-into group and the slash menu all read that list, so the three
+cannot drift. Turning a block into another loses nothing: a list becomes one
+block per item, a quote keeps its attribution as a further block, and a code
+block becomes one block per line.
+
+The input rules are ours, not a markdown parser: ADR-0015 still forbids
+`@lexical/markdown` and mdast, the document is never parsed from or serialized
+to markdown, and each rewrite is its own history entry so one undo restores the
+characters that were typed.
+
 ## Typography and localization
 
-The editor, toolbar, popovers, portals, and read-only renderer inherit the
+The editor, its menus, popovers, portals, and the read-only renderer inherit the
 shared `font-sans` token and the current `uk`, `bg`, or `ru` language context.
 No font family, implementation token, preview URL, or editor state is persisted.
-The composer uses the shared `owner-composer-drafts` locale participant; active
-reorder uses `owner-composer-reorder-gesture` and does not fork the coordinator.
+The composer uses the shared `owner-composer-drafts` locale participant.
 
 ## Verification
 
 ```bash
 cd apps/web
 pnpm exec vitest run src/lib/garden/journal-document-lexical-adapter.test.ts \
-  src/components/garden/lexical-journal/journal-lexical-nodes.test.tsx \
-  src/components/garden/lexical-journal/journal-lexical-image-node.test.tsx \
-  src/components/garden/lexical-journal/journal-node-reorder.test.tsx
+  src/components/garden/lexical-journal/
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
+
+# The browser proof: write an entry through the new controls, drag a block,
+# publish it, and read every block back from the public page.
+pnpm build && pnpm exec next start -p 3130
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3130 pnpm exec playwright test \
+  tests/journal-notion-composer.spec.ts
 ```
 
-The composer is proven by the unit tests above plus `pnpm build`. The former
-browser, device, and responsiveness matrices were retired by ADR-0022.
+Two classes of defect in this composer are invisible to the unit tests and were
+found only by running it: a cancelled animation frame whose id stayed in its
+ref, which froze the gutter on the first block, and a state setter that returned
+a fresh array on every commit, which React reported as "Maximum update depth
+exceeded". Both are guarded by comments at the site rather than by a test,
+because neither has a headless expression.
 
 ## A refused photo names its class (OVE-359)
 
