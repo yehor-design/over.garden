@@ -18,7 +18,10 @@ import {
 } from "lexical";
 import { describe, expect, it } from "vitest";
 
-import { $setJournalBlockId } from "@/components/garden/lexical-journal/journal-lexical-nodes";
+import {
+  $createOverGardenCodeNode,
+  $setJournalBlockId,
+} from "@/components/garden/lexical-journal/journal-lexical-nodes";
 import {
   JOURNAL_LEXICAL_NODE_CLASSES,
   JournalLexicalAdapterError,
@@ -188,7 +191,7 @@ describe("JournalDocumentV1 Lexical adapter", () => {
     );
   });
 
-  it("fails closed on an unsupported text mark instead of silently dropping it", () => {
+  it("fails closed on a text format outside the grammar instead of dropping it", () => {
     const editor = createEditor({
       namespace: "journal-unsupported-mark-test",
       nodes: JOURNAL_NODES,
@@ -199,8 +202,10 @@ describe("JournalDocumentV1 Lexical adapter", () => {
     editor.update(
       () => {
         const paragraph = $setJournalBlockId($createParagraphNode(), "p1");
+        // Underline, strikethrough and code are inside the grammar since
+        // ADR-0028; highlight is one of the formats that still is not.
         paragraph.append(
-          $createTextNode("underlined").toggleFormat("underline"),
+          $createTextNode("highlighted").toggleFormat("highlight"),
         );
         $getRoot().clear().append(paragraph);
       },
@@ -448,3 +453,151 @@ class UnsupportedNode extends ElementNode {
     return new UnsupportedNode();
   }
 }
+
+describe("Notion basic blocks through the adapter (ADR-0028)", () => {
+  const NOTION_DOCUMENT: JournalDocumentV1 = {
+    schemaVersion: JOURNAL_DOCUMENT_SCHEMA_VERSION,
+    blocks: [
+      { id: "h1", type: "heading", level: 1, spans: [{ text: "Сезон 2026" }] },
+      {
+        id: "todo1",
+        type: "list",
+        style: "todo",
+        items: [
+          { spans: [{ text: "полити" }], checked: true },
+          {
+            spans: [{ text: "підв'язати" }],
+            checked: false,
+            items: [{ spans: [{ text: "томати" }], checked: true }],
+          },
+        ],
+      },
+      {
+        id: "call1",
+        type: "callout",
+        icon: "🌱",
+        spans: [
+          { text: "Проростає " },
+          { text: "на сьомий день", marks: [{ type: "bold" }] },
+        ],
+      },
+      {
+        id: "code1",
+        type: "code",
+        language: "sql",
+        text: "select 1;\n\nselect 2;\n",
+      },
+      {
+        id: "p1",
+        type: "paragraph",
+        spans: [
+          {
+            text: "усе разом",
+            marks: [
+              { type: "code" },
+              { type: "bold" },
+              { type: "italic" },
+              { type: "underline" },
+              { type: "strikethrough" },
+              { type: "link", href: "https://example.com/" },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  it("round-trips every new block and mark unchanged", () => {
+    const state = journalDocumentV1ToLexicalEditorState(NOTION_DOCUMENT);
+
+    expect(lexicalEditorStateToJournalDocumentV1(state)).toEqual(
+      normalizeJournalDocumentOrThrow(NOTION_DOCUMENT),
+    );
+  });
+
+  it("keeps a to-do list's checked flags off every other list style", () => {
+    const mixed: JournalDocumentV1 = {
+      schemaVersion: 1,
+      blocks: [
+        {
+          id: "todo",
+          type: "list",
+          style: "todo",
+          items: [{ spans: [{ text: "a" }], checked: true }],
+        },
+        {
+          id: "bullet",
+          type: "list",
+          style: "unordered",
+          items: [{ spans: [{ text: "b" }] }],
+        },
+      ],
+    };
+    const back = lexicalEditorStateToJournalDocumentV1(
+      journalDocumentV1ToLexicalEditorState(mixed),
+    );
+    const todo = back.blocks[0];
+    const bullet = back.blocks[1];
+    if (todo?.type !== "list" || bullet?.type !== "list") {
+      throw new Error("expected two lists");
+    }
+    expect(todo.items[0]?.checked).toBe(true);
+    expect(bullet.items[0]).not.toHaveProperty("checked");
+  });
+
+  it("carries the callout icon and the code language through the node tree", () => {
+    const state = journalDocumentV1ToLexicalEditorState(NOTION_DOCUMENT);
+    const back = lexicalEditorStateToJournalDocumentV1(state);
+    const callout = back.blocks.find((block) => block.type === "callout");
+    const code = back.blocks.find((block) => block.type === "code");
+    expect(callout?.type === "callout" && callout.icon).toBe("🌱");
+    expect(code?.type === "code" && code.language).toBe("sql");
+    expect(code?.type === "code" && code.text).toBe("select 1;\n\nselect 2;\n");
+  });
+
+  it("refuses a code block that somehow carries a mark", () => {
+    const editor = createEditor({
+      namespace: "journal-code-mark-test",
+      nodes: JOURNAL_NODES,
+      onError: (error) => {
+        throw error;
+      },
+    });
+    editor.update(
+      () => {
+        const code = $createOverGardenCodeNode("code1", "plain");
+        code.append($createTextNode("select 1;").toggleFormat("bold"));
+        $getRoot().clear().append(code);
+      },
+      { discrete: true },
+    );
+
+    expect(() =>
+      lexicalEditorStateToJournalDocumentV1(editor.getEditorState()),
+    ).toThrowError(expect.objectContaining({ code: "unsupported_mark" }));
+  });
+
+  it("strips a mark a paste put inside a code block, in the live editor", () => {
+    using editor = buildEditorFromExtensions(
+      createJournalLexicalExtension({
+        initialDocument: {
+          schemaVersion: 1,
+          blocks: [{ id: "code1", type: "code", language: "plain", text: "x" }],
+        },
+      }),
+    );
+
+    editor.update(
+      () => {
+        const code = $getRoot().getFirstChild();
+        if (!$isElementNode(code)) throw new Error("expected the code block");
+        code.append($createTextNode(" y").toggleFormat("italic"));
+      },
+      { discrete: true },
+    );
+
+    expect(
+      lexicalEditorStateToJournalDocumentV1(editor.getEditorState()).blocks[0],
+    ).toEqual({ id: "code1", type: "code", language: "plain", text: "x y" });
+  });
+});

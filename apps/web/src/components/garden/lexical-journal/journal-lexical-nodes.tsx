@@ -18,7 +18,15 @@ import {
 } from "lexical";
 import type { JSX } from "react";
 
-import { JOURNAL_BLOCK_ID_PATTERN } from "@/lib/garden/journal-document";
+import {
+  DEFAULT_JOURNAL_CALLOUT_ICON,
+  DEFAULT_JOURNAL_CODE_LANGUAGE,
+  JOURNAL_BLOCK_ID_PATTERN,
+  JOURNAL_CALLOUT_ICONS,
+  JOURNAL_CODE_LANGUAGES,
+  type JournalCalloutIcon,
+  type JournalCodeLanguage,
+} from "@/lib/garden/journal-document";
 import { JournalLexicalImageNodeView } from "./journal-lexical-image-node";
 
 export {
@@ -41,8 +49,30 @@ function parseMediaAssetId(value: unknown): string {
     : "";
 }
 
+function parseCalloutIcon(value: unknown): JournalCalloutIcon {
+  const icon = typeof value === "string" ? value.normalize("NFC") : "";
+  return (JOURNAL_CALLOUT_ICONS as readonly string[]).includes(icon)
+    ? (icon as JournalCalloutIcon)
+    : DEFAULT_JOURNAL_CALLOUT_ICON;
+}
+
+function parseCodeLanguage(value: unknown): JournalCodeLanguage {
+  return typeof value === "string" &&
+    (JOURNAL_CODE_LANGUAGES as readonly string[]).includes(value)
+    ? (value as JournalCodeLanguage)
+    : DEFAULT_JOURNAL_CODE_LANGUAGE;
+}
+
 export const overgardenBlockIdState = createState("overgardenBlockId", {
   parse: parseBlockId,
+});
+
+const overgardenCalloutIconState = createState("overgardenCalloutIcon", {
+  parse: parseCalloutIcon,
+});
+
+const overgardenCodeLanguageState = createState("overgardenCodeLanguage", {
+  parse: parseCodeLanguage,
 });
 
 /**
@@ -286,6 +316,154 @@ export function $isOverGardenQuoteAttributionNode(
   node: LexicalNode | null | undefined,
 ): node is OverGardenQuoteAttributionNode {
   return node instanceof OverGardenQuoteAttributionNode;
+}
+
+/**
+ * A callout holds one run of inline content, like a paragraph, and carries its
+ * icon in NodeState. The icon is drawn by CSS from `data-icon` rather than by a
+ * DOM child, so the node's DOM children stay exactly the ones Lexical manages
+ * and no experimental DOM-slot API is needed (ADR-0015 keeps those off).
+ */
+export class OverGardenCalloutNode extends ElementNode {
+  $config() {
+    return this.config("overgarden-callout", {
+      extends: ElementNode,
+      stateConfigs: [
+        { flat: true, stateConfig: overgardenBlockIdState },
+        { flat: true, stateConfig: overgardenCalloutIconState },
+      ],
+    });
+  }
+
+  createDOM(config: EditorConfig): HTMLElement {
+    const element = $getDocument().createElement("div");
+    const className = config.theme.callout;
+    if (typeof className === "string" && className) {
+      element.className = className;
+    }
+    element.setAttribute("data-lexical-journal-callout", "true");
+    element.setAttribute("data-icon", this.getIcon());
+    return element;
+  }
+
+  updateDOM(prevNode: OverGardenCalloutNode, dom: HTMLElement): boolean {
+    const icon = this.getIcon();
+    if (prevNode.getIcon() !== icon) dom.setAttribute("data-icon", icon);
+    return false;
+  }
+
+  getIcon(): JournalCalloutIcon {
+    return $getState(this, overgardenCalloutIconState);
+  }
+
+  setIcon(icon: JournalCalloutIcon): this {
+    return $setState(this, overgardenCalloutIconState, icon) as this;
+  }
+
+  canBeEmpty(): true {
+    return true;
+  }
+
+  insertNewAfter(): LexicalNode {
+    const paragraph = $createJournalParagraphNode();
+    this.insertAfter(paragraph);
+    return paragraph;
+  }
+}
+
+/**
+ * A code block holds plain text and line breaks and nothing else: a transform
+ * clears any format a paste or a shortcut managed to set, so the canonical
+ * `code` block can never carry marks it has no field for.
+ */
+export class OverGardenCodeNode extends ElementNode {
+  $config() {
+    return this.config("overgarden-code", {
+      extends: ElementNode,
+      stateConfigs: [
+        { flat: true, stateConfig: overgardenBlockIdState },
+        { flat: true, stateConfig: overgardenCodeLanguageState },
+      ],
+    });
+  }
+
+  createDOM(config: EditorConfig): HTMLElement {
+    const element = $getDocument().createElement("pre");
+    const className = config.theme.code;
+    if (typeof className === "string" && className) {
+      element.className = className;
+    }
+    element.setAttribute("data-lexical-journal-code", "true");
+    element.setAttribute("data-language", this.getLanguage());
+    element.setAttribute("spellcheck", "false");
+    return element;
+  }
+
+  updateDOM(prevNode: OverGardenCodeNode, dom: HTMLElement): boolean {
+    const language = this.getLanguage();
+    if (prevNode.getLanguage() !== language) {
+      dom.setAttribute("data-language", language);
+    }
+    return false;
+  }
+
+  getLanguage(): JournalCodeLanguage {
+    return $getState(this, overgardenCodeLanguageState);
+  }
+
+  setLanguage(language: JournalCodeLanguage): this {
+    return $setState(this, overgardenCodeLanguageState, language) as this;
+  }
+
+  canBeEmpty(): true {
+    return true;
+  }
+
+  /**
+   * Enter inserts a line break inside code; only the Enter that follows an
+   * empty last line leaves the block, which is what the command handler in
+   * `journal-lexical-extensions.tsx` arranges. Returning a paragraph here keeps
+   * that one exit path working through `selection.insertParagraph()`.
+   */
+  insertNewAfter(): LexicalNode {
+    const paragraph = $createJournalParagraphNode();
+    this.insertAfter(paragraph);
+    return paragraph;
+  }
+}
+
+export function $createOverGardenCalloutNode(
+  blockId: string,
+  icon: JournalCalloutIcon = DEFAULT_JOURNAL_CALLOUT_ICON,
+): OverGardenCalloutNode {
+  const node = $setJournalBlockId(
+    $applyNodeReplacement(new OverGardenCalloutNode()),
+    blockId,
+  );
+  return node.setIcon(icon);
+}
+
+export function $isOverGardenCalloutNode(
+  node: LexicalNode | null | undefined,
+): node is OverGardenCalloutNode {
+  return node instanceof OverGardenCalloutNode;
+}
+
+export function $createOverGardenCodeNode(
+  blockId: string,
+  language: JournalCodeLanguage = DEFAULT_JOURNAL_CODE_LANGUAGE,
+): OverGardenCodeNode {
+  const node = $setJournalBlockId(
+    $applyNodeReplacement(new OverGardenCodeNode()),
+    blockId,
+  );
+  return node.setLanguage(language);
+}
+
+export function $isOverGardenCodeNode(
+  node: LexicalNode | null | undefined,
+): node is OverGardenCodeNode {
+  return node instanceof OverGardenCodeNode;
 }
 
 function $createJournalParagraphNode() {

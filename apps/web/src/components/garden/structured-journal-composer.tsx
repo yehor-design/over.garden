@@ -23,6 +23,8 @@ export type JournalReorderBlockTypeClass =
   | "header"
   | "list"
   | "quote"
+  | "callout"
+  | "code"
   | "delimiter"
   | "image"
   | "unknown";
