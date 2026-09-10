@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_JOURNAL_CALLOUT_ICON,
+  DEFAULT_JOURNAL_CODE_LANGUAGE,
   JOURNAL_DOCUMENT_SCHEMA_VERSION,
   MAX_JOURNAL_INLINE_IMAGES,
   assertMeaningfulJournalDocument,
@@ -11,6 +13,8 @@ import {
   journalDocumentImageCount,
   legacyBodyToJournalDocumentV1,
   normalizeJournalDocument,
+  journalDocumentHasMeaningfulBody,
+  journalMarkRank,
   normalizeSafeHref,
   photoCountBucket,
   semanticJournalDocumentHash,
@@ -253,5 +257,257 @@ describe("safe href", () => {
     expect(normalizeSafeHref("/garden/objects/1")).toBe("/garden/objects/1");
     expect(() => normalizeSafeHref("data:text/html")).toThrow();
     expect(() => normalizeSafeHref("//evil.example")).toThrow();
+  });
+});
+
+describe("Notion basic blocks (ADR-0028)", () => {
+  const NOTION_DOC = {
+    schemaVersion: 1,
+    blocks: [
+      { id: "h1", type: "heading", level: 1, spans: [{ text: "Сезон" }] },
+      {
+        id: "todo1",
+        type: "list",
+        style: "todo",
+        items: [
+          { spans: [{ text: "полити" }], checked: true },
+          {
+            spans: [{ text: "підв'язати" }],
+            items: [{ spans: [{ text: "томати" }] }],
+          },
+        ],
+      },
+      {
+        id: "call1",
+        type: "callout",
+        icon: "🌱",
+        spans: [{ text: "Проростає на сьомий день." }],
+      },
+      {
+        id: "code1",
+        type: "code",
+        language: "sql",
+        text: "select 1;\nselect 2;",
+      },
+      {
+        id: "p1",
+        type: "paragraph",
+        spans: [
+          {
+            text: "усе разом",
+            marks: [
+              { type: "strikethrough" },
+              { type: "code" },
+              { type: "underline" },
+              { type: "bold" },
+            ],
+          },
+        ],
+      },
+    ],
+  } as const;
+
+  it("accepts every new block and mark, and is idempotent", () => {
+    const first = normalizeJournalDocument(NOTION_DOC);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    const second = normalizeJournalDocument(first.document);
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.document).toEqual(first.document);
+    expect(semanticJournalDocumentHash(first.document)).toBe(
+      semanticJournalDocumentHash(second.document),
+    );
+  });
+
+  it("fills the callout icon and the code language when they are omitted", () => {
+    const result = normalizeJournalDocument({
+      schemaVersion: 1,
+      blocks: [
+        { id: "c", type: "callout", spans: [{ text: "порада" }] },
+        { id: "k", type: "code", text: "x" },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.blocks[0]).toEqual({
+      id: "c",
+      type: "callout",
+      icon: DEFAULT_JOURNAL_CALLOUT_ICON,
+      spans: [{ text: "порада" }],
+    });
+    expect(result.document.blocks[1]).toEqual({
+      id: "k",
+      type: "code",
+      language: DEFAULT_JOURNAL_CODE_LANGUAGE,
+      text: "x",
+    });
+  });
+
+  it("sorts marks into one canonical order so the hash cannot move", () => {
+    const shuffled = normalizeJournalDocument({
+      schemaVersion: 1,
+      blocks: [
+        {
+          id: "p",
+          type: "paragraph",
+          spans: [
+            {
+              text: "x",
+              marks: [
+                { type: "link", href: "https://example.com/" },
+                { type: "italic" },
+                { type: "code" },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(shuffled.ok).toBe(true);
+    if (!shuffled.ok) return;
+    const block = shuffled.document.blocks[0];
+    expect(block?.type).toBe("paragraph");
+    if (block?.type !== "paragraph") return;
+    expect(block.spans[0]?.marks?.map((mark) => mark.type)).toEqual([
+      "code",
+      "italic",
+      "link",
+    ]);
+    expect(journalMarkRank("code")).toBeLessThan(journalMarkRank("link"));
+  });
+
+  it("keeps only the first link on a span, because nested anchors are invalid", () => {
+    const result = normalizeJournalDocument({
+      schemaVersion: 1,
+      blocks: [
+        {
+          id: "p",
+          type: "paragraph",
+          spans: [
+            {
+              text: "x",
+              marks: [
+                { type: "link", href: "https://a.example/" },
+                { type: "link", href: "https://b.example/" },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const block = result.document.blocks[0];
+    if (block?.type !== "paragraph") throw new Error("expected paragraph");
+    expect(block.spans[0]?.marks).toEqual([
+      { type: "link", href: "https://a.example/" },
+    ]);
+  });
+
+  it("refuses values outside the closed sets", () => {
+    const cases: Array<[unknown, string]> = [
+      [{ id: "h", type: "heading", level: 4, spans: [] }, "invalid_block"],
+      [
+        { id: "l", type: "list", style: "check", items: [{ spans: [] }] },
+        "invalid_block",
+      ],
+      [
+        {
+          id: "l",
+          type: "list",
+          style: "unordered",
+          items: [{ spans: [], checked: true }],
+        },
+        "invalid_block",
+      ],
+      [{ id: "c", type: "callout", icon: "🦄", spans: [] }, "invalid_block"],
+      [
+        { id: "k", type: "code", language: "brainfuck", text: "" },
+        "invalid_block",
+      ],
+      [{ id: "k", type: "code" }, "invalid_block"],
+      [
+        {
+          id: "p",
+          type: "paragraph",
+          spans: [{ text: "x", marks: [{ type: "highlight" }] }],
+        },
+        "invalid_block",
+      ],
+      [
+        { id: "c", type: "callout", icon: "💡", spans: [], extra: 1 },
+        "unknown_field",
+      ],
+    ];
+    for (const [block, code] of cases) {
+      expect(
+        failCode(
+          normalizeJournalDocument({ schemaVersion: 1, blocks: [block] }),
+        ),
+      ).toBe(code);
+    }
+  });
+
+  it("counts callout and code text as body and as plain text", () => {
+    const calloutOnly: JournalDocumentV1 = {
+      schemaVersion: 1,
+      blocks: [
+        {
+          id: "c",
+          type: "callout",
+          icon: DEFAULT_JOURNAL_CALLOUT_ICON,
+          spans: [{ text: "Замульчувати до морозів." }],
+        },
+      ],
+    };
+    expect(journalDocumentHasMeaningfulBody(calloutOnly)).toBe(true);
+    expect(extractJournalDocumentPlainText(calloutOnly)).toBe(
+      "Замульчувати до морозів.",
+    );
+    expect(journalDocumentHasFormatting(calloutOnly)).toBe(true);
+
+    const emptyCode: JournalDocumentV1 = {
+      schemaVersion: 1,
+      blocks: [{ id: "k", type: "code", language: "plain", text: "   " }],
+    };
+    expect(journalDocumentHasMeaningfulBody(emptyCode)).toBe(false);
+    expect(() => assertMeaningfulJournalDocument(emptyCode)).toThrow();
+
+    const doc = normalizeJournalDocument(NOTION_DOC);
+    expect(doc.ok).toBe(true);
+    if (!doc.ok) return;
+    expect(extractJournalDocumentPlainText(doc.document)).toContain(
+      "select 1;",
+    );
+    expect(extractJournalDocumentPlainText(doc.document)).toContain("полити");
+  });
+
+  it("still refuses a third list level", () => {
+    expect(
+      failCode(
+        normalizeJournalDocument({
+          schemaVersion: 1,
+          blocks: [
+            {
+              id: "l",
+              type: "list",
+              style: "todo",
+              items: [
+                {
+                  spans: [{ text: "a" }],
+                  items: [
+                    {
+                      spans: [{ text: "b" }],
+                      items: [{ spans: [{ text: "c" }] }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    ).toBe("invalid_block");
   });
 });

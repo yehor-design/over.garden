@@ -7,9 +7,10 @@ knowingly unfinished. Current decisions live in
 `docs/adr/ADR-0022-owner-mvp-reset.md`,
 `docs/adr/ADR-0023-workspace-resilience.md`,
 `docs/adr/ADR-0024-server-authoritative-interaction.md`,
-`docs/adr/ADR-0025-stable-registry-retired.md` and
-`docs/adr/ADR-0026-organism-knowledge-graph.md` and
-`docs/adr/ADR-0027-owner-health-page-retired.md`; older ADRs and dated documents
+`docs/adr/ADR-0025-stable-registry-retired.md`,
+`docs/adr/ADR-0026-organism-knowledge-graph.md`,
+`docs/adr/ADR-0027-owner-health-page-retired.md` and
+`docs/adr/ADR-0028-notion-shaped-composer.md`; older ADRs and dated documents
 are history and never override them.
 
 ## Product
@@ -129,6 +130,10 @@ Every Linear task uses this shape and nothing more:
   `docs/adr/ADR-0027-owner-health-page-retired.md` — the owner's `/health`
   diagnostics page is retired and the route answers 404 for everyone;
   `/api/health` stays as the monitor endpoint.
+  `docs/adr/ADR-0028-notion-shaped-composer.md` — the composer takes Notion's
+  shape and `JournalDocumentV1` grows Notion's basic blocks, additively, at
+  schema version 1 and with no SQL; it supersedes the closed node and mark
+  lists of ADR-0015 and nothing else there.
   `docs/ORGANISM_GRAPH_EXECUTION.md` — the executor's runbook for that slice:
   the owner's standing authorization, environment quirks, production
   procedures, hand-offs between the fourteen tasks.

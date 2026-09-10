@@ -13,7 +13,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 | Web/app runtime         | Next.js App Router + TypeScript on Vercel                                                                                                                                                                                                                                                             |
 | UI                      | shadcn/ui only                                                                                                                                                                                                                                                                                        |
 | Typography              | Google Sans (text) and Geist Mono (code) via `next/font/google`: fetched at build time, self-hosted under `/_next/static`, preloaded, `display: swap`, `Arial` fallback by hand. Wired once in `apps/web/src/app/fonts.ts` and `globals.css`; no contract, verifier, or matrix (ADR-0022 D7).         |
-| Journal authoring       | Lexical 0.49.0 native node-tree editor behind one shared client-only composer; `JournalDocumentV1` v1 is the sole persistence/API/read contract; public and owner-read routes load no authoring engine. Under ADR-0019, unpublished composer state is local-only and non-durable before Publish.               |
+| Journal authoring       | Lexical 0.49.0 native node-tree editor behind one shared client-only composer; `JournalDocumentV1` v1 is the sole persistence/API/read contract; public and owner-read routes load no authoring engine. Under ADR-0019, unpublished composer state is local-only and non-durable before Publish. Since ADR-0028 the composer wears Notion's canvas and the document carries Notion's basic blocks, still at schema version 1. |
 | Auth                    | Better Auth                                                                                                                                                                                                                                                                                           |
 | Database                | DigitalOcean Managed Postgres in production; Apple Container-first local Postgres on supported Macs, with Docker only as fallback; local/CI default to the production major version, currently Postgres 18                                                                                            |
 | Type-safe data access   | Kysely typed SQL builder; SQL migrations are schema source of truth                                                                                                                                                                                                                                   |
@@ -172,3 +172,15 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   from `0001` keeps its rows until a separate gated migration drops it.
   Supersedes the "`/health` is owner-only" clause of ADR-0022 D5. Accepted and
   implemented on 2026-09-09 by `OVE-410`.
+- ADR-0028 — The journal composer takes Notion's shape (2026-09-10). Binding:
+  `JournalDocumentV1` gains heading level 1, a `todo` list style with a checked
+  flag, a callout, a code block and the marks underline, strikethrough and code,
+  all additively at schema version 1 with no SQL and no migrated row; marks
+  normalize to one canonical order and at most one per type; the composer adopts
+  Notion's canvas, gutter handle, drag-and-drop, slash menu, selection toolbar
+  and input rules, in OverGarden's tokens and font, and the permanent button row
+  is deleted; the public entry keeps its typography and renders a level-1
+  heading as an `h2` so the entry title stays the page's one `h1`. Supersedes
+  the closed root-node and inline-mark lists of ADR-0015; everything else there,
+  including the pin to Lexical 0.49.0 and the forbidden-package list, stands.
+  Accepted 2026-09-10; implemented as SDD Slice 26 (`OVE-411`–`OVE-417`).

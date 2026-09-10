@@ -1,8 +1,13 @@
 # Structured Journal Composer
 
-Status: current implementation contract
+Status: current implementation contract for the runtime, lifecycle, media and
+safe-input sections. The "Closed grammar and identity" section below is being
+superseded block by block by ADR-0028 (SDD Slice 26): the document already
+carries heading level 1, a `todo` list style, a callout and a code block, and
+the marks underline, strikethrough and code. Read ADR-0028 first for the
+grammar; this page is rewritten when the slice closes.
 Owner: OVE-317
-Decision: ADR-0015
+Decision: ADR-0015, amended by ADR-0028
 
 ## Runtime decision
 
