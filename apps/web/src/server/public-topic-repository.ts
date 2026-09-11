@@ -13,6 +13,7 @@ import {
 } from "@/lib/garden/public-paths";
 import {
   DEFAULT_PUBLIC_LOCALE,
+  PUBLIC_LOCALES,
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
@@ -318,7 +319,7 @@ export function serializePublicKnowledgeTopics(
         distinctPublicEntityIds:
           entryCount > 0 ? [`topic:${topic.slug}`] : [],
         canonicalPath: publicTopicPath(topic.slug),
-        equivalentLocales: [],
+        equivalentLocales: [...PUBLIC_LOCALES],
       }).decision,
     };
   });
@@ -331,7 +332,7 @@ export function buildPublicTopicDiscoverySource(
     "localized_topic" | "topic_sitemap" | "public_topic_repository"
   >,
   candidateState: "candidate" | "not_public_candidate" = "candidate",
-  servedLocale: PublicLocale | null = null,
+  routeLocale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): PublicSurfaceDiscoverySource {
   return {
     consumerId,
@@ -353,15 +354,14 @@ export function buildPublicTopicDiscoverySource(
             ...page.entries.flatMap((entry) => [entry.id, entry.objectId]),
           ]
         : [],
-    canonicalPath: localizedPath(
-      DEFAULT_PUBLIC_LOCALE,
-      publicTopicPath(page.topic.slug),
-    ),
-    // The canonical is the unprefixed address; a prefixed request is a
-    // duplicate of it and is `noindex` (ADR-0029 D10). OVE-423 promotes topics
-    // to a three-locale family, at which point the canonical follows the route.
-    servedLocale,
-    equivalentLocales: [],
+    // A topic page's own content is its chrome — the label, the headings, the
+    // counts — and that is translated, so the page genuinely exists in three
+    // languages and each is its own canonical (ADR-0029 D10). The entries it
+    // lists are not translated, and are not meant to be: `hreflang` is for
+    // pages carrying the same content in different languages, which is exactly
+    // what translated chrome over one shared list is.
+    canonicalPath: localizedPath(routeLocale, publicTopicPath(page.topic.slug)),
+    equivalentLocales: [...PUBLIC_LOCALES],
   };
 }
 

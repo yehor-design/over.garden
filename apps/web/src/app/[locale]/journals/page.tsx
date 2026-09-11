@@ -11,6 +11,7 @@ import {
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
+  PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import {
   listPublicJournalDirectoryFacets,
@@ -184,7 +185,7 @@ function buildJournalDirectoryDiscoverySource(
       ...facets.topics.map((facet) => `topic:${facet.slug}`),
     ],
     canonicalPath: localizedPath(locale, "/journals"),
-    equivalentLocales: [locale],
+    equivalentLocales: [...PUBLIC_LOCALES],
   };
 }
 

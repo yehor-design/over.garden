@@ -11,6 +11,7 @@ import {
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
+  PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import {
   normalizePublicObjectCatalogRequest,
@@ -143,7 +144,7 @@ function buildObjectCatalogDiscoverySource(
       card.latestJournal.path,
     ]),
     canonicalPath: localizedPath(locale, "/objects"),
-    equivalentLocales: [locale],
+    equivalentLocales: [...PUBLIC_LOCALES],
   };
 }
 

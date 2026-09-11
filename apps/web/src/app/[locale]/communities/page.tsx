@@ -7,11 +7,11 @@ import {
   getCommunityCopy,
 } from "@/lib/community-copy";
 import {
-  getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
+  PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import {
@@ -116,7 +116,7 @@ function buildCommunityDirectoryDiscoverySource(
     ],
     distinctPublicEntityIds: active.map((community) => community.id),
     canonicalPath: localizedPath(locale, "/communities"),
-    equivalentLocales: getLanguageSwitcherLocales(locale),
+    equivalentLocales: [...PUBLIC_LOCALES],
   };
 }
 

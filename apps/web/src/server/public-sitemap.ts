@@ -119,14 +119,14 @@ export async function buildPublicSitemapChunk(
       const decision = resolvePublicSurfaceDiscoveryForRequest(
         buildPublicTopicDiscoverySource(page, "topic_sitemap"),
       ).decision;
-      return decision.sitemapEligible
-        ? [
-            {
-              url: publicTopicPath(page.topic.slug),
-              lastModified: new Date(page.latestPublishedAt),
-            },
-          ]
-        : [];
+      if (!decision.sitemapEligible) return [];
+      // A topic is self-canonical in each route family (ADR-0029 D10), so all
+      // three of its canonicals belong here.
+      const lastModified = new Date(page.latestPublishedAt);
+      return PUBLIC_LOCALES.map((locale) => ({
+        url: localizedPath(locale, publicTopicPath(page.topic.slug)),
+        lastModified,
+      }));
     });
   }
   if (id === "communities") return listPublicCommunitySitemapUrls();

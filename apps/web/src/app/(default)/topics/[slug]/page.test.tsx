@@ -48,7 +48,7 @@ afterEach(() => {
 });
 
 describe("/topics/[slug]", () => {
-  it("renders rich curated topic evidence without inventing locale equivalence", async () => {
+  it("renders rich curated topic evidence and declares its three locales", async () => {
     const { default: TopicRoute, generateMetadata } =
       await import("@/app/[locale]/topics/[slug]/page");
     const html = renderToStaticMarkup(
@@ -64,13 +64,26 @@ describe("/topics/[slug]", () => {
     const metadata = await generateMetadata({
       params: Promise.resolve({ locale: "ru", slug: "care-checks" }),
     });
-    // The topic's canonical is the unprefixed address, so a /ru request is a
-    // duplicate of it and is refused (ADR-0029 D10). The page still renders in
-    // Russian — the language is the reader's, the address is not.
+    // A topic's own content is its chrome, and that is translated, so the page
+    // genuinely exists in three languages and each is its own canonical
+    // (ADR-0029 D10). The entries it lists are not translated and are not meant
+    // to be — `hreflang` is exactly for same content in different languages.
     expect(metadata).toMatchObject({
-      robots: { index: false, follow: false },
+      alternates: {
+        canonical: "https://over.garden/ru/topics/care-checks",
+        languages: {
+          uk: "https://over.garden/topics/care-checks",
+          bg: "https://over.garden/bg/topics/care-checks",
+          ru: "https://over.garden/ru/topics/care-checks",
+          "x-default": "https://over.garden/topics/care-checks",
+        },
+      },
+      openGraph: {
+        locale: "ru_BG",
+        url: "https://over.garden/ru/topics/care-checks",
+      },
+      robots: { index: true, follow: true },
     });
-    expect(metadata.alternates).toBeUndefined();
   });
 
   it("allows only the canonical Ukrainian topic route to inherit the quality gate", async () => {

@@ -196,7 +196,13 @@ describe("public sitemap", () => {
 
     const urls = await buildPublicSitemapChunk("topics");
 
-    expect(urls.map((item) => item.url)).toEqual([publicTopicPath("rich")]);
+    // The empty topic is refused whatever the locale; the rich one contributes
+    // all three of its canonicals (ADR-0029 D10).
+    expect(urls.map((item) => item.url)).toEqual([
+      publicTopicPath("rich"),
+      `/bg${publicTopicPath("rich")}`,
+      `/ru${publicTopicPath("rich")}`,
+    ]);
   });
 
   it("renders absolute, escaped urls with a true lastmod", () => {
