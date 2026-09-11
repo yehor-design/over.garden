@@ -10,10 +10,16 @@ every canonical URL in the production sitemap. Reproduce any of it with the
 
 ## Status of the task list
 
-Linear holds `OVE-419` … `OVE-422`. The workspace then hit the free-plan issue
-limit (`You've exceeded the free issue limit for this workspace`, 2026-09-11),
-so tasks 5 through 16 live here in the same seven-section shape and move to
-Linear when the limit lifts. Numbering below is positional, not a Linear id.
+All sixteen tasks are in Linear as `OVE-419` … `OVE-434`. They briefly lived
+here only: the workspace hit its plan's issue limit after `OVE-422`
+(`You've exceeded the free issue limit for this workspace`, 2026-09-11), the
+owner deleted the fifty oldest completed issues that afternoon, and the rest
+were created immediately after. What those fifty contained is preserved in
+`docs/linear/archive/`.
+
+This file stays as the executor's companion: the sections below carry the
+production evidence, the traps and the ordering rationale that do not fit an
+issue body.
 
 | # | Linear | Phase | Task |
 | --- | --- | --- | --- |
@@ -21,25 +27,25 @@ Linear when the limit lifts. Numbering below is positional, not a Linear id.
 | 2 | `OVE-420` | 0 | Every URL absolute, Open Graph finished |
 | 3 | `OVE-421` | 0 | Sitemap stops submitting `noindex`; robots.txt reconciled |
 | 4 | `OVE-422` | 1 | Geography stops redirecting; canonical = URL served |
-| 5 | — | 1 | `hreflang` everywhere it belongs, nowhere it does not |
-| 6 | — | 1 | Content language: `source_language`, `lang`, `inLanguage` |
-| 7 | — | 2 | The address manifest and one slugifier |
-| 8 | — | 2 | Topic tags, the community path builder, the banned-literal lint |
-| 9 | — | 2 | Proxy-decided 404s, case 308, the two missing route halves, bounded pagination |
-| 10 | — | 3 | Entry and passport addresses move to `/@{handle}` |
-| 11 | — | 3 | The catalog re-slug backfill |
-| 12 | — | 4 | The entity graph |
-| 13 | — | 4 | A front door for the catalog |
-| 14 | — | 4 | Photographs |
-| 15 | — | 4 | Aggregation hubs worth indexing |
-| 16 | — | 4 | IndexNow |
+| 5 | `OVE-423` | 1 | `hreflang` everywhere it belongs, nowhere it does not |
+| 6 | `OVE-424` | 1 | Content language: `source_language`, `lang`, `inLanguage` |
+| 7 | `OVE-425` | 2 | The address manifest and one slugifier |
+| 8 | `OVE-426` | 2 | Topic tags, the community path builder, the banned-literal lint |
+| 9 | `OVE-427` | 2 | Proxy-decided 404s, case 308, the two missing route halves, bounded pagination |
+| 10 | `OVE-428` | 3 | Entry and passport addresses move to `/@{handle}` |
+| 11 | `OVE-429` | 3 | The catalog re-slug backfill |
+| 12 | `OVE-430` | 4 | The entity graph |
+| 13 | `OVE-431` | 4 | A front door for the catalog |
+| 14 | `OVE-432` | 4 | Photographs |
+| 15 | `OVE-433` | 4 | Aggregation hubs worth indexing |
+| 16 | `OVE-434` | 4 | IndexNow |
 
 Phases are ordered so nothing moves before the layer that catches it exists.
 Within a phase, tasks are independent unless a Dependencies line says otherwise.
 
 ---
 
-## 5. `hreflang` everywhere it belongs, and nowhere it does not
+## 5. `OVE-423` — `hreflang` everywhere it belongs, and nowhere it does not
 
 **Outcome.** Every page that genuinely exists in more than one language declares
 its siblings; every page that exists in one declares none. Three near-duplicate
@@ -72,7 +78,7 @@ reciprocity.
 
 ---
 
-## 6. Content language: `source_language`, `lang`, `inLanguage`
+## 6. `OVE-424` — Content language: `source_language`, `lang`, `inLanguage`
 
 **Outcome.** Each entry declares the language it was written in, and the page
 says so honestly. A Ukrainian entry stops being served inside a `lang="bg"`
@@ -106,7 +112,7 @@ screenshot of an entry card before and after, identical.
 
 ---
 
-## 7. The address manifest and one slugifier
+## 7. `OVE-425` — The address manifest and one slugifier
 
 **Outcome.** One declaration describes every slug namespace, and generates the
 TypeScript guard, the SQL `CHECK` and the lint rule. The five generators become
@@ -140,7 +146,7 @@ refused by the generated `CHECK`, rolled back.
 
 ---
 
-## 8. Topic tags, the community path builder, the banned-literal lint
+## 8. `OVE-426` — Topic tags, the community path builder, the banned-literal lint
 
 **Outcome.** A gardener's own word becomes the topic address, and no call site
 spells a public path by hand.
@@ -166,7 +172,7 @@ reintroduction.
 
 ---
 
-## 9. Proxy-decided 404s, case 308, the missing route halves, bounded pagination
+## 9. `OVE-427` — Proxy-decided 404s, case 308, the missing route halves, bounded pagination
 
 **Outcome.** Every public address resolves to 200, 308 or 404. Nothing answers
 200 with a `noindex` apology, and no filter combination opens crawlable space.
@@ -194,7 +200,7 @@ self-canonicalises rather than pointing at page 1.
 
 ---
 
-## 10. Entry and passport addresses move to `/@{handle}`
+## 10. `OVE-428` — Entry and passport addresses move to `/@{handle}`
 
 **Outcome.** A journal entry lives at `/@{handle}/{slug}` and an object passport
 at `/@{handle}/objects/{slug}`, each at exactly one address, with every previous
@@ -223,7 +229,7 @@ the moment it runs.**
 
 ---
 
-## 11. The catalog re-slug backfill
+## 11. `OVE-429` — The catalog re-slug backfill
 
 **Outcome.** Organism addresses carry the name and nothing else:
 `/species/solanum-lycopersicum/advance`, not
@@ -253,7 +259,7 @@ every statement.
 
 ---
 
-## 12. The entity graph
+## 12. `OVE-430` — The entity graph
 
 **Outcome.** An entry says what it is about and who wrote it, and an organism
 card says what has been written about it. The highest-value item in the slice.
@@ -279,7 +285,7 @@ traversal from entry `about` to the card and back through `subjectOf`.
 
 ---
 
-## 13. A front door for the catalog
+## 13. `OVE-431` — A front door for the catalog
 
 **Outcome.** The catalog is reachable by clicking. 114 669 organism pages have
 no inbound internal link today and are discoverable only from the sitemap.
@@ -302,7 +308,7 @@ sample of organism pages.
 
 ---
 
-## 14. Photographs
+## 14. `OVE-432` — Photographs
 
 **Outcome.** A gardener's photographs are findable. They are the content of a
 gardening record, and image search is a first-class channel for it.
@@ -326,7 +332,7 @@ screenshot.
 
 ---
 
-## 15. Aggregation hubs worth indexing
+## 15. `OVE-433` — Aggregation hubs worth indexing
 
 **Outcome.** A few hundred pages built from catalog data that are substantive on
 their own — "621 сортів томата в Держреєстрі України" — rather than a hundred
@@ -347,7 +353,7 @@ empty-listing rule applies. **New owner-facing surface: approved individually.**
 
 ---
 
-## 16. IndexNow
+## 16. `OVE-434` — IndexNow
 
 **Outcome.** A new or changed page reaches Bing and Yandex in minutes rather
 than weeks. Both are a materially larger share in Ukraine and Bulgaria than in

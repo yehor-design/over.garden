@@ -143,8 +143,8 @@ Every Linear task uses this shape and nothing more:
   or badged by language. Supersedes ADR-0026 D8 and the addressing half of D9,
   and the addressing sections of `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`.
   `docs/ADDRESS_LAW_EXECUTION.md` — the executor's runbook for ADR-0029: the
-  sixteen tasks in order, what each must prove, and the traps. Tasks 5–16 live
-  there rather than in Linear because the workspace hit its free issue limit.
+  sixteen tasks in order (`OVE-419`–`OVE-434`), what each must prove, and the
+  traps that do not fit an issue body.
   `docs/ORGANISM_GRAPH_EXECUTION.md` — the executor's runbook for that slice:
   the owner's standing authorization, environment quirks, production
   procedures, hand-offs between the fourteen tasks.
