@@ -140,6 +140,24 @@ The unused OVE-322 reservation at `0030` remains historical and
 non-transferable. OVE-326 uses the next free number, `0035`; it does not inherit
 or repurpose `0030`.
 
+## SDD Slice 27 — the address law (ADR-0029)
+
+Reserved 2026-09-11, in the order the phases apply. `0066` was the highest
+number in `apps/web/sql` when these were taken.
+
+| Migration | Owner | What it does |
+| --- | --- | --- |
+| `0067` | `OVE-424` | `journal_entries.source_language` written at publish and made `NOT NULL` |
+| `0068` | `OVE-425` | the generated `CHECK` on `journal_entries.public_slug` — the only slug column that has never had one |
+| `0069` | `OVE-426` | widens the `journal_topics.slug` CHECK to the manifest's native-script `topic` shape |
+| `0070` | `OVE-428` | `journal_entry_slug_history` and its sync trigger, modelled on `catalog_item_slug_history` |
+| `0071` | `OVE-429` | the catalog re-slug backfill |
+
+`OVE-419` through `OVE-423`, `OVE-427` and `OVE-430` through `OVE-434` need no
+SQL and therefore hold no allocation; under rule 3 none of them may inherit a
+number from this block. `OVE-432` grows `JournalDocumentV1` additively at schema
+version 1 with no migration, the pattern ADR-0028 established.
+
 ## Rules
 
 1. The owning issue must re-read this file and the actual `apps/web/sql`
