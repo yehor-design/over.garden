@@ -764,7 +764,7 @@ describe("app route cache guardrail", () => {
     );
   });
 
-  it("canonicalizes unprefixed Bulgaria community, profile, and journal documents before lifecycle lookups", async () => {
+  it("serves unprefixed community, profile and journal documents to every country, and reaches their lifecycle lookups", async () => {
     mocks.getPublicCommunityLifecycleLookup.mockClear();
     mocks.getPublicProfileLifecycleLookup.mockClear();
     mocks.getPublicJournalEntryLifecycleLookup.mockClear();
@@ -788,21 +788,17 @@ describe("app route cache guardrail", () => {
       },
     );
 
-    expect(community.status).toBe(307);
-    expect(community.headers.get("Location")).toBe(
-      "https://over.garden/bg/communities/missing-community",
-    );
-    expect(profile.status).toBe(307);
-    expect(profile.headers.get("Location")).toBe(
-      "https://over.garden/bg/@missing_garden",
-    );
-    expect(journal.status).toBe(307);
-    expect(journal.headers.get("Location")).toBe(
-      "https://over.garden/bg/journal/missing-entry?engagement=interaction-unavailable",
-    );
-    expect(mocks.getPublicCommunityLifecycleLookup).not.toHaveBeenCalled();
-    expect(mocks.getPublicProfileLifecycleLookup).not.toHaveBeenCalled();
-    expect(mocks.getPublicJournalEntryLifecycleLookup).not.toHaveBeenCalled();
+    // A canonical address answers to everyone (ADR-0029 D10). These used to
+    // 307 to /bg on the strength of the country header, which meant the proxy
+    // never reached the lifecycle lookup that decides 200, 410 or 404 — the
+    // country of the reader changed which of those they got.
+    for (const response of [community, profile, journal]) {
+      expect(response.status).not.toBe(307);
+      expect(response.headers.get("Location")).toBeNull();
+    }
+    expect(mocks.getPublicCommunityLifecycleLookup).toHaveBeenCalled();
+    expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalled();
+    expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalled();
   });
 
   it("keeps only Next internals and the favicon out of the proxy matcher", async () => {
@@ -862,7 +858,7 @@ describe("app route cache guardrail", () => {
     );
   });
 
-  it("redirects Bulgarian country traffic from the root to /bg", async () => {
+  it("serves the root to every country and never redirects on geography", async () => {
     const bgResponse = await responseFor("/", {
       "x-vercel-ip-country": "BG",
     });
@@ -870,12 +866,16 @@ describe("app route cache guardrail", () => {
       "x-vercel-ip-country": "UA",
     });
 
-    expect(bgResponse.status).toBe(307);
-    expect(bgResponse.headers.get("Location")).toBe("https://over.garden/bg");
-    expect(bgResponse.headers.get("Cache-Control")).toBe(
-      APP_ROUTE_CACHE_CONTROL,
-    );
+    // `/` is the most-linked URL on the site. Making it a redirect wasted the
+    // authority it has and made the crawl non-deterministic: which homepage a
+    // crawler indexed depended on the IP its request left from. `hreflang`
+    // plus `x-default` is what tells a search engine which one to show.
+    expect(bgResponse.status).toBe(200);
+    expect(bgResponse.headers.get("Location")).toBeNull();
+    // The reader still gets a Bulgarian interface; only the address is fixed.
+    expect(bgResponse.headers.get("Content-Language")).toBe("bg");
     expect(uaResponse.status).toBe(200);
+    expect(uaResponse.headers.get("Content-Language")).toBe("uk");
   });
 
   it("persists a localized public route and forwards it into signed-in routes", async () => {
@@ -1044,25 +1044,24 @@ describe("app route cache guardrail", () => {
       cookie: interfaceCookies("bulgaria", "ru"),
     });
 
-    expect(persistedRussian.status).toBe(307);
-    expect(persistedRussian.headers.get("Location")).toBe(
-      "https://over.garden/ru",
-    );
-    expect(persistedUkrainian.status).toBe(307);
-    expect(persistedUkrainian.headers.get("Location")).toBe(
-      "https://over.garden/bg",
-    );
+    // The preference still decides the interface language; it no longer
+    // decides the address. Every one of these answers 200 at the URL asked for.
+    for (const response of [
+      persistedRussian,
+      persistedUkrainian,
+      invalidPreference,
+      persistedBulgaria,
+    ]) {
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Location")).toBeNull();
+    }
+    expect(persistedRussian.headers.get("Content-Language")).toBe("ru");
     expect(persistedUkrainian.headers.get("Content-Language")).toBe("bg");
-    expect(invalidPreference.status).toBe(200);
-    expect(invalidPreference.headers.get("Location")).toBeNull();
     expect(invalidPreference.headers.get("Content-Language")).toBe("uk");
-    expect(persistedBulgaria.status).toBe(307);
-    expect(persistedBulgaria.headers.get("Location")).toBe(
-      "https://over.garden/ru",
-    );
+    expect(persistedBulgaria.headers.get("Content-Language")).toBe("ru");
   });
 
-  it("keeps already-localized unprefixed public routes in the persisted locale", async () => {
+  it("serves unprefixed public routes at the address asked for, in the persisted interface language", async () => {
     const privacyResponse = await responseFor("/privacy", {
       cookie: interfaceCookies("bulgaria", "bg"),
     });
@@ -1083,25 +1082,17 @@ describe("app route cache guardrail", () => {
       { cookie: interfaceCookies("bulgaria", "bg") },
     );
 
-    expect(privacyResponse.status).toBe(307);
-    expect(privacyResponse.headers.get("Location")).toBe(
-      "https://over.garden/bg/privacy",
-    );
-    expect(blogResponse.status).toBe(307);
-    expect(blogResponse.headers.get("Location")).toBe(
-      "https://over.garden/ru/blog/field-note",
-    );
-    expect(ugcResponse.status).toBe(307);
-    expect(ugcResponse.headers.get("Location")).toBe(
-      "https://over.garden/bg/journal/field-note",
-    );
-    expect(catalogResponse.status).toBe(307);
-    expect(catalogResponse.headers.get("Location")).toBe(
-      "https://over.garden/ru/objects?kind=plant",
-    );
-    expect(topicResponse.headers.get("Location")).toBe(
-      "https://over.garden/bg/topics/care-checks?authIntent=follow",
-    );
+    for (const [name, response, language] of [
+      ["privacy", privacyResponse, "bg"],
+      ["blog", blogResponse, "ru"],
+      ["journal", ugcResponse, "bg"],
+      ["objects", catalogResponse, "ru"],
+      ["topic", topicResponse, "bg"],
+    ] as const) {
+      expect(response.status, name).toBe(200);
+      expect(response.headers.get("Location"), name).toBeNull();
+      expect(response.headers.get("Content-Language"), name).toBe(language);
+    }
   });
 
   it("canonicalizes a supported but non-canonical cookie value", async () => {
@@ -1115,7 +1106,7 @@ describe("app route cache guardrail", () => {
     );
   });
 
-  it("serves canonical unprefixed Ukrainian profiles and redirects other preferences", async () => {
+  it("serves the canonical unprefixed profile whatever the interface preference", async () => {
     const ukrainianProfile = await responseFor("/@green_thumb", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=uk`,
     });
@@ -1175,18 +1166,15 @@ describe("app route cache guardrail", () => {
       "https://over.garden/uk/@green_thumb",
     );
     expect(ukrainianProfile.headers.get("Content-Language")).toBe("uk");
-    expect(bulgarianProfile.status).toBe(307);
-    expect(bulgarianProfile.headers.get("Location")).toBe(
-      "https://over.garden/bg/@green_thumb",
-    );
+    expect(bulgarianProfile.status).toBe(200);
+    expect(bulgarianProfile.headers.get("Location")).toBeNull();
+    expect(bulgarianProfile.headers.get("Content-Language")).toBe("bg");
     expect(encodedUkrainianProfile.status).toBe(200);
     expect(encodedUkrainianProfile.headers.get("x-middleware-rewrite")).toBe(
       "https://over.garden/uk/@green_thumb",
     );
-    expect(encodedBulgarianProfile.status).toBe(307);
-    expect(encodedBulgarianProfile.headers.get("Location")).toBe(
-      "https://over.garden/bg/@green_thumb",
-    );
+    expect(encodedBulgarianProfile.status).toBe(200);
+    expect(encodedBulgarianProfile.headers.get("Location")).toBeNull();
     expect(ukrainianProfileHead.status).toBe(200);
     expect(ukrainianProfileHead.headers.get("x-middleware-rewrite")).toBe(
       "https://over.garden/uk/@green_thumb",

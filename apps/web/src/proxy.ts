@@ -16,11 +16,7 @@ import {
   INTERFACE_MARKET_REQUEST_HEADER,
   readInterfaceCountryCode,
 } from "@/lib/interface-market";
-import {
-  buildLocalizedInterfaceTarget,
-  getInterfaceRoutePolicy,
-  sanitizeInterfaceRouteSearch,
-} from "@/lib/interface-route-policy";
+import { sanitizeInterfaceRouteSearch } from "@/lib/interface-route-policy";
 import {
   DEFAULT_PUBLIC_LOCALE,
   localizedPath,
@@ -361,21 +357,8 @@ function getLocaleRoutingResponse(
     const url = request.nextUrl.clone();
     const rootProfilePath = `/@${rootProfileHandle}`;
 
-    if (locale !== DEFAULT_PUBLIC_LOCALE) {
-      if (!isDocumentNavigation) return null;
-
-      const target = buildLocalizedInterfaceTarget({
-        locale,
-        pathname: rootProfilePath,
-        search: request.nextUrl.searchParams,
-      });
-      if (!target) return null;
-      const targetUrl = new URL(target, request.nextUrl);
-      url.pathname = targetUrl.pathname;
-      url.search = targetUrl.search;
-      return NextResponse.redirect(url, { status: 307 });
-    }
-
+    // `/@handle` is a canonical address and stays one whatever country the
+    // request came from (ADR-0029 D10). It used to 307 to `/bg/@handle` here.
     if (request.method !== "GET" && request.method !== "HEAD") return null;
 
     const requestHeaders = new Headers(request.headers);
@@ -401,26 +384,16 @@ function getLocaleRoutingResponse(
     });
   }
 
-  if (
-    isDocumentNavigation &&
-    strippedPath.locale === null &&
-    locale !== DEFAULT_PUBLIC_LOCALE &&
-    getInterfaceRoutePolicy(strippedPath.path).mode === "localized-link"
-  ) {
-    const target = buildLocalizedInterfaceTarget({
-      locale,
-      pathname: strippedPath.path,
-      search: request.nextUrl.searchParams,
-    });
-    if (!target) return null;
-    const url = request.nextUrl.clone();
-    const targetUrl = new URL(target, request.nextUrl);
-    url.pathname = targetUrl.pathname;
-    url.search = targetUrl.search;
-
-    return NextResponse.redirect(url, { status: 307 });
-  }
-
+  // A canonical URL answers 200 to everyone (ADR-0029 D10). What used to sit
+  // here sent every unprefixed `localized-link` path to `/bg` or `/ru` on the
+  // strength of `x-vercel-ip-country`, Googlebot included — so the URLs the
+  // sitemap submits were redirects, and which one a crawler landed on depended
+  // on the IP its request left from.
+  //
+  // The replacement is not another redirect. `hreflang` is the mechanism for
+  // showing a Bulgarian searcher the Bulgarian page, and it only works when the
+  // alternate is not itself a redirect; the site shell offers the other locale
+  // to a reader who arrives in the wrong one.
   return null;
 }
 
@@ -545,15 +518,19 @@ export async function proxy(request: NextRequest) {
   const isDocumentNavigation = isDocumentNavigationRequest(request);
   const initialStrippedPath = stripLocalePrefix(request.nextUrl.pathname);
   const canonicalDefaultProfileHandle =
-    isDocumentNavigation &&
-    initialStrippedPath.locale === null &&
-    locale === DEFAULT_PUBLIC_LOCALE
+    isDocumentNavigation && initialStrippedPath.locale === null
       ? matchPublicProfilePath(request.nextUrl.pathname)
       : null;
   if (canonicalDefaultProfileHandle) {
-    // Default-locale profiles are internally rewritten to /uk for App Router
+    // Unprefixed profiles are internally rewritten to /uk for App Router
     // matching. Classify their terminal lifecycle on the canonical unprefixed
-    // request first because a rewrite does not re-enter Proxy.
+    // request first, because a rewrite does not re-enter Proxy.
+    //
+    // This must not depend on the interface locale. It used to, and it was
+    // only safe because the geo-307 below carried every other locale away
+    // before it got here; with that redirect gone (ADR-0029 D10) a reader in
+    // any other language would have been rewritten past this lookup and shown
+    // a removed profile's page instead of its 404 or 410 document.
     const lifecycleResponse = await getPublicProfileLifecycleResponse(
       request,
       localization,
@@ -564,10 +541,9 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Canonical locale routing must happen before lifecycle lookups so an
-  // unprefixed Bulgaria-market URL cannot emit a terminal response under the
-  // wrong canonical path. Already-prefixed routes fall through to the bounded
-  // lifecycle classifiers below.
+  // What remains of locale routing: the `/uk` prefix folds to the canonical
+  // unprefixed path, and an unprefixed profile is rewritten into the App
+  // Router's `[locale]` tree. Neither depends on where the reader is.
   const localeRoutingResponse = getLocaleRoutingResponse(request, localization);
 
   if (localeRoutingResponse) {

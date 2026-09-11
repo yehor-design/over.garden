@@ -54,6 +54,17 @@ export interface PublicSurfaceCandidateInput {
   /** False only for a listing that currently shows nothing. */
   hasContent: boolean | null;
   canonicalPath: string | null;
+  /**
+   * The locale of the route family the request was served from, when the
+   * surface knows it. A page served under a prefix its canonical does not carry
+   * is a duplicate of the canonical, so it is reachable and `noindex`.
+   *
+   * This is what makes the policy's locale clause real. Reading only
+   * `canonicalPath` could never see the served request, so a surface with a
+   * fixed unprefixed canonical — a journal entry — was indexable under all
+   * three prefixes at once.
+   */
+  servedLocale?: PublicLocale | null;
   equivalentLocales: readonly PublicLocale[] | null;
   surfaceKind: PublicSurfaceKind;
   /**
@@ -100,6 +111,9 @@ export function evaluatePublicSurfaceIndexability(
     input.equivalentLocales.length > 0 &&
     !input.equivalentLocales.includes(canonicalLocale)
   ) {
+    reasons.push("non_equivalent_locale");
+  }
+  if (input.servedLocale && input.servedLocale !== canonicalLocale) {
     reasons.push("non_equivalent_locale");
   }
   if (!input.hasContent) {

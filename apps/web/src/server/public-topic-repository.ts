@@ -331,6 +331,7 @@ export function buildPublicTopicDiscoverySource(
     "localized_topic" | "topic_sitemap" | "public_topic_repository"
   >,
   candidateState: "candidate" | "not_public_candidate" = "candidate",
+  servedLocale: PublicLocale | null = null,
 ): PublicSurfaceDiscoverySource {
   return {
     consumerId,
@@ -356,6 +357,10 @@ export function buildPublicTopicDiscoverySource(
       DEFAULT_PUBLIC_LOCALE,
       publicTopicPath(page.topic.slug),
     ),
+    // The canonical is the unprefixed address; a prefixed request is a
+    // duplicate of it and is `noindex` (ADR-0029 D10). OVE-423 promotes topics
+    // to a three-locale family, at which point the canonical follows the route.
+    servedLocale,
     equivalentLocales: [],
   };
 }

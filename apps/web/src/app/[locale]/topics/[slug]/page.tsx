@@ -58,6 +58,7 @@ export async function generateMetadata({
           topic,
           "localized_topic",
           "candidate",
+          localeParam,
         ),
         payload: topic,
       };
@@ -148,7 +149,7 @@ function buildTopicSurface(
   locale: PublicLocale,
   topic: PublicTopicAggregationPage,
   discovery: PublicSurfaceDiscoveryResult = resolvePublicSurfaceDiscoveryForRequest(
-    buildPublicTopicDiscoverySource(topic, "localized_topic", "candidate"),
+    buildPublicTopicDiscoverySource(topic, "localized_topic", "candidate", locale),
   ),
 ) {
   const copy = getPublicKnowledgeCopy(locale);
