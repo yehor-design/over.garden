@@ -60,8 +60,10 @@ import {
 } from "@/server/public-sitemap";
 
 describe("public sitemap", () => {
-  it("lists one chunk per family plus one per 5 000 entries or profiles", async () => {
+  it("budgets every chunk in emitted URLs, not in rows", async () => {
     mocks.countEntries.mockResolvedValue(12_000);
+    // 4 000 profiles emit 12 000 URLs across three locales, so they need three
+    // chunks — one was enough only while the budget counted rows.
     mocks.countProfiles.mockResolvedValue(4_000);
 
     await expect(listPublicSitemapChunkIds()).resolves.toEqual([
@@ -70,6 +72,8 @@ describe("public sitemap", () => {
       "topics",
       "communities",
       "profiles-0",
+      "profiles-1",
+      "profiles-2",
       "entries-0",
       "entries-1",
       "entries-2",
@@ -160,18 +164,26 @@ describe("public sitemap", () => {
       },
     ]);
 
-    await expect(buildPublicSitemapChunk("catalog")).resolves.toEqual([
-      { url: "/species/solanum-lycopersicum", lastModified: new Date("2026-09-01T00:00:00.000Z") },
-      {
-        url: "/species/solanum-lycopersicum/de-barao",
-        lastModified: new Date("2026-09-02T00:00:00.000Z"),
-      },
-      { url: "/variety/orphan-form", lastModified: new Date("2026-09-03T00:00:00.000Z") },
-      {
-        url: "/species/apis-mellifera/carpathian-bee",
-        lastModified: new Date("2026-09-04T00:00:00.000Z"),
-      },
+    // Each card is self-canonical in all three route families (ADR-0029 D10),
+    // so every one of its canonicals belongs here — not just the unprefixed one.
+    const catalog = await buildPublicSitemapChunk("catalog");
+    expect(catalog.map((entry) => entry.url)).toEqual([
+      "/species/solanum-lycopersicum",
+      "/bg/species/solanum-lycopersicum",
+      "/ru/species/solanum-lycopersicum",
+      "/species/solanum-lycopersicum/de-barao",
+      "/bg/species/solanum-lycopersicum/de-barao",
+      "/ru/species/solanum-lycopersicum/de-barao",
+      "/variety/orphan-form",
+      "/bg/variety/orphan-form",
+      "/ru/variety/orphan-form",
+      "/species/apis-mellifera/carpathian-bee",
+      "/bg/species/apis-mellifera/carpathian-bee",
+      "/ru/species/apis-mellifera/carpathian-bee",
     ]);
+    expect(catalog[0]?.lastModified).toEqual(
+      new Date("2026-09-01T00:00:00.000Z"),
+    );
   });
 
   it("lists only topics that list something (ADR-0022, D3)", async () => {

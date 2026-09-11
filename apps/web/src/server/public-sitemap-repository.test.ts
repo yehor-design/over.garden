@@ -94,7 +94,9 @@ describe("public sitemap repository query contracts", () => {
       '"journal_entries"."owner_user_id" = "user_public_profiles"."user_id"',
     );
     expect(query?.sql).not.toContain("profile_visibility");
-    expect(query?.parameters.slice(-2)).toEqual([5_000, 0]);
+    // A profile row emits one URL per locale, so the row budget is the URL
+    // budget divided by three: 5 000 URLs, not 5 000 rows.
+    expect(query?.parameters.slice(-2)).toEqual([1_666, 0]);
   });
 
   it("lists communities on curated topics only", async () => {
