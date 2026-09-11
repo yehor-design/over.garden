@@ -267,9 +267,9 @@ Ordered so nothing moves before the layer that catches it exists.
 
 | phase | contents | reversible |
 | --- | --- | --- |
-| 0 | `metadataBase` and absolute URLs; sitemap stops emitting `noindex` URLs; sitemap chunks counted in URLs; `robots.txt` reconciled; Open Graph completed; `CHECK` on `journal_entries.public_slug` | yes, no address moves |
+| 0 | `metadataBase` and absolute URLs; sitemap stops emitting `noindex` URLs; sitemap chunks counted in URLs; `robots.txt` reconciled; Open Graph completed | yes, no address moves |
 | 1 | geo-307 removed; one canonical rule; `hreflang` everywhere it belongs; the unprefixed family renders `uk`; `source_language` and `lang` | yes |
-| 2 | the address manifest and one slugifier; topic tags; `publicCommunityPath` and the banned-literal lint; proxy-decided 404s; case 308; the two missing route halves; bounded pagination | yes, new content only |
+| 2 | the address manifest and one slugifier, which generates the `CHECK` `journal_entries.public_slug` has never had; topic tags; `publicCommunityPath` and the banned-literal lint; proxy-decided 404s; case 308; the two missing route halves; bounded pagination | yes, new content only |
 | 3 | `journal_entry_slug_history`; the backfill of every entry and ~101,619 catalog addresses behind 308s; resubmitted sitemap index | no |
 | 4 | D13: the entity graph, the catalog front door, image captions and image sitemap, aggregation hubs, IndexNow | yes |
 
