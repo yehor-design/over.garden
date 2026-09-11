@@ -91,7 +91,9 @@ describe("catalog slug assignment (ADR-0026 D8)", () => {
       "de-barao-3",
     );
     expect(chooseCatalogSlug("de-barao", ["de-barao-2"])).toBe("de-barao");
-    expect(() => chooseCatalogSlug("De Barao", [])).toThrow(/Not a catalog slug/u);
+    // The namespace names itself in the message now: the manifest decides
+    // the shape, and `species` and `form` will not always agree about it.
+    expect(() => chooseCatalogSlug("De Barao", [])).toThrow(/Not a form slug/u);
   });
 
   it("maps taxa to the species namespace and every form to the form namespace", () => {

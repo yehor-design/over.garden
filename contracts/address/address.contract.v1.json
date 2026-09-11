@@ -1,0 +1,258 @@
+{
+  "schema": "overgarden.addressContract.v1",
+  "manifestVersion": "ove425.address.v1",
+  "namespaces": [
+    {
+      "namespace": "species",
+      "script": "latin",
+      "shape": "hyphenated",
+      "alphabet": "a-z0-9",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "uniquenessScope": "global",
+      "budget": {
+        "decodedCharacters": 60,
+        "encodedCharacters": 180
+      },
+      "reservedWords": [],
+      "source": "the accepted scientific name, without authorship",
+      "pathPrefix": "/species/",
+      "pathBuilder": "publicCatalogEvidencePath",
+      "storage": {
+        "table": "catalog_items",
+        "column": "public_slug",
+        "constraint": "catalog_items_public_slug_check",
+        "nullable": true,
+        "maxCharacters": 96,
+        "checkInstalledBy": null
+      },
+      "notes": "Shares a column, a unique index and a history table with `form`: a bare /species/{slug} request is looked up in both, so one slug names one organism."
+    },
+    {
+      "namespace": "form",
+      "script": "latin",
+      "shape": "hyphenated",
+      "alphabet": "a-z0-9",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "uniquenessScope": "perSpecies",
+      "budget": {
+        "decodedCharacters": 60,
+        "encodedCharacters": 180
+      },
+      "reservedWords": [],
+      "source": "the registered denomination, romanized",
+      "pathPrefix": "/species/",
+      "pathBuilder": "publicCatalogEvidencePath",
+      "storage": {
+        "table": "catalog_items",
+        "column": "public_slug",
+        "constraint": "catalog_items_public_slug_check",
+        "nullable": true,
+        "maxCharacters": 96,
+        "checkInstalledBy": null
+      },
+      "notes": "ADR-0029 D7. Two cultivars named Advance under different species both keep the name; within one species they are almost certainly the same cultivar from two registers, so the collision counter is a reconciliation signal (ADR-0026 D4)."
+    },
+    {
+      "namespace": "journalEntry",
+      "script": "native",
+      "shape": "hyphenated",
+      "alphabet": "a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ",
+      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "uniquenessScope": "perAuthorHandle",
+      "budget": {
+        "decodedCharacters": 60,
+        "encodedCharacters": 180
+      },
+      "reservedWords": [
+        "objects"
+      ],
+      "source": "the entry title at first publish",
+      "pathPrefix": "/journal/",
+      "pathBuilder": "publicJournalEntryPath",
+      "storage": {
+        "table": "journal_entries",
+        "column": "public_slug",
+        "constraint": "journal_entries_public_slug_check",
+        "nullable": true,
+        "maxCharacters": 96,
+        "checkInstalledBy": "0068"
+      },
+      "notes": "The only slug column that has never carried a CHECK. Migration 0068 gives it one. The scope is per-author from OVE-428; until its history table lands the publish id still disambiguates."
+    },
+    {
+      "namespace": "object",
+      "script": "native",
+      "shape": "hyphenated",
+      "alphabet": "a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ",
+      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "uniquenessScope": "perAuthorHandle",
+      "budget": {
+        "decodedCharacters": 60,
+        "encodedCharacters": 180
+      },
+      "reservedWords": [],
+      "source": "the object display name",
+      "pathPrefix": "/lineage/objects/",
+      "pathBuilder": "publicLineageObjectPath",
+      "storage": null,
+      "notes": "Addressed by id today; OVE-428 moves it to /@{handle}/objects/{slug} and gives it a column."
+    },
+    {
+      "namespace": "topic",
+      "script": "native",
+      "shape": "hyphenated",
+      "alphabet": "a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ",
+      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "uniquenessScope": "global",
+      "budget": {
+        "decodedCharacters": 60,
+        "encodedCharacters": 180
+      },
+      "reservedWords": [],
+      "source": "the gardener's own tag label",
+      "pathPrefix": "/topics/",
+      "pathBuilder": "publicTopicPath",
+      "storage": {
+        "table": "journal_topics",
+        "column": "slug",
+        "constraint": "journal_topics_slug_check",
+        "nullable": false,
+        "maxCharacters": 64,
+        "checkInstalledBy": "0069"
+      },
+      "notes": "The column's CHECK is still ASCII-only, which is why a Cyrillic tag becomes a hash today. OVE-426 widens it in migration 0069; this manifest already declares the shape it will widen to."
+    },
+    {
+      "namespace": "community",
+      "script": "native",
+      "shape": "hyphenated",
+      "alphabet": "a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ",
+      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "uniquenessScope": "global",
+      "budget": {
+        "decodedCharacters": 60,
+        "encodedCharacters": 180
+      },
+      "reservedWords": [],
+      "source": "the community name",
+      "pathPrefix": "/communities/",
+      "pathBuilder": "publicCommunityPath",
+      "storage": {
+        "table": "communities",
+        "column": "slug",
+        "constraint": "communities_slug_check",
+        "nullable": false,
+        "maxCharacters": 64,
+        "checkInstalledBy": null
+      },
+      "notes": "Communities are seeded, not authored, so every slug is ASCII today; the namespace is native because the next one need not be."
+    },
+    {
+      "namespace": "profileHandle",
+      "script": "latin",
+      "shape": "handle",
+      "alphabet": "a-z0-9",
+      "pattern": "^[a-z0-9][a-z0-9_]{2,29}$",
+      "uniquenessScope": "global",
+      "budget": {
+        "decodedCharacters": 30,
+        "encodedCharacters": 30
+      },
+      "reservedWords": [],
+      "source": "the gardener's chosen handle, unchanged",
+      "pathPrefix": "/@",
+      "pathBuilder": "publicProfileBasePath",
+      "storage": null,
+      "notes": "Already `^[a-z0-9][a-z0-9_]{2,29}$` and validated where it is written. Declared here so the address law has no gap, not to change it."
+    }
+  ],
+  "constraints": [
+    {
+      "constraint": "catalog_items_public_slug_check",
+      "table": "catalog_items",
+      "column": "public_slug",
+      "nullable": true,
+      "maxCharacters": 96,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "checkInstalledBy": null,
+      "namespaces": [
+        "species",
+        "form"
+      ]
+    },
+    {
+      "constraint": "communities_slug_check",
+      "table": "communities",
+      "column": "slug",
+      "nullable": false,
+      "maxCharacters": 64,
+      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "checkInstalledBy": null,
+      "namespaces": [
+        "community"
+      ]
+    },
+    {
+      "constraint": "journal_entries_public_slug_check",
+      "table": "journal_entries",
+      "column": "public_slug",
+      "nullable": true,
+      "maxCharacters": 96,
+      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "checkInstalledBy": "0068",
+      "namespaces": [
+        "journalEntry"
+      ]
+    },
+    {
+      "constraint": "journal_topics_slug_check",
+      "table": "journal_topics",
+      "column": "slug",
+      "nullable": false,
+      "maxCharacters": 64,
+      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "checkInstalledBy": "0069",
+      "namespaces": [
+        "topic"
+      ]
+    }
+  ],
+  "bannedPathLiterals": [
+    {
+      "literal": "/@",
+      "builders": [
+        "publicProfileBasePath"
+      ]
+    },
+    {
+      "literal": "/communities/",
+      "builders": [
+        "publicCommunityPath"
+      ]
+    },
+    {
+      "literal": "/journal/",
+      "builders": [
+        "publicJournalEntryPath"
+      ]
+    },
+    {
+      "literal": "/lineage/objects/",
+      "builders": [
+        "publicLineageObjectPath"
+      ]
+    },
+    {
+      "literal": "/species/",
+      "builders": [
+        "publicCatalogEvidencePath"
+      ]
+    },
+    {
+      "literal": "/topics/",
+      "builders": [
+        "publicTopicPath"
+      ]
+    }
+  ]
+}

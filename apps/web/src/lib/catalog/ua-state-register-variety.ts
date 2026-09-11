@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { JsonValue } from "@/db/schema";
+import { slugify } from "@/lib/address/slugify";
 
 export const UA_STATE_REGISTER_VARIETY_PARSER_VERSION =
   "ove-57.ua-state-register.variety.v1";
@@ -385,7 +386,7 @@ function buildUaStateRegisterProjection(
   return {
     canonicalName: row.varietyName,
     normalizedName: normalizeCatalogName(row.varietyName),
-    publicSlug: buildUaStateRegisterPublicSlug(row),
+    publicSlug: buildUaStateRegisterSlugWithRegisterTail(row),
     source: "ua_state_register",
     sourceId: `ua-state-register:${UA_STATE_REGISTER_SOURCE.version}:RegisterVarietis:${row.applicationNumber}`,
     catalogKind: "plant_variety",
@@ -394,24 +395,33 @@ function buildUaStateRegisterProjection(
   };
 }
 
-function buildUaStateRegisterPublicSlug(
+/**
+ * The register row's address base, plus the application number that still
+ * disambiguates it.
+ *
+ * The base is `slugify` now, like every other namespace: what stood here
+ * decomposed with `NFKD`, stripped the marks and cut at sixty characters with
+ * no regard for what the cut landed in the middle of.
+ *
+ * **The `-ua-register-{applicationNumber}` tail is not the address law's.**
+ * ADR-0029 D6 says the disambiguator is a counter, and a register's
+ * application number in a public URL is exactly the thing D6 forbids. It stays
+ * here for one reason: these rows are inserted straight into
+ * `catalog_items.public_slug`, which is globally unique, without passing
+ * through `assignCatalogSlug` — so removing the tail today would make two
+ * varieties of the same name fail to ingest rather than get a `-2`. `OVE-429`
+ * moves the ingest onto the counter and re-slugs the rows already written; the
+ * tail goes with it.
+ */
+function buildUaStateRegisterSlugWithRegisterTail(
   row: ReturnType<typeof normalizeUaStateRegisterSourceRow>,
 ) {
-  const slugBase = slugifyAscii(row.varietyNameTRL ?? row.varietyName);
-  return `${slugBase}-ua-register-${row.applicationNumber.toLowerCase()}`;
-}
-
-function slugifyAscii(value: string) {
-  const slug = value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[`'’ʼ]+/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-
-  return slug || "ua-variety";
+  const base = slugify(row.varietyNameTRL ?? row.varietyName, {
+    script: "latin",
+    language: "uk",
+    fallback: "ua-variety",
+  });
+  return `${base}-ua-register-${row.applicationNumber.toLowerCase()}`;
 }
 
 function normalizeUaStateRegisterSourceRow(

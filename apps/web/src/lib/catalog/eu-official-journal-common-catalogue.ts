@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { JsonValue } from "@/db/schema";
+import { slugify } from "@/lib/address/slugify";
 import {
   EU_COMMON_CATALOGUE_FORMEX_PARSER_VERSION,
   type EuCommonCatalogueParsedRow,
@@ -262,7 +263,7 @@ function buildProjection(
   return {
     canonicalName,
     normalizedName,
-    publicSlug: buildPublicSlug(canonicalName, sourceRecordKey),
+    publicSlug: buildEuOjSlugWithSourceDigest(canonicalName, sourceRecordKey),
     source: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
     sourceId: sourceRecordKey,
     catalogKind: "plant_variety",
@@ -366,20 +367,35 @@ function isOfficialEuOjSourceUrl(sourceUrl: string) {
   );
 }
 
-function buildPublicSlug(canonicalName: string, sourceRecordKey: string) {
-  const base = slugify(canonicalName);
+/**
+ * The catalogue entry's address base, plus the digest that still disambiguates
+ * it.
+ *
+ * The base is `slugify` now. What stood here was a second copy of the same
+ * `NFKD` mistake, under the same name as the function it has been replaced by
+ * — which is how two slugifiers lived in one repository without anyone
+ * noticing they disagreed.
+ *
+ * **The `eu-oj-` prefix and the ten-character digest are not the address
+ * law's.** ADR-0029 D6 forbids a hash suffix outright. Both stay for the same
+ * reason the Ukrainian register's tail does: this projection is written
+ * straight into the globally unique `catalog_items.public_slug` without
+ * passing through `assignCatalogSlug`, so the digest is the only thing
+ * currently keeping two common-catalogue entries of the same name apart.
+ * `OVE-429` moves the ingest onto the counter and re-slugs what is already
+ * written.
+ */
+function buildEuOjSlugWithSourceDigest(
+  canonicalName: string,
+  sourceRecordKey: string,
+) {
+  const base = slugify(canonicalName, {
+    script: "latin",
+    language: "latin",
+    fallback: "variety",
+  });
   const hash = sha256Hex(sourceRecordKey).slice(0, 10);
-  return `eu-oj-${base || "variety"}-${hash}`.slice(0, 96).replace(/-+$/, "");
-}
-
-function slugify(value: string) {
-  return value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 72);
+  return `eu-oj-${base}-${hash}`;
 }
 
 function normalizeDisplayName(value: string | null) {

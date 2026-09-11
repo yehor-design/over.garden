@@ -145,6 +145,15 @@ jobs:
       - name: Prove the job queue contract against a database
         run: pnpm queue:contract:prove-database
 
+      - name: Check the generated address contract
+        run: pnpm address:contract:check
+
+      - name: Check that no call site spells a public path
+        run: pnpm address:literals:check
+
+      - name: Prove the address slug constraints against a database
+        run: pnpm address:contract:prove-database
+
       - name: Prove the Stable Registry retirement migration and its rollback
         run: pnpm schema:retirement:prove-database
 
