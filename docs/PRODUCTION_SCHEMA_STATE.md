@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-08. Divergences noted 2026-09-04 and 2026-09-05.
+Last inventory: 2026-09-11. Divergences noted 2026-09-04 and 2026-09-05.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -727,6 +727,66 @@ search misses), the same migration on the loopback scratch database (1.3 s),
 `pnpm catalog:typeahead:latency` against a production build there (P95 26.6
 ms server time over 200 queries, eight-row body 1,757 B raw / 687 B gzipped)
 and `tests/catalog-picker.spec.ts` in Chromium.
+
+## The 2026-09-11 application of `0067`, content language
+
+`0067_ove424_journal_entry_source_language.sql` (ADR-0029 D11) was applied to
+production on 2026-09-11 through `scripts/apply-reviewed-migration.ts --mode
+apply --migration 0067` with the pulled production environment and
+`apps/web/.env.local` moved aside: one transaction, `lock_timeout` 30 s, host
+class `digitalocean_managed`, database `defaultdb`, 5 statements, 178 ms. It
+falls under the owner's authorization of 2026-09-11 for the whole address-law
+slice (`docs/ADDRESS_LAW_EXECUTION.md`).
+
+`--mode inventory` reports it `no_sentinel` and always will: it creates no
+table, column or index. The state is read from the constraint and the column
+instead.
+
+**Before**, read-only against `digitalocean_managed` / `defaultdb`:
+
+```
+journal_entries_source_language_check:
+  CHECK (source_language IS NULL OR source_language IN ('uk','bg')), validated
+journal_entries: 11 rows, every one lifecycle_state = 'active'
+  source_language: uk 5, bg 5, null 1
+```
+
+**The `archived` blocker is a development-only condition.** The migration is
+scoped to `lifecycle_state = 'active'` because
+`journal_entries_lifecycle_state_check` and
+`journal_entries_deletion_retention_check` are both `NOT VALID` and the
+development database still holds sixteen rows in the retired `archived` state,
+which therefore refuse every `UPDATE`. Production holds none: all eleven rows
+are `active`, so the clause changes nothing there. Both constraints are still
+`NOT VALID` in production — that is inherited state this migration does not
+touch, and it is why the column is not `NOT NULL`.
+
+**Rehearsed first**, in the house pattern: forward, rollback, and a final
+`ROLLBACK` of the enclosing transaction against production itself. The forward
+run moved exactly one row and widened the constraint; the readback after the
+enclosing rollback was identical to the readback before, so production was
+unchanged by the rehearsal.
+
+The stored values were also compared against the alphabet heuristic the
+migration uses before applying it: all ten non-null rows agreed with it, so the
+migration neither contradicted a recorded language nor needed to. Only the null
+row — the owner's own entry of 2026-09-01 — was written, to `uk`.
+
+**After**, read back immediately, read-only:
+
+```
+journal_entries_source_language_check:
+  CHECK (source_language IN ('uk','bg','ru')), validated
+journal_entries: 11 active, 0 with a null source_language
+  source_language: uk 6, bg 5
+journal_entries_lifecycle_state_check: NOT VALID (unchanged)
+journal_entries_deletion_retention_check: NOT VALID (unchanged)
+```
+
+The deploy order was code first, then migration: the render path already
+treated a null as the default locale, so neither half needed the other. The
+value is written at publish from OVE-424 onward; the backfill is a one-off for
+rows written before the column was filled.
 
 ## The rule this produced
 
