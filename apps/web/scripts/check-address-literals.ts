@@ -37,6 +37,10 @@ const DEFINITIONS = new Set([
   "src/lib/garden/public-paths.ts",
   "src/lib/address/address-manifest.ts",
   "src/lib/address/address-contract.generated.ts",
+  // Decides which shapes a route family serves, so it names prefixes rather
+  // than building addresses out of them.
+  "src/lib/address/match-address-path.ts",
+  "src/lib/public-listing-pagination.ts",
   "src/lib/interface-route-policy.ts",
   "src/lib/site-shell-navigation.ts",
 ]);

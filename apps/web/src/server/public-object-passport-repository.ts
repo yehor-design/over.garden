@@ -387,6 +387,15 @@ export function buildPublicObjectPassportRootQuery(
       "plant_objects.coarse_region_code",
       "spaces.location_visibility",
       "spaces.coarse_region_code",
+      // `catalog_items.id` is not selected, and it still has to be grouped by:
+      // `catalogSpeciesSlugSql` is a correlated subquery that reads it, and a
+      // subquery may only reference a column the outer query groups by.
+      // Without it Postgres refuses the statement with 42803 — at plan time,
+      // for every object passport, whether or not the object exists — and the
+      // page answered 500. Compiling the query cannot see this; only running
+      // it against Postgres can, which is what
+      // `pnpm public:reads:prove-database` now does.
+      "catalog_items.id",
       catalogKindSql("catalog_items"),
       "catalog_items.canonical_name",
       "catalog_items.public_slug",

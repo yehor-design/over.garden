@@ -56,6 +56,12 @@ export async function generateMetadata({
     };
   }
 
+  // Page one, always. `generateMetadata` cannot read `searchParams` here: this
+  // route is partially prerendered, and making its metadata depend on the
+  // query took the canonical out of the streamed shell entirely — measured on
+  // 2026-09-11, `/bg/journals?page=2` came back with no `<link rel=canonical>`
+  // at all. A paginated view is kept out of the index by the `X-Robots-Tag`
+  // the proxy sets instead; see `src/lib/public-listing-pagination.ts`.
   const request = normalizePublicJournalDirectoryRequest({});
   const discovery = await resolvePublicSurfaceDiscoveryFromLoad({
     consumerId: "localized_journals_directory",

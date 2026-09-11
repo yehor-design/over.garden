@@ -140,6 +140,14 @@ export interface AddressNamespaceEntry {
   /** The route prefix this namespace answers under, and who spells it. */
   readonly pathPrefix: string;
   readonly pathBuilder: string;
+  /**
+   * Older prefixes the same namespace still answers under, behind a 308.
+   *
+   * They are part of the address law even though nothing builds them any more:
+   * a reader's bookmark and a crawler's index still carry them, so the case
+   * rule and the banned-literal rule have to know about them too.
+   */
+  readonly legacyPathPrefixes: readonly string[];
   /** `null` while the namespace has no column of its own yet. */
   readonly storage: AddressStorage | null;
   readonly notes: string;
@@ -175,6 +183,7 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     source: "the accepted scientific name, without authorship",
     pathPrefix: "/species/",
     pathBuilder: "publicCatalogEvidencePath",
+    legacyPathPrefixes: [],
     storage: {
       table: "catalog_items",
       column: "public_slug",
@@ -198,6 +207,9 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     source: "the registered denomination, romanized",
     pathPrefix: "/species/",
     pathBuilder: "publicCatalogEvidencePath",
+    // A form answered at `/variety/{slug}` and a breed at `/breed/{slug}`
+    // before ADR-0026 D8 gave them a species to live under. Both still 308.
+    legacyPathPrefixes: ["/variety/", "/breed/"],
     storage: {
       table: "catalog_items",
       column: "public_slug",
@@ -221,6 +233,7 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     source: "the entry title at first publish",
     pathPrefix: "/journal/",
     pathBuilder: "publicJournalEntryPath",
+    legacyPathPrefixes: [],
     storage: {
       table: "journal_entries",
       column: "public_slug",
@@ -242,6 +255,7 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     source: "the object display name",
     pathPrefix: "/lineage/objects/",
     pathBuilder: "publicLineageObjectPath",
+    legacyPathPrefixes: [],
     storage: null,
     notes:
       "Addressed by id today; OVE-428 moves it to /@{handle}/objects/{slug} and gives it a column.",
@@ -256,6 +270,7 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     source: "the gardener's own tag label",
     pathPrefix: "/topics/",
     pathBuilder: "publicTopicPath",
+    legacyPathPrefixes: [],
     storage: {
       table: "journal_topics",
       column: "slug",
@@ -279,6 +294,7 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     source: "the community name",
     pathPrefix: "/communities/",
     pathBuilder: "publicCommunityPath",
+    legacyPathPrefixes: [],
     storage: {
       table: "communities",
       column: "slug",
@@ -301,6 +317,7 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     source: "the gardener's chosen handle, unchanged",
     pathPrefix: "/@",
     pathBuilder: "publicProfileBasePath",
+    legacyPathPrefixes: [],
     storage: null,
     notes:
       "Already `^[a-z0-9][a-z0-9_]{2,29}$` and validated where it is written. Declared here so the address law has no gap, not to change it.",
@@ -329,6 +346,29 @@ export function addressSlugPattern(entry: AddressNamespaceEntry): string {
   if (entry.shape === "handle") return "^[a-z0-9][a-z0-9_]{2,29}$";
   const alphabet = addressAlphabet(entry);
   return `^[${alphabet}]+(?:-[${alphabet}]+)*$`;
+}
+
+/**
+ * Every prefix under which a segment must already be lower case, with the
+ * namespace that owns it.
+ *
+ * Every alphabet in this manifest is lower case, so an upper-case address is
+ * not a different page — it is the same page at a second address. Today
+ * `/bg/topics/PLANTS` and `/bg/@YEHOR` both answer `200, index, follow`, and
+ * `matchPublicCatalogAddressPath` says so out loud: it leaves an upper-case
+ * slug "to the route families' catch-alls", and a catch-all under Cache
+ * Components answers 200 with a `noindex` body rather than a 404.
+ */
+export function addressLowerCasePathPrefixes(): readonly {
+  readonly prefix: string;
+  readonly namespace: AddressNamespace;
+}[] {
+  return ADDRESS_MANIFEST.flatMap((entry) =>
+    [entry.pathPrefix, ...entry.legacyPathPrefixes].map((prefix) => ({
+      prefix,
+      namespace: entry.namespace,
+    })),
+  );
 }
 
 export function addressManifestEntry(

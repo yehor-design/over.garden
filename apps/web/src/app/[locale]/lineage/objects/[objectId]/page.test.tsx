@@ -182,6 +182,9 @@ describe("/lineage/objects/[objectId]", () => {
     });
     mocks.getPublicObjectPassportPage.mockResolvedValue(objectPassportPage);
     mocks.getPublicLineageGraphPage.mockResolvedValue(lineageGraphPage);
+    // The passport now takes its locale from the address rather than from the
+    // reader's cookie, so every case below passes `locale: "bg"` in `params`.
+    // The mock stays because the engagement panel still reads it.
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
     mocks.listLineageInteractionTargets.mockResolvedValue([
       {
@@ -194,12 +197,21 @@ describe("/lineage/objects/[objectId]", () => {
   it("indexes a thin object passport with its canonical path", async () => {
     const { generateMetadata } = await import("./page");
     const metadata = await generateMetadata({
-      params: Promise.resolve({ objectId }),
+      params: Promise.resolve({ locale: "bg", objectId }),
     });
 
     expect(metadata.title).toBe("Balcony tomato · жив обект | OverGarden");
+    // Self-canonical in its own route family, and naming the other two
+    // (ADR-0029 D10, D3). The passport had one address before this; it has
+    // three now, and a canonical that pointed at the unprefixed one would make
+    // two thirds of them duplicates of a page the reader did not ask for.
     expect(metadata.alternates).toMatchObject({
-      canonical: `https://over.garden/lineage/objects/${objectId}`,
+      canonical: `https://over.garden/bg/lineage/objects/${objectId}`,
+      languages: {
+        uk: `https://over.garden/lineage/objects/${objectId}`,
+        bg: `https://over.garden/bg/lineage/objects/${objectId}`,
+        ru: `https://over.garden/ru/lineage/objects/${objectId}`,
+      },
     });
     expect(metadata.robots).toEqual({
       index: true,
@@ -207,11 +219,22 @@ describe("/lineage/objects/[objectId]", () => {
     });
   });
 
+  it("keeps the unprefixed half self-canonical", async () => {
+    const { generateMetadata } = await import("./page");
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ locale: "uk", objectId }),
+    });
+
+    expect(metadata.alternates).toMatchObject({
+      canonical: `https://over.garden/lineage/objects/${objectId}`,
+    });
+  });
+
   it("renders the public-safe passport, journal preview, and lineage without internal payload fields", async () => {
     const { default: PublicLineageObjectRoute } = await import("./page");
     const html = renderToStaticMarkup(
       await PublicLineageObjectRoute({
-        params: Promise.resolve({ objectId }),
+        params: Promise.resolve({ locale: "bg", objectId }),
       }),
     );
 
@@ -269,7 +292,7 @@ describe("/lineage/objects/[objectId]", () => {
     const { default: PublicLineageObjectRoute } = await import("./page");
     const html = renderToStaticMarkup(
       await PublicLineageObjectRoute({
-        params: Promise.resolve({ objectId }),
+        params: Promise.resolve({ locale: "bg", objectId }),
         searchParams: Promise.resolve({
           authIntent: "follow",
           authControl: followControl,
@@ -294,7 +317,7 @@ describe("/lineage/objects/[objectId]", () => {
 
     const { generateMetadata } = await import("./page");
     const metadata = await generateMetadata({
-      params: Promise.resolve({ objectId }),
+      params: Promise.resolve({ locale: "bg", objectId }),
     });
 
     expect(metadata.robots).toEqual({
@@ -307,11 +330,11 @@ describe("/lineage/objects/[objectId]", () => {
     const { default: PublicLineageObjectRoute, generateMetadata } =
       await import("./page");
     const metadata = await generateMetadata({
-      params: Promise.resolve({ objectId }),
+      params: Promise.resolve({ locale: "bg", objectId }),
     });
     const html = renderToStaticMarkup(
       await PublicLineageObjectRoute({
-        params: Promise.resolve({ objectId }),
+        params: Promise.resolve({ locale: "bg", objectId }),
       }),
     );
 

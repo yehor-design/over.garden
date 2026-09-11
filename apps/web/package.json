@@ -21,6 +21,7 @@
     "db:types": "kysely-codegen --dialect postgres --env-file .env.local --out-file src/db/generated.ts",
     "db:types:check": "tsx scripts/check-generated-types.ts",
     "address:contract:prove-database": "tsx scripts/prove-address-contract-database.ts",
+    "public:reads:prove-database": "tsx scripts/prove-public-read-queries-database.ts",
     "address:literals:check": "tsx scripts/check-address-literals.ts",
     "address:contract:build": "tsx scripts/build-address-contract.ts",
     "address:contract:check": "tsx scripts/build-address-contract.ts --check",

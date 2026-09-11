@@ -1,11 +1,15 @@
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import {
+  LOCALE_ROUTE_SEGMENTS,
   ROOT_ROUTE_FILES,
   ROOT_ROUTE_SEGMENTS,
+  ROOT_SEGMENTS_WITHOUT_INDEX,
+  isSectionRootWithoutIndex,
+  isUnknownLocalizedPath,
   isUnknownRootPath,
 } from "./root-route-segments";
 
@@ -49,6 +53,104 @@ describe("root route segments", () => {
     ].sort();
 
     expect([...ROOT_ROUTE_FILES].sort()).toEqual(expected);
+  });
+
+  /**
+   * The list is the filesystem's, not a judgement: a root segment that has no
+   * `page.tsx` directly under it in `(default)` has no front door, except the
+   * ones that are not documents at all.
+   */
+  it("matches the root directories with no page of their own", () => {
+    // Not documents: these answer as route handlers or static files, and an
+    // HTML 404 document is the wrong shape for them.
+    const NOT_DOCUMENTS = new Set([
+      "api",
+      "engagement",
+      "licenses",
+      "sitemap.xml",
+      "sitemaps",
+    ]);
+    const defaultRoot = new URL("../app/(default)/", import.meta.url);
+    // A route group serves the bare path without appearing in it, which is how
+    // `/garden` has a page while `garden/page.tsx` does not exist.
+    const hasIndex = (name: string) => {
+      const section = new URL(`${name}/`, defaultRoot);
+      if (existsSync(fileURLToPath(new URL("page.tsx", section)))) return true;
+      return directories(section).some(
+        (child) =>
+          child.startsWith("(") &&
+          existsSync(fileURLToPath(new URL(`${child}/page.tsx`, section))),
+      );
+    };
+    const expected = directories(defaultRoot)
+      .filter((name) => !NOT_DOCUMENTS.has(name))
+      .filter((name) => !hasIndex(name))
+      .sort();
+
+    expect([...ROOT_SEGMENTS_WITHOUT_INDEX].sort()).toEqual(expected);
+  });
+
+  it("matches the [locale] tree's own directories exactly", () => {
+    const expected = directories(new URL("../app/[locale]/", import.meta.url))
+      .filter((name) => name !== "[profileHandle]")
+      .sort();
+
+    expect([...LOCALE_ROUTE_SEGMENTS].sort()).toEqual(expected);
+  });
+
+  it("flags a prefixed path the prefixed tree cannot serve", () => {
+    for (const path of [
+      "/bg/support",
+      "/ru/erasure",
+      "/bg/garden",
+      "/bg/account",
+      "/ru/nonexistent",
+    ]) {
+      expect(isUnknownLocalizedPath(path), path).toBe(true);
+    }
+    for (const path of [
+      // `/uk/**` is a legacy prefix that folds to the unprefixed path with a
+      // 308; a 404 here would take a mail link away from the reader instead.
+      "/uk/nonexistent",
+      "/uk/auth/reset-password",
+      "/bg",
+      "/bg/journals",
+      "/ru/topics/plants",
+      "/bg/@yehor",
+      "/bg/%40yehor",
+      "/journals",
+      "/support",
+      "/",
+    ]) {
+      expect(isUnknownLocalizedPath(path), path).toBe(false);
+    }
+  });
+
+  it("answers a section root without a page, in every locale", () => {
+    for (const path of [
+      "/species",
+      "/variety",
+      "/topics",
+      "/bg/species",
+      "/ru/topics",
+      "/journal",
+      "/lineage",
+    ]) {
+      expect(isSectionRootWithoutIndex(path), path).toBe(true);
+    }
+    for (const path of [
+      "/",
+      "/bg",
+      "/journals",
+      "/communities",
+      "/feed",
+      "/species/solanum",
+      "/bg/species/solanum",
+      "/api",
+      "/sitemaps",
+    ]) {
+      expect(isSectionRootWithoutIndex(path), path).toBe(false);
+    }
   });
 
   it("flags only first segments that nothing can serve", () => {

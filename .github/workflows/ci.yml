@@ -154,6 +154,9 @@ jobs:
       - name: Prove the address slug constraints against a database
         run: pnpm address:contract:prove-database
 
+      - name: Prove every public read against a database
+        run: pnpm public:reads:prove-database
+
       - name: Prove the Stable Registry retirement migration and its rollback
         run: pnpm schema:retirement:prove-database
 

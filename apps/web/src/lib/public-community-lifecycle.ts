@@ -3,13 +3,12 @@ import {
   renderPublicLifecycleDocument,
   type PublicLifecycleRequestLocation,
 } from "@/lib/public-lifecycle-document";
-import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
+import { matchAddressPath } from "@/lib/address/match-address-path";
+import { localizedPath } from "@/lib/public-localization";
 import {
   MISSING_ADDRESS_SLUG,
   publicCommunityPath,
 } from "@/lib/garden/public-paths";
-
-const PUBLIC_COMMUNITY_PATH = /^\/communities\/([a-z0-9][a-z0-9-]{1,63})\/?$/;
 
 const COMMUNITY_NOT_FOUND_COPY: Record<
   InterfaceLocale,
@@ -36,8 +35,7 @@ const COMMUNITY_NOT_FOUND_COPY: Record<
 };
 
 export function matchPublicCommunityPath(pathname: string) {
-  const basePath = stripLocalePrefix(pathname).path;
-  return PUBLIC_COMMUNITY_PATH.exec(basePath)?.[1] ?? null;
+  return matchAddressPath("community", pathname);
 }
 
 export function renderNotFoundPublicCommunityHtml(
