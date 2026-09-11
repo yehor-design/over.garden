@@ -60,11 +60,11 @@ describe("/guides/[slug]", () => {
     ).resolves.toMatchObject({
       title: "Как да започнете жив запис на растение | OverGarden",
       alternates: {
-        canonical: "/bg/guides/start-a-living-plant-record",
+        canonical: "https://over.garden/bg/guides/start-a-living-plant-record",
         languages: {
-          uk: "/guides/start-a-living-plant-record",
-          bg: "/bg/guides/start-a-living-plant-record",
-          ru: "/ru/guides/start-a-living-plant-record",
+          uk: "https://over.garden/guides/start-a-living-plant-record",
+          bg: "https://over.garden/bg/guides/start-a-living-plant-record",
+          ru: "https://over.garden/ru/guides/start-a-living-plant-record",
         },
       },
       robots: { index: true, follow: true },

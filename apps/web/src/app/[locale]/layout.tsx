@@ -12,6 +12,7 @@ import {
   PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
+import { getPublicSiteUrl } from "@/lib/runtime-url";
 import { RootDocument } from "@/app/root-document";
 
 interface LocaleRootLayoutProps {
@@ -30,6 +31,10 @@ export async function generateMetadata({
   const copy = getInterfaceCopy(locale).metadata;
 
   return {
+    // ADR-0029 D1: one absolute origin. Anything a page leaves relative — an
+    // Open Graph image, a manifest — resolves against this rather than against
+    // the deployment host Next would otherwise guess.
+    metadataBase: new URL(getPublicSiteUrl()),
     title: copy.siteTitle,
     description: copy.siteDescription,
     other: {

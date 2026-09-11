@@ -111,7 +111,7 @@ describe("community public routes", () => {
     });
     expect(directoryMeta).toMatchObject({
       robots: { index: true, follow: true },
-      alternates: { canonical: "/bg/communities" },
+      alternates: { canonical: "https://over.garden/bg/communities" },
     });
     const detailMeta = await detailMetadata({
       params: Promise.resolve({
@@ -149,7 +149,7 @@ describe("community public routes", () => {
     });
     expect(listingMeta).toMatchObject({
       robots: { index: true, follow: true },
-      alternates: { canonical: "/bg/communities/observation-and-care" },
+      alternates: { canonical: "https://over.garden/bg/communities/observation-and-care" },
     });
   });
 

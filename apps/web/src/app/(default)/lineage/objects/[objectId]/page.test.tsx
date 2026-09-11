@@ -199,7 +199,7 @@ describe("/lineage/objects/[objectId]", () => {
 
     expect(metadata.title).toBe("Balcony tomato · жив обект | OverGarden");
     expect(metadata.alternates).toMatchObject({
-      canonical: `/lineage/objects/${objectId}`,
+      canonical: `https://over.garden/lineage/objects/${objectId}`,
     });
     expect(metadata.robots).toEqual({
       index: true,

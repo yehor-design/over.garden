@@ -59,7 +59,7 @@ describe("/knowledge", () => {
     ).resolves.toMatchObject({
       title: "Знания | OverGarden",
       robots: { index: true, follow: true },
-      alternates: { canonical: "/bg/knowledge" },
+      alternates: { canonical: "https://over.garden/bg/knowledge" },
     });
   });
 

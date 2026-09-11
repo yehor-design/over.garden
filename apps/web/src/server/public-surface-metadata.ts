@@ -74,18 +74,46 @@ export function buildPublicSurfaceMetadata(input: {
   const canonicalPath = input.discovery.candidateInput.canonicalPath;
   const equivalentLocales = input.discovery.candidateInput.equivalentLocales;
   const basePath = stripLocalePrefix(canonicalPath).path;
+  const pageUrl = absolutePublicUrl(canonicalPath);
+
+  // Every URL that leaves this builder is fully qualified (ADR-0029 D1). A
+  // relative `canonical` is legal and Google follows it, but a relative
+  // `hreflang` is ignored outright and a relative `og:url` resolves nowhere,
+  // so the whole language layer below was inert while these were paths.
   metadata.alternates = {
-    canonical: canonicalPath,
+    canonical: pageUrl,
     ...(equivalentLocales.length > 1
-      ? { languages: buildLanguageAlternates(basePath, equivalentLocales) }
+      ? {
+          languages: Object.fromEntries(
+            Object.entries(
+              buildLanguageAlternates(basePath, equivalentLocales),
+            ).map(([hreflang, path]) => [hreflang, absolutePublicUrl(path)]),
+          ),
+        }
       : {}),
   };
   metadata.openGraph = {
-    locale: input.locale,
-    url: canonicalPath,
+    type: openGraphType(input.visibleFacts.type),
+    siteName: "OverGarden",
+    locale: openGraphLocale(input.locale),
+    ...(equivalentLocales.length > 1
+      ? {
+          alternateLocale: equivalentLocales
+            .filter((locale) => locale !== input.locale)
+            .map(openGraphLocale),
+        }
+      : {}),
+    title: input.title,
+    ...(input.description ? { description: input.description } : {}),
+    url: pageUrl,
+    ...(input.visibleFacts.image ? { images: [input.visibleFacts.image] } : {}),
   };
-
-  const pageUrl = absolutePublicUrl(canonicalPath);
+  metadata.twitter = {
+    card: input.visibleFacts.image ? "summary_large_image" : "summary",
+    title: input.title,
+    ...(input.description ? { description: input.description } : {}),
+    ...(input.visibleFacts.image ? { images: [input.visibleFacts.image] } : {}),
+  };
   const contentLocale =
     input.contentLocale === null ? null : (input.contentLocale ?? input.locale);
   const pageNode = {
@@ -116,6 +144,28 @@ export function buildPublicSurfaceMetadata(input: {
       ],
     },
   };
+}
+
+/**
+ * Open Graph wants `language_TERRITORY`. The territory is the market the locale
+ * serves, not the language's country of origin: `ru` here is Bulgaria's
+ * Russian-speaking audience (`BULGARIA_PUBLIC_LOCALES`), never Russia.
+ */
+const OPEN_GRAPH_LOCALES: Record<PublicLocale, string> = {
+  uk: "uk_UA",
+  bg: "bg_BG",
+  ru: "ru_BG",
+};
+
+function openGraphLocale(locale: PublicLocale) {
+  return OPEN_GRAPH_LOCALES[locale];
+}
+
+/** The same `visibleFacts.type` that decides the JSON-LD decides `og:type`. */
+function openGraphType(type: PublicSurfaceVisibleFactType) {
+  if (type === "Article" || type === "BlogPosting") return "article" as const;
+  if (type === "ProfilePage") return "profile" as const;
+  return "website" as const;
 }
 
 function buildBreadcrumbNode(
