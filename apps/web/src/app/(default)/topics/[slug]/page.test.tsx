@@ -64,14 +64,13 @@ describe("/topics/[slug]", () => {
     const metadata = await generateMetadata({
       params: Promise.resolve({ locale: "ru", slug: "care-checks" }),
     });
+    // The topic's canonical is the unprefixed address, so a /ru request is a
+    // duplicate of it and is refused (ADR-0029 D10). The page still renders in
+    // Russian — the language is the reader's, the address is not.
     expect(metadata).toMatchObject({
-      alternates: {
-        canonical: "https://over.garden/topics/care-checks",
-      },
-      openGraph: { locale: "ru_BG", url: "https://over.garden/topics/care-checks" },
-      robots: { index: true, follow: true },
+      robots: { index: false, follow: false },
     });
-    expect(metadata.alternates?.languages).toBeUndefined();
+    expect(metadata.alternates).toBeUndefined();
   });
 
   it("allows only the canonical Ukrainian topic route to inherit the quality gate", async () => {
@@ -87,11 +86,14 @@ describe("/topics/[slug]", () => {
     });
   });
 
-  it("redirects an unprefixed Bulgaria-market topic before rendering and preserves only approved state", async () => {
+  it("serves the unprefixed topic to a Bulgaria-market reader instead of redirecting", async () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
     const { default: RootTopicRoute, generateMetadata } =
       await import("./page");
 
+    // There used to be a second geo-307 here, inside the page rather than the
+    // proxy — the audit found only the proxy's. `/topics/{slug}` is a canonical
+    // address and answers 200 to everyone (ADR-0029 D10).
     await expect(
       RootTopicRoute({
         params: Promise.resolve({ slug: "care-checks" }),
@@ -102,8 +104,8 @@ describe("/topics/[slug]", () => {
           email: "private@example.com",
         }),
       }),
-    ).rejects.toThrow("redirect:/bg/topics/care-checks?authIntent=follow");
-    expect(mocks.getPublicTopicAggregationPage).not.toHaveBeenCalled();
+    ).resolves.toBeDefined();
+    expect(mocks.getPublicTopicAggregationPage).toHaveBeenCalled();
 
     await expect(
       generateMetadata({
@@ -111,7 +113,11 @@ describe("/topics/[slug]", () => {
       }),
     ).resolves.toMatchObject({
       alternates: { canonical: "https://over.garden/topics/care-checks" },
-      openGraph: { locale: "bg_BG", url: "https://over.garden/topics/care-checks" },
+      openGraph: {
+        locale: "uk_UA",
+        url: "https://over.garden/topics/care-checks",
+      },
+      robots: { index: true, follow: true },
     });
   });
 });

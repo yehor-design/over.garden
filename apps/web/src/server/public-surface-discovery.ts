@@ -176,6 +176,12 @@ export interface PublicSurfaceDiscoverySource {
   /** Entities the page lists; a listing with none of them is empty. */
   distinctPublicEntityIds: readonly string[] | null;
   canonicalPath: string | null;
+  /**
+   * The locale prefix the request arrived under, for surfaces whose canonical
+   * is fixed rather than per-route-family. Omit it where the canonical already
+   * carries the served locale — then the two are the same fact.
+   */
+  servedLocale?: PublicLocale | null;
   equivalentLocales: readonly PublicLocale[] | null;
   /** Organism cards only (ADR-0026 D9); absent for every other surface. */
   organism?: { hasFirstHandContent: boolean } | null;
@@ -207,6 +213,7 @@ export function resolvePublicSurfaceDiscovery(
           candidateState,
           hasContent: hasVisibleContent(source),
           canonicalPath: source.canonicalPath,
+          servedLocale: source.servedLocale ?? null,
           equivalentLocales: normalizeLocales(source.equivalentLocales),
           surfaceKind: owner.surfaceKind,
           hasFirstHandContent: source.organism

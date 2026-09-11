@@ -52,7 +52,7 @@ export async function generateMetadata({
         throw new Error("Public journal entry unavailable.");
       }
       return {
-        source: buildJournalDiscoverySource(lookup.page),
+        source: buildJournalDiscoverySource(lookup.page, localeParam),
         payload: lookup.page,
       };
     },
@@ -156,7 +156,7 @@ function buildJournalSurface(
   locale: PublicLocale,
   page: PublicJournalEntryPage,
   discovery: PublicSurfaceDiscoveryResult = resolvePublicSurfaceDiscoveryForRequest(
-    buildJournalDiscoverySource(page),
+    buildJournalDiscoverySource(page, locale),
   ),
 ) {
   const copy = getPublicJournalEntryCopy(locale);
@@ -180,6 +180,7 @@ function buildJournalSurface(
 
 function buildJournalDiscoverySource(
   page: PublicJournalEntryPage,
+  servedLocale: PublicLocale,
 ): PublicSurfaceDiscoverySource {
   const context = page.context;
   const topics = page.topics ?? [];
@@ -220,7 +221,12 @@ function buildJournalDiscoverySource(
       ...objectIds,
       ...topics.map((topic) => `topic:${topic.slug}`),
     ],
+    // A gardener's entry is never translated, so it has one address
+    // (ADR-0029 D10). Serving it under a locale prefix makes a duplicate of
+    // that address, which is reachable and `noindex` until OVE-428 turns the
+    // prefixed paths into 308s.
     canonicalPath: publicJournalEntryPath(page.entry.publicSlug),
+    servedLocale,
     equivalentLocales: [],
   };
 }

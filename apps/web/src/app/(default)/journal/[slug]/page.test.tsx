@@ -159,23 +159,41 @@ describe("/journal/[slug] V2", () => {
     expect(html).toContain('data-authenticated="true"');
   });
 
-  it("publishes indexable metadata without fabricated language alternates", async () => {
+  it("indexes the one address an entry has, and refuses the prefixed duplicates", async () => {
     const { generateMetadata } =
       await import("@/app/[locale]/journal/[slug]/page");
-    const metadata = await generateMetadata({
-      params: Promise.resolve({
-        locale: "bg",
-        slug: page.entry.publicSlug,
-      }),
-    });
 
-    expect(metadata).toMatchObject({
-      title: "First public chapter · Запис в дневник | OverGarden",
-      robots: { index: true, follow: true },
+    // A gardener's entry is never translated, so it has one address
+    // (ADR-0029 D10). Serving it under /bg or /ru makes a duplicate of that
+    // address — reachable, and `noindex`. Before the served locale reached the
+    // policy this page was indexable under all three prefixes at once, each
+    // pointing its canonical at the unprefixed one.
+    const canonical = await generateMetadata({
+      params: Promise.resolve({ locale: "uk", slug: page.entry.publicSlug }),
     });
-    expect(metadata.alternates).toEqual({
+    expect(canonical).toMatchObject({ robots: { index: true, follow: true } });
+    expect(canonical.alternates).toEqual({
       canonical: `https://over.garden/journal/${page.entry.publicSlug}`,
     });
+
+    for (const locale of ["bg", "ru"] as const) {
+      const duplicate = await generateMetadata({
+        params: Promise.resolve({ locale, slug: page.entry.publicSlug }),
+      });
+      expect(duplicate.robots, locale).toMatchObject({
+        index: false,
+        follow: false,
+      });
+      // A refused surface emits no canonical and no alternates at all.
+      expect(duplicate.alternates, locale).toBeUndefined();
+    }
+
+    const bulgarianTitle = await generateMetadata({
+      params: Promise.resolve({ locale: "bg", slug: page.entry.publicSlug }),
+    });
+    expect(bulgarianTitle.title).toBe(
+      "First public chapter · Запис в дневник | OverGarden",
+    );
   });
 
   it("fails closed for private, removed RSC, missing and invalid locale reads", async () => {

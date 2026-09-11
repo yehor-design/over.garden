@@ -76,6 +76,8 @@ export interface InterfaceCopy {
     retry: string;
     languageControlLabel: string;
     languageControlTrigger: string;
+    /** Offered to a reader whose language is not the one this address serves. */
+    otherLanguageAvailable: string;
   };
   workspace: {
     title: string;
@@ -144,6 +146,7 @@ const INTERFACE_COPY = {
       retry: "Спробувати ще раз",
       languageControlLabel: "Вибір мови інтерфейсу",
       languageControlTrigger: "Змінити мову",
+      otherLanguageAvailable: "Ця сторінка є вашою мовою",
     },
     workspace: {
       title: "Простір саду",
@@ -212,6 +215,7 @@ const INTERFACE_COPY = {
       retry: "Опитайте отново",
       languageControlLabel: "Избор на език на интерфейса",
       languageControlTrigger: "Смяна на езика",
+      otherLanguageAvailable: "Тази страница я има на вашия език",
     },
     workspace: {
       title: "Градинско пространство",
@@ -280,6 +284,7 @@ const INTERFACE_COPY = {
       retry: "Повторить",
       languageControlLabel: "Выбор языка интерфейса",
       languageControlTrigger: "Сменить язык",
+      otherLanguageAvailable: "Эта страница есть на вашем языке",
     },
     workspace: {
       title: "Пространство сада",
