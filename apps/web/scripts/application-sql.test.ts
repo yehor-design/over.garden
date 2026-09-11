@@ -65,6 +65,7 @@ describe("versioned application SQL bootstrap", () => {
       "0064_ove399_assertion_reference_indexes.sql",
       "0065_ove387_picker_trigram_sets.sql",
       "0066_ove387_picker_trigram_set_index.sql",
+      "0067_ove424_journal_entry_source_language.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

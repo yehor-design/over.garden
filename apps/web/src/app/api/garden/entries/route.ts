@@ -35,6 +35,7 @@ import {
   BoundedJsonPayloadTooLargeError,
   readBoundedJsonRequest,
 } from "@/server/bounded-json-request";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import type { RequestScope } from "@/server/request-scope";
 import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import {
@@ -97,6 +98,9 @@ export async function POST(request: Request) {
 }
 
 async function createEntry(request: Request, scope: RequestScope) {
+  // The language the gardener is writing in is the one they chose for the
+  // interface (ADR-0029 D11). Recorded at publish, never inferred later.
+  const sourceLanguage = await getRequestInterfaceLocale();
   let raw: unknown;
   try {
     raw = await readBoundedJsonRequest(
@@ -215,6 +219,7 @@ async function createEntry(request: Request, scope: RequestScope) {
     const result =
       body.context.target === "space_entry"
         ? await createSpaceJournalEntry(scope, {
+              sourceLanguage,
             ...body.context,
             title: body.title,
             contentDocument: document,
@@ -225,6 +230,7 @@ async function createEntry(request: Request, scope: RequestScope) {
           })
         : body.context.target === "plant_object_entry"
           ? await createPlantObjectJournalEntry(scope, {
+              sourceLanguage,
               ...body.context,
               title: body.title,
               contentDocument: document,
@@ -234,6 +240,7 @@ async function createEntry(request: Request, scope: RequestScope) {
               atomicPublication,
             })
           : await createFirstPlantEntry(scope, {
+              sourceLanguage,
               ...body.context,
               title: body.title,
               contentDocument: document,

@@ -163,7 +163,10 @@ function buildJournalSurface(
   return buildPublicSurfaceMetadata({
     discovery,
     locale,
-    contentLocale: null,
+    // The entry's own language, not the reader's. `contentLocale` becomes
+    // `inLanguage` in the graph, and it was explicitly suppressed here because
+    // there was no honest value to put in it (ADR-0029 D11).
+    contentLocale: page.entry.sourceLanguage,
     title: `${page.entry.title} · ${copy.metadataTitleSuffix} | OverGarden`,
     description: summarize(page.entry.body),
     visibleFacts: {

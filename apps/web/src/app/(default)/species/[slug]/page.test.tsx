@@ -226,7 +226,9 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     expect(degraded).toMatch(/"@type":\s*"Taxon"/u);
   });
 
-  it("renders a localized bee breed page at its legacy address without plant-variety actions", async () => {
+  it("renders a bee breed at its legacy address in the route family's locale, not the reader's", async () => {
+    // The cookie says Bulgarian; the unprefixed family is the default locale's
+    // and stays Ukrainian (ADR-0029 D10). Its CDN copy is shared.
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
     mocks.readPublicVarietyPageByCatalogItemId.mockImplementation(async () =>
       page("breed", "carpathian-bee"),
@@ -242,8 +244,8 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
       catalogKind: "breed",
       slug: "carpathian-bee",
     });
-    expect(html).toContain("Публична порода или линия");
-    expect(html).toContain("Запишете тази порода или линия");
+    expect(html).toContain("Публічна порода або лінія");
+    expect(html).toContain("Записати цю породу або лінію");
     expect(html).not.toContain("списъка с желания");
     expect(metadata).toMatchObject({
       alternates: { canonical: "https://over.garden/breed/carpathian-bee" },

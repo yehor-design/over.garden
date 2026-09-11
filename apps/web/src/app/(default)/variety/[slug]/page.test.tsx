@@ -115,6 +115,9 @@ describe("/variety/[slug]", () => {
         },
       ],
     });
+    // The reader's cookie says Russian. The unprefixed route family is the
+    // default locale's and renders Ukrainian regardless (ADR-0029 D10) — its
+    // CDN copy is shared, so it cannot carry one reader's language.
     mocks.getRequestInterfaceLocale.mockResolvedValue("ru");
     mocks.getSiteShellSessionState.mockResolvedValue({
       isAuthenticated: false,
@@ -146,7 +149,7 @@ describe("/variety/[slug]", () => {
       }),
     );
 
-    expect(html).toContain("Сохранить в список желаний");
+    expect(html).toContain("Зберегти до списку бажань");
     expect(html).toContain('aria-pressed="false"');
     expect(html).toContain("/auth/intent/start");
     expect(html).toContain('name="action" value="bookmark"');
@@ -167,7 +170,7 @@ describe("/variety/[slug]", () => {
       }),
     );
 
-    expect(html).toContain("Сохранено в ваш список желаний.");
+    expect(html).toContain("Збережено до вашого списку бажань.");
   });
 
   it("indexes thin public variety metadata", async () => {
@@ -194,12 +197,12 @@ describe("/variety/[slug]", () => {
         params: Promise.resolve({ slug: "missing-variety" }),
       }),
     ).resolves.toMatchObject({
-      title: "Публичный сорт | OverGarden",
+      title: "Публічний сорт | OverGarden",
       robots: { index: false, follow: false },
     });
   });
 
-  it("localizes variety chrome and metadata without translating canonical catalog or journal values", async () => {
+  it("renders the unprefixed family in the default locale, whatever the reader's cookie says", async () => {
     const { default: PublicVarietyRoute, generateMetadata } =
       await import("./page");
     const metadata = await generateMetadata({
@@ -212,7 +215,7 @@ describe("/variety/[slug]", () => {
     );
 
     expect(metadata.title).toBe("Pomidor Cheri · сорт | OverGarden");
-    expect(html).toContain("Публичный сорт");
+    expect(html).toContain("Публічний сорт");
     expect(html).toContain("Pomidor Cheri");
     expect(html).toContain("First ripe cluster");
   });

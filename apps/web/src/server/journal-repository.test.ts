@@ -959,7 +959,8 @@ describe("journal repository query contracts", () => {
     vi.stubEnv("R2_PUBLIC_BASE_URL", "https://media.over.garden");
     const page = serializePublicJournalEntryPage({
       root: {
-        entryId: "00000000-0000-4000-8000-000000000020",
+        sourceLanguage: "uk",
+      entryId: "00000000-0000-4000-8000-000000000020",
         title: "Перший урожай",
         body: "Перший абзац.\n\nІсторична згадка @previous_gardener.",
         contentDocument: null,

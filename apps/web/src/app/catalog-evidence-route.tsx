@@ -27,7 +27,6 @@ import {
 } from "@/lib/public-surface-localization";
 import { getEngagementSummary } from "@/server/engagement-repository";
 import { readViewerLikeState } from "@/app/engagement/engagement-viewer";
-import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   resolvePublicSurfacePayload,
   resolveUnresolvedPublicSurfaceDiscovery,
@@ -100,11 +99,18 @@ async function resolveCatalogEvidenceRequest(
     props.params,
     props.searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
   ]);
+  // The route family decides the language, never the reader's cookie
+  // (ADR-0029 D10). The unprefixed family is the default locale's.
+  //
+  // Reading the cookie here meant the shared CDN copy of an unprefixed card
+  // held whichever language populated it first: on 2026-09-10 the canonical uk
+  // address served a fully Bulgarian document, with `<html lang="uk">` and
+  // `Content-Language: bg`, to every reader including a crawler.
   const locale: InterfaceLocale | null = localeParam
     ? isPublicLocale(localeParam)
       ? localeParam
       : null
-    : await getRequestInterfaceLocale();
+    : DEFAULT_PUBLIC_LOCALE;
   // The route family decides the canonical and every redirect target: a
   // prefixed page stays prefixed, the unprefixed page stays unprefixed
   // whatever the cookie locale says.
