@@ -43,6 +43,22 @@ issue body.
 Phases are ordered so nothing moves before the layer that catches it exists.
 Within a phase, tasks are independent unless a Dependencies line says otherwise.
 
+## Migrations
+
+Five tasks need SQL. The numbers are reserved in `docs/MIGRATION_ALLOCATION.md`
+in the order the phases apply, against a `0066` high-water mark taken
+2026-09-11: `0067` `OVE-424`, `0068` `OVE-425`, `0069` `OVE-426`, `0070`
+`OVE-428`, `0071` `OVE-429`. Every other task in the slice holds no allocation
+and may not inherit one.
+
+## The namespace vocabulary
+
+`OVE-425` fixes seven namespace identifiers — `species`, `form`, `journalEntry`,
+`object`, `topic`, `community`, `profileHandle` — each with a script, a
+uniqueness scope, a budget, reserved words and a pattern. `OVE-426`, `OVE-427`,
+`OVE-428`, `OVE-429` and `OVE-434` all read them, so a rename there is breaking
+for five successors. The set and its scopes are in `OVE-425`'s body.
+
 ---
 
 ## 5. `OVE-423` — `hreflang` everywhere it belongs, and nowhere it does not
