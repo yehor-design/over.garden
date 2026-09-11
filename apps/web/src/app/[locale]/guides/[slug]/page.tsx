@@ -25,6 +25,7 @@ import {
 } from "@/server/public-seo-content";
 import { resolveUnresolvedPublicSurfaceDiscovery } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
+import { publicTopicPath } from "@/lib/garden/public-paths";
 
 interface LocalizedGuideRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -118,7 +119,7 @@ function buildGuideSurface(locale: PublicLocale, guide: GuideContent) {
     visibleText: guideVisibleText(guide),
     distinctPublicEntityIds: authoredContentEntityIds(guide.path, [
       ...guide.relatedLinks.map((link) => link.href),
-      ...guide.knowledge.evidence.topicSlugs.map((slug) => `/topics/${slug}`),
+      ...guide.knowledge.evidence.topicSlugs.map(publicTopicPath),
       ...guide.knowledge.evidence.catalogSlugs.map(catalogEvidencePublicPath),
     ]),
     meaningfulContentAt: `${guide.editorial.updatedDate}T00:00:00.000Z`,

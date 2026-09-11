@@ -67,6 +67,7 @@ describe("versioned application SQL bootstrap", () => {
       "0066_ove387_picker_trigram_set_index.sql",
       "0067_ove424_journal_entry_source_language.sql",
       "0068_ove425_journal_entry_public_slug_check.sql",
+      "0069_ove426_journal_topic_slug_check.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

@@ -22,6 +22,7 @@ import {
 } from "@/server/mutation-scope";
 import { publicCommunityChangeTags } from "@/lib/public-cache-tags";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
+import { publicCommunityPath } from "@/lib/garden/public-paths";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
 
@@ -126,10 +127,13 @@ function finish(
   anchor: string,
 ): never {
   for (const locale of PUBLIC_LOCALES) {
-    revalidatePath(localizedPath(locale, `/communities/${slug}`));
+    revalidatePath(localizedPath(locale, publicCommunityPath(slug)));
   }
   revalidatePath("/communities");
-  const path = localizedPath(requestedLocale(formData), `/communities/${slug}`);
+  const path = localizedPath(
+    requestedLocale(formData),
+    publicCommunityPath(slug),
+  );
   const query = new URLSearchParams({ communityAction: status });
   redirect(`${path}?${query.toString()}#${anchor}`);
 }

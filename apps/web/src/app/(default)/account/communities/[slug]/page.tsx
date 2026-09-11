@@ -22,6 +22,7 @@ import {
   resolveCommunityReportAction,
   setCommunityParticipationAction,
 } from "./actions";
+import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 
 interface CommunityModerationPageProps {
   params: Promise<{ slug: string }>;
@@ -178,7 +179,7 @@ export default async function CommunityModerationPage({
                   </p>
                   {item.publicSlug ? (
                     <Link
-                      href={`/journal/${item.publicSlug}`}
+                      href={publicJournalEntryPath(item.publicSlug)}
                       className="w-fit text-sm font-medium text-primary hover:underline"
                     >
                       {copy.community.openJournal}

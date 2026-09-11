@@ -51,6 +51,7 @@ import {
 
 import { renderNotFoundUnknownRouteHtml } from "@/lib/public-unknown-route-lifecycle";
 import { isUnknownRootPath } from "@/lib/root-route-segments";
+import { publicProfileBasePath } from "@/lib/garden/public-paths";
 
 export const APP_ROUTE_CACHE_CONTROL =
   "private, no-store, max-age=0, s-maxage=0, must-revalidate";
@@ -355,7 +356,7 @@ function getLocaleRoutingResponse(
 
   if (rootProfileHandle) {
     const url = request.nextUrl.clone();
-    const rootProfilePath = `/@${rootProfileHandle}`;
+    const rootProfilePath = publicProfileBasePath(rootProfileHandle);
 
     // `/@handle` is a canonical address and stays one whatever country the
     // request came from (ADR-0029 D10). It used to 307 to `/bg/@handle` here.

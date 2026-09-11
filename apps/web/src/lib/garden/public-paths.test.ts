@@ -4,9 +4,15 @@ import {
   gardenFirstEntryHomepagePath,
   gardenFirstEntryPreselectionPath,
   lineageInvitationClaimPath,
-  publicLineageObjectPath,
-  publicCatalogEvidencePath,
   localizedPublicJournalEvidencePath,
+  publicCatalogEvidencePath,
+  publicCommunityDiscussionPath,
+  publicCommunityPath,
+  publicJournalEntryPath,
+  publicLineageObjectPath,
+  publicProfileBasePath,
+  publicTopicPath,
+  requestedPublicCatalogPath,
 } from "./public-paths";
 
 describe("garden public paths", () => {
@@ -93,5 +99,51 @@ describe("garden public paths", () => {
     expect(localizedPublicJournalEvidencePath("ru", "demo entry")).toBe(
       "/ru/journal/demo%20entry",
     );
+  });
+
+  it("joins the community, topic and discussion addresses to the builders", () => {
+    expect(publicCommunityPath("observation-and-care")).toBe(
+      "/communities/observation-and-care",
+    );
+    expect(publicTopicPath("помідори")).toBe(
+      `/topics/${encodeURIComponent("помідори")}`,
+    );
+    expect(
+      publicCommunityDiscussionPath("observation-and-care", "c-1"),
+    ).toBe("/communities/observation-and-care/discussions/c-1");
+  });
+
+  /**
+   * Encoding is the reason to have a builder at all. A Cyrillic topic slug
+   * written by hand reaches the browser raw, and a slug carrying a slash or a
+   * question mark escapes its own route segment.
+   */
+  it("encodes every segment it is given, including the hostile ones", () => {
+    expect(publicTopicPath("a/b")).toBe("/topics/a%2Fb");
+    expect(publicCommunityPath("a?b")).toBe("/communities/a%3Fb");
+    expect(publicJournalEntryPath("полив")).toBe(
+      `/journal/${encodeURIComponent("полив")}`,
+    );
+    expect(publicProfileBasePath("@yehor")).toBe("/@yehor");
+  });
+
+  it("rebuilds a requested catalog address in the shape it was asked for", () => {
+    expect(
+      requestedPublicCatalogPath({ kind: "species", speciesSlug: "solanum" }),
+    ).toBe("/species/solanum");
+    expect(
+      requestedPublicCatalogPath({
+        kind: "species",
+        speciesSlug: "solanum",
+        formSlug: "de-barao",
+      }),
+    ).toBe("/species/solanum/de-barao");
+    expect(
+      requestedPublicCatalogPath({
+        kind: "legacy",
+        catalogKind: "breed",
+        slug: "apis",
+      }),
+    ).toBe("/breed/apis");
   });
 });

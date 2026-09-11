@@ -14,9 +14,14 @@ import type {
   JournalTopicTrustState,
   PlantObjectKind,
 } from "@/db/schema";
+import { addressManifestEntry } from "@/lib/address/address-manifest";
+import { isAddressSlug } from "@/lib/address/address-contract.generated";
+import { slugify } from "@/lib/address/slugify";
 import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
 import type { RequestScope } from "@/server/request-scope";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
+
+const TOPIC = addressManifestEntry("topic");
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -514,28 +519,52 @@ function topicDefinitionForCatalogKind(
   }
 }
 
-function explicitTagTopicDefinition(label: string): TopicDefinition {
-  const asciiSlug = label
-    .toLocaleLowerCase("en")
-    .normalize("NFKD")
-    .replace(/[^\w -]+/g, "")
-    .replace(/[_\s]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
+/**
+ * A gardener's own word becomes the address (ADR-0029 D4).
+ *
+ * What stood here filtered with `/[^\w -]+/g`. Without the `u` flag `\w` is
+ * `[A-Za-z0-9_]`, so every Cyrillic letter was deleted, the result was shorter
+ * than two characters, and the fallback took over: `помідори` became
+ * `tag-81e9f6d3034d`. Every tag written in the language this site is for came
+ * out as an opaque hash, and the reader saw `/topics/tag-81e9f6d3034d`.
+ *
+ * The `tag-` prefix is gone with it. It kept a gardener's tag from landing on a
+ * curated topic's slug, and that turns out to be the wrong thing to prevent:
+ * `ensureJournalTopic` looks a topic up by slug, keeps the curated trust state
+ * and never downgrades it, so tagging *Species* joins the curated Species
+ * topic instead of forking a near-duplicate beside it. Which is what a reader
+ * would expect the word to mean.
+ *
+ * The hash survives as the fallback alone — for a label made of emoji, or
+ * written in a script the address alphabet does not hold. It is stable, so the
+ * same unslugifiable label keeps reaching the same topic.
+ *
+ * Not in scope, and worth knowing: an existing `tag-*` topic is not re-slugged.
+ * Production holds none — its five topics are all curated — so nothing splits
+ * in two there. Where one does exist, the old row keeps its entries and new
+ * signals go to the new slug.
+ */
+export function explicitTagTopicDefinition(label: string): TopicDefinition {
+  const slug = slugify(label, {
+    script: TOPIC.script,
+    language: "uk",
+    budget: TOPIC.budget,
+    fallback: `tag-${createStableTopicHash(label)}`,
+  });
 
-  return {
-    slug:
-      asciiSlug.length >= 2
-        ? `tag-${asciiSlug}`
-        : `tag-${createStableTopicHash(label)}`,
-    label,
-    trustState: "provisional",
-  };
+  return { slug, label, trustState: "provisional" };
 }
 
+/**
+ * A curated slug is chosen by an editor rather than derived, so it is checked
+ * rather than slugified — and checked against the manifest, not against a
+ * fourth copy of the pattern. `isAddressSlug` is the same guard the generated
+ * `CHECK` on the column enforces, so the two cannot disagree about what an
+ * editor may type.
+ */
 function normalizeCuratedTopicSlug(value: string) {
-  const normalized = value.trim().toLocaleLowerCase("en");
-  if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(normalized)) {
+  const normalized = value.trim().toLocaleLowerCase("uk");
+  if (!isAddressSlug("topic", normalized)) {
     throw new Error("Curated topic slug must be a safe public slug.");
   }
   return normalized;

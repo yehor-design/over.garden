@@ -1,6 +1,16 @@
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import type { CatalogKind } from "@/db/schema";
 
+/**
+ * The stand-in segment a lifecycle document shows when the request carried no
+ * location of its own — a 404 or a 410 page rendered outside a request.
+ *
+ * It is a real slug in every namespace, so the builders encode it the way they
+ * encode anything else and the rendered path is the shape a reader would
+ * actually have typed.
+ */
+export const MISSING_ADDRESS_SLUG = "missing";
+
 export function publicJournalEntryPath(publicSlug: string): string {
   return `/journal/${encodeURIComponent(publicSlug)}`;
 }
@@ -71,6 +81,44 @@ export function publicTopicPath(slug: string): string {
 
 export function publicCommunityPath(slug: string): string {
   return `/communities/${encodeURIComponent(slug)}`;
+}
+
+/** One contribution's discussion, under the community that hosts it. */
+export function publicCommunityDiscussionPath(
+  slug: string,
+  contributionId: string,
+): string {
+  return `${publicCommunityPath(slug)}/discussions/${encodeURIComponent(contributionId)}`;
+}
+
+/**
+ * The legacy flat address a catalog request arrived at, rebuilt as asked for.
+ *
+ * This is the one builder that answers with the shape of the *request* rather
+ * than the shape of the canonical, because it is what the 308 compares
+ * against.
+ */
+export function requestedPublicCatalogPath(
+  request:
+    | { kind: "species"; speciesSlug: string; formSlug?: string | null }
+    | { kind: "legacy"; catalogKind: CatalogKind; slug: string },
+): string {
+  if (request.kind === "species") {
+    return publicCatalogEvidencePath(
+      request.formSlug
+        ? {
+            catalogKind: "plant_variety",
+            publicSlug: request.formSlug,
+            speciesSlug: request.speciesSlug,
+          }
+        : { catalogKind: "species", publicSlug: request.speciesSlug },
+    );
+  }
+  return publicCatalogEvidencePath({
+    catalogKind: request.catalogKind,
+    publicSlug: request.slug,
+    speciesSlug: null,
+  });
 }
 
 export function publicProfilePath(

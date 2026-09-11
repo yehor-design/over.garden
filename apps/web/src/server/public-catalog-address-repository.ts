@@ -9,7 +9,10 @@ import {
   type CatalogAliasScheme,
   type PublicCatalogAddressRequest,
 } from "@/lib/catalog/addresses";
-import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
+import {
+  publicCatalogEvidencePath,
+  requestedPublicCatalogPath,
+} from "@/lib/garden/public-paths";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
 
@@ -224,12 +227,15 @@ export async function readPublicCatalogCanonicalAddress(
 }
 
 export function requestedCatalogPath(request: PublicCatalogAddressRequest) {
-  if (request.kind === "species") {
-    return request.formSlug
-      ? `/species/${request.speciesSlug}/${request.formSlug}`
-      : `/species/${request.speciesSlug}`;
-  }
-  return `/${request.catalogKind === "breed" ? "breed" : "variety"}/${request.slug}`;
+  return requestedPublicCatalogPath(
+    request.kind === "species"
+      ? {
+          kind: "species",
+          speciesSlug: request.speciesSlug,
+          formSlug: request.formSlug,
+        }
+      : { kind: "legacy", catalogKind: request.catalogKind, slug: request.slug },
+  );
 }
 
 /** Identifier values as the schemes publish them; anything else is no match. */

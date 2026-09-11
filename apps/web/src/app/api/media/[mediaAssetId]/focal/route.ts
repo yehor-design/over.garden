@@ -13,6 +13,8 @@ import {
 } from "@/server/mutation-scope";
 import { publicEntryChangeTags } from "@/lib/public-cache-tags";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
+import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import { localizedPath } from "@/lib/public-localization";
 
 type RouteContext = {
   params: Promise<{ mediaAssetId: string }>;
@@ -91,9 +93,11 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     revalidatePath("/garden");
     if (result.publicSlug) {
-      revalidatePath(`/journal/${result.publicSlug}`);
+      revalidatePath(publicJournalEntryPath(result.publicSlug));
       for (const locale of ["uk", "bg", "ru"] as const) {
-        revalidatePath(`/${locale}/journal/${result.publicSlug}`);
+        revalidatePath(
+          localizedPath(locale, publicJournalEntryPath(result.publicSlug)),
+        );
       }
     }
     revalidatePath("/feed");

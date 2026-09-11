@@ -29,6 +29,7 @@ import {
   readPublicKnowledgeEvidence,
   readPublicTopicPage,
 } from "@/server/public-cache";
+import { publicTopicPath } from "@/lib/garden/public-paths";
 
 interface PublicTopicRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -89,7 +90,10 @@ export default async function TopicRoute({
   const following = scope
     ? await getEngagementFollowState(scope, followTarget).catch(() => false)
     : false;
-  const returnTo = localizedPath(localeParam, `/topics/${topic.topic.slug}`);
+  const returnTo = localizedPath(
+    localeParam,
+    publicTopicPath(topic.topic.slug),
+  );
   const surface = buildTopicSurface(localeParam, topic);
 
   const evidenceResult = await readPublicKnowledgeEvidence(

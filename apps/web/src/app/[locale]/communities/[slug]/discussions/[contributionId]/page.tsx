@@ -17,6 +17,10 @@ import {
   getEngagementCommentThread,
 } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
+import {
+  publicCommunityDiscussionPath,
+  publicCommunityPath,
+} from "@/lib/garden/public-paths";
 
 interface ContributionDiscussionRouteProps {
   params: Promise<{ locale: string; slug: string; contributionId: string }>;
@@ -65,7 +69,7 @@ export default async function ContributionDiscussionRoute({
           {copy.discussionClosed}
         </p>
         <Link
-          href={localizedPath(locale, `/communities/${slug}`)}
+          href={localizedPath(locale, publicCommunityPath(slug))}
           className={buttonVariants({ variant: "outline", className: "w-fit" })}
         >
           {copy.backToCommunity}
@@ -80,7 +84,7 @@ export default async function ContributionDiscussionRoute({
   });
   const returnTo = localizedPath(
     locale,
-    `/communities/${slug}/discussions/${contributionId}`,
+    publicCommunityDiscussionPath(slug, contributionId),
   );
 
   return (

@@ -5,6 +5,10 @@ import {
 } from "@/lib/public-lifecycle-document";
 import { localizedPath } from "@/lib/public-localization";
 import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
+import {
+  MISSING_ADDRESS_SLUG,
+  publicCatalogEvidencePath,
+} from "@/lib/garden/public-paths";
 
 /**
  * The raw 404 document the proxy answers for an organism address nothing
@@ -18,7 +22,15 @@ export function renderNotFoundPublicCatalogHtml(
   const copy = getPublicSurfaceCopy(locale).organism;
   return renderPublicLifecycleDocument({
     locale,
-    pathname: location?.pathname ?? localizedPath(locale, "/species/missing"),
+    pathname:
+      location?.pathname ??
+      localizedPath(
+        locale,
+        publicCatalogEvidencePath({
+          catalogKind: "species",
+          publicSlug: MISSING_ADDRESS_SLUG,
+        }),
+      ),
     search: location?.search,
     title: copy.notFound,
     description: copy.notFoundDescription,

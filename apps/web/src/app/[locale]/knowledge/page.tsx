@@ -37,6 +37,7 @@ import {
   readPublicKnowledgeEvidence,
   readPublicKnowledgeTopics,
 } from "@/server/public-cache";
+import { publicTopicPath } from "@/lib/garden/public-paths";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -113,7 +114,7 @@ export async function renderPublicKnowledgePage(
     topicsResult?.status === "fulfilled"
       ? topicsResult.value.map((topic) => ({
           kind: "topic" as const,
-          path: `/topics/${topic.slug}`,
+          path: publicTopicPath(topic.slug),
           title: topic.label,
           description: topicDescription(locale, topic.entryCount),
           objectKinds: topic.objectKinds,

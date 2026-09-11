@@ -6,6 +6,10 @@ import {
 import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
 import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
 import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
+import {
+  MISSING_ADDRESS_SLUG,
+  publicJournalEntryPath,
+} from "@/lib/garden/public-paths";
 
 const PUBLIC_JOURNAL_ENTRY_PATH = /^\/journal\/([^/]+)\/?$/i;
 
@@ -51,7 +55,9 @@ function renderLifecycleDocument(
 
   return renderPublicLifecycleDocument({
     locale,
-    pathname: location?.pathname ?? localizedPath(locale, "/journal/missing"),
+    pathname:
+      location?.pathname ??
+      localizedPath(locale, publicJournalEntryPath(MISSING_ADDRESS_SLUG)),
     search: location?.search,
     title,
     description,

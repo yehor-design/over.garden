@@ -4,6 +4,10 @@ import {
   type PublicLifecycleRequestLocation,
 } from "@/lib/public-lifecycle-document";
 import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
+import {
+  MISSING_ADDRESS_SLUG,
+  publicCommunityPath,
+} from "@/lib/garden/public-paths";
 
 const PUBLIC_COMMUNITY_PATH = /^\/communities\/([a-z0-9][a-z0-9-]{1,63})\/?$/;
 
@@ -46,7 +50,8 @@ export function renderNotFoundPublicCommunityHtml(
   return renderPublicLifecycleDocument({
     locale,
     pathname:
-      location?.pathname ?? localizedPath(locale, "/communities/missing"),
+      location?.pathname ??
+      localizedPath(locale, publicCommunityPath(MISSING_ADDRESS_SLUG)),
     search: location?.search,
     title: copy.title,
     description: copy.description,
