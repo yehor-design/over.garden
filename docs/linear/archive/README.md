@@ -12,15 +12,20 @@ before the workspace was pruned to fit its plan's issue limit so that SDD Slice
 | `2026-08.md` | 90 issues completed in August 2026 |
 | `2026-09.md` | 47 issues completed in September 2026 |
 | `open-issues.md` | 23 issues still open at snapshot time |
+| `2026-07-early-index.md` | index of `OVE-78` … `OVE-158`, plus two bodies in full |
 
 240 issues, `OVE-159` … `OVE-422`.
 
 ## What is not here, and why
 
-**`OVE-78` … `OVE-158`** — roughly forty issues completed between 1 and 15 July
-2026, the earliest slices. They are the only gap. What they delivered is
-recorded in `docs/DELIVERY_LOG_2026-09.md`, in the ADRs of that period, and in
-their pull requests; their Linear bodies are not reproduced here.
+**`OVE-78` … `OVE-158`** — thirty-five issues completed between 1 and 15 July
+2026, the earliest slices, and the first set the owner deleted.
+`2026-07-early-index.md` names every one with its branch, so its pull request —
+which carries the diff, the review and the merge — is one `gh pr list --head`
+away and is permanent. Two are reproduced in full there as a sample of the shape.
+The other thirty-three bodies were not copied: at four kilobytes each they would
+have taken dozens of round trips to transcribe, and a merged pull request is the
+stronger record of what a shipped task actually did.
 
 **Full descriptions.** Linear's list API truncates a long description and says
 so inline (`… (truncated, use get_issue for full description)`). Capturing every
