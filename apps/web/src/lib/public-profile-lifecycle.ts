@@ -4,6 +4,10 @@ import {
   type PublicLifecycleRequestLocation,
 } from "@/lib/public-lifecycle-document";
 import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
+import {
+  MISSING_ADDRESS_SLUG,
+  publicProfileBasePath,
+} from "@/lib/garden/public-paths";
 
 const PUBLIC_PROFILE_PATH = /^\/@([a-z0-9][a-z0-9_]{2,29})\/?$/i;
 
@@ -93,7 +97,9 @@ function renderPublicProfileLifecycleHtml(
 
   return renderPublicLifecycleDocument({
     locale,
-    pathname: location?.pathname ?? localizedPath(locale, "/@missing"),
+    pathname:
+      location?.pathname ??
+      localizedPath(locale, publicProfileBasePath(MISSING_ADDRESS_SLUG)),
     search: location?.search,
     title: copy.title,
     description: copy.description,

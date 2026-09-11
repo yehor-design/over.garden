@@ -8,6 +8,7 @@ import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import LocalizedCommunityDetailRoute, {
   generateMetadata as generateLocalizedCommunityDetailMetadata,
 } from "@/app/[locale]/communities/[slug]/page";
+import { publicCommunityPath } from "@/lib/garden/public-paths";
 
 interface RootCommunityDetailRouteProps {
   params: Promise<{ slug: string }>;
@@ -42,7 +43,7 @@ export default async function RootCommunityDetailRoute({
     searchParams ?? Promise.resolve({}),
   ]);
   if (locale !== DEFAULT_PUBLIC_LOCALE) {
-    const path = localizedPath(locale, `/communities/${slug}`);
+    const path = localizedPath(locale, publicCommunityPath(slug));
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query)) {
       if (!COMMUNITY_QUERY_KEYS.has(key)) continue;

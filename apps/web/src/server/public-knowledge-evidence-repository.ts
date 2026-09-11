@@ -17,6 +17,7 @@ import {
   type PublicJournalDirectoryPage,
 } from "@/server/public-journal-directory-repository";
 import type { PublicKnowledgeEvidenceRule } from "@/server/public-seo-content";
+import { publicTopicPath } from "@/lib/garden/public-paths";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -271,7 +272,7 @@ function matchesForCard(
 }
 
 function topicPath(locale: PublicLocale, slug: string) {
-  const path = localizedPath(locale, `/topics/${slug}`);
+  const path = localizedPath(locale, publicTopicPath(slug));
   return path;
 }
 

@@ -5,6 +5,10 @@ import {
 } from "@/lib/public-lifecycle-document";
 import { getLivingObjectPassportCopy } from "@/lib/living-object-passport";
 import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
+import {
+  MISSING_ADDRESS_SLUG,
+  publicLineageObjectPath,
+} from "@/lib/garden/public-paths";
 
 const PUBLIC_OBJECT_PASSPORT_PATH = /^\/lineage\/objects\/([^/]+)\/?$/i;
 
@@ -50,7 +54,7 @@ function renderLifecycleDocument(
 
   return renderPublicLifecycleDocument({
     locale,
-    pathname: location?.pathname ?? "/lineage/objects/missing",
+    pathname: location?.pathname ?? publicLineageObjectPath(MISSING_ADDRESS_SLUG),
     search: location?.search,
     title,
     description,

@@ -17,6 +17,7 @@ import type {
 import {
   localizedPublicJournalEvidencePath,
   publicLineageObjectPath,
+  publicTopicPath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
@@ -917,7 +918,7 @@ export async function findPublicEngagementTarget(
             kind: target.kind,
             ref: row.slug,
             label: row.label,
-            href: `/topics/${encodeURIComponent(row.slug)}`,
+            href: publicTopicPath(row.slug),
           }
         : null;
     }
@@ -1718,7 +1719,7 @@ export function engagementTargetPath(target: EngagementCommentTarget) {
     case "variety":
       return publicVarietyPath(target.ref);
     case "topic":
-      return `/topics/${encodeURIComponent(target.ref)}`;
+      return publicTopicPath(target.ref);
     case "community_contribution":
       // A UUID alone cannot safely reconstruct a locale or community slug.
       // Valid server-rendered return paths are preserved; malformed input gets

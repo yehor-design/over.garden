@@ -18,6 +18,8 @@
  * the database whose connection string it borrows.
  */
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import process from "node:process";
 
 import { config as loadEnv } from "dotenv";
@@ -213,6 +215,49 @@ export async function runAddressContractDatabaseProof() {
           `${definition.constraint}: accepted ${definition.maxCharacters + 1} characters`,
         );
       }
+    }
+
+    // `0069` widens a column a gardener will write Cyrillic into, so its
+    // rollback has to be honest about what it cannot undo. The migration's own
+    // down file re-adds the ASCII constraint and lets Postgres validate it: a
+    // Cyrillic topic makes that fail, which is correct — a schema change is
+    // reversible exactly while nothing has used it, and transliterating or
+    // deleting the row would take a public address or a gardener's tag away.
+    caseCount += 1;
+    await pool.query("insert into journal_topics (slug) values ('помідори')");
+    const rollback = readFileSync(
+      path.join(
+        process.cwd(),
+        "sql/rollback/0069_ove426_journal_topic_slug_check.down.sql",
+      ),
+      "utf8",
+    );
+    const rolledBack = await pool
+      .query(rollback)
+      .then(() => "accepted" as const)
+      .catch((error: unknown) =>
+        error instanceof Error && "code" in error && error.code === "23514"
+          ? ("refused" as const)
+          : (`error:${(error as { code?: string }).code ?? "unknown"}` as const),
+      );
+    if (rolledBack !== "refused") {
+      failures.push(
+        `0069 rollback: expected refused while a Cyrillic topic exists, got ${rolledBack}`,
+      );
+    }
+    await pool.query("delete from journal_topics");
+    const rolledBackClean = await pool
+      .query(rollback)
+      .then(() => "accepted" as const)
+      .catch(
+        (error: unknown) =>
+          `error:${(error as { code?: string }).code ?? "unknown"}` as const,
+      );
+    caseCount += 1;
+    if (rolledBackClean !== "accepted") {
+      failures.push(
+        `0069 rollback: expected accepted on an empty table, got ${rolledBackClean}`,
+      );
     }
 
     return {

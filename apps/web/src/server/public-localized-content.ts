@@ -33,6 +33,7 @@ import {
 } from "@/lib/public-localization";
 import type { PublicHomeFeedCopy } from "@/components/public/public-home-feed";
 import { getPublicKnowledgeCopy } from "@/lib/public-knowledge-copy";
+import { publicTopicPath } from "@/lib/garden/public-paths";
 
 export interface LocalizedHomeContent {
   title: string;
@@ -1001,7 +1002,7 @@ function authoredSitemapSource(
           distinctPublicEntityIds: authoredContentEntityIds(basePath, [
             ...guide.relatedLinks.map((link) => link.href),
             ...guide.knowledge.evidence.topicSlugs.map(
-              (slug) => `/topics/${slug}`,
+              publicTopicPath,
             ),
           ]),
           meaningfulContentAt: entry.lastModified,

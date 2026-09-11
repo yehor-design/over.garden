@@ -25,6 +25,7 @@ import {
 } from "@/server/public-seo-content";
 import { resolveUnresolvedPublicSurfaceDiscovery } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
+import { publicTopicPath } from "@/lib/garden/public-paths";
 
 interface LocalizedAnswerRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -121,7 +122,7 @@ function buildAnswerSurface(locale: PublicLocale, page: AnswerPageContent) {
     distinctPublicEntityIds: authoredContentEntityIds(page.path, [
       ...page.relatedVarieties.map((link) => link.href),
       ...page.relatedTopics.map((link) => link.href),
-      ...page.knowledge.evidence.topicSlugs.map((slug) => `/topics/${slug}`),
+      ...page.knowledge.evidence.topicSlugs.map(publicTopicPath),
       ...page.knowledge.evidence.catalogSlugs.map(catalogEvidencePublicPath),
     ]),
     meaningfulContentAt: `${page.editorial.updatedDate}T00:00:00.000Z`,

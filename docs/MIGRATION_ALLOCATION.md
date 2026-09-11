@@ -148,8 +148,8 @@ number in `apps/web/sql` when these were taken.
 | Migration | Owner | What it does |
 | --- | --- | --- |
 | `0067` | `OVE-424` | `journal_entries.source_language` widened to uk/bg/ru and backfilled on `active` rows; **not** `NOT NULL` — applied to production 2026-09-11 |
-| `0068` | `OVE-425` | the generated `CHECK` on `journal_entries.public_slug` — the only slug column that has never had one; the block is `contracts/address/address-slug-checks.generated.sql` verbatim |
-| `0069` | `OVE-426` | widens the `journal_topics.slug` CHECK to the manifest's native-script `topic` shape |
+| `0068` | `OVE-425` | the generated `CHECK` on `journal_entries.public_slug` — the only slug column that has never had one; the block is `contracts/address/address-slug-checks.generated.sql` verbatim — applied to production 2026-09-11 |
+| `0069` | `OVE-426` | widens the `journal_topics.slug` CHECK to the manifest's native-script `topic` shape; the block is `contracts/address/address-slug-checks.generated.sql` verbatim — applied to production 2026-09-11 |
 | `0070` | `OVE-428` | `journal_entry_slug_history` and its sync trigger, modelled on `catalog_item_slug_history` |
 | `0071` | `OVE-429` | the catalog re-slug backfill |
 

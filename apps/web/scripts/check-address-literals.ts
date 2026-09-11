@@ -8,14 +8,13 @@
  * a place those renames have to be remembered, and the reason to have a
  * builder at all is that nobody remembers all of them.
  *
- * ## The allowlist is a ledger, not an exemption
+ * ## The allowlist is empty and stays empty
  *
- * `KNOWN_LITERALS` holds the call sites that already existed when the rule
- * landed. The gate is real from the first commit — a literal in a file that is
- * not on this list fails the build — and the list only shrinks. `OVE-426`
- * empties it. A file that stops spelling a path is removed from the list by
- * this script itself, which fails when an entry no longer matches anything:
- * a stale allowlist is the way a ratchet quietly stops ratcheting.
+ * `KNOWN_LITERALS` held thirty-one entries for one commit — `OVE-425`, which
+ * introduced the rule — and `OVE-426` emptied it. The script fails on a
+ * literal in any file not listed there, and equally on a listed file that no
+ * longer has one, because a stale allowlist is how a ratchet quietly stops
+ * ratcheting.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
@@ -43,35 +42,14 @@ const DEFINITIONS = new Set([
 ]);
 
 /**
- * The call sites that predate the rule. One line per file; the count is the
- * number of literals that file holds, so removing one of several still fails
- * until the ledger is updated.
+ * Call sites allowed to spell a path. Empty, and it stays empty.
+ *
+ * It held thirty-one entries for exactly one commit — the one that introduced
+ * the rule, where emptying it in the same change would have made a large
+ * diff larger. `OVE-426` emptied it. An entry here now is a deliberate
+ * exception and needs a reason beside it.
  */
-const KNOWN_LITERALS: Readonly<Record<string, number>> = {
-  "src/app/(default)/account/communities/[slug]/actions.ts": 1,
-  "src/app/(default)/account/communities/[slug]/page.tsx": 1,
-  "src/app/(default)/communities/[slug]/page.tsx": 1,
-  "src/app/[locale]/answers/[slug]/page.tsx": 1,
-  "src/app/[locale]/communities/[slug]/actions.ts": 2,
-  "src/app/[locale]/communities/[slug]/discussions/[contributionId]/page.tsx": 2,
-  "src/app/[locale]/guides/[slug]/page.tsx": 1,
-  "src/app/[locale]/knowledge/page.tsx": 1,
-  "src/app/[locale]/topics/[slug]/page.tsx": 1,
-  "src/app/api/media/[mediaAssetId]/focal/route.ts": 2,
-  "src/app/catalog-owner-card-controls.tsx": 1,
-  "src/app/engagement/public-engagement-panel.tsx": 1,
-  "src/components/public/public-community.tsx": 4,
-  "src/lib/public-catalog-lifecycle.ts": 1,
-  "src/lib/public-community-lifecycle.ts": 1,
-  "src/lib/public-journal-entry-lifecycle.ts": 1,
-  "src/lib/public-object-passport-lifecycle.ts": 1,
-  "src/lib/public-profile-lifecycle.ts": 1,
-  "src/proxy.ts": 1,
-  "src/server/engagement-repository.ts": 2,
-  "src/server/public-catalog-address-repository.ts": 2,
-  "src/server/public-knowledge-evidence-repository.ts": 1,
-  "src/server/public-localized-content.ts": 1,
-};
+const KNOWN_LITERALS: Readonly<Record<string, number>> = {};
 
 interface Finding {
   readonly file: string;
@@ -199,7 +177,9 @@ function main() {
     0,
   );
   console.log(
-    `address literals: no new ones; ${remaining} on the ledger for OVE-426`,
+    remaining === 0
+      ? `address literals: none; ${files.length} files scanned`
+      : `address literals: no new ones; ${remaining} still on the ledger`,
   );
 }
 

@@ -16,6 +16,7 @@ import {
   ownerUserIdFromFormData,
   resolveMutationScope,
 } from "@/server/mutation-scope";
+import { publicCommunityPath } from "@/lib/garden/public-paths";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
 const MODERATION_REASONS = new Set([
@@ -200,7 +201,7 @@ function finish(formData: FormData, slug: string, status: string): never {
   revalidatePath("/account/communities");
   for (const locale of PUBLIC_LOCALES) {
     revalidatePath(localizedPath(locale, "/communities"));
-    revalidatePath(localizedPath(locale, `/communities/${slug}`));
+    revalidatePath(localizedPath(locale, publicCommunityPath(slug)));
   }
   revalidatePath("/", "layout");
   redirectToModerationStatus(formData, slug, status);

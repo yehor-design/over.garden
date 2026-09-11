@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -63,17 +63,43 @@ describe("the address contract is generated, not restated (ADR-0029 D12)", () =>
    * renders, character for character, or the suite fails before anything
    * reaches a database.
    */
-  it("finds migration 0068's block inside the generated SQL, verbatim", () => {
-    const migration = readFileSync(
-      path.join(WEB_ROOT, "sql/0068_ove425_journal_entry_public_slug_check.sql"),
-      "utf8",
-    );
-    const definition = buildAddressContractDocument().constraints.find(
-      (candidate) =>
-        candidate.constraint === "journal_entries_public_slug_check",
-    );
-    expect(definition?.checkInstalledBy).toBe("0068");
-    expect(migration).toContain(renderConstraintSql(definition!));
+  it.each([
+    [
+      "0068",
+      "sql/0068_ove425_journal_entry_public_slug_check.sql",
+      "journal_entries_public_slug_check",
+    ],
+    [
+      "0069",
+      "sql/0069_ove426_journal_topic_slug_check.sql",
+      "journal_topics_slug_check",
+    ],
+  ])(
+    "finds migration %s's block inside the generated SQL, verbatim",
+    (number, file, constraint) => {
+      const migration = readFileSync(path.join(WEB_ROOT, file), "utf8");
+      const definition = buildAddressContractDocument().constraints.find(
+        (candidate) => candidate.constraint === constraint,
+      );
+      expect(definition?.checkInstalledBy).toBe(number);
+      expect(migration).toContain(renderConstraintSql(definition!));
+    },
+  );
+
+  /**
+   * Every constraint the manifest says a migration installs must have one, and
+   * the migration must be the number it names. Without this, marking a
+   * constraint `checkInstalledBy: "0071"` and never writing `0071` would read
+   * as applied in the generated SQL and be nowhere in the schema.
+   */
+  it("has a migration for every constraint that claims one", () => {
+    for (const definition of buildAddressContractDocument().constraints) {
+      if (!definition.checkInstalledBy) continue;
+      const matches = readdirSync(path.join(WEB_ROOT, "sql")).filter((name) =>
+        name.startsWith(`${definition.checkInstalledBy}_`),
+      );
+      expect(matches, `${definition.constraint}`).toHaveLength(1);
+    }
   });
 
   it("names a builder for every path prefix it bans", () => {

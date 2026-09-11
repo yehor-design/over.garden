@@ -38,6 +38,11 @@ import type {
   PublicCommunityPageModel,
 } from "@/server/community-repository";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import {
+  publicCommunityDiscussionPath,
+  publicCommunityPath,
+  publicTopicPath,
+} from "@/lib/garden/public-paths";
 
 export type PublicCommunityState = "ready" | "loading" | "error";
 
@@ -91,7 +96,7 @@ export function PublicCommunityDirectory({
           {communities.map((community) => (
             <li key={community.id}>
               <Link
-                href={localizedPath(locale, `/communities/${community.slug}`)}
+                href={localizedPath(locale, publicCommunityPath(community.slug))}
                 className="grid min-h-48 content-between gap-6 rounded-md border border-border p-4 transition-colors hover:border-primary/45 hover:bg-muted/30"
               >
                 <span
@@ -177,13 +182,19 @@ export function PublicCommunityView({
 }) {
   const copy = getCommunityCopy(locale);
   const contentCopy = getCommunityContentCopy(locale, community.contentKey);
-  const communityPath = localizedPath(locale, `/communities/${community.slug}`);
+  const communityPath = localizedPath(
+    locale,
+    publicCommunityPath(community.slug),
+  );
   const communityReturnPath = communityViewPath(communityPath, {
     query,
     kind,
     cursor,
   });
-  const knowledgePath = localizedPath(locale, `/topics/${community.topicSlug}`);
+  const knowledgePath = localizedPath(
+    locale,
+    publicTopicPath(community.topicSlug),
+  );
   const actionMessage = actionStatus ? copy.actionMessages[actionStatus] : null;
   const searchState = community.search ?? {
     mode: "browse" as const,
@@ -654,7 +665,7 @@ function CommunityContributionRow({
             <Link
               href={localizedPath(
                 locale,
-                `/communities/${community.slug}/discussions/${item.id}`,
+                publicCommunityDiscussionPath(community.slug, item.id),
               )}
               className={buttonVariants({ variant: "ghost", size: "sm" })}
             >

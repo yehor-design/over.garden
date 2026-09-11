@@ -15,6 +15,20 @@ import {
   revertCatalogCardEditAction,
   setCatalogCardIndexableAction,
 } from "./catalog-owner-card-actions";
+import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
+
+/**
+ * The example address in the merge field, built rather than typed.
+ *
+ * A placeholder is the one path literal that looks harmless: nobody navigates
+ * to it. But it is the shape the owner is being asked to paste, and the day
+ * `/species/` moves it becomes instructions for an address that no longer
+ * exists.
+ */
+const MERGE_TARGET_PLACEHOLDER = publicCatalogEvidencePath({
+  catalogKind: "species",
+  publicSlug: "solanum-lycopersicum",
+});
 
 /**
  * The owner's edit controls on a public organism card (ADR-0026 D10). The
@@ -166,7 +180,7 @@ export function CatalogOwnerCardControls({
               name="targetAddress"
               required
               maxLength={240}
-              placeholder="/species/solanum-lycopersicum"
+              placeholder={MERGE_TARGET_PLACEHOLDER}
               className="rounded-md border border-border bg-background px-3 py-2"
             />
           </label>

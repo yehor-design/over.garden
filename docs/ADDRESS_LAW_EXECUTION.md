@@ -234,6 +234,39 @@ reintroduction.
 
 **Dependencies.** Task 7.
 
+**Shipped 2026-09-11.** The ledger the previous task left behind is empty: all
+thirty-one literals now go through a builder, and `pnpm address:literals:check`
+runs in CI over 651 files with nothing excused. Three findings worth keeping.
+
+1. **The `tag-` prefix went with the hash.** It existed to keep a gardener's
+   tag off a curated topic's slug, and preventing that turns out to be the
+   wrong instinct: `ensureJournalTopic` looks a topic up by slug, keeps the
+   curated trust state and never downgrades it, so tagging *Species* joins the
+   curated Species topic rather than forking a near-duplicate beside it. The
+   stable hash survives as the fallback alone, for a label made of emoji or
+   written in a script the alphabet does not hold.
+
+2. **Existing `tag-*` topics are not re-slugged, and production has none.** Its
+   five topics are all curated and all ASCII — `animals`,
+   `observation-and-care`, `plants`, `plant-varieties`, `species` — and all five
+   pass the widened pattern unchanged. Where a provisional `tag-*` row does
+   exist, in a development database, it keeps its entries and new signals go to
+   the new slug; nothing 308s, because nothing moved.
+
+3. **`0069`'s rollback refuses to run once a Cyrillic topic exists, and that is
+   the design.** Transliterating a slug changes a public address and deleting
+   the row takes a gardener's tag with it, so the down file re-adds the ASCII
+   constraint and lets Postgres validate it. CI executes both halves: refused
+   with a Cyrillic row present, accepted on an empty table.
+
+Three path builders were added to carry the literals:
+`publicCommunityDiscussionPath`, `requestedPublicCatalogPath` and the
+`MISSING_ADDRESS_SLUG` the lifecycle documents render. Two of the replaced
+literals were latent defects rather than style: `` `/topics/${slug}` `` in the
+knowledge hub and `` `/journal/${item.publicSlug}` `` in the account community
+page emitted an unencoded Cyrillic segment, and the proxy's own
+`` `/@${handle}` `` did the same.
+
 ---
 
 ## 9. `OVE-427` — Proxy-decided 404s, case 308, the missing route halves, bounded pagination

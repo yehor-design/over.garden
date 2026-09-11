@@ -47,6 +47,7 @@ import type {
   PublicEngagementComment,
 } from "@/server/engagement-repository";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
+import { publicProfileBasePath } from "@/lib/garden/public-paths";
 
 interface PublicEngagementPanelProps {
   isAuthenticated: boolean;
@@ -360,7 +361,9 @@ function CommentHeader({
     <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
       <p className="text-sm font-medium text-foreground">
         {comment.authorHandle ? (
-          <Link href={`/@${comment.authorHandle}`}>{comment.authorLabel}</Link>
+          <Link href={publicProfileBasePath(comment.authorHandle)}>
+            {comment.authorLabel}
+          </Link>
         ) : (
           comment.authorLabel
         )}

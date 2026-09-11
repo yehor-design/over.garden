@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-11. Divergences noted 2026-09-04 and 2026-09-05.
+Last inventory: 2026-09-11. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -787,6 +787,73 @@ The deploy order was code first, then migration: the render path already
 treated a null as the default locale, so neither half needed the other. The
 value is written at publish from OVE-424 onward; the backfill is a one-off for
 rows written before the column was filled.
+
+## The 2026-09-11 application of `0068` and `0069`, the slug constraints
+
+Both were applied to production on 2026-09-11 through
+`scripts/apply-reviewed-migration.ts --mode apply` with the pulled production
+environment and `apps/web/.env.local` moved aside: one transaction each,
+`lock_timeout` 30 s, host class `digitalocean_managed`, database `defaultdb` —
+`0068` in 176 ms, `0069` in 162 ms. Both fall under the owner's authorization
+of 2026-09-11 for the address-law slice (`docs/ADDRESS_LAW_EXECUTION.md`).
+Applied from the `OVE-426` branch before its merge, which is why this section
+ships in the same pull request.
+
+Both report `no_sentinel` in `--mode inventory` and always will: neither
+creates a table, a column or an index. The state is read from `pg_constraint`.
+
+`0068` gives `journal_entries.public_slug` the `CHECK` it has never had —
+the only one of the four slug columns with no shape, and the only one a
+gardener writes to. `0069` widens `journal_topics.slug` from ASCII to the
+address manifest's native-script `topic` alphabet, which is what made a
+Cyrillic tag come back as `tag-81e9f6d3034d`. Both blocks are
+`contracts/address/address-slug-checks.generated.sql` verbatim.
+
+**Before**, read-only against `digitalocean_managed` / `defaultdb`:
+
+```
+journal_entries_public_slug_check: absent
+journal_topics_slug_check:  CHECK (slug ~ '^[a-z0-9][a-z0-9-]{1,63}$'), validated
+communities_slug_check:     CHECK (slug ~ '^[a-z0-9][a-z0-9-]{1,63}$'), validated
+catalog_items_public_slug_check:
+  CHECK (public_slug IS NULL OR public_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$')
+11 journal entry slugs, 5 topics, 1 community
+```
+
+**Rehearsed first**, in the house pattern: both files run inside one
+transaction against production, read back, then `ROLLBACK`. The readback after
+was identical to the readback before. Because `ALTER TABLE … ADD CONSTRAINT`
+validates by default, the rehearsal also proved that no existing row violates
+either pattern — which is the only thing that could have failed here.
+
+**After**, read back immediately, read-only:
+
+```
+journal_entries_public_slug_check: present, validated
+  public_slug IS NULL OR (char_length BETWEEN 1 AND 96 AND public_slug ~ …)
+journal_topics_slug_check: present, validated
+  char_length BETWEEN 1 AND 64 AND slug ~ …
+both patterns: ^[a-z0-9<37 Cyrillic letters>]+(?:-[a-z0-9<same>]+)*$
+row counts unchanged: 11 entry slugs, 5 topics, 1 community
+```
+
+**Two constraints the manifest declares and no migration installs.**
+`catalog_items_public_slug_check` keeps the narrower `0001` version (the same
+pattern without a length bound) and `communities_slug_check` keeps its ASCII
+one. That is recorded in the manifest as `checkInstalledBy: null`, and the
+generated SQL labels those blocks "declared only" rather than letting them read
+as applied. `OVE-429` installs the catalog one once it has moved the rows a
+length bound would refuse; nothing authors a community yet, so nothing needs
+the wider shape there.
+
+**Neither `CHECK` is `NOT VALID`.** Both were added validated because every
+existing row passes, which is the state `0067`'s two inherited `NOT VALID`
+constraints on the same table are not in — see the section above.
+
+The deploy order was migration first, then code, and it had to be for `0069`:
+the code in `OVE-426` writes Cyrillic topic slugs that the old ASCII constraint
+would refuse. `0068` is safe either way — the slugs the previously deployed
+code wrote pass the new constraint unchanged.
 
 ## The rule this produced
 
