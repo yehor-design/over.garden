@@ -843,6 +843,7 @@ async function assignFormSlug(
     )
     .execute();
   const slug = resolveSlugCollision(
+    "form",
     base,
     new Set(taken.map((row) => row.slug)),
   );

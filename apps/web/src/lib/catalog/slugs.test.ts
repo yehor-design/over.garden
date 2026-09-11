@@ -4,9 +4,10 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { isAddressSlug } from "@/lib/address/address-contract.generated";
+
 import {
   formSlugFromDenomination,
-  isCatalogSlug,
   resolveSlugCollision,
   romanizeBulgarian,
   romanizeUkrainian,
@@ -36,7 +37,7 @@ describe("catalog slugs (ADR-0026 D8)", () => {
     "romanizes %s (%s) as %s",
     (denomination, language, slug) => {
       expect(formSlugFromDenomination(denomination, language)).toBe(slug);
-      expect(isCatalogSlug(slug)).toBe(true);
+      expect(isAddressSlug("form", slug)).toBe(true);
     },
   );
 
@@ -60,8 +61,10 @@ describe("catalog slugs (ADR-0026 D8)", () => {
 
   it("appends -2, -3 on a collision and never reuses a slug the history holds", () => {
     const taken = new Set(["de-barao", "de-barao-2"]);
-    expect(resolveSlugCollision("de-barao", taken)).toBe("de-barao-3");
-    expect(resolveSlugCollision("promin", taken)).toBe("promin");
-    expect(() => resolveSlugCollision("Not A Slug", taken)).toThrow(/Not a catalog slug/u);
+    expect(resolveSlugCollision("form", "de-barao", taken)).toBe("de-barao-3");
+    expect(resolveSlugCollision("form", "promin", taken)).toBe("promin");
+    expect(() => resolveSlugCollision("form", "Not A Slug", taken)).toThrow(
+      /Not a form slug/u,
+    );
   });
 });

@@ -171,6 +171,43 @@ refused by the generated `CHECK`, rolled back.
 
 **Dependencies.** Task 1.
 
+**Shipped 2026-09-11, with four things execution decided.**
+
+1. **The alphabet is spelled out, letter by letter.** `[[:alpha:]]` and
+   `[[:lower:]]` turned out to be Unicode-correct in this database — read
+   against production, they accept `ї` and `ъ` and reject `П`, an apostrophe,
+   an en dash and a space — but they admit every other script's lower case
+   too, and the slugifier's output set is exactly `a-z0-9` plus the
+   thirty-seven Cyrillic letters uk/bg/ru write. A range like `а-я` is not an
+   option: inside a bracket expression a range is read in the database's
+   collation, which is `en_US.UTF-8` here, not in code-point order. Spelling
+   the set out also enforces `NFC` for free — a decomposed `й` is `и` plus
+   U+0306, and U+0306 is not one of the thirty-seven.
+
+2. **The `CHECK` bound is not the budget.** The column admits ninety-six
+   characters; the budget is sixty decoded and a hundred and eighty encoded. A
+   `CHECK` has to admit the rows the table already holds, and every slug
+   production holds was written under the old ninety-six-character rule. Task
+   11 narrows the column once it has moved the rows that would then be
+   refused.
+
+3. **The disambiguating suffixes stay where uniqueness still needs them.** The
+   four named generators are gone and every base is `slugify` now, but the
+   Ukrainian register's `-ua-register-{applicationNumber}` and the EU-OJ
+   digest remain, because both projections are written straight into the
+   globally unique `catalog_items.public_slug` without passing through
+   `assignCatalogSlug`. Task 11 moves the ingest onto the counter and the tails
+   go with it. The journal entry's publish-id tail did **not** stay: entries
+   get `assignJournalEntrySlug`, which counts `-2`, `-3` against the live
+   column under an advisory lock on the base, so two simultaneous publishes of
+   one title serialize instead of colliding.
+
+4. **The banned-literal rule ships with a ledger, not an exemption.**
+   `pnpm address:literals:check` fails on any path literal in a file that is
+   not on the list, and the list holds the thirty-one that already existed.
+   Task 8 empties it; the script fails if an entry goes stale, so the ratchet
+   cannot quietly stop.
+
 ---
 
 ## 8. `OVE-426` — Topic tags, the community path builder, the banned-literal lint

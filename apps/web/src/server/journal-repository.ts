@@ -20,10 +20,8 @@ import type {
 } from "@/db/schema";
 import type { Json } from "@/db/generated";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
-import {
-  MAX_PUBLIC_JOURNAL_SLUG_LENGTH,
-  normalizePublicJournalSlug,
-} from "@/lib/garden/public-journal-slug";
+import { normalizePublicJournalSlug } from "@/lib/garden/public-journal-slug";
+import { assignJournalEntrySlug } from "@/server/journal-slug-repository";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import {
   localizedPublicJournalEvidencePath,
@@ -112,7 +110,6 @@ export { JournalAggregateConflictError, readJournalDocumentFromEntry };
 const MAX_TITLE_LENGTH = 140;
 const MAX_NAME_LENGTH = 120;
 const MAX_RECENT_ITEMS = 20;
-const MAX_PUBLIC_SLUG_LENGTH = MAX_PUBLIC_JOURNAL_SLUG_LENGTH;
 const MAX_RELATED_PUBLIC_JOURNAL_ENTRIES = 3;
 const MAX_OBJECT_GALLERY_MEDIA = 6;
 const MAX_PUBLIC_JOURNAL_MEDIA = 10;
@@ -4341,7 +4338,10 @@ async function atomicJournalEntryValues(
     visibility: "public",
     lifecycle_state: "active",
     source_language: input.sourceLanguage,
-    public_slug: createAtomicPublicSlug(input.title, atomic.publishId),
+    public_slug: await assignJournalEntrySlug(executor, {
+      title: input.title,
+      sourceLanguage: input.sourceLanguage,
+    }),
     published_at: now,
     first_publication_disclosure_version: disclosureLogged
       ? FIRST_PUBLICATION_DISCLOSURE_VERSION
@@ -4499,17 +4499,6 @@ function normalizeSourceLanguage(value: unknown): PublicLocale {
   return typeof value === "string" && isPublicLocale(value)
     ? value
     : DEFAULT_PUBLIC_LOCALE;
-}
-
-function createAtomicPublicSlug(title: string, publishId: string) {
-  const suffix = publishId.replaceAll("-", "").slice(0, 12);
-  const base = title
-    .toLocaleLowerCase("en")
-    .normalize("NFKD")
-    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, Math.max(1, MAX_PUBLIC_SLUG_LENGTH - suffix.length - 1));
-  return `${base || "entry"}-${suffix}`;
 }
 
 async function findJournalEntryById(

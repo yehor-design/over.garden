@@ -4,7 +4,8 @@ import type { Kysely, Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
-import { isCatalogSlug, resolveSlugCollision } from "@/lib/catalog/slugs";
+import { isAddressSlug } from "@/lib/address/address-contract.generated";
+import { resolveAddressCollision } from "@/lib/address/slugify";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -40,9 +41,19 @@ export function buildTakenCatalogSlugsQuery(
     );
 }
 
-/** The base itself when free, else the first free `-N` suffix. */
-export function chooseCatalogSlug(base: string, takenSlugs: readonly string[]) {
-  return resolveSlugCollision(base, new Set(takenSlugs));
+/**
+ * The base itself when free, else the first free `-N` suffix.
+ *
+ * The namespace is the address manifest's, and `species` and `form` are two of
+ * its names: both are `latin`, so the guard is the same either way, but saying
+ * which one is being assigned keeps the call honest when they diverge.
+ */
+export function chooseCatalogSlug(
+  base: string,
+  takenSlugs: readonly string[],
+  namespace: CatalogSlugNamespace = "form",
+) {
+  return resolveAddressCollision(namespace, base, new Set(takenSlugs));
 }
 
 /**
@@ -56,7 +67,8 @@ export async function assignCatalogSlug(
   input: { catalogItemId: string; nodeKind: string; base: string },
   executor: QueryExecutor = db,
 ): Promise<{ slug: string; namespace: CatalogSlugNamespace }> {
-  if (!isCatalogSlug(input.base)) {
+  const namespace = catalogSlugNamespaceForNodeKind(input.nodeKind);
+  if (!isAddressSlug(namespace, input.base)) {
     throw new Error(`Not a catalog slug: ${input.base}`);
   }
   const taken = await buildTakenCatalogSlugsQuery(
@@ -67,11 +79,12 @@ export async function assignCatalogSlug(
   const slug = chooseCatalogSlug(
     input.base,
     taken.map((row) => row.slug),
+    namespace,
   );
   await executor
     .updateTable("catalog_items")
     .set({ public_slug: slug })
     .where("catalog_items.id", "=", input.catalogItemId)
     .execute();
-  return { slug, namespace: catalogSlugNamespaceForNodeKind(input.nodeKind) };
+  return { slug, namespace };
 }

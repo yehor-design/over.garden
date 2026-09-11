@@ -1,27 +1,30 @@
 /**
- * OVE-227 — canonical public journal slug rule.
+ * The public journal slug, as the route contract holds it.
  *
- * The slug is part of the public route contract (`/journal/<slug>`) and of the
- * public Meilisearch projection. Before this module the rule lived only inside
- * `journal-repository.ts`, so the search parity gate could not tell a valid
- * slug from an attacker-shaped or truncated one. Both the write path and the
- * projection comparison now read the same definition.
+ * OVE-227 put the rule here so that the write path and the search-parity gate
+ * read one definition instead of two. OVE-425 took the last copy out of this
+ * file as well: the shape is now the address manifest's, rendered once into
+ * the guard below and into `journal_entries_public_slug_check` (migration
+ * `0068`), so a slug the database would refuse can no longer look valid to the
+ * proxy — and the other way round.
+ *
+ * What narrowed. The old pattern was `[\p{Letter}\p{Number}-]+`, which admits
+ * every script, upper case, a leading or trailing hyphen and a doubled one.
+ * None of those is a slug this system ever issued, and each is a second
+ * address for a page that already has one. Every slug production holds passes
+ * the new guard unchanged.
  */
 
-export const MAX_PUBLIC_JOURNAL_SLUG_LENGTH = 96;
+import {
+  ADDRESS_SLUG_MAX_CHARACTERS,
+  isAddressSlug,
+} from "@/lib/address/address-contract.generated";
 
-/**
- * Letters (any script, so Ukrainian/Bulgarian titles survive), digits, and
- * hyphens only. No slashes, dots, whitespace, query, or fragment characters —
- * those would let a slug escape its own route segment.
- */
-const PUBLIC_JOURNAL_SLUG_PATTERN = /^[\p{Letter}\p{Number}-]+$/u;
+export const MAX_PUBLIC_JOURNAL_SLUG_LENGTH =
+  ADDRESS_SLUG_MAX_CHARACTERS.journalEntry;
 
 export function isValidPublicJournalSlug(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  if (value.length === 0) return false;
-  if (value.length > MAX_PUBLIC_JOURNAL_SLUG_LENGTH) return false;
-  return PUBLIC_JOURNAL_SLUG_PATTERN.test(value);
+  return isAddressSlug("journalEntry", value);
 }
 
 /** Trim-normalize an inbound slug, or `null` when it cannot be canonical. */
