@@ -142,6 +142,9 @@ Every Linear task uses this shape and nothing more:
   only where a translation of the main content exists. Feeds are never filtered
   or badged by language. Supersedes ADR-0026 D8 and the addressing half of D9,
   and the addressing sections of `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`.
+  `docs/ADDRESS_LAW_EXECUTION.md` — the executor's runbook for ADR-0029: the
+  sixteen tasks in order, what each must prove, and the traps. Tasks 5–16 live
+  there rather than in Linear because the workspace hit its free issue limit.
   `docs/ORGANISM_GRAPH_EXECUTION.md` — the executor's runbook for that slice:
   the owner's standing authorization, environment quirks, production
   procedures, hand-offs between the fourteen tasks.
