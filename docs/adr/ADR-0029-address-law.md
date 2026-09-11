@@ -199,11 +199,27 @@ Three translated chrome pages over one shared multilingual list is what
 the three copies. `public-journal-directory-query.ts` has no language predicate
 today; adding one would have been a regression.
 
-`journal_entries.source_language` becomes `NOT NULL`, written at publish. It is
+`journal_entries.source_language` is written at publish. It is
 **server-side only**: it drives `lang` on the entry element and `inLanguage` in
 JSON-LD, and nothing else. Today a Ukrainian entry renders inside a `lang="bg"`
 document, so screen readers apply Bulgarian phonetics to Ukrainian text and
 Google records the wrong content language.
+
+**Amendment, 2026-09-11.** This decision said the column becomes `NOT NULL`.
+Migration `0067` shipped without it, and the constraint admits `ru` as well as
+uk/bg. Two facts found by executing the migration rather than reasoning about
+it. `ru` is a real authoring language — `BULGARIA_PUBLIC_LOCALES` is (bg, ru),
+so a gardener holds a Russian interface and writes in Russian — and the
+development database already held such entries. And `NOT NULL` cannot be set
+while rows exist that no statement can write to:
+`journal_entries_lifecycle_state_check` and
+`journal_entries_deletion_retention_check` are both `NOT VALID`, so the
+sixteen rows left in the retired `archived` state reject every `UPDATE`, and
+`SET NOT NULL` scans the whole table. Requiring the value is blocked on
+deciding what an `archived` entry is in a schema that no longer admits that
+state, which is a separate decision. Until then the render path treats a null
+as the default locale and the publish path never writes one. Production holds
+no such row (`docs/PRODUCTION_SCHEMA_STATE.md`, 2026-09-11).
 
 ### D12. One declaration generates the validator, the constraint and the lint
 

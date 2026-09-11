@@ -103,9 +103,9 @@ document.
 **Owner decisions.** ADR-0029 D11. **Server-side only: no language badge, chip
 or marker on any card, and no listing filtered by content language, ever.**
 
-**Scope.** In: `journal_entries.source_language` written at publish and made
-`NOT NULL` (it exists, is nullable, is CHECK-constrained to `uk`/`bg`, and is
-written by nothing but the deletion path); `lang` on the entry element from it;
+**Scope.** In: `journal_entries.source_language` written at publish (it exists,
+is nullable, is CHECK-constrained to `uk`/`bg`, and is written by nothing but
+the deletion path); `lang` on the entry element from it;
 `inLanguage` in the entry's JSON-LD; the unprefixed route family renders `uk`
 rather than the cookie locale, so the shared CDN copy stops serving one visitor's
 language to everyone. Out: any user-visible language affordance. Any change to
@@ -123,6 +123,17 @@ with `<html lang="uk">` and `Content-Language: bg`. No new visible control.
 
 **Proof.** The `curl` above; one entry's JSON-LD showing `inLanguage`; a
 screenshot of an entry card before and after, identical.
+
+**Shipped 2026-09-11, with two corrections execution forced.** The CHECK admits
+`ru` as well as uk/bg — a Russian interface is a real authoring state and the
+development database already held such entries — and the column is **not**
+`NOT NULL`, because rows in the retired `archived` lifecycle state reject every
+`UPDATE` while two `NOT VALID` constraints stand, and `SET NOT NULL` scans the
+whole table. See the amendment under ADR-0029 D11. Production holds no
+`archived` row; the development database holds sixteen, and they are why the
+backfill is scoped to `lifecycle_state = 'active'`. **Anything later in this
+runbook that writes every journal entry row must carry the same clause or it
+will fail on the first `archived` row it reaches** — that is OVE-428.
 
 **Dependencies.** Task 4.
 
