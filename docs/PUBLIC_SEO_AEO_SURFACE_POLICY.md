@@ -1,8 +1,12 @@
 # Public SEO/AEO Surface Policy
 
-Status: active. Owner decision: ADR-0022, D3 (2026-09-02), amended by ADR-0026
-D9 (2026-09-05) for organism cards. Supersedes the
-measured-threshold policy that this file described before OVE-368.
+Status: active for the indexing rule; **superseded on addressing by ADR-0029**
+(2026-09-11). The "Organism addresses", "Sitemap" and "Robots" sections below
+describe behaviour production does not have and are replaced by ADR-0029 D9,
+D10, D13 and D15; read that file first. Owner decision: ADR-0022, D3
+(2026-09-02), amended by ADR-0026 D9 (2026-09-05) for organism cards — that
+indexing rule stands unchanged. Supersedes the measured-threshold policy that
+this file described before OVE-368.
 
 ## Rule
 
