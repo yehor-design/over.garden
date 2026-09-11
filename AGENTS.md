@@ -10,7 +10,8 @@ knowingly unfinished. Current decisions live in
 `docs/adr/ADR-0025-stable-registry-retired.md`,
 `docs/adr/ADR-0026-organism-knowledge-graph.md`,
 `docs/adr/ADR-0027-owner-health-page-retired.md` and
-`docs/adr/ADR-0028-notion-shaped-composer.md`; older ADRs and dated documents
+`docs/adr/ADR-0028-notion-shaped-composer.md` and
+`docs/adr/ADR-0029-address-law.md`; older ADRs and dated documents
 are history and never override them.
 
 ## Product
@@ -134,6 +135,13 @@ Every Linear task uses this shape and nothing more:
   shape and `JournalDocumentV1` grows Notion's basic blocks, additively, at
   schema version 1 and with no SQL; it supersedes the closed node and mark
   lists of ADR-0015 and nothing else there.
+  `docs/adr/ADR-0029-address-law.md` — one permanent address per public thing,
+  one rule per question: the permalink and the name, 200/308/404 decided in the
+  proxy, script following the content, a slug budget measured after
+  percent-encoding, a collision counter instead of a hash, and a locale prefix
+  only where a translation of the main content exists. Feeds are never filtered
+  or badged by language. Supersedes ADR-0026 D8 and the addressing half of D9,
+  and the addressing sections of `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`.
   `docs/ORGANISM_GRAPH_EXECUTION.md` — the executor's runbook for that slice:
   the owner's standing authorization, environment quirks, production
   procedures, hand-offs between the fourteen tasks.

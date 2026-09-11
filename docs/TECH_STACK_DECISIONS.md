@@ -184,3 +184,15 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   the closed root-node and inline-mark lists of ADR-0015; everything else there,
   including the pin to Lexical 0.49.0 and the forbidden-package list, stands.
   Accepted 2026-09-10; implemented as SDD Slice 26 (`OVE-411`–`OVE-417`).
+- ADR-0029 — The address law (2026-09-11). Binding: every public thing has a
+  permalink `/id/{uuid}` and a name; an address resolves to 200, 308 or 404
+  decided in `src/proxy.ts` before any shell streams; slug script follows the
+  content (ASCII for scientific names, native Cyrillic for a gardener's words);
+  the slug budget is `min(60 decoded, 180 encoded)`; collisions get `-2`, never
+  a hash; a locale prefix exists only where a translation of the main content
+  exists, so entries and object passports have exactly one address at
+  `/@{handle}/…`; listings are never filtered or badged by language; one
+  `address-manifest.ts` generates the guard, the SQL CHECK and the lint.
+  Supersedes ADR-0026 D8, the addressing half of D9, and the addressing
+  sections of `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`. Accepted 2026-09-11;
+  execution is SDD Slice 27 from `OVE-419`.
