@@ -4,6 +4,7 @@ import {
   publicCatalogEvidencePath,
   publicTopicPath,
 } from "@/lib/garden/public-paths";
+import { PUBLIC_LOCALES, localizedPath } from "@/lib/public-localization";
 import { absolutePublicUrl } from "@/lib/garden/public-url";
 import { listIndexableLocalizedAuthoredSitemapEntries } from "@/server/public-localized-content";
 import {
@@ -50,8 +51,9 @@ export async function listPublicSitemapChunkIds(): Promise<
     "catalog",
     "topics",
     "communities",
+    // A profile row emits one URL per locale; an entry row emits one.
     ...Array.from(
-      { length: sitemapChunkCount(profileCount) },
+      { length: sitemapChunkCount(profileCount, PUBLIC_LOCALES.length) },
       (_, index) => `profiles-${index}` as const,
     ),
     ...Array.from(
@@ -88,14 +90,23 @@ export async function buildPublicSitemapChunk(
     }));
   }
   if (id === "catalog") {
-    return (await listIndexablePublicVarietySitemapEntries()).map((entry) => ({
-      url: publicCatalogEvidencePath({
-        catalogKind: entry.catalogKind,
-        publicSlug: entry.publicSlug,
-        speciesSlug: entry.speciesSlug,
-      }),
-      lastModified: new Date(entry.lastModified),
-    }));
+    // An organism card is self-canonical in each of the three route families
+    // (ADR-0029 D10), so all three are canonical URLs and all three belong
+    // here. Listing only the unprefixed one left two thirds of the catalog's
+    // canonicals discoverable by `hreflang` alone.
+    return (await listIndexablePublicVarietySitemapEntries()).flatMap(
+      (entry) => {
+        const path = publicCatalogEvidencePath({
+          catalogKind: entry.catalogKind,
+          publicSlug: entry.publicSlug,
+          speciesSlug: entry.speciesSlug,
+        });
+        return PUBLIC_LOCALES.map((locale) => ({
+          url: localizedPath(locale, path),
+          lastModified: new Date(entry.lastModified),
+        }));
+      },
+    );
   }
   if (id === "topics") {
     const pages = await Promise.all(

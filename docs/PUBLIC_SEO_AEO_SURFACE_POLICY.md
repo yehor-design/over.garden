@@ -1,9 +1,10 @@
 # Public SEO/AEO Surface Policy
 
 Status: active for the indexing rule; **superseded on addressing by ADR-0029**
-(2026-09-11). The "Organism addresses", "Sitemap" and "Robots" sections below
-describe behaviour production does not have and are replaced by ADR-0029 D9,
-D10, D13 and D15; read that file first. Owner decision: ADR-0022, D3
+(2026-09-11). The "Organism addresses" section below describes behaviour
+production does not have yet and is replaced by ADR-0029 D9; read that file
+first. "Sitemap" and "Robots" were rewritten on 2026-09-11 by `OVE-421` and now
+describe what the code does. Owner decision: ADR-0022, D3
 (2026-09-02), amended by ADR-0026 D9 (2026-09-05) for organism cards — that
 indexing rule stands unchanged. Supersedes the measured-threshold policy that
 this file described before OVE-368.
@@ -78,19 +79,37 @@ source shape: `visibleText`, `distinctPublicEntityIds`, `canonicalPath`,
 ## Sitemap
 
 `/sitemap.xml` is a sitemap index; `/sitemaps/<chunk>.xml` serves one chunk
-(`authored`, `catalog`, `topics`, `communities`, `profiles-N`, `entries-N`,
-5 000 URLs per chunk). Both are route handlers that read the database at
-request time (`src/server/public-sitemap.ts`,
-`src/server/public-sitemap-repository.ts`); nothing is generated at build.
-Every indexable public page belongs to exactly one chunk. The `catalog`
-chunk lists canonical organism addresses only, never a 308 target, with
-`lastmod` the later of `content_updated_at` and the newest public entry.
+(`authored`, `catalog`, `topics`, `communities`, `profiles-N`, `entries-N`).
+Both are route handlers that read the database at request time
+(`src/server/public-sitemap.ts`, `src/server/public-sitemap-repository.ts`);
+nothing is generated at build.
+
+**A chunk lists every canonical URL and nothing else.** A page that is
+self-canonical in each of the three route families contributes three URLs —
+authored content, organism cards, profiles and communities all do. A page whose
+canonical is a single unprefixed address contributes one: topics today, journal
+entries and object passports permanently (ADR-0029 D10, since their content is
+never translated).
+
+**Chunks are budgeted in emitted URLs, not in rows** — 5 000 URLs per chunk. A
+row that yields one URL per locale therefore fills a chunk three times faster
+than a row that yields one.
+
+**No chunk emits a URL the page itself would refuse to index.** Where the SQL
+predicate does not already imply eligibility, the chunk evaluates the page's own
+`sitemapEligible` decision: a community can be active, on a curated topic, and
+hold no contributions, which the empty-listing rule refuses. Where the predicate
+does imply it, the code says which clause does the work — a journal entry's
+`body` CHECK, a profile's `exists(public entries)` — rather than leaving the
+reader to re-derive it.
 
 ## Robots
 
-`/robots.txt` allows every crawler on public routes and disallows workspace,
-auth, operator, and API paths. Privacy is enforced server-side (401/403 and
-the public projections), never by `robots.txt`.
+`/robots.txt` allows every crawler on public routes and disallows `/garden`,
+`/account`, `/auth`, `/erasure`, `/api` and `/skeleton`. Those routes are
+already `noindex` and already answer 401/403 to an unauthorised reader: the list
+buys crawl budget, not privacy. Privacy is enforced server-side and never by
+this file.
 
 ## Privacy and language boundary
 

@@ -69,6 +69,10 @@ export function publicTopicPath(slug: string): string {
   return `/topics/${encodeURIComponent(slug)}`;
 }
 
+export function publicCommunityPath(slug: string): string {
+  return `/communities/${encodeURIComponent(slug)}`;
+}
+
 export function publicProfilePath(
   locale: PublicLocale,
   handle: string,

@@ -13,11 +13,11 @@ import {
 } from "@/lib/community-copy";
 import {
   isPublicLocale,
-  localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import {
+  buildPublicCommunityDiscoverySource,
   getPublicCommunityPage,
   type CommunityObjectKind,
   type PublicCommunityPageModel,
@@ -27,7 +27,6 @@ import {
   resolvePublicSurfaceDiscoveryFromLoad,
   resolveUnresolvedPublicSurfaceDiscovery,
   type PublicSurfaceDiscoveryResult,
-  type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
@@ -84,7 +83,7 @@ export async function generateMetadata({
         null,
       );
       if (!community) throw new Error("Public community unavailable.");
-      return buildCommunityDiscoverySource(localeParam, community);
+      return buildPublicCommunityDiscoverySource(localeParam, community);
     },
   });
   return buildCommunitySurface(localeParam, safeSlug, null, discovery).metadata;
@@ -117,7 +116,7 @@ export default async function CommunityDetailRoute({
   );
   if (!community) return notFound();
   const discovery = resolvePublicSurfaceDiscoveryForRequest(
-    buildCommunityDiscoverySource(localeParam, community),
+    buildPublicCommunityDiscoverySource(localeParam, community),
   );
   const surface = buildCommunitySurface(
     localeParam,
@@ -148,34 +147,6 @@ function missingCommunityMetadata(): Metadata {
     title: "OverGarden",
     robots: resolveUnresolvedPublicSurfaceDiscovery("localized_community")
       .decision.robots,
-  };
-}
-
-function buildCommunityDiscoverySource(
-  locale: PublicLocale,
-  community: PublicCommunityPageModel,
-): PublicSurfaceDiscoverySource {
-  const contributions = community.contributions?.items ?? [];
-  // A live community is a public candidate whatever its participation or
-  // navigation readiness says (ADR-0022, D3: no readiness read turns a page
-  // `noindex`). It is a listing of contributions, so it counts only those.
-  const liveCandidate =
-    community.lifecycleState === "active" ||
-    community.lifecycleState === "archived";
-  return {
-    consumerId: "localized_community",
-    candidateState: liveCandidate ? "candidate" : "not_public_candidate",
-    visibleText: contributions.flatMap((item) => [
-      item.title,
-      item.excerpt,
-      item.object.displayName,
-    ]),
-    distinctPublicEntityIds: contributions.flatMap((item) => [
-      item.id,
-      item.object.id,
-    ]),
-    canonicalPath: localizedPath(locale, `/communities/${community.slug}`),
-    equivalentLocales: [locale],
   };
 }
 

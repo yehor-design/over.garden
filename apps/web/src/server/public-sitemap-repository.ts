@@ -5,11 +5,21 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database } from "@/db/types";
 import {
+  publicCommunityPath,
   publicJournalEntryPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
-import { PUBLIC_LOCALES, localizedPath } from "@/lib/public-localization";
+import {
+  DEFAULT_PUBLIC_LOCALE,
+  PUBLIC_LOCALES,
+  localizedPath,
+} from "@/lib/public-localization";
+import {
+  buildPublicCommunityDiscoverySource,
+  getPublicCommunityPage,
+} from "@/server/community-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
+import { resolvePublicSurfaceDiscoveryForRequest } from "@/server/public-surface-discovery";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -21,7 +31,15 @@ export interface PublicSitemapUrl {
   lastModified: Date;
 }
 
-/** Live journal entries: active, public, launch-surface content classes. */
+/**
+ * Live journal entries: active, public, launch-surface content classes.
+ *
+ * This predicate implies sitemap eligibility, so the chunk needs no per-URL
+ * discovery gate: the row is a public candidate by construction, and
+ * `journal_entries.body` carries a `1..20000` CHECK, so the empty-listing rule
+ * can never fire on it. Compare `listPublicCommunitySitemapUrls`, whose
+ * predicate says nothing about whether anything was contributed.
+ */
 function activePublicEntries(executor: QueryExecutor) {
   return executor
     .selectFrom("journal_entries")
@@ -66,7 +84,12 @@ export async function listPublicJournalEntrySitemapUrls(
   );
 }
 
-/** Profiles that have at least one live public entry, every locale variant. */
+/**
+ * Profiles that have at least one live public entry, every locale variant.
+ *
+ * The `exists(activePublicEntries)` clause is what makes a per-URL discovery
+ * gate unnecessary here: a profile in this set always has content.
+ */
 function profilesWithPublicEntries(executor: QueryExecutor) {
   return executor
     .selectFrom("user_public_profiles")
@@ -105,8 +128,8 @@ export async function listPublicProfileSitemapUrls(
     ])
     .orderBy("user_public_profiles.created_at", "asc")
     .orderBy("user_public_profiles.user_id", "asc")
-    .limit(PUBLIC_SITEMAP_CHUNK_SIZE)
-    .offset(chunkIndex * PUBLIC_SITEMAP_CHUNK_SIZE)
+    .limit(sitemapRowsPerChunk(PUBLIC_LOCALES.length))
+    .offset(chunkIndex * sitemapRowsPerChunk(PUBLIC_LOCALES.length))
     .execute();
   return rows.flatMap((row) =>
     PUBLIC_LOCALES.map((locale) => ({
@@ -116,7 +139,20 @@ export async function listPublicProfileSitemapUrls(
   );
 }
 
-/** Communities on curated topics, every locale variant. */
+/**
+ * Communities on curated topics, every locale variant that is actually
+ * indexable.
+ *
+ * Unlike entries and profiles, the SQL predicate here does not imply
+ * eligibility: a community can be active, on a curated topic, and hold no
+ * contributions at all, which the empty-listing rule refuses. Every live
+ * community URL was `noindex, nofollow` and submitted before this gate
+ * existed, which is exactly what Search Console reports as
+ * "Submitted URL marked 'noindex'".
+ *
+ * Contributions do not vary by locale, so the page loads once and each locale's
+ * decision is evaluated against that one model.
+ */
 export async function listPublicCommunitySitemapUrls(
   executor: QueryExecutor = db,
 ): Promise<PublicSitemapUrl[]> {
@@ -132,16 +168,43 @@ export async function listPublicCommunitySitemapUrls(
     .where("journal_topics.trust_state", "=", "curated")
     .orderBy("communities.created_at", "asc")
     .execute();
-  return rows.flatMap((row) =>
-    PUBLIC_LOCALES.map((locale) => ({
-      url: localizedPath(locale, `/communities/${row.slug}`),
-      lastModified: toDate(row.updatedAt),
+  const pages = await Promise.all(
+    rows.map(async (row) => ({
+      row,
+      page: await getPublicCommunityPage(row.slug, DEFAULT_PUBLIC_LOCALE, {
+        executor,
+      }),
     })),
   );
+
+  return pages.flatMap(({ row, page }) => {
+    if (!page) return [];
+    return PUBLIC_LOCALES.flatMap((locale) => {
+      const decision = resolvePublicSurfaceDiscoveryForRequest(
+        buildPublicCommunityDiscoverySource(locale, page),
+      ).decision;
+      if (!decision.sitemapEligible) return [];
+      return [
+        {
+          url: localizedPath(locale, publicCommunityPath(row.slug)),
+          lastModified: toDate(row.updatedAt),
+        },
+      ];
+    });
+  });
 }
 
-export function sitemapChunkCount(total: number): number {
-  return Math.max(1, Math.ceil(total / PUBLIC_SITEMAP_CHUNK_SIZE));
+/**
+ * Chunks are budgeted in emitted URLs, not in rows. A row that yields one URL
+ * per locale fills the budget three times faster, so a "5 000" profile chunk
+ * used to hold 15 000 URLs.
+ */
+export function sitemapRowsPerChunk(urlsPerRow: number): number {
+  return Math.max(1, Math.floor(PUBLIC_SITEMAP_CHUNK_SIZE / urlsPerRow));
+}
+
+export function sitemapChunkCount(total: number, urlsPerRow = 1): number {
+  return Math.max(1, Math.ceil(total / sitemapRowsPerChunk(urlsPerRow)));
 }
 
 function toDate(value: Date | string | null | undefined): Date {

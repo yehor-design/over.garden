@@ -19,10 +19,12 @@ import type {
 } from "@/db/schema";
 import {
   localizedPublicJournalEvidencePath,
+  publicCommunityPath,
   publicLineageObjectPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
-import type { PublicLocale } from "@/lib/public-localization";
+import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import type { PublicSurfaceDiscoverySource } from "@/server/public-surface-discovery";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { blockProfile } from "@/server/profile-interaction-repository";
@@ -2602,3 +2604,38 @@ function escapeLikePattern(value: string) {
 export const communityRepository = {
   database: db,
 };
+
+/**
+ * What a community page tells the indexing policy (ADR-0022 D3). A live
+ * community is a public candidate whatever its participation or navigation
+ * readiness says; it is a listing of contributions, so it counts only those.
+ *
+ * The page and the sitemap read the same function on purpose. A community's
+ * SQL predicate — active or archived, on a curated topic — says nothing about
+ * whether anything has been contributed, so the empty-listing rule can and does
+ * refuse a row the query happily returns.
+ */
+export function buildPublicCommunityDiscoverySource(
+  locale: PublicLocale,
+  community: PublicCommunityPageModel,
+): PublicSurfaceDiscoverySource {
+  const contributions = community.contributions?.items ?? [];
+  const liveCandidate =
+    community.lifecycleState === "active" ||
+    community.lifecycleState === "archived";
+  return {
+    consumerId: "localized_community",
+    candidateState: liveCandidate ? "candidate" : "not_public_candidate",
+    visibleText: contributions.flatMap((item) => [
+      item.title,
+      item.excerpt,
+      item.object.displayName,
+    ]),
+    distinctPublicEntityIds: contributions.flatMap((item) => [
+      item.id,
+      item.object.id,
+    ]),
+    canonicalPath: localizedPath(locale, publicCommunityPath(community.slug)),
+    equivalentLocales: [locale],
+  };
+}
