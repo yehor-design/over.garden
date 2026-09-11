@@ -39,11 +39,11 @@ describe("/blog/[slug]", () => {
       title:
         "Порада AI - це не те саме, що датований садовий доказ | OverGarden",
       alternates: {
-        canonical: "/blog/ai-garden-advice-vs-real-garden-proof",
+        canonical: "https://over.garden/blog/ai-garden-advice-vs-real-garden-proof",
         languages: {
-          uk: "/blog/ai-garden-advice-vs-real-garden-proof",
-          bg: "/bg/blog/ai-garden-advice-vs-real-garden-proof",
-          ru: "/ru/blog/ai-garden-advice-vs-real-garden-proof",
+          uk: "https://over.garden/blog/ai-garden-advice-vs-real-garden-proof",
+          bg: "https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof",
+          ru: "https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof",
         },
       },
       robots: { index: true, follow: true },

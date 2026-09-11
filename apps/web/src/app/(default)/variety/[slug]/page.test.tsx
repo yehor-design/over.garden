@@ -179,7 +179,7 @@ describe("/variety/[slug]", () => {
       }),
     ).resolves.toMatchObject({
       robots: { index: true, follow: true },
-      alternates: { canonical: "/variety/pomidor-cheri-0000000101" },
+      alternates: { canonical: "https://over.garden/variety/pomidor-cheri-0000000101" },
     });
   });
 

@@ -20,7 +20,73 @@ function discovery(equivalentLocales: readonly ("uk" | "bg" | "ru")[]) {
     });
 }
 
+/**
+ * ADR-0029 D1. Google ignores a relative `hreflang` outright and a relative
+ * `og:url` resolves nowhere, so a path leaking out of this builder silently
+ * disables the layer it belongs to. Walk every emitted value rather than
+ * asserting the three we happen to remember.
+ */
+function everyEmittedUrl(metadata: Record<string, unknown>): string[] {
+  const urls: string[] = [];
+  const visit = (value: unknown, key: string) => {
+    if (typeof value === "string") {
+      if (key === "canonical" || key === "url" || key === "x-default" ||
+          /^[a-z]{2}(-[A-Za-z]+)?$/.test(key) || key === "images") {
+        urls.push(value);
+      }
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item, key);
+      return;
+    }
+    if (value && typeof value === "object") {
+      for (const [childKey, child] of Object.entries(value)) {
+        visit(child, childKey);
+      }
+    }
+  };
+  visit(metadata.alternates, "alternates");
+  visit(metadata.openGraph, "openGraph");
+  visit(metadata.twitter, "twitter");
+  return urls;
+}
+
 describe("public surface metadata", () => {
+  it("emits no relative URL from any surface, in any locale", () => {
+    for (const locale of ["uk", "bg", "ru"] as const) {
+      for (const type of [
+        "Article",
+        "BlogPosting",
+        "CollectionPage",
+        "ProfilePage",
+        "ItemPage",
+        "WebPage",
+      ] as const) {
+        const result = buildPublicSurfaceMetadata({
+          discovery: discovery(["uk", "bg", "ru"]),
+          locale,
+          title: "Proof",
+          description: "Proof",
+          visibleFacts: {
+            type,
+            name: "Proof",
+            image: "https://media.over.garden/proof.webp",
+          },
+        });
+        const emitted = everyEmittedUrl(
+          result.metadata as unknown as Record<string, unknown>,
+        );
+        expect(emitted.length).toBeGreaterThan(0);
+        for (const url of emitted) {
+          expect(url, `${locale}/${type} emitted a relative URL`).toMatch(
+            /^https:\/\//,
+          );
+        }
+      }
+    }
+  });
+
   it("emits one canonical, actual language alternates, and visible-fact JSON-LD for an admitted source", () => {
     const result = buildPublicSurfaceMetadata({
       discovery: discovery(["uk", "bg", "ru"]),
@@ -38,13 +104,20 @@ describe("public surface metadata", () => {
 
     expect(result.metadata).toMatchObject({
       alternates: {
-        canonical: "/bg/blog/proof-note",
+        canonical: "https://over.garden/bg/blog/proof-note",
         languages: {
-          uk: "/blog/proof-note",
-          bg: "/bg/blog/proof-note",
-          ru: "/ru/blog/proof-note",
-          "x-default": "/blog/proof-note",
+          uk: "https://over.garden/blog/proof-note",
+          bg: "https://over.garden/bg/blog/proof-note",
+          ru: "https://over.garden/ru/blog/proof-note",
+          "x-default": "https://over.garden/blog/proof-note",
         },
+      },
+      openGraph: {
+        type: "article",
+        siteName: "OverGarden",
+        locale: "bg_BG",
+        alternateLocale: ["uk_UA", "ru_BG"],
+        url: "https://over.garden/bg/blog/proof-note",
       },
       robots: { index: true, follow: true },
     });
@@ -77,7 +150,7 @@ describe("public surface metadata", () => {
     });
 
     expect(result.metadata.alternates).toEqual({
-      canonical: "/bg/blog/proof-note",
+      canonical: "https://over.garden/bg/blog/proof-note",
     });
   });
 

@@ -69,11 +69,11 @@ describe("/answers/[slug]", () => {
     ).resolves.toMatchObject({
       title: "Почему желтеют листья томатов? | OverGarden",
       alternates: {
-        canonical: "/ru/answers/why-are-tomato-leaves-yellow",
+        canonical: "https://over.garden/ru/answers/why-are-tomato-leaves-yellow",
         languages: {
-          uk: "/answers/why-are-tomato-leaves-yellow",
-          bg: "/bg/answers/why-are-tomato-leaves-yellow",
-          ru: "/ru/answers/why-are-tomato-leaves-yellow",
+          uk: "https://over.garden/answers/why-are-tomato-leaves-yellow",
+          bg: "https://over.garden/bg/answers/why-are-tomato-leaves-yellow",
+          ru: "https://over.garden/ru/answers/why-are-tomato-leaves-yellow",
         },
       },
       robots: { index: true, follow: true },

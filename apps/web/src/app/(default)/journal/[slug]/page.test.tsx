@@ -174,7 +174,7 @@ describe("/journal/[slug] V2", () => {
       robots: { index: true, follow: true },
     });
     expect(metadata.alternates).toEqual({
-      canonical: `/journal/${page.entry.publicSlug}`,
+      canonical: `https://over.garden/journal/${page.entry.publicSlug}`,
     });
   });
 

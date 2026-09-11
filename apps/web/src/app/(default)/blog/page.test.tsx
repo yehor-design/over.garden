@@ -13,7 +13,7 @@ describe("/blog", () => {
     });
 
     expect(metadata.robots).toMatchObject({ index: true, follow: true });
-    expect(metadata.alternates).toMatchObject({ canonical: "/blog" });
+    expect(metadata.alternates).toMatchObject({ canonical: "https://over.garden/blog" });
     expect(html).toContain("Корисні публічні сторінки");
     expect(html).toContain("/blog/ai-garden-advice-vs-real-garden-proof");
     expect(html).not.toContain("Български");

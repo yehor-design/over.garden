@@ -131,7 +131,7 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     expect(html).toMatch(/"@type":\s*"BreadcrumbList"/u);
     expect(metadata).toMatchObject({
       title: "Solanum lycopersicum · вид | OverGarden",
-      alternates: { canonical: "/species/solanum-lycopersicum" },
+      alternates: { canonical: "https://over.garden/species/solanum-lycopersicum" },
     });
     expect(mocks.permanentRedirect).not.toHaveBeenCalled();
   });
@@ -184,7 +184,7 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     expect(html).toContain("/species/solanum-lycopersicum/de-barao");
     expect(mocks.getEngagementSummary).toHaveBeenCalledTimes(1);
     expect(metadata).toMatchObject({
-      alternates: { canonical: "/species/solanum-lycopersicum/de-barao" },
+      alternates: { canonical: "https://over.garden/species/solanum-lycopersicum/de-barao" },
     });
   });
 
@@ -246,7 +246,7 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     expect(html).toContain("Запишете тази порода или линия");
     expect(html).not.toContain("списъка с желания");
     expect(metadata).toMatchObject({
-      alternates: { canonical: "/breed/carpathian-bee" },
+      alternates: { canonical: "https://over.garden/breed/carpathian-bee" },
     });
   });
 

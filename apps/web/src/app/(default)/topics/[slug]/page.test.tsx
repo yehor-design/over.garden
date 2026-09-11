@@ -66,9 +66,9 @@ describe("/topics/[slug]", () => {
     });
     expect(metadata).toMatchObject({
       alternates: {
-        canonical: "/topics/care-checks",
+        canonical: "https://over.garden/topics/care-checks",
       },
-      openGraph: { locale: "ru", url: "/topics/care-checks" },
+      openGraph: { locale: "ru_BG", url: "https://over.garden/topics/care-checks" },
       robots: { index: true, follow: true },
     });
     expect(metadata.alternates?.languages).toBeUndefined();
@@ -82,7 +82,7 @@ describe("/topics/[slug]", () => {
         params: Promise.resolve({ locale: "uk", slug: "care-checks" }),
       }),
     ).resolves.toMatchObject({
-      alternates: { canonical: "/topics/care-checks" },
+      alternates: { canonical: "https://over.garden/topics/care-checks" },
       robots: { index: true, follow: true },
     });
   });
@@ -110,8 +110,8 @@ describe("/topics/[slug]", () => {
         params: Promise.resolve({ slug: "care-checks" }),
       }),
     ).resolves.toMatchObject({
-      alternates: { canonical: "/topics/care-checks" },
-      openGraph: { locale: "bg", url: "/topics/care-checks" },
+      alternates: { canonical: "https://over.garden/topics/care-checks" },
+      openGraph: { locale: "bg_BG", url: "https://over.garden/topics/care-checks" },
     });
   });
 });

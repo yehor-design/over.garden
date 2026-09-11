@@ -117,7 +117,7 @@ describe("/{locale}/@:handle public profile route", () => {
       title: "Green Thumb (@green_thumb) · публічний профіль | OverGarden",
       description: "A public-safe profile biography.",
       robots: { index: true, follow: true },
-      alternates: { canonical: "/@green_thumb" },
+      alternates: { canonical: "https://over.garden/@green_thumb" },
     });
   });
 

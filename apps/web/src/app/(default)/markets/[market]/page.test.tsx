@@ -56,7 +56,7 @@ describe("/markets/[market]", () => {
     ).resolves.toMatchObject({
       title: "OverGarden для садівників в Україні | OverGarden",
       alternates: {
-        canonical: "/markets/ukraine",
+        canonical: "https://over.garden/markets/ukraine",
       },
       robots: { index: true, follow: true },
     });
@@ -67,7 +67,7 @@ describe("/markets/[market]", () => {
     expect(bulgariaMetadata).toMatchObject({
       title: "OverGarden за градинари в България | OverGarden",
       robots: { index: true, follow: true },
-      alternates: { canonical: "/bg/markets/bulgaria" },
+      alternates: { canonical: "https://over.garden/bg/markets/bulgaria" },
     });
   });
 });

@@ -105,7 +105,7 @@ describe("/", () => {
     });
 
     expect(metadata.robots).toMatchObject({ index: true, follow: true });
-    expect(metadata.alternates).toMatchObject({ canonical: "/" });
+    expect(metadata.alternates).toMatchObject({ canonical: "https://over.garden/" });
     expect(html).toContain('lang="uk"');
     expect(html).toContain(">Стрічка</h1>");
     expect(html).toContain("Ранкове спостереження");

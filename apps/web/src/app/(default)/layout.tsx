@@ -7,6 +7,7 @@ import {
 } from "@/lib/interface-localization";
 import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import { getRequestInterfaceLocalization } from "@/server/interface-localization";
+import { getPublicSiteUrl } from "@/lib/runtime-url";
 import { RootDocument } from "@/app/root-document";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,6 +15,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const copy = getInterfaceCopy(locale).metadata;
 
   return {
+    // ADR-0029 D1: one absolute origin. Anything a page leaves relative — an
+    // Open Graph image, a manifest — resolves against this rather than against
+    // the deployment host Next would otherwise guess.
+    metadataBase: new URL(getPublicSiteUrl()),
     title: copy.siteTitle,
     description: copy.siteDescription,
     other: {
