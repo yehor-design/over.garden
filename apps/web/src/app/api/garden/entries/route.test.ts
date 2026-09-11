@@ -48,6 +48,13 @@ vi.mock("@/server/journal-repository", () => ({
   readCommittedAtomicJournalCreate: mocks.readCommittedAtomicJournalCreate,
 }));
 
+// The route records the gardener's own interface language at publish
+// (ADR-0029 D11). These tests call the handler outside a Next request scope,
+// so the real resolver's `headers()` has nothing to read.
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: vi.fn(async () => "uk"),
+}));
+
 vi.mock("@/server/media/ephemeral-publication-handoff", () => ({
   claimEphemeralPublicationMedia: mocks.claimEphemeralPublicationMedia,
   finalizeEphemeralPublicationMedia: mocks.finalizeEphemeralPublicationMedia,

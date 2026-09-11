@@ -38,6 +38,7 @@ import {
 } from "@/lib/garden/catalog-object-kind";
 import {
   DEFAULT_PUBLIC_LOCALE,
+  isPublicLocale,
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
@@ -139,6 +140,13 @@ export interface AtomicCreatePublicationInput {
 }
 
 export interface CreateFirstPlantEntryInput {
+  /**
+   * The language the gardener was writing in: their own interface locale at
+   * publish, recorded rather than inferred (ADR-0029 D11). It decides `lang`
+   * on the entry element and `inLanguage` in its JSON-LD, and nothing else —
+   * no listing is filtered by it and no card is badged with it.
+   */
+  sourceLanguage: PublicLocale;
   spaceId?: string | null;
   spaceName?: string | null;
   plantName: string;
@@ -165,6 +173,13 @@ export interface CreateFirstPlantEntryInput {
 }
 
 export interface CreatePlantObjectJournalEntryInput {
+  /**
+   * The language the gardener was writing in: their own interface locale at
+   * publish, recorded rather than inferred (ADR-0029 D11). It decides `lang`
+   * on the entry element and `inLanguage` in its JSON-LD, and nothing else —
+   * no listing is filtered by it and no card is badged with it.
+   */
+  sourceLanguage: PublicLocale;
   plantObjectId: string;
   title: string;
   contentDocument: unknown;
@@ -180,6 +195,13 @@ export interface CreatePlantObjectJournalEntryInput {
 }
 
 export interface CreateSpaceJournalEntryInput {
+  /**
+   * The language the gardener was writing in: their own interface locale at
+   * publish, recorded rather than inferred (ADR-0029 D11). It decides `lang`
+   * on the entry element and `inLanguage` in its JSON-LD, and nothing else —
+   * no listing is filtered by it and no card is badged with it.
+   */
+  sourceLanguage: PublicLocale;
   spaceId: string;
   mentionedPlantObjectIds: string[];
   title: string;
@@ -359,6 +381,12 @@ export interface PublicJournalEntryPage {
     entryDate: Date | string;
     createdAt: Date | string;
     entryScope: EntryScope;
+    /**
+     * The language this entry was written in (ADR-0029 D11). It is the
+     * author's, not the reader's, and it drives `lang` and `inLanguage` only:
+     * nothing filters, sorts or badges by it.
+     */
+    sourceLanguage: PublicLocale;
     publicSlug: string;
     publicPath: string;
     publishedAt: Date | string | null;
@@ -472,6 +500,8 @@ interface PublicJournalEntryRootRow {
   entryId: string;
   title: string;
   body: string;
+  /** Null only on rows written before OVE-424; the render path defaults it. */
+  sourceLanguage: string | null;
   contentDocument: unknown | null;
   contentSchemaVersion: number | null;
   entryDate: Date | string;
@@ -2829,6 +2859,10 @@ export function serializePublicJournalEntryPage(input: {
       entryDate: root.entryDate,
       createdAt: root.entryCreatedAt,
       entryScope: root.entryScope as EntryScope,
+      // The language the gardener wrote in, which is not the language the
+      // reader is browsing in. It decides `lang` on the entry and `inLanguage`
+      // in its JSON-LD, and is read by nothing that filters or sorts.
+      sourceLanguage: normalizeSourceLanguage(root.sourceLanguage),
       publicSlug: root.publicSlug ?? "",
       publicPath: localizedPublicJournalEvidencePath(
         locale,
@@ -3752,6 +3786,7 @@ export function buildPublicJournalEntryLookupQuery(
       "journal_entries.visibility as visibility",
       "journal_entries.lifecycle_state as lifecycleState",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.source_language as sourceLanguage",
       "journal_entries.published_at as publishedAt",
       "journal_entries.public_gone_at as publicGoneAt",
       "spaces.id as spaceId",
@@ -4246,6 +4281,7 @@ async function insertJournalEntry(
 }
 
 type NormalizedAtomicCreate = {
+  sourceLanguage: PublicLocale;
   clientMutationId: string;
   title: string;
   orderedMediaAssetIds: readonly string[];
@@ -4304,6 +4340,7 @@ async function atomicJournalEntryValues(
     id: atomic.publishId,
     visibility: "public",
     lifecycle_state: "active",
+    source_language: input.sourceLanguage,
     public_slug: createAtomicPublicSlug(input.title, atomic.publishId),
     published_at: now,
     first_publication_disclosure_version: disclosureLogged
@@ -4455,6 +4492,13 @@ export function atomicClientMutationId(
   atomic: Pick<AtomicCreatePublicationInput, "publishId" | "requestDigest">,
 ) {
   return `atomic:${atomic.publishId}:${atomic.requestDigest}`;
+}
+
+/** A publish always states a language; only legacy rows may lack one. */
+function normalizeSourceLanguage(value: unknown): PublicLocale {
+  return typeof value === "string" && isPublicLocale(value)
+    ? value
+    : DEFAULT_PUBLIC_LOCALE;
 }
 
 function createAtomicPublicSlug(title: string, publishId: string) {
@@ -4648,6 +4692,7 @@ function normalizeCreateFirstPlantEntryInput(
     body: content.body,
     contentDocument: content.document,
     contentSchemaVersion: content.contentSchemaVersion,
+    sourceLanguage: normalizeSourceLanguage(input.sourceLanguage),
     orderedMediaAssetIds,
     entryDate: normalizeEntryDate(input.entryDate),
     ...normalizeLocationSelection({
@@ -4691,6 +4736,7 @@ function normalizeCreatePlantObjectJournalEntryInput(
     body: content.body,
     contentDocument: content.document,
     contentSchemaVersion: content.contentSchemaVersion,
+    sourceLanguage: normalizeSourceLanguage(input.sourceLanguage),
     orderedMediaAssetIds,
     entryDate: normalizeEntryDate(input.entryDate),
     clientMutationId: normalizeRequiredText(
@@ -4740,6 +4786,7 @@ function normalizeCreateSpaceJournalEntryInput(
     body: content.body,
     contentDocument: content.document,
     contentSchemaVersion: content.contentSchemaVersion,
+    sourceLanguage: normalizeSourceLanguage(input.sourceLanguage),
     orderedMediaAssetIds,
     entryDate: normalizeEntryDate(input.entryDate),
     clientMutationId: normalizeRequiredText(

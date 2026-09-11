@@ -72,6 +72,7 @@ const objectPage: PublicJournalEntryPage = {
     entryDate: "2026-07-10",
     createdAt: "2026-07-10T09:00:00.000Z",
     entryScope: "object",
+    sourceLanguage: "uk",
     publicSlug: "pershyi-urozhai",
     publicPath: "/journal/pershyi-urozhai",
     publishedAt: "2026-07-10T10:00:00.000Z",

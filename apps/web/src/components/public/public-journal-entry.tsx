@@ -58,7 +58,11 @@ export function PublicJournalEntryView({
 
   return (
     <main
-      lang={locale}
+      // The gardener's language, not the reader's (ADR-0029 D11). This element
+      // holds the entry's own words, so a `lang` taken from the interface told
+      // a screen reader to read Ukrainian with Bulgarian phonetics whenever a
+      // Bulgarian reader opened a Ukrainian entry.
+      lang={page.entry.sourceLanguage}
       data-public-journal-entry="true"
       data-entry-context={page.context.kind}
       className="mx-auto flex w-full max-w-4xl flex-col px-4 py-4 sm:px-6 sm:py-5"
