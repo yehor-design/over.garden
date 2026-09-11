@@ -23,7 +23,11 @@ import {
   publicLineageObjectPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
-import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import {
+  PUBLIC_LOCALES,
+  localizedPath,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import type { PublicSurfaceDiscoverySource } from "@/server/public-surface-discovery";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
@@ -2636,6 +2640,6 @@ export function buildPublicCommunityDiscoverySource(
       item.object.id,
     ]),
     canonicalPath: localizedPath(locale, publicCommunityPath(community.slug)),
-    equivalentLocales: [locale],
+    equivalentLocales: [...PUBLIC_LOCALES],
   };
 }

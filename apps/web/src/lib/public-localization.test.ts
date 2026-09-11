@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  PUBLIC_LOCALES,
   buildLanguageAlternates,
   getLanguageSwitcherLocales,
   getRootLocaleRedirectPath,
@@ -75,5 +76,48 @@ describe("public first-entry locale", () => {
     expect(selectPublicLocaleFromAcceptLanguage("ru;q=0.9,uk;q=0.8")).toBe(
       "ru",
     );
+  });
+});
+
+describe("hreflang reciprocity", () => {
+  it("builds the same alternate set from every locale of a family", () => {
+    // Google requires reciprocity: each page in a cluster must name the others
+    // *and itself*. That holds only when every locale of a family passes the
+    // same list, which is why a per-locale list is the wrong shape for this.
+    const fromEach = PUBLIC_LOCALES.map(() =>
+      buildLanguageAlternates("/topics/care-checks", PUBLIC_LOCALES),
+    );
+    for (const alternates of fromEach) {
+      expect(alternates).toEqual(fromEach[0]);
+      expect(Object.keys(alternates).sort()).toEqual([
+        "bg",
+        "ru",
+        "uk",
+        "x-default",
+      ]);
+    }
+  });
+
+  it("puts x-default on the unprefixed default locale", () => {
+    const alternates = buildLanguageAlternates("/journals", PUBLIC_LOCALES);
+
+    expect(alternates["x-default"]).toBe(alternates.uk);
+    expect(alternates.uk).toBe("/journals");
+  });
+
+  it("never lets the switcher list stand in for an hreflang set", () => {
+    // `getLanguageSwitcherLocales` answers "what may this reader switch to",
+    // which is market-scoped and excludes their own market's other language.
+    // Used as an hreflang set it produced a cluster that omitted the canonical
+    // URL itself — /bg/communities declared bg and ru and not uk.
+    const switcherForBulgarian = getLanguageSwitcherLocales("bg");
+
+    expect(switcherForBulgarian).not.toContain("uk");
+    expect([...PUBLIC_LOCALES]).toContain("uk");
+    expect(
+      Object.keys(
+        buildLanguageAlternates("/communities", switcherForBulgarian),
+      ),
+    ).not.toContain("uk");
   });
 });

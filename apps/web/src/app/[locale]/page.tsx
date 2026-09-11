@@ -8,6 +8,7 @@ import {
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
+  PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import {
   normalizePublicFeedRequest,
@@ -167,7 +168,7 @@ function buildHomeDiscoverySource(
       ...topics.map((topic) => `topic:${topic.slug}`),
     ],
     canonicalPath: localizedPath(locale, "/"),
-    equivalentLocales: [locale],
+    equivalentLocales: [...PUBLIC_LOCALES],
   };
 }
 

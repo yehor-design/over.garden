@@ -8,7 +8,11 @@ import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
 } from "@/lib/auth/auth-intent-contract";
-import { isPublicLocale, type PublicLocale } from "@/lib/public-localization";
+import {
+  PUBLIC_LOCALES,
+  isPublicLocale,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import { getPublicProfileCopy } from "@/lib/public-profile-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getProfileViewerState } from "@/server/profile-interaction-repository";
@@ -224,7 +228,7 @@ function buildProfileDiscoverySource(
       ...page.journals.map((journal) => journal.entryId),
     ],
     canonicalPath: publicProfilePath(locale, page.handle),
-    equivalentLocales: [locale],
+    equivalentLocales: [...PUBLIC_LOCALES],
   };
 }
 
