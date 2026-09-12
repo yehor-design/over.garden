@@ -20,8 +20,16 @@ const LEGACY_PATH = new RegExp(`^/(variety|breed)/(${SLUG})/?$`, "u");
 
 /**
  * The organism pages a document navigation can ask for, with an optional
- * locale prefix already removed. Anything else under these segments (a
- * deeper path, an upper-case slug) is left to the route families' catch-alls.
+ * locale prefix already removed.
+ *
+ * Anything else under these segments used to be "left to the route families'
+ * catch-alls", and a catch-all under Cache Components answers 200 with a
+ * `noindex` body — so `/species/Solanum-Lycopersicum` was a second, crawlable
+ * address for a page that already had one. The proxy now decides both cases
+ * before this matcher is reached: an upper-case slug 308s to its lower-case
+ * self (`canonicalLowerCasePath`), and a shape no page can serve answers 404
+ * (`unservableAddressNamespace`). What still returns `null` here is what the
+ * catalog resolver genuinely cannot address.
  */
 export function matchPublicCatalogAddressPath(
   pathname: string,

@@ -75,11 +75,29 @@ export const BANNED_ADDRESS_PATH_LITERALS: readonly {
   readonly builders: readonly string[];
 }[] = [
   { literal: "/@", builders: ["publicProfileBasePath"] },
+  { literal: "/breed/", builders: ["publicCatalogEvidencePath"] },
   { literal: "/communities/", builders: ["publicCommunityPath"] },
   { literal: "/journal/", builders: ["publicJournalEntryPath"] },
   { literal: "/lineage/objects/", builders: ["publicLineageObjectPath"] },
   { literal: "/species/", builders: ["publicCatalogEvidencePath"] },
   { literal: "/topics/", builders: ["publicTopicPath"] },
+  { literal: "/variety/", builders: ["publicCatalogEvidencePath"] },
+];
+
+/** Prefixes under which every following segment is already lower case. */
+export const ADDRESS_LOWER_CASE_PATH_PREFIXES: readonly {
+  readonly prefix: string;
+  readonly namespace: AddressNamespace;
+}[] = [
+  { prefix: "/species/", namespace: "species" },
+  { prefix: "/species/", namespace: "form" },
+  { prefix: "/variety/", namespace: "form" },
+  { prefix: "/breed/", namespace: "form" },
+  { prefix: "/journal/", namespace: "journalEntry" },
+  { prefix: "/lineage/objects/", namespace: "object" },
+  { prefix: "/topics/", namespace: "topic" },
+  { prefix: "/communities/", namespace: "community" },
+  { prefix: "/@", namespace: "profileHandle" },
 ];
 
 const COMPILED: Readonly<Record<AddressNamespace, RegExp>> = Object.fromEntries(

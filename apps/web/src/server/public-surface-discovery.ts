@@ -119,7 +119,7 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "lineage_object",
     "object_passport",
     "candidate",
-    "src/app/(default)/lineage/objects/[objectId]/page.tsx",
+    "src/app/[locale]/lineage/objects/[objectId]/page.tsx",
   ),
   inventory(
     "privacy",

@@ -17,6 +17,7 @@
       "source": "the accepted scientific name, without authorship",
       "pathPrefix": "/species/",
       "pathBuilder": "publicCatalogEvidencePath",
+      "legacyPathPrefixes": [],
       "storage": {
         "table": "catalog_items",
         "column": "public_slug",
@@ -42,6 +43,10 @@
       "source": "the registered denomination, romanized",
       "pathPrefix": "/species/",
       "pathBuilder": "publicCatalogEvidencePath",
+      "legacyPathPrefixes": [
+        "/variety/",
+        "/breed/"
+      ],
       "storage": {
         "table": "catalog_items",
         "column": "public_slug",
@@ -69,6 +74,7 @@
       "source": "the entry title at first publish",
       "pathPrefix": "/journal/",
       "pathBuilder": "publicJournalEntryPath",
+      "legacyPathPrefixes": [],
       "storage": {
         "table": "journal_entries",
         "column": "public_slug",
@@ -94,6 +100,7 @@
       "source": "the object display name",
       "pathPrefix": "/lineage/objects/",
       "pathBuilder": "publicLineageObjectPath",
+      "legacyPathPrefixes": [],
       "storage": null,
       "notes": "Addressed by id today; OVE-428 moves it to /@{handle}/objects/{slug} and gives it a column."
     },
@@ -112,6 +119,7 @@
       "source": "the gardener's own tag label",
       "pathPrefix": "/topics/",
       "pathBuilder": "publicTopicPath",
+      "legacyPathPrefixes": [],
       "storage": {
         "table": "journal_topics",
         "column": "slug",
@@ -137,6 +145,7 @@
       "source": "the community name",
       "pathPrefix": "/communities/",
       "pathBuilder": "publicCommunityPath",
+      "legacyPathPrefixes": [],
       "storage": {
         "table": "communities",
         "column": "slug",
@@ -162,6 +171,7 @@
       "source": "the gardener's chosen handle, unchanged",
       "pathPrefix": "/@",
       "pathBuilder": "publicProfileBasePath",
+      "legacyPathPrefixes": [],
       "storage": null,
       "notes": "Already `^[a-z0-9][a-z0-9_]{2,29}$` and validated where it is written. Declared here so the address law has no gap, not to change it."
     }
@@ -225,6 +235,12 @@
       ]
     },
     {
+      "literal": "/breed/",
+      "builders": [
+        "publicCatalogEvidencePath"
+      ]
+    },
+    {
       "literal": "/communities/",
       "builders": [
         "publicCommunityPath"
@@ -253,6 +269,50 @@
       "builders": [
         "publicTopicPath"
       ]
+    },
+    {
+      "literal": "/variety/",
+      "builders": [
+        "publicCatalogEvidencePath"
+      ]
+    }
+  ],
+  "lowerCasePathPrefixes": [
+    {
+      "prefix": "/species/",
+      "namespace": "species"
+    },
+    {
+      "prefix": "/species/",
+      "namespace": "form"
+    },
+    {
+      "prefix": "/variety/",
+      "namespace": "form"
+    },
+    {
+      "prefix": "/breed/",
+      "namespace": "form"
+    },
+    {
+      "prefix": "/journal/",
+      "namespace": "journalEntry"
+    },
+    {
+      "prefix": "/lineage/objects/",
+      "namespace": "object"
+    },
+    {
+      "prefix": "/topics/",
+      "namespace": "topic"
+    },
+    {
+      "prefix": "/communities/",
+      "namespace": "community"
+    },
+    {
+      "prefix": "/@",
+      "namespace": "profileHandle"
     }
   ]
 }

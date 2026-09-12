@@ -24,6 +24,7 @@ import {
   ADDRESS_MANIFEST,
   ADDRESS_MANIFEST_VERSION,
   addressAlphabet,
+  addressLowerCasePathPrefixes,
   addressSlugPattern,
   assertAddressManifestConsistency,
 } from "../src/lib/address/address-manifest";
@@ -78,6 +79,7 @@ export function buildAddressContractDocument() {
     source: entry.source,
     pathPrefix: entry.pathPrefix,
     pathBuilder: entry.pathBuilder,
+    legacyPathPrefixes: [...entry.legacyPathPrefixes],
     storage: entry.storage
       ? {
           table: entry.storage.table,
@@ -97,6 +99,10 @@ export function buildAddressContractDocument() {
     namespaces,
     constraints: collectConstraints(),
     bannedPathLiterals: collectBannedPathLiterals(),
+    lowerCasePathPrefixes: addressLowerCasePathPrefixes().map((entry) => ({
+      prefix: entry.prefix,
+      namespace: entry.namespace,
+    })),
   };
 }
 
@@ -140,12 +146,12 @@ function collectConstraints(): AddressConstraintDefinition[] {
 function collectBannedPathLiterals() {
   const byPrefix = new Map<string, Set<string>>();
   for (const entry of ADDRESS_MANIFEST) {
-    byPrefix.set(
-      entry.pathPrefix,
-      (byPrefix.get(entry.pathPrefix) ?? new Set<string>()).add(
-        entry.pathBuilder,
-      ),
-    );
+    for (const prefix of [entry.pathPrefix, ...entry.legacyPathPrefixes]) {
+      byPrefix.set(
+        prefix,
+        (byPrefix.get(prefix) ?? new Set<string>()).add(entry.pathBuilder),
+      );
+    }
   }
   return [...byPrefix.entries()]
     .map(([literal, builders]) => ({
@@ -263,6 +269,12 @@ function renderTypescript(
         `  ${typescriptString(definition.constraint)}: ${typescriptString(renderConstraintSql(definition))},`,
     )
     .join("\n");
+  const lowerCase = document.lowerCasePathPrefixes
+    .map(
+      (entry) =>
+        `  { prefix: ${typescriptString(entry.prefix)}, namespace: ${typescriptString(entry.namespace)} },`,
+    )
+    .join("\n");
   const banned = document.bannedPathLiterals
     .map(
       (entry) =>
@@ -324,6 +336,14 @@ export const BANNED_ADDRESS_PATH_LITERALS: readonly {
   readonly builders: readonly string[];
 }[] = [
 ${banned}
+];
+
+/** Prefixes under which every following segment is already lower case. */
+export const ADDRESS_LOWER_CASE_PATH_PREFIXES: readonly {
+  readonly prefix: string;
+  readonly namespace: AddressNamespace;
+}[] = [
+${lowerCase}
 ];
 
 const COMPILED: Readonly<Record<AddressNamespace, RegExp>> = Object.fromEntries(

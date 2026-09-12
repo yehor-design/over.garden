@@ -32,6 +32,11 @@ const mocks = vi.hoisted(() => ({
   getPublicCommunityLifecycleLookup: vi.fn().mockResolvedValue({
     status: "found",
   }),
+  getPublicTopicLifecycleLookup: vi.fn().mockResolvedValue({
+    status: "found",
+    slug: "care-checks",
+  }),
+  isListingPageBeyondTheEnd: vi.fn().mockResolvedValue(false),
   resolvePublicCatalogAddress: vi.fn().mockResolvedValue({
     status: "canonical",
     catalogItemId: "11111111-1111-4111-8111-111111111111",
@@ -63,6 +68,14 @@ vi.mock("@/server/community-repository", () => ({
 
 vi.mock("@/server/public-catalog-address-repository", () => ({
   resolvePublicCatalogAddress: mocks.resolvePublicCatalogAddress,
+}));
+
+vi.mock("@/server/public-topic-repository", () => ({
+  getPublicTopicLifecycleLookup: mocks.getPublicTopicLifecycleLookup,
+}));
+
+vi.mock("@/server/public-listing-bounds", () => ({
+  isListingPageBeyondTheEnd: mocks.isListingPageBeyondTheEnd,
 }));
 
 async function responseFor(
@@ -157,17 +170,23 @@ describe("app route cache guardrail", () => {
 
     // ADR-0026 D10: two owner surfaces live inside the retired namespace and
     // must reach the workspace, while every retired sibling stays a 404.
-    for (const path of [
-      "/garden/catalog/queue",
-      "/garden/catalog/sources",
-      "/bg/garden/catalog/queue",
-    ]) {
+    for (const path of ["/garden/catalog/queue", "/garden/catalog/sources"]) {
       const response = await responseFor(path, {
         accept: "text/html",
         "sec-fetch-dest": "document",
       });
       expect(response.status, path).toBe(200);
     }
+
+    // The workspace has no prefixed half and never had one. `/bg/garden/…`
+    // used to reach `[locale]/[profileHandle]`, fail its `@` check and answer
+    // `200` with a `noindex` body; nothing links there, because
+    // `buildLocalizedInterfaceTarget` returns null for every `/garden` path.
+    const prefixedWorkspace = await responseFor("/bg/garden/catalog/queue", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+    expect(prefixedWorkspace.status).toBe(404);
 
     for (const preservedPath of [
       "/account/communities",
@@ -1334,5 +1353,121 @@ describe("organism addresses (ADR-0026 D8)", () => {
     mocks.resolvePublicCatalogAddress.mockRejectedValueOnce(new Error("database away"));
     const failed = await responseFor("/species/solanum-lycopersicum", document);
     expect(failed.status).toBe(200);
+  });
+
+  /**
+   * Every address resolves to 200, 308 or 404 (ADR-0029 D3). What follows is
+   * the list of shapes that answered `200` with a `noindex` body until now,
+   * each of them a page to a crawler.
+   */
+  describe("nothing answers 200 with a noindex apology", () => {
+    it("308s an upper-case address to its lower-case self", async () => {
+      for (const [from, to] of [
+        ["/bg/topics/PLANTS", "https://over.garden/bg/topics/plants"],
+        ["/bg/@YEHOR", "https://over.garden/bg/@yehor"],
+        ["/species/Solanum/De-Barao", "https://over.garden/species/solanum/de-barao"],
+        ["/variety/De-Barao", "https://over.garden/variety/de-barao"],
+      ] as const) {
+        const response = await responseFor(from, document);
+        expect(response.status, from).toBe(308);
+        expect(response.headers.get("Location"), from).toBe(to);
+      }
+    });
+
+    it("keeps the query string across the case redirect", async () => {
+      const response = await responseFor("/topics/PLANTS?from=feed", document);
+      expect(response.status).toBe(308);
+      expect(response.headers.get("Location")).toBe(
+        "https://over.garden/topics/plants?from=feed",
+      );
+    });
+
+    it("404s a section root with no front door", async () => {
+      for (const path of ["/species", "/variety", "/topics", "/bg/species"]) {
+        const response = await responseFor(path, document);
+        expect(response.status, path).toBe(404);
+        expect(response.headers.get("X-Robots-Tag"), path).toBe(
+          "noindex, nofollow",
+        );
+      }
+    });
+
+    it("404s an address no page under that prefix could serve", async () => {
+      for (const path of [
+        "/journal/a/b",
+        "/bg/communities/a/b",
+        "/@yehor/anything",
+        "/species/a/b/c",
+      ]) {
+        const response = await responseFor(path, document);
+        expect(response.status, path).toBe(404);
+      }
+    });
+
+    it("keeps the routes that live under an address", async () => {
+      const response = await responseFor(
+        "/communities/observation-and-care/discussions/11111111-1111-4111-8111-111111111111",
+        document,
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it("404s a prefixed path the prefixed tree cannot serve", async () => {
+      for (const path of ["/bg/support", "/ru/erasure"]) {
+        const response = await responseFor(path, document);
+        expect(response.status, path).toBe(404);
+      }
+    });
+
+    it("404s a topic that does not exist, and passes one that does", async () => {
+      mocks.getPublicTopicLifecycleLookup.mockResolvedValueOnce({
+        status: "not_found",
+      });
+      const missing = await responseFor("/bg/topics/no-such-topic", document);
+      expect(missing.status).toBe(404);
+      expect(missing.headers.get("Content-Language")).toBe("bg");
+      expect(await missing.text()).toContain("Темата не е намерена");
+
+      const found = await responseFor("/topics/plants", document);
+      expect(found.status).toBe(200);
+    });
+
+    it("404s a listing page past the end, and reads nothing for page one", async () => {
+      mocks.isListingPageBeyondTheEnd.mockClear();
+      const first = await responseFor("/bg/journals", document);
+      expect(first.status).toBe(200);
+      expect(mocks.isListingPageBeyondTheEnd).not.toHaveBeenCalled();
+
+      const malformed = await responseFor("/bg/journals?page=abc", document);
+      expect(malformed.status).toBe(200);
+      expect(mocks.isListingPageBeyondTheEnd).not.toHaveBeenCalled();
+
+      mocks.isListingPageBeyondTheEnd.mockResolvedValueOnce(true);
+      const beyond = await responseFor("/bg/journals?page=999", document);
+      expect(beyond.status).toBe(404);
+
+      const inside = await responseFor("/bg/journals?page=2", document);
+      expect(inside.status).toBe(200);
+    });
+
+    it("keeps a paginated view out of the index and its entries reachable", async () => {
+      const second = await responseFor("/journals?page=2", document);
+      expect(second.status).toBe(200);
+      expect(second.headers.get("X-Robots-Tag")).toBe("noindex, follow");
+
+      const first = await responseFor("/journals", document);
+      expect(first.headers.get("X-Robots-Tag")).toBeNull();
+
+      const notAListing = await responseFor("/feed?page=2", document);
+      expect(notAListing.headers.get("X-Robots-Tag")).toBeNull();
+    });
+
+    it("lets a listing through when the bound cannot be read", async () => {
+      mocks.isListingPageBeyondTheEnd.mockRejectedValueOnce(
+        new Error("database away"),
+      );
+      const response = await responseFor("/journals?page=2", document);
+      expect(response.status).toBe(200);
+    });
   });
 });

@@ -3,6 +3,7 @@ import "server-only";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import { isAddressSlug } from "@/lib/address/address-contract.generated";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { Database, PlantObjectKind } from "@/db/schema";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
@@ -431,10 +432,39 @@ function buildPublicTopicMembershipBaseQuery(
   return query;
 }
 
+/**
+ * A topic slug as the manifest defines it, or `null`.
+ *
+ * This restated `^[a-z0-9][a-z0-9-]{1,63}$` — the pattern the column carried
+ * before `OVE-426` widened it — so `помідори` would have failed to resolve its
+ * own page the day the first Cyrillic topic existed. The guard is the
+ * generated one now, which is the same shape the `CHECK` enforces.
+ */
 function normalizePublicTopicSlug(value: string) {
-  const normalized = value.trim().toLocaleLowerCase("en");
-  if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(normalized)) return null;
-  return normalized;
+  const normalized = value.trim().toLocaleLowerCase("uk");
+  return isAddressSlug("topic", normalized) ? normalized : null;
+}
+
+/**
+ * Whether a topic exists at all, for the proxy's bounded lookup.
+ *
+ * Deliberately not `getPublicTopicAggregationPage`: that reads the topic, its
+ * statistics and its entries, and the proxy only needs to know whether the
+ * address resolves. One indexed lookup by slug, before any shell streams.
+ */
+export async function getPublicTopicLifecycleLookup(
+  slug: string,
+  executor: QueryExecutor = db,
+) {
+  const normalizedSlug = normalizePublicTopicSlug(slug);
+  if (!normalizedSlug) return { status: "not_found" as const };
+  const topic = await buildPublicTopicLookupQuery(
+    executor,
+    normalizedSlug,
+  ).executeTakeFirst();
+  return topic
+    ? { status: "found" as const, slug: topic.slug }
+    : { status: "not_found" as const };
 }
 
 function normalizePublicTopicSlugs(values?: readonly string[] | null) {

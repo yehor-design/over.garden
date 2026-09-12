@@ -49,6 +49,7 @@ export async function generateMetadata({
     };
   }
 
+  // Page one, always; see the journals directory for why.
   const request = normalizePublicObjectCatalogRequest({});
   const discovery = await resolvePublicSurfaceDiscoveryFromLoad({
     consumerId: "localized_catalog_browse",

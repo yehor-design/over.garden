@@ -295,6 +295,61 @@ self-canonicalises rather than pointing at page 1.
 
 **Dependencies.** Task 7.
 
+**Shipped 2026-09-11.** Measured against production before and against a
+production build after. Every row moved:
+
+| address | before | after |
+| --- | --- | --- |
+| `/bg/topics/PLANTS` | 200 | 308 → `/bg/topics/plants` |
+| `/bg/@YEHOR` | 200 | 308 → `/bg/@yehor` |
+| `/species/Solanum-Lycopersicum` | 200 | 308 → lower case |
+| `/species`, `/variety`, `/topics`, `/journal` | 200 | 404 |
+| `/journal/a/b`, `/@yehor/anything`, `/species/a/b/c` | 200 | 404 |
+| `/bg/support`, `/ru/erasure`, `/bg/garden/**` | 200 | 404 |
+| `/topics/no-such-topic` | 200 | 404 |
+| `/bg/journals?page=999` | 200 | 404 |
+| `/lineage/objects/{uuid}` | **500** | 404 |
+| `/communities/{slug}/discussions/{id}` | 200 + `noindex` | 200, a real page |
+
+**The 500 was not the missing route half.** Both halves of
+`/lineage/objects/{uuid}` answered 500, and had since the page existed, so the
+cause could not have been the prefixed one's absence. It was three words of
+SQL: `buildPublicObjectPassportRootQuery` selects `catalogSpeciesSlugSql`, a
+correlated subquery reading `catalog_items.id`, and grouped by every other
+`catalog_items` column but not that one. Postgres refuses the statement with
+`42803` at plan time, for every object, whether or not it exists. Three and a
+half thousand tests passed: a Kysely builder compiles happily and nothing in
+the suite ever sent one to a database. `pnpm public:reads:prove-database` is
+the gate for that class now — 23 public reads, executed against a fresh
+bootstrap with identifiers nothing matches, in CI.
+
+**The self-referencing canonical on page two could not be delivered, and the
+replacement is a header.** The canonical is built in `generateMetadata`, these
+listings are partially prerendered, and making their metadata depend on
+`searchParams` took the canonical out of the streamed shell altogether — on a
+production build, `/bg/journals?page=2` came back with no `<link
+rel=canonical>` anywhere in the response, which is worse than the defect. So
+page two carries `X-Robots-Tag: noindex, follow`, set by the proxy before
+anything streams: not indexed, so not a duplicate; `follow`, so every entry it
+lists stays reachable. The self-canonical becomes possible the day pagination
+moves into the path (`/journals/page/2`), where `generateMetadata` reads it
+from `params`.
+
+**The 404-past-the-end bound is an over-estimate on purpose.** The exact page
+count depends on the filters in the request, so computing it means running the
+listing query in the proxy before the page runs it again. One count of the
+whole public corpus bounds every filtered subset of it, because a filter can
+only remove rows — and every public object has at least one public entry, so
+the same count bounds both listings. It is read only when the request asks past
+page one.
+
+**Two route-shape rules landed with it**, both drift-tested against the
+filesystem: `ROOT_SEGMENTS_WITHOUT_INDEX` (a section that exists with no front
+door) and `LOCALE_ROUTE_SEGMENTS` (the prefixed tree is a subset of the
+unprefixed one, and the gap used to answer 200). `/uk/**` is exempt from the
+second: it is a legacy prefix that folds to the unprefixed path with a 308, and
+a 404 there would take a mail link away from the reader.
+
 ---
 
 ## 10. `OVE-428` — Entry and passport addresses move to `/@{handle}`

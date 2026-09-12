@@ -50,7 +50,22 @@ import {
 } from "@/lib/walking-skeleton/environment";
 
 import { renderNotFoundUnknownRouteHtml } from "@/lib/public-unknown-route-lifecycle";
-import { isUnknownRootPath } from "@/lib/root-route-segments";
+import { canonicalLowerCasePath } from "@/lib/address/canonical-case";
+import { unservableAddressNamespace } from "@/lib/address/match-address-path";
+import {
+  paginatedListingPageSize,
+  paginatedListingRobotsTag,
+  requestedListingPage,
+} from "@/lib/public-listing-pagination";
+import {
+  matchPublicTopicPath,
+  renderNotFoundPublicTopicHtml,
+} from "@/lib/public-topic-lifecycle";
+import {
+  isSectionRootWithoutIndex,
+  isUnknownLocalizedPath,
+  isUnknownRootPath,
+} from "@/lib/root-route-segments";
 import { publicProfileBasePath } from "@/lib/garden/public-paths";
 
 export const APP_ROUTE_CACHE_CONTROL =
@@ -225,12 +240,49 @@ function getCanonicalHostResponse(request: NextRequest) {
   return NextResponse.redirect(url, { status: 308 });
 }
 
+/**
+ * A lifecycle document with the status and the robots header it needs.
+ *
+ * Ten call sites spelled this out; the header matters and is easy to forget.
+ * A 404 or 410 the proxy renders is the terminal answer for that address, so
+ * it says `noindex, nofollow` even though a 404 already tells a crawler
+ * enough — the body is a real page and Google has been known to index one.
+ */
+function notFoundDocument(html: string, status: 404 | 410 = 404) {
+  return new NextResponse(html, {
+    status,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "X-Robots-Tag": "noindex, nofollow",
+    },
+  });
+}
+
 function getCanonicalTrailingSlashResponse(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   if (pathname === "/" || !pathname.endsWith("/")) return null;
 
   const url = new URL(request.url);
   url.pathname = pathname.replace(/\/+$/, "") || "/";
+  return NextResponse.redirect(url, { status: 308 });
+}
+
+/**
+ * An upper-case address 308s to its lower-case self, the way a trailing slash
+ * already does (ADR-0029 D3).
+ *
+ * It runs after the trailing-slash rule so `/bg/topics/PLANTS/` needs two
+ * redirects rather than a combined one — which is correct, because each rule
+ * fixes a different thing and a reader who typed both gets told about both.
+ * It runs before every bounded lookup, so an upper-case slug is redirected
+ * rather than looked up and answered 404.
+ */
+function getCanonicalCaseResponse(request: NextRequest) {
+  const canonical = canonicalLowerCasePath(request.nextUrl.pathname);
+  if (!canonical) return null;
+
+  const url = new URL(request.url);
+  url.pathname = canonical;
   return NextResponse.redirect(url, { status: 308 });
 }
 
@@ -409,15 +461,8 @@ async function getPublicProfileLifecycleResponse(
   };
   const viewer = await resolvePublicProfileViewer(request);
   if (!viewer.ok) {
-    return new NextResponse(
+    return notFoundDocument(
       renderNotFoundPublicProfileHtml(localization.locale, lifecycleLocation),
-      {
-        status: 404,
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-          "X-Robots-Tag": "noindex, nofollow",
-        },
-      },
     );
   }
 
@@ -428,27 +473,13 @@ async function getPublicProfileLifecycleResponse(
     viewer.userId,
   );
   if (lookup.status === "gone") {
-    return new NextResponse(
-      renderGonePublicProfileHtml(localization.locale, lifecycleLocation),
-      {
-        status: 410,
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-          "X-Robots-Tag": "noindex, nofollow",
-        },
-      },
+    return notFoundDocument(
+      renderGonePublicProfileHtml(localization.locale, lifecycleLocation), 410,
     );
   }
   if (lookup.status === "not_found") {
-    return new NextResponse(
+    return notFoundDocument(
       renderNotFoundPublicProfileHtml(localization.locale, lifecycleLocation),
-      {
-        status: 404,
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-          "X-Robots-Tag": "noindex, nofollow",
-        },
-      },
     );
   }
 
@@ -489,6 +520,9 @@ export async function proxy(request: NextRequest) {
     getCanonicalTrailingSlashResponse(request);
   if (canonicalTrailingSlashResponse) return canonicalTrailingSlashResponse;
 
+  const canonicalCaseResponse = getCanonicalCaseResponse(request);
+  if (canonicalCaseResponse) return canonicalCaseResponse;
+
   const canonicalHostResponse = getCanonicalHostResponse(request);
   if (canonicalHostResponse) return canonicalHostResponse;
   const localization = resolveRequestLocalization(request);
@@ -498,18 +532,11 @@ export async function proxy(request: NextRequest) {
   // Components the page would stream a 200 shell before `notFound()` runs.
   if (isUnknownRootPath(request.nextUrl.pathname)) {
     return withAppRouteContract(
-      new NextResponse(
+      notFoundDocument(
         renderNotFoundUnknownRouteHtml(locale, {
           pathname: request.nextUrl.pathname,
           search: request.nextUrl.searchParams,
         }),
-        {
-          status: 404,
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "X-Robots-Tag": "noindex, nofollow",
-          },
-        },
       ),
       request,
       localization,
@@ -517,6 +544,31 @@ export async function proxy(request: NextRequest) {
   }
 
   const isDocumentNavigation = isDocumentNavigationRequest(request);
+
+  // Two more shapes that used to reach a `[...missing]` catch-all and answer
+  // 200 with a `noindex` body: a section root nothing serves (`/species`,
+  // `/topics`) and a path under an address prefix that could never be one
+  // (`/topics/Не слаг`, `/journal/a/b`). `src/app/missing-route.tsx` explains
+  // why the page cannot fix this itself — the root loading boundary has
+  // already streamed the shell by the time `notFound()` runs.
+  if (
+    isDocumentNavigation &&
+    (isSectionRootWithoutIndex(request.nextUrl.pathname) ||
+      isUnknownLocalizedPath(request.nextUrl.pathname) ||
+      unservableAddressNamespace(request.nextUrl.pathname) !== null)
+  ) {
+    return withAppRouteContract(
+      notFoundDocument(
+        renderNotFoundUnknownRouteHtml(locale, {
+          pathname: request.nextUrl.pathname,
+          search: request.nextUrl.searchParams,
+        }),
+      ),
+      request,
+      localization,
+    );
+  }
+
   const initialStrippedPath = stripLocalePrefix(request.nextUrl.pathname);
   const canonicalDefaultProfileHandle =
     isDocumentNavigation && initialStrippedPath.locale === null
@@ -565,15 +617,51 @@ export async function proxy(request: NextRequest) {
     const lookup = await getPublicCommunityLifecycleLookup(publicCommunitySlug);
     if (lookup.status === "not_found") {
       return withAppRouteContract(
-        new NextResponse(
+        notFoundDocument(
           renderNotFoundPublicCommunityHtml(locale, lifecycleLocation),
-          {
-            status: 404,
-            headers: {
-              "content-type": "text/html; charset=utf-8",
-              "X-Robots-Tag": "noindex, nofollow",
-            },
-          },
+        ),
+        request,
+        localization,
+      );
+    }
+  }
+
+  // A page past the end of a listing is nothing at all, and answered
+  // `200, index, follow` with an empty body — infinite crawlable space behind
+  // one query parameter. Read only when the request asks past page one.
+  if (
+    isDocumentNavigation &&
+    requestedListingPage(request.nextUrl.searchParams) !== null &&
+    paginatedListingPageSize(request.nextUrl.pathname) !== null
+  ) {
+    const { isListingPageBeyondTheEnd } =
+      await import("@/server/public-listing-bounds");
+    const beyond = await isListingPageBeyondTheEnd(
+      request.nextUrl.pathname,
+      request.nextUrl.searchParams,
+    ).catch(() => false);
+    if (beyond) {
+      return withAppRouteContract(
+        notFoundDocument(
+          renderNotFoundUnknownRouteHtml(locale, lifecycleLocation),
+        ),
+        request,
+        localization,
+      );
+    }
+  }
+
+  const publicTopicSlug = isDocumentNavigation
+    ? matchPublicTopicPath(request.nextUrl.pathname)
+    : null;
+  if (publicTopicSlug) {
+    const { getPublicTopicLifecycleLookup } =
+      await import("@/server/public-topic-repository");
+    const lookup = await getPublicTopicLifecycleLookup(publicTopicSlug);
+    if (lookup.status === "not_found") {
+      return withAppRouteContract(
+        notFoundDocument(
+          renderNotFoundPublicTopicHtml(locale, lifecycleLocation),
         ),
         request,
         localization,
@@ -604,15 +692,8 @@ export async function proxy(request: NextRequest) {
     const lookup = await getPublicObjectPassportLookup(publicObjectId);
     if (lookup.status === "gone") {
       return withAppRouteContract(
-        new NextResponse(
-          renderGonePublicObjectPassportHtml(locale, lifecycleLocation),
-          {
-            status: 410,
-            headers: {
-              "content-type": "text/html; charset=utf-8",
-              "X-Robots-Tag": "noindex, nofollow",
-            },
-          },
+        notFoundDocument(
+          renderGonePublicObjectPassportHtml(locale, lifecycleLocation), 410,
         ),
         request,
         localization,
@@ -620,15 +701,8 @@ export async function proxy(request: NextRequest) {
     }
     if (lookup.status === "not_found") {
       return withAppRouteContract(
-        new NextResponse(
+        notFoundDocument(
           renderNotFoundPublicObjectPassportHtml(locale, lifecycleLocation),
-          {
-            status: 404,
-            headers: {
-              "content-type": "text/html; charset=utf-8",
-              "X-Robots-Tag": "noindex, nofollow",
-            },
-          },
         ),
         request,
         localization,
@@ -646,15 +720,8 @@ export async function proxy(request: NextRequest) {
       await getPublicJournalEntryLifecycleLookup(publicJournalSlug);
     if (lookup.status === "gone") {
       return withAppRouteContract(
-        new NextResponse(
-          renderGonePublicJournalEntryHtml(locale, lifecycleLocation),
-          {
-            status: 410,
-            headers: {
-              "content-type": "text/html; charset=utf-8",
-              "X-Robots-Tag": "noindex, nofollow",
-            },
-          },
+        notFoundDocument(
+          renderGonePublicJournalEntryHtml(locale, lifecycleLocation), 410,
         ),
         request,
         localization,
@@ -662,15 +729,8 @@ export async function proxy(request: NextRequest) {
     }
     if (lookup.status === "not_found") {
       return withAppRouteContract(
-        new NextResponse(
+        notFoundDocument(
           renderNotFoundPublicJournalEntryHtml(locale, lifecycleLocation),
-          {
-            status: 404,
-            headers: {
-              "content-type": "text/html; charset=utf-8",
-              "X-Robots-Tag": "noindex, nofollow",
-            },
-          },
         ),
         request,
         localization,
@@ -707,15 +767,8 @@ export async function proxy(request: NextRequest) {
     }
     if (lookup?.status === "not_found") {
       return withAppRouteContract(
-        new NextResponse(
+        notFoundDocument(
           renderNotFoundPublicCatalogHtml(locale, lifecycleLocation),
-          {
-            status: 404,
-            headers: {
-              "content-type": "text/html; charset=utf-8",
-              "X-Robots-Tag": "noindex, nofollow",
-            },
-          },
         ),
         request,
         localization,
@@ -733,6 +786,15 @@ export async function proxy(request: NextRequest) {
       headers: requestHeaders,
     },
   });
+
+  // Page two of a listing is not a page of its own. It cannot say so in its
+  // own `<head>` — see `paginatedListingRobotsTag` — so it says so here,
+  // before anything streams.
+  const paginationRobots = paginatedListingRobotsTag(
+    request.nextUrl.pathname,
+    request.nextUrl.searchParams,
+  );
+  if (paginationRobots) response.headers.set("X-Robots-Tag", paginationRobots);
 
   // Workspace, account, auth, and API responses may contain personal data and
   // stay out of every shared cache. Public pages keep the cache headers Next

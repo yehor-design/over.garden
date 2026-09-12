@@ -1,20 +1,18 @@
+import { matchAddressPath } from "@/lib/address/match-address-path";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   renderPublicLifecycleDocument,
   type PublicLifecycleRequestLocation,
 } from "@/lib/public-lifecycle-document";
 import { getLivingObjectPassportCopy } from "@/lib/living-object-passport";
-import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
+import { localizedPath } from "@/lib/public-localization";
 import {
   MISSING_ADDRESS_SLUG,
   publicLineageObjectPath,
 } from "@/lib/garden/public-paths";
 
-const PUBLIC_OBJECT_PASSPORT_PATH = /^\/lineage\/objects\/([^/]+)\/?$/i;
-
 export function matchPublicObjectPassportPath(pathname: string) {
-  const basePath = stripLocalePrefix(pathname).path;
-  return PUBLIC_OBJECT_PASSPORT_PATH.exec(basePath)?.[1] ?? null;
+  return matchAddressPath("object", pathname);
 }
 
 export function renderGonePublicObjectPassportHtml(

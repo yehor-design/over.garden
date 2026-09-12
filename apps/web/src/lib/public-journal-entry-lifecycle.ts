@@ -1,21 +1,19 @@
+import { matchAddressPath } from "@/lib/address/match-address-path";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   renderPublicLifecycleDocument,
   type PublicLifecycleRequestLocation,
 } from "@/lib/public-lifecycle-document";
 import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
-import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
+import { localizedPath } from "@/lib/public-localization";
 import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 import {
   MISSING_ADDRESS_SLUG,
   publicJournalEntryPath,
 } from "@/lib/garden/public-paths";
 
-const PUBLIC_JOURNAL_ENTRY_PATH = /^\/journal\/([^/]+)\/?$/i;
-
 export function matchPublicJournalEntryPath(pathname: string) {
-  const basePath = stripLocalePrefix(pathname).path;
-  return PUBLIC_JOURNAL_ENTRY_PATH.exec(basePath)?.[1] ?? null;
+  return matchAddressPath("journalEntry", pathname);
 }
 
 export function renderGonePublicJournalEntryHtml(
