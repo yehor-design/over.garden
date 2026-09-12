@@ -1,12 +1,4 @@
-import { redirect } from "next/navigation";
-
-import { buildPublicObjectCatalogHref } from "@/components/public/public-object-catalog";
-import {
-  DEFAULT_PUBLIC_LOCALE,
-  type PublicLocale,
-} from "@/lib/public-localization";
-import { normalizePublicObjectCatalogRequest } from "@/server/public-object-catalog-repository";
-import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import {
   generateMetadata as generateLocalizedObjectsMetadata,
   renderPublicObjectsPage,
@@ -18,20 +10,16 @@ export async function generateMetadata() {
   });
 }
 
+/**
+ * Rendered, never redirected by the reader's interface locale — see the
+ * journals route beside it: a canonical URL answers `200` to everyone
+ * (ADR-0029 D10), and a `redirect()` after the shell has streamed cannot fire.
+ */
 export default async function RootObjectsRoute({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 } = {}) {
-  const [locale, query] = await Promise.all([
-    getRequestInterfaceLocale(),
-    searchParams ?? Promise.resolve({}),
-  ]);
-  const request = normalizePublicObjectCatalogRequest(query);
-
-  if (locale !== DEFAULT_PUBLIC_LOCALE) {
-    redirect(buildPublicObjectCatalogHref(locale as PublicLocale, request));
-  }
-
+  const query = (await searchParams) ?? {};
   return renderPublicObjectsPage(DEFAULT_PUBLIC_LOCALE, query);
 }

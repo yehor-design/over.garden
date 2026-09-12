@@ -30,12 +30,19 @@ describe("root locale route", () => {
     vi.clearAllMocks();
   });
 
-  it("honors a persisted locale resolved by the shared request contract", async () => {
+  /**
+   * The unprefixed route renders. The geography redirect that used to sit here
+   * could not work — by the time it ran the shell had streamed, so the status
+   * was already `200` and the location header had sailed — and ADR-0029 D10
+   * settles it anyway: a canonical URL answers `200` to everyone.
+   */
+  it("renders the home page in the default locale whatever the reader's is", async () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("ru");
     const { default: RootLocalePage } = await import("./page");
 
-    await RootLocalePage();
+    const rendered = await RootLocalePage();
 
-    expect(mocks.redirect).toHaveBeenCalledWith("/ru");
+    expect(mocks.redirect).not.toHaveBeenCalled();
+    expect(rendered).toBeTruthy();
   });
 });

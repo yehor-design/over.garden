@@ -104,16 +104,21 @@ describe("/objects", () => {
     expect(html).toContain("Живи обекти");
   });
 
-  it("redirects the unprefixed route to the persisted non-Ukrainian locale", async () => {
+  /**
+   * The unprefixed route renders. The geography redirect that used to sit here
+   * could not work — by the time it ran the shell had streamed, so the status
+   * was already `200` and the location header had sailed — and ADR-0029 D10
+   * settles it anyway: a canonical URL answers `200` to everyone.
+   */
+  it("renders in the default locale whatever the reader's interface locale is", async () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("ru");
     const { default: RootObjectsRoute } = await import("./page");
 
-    await RootObjectsRoute({
+    const rendered = await RootObjectsRoute({
       searchParams: Promise.resolve({ kind: "animal", page: "2" }),
     });
 
-    expect(mocks.redirect).toHaveBeenCalledWith(
-      "/ru/objects?kind=animal&page=2",
-    );
+    expect(mocks.redirect).not.toHaveBeenCalled();
+    expect(rendered).toBeTruthy();
   });
 });
