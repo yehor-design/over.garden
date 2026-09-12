@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Leaf, Sprout } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, Leaf, Sprout } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { publicCatalogRegisterHubPath } from "@/lib/catalog/addresses";
 import {
   CATALOG_BROWSE_INITIALS,
   buildPublicCatalogBrowseHref,
@@ -32,6 +33,7 @@ export function PublicCatalogBrowse({
   request,
   kingdoms,
   firstHand,
+  registerHubs,
   page,
   jsonLd,
 }: {
@@ -40,6 +42,7 @@ export function PublicCatalogBrowse({
   request: PublicCatalogBrowseRequest;
   kingdoms: readonly CatalogBrowseKingdomSummary[];
   firstHand: readonly CatalogBrowseCard[];
+  registerHubs?: readonly { slug: string; name: string; total: number }[];
   page: CatalogBrowsePage | null;
   jsonLd?: Record<string, unknown> | null;
 }) {
@@ -97,6 +100,36 @@ export function PublicCatalogBrowse({
                   className="inline-flex rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:border-primary"
                 >
                   {card.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {!activeKingdom && registerHubs && registerHubs.length > 0 ? (
+        // The register hubs (OVE-433). They are the substantive pages in the
+        // catalog — an aggregation over cards that are `noindex` on their own
+        // (ADR-0026 D9) — so the browse root links them before the kingdoms.
+        <section className="flex flex-col gap-3">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+            <FileText className="size-4 text-primary" />
+            {copy.registersHeading}
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {registerHubs.map((hub) => (
+              <li key={hub.slug}>
+                <Link
+                  href={localizedPath(
+                    locale,
+                    publicCatalogRegisterHubPath(hub.slug),
+                  )}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:border-primary"
+                >
+                  {hub.name}
+                  <span className="text-xs text-muted-foreground">
+                    {hub.total}
+                  </span>
                 </Link>
               </li>
             ))}

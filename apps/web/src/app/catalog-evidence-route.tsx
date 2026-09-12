@@ -9,6 +9,8 @@ import { PublicVarietySourceCredits } from "@/app/(default)/variety/[slug]/sourc
 import { addCatalogPublicSlugToWishlistAction } from "@/app/(default)/wishlist/actions";
 import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
+import { publicCatalogRegisterHubPath } from "@/lib/catalog/addresses";
+import { getPublicCatalogRegisterCopy } from "@/lib/public-catalog-register-copy";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { buttonVariants } from "@/components/ui/button";
 import type { CatalogKind } from "@/db/schema";
@@ -537,6 +539,25 @@ export async function renderPublicCatalogEvidenceRoute(
               </ul>
             </div>
           ))}
+          {catalogKind === "species" && page.card.formCount > 0 ? (
+            // The way into the register hub (OVE-433). The card shows the
+            // forms it can name; the hub shows every one of them with the
+            // registration number a seed packet quotes, which is the fact this
+            // card cannot hold and nobody else publishes.
+            <Link
+              href={localizedPath(
+                routeLocale,
+                publicCatalogRegisterHubPath(page.catalog.publicSlug),
+              )}
+              data-organism-register-hub="true"
+              className="self-start rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+            >
+              {getPublicCatalogRegisterCopy(routeLocale).heading(
+                page.catalog.canonicalName,
+                page.card.formCount,
+              )}
+            </Link>
+          ) : null}
         </section>
       ) : null}
 

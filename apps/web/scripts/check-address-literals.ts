@@ -35,6 +35,9 @@ const WEB_ROOT = path.resolve(
  */
 const DEFINITIONS = new Set([
   "src/lib/garden/public-paths.ts",
+  // The catalog's own builders and matchers: `/species/{species}`,
+  // `/species/{species}/{form}` and the register hub under them (OVE-433).
+  "src/lib/catalog/addresses.ts",
   "src/lib/address/address-manifest.ts",
   "src/lib/address/address-contract.generated.ts",
   // Decides which shapes a route family serves, so it names prefixes rather

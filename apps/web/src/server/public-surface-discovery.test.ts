@@ -49,6 +49,7 @@ describe("public surface discovery adapter", () => {
       "localized_market",
       "localized_catalog_browse",
       "localized_species_browse",
+      "localized_species_register_hub",
       "eppo_archive_browse",
       "eppo_archive_detail",
       "localized_topic",

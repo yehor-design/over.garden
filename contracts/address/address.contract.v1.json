@@ -39,7 +39,9 @@
         "decodedCharacters": 60,
         "encodedCharacters": 180
       },
-      "reservedWords": [],
+      "reservedWords": [
+        "register"
+      ],
       "source": "the registered denomination, romanized",
       "pathPrefix": "/species/",
       "pathBuilder": "publicCatalogEvidencePath",

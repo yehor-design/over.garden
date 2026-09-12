@@ -214,7 +214,10 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     // D6 prescribes — 1 228 of the 15 914 addresses moved in OVE-429 took one.
     uniquenessScope: "global",
     budget: DEFAULT_ADDRESS_BUDGET,
-    reservedWords: [],
+    // `/species/{species}/register` is the register hub (ADR-0029 D13 item 4,
+    // OVE-433), so a cultivar named *Register* would take its own species'
+    // hub with it — the same reason `objects` is reserved for an entry.
+    reservedWords: ["register"],
     source: "the registered denomination, romanized",
     pathPrefix: "/species/",
     pathBuilder: "publicCatalogEvidencePath",

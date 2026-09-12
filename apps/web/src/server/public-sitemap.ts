@@ -1,5 +1,6 @@
 import "server-only";
 
+import { publicCatalogRegisterHubPath } from "@/lib/catalog/addresses";
 import {
   publicCatalogEvidencePath,
   publicTopicPath,
@@ -16,6 +17,7 @@ import {
   sitemapChunkCount,
   type PublicSitemapUrl,
 } from "@/server/public-sitemap-repository";
+import { readCatalogRegisterHubSpecies } from "@/server/public-cache";
 import { resolvePublicSurfaceDiscoveryForRequest } from "@/server/public-surface-discovery";
 import {
   buildPublicTopicDiscoverySource,
@@ -27,6 +29,7 @@ import { listIndexablePublicVarietySitemapEntries } from "@/server/public-variet
 export type PublicSitemapChunkId =
   | "authored"
   | "catalog"
+  | "registers"
   | "topics"
   | "communities"
   | `profiles-${number}`
@@ -49,6 +52,7 @@ export async function listPublicSitemapChunkIds(): Promise<
   return [
     "authored",
     "catalog",
+    "registers",
     "topics",
     "communities",
     // A profile row emits one URL per locale; an entry row emits one.
@@ -70,6 +74,7 @@ export function parsePublicSitemapChunkId(
   if (
     id === "authored" ||
     id === "catalog" ||
+    id === "registers" ||
     id === "topics" ||
     id === "communities"
   ) {
@@ -106,6 +111,20 @@ export async function buildPublicSitemapChunk(
           lastModified: new Date(entry.lastModified),
         }));
       },
+    );
+  }
+  if (id === "registers") {
+    // A register hub is self-canonical in each route family, like the card it
+    // aggregates (ADR-0029 D10), so all three belong here. There are a few
+    // hundred of them and each is substantive on its own — which is the whole
+    // argument of ADR-0029 D13 item 4 for submitting these and not the
+    // hundred thousand bare cards under them.
+    const species = await readCatalogRegisterHubSpecies();
+    return species.flatMap((entry) =>
+      PUBLIC_LOCALES.map((locale) => ({
+        url: localizedPath(locale, publicCatalogRegisterHubPath(entry.slug)),
+        lastModified: entry.latestChange,
+      })),
     );
   }
   if (id === "topics") {

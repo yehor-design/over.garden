@@ -8,6 +8,7 @@ export interface PublicCatalogBrowseCopy {
   readonly firstHandHeading: string;
   readonly firstHandDescription: string;
   readonly kingdomsHeading: string;
+  readonly registersHeading: string;
   readonly organismCount: (total: number) => string;
   readonly allInitials: string;
   readonly backToKingdoms: string;
@@ -27,6 +28,7 @@ const UK: PublicCatalogBrowseCopy = {
   firstHandDescription:
     "Картки, у яких є хоча б один публічний запис із першоджерела.",
   kingdomsHeading: "За царствами",
+  registersHeading: "Сорти в державних реєстрах",
   organismCount: (total) => `${total.toLocaleString("uk-UA")} організмів`,
   allInitials: "Усі літери",
   backToKingdoms: "До всіх царств",
@@ -55,6 +57,7 @@ const BG: PublicCatalogBrowseCopy = {
   firstHandDescription:
     "Картите с поне един публичен запис от първа ръка.",
   kingdomsHeading: "По царства",
+  registersHeading: "Сортове в държавните регистри",
   organismCount: (total) => `${total.toLocaleString("bg-BG")} организма`,
   allInitials: "Всички букви",
   backToKingdoms: "Към всички царства",
@@ -83,6 +86,7 @@ const RU: PublicCatalogBrowseCopy = {
   firstHandDescription:
     "Карточки, где есть хотя бы одна публичная запись из первых рук.",
   kingdomsHeading: "По царствам",
+  registersHeading: "Сорта в государственных реестрах",
   organismCount: (total) => `${total.toLocaleString("ru-RU")} организмов`,
   allInitials: "Все буквы",
   backToKingdoms: "Ко всем царствам",

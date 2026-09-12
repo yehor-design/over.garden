@@ -86,6 +86,12 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "src/app/[locale]/species/page.tsx",
   ),
   inventory(
+    "localized_species_register_hub",
+    "variety_aggregation",
+    "candidate",
+    "src/app/[locale]/species/[slug]/register/page.tsx",
+  ),
+  inventory(
     "eppo_archive_browse",
     "catalog_browse",
     "candidate",
