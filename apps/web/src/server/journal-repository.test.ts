@@ -960,7 +960,8 @@ describe("journal repository query contracts", () => {
     const page = serializePublicJournalEntryPage({
       root: {
         sourceLanguage: "uk",
-      entryId: "00000000-0000-4000-8000-000000000020",
+        catalogItemId: "00000000-0000-4000-8000-0000000000c1",
+        entryId: "00000000-0000-4000-8000-000000000020",
         title: "Перший урожай",
         body: "Перший абзац.\n\nІсторична згадка @previous_gardener.",
         contentDocument: null,

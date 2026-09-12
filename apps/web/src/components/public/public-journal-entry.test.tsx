@@ -87,6 +87,7 @@ const objectPage: PublicJournalEntryPage = {
     object: {
       plantObjectId: "object-1",
       displayName: "Черрі",
+      catalogItemId: "00000000-0000-4000-8000-0000000000c1",
       objectKind: "plant",
       catalogKind: "plant_variety",
       catalogCanonicalName: "Помідор чері",

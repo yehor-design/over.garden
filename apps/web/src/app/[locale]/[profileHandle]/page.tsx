@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 
 import { PublicProfileView } from "@/components/public/public-profile";
-import { publicProfilePath } from "@/lib/garden/public-paths";
+import {
+  publicProfileBasePath,
+  publicProfilePath,
+} from "@/lib/garden/public-paths";
+import { absolutePublicUrl } from "@/lib/garden/public-url";
 import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
@@ -186,6 +190,14 @@ function buildProfileSurface(
       name: page.displayName,
       description,
       trustQualifier: "Public active OverGarden profile",
+      // The page is *of* a person, and every entry that names this gardener as
+      // its author points at the same `@id` (ADR-0029 D13).
+      person: {
+        id: absolutePublicUrl(publicProfileBasePath(page.handle)),
+        name: page.displayName,
+        url: absolutePublicUrl(publicProfilePath(locale, page.handle)),
+        ...(page.avatarUrl ? { image: page.avatarUrl } : {}),
+      },
     },
   });
   if (page.avatarUrl) {

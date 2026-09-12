@@ -8,6 +8,21 @@ const RICH_TEXT = Array.from(
   (_, index) => `visible${index}`,
 ).join(" ");
 
+/** The same, with the canonical path the caller is proving. */
+function indexableDiscovery(
+  canonicalPath: string,
+  equivalentLocales: readonly ("uk" | "bg" | "ru")[],
+) {
+  return resolvePublicSurfaceDiscovery({
+    consumerId: "localized_blog_post",
+    candidateState: "candidate",
+    visibleText: [RICH_TEXT],
+    distinctPublicEntityIds: ["topic-proof"],
+    canonicalPath,
+    equivalentLocales,
+  });
+}
+
 function discovery(equivalentLocales: readonly ("uk" | "bg" | "ru")[]) {
   return resolvePublicSurfaceDiscovery(
     {
@@ -121,20 +136,38 @@ describe("public surface metadata", () => {
       },
       robots: { index: true, follow: true },
     });
+    // The page, the thing on it, and the site that publishes both. The site
+    // nodes are repeated on every page on purpose: a crawler that fetches one
+    // page has to resolve `publisher` from that page alone (ADR-0029 D13).
     expect(result.jsonLd).toMatchObject({
       "@context": "https://schema.org",
       "@graph": [
         {
           "@type": "WebPage",
+          "@id": "https://over.garden/bg/blog/proof-note",
           name: "Доказателствена бележка",
           description: "Видимо описание",
           inLanguage: "bg",
+          isPartOf: { "@id": "https://over.garden/#website" },
         },
         {
           "@type": "Article",
+          "@id": "https://over.garden/bg/blog/proof-note#article",
           headline: "Доказателствена бележка",
+          mainEntityOfPage: { "@id": "https://over.garden/bg/blog/proof-note" },
           datePublished: "2026-08-23T00:00:00.000Z",
           about: "OverGarden editorial",
+          publisher: { "@id": "https://over.garden/#organization" },
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://over.garden/#organization",
+          name: "OverGarden",
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://over.garden/#website",
+          publisher: { "@id": "https://over.garden/#organization" },
         },
       ],
     });
@@ -177,5 +210,91 @@ describe("public surface metadata", () => {
     });
     expect(result.metadata.alternates).toBeUndefined();
     expect(result.jsonLd).toBeNull();
+  });
+
+  /**
+   * The acceptance criterion of the entity graph, as one assertion: an entry
+   * says what it is about by the organism's permalink, the card claims that
+   * same permalink as its own `@id`, and the card points back at the entry's
+   * `@id`. Two pages, one graph (ADR-0029 D13).
+   */
+  it("closes the traversal between an entry and the organism it is about", () => {
+    const permalink = "https://over.garden/id/11111111-1111-4111-8111-111111111111";
+    const entryUrl = "https://over.garden/@yehor/polyv";
+    const cardUrl = "https://over.garden/species/solanum-lycopersicum/de-barao";
+
+    const entry = buildPublicSurfaceMetadata({
+      discovery: indexableDiscovery("/@yehor/polyv", ["uk"]),
+      locale: "uk",
+      title: "Полив | OverGarden",
+      visibleFacts: {
+        type: "BlogPosting",
+        name: "Полив",
+        about: { id: permalink, name: "Де Барао", url: cardUrl },
+        author: {
+          id: "https://over.garden/@yehor",
+          name: "Yehor",
+          url: "https://over.garden/@yehor",
+        },
+        images: [{ url: "https://media.over.garden/a.webp", caption: "Кущ" }],
+      },
+    });
+    const card = buildPublicSurfaceMetadata({
+      discovery: indexableDiscovery(
+        "/species/solanum-lycopersicum/de-barao",
+        ["uk"],
+      ),
+      locale: "uk",
+      contentLocale: null,
+      title: "Де Барао | OverGarden",
+      visibleFacts: {
+        type: "Taxon",
+        name: "Де Барао",
+        taxon: {
+          id: permalink,
+          scientificName: "Solanum lycopersicum",
+          taxonRank: "cultivar",
+          sameAs: [],
+        },
+        subjectOf: [{ id: `${entryUrl}#article`, url: entryUrl }],
+      },
+    });
+
+    const nodeOf = (result: typeof entry, type: string) =>
+      (result.jsonLd?.["@graph"] as Array<Record<string, unknown>>).find(
+        (node) => node["@type"] === type,
+      );
+
+    const article = nodeOf(entry, "BlogPosting");
+    const taxon = nodeOf(card, "Taxon");
+
+    // Entry → card: the `about` `@id` is the card's own `@id`.
+    expect((article?.about as Record<string, unknown>)["@id"]).toBe(permalink);
+    expect(taxon?.["@id"]).toBe(permalink);
+
+    // Card → entry: the `subjectOf` `@id` is the article's own `@id`.
+    expect(taxon?.subjectOf).toEqual([
+      { "@type": "Article", "@id": `${entryUrl}#article`, url: entryUrl },
+    ]);
+    expect(article?.["@id"]).toBe(`${entryUrl}#article`);
+
+    // The author is a node of its own, referenced rather than inlined, so the
+    // profile page and every entry name the same person.
+    expect(article?.author).toEqual({ "@id": "https://over.garden/@yehor" });
+    expect(nodeOf(entry, "Person")).toMatchObject({
+      "@id": "https://over.garden/@yehor",
+      name: "Yehor",
+    });
+
+    // Both photographs the page shows, with the caption a reader sees.
+    expect(article?.image).toEqual([
+      {
+        "@type": "ImageObject",
+        "@id": "https://media.over.garden/a.webp",
+        url: "https://media.over.garden/a.webp",
+        contentUrl: "https://media.over.garden/a.webp",
+        caption: "Кущ",
+      },
+    ]);
   });
 });

@@ -134,6 +134,7 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
         plantObjectId: JOURNEY.plantObjectId,
         displayName: JOURNEY.plantDisplayName,
         objectKind: "plant",
+        catalogItemId: JOURNEY.catalogItemId,
         catalogKind: "plant_variety",
         catalogCanonicalName: JOURNEY.catalogCanonicalName,
         catalogPublicSlug: JOURNEY.catalogPublicSlug,

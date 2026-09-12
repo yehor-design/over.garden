@@ -29,6 +29,12 @@ import {
   readGuestEngagementSummary,
   readPublicJournalEntry,
 } from "@/server/public-cache";
+import { publicCatalogPermalinkPath } from "@/lib/catalog/addresses";
+import {
+  publicCatalogEvidencePath,
+  publicProfileBasePath,
+} from "@/lib/garden/public-paths";
+import { absolutePublicUrl } from "@/lib/garden/public-url";
 
 interface PublicJournalEntryRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -159,6 +165,7 @@ function buildJournalSurface(
   ),
 ) {
   const copy = getPublicJournalEntryCopy(locale);
+  const subject = entrySubject(page);
   return buildPublicSurfaceMetadata({
     discovery,
     locale,
@@ -172,10 +179,34 @@ function buildJournalSurface(
       type: "BlogPosting",
       name: page.entry.title,
       description: summarize(page.entry.body),
-      datePublished:
-        page.entry.publishedAt instanceof Date
-          ? page.entry.publishedAt.toISOString()
-          : (page.entry.publishedAt ?? undefined),
+      datePublished: toIsoTimestamp(page.entry.publishedAt),
+      // The entry's whole graph used to be three facts: a name, a headline and
+      // a date. For a product whose claim is first-hand experience from real
+      // gardeners, nothing said who wrote it or what it was about (D13).
+      ...(page.author
+        ? {
+            author: {
+              // The `@id` is the unprefixed profile address, so an entry read
+              // in Bulgarian and the profile page read in Ukrainian name the
+              // same person. A locale-prefixed `@id` would make three.
+              id: absolutePublicUrl(
+                publicProfileBasePath(page.author.handle),
+              ),
+              name: page.author.displayName,
+              url: absolutePublicUrl(page.author.profilePath),
+              ...(page.author.avatarUrl
+                ? { image: page.author.avatarUrl }
+                : {}),
+            },
+          }
+        : {}),
+      ...(subject ? { about: subject } : {}),
+      // Every photo the page shows, with the caption a reader sees beneath it.
+      images: (page.media ?? []).map((media) => ({
+        url: media.publicUrl,
+        caption: media.caption ?? media.altText,
+      })),
+      breadcrumbs: breadcrumbsFor(page),
     },
   });
 }
@@ -241,4 +272,58 @@ function summarize(body: string) {
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
+
+/**
+ * The organism the entry is about, by the permalink that survives every rename
+ * and merge (ADR-0029 D13).
+ *
+ * Only an object-scoped entry has one, and only when its object has been
+ * matched to a card: a gardener's free-text "помідор" is a name, not a subject,
+ * and pointing `about` at nothing would be worse than saying nothing.
+ */
+function entrySubject(page: PublicJournalEntryPage) {
+  const context = page.context;
+  if (context?.kind !== "object") return null;
+  const { catalogItemId, catalogCanonicalName, catalogPublicSlug } =
+    context.object;
+  if (!catalogItemId || !catalogCanonicalName || !catalogPublicSlug) {
+    return null;
+  }
+  return {
+    id: absolutePublicUrl(publicCatalogPermalinkPath(catalogItemId)),
+    name: catalogCanonicalName,
+    url: absolutePublicUrl(
+      publicCatalogEvidencePath({
+        catalogKind: context.object.catalogKind ?? "plant_variety",
+        publicSlug: catalogPublicSlug,
+        speciesSlug: context.object.catalogSpeciesSlug,
+      }),
+    ),
+  };
+}
+
+/**
+ * Home → author → entry. Both links are on the page: the shell's home link and
+ * the author line under the title (ADR-0022 D3). An entry with no author — a
+ * space-scoped one written before handles — stops at home.
+ */
+function breadcrumbsFor(page: PublicJournalEntryPage) {
+  return [
+    { name: "OverGarden", url: absolutePublicUrl("/") },
+    ...(page.author
+      ? [
+          {
+            name: page.author.displayName,
+            url: absolutePublicUrl(page.author.profilePath),
+          },
+        ]
+      : []),
+    { name: page.entry.title, url: absolutePublicUrl(page.entry.publicPath) },
+  ];
+}
+
+function toIsoTimestamp(value: Date | string | null | undefined) {
+  if (!value) return undefined;
+  return value instanceof Date ? value.toISOString() : value;
 }

@@ -11,8 +11,8 @@ import type {
 } from "@/db/schema";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import {
-  legacyPublicJournalEntryPath,
   publicCatalogEvidencePath,
+  publicJournalEntryPath,
 } from "@/lib/garden/public-paths";
 import {
   DEFAULT_PUBLIC_LOCALE,
@@ -49,6 +49,7 @@ import {
   type PublicVarietySeedProof,
 } from "@/server/variety-seed-proof-repository";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
+import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 
 const MAX_CATALOG_PUBLIC_SLUG_LENGTH = 96;
 const MAX_PUBLIC_VARIETY_ENTRIES = 20;
@@ -291,7 +292,10 @@ export async function getPublicVarietyPageByCatalogItemId(
       entryDate: entry.entryDate,
       // An organism card gathers entries from every gardener, and this row
       // carries no handle. The legacy address 308s to the canonical one.
-      publicPath: legacyPublicJournalEntryPath(entry.entryPublicSlug),
+      publicPath: publicJournalEntryPath(
+        entry.addressHandle,
+        entry.entryPublicSlug,
+      ),
       plantObjectDisplayName: entry.objectDisplayName,
       // ADR-0026 D6: an object linked by curation keeps the gardener's own
       // name in variety_text; the public page names the card, never the label.
@@ -736,6 +740,9 @@ export function buildPublicVarietyEntriesQuery(
       "journal_entries.body as entryBody",
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as entryPublicSlug",
+      publicAuthorHandleSql("journal_entries.owner_user_id").as(
+        "addressHandle",
+      ),
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
@@ -777,7 +784,11 @@ export function buildPublicVarietyEntriesQuery(
     .orderBy("journal_entries.created_at", "desc")
     .orderBy("journal_entries.id", "asc")
     .limit(normalizePublicVarietyLimit(limit))
-    .$narrowType<{ entryPublicSlug: string }>();
+    // An entry whose author has no handle has no canonical address, and a card
+    // that linked to its legacy one would point `subjectOf` at a redirect
+    // rather than at the entry's own `@id` (ADR-0029 D9, D13).
+    .where(publicAuthorHandleSql("journal_entries.owner_user_id"), "is not", null)
+    .$narrowType<{ entryPublicSlug: string; addressHandle: string }>();
 }
 
 function getPublicLocationLabel(row: {

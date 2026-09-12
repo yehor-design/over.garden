@@ -508,6 +508,39 @@ traversal from entry `about` to the card and back through `subjectOf`.
 
 **Dependencies.** Tasks 6, 10.
 
+
+**Shipped 2026-09-12.** An entry's graph was three facts across two nodes: a
+name, a headline and a date. It now carries `author` as a `Person` node, `about`
+pointing at the organism's permalink, every photograph as an `ImageObject` with
+the caption a reader sees, `inLanguage`, `publisher`, `mainEntityOfPage` and a
+`BreadcrumbList`. The organism card gained `subjectOf`, the profile page
+`mainEntity → Person`, and every indexable page carries `Organization` and
+`WebSite`.
+
+**The traversal closes, and a test asserts it.** An entry's `about` `@id` is
+the permalink the card claims as its own `@id`; the card's `subjectOf` `@id` is
+the article node's own. One assertion follows both directions.
+
+**Three things the implementation had to get right.**
+
+1. **An `@id` must not depend on the reader's locale.** The author's `@id` is
+   the unprefixed profile address, not the locale-prefixed URL the page links
+   to — otherwise one gardener is three people to a consumer that merges the
+   graph across pages.
+2. **`Organization` and `WebSite` are repeated on every page**, not emitted
+   once on the homepage. A crawler that fetches one page has to resolve
+   `publisher` from that page alone; a dangling `@id` is a reference to
+   nothing.
+3. **`subjectOf` carries an `@id` and a URL and no title.** The privacy
+   invariant of OVE-40 says the organism card's graph holds the organism's
+   bounded facts and no gardener's words, and it caught the first draft, which
+   put entry titles on the card. A consumer needs no more than the `@id` to
+   follow the link, and the entry's own page supplies its headline.
+
+The card's `subjectOf` also forced the variety repository to build canonical
+entry addresses rather than legacy ones: pointing `subjectOf` at
+`/journal/{slug}` would name a redirect instead of the entry's own `@id`.
+
 ---
 
 ## 13. `OVE-431` — A front door for the catalog
