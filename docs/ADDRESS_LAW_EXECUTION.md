@@ -584,10 +584,22 @@ content — the indexable ones, which is what the acceptance criterion is about
 (ADR-0026 D9) — are listed on the browse root itself, so they are three.
 
 **A kingdom and an initial are filters, not addresses.** Every browse view
-carries the same canonical, `/species`, and the proxy's existing rule stamps
-`noindex, follow` on anything past page one. So the filtered views are crawled
-for their links and never compete with the root — which is the same decision
-D10 makes everywhere else, applied to a listing.
+carries the same canonical, `/species`, and the proxy stamps `noindex, follow`
+on any of them. So the filtered views are crawled for their links and never
+compete with the root — the same decision D10 makes everywhere else, applied to
+a listing.
+
+That header is also how the **empty-listing rule** reaches this surface, and it
+took a second pass to see why it had to be. `generateMetadata` cannot read
+`searchParams` without taking the canonical out of the streamed shell — the
+measurement that decided the paginated self-canonical in task 9 — so the robots
+meta on `/species?kingdom=archaea&letter=q` is the *root's*, and production
+answered `index, follow` for a view showing "nothing under this letter yet".
+The header says it before anything streams. `page` is in the same rule rather
+than in `PAGINATED_LISTINGS`, because that table also drives
+`isListingPageBeyondTheEnd`, which bounds every listing by the *journal entry*
+count — eleven of them, one page of sixty — and it would have 404'd a browse
+page that legitimately has hundreds.
 
 **Migration `0072` is the index the walk needs.** `catalog_items` had no index
 that answers "one kingdom, one initial, ordered by name": the browse would have

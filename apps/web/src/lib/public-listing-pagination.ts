@@ -14,6 +14,27 @@ const PAGINATED_LISTINGS: Readonly<Record<string, number>> = {
   "/objects": PUBLIC_OBJECT_CATALOG_PAGE_SIZE,
 };
 
+/**
+ * Listings whose filters are views of one address rather than addresses of
+ * their own.
+ *
+ * The catalog's front door is the only one so far (ADR-0029 D13 item 2): a
+ * kingdom and an initial narrow `/species`, every one of those views carries
+ * `/species` as its canonical (D10), and a letter nobody has filed anything
+ * under is an empty listing that must not be indexed. None of that can be said
+ * in the page's own `<head>` — the same reason page two cannot, below — so it
+ * is said here.
+ *
+ * `page` is in this list rather than in `PAGINATED_LISTINGS` on purpose. That
+ * table also drives `isListingPageBeyondTheEnd`, which bounds every listing by
+ * the *journal entry* count — eleven of them, one page of sixty — and putting
+ * `/species` there would 404 a browse page that legitimately has hundreds. The
+ * browse route knows its own count and answers that bound itself.
+ */
+const FILTERED_LISTINGS: Readonly<Record<string, readonly string[]>> = {
+  "/species": ["kingdom", "letter", "page"],
+};
+
 export function paginatedListingPageSize(pathname: string): number | null {
   const path = stripLocalePrefix(pathname).path.replace(/\/+$/u, "") || "/";
   return PAGINATED_LISTINGS[path] ?? null;
@@ -59,6 +80,9 @@ export function paginatedListingRobotsTag(
   pathname: string,
   search: URLSearchParams,
 ): string | null {
+  const path = stripLocalePrefix(pathname).path.replace(/\/+$/u, "") || "/";
+  const filters = FILTERED_LISTINGS[path] ?? [];
+  if (filters.some((filter) => search.get(filter))) return "noindex, follow";
   if (paginatedListingPageSize(pathname) === null) return null;
   return requestedListingPage(search) === null ? null : "noindex, follow";
 }

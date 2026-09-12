@@ -59,3 +59,43 @@ describe("bounded listing pagination (ADR-0029 D3)", () => {
     expect(paginatedListingRobotsTag("/topics/plants", page("2"))).toBeNull();
   });
 });
+
+describe("a filtered view of the catalog's front door (OVE-431)", () => {
+  // A kingdom and an initial narrow one listing; every one of those views
+  // carries `/species` as its canonical, and a letter nobody has filed
+  // anything under is an empty listing. `follow` keeps every organism it lists
+  // reachable.
+  it("is noindex, follow whichever filter it carries", () => {
+    for (const search of [
+      "kingdom=plantae",
+      "kingdom=plantae&letter=s",
+      "kingdom=plantae&letter=s&page=4",
+      "page=2",
+    ]) {
+      expect(
+        paginatedListingRobotsTag("/species", new URLSearchParams(search)),
+        search,
+      ).toBe("noindex, follow");
+    }
+    for (const path of ["/bg/species", "/ru/species"]) {
+      expect(
+        paginatedListingRobotsTag(path, new URLSearchParams("kingdom=fungi")),
+        path,
+      ).toBe("noindex, follow");
+    }
+  });
+
+  it("leaves the front door itself alone", () => {
+    expect(paginatedListingRobotsTag("/species", new URLSearchParams())).toBeNull();
+    expect(
+      paginatedListingRobotsTag("/species", new URLSearchParams("kingdom=")),
+    ).toBeNull();
+    // An organism page is not a view of the listing.
+    expect(
+      paginatedListingRobotsTag(
+        "/species/solanum-lycopersicum",
+        new URLSearchParams("kingdom=plantae"),
+      ),
+    ).toBeNull();
+  });
+});

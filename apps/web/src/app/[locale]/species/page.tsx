@@ -136,7 +136,7 @@ export async function renderPublicSpeciesBrowsePage(
   // comes from the `noindex` this surface then carries.
   if (page && request.page > page.pageCount) notFound();
 
-  const surface = buildSpeciesBrowseSurface(locale, kingdoms, request);
+  const surface = buildSpeciesBrowseSurface(locale, kingdoms, request, page);
 
   return (
     <PublicCatalogBrowse
@@ -172,20 +172,31 @@ function buildSpeciesBrowseSurface(
     initial: null,
     page: 1,
   },
+  page: CatalogBrowsePage | null = null,
 ) {
   const copy = getPublicCatalogBrowseCopy(locale);
+  // What the page actually lists, which is not the same thing in the two
+  // views. The root lists the kingdoms; a kingdom lists its organisms, and an
+  // initial nobody has filed anything under lists nothing at all — an empty
+  // listing, which the rule then marks `noindex` (ADR-0022 D3). Describing the
+  // root's kingdoms here in both cases would have told the rule that
+  // `?kingdom=archaea&letter=q` is full when the reader is looking at "nothing
+  // under this letter yet".
+  const listed = request.kingdom
+    ? {
+        text: (page?.cards ?? []).map((card) => card.name),
+        ids: (page?.cards ?? []).map((card) => card.id),
+      }
+    : {
+        text: kingdoms.map((summary) => copy.kingdom[summary.kingdom]),
+        ids: kingdoms.map((summary) => `kingdom:${summary.kingdom}`),
+      };
   const discovery: PublicSurfaceDiscoveryResult =
     resolvePublicSurfaceDiscoveryForRequest({
       consumerId: "localized_species_browse",
       candidateState: "candidate",
-      visibleText: [
-        copy.title,
-        copy.description,
-        ...kingdoms.map((summary) => copy.kingdom[summary.kingdom]),
-      ],
-      distinctPublicEntityIds: kingdoms.map(
-        (summary) => `kingdom:${summary.kingdom}`,
-      ),
+      visibleText: listed.text,
+      distinctPublicEntityIds: listed.ids,
       // One canonical for every filtered view: a kingdom and an initial are
       // filters, not addresses (D10).
       canonicalPath: buildPublicCatalogBrowseHref(locale),
