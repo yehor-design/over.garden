@@ -732,6 +732,40 @@ Webmaster Tools.
 **Dependencies.** Tasks 10, 11 — do not announce addresses that are about to
 move.
 
+**Shipped 2026-09-12.** One endpoint, `api.indexnow.org`, which the
+participating engines share with each other — submitting to each separately is
+what the protocol's own documentation asks implementers not to do. Nothing
+Google-specific, because Google does not participate.
+
+**The key is a constant in the repository, not an environment variable.**
+IndexNow proves control of a host by asking it to serve the key back; anyone
+may read it, and knowing it lets them submit URLs *of this host*, which is the
+point of the protocol rather than a capability worth protecting. As a constant
+it cannot be present in one environment and missing in another, and the file
+and the submission can never disagree about what it is. It is served at
+`/indexnow/{key}.txt` and the submission carries `keyLocation`, which is what
+the protocol provides for a key that is not at the host root.
+
+**The announcement rides on the call that already invalidates the tags.** A
+mutation makes one call when a public page changed, and it now takes the
+canonical URLs as a third argument. URLs and not tags: a tag says *something
+under this name changed*, and only the caller knows whether what changed has an
+address a crawler should be sent to. The entry route announces the canonical
+address only — the locale-prefixed legacy spellings beside it are 308s, and
+announcing a redirect asks a crawler to fetch a page that is not there.
+
+**A failed submission cannot reach the mutation.** `announcePublicUrlsToIndexNow`
+awaits nothing and swallows everything, and a test asserts it by making `fetch`
+throw. An engine being down must not turn a gardener's publish into an error.
+
+**The bounds are per process, and the code says so.** A URL is not announced
+twice inside ten minutes — a gardener editing four times in a minute is one
+change to a crawler — and one instance makes at most thirty submissions a
+minute. That holds within a serverless instance, not across a fleet; durable
+de-duplication belongs in the job queue the day the volume justifies a
+queue-contract migration, and pretending otherwise in a comment would be worse
+than the limitation.
+
 ---
 
 ## Traps recorded before they cost a day
