@@ -741,10 +741,22 @@ Google-specific, because Google does not participate.
 IndexNow proves control of a host by asking it to serve the key back; anyone
 may read it, and knowing it lets them submit URLs *of this host*, which is the
 point of the protocol rather than a capability worth protecting. As a constant
-it cannot be present in one environment and missing in another, and the file
-and the submission can never disagree about what it is. It is served at
-`/indexnow/{key}.txt` and the submission carries `keyLocation`, which is what
-the protocol provides for a key that is not at the host root.
+it cannot be present in one environment and missing in another.
+
+**It is at the host root, and only submitting a real URL proved it had to be.**
+The first version served it at `/indexnow/{key}.txt` and read the protocol's
+`keyLocation` as permission to submit anything. `api.indexnow.org` answered:
+
+```
+422 InvalidRequestParameters
+One or more URLs are not related to your site verified through the
+keylocation parameter.
+```
+
+A key in a subdirectory authorises URLs *in that subdirectory* and nothing
+else. It is a static file in `public/` now, and a test asserts that the file on
+disk and the constant in the submission say the same thing — the one way those
+two could ever drift.
 
 **The announcement rides on the call that already invalidates the tags.** A
 mutation makes one call when a public page changed, and it now takes the
