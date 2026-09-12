@@ -90,6 +90,7 @@ import type { JournalCoverSource } from "@/lib/garden/journal-cover-contract";
 import {
   listJournalDocumentImageMediaIds,
   type JournalDocumentV1,
+  journalDocumentImageCaptions,
 } from "@/lib/garden/journal-document";
 import { blockOrderHashFromDocument } from "@/server/mvp-learning/composer-signals";
 import type { AtomicJournalEditFocalPoint } from "@/lib/garden/entry-contracts";
@@ -1073,6 +1074,7 @@ export async function updateAtomicJournalEntry(
     await claimOrderedInlineMediaForEntry(trx, scope, {
       journalEntryId: entryId,
       orderedMediaAssetIds: content.mediaAssetIds,
+      captionByMediaAssetId: content.captionByMediaAssetId,
       preserveDetachedMediaAssetIds:
         input.coverMediaAssetId &&
         !content.mediaAssetIds.includes(input.coverMediaAssetId)
@@ -1489,6 +1491,9 @@ export async function createFirstPlantEntry(
       const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
         journalEntryId: entry.id,
         orderedMediaAssetIds: normalized.orderedMediaAssetIds,
+        captionByMediaAssetId: journalDocumentImageCaptions(
+          normalized.contentDocument,
+        ),
       });
       await claimJournalEntryCover(trx, scope, {
         journalEntryId: entry.id,
@@ -2154,6 +2159,9 @@ export async function createPlantObjectJournalEntry(
       const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
         journalEntryId: entry.id,
         orderedMediaAssetIds: normalized.orderedMediaAssetIds,
+        captionByMediaAssetId: journalDocumentImageCaptions(
+          normalized.contentDocument,
+        ),
       });
       await claimJournalEntryCover(trx, scope, {
         journalEntryId: entry.id,
@@ -2370,6 +2378,9 @@ export async function createSpaceJournalEntry(
       const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
         journalEntryId: entry.id,
         orderedMediaAssetIds: normalized.orderedMediaAssetIds,
+        captionByMediaAssetId: journalDocumentImageCaptions(
+          normalized.contentDocument,
+        ),
       });
       await claimJournalEntryCover(trx, scope, {
         journalEntryId: entry.id,

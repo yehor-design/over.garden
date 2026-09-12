@@ -192,6 +192,8 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
         replace: props.labels.imageReplace,
         remove: props.labels.imageRemove,
         setCover: props.labels.imageSetCover,
+        caption: props.labels.imageCaption,
+        captionPlaceholder: props.labels.imageCaptionPlaceholder,
       },
       onRemove: (blockId: string, mediaAssetId: string) => {
         onPreviewRemoved(mediaAssetId);
@@ -217,6 +219,8 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
       props.labels.imageReplace,
       props.labels.imageRetry,
       props.labels.imageSetCover,
+      props.labels.imageCaption,
+      props.labels.imageCaptionPlaceholder,
       props.labels.imageUploading,
     ],
   );

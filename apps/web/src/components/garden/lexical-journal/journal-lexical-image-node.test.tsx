@@ -22,6 +22,79 @@ describe("OverGarden Lexical image controls", () => {
     vi.unstubAllGlobals();
   });
 
+  /**
+   * The caption is the one sentence that describes a photo (OVE-432): it is the
+   * `figcaption` a reader sees and the `alt` a screen reader and an image
+   * crawler are given. It has to be reachable by keyboard and hold what the
+   * gardener typed without the editor eating it — proven in a real browser on
+   * 2026-09-12, and pinned here.
+   */
+  it("offers a caption field a keyboard reaches, carrying what was typed", async () => {
+    const editor = createEditor({
+      namespace: "journal-image-caption",
+      nodes: [OverGardenImageNode],
+    });
+    let decorated: JSX.Element | null = null;
+    editor.update(
+      () => {
+        const image = $createOverGardenImageNode({
+          blockId: "image-captioned",
+          mediaAssetId: "00000000-0000-4000-8000-000000000002",
+          caption: "Перша китиця після спеки",
+        });
+        $getRoot().clear().append(image);
+        decorated = image.decorate();
+      },
+      { discrete: true },
+    );
+
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <JournalImagePreviewProvider
+          value={{
+            disabled: false,
+            getState: () => ({
+              status: "ready" as const,
+              previewUrl: "blob:local/preview",
+              failureCode: null,
+            }),
+            labels: {
+              processing: "Processing",
+              failed: "Photo failed",
+              retry: "Retry photo",
+              replace: "Replace photo",
+              remove: "Remove",
+              setCover: "Use as cover",
+              caption: "Photo caption",
+              captionPlaceholder: "What the photo shows",
+            },
+            onRemove: vi.fn(),
+            onRetry: vi.fn(),
+            onReplace: vi.fn(),
+            onSetCover: vi.fn(),
+          }}
+        >
+          {decorated}
+        </JournalImagePreviewProvider>,
+      );
+    });
+
+    // The photo's own `alt` is the caption too — the editor shows the author
+    // what the published page will say about the picture.
+    expect(renderer!.root.findByType("img").props.alt).toBe(
+      "Перша китиця після спеки",
+    );
+
+    const field = renderer!.root.findByType("textarea");
+    expect(field.props.defaultValue).toBe("Перша китиця після спеки");
+    expect(field.props.maxLength).toBe(280);
+    // Not `name`d: the caption travels inside the serialised document, and a
+    // second copy in the form post would be a second place to read it from.
+    expect(field.props.name).toBeUndefined();
+    await act(async () => renderer!.unmount());
+  });
+
   it("does not expose a mutable remove action while the composer is disabled", async () => {
     const editor = createEditor({
       namespace: "journal-disabled-image",
@@ -54,6 +127,8 @@ describe("OverGarden Lexical image controls", () => {
               replace: "Replace photo",
               remove: "Remove",
               setCover: "Use as cover",
+              caption: "Photo caption",
+              captionPlaceholder: "What the photo shows",
             },
             onRemove: vi.fn(),
             onRetry: vi.fn(),
@@ -112,6 +187,8 @@ describe("OverGarden Lexical image controls", () => {
               replace: "Replace photo",
               remove: "Remove photo",
               setCover: "Use as cover",
+              caption: "Photo caption",
+              captionPlaceholder: "What the photo shows",
             },
             onRemove: vi.fn(),
             onRetry,
@@ -192,6 +269,8 @@ describe("OverGarden Lexical image controls", () => {
               replace: "Replace photo",
               remove: "Remove failed photo",
               setCover: "Use as cover",
+              caption: "Photo caption",
+              captionPlaceholder: "What the photo shows",
             },
             onRemove,
             onRetry: vi.fn(),

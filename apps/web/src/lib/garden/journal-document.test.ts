@@ -141,6 +141,67 @@ describe("JournalDocumentV1 normalize", () => {
     ).toBe("unsafe_link");
   });
 
+  // OVE-432: the caption is additive at schema version 1 (ADR-0028's pattern).
+  // A document written before it existed has no key and stays valid.
+  it("carries an image caption, and drops it when it says nothing", () => {
+    const withCaption = normalizeJournalDocument({
+      schemaVersion: 1,
+      blocks: [
+        {
+          id: "img1",
+          type: "image",
+          mediaAssetId: MEDIA_IDS[0]!,
+          caption: "  Перша   китиця\n",
+        },
+      ],
+    });
+    expect(withCaption.ok).toBe(true);
+    expect(withCaption.ok && withCaption.document.blocks[0]).toEqual({
+      id: "img1",
+      type: "image",
+      mediaAssetId: MEDIA_IDS[0]!,
+      caption: "Перша китиця",
+    });
+
+    for (const caption of [undefined, null, "", "   "]) {
+      const result = normalizeJournalDocument({
+        schemaVersion: 1,
+        blocks: [
+          { id: "img1", type: "image", mediaAssetId: MEDIA_IDS[0]!, caption },
+        ],
+      });
+      expect(result.ok, String(caption)).toBe(true);
+      expect(result.ok && result.document.blocks[0]).toEqual({
+        id: "img1",
+        type: "image",
+        mediaAssetId: MEDIA_IDS[0]!,
+      });
+    }
+  });
+
+  it("refuses a caption that is not a line of prose", () => {
+    const tooLong = normalizeJournalDocument({
+      schemaVersion: 1,
+      blocks: [
+        {
+          id: "img1",
+          type: "image",
+          mediaAssetId: MEDIA_IDS[0]!,
+          caption: "я".repeat(281),
+        },
+      ],
+    });
+    expect(failCode(tooLong)).toBe("invalid_block");
+
+    const notAString = normalizeJournalDocument({
+      schemaVersion: 1,
+      blocks: [
+        { id: "img1", type: "image", mediaAssetId: MEDIA_IDS[0]!, caption: 7 },
+      ],
+    });
+    expect(failCode(notAString)).toBe("invalid_block");
+  });
+
   it("enforces ten inline images and unique media ids", () => {
     const ten: JournalDocumentV1 = {
       schemaVersion: 1,

@@ -66,6 +66,7 @@ import {
   JOURNAL_DOCUMENT_SCHEMA_VERSION,
   MAX_JOURNAL_LIST_DEPTH,
   JournalDocumentValidationError,
+  normalizeImageCaption,
   normalizeJournalDocumentOrThrow,
   normalizeSafeHref,
   type JournalCodeLanguage,
@@ -289,6 +290,7 @@ export function $journalBlockToLexicalNode(
       return $createOverGardenImageNode({
         blockId: block.id,
         mediaAssetId: block.mediaAssetId,
+        caption: block.caption,
       });
     default: {
       const exhaustive: never = block;
@@ -467,7 +469,10 @@ export function $lexicalNodeToJournalBlock(
         "Journal image media identity is missing.",
       );
     }
-    return { id, type: "image", mediaAssetId };
+    const caption = normalizeImageCaption(node.getCaption());
+    return caption === null
+      ? { id, type: "image", mediaAssetId }
+      : { id, type: "image", mediaAssetId, caption };
   }
   throw new JournalLexicalAdapterError(
     "unsupported_node",

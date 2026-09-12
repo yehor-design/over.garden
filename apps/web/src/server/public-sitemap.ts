@@ -146,14 +146,36 @@ export function renderSitemapIndexXml(ids: readonly PublicSitemapChunkId[]) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${items}\n</sitemapindex>\n`;
 }
 
+const IMAGE_SITEMAP_NAMESPACE = "http://www.google.com/schemas/sitemap-image/1.1";
+
+/**
+ * The image extension is declared only when a chunk uses it (OVE-432).
+ *
+ * An unused namespace on every chunk is noise a validator reads and a reader
+ * has to explain; the entries chunk is the only one whose pages own their
+ * photographs.
+ */
 export function renderSitemapUrlsetXml(urls: readonly PublicSitemapUrl[]) {
+  const withImages = urls.some((entry) => (entry.images?.length ?? 0) > 0);
   const items = urls
-    .map(
-      (entry) =>
-        `  <url><loc>${escapeXml(absolutePublicUrl(entry.url))}</loc><lastmod>${entry.lastModified.toISOString()}</lastmod></url>`,
-    )
+    .map((entry) => {
+      const images = (entry.images ?? [])
+        .map(
+          (image) =>
+            `<image:image><image:loc>${escapeXml(absolutePublicUrl(image.url))}</image:loc>${
+              image.caption
+                ? `<image:caption>${escapeXml(image.caption)}</image:caption>`
+                : ""
+            }</image:image>`,
+        )
+        .join("");
+      return `  <url><loc>${escapeXml(absolutePublicUrl(entry.url))}</loc><lastmod>${entry.lastModified.toISOString()}</lastmod>${images}</url>`;
+    })
     .join("\n");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${items}\n</urlset>\n`;
+  const namespaces = `xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${
+    withImages ? ` xmlns:image="${IMAGE_SITEMAP_NAMESPACE}"` : ""
+  }`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset ${namespaces}>\n${items}\n</urlset>\n`;
 }
 
 export const SITEMAP_RESPONSE_HEADERS = {

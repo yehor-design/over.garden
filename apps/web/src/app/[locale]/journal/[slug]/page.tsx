@@ -22,6 +22,7 @@ import {
   type PublicSurfaceDiscoveryResult,
   type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
+import { publicMediaAltText } from "@/lib/public-media-alt";
 import { logAddressRefusal } from "@/server/address-refusal-log";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
@@ -217,9 +218,12 @@ function buildJournalSurface(
         : {}),
       ...(subject ? { about: subject } : {}),
       // Every photo the page shows, with the caption a reader sees beneath it.
+      // The same sentence the page shows under the photo and gives a screen
+      // reader (OVE-432) — one rule, so the graph cannot describe a picture
+      // differently from the page it is on.
       images: (page.media ?? []).map((media) => ({
         url: media.publicUrl,
-        caption: media.caption ?? media.altText,
+        caption: publicMediaAltText(media, page.entry.title),
       })),
       breadcrumbs: breadcrumbsFor(page),
     },

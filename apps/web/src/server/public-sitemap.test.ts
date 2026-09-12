@@ -225,4 +225,44 @@ describe("public sitemap", () => {
     expect(index).toContain("/sitemaps/authored.xml</loc>");
     expect(index).toContain("/sitemaps/entries-1.xml</loc>");
   });
+
+  // OVE-432: a gardening record is its photographs, and a crawler only learns
+  // one exists by rendering a page that streams. The sitemap says it instead.
+  it("carries the photographs of an entry as the image extension", () => {
+    const urlset = renderSitemapUrlsetXml([
+      {
+        url: "/@yehor/polyv",
+        lastModified: new Date("2026-07-01T00:00:00Z"),
+        images: [
+          {
+            url: "https://media.over.garden/derivatives/a.webp",
+            caption: 'Перша китиця & "нижче"',
+          },
+          { url: "https://media.over.garden/derivatives/b.webp", caption: null },
+        ],
+      },
+    ]);
+
+    expect(urlset).toContain(
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
+    );
+    expect(urlset).toContain(
+      "<image:image><image:loc>https://media.over.garden/derivatives/a.webp</image:loc><image:caption>Перша китиця &amp; &quot;нижче&quot;</image:caption></image:image>",
+    );
+    // A photo with no caption still belongs in the sitemap; it just says less.
+    expect(urlset).toContain(
+      "<image:image><image:loc>https://media.over.garden/derivatives/b.webp</image:loc></image:image>",
+    );
+  });
+
+  it("declares the image namespace only on a chunk that uses it", () => {
+    const urlset = renderSitemapUrlsetXml([
+      { url: "/topics/harvest", lastModified: new Date("2026-07-01T00:00:00Z") },
+    ]);
+
+    expect(urlset).toContain(
+      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    );
+    expect(urlset).not.toContain("sitemap-image");
+  });
 });

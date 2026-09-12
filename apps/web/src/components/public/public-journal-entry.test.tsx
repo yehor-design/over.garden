@@ -197,7 +197,13 @@ describe("public journal entry V2", () => {
     expect(html).toContain('data-media-presentation="contain"');
     // Contain mode keeps full-image visibility; object-position fail-closes to center.
     expect(html).toContain('data-media-object-position="50% 50%"');
-    expect(html).toContain('alt="Стиглі томати на кущі"');
+    // The caption is the `alt` (OVE-432): one sentence describes the photo,
+    // wherever it is read from. The second photo has none, so it falls back to
+    // the entry's title — never to a number, which is what it used to be.
+    expect(html).toContain('alt="Перша китиця"');
+    expect(html).toContain('alt="Перший урожай після спеки"');
+    expect(html).not.toContain('alt="Перший урожай після спеки, 1"');
+    expect(html).not.toContain('alt="Перший урожай після спеки 2"');
     expect(html).toContain("Перша китиця");
     expect(html).toContain(
       '<ul class="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">',
