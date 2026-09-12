@@ -914,3 +914,14 @@ grep -rl "locale !== DEFAULT_PUBLIC_LOCALE" 'src/app/(default)'
 
 Four tests pinned the redirect and were rewritten; they are the record that the
 behaviour changed on purpose.
+
+**And the skeleton had to follow.** A `loading.tsx` is streamed first and the
+page replaces it, so both end up in the HTML a crawler reads without executing
+it. `/journals` and `/objects` took the *interface* locale in their skeleton
+while the page now takes the *address's*, and production came back with two
+`<h1>`s in two languages — `Дневници` from the skeleton, `Журнали` from the
+page. A browser shows one; a crawler reads both. The unprefixed skeletons use
+the default locale now, which is what their page uses. The prefixed ones still
+read the interface locale, because `loading.tsx` is handed no params — it
+agrees with the route in every ordinary case, and `/knowledge` shows the better
+answer where a client component can read `useParams`.
