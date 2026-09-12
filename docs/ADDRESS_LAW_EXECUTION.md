@@ -899,3 +899,18 @@ reads the addresses in the database and these are section roots. That is worth
 saying plainly: the gate covers entries, passports and profiles, and a page with
 no row behind it needs the crawl proof — `pnpm catalog:crawl:prove-depth` —
 which fetches what the site links to.
+
+**Five more of them, found the same day and not by either gate.** `/`,
+`/journals`, `/objects`, `/communities` and `/communities/{slug}` carried the
+same `(default)` wrapper. The tell was a byte count and a missing graph rather
+than a blank page: `/journals` answered 81 592 bytes with **no JSON-LD** while
+`/bg/journals` rendered in 210 401 — so a check that only asked "does it
+render?" would have passed it. What found them was grepping for the pattern
+rather than for the symptom, once the first three were understood:
+
+```
+grep -rl "locale !== DEFAULT_PUBLIC_LOCALE" 'src/app/(default)'
+```
+
+Four tests pinned the redirect and were rewritten; they are the record that the
+behaviour changed on purpose.

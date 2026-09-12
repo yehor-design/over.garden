@@ -140,11 +140,20 @@ describe("/journals", () => {
     expect(html).toContain("Журнали тимчасово недоступні");
   });
 
-  it("redirects the unprefixed route to a persisted non-Ukrainian locale with filters", async () => {
+  /**
+   * The unprefixed route renders. It used to redirect a Russian or Bulgarian
+   * reader to their own prefix, and that could not work: by the time this runs
+   * the shell has streamed, so the status is already `200` and the location
+   * header has sailed. Measured on production on 2026-09-12, `/journals` came
+   * back 81 592 bytes with no JSON-LD while `/bg/journals` rendered in
+   * 210 401. ADR-0029 D10 settles it anyway — a canonical URL answers `200` to
+   * everyone.
+   */
+  it("renders in the default locale whatever the reader's interface locale is", async () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("ru");
     const { default: RootJournalsRoute } = await import("./page");
 
-    await RootJournalsRoute({
+    const rendered = await RootJournalsRoute({
       searchParams: Promise.resolve({
         q: "пчёлы",
         kind: "animal",
@@ -152,8 +161,7 @@ describe("/journals", () => {
       }),
     });
 
-    expect(mocks.redirect).toHaveBeenCalledWith(
-      "/ru/journals?q=%D0%BF%D1%87%D1%91%D0%BB%D1%8B&kind=animal&page=2",
-    );
+    expect(mocks.redirect).not.toHaveBeenCalled();
+    expect(rendered).toBeTruthy();
   });
 });

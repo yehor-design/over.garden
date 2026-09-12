@@ -153,12 +153,19 @@ describe("community public routes", () => {
     });
   });
 
-  it("redirects the unprefixed directory to the persisted locale", async () => {
+  /**
+   * The unprefixed route renders. The geography redirect that used to sit here
+   * could not work — by the time it ran the shell had streamed, so the status
+   * was already `200` and the location header had sailed — and ADR-0029 D10
+   * settles it anyway: a canonical URL answers `200` to everyone.
+   */
+  it("renders the directory in the default locale whatever the reader's is", async () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("ru");
     const { default: RootDirectory } = await import("./page");
 
-    await RootDirectory();
+    const rendered = await RootDirectory();
 
-    expect(mocks.redirect).toHaveBeenCalledWith("/ru/communities");
+    expect(mocks.redirect).not.toHaveBeenCalled();
+    expect(rendered).toBeTruthy();
   });
 });
