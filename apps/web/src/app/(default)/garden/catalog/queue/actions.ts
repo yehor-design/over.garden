@@ -18,6 +18,7 @@ import {
   ownerUserIdFromFormData,
   resolveMutationScope,
 } from "@/server/mutation-scope";
+import { announceCatalogCard } from "@/server/indexnow-public-addresses";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 const QUEUE_PATH = "/garden/catalog/queue";
@@ -62,6 +63,8 @@ export async function acceptCatalogQueueItemAction(
   });
   for (const catalogItemId of subjectCatalogItemIds) {
     revalidatePublicCacheTags(organismAddressChangeTags(catalogItemId), "expire");
+    // Only an indexable card is announced — see `announceCatalogCard`.
+    announceCatalogCard(catalogItemId);
   }
   revalidatePath(QUEUE_PATH);
   return { actionId };
@@ -121,6 +124,8 @@ export async function revertCatalogActionAction(
   });
   for (const catalogItemId of subjectCatalogItemIds) {
     revalidatePublicCacheTags(organismAddressChangeTags(catalogItemId), "expire");
+    // Only an indexable card is announced — see `announceCatalogCard`.
+    announceCatalogCard(catalogItemId);
   }
   revalidatePath(QUEUE_PATH);
 }

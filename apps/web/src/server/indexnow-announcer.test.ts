@@ -74,6 +74,10 @@ describe("announcing a changed page to IndexNow", () => {
    * The criterion that matters most: a gardener's publish must not become an
    * error because an engine is down. `announcePublicUrlsToIndexNow` awaits
    * nothing and swallows everything.
+   *
+   * It also runs `after` the response rather than as a dropped promise —
+   * outside a request, as here, `after` throws and the work runs directly,
+   * which is why this still observes the call.
    */
   it("never lets a failed submission escape into the mutation", async () => {
     const failing = vi.fn(async () => {

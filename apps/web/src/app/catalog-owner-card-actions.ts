@@ -19,6 +19,7 @@ import {
   ownerUserIdFromFormData,
   resolveMutationScope,
 } from "@/server/mutation-scope";
+import { announceCatalogCard } from "@/server/indexnow-public-addresses";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 /**
@@ -40,6 +41,10 @@ async function ownerScope(formData: FormData) {
 
 function revalidateCard(catalogItemId: string) {
   revalidatePublicCacheTags(organismAddressChangeTags(catalogItemId), "expire");
+  // Only if the card is indexable — `announceCatalogCard` reads that, because
+  // a card built only from sources stays `noindex` (ADR-0026 D9) and asking an
+  // engine to fetch it would be asking it to read "do not index me".
+  announceCatalogCard(catalogItemId);
 }
 
 export async function renameCatalogCardAction(

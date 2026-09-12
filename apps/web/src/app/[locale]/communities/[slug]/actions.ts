@@ -21,6 +21,7 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 import { publicCommunityChangeTags } from "@/lib/public-cache-tags";
+import { announceCommunity } from "@/server/indexnow-public-addresses";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 import { publicCommunityPath } from "@/lib/garden/public-paths";
 
@@ -41,6 +42,7 @@ export async function setCommunityMembershipAction(formData: FormData) {
   try {
     await setCommunityMembership(scope, { slug, state });
     revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
+    announceCommunity(slug);
     status = state === "left" ? "left" : "joined";
   } catch {
     status = "unavailable";
@@ -64,6 +66,7 @@ export async function contributeJournalToCommunityAction(formData: FormData) {
       journalEntryId: String(formData.get("journalEntryId") ?? ""),
     });
     revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
+    announceCommunity(slug);
     status = "contributed";
   } catch {
     status = "unavailable";
@@ -88,6 +91,7 @@ export async function reportCommunityContributionAction(formData: FormData) {
       reason: communityReportReason(formData),
     });
     revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
+    announceCommunity(slug);
     status = "reported";
   } catch {
     status = "unavailable";
@@ -113,6 +117,7 @@ export async function blockCommunityContributionAuthorAction(
       contributionId: String(formData.get("contributionId") ?? ""),
     });
     revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
+    announceCommunity(slug);
     status = "blocked";
   } catch {
     status = "unavailable";

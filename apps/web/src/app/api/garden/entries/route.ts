@@ -68,6 +68,7 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 import { publicEntryChangeTags } from "@/lib/public-cache-tags";
+import { announceJournalEntry } from "@/server/indexnow-public-addresses";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 class AtomicJournalCreateError extends Error {
@@ -307,6 +308,12 @@ async function createEntry(request: Request, scope: RequestScope) {
       }),
       "expire",
     );
+    // A first publish is the reason IndexNow exists here: this address did not
+    // exist a second ago, and the sitemap will not be read for days (OVE-434).
+    announceJournalEntry({
+      ownerUserId: scope.userId,
+      publicSlug: result.entry.public_slug,
+    });
     return Response.json(response);
   } catch (error) {
     const code = safeAtomicErrorCode(error);
