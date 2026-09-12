@@ -30,6 +30,7 @@ import {
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import type { PublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
 import type { PublicLocale } from "@/lib/public-localization";
+import { publicMediaAltText } from "@/lib/public-media-alt";
 import { cn } from "@/lib/utils";
 import type {
   PublicJournalEntryObject,
@@ -363,7 +364,7 @@ function JournalMediaGallery({
           src={page.media[0]!.publicUrl}
           srcSet={buildPublicMediaSourceSet(page.media[0]!).srcSet}
           placeholderDataUri={page.media[0]!.placeholderDataUri}
-          alt={page.media[0]!.altText ?? `${page.entry.title}, 1`}
+          alt={publicMediaAltText(page.media[0]!, page.entry.title)}
           width={1200}
           height={900}
           sizes="(min-width: 1280px) 48rem, 100vw"
@@ -383,14 +384,14 @@ function JournalMediaGallery({
       </figure>
       {page.media.length > 1 ? (
         <ul className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">
-          {page.media.slice(1).map((media, index) => (
+          {page.media.slice(1).map((media) => (
             <li key={media.id} className="min-w-0">
               <figure className="grid min-w-0 grid-cols-1 gap-1.5">
                 <SubjectAwareMediaImage
                   src={media.publicUrl}
                   srcSet={buildPublicMediaSourceSet(media).srcSet}
                   placeholderDataUri={media.placeholderDataUri}
-                  alt={media.altText ?? `${page.entry.title}, ${index + 2}`}
+                  alt={publicMediaAltText(media, page.entry.title)}
                   width={720}
                   height={540}
                   sizes="(min-width: 640px) 15rem, 50vw"
@@ -577,12 +578,12 @@ function PublicJournalEntryBody({
   copy: PublicJournalEntryCopy;
 }) {
   const imagesByMediaId = new Map(
-    page.media.map((item, index) => [
+    page.media.map((item) => [
       item.id,
       {
         mediaAssetId: item.id,
         src: item.publicUrl,
-        alt: item.altText?.trim() || `${page.entry.title} ${index + 1}`,
+        alt: publicMediaAltText(item, page.entry.title),
         caption: item.caption,
       },
     ]),

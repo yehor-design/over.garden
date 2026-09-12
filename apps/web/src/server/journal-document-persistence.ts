@@ -10,6 +10,7 @@ import {
   extractJournalDocumentPlainText,
   journalDocumentImageCount,
   legacyBodyToJournalDocumentV1,
+  journalDocumentImageCaptions,
   listJournalDocumentImageMediaIds,
   normalizeJournalDocumentOrThrow,
   type JournalDocumentV1,
@@ -40,6 +41,8 @@ export interface ResolvedJournalContentWrite {
   body: string;
   contentSchemaVersion: number;
   mediaAssetIds: string[];
+  /** The caption each photo carries, by media id (OVE-432). */
+  captionByMediaAssetId: Map<string, string | null>;
 }
 
 export function resolveJournalContentForWrite(input: {
@@ -89,6 +92,7 @@ export function resolveJournalContentForWrite(input: {
     body: body.trim() ? body : " ",
     contentSchemaVersion: document.schemaVersion,
     mediaAssetIds: listJournalDocumentImageMediaIds(document),
+    captionByMediaAssetId: journalDocumentImageCaptions(document),
   };
 }
 
@@ -133,6 +137,16 @@ export async function claimOrderedInlineMediaForEntry(
     journalEntryId: string;
     orderedMediaAssetIds: readonly string[];
     preserveDetachedMediaAssetIds?: readonly string[];
+    /**
+     * What the gardener typed under each photo (OVE-432).
+     *
+     * The document is where a caption is authored — it travels with every
+     * autosave — and `media_assets` is where every public read looks for it.
+     * Writing it here, in the one place that already reconciles the document's
+     * images against their rows, keeps those two from drifting: one author,
+     * one projection, rather than two homes for one sentence.
+     */
+    captionByMediaAssetId?: ReadonlyMap<string, string | null>;
   },
 ): Promise<boolean> {
   const ordered = [...input.orderedMediaAssetIds];
@@ -188,11 +202,18 @@ export async function claimOrderedInlineMediaForEntry(
   let attached = false;
   for (let index = 0; index < ordered.length; index += 1) {
     const mediaAssetId = ordered[index]!;
+    const caption = input.captionByMediaAssetId?.get(mediaAssetId) ?? null;
     const mediaAsset = await executor
       .updateTable("media_assets")
       .set({
         document_position: index + 1,
         usage_role: "inline",
+        // One sentence, two columns: the caption a reader sees under the photo
+        // is the `alt` a screen reader and an image crawler are read. Keeping
+        // them equal is what stops the two from disagreeing about one picture.
+        ...(input.captionByMediaAssetId
+          ? { caption, alt_text: caption }
+          : {}),
         updated_at: new Date(),
       })
       .where("id", "=", mediaAssetId)

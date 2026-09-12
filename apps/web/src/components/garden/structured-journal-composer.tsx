@@ -72,6 +72,8 @@ export interface StructuredJournalComposerLabels {
   imageRetry: string;
   imageReplace: string;
   imageSetCover: string;
+  imageCaption: string;
+  imageCaptionPlaceholder: string;
   imageRemove: string;
   imageRejectRemote: string;
   unavailableTitle: string;

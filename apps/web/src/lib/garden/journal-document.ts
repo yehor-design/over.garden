@@ -7,6 +7,8 @@ export const JOURNAL_DOCUMENT_SCHEMA_VERSION = 1 as const;
 export const SUPPORTED_JOURNAL_DOCUMENT_SCHEMA_VERSIONS = [1] as const;
 
 export const MAX_JOURNAL_INLINE_IMAGES = 10;
+/** A caption is one line about one photo, not a second entry. */
+export const MAX_JOURNAL_IMAGE_CAPTION_CHARS = 280;
 export const MAX_JOURNAL_DOCUMENT_BYTES = 64 * 1024;
 export const MAX_JOURNAL_DOCUMENT_BLOCKS = 100;
 export const MAX_JOURNAL_PLAIN_TEXT_CHARS = 20_000;
@@ -182,6 +184,19 @@ export interface JournalImageBlock {
   id: string;
   type: "image";
   mediaAssetId: string;
+  /**
+   * What the gardener says the photo shows (OVE-432).
+   *
+   * It is the caption a reader sees under the picture and the `alt` a screen
+   * reader and an image crawler are given — one string, because those are the
+   * same sentence. Before it existed the `alt` was the entry title and a
+   * number, in two different formats on one page.
+   *
+   * Additive at schema version 1, the pattern ADR-0028 establishes: an older
+   * document has no `caption` key and stays valid, and a reader that does not
+   * know the key ignores it.
+   */
+  caption?: string;
 }
 
 export type JournalDocumentBlock =
@@ -414,6 +429,12 @@ export function journalDocumentHasMeaningfulBody(
         if (listItemsHaveMeaningfulText(block.items)) return true;
         break;
       case "image": {
+        // The block's own caption first: since OVE-432 the gardener types it
+        // in the composer and it travels with the document, so it is known
+        // here even on a client draft. The map is the older path, for a
+        // document written before the field existed whose caption is on the
+        // media row.
+        if (block.caption && block.caption.trim().length > 0) return true;
         const caption = options.imageCaptionByMediaId?.get(block.mediaAssetId);
         if (typeof caption === "string" && caption.trim().length > 0) {
           return true;
@@ -469,9 +490,9 @@ export function extractJournalDocumentPlainText(
         break;
       case "image":
         if (includeCaptions) {
-          const caption = options.imageCaptionByMediaId?.get(
-            block.mediaAssetId,
-          );
+          const caption =
+            block.caption ??
+            options.imageCaptionByMediaId?.get(block.mediaAssetId);
           if (typeof caption === "string" && caption.trim()) {
             parts.push(caption.trim());
           }
@@ -493,6 +514,24 @@ export function extractJournalDocumentPlainText(
     .join("\n\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+/**
+ * What each image in the document says about itself, by media id (OVE-432).
+ *
+ * A photo with no caption maps to `null` rather than being absent, so the
+ * projection that writes `media_assets` can clear a caption a gardener
+ * deleted instead of leaving the old one behind.
+ */
+export function journalDocumentImageCaptions(
+  document: JournalDocumentV1,
+): Map<string, string | null> {
+  const captions = new Map<string, string | null>();
+  for (const block of document.blocks) {
+    if (block.type !== "image") continue;
+    captions.set(block.mediaAssetId, block.caption?.trim() || null);
+  }
+  return captions;
 }
 
 export function listJournalDocumentImageMediaIds(
@@ -719,7 +758,7 @@ function normalizeBlock(
       assertOnlyKeys(record, ["id", "type"]);
       return { id, type: "delimiter" };
     case "image": {
-      assertOnlyKeys(record, ["id", "type", "mediaAssetId"]);
+      assertOnlyKeys(record, ["id", "type", "mediaAssetId", "caption"]);
       const mediaAssetId = normalizeUuid(record.mediaAssetId, "mediaAssetId");
       if (seenMedia.has(mediaAssetId)) {
         throw new JournalDocumentValidationError(
@@ -734,7 +773,10 @@ function normalizeBlock(
         );
       }
       seenMedia.add(mediaAssetId);
-      return { id, type: "image", mediaAssetId };
+      const caption = normalizeImageCaption(record.caption);
+      return caption === null
+        ? { id, type: "image", mediaAssetId }
+        : { id, type: "image", mediaAssetId, caption };
     }
     default:
       throw new JournalDocumentValidationError(
@@ -938,6 +980,39 @@ function normalizeCodeLanguage(value: unknown): JournalCodeLanguage {
     );
   }
   return value as JournalCodeLanguage;
+}
+
+/**
+ * A caption, or `null` when there is none.
+ *
+ * Absent and empty are the same fact — a gardener who clears the field has no
+ * caption — so both become `null` and the key is dropped rather than stored as
+ * `""`. One newline is not a paragraph: a caption is a line of prose, so its
+ * whitespace collapses.
+ */
+export function normalizeImageCaption(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") {
+    throw new JournalDocumentValidationError(
+      "invalid_block",
+      "Image caption must be a string.",
+    );
+  }
+  if (value.includes("\0")) {
+    throw new JournalDocumentValidationError(
+      "invalid_block",
+      "Text may not contain null bytes.",
+    );
+  }
+  const caption = value.normalize("NFC").replace(/\s+/gu, " ").trim();
+  if (caption.length === 0) return null;
+  if (caption.length > MAX_JOURNAL_IMAGE_CAPTION_CHARS) {
+    throw new JournalDocumentValidationError(
+      "invalid_block",
+      `Image caption must be at most ${MAX_JOURNAL_IMAGE_CAPTION_CHARS} characters.`,
+    );
+  }
+  return caption;
 }
 
 function normalizeCodeText(value: unknown): string {

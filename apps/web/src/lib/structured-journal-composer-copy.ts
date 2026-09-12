@@ -18,6 +18,8 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     imageRetry: "Повторити фото",
     imageReplace: "Замінити фото",
     imageSetCover: "Використати як обкладинку",
+    imageCaption: "Підпис до фото",
+    imageCaptionPlaceholder: "Що на фото — одним реченням",
     imageRemove: "Прибрати фото",
     imageRejectRemote:
       "Можна лише файл з пристрою. Посилання й віддалені зображення відхилено.",
@@ -100,6 +102,8 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     imageRetry: "Опитай снимката отново",
     imageReplace: "Замени снимката",
     imageSetCover: "Използвай за корица",
+    imageCaption: "Надпис към снимката",
+    imageCaptionPlaceholder: "Какво се вижда — с едно изречение",
     imageRemove: "Премахни снимка",
     imageRejectRemote:
       "Само файл от устройството. Връзки и отдалечени изображения са отхвърлени.",
@@ -181,6 +185,8 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     imageRetry: "Повторить фото",
     imageReplace: "Заменить фото",
     imageSetCover: "Использовать как обложку",
+    imageCaption: "Подпись к фото",
+    imageCaptionPlaceholder: "Что на фото — одним предложением",
     imageRemove: "Убрать фото",
     imageRejectRemote:
       "Только файл с устройства. Ссылки и удалённые изображения отклонены.",

@@ -626,6 +626,36 @@ screenshot.
 
 **Dependencies.** Tasks 10, 12.
 
+**Shipped 2026-09-12.** A photo has one sentence now, and it is the same
+sentence everywhere: the `figcaption` a reader sees, the `alt` a screen reader
+hears, the `caption` in the entry's `ImageObject`, and `<image:caption>` in the
+sitemap. `publicMediaAltText` is the single rule — caption, else the stored
+alt, else the entry's title — and the three fallbacks it replaced included two
+that appeared on one page.
+
+**The caption is authored in the document and projected onto the row.** It
+lives on `JournalImageBlock` as an optional `caption`, additive at schema
+version 1 (ADR-0028's pattern): a document written before it existed has no key
+and stays byte-identical through the editor, which the adapter's round-trip
+test asserts. `claimOrderedInlineMediaForEntry` — the one place that already
+reconciles a document's images against their rows — writes `media_assets.caption`
+and `alt_text` from it. One author, one projection, rather than two homes for
+one sentence. No SQL: both columns already existed and only the launch corpus
+had ever filled them.
+
+**Proven in a browser, because the composer is where this class hides.** On
+2026-09-12, signed in against the local database: the field renders under the
+photo as a `<textarea>` with `tabIndex` 0, a 280-character bound, its label and
+its placeholder; typing into it inside the Lexical editor keeps focus and keeps
+every character; and the composer's `body` field came back holding
+`Перша китиця після спеки`, which is the caption reaching the serialised
+document through the node state. A unit test now pins the same facts.
+
+**The sitemap declares the image namespace only where it uses it.** Entries are
+the only chunk whose pages own their photographs, so `xmlns:image` appears on
+that chunk and nowhere else; an unused namespace on every chunk is noise a
+validator reads and a reader has to explain.
+
 ---
 
 ## 15. `OVE-433` — Aggregation hubs worth indexing

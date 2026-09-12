@@ -80,7 +80,12 @@ const FULL_DOCUMENT: JournalDocumentV1 = {
       attributionSpans: [{ text: "бабуся" }],
     },
     { id: "rule1", type: "delimiter" },
-    { id: "image1", type: "image", mediaAssetId: MEDIA_ID },
+    {
+      id: "image1",
+      type: "image",
+      mediaAssetId: MEDIA_ID,
+      caption: "Перша китиця після спеки",
+    },
   ],
 };
 
@@ -93,6 +98,20 @@ describe("JournalDocumentV1 Lexical adapter", () => {
     expect(lexicalEditorStateToJournalDocumentV1(state)).toEqual(
       normalizeJournalDocumentOrThrow(FULL_DOCUMENT),
     );
+  });
+
+  // OVE-432: the caption is typed in the editor, so it has to survive every
+  // trip through it — an uncaptioned photo comes back with no key at all,
+  // which is what keeps an older document byte-identical.
+  it("round-trips an uncaptioned photo without inventing a caption", () => {
+    const document: JournalDocumentV1 = {
+      schemaVersion: 1,
+      blocks: [{ id: "image1", type: "image", mediaAssetId: MEDIA_ID }],
+    };
+
+    const state = journalDocumentV1ToLexicalEditorState(document);
+
+    expect(lexicalEditorStateToJournalDocumentV1(state)).toEqual(document);
   });
 
   it("keeps adjacent same-style canonical lists as distinct domain blocks", () => {

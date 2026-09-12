@@ -24,6 +24,7 @@ import {
   JOURNAL_BLOCK_ID_PATTERN,
   JOURNAL_CALLOUT_ICONS,
   JOURNAL_CODE_LANGUAGES,
+  normalizeImageCaption,
   type JournalCalloutIcon,
   type JournalCodeLanguage,
 } from "@/lib/garden/journal-document";
@@ -112,6 +113,26 @@ const overgardenMediaAssetIdState = createState("overgardenMediaAssetId", {
   parse: parseMediaAssetId,
 });
 
+/**
+ * The caption a gardener types under a photo (OVE-432).
+ *
+ * It lives on the node rather than beside it, so it travels with every editor
+ * state the composer serialises — undo, redo, autosave and the document the
+ * entry is saved from are all one thing.
+ */
+const overgardenImageCaptionState = createState("overgardenImageCaption", {
+  // A parse runs on whatever is in a serialised editor state, including one
+  // written by an older build, so it answers rather than throws: a caption the
+  // document normalizer would refuse becomes no caption.
+  parse: (value: unknown) => {
+    try {
+      return normalizeImageCaption(value) ?? "";
+    } catch {
+      return "";
+    }
+  },
+});
+
 export function $getJournalBlockId(node: LexicalNode): string {
   return $getState(node, overgardenBlockIdState);
 }
@@ -144,6 +165,7 @@ export class OverGardenImageNode extends DecoratorNode<JSX.Element> {
       stateConfigs: [
         { flat: true, stateConfig: overgardenBlockIdState },
         { flat: true, stateConfig: overgardenMediaAssetIdState },
+        { flat: true, stateConfig: overgardenImageCaptionState },
       ],
     });
   }
@@ -167,6 +189,7 @@ export class OverGardenImageNode extends DecoratorNode<JSX.Element> {
       <JournalLexicalImageNodeView
         blockId={this.getBlockId()}
         mediaAssetId={this.getMediaAssetId()}
+        caption={this.getCaption()}
         nodeKey={this.getKey()}
       />
     );
@@ -178,6 +201,21 @@ export class OverGardenImageNode extends DecoratorNode<JSX.Element> {
 
   getMediaAssetId(): string {
     return $getState(this, overgardenMediaAssetIdState);
+  }
+
+  getCaption(): string {
+    return $getState(this, overgardenImageCaptionState);
+  }
+
+  setCaption(caption: string): this {
+    // The raw string, trimmed only of what a caption can never hold: the
+    // gardener is still typing, and collapsing their spaces under the cursor
+    // would move it.
+    return $setState(
+      this.getWritable(),
+      overgardenImageCaptionState,
+      caption.replace(/[\r\n\0]+/gu, " "),
+    );
   }
 
   isInline(): false {
@@ -192,6 +230,7 @@ export class OverGardenImageNode extends DecoratorNode<JSX.Element> {
 export function $createOverGardenImageNode(input: {
   blockId: string;
   mediaAssetId: string;
+  caption?: string;
 }): OverGardenImageNode {
   const mediaAssetId = parseMediaAssetId(input.mediaAssetId);
   if (!mediaAssetId) {
@@ -199,6 +238,7 @@ export function $createOverGardenImageNode(input: {
   }
   const node = $applyNodeReplacement(new OverGardenImageNode());
   $setJournalBlockId(node, input.blockId);
+  $setState(node, overgardenImageCaptionState, input.caption ?? "");
   return $setState(node, overgardenMediaAssetIdState, mediaAssetId);
 }
 
