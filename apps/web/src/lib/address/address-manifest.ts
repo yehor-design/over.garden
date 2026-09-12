@@ -225,15 +225,23 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     namespace: "journalEntry",
     script: "native",
     shape: "hyphenated",
-    uniquenessScope: "perAuthorHandle",
+    // The *address* is author-scoped; the *name* is still platform-unique, and
+    // migration `0070` says at length why. Three readers identify an entry by
+    // its slug and nothing else — the engagement target ref a like is stored
+    // against, the Meilisearch document id, and the proxy's bounded lookup —
+    // and making the slug ambiguous before those move to the entry id would
+    // let two gardeners' likes land on one row.
+    uniquenessScope: "global",
     budget: DEFAULT_ADDRESS_BUDGET,
     // OVE-428 puts object passports at /@{handle}/objects/{slug}, so an entry
     // may never take `objects` from under its own author.
     reservedWords: ["objects"],
     source: "the entry title at first publish",
-    pathPrefix: "/journal/",
+    // An entry lives under its author (ADR-0029 D9). `/journal/{slug}` was the
+    // flat, global namespace that forced a random suffix into every URL.
+    pathPrefix: "/@",
     pathBuilder: "publicJournalEntryPath",
-    legacyPathPrefixes: [],
+    legacyPathPrefixes: ["/journal/"],
     storage: {
       table: "journal_entries",
       column: "public_slug",
@@ -243,7 +251,7 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
       checkInstalledBy: "0068",
     },
     notes:
-      "The only slug column that has never carried a CHECK. Migration 0068 gives it one. The scope is per-author from OVE-428; until its history table lands the publish id still disambiguates.",
+      "The only slug column that has never carried a CHECK; migration 0068 gave it one. Migration 0070 made the uniqueness per author and gave the namespace its history table, which is what let the publish-id suffix go.",
   },
   {
     namespace: "object",
@@ -253,12 +261,21 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     budget: DEFAULT_ADDRESS_BUDGET,
     reservedWords: [],
     source: "the object display name",
-    pathPrefix: "/lineage/objects/",
-    pathBuilder: "publicLineageObjectPath",
-    legacyPathPrefixes: [],
-    storage: null,
+    // `/@{handle}/objects/{slug}` (ADR-0029 D9). `/lineage/objects/{uuid}` put
+    // a database identifier in a public URL and told a reader nothing.
+    pathPrefix: "/@",
+    pathBuilder: "publicObjectPassportPath",
+    legacyPathPrefixes: ["/lineage/objects/"],
+    storage: {
+      table: "plant_objects",
+      column: "public_slug",
+      constraint: "plant_objects_public_slug_check",
+      nullable: true,
+      maxCharacters: 96,
+      checkInstalledBy: "0070",
+    },
     notes:
-      "Addressed by id today; OVE-428 moves it to /@{handle}/objects/{slug} and gives it a column.",
+      "A passport is addressed by slug from OVE-428. The column is nullable because a private object has no public address, and only an object with a public entry is given one.",
   },
   {
     namespace: "topic",
@@ -361,14 +378,19 @@ export function addressSlugPattern(entry: AddressNamespaceEntry): string {
  */
 export function addressLowerCasePathPrefixes(): readonly {
   readonly prefix: string;
-  readonly namespace: AddressNamespace;
+  readonly namespaces: readonly AddressNamespace[];
 }[] {
-  return ADDRESS_MANIFEST.flatMap((entry) =>
-    [entry.pathPrefix, ...entry.legacyPathPrefixes].map((prefix) => ({
-      prefix,
-      namespace: entry.namespace,
-    })),
-  );
+  const byPrefix = new Map<string, AddressNamespace[]>();
+  for (const entry of ADDRESS_MANIFEST) {
+    for (const prefix of [entry.pathPrefix, ...entry.legacyPathPrefixes]) {
+      byPrefix.set(prefix, [...(byPrefix.get(prefix) ?? []), entry.namespace]);
+    }
+  }
+  // Longest first, so `/lineage/objects/` is tested before nothing else would
+  // match it, and `/@` — which three namespaces share — is tested last.
+  return [...byPrefix.entries()]
+    .sort((left, right) => right[0].length - left[0].length)
+    .map(([prefix, namespaces]) => ({ prefix, namespaces }));
 }
 
 export function addressManifestEntry(

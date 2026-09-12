@@ -321,6 +321,7 @@ describe("public journal directory serialization", () => {
           catalogSpeciesSlug: null,
           safeRegionCode: "UA-30",
           authorHandle: "demo_olena",
+          addressHandle: "demo_olena",
           authorDisplayName: "Олена",
           authorAvatarUrl: "https://media.example/avatar.png",
           totalCount: 2,
@@ -335,6 +336,7 @@ describe("public journal directory serialization", () => {
           catalogPublicSlug: "apis-mellifera",
           safeRegionCode: "hidden backyard address",
           authorHandle: null,
+          addressHandle: "yehor",
           authorDisplayName: null,
           authorAvatarUrl: null,
           totalCount: 2,
@@ -394,7 +396,7 @@ describe("public journal directory serialization", () => {
     expect(page.totalCount).toBe(2);
     expect(page.cards[0]).toMatchObject({
       title: "Після холодної ночі",
-      publicPath: "/ru/journal/after-cold-night",
+      publicPath: "/@demo_olena/after-cold-night",
       safeRegionCode: "UA-30",
       object: {
         displayName: "Черрі біля стінки",
@@ -505,6 +507,7 @@ function row(
     catalogSpeciesSlug: null,
     safeRegionCode: null,
     authorHandle: null,
+    addressHandle: "yehor",
     authorDisplayName: null,
     authorAvatarUrl: null,
     totalCount: 1,

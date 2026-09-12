@@ -855,6 +855,76 @@ the code in `OVE-426` writes Cyrillic topic slugs that the old ASCII constraint
 would refuse. `0068` is safe either way — the slugs the previously deployed
 code wrote pass the new constraint unchanged.
 
+## The 2026-09-12 application of `0070` and the address move
+
+`0070_ove428_author_scoped_addresses.sql` was applied to production through
+`scripts/apply-reviewed-migration.ts --mode apply --migration 0070` with the
+pulled production environment and `apps/web/.env.local` moved aside: one
+transaction, `lock_timeout` 30 s, host class `digitalocean_managed`, database
+`defaultdb`, 38 statements, 361 ms. `pnpm address:entries:move --apply` then
+recomputed every published address in one transaction. Both fall under the
+owner's authorization of 2026-09-11 for the address-law slice
+(`docs/ADDRESS_LAW_EXECUTION.md`), and the move is the bulk production write
+`AGENTS.md` rule 10 names.
+
+**What the schema gained.** `plant_objects.public_slug` with the generated
+`CHECK` and a per-owner unique index; `journal_entry_slug_history` and
+`plant_object_slug_history`, both keyed `(author_handle, slug)`; their sync
+triggers, modelled on `catalog_item_slug_history_sync` of `0054`; and
+`public_author_handle(uuid)`, which resolves an owner to the handle their
+addresses hang from.
+
+`normalized_handle` is the primary key of `user_handle_registry`, so a handle
+is never reused by a second person even after it is retired. That is what makes
+`(author_handle, slug)` a safe key.
+
+**What the entry slug did not become.** Per-author. It is still globally
+unique, and migration `0070` explains at length why: three readers identify an
+entry by its slug and nothing else — the engagement target ref a like is stored
+against, the Meilisearch document id, and the proxy's bounded lookup — and
+making the slug ambiguous before those move to the entry id would let two
+gardeners' likes land on one row. The address is `/@{handle}/{slug}` either
+way. `plant_objects.public_slug` *is* per owner, because nothing reads it by
+slug alone and "Томат" is what half the gardens here call their tomato.
+
+**Before**, read-only against `digitalocean_managed` / `defaultdb`: 11 public
+entries, every one by `@yehor`, every one carrying twelve hexadecimal
+characters of its publish id; 4 objects with a public entry and no slug at all;
+81 gardeners, 81 current handles.
+
+**The move**, one transaction: 11 entry slugs rewritten, 4 passport slugs
+assigned. The four misspellings the old generator produced are corrected —
+`календарноі` → `календарної`, `сталии` → `сталий`, `зав-язуванням` →
+`завязуванням`, `деи-ствие` → `действие` — and every suffix is gone.
+
+**After**, read back immediately, read-only:
+
+```
+journal_entries.public_slug (11): избрана-корица-която-не-зависи-от,
+  кратък-и-отговорен-запис-след, наблюдение-действие-и-следваща,
+  обкладинка-як-сталий-орієнтир, полезна-бележка-за-домат-без,
+  поливане-според-почвата-не-според, полив-без-календарної-пастки,
+  томат-sep-1, три-сигнали-перед-завязуванням,
+  що-записувати-після-огляду-вулика, як-читати-стан-томата-без-фото
+plant_objects.public_slug (4): бджолина-сімя, домат, пчелно-семейство, томат
+journal_entry_slug_history: 22 rows — 11 closed, 11 open
+plant_object_slug_history: 4 rows
+```
+
+Eleven closed rows are eleven old addresses that answer 308 forever. The proxy
+reads them: a slug the live column no longer holds is looked up in the history
+table before anything answers 404, which is the one thing that table exists
+for.
+
+**The deploy order was wrong here, and it is worth writing down.** The
+migration and the move ran before the code that reads the history table was
+deployed, so for the length of one CI run every published URL answered 404
+rather than 308. Nothing linked to those URLs from inside the site — every
+listing rebuilds its links from the database — but an external link or a
+crawler hitting the site in that window saw a 404. Data that moves under a
+reader's feet needs the code that understands the move deployed first; the
+migration alone is safe in either order, the move is not.
+
 ## The rule this produced
 
 Production migrations are applied by hand, one command per migration, with the

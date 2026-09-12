@@ -586,7 +586,11 @@ async function startIsolatedServices(context: ExecuteContext) {
       "MINIO_ROOT_PASSWORD=ove230-recovery-only-secret",
       "--volume",
       `${names.minioVolume}:/data`,
-      "docker.io/minio/minio:latest",
+      // Quay is MinIO's own registry. Docker Hub stopped serving anonymous
+      // pulls of `minio/minio` on 2026-09-12, and this script runs where
+      // nobody has logged in. Pinned, so the tag cannot move under a restore
+      // drill that is meant to be reproducible.
+      "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z",
       "server",
       "/data",
     ],

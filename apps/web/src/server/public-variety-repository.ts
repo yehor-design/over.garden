@@ -11,7 +11,7 @@ import type {
 } from "@/db/schema";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import {
-  localizedPublicJournalEvidencePath,
+  legacyPublicJournalEntryPath,
   publicCatalogEvidencePath,
 } from "@/lib/garden/public-paths";
 import {
@@ -289,10 +289,9 @@ export async function getPublicVarietyPageByCatalogItemId(
       title: entry.entryTitle,
       body: entry.entryBody,
       entryDate: entry.entryDate,
-      publicPath: localizedPublicJournalEvidencePath(
-        locale,
-        entry.entryPublicSlug,
-      ),
+      // An organism card gathers entries from every gardener, and this row
+      // carries no handle. The legacy address 308s to the canonical one.
+      publicPath: legacyPublicJournalEntryPath(entry.entryPublicSlug),
       plantObjectDisplayName: entry.objectDisplayName,
       // ADR-0026 D6: an object linked by curation keeps the gardener's own
       // name in variety_text; the public page names the card, never the label.

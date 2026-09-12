@@ -234,13 +234,13 @@ describe("/garden/objects/[objectId]", () => {
     [
       "bg",
       "Публичната страница е достъпна",
-      "/bg/journal/first-public-flowers",
+      "/journal/first-public-flowers",
       "/bg/lineage/objects/object-1",
     ],
     [
       "ru",
       "Публичная страница доступна",
-      "/ru/journal/first-public-flowers",
+      "/journal/first-public-flowers",
       "/ru/lineage/objects/object-1",
     ],
   ] as const)(

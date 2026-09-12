@@ -93,6 +93,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # `minio/minio` on Docker Hub stopped serving anonymous pulls on
+      # 2026-09-12 — every run, on every branch and on main, failed with
+      # "pull access denied ... may require 'docker login'". Quay is MinIO's
+      # own registry and serves the same images anonymously. Pinned to a
+      # release rather than `latest`, so a registry's tag moving under us is
+      # never again a red build on a branch that changed nothing.
       - name: Start MinIO
         run: |
           docker run --detach --rm \
@@ -101,7 +107,7 @@ jobs:
             -p 9001:9001 \
             -e MINIO_ROOT_USER=overgarden-ci \
             -e MINIO_ROOT_PASSWORD=overgarden-ci-secret \
-            minio/minio:latest server /data --console-address ":9001"
+            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data --console-address ":9001"
 
           for _ in {1..30}; do
             if curl -fsS http://localhost:9000/minio/health/ready >/dev/null 2>&1; then
@@ -156,6 +162,9 @@ jobs:
 
       - name: Prove every public read against a database
         run: pnpm public:reads:prove-database
+
+      - name: Prove the author-scoped address migration, its triggers and its rollback
+        run: pnpm schema:author-addresses:prove-database
 
       - name: Prove the Stable Registry retirement migration and its rollback
         run: pnpm schema:retirement:prove-database

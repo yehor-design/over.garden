@@ -30,7 +30,7 @@ export const ADDRESS_SLUG_MAX_CHARACTERS: Readonly<
   species: 96,
   form: 96,
   journalEntry: 96,
-  object: 60,
+  object: 96,
   topic: 64,
   community: 64,
   profileHandle: 30,
@@ -68,17 +68,18 @@ export const ADDRESS_SLUG_CHECK_SQL: Readonly<Record<string, string>> = {
   "communities_slug_check": "do $$\nbegin\n  if exists (\n    select 1\n    from pg_constraint\n    where conname = 'communities_slug_check'\n      and conrelid = 'communities'::regclass\n  ) then\n    alter table communities\n      drop constraint communities_slug_check;\n  end if;\n\n  alter table communities\n    add constraint communities_slug_check\n    check (\n      char_length(slug) between 1 and 64\n      and slug ~ '^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$'\n    );\nend $$;",
   "journal_entries_public_slug_check": "do $$\nbegin\n  if exists (\n    select 1\n    from pg_constraint\n    where conname = 'journal_entries_public_slug_check'\n      and conrelid = 'journal_entries'::regclass\n  ) then\n    alter table journal_entries\n      drop constraint journal_entries_public_slug_check;\n  end if;\n\n  alter table journal_entries\n    add constraint journal_entries_public_slug_check\n    check (\n      public_slug is null\n      or (\n        char_length(public_slug) between 1 and 96\n        and public_slug ~ '^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$'\n      )\n    );\nend $$;",
   "journal_topics_slug_check": "do $$\nbegin\n  if exists (\n    select 1\n    from pg_constraint\n    where conname = 'journal_topics_slug_check'\n      and conrelid = 'journal_topics'::regclass\n  ) then\n    alter table journal_topics\n      drop constraint journal_topics_slug_check;\n  end if;\n\n  alter table journal_topics\n    add constraint journal_topics_slug_check\n    check (\n      char_length(slug) between 1 and 64\n      and slug ~ '^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$'\n    );\nend $$;",
+  "plant_objects_public_slug_check": "do $$\nbegin\n  if exists (\n    select 1\n    from pg_constraint\n    where conname = 'plant_objects_public_slug_check'\n      and conrelid = 'plant_objects'::regclass\n  ) then\n    alter table plant_objects\n      drop constraint plant_objects_public_slug_check;\n  end if;\n\n  alter table plant_objects\n    add constraint plant_objects_public_slug_check\n    check (\n      public_slug is null\n      or (\n        char_length(public_slug) between 1 and 96\n        and public_slug ~ '^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$'\n      )\n    );\nend $$;",
 };
 
 export const BANNED_ADDRESS_PATH_LITERALS: readonly {
   readonly literal: string;
   readonly builders: readonly string[];
 }[] = [
-  { literal: "/@", builders: ["publicProfileBasePath"] },
+  { literal: "/@", builders: ["publicJournalEntryPath", "publicObjectPassportPath", "publicProfileBasePath"] },
   { literal: "/breed/", builders: ["publicCatalogEvidencePath"] },
   { literal: "/communities/", builders: ["publicCommunityPath"] },
   { literal: "/journal/", builders: ["publicJournalEntryPath"] },
-  { literal: "/lineage/objects/", builders: ["publicLineageObjectPath"] },
+  { literal: "/lineage/objects/", builders: ["publicObjectPassportPath"] },
   { literal: "/species/", builders: ["publicCatalogEvidencePath"] },
   { literal: "/topics/", builders: ["publicTopicPath"] },
   { literal: "/variety/", builders: ["publicCatalogEvidencePath"] },
@@ -87,17 +88,16 @@ export const BANNED_ADDRESS_PATH_LITERALS: readonly {
 /** Prefixes under which every following segment is already lower case. */
 export const ADDRESS_LOWER_CASE_PATH_PREFIXES: readonly {
   readonly prefix: string;
-  readonly namespace: AddressNamespace;
+  readonly namespaces: readonly AddressNamespace[];
 }[] = [
-  { prefix: "/species/", namespace: "species" },
-  { prefix: "/species/", namespace: "form" },
-  { prefix: "/variety/", namespace: "form" },
-  { prefix: "/breed/", namespace: "form" },
-  { prefix: "/journal/", namespace: "journalEntry" },
-  { prefix: "/lineage/objects/", namespace: "object" },
-  { prefix: "/topics/", namespace: "topic" },
-  { prefix: "/communities/", namespace: "community" },
-  { prefix: "/@", namespace: "profileHandle" },
+  { prefix: "/lineage/objects/", namespaces: ["object"] },
+  { prefix: "/communities/", namespaces: ["community"] },
+  { prefix: "/species/", namespaces: ["species", "form"] },
+  { prefix: "/variety/", namespaces: ["form"] },
+  { prefix: "/journal/", namespaces: ["journalEntry"] },
+  { prefix: "/topics/", namespaces: ["topic"] },
+  { prefix: "/breed/", namespaces: ["form"] },
+  { prefix: "/@", namespaces: ["journalEntry", "object", "profileHandle"] },
 ];
 
 const COMPILED: Readonly<Record<AddressNamespace, RegExp>> = Object.fromEntries(

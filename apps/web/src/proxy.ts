@@ -51,7 +51,12 @@ import {
 
 import { renderNotFoundUnknownRouteHtml } from "@/lib/public-unknown-route-lifecycle";
 import { canonicalLowerCasePath } from "@/lib/address/canonical-case";
-import { unservableAddressNamespace } from "@/lib/address/match-address-path";
+import {
+  matchAddressPath,
+  matchAuthorScopedEntryPath,
+  matchAuthorScopedPath,
+  unservableAddressNamespace,
+} from "@/lib/address/match-address-path";
 import {
   paginatedListingPageSize,
   paginatedListingRobotsTag,
@@ -66,7 +71,11 @@ import {
   isUnknownLocalizedPath,
   isUnknownRootPath,
 } from "@/lib/root-route-segments";
-import { publicProfileBasePath } from "@/lib/garden/public-paths";
+import {
+  publicJournalEntryPath,
+  publicObjectPassportPath,
+  publicProfileBasePath,
+} from "@/lib/garden/public-paths";
 
 export const APP_ROUTE_CACHE_CONTROL =
   "private, no-store, max-age=0, s-maxage=0, must-revalidate";
@@ -391,9 +400,13 @@ function getLocaleRoutingResponse(
   const { pathname } = request.nextUrl;
   const isDocumentNavigation = isDocumentNavigationRequest(request);
   const strippedPath = stripLocalePrefix(pathname);
-  const rootProfileHandle = strippedPath.locale
+  // Every address under `/@` is rewritten into the `[locale]` tree the same
+  // way the profile always was: the profile itself, an entry, and an object
+  // passport (ADR-0029 D9). Without this, `/@yehor/полив` would be matched by
+  // `[locale]/[profileHandle]` with the locale set to `@yehor`.
+  const rootAuthorScopedPath = strippedPath.locale
     ? null
-    : matchPublicProfilePath(pathname);
+    : matchAuthorScopedPath(pathname);
 
   if (
     isDocumentNavigation &&
@@ -406,9 +419,22 @@ function getLocaleRoutingResponse(
     return NextResponse.redirect(url, { status: 308 });
   }
 
-  if (rootProfileHandle) {
+  if (rootAuthorScopedPath) {
     const url = request.nextUrl.clone();
-    const rootProfilePath = publicProfileBasePath(rootProfileHandle);
+    // Rebuilt from the matched parts rather than copied from the request, so
+    // `/%40green_thumb` rewrites to `/uk/@green_thumb` and not to itself.
+    const rootProfilePath =
+      rootAuthorScopedPath.kind === "profile"
+        ? publicProfileBasePath(rootAuthorScopedPath.handle)
+        : rootAuthorScopedPath.kind === "journalEntry"
+          ? publicJournalEntryPath(
+              rootAuthorScopedPath.handle,
+              rootAuthorScopedPath.slug!,
+            )
+          : publicObjectPassportPath(
+              rootAuthorScopedPath.handle,
+              rootAuthorScopedPath.slug!,
+            );
 
     // `/@handle` is a canonical address and stays one whatever country the
     // request came from (ADR-0029 D10). It used to 307 to `/bg/@handle` here.
@@ -570,6 +596,50 @@ export async function proxy(request: NextRequest) {
   }
 
   const initialStrippedPath = stripLocalePrefix(request.nextUrl.pathname);
+
+  // An entry and an object passport have one address each, under their author
+  // and with no locale prefix (ADR-0029 D9, D10). `/bg/@yehor/полив` is a
+  // second spelling of the same page, and a second spelling is a duplicate.
+  if (
+    isDocumentNavigation &&
+    initialStrippedPath.locale !== null &&
+    matchAuthorScopedPath(request.nextUrl.pathname)?.kind !== "profile" &&
+    matchAuthorScopedPath(request.nextUrl.pathname) !== null
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = initialStrippedPath.path;
+    return withAppRouteContract(
+      NextResponse.redirect(url, { status: 308 }),
+      request,
+      localization,
+    );
+  }
+
+  // Every address these two families have ever had answers 308 to the one
+  // they have now (D8). The entry's legacy address is decided in its lifecycle
+  // block below, from the one lookup that block already performs — two lookups
+  // for one request is how the first draft of this consumed a test's mock and
+  // answered 200 to a removed entry.
+  const legacyPassportId = isDocumentNavigation
+    ? matchAddressPath("object", request.nextUrl.pathname)
+    : null;
+  if (legacyPassportId) {
+    const { getPublicObjectPassportAddress } = await import(
+      "@/server/public-object-passport-repository"
+    );
+    const address = await getPublicObjectPassportAddress(
+      legacyPassportId,
+    ).catch(() => null);
+    if (address) {
+      const url = request.nextUrl.clone();
+      url.pathname = publicObjectPassportPath(address.handle, address.slug);
+      return withAppRouteContract(
+        NextResponse.redirect(url, { status: 308 }),
+        request,
+        localization,
+      );
+    }
+  }
   const canonicalDefaultProfileHandle =
     isDocumentNavigation && initialStrippedPath.locale === null
       ? matchPublicProfilePath(request.nextUrl.pathname)
@@ -600,7 +670,17 @@ export async function proxy(request: NextRequest) {
   const localeRoutingResponse = getLocaleRoutingResponse(request, localization);
 
   if (localeRoutingResponse) {
-    return withAppRouteContract(localeRoutingResponse, request, localization);
+    // A rewrite is not an answer of the proxy's own — the page behind it
+    // renders and Next sets its own cache headers. Forcing `no-store` here
+    // would make every profile, entry and passport uncacheable, which is the
+    // whole public surface once addresses moved under `/@` (ADR-0029 D9). A
+    // 308 keeps `no-store`, because a redirect the proxy decided is the
+    // proxy's own answer.
+    return withAppRouteContract(localeRoutingResponse, request, localization, {
+      passThrough:
+        localeRoutingResponse.headers.has("x-middleware-rewrite") ||
+        localeRoutingResponse.headers.get("x-middleware-next") === "1",
+    });
   }
 
   const lifecycleLocation = {
@@ -711,13 +791,79 @@ export async function proxy(request: NextRequest) {
   }
 
   const publicJournalSlug = isDocumentNavigationRequest(request)
-    ? matchPublicJournalEntryPath(request.nextUrl.pathname)
+    ? (matchPublicJournalEntryPath(request.nextUrl.pathname) ??
+      matchAuthorScopedEntryPath(request.nextUrl.pathname)?.slug ??
+      null)
     : null;
   if (publicJournalSlug) {
-    const { getPublicJournalEntryLifecycleLookup } =
-      await import("@/server/journal-repository");
+    const [{ getPublicJournalEntryLifecycleLookup }, { resolveJournalEntryAddress }] =
+      await Promise.all([
+        import("@/server/journal-repository"),
+        import("@/server/journal-slug-repository"),
+      ]);
     const lookup =
       await getPublicJournalEntryLifecycleLookup(publicJournalSlug);
+    const authorScoped = matchAuthorScopedEntryPath(request.nextUrl.pathname);
+    // A slug that is not the entry's current one may still be one it used to
+    // have, and the history table is what turns that into a 308 rather than a
+    // 404 (ADR-0029 D8). Read only when the live lookup found nothing, so the
+    // ordinary request pays nothing for it.
+    const historical =
+      lookup.status === "not_found"
+        ? await resolveJournalEntryAddress(publicJournalSlug).catch(() => null)
+        : null;
+    if (historical) {
+      const url = request.nextUrl.clone();
+      url.pathname = publicJournalEntryPath(historical.handle, historical.slug);
+      url.search = sanitizeInterfaceRouteSearch(
+        url.pathname,
+        request.nextUrl.searchParams,
+      );
+      return withAppRouteContract(
+        NextResponse.redirect(url, { status: 308 }),
+        request,
+        localization,
+      );
+    }
+    if (lookup.status === "active" && lookup.addressHandle) {
+      const canonical = publicJournalEntryPath(
+        lookup.addressHandle,
+        lookup.publicSlug,
+      );
+      // Either the request used an older address — `/journal/{slug}` or one of
+      // its locale-prefixed spellings — or it used the canonical one under a
+      // handle that is not the author's. Both answer 308 to the one address
+      // the entry has (ADR-0029 D8, D9).
+      if (
+        stripLocalePrefix(request.nextUrl.pathname).path !== canonical ||
+        initialStrippedPath.locale !== null
+      ) {
+        const url = request.nextUrl.clone();
+        url.pathname = canonical;
+        url.search = sanitizeInterfaceRouteSearch(
+          canonical,
+          request.nextUrl.searchParams,
+        );
+        return withAppRouteContract(
+          NextResponse.redirect(url, { status: 308 }),
+          request,
+          localization,
+        );
+      }
+    }
+    if (
+      lookup.status === "active" &&
+      authorScoped &&
+      lookup.addressHandle !== authorScoped.handle
+    ) {
+      return withAppRouteContract(
+        notFoundDocument(
+          renderNotFoundPublicJournalEntryHtml(locale, lifecycleLocation),
+        ),
+        request,
+        localization,
+      );
+    }
     if (lookup.status === "gone") {
       return withAppRouteContract(
         notFoundDocument(

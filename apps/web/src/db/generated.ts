@@ -288,29 +288,6 @@ export interface CatalogSourceAssertions {
   source_snapshot_id: string;
 }
 
-export interface CatalogSourceColUsages {
-  authorship: string | null;
-  canonical_name: string;
-  col_id: string;
-  kingdom: string | null;
-  normalized_name: Generated<string | null>;
-  normalized_scientific_name: Generated<string | null>;
-  parent_col_id: string | null;
-  rank: string | null;
-  scientific_name: string;
-  source_snapshot_id: string;
-  status: string;
-}
-
-export interface CatalogSourceColVernaculars {
-  col_id: string;
-  id: Generated<string>;
-  language: string | null;
-  name: string;
-  normalized_name: Generated<string | null>;
-  source_snapshot_id: string;
-}
-
 export interface CatalogSourceCaptureRuns {
   capture_schema_version: string;
   capture_tool_revision: string;
@@ -372,6 +349,29 @@ export interface CatalogSourceCaptureUnits {
   unit_key: string;
   unit_kind: string;
   updated_at: Generated<Timestamp>;
+}
+
+export interface CatalogSourceColUsages {
+  authorship: string | null;
+  canonical_name: string;
+  col_id: string;
+  kingdom: string | null;
+  normalized_name: Generated<string | null>;
+  normalized_scientific_name: Generated<string | null>;
+  parent_col_id: string | null;
+  rank: string | null;
+  scientific_name: string;
+  source_snapshot_id: string;
+  status: string;
+}
+
+export interface CatalogSourceColVernaculars {
+  col_id: string;
+  id: Generated<string>;
+  language: string | null;
+  name: string;
+  normalized_name: Generated<string | null>;
+  source_snapshot_id: string;
 }
 
 export interface CatalogSourceLinks {
@@ -709,6 +709,15 @@ export interface JournalEntryObjectMentions {
   space_id: string;
 }
 
+export interface JournalEntrySlugHistory {
+  author_handle: string;
+  id: Generated<string>;
+  journal_entry_id: string;
+  slug: string;
+  valid_from: Generated<Timestamp>;
+  valid_to: Timestamp | null;
+}
+
 export interface JournalEntryTopicSignals {
   created_at: Generated<Timestamp>;
   journal_entry_id: string;
@@ -898,10 +907,20 @@ export interface PlantObjects {
   location_visibility: Generated<string>;
   object_kind: Generated<string>;
   owner_user_id: string;
+  public_slug: string | null;
   space_id: string;
   updated_at: Generated<Timestamp>;
   variety_state: Generated<string>;
   variety_text: string | null;
+}
+
+export interface PlantObjectSlugHistory {
+  author_handle: string;
+  id: Generated<string>;
+  plant_object_id: string;
+  slug: string;
+  valid_from: Generated<Timestamp>;
+  valid_to: Timestamp | null;
 }
 
 export interface ProfileBlocks {
@@ -1128,6 +1147,7 @@ export interface DB {
   journal_entry_catalog_mentions: JournalEntryCatalogMentions;
   journal_entry_mutation_receipts: JournalEntryMutationReceipts;
   journal_entry_object_mentions: JournalEntryObjectMentions;
+  journal_entry_slug_history: JournalEntrySlugHistory;
   journal_entry_topic_signals: JournalEntryTopicSignals;
   journal_topics: JournalTopics;
   learning_actor_attributions: LearningActorAttributions;
@@ -1142,6 +1162,7 @@ export interface DB {
   media_lifecycle_retention_runs: MediaLifecycleRetentionRuns;
   notification_preferences: NotificationPreferences;
   notification_receipts: NotificationReceipts;
+  plant_object_slug_history: PlantObjectSlugHistory;
   plant_objects: PlantObjects;
   profile_blocks: ProfileBlocks;
   profile_follows: ProfileFollows;

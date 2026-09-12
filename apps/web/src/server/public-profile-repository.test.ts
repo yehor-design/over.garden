@@ -499,7 +499,7 @@ describe("public profile handle contracts", () => {
     });
     expect(page.journals[0]).toMatchObject({
       title: "New growth after moving the pot",
-      publicPath: "/bg/journal/lemon-new-growth",
+      publicPath: "/@green_thumb/lemon-new-growth",
     });
     expect(JSON.stringify(page)).not.toContain(userId);
     expect(JSON.stringify(page)).not.toMatch(
@@ -544,7 +544,7 @@ describe("public profile handle contracts", () => {
       links: [
         {
           kind: "journal_entry",
-          href: "/ru/journal/first-public-entry",
+          href: "/@green_thumb/first-public-entry",
           entryDate: "2026-07-04",
         },
       ],

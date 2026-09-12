@@ -102,7 +102,7 @@ describe("OVE-183 social return read models", () => {
     );
 
     expect(page.items[0]).toMatchObject({
-      href: "/ru/journal/late-summer-check",
+      href: "/journal/late-summer-check",
       author: { href: "/ru/@green_thumb" },
     });
   });

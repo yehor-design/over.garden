@@ -40,6 +40,7 @@ import {
 const STAND_IN_TABLES = `
   create table catalog_items (public_slug text);
   create table journal_entries (public_slug text);
+  create table plant_objects (public_slug text);
   create table journal_topics (slug text not null);
   create table communities (slug text not null);
 `;

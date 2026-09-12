@@ -8,7 +8,6 @@ import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
 } from "@/lib/auth/auth-intent-contract";
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
 import { normalizePublicJournalDirectoryReturnTo } from "@/lib/public-journal-directory-navigation";
 import { isPublicLocale, type PublicLocale } from "@/lib/public-localization";
@@ -224,11 +223,11 @@ function buildJournalDiscoverySource(
       ...objectIds,
       ...topics.map((topic) => `topic:${topic.slug}`),
     ],
-    // A gardener's entry is never translated, so it has one address
-    // (ADR-0029 D10). Serving it under a locale prefix makes a duplicate of
-    // that address, which is reachable and `noindex` until OVE-428 turns the
-    // prefixed paths into 308s.
-    canonicalPath: publicJournalEntryPath(page.entry.publicSlug),
+    // A gardener's entry is never translated, so it has one address — under
+    // its author, with no locale prefix (ADR-0029 D9, D10). `publicPath` is
+    // that address, built where the handle is known; every other spelling of
+    // it 308s here.
+    canonicalPath: page.entry.publicPath,
     servedLocale,
     equivalentLocales: [],
   };

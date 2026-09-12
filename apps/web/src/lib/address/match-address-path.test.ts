@@ -15,9 +15,6 @@ describe("one matcher for every public address (ADR-0029 D3)", () => {
     expect(
       matchAddressPath("community", "/ru/communities/observation-and-care"),
     ).toBe("observation-and-care");
-    expect(matchAddressPath("profileHandle", "/@yehor_design")).toBe(
-      "yehor_design",
-    );
     expect(
       matchAddressPath(
         "object",
@@ -71,9 +68,13 @@ describe("addresses no page can serve", () => {
     expect(unservableAddressNamespace("/journal/a/b")).toBe("journalEntry");
     expect(unservableAddressNamespace("/bg/communities/a/b")).toBe("community");
     expect(unservableAddressNamespace("/lineage/objects/a/b")).toBe("object");
-    expect(unservableAddressNamespace("/@yehor/anything")).toBe(
+    // Three namespaces live under `/@`, and a shape that is none of them is
+    // reported against the prefix's own namespace.
+    expect(unservableAddressNamespace("/@yehor/a/b")).toBe("profileHandle");
+    expect(unservableAddressNamespace("/@yehor/objects/a/b")).toBe(
       "profileHandle",
     );
+    expect(unservableAddressNamespace("/@yehor/objects")).toBe("profileHandle");
     expect(unservableAddressNamespace("/species/a/b/c")).toBe("species");
   });
 
@@ -88,6 +89,10 @@ describe("addresses no page can serve", () => {
       "/variety/de-barao",
       "/breed/apis-mellifera",
       "/@yehor",
+      // An entry and a passport under their author (ADR-0029 D9).
+      "/@yehor/полив-без-календарної-пастки",
+      "/@yehor/objects/томат",
+      "/bg/@yehor/полив",
       "/lineage/objects/11111111-1111-4111-8111-111111111111",
     ]) {
       expect(unservableAddressNamespace(path), path).toBeNull();

@@ -18,7 +18,7 @@ import type {
   PlantObjectKind,
 } from "@/db/schema";
 import {
-  localizedPublicJournalEvidencePath,
+  legacyPublicJournalEntryPath,
   publicCommunityPath,
   publicLineageObjectPath,
   publicProfilePath,
@@ -1050,7 +1050,7 @@ export function serializePublicCommunityContributionPage(
     return [
       {
         id: row.contributionId,
-        href: localizedPublicJournalEvidencePath(locale, publicSlug),
+        href: legacyPublicJournalEntryPath(publicSlug),
         title: row.title,
         excerpt: publicExcerpt(row.body),
         entryDate: row.entryDate,

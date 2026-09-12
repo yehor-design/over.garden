@@ -8,7 +8,7 @@ import { getLivingObjectPassportCopy } from "@/lib/living-object-passport";
 import { localizedPath } from "@/lib/public-localization";
 import {
   MISSING_ADDRESS_SLUG,
-  publicLineageObjectPath,
+  publicObjectPassportPath,
 } from "@/lib/garden/public-paths";
 
 export function matchPublicObjectPassportPath(pathname: string) {
@@ -52,7 +52,7 @@ function renderLifecycleDocument(
 
   return renderPublicLifecycleDocument({
     locale,
-    pathname: location?.pathname ?? publicLineageObjectPath(MISSING_ADDRESS_SLUG),
+    pathname: location?.pathname ?? publicObjectPassportPath(MISSING_ADDRESS_SLUG, MISSING_ADDRESS_SLUG),
     search: location?.search,
     title,
     description,

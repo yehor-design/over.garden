@@ -5,7 +5,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database, PlantObjectKind } from "@/db/schema";
 import {
-  localizedPublicJournalEvidencePath,
+  publicJournalEntryPath,
   publicLineageObjectPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
@@ -23,6 +23,7 @@ import {
   readMediaVariantExtras,
   type MediaVariantExtras,
 } from "@/server/media/media-variant-schema";
+import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -111,6 +112,12 @@ export interface PublicFeedEntryRow {
   objectLocationVisibility: string;
   objectCoarseRegionCode: string | null;
   authorHandle: string | null;
+  /**
+   * The handle the entry's address hangs from, from `user_handle_registry`
+   * rather than from the profile: a gardener who hides their profile keeps
+   * their handle, and their published entries keep their addresses.
+   */
+  addressHandle: string;
   authorDisplayName: string | null;
   authorAvatarUrl: string | null;
 }
@@ -268,6 +275,7 @@ export function buildPublicFeedEntriesQuery(
       "plant_objects.location_visibility as objectLocationVisibility",
       "plant_objects.coarse_region_code as objectCoarseRegionCode",
       "user_public_profiles.handle as authorHandle",
+      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
       "user_public_profiles.display_name as authorDisplayName",
       "user_public_profiles.avatar_url as authorAvatarUrl",
     ])
@@ -278,10 +286,16 @@ export function buildPublicFeedEntriesQuery(
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
     .where(publicLaunchSurfacePredicates())
+    // An entry whose author has no handle in the registry has no public
+    // address at all (ADR-0029 D9), so it is not a row a listing can render.
+    // The filter is what makes `addressHandle` non-null below rather than a
+    // type assertion hoping it is.
+    .where(publicAuthorHandleSql("journal_entries.owner_user_id"), "is not", null)
     .$narrowType<{
       publishedAt: Date;
       publicSlug: string;
       objectId: string;
+      addressHandle: string;
     }>();
 
   if (input.kind !== "all") {
@@ -541,10 +555,7 @@ export function serializePublicFeedPage(input: {
       excerpt: buildPublicFeedExcerpt(row.body),
       entryDate: row.entryDate,
       publishedAt: row.publishedAt,
-      publicPath: localizedPublicJournalEvidencePath(
-        input.locale,
-        row.publicSlug,
-      ),
+      publicPath: publicJournalEntryPath(row.addressHandle, row.publicSlug),
       object: {
         id: row.objectId,
         displayName: row.objectDisplayName,

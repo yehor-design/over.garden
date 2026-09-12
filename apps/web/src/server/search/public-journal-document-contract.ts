@@ -20,7 +20,9 @@
 
 import { createHash } from "node:crypto";
 
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import {
+  legacyPublicJournalEntryPath,
+} from "@/lib/garden/public-paths";
 import { isValidPublicJournalSlug } from "@/lib/garden/public-journal-slug";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
 import {
@@ -34,6 +36,7 @@ import type {
   JournalEntrySearchContractDocument,
   JournalSearchCoverSource,
 } from "@/server/search/documents";
+import { matchAuthorScopedEntryPath } from "@/lib/address/match-address-path";
 
 /** Mirrors `contracts/search/public-journal-entry-search-document.json`. */
 export const REQUIRED_JOURNAL_DOCUMENT_FIELDS = [
@@ -230,10 +233,15 @@ export function validateObservedJournalSearchDocument(
     : null;
   if (publicSlug === null) fail("invalid_public_slug", "publicSlug");
 
+  // The path is the address the entry actually answers at — either under its
+  // author (ADR-0029 D9) or, for a projection written before the move, the
+  // legacy one that 308s to it. The gate checks that it is one of the two and
+  // that it names this entry's slug; it cannot check the handle, because the
+  // document is the only place the projection carries it.
   if (
     publicSlug === null ||
     typeof doc.publicPath !== "string" ||
-    doc.publicPath !== publicJournalEntryPath(publicSlug)
+    !isPublicJournalEntryAddress(doc.publicPath, publicSlug)
   ) {
     fail("invalid_public_path", "publicPath");
   }
@@ -488,4 +496,18 @@ export function normalizePublicDerivativeUrl(
   }
 
   return trimmed;
+}
+
+/**
+ * Whether a projected path is an address this entry answers at.
+ *
+ * Two shapes are legal: `/@{handle}/{slug}`, the canonical one, and
+ * `/journal/{slug}`, which every document written before `OVE-428` carries and
+ * which answers 308 forever. Refusing the second would fail the search-parity
+ * gate for every document in the index until a full reprojection finished.
+ */
+function isPublicJournalEntryAddress(path: string, publicSlug: string) {
+  if (path === legacyPublicJournalEntryPath(publicSlug)) return true;
+  const matched = matchAuthorScopedEntryPath(path);
+  return matched !== null && matched.slug === publicSlug;
 }

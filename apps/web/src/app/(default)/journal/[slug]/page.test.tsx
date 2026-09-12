@@ -81,7 +81,7 @@ const page = {
     createdAt: "2026-07-10T09:00:00.000Z",
     entryScope: "object",
     publicSlug: "first-public-chapter",
-    publicPath: "/bg/journal/first-public-chapter",
+    publicPath: "/@yehor/first-public-chapter",
     publicNoindex: true,
     publishedAt: "2026-07-10T10:00:00.000Z",
   },
@@ -154,7 +154,7 @@ describe("/journal/[slug] V2", () => {
       page.entry.publicSlug,
     );
     expect(html).toContain(
-      'data-owner-control="/garden/entries/entry-1/edit?returnTo=%2Fbg%2Fjournal%2Ffirst-public-chapter"',
+      'data-owner-control="/garden/entries/entry-1/edit?returnTo=%2F%40yehor%2Ffirst-public-chapter"',
     );
     expect(html).toContain('data-authenticated="true"');
   });
@@ -173,8 +173,11 @@ describe("/journal/[slug] V2", () => {
     });
     expect(canonical).toMatchObject({ robots: { index: true, follow: true } });
     expect(canonical.alternates).toEqual({
-      canonical: `https://over.garden/journal/${page.entry.publicSlug}`,
+      canonical: `https://over.garden${page.entry.publicPath}`,
     });
+    // The one address is under its author (ADR-0029 D9), not in the flat
+    // namespace that forced a random suffix into every entry URL.
+    expect(page.entry.publicPath).toBe(`/@yehor/${page.entry.publicSlug}`);
 
     for (const locale of ["bg", "ru"] as const) {
       const duplicate = await generateMetadata({

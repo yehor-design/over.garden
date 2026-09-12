@@ -8,6 +8,7 @@ import {
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
+import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 export type PublicJournalDirectoryQueryExecutor =
@@ -62,6 +63,12 @@ export interface PublicJournalDirectoryEntryRow {
   catalogSpeciesSlug: string | null;
   safeRegionCode: string | null;
   authorHandle: string | null;
+  /**
+   * The handle the entry's address hangs from, from the handle registry rather
+   * than from the profile: a gardener who hides their profile keeps their
+   * handle, and their published entries keep their addresses.
+   */
+  addressHandle: string;
   authorDisplayName: string | null;
   authorAvatarUrl: string | null;
   totalCount: number | string | bigint;
@@ -173,6 +180,7 @@ export function buildPublicJournalDirectoryEntriesQuery(
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
       safeRegion.as("safeRegionCode"),
       "user_public_profiles.handle as authorHandle",
+      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
       "user_public_profiles.display_name as authorDisplayName",
       "user_public_profiles.avatar_url as authorAvatarUrl",
       sql<number>`count(*) over()`.as("totalCount"),
@@ -183,10 +191,16 @@ export function buildPublicJournalDirectoryEntriesQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
+    // An entry whose author has no handle in the registry has no public
+    // address at all (ADR-0029 D9), so it is not a row a listing can render.
+    // The filter is what makes `addressHandle` non-null rather than a type
+    // assertion hoping it is.
+    .where(publicAuthorHandleSql("journal_entries.owner_user_id"), "is not", null)
     .$narrowType<{
       publishedAt: Date;
       publicSlug: string;
       entryId: string;
+      addressHandle: string;
     }>();
 
   query = query.where(publicLaunchSurfacePredicates());
