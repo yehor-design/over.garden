@@ -4,7 +4,10 @@ import {
 } from "@/lib/address/address-contract.generated";
 import { addressManifestEntry } from "@/lib/address/address-manifest";
 import type { AddressNamespace } from "@/lib/address/address-manifest";
-import { matchPublicCatalogAddressPath } from "@/lib/catalog/addresses";
+import {
+  matchCatalogSpeciesHubPath,
+  matchPublicCatalogAddressPath,
+} from "@/lib/catalog/addresses";
 import { PUBLIC_OBJECT_PASSPORT_SEGMENT } from "@/lib/garden/public-paths";
 import { stripLocalePrefix } from "@/lib/public-localization";
 
@@ -164,8 +167,10 @@ export function unservableAddressNamespace(
   // The catalog owns two shapes under one prefix — `/species/{species}` and
   // `/species/{species}/{form}` — plus the two legacy flat ones, so its own
   // matcher decides, and a 308 to the canonical address is resolved after
-  // this by the bounded lookup.
+  // this by the bounded lookup. A register hub is a third shape and a real
+  // page, so it is servable before that matcher is asked (OVE-433).
   if (prefix.namespaces.includes("species") || prefix.namespaces.includes("form")) {
+    if (matchCatalogSpeciesHubPath(path)) return null;
     return matchPublicCatalogAddressPath(path) === null
       ? prefix.namespaces[0]!
       : null;

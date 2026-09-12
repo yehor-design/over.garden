@@ -677,6 +677,38 @@ empty-listing rule applies. **New owner-facing surface: approved individually.**
 
 **Dependencies.** Tasks 11, 13.
 
+**Shipped 2026-09-12.** `/species/{species}/register` — "621 сортів Solanum
+lycopersicum у реєстрах", the split between the two registers, and every
+cultivar with the registration number a seed packet quotes. The owner approved
+this shape on 2026-09-12, choosing it over two register-wide pages.
+
+**The number went from the address into the page.** `advance-ua-register-09040016`
+was an address carrying a state register's application number, and task 11 took
+it out because an address is a name. The number itself is the most quotable
+fact the catalog holds, so it belongs on a page — and this is the page. 15 177
+cultivars carry a `ua_register` identifier and 721 an `eu_common_catalogue`
+one; 241 species have at least one registered form, 149 have three or more.
+
+**`register` is a reserved word in the form namespace.** Without the
+reservation a cultivar named *Register* would take its own species' hub; the
+same mechanism, and the same reason, as `objects` under an author. The catalog
+matcher answers `null` for the hub shape so it is never read as a form address,
+and `unservableAddressNamespace` calls it servable so the proxy does not 404 it.
+
+**The graph is built from the rows the page shows.** `CollectionPage` with
+`hasPart` from the cultivars listed and nothing else. A graph that claims more
+than the page does is the defect this slice exists to remove.
+
+**A species with no registered form has no hub.** `getCatalogRegisterHub`
+answers `null` and the route 404s, rather than publishing a page that says
+zero — the empty-listing rule, applied before a crawler ever sees it.
+
+**The relation is `form_of`, not `parent_catalog_item_id`.** No cultivar in
+production has a parent: all 15 924 of them have `parent_catalog_item_id` null,
+and the link to a species is a row in `catalog_item_relations`. The first draft
+of the query read the column and returned nothing for every species, which
+looked exactly like "the data is not there".
+
 ---
 
 ## 16. `OVE-434` — IndexNow

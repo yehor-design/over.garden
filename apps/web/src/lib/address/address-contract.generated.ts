@@ -55,7 +55,7 @@ export const ADDRESS_RESERVED_WORDS: Readonly<
   Record<AddressNamespace, readonly string[]>
 > = {
   species: [],
-  form: [],
+  form: ["register"],
   journalEntry: ["objects"],
   object: [],
   topic: [],

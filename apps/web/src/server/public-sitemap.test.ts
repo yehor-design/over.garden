@@ -69,6 +69,7 @@ describe("public sitemap", () => {
     await expect(listPublicSitemapChunkIds()).resolves.toEqual([
       "authored",
       "catalog",
+      "registers",
       "topics",
       "communities",
       "profiles-0",
@@ -87,6 +88,7 @@ describe("public sitemap", () => {
     await expect(listPublicSitemapChunkIds()).resolves.toEqual([
       "authored",
       "catalog",
+      "registers",
       "topics",
       "communities",
       "profiles-0",

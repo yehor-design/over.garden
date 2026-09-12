@@ -91,6 +91,32 @@ export async function readPublicJournalEntry(
  * browse index is allowed to lag a new import by a day rather than pay for a
  * grouped scan per crawler request.
  */
+/**
+ * A species' register hub (OVE-433).
+ *
+ * `days`, like the browse: the registers change when an import runs, and the
+ * hub is a crawl target rather than a page a gardener refreshes.
+ */
+export async function readCatalogRegisterHub(speciesSlug: string) {
+  "use cache";
+  cacheLife("days");
+  cacheTag(PUBLIC_CACHE_TAGS.catalog);
+  const { getCatalogRegisterHub } = await import(
+    "@/server/public-catalog-register-repository"
+  );
+  return getCatalogRegisterHub(speciesSlug);
+}
+
+export async function readCatalogRegisterHubSpecies() {
+  "use cache";
+  cacheLife("days");
+  cacheTag(PUBLIC_CACHE_TAGS.catalog);
+  const { listCatalogRegisterHubSpecies } = await import(
+    "@/server/public-catalog-register-repository"
+  );
+  return listCatalogRegisterHubSpecies();
+}
+
 export async function readCatalogBrowseKingdoms() {
   "use cache";
   cacheLife("days");

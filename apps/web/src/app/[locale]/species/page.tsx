@@ -19,6 +19,7 @@ import {
   readCatalogBrowseFirstHandOrganisms,
   readCatalogBrowseKingdoms,
   readCatalogBrowsePage,
+  readCatalogRegisterHubSpecies,
 } from "@/server/public-cache";
 import {
   resolvePublicSurfaceDiscoveryForRequest,
@@ -33,6 +34,8 @@ import type {
 } from "@/server/public-catalog-browse-repository";
 
 type SearchParams = Record<string, string | string[] | undefined>;
+
+type RegisterHubSpecies = { slug: string; name: string; total: number };
 
 interface PublicSpeciesBrowseRouteProps {
   params: Promise<{ locale: string }>;
@@ -107,11 +110,17 @@ export async function renderPublicSpeciesBrowsePage(
 ) {
   const request = normalizePublicCatalogBrowseRequest(searchParams);
   const { kingdom, initial, page: pageNumber } = request;
-  const [kingdoms, firstHand] = await Promise.all([
+  const [kingdoms, firstHand, registerHubs] = await Promise.all([
     settled<CatalogBrowseKingdomSummary[]>(readCatalogBrowseKingdoms, []),
     kingdom
       ? Promise.resolve<CatalogBrowseCard[]>([])
       : settled<CatalogBrowseCard[]>(readCatalogBrowseFirstHandOrganisms, []),
+    kingdom
+      ? Promise.resolve<RegisterHubSpecies[]>([])
+      : settled<RegisterHubSpecies[]>(
+          async () => [...(await readCatalogRegisterHubSpecies())].slice(0, 24),
+          [],
+        ),
   ]);
 
   const page = kingdom
@@ -136,6 +145,7 @@ export async function renderPublicSpeciesBrowsePage(
       request={request}
       kingdoms={kingdoms}
       firstHand={firstHand}
+      registerHubs={registerHubs}
       page={page}
       jsonLd={surface.jsonLd}
     />

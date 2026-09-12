@@ -16,6 +16,35 @@ export type PublicCatalogAddressRequest =
 
 const SLUG = "[a-z0-9]+(?:-[a-z0-9]+)*";
 const SPECIES_PATH = new RegExp(`^/species/(${SLUG})(?:/(${SLUG}))?/?$`, "u");
+
+/**
+ * The segment that is a page under a species rather than a form of it
+ * (ADR-0029 D13 item 4, OVE-433).
+ *
+ * `register` is reserved in the form namespace for exactly this: without the
+ * reservation a cultivar named *Register* would take its own species' hub, and
+ * without this check the hub's address would be read as that cultivar's and
+ * answered with a 404 the hub does not deserve.
+ */
+export const CATALOG_SPECIES_HUB_SEGMENTS = ["register"] as const;
+export type CatalogSpeciesHubSegment =
+  (typeof CATALOG_SPECIES_HUB_SEGMENTS)[number];
+
+export function matchCatalogSpeciesHubPath(
+  pathname: string,
+): { speciesSlug: string; hub: CatalogSpeciesHubSegment } | null {
+  const basePath = stripLocalePrefix(pathname).path;
+  const matched = SPECIES_PATH.exec(basePath);
+  const hub = matched?.[2];
+  return hub && (CATALOG_SPECIES_HUB_SEGMENTS as readonly string[]).includes(hub)
+    ? { speciesSlug: matched![1]!, hub: hub as CatalogSpeciesHubSegment }
+    : null;
+}
+
+/** `/species/{species}/register`, in the locale's own route family. */
+export function publicCatalogRegisterHubPath(speciesSlug: string): string {
+  return `/species/${encodeURIComponent(speciesSlug)}/register`;
+}
 const LEGACY_PATH = new RegExp(`^/(variety|breed)/(${SLUG})/?$`, "u");
 
 /**
@@ -37,6 +66,13 @@ export function matchPublicCatalogAddressPath(
   const basePath = stripLocalePrefix(pathname).path;
   const species = SPECIES_PATH.exec(basePath);
   if (species) {
+    // A hub is a page under the species, not a form of it (OVE-433).
+    if (
+      species[2] &&
+      (CATALOG_SPECIES_HUB_SEGMENTS as readonly string[]).includes(species[2])
+    ) {
+      return null;
+    }
     return {
       kind: "species",
       speciesSlug: species[1]!,

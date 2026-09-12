@@ -59,6 +59,7 @@ async function readCases(): Promise<ReadCase[]> {
     directory,
     feed,
     catalogBrowse,
+    catalogRegister,
   ] = await Promise.all([
     import("../src/server/public-object-passport-repository"),
     import("../src/server/public-lineage-repository"),
@@ -72,9 +73,18 @@ async function readCases(): Promise<ReadCase[]> {
     import("../src/server/public-journal-directory-query"),
     import("../src/server/public-feed-repository"),
     import("../src/server/public-catalog-browse-repository"),
+    import("../src/server/public-catalog-register-repository"),
   ]);
 
   return [
+    {
+      name: "catalog register hub",
+      run: (db) => catalogRegister.getCatalogRegisterHub(ABSENT_SLUG, db),
+    },
+    {
+      name: "catalog register hub species",
+      run: (db) => catalogRegister.listCatalogRegisterHubSpecies(4, db),
+    },
     {
       name: "catalog browse kingdoms",
       run: (db) => catalogBrowse.listCatalogBrowseKingdoms(db),
