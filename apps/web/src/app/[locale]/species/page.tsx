@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { notFound } from "next/navigation";
 
 import { PublicCatalogBrowse } from "@/components/public/public-catalog-browse";
@@ -66,8 +67,38 @@ export async function generateMetadata({
         .decision.robots,
     };
   }
-  const kingdoms = await readCatalogBrowseKingdoms().catch(() => []);
+  const kingdoms = await settled<CatalogBrowseKingdomSummary[]>(
+    readCatalogBrowseKingdoms,
+    [],
+  );
   return buildSpeciesBrowseSurface(localeParam, kingdoms).metadata;
+}
+
+/**
+ * The catalog is read at request time, and a read that failed is an empty
+ * catalog rather than a broken page.
+ *
+ * `connection()` first, which is what every listing beside this one does
+ * through `resolvePublicSurfacePayload`: it marks the scope as needing a
+ * request, so the build never reaches the database. Without it `next build`
+ * runs this query, and a preview deployment — which has no `DATABASE_URL` at
+ * all — fails outright on `/species`. `Promise.allSettled` alone does not save
+ * it: the prerender aborts on the rejection however it is handled.
+ *
+ * The reads stay cached for a day behind that (`readCatalogBrowse*`), so
+ * request time costs one query per view per day, not one per crawler.
+ *
+ * A failure then renders the page with nothing in it, which the empty-listing
+ * rule marks `noindex` (ADR-0022 D3) — the honest answer for a catalog nobody
+ * can read.
+ */
+async function settled<T>(work: () => Promise<T>, fallback: T): Promise<T> {
+  // A thunk, not a promise: an argument is evaluated before the call, so
+  // passing `read()` starts the query before `connection()` can postpone it —
+  // which is how the first attempt at this still failed the build.
+  await connection();
+  const [result] = await Promise.allSettled([work()]);
+  return result.status === "fulfilled" ? result.value : fallback;
 }
 
 export async function renderPublicSpeciesBrowsePage(
@@ -75,16 +106,18 @@ export async function renderPublicSpeciesBrowsePage(
   searchParams: SearchParams = {},
 ) {
   const request = normalizePublicCatalogBrowseRequest(searchParams);
+  const { kingdom, initial, page: pageNumber } = request;
   const [kingdoms, firstHand] = await Promise.all([
-    readCatalogBrowseKingdoms(),
-    request.kingdom ? Promise.resolve([]) : readCatalogBrowseFirstHandOrganisms(),
+    settled<CatalogBrowseKingdomSummary[]>(readCatalogBrowseKingdoms, []),
+    kingdom
+      ? Promise.resolve<CatalogBrowseCard[]>([])
+      : settled<CatalogBrowseCard[]>(readCatalogBrowseFirstHandOrganisms, []),
   ]);
 
-  const page = request.kingdom
-    ? await readCatalogBrowsePage(
-        request.kingdom,
-        request.initial,
-        request.page,
+  const page = kingdom
+    ? await settled<CatalogBrowsePage | null>(
+        () => readCatalogBrowsePage(kingdom, initial, pageNumber),
+        null,
       )
     : null;
 
@@ -102,7 +135,7 @@ export async function renderPublicSpeciesBrowsePage(
       copy={getPublicCatalogBrowseCopy(locale)}
       request={request}
       kingdoms={kingdoms}
-      firstHand={firstHand as CatalogBrowseCard[]}
+      firstHand={firstHand}
       page={page}
       jsonLd={surface.jsonLd}
     />
