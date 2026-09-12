@@ -451,6 +451,37 @@ resubmitted.
 the moment it runs.** Note `docs/production-probes-need-a-timeout.md`: bound
 every statement.
 
+
+**Shipped 2026-09-12.** 15 914 addresses moved in production, 1 228 of them
+taking a counter. Zero addresses now carry a register number, a digest or a
+`-species-backbone` suffix, where 15 902 did. A hundred old addresses were
+sampled at random and requested over HTTP: **100 of 100 answered 308**.
+
+**Four species got their names back.** `speciesSlugFromScientificName` never
+stripped the botanist's authority, so `Solanum lycopersicum L.` would have
+become `solanum-lycopersicum-l` — worse than the `-species-backbone` suffix it
+replaced. The rule that strips it is deliberately conservative: one trailing
+capitalised abbreviation ending in a full stop, so `sp.`, `subsp.` and `var.`
+stay and a multi-word authority is left alone rather than guessed at.
+
+**The form name stayed platform-unique**, for the same reason the journal
+entry's did. `resolvePublicCatalogAddress` finds a form by its slug alone, in
+the history table, and only then compares the requested path with the canonical
+one; the column and the history table are both globally unique. Per-species
+names need the resolver to take the species first and both uniqueness keys to
+grow a species column.
+
+**Two things about doing a hundred thousand writes to a managed database.**
+Transactions of five hundred, not one transaction — a lock held for minutes on
+the table every public page reads is a worse outcome than a half-moved catalog,
+and a half-moved catalog answers correctly at every address anyway. And the
+plan's first draft rebuilt the taken-slug set per row: a billion and a half
+string comparisons, two and a half minutes; walking it takes 1.5 seconds.
+
+**The order was code first**, which is the correction to `OVE-428`'s mistake.
+The pull request merged and deployed before a single address moved, and nothing
+answered 404 at any point.
+
 ---
 
 ## 12. `OVE-430` — The entity graph

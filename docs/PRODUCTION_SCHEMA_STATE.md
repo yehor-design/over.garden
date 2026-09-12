@@ -925,6 +925,58 @@ crawler hitting the site in that window saw a 404. Data that moves under a
 reader's feet needs the code that understands the move deployed first; the
 migration alone is safe in either order, the move is not.
 
+## The 2026-09-12 catalog re-slug and `0071`
+
+`pnpm address:catalog:reslug --apply` moved **15 914** organism addresses on
+2026-09-12, and `0071_ove429_catalog_public_slug_check.sql` was applied after
+it: one transaction, host class `digitalocean_managed`, database `defaultdb`,
+4 statements, 631 ms. Both fall under the owner's authorization of 2026-09-11
+for the address-law slice, and the move is the bulk production write
+`AGENTS.md` rule 10 names.
+
+**Before**, read-only: 114 669 catalog rows, 101 619 of them with an address.
+15 177 carried a state register's application number, 721 an `eu-oj-` digest
+and its ten-character SHA, 4 a `-species-backbone` suffix. The longest slug was
+sixty characters; none exceeded ninety-six.
+
+**The move**, 32 transactions of 500 rows, 682 s: 15 910 forms and 4 species.
+1 228 of them took a `-2` from the counter, which is the disambiguator
+ADR-0029 D6 prescribes and, within one species, the reconciliation signal
+ADR-0026 D4 describes.
+
+**After**, read back immediately, read-only:
+
+```
+catalog_items: 101 619 slugged, longest 60 characters
+  with -ua-register-:    0   (was 15 177)
+  with eu-oj-:           0   (was 721)
+  with -species-backbone: 0  (was 4)
+catalog_item_slug_history: 117 533 rows — 101 619 open, 15 914 closed
+catalog_items_public_slug_check:
+  public_slug IS NULL OR (char_length BETWEEN 1 AND 96
+    AND public_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'), validated
+```
+
+**Verified over HTTP, not only in the database.** A hundred closed history
+slugs were sampled at random and requested at the address they used to answer
+— `/species/{species}/{form}` for a form with a parent, `/variety/{slug}` for
+one without, `/species/{slug}` for a taxon. **100 of 100 answered 308.** The
+catalog sitemap chunk holds no register number, digest or backbone suffix, and
+the typeahead answers `ready` in 180–340 ms with `db;dur=290`, inside the
+400 ms deadline, returning addresses like
+`/species/solanum-lycopersicum/tomatina`.
+
+**Four species got their names back.** `Solanum lycopersicum L.` and three
+others carry the botanist's authority in `canonical_name`, and
+`speciesSlugFromScientificName` never stripped it — the recomputed address
+would have been `solanum-lycopersicum-l`. ADR-0026 D8 says the scientific name
+*without authorship*, and it now is; exactly four rows in this catalog carry a
+short authority, and the bare names they should have had were free.
+
+**The order was code first this time.** The pull request merged and deployed
+before a single address moved, which is the correction to the mistake recorded
+above for `0070`. Nothing answered 404 at any point.
+
 ## The rule this produced
 
 Production migrations are applied by hand, one command per migration, with the
