@@ -3,6 +3,10 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { PUBLIC_CACHE_TAGS, publicCacheTag } from "@/lib/public-cache-tags";
+import type {
+  CatalogBrowseInitial,
+  CatalogBrowseKingdom,
+} from "@/lib/public-catalog-browse";
 import type { PublicLocale } from "@/lib/public-localization";
 import {
   getPublicCommunityPage,
@@ -76,6 +80,49 @@ export async function readPublicJournalEntry(
     }
   }
   return lookup;
+}
+
+/**
+ * The catalog's browse counts and pages (OVE-431).
+ *
+ * `days`, not `hours`: the catalog changes when an import runs, not when a
+ * gardener writes, and this is the one read on the crawl path that touches a
+ * hundred thousand rows. `catalogCard` tags keep a card's own page fresh; the
+ * browse index is allowed to lag a new import by a day rather than pay for a
+ * grouped scan per crawler request.
+ */
+export async function readCatalogBrowseKingdoms() {
+  "use cache";
+  cacheLife("days");
+  cacheTag(PUBLIC_CACHE_TAGS.catalog);
+  const { listCatalogBrowseKingdoms } = await import(
+    "@/server/public-catalog-browse-repository"
+  );
+  return listCatalogBrowseKingdoms();
+}
+
+export async function readCatalogBrowsePage(
+  kingdom: CatalogBrowseKingdom,
+  initial: CatalogBrowseInitial | null,
+  page: number,
+) {
+  "use cache";
+  cacheLife("days");
+  cacheTag(PUBLIC_CACHE_TAGS.catalog);
+  const { listCatalogBrowsePage } = await import(
+    "@/server/public-catalog-browse-repository"
+  );
+  return listCatalogBrowsePage({ kingdom, initial, page });
+}
+
+export async function readCatalogBrowseFirstHandOrganisms() {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(PUBLIC_CACHE_TAGS.catalog);
+  const { listCatalogBrowseFirstHandOrganisms } = await import(
+    "@/server/public-catalog-browse-repository"
+  );
+  return listCatalogBrowseFirstHandOrganisms();
 }
 
 export async function readPublicFeedPage(

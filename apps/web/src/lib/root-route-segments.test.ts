@@ -128,10 +128,8 @@ describe("root route segments", () => {
 
   it("answers a section root without a page, in every locale", () => {
     for (const path of [
-      "/species",
       "/variety",
       "/topics",
-      "/bg/species",
       "/ru/topics",
       "/journal",
       "/lineage",
@@ -144,6 +142,11 @@ describe("root route segments", () => {
       "/journals",
       "/communities",
       "/feed",
+      // `/species` is the catalog's front door since OVE-431. It used to be a
+      // section root with no page, and a 404 there is now a 404 on the only
+      // inbound link 114 669 organism pages have.
+      "/species",
+      "/bg/species",
       "/species/solanum",
       "/bg/species/solanum",
       "/api",

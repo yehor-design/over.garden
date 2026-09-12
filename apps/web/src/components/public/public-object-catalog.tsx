@@ -15,6 +15,7 @@ import {
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
+import { CatalogFrontDoor } from "@/components/public/catalog-front-door";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -77,6 +78,10 @@ export function PublicObjectCatalog({
           {copy.intro}
         </p>
       </header>
+
+      <section className="border-b border-border py-4">
+        <CatalogFrontDoor locale={locale} />
+      </section>
 
       <section className="grid gap-3 border-b border-border py-4">
         <PublicObjectCatalogSearch
