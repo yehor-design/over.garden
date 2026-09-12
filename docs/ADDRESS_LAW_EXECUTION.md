@@ -758,13 +758,29 @@ else. It is a static file in `public/` now, and a test asserts that the file on
 disk and the constant in the submission say the same thing — the one way those
 two could ever drift.
 
-**The announcement rides on the call that already invalidates the tags.** A
-mutation makes one call when a public page changed, and it now takes the
-canonical URLs as a third argument. URLs and not tags: a tag says *something
-under this name changed*, and only the caller knows whether what changed has an
-address a crawler should be sent to. The entry route announces the canonical
-address only — the locale-prefixed legacy spellings beside it are 308s, and
-announcing a redirect asks a crawler to fetch a page that is not there.
+**Deciding which address to announce is its own question, and it has one hard
+rule.** `indexnow-public-addresses.ts` sits beside every mutation that
+invalidates a public cache tag, and it is where *nothing `noindex` is
+submitted* is enforced — because that rule needs to know things a cache tag
+does not carry:
+
+  * a **journal entry** is announced at the one address it has, under its
+    author, and only when it has a `public_slug` and its author has a current
+    handle; without a handle the entry has no canonical address, and the legacy
+    spelling is a 308 — announcing a redirect asks a crawler to fetch a page
+    that is not there;
+  * an **organism card** is announced only once it is indexable. ADR-0026 D9
+    keeps a card built only from sources `noindex`, so announcing every card
+    revalidation would ask two search engines to fetch a page that tells them
+    not to index it. The function reads `first_hand_content_at` and
+    `indexable_override` — the same condition the indexing policy reads;
+  * a **community** is announced on the mutations that already invalidate it,
+    because a mutation that invalidated its cache has just changed what the
+    page shows.
+
+The first draft put an `announce` parameter on `revalidatePublicCacheTags`
+instead, and nothing ever passed it: the cache call is about caches, and a
+parameter there would have been a second place to forget. It is gone.
 
 **A failed submission cannot reach the mutation.** `announcePublicUrlsToIndexNow`
 awaits nothing and swallows everything, and a test asserts it by making `fetch`
