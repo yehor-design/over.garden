@@ -564,6 +564,44 @@ sample of organism pages.
 
 **Dependencies.** Task 11.
 
+**Shipped 2026-09-12.** `/species` is a page. It used to be a section root with
+no index — a real 404 since task 9 — and it is now the catalog's front door:
+eight kingdoms, an A–Z of initials under each, and the organisms behind an
+initial. Every link on that path is an `<a href>` in the served markup, which
+is what the crawl-depth proof follows: it reads HTML and never executes it, so
+a link that needed hydration would not count (ADR-0024).
+
+**The owner chose two doors, not a menu item.** Asked on 2026-09-12 where the
+catalog should appear, the owner picked **inside Knowledge *and* under Living
+objects** — `site-shell-navigation.ts` is unchanged. Those are two different
+questions a reader is already asking ("what is this organism", "what is the
+thing in my garden") and both end at the same catalog. The scope line above
+said "a catalog entry in the site shell"; that half is deliberately not built.
+
+**Four clicks, and the indexable ones are at three.** `/` → Knowledge →
+`/species` → a kingdom → an organism is four. The cards with first-hand
+content — the indexable ones, which is what the acceptance criterion is about
+(ADR-0026 D9) — are listed on the browse root itself, so they are three.
+
+**A kingdom and an initial are filters, not addresses.** Every browse view
+carries the same canonical, `/species`, and the proxy's existing rule stamps
+`noindex, follow` on anything past page one. So the filtered views are crawled
+for their links and never compete with the root — which is the same decision
+D10 makes everywhere else, applied to a listing.
+
+**Migration `0072` is the index the walk needs.** `catalog_items` had no index
+that answers "one kingdom, one initial, ordered by name": the browse would have
+been a sequential scan of 114 669 rows plus a sort, on a public page. The
+partial index over addressable rows turns it into an index-only scan —
+**0.63 ms** for a page of 60, measured on production after applying it. The
+kingdom summary is 175 ms and is cached for a day, because the catalog changes
+when an import runs, not when a gardener writes.
+
+**`pnpm catalog:crawl:prove-depth` is the proof, and it is a gate.** It walks
+from `/` breadth-first over served HTML, reports the depth at which an organism
+address first appears and the trail that reached it, and exits non-zero if that
+depth is absent or greater than four.
+
 ---
 
 ## 14. `OVE-432` — Photographs

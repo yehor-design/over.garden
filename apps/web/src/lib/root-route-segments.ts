@@ -104,7 +104,6 @@ export const ROOT_SEGMENTS_WITHOUT_INDEX: ReadonlySet<string> = new Set([
   "lineage",
   "markets",
   "sources",
-  "species",
   "topics",
   "variety",
   "wikidata",

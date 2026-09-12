@@ -58,6 +58,7 @@ async function readCases(): Promise<ReadCase[]> {
     objectCatalog,
     directory,
     feed,
+    catalogBrowse,
   ] = await Promise.all([
     import("../src/server/public-object-passport-repository"),
     import("../src/server/public-lineage-repository"),
@@ -70,9 +71,44 @@ async function readCases(): Promise<ReadCase[]> {
     import("../src/server/public-object-catalog-repository"),
     import("../src/server/public-journal-directory-query"),
     import("../src/server/public-feed-repository"),
+    import("../src/server/public-catalog-browse-repository"),
   ]);
 
   return [
+    {
+      name: "catalog browse kingdoms",
+      run: (db) => catalogBrowse.listCatalogBrowseKingdoms(db),
+    },
+    {
+      name: "catalog browse page",
+      run: (db) =>
+        catalogBrowse.listCatalogBrowsePage(
+          { kingdom: "Plantae", initial: "s", page: 1 },
+          db,
+        ),
+    },
+    {
+      // The digit bucket takes a different branch: a regex rather than an
+      // equality, and a planner refuses the two in different ways.
+      name: "catalog browse page, digit bucket",
+      run: (db) =>
+        catalogBrowse.listCatalogBrowsePage(
+          { kingdom: "Plantae", initial: "#", page: 1 },
+          db,
+        ),
+    },
+    {
+      name: "catalog browse page, no initial",
+      run: (db) =>
+        catalogBrowse.listCatalogBrowsePage(
+          { kingdom: "Fungi", initial: null, page: 1 },
+          db,
+        ),
+    },
+    {
+      name: "catalog browse first-hand organisms",
+      run: (db) => catalogBrowse.listCatalogBrowseFirstHandOrganisms(4, db),
+    },
     {
       name: "object passport root",
       run: (db) =>

@@ -80,6 +80,12 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "src/app/[locale]/objects/page.tsx",
   ),
   inventory(
+    "localized_species_browse",
+    "catalog_browse",
+    "candidate",
+    "src/app/[locale]/species/page.tsx",
+  ),
+  inventory(
     "eppo_archive_browse",
     "catalog_browse",
     "candidate",

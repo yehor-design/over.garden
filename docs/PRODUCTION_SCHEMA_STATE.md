@@ -988,3 +988,33 @@ safe in either order.
 
 After applying anything, re-run the inventory and update this page in the same
 pull request as the migration or the code that needs it.
+
+## `0072`, the catalog browse index — applied 2026-09-12
+
+`0072_ove431_catalog_browse_index.sql` applied to production on 2026-09-12: one
+transaction, host class `digitalocean_managed`, database `defaultdb`, 2
+statements, **5 168 ms**.
+
+```
+catalog_items_browse_idx on catalog_items
+  (kingdom, lower(left(canonical_name, 1)), canonical_name, id)
+  where public_slug is not null and merged_into_catalog_item_id is null
+```
+
+The catalog's front door (`OVE-431`) asks one question in every view — rows in
+one kingdom whose name starts with one letter, ordered by name — and
+`catalog_items` had no index that answers it. Measured on production right
+after the build, a page of sixty:
+
+```
+Index Only Scan using catalog_items_browse_idx  (actual time=0.422..0.529 rows=60)
+Execution Time: 0.629 ms
+```
+
+The kingdom-and-initial summary is a grouped scan of the same partial set,
+174.9 ms, and it is cached for a day rather than indexed further: the catalog
+changes when an import runs, not when a gardener writes.
+
+Rollback `sql/rollback/0072_ove431_catalog_browse_index.sql` drops the index
+and is safe at any time — the browse stays correct and becomes a sequential
+scan again.

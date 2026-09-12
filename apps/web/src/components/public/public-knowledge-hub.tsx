@@ -13,6 +13,7 @@ import {
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
+import { CatalogFrontDoor } from "@/components/public/catalog-front-door";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -163,6 +164,10 @@ export function PublicKnowledgeHub({
       {state === "ready" ? (
         <KnowledgeResults locale={locale} copy={copy} items={items} />
       ) : null}
+
+      <section className="mt-6 border-t border-border pt-6">
+        <CatalogFrontDoor locale={locale} />
+      </section>
 
       <div className="mt-6 border-t border-border pt-6 xl:hidden">
         <SiteShellContextRailModules modules={contextModules} />

@@ -1407,7 +1407,10 @@ describe("organism addresses (ADR-0026 D8)", () => {
     });
 
     it("404s a section root with no front door", async () => {
-      for (const path of ["/species", "/variety", "/topics", "/bg/species"]) {
+      // `/species` is no longer on this list: OVE-431 gave the catalog a front
+      // door there, and it is the only inbound link 114 669 organism pages
+      // have.
+      for (const path of ["/variety", "/topics", "/journal", "/ru/topics"]) {
         const response = await responseFor(path, document);
         expect(response.status, path).toBe(404);
         expect(response.headers.get("X-Robots-Tag"), path).toBe(
