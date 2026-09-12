@@ -8,6 +8,7 @@ import {
   publicJournalEntryPath,
   publicProfileBasePath,
 } from "@/lib/garden/public-paths";
+import { logAddressRefusal } from "@/server/address-refusal-log";
 
 /**
  * An entry at its own address: `/@{handle}/{slug}` (ADR-0029 D9).
@@ -27,12 +28,35 @@ interface AuthorScopedEntryRouteProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
+/**
+ * A route segment as the address law spells it, whatever the router handed us.
+ *
+ * Next decodes a dynamic segment before it reaches `params`, so `%40yehor` in
+ * the URL arrives as `@yehor`. Decoding again is a no-op on the decoded form
+ * and correct on the encoded one, which is what the profile route beside this
+ * one has always done; assuming one spelling is how a route ends up refusing
+ * its own address.
+ */
+function decodeSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+function routeHandle(profileHandle: string): string {
+  return decodeSegment(profileHandle).replace(/^@/u, "").toLowerCase();
+}
+
 async function resolveAddress(
   params: AuthorScopedEntryRouteProps["params"],
 ): Promise<{ locale: string; slug: string } | null> {
   const { locale, profileHandle, entrySlug } = await params;
   const matched = matchAuthorScopedEntryPath(
-    `${publicProfileBasePath(profileHandle)}/${entrySlug}`,
+    `${publicProfileBasePath(routeHandle(profileHandle))}/${encodeURIComponent(
+      decodeSegment(entrySlug),
+    )}`,
   );
   return matched ? { locale, slug: matched.slug } : null;
 }
@@ -53,19 +77,38 @@ export default async function AuthorScopedEntryRoute({
 }: AuthorScopedEntryRouteProps) {
   const { profileHandle, entrySlug } = await params;
   const address = await resolveAddress(params);
-  if (!address) notFound();
+  if (!address) {
+    logAddressRefusal({
+      route: "author_scoped_entry",
+      reason: "address_unparsed",
+      detail: { profileHandle, entrySlug },
+    });
+    notFound();
+  }
 
   const { getPublicJournalEntryLifecycleLookup } = await import(
     "@/server/journal-repository"
   );
   const lookup = await getPublicJournalEntryLifecycleLookup(address.slug);
-  const handle = profileHandle.replace(/^@/u, "").toLowerCase();
-  if (
-    lookup.status !== "active" ||
-    lookup.addressHandle === null ||
-    publicJournalEntryPath(lookup.addressHandle, lookup.publicSlug) !==
-      publicJournalEntryPath(handle, decodeURIComponent(entrySlug))
-  ) {
+  const requested = publicJournalEntryPath(
+    routeHandle(profileHandle),
+    decodeSegment(entrySlug),
+  );
+  const canonical =
+    lookup.status === "active" && lookup.addressHandle !== null
+      ? publicJournalEntryPath(lookup.addressHandle, lookup.publicSlug)
+      : null;
+  if (canonical === null || canonical !== requested) {
+    logAddressRefusal({
+      route: "author_scoped_entry",
+      reason:
+        lookup.status !== "active"
+          ? `lookup_${lookup.status}`
+          : lookup.addressHandle === null
+            ? "author_without_handle"
+            : "handle_not_the_author",
+      detail: { slug: address.slug, canonical, requested },
+    });
     notFound();
   }
 

@@ -22,6 +22,7 @@ import {
   type PublicSurfaceDiscoveryResult,
   type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
+import { logAddressRefusal } from "@/server/address-refusal-log";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser } from "@/server/request-scope";
@@ -75,11 +76,25 @@ export default async function PublicJournalEntryRoute({
     params,
     searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
   ]);
-  if (!isPublicLocale(localeParam)) notFound();
+  if (!isPublicLocale(localeParam)) {
+    logAddressRefusal({
+      route: "journal_entry",
+      reason: "locale_not_public",
+      detail: { locale: localeParam, slug },
+    });
+    notFound();
+  }
 
   const locale: PublicLocale = localeParam;
   const lookup = await readPublicJournalEntry(slug, locale);
-  if (lookup.status !== "active") notFound();
+  if (lookup.status !== "active") {
+    logAddressRefusal({
+      route: "journal_entry",
+      reason: `lookup_${lookup.status}`,
+      detail: { locale: localeParam, slug },
+    });
+    notFound();
+  }
 
   const session = await getCurrentSession();
   const userId = session?.user?.id;
