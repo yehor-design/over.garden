@@ -16,17 +16,28 @@
  * fewer thing that can be missing in one environment and present in another,
  * and the file and the submission can never disagree about what the key is.
  *
- * The file is served at `/indexnow/{key}.txt` rather than at the host root,
- * which the protocol allows as long as the submission says where it is — that
- * is what `keyLocation` is for.
+ * ## The file is at the host root, and it has to be
+ *
+ * The protocol allows a key in a subdirectory, but then it only authorises
+ * URLs *in that subdirectory*. The first version of this served it at
+ * `/indexnow/{key}.txt` and read the specification as permission to submit
+ * anything with `keyLocation` pointing there. `api.indexnow.org` answered:
+ *
+ * > `422 InvalidRequestParameters` — One or more URLs are not related to your
+ * > site verified through the keylocation parameter.
+ *
+ * Only submitting a real URL showed that. It is a static file in `public/`
+ * now, which is the root of this host, and `indexnow-key-file.test.ts` asserts
+ * the file on disk and the constant below say the same thing — the one way
+ * they could ever drift.
  */
 export const INDEXNOW_KEY = "e1d2d024f0edaca0ebfb710bfc63f607";
 
 /** The file name the protocol expects, wherever it is hosted. */
 export const INDEXNOW_KEY_FILE = `${INDEXNOW_KEY}.txt`;
 
-/** Where this host serves it. */
-export const INDEXNOW_KEY_PATH = `/indexnow/${INDEXNOW_KEY_FILE}`;
+/** Where this host serves it: the root, because a subdirectory key only covers that subdirectory. */
+export const INDEXNOW_KEY_PATH = `/${INDEXNOW_KEY_FILE}`;
 
 /**
  * One endpoint, not four.

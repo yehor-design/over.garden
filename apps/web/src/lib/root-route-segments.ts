@@ -31,7 +31,6 @@ export const ROOT_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
   "gbif",
   "guides",
   "id",
-  "indexnow",
   "journal",
   "journals",
   "knowledge",
@@ -63,6 +62,10 @@ export const ROOT_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
  */
 export const ROOT_ROUTE_FILES: ReadonlySet<string> = new Set([
   "apple-icon.png",
+  // The IndexNow key file (OVE-434). It is at the root because a key in a
+  // subdirectory only authorises URLs in that subdirectory — `api.indexnow.org`
+  // answers `422` otherwise, which is how this was found.
+  "e1d2d024f0edaca0ebfb710bfc63f607.txt",
   "favicon.ico",
   "file.svg",
   "globe.svg",
