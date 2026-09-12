@@ -5,6 +5,10 @@ import PublicJournalEntryRoute, {
 } from "@/app/[locale]/journal/[slug]/page";
 import { matchAuthorScopedEntryPath } from "@/lib/address/match-address-path";
 import {
+  decodeRouteSegment,
+  routeHandleSegment,
+} from "@/lib/address/route-segments";
+import {
   publicJournalEntryPath,
   publicProfileBasePath,
 } from "@/lib/garden/public-paths";
@@ -28,34 +32,13 @@ interface AuthorScopedEntryRouteProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-/**
- * A route segment as the address law spells it, whatever the router handed us.
- *
- * Next decodes a dynamic segment before it reaches `params`, so `%40yehor` in
- * the URL arrives as `@yehor`. Decoding again is a no-op on the decoded form
- * and correct on the encoded one, which is what the profile route beside this
- * one has always done; assuming one spelling is how a route ends up refusing
- * its own address.
- */
-function decodeSegment(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
-  }
-}
-
-function routeHandle(profileHandle: string): string {
-  return decodeSegment(profileHandle).replace(/^@/u, "").toLowerCase();
-}
-
 async function resolveAddress(
   params: AuthorScopedEntryRouteProps["params"],
 ): Promise<{ locale: string; slug: string } | null> {
   const { locale, profileHandle, entrySlug } = await params;
   const matched = matchAuthorScopedEntryPath(
-    `${publicProfileBasePath(routeHandle(profileHandle))}/${encodeURIComponent(
-      decodeSegment(entrySlug),
+    `${publicProfileBasePath(routeHandleSegment(profileHandle))}/${encodeURIComponent(
+      decodeRouteSegment(entrySlug),
     )}`,
   );
   return matched ? { locale, slug: matched.slug } : null;
@@ -91,8 +74,8 @@ export default async function AuthorScopedEntryRoute({
   );
   const lookup = await getPublicJournalEntryLifecycleLookup(address.slug);
   const requested = publicJournalEntryPath(
-    routeHandle(profileHandle),
-    decodeSegment(entrySlug),
+    routeHandleSegment(profileHandle),
+    decodeRouteSegment(entrySlug),
   );
   const canonical =
     lookup.status === "active" && lookup.addressHandle !== null

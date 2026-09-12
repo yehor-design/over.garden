@@ -650,3 +650,42 @@ move.
   breaks every earlier migration replay. Guard both.
 - Verify against real Chromium, not the preview browser, before claiming a page
   needs no hydration.
+
+## The `200` that was a not-found page
+
+**Found 2026-09-12, after task 10 shipped.** Every object passport at its own
+address — `/@yehor/objects/томат` and the three beside it — answered `200`,
+with the object's own `<title>`, its canonical, `robots: index, follow`, and
+the not-found page in the body. A reader saw "Сторінку не знайдено". It had
+been that way since the addresses moved that morning.
+
+**The cause is one encoding, twice.** `publicObjectPassportPath` encodes the
+slug it is given, and a route segment arrives from the URL already encoded, so
+`%D1%82…` became `%25D1%2582…`, matched no address, and the route called
+`notFound()`. The entry route beside it pasted the raw segment into the path
+instead of passing it through a builder, which is why entries were spared:
+right by accident, not by design. `decodeRouteSegment` now decodes first in
+both, which is correct in either spelling — a decoded slug holds no `%`,
+because no address alphabet admits one (D12).
+
+**The proof of task 10 could not see it.** It was `curl -sI` on all twenty-two
+addresses, and every status line was right. It has to be: the proxy decides the
+status from its own bounded lookup (D3), finds the address, and answers `200`;
+the shell streams; the page runs afterwards and `notFound()` can no longer
+change a header. A status line is not a page, and for a day nobody could tell
+the difference.
+
+**`pnpm public:addresses:prove-render` is the gate now.** It reads every
+published address out of the database and fetches it, and a pass requires three
+things of the body: `200`, the page's own heading, and the JSON-LD an indexable
+surface carries (D13). Run against production the moment it existed it reported
+`checked: 16, failed: 4` and named the four passports. Both routes also gained
+the tests neither had — the reason a whole surface could be dead for a day is
+that `[profileHandle]/[entrySlug]` and `[profileHandle]/objects/[objectSlug]`
+had no test file at all — and each asserts both spellings a router can hand a
+segment.
+
+**`logAddressRefusal` makes the next one audible.** A route refusing an address
+the proxy has already accepted is two lookups disagreeing, and it is silent
+from outside: the reader gets an apology, every monitor sees a healthy `200`.
+It now writes one line naming the route, the guard, and the two paths compared.

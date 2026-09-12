@@ -22,6 +22,7 @@
     "db:types:check": "tsx scripts/check-generated-types.ts",
     "address:contract:prove-database": "tsx scripts/prove-address-contract-database.ts",
     "public:reads:prove-database": "tsx scripts/prove-public-read-queries-database.ts",
+    "public:addresses:prove-render": "tsx scripts/prove-public-addresses-render.ts",
     "address:entries:move": "tsx scripts/move-addresses-under-authors.ts",
     "address:catalog:reslug": "tsx scripts/reslug-catalog-addresses.ts",
     "schema:author-addresses:prove-database": "tsx scripts/prove-author-addresses-database.ts",
