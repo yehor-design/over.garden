@@ -26,9 +26,29 @@ export {
 
 import type { SlugLanguage } from "@/lib/address/romanize";
 
-/** The species slug: the scientific name without authorship. */
+/**
+ * A trailing botanical or zoological authority: `L.`, `Mill.`, `DC.`
+ *
+ * Capitalised and ending in a full stop, which is what separates an authority
+ * from the rank abbreviations that are part of the name — `sp.`, `subsp.`,
+ * `var.`, `f.` are lower case and stay. Deliberately conservative: it strips a
+ * single trailing token and leaves `Duchesne ex Rozier` alone, because a name
+ * this rule does not recognise keeps a slug that is merely long, while a rule
+ * that guessed would silently rename a species.
+ */
+const TRAILING_AUTHORITY = /\s+\(?[A-Z][A-Za-z]*\.\)?$/u;
+
+/**
+ * The species slug: the scientific name **without authorship** (ADR-0026 D8).
+ *
+ * The authority was never stripped, so `Solanum lycopersicum L.` would have
+ * become `solanum-lycopersicum-l` — an address with a botanist's initial in
+ * it. Four rows in the production catalog carry a short authority, and all
+ * four are the seeded species the launch corpus is built on; the bare names
+ * they should have had are free.
+ */
 export function speciesSlugFromScientificName(scientificName: string): string {
-  return slugify(scientificName, {
+  return slugify(scientificName.replace(TRAILING_AUTHORITY, ""), {
     script: "latin",
     language: "latin",
     fallback: "species",

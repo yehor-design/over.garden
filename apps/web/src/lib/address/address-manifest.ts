@@ -190,9 +190,10 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
       constraint: "catalog_items_public_slug_check",
       nullable: true,
       maxCharacters: 96,
-      // 0001 already holds the same pattern without the length bound. OVE-429
-      // narrows the column once it has moved the rows the budget refuses.
-      checkInstalledBy: null,
+      // 0001 held the same pattern without a length bound; migration `0071`
+      // installs the generated one, after OVE-429 moved every address that a
+      // register number or a digest had made longer than a name.
+      checkInstalledBy: "0071",
     },
     notes:
       "Shares a column, a unique index and a history table with `form`: a bare /species/{slug} request is looked up in both, so one slug names one organism.",
@@ -201,7 +202,17 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     namespace: "form",
     script: "latin",
     shape: "hyphenated",
-    uniquenessScope: "perSpecies",
+    // The *address* is per species — `/species/{species}/{form}`, ADR-0029 D7
+    // — and the *name* is platform-unique, for the same reason the journal
+    // entry's is (migration `0070`). `resolvePublicCatalogAddress` finds a
+    // form by its slug alone, in `catalog_item_slug_history`, and only then
+    // compares the requested path with the canonical one; the column and the
+    // history table are both globally unique. Making the name ambiguous needs
+    // the resolver to take the species first and both uniqueness keys to grow
+    // a species column. Until then two cultivars named *Advance* under
+    // different species get `advance` and `advance-2`, which is the counter
+    // D6 prescribes — 1 228 of the 15 914 addresses moved in OVE-429 took one.
+    uniquenessScope: "global",
     budget: DEFAULT_ADDRESS_BUDGET,
     reservedWords: [],
     source: "the registered denomination, romanized",
@@ -216,7 +227,7 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
       constraint: "catalog_items_public_slug_check",
       nullable: true,
       maxCharacters: 96,
-      checkInstalledBy: null,
+      checkInstalledBy: "0071",
     },
     notes:
       "ADR-0029 D7. Two cultivars named Advance under different species both keep the name; within one species they are almost certainly the same cultivar from two registers, so the collision counter is a reconciliation signal (ADR-0026 D4).",

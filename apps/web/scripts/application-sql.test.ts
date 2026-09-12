@@ -69,6 +69,7 @@ describe("versioned application SQL bootstrap", () => {
       "0068_ove425_journal_entry_public_slug_check.sql",
       "0069_ove426_journal_topic_slug_check.sql",
       "0070_ove428_author_scoped_addresses.sql",
+      "0071_ove429_catalog_public_slug_check.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

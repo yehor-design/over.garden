@@ -59,6 +59,31 @@ describe("catalog slugs (ADR-0026 D8)", () => {
     expect(speciesSlugFromScientificName("Apis mellifera")).toBe("apis-mellifera");
   });
 
+  it("drops the authority and keeps the rank abbreviation", () => {
+    // `Solanum lycopersicum L.` would otherwise become
+    // `solanum-lycopersicum-l` — a botanist's initial in a public address.
+    expect(speciesSlugFromScientificName("Solanum lycopersicum L.")).toBe(
+      "solanum-lycopersicum",
+    );
+    expect(speciesSlugFromScientificName("Ocimum basilicum L.")).toBe(
+      "ocimum-basilicum",
+    );
+    expect(speciesSlugFromScientificName("Beta vulgaris (DC.)")).toBe(
+      "beta-vulgaris",
+    );
+    // `sp.`, `subsp.`, `var.` and `f.` are part of the name, not the author.
+    expect(speciesSlugFromScientificName("Crypticerya sp.")).toBe(
+      "crypticerya-sp",
+    );
+    expect(speciesSlugFromScientificName("Brassica oleracea var.")).toBe(
+      "brassica-oleracea-var",
+    );
+    // A multi-word authority is left alone rather than guessed at.
+    expect(
+      speciesSlugFromScientificName("Fragaria × ananassa Duchesne ex Rozier"),
+    ).toBe("fragaria-x-ananassa-duchesne-ex-rozier");
+  });
+
   it("appends -2, -3 on a collision and never reuses a slug the history holds", () => {
     const taken = new Set(["de-barao", "de-barao-2"]);
     expect(resolveSlugCollision("form", "de-barao", taken)).toBe("de-barao-3");
