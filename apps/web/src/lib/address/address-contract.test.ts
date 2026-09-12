@@ -79,6 +79,11 @@ describe("the address contract is generated, not restated (ADR-0029 D12)", () =>
       "sql/0070_ove428_author_scoped_addresses.sql",
       "plant_objects_public_slug_check",
     ],
+    [
+      "0071",
+      "sql/0071_ove429_catalog_public_slug_check.sql",
+      "catalog_items_public_slug_check",
+    ],
   ])(
     "finds migration %s's block inside the generated SQL, verbatim",
     (number, file, constraint) => {

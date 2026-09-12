@@ -151,7 +151,7 @@ number in `apps/web/sql` when these were taken.
 | `0068` | `OVE-425` | the generated `CHECK` on `journal_entries.public_slug` — the only slug column that has never had one; the block is `contracts/address/address-slug-checks.generated.sql` verbatim — applied to production 2026-09-11 |
 | `0069` | `OVE-426` | widens the `journal_topics.slug` CHECK to the manifest's native-script `topic` shape; the block is `contracts/address/address-slug-checks.generated.sql` verbatim — applied to production 2026-09-11 |
 | `0070` | `OVE-428` | `journal_entry_slug_history` and `plant_object_slug_history` with their sync triggers, modelled on `catalog_item_slug_history`, plus `plant_objects.public_slug` and its generated `CHECK` — applied to production 2026-09-12 |
-| `0071` | `OVE-429` | the catalog re-slug backfill |
+| `0071` | `OVE-429` | the generated `CHECK` on `catalog_items.public_slug`, which the re-slug makes possible; the addresses themselves move in `pnpm address:catalog:reslug` |
 
 `OVE-419` through `OVE-423`, `OVE-427` and `OVE-430` through `OVE-434` need no
 SQL and therefore hold no allocation; under rule 3 none of them may inherit a

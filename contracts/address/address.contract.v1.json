@@ -24,7 +24,7 @@
         "constraint": "catalog_items_public_slug_check",
         "nullable": true,
         "maxCharacters": 96,
-        "checkInstalledBy": null
+        "checkInstalledBy": "0071"
       },
       "notes": "Shares a column, a unique index and a history table with `form`: a bare /species/{slug} request is looked up in both, so one slug names one organism."
     },
@@ -34,7 +34,7 @@
       "shape": "hyphenated",
       "alphabet": "a-z0-9",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-      "uniquenessScope": "perSpecies",
+      "uniquenessScope": "global",
       "budget": {
         "decodedCharacters": 60,
         "encodedCharacters": 180
@@ -53,7 +53,7 @@
         "constraint": "catalog_items_public_slug_check",
         "nullable": true,
         "maxCharacters": 96,
-        "checkInstalledBy": null
+        "checkInstalledBy": "0071"
       },
       "notes": "ADR-0029 D7. Two cultivars named Advance under different species both keep the name; within one species they are almost certainly the same cultivar from two registers, so the collision counter is a reconciliation signal (ADR-0026 D4)."
     },
@@ -195,7 +195,7 @@
       "nullable": true,
       "maxCharacters": 96,
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-      "checkInstalledBy": null,
+      "checkInstalledBy": "0071",
       "namespaces": [
         "species",
         "form"

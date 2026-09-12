@@ -6,7 +6,7 @@
 -- verbatim, and a test asserts the copy is identical.
 
 -- catalog_items_public_slug_check — species, form
--- declared only: no migration installs this block yet, and the column keeps the narrower CHECK it already has
+-- installed by migration 0071
 do $$
 begin
   if exists (
