@@ -56,8 +56,13 @@ describe("OVE-348 atomic journal edit smoke", () => {
     // locale-prefixed spellings the proxy 308s from — a redirect is cached too
     // (ADR-0029 D9).
     expect(route).toContain(
-      "revalidatePath(publicJournalEntryPath(authorHandle, entry.public_slug))",
+      "const canonical = publicJournalEntryPath(authorHandle, entry.public_slug)",
     );
+    expect(route).toContain("revalidatePath(canonical)");
+    // Only the canonical address is announced to IndexNow: the legacy
+    // spellings below it are 308s, and announcing a redirect asks a crawler to
+    // fetch a page that is not there (OVE-434).
+    expect(route).toContain("announcePublicUrlsToIndexNow([canonical])");
     expect(route).toContain(
       "revalidatePath(localizedPath(locale, legacyPath))",
     );

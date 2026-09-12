@@ -61,6 +61,7 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 import { publicEntryChangeTags } from "@/lib/public-cache-tags";
+import { announcePublicUrlsToIndexNow } from "@/server/indexnow-announcer";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 export async function PATCH(
@@ -445,7 +446,12 @@ async function convergeAndRevalidate(entry: {
       ? await getPublicAuthorHandle(entry.owner_user_id)
       : null;
     if (authorHandle) {
-      revalidatePath(publicJournalEntryPath(authorHandle, entry.public_slug));
+      const canonical = publicJournalEntryPath(authorHandle, entry.public_slug);
+      revalidatePath(canonical);
+      // Only the canonical address, and only once the author's handle is
+      // known: the legacy spelling below is a 308, and announcing a redirect
+      // asks a crawler to fetch a page that is not there (OVE-434).
+      announcePublicUrlsToIndexNow([canonical]);
     }
     const legacyPath = legacyPublicJournalEntryPath(entry.public_slug);
     for (const locale of PUBLIC_LOCALES) {

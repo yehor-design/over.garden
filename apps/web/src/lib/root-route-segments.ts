@@ -31,6 +31,7 @@ export const ROOT_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
   "gbif",
   "guides",
   "id",
+  "indexnow",
   "journal",
   "journals",
   "knowledge",
