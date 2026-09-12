@@ -91,6 +91,14 @@ export function buildPublicVarietySurfaceMetadata(
           return url ? [url] : [];
         }),
       },
+      // The other side of an entry's `about`: what gardeners have written about
+      // this organism, by the `@id` those entries claim. The card already
+      // renders them, so the traversal closes on facts a reader can see
+      // (ADR-0022 D3, ADR-0029 D13).
+      subjectOf: page.entries.map((entry) => ({
+        id: `${absolutePublicUrl(entry.publicPath)}#article`,
+        url: absolutePublicUrl(entry.publicPath),
+      })),
       breadcrumbs: [
         {
           name: "OverGarden",

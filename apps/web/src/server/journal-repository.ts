@@ -441,6 +441,12 @@ export interface PublicJournalEntryObject {
   plantObjectId: string;
   displayName: string;
   objectKind: PlantObjectKind;
+  /**
+   * The organism this object is, by the id its permalink is built from. It is
+   * what an entry's `about` points at in the knowledge graph (ADR-0029 D13):
+   * an address moves, and an `@id` must not.
+   */
+  catalogItemId: string | null;
   catalogKind: CatalogKind | null;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
@@ -518,6 +524,7 @@ interface PublicJournalEntryRootRow {
   objectDisplayName: string | null;
   objectKind: string | null;
   catalogKind: string | null;
+  catalogItemId: string | null;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
   catalogSpeciesSlug: string | null;
@@ -2826,6 +2833,7 @@ export function serializePublicJournalEntryPage(input: {
             plantObjectId: root.plantObjectId,
             displayName: root.objectDisplayName,
             objectKind: root.objectKind as PlantObjectKind,
+            catalogItemId: root.catalogItemId,
             catalogKind: root.catalogKind as CatalogKind | null,
             catalogCanonicalName: root.catalogCanonicalName,
             catalogPublicSlug: root.catalogPublicSlug,

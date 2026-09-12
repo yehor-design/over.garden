@@ -85,6 +85,8 @@ describe("public variety metadata", () => {
             },
           ],
         },
+        expect.objectContaining({ "@type": "Organization" }),
+        expect.objectContaining({ "@type": "WebSite" }),
       ],
     });
     const taxon = (jsonLd as { "@graph": Record<string, unknown>[] })[
@@ -136,6 +138,8 @@ describe("public variety metadata", () => {
             },
           ],
         },
+        expect.objectContaining({ "@type": "Organization" }),
+        expect.objectContaining({ "@type": "WebSite" }),
       ],
     });
   });
@@ -150,6 +154,8 @@ describe("public variety metadata", () => {
           description: "Публичные записи сада: Pomidor Cheri.",
         }),
         expect.objectContaining({ "@type": "BreadcrumbList" }),
+        expect.objectContaining({ "@type": "Organization" }),
+        expect.objectContaining({ "@type": "WebSite" }),
       ],
     });
   });
@@ -180,6 +186,8 @@ describe("public variety metadata", () => {
           "@type": "BreadcrumbList",
           "@id": "https://example.test/species/solanum-lycopersicum#breadcrumb",
         },
+        expect.objectContaining({ "@type": "Organization" }),
+        expect.objectContaining({ "@type": "WebSite" }),
       ],
     });
   });
