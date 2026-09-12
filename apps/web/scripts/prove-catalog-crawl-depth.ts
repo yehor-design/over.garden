@@ -111,11 +111,12 @@ export async function crawlForOrganisms(input: {
     frontier = next;
   }
 
-  const first = sample[0];
   const trail: string[] = [];
-  for (let node = first; node; node = parent.get(node)) {
+  let node: string | undefined = sample[0];
+  while (node) {
     trail.unshift(node);
     if (node === "/") break;
+    node = parent.get(node);
   }
 
   return {
