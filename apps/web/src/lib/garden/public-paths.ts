@@ -11,21 +11,47 @@ import type { CatalogKind } from "@/db/schema";
  */
 export const MISSING_ADDRESS_SLUG = "missing";
 
-export function publicJournalEntryPath(publicSlug: string): string {
-  return `/journal/${encodeURIComponent(publicSlug)}`;
+/**
+ * Where a journal entry lives: under its author (ADR-0029 D9).
+ *
+ * `/journal/{slug}` was a flat, global namespace, so "мій перший помідор"
+ * collided across gardeners and *forced* a disambiguator into every URL — which
+ * is why every published entry carried twelve hexadecimal characters of its
+ * publish id. Scoping to the handle makes a collision per-person and rare, and
+ * puts the first-hand claim where a reader and an answer engine both see it.
+ *
+ * One address, no locale prefix: an entry is never translated (D10).
+ */
+export function publicJournalEntryPath(
+  authorHandle: string,
+  publicSlug: string,
+): string {
+  return `${publicProfileBasePath(authorHandle)}/${encodeURIComponent(publicSlug)}`;
 }
 
 /**
- * Interactive public journal evidence must preserve the already-resolved
- * interface locale. Keep the canonical base path above locale-neutral for
- * metadata and search documents.
+ * The entry's previous address, kept for the 308 and for the places that hold
+ * a slug without its author — a stored engagement ref, an old bookmark, a
+ * link somebody published. It resolves through the slug history forever (D8).
  */
-export function localizedPublicJournalEvidencePath(
-  locale: PublicLocale,
+export function legacyPublicJournalEntryPath(publicSlug: string): string {
+  return `/journal/${encodeURIComponent(publicSlug)}`;
+}
+
+/** An object passport, under the same author (ADR-0029 D9). */
+export function publicObjectPassportPath(
+  authorHandle: string,
   publicSlug: string,
 ): string {
-  return localizedPath(locale, publicJournalEntryPath(publicSlug));
+  return `${publicProfileBasePath(authorHandle)}/${PUBLIC_OBJECT_PASSPORT_SEGMENT}/${encodeURIComponent(publicSlug)}`;
 }
+
+/**
+ * The segment that separates a passport from an entry under one author, and
+ * the reason `objects` is a reserved entry slug in the manifest: an entry
+ * called *objects* would take its own author's passports with it.
+ */
+export const PUBLIC_OBJECT_PASSPORT_SEGMENT = "objects";
 
 /**
  * Where an organism lives (ADR-0026 D8). A species answers at
@@ -71,6 +97,12 @@ export function lineageInvitationClaimPath(token: string): string {
   return `/garden/lineage/invitations/claim#${params.toString()}`;
 }
 
+/**
+ * The passport's previous address, kept for the 308 and for nothing else.
+ *
+ * It put a database identifier in a public URL: `/lineage/objects/{uuid}` told
+ * a reader nothing, could not be typed, and could not be remembered.
+ */
 export function publicLineageObjectPath(plantObjectId: string): string {
   return `/lineage/objects/${encodeURIComponent(plantObjectId)}`;
 }

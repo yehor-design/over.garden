@@ -23,8 +23,11 @@ const mocks = vi.hoisted(() => ({
   getPublicObjectPassportLookup: vi.fn().mockResolvedValue({
     status: "not_found",
   }),
+  getPublicObjectPassportAddress: vi.fn().mockResolvedValue(null),
   getPublicJournalEntryLifecycleLookup: vi.fn().mockResolvedValue({
     status: "active",
+    publicSlug: "smoke-slug",
+    addressHandle: "yehor",
   }),
   getPublicProfileLifecycleLookup: vi.fn().mockResolvedValue({
     status: "active",
@@ -37,6 +40,7 @@ const mocks = vi.hoisted(() => ({
     slug: "care-checks",
   }),
   isListingPageBeyondTheEnd: vi.fn().mockResolvedValue(false),
+  resolveJournalEntryAddress: vi.fn().mockResolvedValue(null),
   resolvePublicCatalogAddress: vi.fn().mockResolvedValue({
     status: "canonical",
     catalogItemId: "11111111-1111-4111-8111-111111111111",
@@ -51,6 +55,7 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/server/public-object-passport-repository", () => ({
   getPublicObjectPassportLookup: mocks.getPublicObjectPassportLookup,
+  getPublicObjectPassportAddress: mocks.getPublicObjectPassportAddress,
 }));
 
 vi.mock("@/server/journal-repository", () => ({
@@ -76,6 +81,10 @@ vi.mock("@/server/public-topic-repository", () => ({
 
 vi.mock("@/server/public-listing-bounds", () => ({
   isListingPageBeyondTheEnd: mocks.isListingPageBeyondTheEnd,
+}));
+
+vi.mock("@/server/journal-slug-repository", () => ({
+  resolveJournalEntryAddress: mocks.resolveJournalEntryAddress,
 }));
 
 async function responseFor(
@@ -413,7 +422,7 @@ describe("app route cache guardrail", () => {
   it.each([
     "/",
     "/privacy",
-    "/journal/smoke-slug",
+    "/@yehor/smoke-slug",
     "/variety/smoke-variety",
     "/bg/journals",
   ])(
@@ -593,6 +602,8 @@ describe("app route cache guardrail", () => {
 
     mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
       status: "active",
+      publicSlug: "active-entry",
+      addressHandle: "yehor",
     });
     const active = await responseFor("/ru/journal/active-entry", {
       accept: "text/html",
@@ -617,7 +628,13 @@ describe("app route cache guardrail", () => {
       'href="/ru/journal/private-entry?engagement=interaction-unavailable"',
     );
     expect(privateEntryHtml).not.toContain("opaque-journal-token");
-    expect(active.status).toBe(200);
+    // An active entry asked for at `/ru/journal/{slug}` answers 308 to the one
+    // address it has, under its author and with no locale prefix (ADR-0029
+    // D9, D10).
+    expect(active.status).toBe(308);
+    expect(active.headers.get("Location")).toBe(
+      "https://over.garden/@yehor/active-entry",
+    );
     expect(rsc.status).toBe(200);
     expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith(
       "private-entry",
@@ -811,10 +828,17 @@ describe("app route cache guardrail", () => {
     // 307 to /bg on the strength of the country header, which meant the proxy
     // never reached the lifecycle lookup that decides 200, 410 or 404 — the
     // country of the reader changed which of those they got.
-    for (const response of [community, profile, journal]) {
+    for (const response of [community, profile]) {
       expect(response.status).not.toBe(307);
       expect(response.headers.get("Location")).toBeNull();
     }
+    // The entry's legacy address is a permanent redirect to the one it has
+    // under its author (ADR-0029 D9) — a 308 that does not depend on the
+    // country header, which is what this test is about.
+    expect(journal.status).toBe(308);
+    expect(journal.headers.get("Location")).toBe(
+      "https://over.garden/@yehor/smoke-slug",
+    );
     expect(mocks.getPublicCommunityLifecycleLookup).toHaveBeenCalled();
     expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalled();
     expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalled();
@@ -1087,7 +1111,7 @@ describe("app route cache guardrail", () => {
     const blogResponse = await responseFor("/blog/field-note", {
       cookie: interfaceCookies("bulgaria", "ru"),
     });
-    const ugcResponse = await responseFor("/journal/field-note", {
+    const ugcResponse = await responseFor("/@yehor/field-note", {
       cookie: interfaceCookies("bulgaria", "bg"),
     });
     const catalogResponse = await responseFor(
@@ -1396,7 +1420,8 @@ describe("organism addresses (ADR-0026 D8)", () => {
       for (const path of [
         "/journal/a/b",
         "/bg/communities/a/b",
-        "/@yehor/anything",
+        "/@yehor/objects/a/b",
+        "/@yehor/a/b/c",
         "/species/a/b/c",
       ]) {
         const response = await responseFor(path, document);
@@ -1417,6 +1442,29 @@ describe("organism addresses (ADR-0026 D8)", () => {
         const response = await responseFor(path, document);
         expect(response.status, path).toBe(404);
       }
+    });
+
+    /**
+     * The move in `pnpm address:entries:move` renamed every published entry.
+     * Without the history table behind this redirect, every URL anybody had
+     * ever shared would answer 404 instead of 308 (ADR-0029 D8).
+     */
+    it("308s an address the entry used to have", async () => {
+      mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+        status: "not_found",
+      });
+      mocks.resolveJournalEntryAddress.mockResolvedValueOnce({
+        handle: "yehor",
+        slug: "полив-без-календарної-пастки",
+      });
+      const moved = await responseFor(
+        "/journal/полив-без-календарноі-пастки-5364380c26",
+        document,
+      );
+      expect(moved.status).toBe(308);
+      expect(moved.headers.get("Location")).toBe(
+        `https://over.garden/@yehor/${encodeURIComponent("полив-без-календарної-пастки")}`,
+      );
     });
 
     it("404s a topic that does not exist, and passes one that does", async () => {

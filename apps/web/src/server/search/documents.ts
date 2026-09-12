@@ -1,4 +1,7 @@
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import {
+  legacyPublicJournalEntryPath,
+  publicJournalEntryPath,
+} from "@/lib/garden/public-paths";
 import {
   normalizeCoarseRegionCode,
   type CoarseRegionCode,
@@ -41,6 +44,12 @@ export interface JournalEntrySearchContractRow {
   location_visibility: "region" | "hidden" | string;
   coarse_region_code?: string | null;
   owner_profile_public_safe: boolean;
+  /**
+   * The handle the entry's public address hangs from (ADR-0029 D9). The
+   * projection carries it because a search hit links straight to the entry,
+   * and `/journal/{slug}` would make every result a redirect.
+   */
+  author_handle?: string | null;
   cover_source?: JournalSearchCoverSource | null;
   cover_public_url?: string | null;
   cover_projection_quality?: PublicProjectionQualityClass | null;
@@ -119,7 +128,9 @@ export function buildJournalEntrySearchDocumentContractFixture(
     title: entry.title,
     body: entry.body,
     publicSlug: entry.public_slug,
-    publicPath: publicJournalEntryPath(entry.public_slug),
+    publicPath: entry.author_handle
+      ? publicJournalEntryPath(entry.author_handle, entry.public_slug)
+      : legacyPublicJournalEntryPath(entry.public_slug),
     locationVisibility,
     ...(coarseRegionCode ? { coarseRegionCode } : {}),
     noindex: false,

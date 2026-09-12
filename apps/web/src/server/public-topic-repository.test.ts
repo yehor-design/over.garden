@@ -68,7 +68,6 @@ describe("public topic repository query contracts", () => {
             publicSlug: null,
           },
         ],
-        "bg",
       ),
     ).toEqual([
       {
@@ -78,7 +77,7 @@ describe("public topic repository query contracts", () => {
         bodyPreview: "Visible care evidence",
         entryDate: "2026-07-30",
         publishedAt: "2026-07-30T12:00:00.000Z",
-        publicPath: "/bg/journal/care-check",
+        publicPath: "/journal/care-check",
       },
     ]);
   });

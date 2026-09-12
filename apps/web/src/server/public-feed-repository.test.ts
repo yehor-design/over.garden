@@ -59,6 +59,7 @@ const firstRow = {
   spaceLocationVisibility: "region",
   spaceCoarseRegionCode: "UA-30",
   authorHandle: "green_thumb",
+  addressHandle: "green_thumb",
   authorDisplayName: "Олена",
   authorAvatarUrl: null,
 };
@@ -78,6 +79,7 @@ const secondRow = {
   spaceLocationVisibility: "region",
   spaceCoarseRegionCode: "BG-23",
   authorHandle: "apiary_notes",
+  addressHandle: "apiary_notes",
   authorDisplayName: "Микола",
 };
 
@@ -313,7 +315,7 @@ describe("public feed repository", () => {
     );
     expect(page.entries[0]).toMatchObject({
       id: firstRow.entryId,
-      publicPath: "/bg/journal/morning-check",
+      publicPath: "/@green_thumb/morning-check",
       object: {
         id: firstRow.objectId,
         kind: "plant",

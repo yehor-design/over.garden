@@ -20,6 +20,7 @@ import {
 } from "@/server/community-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { resolvePublicSurfaceDiscoveryForRequest } from "@/server/public-surface-discovery";
+import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -66,17 +67,23 @@ export async function listPublicJournalEntrySitemapUrls(
     .select([
       "journal_entries.public_slug as publicSlug",
       "journal_entries.updated_at as updatedAt",
+      publicAuthorHandleSql("journal_entries.owner_user_id").as(
+        "addressHandle",
+      ),
     ])
     .orderBy("journal_entries.published_at", "asc")
     .orderBy("journal_entries.id", "asc")
     .limit(PUBLIC_SITEMAP_CHUNK_SIZE)
     .offset(chunkIndex * PUBLIC_SITEMAP_CHUNK_SIZE)
     .execute();
+  // An entry whose author has no handle has no canonical address, and a
+  // sitemap that submitted its legacy one would be submitting a 308
+  // (ADR-0022 D3: a sitemap lists canonicals and nothing else).
   return rows.flatMap((row) =>
-    row.publicSlug
+    row.publicSlug && row.addressHandle
       ? [
           {
-            url: publicJournalEntryPath(row.publicSlug),
+            url: publicJournalEntryPath(row.addressHandle, row.publicSlug),
             lastModified: toDate(row.updatedAt),
           },
         ]

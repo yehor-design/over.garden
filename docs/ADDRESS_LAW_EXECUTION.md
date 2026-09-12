@@ -379,6 +379,48 @@ sitemap regenerated and every `<loc>` fetched at 200.
 **Dependencies.** Tasks 7, 9. **Bulk production write — hard rule 10 sign-off at
 the moment it runs.**
 
+
+**Shipped 2026-09-12.** Production moved: eleven entries and four object
+passports, in one transaction, with twenty-two slug-history rows behind them —
+eleven closed, eleven open. The four misspellings the old generator produced
+are corrected in the addresses themselves: `календарноі` → `календарної`,
+`сталии` → `сталий`, `зав-язуванням` → `завязуванням`, `деи-ствие` →
+`действие`. No entry carries a suffix.
+
+**The entry name stayed platform-unique; only the address moved.** Three
+readers identify an entry by its slug and nothing else — the engagement target
+ref a like is stored against, the Meilisearch document id, and the proxy's
+bounded lookup — and making the slug ambiguous before those move to the entry
+id would let two gardeners' likes land on one row. The visible outcome is the
+same either way, and a collision between two different gardeners takes a `-2`
+from the counter instead of being impossible. `plant_objects.public_slug` *is*
+per owner: nothing reads it by slug alone, and "Томат" is what half the gardens
+here call their tomato.
+
+**The history table is load-bearing, and the first draft of the proxy did not
+read it.** The move renames every published slug, so after it the live column
+no longer holds the address anybody had shared. `/journal/{old-slug}` answers
+308 only because `resolveJournalEntryAddress` looks in
+`journal_entry_slug_history` when the live lookup finds nothing. Without that
+read the move turns every published URL into a 404 — which is exactly what the
+history table exists to prevent, and exactly what it would have done.
+
+**The deploy order was wrong and cost a real window.** The migration and the
+move ran before the code that reads the history table was deployed, so for the
+length of one CI run an external link to an entry answered 404. Nothing inside
+the site linked there — every listing rebuilds its links from the database —
+but a crawler in that window saw a 404. A migration is safe in either order; a
+move is not, and the code that understands it goes first.
+
+**Two more things worth keeping.** `matchAuthorScopedPath` decodes `%40` as
+well as `@`, because a browser address bar produces the encoded form and the
+old profile matcher decoded the whole path to see it — decoding only the handle
+keeps an encoded slash in a later segment encoded. And a rewrite is no longer
+forced to `no-store`: the proxy used to stamp its cache contract on every
+response it returned, which was harmless while only the profile was rewritten
+and would have made every entry and passport uncacheable once they moved under
+`/@`.
+
 ---
 
 ## 11. `OVE-429` — The catalog re-slug backfill

@@ -15,12 +15,12 @@ import type {
   EngagementTargetKind,
 } from "@/db/schema";
 import {
-  localizedPublicJournalEvidencePath,
+  legacyPublicJournalEntryPath,
+  publicJournalEntryPath,
   publicLineageObjectPath,
   publicTopicPath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
-import type { PublicLocale } from "@/lib/public-localization";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
@@ -35,6 +35,7 @@ import {
   utcDayWindow,
 } from "@/server/interaction-admission";
 import type { RequestScope } from "@/server/request-scope";
+import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -679,7 +680,6 @@ export async function moderateEngagementCommentReport(
 export async function listEngagementBookmarks(
   scope: RequestScope,
   executor: QueryExecutor = db,
-  locale: PublicLocale = "uk",
 ): Promise<EngagementBookmarkShelfItem[]> {
   const rows = await buildListEngagementBookmarksQuery(
     executor,
@@ -694,7 +694,6 @@ export async function listEngagementBookmarks(
       target,
       executor,
       scope,
-      locale,
     );
     if (!publicTarget) continue;
 
@@ -843,7 +842,6 @@ export async function findPublicEngagementTarget(
   target: EngagementTarget,
   executor: QueryExecutor = db,
   viewerScope: RequestScope | null = null,
-  locale: PublicLocale = "uk",
 ): Promise<PublicEngagementTarget | null> {
   switch (target.kind) {
     case "journal_entry": {
@@ -866,7 +864,9 @@ export async function findPublicEngagementTarget(
             kind: target.kind,
             ref: row.publicSlug,
             label: row.title,
-            href: localizedPublicJournalEvidencePath(locale, row.publicSlug),
+            href: row.addressHandle
+              ? publicJournalEntryPath(row.addressHandle, row.publicSlug)
+              : legacyPublicJournalEntryPath(row.publicSlug),
           }
         : null;
     }
@@ -1429,6 +1429,9 @@ export function buildPublicJournalEntryTargetQuery(
       "public_slug as publicSlug",
       "title",
       "owner_user_id as ownerUserId",
+      publicAuthorHandleSql("journal_entries.owner_user_id").as(
+        "addressHandle",
+      ),
     ])
     .where("public_slug", "=", publicSlug)
     .where("visibility", "=", "public")
@@ -1710,10 +1713,24 @@ export function normalizeEngagementReturnTo(
   return normalizeInternalReturnPath(value, engagementTargetPath(target));
 }
 
+/**
+ * Where a reader is sent back to after signing in to like or comment.
+ *
+ * A journal entry and an object passport are addressed under their author now
+ * (ADR-0029 D9), and this function has only the target ref: a slug for an
+ * entry, a UUID for a passport. Neither carries a handle. It answers with the
+ * legacy address instead, which the proxy 308s to the canonical one — a
+ * redirect on a return path costs one hop and no correctness.
+ *
+ * Putting the handle in the ref is what would remove the hop. It is not worth
+ * a data migration of every stored like and comment on its own; it becomes
+ * worth it together with moving the ref onto the entry id, which is also what
+ * would let an entry slug be unique per author rather than per platform.
+ */
 export function engagementTargetPath(target: EngagementCommentTarget) {
   switch (target.kind) {
     case "journal_entry":
-      return localizedPublicJournalEvidencePath("uk", target.ref);
+      return legacyPublicJournalEntryPath(target.ref);
     case "lineage_object":
       return publicLineageObjectPath(target.ref);
     case "variety":

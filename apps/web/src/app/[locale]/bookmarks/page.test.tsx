@@ -87,14 +87,13 @@ describe("/{locale}/bookmarks", () => {
       }),
     );
 
-    expect(mocks.listEngagementBookmarks).toHaveBeenCalledWith(
-      {
-        userId: "00000000-0000-4000-8000-000000000001",
-        sessionId: "session-1",
-      },
-      undefined,
-      "uk",
-    );
+    // No locale argument any more: a bookmark's target has one address, under
+    // its author, and the reader's language does not choose between three of
+    // them (ADR-0029 D10).
+    expect(mocks.listEngagementBookmarks).toHaveBeenCalledWith({
+      userId: "00000000-0000-4000-8000-000000000001",
+      sessionId: "session-1",
+    });
     expect(html).toContain("Закладки");
     expect(html).toContain("First ripe cluster");
     expect(html).toContain("/journal/first-ripe-cluster");

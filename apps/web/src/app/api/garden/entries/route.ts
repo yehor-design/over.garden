@@ -61,7 +61,7 @@ import {
   listClaimedPublicPaths,
   type ClaimedEphemeralPublicationMedia,
 } from "@/lib/media/claimed-media";
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import { legacyPublicJournalEntryPath } from "@/lib/garden/public-paths";
 import {
   mutationScopeResponse,
   ownerUserIdFromRequest,
@@ -599,7 +599,7 @@ function buildAtomicCreateResponse(input: {
       coverUrl: coverMedia
         ? getPublicDerivativeUrl(coverMedia.publicPath)
         : null,
-      publicPath: publicJournalEntryPath(input.entry.public_slug),
+      publicPath: legacyPublicJournalEntryPath(input.entry.public_slug),
     },
     returnTo,
   };

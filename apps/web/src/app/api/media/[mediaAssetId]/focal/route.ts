@@ -13,7 +13,11 @@ import {
 } from "@/server/mutation-scope";
 import { publicEntryChangeTags } from "@/lib/public-cache-tags";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import {
+  legacyPublicJournalEntryPath,
+  publicJournalEntryPath,
+} from "@/lib/garden/public-paths";
+import { getPublicAuthorHandle } from "@/server/author-handle-repository";
 import { localizedPath } from "@/lib/public-localization";
 
 type RouteContext = {
@@ -93,10 +97,19 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     revalidatePath("/garden");
     if (result.publicSlug) {
-      revalidatePath(publicJournalEntryPath(result.publicSlug));
+      const authorHandle = await getPublicAuthorHandle(scope.userId);
+      if (authorHandle) {
+        revalidatePath(
+          publicJournalEntryPath(authorHandle, result.publicSlug),
+        );
+      }
+      revalidatePath(legacyPublicJournalEntryPath(result.publicSlug));
       for (const locale of ["uk", "bg", "ru"] as const) {
         revalidatePath(
-          localizedPath(locale, publicJournalEntryPath(result.publicSlug)),
+          localizedPath(
+            locale,
+            legacyPublicJournalEntryPath(result.publicSlug),
+          ),
         );
       }
     }

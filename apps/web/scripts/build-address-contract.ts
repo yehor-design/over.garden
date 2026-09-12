@@ -101,7 +101,7 @@ export function buildAddressContractDocument() {
     bannedPathLiterals: collectBannedPathLiterals(),
     lowerCasePathPrefixes: addressLowerCasePathPrefixes().map((entry) => ({
       prefix: entry.prefix,
-      namespace: entry.namespace,
+      namespaces: [...entry.namespaces],
     })),
   };
 }
@@ -272,7 +272,7 @@ function renderTypescript(
   const lowerCase = document.lowerCasePathPrefixes
     .map(
       (entry) =>
-        `  { prefix: ${typescriptString(entry.prefix)}, namespace: ${typescriptString(entry.namespace)} },`,
+        `  { prefix: ${typescriptString(entry.prefix)}, namespaces: [${entry.namespaces.map(typescriptString).join(", ")}] },`,
     )
     .join("\n");
   const banned = document.bannedPathLiterals
@@ -341,7 +341,7 @@ ${banned}
 /** Prefixes under which every following segment is already lower case. */
 export const ADDRESS_LOWER_CASE_PATH_PREFIXES: readonly {
   readonly prefix: string;
-  readonly namespace: AddressNamespace;
+  readonly namespaces: readonly AddressNamespace[];
 }[] = [
 ${lowerCase}
 ];

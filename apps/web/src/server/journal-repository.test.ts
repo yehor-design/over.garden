@@ -989,6 +989,7 @@ describe("journal repository query contracts", () => {
         objectLocationVisibility: "region",
         objectCoarseRegionCode: "UA-30",
         authorHandle: "olena",
+        addressHandle: "olena",
         authorDisplayName: "Олена",
         authorAvatarUrl: null,
       },
@@ -1028,7 +1029,7 @@ describe("journal repository query contracts", () => {
       locale: "bg",
     });
 
-    expect(page.entry.publicPath).toBe("/bg/journal/pershyi-urozhai");
+    expect(page.entry.publicPath).toBe("/@olena/pershyi-urozhai");
     expect(page.context.kind).toBe("object");
     expect(page.context).toMatchObject({
       kind: "object",
@@ -1066,10 +1067,10 @@ describe("journal repository query contracts", () => {
     ]);
     expect(page.adjacentEntries).toMatchObject({
       newer: null,
-      older: { publicPath: "/bg/journal/tyzhden-ranishe" },
+      older: { publicPath: "/journal/tyzhden-ranishe" },
     });
     expect(page.relatedEntries[0]?.publicPath).toBe(
-      "/bg/journal/tyzhden-ranishe",
+      "/journal/tyzhden-ranishe",
     );
     expect(JSON.stringify(page)).not.toMatch(
       /ownerUserId|owner_user_id|email|quarantine|coordinates|latitude|longitude/i,

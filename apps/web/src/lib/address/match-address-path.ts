@@ -5,6 +5,7 @@ import {
 import { addressManifestEntry } from "@/lib/address/address-manifest";
 import type { AddressNamespace } from "@/lib/address/address-manifest";
 import { matchPublicCatalogAddressPath } from "@/lib/catalog/addresses";
+import { PUBLIC_OBJECT_PASSPORT_SEGMENT } from "@/lib/garden/public-paths";
 import { stripLocalePrefix } from "@/lib/public-localization";
 
 /**
@@ -29,26 +30,112 @@ export function matchAddressPath(
 ): string | null {
   const entry = addressManifestEntry(namespace);
   const path = pathWithoutTrailingSlash(stripLocalePrefix(pathname).path);
-  if (!path.startsWith(entry.pathPrefix)) return null;
+  // Three namespaces share `/@`, and each is a different shape under it, so
+  // that prefix is left to `matchAuthorScopedPath`. What remains here is the
+  // one-segment shape: a namespace's own prefix where it has one of its own,
+  // and the older prefixes it still answers under behind a 308.
+  const prefixes = [entry.pathPrefix, ...entry.legacyPathPrefixes].filter(
+    (prefix) => prefix !== "/@",
+  );
 
-  const remainder = path.slice(entry.pathPrefix.length);
-  if (remainder.length === 0 || remainder.includes("/")) return null;
+  for (const prefix of prefixes) {
+    if (!path.startsWith(prefix)) continue;
+    const remainder = path.slice(prefix.length);
+    if (remainder.length === 0 || remainder.includes("/")) continue;
+    const decoded = decodeSegment(remainder);
+    if (decoded === null) continue;
+    if (isAddressSlug(namespace, decoded)) return decoded;
+  }
+  return null;
+}
 
-  const decoded = decodeSegment(remainder);
-  if (decoded === null) return null;
-  return isAddressSlug(namespace, decoded) ? decoded : null;
+export interface AuthorScopedAddress {
+  readonly handle: string;
+  readonly slug: string;
+}
+
+/**
+ * The three shapes that live under one author (ADR-0029 D9).
+ *
+ * `/@{handle}` is the profile, `/@{handle}/{slug}` an entry, and
+ * `/@{handle}/objects/{slug}` an object passport. They share a prefix because
+ * they share an owner, and `objects` is a reserved entry slug for exactly this
+ * reason: an entry called *objects* would take its own author's passports with
+ * it.
+ */
+export function matchAuthorScopedPath(
+  pathname: string,
+): { kind: "profile" | "journalEntry" | "object"; handle: string; slug: string | null } | null {
+  const path = pathWithoutTrailingSlash(stripLocalePrefix(pathname).path);
+  // `%40` is `@`, and a browser address bar produces it. The old profile
+  // matcher decoded the whole path to see it; decoding only the handle keeps
+  // an encoded slash in a later segment encoded, which is what stops a slug
+  // escaping its own route segment.
+  const segments = path.slice(1).split("/");
+  const first = segments[0] ?? "";
+  const handleSegment = first.startsWith("@")
+    ? first.slice(1)
+    : first.toLowerCase().startsWith("%40")
+      ? first.slice(3)
+      : null;
+  if (handleSegment === null) return null;
+  const handle = decodeSegment(handleSegment)?.toLowerCase() ?? null;
+  if (handle === null || !isAddressSlug("profileHandle", handle)) return null;
+
+  if (segments.length === 1) {
+    return { kind: "profile", handle, slug: null };
+  }
+
+  if (segments.length === 2) {
+    const slug = decodeSegment(segments[1]!);
+    if (slug === null || slug === PUBLIC_OBJECT_PASSPORT_SEGMENT) return null;
+    return isAddressSlug("journalEntry", slug)
+      ? { kind: "journalEntry", handle, slug }
+      : null;
+  }
+
+  if (segments.length === 3 && segments[1] === PUBLIC_OBJECT_PASSPORT_SEGMENT) {
+    const slug = decodeSegment(segments[2]!);
+    if (slug === null) return null;
+    return isAddressSlug("object", slug)
+      ? { kind: "object", handle, slug }
+      : null;
+  }
+
+  return null;
+}
+
+/** `/@{handle}/{slug}`, or `null`. */
+export function matchAuthorScopedEntryPath(
+  pathname: string,
+): AuthorScopedAddress | null {
+  const matched = matchAuthorScopedPath(pathname);
+  return matched?.kind === "journalEntry"
+    ? { handle: matched.handle, slug: matched.slug! }
+    : null;
+}
+
+/** `/@{handle}/objects/{slug}`, or `null`. */
+export function matchAuthorScopedObjectPath(
+  pathname: string,
+): AuthorScopedAddress | null {
+  const matched = matchAuthorScopedPath(pathname);
+  return matched?.kind === "object"
+    ? { handle: matched.handle, slug: matched.slug! }
+    : null;
 }
 
 /**
  * The namespace a path claims to be in when nothing under it could serve the
  * path, or `null` when the path is servable or is not an address at all.
  *
- * This is what turns `/topics/Не слаг`, `/journal/a/b`, `/communities/x/y` and
- * `/species/a/b/c` into real 404s. Every one of them reaches a `[...missing]`
- * catch-all today, and `src/app/missing-route.tsx` says in its own comment why
- * that is not enough: the root loading boundary streams the shell before the
- * page runs, so `notFound()` answers 200 with a `noindex` body. A crawler
- * reads 200. The proxy is the only place a real status can still be chosen.
+ * This is what turns `/topics/Не слаг`, `/journal/a/b`, `/communities/x/y`,
+ * `/@yehor/objects/a/b` and `/species/a/b/c` into real 404s. Every one of them
+ * reaches a `[...missing]` catch-all today, and `src/app/missing-route.tsx`
+ * says in its own comment why that is not enough: the root loading boundary
+ * streams the shell before the page runs, so `notFound()` answers 200 with a
+ * `noindex` body. A crawler reads 200. The proxy is the only place a real
+ * status can still be chosen.
  *
  * A bare section root — `/topics`, `/species` — is **not** answered here.
  * Those are decided from the route table in `root-route-segments.ts`, because
@@ -60,25 +147,34 @@ export function unservableAddressNamespace(
 ): AddressNamespace | null {
   const path = pathWithoutTrailingSlash(stripLocalePrefix(pathname).path);
   const prefix = ADDRESS_LOWER_CASE_PATH_PREFIXES.find((candidate) =>
-    path.startsWith(candidate.prefix),
+    candidate.prefix === "/@"
+      ? path.startsWith("/@") || path.toLowerCase().startsWith("/%40")
+      : path.startsWith(candidate.prefix),
   );
   if (!prefix) return null;
 
   const remainder = path.slice(prefix.prefix.length);
   if (remainder.length === 0) return null;
 
+  // Three namespaces share `/@`, and their own matcher knows all three shapes.
+  if (prefix.prefix === "/@") {
+    return matchAuthorScopedPath(path) === null ? "profileHandle" : null;
+  }
+
   // The catalog owns two shapes under one prefix — `/species/{species}` and
   // `/species/{species}/{form}` — plus the two legacy flat ones, so its own
   // matcher decides, and a 308 to the canonical address is resolved after
   // this by the bounded lookup.
-  if (prefix.namespace === "species" || prefix.namespace === "form") {
-    return matchPublicCatalogAddressPath(path) === null ? prefix.namespace : null;
+  if (prefix.namespaces.includes("species") || prefix.namespaces.includes("form")) {
+    return matchPublicCatalogAddressPath(path) === null
+      ? prefix.namespaces[0]!
+      : null;
   }
 
   if (servesDeeperPath(prefix.prefix, remainder)) return null;
 
-  return matchAddressPath(prefix.namespace, path) === null
-    ? prefix.namespace
+  return matchAddressPath(prefix.namespaces[0]!, path) === null
+    ? prefix.namespaces[0]!
     : null;
 }
 
@@ -90,9 +186,6 @@ export function unservableAddressNamespace(
  * how this file stays a decision about addresses rather than a second router:
  * every other deeper path under a manifest prefix is unservable, and saying
  * which ones are not is a short, checkable sentence.
- *
- * `OVE-428` adds `/@{handle}/{slug}` and `/@{handle}/objects/{slug}` here when
- * entries and passports move under the author.
  */
 function servesDeeperPath(prefix: string, remainder: string): boolean {
   if (prefix !== "/communities/") return false;

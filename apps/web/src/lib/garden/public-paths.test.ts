@@ -3,13 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   gardenFirstEntryHomepagePath,
   gardenFirstEntryPreselectionPath,
+  legacyPublicJournalEntryPath,
   lineageInvitationClaimPath,
-  localizedPublicJournalEvidencePath,
   publicCatalogEvidencePath,
   publicCommunityDiscussionPath,
   publicCommunityPath,
   publicJournalEntryPath,
   publicLineageObjectPath,
+  publicObjectPassportPath,
   publicProfileBasePath,
   publicTopicPath,
   requestedPublicCatalogPath,
@@ -89,15 +90,14 @@ describe("garden public paths", () => {
     ).toBe("/breed/carpathian-bee");
   });
 
-  it("keeps interactive journal evidence in the resolved public locale", () => {
-    expect(localizedPublicJournalEvidencePath("uk", "demo entry")).toBe(
+  /**
+   * An entry used to answer at three addresses, one per locale. It is never
+   * translated, so it has one (ADR-0029 D10) — and the locale-prefixed
+   * spellings became 308s rather than pages.
+   */
+  it("keeps the legacy address for the places that hold a slug without its author", () => {
+    expect(legacyPublicJournalEntryPath("demo entry")).toBe(
       "/journal/demo%20entry",
-    );
-    expect(localizedPublicJournalEvidencePath("bg", "demo entry")).toBe(
-      "/bg/journal/demo%20entry",
-    );
-    expect(localizedPublicJournalEvidencePath("ru", "demo entry")).toBe(
-      "/ru/journal/demo%20entry",
     );
   });
 
@@ -121,10 +121,27 @@ describe("garden public paths", () => {
   it("encodes every segment it is given, including the hostile ones", () => {
     expect(publicTopicPath("a/b")).toBe("/topics/a%2Fb");
     expect(publicCommunityPath("a?b")).toBe("/communities/a%3Fb");
-    expect(publicJournalEntryPath("полив")).toBe(
+    expect(publicJournalEntryPath("yehor", "полив")).toBe(
+      `/@yehor/${encodeURIComponent("полив")}`,
+    );
+    expect(legacyPublicJournalEntryPath("полив")).toBe(
       `/journal/${encodeURIComponent("полив")}`,
     );
     expect(publicProfileBasePath("@yehor")).toBe("/@yehor");
+  });
+
+  /**
+   * The address that carries the whole point of the product: whose garden this
+   * is, in the URL, without a random suffix (ADR-0029 D9).
+   */
+  it("puts an entry and a passport under their author", () => {
+    expect(publicJournalEntryPath("yehor", "полив-без-календарної-пастки")).toBe(
+      `/@yehor/${encodeURIComponent("полив-без-календарної-пастки")}`,
+    );
+    expect(publicObjectPassportPath("yehor", "томат")).toBe(
+      `/@yehor/objects/${encodeURIComponent("томат")}`,
+    );
+    expect(publicJournalEntryPath("@yehor", "полив")).toBe("/@yehor/полив".replace("полив", encodeURIComponent("полив")));
   });
 
   it("rebuilds a requested catalog address in the shape it was asked for", () => {

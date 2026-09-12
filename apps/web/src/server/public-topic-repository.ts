@@ -9,7 +9,7 @@ import type { Database, PlantObjectKind } from "@/db/schema";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
 import {
-  localizedPublicJournalEvidencePath,
+  legacyPublicJournalEntryPath,
   publicTopicPath,
 } from "@/lib/garden/public-paths";
 import {
@@ -125,10 +125,7 @@ export async function getPublicTopicAggregationPage(
     aggregateBodyLength,
     latestPublishedAt: stats?.latestPublishedAt ?? null,
     qualityClass: "verified" as const,
-    entries: serializePublicTopicEntries(
-      entries,
-      options.locale ?? DEFAULT_PUBLIC_LOCALE,
-    ),
+    entries: serializePublicTopicEntries(entries),
   } satisfies Omit<PublicTopicAggregationPage, "indexState">;
   return {
     ...page,
@@ -263,7 +260,6 @@ export function buildPublicTopicAggregationEntriesQuery(
 
 export function serializePublicTopicEntries(
   rows: readonly PublicTopicEntryRow[],
-  locale: PublicLocale,
 ): PublicTopicEntry[] {
   return rows.flatMap((entry) =>
     entry.publicSlug && entry.publishedAt
@@ -275,10 +271,9 @@ export function serializePublicTopicEntries(
             bodyPreview: publicTopicBodyPreview(entry.body),
             entryDate: entry.entryDate,
             publishedAt: entry.publishedAt,
-            publicPath: localizedPublicJournalEvidencePath(
-              locale,
-              entry.publicSlug,
-            ),
+            // A topic gathers entries from every gardener, and this row
+            // carries no handle. The legacy address 308s to the canonical one.
+            publicPath: legacyPublicJournalEntryPath(entry.publicSlug),
           },
         ]
       : [],

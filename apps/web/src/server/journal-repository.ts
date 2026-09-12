@@ -24,7 +24,7 @@ import { normalizePublicJournalSlug } from "@/lib/garden/public-journal-slug";
 import { assignJournalEntrySlug } from "@/server/journal-slug-repository";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import {
-  localizedPublicJournalEvidencePath,
+  legacyPublicJournalEntryPath,
   publicJournalEntryPath,
   publicLineageObjectPath,
   publicProfilePath,
@@ -103,6 +103,7 @@ import {
   DELETED_JOURNAL_ENTRY_BODY,
   DELETED_JOURNAL_ENTRY_TITLE,
 } from "@/server/journal-deletion-retention";
+import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 export { JournalAggregateConflictError, readJournalDocumentFromEntry };
@@ -525,6 +526,12 @@ interface PublicJournalEntryRootRow {
   objectLocationVisibility: string | null;
   objectCoarseRegionCode: string | null;
   authorHandle: string | null;
+  /**
+   * The handle the entry's address hangs from, from the handle registry rather
+   * than from the profile: a gardener who hides their profile keeps their
+   * handle, and their published entries keep their addresses (ADR-0029 D9).
+   */
+  addressHandle: string | null;
   authorDisplayName: string | null;
   authorAvatarUrl: string | null;
 }
@@ -584,7 +591,7 @@ export type PublicJournalEntryLookup =
     };
 
 export type PublicJournalEntryLifecycleLookup =
-  | { status: "active" }
+  | { status: "active"; publicSlug: string; addressHandle: string | null }
   | { status: "gone"; publicSlug: string }
   | { status: "not_found" };
 
@@ -596,6 +603,8 @@ interface PublicJournalEntryLifecycleRow {
   publicGoneAt: Date | string | null;
   plantObjectId: string | null;
   joinedPlantObjectId: string | null;
+  /** The handle the entry's canonical address hangs from (ADR-0029 D9). */
+  addressHandle: string | null;
 }
 
 export interface FirstPlantEntryResult {
@@ -2526,7 +2535,7 @@ export async function resolvePlantObjectCatalog(
       },
       entryCount,
       publicEntryPaths: publicSlugs.flatMap((row) =>
-        row.publicSlug ? [publicJournalEntryPath(row.publicSlug)] : [],
+        row.publicSlug ? [legacyPublicJournalEntryPath(row.publicSlug)] : [],
       ),
     };
   });
@@ -2578,7 +2587,7 @@ export async function updatePlantObjectLocation(
     space: page.space,
     plantObject: page.plantObject,
     publicEntryPaths: publicSlugs.flatMap((row) =>
-      row.publicSlug ? [publicJournalEntryPath(row.publicSlug)] : [],
+      row.publicSlug ? [legacyPublicJournalEntryPath(row.publicSlug)] : [],
     ),
   };
 }
@@ -2661,7 +2670,13 @@ export async function getPublicJournalEntryLifecycleLookup(
     row.lifecycleState === "active" &&
     row.publicGoneAt === null &&
     hasValidContext
-    ? { status: "active" }
+    ? {
+        status: "active",
+        publicSlug: row.publicSlug,
+        // The proxy needs the canonical address to 308 a legacy or prefixed
+        // spelling at it, and this is the one lookup it already performs.
+        addressHandle: row.addressHandle,
+      }
     : { status: "not_found" };
 }
 
@@ -2861,10 +2876,9 @@ export function serializePublicJournalEntryPage(input: {
       // in its JSON-LD, and is read by nothing that filters or sorts.
       sourceLanguage: normalizeSourceLanguage(root.sourceLanguage),
       publicSlug: root.publicSlug ?? "",
-      publicPath: localizedPublicJournalEvidencePath(
-        locale,
-        root.publicSlug ?? "",
-      ),
+      publicPath: root.addressHandle
+        ? publicJournalEntryPath(root.addressHandle, root.publicSlug ?? "")
+        : legacyPublicJournalEntryPath(root.publicSlug ?? ""),
       publishedAt: root.publishedAt,
     },
     context,
@@ -2881,13 +2895,10 @@ export function serializePublicJournalEntryPage(input: {
       label: row.label,
       publicPath: localizedPath(locale, publicTopicPath(row.slug)),
     })),
-    relatedEntries: serializeRelatedPublicJournalEntries(
-      input.relatedRows,
-      locale,
-    ),
+    relatedEntries: serializeRelatedPublicJournalEntries(input.relatedRows),
     adjacentEntries: {
-      newer: serializeRelatedPublicJournalEntry(input.newerRow, locale),
-      older: serializeRelatedPublicJournalEntry(input.olderRow, locale),
+      newer: serializeRelatedPublicJournalEntry(input.newerRow),
+      older: serializeRelatedPublicJournalEntry(input.olderRow),
     },
     media: input.mediaRows.map((row) => ({
       id: row.id,
@@ -2943,14 +2954,12 @@ function serializeRelatedPublicJournalEntries(
     entryDate: Date | string;
     publicSlug: string;
   }>,
-  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): PublicJournalEntryRelatedEntry[] {
-  return rows.map((row) => serializeRelatedPublicJournalEntry(row, locale)!);
+  return rows.map((row) => serializeRelatedPublicJournalEntry(row)!);
 }
 
 function serializeRelatedPublicJournalEntry(
   row: PublicJournalEntryRelatedRow | null,
-  locale: PublicLocale,
 ): PublicJournalEntryRelatedEntry | null {
   if (!row) return null;
 
@@ -2960,7 +2969,9 @@ function serializeRelatedPublicJournalEntry(
     bodyPreview: publicJournalEntryBodyPreview(row.body),
     entryDate: row.entryDate,
     publicSlug: row.publicSlug,
-    publicPath: localizedPublicJournalEvidencePath(locale, row.publicSlug),
+    // A related entry can be another gardener's, and this row carries no
+    // handle. The legacy address 308s to the canonical one.
+    publicPath: legacyPublicJournalEntryPath(row.publicSlug),
   };
 }
 
@@ -3010,7 +3021,7 @@ export async function deleteJournalEntry(
       return {
         entryId: existing.id,
         publicUrl: existing.public_slug
-          ? publicJournalEntryPath(existing.public_slug)
+          ? legacyPublicJournalEntryPath(existing.public_slug)
           : null,
         publicGone: existing.public_gone_at !== null,
         deletedAt: existing.deleted_at,
@@ -3058,7 +3069,7 @@ export async function deleteJournalEntry(
     return {
       entryId: row.id,
       publicUrl: row.public_slug
-        ? publicJournalEntryPath(row.public_slug)
+        ? legacyPublicJournalEntryPath(row.public_slug)
         : null,
       publicGone: row.public_gone_at !== null,
       deletedAt: row.deleted_at,
@@ -3708,6 +3719,9 @@ export function buildPublicJournalEntryLifecycleQuery(
         ),
     )
     .select([
+      publicAuthorHandleSql("journal_entries.owner_user_id").as(
+        "addressHandle",
+      ),
       "journal_entries.entry_scope as entryScope",
       "journal_entries.visibility as visibility",
       "journal_entries.lifecycle_state as lifecycleState",
@@ -3803,6 +3817,7 @@ export function buildPublicJournalEntryLookupQuery(
       "plant_objects.location_visibility as objectLocationVisibility",
       "plant_objects.coarse_region_code as objectCoarseRegionCode",
       "user_public_profiles.handle as authorHandle",
+      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
       "user_public_profiles.display_name as authorDisplayName",
       "user_public_profiles.avatar_url as authorAvatarUrl",
     ])

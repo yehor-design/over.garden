@@ -607,7 +607,7 @@ describe("OVE-184 community repository contracts", () => {
 
     expect(page.items).toHaveLength(12);
     expect(page.items[0]).toMatchObject({
-      href: "/bg/journal/public-observation-0",
+      href: "/journal/public-observation-0",
       discussionState: "open",
       author: {
         handle: "keeper_0",

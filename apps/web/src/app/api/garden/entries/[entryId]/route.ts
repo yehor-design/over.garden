@@ -14,7 +14,11 @@ import {
 } from "@/lib/garden/journal-document";
 import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
 import { journalEntryDateInputValue } from "@/lib/garden/journal-entry-date";
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import {
+  legacyPublicJournalEntryPath,
+  publicJournalEntryPath,
+} from "@/lib/garden/public-paths";
+import { getPublicAuthorHandle } from "@/server/author-handle-repository";
 import { bytesToBase64Url } from "@/lib/media/ephemeral-staging-contract";
 import { stableJson } from "@/lib/media/ephemeral-staging-crypto";
 import { localizedPath, PUBLIC_LOCALES } from "@/lib/public-localization";
@@ -369,7 +373,7 @@ function buildAtomicEditResponse(
       bodyPreview: result.entry.body.slice(0, 240),
       entryDate: normalizeResponseDate(result.entry.entry_date),
       coverUrl: cover ? getPublicDerivativeUrl(cover.publicPath) : null,
-      publicPath: publicJournalEntryPath(result.entry.public_slug),
+      publicPath: legacyPublicJournalEntryPath(result.entry.public_slug),
     },
     returnTo: normalizeJournalComposerReturnTo(
       body.returnTo,
@@ -418,6 +422,7 @@ function validPlaceholderMap(value: unknown) {
 
 async function convergeAndRevalidate(entry: {
   id: string;
+  owner_user_id?: string | null;
   plant_object_id?: string | null;
   public_slug?: string | null;
 }) {
@@ -434,9 +439,17 @@ async function convergeAndRevalidate(entry: {
     "expire",
   );
   if (entry.public_slug) {
-    const publicPath = publicJournalEntryPath(entry.public_slug);
+    // Both addresses: the canonical one the entry answers at, and the legacy
+    // one the proxy 308s from — a redirect is cached too (ADR-0029 D9).
+    const authorHandle = entry.owner_user_id
+      ? await getPublicAuthorHandle(entry.owner_user_id)
+      : null;
+    if (authorHandle) {
+      revalidatePath(publicJournalEntryPath(authorHandle, entry.public_slug));
+    }
+    const legacyPath = legacyPublicJournalEntryPath(entry.public_slug);
     for (const locale of PUBLIC_LOCALES) {
-      revalidatePath(localizedPath(locale, publicPath));
+      revalidatePath(localizedPath(locale, legacyPath));
     }
   }
   await convergePublicProjectionsNow([entry.id]).catch(() => undefined);

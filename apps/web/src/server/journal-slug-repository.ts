@@ -2,6 +2,7 @@ import "server-only";
 
 import { sql, type Kysely, type Transaction } from "kysely";
 
+import { db } from "@/db";
 import type { Database } from "@/db/schema";
 import { addressManifestEntry } from "@/lib/address/address-manifest";
 import { isAddressSlug } from "@/lib/address/address-contract.generated";
@@ -94,4 +95,77 @@ export function buildTakenJournalEntrySlugsQuery(
       ]),
     )
     .$narrowType<{ slug: string }>();
+}
+
+export interface JournalEntryAddress {
+  readonly handle: string;
+  readonly slug: string;
+}
+
+/**
+ * The address an entry has now, found from any address it has ever had
+ * (ADR-0029 D8).
+ *
+ * The live column answers first. When it does not — because the slug moved —
+ * `journal_entry_slug_history` does, including rows whose `valid_to` is set:
+ * that is exactly what a closed row is for. Without this, the move that
+ * `pnpm address:entries:move` performs would turn every published URL into a
+ * 404 rather than a 308, which is the one thing the history table exists to
+ * prevent.
+ *
+ * The handle comes from the registry rather than from the history row, so a
+ * gardener who has since renamed their handle still gets one working
+ * destination instead of a redirect to an address nobody answers at.
+ */
+export async function resolveJournalEntryAddress(
+  slug: string,
+  executor: QueryExecutor = db,
+): Promise<JournalEntryAddress | null> {
+  const live = await executor
+    .selectFrom("journal_entries")
+    .innerJoin("user_handle_registry", (join) =>
+      join
+        .onRef(
+          "user_handle_registry.user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
+    .select([
+      "user_handle_registry.normalized_handle as handle",
+      "journal_entries.public_slug as slug",
+    ])
+    .where("journal_entries.public_slug", "=", slug)
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .executeTakeFirst();
+  if (live?.slug) return { handle: live.handle, slug: live.slug };
+
+  const historical = await executor
+    .selectFrom("journal_entry_slug_history")
+    .innerJoin(
+      "journal_entries",
+      "journal_entries.id",
+      "journal_entry_slug_history.journal_entry_id",
+    )
+    .innerJoin("user_handle_registry", (join) =>
+      join
+        .onRef(
+          "user_handle_registry.user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
+    .select([
+      "user_handle_registry.normalized_handle as handle",
+      "journal_entries.public_slug as slug",
+    ])
+    .where("journal_entry_slug_history.slug", "=", slug)
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.public_slug", "is not", null)
+    .executeTakeFirst();
+  return historical?.slug
+    ? { handle: historical.handle, slug: historical.slug }
+    : null;
 }

@@ -157,6 +157,9 @@ jobs:
       - name: Prove every public read against a database
         run: pnpm public:reads:prove-database
 
+      - name: Prove the author-scoped address migration, its triggers and its rollback
+        run: pnpm schema:author-addresses:prove-database
+
       - name: Prove the Stable Registry retirement migration and its rollback
         run: pnpm schema:retirement:prove-database
 

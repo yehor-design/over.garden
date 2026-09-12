@@ -15,8 +15,8 @@ import type {
   UserPublicProfile,
 } from "@/db/schema";
 import {
+  publicJournalEntryPath,
   publicLineageObjectPath,
-  localizedPublicJournalEvidencePath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import {
@@ -635,8 +635,10 @@ export function serializePublicProfilePage(input: {
         ? [
             {
               kind: "journal_entry" as const,
-              href: localizedPublicJournalEvidencePath(
-                input.locale ?? DEFAULT_PUBLIC_LOCALE,
+              // Every entry on a profile is that profile's own, so the page's
+              // handle addresses all of them (ADR-0029 D9).
+              href: publicJournalEntryPath(
+                input.profile.handle,
                 link.publicSlug,
               ),
               entryDate: link.entryDate,
@@ -733,8 +735,8 @@ export function serializePublicProfileEvidencePage(input: {
           bodyPreview: boundedBodyPreview(row.body),
           entryDate: row.entryDate,
           publishedAt: row.publishedAt,
-          publicPath: localizedPublicJournalEvidencePath(
-            input.locale,
+          publicPath: publicJournalEntryPath(
+            input.profile.handle,
             row.publicSlug,
           ),
           context: isObject

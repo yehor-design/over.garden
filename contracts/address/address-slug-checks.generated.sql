@@ -98,3 +98,28 @@ begin
       and slug ~ '^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$'
     );
 end $$;
+
+-- plant_objects_public_slug_check — object
+-- installed by migration 0070
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'plant_objects_public_slug_check'
+      and conrelid = 'plant_objects'::regclass
+  ) then
+    alter table plant_objects
+      drop constraint plant_objects_public_slug_check;
+  end if;
+
+  alter table plant_objects
+    add constraint plant_objects_public_slug_check
+    check (
+      public_slug is null
+      or (
+        char_length(public_slug) between 1 and 96
+        and public_slug ~ '^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$'
+      )
+    );
+end $$;

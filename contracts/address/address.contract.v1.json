@@ -63,7 +63,7 @@
       "shape": "hyphenated",
       "alphabet": "a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ",
       "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
-      "uniquenessScope": "perAuthorHandle",
+      "uniquenessScope": "global",
       "budget": {
         "decodedCharacters": 60,
         "encodedCharacters": 180
@@ -72,9 +72,11 @@
         "objects"
       ],
       "source": "the entry title at first publish",
-      "pathPrefix": "/journal/",
+      "pathPrefix": "/@",
       "pathBuilder": "publicJournalEntryPath",
-      "legacyPathPrefixes": [],
+      "legacyPathPrefixes": [
+        "/journal/"
+      ],
       "storage": {
         "table": "journal_entries",
         "column": "public_slug",
@@ -83,7 +85,7 @@
         "maxCharacters": 96,
         "checkInstalledBy": "0068"
       },
-      "notes": "The only slug column that has never carried a CHECK. Migration 0068 gives it one. The scope is per-author from OVE-428; until its history table lands the publish id still disambiguates."
+      "notes": "The only slug column that has never carried a CHECK; migration 0068 gave it one. Migration 0070 made the uniqueness per author and gave the namespace its history table, which is what let the publish-id suffix go."
     },
     {
       "namespace": "object",
@@ -98,11 +100,20 @@
       },
       "reservedWords": [],
       "source": "the object display name",
-      "pathPrefix": "/lineage/objects/",
-      "pathBuilder": "publicLineageObjectPath",
-      "legacyPathPrefixes": [],
-      "storage": null,
-      "notes": "Addressed by id today; OVE-428 moves it to /@{handle}/objects/{slug} and gives it a column."
+      "pathPrefix": "/@",
+      "pathBuilder": "publicObjectPassportPath",
+      "legacyPathPrefixes": [
+        "/lineage/objects/"
+      ],
+      "storage": {
+        "table": "plant_objects",
+        "column": "public_slug",
+        "constraint": "plant_objects_public_slug_check",
+        "nullable": true,
+        "maxCharacters": 96,
+        "checkInstalledBy": "0070"
+      },
+      "notes": "A passport is addressed by slug from OVE-428. The column is nullable because a private object has no public address, and only an object with a public entry is given one."
     },
     {
       "namespace": "topic",
@@ -225,12 +236,26 @@
       "namespaces": [
         "topic"
       ]
+    },
+    {
+      "constraint": "plant_objects_public_slug_check",
+      "table": "plant_objects",
+      "column": "public_slug",
+      "nullable": true,
+      "maxCharacters": 96,
+      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "checkInstalledBy": "0070",
+      "namespaces": [
+        "object"
+      ]
     }
   ],
   "bannedPathLiterals": [
     {
       "literal": "/@",
       "builders": [
+        "publicJournalEntryPath",
+        "publicObjectPassportPath",
         "publicProfileBasePath"
       ]
     },
@@ -255,7 +280,7 @@
     {
       "literal": "/lineage/objects/",
       "builders": [
-        "publicLineageObjectPath"
+        "publicObjectPassportPath"
       ]
     },
     {
@@ -279,40 +304,55 @@
   ],
   "lowerCasePathPrefixes": [
     {
-      "prefix": "/species/",
-      "namespace": "species"
-    },
-    {
-      "prefix": "/species/",
-      "namespace": "form"
-    },
-    {
-      "prefix": "/variety/",
-      "namespace": "form"
-    },
-    {
-      "prefix": "/breed/",
-      "namespace": "form"
-    },
-    {
-      "prefix": "/journal/",
-      "namespace": "journalEntry"
-    },
-    {
       "prefix": "/lineage/objects/",
-      "namespace": "object"
-    },
-    {
-      "prefix": "/topics/",
-      "namespace": "topic"
+      "namespaces": [
+        "object"
+      ]
     },
     {
       "prefix": "/communities/",
-      "namespace": "community"
+      "namespaces": [
+        "community"
+      ]
+    },
+    {
+      "prefix": "/species/",
+      "namespaces": [
+        "species",
+        "form"
+      ]
+    },
+    {
+      "prefix": "/variety/",
+      "namespaces": [
+        "form"
+      ]
+    },
+    {
+      "prefix": "/journal/",
+      "namespaces": [
+        "journalEntry"
+      ]
+    },
+    {
+      "prefix": "/topics/",
+      "namespaces": [
+        "topic"
+      ]
+    },
+    {
+      "prefix": "/breed/",
+      "namespaces": [
+        "form"
+      ]
     },
     {
       "prefix": "/@",
-      "namespace": "profileHandle"
+      "namespaces": [
+        "journalEntry",
+        "object",
+        "profileHandle"
+      ]
     }
   ]
 }

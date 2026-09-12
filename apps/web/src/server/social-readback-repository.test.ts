@@ -211,11 +211,11 @@ describe("social readback repository contracts", () => {
         targetVarietyText: "Red Cherry",
         targetVarietyState: "selected",
       },
-    ], "bg");
+    ]);
 
     expect(stories).toMatchObject([
       {
-        href: "/bg/journal/public-story",
+        href: "/journal/public-story",
         ownerMention: "@green_thumb",
         targetObject: {
           displayName: "Balcony tomato",

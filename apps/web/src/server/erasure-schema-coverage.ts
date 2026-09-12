@@ -140,6 +140,54 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     executionOwned: true,
   },
 
+  // Address history (cascade). A slug history row names the handle its address
+  // hung from, which is personal data: `/@yehor/полив` is a person in a URL.
+  // The row goes with the entry or the object through `ON DELETE CASCADE`, and
+  // the handle goes with it — an erased gardener's addresses stop resolving
+  // rather than answering 308 to a page that no longer exists (ADR-0029 D8).
+  {
+    id: "journal_entry_slug_history.journal_entry_id",
+    table: "journal_entry_slug_history",
+    columnOrPath: "journal_entry_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale: "ON DELETE CASCADE with the entry the address named.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "journal_entry_slug_history.author_handle",
+    table: "journal_entry_slug_history",
+    columnOrPath: "author_handle",
+    kind: "soft_column",
+    disposition: "delete",
+    rationale:
+      "The handle an entry's address hung from is deleted with the entry.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "plant_object_slug_history.plant_object_id",
+    table: "plant_object_slug_history",
+    columnOrPath: "plant_object_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale: "ON DELETE CASCADE with the object the address named.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "plant_object_slug_history.author_handle",
+    table: "plant_object_slug_history",
+    columnOrPath: "author_handle",
+    kind: "soft_column",
+    disposition: "delete",
+    rationale:
+      "The handle a passport's address hung from is deleted with the object.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+
   // Social / engagement (cascade)
   {
     id: "profile_follows.follower_user_id",

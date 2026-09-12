@@ -11,8 +11,8 @@ import type {
   PlantObjectKind,
 } from "@/db/schema";
 import {
+  legacyPublicJournalEntryPath,
   publicCatalogEvidencePath,
-  localizedPublicJournalEvidencePath,
   publicLineageObjectPath,
 } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
@@ -343,10 +343,7 @@ function serializePublicObjectCatalogCard(
     },
     latestJournal: {
       title: row.latestEntryTitle,
-      path: localizedPublicJournalEvidencePath(
-        locale,
-        row.latestEntryPublicSlug,
-      ),
+      path: legacyPublicJournalEntryPath(row.latestEntryPublicSlug),
       entryDate: row.latestEntryDate,
     },
     mediaPublicUrl: row.mediaDerivativeKey

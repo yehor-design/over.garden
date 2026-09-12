@@ -14,7 +14,7 @@ import type {
 } from "@/db/schema";
 import {
   publicCatalogEvidencePath,
-  localizedPublicJournalEvidencePath,
+  publicJournalEntryPath,
   publicLineageObjectPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
@@ -399,7 +399,7 @@ export function serializePublicJournalDirectoryPage(
       excerpt: buildPublicJournalDirectoryExcerpt(row.body),
       entryDate: row.entryDate,
       publishedAt: row.publishedAt,
-      publicPath: localizedPublicJournalEvidencePath(locale, row.publicSlug),
+      publicPath: publicJournalEntryPath(row.addressHandle, row.publicSlug),
       season: seasonForDate(row.entryDate),
       safeRegionCode: normalizeCoarseRegionCode(row.safeRegionCode),
       object: {

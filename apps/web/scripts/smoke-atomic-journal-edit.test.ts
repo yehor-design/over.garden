@@ -52,8 +52,14 @@ describe("OVE-348 atomic journal edit smoke", () => {
     expect(route).toContain("claimEphemeralPublicationMedia");
     expect(route).toContain("assertPublicMediaReady");
     expect(route).toContain("for (const locale of PUBLIC_LOCALES)");
+    // Both addresses: the canonical one under the author, and the legacy
+    // locale-prefixed spellings the proxy 308s from — a redirect is cached too
+    // (ADR-0029 D9).
     expect(route).toContain(
-      "revalidatePath(localizedPath(locale, publicPath))",
+      "revalidatePath(publicJournalEntryPath(authorHandle, entry.public_slug))",
+    );
+    expect(route).toContain(
+      "revalidatePath(localizedPath(locale, legacyPath))",
     );
     expect(repository).toContain(
       "export async function updateAtomicJournalEntry",

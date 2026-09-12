@@ -17,9 +17,9 @@ import {
 } from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import {
-  localizedPublicJournalEvidencePath,
-  publicProfilePath,
   publicCatalogEvidencePath,
+  publicJournalEntryPath,
+  publicProfilePath,
 } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
@@ -30,6 +30,7 @@ import {
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { buildFirstProcessedMediaPerEntryQuery } from "@/server/public-media-repository";
+import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 const PUBLIC_OBJECT_JOURNAL_PREVIEW_PAGE_SIZE = 5;
@@ -127,6 +128,12 @@ interface PublicObjectPassportRootRow {
   firstEntryDate: Date | string;
   latestEntryDate: Date | string;
   authorHandle: string | null;
+  /**
+   * The handle the passport's address hangs from, from the handle registry
+   * rather than from the profile: a gardener who hides their profile keeps
+   * their handle, and their public objects keep their addresses.
+   */
+  addressHandle: string;
   authorDisplayName: string | null;
   authorAvatarUrl: string | null;
 }
@@ -172,6 +179,62 @@ export async function getPublicObjectPassportPage(
     locale,
   );
   return lookup.status === "active" ? lookup.page : null;
+}
+
+/**
+ * The object a `/@{handle}/objects/{slug}` address names, or `null`.
+ *
+ * The slug is unique per owner and the handle identifies the owner, so the
+ * pair is a key. Deliberately one indexed read that answers an id: the page
+ * below already knows how to render an object by id, and every cache tag and
+ * lookup in this file is keyed by that id.
+ */
+export async function getPublicObjectPassportIdBySlug(
+  authorHandle: string,
+  publicSlug: string,
+  executor: QueryExecutor = db,
+): Promise<string | null> {
+  const row = await executor
+    .selectFrom("plant_objects")
+    .innerJoin("user_handle_registry", (join) =>
+      join
+        .onRef("user_handle_registry.user_id", "=", "plant_objects.owner_user_id")
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
+    .select(["plant_objects.id as plantObjectId"])
+    .where("user_handle_registry.normalized_handle", "=", authorHandle)
+    .where("plant_objects.public_slug", "=", publicSlug)
+    .executeTakeFirst();
+  return row?.plantObjectId ?? null;
+}
+
+/**
+ * The canonical address of a passport still addressed by its id.
+ *
+ * `/lineage/objects/{uuid}` answers 308 forever (ADR-0029 D8), and this is the
+ * one read the proxy performs to build the destination.
+ */
+export async function getPublicObjectPassportAddress(
+  plantObjectId: string,
+  executor: QueryExecutor = db,
+): Promise<{ handle: string; slug: string } | null> {
+  const normalized = normalizePublicObjectPassportId(plantObjectId);
+  if (!normalized) return null;
+  const row = await executor
+    .selectFrom("plant_objects")
+    .innerJoin("user_handle_registry", (join) =>
+      join
+        .onRef("user_handle_registry.user_id", "=", "plant_objects.owner_user_id")
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
+    .select([
+      "user_handle_registry.normalized_handle as handle",
+      "plant_objects.public_slug as slug",
+    ])
+    .where("plant_objects.id", "=", normalized)
+    .where("plant_objects.public_slug", "is not", null)
+    .executeTakeFirst();
+  return row?.slug ? { handle: row.handle, slug: row.slug } : null;
 }
 
 export async function getPublicObjectPassportLookup(
@@ -370,6 +433,7 @@ export function buildPublicObjectPassportRootQuery(
       "catalog_items.public_slug as catalogPublicSlug",
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
       "user_public_profiles.handle as authorHandle",
+      publicAuthorHandleSql("plant_objects.owner_user_id").as("addressHandle"),
       "user_public_profiles.display_name as authorDisplayName",
       "user_public_profiles.avatar_url as authorAvatarUrl",
       fn.count<number>("public_entries.id").as("publicEntryCount"),
@@ -402,7 +466,13 @@ export function buildPublicObjectPassportRootQuery(
       "user_public_profiles.handle",
       "user_public_profiles.display_name",
       "user_public_profiles.avatar_url",
-    ]);
+    ])
+    // `publicAuthorHandleSql` reads `plant_objects.owner_user_id`, which is
+    // functionally dependent on the grouped primary key above; and the filter
+    // is what makes `addressHandle` non-null rather than a hopeful assertion.
+    // An object whose owner has no handle has no public address (ADR-0029 D9).
+    .having(publicAuthorHandleSql("plant_objects.owner_user_id"), "is not", null)
+    .$narrowType<{ addressHandle: string }>();
 }
 
 export function buildPublicObjectPassportTimelineQuery(
@@ -515,16 +585,16 @@ export function serializePublicObjectPassportPage(
   /** OVE-371 placeholder/variant columns, keyed by media asset id. */
   mediaExtras?: ReadonlyMap<string, MediaVariantExtras>,
 ): PublicObjectPassportPage {
+  // Every entry on a passport belongs to the object's owner, so one handle
+  // addresses all of them (ADR-0029 D9).
+  const authorHandle = root.addressHandle;
   const serializedJournal = journalRows.map((entry) => ({
     id: entry.entryId,
     title: entry.entryTitle,
     bodyPreview: publicJournalBodyPreview(entry.entryBody),
     entryDate: entry.entryDate,
     publicSlug: entry.entryPublicSlug,
-    publicPath: localizedPublicJournalEvidencePath(
-      locale,
-      entry.entryPublicSlug,
-    ),
+    publicPath: publicJournalEntryPath(authorHandle, entry.entryPublicSlug),
     mediaPublicUrl: entry.mediaDerivativeKey
       ? getPublicDerivativeUrl(entry.mediaDerivativeKey)
       : null,

@@ -55,7 +55,7 @@ function renderLifecycleDocument(
     locale,
     pathname:
       location?.pathname ??
-      localizedPath(locale, publicJournalEntryPath(MISSING_ADDRESS_SLUG)),
+      publicJournalEntryPath(MISSING_ADDRESS_SLUG, MISSING_ADDRESS_SLUG),
     search: location?.search,
     title,
     description,
