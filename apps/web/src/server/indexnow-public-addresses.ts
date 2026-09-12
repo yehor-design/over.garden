@@ -12,7 +12,10 @@ import {
 import { catalogKindSql } from "@/server/catalog-kind-sql";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { getPublicAuthorHandle } from "@/server/author-handle-repository";
-import { announcePublicUrlsToIndexNow } from "@/server/indexnow-announcer";
+import {
+  afterResponse,
+  announcePublicUrlsToIndexNow,
+} from "@/server/indexnow-announcer";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -42,14 +45,16 @@ export function announceJournalEntry(input: {
   ownerUserId: string | null | undefined;
   publicSlug: string | null | undefined;
 }): void {
-  void (async () => {
+  // `afterResponse`, not a bare promise: the read below has to survive the
+  // response, and on this platform an unawaited promise does not.
+  afterResponse(async () => {
     if (!input.ownerUserId || !input.publicSlug) return;
     const handle = await getPublicAuthorHandle(input.ownerUserId);
     if (!handle) return;
     announcePublicUrlsToIndexNow([
       publicJournalEntryPath(handle, input.publicSlug),
     ]);
-  })().catch(() => undefined);
+  });
 }
 
 /**
@@ -66,7 +71,7 @@ export function announceCatalogCard(
   catalogItemId: string,
   executor: QueryExecutor = db,
 ): void {
-  void (async () => {
+  afterResponse(async () => {
     const row = await executor
       .selectFrom("catalog_items")
       .select([
@@ -91,7 +96,7 @@ export function announceCatalogCard(
         speciesSlug: row.speciesSlug,
       }),
     ]);
-  })().catch(() => undefined);
+  });
 }
 
 /**

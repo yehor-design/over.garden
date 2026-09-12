@@ -7,6 +7,11 @@ const getPublicAuthorHandle = vi.fn(
 
 vi.mock("@/server/indexnow-announcer", () => ({
   announcePublicUrlsToIndexNow: (urls: readonly string[]) => announce(urls),
+  // The real one schedules with `after`, which throws outside a request; the
+  // work then runs directly, and that is what this stands in for.
+  afterResponse: (work: () => Promise<unknown>) => {
+    void work().catch(() => undefined);
+  },
 }));
 vi.mock("@/server/author-handle-repository", () => ({
   getPublicAuthorHandle: () => getPublicAuthorHandle(),

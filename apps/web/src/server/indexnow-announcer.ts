@@ -1,5 +1,7 @@
 import "server-only";
 
+import { after } from "next/server";
+
 import {
   INDEXNOW_ENDPOINT,
   INDEXNOW_RATE_WINDOW_MS,
@@ -40,7 +42,30 @@ let windowStartedAt = 0;
 let submissionsInWindow = 0;
 
 export function announcePublicUrlsToIndexNow(paths: readonly string[]): void {
-  void announceNow(paths).catch(() => undefined);
+  afterResponse(() => announceNow(paths));
+}
+
+/**
+ * Work that must outlive the response, without delaying it.
+ *
+ * A bare `void promise` is not enough on this platform: the instance is frozen
+ * as soon as the response is sent, so a submission started and not awaited can
+ * simply never be made — the feature would look implemented and do nothing, in
+ * production only. `after` is the runtime's own answer, and it is what keeps a
+ * failure out of the mutation too.
+ *
+ * Outside a request — a script, a test — `after` throws, and there the plain
+ * promise is correct: nothing is about to be frozen.
+ */
+export function afterResponse(work: () => Promise<unknown>): void {
+  const guarded = () => {
+    void work().catch(() => undefined);
+  };
+  try {
+    after(guarded);
+  } catch {
+    guarded();
+  }
 }
 
 /** The awaited form, for tests and for a script that announces deliberately. */

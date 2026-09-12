@@ -786,6 +786,13 @@ parameter there would have been a second place to forget. It is gone.
 awaits nothing and swallows everything, and a test asserts it by making `fetch`
 throw. An engine being down must not turn a gardener's publish into an error.
 
+**And a dropped promise is not "after the response" on this platform.** The
+instance is frozen as soon as the response is sent, so `void announceNow(…)`
+can simply never run — the feature would look implemented and do nothing, in
+production only, with every test green. `afterResponse` schedules through
+`after` from `next/server`, and falls back to running the work directly outside
+a request, where `after` throws and nothing is about to be frozen.
+
 **The bounds are per process, and the code says so.** A URL is not announced
 twice inside ten minutes — a gardener editing four times in a minute is one
 change to a crawler — and one instance makes at most thirty submissions a
