@@ -823,3 +823,32 @@ segment.
 the proxy has already accepted is two lookups disagreeing, and it is silent
 from outside: the reader gets an apology, every monitor sees a healthy `200`.
 It now writes one line naming the route, the guard, and the two paths compared.
+
+## The redirect that could not fire
+
+**Found 2026-09-12, the same day `/species` shipped.** Three unprefixed pages —
+`/knowledge`, `/species` and `/species/{species}/register` — read the reader's
+interface locale and `redirect()`ed a Bulgarian or Russian reader to their own
+prefix. Measured on production from a request geolocated to Bulgaria:
+
+```
+/species                 200, 61 267 bytes, no <h1> at all
+/bg/species              200, renders in full
+```
+
+**A `redirect()` in a page cannot fire after the shell has streamed.** The
+status is already `200` and the location header has sailed, so the reader gets
+the site chrome and an empty page — the same shape as the not-found body that
+answered `200` earlier the same day, and invisible to the same `curl -sI`.
+
+**D10 had already decided it.** A canonical URL answers `200` to everyone, and
+task 4 (`OVE-422`) took the geography redirects out of every other public page;
+these three were the ones nobody had revisited. They render now. The language
+control in the shell is how a reader reaches their own prefix, and `hreflang`
+is how a crawler does.
+
+**`pnpm public:addresses:prove-render` would not have caught these**, because it
+reads the addresses in the database and these are section roots. That is worth
+saying plainly: the gate covers entries, passports and profiles, and a page with
+no row behind it needs the crawl proof — `pnpm catalog:crawl:prove-depth` —
+which fetches what the site links to.
