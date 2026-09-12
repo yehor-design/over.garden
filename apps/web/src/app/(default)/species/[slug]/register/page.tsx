@@ -1,12 +1,4 @@
-import { redirect } from "next/navigation";
-
-import { publicCatalogRegisterHubPath } from "@/lib/catalog/addresses";
-import {
-  DEFAULT_PUBLIC_LOCALE,
-  localizedPath,
-  type PublicLocale,
-} from "@/lib/public-localization";
-import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import {
   generateMetadata as generateLocalizedRegisterHubMetadata,
   renderPublicRegisterHubPage,
@@ -23,23 +15,17 @@ export async function generateMetadata({ params }: RootRegisterHubRouteProps) {
   });
 }
 
-/** `/species/{species}/register` without a prefix, which is the Ukrainian address. */
+/**
+ * `/species/{species}/register` without a prefix, the Ukrainian address.
+ *
+ * It renders rather than redirecting by interface locale — see the browse
+ * route beside it: a canonical URL answers `200` to everyone (ADR-0029 D10),
+ * and a `redirect()` after the shell has streamed leaves the reader with an
+ * empty page instead of a location header.
+ */
 export default async function RootRegisterHubRoute({
   params,
 }: RootRegisterHubRouteProps) {
-  const [{ slug }, locale] = await Promise.all([
-    params,
-    getRequestInterfaceLocale(),
-  ]);
-
-  if (locale !== DEFAULT_PUBLIC_LOCALE) {
-    redirect(
-      localizedPath(
-        locale as PublicLocale,
-        publicCatalogRegisterHubPath(slug),
-      ),
-    );
-  }
-
+  const { slug } = await params;
   return renderPublicRegisterHubPage(DEFAULT_PUBLIC_LOCALE, slug);
 }
