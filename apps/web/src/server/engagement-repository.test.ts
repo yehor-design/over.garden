@@ -40,7 +40,6 @@ import {
   buildReportEngagementCommentQuery,
   buildUpsertEngagementBookmarkQuery,
   buildUpsertEngagementFollowQuery,
-  normalizeEngagementReturnTo,
   normalizeEngagementCommentTarget,
   normalizeEngagementTarget,
 } from "./engagement-repository";
@@ -65,9 +64,10 @@ class TestPostgresDialect implements Dialect {
 
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 const scope = scopedToUser("00000000-0000-4000-8000-000000000001");
+// The entry's id, since migration `0073` moved the ref off the slug.
 const journalTarget = {
   kind: "journal_entry" as const,
-  ref: "first-public-harvest",
+  ref: "00000000-0000-4000-8000-0000000000e1",
 };
 const privateLeakPattern =
   /quarantine|media_assets|derivative_key|ip_address|user_agent|email|phone|invite|token|coarse_region|location_visibility|latitude|longitude|coordinates/i;
@@ -141,7 +141,7 @@ describe("engagement repository contracts", () => {
     expect(compiled.sql).not.toMatch(promotionCouplingPattern);
     expect(compiled.parameters).toContain(scope.userId);
     expect(compiled.parameters).toContain("journal_entry");
-    expect(compiled.parameters).toContain("first-public-harvest");
+    expect(compiled.parameters).toContain(journalTarget.ref);
     expect(compiled.parameters).toContain("comment-submit-000000000001");
   });
 
@@ -450,24 +450,23 @@ describe("engagement repository contracts", () => {
   });
 
   it("normalizes target types while keeping topic unavailable for current public pages", () => {
+    // Since `0073` an entry is identified by its id: a slug moved under the
+    // author with OVE-428 and left every stored like pointing at a name.
     expect(
-      normalizeEngagementTarget("journal_entry", "врожай-томату-2026"),
+      normalizeEngagementTarget(
+        "journal_entry",
+        "00000000-0000-4000-8000-0000000000E1",
+      ),
     ).toEqual({
       kind: "journal_entry",
-      ref: "врожай-томату-2026",
+      ref: "00000000-0000-4000-8000-0000000000e1",
     });
+    expect(() =>
+      normalizeEngagementTarget("journal_entry", "врожай-томату-2026"),
+    ).toThrow("Engagement target is not available.");
     expect(() =>
       normalizeEngagementTarget("lineage_object", "not-a-uuid"),
     ).toThrow("Engagement target is not available.");
   });
 
-  it.each([
-    "/\\attacker.example/steal",
-    "/%5cattacker.example/steal",
-    "/%252f%255cattacker.example/steal",
-  ])("falls back from unsafe engagement return path %s", (returnTo) => {
-    expect(normalizeEngagementReturnTo(returnTo, journalTarget)).toBe(
-      "/journal/first-public-harvest",
-    );
-  });
 });

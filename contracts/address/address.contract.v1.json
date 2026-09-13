@@ -65,7 +65,7 @@
       "shape": "hyphenated",
       "alphabet": "a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ",
       "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
-      "uniquenessScope": "global",
+      "uniquenessScope": "perAuthorHandle",
       "budget": {
         "decodedCharacters": 60,
         "encodedCharacters": 180
@@ -87,7 +87,7 @@
         "maxCharacters": 96,
         "checkInstalledBy": "0068"
       },
-      "notes": "The only slug column that has never carried a CHECK; migration 0068 gave it one. Migration 0070 made the uniqueness per author and gave the namespace its history table, which is what let the publish-id suffix go."
+      "notes": "The only slug column that has never carried a CHECK; migration 0068 gave it one. Migration 0070 gave the namespace its history table, which is what let the publish-id suffix go; 0073 made the live column unique per author to match, once nothing identified an entry by its slug alone."
     },
     {
       "namespace": "object",

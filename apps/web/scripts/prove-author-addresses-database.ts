@@ -35,6 +35,7 @@ import { readFileSync } from "node:fs";
 
 import type { Database } from "../src/db/schema";
 import { assertLoopbackDatabaseEnvironment } from "../src/lib/local-runtime-safety";
+import { assignJournalEntrySlug } from "../src/server/journal-slug-repository";
 import { assignPlantObjectPublicSlug } from "../src/server/plant-object-slug-repository";
 import { loadVersionedApplicationSql } from "./application-sql";
 
@@ -45,6 +46,11 @@ const USER_ID = "00000000-0000-4000-8000-0000000004a0";
 const SPACE_ID = "00000000-0000-4000-8000-0000000004a1";
 const OBJECT_ID = "00000000-0000-4000-8000-0000000004a2";
 const ENTRY_ID = "00000000-0000-4000-8000-0000000004a3";
+const SECOND_USER_ID = "00000000-0000-4000-8000-0000000004b0";
+const SECOND_SPACE_ID = "00000000-0000-4000-8000-0000000004b1";
+const SECOND_ENTRY_ID = "00000000-0000-4000-8000-0000000004b3";
+const MIGRATION_0073 =
+  "0073_ove436_entry_names_per_author_engagement_refs_by_id.sql";
 
 async function seed(pool: Pool): Promise<string> {
   await pool.query(
@@ -218,6 +224,79 @@ export async function runAuthorAddressesDatabaseProof() {
     );
     expect("the assigned slug wrote history", secondHistory.rows, [
       { author_handle: handle, slug: "томат-2", open: true },
+    ]);
+
+    // 5. The entry's name is the gardener's (0073). The first gardener already
+    // holds `полив-без-календарної-пастки`, so the counter gives them `-2`; a
+    // second gardener gets the base itself, and the per-owner unique index
+    // accepts the same slug under the second owner.
+    await pool.query(
+      `insert into "user" (id, name, email, "emailVerified", "createdAt", "updatedAt")
+       values ($1, 'Second gardener', 'ove436-proof@example.test', true, now(), now())`,
+      [SECOND_USER_ID],
+    );
+    const secondClaimed = await pool.query<{ handle: string }>(
+      `select normalized_handle as handle from user_handle_registry
+       where user_id = $1 and lifecycle_state = 'current'`,
+      [SECOND_USER_ID],
+    );
+    const secondHandle = secondClaimed.rows[0]?.handle;
+    if (!secondHandle) throw new Error("author_addresses_proof_second_handle_missing");
+    await pool.query(
+      `insert into spaces (id, owner_user_id, display_name) values ($1, $2, 'Second space')`,
+      [SECOND_SPACE_ID, SECOND_USER_ID],
+    );
+    const firstOwnersNext = await db.transaction().execute((trx) =>
+      assignJournalEntrySlug(trx, {
+        title: "Полив без календарної пастки",
+        sourceLanguage: "uk",
+        ownerUserId: USER_ID,
+      }),
+    );
+    expect("the first gardener's next name", firstOwnersNext, "полив-без-календарної-пастки-2");
+    const secondOwnersName = await db.transaction().execute((trx) =>
+      assignJournalEntrySlug(trx, {
+        title: "Полив без календарної пастки",
+        sourceLanguage: "uk",
+        ownerUserId: SECOND_USER_ID,
+      }),
+    );
+    expect("the second gardener's name", secondOwnersName, "полив-без-календарної-пастки");
+    const sameNameSecondOwner = await pool
+      .query(
+        `insert into journal_entries
+           (id, owner_user_id, space_id, title, body, entry_scope, visibility,
+            lifecycle_state, published_at, public_slug, source_language, client_mutation_id)
+         values ($1, $2, $3, 'Полив без календарної пастки', 'Інший текст.', 'space',
+                 'public', 'active', now(), $4, 'uk', $5)`,
+        [SECOND_ENTRY_ID, SECOND_USER_ID, SECOND_SPACE_ID, secondOwnersName, `ove436-proof-${SECOND_ENTRY_ID}`],
+      )
+      .then(() => "accepted")
+      .catch((error: unknown) => (error as { code?: string }).code ?? "unknown");
+    expect("the same name under a second owner", sameNameSecondOwner, "accepted");
+
+    // 6. A like stored against a name that has since moved lands on the entry
+    // when 0073 replays, and of two likes by one reader — on the old name and
+    // on the new — the older survives.
+    await pool.query(
+      `insert into engagement_likes (target_kind, target_ref, user_id, created_at)
+       values ('journal_entry', 'polyv-old-slug', $1, now() - interval '1 minute'),
+              ('journal_entry', 'полив-без-календарної-пастки', $1, now())`,
+      [SECOND_USER_ID],
+    );
+    const olderLike = await pool.query<{ id: string }>(
+      `select id from engagement_likes where target_ref = 'polyv-old-slug'`,
+    );
+    await pool.query(
+      readFileSync(path.join(process.cwd(), "sql", MIGRATION_0073), "utf8"),
+    );
+    const likesAfter = await pool.query<{ id: string; target_ref: string }>(
+      `select id, target_ref from engagement_likes
+       where target_kind = 'journal_entry' and user_id = $1`,
+      [SECOND_USER_ID],
+    );
+    expect("likes after the ref moved onto the entry id", likesAfter.rows, [
+      { id: olderLike.rows[0]?.id, target_ref: ENTRY_ID },
     ]);
 
     // And the CHECK refuses a shape the slugifier cannot produce.

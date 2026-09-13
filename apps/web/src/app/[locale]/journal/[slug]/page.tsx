@@ -39,7 +39,17 @@ import {
 import { absolutePublicUrl } from "@/lib/garden/public-url";
 
 interface PublicJournalEntryRouteProps {
-  params: Promise<{ locale: string; slug: string }>;
+  params: Promise<{
+    locale: string;
+    slug: string;
+    /**
+     * The author's handle when the address carries one. The name is per
+     * author since `0073`, so the pair is the key; the legacy `/journal/{slug}`
+     * route passes none and the proxy has already sent every live entry to
+     * its author-scoped address before this route renders.
+     */
+    authorHandle?: string | null;
+  }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
@@ -48,13 +58,17 @@ const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
 export async function generateMetadata({
   params,
 }: PublicJournalEntryRouteProps): Promise<Metadata> {
-  const { locale: localeParam, slug } = await params;
+  const { locale: localeParam, slug, authorHandle = null } = await params;
   if (!isPublicLocale(localeParam)) return missingMetadata();
 
   const bounded = await resolvePublicSurfacePayload({
     consumerId: "localized_journal_entry",
     load: async () => {
-      const lookup = await readPublicJournalEntry(slug, localeParam);
+      const lookup = await readPublicJournalEntry(
+        slug,
+        localeParam,
+        authorHandle,
+      );
       if (lookup.status !== "active") {
         throw new Error("Public journal entry unavailable.");
       }
@@ -73,10 +87,11 @@ export default async function PublicJournalEntryRoute({
   params,
   searchParams,
 }: PublicJournalEntryRouteProps) {
-  const [{ locale: localeParam, slug }, query] = await Promise.all([
-    params,
-    searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
-  ]);
+  const [{ locale: localeParam, slug, authorHandle = null }, query] =
+    await Promise.all([
+      params,
+      searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
+    ]);
   if (!isPublicLocale(localeParam)) {
     logAddressRefusal({
       route: "journal_entry",
@@ -87,7 +102,7 @@ export default async function PublicJournalEntryRoute({
   }
 
   const locale: PublicLocale = localeParam;
-  const lookup = await readPublicJournalEntry(slug, locale);
+  const lookup = await readPublicJournalEntry(slug, locale, authorHandle);
   if (lookup.status !== "active") {
     logAddressRefusal({
       route: "journal_entry",
@@ -100,9 +115,11 @@ export default async function PublicJournalEntryRoute({
   const session = await getCurrentSession();
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
+  // The entry's id (the engagement ref since `0073`): a like stored against
+  // the slug was orphaned the day the slug moved under the author.
   const engagementTarget = {
     kind: "journal_entry" as const,
-    ref: lookup.page.entry.publicSlug,
+    ref: lookup.page.entry.id,
   };
   const [engagement, ownerControl, likeState] = await Promise.all([
     scope

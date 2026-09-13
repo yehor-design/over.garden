@@ -875,16 +875,29 @@ export async function proxy(request: NextRequest) {
         import("@/server/journal-repository"),
         import("@/server/journal-slug-repository"),
       ]);
-    const lookup =
-      await getPublicJournalEntryLifecycleLookup(publicJournalSlug);
     const authorScoped = matchAuthorScopedEntryPath(request.nextUrl.pathname);
+    // The name is per author since `0073`, so an author-scoped address is
+    // looked up by `(handle, slug)`. A legacy `/journal/{slug}` carries no
+    // handle and its slug may name more than one entry now; it is answered
+    // from the address history first — the legacy namespace was global, so
+    // the entry that held the slug first is the one the shared link meant —
+    // and the bare lookup only decides between 410 and 404 after that.
+    const lookup = await getPublicJournalEntryLifecycleLookup(
+      publicJournalSlug,
+      undefined,
+      { authorHandle: authorScoped?.handle ?? null },
+    );
     // A slug that is not the entry's current one may still be one it used to
     // have, and the history table is what turns that into a 308 rather than a
     // 404 (ADR-0029 D8). Read only when the live lookup found nothing, so the
     // ordinary request pays nothing for it.
     const historical =
       lookup.status === "not_found"
-        ? await resolveJournalEntryAddress(publicJournalSlug).catch(() => null)
+        ? await resolveJournalEntryAddress(
+            publicJournalSlug,
+            undefined,
+            authorScoped?.handle ?? null,
+          ).catch(() => null)
         : null;
     if (historical) {
       const url = request.nextUrl.clone();

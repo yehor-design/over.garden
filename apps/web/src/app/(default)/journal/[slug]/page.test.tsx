@@ -115,10 +115,13 @@ describe("/journal/[slug] V2", () => {
       }),
     );
 
+    // The legacy route carries no author handle (the name is per author
+    // since `0073`); the author-scoped route passes one.
     expect(mocks.getLookup).toHaveBeenCalledWith(
       page.entry.publicSlug,
       undefined,
       "bg",
+      null,
     );
     expect(html).toContain('data-locale="bg"');
     expect(html).toContain('data-return-to="/bg/journals?kind=plant"');
