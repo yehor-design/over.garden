@@ -12,7 +12,9 @@ import type {
 } from "@/db/schema";
 import {
   legacyPublicJournalEntryPath,
+  publicJournalEntryPath,
   publicLineageObjectPath,
+  publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
@@ -52,8 +54,11 @@ export interface FollowedFeedCandidateRow {
   entryDate: Date | string;
   publishedAt: Date | string | null;
   ownerHandle: string;
+  /** The registry handle the addresses hang from (ADR-0029 D9). */
+  addressHandle: string;
   ownerDisplayName: string | null;
   objectId: string;
+  objectPublicSlug: string | null;
   objectDisplayName: string;
   objectKind: string;
   varietyText: string | null;
@@ -313,8 +318,10 @@ export function buildFollowedFeedCandidatesQuery(
       "entries.entry_date as entryDate",
       "entries.published_at as publishedAt",
       "profiles.handle as ownerHandle",
+      "owner_handles.normalized_handle as addressHandle",
       "profiles.display_name as ownerDisplayName",
       "objects.id as objectId",
+      "objects.public_slug as objectPublicSlug",
       "objects.display_name as objectDisplayName",
       "objects.object_kind as objectKind",
       "objects.variety_text as varietyText",
@@ -383,7 +390,9 @@ export function serializeFollowedFeedPage(
     return [
       {
         key: stableOpaqueKey("feed", row.entryId),
-        href: legacyPublicJournalEntryPath(row.publicSlug),
+        // Under the author (ADR-0029 D9); this feed used to link the legacy
+        // address, a 308 on every story.
+        href: publicJournalEntryPath(row.addressHandle, row.publicSlug),
         title: row.title,
         excerpt: summarizePublicText(row.body, 240),
         entryDate: row.entryDate,
@@ -399,7 +408,11 @@ export function serializeFollowedFeedPage(
           kind: row.objectKind as PlantObjectKind,
           varietyText: row.varietyText,
           catalogKind: row.catalogKind,
-          href: publicLineageObjectPath(row.objectId),
+          href: publicObjectPassportAddress({
+            authorHandle: row.addressHandle,
+            publicSlug: row.objectPublicSlug,
+            plantObjectId: row.objectId,
+          }),
         },
         reasons: Array.from(new Set(reasons)),
         mediaUrl: mediaByEntry.get(row.entryId) ?? null,

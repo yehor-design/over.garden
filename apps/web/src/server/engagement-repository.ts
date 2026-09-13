@@ -18,6 +18,7 @@ import {
   legacyPublicJournalEntryPath,
   publicJournalEntryPath,
   publicLineageObjectPath,
+  publicObjectPassportAddress,
   publicTopicPath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
@@ -890,7 +891,13 @@ export async function findPublicEngagementTarget(
             kind: target.kind,
             ref: row.plantObjectId,
             label: row.displayName,
-            href: publicLineageObjectPath(row.plantObjectId),
+            // The passport's own address (ADR-0029 D9); the id path only
+            // for an object with no slug yet.
+            href: publicObjectPassportAddress({
+              authorHandle: row.addressHandle,
+              publicSlug: row.publicSlug,
+              plantObjectId: row.plantObjectId,
+            }),
           }
         : null;
     }
@@ -1469,12 +1476,17 @@ export function buildPublicLineageObjectTargetQuery(
       "plant_objects.id as plantObjectId",
       "plant_objects.display_name as displayName",
       "plant_objects.owner_user_id as ownerUserId",
+      "plant_objects.public_slug as publicSlug",
+      publicAuthorHandleSql("plant_objects.owner_user_id").as("addressHandle"),
     ])
     .where("plant_objects.id", "=", plantObjectId)
+    // `owner_user_id` is grouped by, which is what lets the handle scalar
+    // read it (see `author-handle-sql.ts`).
     .groupBy([
       "plant_objects.id",
       "plant_objects.display_name",
       "plant_objects.owner_user_id",
+      "plant_objects.public_slug",
     ]);
 }
 

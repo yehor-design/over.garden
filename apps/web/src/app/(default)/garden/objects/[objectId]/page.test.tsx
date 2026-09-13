@@ -15,6 +15,12 @@ const mocks = vi.hoisted(() => ({
   createAuthIntentControlRef: vi.fn(),
 }));
 
+// The owner's public links hang from the registry handle (ADR-0029 D9); a
+// fixture without one keeps the legacy addresses these cases pin.
+vi.mock("@/server/author-handle-repository", () => ({
+  getPublicAuthorHandle: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
   getAuthoritativeCurrentSession: mocks.getAuthoritativeCurrentSession,

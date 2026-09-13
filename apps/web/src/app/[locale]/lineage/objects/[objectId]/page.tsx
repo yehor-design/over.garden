@@ -21,7 +21,6 @@ import {
   type AuthIntentAction,
 } from "@/lib/auth/auth-intent-contract";
 import {
-  publicLineageObjectPath,
   publicCatalogEvidencePath,
 } from "@/lib/garden/public-paths";
 import {
@@ -150,7 +149,9 @@ export default async function PublicLineageObjectRoute({
     kind: "lineage_object" as const,
     ref: passport.object.plantObjectId,
   };
-  const returnTo = publicLineageObjectPath(passport.object.plantObjectId);
+  // The passport's own address (ADR-0029 D9): a return path that 308s is a
+  // hop after every sign-in, and the auth-intent contract now accepts it.
+  const returnTo = passport.object.publicPath;
   const engagement = scope
     ? await getEngagementSummary(engagementTarget, scope, {
         commentCursor: firstParam(query.cursor),
@@ -235,6 +236,7 @@ export default async function PublicLineageObjectRoute({
                   subject={subject}
                   source={source}
                   rootPlantObjectId={passport.object.plantObjectId}
+                  rootPublicPath={passport.object.publicPath}
                   interactionTarget={
                     authorizedInteractionTarget ?? publicInteractionTarget
                   }
@@ -324,6 +326,7 @@ function PublicLineageEdgeCard({
   subject,
   source,
   rootPlantObjectId,
+  rootPublicPath,
   interactionTarget,
   isAuthenticated,
   canInteract,
@@ -336,6 +339,8 @@ function PublicLineageEdgeCard({
   subject: PublicLineageNode;
   source: PublicLineageNode;
   rootPlantObjectId: string;
+  /** The root passport's own address, for the return path after sign-in. */
+  rootPublicPath: string;
   interactionTarget: PublicLineageNode | null;
   isAuthenticated: boolean;
   canInteract: boolean;
@@ -379,6 +384,7 @@ function PublicLineageEdgeCard({
         <LineageInteractionPanel
           edge={edge}
           rootPlantObjectId={rootPlantObjectId}
+          rootPublicPath={rootPublicPath}
           target={interactionTarget}
           isAuthenticated={isAuthenticated}
           canInteract={canInteract}
@@ -402,6 +408,7 @@ function LineageInteractionPanel({
   resumeControl,
   status,
   locale,
+  rootPublicPath,
 }: {
   edge: PublicLineageEdge;
   rootPlantObjectId: string;
@@ -412,6 +419,8 @@ function LineageInteractionPanel({
   resumeControl: string | null;
   status: string | null;
   locale: InterfaceLocale;
+  /** The root passport's own address, for the return path after sign-in. */
+  rootPublicPath: string;
 }) {
   const copy = getPublicSurfaceCopy(locale);
   const followControl = createAuthIntentControlRef(
@@ -536,7 +545,7 @@ function LineageInteractionPanel({
       ) : (
         <AuthIntentTrigger
           action="follow"
-          returnTo={publicLineageObjectPath(rootPlantObjectId)}
+          returnTo={rootPublicPath}
           target={{ kind: "object", ref: target.plantObjectId }}
           control={followControl}
           label={copy.passport.followUpdates}

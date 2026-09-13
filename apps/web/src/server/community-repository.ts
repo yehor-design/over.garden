@@ -219,6 +219,8 @@ export interface CommunityModerationQueueItem {
   journalTitle: string | null;
   publicSlug: string | null;
   authorHandle: string | null;
+  /** The registry handle the entry's address hangs from (ADR-0029 D9). */
+  addressHandle: string | null;
 }
 
 /** One directory read per request: metadata and the page share it (React.cache). */
@@ -2086,6 +2088,7 @@ export function buildCommunityModerationQueueQuery(
       "journal_entries.title as journalTitle",
       "journal_entries.public_slug as publicSlug",
       "user_public_profiles.handle as authorHandle",
+      "contributor_handles.normalized_handle as addressHandle",
     ])
     .where(
       "community_contributions.community_id",

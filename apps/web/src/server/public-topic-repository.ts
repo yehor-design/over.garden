@@ -3,6 +3,7 @@ import "server-only";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import { localizeTopicLabel } from "@/lib/system-topic-labels";
 import { isAddressSlug } from "@/lib/address/address-contract.generated";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { Database, PlantObjectKind } from "@/db/schema";
@@ -124,7 +125,14 @@ export async function getPublicTopicAggregationPage(
   ).execute();
 
   const page = {
-    topic: { slug: topic.slug, label: topic.label },
+    topic: {
+      slug: topic.slug,
+      label: localizeTopicLabel(
+        options.locale ?? DEFAULT_PUBLIC_LOCALE,
+        topic.slug,
+        topic.label,
+      ),
+    },
     entryCount,
     aggregateBodyLength,
     latestPublishedAt: stats?.latestPublishedAt ?? null,

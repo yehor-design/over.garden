@@ -24,6 +24,7 @@ import { normalizePublicJournalSlug } from "@/lib/garden/public-journal-slug";
 import { assignJournalEntrySlug } from "@/server/journal-slug-repository";
 import { assignPlantObjectPublicSlug } from "@/server/plant-object-slug-repository";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
+import { localizeTopicLabel } from "@/lib/system-topic-labels";
 import {
   legacyPublicJournalEntryPath,
   publicJournalEntryPath,
@@ -263,12 +264,16 @@ export interface PlantObjectCatalogResolutionResult {
   plantObject: PlantObjectPage["plantObject"];
   entryCount: number;
   publicEntryPaths: string[];
+  /** The same entries by id, for the cache tags a revalidation expires. */
+  publicEntryIds: string[];
 }
 
 export interface PlantObjectLocationUpdateResult {
   space: PlantObjectPage["space"];
   plantObject: PlantObjectPage["plantObject"];
   publicEntryPaths: string[];
+  /** The same entries by id, for the cache tags a revalidation expires. */
+  publicEntryIds: string[];
 }
 
 export interface PlantObjectSummary {
@@ -320,6 +325,8 @@ export interface PlantObjectPage {
   plantObject: {
     id: PlantObject["id"];
     display_name: PlantObject["display_name"];
+    /** The passport's slug under the owner's handle; `null` until it has one. */
+    public_slug: PlantObject["public_slug"];
     object_kind: PlantObjectKind;
     catalog_item_id: PlantObject["catalog_item_id"];
     catalogKind: CatalogKind | null;
@@ -1545,6 +1552,7 @@ export async function createFirstPlantEntry(
         plantObject: {
           id: plantObject.id,
           display_name: plantObject.display_name,
+          public_slug: plantObject.public_slug,
           object_kind: plantObject.object_kind as PlantObjectKind,
           catalog_item_id: plantObject.catalog_item_id,
           catalogKind: selectedCatalogItem?.catalogKind ?? null,
@@ -2018,6 +2026,7 @@ export async function getPlantObjectPage(
     plantObject: {
       id: objectRow.objectId,
       display_name: objectRow.objectDisplayName,
+      public_slug: objectRow.publicSlug,
       object_kind: objectRow.objectKind as PlantObjectKind,
       catalog_item_id: objectRow.catalogItemId,
       catalogKind: objectRow.catalogKind as CatalogKind | null,
@@ -2220,6 +2229,7 @@ export async function createPlantObjectJournalEntry(
         plantObject: {
           id: target.objectId,
           display_name: target.objectDisplayName,
+          public_slug: target.publicSlug,
           object_kind: target.objectKind as PlantObjectKind,
           catalog_item_id: target.catalogItemId,
           catalogKind: target.catalogKind as CatalogKind | null,
@@ -2272,6 +2282,7 @@ export async function createPlantObjectJournalEntry(
       plantObject: {
         id: target.objectId,
         display_name: target.objectDisplayName,
+        public_slug: target.publicSlug,
         object_kind: target.objectKind as PlantObjectKind,
         catalog_item_id: target.catalogItemId,
         catalogKind: target.catalogKind as CatalogKind | null,
@@ -2558,6 +2569,7 @@ export async function resolvePlantObjectCatalog(
       plantObject: {
         id: resolved.id,
         display_name: resolved.display_name,
+        public_slug: resolved.public_slug,
         object_kind: resolved.object_kind as PlantObjectKind,
         catalog_item_id: resolved.catalog_item_id,
         catalogKind: selectedCatalogItem?.catalogKind ?? null,
@@ -2572,8 +2584,9 @@ export async function resolvePlantObjectCatalog(
       },
       entryCount,
       publicEntryPaths: publicSlugs.flatMap((row) =>
-        row.publicSlug ? [legacyPublicJournalEntryPath(row.publicSlug)] : [],
+        row.publicSlug ? [publicEntryAddress(row)] : [],
       ),
+      publicEntryIds: publicSlugs.map((row) => row.entryId),
     };
   });
 }
@@ -2624,9 +2637,25 @@ export async function updatePlantObjectLocation(
     space: page.space,
     plantObject: page.plantObject,
     publicEntryPaths: publicSlugs.flatMap((row) =>
-      row.publicSlug ? [legacyPublicJournalEntryPath(row.publicSlug)] : [],
+      row.publicSlug ? [publicEntryAddress(row)] : [],
     ),
+    publicEntryIds: publicSlugs.map((row) => row.entryId),
   };
+}
+
+/**
+ * The entry's own address (ADR-0029 D9) for the paths a workspace action
+ * revalidates; the legacy address only for an author with no handle. The
+ * legacy path used to be revalidated here, and it has cached nothing since
+ * OVE-428 — it answers 308.
+ */
+function publicEntryAddress(row: {
+  publicSlug: string | null;
+  addressHandle: string | null;
+}): string {
+  return row.addressHandle && row.publicSlug
+    ? publicJournalEntryPath(row.addressHandle, row.publicSlug)
+    : legacyPublicJournalEntryPath(row.publicSlug ?? "");
 }
 
 export async function listMyRecentJournalEntries(
@@ -2942,7 +2971,9 @@ export function serializePublicJournalEntryPage(input: {
     ),
     topics: input.topicRows.map((row) => ({
       slug: row.slug,
-      label: row.label,
+      // A system topic is named in the page's language; a gardener's tag is
+      // the gardener's word.
+      label: localizeTopicLabel(locale, row.slug, row.label),
       publicPath: localizedPath(locale, publicTopicPath(row.slug)),
     })),
     relatedEntries: serializeRelatedPublicJournalEntries(input.relatedRows),
@@ -3450,7 +3481,11 @@ export function buildPublicEntrySlugsForObjectQuery(
           plantObjectId,
         ),
     )
-    .select("public_slug as publicSlug")
+    .select([
+      "journal_entries.id as entryId",
+      "journal_entries.public_slug as publicSlug",
+      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
+    ])
     .where("journal_entries.owner_user_id", "=", scope.userId)
     .where((eb) =>
       eb.or([
@@ -3492,6 +3527,7 @@ export function buildPlantObjectPageObjectQuery(
     .select([
       "plant_objects.id as objectId",
       "plant_objects.display_name as objectDisplayName",
+      "plant_objects.public_slug as publicSlug",
       "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
       catalogKindSql("catalog_items").as("catalogKind"),

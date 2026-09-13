@@ -61,6 +61,7 @@ async function readCases(): Promise<ReadCase[]> {
     catalogBrowse,
     catalogRegister,
     sitemap,
+    engagement,
   ] = await Promise.all([
     import("../src/server/public-object-passport-repository"),
     import("../src/server/public-lineage-repository"),
@@ -76,6 +77,7 @@ async function readCases(): Promise<ReadCase[]> {
     import("../src/server/public-catalog-browse-repository"),
     import("../src/server/public-catalog-register-repository"),
     import("../src/server/public-sitemap-repository"),
+    import("../src/server/engagement-repository"),
   ]);
 
   return [
@@ -98,6 +100,14 @@ async function readCases(): Promise<ReadCase[]> {
     {
       name: "object passport sitemap chunk",
       run: (db) => sitemap.listPublicObjectPassportSitemapUrls(0, db),
+    },
+    {
+      // A grouped query with a correlated handle scalar: the 42803 class.
+      name: "engagement lineage object target",
+      run: (db) =>
+        engagement
+          .buildPublicLineageObjectTargetQuery(db, ABSENT_UUID)
+          .executeTakeFirst(),
     },
     {
       name: "catalog browse kingdoms",

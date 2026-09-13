@@ -17,7 +17,10 @@ import {
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { RequestScope } from "@/server/request-scope";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
-import { legacyPublicJournalEntryPath } from "@/lib/garden/public-paths";
+import {
+  legacyPublicJournalEntryPath,
+  publicJournalEntryPath,
+} from "@/lib/garden/public-paths";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -71,6 +74,8 @@ export interface FollowedFeedStoryRow {
   entryDate: Date | string;
   publishedAt: Date | string | null;
   ownerHandle: string | null;
+  /** The registry handle the entry's address hangs from; `null` without one. */
+  addressHandle: string | null;
   targetObjectDisplayName: string;
   targetObjectKind: string;
   targetCatalogKind: string | null;
@@ -251,6 +256,7 @@ export function buildFollowedFeedStoriesQuery(
       "target_public_entries.entry_date as entryDate",
       "target_public_entries.published_at as publishedAt",
       "target_owner_profiles.handle as ownerHandle",
+      "target_owner_handles.normalized_handle as addressHandle",
       "target_objects.display_name as targetObjectDisplayName",
       "target_objects.object_kind as targetObjectKind",
       catalogKindSql("target_catalog_items").as("targetCatalogKind"),
@@ -617,7 +623,10 @@ export function serializeFollowedFeedStories(
     return [
       {
         key: stableReadbackKey("followed-feed", row.followId),
-        href: legacyPublicJournalEntryPath(row.publicSlug),
+        // Under the author (ADR-0029 D9); legacy only for a handle-less one.
+        href: row.addressHandle
+          ? publicJournalEntryPath(row.addressHandle, row.publicSlug)
+          : legacyPublicJournalEntryPath(row.publicSlug),
         ownerMention: row.ownerHandle ? `@${row.ownerHandle}` : null,
         targetObject: mapTargetObject(row),
         entryDate: row.entryDate,

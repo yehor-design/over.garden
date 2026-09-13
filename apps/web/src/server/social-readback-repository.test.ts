@@ -205,6 +205,7 @@ describe("social readback repository contracts", () => {
         entryDate: "2026-07-04",
         publishedAt: "2026-07-04T08:00:00.000Z",
         ownerHandle: "green_thumb",
+        addressHandle: "green_thumb",
         targetObjectDisplayName: "Balcony tomato",
         targetObjectKind: "plant",
         targetCatalogKind: "plant_variety",
@@ -215,7 +216,8 @@ describe("social readback repository contracts", () => {
 
     expect(stories).toMatchObject([
       {
-        href: "/journal/public-story",
+        // Under the author (ADR-0029 D9), not the legacy address that 308s.
+        href: "/@green_thumb/public-story",
         ownerMention: "@green_thumb",
         targetObject: {
           displayName: "Balcony tomato",

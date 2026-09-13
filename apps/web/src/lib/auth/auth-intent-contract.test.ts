@@ -10,6 +10,39 @@ import {
 } from "./auth-intent-contract";
 
 describe("auth intent contract", () => {
+  /**
+   * The entry page passes its own address as `returnTo` (ADR-0029 D9); the
+   * allowlist used to know only the legacy `/journal/{slug}`, and every guest
+   * engagement from an entry page failed with `state=invalid`.
+   */
+  it("accepts the author-scoped addresses an entry and a passport have now", () => {
+    for (const returnTo of [
+      "/@demo_olena/balcony-tomato-check",
+      `/@demo_olena/${encodeURIComponent("полив-без-календарної-пастки")}`,
+      `/@demo_olena/objects/${encodeURIComponent("томат")}`,
+    ]) {
+      expect(
+        normalizeAuthIntentDraft({
+          action: "bookmark",
+          returnTo,
+          target: { kind: "journal", ref: "balcony-tomato-check" },
+        }).returnTo,
+      ).toBe(returnTo);
+    }
+  });
+
+  it("still refuses a path under /@ that could not be an address", () => {
+    for (const returnTo of ["/@demo_olena/a/b/c", "/@Demo Olena/x", "/@/x"]) {
+      expect(() =>
+        normalizeAuthIntentDraft({
+          action: "bookmark",
+          returnTo,
+          target: { kind: "journal", ref: "balcony-tomato-check" },
+        }),
+      ).toThrow();
+    }
+  });
+
   it("accepts every allowlisted mutation with the smallest safe payload", () => {
     const cases = [
       {

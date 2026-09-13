@@ -85,8 +85,10 @@ describe("OVE-183 social return read models", () => {
           entryDate: "2026-07-30",
           publishedAt: "2026-07-30T08:00:00.000Z",
           ownerHandle: "green_thumb",
+          addressHandle: "green_thumb",
           ownerDisplayName: "Green Thumb",
           objectId: "00000000-0000-4000-8000-000000000202",
+          objectPublicSlug: "balcony-tomato",
           objectDisplayName: "Balcony tomato",
           objectKind: "plant",
           varietyText: "Red Cherry",
@@ -102,8 +104,10 @@ describe("OVE-183 social return read models", () => {
     );
 
     expect(page.items[0]).toMatchObject({
-      href: "/journal/late-summer-check",
+      // Under the author (ADR-0029 D9), not the legacy address that 308s.
+      href: "/@green_thumb/late-summer-check",
       author: { href: "/ru/@green_thumb" },
+      object: { href: "/@green_thumb/objects/balcony-tomato" },
     });
   });
 

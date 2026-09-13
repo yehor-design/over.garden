@@ -61,6 +61,12 @@ interface Address {
   readonly name: string;
   /** A page, or an address that must answer a real 404. */
   readonly expects: "page" | "not_found";
+  /**
+   * The language the record is written in, when the page must declare it:
+   * `<main lang>` on the content element and `inLanguage` in the graph
+   * (OVE-424). A consistency check per record, never a filter on records.
+   */
+  readonly language?: string | null;
 }
 
 /**
@@ -104,11 +110,13 @@ export async function listPublishedAddresses(
     handle: string;
     slug: string;
     title: string;
+    language: string | null;
   }>`
     select
       handles.normalized_handle as handle,
       entries.public_slug as slug,
-      entries.title as title
+      entries.title as title,
+      entries.source_language as language
     from journal_entries as entries
     join user_handle_registry as handles
       on handles.user_id = entries.owner_user_id
@@ -175,6 +183,7 @@ export async function listPublishedAddresses(
       path: publicJournalEntryPath(row.handle, row.slug),
       name: row.title,
       expects: "page" as const,
+      language: row.language,
     })),
     ...passports.rows.map((row) => ({
       kind: "passport" as const,
@@ -244,6 +253,12 @@ export function judgeRenderedPage(
     html.match(/type="application\/ld\+json"/gu) ?? []
   ).length;
 
+  const language = address.language ?? null;
+  const declaresLanguage =
+    language === null ||
+    (html.includes(`<main lang="${language}"`) &&
+      html.includes(`"inLanguage":"${language}"`));
+
   const why =
     address.expects === "not_found"
       ? status === 404
@@ -255,7 +270,9 @@ export function judgeRenderedPage(
           ? "no heading in the HTML"
           : jsonLdBlocks === 0
             ? "no JSON-LD on an indexable surface"
-            : null;
+            : !declaresLanguage
+              ? `the page does not declare ${language} on its content and in its graph`
+              : null;
 
   return {
     ...address,

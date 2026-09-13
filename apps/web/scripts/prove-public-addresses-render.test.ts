@@ -16,9 +16,9 @@ const NOTHING = {
   expects: "not_found" as const,
 };
 
-const RENDERED = `<html><head><title>Полив</title>
-<script type="application/ld+json">{"@context":"https://schema.org"}</script>
-</head><body><h1 class="x">Полив без календарної пастки</h1><p>…</p></body></html>`;
+const RENDERED = `<html lang="uk"><head><title>Полив</title>
+<script type="application/ld+json">{"@context":"https://schema.org","inLanguage":"uk"}</script>
+</head><body><main lang="uk"><h1 class="x">Полив без календарної пастки</h1><p>…</p></main></body></html>`;
 
 /** What the not-found page looks like inside a `200`. */
 const APOLOGY = `<html><head><title>Полив · Запис журналу | OverGarden</title></head>
@@ -71,5 +71,25 @@ describe("the address render proof", () => {
     expect(judgeRenderedPage(NOTHING, 200, RENDERED)).toMatchObject({
       ok: false,
     });
+  });
+
+  /**
+   * OVE-424: a record declares its own language on its content element and
+   * in its graph. This is a consistency check on each record, not a filter —
+   * the page chrome may be Ukrainian while the entry is Bulgarian.
+   */
+  it("requires the record's language on the content element and in the graph", () => {
+    const bulgarian = { ...ADDRESS, language: "bg" };
+    const rendered = RENDERED.replace('<main lang="uk">', '<main lang="bg">').replace(
+      '"inLanguage":"uk"',
+      '"inLanguage":"bg"',
+    );
+    expect(judgeRenderedPage(bulgarian, 200, rendered)).toMatchObject({ ok: true });
+    expect(judgeRenderedPage(bulgarian, 200, RENDERED)).toMatchObject({
+      ok: false,
+      why: "the page does not declare bg on its content and in its graph",
+    });
+    // Without a language on the address, nothing is asked about it.
+    expect(judgeRenderedPage(ADDRESS, 200, RENDERED)).toMatchObject({ ok: true });
   });
 });
