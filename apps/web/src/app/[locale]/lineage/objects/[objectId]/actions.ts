@@ -3,8 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { publicLineageObjectPath } from "@/lib/garden/public-paths";
+import { publicCacheTag } from "@/lib/public-cache-tags";
+import {
+  publicLineageObjectPath,
+  publicObjectPassportPath,
+} from "@/lib/garden/public-paths";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
+import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 import { createAuthIntentToken } from "@/server/auth-intent-token";
 import {
   askLineageQuestion,
@@ -18,6 +23,29 @@ import {
 
 const LINEAGE_UPDATES_PATH = "/garden/lineage/questions";
 
+/**
+ * The passport's own address, from the id the form carries (ADR-0029 D9).
+ *
+ * One bounded read, only on the paths that leave the page — a redirect after
+ * a refused question, the return after sign-in, the revalidation — and the
+ * legacy address only for an object that has no slug yet, where it is the
+ * address that answers.
+ */
+async function passportPath(rootPlantObjectId: string): Promise<string> {
+  if (!UUID_PATTERN.test(rootPlantObjectId)) {
+    return publicLineageObjectPath(rootPlantObjectId);
+  }
+  const { getPublicObjectPassportAddress } = await import(
+    "@/server/public-object-passport-repository"
+  );
+  const address = await getPublicObjectPassportAddress(
+    rootPlantObjectId,
+  ).catch(() => null);
+  return address
+    ? publicObjectPassportPath(address.handle, address.slug)
+    : publicLineageObjectPath(rootPlantObjectId);
+}
+
 export async function followLineageNodeAction(formData: FormData) {
   const edgeId = String(formData.get("edgeId") ?? "");
   const targetPlantObjectId = String(formData.get("targetPlantObjectId") ?? "");
@@ -27,7 +55,7 @@ export async function followLineageNodeAction(formData: FormData) {
   });
   if (admission.status === "rejected") {
     if (admission.code === "session_required") {
-      redirectToFollowAuthIntent({
+      await redirectToFollowAuthIntent({
         edgeId,
         targetPlantObjectId,
         rootPlantObjectId,
@@ -42,7 +70,7 @@ export async function followLineageNodeAction(formData: FormData) {
     targetPlantObjectId,
   });
 
-  revalidateLineageInteractionPaths(rootPlantObjectId);
+  await revalidateLineageInteractionPaths(rootPlantObjectId);
 }
 
 export async function askLineageQuestionAction(formData: FormData) {
@@ -68,7 +96,7 @@ export async function askLineageQuestionAction(formData: FormData) {
       UUID_PATTERN.test(rootPlantObjectId)
     ) {
       const url = new URL(
-        publicLineageObjectPath(rootPlantObjectId),
+        await passportPath(rootPlantObjectId),
         "https://over.garden",
       );
       url.searchParams.set(
@@ -82,19 +110,25 @@ export async function askLineageQuestionAction(formData: FormData) {
     throw error;
   }
 
-  revalidateLineageInteractionPaths(rootPlantObjectId);
+  await revalidateLineageInteractionPaths(rootPlantObjectId);
 }
 
-function revalidateLineageInteractionPaths(rootPlantObjectId: string) {
+async function revalidateLineageInteractionPaths(rootPlantObjectId: string) {
   const normalizedRootPlantObjectId = rootPlantObjectId.trim();
 
   revalidatePath(LINEAGE_UPDATES_PATH);
   if (normalizedRootPlantObjectId) {
-    revalidatePath(publicLineageObjectPath(normalizedRootPlantObjectId));
+    // The passport is cached by its object tag; the legacy path this used to
+    // revalidate has answered 308 since OVE-428 and cached nothing.
+    revalidatePath(await passportPath(normalizedRootPlantObjectId));
+    revalidatePublicCacheTags(
+      [publicCacheTag.object(normalizedRootPlantObjectId)],
+      "expire",
+    );
   }
 }
 
-function redirectToFollowAuthIntent({
+async function redirectToFollowAuthIntent({
   edgeId,
   targetPlantObjectId,
   rootPlantObjectId,
@@ -113,7 +147,7 @@ function redirectToFollowAuthIntent({
 
   const token = createAuthIntentToken({
     action: "follow",
-    returnTo: publicLineageObjectPath(rootPlantObjectId),
+    returnTo: await passportPath(rootPlantObjectId),
     target: { kind: "object", ref: targetPlantObjectId },
     control: createAuthIntentControlRef(
       "follow",

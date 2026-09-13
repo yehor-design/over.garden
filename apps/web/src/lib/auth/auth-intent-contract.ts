@@ -1,4 +1,5 @@
 import { parseInternalReturnPath } from "@/lib/navigation/internal-return-path";
+import { matchAuthorScopedPath } from "@/lib/address/match-address-path";
 import { normalizePublicJournalSlug } from "@/lib/garden/public-journal-slug";
 
 export const AUTH_INTENT_ACTIONS = [
@@ -320,8 +321,25 @@ function normalizeReturnTo(value: unknown): string {
 function isAllowedReturnPath(pathname: string) {
   return (
     ROUTE_PATTERNS.some((pattern) => pattern.test(pathname)) ||
-    isPublicJournalReturnPath(pathname)
+    isPublicJournalReturnPath(pathname) ||
+    isAuthorScopedReturnPath(pathname)
   );
+}
+
+/**
+ * `/@{handle}/{slug}` and `/@{handle}/objects/{slug}` — the addresses an
+ * entry and a passport have had since OVE-428 (ADR-0029 D9).
+ *
+ * The list above predates the move and knew only `/journal/{slug}` and
+ * `/lineage/objects/{uuid}`. The entry page passes its own canonical address
+ * as `returnTo`, so every guest who clicked like, bookmark or comment on an
+ * entry was sent to `/auth/intent?state=invalid` — measured on production
+ * 2026-09-13 by replaying the page's own form. The address matcher is the
+ * grammar, so a slug that could not be an address is still refused.
+ */
+function isAuthorScopedReturnPath(pathname: string) {
+  const matched = matchAuthorScopedPath(pathname);
+  return matched !== null && matched.kind !== "profile";
 }
 
 function isPublicJournalReturnPath(pathname: string) {

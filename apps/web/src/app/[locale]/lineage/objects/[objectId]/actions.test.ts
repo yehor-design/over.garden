@@ -20,6 +20,14 @@ vi.mock("next/navigation", () => ({
   redirect: mocks.redirect,
 }));
 
+vi.mock("@/server/public-object-passport-repository", () => ({
+  getPublicObjectPassportAddress: vi.fn(async (plantObjectId: string) =>
+    plantObjectId === "00000000-0000-4000-8000-000000000101"
+      ? { handle: "yehor", slug: "томат" }
+      : null,
+  ),
+}));
+
 vi.mock("@/server/mutation-scope", () => ({
   resolveMutationScope: mocks.resolveMutationScope,
   ownerUserIdFromFormData: vi.fn(() => null),
@@ -86,9 +94,9 @@ describe("/lineage/objects/[objectId] actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       "/garden/lineage/questions",
     );
-    expect(mocks.revalidatePath).toHaveBeenCalledWith(
-      "/lineage/objects/00000000-0000-4000-8000-000000000101",
-    );
+    // The passport's own address (ADR-0029 D9), not the legacy id path that
+    // has answered 308 since OVE-428 and cached nothing.
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/@yehor/objects/%D1%82%D0%BE%D0%BC%D0%B0%D1%82");
   });
 
   it("asks a lineage question with bounded form fields only", async () => {
@@ -134,7 +142,7 @@ describe("/lineage/objects/[objectId] actions", () => {
     formData.set("rootPlantObjectId", "00000000-0000-4000-8000-000000000101");
 
     await expect(askLineageQuestionAction(formData)).rejects.toThrow(
-      "NEXT_REDIRECT:/lineage/objects/00000000-0000-4000-8000-000000000101?engagement=lineage-question-rate-limited#passport-provenance",
+      "NEXT_REDIRECT:/@yehor/objects/%D1%82%D0%BE%D0%BC%D0%B0%D1%82?engagement=lineage-question-rate-limited#passport-provenance",
     );
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
@@ -160,7 +168,7 @@ describe("/lineage/objects/[objectId] actions", () => {
     );
     expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
       action: "follow",
-      returnTo: "/lineage/objects/00000000-0000-4000-8000-000000000101",
+      returnTo: "/@yehor/objects/%D1%82%D0%BE%D0%BC%D0%B0%D1%82",
       target: {
         kind: "object",
         ref: "00000000-0000-4000-8000-000000000102",

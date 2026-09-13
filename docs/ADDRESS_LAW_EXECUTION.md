@@ -1041,3 +1041,41 @@ roots now; a root that degrades renders a heading and no JSON-LD, which is the
 signature the proof refuses. `pnpm public:addresses:prove-render` was written
 the day before and did not cover this, because it reads addresses from the
 database and no row names a root.
+
+## The return path the contract refused
+
+**Found 2026-09-13, by replaying the page's own form.** The entry page passes
+its canonical address — `/@{handle}/{slug}` — as `returnTo` on every like,
+bookmark and comment form for a guest. The auth-intent contract's allowlist
+predates OVE-428 and admitted only `/journal/{slug}` and
+`/lineage/objects/{uuid}`. So every guest who clicked one of those buttons on
+an entry page was sent to `/auth/intent?state=invalid`:
+
+```
+POST /auth/intent/start  returnTo=/@yehor/полив-…   → 303 /auth/intent?state=invalid
+POST /auth/intent/start  returnTo=/journal/полив-…  → 303 /auth/intent?intent=<token>
+```
+
+The passport page had kept working only because it still passed the legacy
+address. No test caught it because the contract's tests were written with the
+legacy addresses too, and no proof replays a form.
+
+**Fixed with the grammar, not another regex.** `isAllowedReturnPath` now asks
+`matchAuthorScopedPath` — the same matcher the proxy and the routes use — so a
+slug that could not be an address is still refused.
+
+**And the rest of the residue went with it.** Every owner-facing link that
+still went through a 308 builds the canonical address now (the workspace's
+"open page" and passport links, the social return feed, the followed feed, the
+moderation queue, the engagement target for a passport); the passport actions
+redirect and return to the passport's own address; and the three workspace
+actions that revalidated legacy `/journal/{slug}` paths — which have cached
+nothing since the move — expire the entry and object tags instead. The five
+system topics are named in the page's language (`Рослини` / `Растения`), with
+their slugs unchanged and a gardener's own tag never translated. The render
+proof asks each entry to declare its own language on `<main>` and in its graph
+(a consistency check per record — never a filter on records).
+
+What stays for the next slice: engagement refs move from the entry slug to the
+entry id and entry slugs become unique per author (migration `0073`), which is
+also what repairs the two likes the move orphaned on `томат-sep-1-…`.

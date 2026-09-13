@@ -51,21 +51,21 @@ describe("OVE-348 atomic journal edit smoke", () => {
     expect(route).toContain("readCommittedAtomicJournalEdit");
     expect(route).toContain("claimEphemeralPublicationMedia");
     expect(route).toContain("assertPublicMediaReady");
-    expect(route).toContain("for (const locale of PUBLIC_LOCALES)");
-    // Both addresses: the canonical one under the author, and the legacy
-    // locale-prefixed spellings the proxy 308s from — a redirect is cached too
-    // (ADR-0029 D9).
+    // The route used to revalidate `/journal/{slug}` in every locale as well;
+    // that address has answered 308 since OVE-428 and caches nothing, so the
+    // loop is gone and only the canonical address (plus its tags) remains.
+    expect(route).not.toContain("for (const locale of PUBLIC_LOCALES)");
+    expect(route).not.toContain("revalidatePath(localizedPath(locale, legacyPath))");
+    // One address: the canonical one under the author (ADR-0029 D9). The
+    // legacy locale-prefixed spellings are 308s the proxy answers itself, so
+    // there is nothing behind them to revalidate.
     expect(route).toContain(
       "const canonical = publicJournalEntryPath(authorHandle, entry.public_slug)",
     );
     expect(route).toContain("revalidatePath(canonical)");
-    // Only the canonical address is announced to IndexNow: the legacy
-    // spellings below it are 308s, and announcing a redirect asks a crawler to
-    // fetch a page that is not there (OVE-434).
+    // Only the canonical address is announced to IndexNow: announcing a
+    // redirect asks a crawler to fetch a page that is not there (OVE-434).
     expect(route).toContain("announcePublicUrlsToIndexNow([canonical])");
-    expect(route).toContain(
-      "revalidatePath(localizedPath(locale, legacyPath))",
-    );
     expect(repository).toContain(
       "export async function updateAtomicJournalEntry",
     );

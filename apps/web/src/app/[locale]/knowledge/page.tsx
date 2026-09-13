@@ -38,6 +38,7 @@ import {
   readPublicKnowledgeTopics,
 } from "@/server/public-cache";
 import { publicTopicPath } from "@/lib/garden/public-paths";
+import { localizeTopicLabel } from "@/lib/system-topic-labels";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -115,7 +116,9 @@ export async function renderPublicKnowledgePage(
       ? topicsResult.value.map((topic) => ({
           kind: "topic" as const,
           path: publicTopicPath(topic.slug),
-          title: topic.label,
+          // A system topic is named in the page's language (the cached list
+          // is language-neutral); a gardener's tag is the gardener's word.
+          title: localizeTopicLabel(locale, topic.slug, topic.label),
           description: topicDescription(locale, topic.entryCount),
           objectKinds: topic.objectKinds,
           evidenceCount: topic.entryCount,

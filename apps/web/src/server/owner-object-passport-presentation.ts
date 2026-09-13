@@ -11,6 +11,7 @@ import {
 import {
   legacyPublicJournalEntryPath,
   publicCatalogEvidencePath,
+  publicJournalEntryPath,
 } from "@/lib/garden/public-paths";
 import { getLocalizedCoarseRegionLabel } from "@/lib/garden/regions";
 
@@ -21,6 +22,8 @@ export function buildOwnerObjectPassportPresentation(
   page: PlantObjectPage,
   provenance: ObjectProvenancePanel,
   locale: InterfaceLocale,
+  /** The owner's registry handle; every public link hangs from it (ADR-0029 D9). */
+  authorHandle: string | null = null,
 ): OwnerLivingObjectPassportPresentation {
   const copy = getLivingObjectPassportCopy(locale);
   const object = page.plantObject;
@@ -40,7 +43,9 @@ export function buildOwnerObjectPassportPresentation(
         entry.lifecycle_state === "active" &&
         entry.public_slug &&
         !entry.public_gone_at
-          ? legacyPublicJournalEntryPath(entry.public_slug)
+          ? authorHandle
+            ? publicJournalEntryPath(authorHandle, entry.public_slug)
+            : legacyPublicJournalEntryPath(entry.public_slug)
           : `#passport-entry-${entry.id}`,
       mediaPublicUrl: entry.media?.publicUrl ?? null,
       mediaFocalX: entry.media?.focalX ?? null,

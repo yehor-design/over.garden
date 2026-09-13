@@ -36,8 +36,11 @@ import { isObjectProgressMomentEligible } from "@/lib/garden/object-progress-mom
 import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
 import {
   legacyPublicJournalEntryPath,
+  publicJournalEntryPath,
   publicLineageObjectPath,
+  publicObjectPassportPath,
 } from "@/lib/garden/public-paths";
+import { getPublicAuthorHandle } from "@/server/author-handle-repository";
 import { localizedPath } from "@/lib/public-localization";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { resolveFollowUpValuePulsePrompt } from "@/server/follow-up-value-pulse";
@@ -224,16 +227,19 @@ async function PlantObjectSections({
     EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE
       ? ownerCopy.source.euLegalCaveat
       : null;
-  const lineageReadbackPathValue = getLineageReadbackPath(
+  // The owner's registry handle: every public link on this page hangs from
+  // it (ADR-0029 D9). The legacy id path, which 308s, only for an object
+  // that has no slug yet — and that one keeps the locale prefix, because it
+  // renders in its own route family.
+  const authorHandle = await getPublicAuthorHandle(scope.userId);
+  const passportPath = ownPassportPath(page, objectId, authorHandle, locale);
+  const lineageReadbackPath = getLineageReadbackPath(
     page,
     provenancePanel,
-    objectId,
+    passportPath,
   );
-  const lineageReadbackPath = lineageReadbackPathValue
-    ? localizedPath(locale, lineageReadbackPathValue)
-    : null;
   const objectPassportReadbackPath = hasActivePublicEntry(page)
-    ? localizedPath(locale, publicLineageObjectPath(objectId))
+    ? passportPath
     : null;
   const valuePulseJournalEntryId =
     query.valuePulse === "1" && typeof query.entryId === "string"
@@ -265,6 +271,7 @@ async function PlantObjectSections({
     page,
     provenancePanel,
     locale,
+    authorHandle,
   );
   const entriesById = new Map(page.entries.map((entry) => [entry.id, entry]));
 
@@ -354,6 +361,7 @@ async function PlantObjectSections({
               objectId={objectId}
               objectPassportReadbackPath={objectPassportReadbackPath}
               locale={locale}
+            authorHandle={authorHandle}
             />
           ) : null;
         }}
@@ -431,11 +439,14 @@ function OwnerEntryActions({
   objectId,
   objectPassportReadbackPath,
   locale,
+  authorHandle,
 }: {
   entry: PlantObjectPage["entries"][number];
   objectId: string;
   objectPassportReadbackPath: string | null;
   locale: InterfaceLocale;
+  /** The owner's registry handle; the public link hangs from it (ADR-0029 D9). */
+  authorHandle: string | null;
 }) {
   const actionCopy = getOwnerObjectCopy(locale).entryActions;
 
@@ -457,7 +468,11 @@ function OwnerEntryActions({
           </Link>
         ) : null}
         <Link
-          href={legacyPublicJournalEntryPath(entry.public_slug)}
+          href={
+            authorHandle
+              ? publicJournalEntryPath(authorHandle, entry.public_slug)
+              : legacyPublicJournalEntryPath(entry.public_slug)
+          }
           className="text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
           {actionCopy.openPage}
@@ -764,10 +779,25 @@ function canResolveCatalogState(value: string) {
   return value === "unknown" || value === "free_text";
 }
 
+/**
+ * The passport's own address (ADR-0029 D9) when the object has one, or the
+ * legacy id path in the locale's route family when it does not.
+ */
+function ownPassportPath(
+  page: PlantObjectPage,
+  objectId: string,
+  authorHandle: string | null,
+  locale: InterfaceLocale,
+) {
+  return authorHandle && page.plantObject.public_slug
+    ? publicObjectPassportPath(authorHandle, page.plantObject.public_slug)
+    : localizedPath(locale, publicLineageObjectPath(objectId));
+}
+
 function getLineageReadbackPath(
   page: PlantObjectPage,
   provenancePanel: ObjectProvenancePanel,
-  objectId: string,
+  passportPath: string,
 ) {
   if (!hasActivePublicEntry(page)) return null;
 
@@ -778,7 +808,7 @@ function getLineageReadbackPath(
       edge.erasureState === "active",
   );
 
-  return hasConfirmedOwnObjectSource ? publicLineageObjectPath(objectId) : null;
+  return hasConfirmedOwnObjectSource ? passportPath : null;
 }
 
 function hasActivePublicEntry(page: PlantObjectPage) {

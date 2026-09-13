@@ -492,9 +492,9 @@ function topicDefinitionForObjectKind(
 ): TopicDefinition | null {
   switch (value as PlantObjectKind | string | null) {
     case "plant":
-      return { slug: "plants", label: "Plants", trustState: "curated" };
+      return { slug: "plants", label: "Рослини", trustState: "curated" };
     case "animal":
-      return { slug: "animals", label: "Animals", trustState: "curated" };
+      return { slug: "animals", label: "Тварини", trustState: "curated" };
     default:
       return null;
   }
@@ -507,13 +507,13 @@ function topicDefinitionForCatalogKind(
     case "plant_variety":
       return {
         slug: "plant-varieties",
-        label: "Plant varieties",
+        label: "Сорти рослин",
         trustState: "curated",
       };
     case "species":
-      return { slug: "species", label: "Species", trustState: "curated" };
+      return { slug: "species", label: "Види", trustState: "curated" };
     case "breed":
-      return { slug: "breeds", label: "Breeds", trustState: "curated" };
+      return { slug: "breeds", label: "Породи", trustState: "curated" };
     default:
       return null;
   }

@@ -24,6 +24,7 @@ import {
 } from "./actions";
 import {
   legacyPublicJournalEntryPath,
+  publicJournalEntryPath,
 } from "@/lib/garden/public-paths";
 
 interface CommunityModerationPageProps {
@@ -181,7 +182,11 @@ export default async function CommunityModerationPage({
                   </p>
                   {item.publicSlug ? (
                     <Link
-                      href={legacyPublicJournalEntryPath(item.publicSlug)}
+                      href={
+                        item.addressHandle
+                          ? publicJournalEntryPath(item.addressHandle, item.publicSlug)
+                          : legacyPublicJournalEntryPath(item.publicSlug)
+                      }
                       className="w-fit text-sm font-medium text-primary hover:underline"
                     >
                       {copy.community.openJournal}

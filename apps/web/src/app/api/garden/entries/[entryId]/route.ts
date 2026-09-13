@@ -21,7 +21,6 @@ import {
 import { getPublicAuthorHandle } from "@/server/author-handle-repository";
 import { bytesToBase64Url } from "@/lib/media/ephemeral-staging-contract";
 import { stableJson } from "@/lib/media/ephemeral-staging-crypto";
-import { localizedPath, PUBLIC_LOCALES } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
   claimedMediaFromPhotos,
@@ -472,10 +471,6 @@ async function convergeAndRevalidate(entry: {
       // known: the legacy spelling below is a 308, and announcing a redirect
       // asks a crawler to fetch a page that is not there (OVE-434).
       announcePublicUrlsToIndexNow([canonical]);
-    }
-    const legacyPath = legacyPublicJournalEntryPath(entry.public_slug);
-    for (const locale of PUBLIC_LOCALES) {
-      revalidatePath(localizedPath(locale, legacyPath));
     }
   }
   await convergePublicProjectionsNow([entry.id]).catch(() => undefined);

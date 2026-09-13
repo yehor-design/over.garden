@@ -120,6 +120,7 @@ function ownerPage({
     plantObject: {
       id: "object-1",
       display_name: "Тестовий об'єкт",
+      public_slug: null,
       object_kind: objectKind,
       catalog_item_id: null,
       catalogKind: objectKind === "plant" ? "species" : "breed",

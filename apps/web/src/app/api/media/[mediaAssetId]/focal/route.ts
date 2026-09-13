@@ -14,11 +14,9 @@ import {
 import { publicEntryChangeTags } from "@/lib/public-cache-tags";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 import {
-  legacyPublicJournalEntryPath,
   publicJournalEntryPath,
 } from "@/lib/garden/public-paths";
 import { getPublicAuthorHandle } from "@/server/author-handle-repository";
-import { localizedPath } from "@/lib/public-localization";
 
 type RouteContext = {
   params: Promise<{ mediaAssetId: string }>;
@@ -101,15 +99,6 @@ export async function PATCH(request: Request, context: RouteContext) {
       if (authorHandle) {
         revalidatePath(
           publicJournalEntryPath(authorHandle, result.publicSlug),
-        );
-      }
-      revalidatePath(legacyPublicJournalEntryPath(result.publicSlug));
-      for (const locale of ["uk", "bg", "ru"] as const) {
-        revalidatePath(
-          localizedPath(
-            locale,
-            legacyPublicJournalEntryPath(result.publicSlug),
-          ),
         );
       }
     }

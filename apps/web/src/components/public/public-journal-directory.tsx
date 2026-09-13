@@ -34,6 +34,7 @@ import type {
   PublicJournalDirectoryRequest,
 } from "@/server/public-journal-directory-repository";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import { localizeTopicLabel } from "@/lib/system-topic-labels";
 
 export { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 
@@ -152,7 +153,7 @@ export function PublicJournalDirectory({
               { value: "", label: copy.allTopics },
               ...facets.topics.map((topic) => ({
                 value: topic.slug,
-                label: `${topic.label} (${topic.count})`,
+                label: `${localizeTopicLabel(locale, topic.slug, topic.label)} (${topic.count})`,
               })),
             ]}
           />

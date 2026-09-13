@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { publicCacheTag } from "@/lib/public-cache-tags";
 
 import type { MutationScopeActionState } from "@/lib/auth/owner-scope-contract";
 import {
@@ -35,9 +36,7 @@ export async function resolvePlantObjectCatalogAction(formData: FormData) {
 
   revalidatePath("/garden");
   revalidatePath(`/garden/objects/${result.plantObject.id}`);
-  for (const publicEntryPath of result.publicEntryPaths) {
-    revalidatePath(publicEntryPath);
-  }
+  revalidatePublicEntries(result);
 }
 
 export async function updatePlantObjectLocationAction(formData: FormData) {
@@ -56,9 +55,7 @@ export async function updatePlantObjectLocationAction(formData: FormData) {
 
   revalidatePath("/garden");
   revalidatePath(`/garden/objects/${result.plantObject.id}`);
-  for (const publicEntryPath of result.publicEntryPaths) {
-    revalidatePath(publicEntryPath);
-  }
+  revalidatePublicEntries(result);
 }
 
 export async function createProvenanceEdgeAction(formData: FormData) {
@@ -170,6 +167,31 @@ function toIsoTimestamp(value: Date | string): string {
   return value instanceof Date
     ? value.toISOString()
     : new Date(value).toISOString();
+}
+
+/**
+ * Every public entry on the object, by its own address and by its cache tag.
+ *
+ * `revalidatePath` alone used to be called with the legacy `/journal/{slug}`
+ * paths, which have answered 308 since OVE-428 and cache nothing — so a
+ * location or catalog change reached the public entry pages only when their
+ * hour-long cache expired on its own.
+ */
+function revalidatePublicEntries(result: {
+  plantObject: { id: string };
+  publicEntryPaths: string[];
+  publicEntryIds: string[];
+}) {
+  for (const publicEntryPath of result.publicEntryPaths) {
+    revalidatePath(publicEntryPath);
+  }
+  revalidatePublicCacheTags(
+    [
+      publicCacheTag.object(result.plantObject.id),
+      ...result.publicEntryIds.map((entryId) => publicCacheTag.entry(entryId)),
+    ],
+    "expire",
+  );
 }
 
 function publicSlugFromUrl(publicUrl: string | null): string | null {
