@@ -1079,3 +1079,40 @@ proof asks each entry to declare its own language on `<main>` and in its graph
 What stays for the next slice: engagement refs move from the entry slug to the
 entry id and entry slugs become unique per author (migration `0073`), which is
 also what repairs the two likes the move orphaned on `томат-sep-1-…`.
+
+## The name becomes the author's (`OVE-436`, migration `0073`)
+
+**Decided by the owner 2026-09-13**, after the residue audit: "A1 і A2 разом
+зараз". `0070` had moved entries under their authors and left the name
+platform-unique, because three readers knew an entry by its slug alone. Two of
+those were already gone or wrong — the search document has been keyed by the
+entry id since OVE-242, and the engagement refs were *broken*: the move renamed
+every slug and left every stored like pointing at the old name. Measured on
+production, both journal-entry likes referenced `томат-sep-1-f66321980b32`, a
+slug that exists only in the history table; the entry showed none.
+
+**`0073` moves the engagement refs onto the entry id** — live name first,
+history second (oldest row first), idempotent, keeping the older of two rows a
+unique key would otherwise reject — **and makes `journal_entries.public_slug`
+unique per `(owner_user_id, public_slug)`.** The five system topics get their
+Ukrainian labels in the same migration.
+
+**In the code:** the allocator is per owner (lock, taken set, history under the
+current handle); the address manifest says `perAuthorHandle` and the contract
+is regenerated; the proxy and the author-scoped route look an entry up by
+`(handle, slug)`; a legacy `/journal/{slug}` resolves through the history,
+oldest row first — the legacy namespace was global, so the entry that held the
+slug first is the one a shared link meant; the engagement target of an entry
+is its id (the page, the auth-intent contract — which still accepts a slug so
+an intent minted before the deploy resumes — the comment and follow
+notification queries, and the deletion scrub all follow). The two dead
+return-path helpers went with it: the return path comes from the form now.
+
+**Proofs.** `pnpm schema:author-addresses:prove-database` applies every
+migration, replays them, then shows the first gardener's next name is
+`полив-без-календарної-пастки-2`, the second gardener's is the base, the
+per-owner index accepts it, and a like stored on `polyv-old-slug` lands on the
+entry id when `0073` replays with the older of two duplicates kept.
+`pnpm public:reads:prove-database` runs the ten new reads — the grouped
+notification queries with their correlated handle scalar included — on a real
+Postgres.

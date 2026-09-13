@@ -39,14 +39,17 @@ const JOURNAL_ENTRY = addressManifestEntry("journalEntry");
  * lock `prepareAtomicCreateTransaction` already holds, always in that order,
  * so no pair of transactions can wait on each other.
  *
- * The uniqueness scope is global here and per-author in the manifest, because
- * `OVE-428` moves entries to `/@{handle}/{slug}` and gives the namespace its
- * own history table. Until then the live column is the whole history: nothing
- * re-slugs an entry yet, so no retired slug exists to be handed out twice.
+ * **The scope is the gardener** (migration `0073`, ADR-0029 D6): the lock, the
+ * taken set and the unique index are all per owner, so two gardeners both get
+ * `мій-перший-помідор` under their own handles. The taken set reads the slug
+ * history under the gardener's current handle as well as the live column: an
+ * address that was moved still answers 308 from its old slug (D8), and a
+ * counter that read only the live column would hand that old slug to a second
+ * entry, so the old link would silently start opening a different one.
  */
 export async function assignJournalEntrySlug(
   executor: QueryExecutor,
-  input: { title: string; sourceLanguage: PublicLocale },
+  input: { title: string; sourceLanguage: PublicLocale; ownerUserId: string },
 ): Promise<string> {
   const base = slugify(input.title, {
     script: JOURNAL_ENTRY.script,
@@ -58,11 +61,15 @@ export async function assignJournalEntrySlug(
     throw new Error(`Not a journal entry slug: ${base}`);
   }
 
-  await sql`select pg_advisory_xact_lock(hashtextextended(${`journal-entry-slug:${base}`}, 0))`.execute(
+  await sql`select pg_advisory_xact_lock(hashtextextended(${`journal-entry-slug:${input.ownerUserId}:${base}`}, 0))`.execute(
     executor,
   );
 
-  const taken = await buildTakenJournalEntrySlugsQuery(executor, base).execute();
+  const taken = await buildTakenJournalEntrySlugsQuery(
+    executor,
+    input.ownerUserId,
+    base,
+  ).execute();
   return resolveAddressCollision(
     "journalEntry",
     base,
@@ -74,7 +81,9 @@ export async function assignJournalEntrySlug(
 }
 
 /**
- * Every slug that could collide with the base or one of its `-N` suffixes.
+ * Every slug of this gardener's that could collide with the base or one of
+ * its `-N` suffixes — the live column *and* the slug history under the
+ * gardener's current handle.
  *
  * `like` with the base as a prefix is the same shape
  * `buildTakenCatalogSlugsQuery` uses, and it is deliberately wider than the
@@ -82,11 +91,13 @@ export async function assignJournalEntrySlug(
  */
 export function buildTakenJournalEntrySlugsQuery(
   executor: QueryExecutor,
+  ownerUserId: string,
   base: string,
 ) {
   return executor
     .selectFrom("journal_entries")
     .select(["journal_entries.public_slug as slug"])
+    .where("journal_entries.owner_user_id", "=", ownerUserId)
     .where("journal_entries.public_slug", "is not", null)
     .where((eb) =>
       eb.or([
@@ -94,7 +105,28 @@ export function buildTakenJournalEntrySlugsQuery(
         eb("journal_entries.public_slug", "like", `${base}-%`),
       ]),
     )
-    .$narrowType<{ slug: string }>();
+    .$narrowType<{ slug: string }>()
+    .union(
+      executor
+        .selectFrom("journal_entry_slug_history as history")
+        .innerJoin("user_handle_registry", (join) =>
+          join
+            .onRef(
+              "user_handle_registry.normalized_handle",
+              "=",
+              "history.author_handle",
+            )
+            .on("user_handle_registry.lifecycle_state", "=", "current"),
+        )
+        .select(["history.slug as slug"])
+        .where("user_handle_registry.user_id", "=", ownerUserId)
+        .where((eb) =>
+          eb.or([
+            eb("history.slug", "=", base),
+            eb("history.slug", "like", `${base}-%`),
+          ]),
+        ),
+    );
 }
 
 export interface JournalEntryAddress {
@@ -106,12 +138,14 @@ export interface JournalEntryAddress {
  * The address an entry has now, found from any address it has ever had
  * (ADR-0029 D8).
  *
- * The live column answers first. When it does not — because the slug moved —
- * `journal_entry_slug_history` does, including rows whose `valid_to` is set:
- * that is exactly what a closed row is for. Without this, the move that
- * `pnpm address:entries:move` performs would turn every published URL into a
- * 404 rather than a 308, which is the one thing the history table exists to
- * prevent.
+ * With the handle — an author-scoped request — the live column answers first
+ * for `(handle, slug)`, then the history for the same pair, including rows
+ * whose `valid_to` is set: that is exactly what a closed row is for. Without
+ * the handle — a legacy `/journal/{slug}` request, which carries none — the
+ * slug is ambiguous since `0073` made names per author, so the live column
+ * answers only when exactly one entry has the slug, and otherwise the oldest
+ * history row does: the legacy namespace was global, so the address a reader
+ * shared before the move belongs to the entry that held the slug first.
  *
  * The handle comes from the registry rather than from the history row, so a
  * gardener who has since renamed their handle still gets one working
@@ -120,8 +154,9 @@ export interface JournalEntryAddress {
 export async function resolveJournalEntryAddress(
   slug: string,
   executor: QueryExecutor = db,
+  authorHandle: string | null = null,
 ): Promise<JournalEntryAddress | null> {
-  const live = await executor
+  let liveQuery = executor
     .selectFrom("journal_entries")
     .innerJoin("user_handle_registry", (join) =>
       join
@@ -138,10 +173,20 @@ export async function resolveJournalEntryAddress(
     ])
     .where("journal_entries.public_slug", "=", slug)
     .where("journal_entries.lifecycle_state", "=", "active")
-    .executeTakeFirst();
-  if (live?.slug) return { handle: live.handle, slug: live.slug };
+    .limit(2);
+  if (authorHandle !== null) {
+    liveQuery = liveQuery.where(
+      "user_handle_registry.normalized_handle",
+      "=",
+      authorHandle,
+    );
+  }
+  const live = await liveQuery.execute();
+  if (live.length === 1 && live[0]!.slug) {
+    return { handle: live[0]!.handle, slug: live[0]!.slug };
+  }
 
-  const historical = await executor
+  let historyQuery = executor
     .selectFrom("journal_entry_slug_history")
     .innerJoin(
       "journal_entries",
@@ -164,7 +209,16 @@ export async function resolveJournalEntryAddress(
     .where("journal_entry_slug_history.slug", "=", slug)
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_slug", "is not", null)
-    .executeTakeFirst();
+    .orderBy("journal_entry_slug_history.valid_from", "asc")
+    .orderBy("journal_entry_slug_history.id", "asc");
+  if (authorHandle !== null) {
+    historyQuery = historyQuery.where(
+      "journal_entry_slug_history.author_handle",
+      "=",
+      authorHandle,
+    );
+  }
+  const historical = await historyQuery.executeTakeFirst();
   return historical?.slug
     ? { handle: historical.handle, slug: historical.slug }
     : null;

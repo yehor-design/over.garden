@@ -34,14 +34,16 @@ interface AuthorScopedEntryRouteProps {
 
 async function resolveAddress(
   params: AuthorScopedEntryRouteProps["params"],
-): Promise<{ locale: string; slug: string } | null> {
+): Promise<{ locale: string; handle: string; slug: string } | null> {
   const { locale, profileHandle, entrySlug } = await params;
   const matched = matchAuthorScopedEntryPath(
     `${publicProfileBasePath(routeHandleSegment(profileHandle))}/${encodeURIComponent(
       decodeRouteSegment(entrySlug),
     )}`,
   );
-  return matched ? { locale, slug: matched.slug } : null;
+  return matched
+    ? { locale, handle: matched.handle, slug: matched.slug }
+    : null;
 }
 
 export async function generateMetadata({
@@ -50,7 +52,11 @@ export async function generateMetadata({
   const address = await resolveAddress(params);
   if (!address) return {};
   return generateEntryMetadata({
-    params: Promise.resolve({ locale: address.locale, slug: address.slug }),
+    params: Promise.resolve({
+      locale: address.locale,
+      slug: address.slug,
+      authorHandle: address.handle,
+    }),
   });
 }
 
@@ -72,7 +78,13 @@ export default async function AuthorScopedEntryRoute({
   const { getPublicJournalEntryLifecycleLookup } = await import(
     "@/server/journal-repository"
   );
-  const lookup = await getPublicJournalEntryLifecycleLookup(address.slug);
+  // The name is per author since `0073`, so the pair is the key: the lookup
+  // takes the handle rather than checking it afterwards.
+  const lookup = await getPublicJournalEntryLifecycleLookup(
+    address.slug,
+    undefined,
+    { authorHandle: address.handle },
+  );
   const requested = publicJournalEntryPath(
     routeHandleSegment(profileHandle),
     decodeRouteSegment(entrySlug),
@@ -96,7 +108,11 @@ export default async function AuthorScopedEntryRoute({
   }
 
   return PublicJournalEntryRoute({
-    params: Promise.resolve({ locale: address.locale, slug: address.slug }),
+    params: Promise.resolve({
+      locale: address.locale,
+      slug: address.slug,
+      authorHandle: address.handle,
+    }),
     searchParams,
   });
 }

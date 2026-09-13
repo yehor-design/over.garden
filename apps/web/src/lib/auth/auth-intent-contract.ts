@@ -239,6 +239,12 @@ function normalizeTarget(value: unknown): AuthIntentTarget | undefined {
   const kind = record.kind as AuthIntentTargetKind;
   const rawRef = record.ref.trim();
   if (kind === "journal") {
+    // The entry's id since migration `0073` (the engagement ref moved off the
+    // slug); a slug is still accepted so an intent minted before the deploy
+    // resumes rather than fails.
+    if (UUID_PATTERN.test(rawRef.toLowerCase())) {
+      return { kind, ref: rawRef.toLowerCase() };
+    }
     const ref = normalizePublicJournalSlug(rawRef);
     if (!ref) throw new AuthIntentContractError();
     return { kind, ref };

@@ -2708,6 +2708,13 @@ export async function getPublicJournalEntryPage(
 export async function getPublicJournalEntryLifecycleLookup(
   publicSlug: string,
   executor: QueryExecutor = db,
+  /**
+   * The author's handle when the request carries one (`/@{handle}/{slug}`).
+   * The name is per author since `0073`, so without the handle a slug can
+   * name more than one entry; the legacy `/journal/{slug}` path resolves
+   * through `resolveJournalEntryAddress` instead.
+   */
+  options: { authorHandle?: string | null } = {},
 ): Promise<PublicJournalEntryLifecycleLookup> {
   const slug = normalizePublicSlug(publicSlug);
   if (!slug) return { status: "not_found" };
@@ -2715,6 +2722,7 @@ export async function getPublicJournalEntryLifecycleLookup(
   const row = (await buildPublicJournalEntryLifecycleQuery(
     executor,
     slug,
+    options.authorHandle ?? null,
   ).executeTakeFirst()) as PublicJournalEntryLifecycleRow | undefined;
   if (!row?.publicSlug) return { status: "not_found" };
 
@@ -2753,6 +2761,7 @@ async function loadPublicJournalEntryLookup(
   publicSlug: string,
   executor: QueryExecutor = db,
   locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
+  authorHandle: string | null = null,
 ): Promise<PublicJournalEntryLookup> {
   const slug = normalizePublicSlug(publicSlug);
   if (!slug) return { status: "not_found" };
@@ -2760,6 +2769,7 @@ async function loadPublicJournalEntryLookup(
   const row = await buildPublicJournalEntryLookupQuery(
     executor,
     slug,
+    authorHandle,
   ).executeTakeFirst();
   if (!row?.publicSlug) return { status: "not_found" };
 
@@ -3213,7 +3223,7 @@ async function scrubDeletedJournalEntryRelations(
     .selectFrom("engagement_comments")
     .select("id")
     .where("target_kind", "=", "journal_entry")
-    .where("target_ref", "=", input.publicSlug);
+    .where("target_ref", "=", input.entryId);
   await executor
     .deleteFrom("engagement_comment_reports")
     .where("comment_id", "in", comments)
@@ -3221,17 +3231,17 @@ async function scrubDeletedJournalEntryRelations(
   await executor
     .deleteFrom("engagement_comments")
     .where("target_kind", "=", "journal_entry")
-    .where("target_ref", "=", input.publicSlug)
+    .where("target_ref", "=", input.entryId)
     .execute();
   await executor
     .deleteFrom("engagement_bookmarks")
     .where("target_kind", "=", "journal_entry")
-    .where("target_ref", "=", input.publicSlug)
+    .where("target_ref", "=", input.entryId)
     .execute();
   await executor
     .deleteFrom("engagement_likes")
     .where("target_kind", "=", "journal_entry")
-    .where("target_ref", "=", input.publicSlug)
+    .where("target_ref", "=", input.entryId)
     .execute();
 }
 
@@ -3792,8 +3802,9 @@ export function buildPublicJournalEntryPageQuery(
 export function buildPublicJournalEntryLifecycleQuery(
   executor: QueryExecutor,
   publicSlug: string,
+  authorHandle: string | null = null,
 ) {
-  return executor
+  const query = executor
     .selectFrom("journal_entries")
     .innerJoin("spaces", (join) =>
       join
@@ -3823,13 +3834,21 @@ export function buildPublicJournalEntryLifecycleQuery(
     ])
     .where("journal_entries.public_slug", "=", publicSlug)
     .where(publicLaunchSurfacePredicates());
+  return authorHandle === null
+    ? query
+    : query.where(
+        publicAuthorHandleSql("journal_entries.owner_user_id"),
+        "=",
+        authorHandle,
+      );
 }
 
 export function buildPublicJournalEntryLookupQuery(
   executor: QueryExecutor,
   publicSlug: string,
+  authorHandle: string | null = null,
 ) {
-  return executor
+  const query = executor
     .selectFrom("journal_entries")
     .leftJoin("plant_objects", (join) =>
       join
@@ -3915,6 +3934,14 @@ export function buildPublicJournalEntryLookupQuery(
     ])
     .where("journal_entries.public_slug", "=", publicSlug)
     .where(publicLaunchSurfacePredicates());
+  // The name is per author since `0073`; with the handle the pair is the key.
+  return authorHandle === null
+    ? query
+    : query.where(
+        publicAuthorHandleSql("journal_entries.owner_user_id"),
+        "=",
+        authorHandle,
+      );
 }
 
 export function buildRelatedPublicJournalEntriesQuery(
@@ -4451,6 +4478,7 @@ async function atomicJournalEntryValues(
     public_slug: await assignJournalEntrySlug(executor, {
       title: input.title,
       sourceLanguage: input.sourceLanguage,
+      ownerUserId: scope.userId,
     }),
     published_at: now,
     first_publication_disclosure_version: disclosureLogged

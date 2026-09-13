@@ -5,15 +5,14 @@ import { createHash } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 import type {
   Database,
   NotificationReceiptState,
   PlantObjectKind,
 } from "@/db/schema";
 import {
-  legacyPublicJournalEntryPath,
   publicJournalEntryPath,
-  publicLineageObjectPath,
   publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
@@ -194,7 +193,11 @@ interface NotificationCommentRow {
   parentCommentId: string | null;
   createdAt: Date | string;
   actorHandle: string | null;
+  /** The entry id (the engagement ref since `0073`). */
   targetRef: string;
+  entryPublicSlug: string;
+  /** The author's registry handle; the entry's address hangs from it. */
+  addressHandle: string;
 }
 
 interface NotificationFollowRow {
@@ -203,6 +206,9 @@ interface NotificationFollowRow {
   actorHandle: string | null;
   targetRef: string;
   targetLabel?: string | null;
+  /** For an object target: its slug and its owner's handle, for the address. */
+  objectPublicSlug?: string | null;
+  addressHandle?: string | null;
 }
 
 interface NotificationReceiptRow {
@@ -517,7 +523,11 @@ export async function listNotificationCenterPage(
       actorHandle: row.actorHandle,
       targetRef: row.targetRef,
       targetLabel: row.targetLabel ?? null,
-      href: publicLineageObjectPath(row.targetRef),
+      href: publicObjectPassportAddress({
+        authorHandle: row.addressHandle ?? null,
+        publicSlug: row.objectPublicSlug ?? null,
+        plantObjectId: row.targetRef,
+      }),
       summaryKey: "object_followed" as const,
       groupRef: `object:${row.targetRef}`,
       actionKind: "open_object" as const,
@@ -565,7 +575,11 @@ export async function listNotificationCenterPage(
       actorHandle: row.actorHandle,
       targetRef: row.targetRef,
       targetLabel: row.targetLabel ?? null,
-      href: publicLineageObjectPath(row.targetRef),
+      href: publicObjectPassportAddress({
+        authorHandle: row.addressHandle ?? null,
+        publicSlug: row.objectPublicSlug ?? null,
+        plantObjectId: row.targetRef,
+      }),
       summaryKey: "lineage_followed" as const,
       groupRef: `lineage:${row.targetRef}`,
       actionKind: "open_object" as const,
@@ -617,8 +631,15 @@ export function buildNotificationCommentEventsQuery(
     )
     .innerJoin("journal_entries as entries", (join) =>
       join
-        .onRef("entries.public_slug", "=", "comments.target_ref")
+        // The ref is the entry id since `0073`; it was the slug, which the
+        // move under the author left pointing at a name nothing answered to.
+        .on(sql`${sql.ref("entries.id")}::text = ${sql.ref("comments.target_ref")}`)
         .on("comments.target_kind", "=", "journal_entry"),
+    )
+    .innerJoin("user_handle_registry as owner_handles", (join) =>
+      join
+        .onRef("owner_handles.user_id", "=", "entries.owner_user_id")
+        .on("owner_handles.lifecycle_state", "=", "current"),
     )
     .leftJoin("user_handle_registry as actor_handles", (join) =>
       join
@@ -642,6 +663,8 @@ export function buildNotificationCommentEventsQuery(
       "comments.created_at as createdAt",
       "profiles.handle as actorHandle",
       "comments.target_ref as targetRef",
+      "entries.public_slug as entryPublicSlug",
+      "owner_handles.normalized_handle as addressHandle",
     ])
     .where("comments.comment_state", "=", "active")
     .where("comments.author_user_id", "!=", scope.userId)
@@ -763,17 +786,23 @@ export function buildNotificationObjectFollowEventsQuery(
       "profiles.handle as actorHandle",
       "objects.id as targetRef",
       "objects.display_name as targetLabel",
+      "objects.public_slug as objectPublicSlug",
+      publicAuthorHandleSql("objects.owner_user_id").as("addressHandle"),
     ])
     .where("objects.owner_user_id", "=", scope.userId)
     .where("follows.target_kind", "=", "lineage_object")
     .where("follows.follow_state", "=", "active")
     .where(noActiveBlockPredicate(scope.userId, "follows.follower_user_id"))
+    // `owner_user_id` is grouped by, which is what lets the handle scalar
+    // read it (see `author-handle-sql.ts`).
     .groupBy([
       "follows.id",
       "follows.updated_at",
       "profiles.handle",
       "objects.id",
       "objects.display_name",
+      "objects.public_slug",
+      "objects.owner_user_id",
     ])
     .orderBy("follows.updated_at", "desc")
     .orderBy("follows.id", "asc")
@@ -966,6 +995,8 @@ export function buildNotificationLineageFollowEventsQuery(
       "profiles.handle as actorHandle",
       "objects.id as targetRef",
       "objects.display_name as targetLabel",
+      "objects.public_slug as objectPublicSlug",
+      publicAuthorHandleSql("objects.owner_user_id").as("addressHandle"),
     ])
     .where("follows.target_owner_user_id", "=", scope.userId)
     .where("follows.follow_state", "=", "active")
@@ -976,6 +1007,8 @@ export function buildNotificationLineageFollowEventsQuery(
       "profiles.handle",
       "objects.id",
       "objects.display_name",
+      "objects.public_slug",
+      "objects.owner_user_id",
     ])
     .orderBy("follows.updated_at", "desc")
     .orderBy("follows.id", "asc")
@@ -1285,7 +1318,9 @@ function mapCommentNotification(
     actorHandle: row.actorHandle,
     targetRef: row.targetRef,
     targetLabel: null,
-    href: legacyPublicJournalEntryPath(row.targetRef),
+    // Under the author (ADR-0029 D9): the ref is an id now, and the row
+    // carries the slug and the handle the address is built from.
+    href: publicJournalEntryPath(row.addressHandle, row.entryPublicSlug),
     summaryKey: reply ? "reply_to_comment" : "comment_on_journal",
     groupRef: `journal:${row.targetRef}`,
     actionKind: "open_journal",

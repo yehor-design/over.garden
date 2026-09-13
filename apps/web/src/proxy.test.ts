@@ -654,8 +654,11 @@ describe("app route cache guardrail", () => {
       "https://over.garden/@yehor/active-entry",
     );
     expect(rsc.status).toBe(200);
+    // A legacy `/journal/{slug}` carries no handle; the lookup says so.
     expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith(
       "private-entry",
+      undefined,
+      { authorHandle: null },
     );
   });
 
@@ -1560,8 +1563,11 @@ describe("author-scoped addresses reach their lifecycle blocks", () => {
     expect(response.headers.get("x-middleware-rewrite")).toBe(
       `https://over.garden/uk/@yehor/${encodeURIComponent("полив-без-календарної-пастки")}`,
     );
+    // By the pair, not the slug alone: the name is per author since `0073`.
     expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith(
       "полив-без-календарної-пастки",
+      undefined,
+      { authorHandle: "yehor" },
     );
   });
 

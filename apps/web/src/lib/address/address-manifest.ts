@@ -239,13 +239,14 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     namespace: "journalEntry",
     script: "native",
     shape: "hyphenated",
-    // The *address* is author-scoped; the *name* is still platform-unique, and
-    // migration `0070` says at length why. Three readers identify an entry by
-    // its slug and nothing else — the engagement target ref a like is stored
-    // against, the Meilisearch document id, and the proxy's bounded lookup —
-    // and making the slug ambiguous before those move to the entry id would
-    // let two gardeners' likes land on one row.
-    uniquenessScope: "global",
+    // The address is author-scoped and, since migration `0073`, so is the
+    // name: two gardeners may both call an entry `мій-перший-помідор`. What
+    // held the name platform-unique before were three readers that knew an
+    // entry by its slug alone — the engagement target ref, the search document
+    // id, and the proxy's bounded lookup — and `0073` moved the first onto
+    // the entry id (the second already was), while the third reads
+    // `(handle, slug)` and answers a legacy `/journal/{slug}` from history.
+    uniquenessScope: "perAuthorHandle",
     budget: DEFAULT_ADDRESS_BUDGET,
     // OVE-428 puts object passports at /@{handle}/objects/{slug}, so an entry
     // may never take `objects` from under its own author.
@@ -265,7 +266,7 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
       checkInstalledBy: "0068",
     },
     notes:
-      "The only slug column that has never carried a CHECK; migration 0068 gave it one. Migration 0070 made the uniqueness per author and gave the namespace its history table, which is what let the publish-id suffix go.",
+      "The only slug column that has never carried a CHECK; migration 0068 gave it one. Migration 0070 gave the namespace its history table, which is what let the publish-id suffix go; 0073 made the live column unique per author to match, once nothing identified an entry by its slug alone.",
   },
   {
     namespace: "object",

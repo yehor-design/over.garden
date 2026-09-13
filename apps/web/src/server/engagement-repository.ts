@@ -17,12 +17,10 @@ import type {
 import {
   legacyPublicJournalEntryPath,
   publicJournalEntryPath,
-  publicLineageObjectPath,
   publicObjectPassportAddress,
   publicTopicPath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
-import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { blockUserId } from "@/server/profile-interaction-repository";
@@ -45,7 +43,6 @@ export const ENGAGEMENT_COMMENT_PAGE_SIZE = 8;
 const MAX_COMMENT_READBACK = 24;
 const MAX_BOOKMARK_READBACK = 50;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const JOURNAL_SLUG_PATTERN = /^[\p{Letter}\p{Number}-]+$/u;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UNSAFE_COMMENT_PATTERN =
@@ -863,7 +860,7 @@ export async function findPublicEngagementTarget(
       return row
         ? {
             kind: target.kind,
-            ref: row.publicSlug,
+            ref: row.id,
             label: row.title,
             href: row.addressHandle
               ? publicJournalEntryPath(row.addressHandle, row.publicSlug)
@@ -1428,11 +1425,12 @@ export function buildCountEngagementLikesQuery(
 
 export function buildPublicJournalEntryTargetQuery(
   executor: QueryExecutor,
-  publicSlug: string,
+  entryId: string,
 ) {
   return executor
     .selectFrom("journal_entries")
     .select([
+      "id",
       "public_slug as publicSlug",
       "title",
       "owner_user_id as ownerUserId",
@@ -1440,7 +1438,8 @@ export function buildPublicJournalEntryTargetQuery(
         "addressHandle",
       ),
     ])
-    .where("public_slug", "=", publicSlug)
+    .where("id", "=", entryId)
+    .where("public_slug", "is not", null)
     .where("visibility", "=", "public")
     .where("lifecycle_state", "=", "active")
     .where("public_gone_at", "is", null)
@@ -1679,10 +1678,13 @@ export function normalizeEngagementTarget(
   const ref = String(refValue ?? "").trim();
 
   if (kind === "journal_entry") {
-    if (!ref || ref.length > 160 || !JOURNAL_SLUG_PATTERN.test(ref)) {
+    // The entry's id, since migration `0073`: a like used to be stored
+    // against the slug, which moved under the author and left every stored
+    // like pointing at a name nothing answered to.
+    if (!UUID_PATTERN.test(ref)) {
       throw new Error("Engagement target is not available.");
     }
-    return { kind, ref };
+    return { kind, ref: ref.toLowerCase() };
   }
 
   if (kind === "lineage_object") {
@@ -1718,44 +1720,6 @@ export function normalizeEngagementCommentTarget(
   return normalizeEngagementTarget(kindValue, refValue);
 }
 
-export function normalizeEngagementReturnTo(
-  value: string | null | undefined,
-  target: EngagementCommentTarget,
-) {
-  return normalizeInternalReturnPath(value, engagementTargetPath(target));
-}
-
-/**
- * Where a reader is sent back to after signing in to like or comment.
- *
- * A journal entry and an object passport are addressed under their author now
- * (ADR-0029 D9), and this function has only the target ref: a slug for an
- * entry, a UUID for a passport. Neither carries a handle. It answers with the
- * legacy address instead, which the proxy 308s to the canonical one — a
- * redirect on a return path costs one hop and no correctness.
- *
- * Putting the handle in the ref is what would remove the hop. It is not worth
- * a data migration of every stored like and comment on its own; it becomes
- * worth it together with moving the ref onto the entry id, which is also what
- * would let an entry slug be unique per author rather than per platform.
- */
-export function engagementTargetPath(target: EngagementCommentTarget) {
-  switch (target.kind) {
-    case "journal_entry":
-      return legacyPublicJournalEntryPath(target.ref);
-    case "lineage_object":
-      return publicLineageObjectPath(target.ref);
-    case "variety":
-      return publicVarietyPath(target.ref);
-    case "topic":
-      return publicTopicPath(target.ref);
-    case "community_contribution":
-      // A UUID alone cannot safely reconstruct a locale or community slug.
-      // Valid server-rendered return paths are preserved; malformed input gets
-      // this neutral same-origin fallback instead.
-      return "/";
-  }
-}
 
 async function listEngagementComments(
   target: EngagementCommentTarget,

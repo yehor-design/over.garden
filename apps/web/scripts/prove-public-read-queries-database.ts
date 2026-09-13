@@ -62,6 +62,9 @@ async function readCases(): Promise<ReadCase[]> {
     catalogRegister,
     sitemap,
     engagement,
+    journalSlug,
+    socialReturn,
+    requestScope,
   ] = await Promise.all([
     import("../src/server/public-object-passport-repository"),
     import("../src/server/public-lineage-repository"),
@@ -78,7 +81,11 @@ async function readCases(): Promise<ReadCase[]> {
     import("../src/server/public-catalog-register-repository"),
     import("../src/server/public-sitemap-repository"),
     import("../src/server/engagement-repository"),
+    import("../src/server/journal-slug-repository"),
+    import("../src/server/social-return-repository"),
+    import("../src/server/request-scope"),
   ]);
+  const absentScope = requestScope.scopedToUser(ABSENT_UUID);
 
   return [
     {
@@ -108,6 +115,57 @@ async function readCases(): Promise<ReadCase[]> {
         engagement
           .buildPublicLineageObjectTargetQuery(db, ABSENT_UUID)
           .executeTakeFirst(),
+    },
+    {
+      name: "engagement journal entry target by id",
+      run: (db) =>
+        engagement
+          .buildPublicJournalEntryTargetQuery(db, ABSENT_UUID)
+          .executeTakeFirst(),
+    },
+    {
+      name: "journal entry lifecycle lookup by handle and slug",
+      run: (db) =>
+        journal.getPublicJournalEntryLifecycleLookup(ABSENT_SLUG, db, {
+          authorHandle: ABSENT_HANDLE,
+        }),
+    },
+    {
+      name: "journal entry address from history, legacy",
+      run: (db) => journalSlug.resolveJournalEntryAddress(ABSENT_SLUG, db),
+    },
+    {
+      name: "journal entry address from history, author-scoped",
+      run: (db) =>
+        journalSlug.resolveJournalEntryAddress(ABSENT_SLUG, db, ABSENT_HANDLE),
+    },
+    {
+      name: "journal entry taken slugs, per author with history",
+      run: (db) =>
+        journalSlug
+          .buildTakenJournalEntrySlugsQuery(db, ABSENT_UUID, "x")
+          .execute(),
+    },
+    {
+      // The three notification queries that build an address from a joined
+      // row; two of them group with a correlated handle scalar.
+      name: "notification comment events by entry id",
+      run: (db) =>
+        socialReturn.buildNotificationCommentEventsQuery(db, absentScope).execute(),
+    },
+    {
+      name: "notification object follow events",
+      run: (db) =>
+        socialReturn
+          .buildNotificationObjectFollowEventsQuery(db, absentScope)
+          .execute(),
+    },
+    {
+      name: "notification lineage follow events",
+      run: (db) =>
+        socialReturn
+          .buildNotificationLineageFollowEventsQuery(db, absentScope)
+          .execute(),
     },
     {
       name: "catalog browse kingdoms",

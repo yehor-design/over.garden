@@ -62,6 +62,8 @@ import {
 export async function readPublicJournalEntry(
   publicSlug: string,
   locale: PublicLocale,
+  /** The author's handle: the name is per author since `0073`, so the pair is the key. */
+  authorHandle: string | null = null,
 ) {
   "use cache";
   cacheLife("hours");
@@ -69,6 +71,7 @@ export async function readPublicJournalEntry(
     publicSlug,
     undefined,
     locale,
+    authorHandle,
   );
   cacheTag(PUBLIC_CACHE_TAGS.journals, publicCacheTag.entrySlug(publicSlug));
   if (lookup.status === "active") {
