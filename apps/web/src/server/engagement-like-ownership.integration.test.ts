@@ -23,9 +23,11 @@ import {
 const hasLocalDatabase = Boolean(process.env.DATABASE_URL);
 
 // A Cyrillic slug of the shape production actually uses. The retired capability
-// token overflowed 256 characters on exactly this input.
+// token overflowed 256 characters on exactly this input. Since migration
+// `0073` a like is stored against the entry's id, not its slug, so the target
+// is built from the seeded row below.
 const PUBLIC_SLUG = "кратък-и-отговорен-запис-след-преглед-на-кошер-29a9b986d1";
-const target = { kind: "journal_entry" as const, ref: PUBLIC_SLUG };
+let target = { kind: "journal_entry" as const, ref: "" };
 
 describe.skipIf(!hasLocalDatabase)("OVE-377 owned engagement likes", () => {
   let ownerUserId: string;
@@ -58,7 +60,7 @@ describe.skipIf(!hasLocalDatabase)("OVE-377 owned engagement likes", () => {
     `.execute(db);
     plantObjectId = plantObject.rows[0]!.id;
 
-    await sql`
+    const entry = await sql<{ id: string }>`
       insert into journal_entries (
         owner_user_id, space_id, plant_object_id, title, body,
         client_mutation_id, public_slug, visibility, published_at
@@ -67,13 +69,15 @@ describe.skipIf(!hasLocalDatabase)("OVE-377 owned engagement likes", () => {
         'Like ownership fixture', 'Fixture body.', ${randomUUID()},
         ${PUBLIC_SLUG}, 'public', now()
       )
+      returning id
     `.execute(db);
+    target = { kind: "journal_entry", ref: entry.rows[0]!.id };
   });
 
   afterEach(async () => {
     await db
       .deleteFrom("engagement_likes")
-      .where("target_ref", "=", PUBLIC_SLUG)
+      .where("target_ref", "=", target.ref)
       .execute();
     await db
       .deleteFrom("journal_entries")
@@ -211,7 +215,7 @@ describe.skipIf(!hasLocalDatabase)("OVE-377 owned engagement likes", () => {
   it("refuses a like on a target that is not public", async () => {
     await expect(
       toggleEngagementLike({
-        target: { kind: "journal_entry", ref: "no-such-entry-anywhere" },
+        target: { kind: "journal_entry", ref: randomUUID() },
         owner: { kind: "visitor", visitorId: randomUUID() },
       }),
     ).rejects.toThrow();
