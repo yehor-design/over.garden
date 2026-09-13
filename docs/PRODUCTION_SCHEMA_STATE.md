@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-11; `0073` applied 2026-09-13. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
+Last inventory: 2026-09-13; `0073` and `0074` applied 2026-09-13. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -988,6 +988,36 @@ safe in either order.
 
 After applying anything, re-run the inventory and update this page in the same
 pull request as the migration or the code that needs it.
+
+## `0074`, the label-to-taxon rules — applied 2026-09-13
+
+`0074_ove435_label_scientific_name_rules.sql` applied to production on
+2026-09-13 through `scripts/apply-reviewed-migration.ts --mode apply`: one
+transaction, host class `digitalocean_managed`, database `defaultdb`, 3
+statements, **230 ms**. Inventory before and after read
+`digitalocean_managed` / `defaultdb`, `0073` applied, `0074` pending then
+applied.
+
+Read back on production right after, read-only:
+
+```
+catalog_reconcile_thresholds: 8 rows, all 0.9500, decisions_30d 0 —
+  the six of 0056 plus label_scientific_name and label_scientific_synonym
+catalog_reconcile_thresholds_rule_code_check: the eight codes
+```
+
+Why: the reconciliation ladder reached cultivars and breeds from a gardener's
+label and never a taxon, so all four public objects — whose own name is
+exactly the species' scientific name — stayed free-text beside their cards.
+The worker's rung seven (`OVE-435`) proposes under these two codes; the table's
+closed set had to admit them before the worker that proposes them is deployed.
+The incumbent worker is unaffected: the constraint is not part of the queue
+contract its preflight checks, and `read_thresholds` reads rows by code.
+
+Rollback `sql/rollback/0074_ove435_label_scientific_name_rules.down.sql`
+deletes the two rows and restores the six-code set; links already made are
+ordinary `label_link` decisions with their inverse in
+`catalog_curation_actions`, reverted one by one if wanted, never by this file.
 
 ## `0073`, entry names per author and engagement refs by id — applied 2026-09-13
 

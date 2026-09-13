@@ -815,6 +815,78 @@ than the limitation.
 
 ---
 
+## 17. `OVE-435` — The label that was a species
+
+**Outcome.** A gardener's living object points at the card for what it is,
+so the `about → subjectOf` edge the entity-graph task built carries real
+data in production.
+
+**What was true, measured 2026-09-12.** Every `plant_objects` row in
+production had `catalog_item_id = null` and `variety_state = 'free_text'` —
+including all four public objects, whose `variety_text` is *exactly* the
+accepted name of a card that already exists: Томат and Домат say `Solanum
+lycopersicum`, Бджолина сім'я and Пчелно семейство say `Apis mellifera`. So
+no entry carried `about`, neither card carried `subjectOf`, and both cards
+stayed `noindex` with `first_hand_content_at` null although a gardener had
+written about them (ADR-0026 D9).
+
+**Owner decision.** Link them now, through the reconciliation machinery, so
+the same path works for the next object; never by a hand-written `UPDATE`.
+
+**Why the machinery could not do it.** The ladder's fifth rung reaches a
+cultivar or breed by its denomination, and the label ladder handed it *only
+forms* as candidates. A taxon was unreachable from a label by construction:
+`climb_label_ladder(cluster, forms)`. ADR-0026 D6 had said the worker
+"proposes species links"; nothing implemented that clause. The
+`catalog_reconcile` job itself had no producer in the web app either — the
+sources page enqueues refreshes, the digest cron enqueues nothing — so on
+production the ladder had never run over labels at all (the queue held only
+`source_link` items).
+
+**What shipped.**
+
+1. **Rung seven, in the worker.** A label equal after the shared normalizer to
+   the accepted name of exactly one active taxon the object's kind can be
+   proposes `label_scientific_name` at 0.97 — above the seeded 0.95, so it
+   applies itself through `catalog_apply_queue_item` like a denomination
+   match. A label equal to a synonym of exactly one proposes
+   `label_scientific_synonym` at 0.90 — under every threshold, so the owner
+   decides. A vernacular (`Томат`) is a search hint, not an identity claim,
+   and reaches nothing. Kingdom-aware like the rest: a plant object labelled
+   `Pieris japonica` reaches the shrub, an animal object the butterfly, and a
+   name carried only by the wrong kingdom records `homonym_kingdom_conflict`
+   and proposes nothing. Two live taxa under one accepted name propose
+   nothing — that is the duplicates scope's question. Fungi and Chromista
+   count as "plant" objects, because a gardener's plant object is anything
+   grown in a bed and no object kind names them. The taxon index is built
+   once per run (`TaxonNameIndex`): twenty thousand clusters cannot walk a
+   hundred thousand nodes each.
+2. **Migration `0074`.** `catalog_reconcile_thresholds.rule_code` is a closed
+   set in a CHECK; the two codes join it and are seeded at 0.95. Applied to
+   production 2026-09-13 (3 statements, 230 ms); receipt in
+   `docs/PRODUCTION_SCHEMA_STATE.md`. Not a queue-contract change: the
+   incumbent worker stayed healthy.
+3. **The enqueue command.** `scripts/enqueue-catalog-reconcile.ts` inserts the
+   `catalog_reconcile` row through the repository's builder with the same
+   production gate as the refresh command (`docs/ORGANISM_GRAPH_EXECUTION.md`
+   §4.4).
+
+**Proof, rehearsed.** `tests/test_catalog_reconcile_database.py` seeds the
+production shape — two `Solanum lycopersicum` plants, two `Apis mellifera`
+animals, a public entry each, both cards bare, plus a plant labelled with a
+butterfly's name, a synonym label and a vernacular label — and one labels run
+links all four, sets `first_hand_content_at` on both cards, writes both
+`catalog_card` intents, queues the synonym for the owner, records the
+kingdom conflict, and has nothing to say on a second run.
+
+**Acceptance (production).** The four public objects have a `catalog_item_id`;
+a live entry's JSON-LD carries `about` with the card's permalink `@id`, and the
+card's JSON-LD carries `subjectOf` back at the entry's `@id` — both pages
+fetched on production and quoted below once the worker release with the rung
+is deployed and the labels run has been enqueued.
+
+---
+
 ## Traps recorded before they cost a day
 
 - `notFound()` under a streamed shell answers **200**, not 404. Any real 404 is

@@ -20,7 +20,15 @@ Rungs, in order, each yielding ``(confidence, reasons)``:
 5. cultivar and breed denominations equal after the shared normalizer, or
    equivalent under transliteration, within the same species
    (``denomination_equal``, ``denomination_transliteration``);
-6. co-usage by gardeners as a supporting signal only (``co_usage:{n}``).
+6. co-usage by gardeners as a supporting signal only (``co_usage:{n}``);
+7. a gardener label that *is* a scientific name — equal after the shared
+   normalizer to the accepted name of exactly one active taxon the object's
+   kind can be (``label_scientific_name``), or to a synonym of exactly one
+   (``label_scientific_synonym``). The label ladder only: a form is reached by
+   its denomination (rung 5), a taxon by its name (this rung). Until OVE-435
+   nothing reached a taxon from a label, so an object whose own name was
+   exactly ``Solanum lycopersicum`` stayed a free-text label beside the card
+   for Solanum lycopersicum — every public object on production sat that way.
 
 A kingdom mismatch on an otherwise exact name records
 ``homonym_kingdom_conflict`` and never proposes.
@@ -50,6 +58,8 @@ RULE_CANONICAL_SAME_KINGDOM_RANK = "canonical_same_kingdom_rank"
 RULE_FUZZY_SAME_GENUS = "fuzzy_same_genus"
 RULE_DENOMINATION_EQUAL = "denomination_equal"
 RULE_DENOMINATION_TRANSLITERATION = "denomination_transliteration"
+RULE_LABEL_SCIENTIFIC_NAME = "label_scientific_name"
+RULE_LABEL_SCIENTIFIC_SYNONYM = "label_scientific_synonym"
 REASON_CO_USAGE = "co_usage"
 REASON_HOMONYM_KINGDOM_CONFLICT = "homonym_kingdom_conflict"
 
@@ -60,6 +70,8 @@ RULE_CODES: tuple[str, ...] = (
     RULE_FUZZY_SAME_GENUS,
     RULE_DENOMINATION_EQUAL,
     RULE_DENOMINATION_TRANSLITERATION,
+    RULE_LABEL_SCIENTIFIC_NAME,
+    RULE_LABEL_SCIENTIFIC_SYNONYM,
 )
 
 CONFIDENCE: Mapping[str, float] = {
@@ -68,6 +80,12 @@ CONFIDENCE: Mapping[str, float] = {
     RULE_CANONICAL_SAME_KINGDOM_RANK: 0.93,
     RULE_DENOMINATION_EQUAL: 0.96,
     RULE_DENOMINATION_TRANSLITERATION: 0.94,
+    # A binomial typed exactly is as unambiguous as a denomination typed
+    # exactly, and the rung already requires exactly one live taxon to carry
+    # it: above the seeded 0.95, so it applies itself. A synonym is a name a
+    # source retired for a reason — the owner decides that one.
+    RULE_LABEL_SCIENTIFIC_NAME: 0.97,
+    RULE_LABEL_SCIENTIFIC_SYNONYM: 0.90,
 }
 FUZZY_MIN_SCORE = 0.92
 CO_USAGE_BONUS = 0.01
@@ -84,6 +102,17 @@ MAX_LABEL_CLUSTERS = 20_000
 MAX_SOURCE_RECORDS = 20_000
 SCOPES = ("labels", "source_records", "duplicates")
 FORM_KIND_BY_OBJECT_KIND = {"plant": "cultivar", "animal": "breed"}
+# The kingdoms a gardener's object of each kind can belong to; a node whose
+# kingdom is known and elsewhere is a homonym conflict, never a proposal. A
+# node with no recorded kingdom is not excluded — the exactly-one rule still
+# guards it. Fungi and Chromista are "plants" here because a gardener's plant
+# object is anything they grow in a bed, and no object kind names them.
+KINGDOMS_BY_OBJECT_KIND: Mapping[str, frozenset[str]] = {
+    "plant": frozenset({"plantae", "fungi", "chromista"}),
+    "animal": frozenset({"animalia"}),
+}
+ACCEPTED_NAME_TYPES = frozenset({"scientific_accepted"})
+SYNONYM_NAME_TYPES = frozenset({"scientific_synonym"})
 
 _SPACE_RUN = re.compile(r"\s+")
 _CYRILLIC = re.compile(r"[Ѐ-ӿ]")
@@ -393,15 +422,125 @@ def climb_node_ladder(subject: Node, candidates: Sequence[Node]) -> LadderOutcom
     return LadderOutcome(proposal=proposal, conflicts=tuple(dict.fromkeys(conflicts)))
 
 
-def climb_label_ladder(cluster: LabelCluster, forms: Sequence[Node]) -> LadderOutcome:
-    """A gardener label reaches a form of the matching kind by its denomination."""
+@dataclass(frozen=True)
+class TaxonNameIndex:
+    """Active taxa by every scientific name a gardener could have typed.
+
+    Built once per run: a label ladder over twenty thousand clusters cannot
+    walk a hundred thousand nodes per cluster. Keys are the shared normalizer's
+    spelling; the accepted names are the parsed canonical (authorship stripped
+    by gnparser, or the whole canonical name where it is unavailable) and every
+    ``scientific_accepted`` row, the synonyms every ``scientific_synonym`` row
+    that is not also an accepted name of the same node.
+    """
+
+    accepted: Mapping[str, tuple[Node, ...]]
+    synonyms: Mapping[str, tuple[Node, ...]]
+    by_id: Mapping[str, Node]
+
+    @classmethod
+    def build(cls, nodes: Iterable[Node]) -> "TaxonNameIndex":
+        accepted: dict[str, list[Node]] = defaultdict(list)
+        synonyms: dict[str, list[Node]] = defaultdict(list)
+        by_id: dict[str, Node] = {}
+        for node in nodes:
+            if node.node_kind != "taxon":
+                continue
+            by_id[node.id] = node
+            accepted_keys = {normalize_name(_canonical_simple(node))}
+            accepted_keys.update(
+                normalize_name(name.display_name)
+                for name in node.names
+                if name.name_type in ACCEPTED_NAME_TYPES
+            )
+            synonym_keys = {
+                normalize_name(name.display_name)
+                for name in node.names
+                if name.name_type in SYNONYM_NAME_TYPES
+            }
+            for key in accepted_keys - {""}:
+                accepted[key].append(node)
+            for key in synonym_keys - accepted_keys - {""}:
+                synonyms[key].append(node)
+        return cls(
+            accepted={key: tuple(value) for key, value in accepted.items()},
+            synonyms={key: tuple(value) for key, value in synonyms.items()},
+            by_id=by_id,
+        )
+
+    @classmethod
+    def empty(cls) -> "TaxonNameIndex":
+        return cls(accepted={}, synonyms={}, by_id={})
+
+
+def _kingdom_fits_object_kind(node: Node, object_kind: str) -> bool:
+    wanted = KINGDOMS_BY_OBJECT_KIND.get(object_kind)
+    if wanted is None or node.kingdom is None:
+        return True
+    return node.kingdom.casefold() in wanted
+
+
+def rung_label_scientific_name(
+    cluster: LabelCluster, index: TaxonNameIndex, conflicts: list[str]
+) -> Proposal | None:
+    """Rung 7: the label is a scientific name, and exactly one live taxon carries it.
+
+    The accepted name is asked first and decides alone: two live taxa under
+    one accepted name are the duplicates scope's question, not the label's,
+    so the rung proposes nothing rather than guessing between them. A synonym
+    is asked only when no accepted name matched.
+    """
+    label = normalize_name(cluster.label)
+    if not label:
+        return None
+    ladder = (
+        (index.accepted, RULE_LABEL_SCIENTIFIC_NAME),
+        (index.synonyms, RULE_LABEL_SCIENTIFIC_SYNONYM),
+    )
+    for names, rule in ladder:
+        candidates = names.get(label, ())
+        if not candidates:
+            continue
+        compatible: list[Node] = []
+        for candidate in candidates:
+            if _kingdom_fits_object_kind(candidate, cluster.object_kind):
+                compatible.append(candidate)
+            else:
+                conflicts.append(f"{REASON_HOMONYM_KINGDOM_CONFLICT}:{candidate.id}")
+        if len(compatible) == 1:
+            return Proposal(compatible[0].id, CONFIDENCE[rule], (rule,))
+        if compatible:
+            return None
+    return None
+
+
+def climb_label_ladder(
+    cluster: LabelCluster,
+    forms: Sequence[Node],
+    index: TaxonNameIndex | None = None,
+) -> LadderOutcome:
+    """A gardener label reaches a form by its denomination, or a taxon by its name.
+
+    The forms rung answers first: a denomination is the more specific claim,
+    and a cultivar named exactly like a species does not exist in any source
+    this graph reads. ``index`` is the run's :class:`TaxonNameIndex`; without
+    one, only forms are reachable, which is what every caller before OVE-435
+    had.
+    """
     wanted_kind = FORM_KIND_BY_OBJECT_KIND.get(cluster.object_kind)
     candidates = [form for form in forms if form.node_kind == wanted_kind]
+    conflicts: list[str] = []
     proposal = rung_denomination([cluster.label], cluster.species_id, candidates)
+    taxa = index if index is not None else TaxonNameIndex.empty()
+    if proposal is None:
+        proposal = rung_label_scientific_name(cluster, taxa, conflicts)
     if proposal is not None:
-        target = next(candidate for candidate in candidates if candidate.id == proposal.target_id)
+        target = next(
+            (candidate for candidate in candidates if candidate.id == proposal.target_id),
+            None,
+        ) or taxa.by_id[proposal.target_id]
         proposal = with_co_usage(proposal, cluster.gardener_ids, target)
-    return LadderOutcome(proposal=proposal)
+    return LadderOutcome(proposal=proposal, conflicts=tuple(dict.fromkeys(conflicts)))
 
 
 def _canonical_simple(node: Node) -> str:
@@ -711,9 +850,11 @@ def _reconcile_labels(
     conn: Any, nodes: Sequence[Node], thresholds: Mapping[str, float], receipt: ReconcileReceipt
 ) -> None:
     forms = [node for node in nodes if node.node_kind in {"cultivar", "breed"}]
+    taxa = TaxonNameIndex.build(nodes)
     for cluster in read_label_clusters(conn):
         receipt.subjects += 1
-        outcome = climb_label_ladder(cluster, forms)
+        outcome = climb_label_ladder(cluster, forms, taxa)
+        receipt.conflicts += len(outcome.conflicts)
         if outcome.proposal is None:
             receipt.skipped += 1
             continue
