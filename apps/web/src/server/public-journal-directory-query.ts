@@ -53,6 +53,7 @@ export interface PublicJournalDirectoryEntryRow {
   publishedAt: Date | string;
   publicSlug: string;
   objectId: string;
+  objectPublicSlug: string | null;
   objectDisplayName: string;
   objectKind: string;
   varietyText: string | null;
@@ -170,6 +171,7 @@ export function buildPublicJournalDirectoryEntriesQuery(
       "journal_entries.published_at as publishedAt",
       "journal_entries.public_slug as publicSlug",
       "plant_objects.id as objectId",
+      "plant_objects.public_slug as objectPublicSlug",
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
       "plant_objects.variety_text as varietyText",

@@ -1,5 +1,6 @@
 /**
- * Fetches every published address and asserts the page itself came back.
+ * Fetches every published address and asserts the page itself came back — and
+ * one address per family that nothing answers, asserting it came back 404.
  *
  * `OVE-428` moved entries and object passports under their authors and proved
  * the move with `curl -sI`: all eleven old addresses `308`, all eleven new ones
@@ -14,6 +15,13 @@
  * that the page's own heading is in the HTML, and that the surface carries its
  * JSON-LD (ADR-0029 D13) — three facts that are only true when the page
  * rendered.
+ *
+ * The second half is the mirror image, found a day later: an address that
+ * *should* be nothing answered `200` too. The rewrite that carries `/@…` into
+ * the `[locale]` tree returned before the lifecycle blocks, so a nonexistent
+ * entry, passport or register hub was rewritten past its own 404 (ADR-0029
+ * D3). For each family this now asks for a sibling that cannot exist and
+ * requires a real `404` — the status a crawler reads, not the body.
  *
  * Read-only against the database, one bounded statement, and plain `GET`s
  * against the site. Point it at any deployment:
@@ -30,6 +38,7 @@ import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
 
 import type { Database } from "../src/db/schema";
+import { publicCatalogRegisterHubPath } from "../src/lib/catalog/addresses";
 import {
   publicJournalEntryPath,
   publicObjectPassportPath,
@@ -42,10 +51,19 @@ import {
 } from "../src/db/connection";
 
 interface Address {
-  readonly kind: "profile" | "entry" | "passport";
+  readonly kind: "profile" | "entry" | "passport" | "hub";
   readonly path: string;
   readonly name: string;
+  /** A page, or an address that must answer a real 404. */
+  readonly expects: "page" | "not_found";
 }
+
+/**
+ * A slug that no gardener and no catalog can have filed: the address grammar
+ * allows it, so the request reaches the lifecycle block rather than being
+ * refused as malformed, and the proof measures the block and not the parser.
+ */
+const NOTHING_HERE = "there-is-nothing-at-this-address-3f9c1";
 
 interface Result extends Address {
   readonly status: number;
@@ -100,26 +118,83 @@ export async function listPublishedAddresses(
     order by objects.created_at asc
   `.execute(db);
 
+  const hubs = await sql<{ slug: string; name: string }>`
+    select species.public_slug as slug, species.canonical_name as name
+    from catalog_item_relations as relation
+    join catalog_items as form on form.id = relation.from_catalog_item_id
+    join catalog_items as species on species.id = relation.to_catalog_item_id
+    where relation.relation_type = 'form_of'
+      and species.node_kind = 'taxon'
+      and species.public_slug is not null
+      and species.merged_into_catalog_item_id is null
+      and form.public_slug is not null
+      and form.merged_into_catalog_item_id is null
+    group by species.public_slug, species.canonical_name
+    order by count(form.id) desc, species.canonical_name asc
+    limit 3
+  `.execute(db);
+
   const handles = new Set<string>();
   for (const row of entries.rows) handles.add(row.handle);
   for (const row of passports.rows) handles.add(row.handle);
+  const [firstHandle] = handles;
 
   return [
     ...[...handles].map((handle) => ({
       kind: "profile" as const,
       path: publicProfileBasePath(handle),
       name: `@${handle}`,
+      expects: "page" as const,
     })),
     ...entries.rows.map((row) => ({
       kind: "entry" as const,
       path: publicJournalEntryPath(row.handle, row.slug),
       name: row.title,
+      expects: "page" as const,
     })),
     ...passports.rows.map((row) => ({
       kind: "passport" as const,
       path: publicObjectPassportPath(row.handle, row.slug),
       name: row.name,
+      expects: "page" as const,
     })),
+    ...hubs.rows.map((row) => ({
+      kind: "hub" as const,
+      path: publicCatalogRegisterHubPath(row.slug),
+      name: row.name,
+      expects: "page" as const,
+    })),
+    // One sibling per family that nothing answers. The profile one needs no
+    // row; the entry and passport ones hang under a real handle so that the
+    // handle is not the reason for the 404.
+    {
+      kind: "profile" as const,
+      path: publicProfileBasePath("nobody_at_all_3f9c1"),
+      name: "a handle nobody holds",
+      expects: "not_found" as const,
+    },
+    ...(firstHandle
+      ? [
+          {
+            kind: "entry" as const,
+            path: publicJournalEntryPath(firstHandle, NOTHING_HERE),
+            name: "an entry that does not exist",
+            expects: "not_found" as const,
+          },
+          {
+            kind: "passport" as const,
+            path: publicObjectPassportPath(firstHandle, NOTHING_HERE),
+            name: "a passport that does not exist",
+            expects: "not_found" as const,
+          },
+        ]
+      : []),
+    {
+      kind: "hub" as const,
+      path: publicCatalogRegisterHubPath(NOTHING_HERE),
+      name: "a register hub for no species",
+      expects: "not_found" as const,
+    },
   ];
 }
 
@@ -146,13 +221,17 @@ export function judgeRenderedPage(
   ).length;
 
   const why =
-    status !== 200
-      ? `status ${status}`
-      : heading === null
-        ? "no heading in the HTML"
-        : jsonLdBlocks === 0
-          ? "no JSON-LD on an indexable surface"
-          : null;
+    address.expects === "not_found"
+      ? status === 404
+        ? null
+        : `status ${status} for an address that is nothing`
+      : status !== 200
+        ? `status ${status}`
+        : heading === null
+          ? "no heading in the HTML"
+          : jsonLdBlocks === 0
+            ? "no JSON-LD on an indexable surface"
+            : null;
 
   return {
     ...address,
@@ -204,7 +283,14 @@ async function main() {
   for (const address of addresses) {
     const response = await fetch(`${baseUrl}${address.path}`, {
       redirect: "follow",
-      headers: { "user-agent": "overgarden-address-render-proof" },
+      // A document navigation, as a browser or a crawler sends one: the
+      // lifecycle blocks in the proxy answer only those, and a bare `fetch`
+      // without these is not one.
+      headers: {
+        "user-agent": "overgarden-address-render-proof",
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      },
     });
     results.push(
       judgeRenderedPage(address, response.status, await response.text()),
@@ -223,9 +309,13 @@ async function main() {
           profile: results.filter((r) => r.kind === "profile").length,
           entry: results.filter((r) => r.kind === "entry").length,
           passport: results.filter((r) => r.kind === "passport").length,
+          hub: results.filter((r) => r.kind === "hub").length,
         },
+        expectedNotFound: results.filter((r) => r.expects === "not_found")
+          .length,
         failures: failures.map((result) => ({
           kind: result.kind,
+          expects: result.expects,
           path: result.path,
           name: result.name,
           status: result.status,

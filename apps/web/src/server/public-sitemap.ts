@@ -10,9 +10,11 @@ import { absolutePublicUrl } from "@/lib/garden/public-url";
 import { listIndexableLocalizedAuthoredSitemapEntries } from "@/server/public-localized-content";
 import {
   countPublicJournalEntriesForSitemap,
+  countPublicObjectPassportsForSitemap,
   countPublicProfilesForSitemap,
   listPublicCommunitySitemapUrls,
   listPublicJournalEntrySitemapUrls,
+  listPublicObjectPassportSitemapUrls,
   listPublicProfileSitemapUrls,
   sitemapChunkCount,
   type PublicSitemapUrl,
@@ -33,7 +35,8 @@ export type PublicSitemapChunkId =
   | "topics"
   | "communities"
   | `profiles-${number}`
-  | `entries-${number}`;
+  | `entries-${number}`
+  | `passports-${number}`;
 
 export const PUBLIC_SITEMAP_INDEX_PATH = "/sitemap.xml";
 
@@ -45,9 +48,10 @@ export function publicSitemapChunkPath(id: PublicSitemapChunkId) {
 export async function listPublicSitemapChunkIds(): Promise<
   PublicSitemapChunkId[]
 > {
-  const [entryCount, profileCount] = await Promise.all([
+  const [entryCount, profileCount, passportCount] = await Promise.all([
     countPublicJournalEntriesForSitemap(),
     countPublicProfilesForSitemap(),
+    countPublicObjectPassportsForSitemap(),
   ]);
   return [
     "authored",
@@ -63,6 +67,14 @@ export async function listPublicSitemapChunkIds(): Promise<
     ...Array.from(
       { length: sitemapChunkCount(entryCount) },
       (_, index) => `entries-${index}` as const,
+    ),
+    // A passport has one address, like an entry (ADR-0029 D9). The family was
+    // missing from the index altogether: the four passports the move gave an
+    // address to were reachable only through links, and every one of those
+    // links went through a 308.
+    ...Array.from(
+      { length: sitemapChunkCount(passportCount) },
+      (_, index) => `passports-${index}` as const,
     ),
   ];
 }
@@ -80,9 +92,9 @@ export function parsePublicSitemapChunkId(
   ) {
     return id;
   }
-  const chunk = /^(profiles|entries)-(\d{1,4})$/.exec(id);
+  const chunk = /^(profiles|entries|passports)-(\d{1,4})$/.exec(id);
   if (!chunk) return null;
-  return `${chunk[1] as "profiles" | "entries"}-${Number(chunk[2])}`;
+  return `${chunk[1] as "profiles" | "entries" | "passports"}-${Number(chunk[2])}`;
 }
 
 export async function buildPublicSitemapChunk(
@@ -149,10 +161,15 @@ export async function buildPublicSitemapChunk(
     });
   }
   if (id === "communities") return listPublicCommunitySitemapUrls();
-  const [kind, index] = id.split("-") as ["profiles" | "entries", string];
-  return kind === "profiles"
-    ? listPublicProfileSitemapUrls(Number(index))
-    : listPublicJournalEntrySitemapUrls(Number(index));
+  const [kind, index] = id.split("-") as [
+    "profiles" | "entries" | "passports",
+    string,
+  ];
+  if (kind === "profiles") return listPublicProfileSitemapUrls(Number(index));
+  if (kind === "passports") {
+    return listPublicObjectPassportSitemapUrls(Number(index));
+  }
+  return listPublicJournalEntrySitemapUrls(Number(index));
 }
 
 export function renderSitemapIndexXml(ids: readonly PublicSitemapChunkId[]) {

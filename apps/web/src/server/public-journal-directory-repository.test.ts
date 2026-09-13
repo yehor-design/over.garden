@@ -404,7 +404,9 @@ describe("public journal directory serialization", () => {
         identityLabel: "Помідор чері",
         catalogSlug: "pomidor-cheri",
         catalogPath: "/variety/pomidor-cheri",
-        publicPath: "/lineage/objects/00000000-0000-4000-8000-000000000201",
+        // The passport's own address (ADR-0029 D9), not the id path that
+        // has answered 308 since OVE-428.
+        publicPath: `/@demo_olena/objects/${encodeURIComponent("тестовий-живий-обєкт")}`,
       },
       author: {
         displayName: "Олена",
@@ -497,6 +499,7 @@ function row(
     publishedAt: "2026-07-10T12:00:00.000Z",
     publicSlug: "after-cold-night",
     objectId: "00000000-0000-4000-8000-000000000201",
+    objectPublicSlug: "тестовий-живий-обєкт",
     objectDisplayName: "Тестовий живий об'єкт",
     objectKind: "animal",
     varietyText: null,

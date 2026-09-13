@@ -287,6 +287,7 @@ describe("public object passport repository query contracts", () => {
         latestEntryDate: new Date("2026-07-04T12:00:00.000Z"),
         authorHandle: "green_thumb",
         addressHandle: "green_thumb",
+        publicSlug: "balcony-tomato",
         authorDisplayName: "Green Thumb",
         authorAvatarUrl: null,
       },
@@ -331,6 +332,10 @@ describe("public object passport repository query contracts", () => {
     expect(page.object.catalogPath).toBe(
       "/variety/red-cherry-tomato-0000000101",
     );
+    // The address the canonical names: under the author, no locale prefix
+    // (ADR-0029 D9), and built from the registry handle rather than the
+    // profile's.
+    expect(page.object.publicPath).toBe("/@green_thumb/objects/balcony-tomato");
     expect(page.object.safeLocationLabel).toBe("Region: Ukraine - Kyiv City");
     expect(page.author).toMatchObject({
       handle: "green_thumb",

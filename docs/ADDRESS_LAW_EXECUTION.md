@@ -831,6 +831,13 @@ than the limitation.
   breaks every earlier migration replay. Guard both.
 - Verify against real Chromium, not the preview browser, before claiming a page
   needs no hydration.
+- A rewrite in `proxy.ts` *returns*. Anything placed after it is unreachable
+  for the paths it rewrites — which is how every `/@` address skipped its own
+  404 for a day. The rewrite is the last thing `proxy()` does now; keep it so.
+- Ask for an address that cannot exist, not only for the ones that do. A gate
+  that fetches every row in the database proves the pages; the mirror image —
+  `/@yehor/there-is-nothing-here` answering 404 — needs its own probe, and
+  `pnpm public:addresses:prove-render` now sends one per family.
 
 ## The `200` that was a not-found page
 
@@ -925,3 +932,64 @@ the default locale now, which is what their page uses. The prefixed ones still
 read the interface locale, because `loading.tsx` is handed no params — it
 agrees with the route in every ordinary case, and `/knowledge` shows the better
 answer where a client component can read `useParams`.
+
+## The rewrite that returned first
+
+**Found 2026-09-13, by the audit the owner asked for after the slice shipped.**
+Three shapes of address that should be nothing answered `200` with the
+not-found page inside:
+
+```
+/@yehor/definitely-not-an-entry          200
+/@yehor/objects/no-such-object           200
+/species/apis-mellifera/register         200   (a species with no registered forms)
+```
+
+**The entry's lifecycle block was dead code for every `/@` address.** `proxy()`
+rewrote each unprefixed `/@…` path into the `[locale]` tree — and a rewrite
+returns — *before* the block that asks whether the entry exists. The block was
+written, tested with `/journal/{slug}` inputs, and never reached by the one
+family of paths it was meant for. Passports by slug and register hubs had no
+block at all: the route's `notFound()` was the whole answer, and under Cache
+Components that is a `200`.
+
+**The fix is an ordering, and two new reads.** The rewrite is the last thing
+`proxy()` does now, after every lifecycle block. `getPublicObjectPassportLifecycleBySlug`
+decides a passport in two bounded reads (the id by its address, then the same
+counts the id lookup uses for 410); `resolvePlantObjectAddress` reads the slug
+history keyed by `(author_handle, slug)` so a passport's old address 308s (D8)
+the way an entry's does; `hasCatalogRegisterHub` is one indexed exists-query,
+and a hub under a slug the species used to have follows the species. A
+lookup that *fails* still lets the page decide — a database that is down must
+not turn every passport into a 404.
+
+**What the same audit found next to it, by grepping the pattern.**
+
+- The passport's canonical named `/lineage/objects/{uuid}` — a path that has
+  answered 308 since `OVE-428` — and carried `hreflang` to three spellings of a
+  page that is never translated. It names `/@{handle}/objects/{slug}` now, with
+  no `hreflang`, as an entry does (task 5).
+- **Every internal link to a passport went through that 308**: the entry it is
+  the subject of, the journal directory, the profile, the feed, `/objects`, a
+  community page. The render proof followed redirects, so it passed. The rows
+  behind those surfaces carry the object's slug now and build the address with
+  `publicObjectPassportAddress`, which falls back to the id path only for an
+  object that has no slug. `/objects` also linked its latest entry at
+  `/journal/{slug}`; it links under the author.
+- **Nothing gave the next object an address.** `plant_objects.public_slug` was
+  assigned by the move script, once, to the four objects that had a public
+  entry that day; an object published after it had a passport at the retired
+  address and none at the canonical one. `assignPlantObjectPublicSlug` runs in
+  the publish transaction now, per gardener, counter for collisions (D6),
+  history for the taken set (so a moved slug is never handed out again), and
+  `pnpm schema:author-addresses:prove-database` proves it on a real database:
+  the second tomato is `томат-2`, and a rename does not move it (D8).
+- **Passports were not in the sitemap at all.** There is a `passports-N` chunk
+  now, one URL per addressed passport with a live public entry, dated by its
+  newest entry.
+
+**The gate that catches the first class now.** `pnpm public:addresses:prove-render`
+asks, beside every real address, for one sibling per family that cannot exist
+— `/@{handle}/there-is-nothing-at-this-address-3f9c1` and its passport and hub
+counterparts — and requires a real `404`. A status line *is* the right proof
+for that half: it is the only place a crawler reads the answer.

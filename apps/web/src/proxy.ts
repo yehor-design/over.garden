@@ -22,7 +22,12 @@ import {
   localizedPath,
   stripLocalePrefix,
 } from "@/lib/public-localization";
-import { matchPublicCatalogAddressPath } from "@/lib/catalog/addresses";
+import {
+  matchCatalogSpeciesHubPath,
+  matchPublicCatalogAddressPath,
+  publicCatalogRegisterHubPath,
+  type CatalogSpeciesHubSegment,
+} from "@/lib/catalog/addresses";
 import { renderNotFoundPublicCatalogHtml } from "@/lib/public-catalog-lifecycle";
 import { isRetiredControlPlanePath } from "@/lib/retired-control-plane-routes";
 import {
@@ -54,6 +59,7 @@ import { canonicalLowerCasePath } from "@/lib/address/canonical-case";
 import {
   matchAddressPath,
   matchAuthorScopedEntryPath,
+  matchAuthorScopedObjectPath,
   matchAuthorScopedPath,
   unservableAddressNamespace,
 } from "@/lib/address/match-address-path";
@@ -392,24 +398,15 @@ function resolveRequestLocalization(request: NextRequest) {
   });
 }
 
-function getLocaleRoutingResponse(
-  request: NextRequest,
-  localization: ResolvedInterfaceLocalization,
-) {
-  const { locale } = localization;
+/**
+ * `/uk/...` folds to the canonical unprefixed path: the default locale has no
+ * prefix (ADR-0029 D10), so the prefixed spelling is a second address for the
+ * same page.
+ */
+function getLocaleFoldResponse(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isDocumentNavigation = isDocumentNavigationRequest(request);
-  const strippedPath = stripLocalePrefix(pathname);
-  // Every address under `/@` is rewritten into the `[locale]` tree the same
-  // way the profile always was: the profile itself, an entry, and an object
-  // passport (ADR-0029 D9). Without this, `/@yehor/полив` would be matched by
-  // `[locale]/[profileHandle]` with the locale set to `@yehor`.
-  const rootAuthorScopedPath = strippedPath.locale
-    ? null
-    : matchAuthorScopedPath(pathname);
-
   if (
-    isDocumentNavigation &&
+    isDocumentNavigationRequest(request) &&
     (pathname === "/uk" || pathname.startsWith("/uk/")) &&
     !hasValidInternalProfileRewrite(request)
   ) {
@@ -418,6 +415,30 @@ function getLocaleRoutingResponse(
 
     return NextResponse.redirect(url, { status: 308 });
   }
+  return null;
+}
+
+/**
+ * Every address under `/@` is rewritten into the `[locale]` tree the same way
+ * the profile always was: the profile itself, an entry, and an object passport
+ * (ADR-0029 D9). Without this, `/@yehor/полив` would be matched by
+ * `[locale]/[profileHandle]` with the locale set to `@yehor`.
+ *
+ * It runs last in `proxy()`, after every lifecycle block. It used to run
+ * before them, and a rewrite returns — so an entry or a passport that did not
+ * exist was rewritten past its own 404 and answered 200 with the not-found
+ * page inside, for every unprefixed address under `/@`.
+ */
+function getAuthorScopedRewriteResponse(
+  request: NextRequest,
+  localization: ResolvedInterfaceLocalization,
+) {
+  const { locale } = localization;
+  const { pathname } = request.nextUrl;
+  const strippedPath = stripLocalePrefix(pathname);
+  const rootAuthorScopedPath = strippedPath.locale
+    ? null
+    : matchAuthorScopedPath(pathname);
 
   if (rootAuthorScopedPath) {
     const url = request.nextUrl.clone();
@@ -664,23 +685,16 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // What remains of locale routing: the `/uk` prefix folds to the canonical
-  // unprefixed path, and an unprefixed profile is rewritten into the App
-  // Router's `[locale]` tree. Neither depends on where the reader is.
-  const localeRoutingResponse = getLocaleRoutingResponse(request, localization);
-
-  if (localeRoutingResponse) {
-    // A rewrite is not an answer of the proxy's own — the page behind it
-    // renders and Next sets its own cache headers. Forcing `no-store` here
-    // would make every profile, entry and passport uncacheable, which is the
-    // whole public surface once addresses moved under `/@` (ADR-0029 D9). A
-    // 308 keeps `no-store`, because a redirect the proxy decided is the
+  // What remains of locale routing here: the `/uk` prefix folds to the
+  // canonical unprefixed path, and that does not depend on where the reader
+  // is. The rewrite of an unprefixed `/@` address into the `[locale]` tree is
+  // the last thing `proxy()` does — see `getAuthorScopedRewriteResponse` for
+  // why it cannot come before the lifecycle blocks below.
+  const localeFoldResponse = getLocaleFoldResponse(request);
+  if (localeFoldResponse) {
+    // A 308 keeps `no-store`, because a redirect the proxy decided is the
     // proxy's own answer.
-    return withAppRouteContract(localeRoutingResponse, request, localization, {
-      passThrough:
-        localeRoutingResponse.headers.has("x-middleware-rewrite") ||
-        localeRoutingResponse.headers.get("x-middleware-next") === "1",
-    });
+    return withAppRouteContract(localeFoldResponse, request, localization);
   }
 
   const lifecycleLocation = {
@@ -749,9 +763,13 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  const publicProfileHandle = isDocumentNavigation
-    ? matchPublicProfilePath(request.nextUrl.pathname)
-    : null;
+  // The unprefixed profile was classified above, before the fold; this is the
+  // prefixed one. Now that the rewrite no longer returns before this point,
+  // without the distinction the unprefixed profile would be looked up twice.
+  const publicProfileHandle =
+    isDocumentNavigation && initialStrippedPath.locale !== null
+      ? matchPublicProfilePath(request.nextUrl.pathname)
+      : null;
   if (publicProfileHandle) {
     const lifecycleResponse = await getPublicProfileLifecycleResponse(
       request,
@@ -780,6 +798,62 @@ export async function proxy(request: NextRequest) {
       );
     }
     if (lookup.status === "not_found") {
+      return withAppRouteContract(
+        notFoundDocument(
+          renderNotFoundPublicObjectPassportHtml(locale, lifecycleLocation),
+        ),
+        request,
+        localization,
+      );
+    }
+  }
+
+  // The passport at its own address (ADR-0029 D9). An address nothing answers
+  // is a real 404 here rather than a `notFound()` inside a streamed 200, and
+  // an address the object used to have is a 308 from the slug history (D8) —
+  // the same two answers the entry block below gives.
+  const authorScopedObject = isDocumentNavigation
+    ? matchAuthorScopedObjectPath(request.nextUrl.pathname)
+    : null;
+  if (authorScopedObject) {
+    const { getPublicObjectPassportLifecycleBySlug, resolvePlantObjectAddress } =
+      await import("@/server/public-object-passport-repository");
+    // A failed lookup lets the page decide, as the catalog block does: a
+    // database that is down must not turn every passport into a 404.
+    const lookup = await getPublicObjectPassportLifecycleBySlug(
+      authorScopedObject.handle,
+      authorScopedObject.slug,
+    ).catch(() => null);
+    if (lookup?.status === "gone") {
+      return withAppRouteContract(
+        notFoundDocument(
+          renderGonePublicObjectPassportHtml(locale, lifecycleLocation), 410,
+        ),
+        request,
+        localization,
+      );
+    }
+    if (lookup?.status === "not_found") {
+      const historical = await resolvePlantObjectAddress(
+        authorScopedObject.handle,
+        authorScopedObject.slug,
+      ).catch(() => null);
+      if (historical) {
+        const url = request.nextUrl.clone();
+        url.pathname = publicObjectPassportPath(
+          historical.handle,
+          historical.slug,
+        );
+        url.search = sanitizeInterfaceRouteSearch(
+          url.pathname,
+          request.nextUrl.searchParams,
+        );
+        return withAppRouteContract(
+          NextResponse.redirect(url, { status: 308 }),
+          request,
+          localization,
+        );
+      }
       return withAppRouteContract(
         notFoundDocument(
           renderNotFoundPublicObjectPassportHtml(locale, lifecycleLocation),
@@ -884,6 +958,72 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // A hub under a species is a page only when the species has something to
+  // list (OVE-433); for any other slug the route's `notFound()` answers 200
+  // under the streamed shell, so the existence read is here. A hub under a
+  // slug the species used to have follows the species (ADR-0026 D8). The map
+  // is exhaustive over the hub segments on purpose: a new hub kind cannot be
+  // added to the address grammar without saying how to tell it exists.
+  const speciesHub = isDocumentNavigation
+    ? matchCatalogSpeciesHubPath(request.nextUrl.pathname)
+    : null;
+  if (speciesHub) {
+    const { hasCatalogRegisterHub } =
+      await import("@/server/public-catalog-register-repository");
+    const hubExists = {
+      register: hasCatalogRegisterHub,
+    } satisfies Record<
+      CatalogSpeciesHubSegment,
+      (speciesSlug: string) => Promise<boolean>
+    >;
+    const exists = await hubExists[speciesHub.hub](speciesHub.speciesSlug).catch(
+      () => null,
+    );
+    if (exists === false) {
+      const { resolvePublicCatalogAddress } =
+        await import("@/server/public-catalog-address-repository");
+      const species = await resolvePublicCatalogAddress({
+        kind: "species",
+        speciesSlug: speciesHub.speciesSlug,
+        formSlug: null,
+      }).catch(() => null);
+      // The resolver answers with the species' canonical path; read the slug
+      // back out of it with the same matcher every other block uses rather
+      // than composing a hub path by hand.
+      const movedSpecies =
+        species?.status === "redirect"
+          ? matchPublicCatalogAddressPath(species.canonicalPath)
+          : null;
+      const movedSpeciesSlug =
+        movedSpecies?.kind === "species" && movedSpecies.formSlug === null
+          ? movedSpecies.speciesSlug
+          : null;
+      const movedHubExists = movedSpeciesSlug
+        ? await hubExists[speciesHub.hub](movedSpeciesSlug).catch(() => false)
+        : false;
+      if (movedSpeciesSlug && movedHubExists) {
+        const prefixLocale = stripLocalePrefix(request.nextUrl.pathname).locale;
+        const url = request.nextUrl.clone();
+        url.pathname = localizedPath(
+          prefixLocale ?? DEFAULT_PUBLIC_LOCALE,
+          publicCatalogRegisterHubPath(movedSpeciesSlug),
+        );
+        return withAppRouteContract(
+          NextResponse.redirect(url, { status: 308 }),
+          request,
+          localization,
+        );
+      }
+      return withAppRouteContract(
+        notFoundDocument(
+          renderNotFoundPublicCatalogHtml(locale, lifecycleLocation),
+        ),
+        request,
+        localization,
+      );
+    }
+  }
+
   // Organism addresses (ADR-0026 D8): a historical slug, an old `/variety` or
   // `/breed` path, a form under a stale species slug or a merged node answers
   // 308 to the canonical address; an address nothing resolves answers 404.
@@ -922,16 +1062,27 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Only now is an unprefixed `/@` address rewritten into the `[locale]`
+  // tree: every lifecycle block above has had its say, so what reaches the
+  // page is an address that is a page. A rewrite is not an answer of the
+  // proxy's own — the page behind it renders and Next sets its own cache
+  // headers, which is why it passes through below like `next()` does.
+  const authorScopedRewrite = getAuthorScopedRewriteResponse(
+    request,
+    localization,
+  );
   const requestHeaders = new Headers(request.headers);
   requestHeaders.delete(INTERNAL_PROFILE_REWRITE_HEADER);
   requestHeaders.delete(INTERNAL_PROFILE_REWRITE_SIGNATURE_HEADER);
   requestHeaders.set(INTERFACE_LOCALE_REQUEST_HEADER, locale);
   requestHeaders.set(INTERFACE_MARKET_REQUEST_HEADER, localization.market);
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
+  const response =
+    authorScopedRewrite ??
+    NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
 
   // Page two of a listing is not a page of its own. It cannot say so in its
   // own `<head>` — see `paginatedListingRobotsTag` — so it says so here,

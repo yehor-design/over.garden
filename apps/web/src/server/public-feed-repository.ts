@@ -6,7 +6,7 @@ import { db } from "@/db";
 import type { Database, PlantObjectKind } from "@/db/schema";
 import {
   publicJournalEntryPath,
-  publicLineageObjectPath,
+  publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import { isCoarseRegionCode } from "@/lib/garden/regions";
@@ -107,6 +107,7 @@ export interface PublicFeedEntryRow {
   publishedAt: Date | string;
   publicSlug: string;
   objectId: string;
+  objectPublicSlug: string | null;
   objectDisplayName: string;
   objectKind: string;
   objectLocationVisibility: string;
@@ -270,6 +271,7 @@ export function buildPublicFeedEntriesQuery(
       "journal_entries.published_at as publishedAt",
       "journal_entries.public_slug as publicSlug",
       "plant_objects.id as objectId",
+      "plant_objects.public_slug as objectPublicSlug",
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
       "plant_objects.location_visibility as objectLocationVisibility",
@@ -560,7 +562,11 @@ export function serializePublicFeedPage(input: {
         id: row.objectId,
         displayName: row.objectDisplayName,
         kind,
-        publicPath: publicLineageObjectPath(row.objectId),
+        publicPath: publicObjectPassportAddress({
+          authorHandle: row.addressHandle,
+          publicSlug: row.objectPublicSlug,
+          plantObjectId: row.objectId,
+        }),
         safeRegionCode:
           row.objectLocationVisibility === "region" &&
           isCoarseRegionCode(row.objectCoarseRegionCode)

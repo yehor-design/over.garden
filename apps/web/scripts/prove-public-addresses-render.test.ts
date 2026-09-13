@@ -6,6 +6,14 @@ const ADDRESS = {
   kind: "entry" as const,
   path: "/@yehor/полив",
   name: "Полив без календарної пастки",
+  expects: "page" as const,
+};
+
+const NOTHING = {
+  kind: "passport" as const,
+  path: "/@yehor/objects/there-is-nothing-at-this-address",
+  name: "a passport that does not exist",
+  expects: "not_found" as const,
 };
 
 const RENDERED = `<html><head><title>Полив</title>
@@ -46,6 +54,22 @@ describe("the address render proof", () => {
     expect(judgeRenderedPage(ADDRESS, 404, APOLOGY)).toMatchObject({
       ok: false,
       why: "status 404",
+    });
+  });
+
+  // The mirror image: an address that is nothing must say so in the status
+  // line, because that is the only place a crawler reads it.
+  it("requires a real 404 for an address that is nothing", () => {
+    expect(judgeRenderedPage(NOTHING, 404, APOLOGY)).toMatchObject({
+      ok: true,
+      why: null,
+    });
+    expect(judgeRenderedPage(NOTHING, 200, APOLOGY)).toMatchObject({
+      ok: false,
+      why: "status 200 for an address that is nothing",
+    });
+    expect(judgeRenderedPage(NOTHING, 200, RENDERED)).toMatchObject({
+      ok: false,
     });
   });
 });

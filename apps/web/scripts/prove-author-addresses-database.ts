@@ -35,6 +35,7 @@ import { readFileSync } from "node:fs";
 
 import type { Database } from "../src/db/schema";
 import { assertLoopbackDatabaseEnvironment } from "../src/lib/local-runtime-safety";
+import { assignPlantObjectPublicSlug } from "../src/server/plant-object-slug-repository";
 import { loadVersionedApplicationSql } from "./application-sql";
 
 const MIGRATION = "0070_ove428_author_scoped_addresses.sql";
@@ -183,6 +184,41 @@ export async function runAuthorAddressesDatabaseProof() {
       .then(() => "accepted")
       .catch((error: unknown) => (error as { code?: string }).code ?? "unknown");
     expect("a second passport with the same name", duplicate, "23505");
+
+    // 4. The product gives the next object its address itself. The move
+    // script named the objects that existed on the day; this is what names
+    // the ones published after it — and the counter walks past the name the
+    // first object already holds, per gardener (ADR-0029 D6).
+    const secondObjectId = randomUUID();
+    await pool.query(
+      `insert into plant_objects (id, owner_user_id, space_id, display_name, object_kind, variety_state)
+       values ($1, $2, $3, 'Томат', 'plant', 'unknown')`,
+      [secondObjectId, USER_ID, SPACE_ID],
+    );
+    const assigned = await db.transaction().execute((trx) =>
+      assignPlantObjectPublicSlug(trx, {
+        plantObjectId: secondObjectId,
+        ownerUserId: USER_ID,
+        displayName: "Томат",
+      }),
+    );
+    expect("the next tomato's slug", assigned, "томат-2");
+    const assignedAgain = await db.transaction().execute((trx) =>
+      assignPlantObjectPublicSlug(trx, {
+        plantObjectId: secondObjectId,
+        ownerUserId: USER_ID,
+        displayName: "Томат (renamed since)",
+      }),
+    );
+    expect("a slug, once given, is frozen", assignedAgain, "томат-2");
+    const secondHistory = await pool.query(
+      `select author_handle, slug, valid_to is null as open
+       from plant_object_slug_history where plant_object_id = $1`,
+      [secondObjectId],
+    );
+    expect("the assigned slug wrote history", secondHistory.rows, [
+      { author_handle: handle, slug: "томат-2", open: true },
+    ]);
 
     // And the CHECK refuses a shape the slugifier cannot produce.
     const malformed = await pool

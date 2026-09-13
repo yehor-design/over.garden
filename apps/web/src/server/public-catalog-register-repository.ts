@@ -135,6 +135,44 @@ export async function getCatalogRegisterHub(
 }
 
 /**
+ * Whether `/species/{species}/register` is a page, in one indexed read.
+ *
+ * The proxy asks this before the shell streams, because a hub for a species
+ * nobody has registered a form of is a 404 and `notFound()` in the route can
+ * no longer say so (ADR-0029 D3). It is the existence half of
+ * `getCatalogRegisterHub` with nothing loaded: the species by its slug, and
+ * one public form of it.
+ */
+export async function hasCatalogRegisterHub(
+  speciesSlug: string,
+  executor: QueryExecutor = db,
+): Promise<boolean> {
+  const row = await executor
+    .selectFrom("catalog_items as species")
+    .select("species.id")
+    .where("species.public_slug", "=", speciesSlug)
+    .where("species.node_kind", "=", "taxon")
+    .where("species.merged_into_catalog_item_id", "is", null)
+    .where(({ exists, selectFrom }) =>
+      exists(
+        selectFrom("catalog_item_relations as relation")
+          .innerJoin(
+            "catalog_items as form",
+            "form.id",
+            "relation.from_catalog_item_id",
+          )
+          .select("relation.from_catalog_item_id")
+          .whereRef("relation.to_catalog_item_id", "=", "species.id")
+          .where("relation.relation_type", "=", "form_of")
+          .where("form.public_slug", "is not", null)
+          .where("form.merged_into_catalog_item_id", "is", null),
+      ),
+    )
+    .executeTakeFirst();
+  return row !== undefined;
+}
+
+/**
  * Every species that has a register hub, for the sitemap and the browse root.
  *
  * Ordered by how many forms each holds, because that is the order in which

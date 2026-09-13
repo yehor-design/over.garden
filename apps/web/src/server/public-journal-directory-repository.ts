@@ -15,7 +15,7 @@ import type {
 import {
   publicCatalogEvidencePath,
   publicJournalEntryPath,
-  publicLineageObjectPath,
+  publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import {
@@ -416,7 +416,11 @@ export function serializePublicJournalDirectoryPage(
         catalogKind: catalogPath ? catalogKind : null,
         catalogSlug: catalogPath ? row.catalogPublicSlug : null,
         catalogPath,
-        publicPath: publicLineageObjectPath(row.objectId),
+        publicPath: publicObjectPassportAddress({
+          authorHandle: row.addressHandle,
+          publicSlug: row.objectPublicSlug,
+          plantObjectId: row.objectId,
+        }),
       },
       author: authorHandle
         ? {

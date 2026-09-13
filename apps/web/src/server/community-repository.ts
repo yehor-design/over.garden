@@ -20,7 +20,7 @@ import type {
 import {
   legacyPublicJournalEntryPath,
   publicCommunityPath,
-  publicLineageObjectPath,
+  publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import {
@@ -111,6 +111,7 @@ export interface PublicCommunityContributionRow {
   publishedAt: Date | string | null;
   ownerUserId: string;
   objectId: string;
+  objectPublicSlug: string | null;
   objectDisplayName: string;
   objectKind: string;
   authorHandle: string | null;
@@ -1068,7 +1069,11 @@ export function serializePublicCommunityContributionPage(
           id: row.objectId,
           displayName: row.objectDisplayName,
           kind,
-          href: publicLineageObjectPath(row.objectId),
+          href: publicObjectPassportAddress({
+            authorHandle: handle,
+            publicSlug: row.objectPublicSlug,
+            plantObjectId: row.objectId,
+          }),
         },
         coverUrl: row.coverDerivativeKey
           ? mediaUrlForKey(row.coverDerivativeKey)
@@ -1381,6 +1386,7 @@ export function buildPublicCommunityContributionsQuery(
       "journal_entries.published_at as publishedAt",
       "journal_entries.owner_user_id as ownerUserId",
       "plant_objects.id as objectId",
+      "plant_objects.public_slug as objectPublicSlug",
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
       "user_public_profiles.handle as authorHandle",

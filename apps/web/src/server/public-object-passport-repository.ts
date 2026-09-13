@@ -19,6 +19,8 @@ import type { PublicProjectionQualityClass } from "@/lib/public-projection-quali
 import {
   publicCatalogEvidencePath,
   publicJournalEntryPath,
+  publicLineageObjectPath,
+  publicObjectPassportPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
@@ -55,6 +57,12 @@ export interface PublicObjectPassportPage {
     publicEntryCount: number;
     firstEntryDate: Date | string;
     latestEntryDate: Date | string;
+    /**
+     * The one address this passport has: `/@{handle}/objects/{slug}`
+     * (ADR-0029 D9), which is what its canonical names. The legacy id path is
+     * the fallback only for an object that has no slug yet.
+     */
+    publicPath: string;
   };
   author: {
     handle: string;
@@ -89,6 +97,19 @@ export interface PublicObjectPassportPage {
 
 export type PublicObjectPassportLookup =
   | { status: "active"; page: PublicObjectPassportPage }
+  | { status: "gone"; plantObjectId: string }
+  | { status: "not_found" };
+
+/**
+ * What `/@{handle}/objects/{slug}` names right now, without loading the page.
+ *
+ * `active` is the same fact the root query establishes — at least one public
+ * entry still anchors the object — and `gone` the same one the id lookup
+ * answers 410 for. The proxy decides the status from this before the shell
+ * streams (ADR-0029 D3); the page loads the passport itself afterwards.
+ */
+export type PublicObjectPassportAddressLookup =
+  | { status: "active"; plantObjectId: string }
   | { status: "gone"; plantObjectId: string }
   | { status: "not_found" };
 
@@ -134,6 +155,8 @@ interface PublicObjectPassportRootRow {
    * their handle, and their public objects keep their addresses.
    */
   addressHandle: string;
+  /** The passport's own slug under that handle; `null` until one is assigned. */
+  publicSlug: string | null;
   authorDisplayName: string | null;
   authorAvatarUrl: string | null;
 }
@@ -206,6 +229,83 @@ export async function getPublicObjectPassportIdBySlug(
     .where("plant_objects.public_slug", "=", publicSlug)
     .executeTakeFirst();
   return row?.plantObjectId ?? null;
+}
+
+/**
+ * The lifecycle of the passport a `/@{handle}/objects/{slug}` address names.
+ *
+ * Two bounded reads, and only the second touches entries: the id by its
+ * address, then the same counts the id lookup uses to tell a removed passport
+ * from one that never existed. A slug that matches an object with no public
+ * entry left is `not_found` here even though the row exists — a passport is
+ * its public entries, and the address of an object that has none is not a
+ * page (ADR-0022 D3). The proxy tries the slug history next, so an address
+ * the object used to have still answers 308 rather than 404 (ADR-0029 D8).
+ */
+export async function getPublicObjectPassportLifecycleBySlug(
+  authorHandle: string,
+  publicSlug: string,
+  executor: QueryExecutor = db,
+): Promise<PublicObjectPassportAddressLookup> {
+  const plantObjectId = await getPublicObjectPassportIdBySlug(
+    authorHandle,
+    publicSlug,
+    executor,
+  );
+  if (!plantObjectId) return { status: "not_found" };
+
+  const lifecycle = await buildPublicObjectPassportLifecycleQuery(
+    executor,
+    plantObjectId,
+  ).executeTakeFirst();
+  if (!lifecycle) return { status: "not_found" };
+  if (Number(lifecycle.activePublicCount) > 0) {
+    return { status: "active", plantObjectId };
+  }
+  return classifyPublicObjectPassportLifecycle(lifecycle) === "gone"
+    ? { status: "gone", plantObjectId }
+    : { status: "not_found" };
+}
+
+/**
+ * The address an object answers at today, given one it used to answer at.
+ *
+ * `plant_object_slug_history` is keyed by `(author_handle, slug)` — a slug is
+ * unique per gardener, not across the site, so the handle is part of the key
+ * and a lookup by slug alone could hand one gardener's old address to another
+ * gardener's object. The trigger records a row whenever the slug *or* the
+ * handle changes, so a renamed handle and a renamed object both resolve here.
+ *
+ * `null` when the history knows nothing, and `null` when what it knows is the
+ * address that was asked for: the live lookup already said that one is not a
+ * page, and a 308 to itself would be a loop.
+ */
+export async function resolvePlantObjectAddress(
+  authorHandle: string,
+  slug: string,
+  executor: QueryExecutor = db,
+): Promise<{ handle: string; slug: string } | null> {
+  const historical = await executor
+    .selectFrom("plant_object_slug_history as history")
+    .innerJoin("plant_objects", "plant_objects.id", "history.plant_object_id")
+    .innerJoin("user_handle_registry", (join) =>
+      join
+        .onRef("user_handle_registry.user_id", "=", "plant_objects.owner_user_id")
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
+    .select([
+      "user_handle_registry.normalized_handle as handle",
+      "plant_objects.public_slug as slug",
+    ])
+    .where("history.author_handle", "=", authorHandle)
+    .where("history.slug", "=", slug)
+    .where("plant_objects.public_slug", "is not", null)
+    .executeTakeFirst();
+  if (!historical?.slug) return null;
+  if (historical.handle === authorHandle && historical.slug === slug) {
+    return null;
+  }
+  return { handle: historical.handle, slug: historical.slug };
 }
 
 /**
@@ -434,6 +534,7 @@ export function buildPublicObjectPassportRootQuery(
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
       "user_public_profiles.handle as authorHandle",
       publicAuthorHandleSql("plant_objects.owner_user_id").as("addressHandle"),
+      "plant_objects.public_slug as publicSlug",
       "user_public_profiles.display_name as authorDisplayName",
       "user_public_profiles.avatar_url as authorAvatarUrl",
       fn.count<number>("public_entries.id").as("publicEntryCount"),
@@ -449,6 +550,7 @@ export function buildPublicObjectPassportRootQuery(
       "plant_objects.variety_state",
       "plant_objects.location_visibility",
       "plant_objects.coarse_region_code",
+      "plant_objects.public_slug",
       "spaces.location_visibility",
       "spaces.coarse_region_code",
       // `catalog_items.id` is not selected, and it still has to be grouped by:
@@ -682,6 +784,9 @@ export function serializePublicObjectPassportPage(
       publicEntryCount: Number(root.publicEntryCount),
       firstEntryDate: root.firstEntryDate,
       latestEntryDate: root.latestEntryDate,
+      publicPath: root.publicSlug
+        ? publicObjectPassportPath(authorHandle, root.publicSlug)
+        : publicLineageObjectPath(root.plantObjectId),
     },
     author,
     journalPreview,

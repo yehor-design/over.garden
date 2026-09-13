@@ -979,6 +979,7 @@ describe("journal repository query contracts", () => {
         spaceLocationVisibility: "region",
         spaceCoarseRegionCode: "UA-30",
         plantObjectId: "00000000-0000-4000-8000-000000000003",
+        objectPublicSlug: "черрі",
         objectDisplayName: "Черрі",
         objectKind: "plant",
         catalogKind: "plant_variety",
@@ -1036,7 +1037,9 @@ describe("journal repository query contracts", () => {
       kind: "object",
       object: {
         displayName: "Черрі",
-        publicPath: "/lineage/objects/00000000-0000-4000-8000-000000000003",
+        // Under the author, as the passport's canonical is (ADR-0029 D9) —
+        // not the id path, which has answered 308 since OVE-428.
+        publicPath: `/@olena/objects/${encodeURIComponent("черрі")}`,
       },
     });
     expect(page.author?.profilePath).toBe("/bg/@olena");

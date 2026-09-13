@@ -226,10 +226,12 @@ describe("public living-object catalog serialization", () => {
       objectCount: 2,
       journalCount: 5,
       mediaPublicUrl: "https://media.example/public/catalog/tomato.png",
+      // Both links under the author (ADR-0029 D9): the legacy id and
+      // `/journal/{slug}` paths each cost a crawler a 308.
       representativeObject: {
-        path: "/lineage/objects/00000000-0000-4000-8000-000000000201",
+        path: `/@yehor/objects/${encodeURIComponent("тестовий-живий-обєкт")}`,
       },
-      latestJournal: { path: "/journal/catalog-entry" },
+      latestJournal: { path: "/@yehor/catalog-entry" },
     });
     expect(page.cards[1]).toMatchObject({
       objectKind: "animal",
@@ -324,6 +326,8 @@ function row(
     journalCount: 1,
     representativeObjectId: "00000000-0000-4000-8000-000000000201",
     representativeObjectName: "Тестовий живий об'єкт",
+    representativeObjectSlug: "тестовий-живий-обєкт",
+    latestAuthorHandle: "yehor",
     latestEntryTitle: "Спостереження за сезоном",
     latestEntryPublicSlug: "catalog-entry",
     latestEntryDate: "2026-07-10",

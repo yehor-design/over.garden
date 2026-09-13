@@ -79,7 +79,8 @@ source shape: `visibleText`, `distinctPublicEntityIds`, `canonicalPath`,
 ## Sitemap
 
 `/sitemap.xml` is a sitemap index; `/sitemaps/<chunk>.xml` serves one chunk
-(`authored`, `catalog`, `topics`, `communities`, `profiles-N`, `entries-N`).
+(`authored`, `catalog`, `registers`, `topics`, `communities`, `profiles-N`,
+`entries-N`, `passports-N`).
 Both are route handlers that read the database at request time
 (`src/server/public-sitemap.ts`, `src/server/public-sitemap-repository.ts`);
 nothing is generated at build.

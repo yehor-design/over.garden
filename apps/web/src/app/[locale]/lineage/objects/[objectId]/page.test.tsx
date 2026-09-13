@@ -59,6 +59,7 @@ const objectPassportPage = {
     publicEntryCount: 2,
     firstEntryDate: new Date("2026-07-01T12:00:00.000Z"),
     latestEntryDate: new Date("2026-07-04T12:00:00.000Z"),
+    publicPath: "/@green_thumb/objects/balcony-tomato",
   },
   author: {
     handle: "green_thumb",
@@ -201,32 +202,28 @@ describe("/lineage/objects/[objectId]", () => {
     });
 
     expect(metadata.title).toBe("Balcony tomato · жив обект | OverGarden");
-    // Self-canonical in its own route family, and naming the other two
-    // (ADR-0029 D10, D3). The passport had one address before this; it has
-    // three now, and a canonical that pointed at the unprefixed one would make
-    // two thirds of them duplicates of a page the reader did not ask for.
+    // One address, under the author and with no locale prefix (ADR-0029 D9,
+    // D10), and no `hreflang` (OVE-423): a passport is never translated. The
+    // canonical used to name `/bg/lineage/objects/{uuid}` — a path that 308s —
+    // and a canonical that redirects is a signal a crawler discards.
     expect(metadata.alternates).toMatchObject({
-      canonical: `https://over.garden/bg/lineage/objects/${objectId}`,
-      languages: {
-        uk: `https://over.garden/lineage/objects/${objectId}`,
-        bg: `https://over.garden/bg/lineage/objects/${objectId}`,
-        ru: `https://over.garden/ru/lineage/objects/${objectId}`,
-      },
+      canonical: "https://over.garden/@green_thumb/objects/balcony-tomato",
     });
+    expect(metadata.alternates?.languages).toBeUndefined();
     expect(metadata.robots).toEqual({
       index: true,
       follow: true,
     });
   });
 
-  it("keeps the unprefixed half self-canonical", async () => {
+  it("names the same canonical from every route family", async () => {
     const { generateMetadata } = await import("./page");
     const metadata = await generateMetadata({
       params: Promise.resolve({ locale: "uk", objectId }),
     });
 
     expect(metadata.alternates).toMatchObject({
-      canonical: `https://over.garden/lineage/objects/${objectId}`,
+      canonical: "https://over.garden/@green_thumb/objects/balcony-tomato",
     });
   });
 
