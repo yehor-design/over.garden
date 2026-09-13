@@ -57,6 +57,7 @@ describe("public topic repository query contracts", () => {
             entryDate: "2026-07-30",
             publishedAt: "2026-07-30T12:00:00.000Z",
             publicSlug: "care-check",
+            addressHandle: "yehor",
           },
           {
             id: "00000000-0000-4000-8000-000000000102",
@@ -66,6 +67,7 @@ describe("public topic repository query contracts", () => {
             entryDate: "2026-07-30",
             publishedAt: null,
             publicSlug: null,
+            addressHandle: null,
           },
         ],
       ),
@@ -77,7 +79,8 @@ describe("public topic repository query contracts", () => {
         bodyPreview: "Visible care evidence",
         entryDate: "2026-07-30",
         publishedAt: "2026-07-30T12:00:00.000Z",
-        publicPath: "/journal/care-check",
+        // Under its author (ADR-0029 D9), not the legacy address that 308s.
+        publicPath: "/@yehor/care-check",
       },
     ]);
   });

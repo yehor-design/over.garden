@@ -147,7 +147,14 @@ export async function PATCH(
       await assertPublicMediaReady(replay.publicMedia);
       await convergeAndRevalidate(replay.entry);
       return privateNoStore(
-        Response.json(buildAtomicEditResponse(request, body, replay)),
+        Response.json(
+          buildAtomicEditResponse(
+            request,
+            body,
+            replay,
+            await getPublicAuthorHandle(admission.scope.userId),
+          ),
+        ),
       );
     }
 
@@ -239,7 +246,14 @@ export async function PATCH(
     }
     await convergeAndRevalidate(result.entry);
     return privateNoStore(
-      Response.json(buildAtomicEditResponse(request, body, result)),
+      Response.json(
+        buildAtomicEditResponse(
+          request,
+          body,
+          result,
+          await getPublicAuthorHandle(admission.scope.userId),
+        ),
+      ),
     );
   } catch (error) {
     if (error instanceof JournalAggregateConflictError) {
@@ -356,6 +370,8 @@ function buildAtomicEditResponse(
     };
     publicMedia: readonly { mediaAssetId: string; publicPath: string }[];
   },
+  /** The author's registry handle; the card's link is the entry's own address. */
+  authorHandle: string | null,
 ): AtomicJournalEditResponse {
   if (!result.entry.public_slug) throw new Error("atomic_edit_incomplete");
   const cover =
@@ -374,7 +390,11 @@ function buildAtomicEditResponse(
       bodyPreview: result.entry.body.slice(0, 240),
       entryDate: normalizeResponseDate(result.entry.entry_date),
       coverUrl: cover ? getPublicDerivativeUrl(cover.publicPath) : null,
-      publicPath: legacyPublicJournalEntryPath(result.entry.public_slug),
+      // The link the gardener sees and shares (ADR-0029 D9); the legacy
+      // address, which 308s there, only for an author who has no handle.
+      publicPath: authorHandle
+        ? publicJournalEntryPath(authorHandle, result.entry.public_slug)
+        : legacyPublicJournalEntryPath(result.entry.public_slug),
     },
     returnTo: normalizeJournalComposerReturnTo(
       body.returnTo,
