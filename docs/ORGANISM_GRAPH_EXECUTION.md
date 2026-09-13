@@ -324,7 +324,12 @@ rewrites and force-pushes. For those, ask.
    and `pnpm smoke:matching-runtime-capabilities`. The heartbeat row must show
    the handler set the manifest declares. **`--env-file` is not optional**:
    without it the smoke loads `.env.local`, reads the loopback heartbeat, and
-   reports the handler set of a worker nobody deployed.
+   reports the handler set of a worker nobody deployed. As of 2026-09-13
+   `smoke:matching-runtime-capabilities` prints only its one-line failure
+   against a healthy production worker, while `smoke:matching-queue-health`
+   reads the same heartbeat row and passes with the expected commit and
+   digest — treat queue-health as the deploy gate until the capabilities
+   proof says why it fails.
 6. Record the release digest, the run id and the heartbeat handler set on the
    issue. `infra/production-worker/README.md` is the full runbook. The digest
    the smoke wants is the whole `sha256:…`, not a prefix; a truncated one is
