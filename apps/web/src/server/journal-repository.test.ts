@@ -73,6 +73,19 @@ class TestPostgresDialect implements Dialect {
 
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 
+/**
+ * The public queries carry the author's handle as a correlated scalar that
+ * reads `owner_user_id` to find the registry row (ADR-0029 D9). The privacy
+ * guard below is about what a query *selects*, so the subquery is taken out
+ * before the guard runs and asserted separately.
+ */
+function withoutAuthorHandleSubquery(sql: string) {
+  return sql.replace(
+    /\(\s*select handle_registry\.normalized_handle[\s\S]*?limit 1\s*\)/gu,
+    "<author-handle>",
+  );
+}
+
 describe("journal repository query contracts", () => {
   it("reuses only an owner-scoped space for first-object creation", () => {
     const compiled = buildOwnedSpaceForFirstEntryQuery(
@@ -814,7 +827,8 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"journal_entries"."public_slug" is not null',
     );
-    expect(compiled.sql).not.toMatch(
+    expect(compiled.sql).toContain("handle_registry.normalized_handle");
+    expect(withoutAuthorHandleSubquery(compiled.sql)).not.toMatch(
       /owner_user_id|client_mutation_id|quarantine_key|derivative_key|ip_address|user_agent|email|phone|coordinates|latitude|longitude/i,
     );
     expect(compiled.parameters).toEqual([
@@ -880,7 +894,8 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"journal_entries"."created_at" desc');
     expect(compiled.sql).toContain('"journal_entries"."id" asc');
     expect(compiled.parameters.at(-1)).toBe(1);
-    expect(compiled.sql).not.toMatch(
+    expect(compiled.sql).toContain("handle_registry.normalized_handle");
+    expect(withoutAuthorHandleSubquery(compiled.sql)).not.toMatch(
       /owner_user_id|client_mutation_id|quarantine_key|email|coordinates|latitude|longitude/i,
     );
   });
@@ -1011,6 +1026,7 @@ describe("journal repository query contracts", () => {
           body: "Коротка попередня нотатка.",
           entryDate: "2026-07-03",
           publicSlug: "tyzhden-ranishe",
+          addressHandle: "olena",
         },
       ],
       newerRow: null,
@@ -1020,6 +1036,7 @@ describe("journal repository query contracts", () => {
         body: "Коротка попередня нотатка.",
         entryDate: "2026-07-03",
         publicSlug: "tyzhden-ranishe",
+        addressHandle: "olena",
       },
       mentionedRows: [],
       mentionedProfileRows: [
@@ -1071,10 +1088,10 @@ describe("journal repository query contracts", () => {
     ]);
     expect(page.adjacentEntries).toMatchObject({
       newer: null,
-      older: { publicPath: "/journal/tyzhden-ranishe" },
+      older: { publicPath: "/@olena/tyzhden-ranishe" },
     });
     expect(page.relatedEntries[0]?.publicPath).toBe(
-      "/journal/tyzhden-ranishe",
+      "/@olena/tyzhden-ranishe",
     );
     expect(JSON.stringify(page)).not.toMatch(
       /ownerUserId|owner_user_id|email|quarantine|coordinates|latitude|longitude/i,

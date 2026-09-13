@@ -61,7 +61,10 @@ import {
   listClaimedPublicPaths,
   type ClaimedEphemeralPublicationMedia,
 } from "@/lib/media/claimed-media";
-import { legacyPublicJournalEntryPath } from "@/lib/garden/public-paths";
+import {
+  legacyPublicJournalEntryPath,
+  publicJournalEntryPath,
+} from "@/lib/garden/public-paths";
 import {
   mutationScopeResponse,
   ownerUserIdFromRequest,
@@ -70,6 +73,7 @@ import {
 import { publicEntryChangeTags } from "@/lib/public-cache-tags";
 import { announceJournalEntry } from "@/server/indexnow-public-addresses";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
+import { getPublicAuthorHandle } from "@/server/author-handle-repository";
 
 class AtomicJournalCreateError extends Error {
   constructor(
@@ -173,6 +177,7 @@ async function createEntry(request: Request, scope: RequestScope) {
           entry: replay.entry,
           publicMedia: replay.publicMedia,
           plantObjectId: replay.entry.plant_object_id,
+          authorHandle: await getPublicAuthorHandle(scope.userId),
         }),
       );
     }
@@ -274,6 +279,7 @@ async function createEntry(request: Request, scope: RequestScope) {
       entry: result.entry,
       publicMedia: handoff?.publicMedia ?? [],
       plantObjectId: "plantObject" in result ? result.plantObject.id : null,
+      authorHandle: await getPublicAuthorHandle(scope.userId),
     });
 
     scheduleLearningAttributionDrain(async () => {
@@ -562,6 +568,8 @@ async function atomicReceiptSetDigest(receipts: readonly string[]) {
 function buildAtomicCreateResponse(input: {
   request: Request;
   body: AtomicJournalCreateRequest;
+  /** The author's registry handle; the card's link is the entry's own address. */
+  authorHandle: string | null;
   entry: {
     id: string;
     title: string;
@@ -606,7 +614,11 @@ function buildAtomicCreateResponse(input: {
       coverUrl: coverMedia
         ? getPublicDerivativeUrl(coverMedia.publicPath)
         : null,
-      publicPath: legacyPublicJournalEntryPath(input.entry.public_slug),
+      // The link the gardener sees first and shares (ADR-0029 D9). It used
+      // to be the legacy address, so every share went through a 308.
+      publicPath: input.authorHandle
+        ? publicJournalEntryPath(input.authorHandle, input.entry.public_slug)
+        : legacyPublicJournalEntryPath(input.entry.public_slug),
     },
     returnTo,
   };

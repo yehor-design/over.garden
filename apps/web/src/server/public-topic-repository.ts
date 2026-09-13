@@ -10,6 +10,7 @@ import type { PublicProjectionQualityClass } from "@/lib/public-projection-quali
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
 import {
   legacyPublicJournalEntryPath,
+  publicJournalEntryPath,
   publicTopicPath,
 } from "@/lib/garden/public-paths";
 import {
@@ -25,6 +26,7 @@ import {
   type PublicSurfaceDiscoveryConsumerId,
   type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
+import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -91,6 +93,8 @@ export interface PublicTopicEntryRow {
   entryDate: Date | string;
   publishedAt: Date | string | null;
   publicSlug: string | null;
+  /** The author's registry handle, for the address; `null` for a handle-less author. */
+  addressHandle: string | null;
 }
 
 export async function getPublicTopicAggregationPage(
@@ -252,6 +256,7 @@ export function buildPublicTopicAggregationEntriesQuery(
       "journal_entries.entry_date as entryDate",
       "journal_entries.published_at as publishedAt",
       "journal_entries.public_slug as publicSlug",
+      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
     ])
     .orderBy("journal_entries.published_at", "desc")
     .orderBy("journal_entries.id", "asc")
@@ -271,9 +276,11 @@ export function serializePublicTopicEntries(
             bodyPreview: publicTopicBodyPreview(entry.body),
             entryDate: entry.entryDate,
             publishedAt: entry.publishedAt,
-            // A topic gathers entries from every gardener, and this row
-            // carries no handle. The legacy address 308s to the canonical one.
-            publicPath: legacyPublicJournalEntryPath(entry.publicSlug),
+            // Under its author (ADR-0029 D9); the legacy address, which
+            // 308s there, only for an author who has no handle.
+            publicPath: entry.addressHandle
+              ? publicJournalEntryPath(entry.addressHandle, entry.publicSlug)
+              : legacyPublicJournalEntryPath(entry.publicSlug),
           },
         ]
       : [],

@@ -581,6 +581,8 @@ interface PublicJournalEntryRelatedRow {
   body: string;
   entryDate: Date | string;
   publicSlug: string;
+  /** The author's registry handle, for the address; `null` for a handle-less author. */
+  addressHandle: string | null;
 }
 
 export interface GonePublicJournalEntryPage {
@@ -3001,6 +3003,7 @@ function serializeRelatedPublicJournalEntries(
     body: string;
     entryDate: Date | string;
     publicSlug: string;
+    addressHandle: string | null;
   }>,
 ): PublicJournalEntryRelatedEntry[] {
   return rows.map((row) => serializeRelatedPublicJournalEntry(row)!);
@@ -3017,9 +3020,13 @@ function serializeRelatedPublicJournalEntry(
     bodyPreview: publicJournalEntryBodyPreview(row.body),
     entryDate: row.entryDate,
     publicSlug: row.publicSlug,
-    // A related entry can be another gardener's, and this row carries no
-    // handle. The legacy address 308s to the canonical one.
-    publicPath: legacyPublicJournalEntryPath(row.publicSlug),
+    // Under its author (ADR-0029 D9). The row used to carry no handle and
+    // linked the legacy address, which 308s — a hop for every reader and a
+    // redirect for every crawler that followed it. The legacy path stays only
+    // for an author who has no handle, where it is the address that answers.
+    publicPath: row.addressHandle
+      ? publicJournalEntryPath(row.addressHandle, row.publicSlug)
+      : legacyPublicJournalEntryPath(row.publicSlug),
   };
 }
 
@@ -3888,6 +3895,7 @@ export function buildRelatedPublicJournalEntriesQuery(
       "journal_entries.body as body",
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as publicSlug",
+      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
     ])
     .where("journal_entries.plant_object_id", "=", plantObjectId)
     .where("journal_entries.id", "!=", currentEntryId)
@@ -3962,6 +3970,7 @@ export function buildAdjacentPublicJournalEntryQuery(
       "journal_entries.body as body",
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as publicSlug",
+      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
     ])
     .where("journal_entries.id", "!=", input.currentEntryId)
     .where("journal_entries.visibility", "=", "public")

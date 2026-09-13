@@ -987,6 +987,15 @@ not turn every passport into a 404.
 - **Passports were not in the sitemap at all.** There is a `passports-N` chunk
   now, one URL per addressed passport with a live public entry, dated by its
   newest entry.
+- **The same question, asked of entries.** `grep -rn "legacyPublicJournalEntryPath("`
+  listed every surface still linking `/journal/{slug}`, which has answered 308
+  since the move: a topic page, a community page, the related and the
+  newer/older entries on an entry page (eight redirecting links per entry
+  page, measured), and the card the publish API returns to the composer — the
+  first link a gardener sees and the one they share. Each row carries the
+  author's registry handle now and links under the author. The owner-only
+  surfaces (the workspace's "open page", social return, engagement targets)
+  keep the documented one-hop residue until refs carry the handle.
 
 **The gate that catches the first class now.** `pnpm public:addresses:prove-render`
 asks, beside every real address, for one sibling per family that cannot exist

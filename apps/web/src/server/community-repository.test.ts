@@ -590,6 +590,7 @@ describe("OVE-184 community repository contracts", () => {
       objectDisplayName: `Об'єкт ${index}`,
       objectKind: index % 2 === 0 ? "plant" : "animal",
       authorHandle: `keeper_${index}`,
+      addressHandle: `keeper_${index}`,
       authorDisplayName: `Keeper ${index}`,
       coverDerivativeKey: index === 0 ? "covers/cover.png" : null,
       coverFocalX: index === 0 ? 0.5 : null,
@@ -608,7 +609,8 @@ describe("OVE-184 community repository contracts", () => {
 
     expect(page.items).toHaveLength(12);
     expect(page.items[0]).toMatchObject({
-      href: "/journal/public-observation-0",
+      // Under its author (ADR-0029 D9), not the legacy address that 308s.
+      href: "/@keeper_0/public-observation-0",
       object: {
         // Under the author, as the passport's canonical is (ADR-0029 D9).
         href: `/@keeper_0/objects/${encodeURIComponent("обєкт-0")}`,

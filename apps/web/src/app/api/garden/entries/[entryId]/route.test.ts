@@ -19,6 +19,18 @@ const mocks = vi.hoisted(() => ({
   convergePublicProjectionsNow: vi.fn(),
 }));
 
+// The card's link is the entry's own address, built from the author's
+// handle (ADR-0029 D9); the route reads it on every publish.
+// A mocked author handle would otherwise let the route announce a real URL
+// to IndexNow from a unit test; the announcer has tests of its own.
+vi.mock("@/server/indexnow-announcer", () => ({
+  announcePublicUrlsToIndexNow: vi.fn(),
+}));
+
+vi.mock("@/server/author-handle-repository", () => ({
+  getPublicAuthorHandle: vi.fn().mockResolvedValue("yehor"),
+}));
+
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn() ,
   revalidateTag: vi.fn(),

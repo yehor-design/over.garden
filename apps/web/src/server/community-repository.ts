@@ -18,8 +18,8 @@ import type {
   PlantObjectKind,
 } from "@/db/schema";
 import {
-  legacyPublicJournalEntryPath,
   publicCommunityPath,
+  publicJournalEntryPath,
   publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
@@ -115,6 +115,8 @@ export interface PublicCommunityContributionRow {
   objectDisplayName: string;
   objectKind: string;
   authorHandle: string | null;
+  /** The registry handle the entry's address hangs from (ADR-0029 D9). */
+  addressHandle: string;
   authorDisplayName: string | null;
   coverDerivativeKey: string | null;
   coverFocalX: number | null;
@@ -1051,7 +1053,9 @@ export function serializePublicCommunityContributionPage(
     return [
       {
         id: row.contributionId,
-        href: legacyPublicJournalEntryPath(publicSlug),
+        // Under its author (ADR-0029 D9): the query joins the current handle,
+        // so the row always has one.
+        href: publicJournalEntryPath(row.addressHandle, publicSlug),
         title: row.title,
         excerpt: publicExcerpt(row.body),
         entryDate: row.entryDate,
@@ -1390,6 +1394,7 @@ export function buildPublicCommunityContributionsQuery(
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
       "user_public_profiles.handle as authorHandle",
+      "user_handle_registry.normalized_handle as addressHandle",
       "user_public_profiles.display_name as authorDisplayName",
       sql<string | null>`(
         select media_assets.derivative_key
