@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { connection } from "next/server";
 
 import { PublicCommunityDirectory } from "@/components/public/public-community";
 import {
@@ -28,6 +29,10 @@ import {
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
 import { readPublicCommunityDirectory } from "@/server/public-cache";
+import {
+  describeWorkspaceFailure,
+  recordPublicSurfaceFailure,
+} from "@/server/workspace-failure";
 
 interface CommunityDirectoryRouteProps {
   params: Promise<{ locale: string }>;
@@ -61,7 +66,24 @@ export async function generateMetadata({
   return buildCommunityDirectorySurface(locale, [], discovery).metadata;
 }
 
+/**
+ * The directory is a request-time page, and says so before anything is read.
+ *
+ * It answered "temporarily unavailable" on production from the day the
+ * `(default)` wrapper stopped redirecting until 2026-09-13, and nothing in any
+ * log said why. The cause was two `catch` blocks in a row: `currentViewerScope`
+ * swallowed the bail-out that `headers()` throws during a prerender — Next
+ * signals "this page is dynamic" by *throwing*, and a `try/catch` around the
+ * session read caught it — so the prerender walked on into the cached
+ * directory read, which the aborted prerender then cancelled ("Connection
+ * closed."), and the `catch` below turned that into the degraded state.
+ * `connection()` first makes the page request-time in one line nobody can
+ * catch; `unstable_rethrow` in both catches lets Next's own signals through;
+ * and the degraded branch now writes one log line, so the next time a public
+ * surface degrades, somebody reads about it.
+ */
 export async function renderCommunityDirectory(locale: PublicLocale) {
+  await connection();
   const viewerScope = await currentViewerScope();
   try {
     const communities = viewerScope
@@ -83,7 +105,16 @@ export async function renderCommunityDirectory(locale: PublicLocale) {
         jsonLd={surface.jsonLd}
       />
     );
-  } catch {
+  } catch (error) {
+    // Next's own control flow — a prerender bail-out, a redirect, a
+    // not-found — is not a degraded directory, and swallowing it is exactly
+    // the defect this branch used to hide.
+    unstable_rethrow(error);
+    recordPublicSurfaceFailure(describeWorkspaceFailure(error), {
+      surface: "community_directory",
+      section: "directory",
+      locale,
+    });
     return (
       <PublicCommunityDirectory
         locale={locale}
@@ -157,7 +188,10 @@ async function currentViewerScope(): Promise<RequestScope | null> {
     return session?.user?.id
       ? scopedToUser(session.user.id, getSessionId(session))
       : null;
-  } catch {
+  } catch (error) {
+    // A guest is a guest whatever the session store said — but a prerender
+    // bail-out is not a session failure, and it must reach Next.
+    unstable_rethrow(error);
     return null;
   }
 }

@@ -838,6 +838,12 @@ than the limitation.
   that fetches every row in the database proves the pages; the mirror image —
   `/@yehor/there-is-nothing-here` answering 404 — needs its own probe, and
   `pnpm public:addresses:prove-render` now sends one per family.
+- Next signals "this page is dynamic" during a prerender by **throwing**. A
+  `try/catch` around `getCurrentSession()` catches that signal, the render
+  walks on into a cached read, the aborted prerender cancels it, and the page's
+  own `catch` renders the degraded state — silently. `unstable_rethrow` in
+  every blanket `catch` on a public page, and `connection()` before the first
+  read of a listing that has no other dynamic read ahead of it.
 
 ## The `200` that was a not-found page
 
@@ -1002,3 +1008,36 @@ asks, beside every real address, for one sibling per family that cannot exist
 — `/@{handle}/there-is-nothing-at-this-address-3f9c1` and its passport and hub
 counterparts — and requires a real `404`. A status line *is* the right proof
 for that half: it is the only place a crawler reads the answer.
+
+## The directory that was "temporarily unavailable" for weeks
+
+**Found 2026-09-13, while auditing the residue of the slice.** `/communities`
+answered `200` with a heading, `noindex, nofollow`, no canonical and no graph,
+and the one active community was not listed. The database was healthy, the
+three statements behind the directory ran on production in a second each, and
+locally in dev the page rendered the community. The only witness was the page
+itself: "Спільнота тимчасово недоступна."
+
+**Two `catch` blocks in a row.** `currentViewerScope()` wrapped
+`getCurrentSession()` in a `try/catch` that returned a guest for *any* error.
+During a prerender, `headers()` throws Next's bail-out — that is how a page
+says it is dynamic — and the helper caught it. The render walked on into
+`readPublicCommunityDirectory()`, the aborted prerender cancelled the cached
+read with `Connection closed.`, and the directory's own `catch` rendered the
+degraded state. The route table gave it away once you knew to look: it was the
+only listing with a `15m` revalidate column, because as far as Next could
+tell nothing on the page was dynamic. The topic page has the same swallow and
+survived only because it reads `searchParams` first, outside any `catch`.
+
+**The fix is three lines and a log.** `await connection()` before anything is
+read, `unstable_rethrow(error)` at the top of both catches (Next's documented
+API for exactly this), and `recordPublicSurfaceFailure` — the public twin of
+`recordWorkspaceSectionFailure`, class and digest only — so the next degraded
+surface is a log line and not a rumour. The topic page's three `.catch(() =>
+null)` got the same rethrow.
+
+**And a gate that would have seen it.** The render proof lists the six public
+roots now; a root that degrades renders a heading and no JSON-LD, which is the
+signature the proof refuses. `pnpm public:addresses:prove-render` was written
+the day before and did not cover this, because it reads addresses from the
+database and no row names a root.

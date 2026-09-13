@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import { cache } from "react";
 
 import { PublicCommunityView } from "@/components/public/public-community";
@@ -198,7 +198,9 @@ async function currentViewerScope(): Promise<RequestScope | null> {
     return session?.user?.id
       ? scopedToUser(session.user.id, getSessionId(session))
       : null;
-  } catch {
+  } catch (error) {
+    // A prerender bail-out is not a session failure; see the directory page.
+    unstable_rethrow(error);
     return null;
   }
 }

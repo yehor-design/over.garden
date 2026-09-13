@@ -23,7 +23,10 @@ const mocks = vi.hoisted(() => ({
   ),
 }));
 
-vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  notFound: mocks.notFound,
+}));
 vi.mock("@/components/public/public-community", () => ({
   PublicCommunityView: mocks.publicCommunityView,
 }));

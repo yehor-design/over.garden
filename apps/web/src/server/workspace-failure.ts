@@ -280,6 +280,35 @@ export function recordWorkspaceSectionFailure(
 }
 
 /**
+ * The public-surface twin of `recordWorkspaceSectionFailure`: one JSON line
+ * when a public listing settles into its degraded state instead of throwing.
+ *
+ * `/communities` rendered "temporarily unavailable" on production for weeks
+ * with nothing in any log — the directory query was healthy, the data was
+ * healthy, and the only witness was the page. The same policy as above: the
+ * class and the digest, never a message, a statement or a parameter.
+ */
+export function recordPublicSurfaceFailure(
+  failure: WorkspaceFailureDescription,
+  labels: { surface: string; section?: string; locale?: string },
+): void {
+  try {
+    console.error(
+      JSON.stringify({
+        event: "public_surface_degraded",
+        surface: labels.surface,
+        section: labels.section ?? null,
+        locale: labels.locale ?? null,
+        failureClass: failure.failureClass,
+        digest: failure.digest,
+      }),
+    );
+  } catch {
+    // Observability must never be the reason a page fails to render.
+  }
+}
+
+/**
  * Turns one read into a rendered value. Nothing under `/garden/**` awaits a
  * repository call outside this function: an exception escaping a Server
  * Component during a postponed resume is not a UI mechanism (ADR-0023).
