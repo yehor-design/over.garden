@@ -391,6 +391,24 @@ refuses the loopback database when production *is* named — a production flag
 against a local database puts a job nobody drains on a queue nobody watches. Rehearse every job on the loopback database first and record
 counts and duration on the issue for both runs.
 
+A reconciliation run is enqueued the same way (since `OVE-435`; before it,
+nothing in the web app enqueued one, and the ladder ran only when an operator
+inserted the row by hand):
+
+```bash
+pnpm exec tsx scripts/enqueue-catalog-reconcile.ts --scope labels \
+  --env-file /abs/path/prod.env --environment production \
+  --confirm-environment production --allow-non-local-mutation
+```
+
+`--scope` is `labels`, `source_records` or `duplicates`; `--source <slug>` and
+`--since <iso>` narrow the source-records scope and are refused on the other
+two. The idempotency key is one run per scope and source, so a second command
+before the worker claims the first is the same row. The receipt of a run is
+the worker's log line (`catalog_reconcile {...}`) and, durably, the rows it
+wrote: `catalog_curation_queue` (one per proposal, `auto_applied` or `open`)
+and `catalog_curation_actions` (one per decision, with its inverse).
+
 Two source slugs pull a whole release before they write anything, so their
 first run is a download and not a query: `world-flora-online` fetches a 122 MB
 Zenodo zip and `gbif-backbone` a 466 MB hosted export, both pinned by version

@@ -16,6 +16,7 @@ from app.catalog_reconcile import (
     LabelCluster,
     Node,
     NodeName,
+    TaxonNameIndex,
     climb_label_ladder,
     climb_node_ladder,
     recalibrated_threshold,
@@ -290,6 +291,124 @@ class TestLabelClusters:
 
     def test_a_label_matching_nothing_proposes_nothing(self):
         assert climb_label_ladder(self.cluster("Моя рідкісна ягода"), []).proposal is None
+
+    # Rung 7 (OVE-435). On production every public object carried the species'
+    # own scientific name as its label — `Solanum lycopersicum`, `Apis
+    # mellifera` — and the ladder had no rung from a label to a taxon.
+    def tomato(self, node_id: str = "tomato", **kwargs) -> Node:
+        return taxon(
+            node_id,
+            "Solanum lycopersicum L.",
+            "Plantae",
+            names=(
+                NodeName("Solanum lycopersicum L.", "scientific_accepted", "la"),
+                NodeName("Solanum lycopersicum", "scientific_accepted", "la"),
+                NodeName("Lycopersicon esculentum", "scientific_synonym", "la"),
+                NodeName("Томат", "vernacular", "uk"),
+            ),
+            **kwargs,
+        )
+
+    def test_a_label_that_is_the_accepted_name_reaches_its_taxon(self):
+        index = TaxonNameIndex.build([self.tomato()])
+
+        outcome = climb_label_ladder(self.cluster("Solanum  lycopersicum"), [], index)
+
+        assert outcome.proposal is not None
+        assert outcome.proposal.target_id == "tomato"
+        assert outcome.proposal.reasons == ("label_scientific_name",)
+        assert outcome.proposal.confidence == pytest.approx(0.97)
+        assert outcome.conflicts == ()
+
+    def test_the_accepted_name_with_its_authorship_is_the_same_name(self):
+        # Without gnparser the parsed canonical is absent and the whole
+        # canonical name is one key; the bare accepted row is the other.
+        index = TaxonNameIndex.build([self.tomato()])
+        assert climb_label_ladder(self.cluster("Solanum lycopersicum L."), [], index).proposal is not None
+
+    def test_a_vernacular_name_is_not_a_scientific_name(self):
+        # `Томат` names the tomato in Ukrainian and in a dozen other places;
+        # a vernacular is a search hint, not an identity claim.
+        index = TaxonNameIndex.build([self.tomato()])
+        assert climb_label_ladder(self.cluster("Томат"), [], index).proposal is None
+
+    def test_a_synonym_reaches_the_accepted_taxon_below_the_threshold(self):
+        index = TaxonNameIndex.build([self.tomato()])
+
+        outcome = climb_label_ladder(self.cluster("Lycopersicon esculentum"), [], index)
+
+        assert outcome.proposal is not None
+        assert outcome.proposal.target_id == "tomato"
+        assert outcome.proposal.reasons == ("label_scientific_synonym",)
+        # 0.90 sits under every seeded threshold: the owner decides a synonym.
+        assert outcome.proposal.confidence == pytest.approx(0.90)
+
+    def test_a_denomination_still_answers_before_a_taxon(self):
+        cultivar = form("cultivar", "Solanum lycopersicum", species_id="tomato")
+        index = TaxonNameIndex.build([self.tomato()])
+
+        outcome = climb_label_ladder(self.cluster("Solanum lycopersicum"), [cultivar], index)
+
+        assert outcome.proposal is not None and outcome.proposal.target_id == "cultivar"
+
+    def test_a_label_never_crosses_a_kingdom_and_the_homonym_is_recorded(self):
+        shrub = taxon("shrub", "Pieris japonica", "Plantae")
+        butterfly = taxon("butterfly", "Pieris japonica", "Animalia")
+        index = TaxonNameIndex.build([shrub, butterfly])
+
+        plant = climb_label_ladder(self.cluster("Pieris japonica", object_kind="plant"), [], index)
+        animal = climb_label_ladder(self.cluster("Pieris japonica", object_kind="animal"), [], index)
+
+        assert plant.proposal is not None and plant.proposal.target_id == "shrub"
+        assert plant.conflicts == ("homonym_kingdom_conflict:butterfly",)
+        assert animal.proposal is not None and animal.proposal.target_id == "butterfly"
+        assert animal.conflicts == ("homonym_kingdom_conflict:shrub",)
+        # Only the wrong kingdom carries the name: recorded, never proposed.
+        only_animal = TaxonNameIndex.build([butterfly])
+        refused = climb_label_ladder(self.cluster("Pieris japonica", object_kind="plant"), [], only_animal)
+        assert refused.proposal is None
+        assert refused.conflicts == ("homonym_kingdom_conflict:butterfly",)
+
+    def test_a_mushroom_is_a_plant_object_and_a_bee_is_not(self):
+        mushroom = taxon("mushroom", "Agaricus bisporus", "Fungi")
+        bee = taxon("bee", "Apis mellifera", "Animalia")
+        index = TaxonNameIndex.build([mushroom, bee])
+
+        assert climb_label_ladder(self.cluster("Agaricus bisporus"), [], index).proposal is not None
+        assert climb_label_ladder(self.cluster("Apis mellifera"), [], index).proposal is None
+        hive = climb_label_ladder(self.cluster("Apis mellifera", object_kind="animal"), [], index)
+        assert hive.proposal is not None and hive.proposal.target_id == "bee"
+
+    def test_two_live_taxa_under_one_accepted_name_propose_nothing(self):
+        # A duplicate in the graph is the duplicates scope's question; the
+        # label ladder does not guess between them, and does not fall through
+        # to a synonym either.
+        first = taxon("a", "Solanum nigrum", "Plantae")
+        second = taxon("b", "Solanum nigrum", "Plantae")
+        index = TaxonNameIndex.build([first, second])
+
+        outcome = climb_label_ladder(self.cluster("Solanum nigrum"), [], index)
+
+        assert outcome.proposal is None
+        assert outcome.conflicts == ()
+
+    def test_a_form_is_never_a_taxon_candidate(self):
+        # A cultivar named like a species (a fixture, not a source's name)
+        # must not be found through the taxon index.
+        odd = form("odd", "Solanum lycopersicum", species_id=None)
+        assert TaxonNameIndex.build([odd]).accepted == {}
+
+    def test_co_usage_raises_a_species_link_too(self):
+        gardeners = frozenset({"g1"})
+        index = TaxonNameIndex.build([self.tomato(gardener_ids=gardeners)])
+
+        outcome = climb_label_ladder(
+            self.cluster("Solanum lycopersicum", gardener_ids=gardeners), [], index
+        )
+
+        assert outcome.proposal is not None
+        assert outcome.proposal.reasons == ("label_scientific_name", "co_usage:1")
+        assert outcome.proposal.confidence == pytest.approx(0.98)
 
 
 class TestThresholds:

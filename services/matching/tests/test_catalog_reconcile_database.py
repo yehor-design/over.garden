@@ -97,6 +97,24 @@ def seed_item(
     return item_id
 
 
+def seed_name(
+    conn: psycopg.Connection,
+    item_id: str,
+    display_name: str,
+    *,
+    name_type: str = "scientific_accepted",
+    locale: str = "la",
+) -> None:
+    conn.execute(
+        """
+        insert into catalog_item_names (catalog_item_id, display_name, normalized_name, locale, name_type)
+        values (%s, %s, catalog_normalize_name(%s), %s, %s)
+        on conflict do nothing
+        """,
+        (item_id, display_name, display_name, locale, name_type),
+    )
+
+
 def seed_gardener(conn: psycopg.Connection) -> tuple[str, str]:
     user_id = str(uuid.uuid4())
     space_id = str(uuid.uuid4())
@@ -619,6 +637,110 @@ def test_the_labels_scope_auto_applies_above_the_threshold_and_queues_below_it(c
         "select count(*)::int as n from catalog_curation_queue where state = 'open'"
     ).fetchone()
     assert open_items["n"] == 1
+
+
+def test_the_labels_scope_links_a_scientific_name_to_its_taxon_and_the_card_learns_it(conn):
+    """OVE-435, the shape production had on 2026-09-12.
+
+    Four public objects — two `Solanum lycopersicum` plants, two `Apis
+    mellifera` animals — with a public entry each, both cards present and
+    bare. One labels run links all four through `catalog_apply_queue_item`,
+    the cards learn their first-hand content and ask to re-render, and the
+    gardener's own spelling stays on the object. A second run has nothing to
+    say; a synonym label waits for the owner.
+    """
+    tomato = seed_item(conn, "Solanum lycopersicum L.", slug="ove435-solanum-lycopersicum")
+    seed_name(conn, tomato, "Solanum lycopersicum L.")
+    seed_name(conn, tomato, "Solanum lycopersicum")
+    seed_name(conn, tomato, "Lycopersicon esculentum", name_type="scientific_synonym")
+    seed_name(conn, tomato, "Томат", name_type="vernacular", locale="uk")
+    bee = seed_item(conn, "Apis mellifera", kingdom="Animalia", slug="ove435-apis-mellifera")
+    seed_name(conn, bee, "Apis mellifera")
+    # The butterfly genus shares the tomato's kingdom-crossing trap: a plant
+    # object labelled with an animal's name reaches nothing.
+    seed_item(conn, "Pieris rapae", kingdom="Animalia", slug="ove435-pieris-rapae")
+    owner = seed_gardener(conn)
+    tomato_uk = seed_object(conn, owner, label="Solanum lycopersicum", entries=1)
+    tomato_bg = seed_object(conn, owner, label="solanum lycopersicum", entries=1)
+    hive_uk = seed_object(conn, owner, label="Apis mellifera", object_kind="animal", entries=1)
+    hive_bg = seed_object(conn, owner, label="Apis mellifera", object_kind="animal", entries=1)
+    crossed = seed_object(conn, owner, label="Pieris rapae")
+    old_name = seed_object(conn, owner, label="Lycopersicon esculentum")
+    vernacular = seed_object(conn, owner, label="Томат")
+
+    receipt = ladder.reconcile(conn, "labels")
+
+    assert receipt["proposals"] == 3, "tomato, bee, and the synonym"
+    assert receipt["autoApplied"] == 2
+    assert receipt["queued"] == 1
+    assert receipt["conflicts"] == 1, "the plant labelled with an animal's name"
+    linked = {
+        row["id"]: row
+        for row in conn.execute(
+            "select id::text as id, catalog_item_id::text as catalog_item_id, variety_state, variety_text"
+            " from plant_objects"
+        ).fetchall()
+    }
+    for object_id in (tomato_uk, tomato_bg):
+        assert linked[object_id]["catalog_item_id"] == tomato
+        assert linked[object_id]["variety_state"] == "selected"
+    for object_id in (hive_uk, hive_bg):
+        assert linked[object_id]["catalog_item_id"] == bee
+        assert linked[object_id]["variety_state"] == "selected"
+    # ADR-0026 D6: the gardener's own spelling stays.
+    assert linked[tomato_bg]["variety_text"] == "solanum lycopersicum"
+    for object_id in (crossed, old_name, vernacular):
+        assert linked[object_id]["catalog_item_id"] is None
+        assert linked[object_id]["variety_state"] == "free_text"
+    # ADR-0026 D9: a card with a gardener's public entry is indexable, and asks
+    # to be rendered again.
+    cards = {
+        row["id"]: row["first_hand_content_at"]
+        for row in conn.execute(
+            "select id::text as id, first_hand_content_at from catalog_items where id in (%s, %s)",
+            (tomato, bee),
+        ).fetchall()
+    }
+    assert cards[tomato] is not None and cards[bee] is not None
+    intents = {
+        row["id"]
+        for row in conn.execute(
+            "select entity_id::text as id from public_projection_intents"
+            " where entity_kind = 'catalog_item' and desired_reason = 'catalog_card'"
+        ).fetchall()
+    }
+    assert intents == {tomato, bee}
+    items = conn.execute(
+        """
+        select subject_label, reasons, state, confidence
+        from catalog_curation_queue where item_type = 'label_link'
+        order by subject_label
+        """
+    ).fetchall()
+    assert [(row["subject_label"], row["reasons"], row["state"]) for row in items] == [
+        ("Apis mellifera", ["label_scientific_name"], "auto_applied"),
+        ("Lycopersicon esculentum", ["label_scientific_synonym"], "open"),
+        ("Solanum lycopersicum", ["label_scientific_name"], "auto_applied"),
+    ]
+    actions = conn.execute(
+        "select automatic, payload->>'rule_code' as rule_code from catalog_curation_actions"
+        " where action_type = 'link' order by performed_at"
+    ).fetchall()
+    assert [(row["automatic"], row["rule_code"]) for row in actions] == [
+        (True, "label_scientific_name"),
+        (True, "label_scientific_name"),
+    ]
+    # A second run proposes nothing: the labels are linked, the synonym item open.
+    again = ladder.reconcile(conn, "labels")
+    assert again["proposals"] == 0
+    # The owner's Yes on the synonym is the same function.
+    open_item = conn.execute(
+        "select id::text as id from catalog_curation_queue where state = 'open'"
+    ).fetchone()["id"]
+    apply_item(conn, open_item, automatic=False)
+    assert conn.execute(
+        "select catalog_item_id::text as id from plant_objects where id = %s", (old_name,)
+    ).fetchone()["id"] == tomato
 
 
 def test_the_duplicates_scope_queues_a_same_name_pair_and_never_crosses_a_kingdom(conn):
