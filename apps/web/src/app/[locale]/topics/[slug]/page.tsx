@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 import { cache } from "react";
 
 import { PublicKnowledgeTopicPage } from "@/components/public/public-knowledge-topic";
@@ -78,8 +78,18 @@ export default async function TopicRoute({
   if (!isPublicLocale(localeParam)) notFound();
 
   const query = (await searchParams) ?? {};
-  const session = await getCurrentSession().catch(() => null);
-  const topic = await loadTopicPage(slug, localeParam).catch(() => null);
+  // A rejection here is a guest or a missing topic — unless it is Next's own
+  // prerender bail-out, which must reach Next (see the community directory).
+  const session = await getCurrentSession().catch((error: unknown) => {
+    unstable_rethrow(error);
+    return null;
+  });
+  const topic = await loadTopicPage(slug, localeParam).catch(
+    (error: unknown) => {
+      unstable_rethrow(error);
+      return null;
+    },
+  );
   if (!topic) notFound();
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
@@ -88,7 +98,12 @@ export default async function TopicRoute({
     ref: topic.topic.slug,
   };
   const following = scope
-    ? await getEngagementFollowState(scope, followTarget).catch(() => false)
+    ? await getEngagementFollowState(scope, followTarget).catch(
+        (error: unknown) => {
+          unstable_rethrow(error);
+          return false;
+        },
+      )
     : false;
   const returnTo = localizedPath(
     localeParam,

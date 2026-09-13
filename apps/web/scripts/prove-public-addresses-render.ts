@@ -16,6 +16,11 @@
  * JSON-LD (ADR-0029 D13) — three facts that are only true when the page
  * rendered.
  *
+ * The public roots are in the list too, since 2026-09-13: `/communities`
+ * rendered "temporarily unavailable" for weeks — a heading, a `200`, and no
+ * graph — and no gate asked for it because no row in the database names a
+ * root. A root that degrades loses its JSON-LD, which is what this asks for.
+ *
  * The second half is the mirror image, found a day later: an address that
  * *should* be nothing answered `200` too. The rewrite that carries `/@…` into
  * the `[locale]` tree returned before the lifecycle blocks, so a nonexistent
@@ -51,7 +56,7 @@ import {
 } from "../src/db/connection";
 
 interface Address {
-  readonly kind: "profile" | "entry" | "passport" | "hub";
+  readonly kind: "root" | "profile" | "entry" | "passport" | "hub";
   readonly path: string;
   readonly name: string;
   /** A page, or an address that must answer a real 404. */
@@ -64,6 +69,19 @@ interface Address {
  * refused as malformed, and the proof measures the block and not the parser.
  */
 const NOTHING_HERE = "there-is-nothing-at-this-address-3f9c1";
+
+/**
+ * The public roots that carry a graph when they render. `/feed` is not one:
+ * it is a reader's own feed, `noindex` by design and without JSON-LD.
+ */
+const PUBLIC_ROOTS = [
+  "/",
+  "/journals",
+  "/objects",
+  "/knowledge",
+  "/species",
+  "/communities",
+] as const;
 
 interface Result extends Address {
   readonly status: number;
@@ -140,6 +158,12 @@ export async function listPublishedAddresses(
   const [firstHandle] = handles;
 
   return [
+    ...PUBLIC_ROOTS.map((path) => ({
+      kind: "root" as const,
+      path,
+      name: `root ${path}`,
+      expects: "page" as const,
+    })),
     ...[...handles].map((handle) => ({
       kind: "profile" as const,
       path: publicProfileBasePath(handle),
@@ -306,6 +330,7 @@ async function main() {
         checked: results.length,
         failed: failures.length,
         byKind: {
+          root: results.filter((r) => r.kind === "root").length,
           profile: results.filter((r) => r.kind === "profile").length,
           entry: results.filter((r) => r.kind === "entry").length,
           passport: results.filter((r) => r.kind === "passport").length,
