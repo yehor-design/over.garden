@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-11. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
+Last inventory: 2026-09-11; `0073` applied 2026-09-13. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -988,6 +988,34 @@ safe in either order.
 
 After applying anything, re-run the inventory and update this page in the same
 pull request as the migration or the code that needs it.
+
+## `0073`, entry names per author and engagement refs by id — applied 2026-09-13
+
+`0073_ove436_entry_names_per_author_engagement_refs_by_id.sql` applied to
+production on 2026-09-13 through `scripts/apply-reviewed-migration.ts --mode
+apply`: one transaction, host class `digitalocean_managed`, database
+`defaultdb`, 17 statements, **302 ms**.
+
+Read back on production right after, read-only:
+
+```
+engagement_likes (journal_entry): 2 rows, both target_ref = f6632198-… = journal_entries.id of «томат-sep-1»
+pg_indexes on journal_entries matching public_slug: journal_entries_owner_public_slug_uidx only
+journal_topics: plants → Рослини, animals → Тварини, species → Види,
+                plant-varieties → Сорти рослин, observation-and-care → Спостереження і догляд
+```
+
+Before it, both likes referenced `томат-sep-1-f66321980b32` — the slug the
+`0070` move retired, which lived only in the history table — and the entry
+showed none. The migration resolves a ref through the live name first and the
+history second (oldest row first), is idempotent (a ref that is already an id
+is left alone), and of two rows a unique key would reject it keeps the older.
+`journal_entries_public_slug_uidx` (global) is replaced by
+`journal_entries_owner_public_slug_uidx (owner_user_id, public_slug)`.
+
+Rollback `sql/rollback/0073_….down.sql` maps refs back to each entry's
+current slug and recreates the global index — which fails, honestly, if two
+gardeners share a slug by then.
 
 ## `0072`, the catalog browse index — applied 2026-09-12
 
