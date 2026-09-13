@@ -18,6 +18,7 @@ import {
 } from "@/server/public-journal-directory-repository";
 import type { PublicKnowledgeEvidenceRule } from "@/server/public-seo-content";
 import { publicTopicPath } from "@/lib/garden/public-paths";
+import { localizeTopicLabel } from "@/lib/system-topic-labels";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -250,7 +251,9 @@ function matchesForCard(
     .map((topic) => ({
       kind: "topic" as const,
       slug: topic.slug,
-      label: topic.label,
+      // A system topic is named in the page's language; a gardener's tag is
+      // the gardener's word (see `system-topic-labels.ts`).
+      label: localizeTopicLabel(locale, topic.slug, topic.label),
       publicPath: topicPath(locale, topic.slug),
     }));
 
