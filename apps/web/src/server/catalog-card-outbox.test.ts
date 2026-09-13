@@ -15,6 +15,9 @@ import type { Database } from "@/db/schema";
 vi.mock("@/server/public-cache-revalidation", () => ({
   revalidatePublicCacheTags: vi.fn(),
 }));
+vi.mock("@/server/indexnow-public-addresses", () => ({
+  announceCatalogCard: vi.fn(),
+}));
 
 import {
   claimCatalogCardIntent,
@@ -22,6 +25,7 @@ import {
   drainCatalogCardIntents,
   recordCatalogCardIntent,
 } from "./catalog-card-outbox";
+import { announceCatalogCard } from "./indexnow-public-addresses";
 import { revalidatePublicCacheTags } from "./public-cache-revalidation";
 
 const ITEM = "11111111-1111-4111-8111-111111111111";
@@ -103,6 +107,10 @@ describe("catalog card outbox (ADR-0026 D9, migration 0062)", () => {
       [`organism:${ITEM}`, "organism-slugs", "catalog", "sitemap"],
       "expire",
     );
+    // A worker's decision reaches the web only through this drain, so the
+    // card is announced here too (only an indexable one is — the announcer
+    // checks); the owner's decision announces from its own Server Action.
+    expect(announceCatalogCard).toHaveBeenCalledWith(ITEM, db);
     const converge = statements.find((sql) => sql.includes("set status = 'applied'"))!;
     expect(converge).toContain("applied_generation = desired_generation");
     expect(converge).toContain("and desired_generation = $3::bigint");
