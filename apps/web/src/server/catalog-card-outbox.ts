@@ -7,6 +7,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
 import { organismAddressChangeTags } from "@/lib/public-cache-tags";
+import { announceCatalogCard } from "@/server/indexnow-public-addresses";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -135,6 +136,12 @@ export async function drainCatalogCardIntents(
     input.revalidate ??
     ((catalogItemId: string) => {
       revalidatePublicCacheTags(organismAddressChangeTags(catalogItemId), "expire");
+      // The owner's decision announces its card from the Server Action that
+      // made it (OVE-434). A worker's decision reaches the web only here, so
+      // here is where its card is announced — a label the ladder linked can
+      // turn a bare card into an indexable one, and a page that changed is a
+      // page announced. Only an indexable card is, see `announceCatalogCard`.
+      announceCatalogCard(catalogItemId, executor);
     });
   const results: CatalogCardDrainResult[] = [];
   for (let index = 0; index < limit; index += 1) {
