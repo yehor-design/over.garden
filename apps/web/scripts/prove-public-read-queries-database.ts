@@ -60,6 +60,7 @@ async function readCases(): Promise<ReadCase[]> {
     feed,
     catalogBrowse,
     catalogRegister,
+    sitemap,
   ] = await Promise.all([
     import("../src/server/public-object-passport-repository"),
     import("../src/server/public-lineage-repository"),
@@ -74,6 +75,7 @@ async function readCases(): Promise<ReadCase[]> {
     import("../src/server/public-feed-repository"),
     import("../src/server/public-catalog-browse-repository"),
     import("../src/server/public-catalog-register-repository"),
+    import("../src/server/public-sitemap-repository"),
   ]);
 
   return [
@@ -84,6 +86,18 @@ async function readCases(): Promise<ReadCase[]> {
     {
       name: "catalog register hub species",
       run: (db) => catalogRegister.listCatalogRegisterHubSpecies(4, db),
+    },
+    {
+      name: "catalog register hub exists",
+      run: (db) => catalogRegister.hasCatalogRegisterHub(ABSENT_SLUG, db),
+    },
+    {
+      name: "object passport sitemap count",
+      run: (db) => sitemap.countPublicObjectPassportsForSitemap(db),
+    },
+    {
+      name: "object passport sitemap chunk",
+      run: (db) => sitemap.listPublicObjectPassportSitemapUrls(0, db),
     },
     {
       name: "catalog browse kingdoms",
@@ -146,6 +160,25 @@ async function readCases(): Promise<ReadCase[]> {
     {
       name: "object passport lookup",
       run: (db) => passport.getPublicObjectPassportLookup(ABSENT_UUID, db),
+    },
+    {
+      name: "object passport id by address",
+      run: (db) =>
+        passport.getPublicObjectPassportIdBySlug(ABSENT_HANDLE, ABSENT_SLUG, db),
+    },
+    {
+      name: "object passport lifecycle by address",
+      run: (db) =>
+        passport.getPublicObjectPassportLifecycleBySlug(
+          ABSENT_HANDLE,
+          ABSENT_SLUG,
+          db,
+        ),
+    },
+    {
+      name: "object passport address history",
+      run: (db) =>
+        passport.resolvePlantObjectAddress(ABSENT_HANDLE, ABSENT_SLUG, db),
     },
     {
       name: "public lineage graph",

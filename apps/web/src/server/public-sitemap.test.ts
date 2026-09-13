@@ -5,7 +5,9 @@ import { publicTopicPath } from "@/lib/garden/public-paths";
 const mocks = vi.hoisted(() => ({
   countEntries: vi.fn(),
   countProfiles: vi.fn(),
+  countPassports: vi.fn().mockResolvedValue(0),
   listEntryUrls: vi.fn(),
+  listPassportUrls: vi.fn(),
   listProfileUrls: vi.fn(),
   listCommunityUrls: vi.fn(),
   listAuthored: vi.fn(),
@@ -20,7 +22,9 @@ vi.mock("@/server/public-sitemap-repository", async (importOriginal) => ({
   >()),
   countPublicJournalEntriesForSitemap: mocks.countEntries,
   countPublicProfilesForSitemap: mocks.countProfiles,
+  countPublicObjectPassportsForSitemap: mocks.countPassports,
   listPublicJournalEntrySitemapUrls: mocks.listEntryUrls,
+  listPublicObjectPassportSitemapUrls: mocks.listPassportUrls,
   listPublicProfileSitemapUrls: mocks.listProfileUrls,
   listPublicCommunitySitemapUrls: mocks.listCommunityUrls,
 }));
@@ -65,6 +69,7 @@ describe("public sitemap", () => {
     // 4 000 profiles emit 12 000 URLs across three locales, so they need three
     // chunks — one was enough only while the budget counted rows.
     mocks.countProfiles.mockResolvedValue(4_000);
+    mocks.countPassports.mockResolvedValue(5_001);
 
     await expect(listPublicSitemapChunkIds()).resolves.toEqual([
       "authored",
@@ -78,12 +83,15 @@ describe("public sitemap", () => {
       "entries-0",
       "entries-1",
       "entries-2",
+      "passports-0",
+      "passports-1",
     ]);
   });
 
   it("keeps an empty family as one empty chunk so the index never lies", async () => {
     mocks.countEntries.mockResolvedValue(0);
     mocks.countProfiles.mockResolvedValue(0);
+    mocks.countPassports.mockResolvedValue(0);
 
     await expect(listPublicSitemapChunkIds()).resolves.toEqual([
       "authored",
@@ -93,6 +101,7 @@ describe("public sitemap", () => {
       "communities",
       "profiles-0",
       "entries-0",
+      "passports-0",
     ]);
   });
 

@@ -107,6 +107,28 @@ export function publicLineageObjectPath(plantObjectId: string): string {
   return `/lineage/objects/${encodeURIComponent(plantObjectId)}`;
 }
 
+/**
+ * The address to link a passport at, from whatever a listing row knows.
+ *
+ * Every public surface that names an object — the entry it is the subject of,
+ * the journal directory, a profile, the feed, the object catalog, a community
+ * page — used to link `/lineage/objects/{uuid}`, which has answered 308 since
+ * OVE-428 moved passports under their authors. A link into a redirect costs
+ * every reader a hop and tells a crawler the page lives somewhere else. The
+ * canonical is built here when the row carries the handle and the slug; the
+ * legacy path stays only for an object that has no slug yet, where it is the
+ * one address that answers.
+ */
+export function publicObjectPassportAddress(input: {
+  authorHandle: string | null | undefined;
+  publicSlug: string | null | undefined;
+  plantObjectId: string;
+}): string {
+  return input.authorHandle && input.publicSlug
+    ? publicObjectPassportPath(input.authorHandle, input.publicSlug)
+    : publicLineageObjectPath(input.plantObjectId);
+}
+
 export function publicTopicPath(slug: string): string {
   return `/topics/${encodeURIComponent(slug)}`;
 }

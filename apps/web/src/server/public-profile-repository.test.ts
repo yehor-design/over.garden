@@ -433,6 +433,7 @@ describe("public profile handle contracts", () => {
       objects: [
         {
           objectId: "00000000-0000-4000-8000-000000000201",
+          publicSlug: "balcony-lemon",
           displayName: "Balcony lemon",
           objectKind: "plant",
           catalogCanonicalName: "Citrus limon",
@@ -466,6 +467,7 @@ describe("public profile handle contracts", () => {
           publishedAt: "2026-07-10T12:00:00.000Z",
           entryScope: "object",
           objectId: "00000000-0000-4000-8000-000000000201",
+          objectPublicSlug: "balcony-lemon",
           objectDisplayName: "Balcony lemon",
           objectKind: "plant",
           spaceDisplayName: "Balcony",
@@ -495,11 +497,17 @@ describe("public profile handle contracts", () => {
     expect(page.objects[0]).toMatchObject({
       displayName: "Balcony lemon",
       publicEntryCount: 4,
+      publicPath: "/@green_thumb/objects/balcony-lemon",
       coverImageUrl: "https://media.over.garden/objects/lemon.png",
     });
     expect(page.journals[0]).toMatchObject({
       title: "New growth after moving the pot",
       publicPath: "/@green_thumb/lemon-new-growth",
+      context: {
+        kind: "object",
+        // The passport under the same author (ADR-0029 D9).
+        publicPath: "/@green_thumb/objects/balcony-lemon",
+      },
     });
     expect(JSON.stringify(page)).not.toContain(userId);
     expect(JSON.stringify(page)).not.toMatch(

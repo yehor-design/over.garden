@@ -74,6 +74,7 @@ function publicPassport(
       publicEntryCount: 2,
       firstEntryDate: new Date("2026-07-01T12:00:00.000Z"),
       latestEntryDate: new Date("2026-07-12T12:00:00.000Z"),
+      publicPath: "/@yehor/objects/balkonnyi-tomat",
       ...overrides,
     },
     author: {

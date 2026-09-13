@@ -3,6 +3,7 @@ import "server-only";
 import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type {
@@ -13,7 +14,8 @@ import type {
 import {
   legacyPublicJournalEntryPath,
   publicCatalogEvidencePath,
-  publicLineageObjectPath,
+  publicJournalEntryPath,
+  publicObjectPassportAddress,
 } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
@@ -93,6 +95,14 @@ export interface PublicObjectCatalogGroupRow {
   journalCount: number | string | bigint;
   representativeObjectId: string;
   representativeObjectName: string;
+  representativeObjectSlug: string | null;
+  /**
+   * The handle of the gardener whose entry is the group's latest — which is
+   * also the representative object's owner, since both are read from the
+   * same row of the ordered aggregate. `null` for an author with no handle,
+   * whose pages keep their legacy addresses.
+   */
+  latestAuthorHandle: string | null;
   latestEntryTitle: string;
   latestEntryPublicSlug: string;
   latestEntryDate: Date | string;
@@ -191,6 +201,19 @@ export function buildPublicObjectCatalogGroupsQuery(
       ),
       sql<string>`(array_agg(${sql.ref("plant_objects.display_name")} ${latestOrder}))[1]`.as(
         "representativeObjectName",
+      ),
+      sql<
+        string | null
+      >`(array_agg(${sql.ref("plant_objects.public_slug")} ${latestOrder}))[1]`.as(
+        "representativeObjectSlug",
+      ),
+      // A correlated scalar inside an aggregate reads the row, not the group,
+      // so the owner column need not be grouped by here — unlike the case
+      // `author-handle-sql.ts` warns about.
+      sql<
+        string | null
+      >`(array_agg(${publicAuthorHandleSql("journal_entries.owner_user_id")} ${latestOrder}))[1]`.as(
+        "latestAuthorHandle",
       ),
       sql<string>`(array_agg(${sql.ref("journal_entries.title")} ${latestOrder}))[1]`.as(
         "latestEntryTitle",
@@ -339,11 +362,19 @@ function serializePublicObjectCatalogCard(
     journalCount: Number(row.journalCount),
     representativeObject: {
       displayName: row.representativeObjectName,
-      path: publicLineageObjectPath(row.representativeObjectId),
+      path: publicObjectPassportAddress({
+        authorHandle: row.latestAuthorHandle,
+        publicSlug: row.representativeObjectSlug,
+        plantObjectId: row.representativeObjectId,
+      }),
     },
     latestJournal: {
       title: row.latestEntryTitle,
-      path: legacyPublicJournalEntryPath(row.latestEntryPublicSlug),
+      // Under the author (ADR-0029 D9); the legacy path, which 308s there,
+      // only for an author who has no handle.
+      path: row.latestAuthorHandle
+        ? publicJournalEntryPath(row.latestAuthorHandle, row.latestEntryPublicSlug)
+        : legacyPublicJournalEntryPath(row.latestEntryPublicSlug),
       entryDate: row.latestEntryDate,
     },
     mediaPublicUrl: row.mediaDerivativeKey

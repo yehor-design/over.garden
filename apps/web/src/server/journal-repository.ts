@@ -22,11 +22,12 @@ import type { Json } from "@/db/generated";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
 import { normalizePublicJournalSlug } from "@/lib/garden/public-journal-slug";
 import { assignJournalEntrySlug } from "@/server/journal-slug-repository";
+import { assignPlantObjectPublicSlug } from "@/server/plant-object-slug-repository";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import {
   legacyPublicJournalEntryPath,
   publicJournalEntryPath,
-  publicLineageObjectPath,
+  publicObjectPassportAddress,
   publicProfilePath,
   publicTopicPath,
 } from "@/lib/garden/public-paths";
@@ -522,6 +523,7 @@ interface PublicJournalEntryRootRow {
   spaceLocationVisibility: string;
   spaceCoarseRegionCode: string | null;
   plantObjectId: string | null;
+  objectPublicSlug: string | null;
   objectDisplayName: string | null;
   objectKind: string | null;
   catalogKind: string | null;
@@ -558,6 +560,7 @@ interface PublicJournalEntryTopicRow {
 
 interface PublicJournalEntryMentionedObjectRow {
   plantObjectId: string;
+  publicSlug: string | null;
   displayName: string;
   objectKind: string;
   varietyText: string | null;
@@ -1487,6 +1490,13 @@ export async function createFirstPlantEntry(
     });
 
     if (entry) {
+      // The passport's address is given the moment its first public entry
+      // exists (ADR-0029 D9); a later publish finds it already there.
+      await assignPlantObjectPublicSlug(trx, {
+        plantObjectId: plantObject.id,
+        ownerUserId: scope.userId,
+        displayName: plantObject.display_name,
+      });
       await insertAtomicPublicationMedia(trx, scope, entry.id, normalized);
       const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
         journalEntryId: entry.id,
@@ -2155,6 +2165,13 @@ export async function createPlantObjectJournalEntry(
     });
 
     if (entry) {
+      // The first public entry on an existing object gives it its address too
+      // (ADR-0029 D9); an object that already has one keeps it.
+      await assignPlantObjectPublicSlug(trx, {
+        plantObjectId: target.objectId,
+        ownerUserId: scope.userId,
+        displayName: target.objectDisplayName,
+      });
       await insertAtomicPublicationMedia(trx, scope, entry.id, normalized);
       const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
         journalEntryId: entry.id,
@@ -2849,7 +2866,13 @@ export function serializePublicJournalEntryPage(input: {
             catalogCanonicalName: root.catalogCanonicalName,
             catalogPublicSlug: root.catalogPublicSlug,
             catalogSpeciesSlug: root.catalogSpeciesSlug,
-            publicPath: publicLineageObjectPath(root.plantObjectId),
+            // Under the author, as the passport's canonical is (ADR-0029 D9);
+            // the id path only for an object that has no slug yet.
+            publicPath: publicObjectPassportAddress({
+              authorHandle: root.addressHandle,
+              publicSlug: root.objectPublicSlug,
+              plantObjectId: root.plantObjectId,
+            }),
             varietyText: root.varietyText,
             varietyState: root.varietyState as VarietyState,
             locationVisibility:
@@ -2867,7 +2890,13 @@ export function serializePublicJournalEntryPage(input: {
             catalogCanonicalName: row.catalogCanonicalName,
             catalogPublicSlug: row.catalogPublicSlug,
             catalogSpeciesSlug: row.catalogSpeciesSlug,
-            publicPath: publicLineageObjectPath(row.plantObjectId),
+            // A mentioned object lives in the entry's own space, so it shares
+            // the entry's author and the author's handle.
+            publicPath: publicObjectPassportAddress({
+              authorHandle: root.addressHandle,
+              publicSlug: row.publicSlug,
+              plantObjectId: row.plantObjectId,
+            }),
             varietyText: row.varietyText,
             varietyState: row.varietyState as VarietyState,
           })),
@@ -3824,6 +3853,7 @@ export function buildPublicJournalEntryLookupQuery(
       "spaces.location_visibility as spaceLocationVisibility",
       "spaces.coarse_region_code as spaceCoarseRegionCode",
       "plant_objects.id as plantObjectId",
+      "plant_objects.public_slug as objectPublicSlug",
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
@@ -4028,6 +4058,7 @@ export function buildPublicMentionedObjectsForEntryQuery(
     )
     .select([
       "plant_objects.id as plantObjectId",
+      "plant_objects.public_slug as publicSlug",
       "plant_objects.display_name as displayName",
       "plant_objects.object_kind as objectKind",
       "plant_objects.variety_text as varietyText",

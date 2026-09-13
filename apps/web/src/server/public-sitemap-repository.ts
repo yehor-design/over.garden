@@ -7,6 +7,7 @@ import type { Database } from "@/db/types";
 import {
   publicCommunityPath,
   publicJournalEntryPath,
+  publicObjectPassportPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import {
@@ -150,6 +151,83 @@ export async function listPublicJournalEntrySitemapUrls(
               // rule, the same as `publicMediaAltText` (OVE-432).
               caption: image.caption ?? row.title,
             })),
+          },
+        ]
+      : [],
+  );
+}
+
+/**
+ * Object passports with an address: a slug, an author with a current handle,
+ * and at least one live public entry — which is exactly when the passport is
+ * a page (`getPublicObjectPassportLifecycleBySlug` says `active`).
+ */
+function addressedPublicObjects(executor: QueryExecutor) {
+  return executor
+    .selectFrom("plant_objects")
+    .where("plant_objects.public_slug", "is not", null)
+    .where(({ exists, selectFrom }) =>
+      exists(
+        selectFrom("journal_entries")
+          .select("journal_entries.id")
+          .whereRef("journal_entries.plant_object_id", "=", "plant_objects.id")
+          .whereRef(
+            "journal_entries.owner_user_id",
+            "=",
+            "plant_objects.owner_user_id",
+          )
+          .where("journal_entries.visibility", "=", "public")
+          .where("journal_entries.lifecycle_state", "=", "active")
+          .where("journal_entries.public_gone_at", "is", null)
+          .where("journal_entries.public_slug", "is not", null)
+          .where(publicLaunchSurfacePredicates()),
+      ),
+    );
+}
+
+export async function countPublicObjectPassportsForSitemap(
+  executor: QueryExecutor = db,
+): Promise<number> {
+  const row = await addressedPublicObjects(executor)
+    .select((eb) => eb.fn.countAll<number>().as("count"))
+    .executeTakeFirst();
+  return Number(row?.count ?? 0);
+}
+
+export async function listPublicObjectPassportSitemapUrls(
+  chunkIndex: number,
+  executor: QueryExecutor = db,
+): Promise<PublicSitemapUrl[]> {
+  const rows = await addressedPublicObjects(executor)
+    .select([
+      "plant_objects.public_slug as publicSlug",
+      publicAuthorHandleSql("plant_objects.owner_user_id").as("addressHandle"),
+      // The passport changes when its entries do, so its date is the newest
+      // public entry's, not the object row's.
+      sql<Date | string | null>`(
+        select max(entries.updated_at)
+        from journal_entries as entries
+        where entries.plant_object_id = plant_objects.id
+          and entries.owner_user_id = plant_objects.owner_user_id
+          and entries.visibility = 'public'
+          and entries.lifecycle_state = 'active'
+          and entries.public_gone_at is null
+      )`.as("updatedAt"),
+      "plant_objects.updated_at as objectUpdatedAt",
+    ])
+    .orderBy("plant_objects.created_at", "asc")
+    .orderBy("plant_objects.id", "asc")
+    .limit(PUBLIC_SITEMAP_CHUNK_SIZE)
+    .offset(chunkIndex * PUBLIC_SITEMAP_CHUNK_SIZE)
+    .execute();
+
+  // The same rule as the entries chunk: no handle, no canonical, no URL.
+  return rows.flatMap((row) =>
+    row.publicSlug && row.addressHandle
+      ? [
+          {
+            url: publicObjectPassportPath(row.addressHandle, row.publicSlug),
+            lastModified: toDate(row.updatedAt ?? row.objectUpdatedAt),
           },
         ]
       : [],

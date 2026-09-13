@@ -586,6 +586,7 @@ describe("OVE-184 community repository contracts", () => {
       publishedAt: new Date(Date.UTC(2026, 6, 13, 11, 0, index)),
       ownerUserId: `00000000-0000-4000-8000-${String(900 + index).padStart(12, "0")}`,
       objectId: `00000000-0000-4000-8000-${String(1000 + index).padStart(12, "0")}`,
+      objectPublicSlug: index === 0 ? "обєкт-0" : null,
       objectDisplayName: `Об'єкт ${index}`,
       objectKind: index % 2 === 0 ? "plant" : "animal",
       authorHandle: `keeper_${index}`,
@@ -608,6 +609,10 @@ describe("OVE-184 community repository contracts", () => {
     expect(page.items).toHaveLength(12);
     expect(page.items[0]).toMatchObject({
       href: "/journal/public-observation-0",
+      object: {
+        // Under the author, as the passport's canonical is (ADR-0029 D9).
+        href: `/@keeper_0/objects/${encodeURIComponent("обєкт-0")}`,
+      },
       discussionState: "open",
       author: {
         handle: "keeper_0",

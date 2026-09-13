@@ -24,11 +24,22 @@ const mocks = vi.hoisted(() => ({
     status: "not_found",
   }),
   getPublicObjectPassportAddress: vi.fn().mockResolvedValue(null),
-  getPublicJournalEntryLifecycleLookup: vi.fn().mockResolvedValue({
+  getPublicObjectPassportLifecycleBySlug: vi.fn().mockResolvedValue({
     status: "active",
-    publicSlug: "smoke-slug",
-    addressHandle: "yehor",
+    plantObjectId: "00000000-0000-4000-8000-000000000777",
   }),
+  resolvePlantObjectAddress: vi.fn().mockResolvedValue(null),
+  hasCatalogRegisterHub: vi.fn().mockResolvedValue(true),
+  // Answers for the slug it was asked about, so an entry at its own address
+  // resolves to itself; a fixed slug would 308 every `/@yehor/{slug}` to one
+  // address now that the entry block is reachable for them.
+  getPublicJournalEntryLifecycleLookup: vi
+    .fn()
+    .mockImplementation(async (slug: string) => ({
+      status: "active",
+      publicSlug: slug,
+      addressHandle: "yehor",
+    })),
   getPublicProfileLifecycleLookup: vi.fn().mockResolvedValue({
     status: "active",
   }),
@@ -56,6 +67,13 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/server/public-object-passport-repository", () => ({
   getPublicObjectPassportLookup: mocks.getPublicObjectPassportLookup,
   getPublicObjectPassportAddress: mocks.getPublicObjectPassportAddress,
+  getPublicObjectPassportLifecycleBySlug:
+    mocks.getPublicObjectPassportLifecycleBySlug,
+  resolvePlantObjectAddress: mocks.resolvePlantObjectAddress,
+}));
+
+vi.mock("@/server/public-catalog-register-repository", () => ({
+  hasCatalogRegisterHub: mocks.hasCatalogRegisterHub,
 }));
 
 vi.mock("@/server/journal-repository", () => ({
@@ -837,7 +855,7 @@ describe("app route cache guardrail", () => {
     // country header, which is what this test is about.
     expect(journal.status).toBe(308);
     expect(journal.headers.get("Location")).toBe(
-      "https://over.garden/@yehor/smoke-slug",
+      "https://over.garden/@yehor/missing-entry",
     );
     expect(mocks.getPublicCommunityLifecycleLookup).toHaveBeenCalled();
     expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalled();
@@ -1520,5 +1538,230 @@ describe("organism addresses (ADR-0026 D8)", () => {
       const response = await responseFor("/journals?page=2", document);
       expect(response.status).toBe(200);
     });
+  });
+});
+
+/**
+ * The rewrite of an unprefixed `/@` address used to return before the
+ * lifecycle blocks, so every entry and passport under `/@` was rewritten past
+ * its own 404 and answered 200 with the not-found page inside — found on
+ * production by asking for an entry that does not exist. The rewrite is the
+ * last thing the proxy does now, and these pin what each block answers.
+ */
+describe("author-scoped addresses reach their lifecycle blocks", () => {
+  const document = { accept: "text/html", "sec-fetch-dest": "document" };
+
+  it("still rewrites an entry that exists into the [locale] tree", async () => {
+    const response = await responseFor(
+      `/@yehor/${encodeURIComponent("полив-без-календарної-пастки")}`,
+      document,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-rewrite")).toBe(
+      `https://over.garden/uk/@yehor/${encodeURIComponent("полив-без-календарної-пастки")}`,
+    );
+    expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith(
+      "полив-без-календарної-пастки",
+    );
+  });
+
+  it("404s an entry that does not exist under its author", async () => {
+    mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    const response = await responseFor("/@yehor/definitely-not-an-entry", document);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(await response.text()).toContain("Запис не знайдено");
+  });
+
+  it("308s an entry asked for under a handle that is not its author's", async () => {
+    mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+      status: "active",
+      publicSlug: "field-note",
+      addressHandle: "yehor",
+    });
+    const response = await responseFor("/@someone_else/field-note", document);
+    expect(response.status).toBe(308);
+    expect(response.headers.get("Location")).toBe(
+      "https://over.garden/@yehor/field-note",
+    );
+  });
+
+  it("still rewrites a passport that exists, after one bounded lookup", async () => {
+    mocks.getPublicObjectPassportLifecycleBySlug.mockClear();
+    mocks.resolvePlantObjectAddress.mockClear();
+    const response = await responseFor(
+      `/@yehor/objects/${encodeURIComponent("томат")}`,
+      document,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-rewrite")).toBe(
+      `https://over.garden/uk/@yehor/objects/${encodeURIComponent("томат")}`,
+    );
+    expect(mocks.getPublicObjectPassportLifecycleBySlug).toHaveBeenCalledWith(
+      "yehor",
+      "томат",
+    );
+    expect(mocks.resolvePlantObjectAddress).not.toHaveBeenCalled();
+  });
+
+  it("404s a passport that does not exist, reading the history first", async () => {
+    mocks.getPublicObjectPassportLifecycleBySlug.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    mocks.resolvePlantObjectAddress.mockClear();
+    const response = await responseFor("/@yehor/objects/no-such-object", document);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(await response.text()).toContain("Паспорт не знайдено");
+    expect(mocks.resolvePlantObjectAddress).toHaveBeenCalledWith(
+      "yehor",
+      "no-such-object",
+    );
+  });
+
+  it("308s a passport address the object used to have", async () => {
+    mocks.getPublicObjectPassportLifecycleBySlug.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    mocks.resolvePlantObjectAddress.mockResolvedValueOnce({
+      handle: "yehor",
+      slug: "томат-на-балконі",
+    });
+    const response = await responseFor(
+      "/@yehor/objects/old-tomato?token=opaque&engagement=liked",
+      document,
+    );
+    expect(response.status).toBe(308);
+    // The query goes through the same route policy the rewrite applies, so
+    // a token never rides a redirect and the destination sees only what its
+    // own page would have accepted.
+    expect(response.headers.get("Location")).toBe(
+      `https://over.garden/@yehor/objects/${encodeURIComponent("томат-на-балконі")}`,
+    );
+  });
+
+  it("410s a passport whose public entries are all gone", async () => {
+    mocks.getPublicObjectPassportLifecycleBySlug.mockResolvedValueOnce({
+      status: "gone",
+      plantObjectId: "00000000-0000-4000-8000-000000000778",
+    });
+    const response = await responseFor("/@yehor/objects/removed", document);
+    expect(response.status).toBe(410);
+    expect(await response.text()).toContain("Паспорт видалено");
+  });
+
+  it("lets a passport through when the lookup itself fails", async () => {
+    mocks.getPublicObjectPassportLifecycleBySlug.mockRejectedValueOnce(
+      new Error("database away"),
+    );
+    const response = await responseFor("/@yehor/objects/anything", document);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-rewrite")).not.toBeNull();
+  });
+
+  it("does not look a profile up twice, and does not touch the entry lookups for it", async () => {
+    mocks.getPublicProfileLifecycleLookup.mockClear();
+    mocks.getPublicJournalEntryLifecycleLookup.mockClear();
+    mocks.getPublicObjectPassportLifecycleBySlug.mockClear();
+    const response = await responseFor("/@yehor", document);
+    expect(response.status).toBe(200);
+    expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledTimes(1);
+    expect(mocks.getPublicJournalEntryLifecycleLookup).not.toHaveBeenCalled();
+    expect(mocks.getPublicObjectPassportLifecycleBySlug).not.toHaveBeenCalled();
+  });
+
+  it("reads nothing for a client-side navigation to an entry", async () => {
+    mocks.getPublicJournalEntryLifecycleLookup.mockClear();
+    const rsc = await responseFor("/@yehor/field-note", {
+      accept: "text/x-component",
+      rsc: "1",
+    });
+    expect(rsc.status).toBe(200);
+    expect(rsc.headers.get("x-middleware-rewrite")).not.toBeNull();
+    expect(mocks.getPublicJournalEntryLifecycleLookup).not.toHaveBeenCalled();
+  });
+});
+
+describe("register hubs (OVE-433)", () => {
+  const document = { accept: "text/html", "sec-fetch-dest": "document" };
+
+  it("passes a hub that exists through, in every route family", async () => {
+    mocks.hasCatalogRegisterHub.mockClear();
+    for (const path of [
+      "/species/solanum-lycopersicum/register",
+      "/bg/species/solanum-lycopersicum/register",
+    ]) {
+      const response = await responseFor(path, document);
+      expect(response.status, path).toBe(200);
+    }
+    expect(mocks.hasCatalogRegisterHub).toHaveBeenCalledTimes(2);
+    expect(mocks.hasCatalogRegisterHub).toHaveBeenCalledWith(
+      "solanum-lycopersicum",
+    );
+  });
+
+  it("404s a hub for a species with no registered forms, and for no species at all", async () => {
+    mocks.hasCatalogRegisterHub.mockResolvedValueOnce(false);
+    const bare = await responseFor("/species/apis-mellifera/register", document);
+    expect(bare.status).toBe(404);
+    expect(bare.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(await bare.text()).toContain("Організм не знайдено");
+
+    mocks.hasCatalogRegisterHub.mockResolvedValueOnce(false);
+    mocks.resolvePublicCatalogAddress.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    const missing = await responseFor(
+      "/ru/species/no-such-species/register",
+      document,
+    );
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get("Content-Language")).toBe("ru");
+    expect(await missing.text()).toContain("Организм не найден");
+  });
+
+  it("308s a hub under a slug the species used to have, keeping the prefix", async () => {
+    mocks.hasCatalogRegisterHub.mockResolvedValueOnce(false);
+    mocks.resolvePublicCatalogAddress.mockResolvedValueOnce({
+      status: "redirect",
+      catalogItemId: "11111111-1111-4111-8111-111111111111",
+      canonicalPath: "/species/solanum-lycopersicum",
+    });
+    mocks.hasCatalogRegisterHub.mockResolvedValueOnce(true);
+    const response = await responseFor(
+      "/bg/species/lycopersicon-esculentum/register",
+      document,
+    );
+    expect(response.status).toBe(308);
+    expect(response.headers.get("Location")).toBe(
+      "https://over.garden/bg/species/solanum-lycopersicum/register",
+    );
+  });
+
+  it("404s rather than 308s when the species the slug moved to has no hub either", async () => {
+    mocks.hasCatalogRegisterHub.mockResolvedValueOnce(false);
+    mocks.resolvePublicCatalogAddress.mockResolvedValueOnce({
+      status: "redirect",
+      catalogItemId: "11111111-1111-4111-8111-111111111111",
+      canonicalPath: "/species/solanum-lycopersicum",
+    });
+    mocks.hasCatalogRegisterHub.mockResolvedValueOnce(false);
+    const response = await responseFor(
+      "/species/lycopersicon-esculentum/register",
+      document,
+    );
+    expect(response.status).toBe(404);
+  });
+
+  it("lets a hub through when the existence read fails", async () => {
+    mocks.hasCatalogRegisterHub.mockRejectedValueOnce(new Error("database away"));
+    const response = await responseFor(
+      "/species/solanum-lycopersicum/register",
+      document,
+    );
+    expect(response.status).toBe(200);
   });
 });

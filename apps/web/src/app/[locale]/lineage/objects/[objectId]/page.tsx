@@ -31,9 +31,7 @@ import {
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   DEFAULT_PUBLIC_LOCALE,
-  PUBLIC_LOCALES,
   isPublicLocale,
-  localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
@@ -98,7 +96,7 @@ export async function generateMetadata({
       const page = await getCachedPublicObjectPassportPage(objectId, locale);
       if (!page) throw new Error("Public lineage object unavailable.");
       return {
-        source: buildLineageObjectDiscoverySource(page, locale),
+        source: buildLineageObjectDiscoverySource(page),
         payload: page,
       };
     },
@@ -271,7 +269,7 @@ function buildLineageObjectSurface(
   locale: PublicLocale,
   page: PublicObjectPassportPage,
   discovery: PublicSurfaceDiscoveryResult = resolvePublicSurfaceDiscoveryForRequest(
-    buildLineageObjectDiscoverySource(page, locale),
+    buildLineageObjectDiscoverySource(page),
   ),
 ) {
   const copy = getPublicSurfaceCopy(locale);
@@ -292,7 +290,6 @@ function buildLineageObjectSurface(
 
 function buildLineageObjectDiscoverySource(
   page: PublicObjectPassportPage,
-  locale: PublicLocale,
 ): PublicSurfaceDiscoverySource {
   const journals = [...page.journalPreview, ...page.journalContinuation];
   return {
@@ -309,14 +306,16 @@ function buildLineageObjectDiscoverySource(
       page.object.plantObjectId,
       ...journals.map((entry) => entry.id),
     ],
-    // The passport answers at three addresses now that the prefixed half
-    // exists, each self-canonical in its own route family (ADR-0029 D10), and
-    // each naming the other two in `hreflang` (D3).
-    canonicalPath: localizedPath(
-      locale,
-      publicLineageObjectPath(page.object.plantObjectId),
-    ),
-    equivalentLocales: [...PUBLIC_LOCALES],
+    // A passport is never translated, so it has one address — under its
+    // author, with no locale prefix (ADR-0029 D9, D10) — and no `hreflang`
+    // (OVE-423), exactly as an entry has. `publicPath` is that address, built
+    // where the handle and the slug are known; every other spelling of it,
+    // `/lineage/objects/{uuid}` and the prefixed ones included, 308s to it in
+    // the proxy. The canonical used to name the id path, which is itself a
+    // redirect — a canonical that redirects is a duplicate signal a crawler
+    // discards.
+    canonicalPath: page.object.publicPath,
+    equivalentLocales: [],
   };
 }
 

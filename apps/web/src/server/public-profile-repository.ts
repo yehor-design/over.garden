@@ -16,7 +16,7 @@ import type {
 } from "@/db/schema";
 import {
   publicJournalEntryPath,
-  publicLineageObjectPath,
+  publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import {
@@ -217,6 +217,7 @@ interface PublicProfileCountRow {
 
 interface PublicProfileObjectRow {
   objectId: string;
+  publicSlug: string | null;
   displayName: string;
   objectKind: string;
   catalogCanonicalName: string | null;
@@ -236,6 +237,7 @@ interface PublicProfileJournalRow {
   publishedAt: Date | string | null;
   entryScope: string;
   objectId: string | null;
+  objectPublicSlug: string | null;
   objectDisplayName: string | null;
   objectKind: string | null;
   spaceDisplayName: string;
@@ -694,7 +696,11 @@ export function serializePublicProfileEvidencePage(input: {
           identityState: identity.state,
           latestEntryDate: row.latestEntryDate,
           publicEntryCount: numericCount(row.publicEntryCount),
-          publicPath: publicLineageObjectPath(row.objectId),
+          publicPath: publicObjectPassportAddress({
+            authorHandle: input.profile.handle,
+            publicSlug: row.publicSlug,
+            plantObjectId: row.objectId,
+          }),
           coverImageUrl: publicMediaUrl(cover?.derivativeKey),
           coverImageAlt: cover?.altText?.trim() || row.displayName,
           coverFocalX: cover?.derivativeKey
@@ -743,7 +749,11 @@ export function serializePublicProfileEvidencePage(input: {
             ? {
                 kind: "object" as const,
                 label: row.objectDisplayName as string,
-                publicPath: publicLineageObjectPath(row.objectId as string),
+                publicPath: publicObjectPassportAddress({
+                  authorHandle: input.profile.handle,
+                  publicSlug: row.objectPublicSlug,
+                  plantObjectId: row.objectId as string,
+                }),
                 objectKind: objectKind as PlantObjectKind,
               }
             : {
@@ -1080,6 +1090,7 @@ export function buildPublicProfileObjectEvidenceQuery(
     )
     .select([
       "plant_objects.id as objectId",
+      "plant_objects.public_slug as publicSlug",
       "plant_objects.display_name as displayName",
       "plant_objects.object_kind as objectKind",
       "catalog_items.canonical_name as catalogCanonicalName",
@@ -1096,6 +1107,7 @@ export function buildPublicProfileObjectEvidenceQuery(
     .where("plant_objects.owner_user_id", "=", userId)
     .groupBy([
       "plant_objects.id",
+      "plant_objects.public_slug",
       "plant_objects.display_name",
       "plant_objects.object_kind",
       "catalog_items.canonical_name",
@@ -1139,6 +1151,7 @@ export function buildPublicProfileJournalEvidenceQuery(
       "journal_entries.published_at as publishedAt",
       "journal_entries.entry_scope as entryScope",
       "plant_objects.id as objectId",
+      "plant_objects.public_slug as objectPublicSlug",
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
       "spaces.display_name as spaceDisplayName",

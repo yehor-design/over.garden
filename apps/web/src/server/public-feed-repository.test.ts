@@ -52,6 +52,7 @@ const firstRow = {
   publishedAt: "2026-07-10T12:00:00.000Z",
   publicSlug: "morning-check",
   objectId: "00000000-0000-4000-8000-000000000101",
+  objectPublicSlug: "томат-черрі",
   objectDisplayName: "Томат Черрі",
   objectKind: "plant",
   objectLocationVisibility: "region",
@@ -72,6 +73,7 @@ const secondRow = {
   publishedAt: "2026-07-09T12:00:00.000Z",
   publicSlug: "week-check",
   objectId: "00000000-0000-4000-8000-000000000102",
+  objectPublicSlug: null,
   objectDisplayName: "Сім'я Карніка",
   objectKind: "animal",
   objectLocationVisibility: "hidden",
@@ -319,7 +321,7 @@ describe("public feed repository", () => {
       object: {
         id: firstRow.objectId,
         kind: "plant",
-        publicPath: `/lineage/objects/${firstRow.objectId}`,
+        publicPath: `/@${firstRow.addressHandle}/objects/${encodeURIComponent("томат-черрі")}`,
         safeRegionCode: "UA-30",
       },
       author: {
