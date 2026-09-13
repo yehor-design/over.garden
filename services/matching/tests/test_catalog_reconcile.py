@@ -24,7 +24,7 @@ from app.catalog_reconcile import (
     transliteration_keys,
     with_parsed_names,
 )
-from app.gnparser import GnParserUnavailable, gnparser_path
+from app.gnparser import GnParserUnavailable, ParsedName, gnparser_path
 
 try:
     gnparser_path()
@@ -316,15 +316,90 @@ class TestLabelClusters:
 
         assert outcome.proposal is not None
         assert outcome.proposal.target_id == "tomato"
-        assert outcome.proposal.reasons == ("label_scientific_name",)
+        assert outcome.proposal.reasons == ("label_scientific_name:stored",)
         assert outcome.proposal.confidence == pytest.approx(0.97)
         assert outcome.conflicts == ()
 
     def test_the_accepted_name_with_its_authorship_is_the_same_name(self):
-        # Without gnparser the parsed canonical is absent and the whole
-        # canonical name is one key; the bare accepted row is the other.
+        # The canonical name as stored is a key of its own, authorship and all.
         index = TaxonNameIndex.build([self.tomato()])
         assert climb_label_ladder(self.cluster("Solanum lycopersicum L."), [], index).proposal is not None
+
+    def parsed(self, verbatim: str, canonical: str, authorship: str = "") -> ParsedName:
+        return ParsedName(
+            verbatim=verbatim,
+            parsed=True,
+            canonical_simple=canonical,
+            canonical_full=canonical,
+            authorship=authorship,
+            rank=None,
+            cardinality=len(canonical.split()),
+            quality=1,
+        )
+
+    def test_a_bare_canonical_with_authorship_stripped_reaches_the_taxon_through_the_parser(self):
+        # No bare accepted row: only the parser knows `Malus domestica` is the
+        # name under `Malus domestica Borkh.`.
+        apple = taxon(
+            "apple",
+            "Malus domestica Borkh.",
+            "Plantae",
+            parsed=self.parsed("Malus domestica Borkh.", "Malus domestica", "Borkh."),
+        )
+        index = TaxonNameIndex.build([apple])
+
+        outcome = climb_label_ladder(self.cluster("Malus domestica"), [], index)
+
+        assert outcome.proposal is not None
+        assert outcome.proposal.target_id == "apple"
+        assert outcome.proposal.reasons == ("label_scientific_name:parsed",)
+
+    def test_a_qualifier_the_parser_reads_as_an_author_does_not_hide_the_plain_name(self):
+        # Production, 2026-09-13: gnparser reads `(Africanized)` as an
+        # authorship, so by the parsed canonical two live taxa carry
+        # `Apis mellifera`. The stored name is asked first and names one.
+        bee = taxon(
+            "bee",
+            "Apis mellifera",
+            "Animalia",
+            names=(NodeName("Apis mellifera", "scientific_accepted", "la"),),
+            parsed=self.parsed("Apis mellifera", "Apis mellifera"),
+        )
+        africanized = taxon(
+            "africanized",
+            "Apis mellifera (Africanized)",
+            "Animalia",
+            names=(NodeName("Apis mellifera (Africanized)", "scientific_accepted", "la"),),
+            parsed=self.parsed("Apis mellifera (Africanized)", "Apis mellifera", "(Africanized)"),
+        )
+        index = TaxonNameIndex.build([africanized, bee])
+
+        hive = climb_label_ladder(self.cluster("Apis mellifera", object_kind="animal"), [], index)
+
+        assert hive.proposal is not None
+        assert hive.proposal.target_id == "bee"
+        assert hive.proposal.reasons == ("label_scientific_name:stored",)
+        # The qualified name reaches its own node, by the stored spelling.
+        qualified = climb_label_ladder(
+            self.cluster("Apis mellifera (Africanized)", object_kind="animal"), [], index
+        )
+        assert qualified.proposal is not None and qualified.proposal.target_id == "africanized"
+
+    @needs_gnparser
+    def test_the_real_parser_reads_the_qualifier_as_an_author(self):
+        bee = taxon("bee", "Apis mellifera", "Animalia")
+        africanized = taxon("africanized", "Apis mellifera (Africanized)", "Animalia")
+        notes: list[str] = []
+        nodes = with_parsed_names([bee, africanized], notes)
+        assert notes == []
+        assert nodes[1].parsed is not None and nodes[1].parsed.canonical_simple == "Apis mellifera"
+        index = TaxonNameIndex.build(nodes)
+        assert [node.id for node in index.parsed.get("apis mellifera", ())] == ["africanized"]
+
+        hive = climb_label_ladder(self.cluster("Apis mellifera", object_kind="animal"), [], index)
+
+        assert hive.proposal is not None and hive.proposal.target_id == "bee"
+        assert hive.proposal.reasons == ("label_scientific_name:stored",)
 
     def test_a_vernacular_name_is_not_a_scientific_name(self):
         # `Томат` names the tomato in Ukrainian and in a dozen other places;
@@ -396,7 +471,8 @@ class TestLabelClusters:
         # A cultivar named like a species (a fixture, not a source's name)
         # must not be found through the taxon index.
         odd = form("odd", "Solanum lycopersicum", species_id=None)
-        assert TaxonNameIndex.build([odd]).accepted == {}
+        index = TaxonNameIndex.build([odd])
+        assert index.stored == {} and index.parsed == {} and index.synonyms == {}
 
     def test_co_usage_raises_a_species_link_too(self):
         gardeners = frozenset({"g1"})
@@ -407,7 +483,7 @@ class TestLabelClusters:
         )
 
         assert outcome.proposal is not None
-        assert outcome.proposal.reasons == ("label_scientific_name", "co_usage:1")
+        assert outcome.proposal.reasons == ("label_scientific_name:stored", "co_usage:1")
         assert outcome.proposal.confidence == pytest.approx(0.98)
 
 

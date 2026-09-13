@@ -656,6 +656,12 @@ def test_the_labels_scope_links_a_scientific_name_to_its_taxon_and_the_card_lear
     seed_name(conn, tomato, "Томат", name_type="vernacular", locale="uk")
     bee = seed_item(conn, "Apis mellifera", kingdom="Animalia", slug="ove435-apis-mellifera")
     seed_name(conn, bee, "Apis mellifera")
+    # Production's own trap: gnparser reads the qualifier as an authorship,
+    # so the parsed canonical of this node is `Apis mellifera` too.
+    africanized = seed_item(
+        conn, "Apis mellifera (Africanized)", kingdom="Animalia", slug="ove435-apis-mellifera-africanized"
+    )
+    seed_name(conn, africanized, "Apis mellifera (Africanized)")
     # The butterfly genus shares the tomato's kingdom-crossing trap: a plant
     # object labelled with an animal's name reaches nothing.
     seed_item(conn, "Pieris rapae", kingdom="Animalia", slug="ove435-pieris-rapae")
@@ -718,9 +724,9 @@ def test_the_labels_scope_links_a_scientific_name_to_its_taxon_and_the_card_lear
         """
     ).fetchall()
     assert [(row["subject_label"], row["reasons"], row["state"]) for row in items] == [
-        ("Apis mellifera", ["label_scientific_name"], "auto_applied"),
+        ("Apis mellifera", ["label_scientific_name:stored"], "auto_applied"),
         ("Lycopersicon esculentum", ["label_scientific_synonym"], "open"),
-        ("Solanum lycopersicum", ["label_scientific_name"], "auto_applied"),
+        ("Solanum lycopersicum", ["label_scientific_name:stored"], "auto_applied"),
     ]
     actions = conn.execute(
         "select automatic, payload->>'rule_code' as rule_code from catalog_curation_actions"
