@@ -22,13 +22,19 @@ Rungs, in order, each yielding ``(confidence, reasons)``:
    (``denomination_equal``, ``denomination_transliteration``);
 6. co-usage by gardeners as a supporting signal only (``co_usage:{n}``);
 7. a gardener label that *is* a scientific name — equal after the shared
-   normalizer to the accepted name of exactly one active taxon the object's
-   kind can be (``label_scientific_name``), or to a synonym of exactly one
-   (``label_scientific_synonym``). The label ladder only: a form is reached by
-   its denomination (rung 5), a taxon by its name (this rung). Until OVE-435
-   nothing reached a taxon from a label, so an object whose own name was
-   exactly ``Solanum lycopersicum`` stayed a free-text label beside the card
-   for Solanum lycopersicum — every public object on production sat that way.
+   normalizer to an accepted name of exactly one active taxon the object's
+   kind can be (``label_scientific_name:stored`` when it is the name as a
+   source stored it, ``label_scientific_name:parsed`` when it is the parser's
+   canonical with the authorship stripped), or to a synonym of exactly one
+   (``label_scientific_synonym``). Stored before parsed, because gnparser
+   reads the qualifier in ``Apis mellifera (Africanized)`` as an authorship:
+   by the parsed canonical two live taxa carry ``Apis mellifera``, by the
+   stored name exactly one does, and that one is what the gardener typed.
+   The label ladder only: a form is reached by its denomination (rung 5), a
+   taxon by its name (this rung). Until OVE-435 nothing reached a taxon from
+   a label, so an object whose own name was exactly ``Solanum lycopersicum``
+   stayed a free-text label beside the card for Solanum lycopersicum — every
+   public object on production sat that way.
 
 A kingdom mismatch on an otherwise exact name records
 ``homonym_kingdom_conflict`` and never proposes.
@@ -428,49 +434,68 @@ class TaxonNameIndex:
 
     Built once per run: a label ladder over twenty thousand clusters cannot
     walk a hundred thousand nodes per cluster. Keys are the shared normalizer's
-    spelling; the accepted names are the parsed canonical (authorship stripped
-    by gnparser, or the whole canonical name where it is unavailable) and every
-    ``scientific_accepted`` row, the synonyms every ``scientific_synonym`` row
-    that is not also an accepted name of the same node.
+    spelling. Three maps, asked in this order:
+
+    * ``stored`` — an accepted name as a source stored it: the canonical name
+      and every ``scientific_accepted`` row;
+    * ``parsed`` — the parser's canonical with the authorship stripped, where
+      gnparser parsed the canonical name at all;
+    * ``synonyms`` — every ``scientific_synonym`` row that is not also an
+      accepted name of the same node.
+
+    Stored before parsed is what production taught on 2026-09-13: gnparser
+    reads the qualifier in ``Apis mellifera (Africanized)`` as an authorship,
+    so by the parsed canonical two live taxa carried ``Apis mellifera`` and
+    the rung, seeing two, proposed nothing for the two bee colonies. By the
+    stored name exactly one taxon carries it, and that one is what the
+    gardener typed.
     """
 
-    accepted: Mapping[str, tuple[Node, ...]]
+    stored: Mapping[str, tuple[Node, ...]]
+    parsed: Mapping[str, tuple[Node, ...]]
     synonyms: Mapping[str, tuple[Node, ...]]
     by_id: Mapping[str, Node]
 
     @classmethod
     def build(cls, nodes: Iterable[Node]) -> "TaxonNameIndex":
-        accepted: dict[str, list[Node]] = defaultdict(list)
+        stored: dict[str, list[Node]] = defaultdict(list)
+        parsed: dict[str, list[Node]] = defaultdict(list)
         synonyms: dict[str, list[Node]] = defaultdict(list)
         by_id: dict[str, Node] = {}
         for node in nodes:
             if node.node_kind != "taxon":
                 continue
             by_id[node.id] = node
-            accepted_keys = {normalize_name(_canonical_simple(node))}
-            accepted_keys.update(
+            stored_keys = {normalize_name(node.canonical_name)}
+            stored_keys.update(
                 normalize_name(name.display_name)
                 for name in node.names
                 if name.name_type in ACCEPTED_NAME_TYPES
             )
+            parsed_keys: set[str] = set()
+            if node.parsed is not None and node.parsed.parsed and node.parsed.canonical_simple:
+                parsed_keys.add(normalize_name(node.parsed.canonical_simple))
             synonym_keys = {
                 normalize_name(name.display_name)
                 for name in node.names
                 if name.name_type in SYNONYM_NAME_TYPES
             }
-            for key in accepted_keys - {""}:
-                accepted[key].append(node)
-            for key in synonym_keys - accepted_keys - {""}:
+            for key in stored_keys - {""}:
+                stored[key].append(node)
+            for key in parsed_keys - stored_keys - {""}:
+                parsed[key].append(node)
+            for key in synonym_keys - stored_keys - parsed_keys - {""}:
                 synonyms[key].append(node)
         return cls(
-            accepted={key: tuple(value) for key, value in accepted.items()},
+            stored={key: tuple(value) for key, value in stored.items()},
+            parsed={key: tuple(value) for key, value in parsed.items()},
             synonyms={key: tuple(value) for key, value in synonyms.items()},
             by_id=by_id,
         )
 
     @classmethod
     def empty(cls) -> "TaxonNameIndex":
-        return cls(accepted={}, synonyms={}, by_id={})
+        return cls(stored={}, parsed={}, synonyms={}, by_id={})
 
 
 def _kingdom_fits_object_kind(node: Node, object_kind: str) -> bool:
@@ -485,19 +510,23 @@ def rung_label_scientific_name(
 ) -> Proposal | None:
     """Rung 7: the label is a scientific name, and exactly one live taxon carries it.
 
-    The accepted name is asked first and decides alone: two live taxa under
-    one accepted name are the duplicates scope's question, not the label's,
-    so the rung proposes nothing rather than guessing between them. A synonym
-    is asked only when no accepted name matched.
+    Each tier decides alone: a name carried by two live taxa in that tier is
+    the duplicates scope's question, not the label's, so the rung proposes
+    nothing rather than guessing between them and does not fall through. A
+    later tier is asked only when the earlier one matched nothing at all. The
+    reason records the tier that answered (``label_scientific_name:stored``,
+    ``label_scientific_name:parsed``); the rule code is the part before the
+    colon, as for every other rung.
     """
     label = normalize_name(cluster.label)
     if not label:
         return None
-    ladder = (
-        (index.accepted, RULE_LABEL_SCIENTIFIC_NAME),
-        (index.synonyms, RULE_LABEL_SCIENTIFIC_SYNONYM),
+    tiers = (
+        (index.stored, RULE_LABEL_SCIENTIFIC_NAME, "stored"),
+        (index.parsed, RULE_LABEL_SCIENTIFIC_NAME, "parsed"),
+        (index.synonyms, RULE_LABEL_SCIENTIFIC_SYNONYM, None),
     )
-    for names, rule in ladder:
+    for names, rule, tier in tiers:
         candidates = names.get(label, ())
         if not candidates:
             continue
@@ -508,7 +537,8 @@ def rung_label_scientific_name(
             else:
                 conflicts.append(f"{REASON_HOMONYM_KINGDOM_CONFLICT}:{candidate.id}")
         if len(compatible) == 1:
-            return Proposal(compatible[0].id, CONFIDENCE[rule], (rule,))
+            reason = f"{rule}:{tier}" if tier else rule
+            return Proposal(compatible[0].id, CONFIDENCE[rule], (reason,))
         if compatible:
             return None
     return None

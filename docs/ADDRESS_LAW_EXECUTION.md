@@ -879,11 +879,52 @@ links all four, sets `first_hand_content_at` on both cards, writes both
 `catalog_card` intents, queues the synonym for the owner, records the
 kingdom conflict, and has nothing to say on a second run.
 
-**Acceptance (production).** The four public objects have a `catalog_item_id`;
-a live entry's JSON-LD carries `about` with the card's permalink `@id`, and the
-card's JSON-LD carries `subjectOf` back at the entry's `@id` — both pages
-fetched on production and quoted below once the worker release with the rung
-is deployed and the labels run has been enqueued.
+**Run on production, 2026-09-13.** Worker release `04cfa8e4` (digest
+`sha256:7a2388b0…`) installed, migrated and deployed on the droplet through the
+release script; queue-health smoke `ready` against that commit and digest;
+`scripts/enqueue-catalog-reconcile.ts --scope labels` enqueued job
+`95315aa7-…`, claimed within a second and done in 33 s. It wrote one
+`label_link` item — `Solanum lycopersicum` → the tomato card, `0.9700`,
+`label_scientific_name`, `auto_applied`, impact 15 — and one automatic `link`
+action whose inverse names both tomato objects. Both are `selected` on
+`0a512046-…`; the card's `first_hand_content_at` became the newest entry's
+`published_at` (2026-09-01) and its `catalog_card` intent is pending for the
+daily drain.
+
+**What production taught within the hour: the bee colonies stayed
+free-text.** The graph holds twenty-two active `Apis mellifera …` taxa from
+the backbone ingest, among them `Apis mellifera (Africanized)`. gnparser reads
+`(Africanized)` as an *authorship* — canonical `Apis mellifera`, quality 1, no
+warning — so by the parsed canonical two live taxa carried the bee's name and
+the rung, seeing two, proposed nothing. The disposable-database rehearsal
+could not see it: its fixture had one bee. The rung now asks three tiers in
+order and each decides alone: the accepted name *as a source stored it* (the
+canonical name and every `scientific_accepted` row; reason
+`label_scientific_name:stored`), then the parser's canonical with the
+authorship stripped (`label_scientific_name:parsed`), then a synonym. By the
+stored name exactly one taxon carries `Apis mellifera`, and that one is what
+the gardener typed; the qualified node still reaches itself by its own stored
+spelling. The fixture now carries the Africanized sibling, and a unit test
+runs the real parser over both names.
+
+**Proof, entry → card → entry (production, 2026-09-13, tomato half).**
+`/@yehor/полив-без-календарної-пастки` answers 200, `index, follow`, and its
+`BlogPosting` carries:
+
+```
+"about": {"@type": "Taxon",
+          "@id": "https://over.garden/id/0a512046-b52d-46d8-9f67-e785895b1806",
+          "name": "Solanum lycopersicum L.",
+          "url": "https://over.garden/species/solanum-lycopersicum"}
+```
+
+`/species/solanum-lycopersicum` answers 200 and — for the first time —
+`index, follow`; its `Taxon` node is
+`"@id": "https://over.garden/id/0a512046-b52d-46d8-9f67-e785895b1806"` and its
+`subjectOf` lists nine `Article` nodes, among them
+`"@id": "https://over.garden/@yehor/полив-без-календарної-пастки#article"` —
+the entry's own article `@id`. The traversal closes in both directions. The
+bee half follows the deploy of the refined rung, below.
 
 ---
 
