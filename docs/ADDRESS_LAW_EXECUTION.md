@@ -923,8 +923,37 @@ runs the real parser over both names.
 `"@id": "https://over.garden/id/0a512046-b52d-46d8-9f67-e785895b1806"` and its
 `subjectOf` lists nine `Article` nodes, among them
 `"@id": "https://over.garden/@yehor/полив-без-календарної-пастки#article"` —
-the entry's own article `@id`. The traversal closes in both directions. The
-bee half follows the deploy of the refined rung, below.
+the entry's own article `@id`. The traversal closes in both directions.
+
+**Second run, 2026-09-13.** Worker release `93d34b92` (digest
+`sha256:e32a27b2…`, the refined rung) installed and deployed the same way;
+queue-health smoke `ready` against it. The same enqueue command re-armed job
+`95315aa7-…` (the idempotency key names the run, and a done row is asked to
+run again); attempt 2 was done in 33 s and wrote the second `label_link` item
+— `Apis mellifera` → `94a18629-…`, `0.9700`, `label_scientific_name:stored`,
+`auto_applied`, impact 8 — and the second automatic `link` action, whose
+inverse names both bee colonies. Both are `selected`; the bee card's
+`first_hand_content_at` became its newest entry's `published_at`
+(2026-07-29). Nothing was written by hand: two queue items, two actions, four
+objects, all through `catalog_apply_queue_item`.
+
+**Proof, bee half (production, 2026-09-13, about thirty-five minutes after
+the link, no manual revalidation).** `/@yehor/що-записувати-після-огляду-вулика`
+answers 200, `index, follow`, and its `BlogPosting` carries
+`"about": {"@id": "https://over.garden/id/94a18629-afe1-4b93-8b67-57cb272e69ef",
+"url": "https://over.garden/species/apis-mellifera"}`.
+`/species/apis-mellifera` — `noindex, nofollow` with no graph at all an hour
+earlier — answers 200, `index, follow`; its `Taxon` node is
+`"@id": "https://over.garden/id/94a18629-afe1-4b93-8b67-57cb272e69ef"` and its
+`subjectOf` lists both bee entries, among them
+`"@id": "https://over.garden/@yehor/що-записувати-після-огляду-вулика#article"`.
+Both cards left `noindex` the moment a gardener's entry reached them
+(ADR-0026 D9), by the product's own path.
+
+**Acceptance.** All four public objects carry a `catalog_item_id`; a live
+entry's JSON-LD carries `about` with the card's permalink `@id`, and the card's
+JSON-LD carries `subjectOf` back at the entry's `@id`, on both species; nothing
+was written by hand-edited SQL. Done.
 
 ---
 
