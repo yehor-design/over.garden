@@ -113,10 +113,18 @@ was raised on 2026-09-16 and is **not part of this design**; see D16.
 
 ### D4. One reading, three locales, never a translation
 
-Sources may be in any language, including English. Each piece is written
-separately in each market language — `uk` for Ukraine, `bg` and `ru` for
-Bulgaria — from the same source material. Nothing is translated from another
-locale's output. Reading an English source and writing Ukrainian is the same
+Sources may be in any language, including English. **Each piece is written
+separately in all three of the product's languages — `uk`, `bg` and `ru` —
+from the same source material**, and nothing is translated from another locale's
+output. The market decides which websites are read, not which languages come
+out: that is what the owner asked for on 2026-09-16, and the sentence this
+paragraph replaced said the opposite, mapping `uk` to Ukraine and `bg`/`ru` to
+Bulgaria.
+
+Whether every piece deserves all three pages is a product judgement, not an
+engineering one, and it is left reachable rather than settled: **one constant
+(`EDITORIAL_OUTPUT_LOCALES`) decides**, so the other answer costs one line and
+one test, with no schema and no prompt change. Reading an English source and writing Ukrainian is the same
 operation as writing Ukrainian from a Ukrainian source, so this does not weaken
 the 2026-09-06 decision; it is that decision applied to foreign material.
 
@@ -224,9 +232,12 @@ linker actually placed, so it can always be rebuilt from the published document.
 - **The card shows gardener entries first**, with editorial mentions as a
   secondary block, newest first, bounded, same locale only. One article that
   mentions twelve organisms must not take over twelve cards.
-- **The same table is the editorial memory.** What was written about, when,
-  under which query and from which source URLs is what prevents repetition and
-  query cannibalization. One structure serves both; there are not two.
+- **The registry is half the editorial memory.** Which nodes were written about,
+  when and under which query is what prevents topical repetition and query
+  cannibalization; `editorial_written` keeps the other half, the source URLs a
+  piece was built from. They are two tables because they are two grains — one
+  row per piece, one row per piece-and-target — and an earlier draft of this
+  page claimed one structure served both, which writing the tasks disproved.
 
 This is the visible counterpart of the `subjectOf` edge of ADR-0029 D13.1, and
 a second answer to its finding that 114,669 organism pages have no inbound
