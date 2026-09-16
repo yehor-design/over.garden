@@ -121,10 +121,13 @@ out: that is what the owner asked for on 2026-09-16, and the sentence this
 paragraph replaced said the opposite, mapping `uk` to Ukraine and `bg`/`ru` to
 Bulgaria.
 
-Whether every piece deserves all three pages is a product judgement, not an
-engineering one, and it is left reachable rather than settled: **one constant
-(`EDITORIAL_OUTPUT_LOCALES`) decides**, so the other answer costs one line and
-one test, with no schema and no prompt change. Reading an English source and writing Ukrainian is the same
+Whether every piece deserves all three pages was left open when this was
+written, and the owner settled it the same day: asked directly whether a piece
+sourced from Ukrainian material should also exist in Bulgarian and Russian, he
+answered **писати**. So all three it is. **One constant
+(`EDITORIAL_OUTPUT_LOCALES`) remains the single home of that rule** — not
+because the answer is provisional, but because a locale set with one home
+cannot drift into three. Reading an English source and writing Ukrainian is the same
 operation as writing Ukrainian from a Ukrainian source, so this does not weaken
 the 2026-09-06 decision; it is that decision applied to foreign material.
 
@@ -327,10 +330,18 @@ carries the exposure — is recorded here rather than in a feature.
 - Slice 23 is unaffected and still required: no external service supplies
   `news_articles`, `blog_posts`, their public pages, feed placement, `hreflang`
   or JSON-LD, because OverGarden is not a CMS.
-- Slice 25's issues need rewriting against this page before execution. `OVE-403`
-  (the falsification gate: five drafts by hand, three of five publishable after
-  less than twenty minutes of editing each) is unchanged and still comes first;
-  it can be run by hand, at no cost, before any code.
+- Slice 25's issues were rewritten against this page on 2026-09-16, and two
+  were created for D9 and D10, which no task described.
+- **The falsification gate is gone.** This page was written around it: five
+  drafts by hand, three of five publishable after less than twenty minutes of
+  editing each, run before any code and costing nothing. The owner cut it the
+  same day — "це взагалі робити не будемо". `OVE-403` keeps the two modules and
+  loses its proof run, and the first evidence that this pipeline writes
+  anything worth publishing now arrives at `OVE-405`'s first real run, after the
+  queue, the tables, the worker and the reading module exist. That is the
+  trade: the cheap early answer was declined, so the answer is late and the
+  work preceding it is unhedged. It is recorded here because nothing else in
+  the repository would show it.
 - The linker and the mention registry are new work that none of the Slice 25
   issues describes.
 - A queue kind for editorial runs still needs the migration and runtime
@@ -360,14 +371,15 @@ carries the exposure — is recorded here rather than in a feature.
 
 ## Rollout
 
-1. `OVE-403` by hand, at no cost: five drafts from real English sources into
-   `uk`, `bg` and `ru`, measured in editing minutes. This decides whether
-   anything else is built.
-2. Slice 23 — the entities and their public pages.
+1. Slice 23 — the entities and their public pages. It comes first and depends
+   on nothing here.
+2. `OVE-403` — the instructions and the checks module, on fixtures. Blocked by
+   nothing since the proof run was cut.
 3. The queue kind, the sources registry and the reading module (`OVE-404`).
-4. The run job, the three-locale write and the checks (`OVE-405`).
-5. The candidate resolver, the linker and the mention registry (D9, D10) — new,
-   not yet issued.
+4. The run job, the three-locale write and the checks (`OVE-405`) — **the first
+   real run, and the first real evidence of quality, is here.**
+5. The candidate resolver and the linker (`OVE-437`), then the mention registry
+   and the card's block (`OVE-438`).
 6. The owner pages: the instruction, Run per market, drafts with Publish and
    Delete (`OVE-406`).
 

@@ -67,8 +67,13 @@ memory against repeating itself. ADR-0026 D9 stands unchanged — an editorial
 mention does not make a source-only card indexable, and the measure of success
 is how many cards get a first *gardener* entry after a reader was sent to them.
 Nothing is implemented: every issue of Slice 23 and Slice 25 is still in
-Backlog, `OVE-403` (five drafts by hand, three of five publishable after under
-twenty minutes of editing) comes first and costs nothing to run.
+Backlog. The eight Slice 25 issues were rewritten against the ADR the same day
+and two were created for the linking work no task described. The owner also cut
+the falsification gate that day — the five hand-made drafts that were to decide,
+for nothing, whether the writing is good enough — so the first evidence of
+quality now arrives at the pipeline's first real run, after the queue, the
+tables and the reading module exist. Slice 23 comes first and depends on none
+of it.
 
 **Just delivered, 2026-09-10.** SDD Slice 26 (`OVE-411`–`OVE-417`) — the
 composer takes Notion's shape. The owner asked for the editor to look and behave
