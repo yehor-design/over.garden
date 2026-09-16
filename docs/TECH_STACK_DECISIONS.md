@@ -196,3 +196,22 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   Supersedes ADR-0026 D8, the addressing half of D9, and the addressing
   sections of `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`. Accepted 2026-09-11;
   execution is SDD Slice 27 from `OVE-419`.
+- ADR-0030 — The editorial pipeline lives inside OverGarden (2026-09-16).
+  Binding: the machine that drafts news and blog articles from the owner's
+  chosen websites is built in this repository for this site only — no separate
+  product, no tenants, no public API, and no bought service; the arithmetic is
+  ~130 articles a month once each of ~43 pieces is written into `uk`, `bg` and
+  `ru`, which costs ~$5–26 in tokens on the already-paid droplet against
+  $40–650 bought, because every service in the category bills per article.
+  Sources are read through feeds, WordPress JSON, sitemaps or index pages with
+  `robots.txt` respected and source text never stored; each locale is written
+  separately from the same material, never translated; a model is assigned per
+  role; a press always yields a draft and a human always publishes. Internal
+  links are a first-class output: the model never writes a URL, a deterministic
+  linker wraps first occurrences inside a candidate set resolved through the
+  organism graph, an empty card is a valid target when it matches the name,
+  addresses are re-validated at publish, and publishing registers a mention that
+  the card shows and the pipeline reuses as its memory against repetition.
+  ADR-0026 D9 is explicitly unchanged: an editorial mention does not make a
+  source-only card indexable. Accepted 2026-09-16; execution folds into SDD
+  Slice 23 and Slice 25, whose Linear descriptions predate it.

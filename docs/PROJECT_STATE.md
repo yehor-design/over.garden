@@ -49,6 +49,27 @@ The seven owner requirements have one committed production receipt:
 
 ## Where the project is heading
 
+**Decided, 2026-09-16, not yet built.** The editorial pipeline — a machine that
+reads the websites the owner chose and drafts news and blog articles for him to
+edit and publish — is built **inside OverGarden, for OverGarden only**
+(ADR-0030). A standalone product for other sites was explored the same day and
+rejected: everything expensive about it serves a customer who does not exist,
+while this site's need is two markets and one domain. Buying a service was
+rejected on arithmetic — every service in the category bills per article, and
+each piece is written into `uk`, `bg` and `ru`, so ~43 pieces a month is ~130
+articles: $40–650 bought against ~$5–26 in tokens self-run on infrastructure
+already paid for. Sources may be in any language and each locale is written
+separately, never translated. New in this decision and in none of the Slice 25
+issues: internal links are a first-class output placed by a deterministic linker
+over a candidate set resolved through the organism graph, and publishing
+registers a mention that the organism card shows and the pipeline reuses as its
+memory against repeating itself. ADR-0026 D9 stands unchanged — an editorial
+mention does not make a source-only card indexable, and the measure of success
+is how many cards get a first *gardener* entry after a reader was sent to them.
+Nothing is implemented: every issue of Slice 23 and Slice 25 is still in
+Backlog, `OVE-403` (five drafts by hand, three of five publishable after under
+twenty minutes of editing) comes first and costs nothing to run.
+
 **Just delivered, 2026-09-10.** SDD Slice 26 (`OVE-411`–`OVE-417`) — the
 composer takes Notion's shape. The owner asked for the editor to look and behave
 like Notion, and answered the two questions that ask carried: which blocks, and

@@ -10,9 +10,10 @@ knowingly unfinished. Current decisions live in
 `docs/adr/ADR-0025-stable-registry-retired.md`,
 `docs/adr/ADR-0026-organism-knowledge-graph.md`,
 `docs/adr/ADR-0027-owner-health-page-retired.md` and
-`docs/adr/ADR-0028-notion-shaped-composer.md` and
-`docs/adr/ADR-0029-address-law.md`; older ADRs and dated documents
-are history and never override them.
+`docs/adr/ADR-0028-notion-shaped-composer.md`,
+`docs/adr/ADR-0029-address-law.md` and
+`docs/adr/ADR-0030-editorial-pipeline-in-overgarden.md`; older ADRs and dated
+documents are history and never override them.
 
 ## Product
 
@@ -142,6 +143,14 @@ Every Linear task uses this shape and nothing more:
   only where a translation of the main content exists. Feeds are never filtered
   or badged by language. Supersedes ADR-0026 D8 and the addressing half of D9,
   and the addressing sections of `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`.
+  `docs/adr/ADR-0030-editorial-pipeline-in-overgarden.md` — the editorial
+  pipeline that drafts news and blog articles from the owner's chosen sources
+  is built inside OverGarden, for OverGarden only: no separate product, no
+  bought service, one reading per piece written separately into `uk`, `bg` and
+  `ru`, a human press to publish, and internal links placed by a deterministic
+  linker over a resolved candidate set with a mention registry on the cards.
+  ADR-0026 D9 is unchanged — an editorial mention does not make a card
+  indexable.
   `docs/ADDRESS_LAW_EXECUTION.md` — the executor's runbook for ADR-0029: the
   sixteen tasks in order (`OVE-419`–`OVE-434`), what each must prove, and the
   traps that do not fit an issue body.
