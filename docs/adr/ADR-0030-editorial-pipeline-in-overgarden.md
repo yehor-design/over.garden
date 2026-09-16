@@ -13,8 +13,9 @@
   D3 (everything public is indexable), ADR-0026 D9 (a source-only organism card
   is `noindex` until a gardener publishes on it — **unchanged**, see D11),
   ADR-0028 (`JournalDocumentV1` is the document contract), ADR-0029 D8 (a slug
-  is frozen at publish, a rename answers 308) and D13 (the entity graph, and
-  the finding that 114,669 organism pages have no inbound internal link).
+  is frozen at publish, a rename answers 308) and ADR-0029 D13 (the entity
+  graph, and the finding that 114,669 organism pages have no inbound internal
+  link).
 
 ## Context
 
@@ -66,7 +67,7 @@ key vault. The sources list, the instruction, the run, the draft and the Publish
 press all live in OverGarden, in its database, behind the owner role.
 
 The standalone product is not deferred; it is out of scope. Anything that exists
-only to serve a second customer is not built (D13).
+only to serve a second customer is not built (D15).
 
 ### D2. Build, not buy — the arithmetic
 
@@ -108,7 +109,7 @@ is never stored: it lives inside the run.
 
 Defeating anti-bot protection — solving CAPTCHAs, spoofing browser
 fingerprints, rotating residential proxies to evade blocks, bypassing paywalls —
-was raised on 2026-09-16 and is **not part of this design**; see D14.
+was raised on 2026-09-16 and is **not part of this design**; see D16.
 
 ### D4. One reading, three locales, never a translation
 
@@ -122,13 +123,23 @@ the 2026-09-06 decision; it is that decision applied to foreign material.
 The three locale calls share the same source material as a stable prefix, so
 that prefix is cached rather than paid for three times.
 
-### D5. A model per role, not a model
+### D5. A model per role, and the provider is configuration
 
 The pipeline assigns a model to each job — selecting material, writing the
 draft, rewriting after a failed check — so the cheap work does not run on the
 expensive model. The key is OverGarden's own. The per-run token spend has a
 ceiling, and each draft records which model and which instruction version
 produced it, because "quality dropped" is otherwise unanswerable.
+
+The owner asked on 2026-09-16 to be able to switch models and providers freely
+— OpenAI, Anthropic, Google, any of them. He asked it of the product that was
+then rejected, and it survives here as a constraint on shape rather than a
+feature: **which model serves which role is configuration, not code**, and the
+pipeline talks to one adapter boundary, so adding a provider never touches the
+generation, the checks or the linker. The cost table of D2 quotes Claude prices
+because those are the prices that were measured, not because the pipeline is
+bound to one vendor. What is not built is a user interface for any of this:
+it is a configuration row, edited by the owner, for one site.
 
 ### D6. A press yields a draft; a human publishes
 
@@ -142,9 +153,16 @@ publication path, and none is added later.
 Overlap against the sources, overlap against what this site already published,
 length bounds, a cliché list, the presence of a sources block: these run on
 every draft, trip at most one rewrite, and stay invisible on the row — no badge,
-no score, no note (2026-09-08). External paid uniqueness checking is **not** in
-scope for one site; the internal overlap check is the gate, and a per-article
-external check can be bought later if it earns its place.
+no score, no note (2026-09-08). On external paid uniqueness checking, be precise about who decided what. The
+owner decided on 2026-09-16 that **the service** buys and pays for an external
+checker and hands the report over as the deliverable — he decided it of the
+standalone product, whose value was selling other people that evidence. For one
+site nobody has to be convinced, so this ADR carries the internal overlap check
+as the gate (`OVE-403` already specifies at least 92 % unique against the
+fetched corpus and every existing article) and leaves the external check as an
+**open option**, not a rejected one: Copyscape Premium is about $0.11 for a
+1,000-word article, which is affordable at this volume if a draft ever ships
+something the internal check could not see.
 
 The one visible exception, added 2026-09-16, is the link summary of D9.
 
@@ -230,7 +248,42 @@ an article sent a reader to them**. If that number is zero after three months,
 the linking works as navigation and fails as an invitation, and what needs
 changing is the card, not the number of links.
 
-### D13. Rejected
+### D13. The piece is shaped to be quoted, not only to be read
+
+Answer engines extract self-contained fragments, so the shape is part of the
+output and is checked, not left to the model's taste:
+
+- a **self-contained answer** to the piece's primary query inside the first
+  hundred words, one that still makes sense lifted out of the article;
+- **question-shaped subheadings** that map to the sub-questions of that query;
+- one claim per paragraph, with the concrete dated numbers taken from the
+  material rather than adjectives — those are the quotable units;
+- the **sources block** that is already required, with links and access dates;
+- **entity links** in the JSON-LD graph (`about` and `mentions`, pointing at
+  organism cards and their identifiers), which is the machine-readable half of
+  the internal links of D9 and rides on ADR-0029 D13.1;
+- FAQ markup only where the questions are genuinely questions; it is for
+  machine readability, not for a rich result.
+
+Meta title and description are written around the primary query without
+repeating it mechanically (D8).
+
+### D14. Voice inputs, and the trap inside them
+
+What shapes the voice, in increasing cost: the built-in instructions, the
+owner's instruction text, the voice and lexicon files (`OVE-403` syncs these
+from `docs/product-research/BRAND_CANON_v1.md` and `LEXICON_AND_OBJECTIONS.md`
+and fails CI when they drift), a banned list — words, claims, formulations — and
+required elements such as a disclaimer, and optionally three to ten of this
+site's own published pieces as **style** exemplars.
+
+The trap, and it is why examples are named here at all: **anything given as an
+example must also be inside the overlap check**. A model handed exemplars for
+tone will paraphrase them for substance, and an overlap check that only looks at
+the fetched sources cannot see it. The same holds for the voice and lexicon
+files.
+
+### D15. Rejected
 
 - **The standalone product**, and with it multi-tenancy, a key vault for other
   people's model keys, bring-your-own-key as a feature, billing and quotas, CMS
@@ -250,7 +303,7 @@ changing is the card, not the number of links.
   claims array, bulk actions, soft delete, statistics, a pause control, learning
   from the owner's actions, and hosted scraping APIs.
 
-### D14. Open
+### D16. Open
 
 Whether to read sources that refuse automated reading, by circumventing
 anti-bot protection, was raised on 2026-09-16 and is unresolved. Nothing in this
