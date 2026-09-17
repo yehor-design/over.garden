@@ -2,7 +2,12 @@ import {
   getInterfaceCopy,
   type InterfaceLocale,
 } from "./interface-localization";
-import { buildSignInHref } from "./navigation/sign-in-href";
+import { buildAuthIntentResumeHref } from "./auth/auth-intent-contract";
+import {
+  buildSignInHref,
+  SIGN_IN_PATH,
+  SIGN_UP_PATH,
+} from "./navigation/sign-in-href";
 import { localizedPath, stripLocalePrefix } from "./public-localization";
 
 export type SiteShellNavigationKey =
@@ -19,6 +24,7 @@ export type SiteShellNavigationKey =
   | "wishlist"
   | "lineage-claims"
   | "profile"
+  | "you"
   | "sign-in";
 
 export interface SiteShellNavigationItem {
@@ -46,7 +52,12 @@ export interface SiteShellNavigation {
    * rewrite, which is two primaries on one screen.
    */
   primaryAction: SiteShellNavigationItem;
-  /** The screen the primary action reaches once the reader has an account. */
+  /**
+   * Where the primary action goes for *this* reader: the composer when they
+   * have an account, the sign-in screen with the composer as its return path
+   * when they do not. A reader who signs in from here lands on the composer,
+   * not on the workspace around it — the extra press `OVE-378` removed once.
+   */
   primaryActionHref: string;
   /** The sign-in screen, with the reader's current page as its return path. */
   signIn: SiteShellNavigationItem;
@@ -93,6 +104,18 @@ export interface SiteShellRouteContext {
 
 /** Where a reader who presses the primary action ends up once signed in. */
 export const SITE_SHELL_COMPOSER_PATH = "/garden#first-entry-composer";
+
+/**
+ * The screen the editor owns on its own, where the tab bar would compete with
+ * the composer's gutter, its `/` menu and its selection pill (ADR-0028). The
+ * workspace at `/garden` is not one of these: the first-entry composer is one
+ * section of a page that also carries navigation of its own.
+ */
+export function isSiteShellComposerRoute(pathname: string) {
+  return /^\/garden\/entries\/[^/]+\/edit$/u.test(
+    normalizeSiteShellPath(pathname),
+  );
+}
 
 /**
  * The catalogue's addresses. `/objects`, `/species`, `/variety`, `/breed` and
@@ -232,37 +255,53 @@ export function getSiteShellNavigation(
     buildSignInHref({ returnTo: currentPath }),
     "utility",
   );
+  const primaryActionHref = isAuthenticated
+    ? SITE_SHELL_COMPOSER_PATH
+    : buildSignInHref({
+        returnTo: buildAuthIntentResumeHref({
+          action: "create_entry",
+          returnTo: "/garden",
+        }),
+        intent: "create_entry",
+      });
   const primaryAction = item(
     "new-entry",
     copy.shell.primaryAction,
-    SITE_SHELL_COMPOSER_PATH,
+    primaryActionHref,
     "personal",
   );
   const findItem = (key: SiteShellNavigationKey) =>
     [...publicItems, ...personalItems].find((entry) => entry.key === key);
-  const profileItem = item(
-    "profile",
-    copy.navigation.profile,
-    "/garden/profile",
+  // The fifth slot is identity, not authentication. A tab bar that spends a
+  // slot on "Sign in" has four slots for a product whose whole purpose is
+  // gardeners publishing, and no place at all for publishing (ADR-0031 D4).
+  const youItem = item(
+    "you",
+    copy.navigation.you,
+    isAuthenticated ? "/garden/profile" : signInItem.href,
     "personal",
-    { match: "prefix", paths: ["/garden/profile"] },
+    isAuthenticated
+      ? { match: "prefix", paths: ["/garden/profile"] }
+      : // The destination is spelled in one module and read here, never
+        // written again: a second spelling is how the header once pointed a
+        // reader at `/garden` while reading its label from this file.
+        { match: "prefix", paths: [SIGN_IN_PATH, SIGN_UP_PATH] },
   );
-  const mobileKeys: SiteShellNavigationKey[] = isAuthenticated
-    ? ["feed", "catalogue", "garden", "notifications"]
-    : ["feed", "catalogue", "journals", "knowledge"];
-  const mobileItems = mobileKeys.flatMap((key) => {
-    const entry = findItem(key);
-    return entry ? [entry] : [];
-  });
-
-  mobileItems.push(isAuthenticated ? profileItem : signInItem);
+  // Five slots, in this order, at every width below `lg` and in both states.
+  const mobileItems = [
+    findItem("feed"),
+    findItem("catalogue"),
+    primaryAction,
+    findItem("journals"),
+    youItem,
+  ].flatMap((entry) => (entry ? [entry] : []));
 
   return {
     publicItems,
     personalItems,
     mobileItems,
     primaryAction,
-    primaryActionHref: SITE_SHELL_COMPOSER_PATH,
+    primaryActionHref,
     signIn: signInItem,
     searchHref: localizedPath(locale, "/journals"),
     footerLinks: [

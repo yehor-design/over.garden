@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getSiteShellNavigation,
   getSiteShellRouteContext,
+  isSiteShellComposerRoute,
   isSiteShellItemActive,
 } from "./site-shell-navigation";
 
@@ -65,11 +66,8 @@ describe("site shell navigation contract", () => {
     const member = getSiteShellNavigation("uk", true);
 
     for (const navigation of [guest, member]) {
-      expect(navigation.primaryAction).toMatchObject({
-        key: "new-entry",
-        label: "Новий запис",
-        href: "/garden#first-entry-composer",
-      });
+      expect(navigation.primaryAction.key).toBe("new-entry");
+      expect(navigation.primaryAction.label).toBe("Новий запис");
       // The action is not a rail item as well: one primary per screen region
       // (DESIGN.md §4.4). It used to be two, one of them in the header.
       expect(
@@ -78,6 +76,58 @@ describe("site shell navigation contract", () => {
         ),
       ).toBe(false);
     }
+
+    // Signed in it is the composer. Signed out it is the sign-in screen with
+    // the composer as its return, so the reader lands on the thing they
+    // pressed rather than on the workspace around it.
+    expect(member.primaryActionHref).toBe("/garden#first-entry-composer");
+    expect(guest.primaryActionHref).toContain("/auth/sign-in?next=");
+    expect(guest.primaryActionHref).toContain("intent=create_entry");
+    expect(decodeURIComponent(guest.primaryActionHref)).toContain(
+      "first-entry-composer",
+    );
+    expect(guest.primaryAction.href).toBe(guest.primaryActionHref);
+  });
+
+  it("gives the tab bar five slots in one order, and Sign in is not one", () => {
+    for (const isAuthenticated of [false, true]) {
+      const navigation = getSiteShellNavigation("uk", isAuthenticated, true);
+      expect(navigation.mobileItems.map((item) => item.key)).toEqual([
+        "feed",
+        "catalogue",
+        "new-entry",
+        "journals",
+        "you",
+      ]);
+      expect(
+        navigation.mobileItems.some((item) => item.key === "sign-in"),
+      ).toBe(false);
+    }
+  });
+
+  it("makes the fifth slot identity, and sign-in only the way there", () => {
+    const guest = getSiteShellNavigation("uk", false, false, "/journals");
+    const member = getSiteShellNavigation("uk", true);
+    const slot = (navigation: ReturnType<typeof getSiteShellNavigation>) =>
+      navigation.mobileItems.find((item) => item.key === "you")!;
+
+    expect(slot(guest).label).toBe("Ви");
+    expect(slot(guest).href).toBe("/auth/sign-in?next=%2Fjournals");
+    expect(slot(member).href).toBe("/garden/profile");
+    expect(isSiteShellItemActive("/garden/profile", slot(member))).toBe(true);
+    expect(isSiteShellItemActive("/auth/sign-in", slot(guest))).toBe(true);
+  });
+
+  it("knows the one screen the editor owns on its own", () => {
+    expect(isSiteShellComposerRoute("/garden/entries/abc-1/edit")).toBe(true);
+    expect(isSiteShellComposerRoute("/garden/entries/abc-1/edit/")).toBe(true);
+    // The workspace is not the composer: it is a page with navigation of its
+    // own that happens to carry the first-entry composer as one section.
+    expect(isSiteShellComposerRoute("/garden")).toBe(false);
+    expect(isSiteShellComposerRoute("/garden#first-entry-composer")).toBe(
+      false,
+    );
+    expect(isSiteShellComposerRoute("/garden/entries/abc-1")).toBe(false);
   });
 
   it("names the footer's four links and localizes each one", () => {

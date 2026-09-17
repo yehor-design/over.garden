@@ -441,8 +441,12 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
+  /* 80 px, not the bar's 56: a wrapped Bulgarian label under WCAG 1.4.12's
+     letter-spacing override takes the bar to about 64, and the reader who
+     needs that override is exactly the one who must not lose the last row of
+     a page behind it. */
   .site-shell-content-safe-bottom {
-    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
 
     @media (width >= 64rem) {
       padding-bottom: 0;

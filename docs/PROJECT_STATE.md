@@ -126,7 +126,29 @@ locale prefix" rule 308s it back — a public entry then self-redirects forever.
 It reproduces on `main` and on any branch; CI and Vercel bind differently and
 never see it.
 
-The remaining page families (`OVE-444`–`OVE-459`) are still in Backlog. The empty states
+**The phone got the product's verb** (`OVE-444`, 2026-09-17). The tab bar is
+five slots — Feed · Catalogue · **New entry** · Journals · You — where it used
+to spend one on "Sign in" and offer no way to write an entry at all. "You" is
+identity rather than authentication: sign-in for a stranger, the profile for a
+gardener, and the destination is built by the one module that is allowed to
+spell it. The primary action is one control per viewport: the rail draws it
+from `lg`, the bar below it, never both at a width.
+
+Three measurements decided the shape rather than three opinions. The brand link
+was 36 px tall and is now 44 like every other control in the bar. The safe-area
+padding was on the content region while the footer sat _below_ it, so on a short
+page the footer was the thing hidden behind the bar — it is on the whole column
+now, at 80 px, which clears the bar even when a Bulgarian label wraps under the
+WCAG 1.4.12 overrides. And the tab slots carry no horizontal padding, because
+four pixels of it is the difference between "Дневници" on one line and on two.
+
+`tests/mobile-shell.spec.ts` holds all of it: 320 / 375 / 768 in `uk`, `bg` and
+`ru`, a 44 × 44 assertion that measures the hit target (the box unioned with its
+`::before`) rather than the class name, 400 % zoom at 1280 logical width, and
+axe at 375 px on the home page, the journals directory, an organism card and the
+workspace.
+
+The remaining page families (`OVE-445`–`OVE-459`) are still in Backlog. The empty states
 have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module
 (`src/lib/illustrations.ts`), on the owner's position of 2026-09-17 — the free

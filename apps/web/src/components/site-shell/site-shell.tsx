@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { Menu as MenuIcon, Search, SquarePen, UserRound } from "lucide-react";
 import { useState } from "react";
 
-import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthenticatedUtilityRegion } from "@/components/auth/authenticated-utility-region";
 import { OwnerScopeProvider } from "@/components/auth/owner-scope";
 import { SessionSignalBoundary } from "@/components/auth/session-signal-boundary";
@@ -46,6 +45,7 @@ import {
 import {
   getSiteShellNavigation,
   getSiteShellRouteContext,
+  isSiteShellComposerRoute,
   type SiteShellNavigation,
   type SiteShellNavigationItem,
 } from "@/lib/site-shell-navigation";
@@ -204,7 +204,7 @@ export function SiteShell({
               <Link
                 data-site-shell-brand="true"
                 href={navigation.publicItems[0]?.href ?? "/"}
-                className="flex min-w-0 shrink-0 items-center rounded-md px-2 py-1 text-action outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring lg:mb-4 lg:px-2"
+                className="flex min-h-11 min-w-0 shrink-0 items-center rounded-md px-2 py-1 text-action outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring lg:mb-4 lg:px-2"
               >
                 <OverGardenLogo className="h-7 w-auto shrink-0 lg:h-8" />
                 <span className="sr-only">OverGarden</span>
@@ -226,38 +226,25 @@ export function SiteShell({
                 ) : null}
               </div>
 
-              {/* One element, both shapes. The action is a single control in
-                  the document — the right end of the bar below `lg`, the rail
-                  under the navigation above it — rather than one control per
-                  breakpoint, which is how the product came to render its
-                  primary action twice. */}
-              <div className="ml-auto shrink-0 lg:mt-4 lg:ml-0 lg:w-full">
-                <PrimaryAction
-                  item={navigation.primaryAction}
-                  isAuthenticated={isAuthenticated}
-                />
+              {/* The primary action is in the rail above `lg` and in the tab
+                  bar below it: one control visible to a reader at any width,
+                  and never the two the header and the rail used to draw at
+                  once (DESIGN.md §4.4, ADR-0031 D4). */}
+              <div className="mt-4 hidden w-full lg:block">
+                <PrimaryAction item={navigation.primaryAction} />
               </div>
 
-              <div className="flex shrink-0 items-center gap-1 lg:hidden">
+              <div className="ml-auto flex shrink-0 items-center lg:hidden">
                 <Link
                   href={navigation.searchHref}
                   aria-label={navigation.labels.search}
-                  className={iconButtonVariants({ variant: "ghost" })}
+                  className={iconButtonVariants({
+                    variant: "ghost",
+                    size: "lg",
+                  })}
                 >
                   <Search aria-hidden="true" />
                 </Link>
-                {isAuthenticated ? null : (
-                  <Link
-                    data-site-shell-action="sign-in-mobile"
-                    href={navigation.signIn.href}
-                    className={buttonVariants({
-                      variant: "secondary",
-                      size: "sm",
-                    })}
-                  >
-                    {navigation.signIn.label}
-                  </Link>
-                )}
               </div>
 
               <div className="mt-auto hidden w-full flex-col gap-2 pt-4 lg:flex">
@@ -271,13 +258,19 @@ export function SiteShell({
               </div>
             </header>
 
-            <div className="flex min-w-0 flex-col">
+            {/* The column clears the tab bar, not just the content inside it:
+                the footer is the last thing on a short page, and padding the
+                content alone left it underneath the bar. */}
+            <div
+              data-site-shell-column="true"
+              className="site-shell-content-safe-bottom flex min-w-0 flex-col"
+            >
               <div
                 id="main-content"
                 data-interface-locale-fragment-safe="true"
                 data-site-shell-region="content"
                 tabIndex={-1}
-                className="site-shell-content-safe-bottom mx-auto w-full max-w-content min-w-0 flex-1 outline-none"
+                className="mx-auto w-full max-w-content min-w-0 flex-1 outline-none"
               >
                 {children}
               </div>
@@ -327,11 +320,14 @@ export function SiteShell({
             </aside>
           </div>
 
-          <SiteShellMobileNavigation
-            items={navigation.mobileItems}
-            pathname={pathname}
-            ariaLabel={navigation.labels.mobileNavigation}
-          />
+          {isSiteShellComposerRoute(pathname) ? null : (
+            <SiteShellMobileNavigation
+              items={navigation.mobileItems}
+              pathname={pathname}
+              ariaLabel={navigation.labels.mobileNavigation}
+              primaryActionKey={navigation.primaryAction.key}
+            />
+          )}
         </div>
       </SiteShellContextRailProvider>
     </SiteShellLocaleProvider>
@@ -349,38 +345,13 @@ export function SiteShell({
 }
 
 /**
- * The one primary action of the shell. A signed-out reader reaches the composer
- * through the sign-in screen and comes back to it — never to the workspace
- * around it, which is the extra press `OVE-378` removed once already.
+ * The rail's primary action. A signed-out reader reaches the composer through
+ * the sign-in screen and comes back to it — never to the workspace around it,
+ * which is the extra press `OVE-378` removed once already. The destination for
+ * either state is decided in `getSiteShellNavigation`, so the rail and the tab
+ * bar cannot drift apart.
  */
-function PrimaryAction({
-  item,
-  isAuthenticated,
-}: {
-  item: SiteShellNavigationItem;
-  isAuthenticated: boolean;
-}) {
-  // Below `sm` the bar already carries a menu, a brand and a search control, so
-  // the label collapses and the icon keeps the action's accessible name. It is
-  // the same element throughout: nothing is duplicated per breakpoint.
-  const labelClassName = "sr-only sm:not-sr-only";
-
-  if (!isAuthenticated) {
-    return (
-      <span data-site-shell-action="new-entry" className="contents">
-        <AuthIntentTrigger
-          action="create_entry"
-          returnTo="/garden"
-          label={item.label}
-          labelClassName={labelClassName}
-          icon={<SquarePen aria-hidden="true" />}
-          formClassName="w-full"
-          className="w-full"
-        />
-      </span>
-    );
-  }
-
+function PrimaryAction({ item }: { item: SiteShellNavigationItem }) {
   return (
     <Link
       data-site-shell-action="new-entry"
@@ -388,7 +359,7 @@ function PrimaryAction({
       className={buttonVariants({ className: "w-full" })}
     >
       <SquarePen aria-hidden="true" />
-      <span className={labelClassName}>{item.label}</span>
+      <span>{item.label}</span>
     </Link>
   );
 }

@@ -154,7 +154,15 @@ describe("the one primary action", () => {
     mocks.pathname = "/";
   });
 
-  it("renders once, in the rail, for a signed-in gardener", () => {
+  /**
+   * One per viewport, not one per document. The rail and the tab bar are drawn
+   * at mutually exclusive widths — that is what `OVE-444` added — so the
+   * contract is that exactly one of them is a reader's, never both, and never
+   * two inside the same region the way the rail and the header used to be. The
+   * *rendered* version of this assertion is in `tests/site-shell.spec.ts`,
+   * which measures visibility at 375, 1024, 1280 and 1440.
+   */
+  it("lives in the rail and in the tab bar, and in neither twice", () => {
     const { container } = render(
       <SiteShell
         locale="uk"
@@ -166,29 +174,108 @@ describe("the one primary action", () => {
       </SiteShell>,
     );
 
-    const actions = container.querySelectorAll(
-      '[data-site-shell-action="new-entry"]',
-    );
-    expect(actions).toHaveLength(1);
-    const action = screen.getByRole("link", { name: "Новий запис" });
-    expect(action.getAttribute("href")).toBe("/garden#first-entry-composer");
-    // It is inside the banner — the rail — and not in a second chrome region.
-    expect(screen.getByRole("banner").contains(action)).toBe(true);
+    const actions = [
+      ...container.querySelectorAll('[data-site-shell-action="new-entry"]'),
+    ];
+    expect(actions).toHaveLength(2);
+    const banner = screen.getByRole("banner");
+    const tabBar = screen.getByRole("navigation", {
+      name: "Основна мобільна навігація",
+    });
+    expect(actions.filter((node) => banner.contains(node))).toHaveLength(1);
+    expect(actions.filter((node) => tabBar.contains(node))).toHaveLength(1);
+    for (const action of actions) {
+      expect(action.getAttribute("href")).toBe("/garden#first-entry-composer");
+    }
+    // The rail's copy is drawn only from `lg`; the bar carrying the other is
+    // hidden from `lg`. A reader is never offered both.
+    expect(
+      actions.find((node) => banner.contains(node))!.parentElement?.className,
+    ).toContain("lg:block");
+    expect(tabBar.className).toContain("lg:hidden");
   });
 
-  it("renders once for a signed-out reader and goes through sign-in", () => {
-    const { container } = render(
+  it("goes through sign-in for a signed-out reader, and returns to the composer", () => {
+    render(
       <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
         <main>Стрічка</main>
       </SiteShell>,
     );
 
+    for (const action of screen.getAllByRole("link", { name: "Новий запис" })) {
+      const href = action.getAttribute("href") ?? "";
+      expect(href).toContain("/auth/sign-in?next=");
+      expect(href).toContain("intent=create_entry");
+      expect(decodeURIComponent(href)).toContain("first-entry-composer");
+    }
+  });
+});
+
+describe("the tab bar", () => {
+  beforeEach(() => {
+    mocks.pathname = "/";
+  });
+
+  it("is a named nav of five slots, and Sign in is not one of them", () => {
+    render(
+      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+        <main>Стрічка</main>
+      </SiteShell>,
+    );
+
+    const bar = screen.getByRole("navigation", {
+      name: "Основна мобільна навігація",
+    });
+    const tabs = [...bar.querySelectorAll("[data-site-shell-tab]")];
+    expect(tabs.map((tab) => tab.getAttribute("data-site-shell-tab"))).toEqual([
+      "feed",
+      "catalogue",
+      "new-entry",
+      "journals",
+      "you",
+    ]);
+    expect(bar.textContent).not.toContain("Увійти");
+    expect(bar.textContent).toContain("Ви");
+  });
+
+  it("marks the active tab and only it", () => {
+    mocks.pathname = "/journals";
+    render(
+      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+        <main>Журнали</main>
+      </SiteShell>,
+    );
+
+    const bar = screen.getByRole("navigation", {
+      name: "Основна мобільна навігація",
+    });
+    const current = [...bar.querySelectorAll('[aria-current="page"]')];
+    expect(current).toHaveLength(1);
+    expect(current[0]?.getAttribute("data-site-shell-tab")).toBe("journals");
+  });
+
+  it("stays off the screen the editor owns on its own", () => {
+    mocks.pathname =
+      "/garden/entries/11111111-1111-4111-8111-111111111111/edit";
+    render(
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        isAuthenticated
+        ownerUserId="00000000-0000-4000-8000-000000000001"
+      >
+        <main>Редагування</main>
+      </SiteShell>,
+    );
+
     expect(
-      container.querySelectorAll('[data-site-shell-action="new-entry"]'),
-    ).toHaveLength(1);
-    const action = screen.getByRole("link", { name: "Новий запис" });
-    expect(action.getAttribute("href")).toContain("/auth/sign-in?next=");
-    expect(action.getAttribute("href")).toContain("intent=create_entry");
+      screen.queryByRole("navigation", {
+        name: "Основна мобільна навігація",
+      }),
+    ).toBeNull();
+    // The rest of the shell is untouched: only the bar goes.
+    expect(screen.getAllByRole("banner")).toHaveLength(1);
+    expect(screen.getAllByRole("contentinfo")).toHaveLength(1);
   });
 });
 
@@ -442,7 +529,9 @@ describe("every guest sign-in control reaches the form itself", () => {
     );
 
     const signInControls = [
-      ...html.matchAll(/data-site-shell-action="sign-in[^"]*"[^>]*/g),
+      ...html.matchAll(
+        /(?:data-site-shell-action="sign-in[^"]*"|data-site-shell-tab="you")[^>]*/g,
+      ),
     ].map((match) => match[0]);
     expect(signInControls.length).toBeGreaterThanOrEqual(2);
     for (const control of signInControls) {
@@ -468,6 +557,9 @@ describe("every guest sign-in control reaches the form itself", () => {
     );
 
     expect(html).not.toContain('data-site-shell-action="sign-in');
+    // And the fifth tab means their profile rather than a form.
+    expect(html).toContain('data-site-shell-tab="you"');
+    expect(html).toContain('href="/garden/profile"');
   });
 });
 
