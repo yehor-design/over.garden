@@ -36,6 +36,9 @@ export interface InterfaceCopy {
   navigation: {
     feed: string;
     catalogue: string;
+    /** The tab bar's fifth slot. Identity-neutral: signed out it means
+     *  "sign in", signed in it means "your profile" (ADR-0031 D4). */
+    you: string;
     livingObjects: string;
     journals: string;
     communities: string;
@@ -118,6 +121,7 @@ const INTERFACE_COPY = {
       feed: "Стрічка",
       catalogue: "Каталог",
       livingObjects: "Живі об'єкти",
+      you: "Ви",
       journals: "Журнали",
       communities: "Спільноти",
       knowledge: "Знання",
@@ -199,6 +203,7 @@ const INTERFACE_COPY = {
       feed: "Поток",
       catalogue: "Каталог",
       livingObjects: "Живи обекти",
+      you: "Вие",
       journals: "Дневници",
       communities: "Общности",
       knowledge: "Знания",
@@ -280,6 +285,7 @@ const INTERFACE_COPY = {
       feed: "Лента",
       catalogue: "Каталог",
       livingObjects: "Живые объекты",
+      you: "Вы",
       journals: "Журналы",
       communities: "Сообщества",
       knowledge: "Знания",

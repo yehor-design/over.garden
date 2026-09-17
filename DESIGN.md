@@ -386,7 +386,17 @@ lg → xl       [ rail 240 ]   [ content max 704 ]
   screen must be complete without it.** It is never the only home of an action.
 - **Mobile**: a 56 px header and a 5-slot bottom tab bar. The tab bar carries
   Feed, Catalogue, **New entry**, Journals and You. Authentication is not a tab;
-  a signed-out visitor sees "You", which leads to sign-in.
+  a signed-out visitor sees "You", which leads to sign-in. The bar does not
+  render on the composer's own screen, where it would compete with the editor's
+  gutter and its `/` menu.
+
+  **New entry is the only slot with no visible label.** It is a filled circle
+  carrying its name as `aria-label`: "Новий запис" is the widest label the
+  product has and this is its narrowest column, and at 320 px it wrapped to two
+  lines and spilled past the bar in all three languages. The other four are one
+  line each at 320 px — measured, in `uk`, `bg` and `ru` — which is why the slot
+  carries no horizontal padding: four pixels of it is the difference between
+  "Дневници" on one line and on two.
 
 The context rail opens from the header on mobile or not at all.
 

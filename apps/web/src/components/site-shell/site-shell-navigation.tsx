@@ -6,6 +6,7 @@ import {
   Bell,
   Bookmark,
   BookOpenText,
+  CircleUserRound,
   GitBranch,
   Heart,
   LayoutDashboard,
@@ -42,6 +43,7 @@ const NAVIGATION_ICONS: Record<SiteShellNavigationKey, LucideIcon> = {
   wishlist: Heart,
   "lineage-claims": GitBranch,
   profile: UserRound,
+  you: CircleUserRound,
   "sign-in": LogIn,
 };
 
@@ -84,14 +86,34 @@ export function SiteShellNavigationList({
   );
 }
 
+/**
+ * The five-slot bar below `lg`: **Feed · Catalogue · New entry · Journals ·
+ * You** (DESIGN.md §3.2, ADR-0031 D4).
+ *
+ * What it replaces spent a slot on "Sign in" while the product's central verb —
+ * writing an entry — had no place on a phone at all, on a product whose whole
+ * purpose is gardeners publishing. Authentication is not a tab: a signed-out
+ * visitor sees "You", which leads to sign-in and back.
+ *
+ * Three measurements rather than three opinions. Each slot is at least
+ * 44 × 44 at 320 px, which is five 64 px columns with room to spare. The label
+ * is `text-caption` and wraps rather than truncating, because Bulgarian
+ * "Дневници" is a third longer than Ukrainian "Журнали" and WCAG 1.4.12's
+ * letter-spacing override adds another tenth on top (§2.6). And the bar pads
+ * itself by `env(safe-area-inset-bottom)` while the content column pads itself
+ * by the bar's height plus the same inset, so nothing hides underneath it.
+ */
 export function SiteShellMobileNavigation({
   items,
   pathname,
   ariaLabel,
+  primaryActionKey,
 }: {
   items: readonly SiteShellNavigationItem[];
   pathname: string;
   ariaLabel: string;
+  /** The one slot drawn as a filled action rather than a destination. */
+  primaryActionKey?: SiteShellNavigationKey;
 }) {
   return (
     <nav
@@ -99,24 +121,46 @@ export function SiteShellMobileNavigation({
       aria-label={ariaLabel}
       className="site-shell-safe-bottom fixed inset-x-0 bottom-0 z-rail border-t border-border bg-surface lg:hidden"
     >
-      <ul className="mx-auto grid min-h-14 max-w-lg grid-cols-5">
+      <ul className="mx-auto grid max-w-lg grid-cols-5 items-stretch">
         {items.map((item) => {
           const Icon = NAVIGATION_ICONS[item.key];
           const active = isSiteShellItemActive(pathname, item);
+          const isPrimary = item.key === primaryActionKey;
 
           return (
-            <li key={item.key} className="min-w-0">
+            <li key={item.key} className="flex min-w-0">
               <Link
                 href={item.href}
-                aria-label={item.label}
                 aria-current={active ? "page" : undefined}
+                aria-label={isPrimary ? item.label : undefined}
                 data-active={active || undefined}
-                className="flex h-full min-w-0 flex-col items-center justify-center gap-1 px-1 text-text-secondary transition-colors duration-instant ease-out outline-none hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring data-[active]:text-action-subtle-text"
+                data-site-shell-tab={item.key}
+                {...(isPrimary
+                  ? { "data-site-shell-action": "new-entry" }
+                  : {})}
+                className="flex min-h-14 w-full min-w-0 flex-col items-center justify-center gap-1 text-text-secondary transition-colors duration-instant ease-out outline-none hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring data-[active]:text-action-subtle-text"
               >
-                <Icon aria-hidden="true" className="size-5 shrink-0" />
-                <span className="max-w-full text-center text-caption leading-none font-medium break-words">
-                  {item.label}
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "flex shrink-0 items-center justify-center",
+                    isPrimary &&
+                      "size-10 rounded-full bg-action text-text-on-fill",
+                  )}
+                >
+                  <Icon className="size-5 shrink-0" />
                 </span>
+                {/* The action's name is on the control, not under it. "Новий
+                    запис" is the widest label the product has and this is its
+                    narrowest column — at 320 px it wrapped to two lines and
+                    spilled past the bar, in every one of the three languages.
+                    The filled circle is what makes the slot distinct
+                    (ADR-0031 D4); the name is what a screen reader reads. */}
+                {isPrimary ? null : (
+                  <span className="max-w-full text-center text-caption leading-tight font-medium break-words">
+                    {item.label}
+                  </span>
+                )}
               </Link>
             </li>
           );

@@ -36,6 +36,15 @@ async function selectLocale(page: Page, baseURL: string) {
   ]);
 }
 
+/**
+ * The shell streams in through the document's Suspense boundary, so a `load`
+ * event is not the moment it has a size. Measuring before this returns reports
+ * every region as 0 × 0 — which reads exactly like a region that is not drawn.
+ */
+async function settleShell(page: Page) {
+  await expect(page.locator('[data-site-shell-region="header"]')).toBeVisible();
+}
+
 test.describe("the three-column shell", () => {
   for (const { width, label, context } of WIDTHS) {
     test(`draws its columns at ${width} px (${label})`, async ({
@@ -46,6 +55,7 @@ test.describe("the three-column shell", () => {
       await selectLocale(page, baseURL);
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/journals", { waitUntil: "load" });
+      await settleShell(page);
 
       const banner = page.locator('[data-site-shell-region="header"]');
       const content = page.locator('[data-site-shell-region="content"]');
@@ -88,22 +98,47 @@ test.describe("the three-column shell", () => {
     });
   }
 
-  test("the primary action is in the rail and appears once", async ({
+  test("exactly one primary action is a reader's, at every width", async ({
     baseURL,
     page,
   }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
     await selectLocale(page, baseURL);
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/journals", { waitUntil: "load" });
 
-    const action = page.locator('[data-site-shell-action="new-entry"]');
-    await expect(action).toHaveCount(1);
-    expect(
-      await action.evaluate((node) =>
-        Boolean(node.closest('[data-site-shell-region="header"]')),
-      ),
-    ).toBe(true);
+    // The rail draws it above `lg` and the tab bar below (`OVE-444`), so the
+    // contract is one *visible* action per viewport — never the two the rail
+    // and the header used to draw side by side at the same width.
+    for (const width of [375, 768, 1024, 1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/journals", { waitUntil: "load" });
+      await settleShell(page);
+      const visible = await page.evaluate(() =>
+        [
+          ...document.querySelectorAll<HTMLElement>(
+            '[data-site-shell-action="new-entry"]',
+          ),
+        ]
+          .filter((node) => node.getClientRects().length > 0)
+          .map((node) => ({
+            href: node.getAttribute("href"),
+            inBanner: Boolean(
+              node.closest('[data-site-shell-region="header"]'),
+            ),
+            inTabBar: Boolean(
+              node.closest('[data-site-shell-region="mobile-navigation"]'),
+            ),
+          })),
+      );
+      expect(visible, `at ${width}px`).toHaveLength(1);
+      // Signed out, so the one action goes through the sign-in screen and
+      // returns to the composer rather than to the workspace around it.
+      const href = visible[0]!.href ?? "";
+      expect(href).toContain("/auth/sign-in?next=");
+      expect(decodeURIComponent(href)).toContain("first-entry-composer");
+      expect(visible[0]!.inBanner || visible[0]!.inTabBar).toBe(true);
+      expect(visible[0]!.inBanner && visible[0]!.inTabBar).toBe(false);
+      expect(visible[0]!.inBanner).toBe(width >= 1024);
+    }
   });
 
   test("no screen loses an action when the context rail is absent", async ({
@@ -116,6 +151,7 @@ test.describe("the three-column shell", () => {
     for (const address of ["/", "/journals", "/objects", "/knowledge"]) {
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(address, { waitUntil: "load" });
+      await settleShell(page);
       const withRail = await page.evaluate(() =>
         [...document.querySelectorAll("a[href]")].map((link) =>
           link.getAttribute("href"),
@@ -134,6 +170,7 @@ test.describe("the three-column shell", () => {
 
       await page.setViewportSize({ width: 1100, height: 900 });
       await page.goto(address, { waitUntil: "load" });
+      await settleShell(page);
       const without = new Set(
         await page.evaluate(() =>
           [...document.querySelectorAll("a[href]")]
@@ -166,6 +203,7 @@ test.describe("the three-column shell", () => {
     await selectLocale(page, baseURL);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/journals", { waitUntil: "load" });
+    await settleShell(page);
 
     await page.keyboard.press("Tab");
     const skip = await page.evaluate(() => ({
@@ -217,6 +255,7 @@ test.describe("the three-column shell", () => {
     await selectLocale(page, baseURL);
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/", { waitUntil: "load" });
+    await settleShell(page);
 
     const footer = page.locator('[data-site-shell-region="footer"]');
     for (const address of [
