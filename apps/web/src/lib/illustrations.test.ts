@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,11 +7,13 @@ import { describe, expect, it } from "vitest";
 import {
   ILLUSTRATION_KEYS,
   ILLUSTRATION_SIZES,
-  illustrationObjectKey,
+  ILLUSTRATION_SUBJECTS,
+  illustrationPath,
   resolveIllustration,
 } from "./illustrations";
 
 const SOURCE_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const APP_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const MANIFEST = fileURLToPath(new URL("./illustrations.ts", import.meta.url));
 
 function walk(directory: string, out: string[] = []): string[] {
@@ -45,36 +47,50 @@ describe("the illustration manifest", () => {
 
   it("keeps the whole set under one directory, so a licence change is one move", () => {
     for (const key of ILLUSTRATION_KEYS) {
-      expect(illustrationObjectKey(key)).toBe(`illustrations/${key}.webp`);
+      expect(illustrationPath(key)).toBe(`/illustrations/${key}.webp`);
     }
   });
 
-  it("serves WebP through the existing media pipeline, never a bundled asset", () => {
-    const url = resolveIllustration(ILLUSTRATION_KEYS[0], {
-      baseUrl: "https://media.over.garden",
-    });
-    // Nothing is published yet, so the honest answer is `null` rather than a
-    // URL that would 404 on every empty state.
-    expect(url).toBeNull();
-  });
-
-  it("answers null rather than a broken image when a key has no file", () => {
+  it("ships a real WebP for every key, and nothing else in that directory", () => {
+    // A key with no file renders a broken image on an empty state, which is
+    // worse than the no-illustration state it replaced.
+    const directory = join(APP_ROOT, "public", "illustrations");
     for (const key of ILLUSTRATION_KEYS) {
-      expect(
-        resolveIllustration(key, { baseUrl: "https://media.over.garden" }),
-        key,
-      ).toBeNull();
+      const file = join(directory, `${key}.webp`);
+      expect(existsSync(file), `${key}.webp is missing`).toBe(true);
+      const header = readFileSync(file).subarray(0, 12);
+      expect(header.subarray(0, 4).toString("ascii"), key).toBe("RIFF");
+      expect(header.subarray(8, 12).toString("ascii"), key).toBe("WEBP");
     }
+    expect(readdirSync(directory).sort()).toEqual(
+      ILLUSTRATION_KEYS.map((key) => `${key}.webp`).sort(),
+    );
   });
 
-  it("answers null in a browser, where the media base is not exposed", () => {
-    expect(
-      resolveIllustration(ILLUSTRATION_KEYS[0], { baseUrl: "" }),
-    ).toBeNull();
+  it("resolves to a root-relative path the browser can take as it is", () => {
+    for (const key of ILLUSTRATION_KEYS) {
+      const illustration = resolveIllustration(key);
+      expect(illustration.src).toBe(`/illustrations/${key}.webp`);
+      // Twice the 180 px maximum, so the largest declared size stays sharp on
+      // a 2× display without a second file.
+      expect(illustration.width).toBe(360);
+      expect(illustration.height).toBe(360);
+    }
   });
 
   it("sizes them as DESIGN.md §2.9 does: 96 in a card, 144 at page level", () => {
     expect(ILLUSTRATION_SIZES).toEqual({ card: 96, page: 144 });
+  });
+
+  it("records what each key is a picture of", () => {
+    // Replacing one later means finding its equivalent, and a file name does
+    // not say what the picture shows.
+    expect(Object.keys(ILLUSTRATION_SUBJECTS).sort()).toEqual(
+      [...ILLUSTRATION_KEYS].sort(),
+    );
+    for (const subject of Object.values(ILLUSTRATION_SUBJECTS)) {
+      expect(subject.trim().length).toBeGreaterThan(0);
+    }
   });
 
   it("records the licence position rather than leaving it to be rediscovered", () => {
