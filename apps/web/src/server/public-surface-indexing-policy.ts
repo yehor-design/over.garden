@@ -57,12 +57,11 @@ export interface PublicSurfaceCandidateInput {
   /**
    * The locale of the route family the request was served from, when the
    * surface knows it. A page served under a prefix its canonical does not carry
-   * is a duplicate of the canonical, so it is reachable and `noindex`.
-   *
-   * This is what makes the policy's locale clause real. Reading only
-   * `canonicalPath` could never see the served request, so a surface with a
-   * fixed unprefixed canonical — a journal entry — was indexable under all
-   * three prefixes at once.
+   * is a duplicate of the canonical — but only where that prefix is an
+   * *address*. Since OVE-460 an unprefixed canonical renders from the reader's
+   * locale subtree at its own URL, so for a surface with no translated
+   * addresses the served locale says which language the reader asked for and
+   * nothing about duplication.
    */
   servedLocale?: PublicLocale | null;
   equivalentLocales: readonly PublicLocale[] | null;
@@ -113,7 +112,18 @@ export function evaluatePublicSurfaceIndexability(
   ) {
     reasons.push("non_equivalent_locale");
   }
-  if (input.servedLocale && input.servedLocale !== canonicalLocale) {
+  // Only where the surface has a locale-paired address to be a duplicate of.
+  // A surface that is never translated — a gardener's entry — has one address,
+  // unprefixed, and since OVE-460 the locale subtree it renders from is the
+  // reader's language rather than a second spelling of the page: the prefixed
+  // spelling still 308s here. Comparing the two unconditionally made every
+  // entry `noindex, nofollow` for anyone whose language was not the default,
+  // measured on production within minutes of the deploy.
+  if (
+    input.servedLocale &&
+    input.servedLocale !== canonicalLocale &&
+    input.equivalentLocales.length > 0
+  ) {
     reasons.push("non_equivalent_locale");
   }
   if (!input.hasContent) {

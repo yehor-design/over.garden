@@ -162,37 +162,30 @@ describe("/journal/[slug] V2", () => {
     expect(html).toContain('data-authenticated="true"');
   });
 
-  it("indexes the one address an entry has, and refuses the prefixed duplicates", async () => {
+  it("indexes the one address an entry has, in whichever language it renders", async () => {
     const { generateMetadata } =
       await import("@/app/[locale]/journal/[slug]/page");
 
     // A gardener's entry is never translated, so it has one address
-    // (ADR-0029 D10). Serving it under /bg or /ru makes a duplicate of that
-    // address — reachable, and `noindex`. Before the served locale reached the
-    // policy this page was indexable under all three prefixes at once, each
-    // pointing its canonical at the unprefixed one.
-    const canonical = await generateMetadata({
-      params: Promise.resolve({ locale: "uk", slug: page.entry.publicSlug }),
-    });
-    expect(canonical).toMatchObject({ robots: { index: true, follow: true } });
-    expect(canonical.alternates).toEqual({
-      canonical: `https://over.garden${page.entry.publicPath}`,
-    });
+    // (ADR-0029 D10) — and since OVE-460 the locale subtree it renders from is
+    // the *reader's language*, not a second spelling: `/bg/@yehor/…` still
+    // answers 308 to the one address. Read as a duplicate, every entry went
+    // `noindex, nofollow` for a reader whose language was not the default.
+    for (const locale of ["uk", "bg", "ru"] as const) {
+      const rendered = await generateMetadata({
+        params: Promise.resolve({ locale, slug: page.entry.publicSlug }),
+      });
+      expect(rendered, locale).toMatchObject({
+        robots: { index: true, follow: true },
+      });
+      expect(rendered.alternates, locale).toEqual({
+        canonical: `https://over.garden${page.entry.publicPath}`,
+      });
+    }
+
     // The one address is under its author (ADR-0029 D9), not in the flat
     // namespace that forced a random suffix into every entry URL.
     expect(page.entry.publicPath).toBe(`/@yehor/${page.entry.publicSlug}`);
-
-    for (const locale of ["bg", "ru"] as const) {
-      const duplicate = await generateMetadata({
-        params: Promise.resolve({ locale, slug: page.entry.publicSlug }),
-      });
-      expect(duplicate.robots, locale).toMatchObject({
-        index: false,
-        follow: false,
-      });
-      // A refused surface emits no canonical and no alternates at all.
-      expect(duplicate.alternates, locale).toBeUndefined();
-    }
 
     const bulgarianTitle = await generateMetadata({
       params: Promise.resolve({ locale: "bg", slug: page.entry.publicSlug }),
