@@ -11,6 +11,11 @@ import type { PublicLocale } from "@/lib/public-localization";
  * Ukrainian, shown as-is on `/bg/…` and `/ru/…`, on pages that declare
  * `hreflang` to each other. A gardener's own tag is not in this map and is
  * never translated: it is the gardener's word, and the address carries it.
+ *
+ * One map, not two. The feed carried a second copy of this table with five of
+ * the six slugs, so a Russian reader's feed rail read «Спостереження і догляд»
+ * among Russian labels — the sixth topic fell through to its stored Ukrainian
+ * name. A name has one builder (2026-09-17).
  */
 const SYSTEM_TOPIC_LABELS: Readonly<
   Record<string, Readonly<Record<PublicLocale, string>>>

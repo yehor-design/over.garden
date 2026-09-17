@@ -6,7 +6,7 @@ import {
 } from "@/lib/garden/journal-cover-contract";
 import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
 import { listLocalCoverMatrixBranchIds } from "@/lib/launch-corpus/cover-matrix";
-import { localizeCuratedTopicLabel } from "@/lib/launch-corpus/topic-labels";
+import { localizeTopicLabel } from "@/lib/system-topic-labels";
 
 function finalMedia(
   id: string,
@@ -88,11 +88,13 @@ describe("OVE-199 local cover matrix", () => {
   });
 
   it("localizes curated English topic stubs", () => {
-    expect(localizeCuratedTopicLabel("plants", "Plants", "bg")).toBe(
-      "Растения",
-    );
-    expect(localizeCuratedTopicLabel("animals", "Animals", "uk")).toBe(
-      "Тварини",
+    expect(localizeTopicLabel("bg", "plants", "Plants")).toBe("Растения");
+    expect(localizeTopicLabel("uk", "animals", "Animals")).toBe("Тварини");
+    // The sixth system topic is why there is one map and not two: the feed
+    // carried its own five-slug copy, so a Russian reader's rail read
+    // «Спостереження і догляд» among Russian labels.
+    expect(localizeTopicLabel("ru", "observation-and-care", "Спостереження і догляд")).toBe(
+      "Наблюдения и уход",
     );
   });
 });
