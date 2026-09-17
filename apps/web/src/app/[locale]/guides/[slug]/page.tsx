@@ -103,7 +103,7 @@ export default async function GuideRoute({ params }: LocalizedGuideRouteProps) {
       locale={localeParam}
       guide={guide}
       chrome={getLocalizedRouteChrome(localeParam)}
-      availableLocales={getLanguageSwitcherLocales(localeParam)}
+      availableLocales={getLanguageSwitcherLocales()}
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
       jsonLd={surface.jsonLd}

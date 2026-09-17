@@ -24,18 +24,32 @@ describe("interface locale contract", () => {
       market: "ukraine",
       locale: "uk",
     });
-    expect(parseInterfaceLocalizationHint("bulgaria:uk")).toBeNull();
-    expect(parseInterfaceLocalizationHint("ukraine:ru")).toBeNull();
+    // Every market offers every language since 2026-09-17, so these two pairs
+    // are ordinary rather than impossible: a reader in Bulgaria reading in
+    // Ukrainian, and a reader in Ukraine reading in Russian.
+    expect(parseInterfaceLocalizationHint("bulgaria:uk")).toEqual({
+      market: "bulgaria",
+      locale: "uk",
+    });
+    expect(parseInterfaceLocalizationHint("ukraine:ru")).toEqual({
+      market: "ukraine",
+      locale: "ru",
+    });
     expect(parseInterfaceLocalizationHint("bulgaria:bg:private")).toBeNull();
+    expect(parseInterfaceLocalizationHint("bulgaria:de")).toBeNull();
+    expect(parseInterfaceLocalizationHint("moldova:bg")).toBeNull();
     expect(() =>
       serializeInterfaceLocalizationHint({
         market: "ukraine",
-        locale: "ru",
+        locale: "de" as never,
       }),
     ).toThrow("Interface localization hint must be market-valid.");
   });
 
-  it("resolves market before accepting an allowed locale source", () => {
+  it("takes the language from the loudest source and the market from the reader", () => {
+    // Explicit beats the route, the route beats what was saved, and what was
+    // saved beats the market's default. The market is now only the last of
+    // those: it decides where a reader who has chosen nothing starts.
     expect(
       resolveInterfaceLocalization({
         explicitMarket: "ukraine",
@@ -46,11 +60,13 @@ describe("interface locale contract", () => {
       }),
     ).toEqual({
       market: "ukraine",
-      locale: "uk",
+      locale: "ru",
       marketSource: "explicit",
-      localeSource: "persisted",
+      localeSource: "explicit",
     });
 
+    // The prefix is a choice, and a choice outranks a saved language. It no
+    // longer moves the reader's market: they are still in Ukraine.
     expect(
       resolveInterfaceLocalization({
         routeLocale: "bg",
@@ -58,12 +74,15 @@ describe("interface locale contract", () => {
         countryCode: "UA",
       }),
     ).toEqual({
-      market: "bulgaria",
+      market: "ukraine",
       locale: "bg",
-      marketSource: "route",
+      marketSource: "country",
       localeSource: "route",
     });
 
+    // A saved language survives the border. This is the whole point of the
+    // preference: it held only inside one market before, so a reader who chose
+    // Russian in Bulgaria was put back into Ukrainian by a Ukrainian address.
     expect(
       resolveInterfaceLocalization({
         persistedMarket: "bulgaria",
@@ -72,9 +91,9 @@ describe("interface locale contract", () => {
       }),
     ).toEqual({
       market: "ukraine",
-      locale: "uk",
+      locale: "ru",
       marketSource: "country",
-      localeSource: "market-default",
+      localeSource: "persisted",
     });
 
     expect(
@@ -85,7 +104,25 @@ describe("interface locale contract", () => {
       }),
     ).toEqual({
       market: "bulgaria",
+      locale: "uk",
+      marketSource: "country",
+      localeSource: "persisted",
+    });
+
+    // And a reader who has chosen nothing starts in their country's language.
+    expect(
+      resolveInterfaceLocalization({ countryCode: "BG" }),
+    ).toEqual({
+      market: "bulgaria",
       locale: "bg",
+      marketSource: "country",
+      localeSource: "market-default",
+    });
+    expect(
+      resolveInterfaceLocalization({ countryCode: "UA" }),
+    ).toEqual({
+      market: "ukraine",
+      locale: "uk",
       marketSource: "country",
       localeSource: "market-default",
     });

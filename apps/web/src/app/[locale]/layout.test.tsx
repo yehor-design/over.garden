@@ -51,7 +51,7 @@ describe("locale root layout", () => {
     });
   });
 
-  it("sets the document language and market from the route", async () => {
+  it("sets the document language from the route and the shell from the reader", async () => {
     const html = renderToStaticMarkup(
       await LocaleRootLayout({
         children: <main>OverGarden</main>,
@@ -60,9 +60,11 @@ describe("locale root layout", () => {
     );
 
     expect(html).toContain('data-lang="ru"');
-    expect(html).toContain(
-      'data-localization="{&quot;locale&quot;:&quot;ru&quot;,&quot;market&quot;:&quot;bulgaria&quot;}"',
-    );
+    // The shell resolves the reader instead of taking the route's word for it.
+    // This subtree is where an unprefixed address renders for a reader who
+    // chose this language, so the market behind the language control is a fact
+    // about them, not about the prefix they were rewritten into.
+    expect(html).toContain('data-localization="request"');
     expect(html).toContain("<main>OverGarden</main>");
   });
 });

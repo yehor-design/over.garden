@@ -1,14 +1,123 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildInterfaceLocaleChoiceTarget,
   buildLocalizedInterfaceTarget,
   getInterfaceLanguageControlPlacement,
   getInterfaceRoutePolicy,
   INTERFACE_UTILITY_CONTROL_PREFIXES,
+  isReaderLocalizedPublicPath,
   isSafeExitRoute,
   sanitizeInterfaceRouteFragment,
   sanitizeInterfaceRouteSearch,
 } from "./interface-route-policy";
+
+describe("the language a reader chooses", () => {
+  it("points every option at the prefixed spelling, the default locale included", () => {
+    // The prefix is the only thing that tells the proxy a language was chosen:
+    // it resolves the interface locale from the route, writes the preference,
+    // and folds `/uk/…` back to the canonical address. Built as an *address*
+    // instead, the Ukrainian option pointed at the page the reader was already
+    // on, and choosing Ukrainian did nothing at all.
+    expect(
+      buildInterfaceLocaleChoiceTarget({ locale: "uk", pathname: "/journals" }),
+    ).toBe("/uk/journals");
+    expect(
+      buildInterfaceLocaleChoiceTarget({ locale: "bg", pathname: "/journals" }),
+    ).toBe("/bg/journals");
+    expect(
+      buildInterfaceLocaleChoiceTarget({
+        locale: "uk",
+        pathname: "/bg/@yehor/полив",
+      }),
+    ).toBe("/uk/@yehor/полив");
+    expect(
+      buildInterfaceLocaleChoiceTarget({ locale: "ru", pathname: "/" }),
+    ).toBe("/ru");
+    // The address builder still answers the other question — where a page
+    // lives in a locale — and for the default locale that is unprefixed.
+    expect(
+      buildLocalizedInterfaceTarget({ locale: "uk", pathname: "/journals" }),
+    ).toBe("/journals");
+  });
+
+  it("keeps the query the target route declares safe and drops the rest", () => {
+    expect(
+      buildInterfaceLocaleChoiceTarget({
+        locale: "bg",
+        pathname: "/journals",
+        search: "?kind=plant&token=private",
+      }),
+    ).toBe("/bg/journals?kind=plant");
+  });
+
+  it("has no link to offer where an address has no prefixed spelling", () => {
+    // The workspace has one address, so the choice there is the cookie.
+    expect(
+      buildInterfaceLocaleChoiceTarget({ locale: "bg", pathname: "/garden" }),
+    ).toBeNull();
+    expect(
+      buildInterfaceLocaleChoiceTarget({
+        locale: "bg",
+        pathname: "/api/interface/context",
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("which addresses render in the reader's language", () => {
+  it("covers every public family and nothing else", () => {
+    for (const pathname of [
+      "/",
+      "/journals",
+      "/feed",
+      "/objects",
+      "/knowledge",
+      "/communities",
+      "/communities/tomato-growers",
+      "/topics/care-checks",
+      "/blog",
+      "/blog/field-note",
+      "/guides/watering",
+      "/answers/why-yellow-leaves",
+      "/privacy",
+      "/species",
+      "/species/apis-mellifera",
+      "/species/solanum-lycopersicum/register",
+      "/variety/de-barao",
+      "/breed/karpatka",
+      "/sources/eppo",
+      "/markets/bulgaria",
+      "/@yehor",
+      "/@yehor/полив",
+      "/@yehor/objects/томат",
+      "/%40yehor",
+    ]) {
+      expect(isReaderLocalizedPublicPath(pathname), pathname).toBe(true);
+    }
+
+    for (const pathname of [
+      // No prefixed twin exists for any of these.
+      "/garden",
+      "/garden/objects/00000000-0000-4000-8000-000000000001",
+      "/account/communities",
+      "/auth/sign-in",
+      "/erasure",
+      "/support",
+      "/id/0a512046-b52d-46d8-9f67-e785895b1806",
+      "/api/public/catalog/typeahead",
+      "/_next/static/chunk.js",
+      "/sitemap.xml",
+      "/robots.txt",
+      "/e1d2d024f0edaca0ebfb710bfc63f607.txt",
+      // Already prefixed: the address names the language itself.
+      "/bg/journals",
+      "/ru/@yehor/полив",
+    ]) {
+      expect(isReaderLocalizedPublicPath(pathname), pathname).toBe(false);
+    }
+  });
+});
 
 describe("interface route policy", () => {
   it("classifies localized, canonical unprefixed, and non-UI routes", () => {

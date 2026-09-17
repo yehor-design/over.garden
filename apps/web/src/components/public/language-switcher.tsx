@@ -1,7 +1,6 @@
 "use client";
 
 import { Languages } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useActionState, useSyncExternalStore } from "react";
 
@@ -11,12 +10,11 @@ import {
 } from "@/lib/interface-localization";
 import type { InterfaceMarket } from "@/lib/interface-market";
 import {
-  buildLocalizedInterfaceTarget,
-  getInterfaceRoutePolicy,
+  buildInterfaceLocaleChoiceTarget,
   sanitizeInterfaceRouteSearch,
 } from "@/lib/interface-route-policy";
 import {
-  BULGARIA_PUBLIC_LOCALES,
+  INTERFACE_LOCALE_CHOICES,
   PUBLIC_LOCALE_CONFIG,
   type PublicLocale,
 } from "@/lib/public-localization";
@@ -70,21 +68,15 @@ export function InterfaceLanguageControl({
     emptyBrowserSearch,
   );
   const copy = getInterfaceCopy(locale).shell;
-  const localizedRoute =
-    getInterfaceRoutePolicy(activePathname).mode === "localized-link";
 
-  if (
-    market !== "bulgaria" ||
-    !BULGARIA_PUBLIC_LOCALES.includes(
-      locale as (typeof BULGARIA_PUBLIC_LOCALES)[number],
-    )
-  ) {
-    return null;
-  }
-
+  // Every reader sees every language (owner decision, 2026-09-17). The control
+  // used to render only for the Bulgarian market, so a reader in Ukraine had no
+  // way to change the interface at all and a reader in Bulgaria lost the
+  // control the moment they chose Ukrainian.
   return (
     <nav
       data-interface-language-control="site-shell-interface-language-control"
+      data-interface-market={market}
       aria-label={copy.languageControlLabel}
       className={cn(
         "relative min-w-0 text-foreground",
@@ -107,28 +99,33 @@ export function InterfaceLanguageControl({
           data-interface-language-menu
           className="absolute top-full right-0 z-popover mt-1 grid min-w-44 gap-1 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
         >
-          {BULGARIA_PUBLIC_LOCALES.map((availableLocale) => {
+          {INTERFACE_LOCALE_CHOICES.map((availableLocale) => {
             const config = PUBLIC_LOCALE_CONFIG[availableLocale];
             const selected = availableLocale === locale;
-            const target = buildLocalizedInterfaceTarget({
+            const target = buildInterfaceLocaleChoiceTarget({
               locale: availableLocale,
               pathname: activePathname,
               search: browserSearch,
             });
 
-            if (localizedRoute && target) {
+            if (target) {
               return (
-                <Link
+                // A plain anchor, not `next/link`. The prefix in the target is
+                // what tells the proxy this language was *chosen*: it resolves
+                // the interface locale from the route, writes the preference,
+                // and folds the address back to its canonical spelling. A
+                // client-side navigation would reach the prefixed route without
+                // that fold and leave the reader on a second spelling of the
+                // page they are already on.
+                //
+                // It is not prefetched for the same reason it never was: Next
+                // strips `Next-Router-Prefetch` before the proxy runs (verified
+                // in Chromium against a production build, 2026-09-04), so a
+                // prefetch would be indistinguishable from a choice and merely
+                // hovering an option would rewrite the saved language.
+                <a
                   key={availableLocale}
                   href={target}
-                  // Never prefetch a language the reader has not chosen. The
-                  // proxy reads the preference from the locale prefix a request
-                  // lands on, and Next strips `Next-Router-Prefetch` before
-                  // middleware runs (verified in Chromium against a production
-                  // build, 2026-09-04), so a prefetch is indistinguishable from
-                  // a navigation there. Left prefetchable, merely hovering this
-                  // option rewrote the saved language — see ADR-0024 D4.
-                  prefetch={false}
                   role="menuitemradio"
                   aria-checked={selected}
                   aria-current={selected ? "true" : undefined}
@@ -139,7 +136,7 @@ export function InterfaceLanguageControl({
                   className={optionClassName(selected)}
                 >
                   {config.label}
-                </Link>
+                </a>
               );
             }
 
@@ -222,12 +219,12 @@ export function languageHref({
   pathname: string;
   search: string;
 }) {
-  const localizedTarget = buildLocalizedInterfaceTarget({
+  const choiceTarget = buildInterfaceLocaleChoiceTarget({
     locale,
     pathname,
     search,
   });
-  if (localizedTarget) return localizedTarget;
+  if (choiceTarget) return choiceTarget;
 
   return `${pathname}${sanitizeInterfaceRouteSearch(pathname, search)}`;
 }

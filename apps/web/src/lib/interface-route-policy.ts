@@ -257,6 +257,17 @@ export const INTERFACE_ROUTE_POLICIES = [
     safeQueryKeys: ["profileAction", "authIntent"],
     preserveClientFragment: true,
   },
+  {
+    // The organism catalog. These pages have had a localized twin since the
+    // addresses shipped — `/bg/species/apis-mellifera` renders and is in the
+    // sitemap — but no policy said so, so they fell to the same-path default
+    // and the language control offered a preference nothing re-rendered.
+    id: "public-catalog",
+    mode: "localized-link",
+    prefixes: ["/species", "/variety/", "/breed/", "/sources/eppo"],
+    safeQueryKeys: ["kingdom", "letter", "page", "authIntent", "engagement"],
+    preserveClientFragment: true,
+  },
 ] as const satisfies readonly InterfaceRoutePolicy[];
 
 const DEFAULT_RENDERED_ROUTE_POLICY = {
@@ -377,6 +388,69 @@ export function sanitizeInterfaceRouteFragment(
 
   const value = fragment.startsWith("#") ? fragment.slice(1) : fragment;
   return SAFE_FRAGMENT.test(value) ? `#${value}` : "";
+}
+
+/**
+ * Does this unprefixed address have a twin in the `[locale]` tree?
+ *
+ * The proxy asks before rendering an unprefixed canonical address in the
+ * reader's own language (ADR-0029 D10, amended): the URL stays canonical and
+ * the page behind it is the reader's locale. A path with no twin — the
+ * workspace, an account route, a permalink, an archive — is left exactly where
+ * it is, and so is anything carrying a file extension.
+ */
+export function isReaderLocalizedPublicPath(pathname: string): boolean {
+  const stripped = stripLocalePrefix(pathname);
+  if (stripped.locale !== null) return false;
+  const basePath = normalizePath(stripped.path);
+  if (basePath.includes(".")) return false;
+
+  return getInterfaceRoutePolicy(basePath).mode === "localized-link";
+}
+
+/**
+ * Where a language option points.
+ *
+ * Always the prefixed spelling, the default locale included — `/uk/journals`,
+ * not `/journals`. The prefix is the only thing that tells the proxy a reader
+ * *chose* this language: it resolves the interface locale from the route
+ * first, writes the preference from what it resolved, and then folds `/uk/…`
+ * back to the canonical unprefixed address (and a prefixed author address back
+ * to its one address). So one click is one document navigation that ends on
+ * the canonical URL with the choice saved.
+ *
+ * `buildLocalizedInterfaceTarget` cannot serve here: it builds the *address*
+ * of a page in a locale, and the address of a default-locale page is
+ * unprefixed — a link from `/journals` to `/journals`, which is how choosing
+ * Ukrainian used to do nothing at all.
+ */
+export function buildInterfaceLocaleChoiceTarget(input: {
+  locale: PublicLocale;
+  pathname: string;
+  search?: InterfaceRouteSearchInput;
+  fragment?: string | null;
+}): string | null {
+  const policy = getInterfaceRoutePolicy(input.pathname);
+  // A workspace or account route has no prefixed spelling to link to, so the
+  // choice there is the cookie the shell writes, not a link to `/bg/garden`.
+  if (policy.mode !== "localized-link") return null;
+  const basePath = localizedPathMayCarryPrivateState(
+    policy,
+    normalizeBasePath(input.pathname),
+  )
+    ? "/"
+    : normalizeBasePath(input.pathname);
+
+  return `${prefixedLocalePath(input.locale, basePath)}${sanitizeInterfaceRouteSearch(
+    input.pathname,
+    input.search,
+    input.locale,
+  )}${sanitizeInterfaceRouteFragment(input.pathname, input.fragment)}`;
+}
+
+/** `/uk/journals`, never `/journals`: see `buildInterfaceLocaleChoiceTarget`. */
+function prefixedLocalePath(locale: PublicLocale, basePath: string) {
+  return basePath === "/" ? `/${locale}` : `/${locale}${basePath}`;
 }
 
 export function buildLocalizedInterfaceTarget(input: {
@@ -543,6 +617,10 @@ function localizedPathMayCarryPrivateState(
     return genericRenderedPathMayCarryPrivateState(pathname);
   }
 
+  if (policy.id === "public-profile") {
+    return authorScopedPathMayCarryPrivateState(pathname);
+  }
+
   const dynamicSegment = knownPublicDynamicSegment(policy.id, pathname);
   if (dynamicSegment === null) return false;
 
@@ -550,10 +628,53 @@ function localizedPathMayCarryPrivateState(
   const decodedSegment = decodePathSegment(dynamicSegment);
   if (decodedSegment === null) return true;
 
-  if (policy.id === "public-profile") {
-    return !PUBLIC_PROFILE_HANDLE.test(decodedSegment);
+  return publicSlugMayCarryPrivateState(decodedSegment);
+}
+
+/**
+ * An author-scoped address is a handle, and for an entry or a passport a name
+ * its gardener gave it. Every segment is checked: the handle by its own shape,
+ * the rest by the public slug shape, with `objects` allowed as the one literal
+ * the passport family puts between them.
+ *
+ * The whole remainder used to be collapsed into a single value, which no shape
+ * matched, so `/@yehor/полив` read as opaque and every language option on an
+ * entry or a passport pointed at the home page instead of the page the reader
+ * was standing on. Nothing showed it while the control was hidden on those
+ * addresses.
+ */
+function authorScopedPathMayCarryPrivateState(pathname: string) {
+  const prefix = ["/@", "/%40"].find((candidate) =>
+    pathname.startsWith(candidate),
+  );
+  if (!prefix) return true;
+
+  const [handle, ...rest] = pathname
+    .slice(prefix.length)
+    .split("/")
+    .filter(Boolean);
+  if (!handle || rest.length > 2) return true;
+
+  const decodedHandle = decodeKnownPublicSegment(handle);
+  if (decodedHandle === null || !PUBLIC_PROFILE_HANDLE.test(decodedHandle)) {
+    return true;
   }
 
+  return rest.some((rawSegment) => {
+    const segment = decodeKnownPublicSegment(rawSegment);
+    if (segment === null) return true;
+    if (segment === "objects") return false;
+    return publicSlugMayCarryPrivateState(segment);
+  });
+}
+
+function decodeKnownPublicSegment(rawSegment: string) {
+  if (ENCODED_PRIVATE_PATH_DELIMITER.test(rawSegment)) return null;
+  return decodePathSegment(rawSegment);
+}
+
+/** A public slug is semantic and never opaque, credential-shaped or an id. */
+function publicSlugMayCarryPrivateState(decodedSegment: string) {
   return (
     decodedSegment.length > 160 ||
     !PUBLIC_SEMANTIC_SLUG.test(decodedSegment) ||

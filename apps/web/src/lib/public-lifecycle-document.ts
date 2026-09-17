@@ -3,13 +3,13 @@ import {
   type InterfaceLocale,
 } from "@/lib/interface-localization";
 import {
-  buildLocalizedInterfaceTarget,
+  buildInterfaceLocaleChoiceTarget,
   getInterfaceRoutePolicy,
   INTERFACE_LOCALE_PREFERENCE_ENDPOINT,
   type InterfaceRouteSearchInput,
 } from "@/lib/interface-route-policy";
 import {
-  BULGARIA_PUBLIC_LOCALES,
+  INTERFACE_LOCALE_CHOICES,
   PUBLIC_LOCALE_CONFIG,
   type PublicLocale,
 } from "@/lib/public-localization";
@@ -76,11 +76,9 @@ export function renderPublicLifecycleDocument(
 function renderRawInterfaceLanguageControl(
   input: Pick<PublicLifecycleDocumentInput, "locale" | "pathname" | "search">,
 ) {
-  if (input.locale === "uk") return "";
-
   const copy = getInterfaceCopy(input.locale).shell;
   const routePolicy = getInterfaceRoutePolicy(input.pathname);
-  const options = BULGARIA_PUBLIC_LOCALES.map((locale) =>
+  const options = INTERFACE_LOCALE_CHOICES.map((locale) =>
     renderRawLanguageOption({
       currentLocale: input.locale,
       locale,
@@ -114,7 +112,7 @@ function renderRawLanguageOption(input: {
   const commonAttributes = `data-interface-language-option data-interface-locale="${input.locale}" lang="${escapeAttribute(config.htmlLang)}" role="menuitemradio" aria-checked="${selected ? "true" : "false"}"`;
 
   if (input.localizedLink) {
-    const target = buildLocalizedInterfaceTarget({
+    const target = buildInterfaceLocaleChoiceTarget({
       locale: input.locale,
       pathname: input.pathname,
       search: input.search,

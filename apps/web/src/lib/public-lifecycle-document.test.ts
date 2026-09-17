@@ -24,12 +24,25 @@ describe("raw public lifecycle document", () => {
     expect(html).not.toContain("fonts.googleapis.com");
     expect(html).not.toContain("fonts.gstatic.com");
     expect(html).toContain("Запис не знайдено");
-    expect(html).not.toContain("data-interface-language-control");
-    expect(html).not.toContain("Български");
-    expect(html).not.toContain("Русский");
+    // A tombstone carries the control too, and carries all three languages:
+    // a reader who lands on a dead address in the wrong language has to be
+    // able to leave it in the right one.
+    expect(html.match(/data-interface-language-control="true"/g)).toHaveLength(
+      1,
+    );
+    expect(
+      html.match(/data-interface-language-option data-interface-locale=/g),
+    ).toHaveLength(3);
+    expect(html).toContain("Български");
+    expect(html).toContain("Русский");
+    // Every option is the prefixed spelling, the reader's own included: that
+    // prefix is what tells the proxy the language was chosen.
+    expect(html).toContain('href="/uk/journal/missing-entry"');
+    expect(html).toContain('href="/bg/journal/missing-entry"');
+    expect(html).toContain('href="/ru/journal/missing-entry"');
   });
 
-  it("renders exactly one Bulgaria control with two localized document links and safe view state", () => {
+  it("renders exactly one control with three localized document links and safe view state", () => {
     const html = renderPublicLifecycleDocument({
       locale: "bg",
       pathname: "/bg/journal/missing-entry",
@@ -46,9 +59,10 @@ describe("raw public lifecycle document", () => {
     );
     expect(
       html.match(/data-interface-language-option data-interface-locale=/g),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     expect(html).toContain("Български");
     expect(html).toContain("Русский");
+    expect(html).toContain("Українська");
     expect(html).toContain('data-interface-locale="bg" lang="bg"');
     expect(html).toContain('data-interface-locale="ru" lang="ru"');
     expect(html).toContain('aria-checked="true"');
@@ -61,8 +75,10 @@ describe("raw public lifecycle document", () => {
     expect(html).toContain(
       'href="/ru/journal/missing-entry?engagement=interaction-unavailable&amp;authIntent=comment"',
     );
-    expect(html.match(/rel="noreferrer"/g)).toHaveLength(3);
-    expect(html.match(/referrerpolicy="no-referrer"/g)).toHaveLength(3);
+    // Three language options and the way out: four links, every one of them
+    // referrer-free, because a dead address must not travel.
+    expect(html.match(/rel="noreferrer"/g)).toHaveLength(4);
+    expect(html.match(/referrerpolicy="no-referrer"/g)).toHaveLength(4);
     expect(html).toContain(
       '<a href="/bg/journals" rel="noreferrer" referrerpolicy="no-referrer">',
     );
@@ -84,7 +100,7 @@ describe("raw public lifecycle document", () => {
     );
   });
 
-  it("uses the locale-only POST for canonical unprefixed Bulgaria lifecycle UI", () => {
+  it("uses the locale-only POST where an address has no prefixed spelling", () => {
     const privateObjectId = "18700007-0000-4000-8000-000000000099";
     const html = renderPublicLifecycleDocument({
       locale: "ru",
@@ -101,9 +117,10 @@ describe("raw public lifecycle document", () => {
     );
     expect(
       html.match(/data-interface-language-option data-interface-locale=/g),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     expect(html).toContain('data-interface-locale="bg" lang="bg"');
     expect(html).toContain('data-interface-locale="ru" lang="ru"');
+    expect(html).toContain('data-interface-locale="uk" lang="uk"');
     expect(html).toContain('action="/api/interface/locale"');
     expect(html).toContain('method="post"');
     expect(html).toContain('name="locale" value="bg"');

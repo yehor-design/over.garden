@@ -62,7 +62,7 @@ describe("request interface locale", () => {
     );
   });
 
-  it("lets a supported country override stale persisted market and locale", async () => {
+  it("lets a supported country move the market and never the saved language", async () => {
     mocks.headers.mockResolvedValue(
       new Headers({
         "accept-language": "ru;q=1",
@@ -79,11 +79,14 @@ describe("request interface locale", () => {
     const { resolveRequestInterfaceLocalization } =
       await import("./interface-localization");
 
+    // The country decides where the reader is, and with it the language a
+    // reader who has chosen nothing starts in. This one has chosen: Russian
+    // travels with them, in Ukraine as in Bulgaria.
     await expect(resolveRequestInterfaceLocalization()).resolves.toMatchObject({
       market: "ukraine",
-      locale: "uk",
+      locale: "ru",
       marketSource: "country",
-      localeSource: "market-default",
+      localeSource: "persisted",
     });
   });
 });

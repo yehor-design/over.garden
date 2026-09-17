@@ -69,7 +69,7 @@ export default async function BlogIndexRoute({
       locale={localeParam}
       content={content}
       posts={posts}
-      availableLocales={getLanguageSwitcherLocales(localeParam)}
+      availableLocales={getLanguageSwitcherLocales()}
       jsonLd={surface.jsonLd}
     />
   );

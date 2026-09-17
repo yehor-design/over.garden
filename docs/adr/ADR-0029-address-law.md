@@ -187,6 +187,31 @@ switcher. `hreflang` is the mechanism for showing a Bulgarian searcher the
 Bulgarian page, and it only works if the alternate is not itself a redirect —
 the present geo-307 does not coexist with `hreflang`, it disables it.
 
+**Amendment, 2026-09-17: a canonical address renders in the reader's
+language.** D10 said what the *status* must be and was read as settling the
+*language* too, so an unprefixed address rendered in Ukrainian for everyone.
+An entry, a profile and an object passport have no prefixed spelling to escape
+to, so a reader in Bulgaria read every gardener's entry in a Ukrainian
+interface, and the language control — which took the market from the prefix —
+was not drawn on those pages at all.
+
+The status rule is unchanged: 200, at the address asked for, for everyone. The
+subtree that renders it is now the reader's. Their language is a cookie, set by
+their country on a first visit and by their own choice afterwards; a locale
+prefix in an address is that choice, written back to the cookie, and `/uk/…`
+still folds to the canonical spelling. What the reader sees therefore follows
+them across every page, including the workspace, while the addresses stay
+exactly as this ADR defines them: `/bg/…` and `/ru/…` remain real, indexable
+addresses, and the `hreflang` cluster is untouched.
+
+Two consequences are deliberate. An unprefixed page served to a reader with a
+preference carries the canonical of the twin that rendered it, so a crawler —
+which carries no preference and no country — still sees the Ukrainian page at
+`/journals` with a self-referential canonical. And the market no longer follows
+from the prefix: every market offers all three languages (owner decision,
+2026-09-17), so the prefix says what a reader chose and the country says where
+they are.
+
 ### D11. Feeds are language-blind (owner decision, 2026-09-11)
 
 No listing is ever filtered by content language. No language badge, chip or

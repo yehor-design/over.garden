@@ -105,7 +105,7 @@ export default async function AnswerRoute({
       locale={localeParam}
       page={page}
       chrome={getLocalizedRouteChrome(localeParam)}
-      availableLocales={getLanguageSwitcherLocales(localeParam)}
+      availableLocales={getLanguageSwitcherLocales()}
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
       jsonLd={surface.jsonLd}

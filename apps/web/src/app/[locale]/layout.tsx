@@ -6,6 +6,7 @@ import {
   resolveInterfaceLocalization,
   serializeInterfaceLocalizationHint,
 } from "@/lib/interface-localization";
+import { marketWithDefaultInterfaceLocale } from "@/lib/interface-market";
 import {
   DEFAULT_PUBLIC_LOCALE,
   isPublicLocale,
@@ -57,7 +58,14 @@ export default async function LocaleRootLayout({
   const localization = localizationForRoute((await params).locale);
 
   return (
-    <RootDocument lang={localization.locale} localization={localization}>
+    // The document's language is the route's and stays static for the tree.
+    // The shell's is the reader's, resolved in the document's Suspense hole
+    // the way the unprefixed tree has always resolved it: this subtree is now
+    // where an unprefixed address renders for a reader who chose this
+    // language, and the market that decides what the language control offers
+    // is a fact about the reader, not about the prefix they were rewritten
+    // into.
+    <RootDocument lang={localization.locale} localization={null}>
       {children}
     </RootDocument>
   );
@@ -67,6 +75,10 @@ function localizationForRoute(value: string) {
   const routeLocale: PublicLocale = isPublicLocale(value)
     ? value
     : DEFAULT_PUBLIC_LOCALE;
-  const { locale, market } = resolveInterfaceLocalization({ routeLocale });
-  return { locale, market };
+  const { locale } = resolveInterfaceLocalization({ routeLocale });
+  // A prerendered document has no reader, so its context hint carries the
+  // market this language is the default of. The reader's own market is a
+  // request fact and is resolved in the shell; this is the fallback the
+  // last-resort error document reads when there is nothing better.
+  return { locale, market: marketWithDefaultInterfaceLocale(locale) };
 }

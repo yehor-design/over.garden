@@ -86,7 +86,7 @@ export default async function BlogPostRoute({
       locale={localeParam}
       post={post}
       chrome={getLocalizedRouteChrome(localeParam)}
-      availableLocales={getLanguageSwitcherLocales(localeParam)}
+      availableLocales={getLanguageSwitcherLocales()}
       jsonLd={surface.jsonLd}
     />
   );

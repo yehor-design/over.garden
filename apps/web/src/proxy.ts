@@ -16,11 +16,15 @@ import {
   INTERFACE_MARKET_REQUEST_HEADER,
   readInterfaceCountryCode,
 } from "@/lib/interface-market";
-import { sanitizeInterfaceRouteSearch } from "@/lib/interface-route-policy";
+import {
+  isReaderLocalizedPublicPath,
+  sanitizeInterfaceRouteSearch,
+} from "@/lib/interface-route-policy";
 import {
   DEFAULT_PUBLIC_LOCALE,
   localizedPath,
   stripLocalePrefix,
+  type PublicLocale,
 } from "@/lib/public-localization";
 import {
   matchCatalogSpeciesHubPath,
@@ -424,6 +428,12 @@ function getLocaleFoldResponse(request: NextRequest) {
  * (ADR-0029 D9). Without this, `/@yehor/полив` would be matched by
  * `[locale]/[profileHandle]` with the locale set to `@yehor`.
  *
+ * Into the *reader's* locale, not a fixed one. The destination used to be
+ * `/uk` whatever the reader had chosen, and an entry has no prefixed spelling
+ * to escape to (a prefixed author address 308s back here), so every gardener
+ * in Bulgaria read every entry in a Ukrainian interface and the language
+ * control — which reads the market off the route — rendered nothing at all.
+ *
  * It runs last in `proxy()`, after every lifecycle block. It used to run
  * before them, and a rewrite returns — so an entry or a passport that did not
  * exist was rewritten past its own 404 and answered 200 with the not-found
@@ -464,7 +474,7 @@ function getAuthorScopedRewriteResponse(
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(INTERFACE_LOCALE_REQUEST_HEADER, locale);
     requestHeaders.set(INTERFACE_MARKET_REQUEST_HEADER, localization.market);
-    url.pathname = `/uk${rootProfilePath}`;
+    url.pathname = `/${locale}${rootProfilePath}`;
     url.search = sanitizeInterfaceRouteSearch(
       rootProfilePath,
       request.nextUrl.searchParams,
@@ -495,6 +505,42 @@ function getAuthorScopedRewriteResponse(
   // alternate is not itself a redirect; the site shell offers the other locale
   // to a reader who arrives in the wrong one.
   return null;
+}
+
+/**
+ * An unprefixed public address renders in the reader's language.
+ *
+ * The address does not change and the status stays `200` (ADR-0029 D10): the
+ * proxy picks which locale subtree renders it, the same move the `/@` family
+ * has always needed. A reader who has chosen nothing is placed by their
+ * country; a reader who has chosen is placed by their choice, on every page,
+ * including the ones whose own address has a prefixed spelling.
+ *
+ * The default locale is not rewritten. Its pages are the unprefixed tree
+ * itself, so a Ukrainian reader — and a crawler, which carries no preference
+ * and no Bulgarian address — sees exactly what it saw before.
+ *
+ * Nothing private is rewritten: the workspace, the account, an archive and a
+ * permalink have no prefixed twin, and `isReaderLocalizedPublicPath` is the
+ * one place that says which addresses do.
+ */
+function getReaderLocaleRewriteResponse(
+  request: NextRequest,
+  locale: PublicLocale,
+  requestHeaders: Headers,
+) {
+  if (locale === DEFAULT_PUBLIC_LOCALE) return null;
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  if (!isReaderLocalizedPublicPath(request.nextUrl.pathname)) return null;
+
+  const url = request.nextUrl.clone();
+  url.pathname = localizedPath(locale, stripLocalePrefix(url.pathname).path);
+
+  return NextResponse.rewrite(url, {
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 async function getPublicProfileLifecycleResponse(
@@ -1091,6 +1137,7 @@ export async function proxy(request: NextRequest) {
   requestHeaders.set(INTERFACE_MARKET_REQUEST_HEADER, localization.market);
   const response =
     authorScopedRewrite ??
+    getReaderLocaleRewriteResponse(request, locale, requestHeaders) ??
     NextResponse.next({
       request: {
         headers: requestHeaders,

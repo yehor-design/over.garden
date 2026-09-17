@@ -957,6 +957,76 @@ was written by hand-edited SQL. Done.
 
 ---
 
+## 18. `OVE-460` — The interface language is the reader's
+
+**Outcome.** A reader's language follows them across every page: chosen once,
+or set by their country on a first visit, and never changed by which page they
+open. Entries are not translated; only the interface around them.
+
+**What was true, measured on production 2026-09-17.** The proxy resolved the
+reader correctly and the document ignored it. `/@yehor/кратък-и-отговорен-запис-след`
+answered `Content-Language: bg` with `<html lang="uk">` and no language control
+at all. `/`, `/journals` and every organism card answered `Content-Language: bg`
+with `<html lang="uk">` and a control offering Bulgarian and Russian — on a
+Ukrainian page, to a reader the control itself said was Bulgarian.
+
+**Why.** Three decisions met badly.
+
+1. The unprefixed tree hard-codes the default locale: its layout passes
+   `DEFAULT_PUBLIC_LOCALE` into the document and each page passes it into the
+   shared renderer. That is what "the document language comes from the route"
+   (ADR-0022 D4) means where there is no route locale.
+2. An entry, a profile and a passport have exactly one address, unprefixed
+   (D9), and the proxy rewrote it into `/uk/…` — a fixed destination.
+3. The market came from the locale prefix, and the language control was drawn
+   only for the Bulgarian market. In the `/uk` subtree the market read as
+   Ukraine, whose language list held one language, so the control rendered
+   nothing.
+
+**What shipped.**
+
+* **Every market offers all three languages** (owner decision). The market now
+  decides one thing: which language a reader who has chosen nothing starts in.
+* **The prefix no longer names a market.** With all three languages in both
+  markets, reading Ukraine out of `/uk/…` moved a Bulgarian reader who chose
+  Ukrainian into a market whose control then disappeared.
+* **The proxy renders an unprefixed public address from the reader's locale
+  subtree**, the URL and the status unchanged. `isReaderLocalizedPublicPath`
+  is the one place that says which addresses have a prefixed twin; the
+  workspace, the account, an archive and a permalink have none and are left
+  alone — they read the same preference at request time, as they always did.
+* **The language control is on every page in every market**, and each option
+  points at the *prefixed* spelling, the reader's own included. That prefix is
+  the only thing that tells the proxy a language was chosen: it resolves the
+  locale from the route, writes the preference, and folds `/uk/…` — and a
+  prefixed author address — back to the canonical one. The options are plain
+  anchors, because only a document navigation gives the proxy that chance.
+* **The shell resolves the reader even inside the prefixed tree**, so the
+  control reflects who is reading rather than which subtree rendered them.
+
+**Two defects found on the way, both invisible while the control was hidden.**
+A two-segment author address read as opaque to the localized-target builder, so
+every language option on an entry or a passport would have pointed at the home
+page. And `languageHref` — the switcher's own helper — built an *address*
+rather than a *choice*, so the Ukrainian option pointed at the page the reader
+was already standing on and did nothing.
+
+**Proof (local, before merge).** A first visit from Bulgaria to `/journals`:
+`200`, `Content-Language: bg`, `<html lang="bg">`, three options, hrefs
+`/uk/journals`, `/bg/journals`, `/ru/journals`. The same address from Ukraine:
+`uk`, three options. Choosing Ukrainian from a Bulgarian page: `/uk/journals`
+answers `308` to `/journals` and writes `overgarden_interface_locale=uk`, and
+`/journals` then renders `uk`. `/auth/sign-in` for a Bulgarian reader: the
+copy is Bulgarian and the shell declares `lang="bg"` on its own container,
+which is what a screen reader reads.
+
+**The one thing only production can answer.** The CDN caches by URL, and an
+unprefixed address now has three renderings. The proof after deploy is two
+requests to the same URL with different preferences, checked for different
+documents.
+
+---
+
 ## Traps recorded before they cost a day
 
 - `notFound()` under a streamed shell answers **200**, not 404. Any real 404 is

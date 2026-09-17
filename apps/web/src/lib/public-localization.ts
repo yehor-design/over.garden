@@ -3,13 +3,16 @@ export const PUBLIC_LOCALES = ["uk", "bg", "ru"] as const;
 export type PublicLocale = (typeof PUBLIC_LOCALES)[number];
 
 export const DEFAULT_PUBLIC_LOCALE: PublicLocale = "uk";
-export const UKRAINE_PUBLIC_LOCALES = [
-  "uk",
-] as const satisfies readonly PublicLocale[];
-export const BULGARIA_PUBLIC_LOCALES = [
-  "bg",
-  "ru",
-] as const satisfies readonly PublicLocale[];
+/**
+ * The languages any reader may choose, whatever market they are in (owner
+ * decision, 2026-09-17). Each market used to carry its own subset: Ukraine
+ * offered Ukrainian alone and Bulgaria offered Bulgarian and Russian, so a
+ * reader in Bulgaria could not read the interface in Ukrainian and a reader in
+ * Ukraine had no language control at all. The gardeners here write in all
+ * three, and a language a reader cannot choose is a language they are shut out
+ * of. The market still decides which one they *start* in.
+ */
+export const INTERFACE_LOCALE_CHOICES = PUBLIC_LOCALES;
 export const PREFIXED_PUBLIC_LOCALES = [
   "bg",
   "ru",
@@ -89,12 +92,8 @@ export function buildLanguageAlternates(
   ]) as Record<string, string>;
 }
 
-export function getLanguageSwitcherLocales(
-  locale: PublicLocale,
-): readonly PublicLocale[] {
-  return locale === DEFAULT_PUBLIC_LOCALE
-    ? UKRAINE_PUBLIC_LOCALES
-    : BULGARIA_PUBLIC_LOCALES;
+export function getLanguageSwitcherLocales(): readonly PublicLocale[] {
+  return INTERFACE_LOCALE_CHOICES;
 }
 
 export function selectPublicLocaleFromRequestContext(input: {

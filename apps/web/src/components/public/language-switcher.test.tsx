@@ -63,7 +63,7 @@ describe("the language control", () => {
   it("needs no client bundle to work", () => {
     // A public choice is an anchor; an unprefixed one is a form over a Server
     // Action. Neither depends on hydration having run.
-    expect(source).toContain("<Link");
+    expect(source).toContain("<a\n");
     const formActions = [...source.matchAll(/<form\n?\s*action=\{([^}]*)\}/g)];
     expect(formActions.length).toBeGreaterThanOrEqual(1);
   });
@@ -142,21 +142,28 @@ describe("the workspace form keeps a real endpoint", () => {
 });
 
 describe("a language the reader has not chosen is never prefetched", () => {
-  it("marks every cross-locale option `prefetch={false}`", () => {
+  it("never lets the router reach a language the reader has not chosen", () => {
     // Measured, not assumed: Next strips `Next-Router-Prefetch` before
     // middleware runs, so `proxy.ts` cannot tell a prefetch of `/ru/…` from a
     // reader landing there and writes the preference either way. Left
     // prefetchable, hovering "Русский" on a `/bg/` page rewrote the saved
     // language to `ru` — reproduced in Chromium against a production build on
-    // 2026-09-04, before this line existed.
-    const links = [...code.matchAll(/<Link\b[\s\S]*?>/g)].map((m) => m[0]!);
-    const localeOptions = links.filter((link) =>
-      link.includes("data-interface-language-option"),
+    // 2026-09-04.
+    //
+    // The options are plain anchors, which cannot prefetch at all and cannot
+    // navigate on the client either. Both matter: the prefix in the target is
+    // how the proxy learns of the choice, and only a document navigation gives
+    // it the chance to fold that prefix back to the canonical address.
+    expect(code).not.toContain('from "next/link"');
+    expect(code).not.toContain("<Link");
+    const anchors = [...code.matchAll(/<a\b[\s\S]*?>/g)].map((m) => m[0]!);
+    const localeOptions = anchors.filter((anchor) =>
+      anchor.includes("data-interface-language-option"),
     );
 
     expect(localeOptions.length).toBeGreaterThanOrEqual(1);
     for (const option of localeOptions) {
-      expect(option).toMatch(/prefetch=\{false\}/);
+      expect(option).toContain("hrefLang=");
     }
   });
 });
