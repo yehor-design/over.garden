@@ -175,6 +175,40 @@ in the same instant, the second insert failed a unique constraint, `beforeAll`
 aborted, and teardown then failed on an undefined fixture — so the error named
 neither cause. One `on conflict do nothing` statement now.
 
+**Authentication is finished** (`OVE-455`, 2026-09-17), and the gap this page
+recorded is closed: **a successful sign-in has now been watched in a real
+browser**, not only the refusal path. Watching it found the defect the gap was
+hiding. `router.replace` is a client navigation, the shell lives in the root
+layout, and a client navigation inside the same layout does not re-render it —
+so a reader who signed in landed on the page they had asked for with the chrome
+still offering them "sign in". It is a document navigation now, and the test
+asserts the `next` round-trip, the signed-in chrome and the ADR-0022 D6
+cross-tab reload in one run.
+
+The screen itself is the anatomy Intercom, Cal.com, Uxcel, Mixpanel and
+Relevance AI all ship: the provider above an `or` divider, labelled fields
+beneath, the refusal inline, and the forgotten-password link beside the password
+label. The Google button carries the **mark** — measured at 18 px on a 40 px
+button, with clear space — because Google's own terms do not permit the bare
+bordered button that shipped before. Its four brand colours are the one
+exception the colour gate makes, by path, with a test asserting the exception is
+exactly one file and that every other gate still applies inside it. The password
+field has a show/hide control whose accessible name changes with its state, the
+refusal is a `Callout` with `role="alert"` above the fields that never says
+which of the two credentials was wrong, focus moves to the first control, and
+`/auth/help` answers three questions with three headings instead of one muted
+paragraph.
+
+Three stale things turned up on the way, all of them invisible because nobody
+ran them. `tests/auth-provider-retirement.spec.ts` asserted the
+`garden-auth-panel` that `OVE-378` deleted a fortnight earlier — it is in no CI
+list and no script, so it failed silently; it is rewritten against the screen
+that exists. `tests/journal-deletion-retention.spec.ts` asserted `signUp.ok()`,
+which is never true without a mail provider, and then seeds a column the schema
+no longer has; the sign-up half is on the shared helper now and the column is a
+spawned task. And the shell's context rail read "Далі / Далі" on any route with
+no destination of its own, which nothing but a screenshot could have told us.
+
 The remaining page families (`OVE-446` is done; `OVE-447`–`OVE-459`) are still
 in Backlog. The empty states
 have their pictures: six 3D objects from `thiings.co` in

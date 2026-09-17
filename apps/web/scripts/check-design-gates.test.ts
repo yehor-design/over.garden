@@ -89,6 +89,35 @@ describe("gate 1 — no palette utility, hex or oklch() in a component", () => {
     );
     expect(messages.length).toBeGreaterThan(0);
   });
+
+  it("stands down for Google's mark, and for nothing else in that directory", async () => {
+    // Google's identity guidelines require their mark in their four colours on
+    // any button that starts a Google sign-in (`OVE-455`). Those are a third
+    // party's trademark, not this product's palette — they must never be
+    // re-pointed and therefore must never become tokens, which is what the
+    // gate exists to insist on for everything else. The allowance is one file
+    // by path; this asserts both halves, because an exception nobody bounded
+    // is an exception that spreads.
+    expect(
+      await lintAs(
+        "src/components/auth/google-sign-in-button.tsx",
+        "hex-colour.tsx",
+      ),
+    ).toEqual([]);
+    expect(
+      (await lintAs("src/components/auth/gate-fixture.tsx", "hex-colour.tsx"))
+        .length,
+    ).toBeGreaterThan(0);
+    // And the other gates still apply inside the excused file.
+    expect(
+      (
+        await lintAs(
+          "src/components/auth/google-sign-in-button.tsx",
+          "z-index-literal.tsx",
+        )
+      ).length,
+    ).toBeGreaterThan(0);
+  });
 });
 
 describe("gate 2 — no arbitrary value, but every arbitrary variant stays", () => {

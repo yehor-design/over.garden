@@ -205,6 +205,23 @@ const eslintConfig = defineConfig([
     rules: { "no-restricted-syntax": "off" },
   },
   {
+    // Google's identity guidelines require their mark, in their four colours,
+    // on any button that starts a Google sign-in (`OVE-455`). Those four are a
+    // third party's trademark, not this product's palette: they must never be
+    // re-pointed and therefore must never become tokens, which is exactly what
+    // the colour gate exists to insist on for everything else. One file, by
+    // path; every other gate stands.
+    files: ["src/components/auth/google-sign-in-button.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...layoutGates,
+        ...styleGate,
+        ...rawControlGate,
+      ],
+    },
+  },
+  {
     // OVE-197 subject-aware media needs continuous focal object-position and
     // marker coordinates; those cannot be expressed as static design tokens,
     // so the arbitrary-value gate and the inline-style gate stand down here.

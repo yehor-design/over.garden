@@ -50,9 +50,26 @@ test.describe("sign in, by keyboard alone", () => {
     expect(reached, "Tab never reached the email control").toBe(true);
 
     await page.keyboard.type("keyboard-proof@example.test");
+
+    // The forgotten-password link sits beside the password label (`OVE-455`,
+    // the anatomy Intercom, Cal.com, Uxcel, Mixpanel and Relevance AI all
+    // ship), so it is one stop between the two credentials. Asserted rather
+    // than tabbed past, because a link that moved out of the tab order is
+    // exactly what this file exists to catch.
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("link", { name: /Забули|Забравили|Забыли/u }),
+    ).toBeFocused();
+
     await page.keyboard.press("Tab");
     await expect(password).toBeFocused();
     await page.keyboard.type("not-a-real-password");
+
+    // The show/hide control is inside the field, between it and the submit.
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("button", { name: /Показати|Показване|Показать/u }),
+    ).toBeFocused();
 
     // The submit control is the next stop, and Enter from inside the form
     // submits it — which is the behaviour a browser gives a real `<form>` and

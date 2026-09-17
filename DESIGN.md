@@ -590,6 +590,16 @@ Grounded in the Plain, Twenty, Gorgias and Workable references.
   names what to do next, not what went wrong internally.
 - A form that changes server state is a Server Action on a real endpoint
   (ADR-0024 D3). No exceptions on public pages.
+- A **password field** carries a show/hide control whose _accessible name_
+  changes with its state — "show password" becomes "hide password". A name that
+  never changes leaves a screen-reader user pressing a button whose effect they
+  cannot hear. It degrades to a plain password field before hydration, which is
+  the right way round.
+- A **third-party sign-in button** follows that party's identity rules, not this
+  system's: Google's require the four-colour mark, permitted wording, a 40 px
+  minimum and clear space beside the mark, and the provider's name is never
+  translated. The colour gate stands down for that one file by path, because a
+  trademark is the one colour that must never be re-pointed.
 
 ### 5.4 Empty, loading, error
 

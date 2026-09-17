@@ -12,8 +12,9 @@ import {
 import { authClient } from "@/lib/auth-client";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
+import { Callout } from "@/components/ui/callout";
 import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export function ResetPasswordForm({
   locale = "uk",
@@ -21,6 +22,9 @@ export function ResetPasswordForm({
   locale?: InterfaceLocale;
 }) {
   const copy = getTrustSurfaceCopy(locale).resetPassword;
+  // The show/hide labels belong to the same vocabulary as the sign-in screen's:
+  // one wording for one control, wherever a password is typed.
+  const authPanelCopy = getTrustSurfaceCopy(locale).authPanel;
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = useMemo(
@@ -86,35 +90,43 @@ export function ResetPasswordForm({
         <p className="text-sm text-muted-foreground">{copy.description}</p>
       </div>
 
+      {/* A refusal is a form-level error above the fields, not a line under
+          the submit that a reader has already scrolled past (DESIGN.md §5.3). */}
+      {message ? (
+        <Callout tone="danger" live="assertive" data-auth-message="error">
+          {message}
+        </Callout>
+      ) : null}
+
       <Field label={copy.newPassword} id="reset-new-password" required>
-        <Input
-          type="password"
+        <PasswordInput
           autoComplete="new-password"
           value={password}
           onChange={(event) => {
             setPassword(event.target.value);
           }}
           minLength={8}
+          showLabel={authPanelCopy.showPassword}
+          hideLabel={authPanelCopy.hidePassword}
         />
       </Field>
 
       <Field label={copy.confirmPassword} id="reset-confirm-password" required>
-        <Input
-          type="password"
+        <PasswordInput
           autoComplete="new-password"
           value={confirmPassword}
           onChange={(event) => {
             setConfirmPassword(event.target.value);
           }}
           minLength={8}
+          showLabel={authPanelCopy.showPassword}
+          hideLabel={authPanelCopy.hidePassword}
         />
       </Field>
 
-      <Button type="button" onClick={resetPassword} disabled={isPending}>
-        {isPending ? copy.pending : copy.submit}
+      <Button type="button" onClick={resetPassword} loading={isPending}>
+        {copy.submit}
       </Button>
-
-      {message ? <p className="text-sm text-destructive">{message}</p> : null}
     </section>
   );
 }
