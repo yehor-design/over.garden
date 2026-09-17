@@ -291,37 +291,50 @@ first-run card. Never as page decoration, never more than one per viewport.
 
 Sizes: 96 px in a card, 144 px in a page-level empty state, 180 px maximum.
 Always a `<img>` with `alt=""` — the heading beside it carries the meaning.
-Served as WebP through the existing media pipeline, not as inline SVG.
+Served as WebP, never as inline SVG; where the files live is below.
 
 **Source: `thiings.co`.** Decided by the owner on 2026-09-17, after the licence
-position below was put to them, and reaffirmed. It is their call and their risk;
-this page records it so that it stays a known position rather than an
-assumption someone inherits.
+position below was put to them, and reaffirmed twice the same day.
 
 What the licence actually says, verbatim from `thiings.co/terms`: a free
 download is for "Personal and non-commercial use", "Attribution required";
 commercial use needs a paid licence ($49 indie / $199 business, lifetime); and
-**no tier** permits reselling or redistributing the icons "as standalone assets".
-OverGarden is a commercial product, so the free tier does not cover its use.
+**no tier** permits reselling or redistributing the icons "as standalone
+assets". OverGarden is a commercial product, so the free tier does not cover
+its use.
 
-Three rules follow, and they are not optional:
+**The owner's position, 2026-09-17: the free tier, and no attribution.** The
+product carries no credit to `thiings.co` anywhere, including the footer. That
+is their call and their risk; this page records it so that it stays a known
+position rather than an assumption someone inherits, and so that nobody spends
+an afternoon re-deriving a rule the product does not follow. An earlier draft of
+this section required the credit; it was wrong about what had been decided.
 
-1. **Carry the attribution.** It is the one free-tier condition the product can
-   meet, and meeting it costs nothing. A visible credit to `thiings.co` goes in
-   the footer, beside the other source attributions. Do not skip it on the
-   grounds that the tier is already being exceeded.
-2. **Never republish them as assets.** They are referenced from a page; they are
-   never offered as a download, a pack, a sprite sheet, or an API. That
-   prohibition is the one term that binds at every tier, including the paid
-   ones.
-3. **Keep the swap cheap.** The illustration stays a component prop and the
-   files stay in one directory with one manifest. If the position is ever
-   revisited, buying the $49 indie licence or moving to
-   [3dicons.co](https://3dicons.co/) (CC0 — commercial, no attribution) must be
-   a one-directory change, not a hunt through components.
+Two rules survive that decision, and they are not optional:
 
-File the download receipt and the terms as read on the day beside
-`docs/launch-corpus-unsplash-license-receipt.md`, so the position is dated.
+1. **Never republish them as assets.** They are referenced from a page; they are
+   never offered as a download, a pack, a sprite sheet, an archive or an API,
+   and no route lists the directory. That prohibition is the one term that binds
+   at every tier, including the paid ones, and no reading of the free tier
+   excuses it.
+2. **Keep the swap cheap.** The illustration stays a component prop and the
+   files stay in one directory with one manifest,
+   `apps/web/src/lib/illustrations.ts`. Buying the $49 indie licence, moving to
+   [3dicons.co](https://3dicons.co/) (CC0 — commercial, no attribution), or
+   dropping the set must be a one-directory change, not a hunt through
+   components. `illustrations.test.ts` fails if any other file names a path.
+
+**Where the files live.** `apps/web/public/illustrations/*.webp`, 360 × 360 —
+twice the 180 px maximum, so the largest declared size stays sharp on a 2×
+display and no size needs a second file. They are served by the CDN as plain
+static WebP, never through the Vercel image optimizer, which ADR-0022 D2 bans.
+
+They are deliberately **not** in the media bucket. That pipeline exists for a
+gardener's photographs: a staging worker, an atomic publish, retention, and
+revocation. Six permanent pieces of app art have none of that, and putting them
+in the user-media bucket would make every tool that reasons about that bucket
+learn an exception. Shipping them with the code also means a rollback rolls them
+back, which an object in a bucket does not.
 
 ### 2.10 Photography
 
