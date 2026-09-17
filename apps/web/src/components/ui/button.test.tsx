@@ -57,6 +57,17 @@ describe("Button", () => {
     expect(screen.getByRole("button")).toHaveProperty("type", "submit");
   });
 
+  it("keeps its fill colour and its type step, which `cn` once merged away", () => {
+    // `tailwind-merge` put a named size and a named colour in the same group,
+    // so `text-body-sm` deleted `text-text-on-fill` and every filled button drew
+    // body ink on a green fill. Found by an axe scan of the real stylesheet.
+    render(<Button variant="primary">Publish entry</Button>);
+    const className = screen.getByRole("button").className;
+    expect(className).toContain("text-text-on-fill");
+    expect(className).toContain("bg-action");
+    expect(className).toContain("text-body-sm");
+  });
+
   it("carries each of the five variants and three sizes", () => {
     for (const variant of [
       "primary",
