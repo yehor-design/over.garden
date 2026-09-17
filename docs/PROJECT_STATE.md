@@ -148,6 +148,51 @@ four pixels of it is the difference between "Дневници" on one line and o
 axe at 375 px on the home page, the journals directory, an organism card and the
 workspace.
 
+**One page, one language, and the contract page says what the code does**
+(`OVE-446`, 2026-09-17). The defect the card was written for had already been
+fixed that evening, by a different decision than the card proposed: the owner's
+answer, put to them again and reaffirmed, is that **both markets offer all
+three languages** and the market decides only which one a reader who has chosen
+nothing starts in. `docs/INTERFACE_LOCALE_CONTRACT.md` had still described the
+old model — Ukraine with one language and no control — and now records the real
+one, with a section naming what is no longer true so nobody re-derives a rule
+the product does not follow.
+
+Two live defects came out of measuring rather than reading, both the old model
+surviving where nobody looks. **The global error page drew no language control
+for the Ukraine market**, read a market out of a locale prefix, and recognised
+only `bulgaria:bg` and `bulgaria:ru` as contexts — so `bulgaria:uk` and
+`ukraine:ru`, two ordinary readers, were silently reset to Ukrainian on the one
+page they most need to understand; its test mocked the control with the same
+market gate, so it passed throughout. And **the `[locale]` layout claimed a
+market derived from the route's language**: measured on production, a reader in
+Bulgaria whose language is Russian renders from the `/ru` subtree, and the
+document told the error boundary they were in Ukraine.
+
+What is asserted rather than described: 600 resolver combinations (country ×
+persisted market × URL prefix × persisted locale) all answering with a
+market-valid locale, the production failure among them as a named case; a
+repo-wide guard that only three declared modules may build a cross-locale
+address and each must emit a plain anchor; the three typed namespaces carrying
+the same key set all the way down with no empty string; and an entry keeping
+`lang` when it is listed in a feed or directory somebody is reading in another
+language (WCAG 3.1.2) — proved end to end by publishing in Bulgarian and reading
+in Ukrainian, not by a fixture.
+
+`pnpm interface:locale:probe` is the production receipt: it records the resolved
+market from the document's own context hint rather than guessing from a
+screenshot. What it cannot do is forge a country — Vercel sets
+`x-vercel-ip-country` at the edge and the resolver reads it first, so a
+UA-signal vantage point is not reachable from a machine in Bulgaria. The country
+dimension is the resolver matrix's to prove.
+
+A harness fix that came with it: Better Auth rate-limits sign-up, and the fourth
+call in a window answers `429` and writes nothing. Playwright runs spec _files_
+in parallel, so specs signing a synthetic gardener in used to push one another
+over the limit and fail with "Synthetic gardener was not persisted", which names
+the symptom and hides the cause. `tests/helpers/synthetic-gardener.ts` retries
+the window and says what it saw; four specs use it.
+
 **Search stopped being an icon** (`OVE-445`, 2026-09-17). `⌘K`, `Ctrl+K`, `/`
 and the rail's own control open one palette over journals, organisms,
 gardeners, communities and actions, grouped in that order, with the shortcuts
@@ -209,18 +254,18 @@ no longer has; the sign-up half is on the shared helper now and the column is a
 spawned task. And the shell's context rail read "Далі / Далі" on any route with
 no destination of its own, which nothing but a screenshot could have told us.
 
-The remaining page families (`OVE-446` is done; `OVE-447`–`OVE-459`) are still
-in Backlog. The empty states
-have their pictures: six 3D objects from `thiings.co` in
+The remaining page families (`OVE-447`–`OVE-459`) are still in Backlog.
+
+The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module
 (`src/lib/illustrations.ts`), on the owner's position of 2026-09-17 — the free
 tier, and no attribution anywhere, including the footer. `DESIGN.md` §2.9 now
 records that instead of the visible credit it used to require, and says why the
 files ship with the code rather than through the media pipeline, which exists
 for a gardener's photographs. No page renders `EmptyState` yet, so they reach a
-reader as the page families land. One gap the foundation declares rather than
-hides: gate 8's command-palette flow is blocked on `OVE-445`, which builds the
-palette.
+reader as the page families land. The gap the foundation declared — gate 8's
+command-palette flow, blocked on `OVE-445` — is closed: that gate drives the
+palette now.
 
 **Decided, 2026-09-16, not yet built.** The editorial pipeline — a machine that
 reads the websites the owner chose and drafts news and blog articles for him to
