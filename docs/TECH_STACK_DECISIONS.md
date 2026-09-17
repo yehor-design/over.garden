@@ -215,3 +215,22 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   ADR-0026 D9 is explicitly unchanged: an editorial mention does not make a
   source-only card indexable. Accepted 2026-09-16; execution folds into SDD
   Slice 23 and Slice 25, whose Linear descriptions predate it.
+- ADR-0031 — One design system, and the redesign that delivers it (2026-09-17).
+  Binding: `DESIGN.md` is the canon for tokens, components, layout, patterns,
+  accessibility and content, and its rules are CI gates rather than review
+  notes. Tokens are two layers — primitive `--og-*` ramps that never leave
+  `globals.css`, and semantic `--color-*` names that everything else consumes.
+  The interface neutral is hue 150 at chroma 0.002–0.008; green stays as brand
+  and primary action on the existing `oklch(0.39 0.105 151)`, which becomes
+  `green-700` and measures 9.15:1 against white. **Light theme only** — the
+  `.dark` block, its four `dark:` utilities and shadcn's leftover purple
+  `--sidebar-primary` are removed, because a half-implemented theme makes every
+  component's correctness unverifiable. Layout is three columns (rail 240 /
+  content 704 / context 300), with the context rail never the only home of an
+  action, and a five-slot mobile tab bar that carries the product's verb instead
+  of a sign-in link. Filters apply on change and live in the URL; one command
+  palette is layered over the crawlable search pages, which stay. Information
+  architecture is in scope, and a genuinely new owner-facing surface still needs
+  the owner's separate approval. WCAG 2.2 AA is the target and the gate. Nothing
+  here relaxes ADR-0023, ADR-0024 D3, ADR-0028 or ADR-0029. Accepted 2026-09-17;
+  execution is SDD Slice 28 (`OVE-439`–`OVE-459`), foundation first.

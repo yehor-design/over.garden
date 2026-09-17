@@ -2,7 +2,7 @@
 
 Status: living document. Update it whenever production behaviour, the direction,
 or the list of known gaps changes. Read it first, then `AGENTS.md`.
-Last reviewed: 2026-09-09.
+Last reviewed: 2026-09-17.
 
 This page answers four questions for anyone returning to OverGarden: what the
 product is today, what is actually true in production right now, what is being
@@ -48,6 +48,39 @@ The seven owner requirements have one committed production receipt:
 `pnpm prove:owner-mvp-reset`.
 
 ## Where the project is heading
+
+**Decided, 2026-09-17, not yet built.** The whole interface is redesigned onto
+one design system (ADR-0031, SDD Slice 28, `OVE-439`–`OVE-459`). `DESIGN.md`
+stopped being a stub and is now the canon: two token layers, a component
+inventory with a binding contract, a three-column shell, and WCAG 2.2 AA
+enforced by CI rather than by review.
+
+The audit that produced it found a split nobody had named. **The token layer is
+healthy** — five hard-coded colour utilities and five inline `style={{}}` in the
+whole of `apps/web/src`, one `<main>`, a working skip link, cards as
+`<article>`, zero images without `alt`, zero unlabelled controls, zero targets
+under 24 px, and **zero contrast failures at AA** on `/journals` as measured.
+(A first measurement claimed 102 failures; it parsed `getComputedStyle`'s
+`lab()` output as RGB. Measure colour through a canvas, not a regex.)
+**The component layer barely exists** — seven primitives, only `Button` adopted
+at 78 imports, and **fifty files reaching for a raw `<input>`, `<select>` or
+`<textarea>`**. The product does not need repainting; it needs the layer between
+tokens and pages it never had.
+
+Seven interface defects go with it, each now owned by a task: Ukrainian content
+served under Bulgarian chrome with a language control the Ukraine market must
+not render; `/journals` filtering through six `<select>`s behind an Apply
+button; search that is an icon and nothing else; a mobile header whose brand
+block clips, a floating control half off the right edge of every page, a tab bar
+spending a slot on "Sign in" while writing an entry has no place on a phone; no
+footer and no `contentinfo` landmark, with `/privacy`, `/support` and
+`/first-publication-disclosure` linked from nowhere; two `aside` and two `nav`
+landmarks unnamed; and a `.dark` block that is declared, consumed by four
+utilities, reachable by no toggle, and still carrying shadcn's default purple.
+Dark mode is removed rather than finished (ADR-0031 D2).
+
+Nothing is implemented: every Slice 28 issue is in Backlog, and the foundation
+four (`OVE-439`–`OVE-442`) block the rest.
 
 **Decided, 2026-09-16, not yet built.** The editorial pipeline — a machine that
 reads the websites the owner chose and drafts news and blog articles for him to

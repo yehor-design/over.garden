@@ -11,8 +11,9 @@ knowingly unfinished. Current decisions live in
 `docs/adr/ADR-0026-organism-knowledge-graph.md`,
 `docs/adr/ADR-0027-owner-health-page-retired.md` and
 `docs/adr/ADR-0028-notion-shaped-composer.md`,
-`docs/adr/ADR-0029-address-law.md` and
-`docs/adr/ADR-0030-editorial-pipeline-in-overgarden.md`; older ADRs and dated
+`docs/adr/ADR-0029-address-law.md`,
+`docs/adr/ADR-0030-editorial-pipeline-in-overgarden.md` and
+`docs/adr/ADR-0031-design-system-and-redesign.md`; older ADRs and dated
 documents are history and never override them.
 
 ## Product
@@ -29,7 +30,7 @@ before defensive refusal.
 | Layer | Decision |
 | --- | --- |
 | App | Next.js App Router + TypeScript on Vercel (`fra1`), Cache Components for public pages |
-| UI | shadcn/ui primitives, Tailwind, `next/font/local` for Google Sans and Geist Mono |
+| UI | One design system: `DESIGN.md` is the canon (tokens, components, layout, patterns, accessibility). shadcn/ui primitives, Tailwind, `next/font/google` for Google Sans and Geist Mono |
 | Auth | Better Auth with session cookie cache; one sealed `owner` role bootstrapped by CLI |
 | Data | DigitalOcean Managed Postgres, Kysely, SQL migrations under `apps/web/sql` are the schema truth, no ORM |
 | Journal | Lexical composer, `JournalDocumentV1` is the sole persisted document contract |
@@ -157,6 +158,12 @@ Every Linear task uses this shape and nothing more:
   `docs/ORGANISM_GRAPH_EXECUTION.md` — the executor's runbook for that slice:
   the owner's standing authorization, environment quirks, production
   procedures, hand-offs between the fourteen tasks.
+  `docs/adr/ADR-0031-design-system-and-redesign.md` — one design system and the
+  redesign that delivers it: two token layers, a real component library, a
+  three-column shell, light theme only, and WCAG 2.2 AA as a build gate.
+  `DESIGN.md` — **read before changing any interface.** It is authoritative for
+  tokens, components, layout, patterns, accessibility and content, and its §10
+  rules are enforced in CI rather than reviewed.
   `docs/TECH_STACK_DECISIONS.md` — stack detail and ADR index.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — provider IDs, buckets, domains, env.
 - `docs/PRODUCTION_SCHEMA_STATE.md` — which migrations the production database
