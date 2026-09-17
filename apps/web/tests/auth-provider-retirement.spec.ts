@@ -3,6 +3,18 @@ import { expect, test } from "playwright/test";
 const INTERFACE_LOCALE_COOKIE = "overgarden_interface_locale";
 const INTERFACE_MARKET_COOKIE = "overgarden_interface_market";
 
+/**
+ * Facebook Login is retired (`OVE-296`) and credentials plus Google are what
+ * remain.
+ *
+ * **This file asserted a surface that no longer exists.** It looked for
+ * `garden-auth-panel` on `/garden` — the panel fourteen pages embedded until
+ * `OVE-378` replaced it with one sign-in screen on 2026-09-04. The panel has
+ * been deleted since, `single-sign-in-surface.test.ts` asserts it stays
+ * deleted, and this spec is in no CI list and no `package.json` script, so
+ * nobody ran it and it failed silently for a fortnight. Rewritten against the
+ * screen that exists (`OVE-455`); the retirement it guards is unchanged.
+ */
 test.describe("OVE-296 retired provider surface", () => {
   for (const locale of ["uk", "bg", "ru"] as const) {
     test(`keeps credential and Google entry points without retired copy in ${locale}`, async ({
@@ -24,16 +36,16 @@ test.describe("OVE-296 retired provider surface", () => {
         },
       ]);
 
-      const response = await page.goto("/garden");
+      const response = await page.goto("/auth/sign-in");
       expect(response?.status()).toBe(200);
-      const panel = page.getByTestId("garden-auth-panel");
-      await expect(panel).toBeVisible();
-      await expect(panel).toHaveAttribute("lang", locale);
-      await expect(panel.locator('input[type="email"]')).toBeVisible();
-      await expect(panel.locator('input[type="password"]')).toBeVisible();
+      const surface = page.locator('[data-auth-surface="sign-in"]');
+      await expect(surface).toBeVisible();
+      await expect(surface).toHaveAttribute("lang", locale);
+      await expect(surface.locator('input[type="email"]')).toBeVisible();
+      await expect(surface.locator('input[type="password"]')).toBeVisible();
       await expect(page.getByTestId("google-sign-in-button")).toBeVisible();
-      await expect(panel).not.toContainText(/facebook/i);
-      await expect(panel.locator('[data-testid*="facebook"]')).toHaveCount(0);
+      await expect(surface).not.toContainText(/facebook/i);
+      await expect(surface.locator('[data-testid*="facebook"]')).toHaveCount(0);
     });
   }
 

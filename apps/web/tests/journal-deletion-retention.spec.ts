@@ -18,10 +18,10 @@
 
 import { randomUUID } from "node:crypto";
 
+import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
 import { expect, test, type BrowserContext } from "playwright/test";
 import { Pool } from "pg";
 
-import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 
 const TEST_PASSWORD = "OVE353-local-password-1!";
 const LOCALE_COOKIE = "overgarden_interface_locale";
@@ -155,43 +155,28 @@ async function selectLocale(
   ]);
 }
 
+/**
+ * A gardener with a session, through the one helper that knows how.
+ *
+ * What stood here asserted `signUp.ok()`, and sign-up answers 500 on a machine
+ * with no mail provider — the rows are written before the verification mail is
+ * sent — so this spec could not pass locally and is in no CI list, which is why
+ * nobody noticed. The shared helper knows that, and knows about Better Auth's
+ * sign-up rate limit as well.
+ */
 async function createVerifiedCredentialSession(input: {
   origin: string;
   context: BrowserContext;
   pool: Pool;
 }) {
-  const email = `ove353-browser-${randomUUID()}@example.test`;
-  const signUp = await input.context.request.post(
-    `${input.origin}/api/auth/sign-up/email`,
-    {
-      headers: { origin: input.origin },
-      data: {
-        email,
-        password: TEST_PASSWORD,
-        name: PRIVATE_AUTH_COMPATIBILITY_NAME,
-      },
-    },
-  );
-  expect(signUp.ok()).toBe(true);
-  const user = await input.pool.query<{ id: string }>(
-    'select id::text as id from public."user" where email = $1::text',
-    [email],
-  );
-  const userId = user.rows[0]?.id;
-  if (!userId) throw new Error("Synthetic auth user was not persisted.");
-  await input.pool.query(
-    'update public."user" set "emailVerified" = true where id = $1::uuid',
-    [userId],
-  );
-  const signIn = await input.context.request.post(
-    `${input.origin}/api/auth/sign-in/email`,
-    {
-      headers: { origin: input.origin },
-      data: { email, password: TEST_PASSWORD },
-    },
-  );
-  expect(signIn.ok()).toBe(true);
-  return { email, userId };
+  const gardener = await signInSyntheticGardener({
+    baseURL: input.origin,
+    context: input.context,
+    pool: input.pool,
+    prefix: "ove353-browser",
+    password: TEST_PASSWORD,
+  });
+  return { email: gardener.email, userId: gardener.id };
 }
 
 async function seedPublishedEntry(pool: Pool, ownerUserId: string) {

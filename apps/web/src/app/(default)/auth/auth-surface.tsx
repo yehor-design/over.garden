@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
 import { AUTH_HELP_PATH } from "@/lib/auth/auth-recovery";
 import { announceSessionSignal } from "@/lib/auth/session-signal";
 import type { InterfaceLocale } from "@/lib/interface-localization";
@@ -18,6 +19,7 @@ import { buildSignInHref } from "@/lib/navigation/sign-in-href";
 import { HiddenField } from "@/components/ui/hidden-field";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 /**
  * The one screen that signs somebody in, and the one that creates an account.
@@ -69,7 +71,6 @@ export function AuthSurface({
   ) => Promise<AuthFormState>;
 }) {
   const copy = getTrustSurfaceCopy(locale).authPanel;
-  const router = useRouter();
   const [state, formAction] = useActionState(submit, {
     status: "idle" as const,
     message: null,
@@ -83,6 +84,13 @@ export function AuthSurface({
   // ADR-0022 D6: signing in reloads every other open tab. The announcement
   // belongs on the destination, and this is the first render that knows the
   // session exists.
+  //
+  // The destination is reached by a **document navigation**, not
+  // `router.replace`. The shell lives in the root layout, and a client
+  // navigation inside the same layout does not re-render it — so a reader who
+  // signed in landed on the page they asked for with the chrome still offering
+  // them "sign in". Watched in a real browser on 2026-09-17, which is what
+  // `OVE-455` exists for: only the refusal path had ever been observed.
   if (
     (state.status === "signed-in" || state.status === "accepted") &&
     state.redirectTo &&
@@ -91,7 +99,7 @@ export function AuthSurface({
     setSignalled(true);
     if (state.status === "signed-in") {
       announceSessionSignal({ type: "signed_in", ownerUserId: null });
-      router.replace(state.redirectTo);
+      window.location.assign(state.redirectTo);
     }
   }
 
@@ -105,6 +113,16 @@ export function AuthSurface({
   const title = isSignUp ? copy.signUpScreenTitle : copy.signInScreenTitle;
   const otherHref = buildSignInHref({ returnTo: next, signUp: !isSignUp });
   const otherLabel = isSignUp ? copy.toSignIn : copy.toSignUp;
+  const refused = state.status === "error";
+  const emailRef = useRef<HTMLInputElement>(null);
+
+  // The first invalid control takes focus (DESIGN.md §5.3). A refusal never
+  // says *which* credential was wrong — that would tell somebody probing which
+  // half they had right — so the first control of the form is the first
+  // invalid one, and it is where a reader continues from.
+  useEffect(() => {
+    if (refused) emailRef.current?.focus();
+  }, [refused, state.message]);
 
   return (
     <main
@@ -123,39 +141,81 @@ export function AuthSurface({
             </p>
           </div>
 
+          {/* The provider above an `or` divider, then the labelled fields:
+              the anatomy Intercom, Cal.com, Uxcel, Mixpanel and Relevance AI
+              all ship, and all five show the Google mark. */}
           {googleSignInEnabled ? (
-            <form action={socialAction} className="grid gap-2">
-              <HiddenField name="provider" value="google" />
-              <HiddenField name="next" value={next} />
-              <SubmitButton variant="secondary" testId="google-sign-in-button">
-                {formatTrustTemplate(copy.continueWith, { provider: "Google" })}
-              </SubmitButton>
-              {socialState.message ? (
-                <AuthMessage status="error" message={socialState.message} />
-              ) : null}
-            </form>
+            <div className="grid gap-4">
+              <form action={socialAction} className="grid gap-2">
+                <HiddenField name="provider" value="google" />
+                <HiddenField name="next" value={next} />
+                <GoogleSubmit
+                  label={formatTrustTemplate(copy.continueWith, {
+                    provider: "Google",
+                  })}
+                />
+                {socialState.message ? (
+                  <Callout tone="danger" live="assertive">
+                    {socialState.message}
+                  </Callout>
+                ) : null}
+              </form>
+              <OrDivider label={copy.orDivider} />
+            </div>
           ) : null}
 
           <form action={formAction} className="grid gap-4">
             <HiddenField name="next" value={next} />
+
+            {/* A refusal is a form-level error: a `Callout` with `role="alert"`
+                above the fields, saying what to do next and never which of the
+                two credentials was wrong (DESIGN.md §5.3). */}
+            {state.message ? (
+              <Callout
+                id="auth-message"
+                tone={refused ? "danger" : "info"}
+                live={refused ? "assertive" : "polite"}
+                data-auth-message={refused ? "error" : "status"}
+              >
+                {state.message}
+              </Callout>
+            ) : null}
+
             <Field label={copy.email} required>
               <Input
+                ref={emailRef}
                 type="email"
                 name="email"
                 autoFocus
+                required
                 autoComplete="email"
-                aria-invalid={state.status === "error" || undefined}
+                aria-invalid={refused || undefined}
                 aria-describedby={state.message ? "auth-message" : undefined}
               />
             </Field>
 
-            <Field label={copy.password} required>
-              <Input
-                type="password"
+            <Field
+              label={copy.password}
+              required
+              mark={
+                isSignUp ? undefined : (
+                  <Link
+                    href={AUTH_HELP_PATH}
+                    className="text-caption font-medium text-link underline-offset-4 hover:underline"
+                  >
+                    {copy.forgotPassword}
+                  </Link>
+                )
+              }
+            >
+              <PasswordInput
                 name="password"
+                required
                 autoComplete={isSignUp ? "new-password" : "current-password"}
                 minLength={8}
-                aria-invalid={state.status === "error" || undefined}
+                showLabel={copy.showPassword}
+                hideLabel={copy.hidePassword}
+                aria-invalid={refused || undefined}
                 aria-describedby={state.message ? "auth-message" : undefined}
               />
             </Field>
@@ -163,13 +223,6 @@ export function AuthSurface({
             <SubmitButton>
               {isSignUp ? copy.createAccount : copy.signIn}
             </SubmitButton>
-
-            {state.message ? (
-              <AuthMessage
-                status={state.status === "error" ? "error" : "status"}
-                message={state.message}
-              />
-            ) : null}
           </form>
 
           <div className="grid gap-2 border-t border-border pt-4 text-sm">
@@ -205,47 +258,40 @@ export function AuthSurface({
   );
 }
 
-function SubmitButton({
-  children,
-  variant,
-  testId,
-}: {
-  children: React.ReactNode;
-  variant?: "secondary";
-  testId?: string;
-}) {
+function SubmitButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
+  // `loading` keeps the button's width, swaps the label for a spinner, marks it
+  // busy and leaves it focusable (DESIGN.md §4.4). It never disappears, which
+  // on a sign-in screen is the difference between "working" and "broken".
   return (
-    <Button
-      type="submit"
-      variant={variant}
-      disabled={pending}
-      data-testid={testId}
-    >
+    <Button type="submit" loading={pending}>
       {children}
     </Button>
   );
 }
 
-function AuthMessage({
-  status,
-  message,
-}: {
-  status: "error" | "status";
-  message: string;
-}) {
+function GoogleSubmit({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <GoogleSignInButton
+      label={label}
+      loading={pending}
+      data-testid="google-sign-in-button"
+    />
+  );
+}
+
+/** The `or` between the provider and the fields, as a rule with a word on it. */
+function OrDivider({ label }: { label: string }) {
   return (
     <p
-      id="auth-message"
-      role={status === "error" ? "alert" : "status"}
-      aria-live={status === "error" ? "assertive" : "polite"}
-      className={
-        status === "error"
-          ? "text-sm text-destructive"
-          : "text-sm text-muted-foreground"
-      }
+      aria-hidden="true"
+      data-auth-or-divider="true"
+      className="flex items-center gap-3 text-caption text-text-muted"
     >
-      {message}
+      <span className="h-px flex-1 bg-border" />
+      {label}
+      <span className="h-px flex-1 bg-border" />
     </p>
   );
 }

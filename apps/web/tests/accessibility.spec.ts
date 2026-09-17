@@ -292,8 +292,11 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
     const password = page.locator('input[type="password"]').first();
     await tabTo(page, email, "the email control");
     await page.keyboard.type(`${PREFIX}-keyboard@example.test`);
-    await page.keyboard.press("Tab");
-    await expect(password).toBeFocused();
+    // Two stops between the credentials since `OVE-455`: the forgotten-password
+    // link beside the password label, and the show/hide control inside the
+    // field. `tabTo` walks to each rather than assuming a count, so a control
+    // that leaves the tab order still fails here.
+    await tabTo(page, password, "the password control");
     await page.keyboard.type(TEST_PASSWORD);
 
     const submit = page
@@ -301,7 +304,7 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
       .filter({ has: password })
       .locator('button[type="submit"]')
       .first();
-    await page.keyboard.press("Tab");
+    await tabTo(page, submit, "the submit control");
     await expect(submit).toBeFocused();
     await expect(submit).toHaveAccessibleName(/\S/);
     // Focus is visible on whatever holds it: `0px` would mean the ring was

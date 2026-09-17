@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MailWarning } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { SIGN_IN_PATH } from "@/lib/navigation/sign-in-href";
 import { SUPPORT_EMAIL } from "@/lib/privacy/disclosures";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
@@ -44,47 +45,57 @@ export default async function AuthHelpPage() {
 
       <PasswordResetRequestForm locale={locale} />
 
-      <section className="grid gap-4 rounded-lg border border-border p-5">
-        <h2 className="text-base font-semibold text-foreground">
-          {copy.nextTitle}
-        </h2>
-        <ol className="list-decimal space-y-3 pl-5 text-sm leading-6 text-muted-foreground">
-          <li>{copy.stepOne}</li>
-          <li>
-            {copy.stepTwoBeforeEmail}
+      {/* Three answerable questions, each with its own heading, instead of one
+          muted paragraph doing the work of three. A reader arrives here with
+          exactly one of these problems and should not have to read the other
+          two to find theirs. */}
+      <div data-auth-help-sections="true" className="grid gap-4">
+        <section className="grid gap-2 rounded-lg border border-border p-5">
+          <h2 className="text-h4 text-text-heading">
+            {copy.sections.emailTitle}
+          </h2>
+          <p className="text-body-sm leading-6 text-text-secondary">
+            {copy.sections.emailBody}
+          </p>
+        </section>
+
+        <section className="grid gap-2 rounded-lg border border-border p-5">
+          <h2 className="text-h4 text-text-heading">
+            {copy.sections.passwordTitle}
+          </h2>
+          <p className="text-body-sm leading-6 text-text-secondary">
+            {copy.sections.passwordBody}
+          </p>
+        </section>
+
+        <section className="grid gap-2 rounded-lg border border-border bg-surface-sunken p-5">
+          <h2 className="flex items-center gap-2 text-h4 text-text-heading">
+            <MailWarning aria-hidden="true" className="size-4 shrink-0" />
+            {copy.sections.supportTitle}
+          </h2>
+          <p className="text-body-sm leading-6 text-text-secondary">
+            {copy.sections.supportBody}
+          </p>
+          <p className="text-body-sm">
             <a
               href={`mailto:${SUPPORT_EMAIL}`}
-              className="font-medium text-primary underline-offset-4 hover:underline"
+              className="rounded-sm font-medium text-link underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
               {SUPPORT_EMAIL}
-            </a>{" "}
-            {copy.stepTwoAfterEmail}
-          </li>
-          <li>
-            {copy.stepThreeBeforeGarden}
-            <Link href="/garden" className="font-medium text-primary">
-              {copy.stepThreeGardenLink}
-            </Link>{" "}
-            {copy.stepThreeAfterGarden}
-          </li>
-        </ol>
-      </section>
+            </a>
+          </p>
+        </section>
+      </div>
 
-      <section className="flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-4">
-        <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <MailWarning className="size-4" />
-          {copy.fallbackTitle}
-        </p>
-        <p className="text-sm leading-6 text-muted-foreground">
-          {copy.fallbackBody}
-        </p>
-        <Link
-          href="/garden"
-          className={buttonVariants({ variant: "secondary" })}
-        >
-          {copy.backToSignIn}
-        </Link>
-      </section>
+      <Link
+        href={SIGN_IN_PATH}
+        className={buttonVariants({
+          variant: "secondary",
+          className: "justify-self-start",
+        })}
+      >
+        {copy.backToSignIn}
+      </Link>
     </main>
   );
 }

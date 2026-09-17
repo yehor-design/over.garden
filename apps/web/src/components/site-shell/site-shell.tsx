@@ -308,9 +308,15 @@ export function SiteShell({
                   <SiteShellContextRailModules modules={routeContextModules} />
                 ) : (
                   <div className="flex flex-col gap-3">
-                    <p className="text-overline text-text-muted uppercase">
-                      {navigation.labels.contextTitle}
-                    </p>
+                    {/* The eyebrow names the rail and the heading names the
+                        destination. On a route with no destination of its own
+                        they are the same word, and the rail read "Далі / Далі"
+                        until somebody looked at it. */}
+                    {context.title === navigation.labels.contextTitle ? null : (
+                      <p className="text-overline text-text-muted uppercase">
+                        {navigation.labels.contextTitle}
+                      </p>
+                    )}
                     <h2 className="text-h4 text-text-heading">
                       {context.title}
                     </h2>

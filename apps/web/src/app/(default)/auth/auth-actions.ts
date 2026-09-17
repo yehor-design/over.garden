@@ -1,9 +1,11 @@
 "use server";
 
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { APIError } from "better-auth/api";
 
 import { auth } from "@/lib/auth";
+import { passwordResetSuccessPath } from "@/lib/auth/auth-recovery";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "@/lib/auth/public-identity-compatibility";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
@@ -116,6 +118,52 @@ export async function signUpAction(
     record(error, "sign_up");
     return { status: "error", message: copy.createAccountError };
   }
+}
+
+/**
+ * Setting a new password from a one-time link.
+ *
+ * It was `authClient.resetPassword` in the browser until `OVE-455`, so the one
+ * screen a reader reaches from an email — often on a phone, often on a network
+ * that has just made them wait — did nothing at all until its bundle had run.
+ * Every other form on these five pages already posted to a real endpoint
+ * (ADR-0024 D3); this one is the last of them.
+ *
+ * The token travels in the form rather than in a closure, because a form is
+ * what a browser can submit without JavaScript. It is never echoed back: a
+ * refusal says the link did not work and offers the help screen, and says
+ * nothing about why, which is the same reason sign-in never names the wrong
+ * credential.
+ */
+export async function resetPasswordAction(
+  _previous: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const locale = await getRequestInterfaceLocale();
+  const copy = getTrustSurfaceCopy(locale).resetPassword;
+  const token = field(formData, "token").trim();
+  const password = field(formData, "password");
+
+  if (password !== field(formData, "confirmPassword")) {
+    return { status: "error", message: copy.mismatch };
+  }
+  if (token.length === 0) {
+    return { status: "error", message: copy.invalidDescription };
+  }
+
+  try {
+    await auth.api.resetPassword({
+      body: { newPassword: password, token },
+      headers: await headers(),
+    });
+  } catch (error) {
+    if (!(error instanceof APIError)) record(error, "reset_password");
+    return { status: "error", message: copy.invalidDescription };
+  }
+
+  // Outside the `try`: `redirect` throws by design, and catching it here would
+  // turn a completed reset into "the link did not work".
+  redirect(passwordResetSuccessPath());
 }
 
 /**
