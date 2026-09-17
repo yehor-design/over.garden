@@ -7,10 +7,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   pathname: "/",
+  push: () => {},
 }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => mocks.pathname,
+  // The command palette pushes a route when a result is chosen; the shell only
+  // needs it to exist here.
+  useRouter: () => ({ push: mocks.push }),
 }));
 vi.mock("@/components/auth/session-signal-boundary", () => ({
   SessionSignalBoundary: ({ ownerUserId }: { ownerUserId: string | null }) => (

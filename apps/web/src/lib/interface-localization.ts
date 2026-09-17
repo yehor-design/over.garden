@@ -95,6 +95,31 @@ export interface InterfaceCopy {
     sourcesDescription: string;
     openAccount: string;
   };
+  /** The command palette of DESIGN.md §5.2. */
+  palette: {
+    open: string;
+    title: string;
+    description: string;
+    placeholder: string;
+    close: string;
+    groups: {
+      journals: string;
+      organisms: string;
+      gardeners: string;
+      communities: string;
+      actions: string;
+    };
+    /** Announced once per settled query, never once per keystroke. */
+    resultCount: string;
+    emptyTitle: string;
+    emptyDescription: string;
+    recent: string;
+    clearRecent: string;
+    hintNavigate: string;
+    hintOpen: string;
+    hintClose: string;
+    unavailable: string;
+  };
   workspace: {
     title: string;
     returningDescription: string;
@@ -176,6 +201,32 @@ const INTERFACE_COPY = {
       sourcesDescription:
         "Назви організмів — з Catalogue of Life; реєстрові дані — з EPPO Global Database. Світлини належать їхнім авторам.",
       openAccount: "Відкрити меню облікового запису",
+    },
+    palette: {
+      open: "Пошук",
+      title: "Пошук в OverGarden",
+      description:
+        "Журнали, організми, садівники, спільноти та дії — в одному місці.",
+      placeholder: "Що шукаєте?",
+      close: "Закрити пошук",
+      groups: {
+        journals: "Журнали",
+        organisms: "Організми",
+        gardeners: "Садівники",
+        communities: "Спільноти",
+        actions: "Дії",
+      },
+      resultCount: "Знайдено результатів",
+      emptyTitle: "Нічого не знайдено",
+      emptyDescription:
+        "Спробуйте інше слово або відкрийте повний пошук у журналах чи каталозі.",
+      recent: "Нещодавні запити",
+      clearRecent: "Очистити нещодавні",
+      hintNavigate: "↑ ↓ — переміщення",
+      hintOpen: "Enter — відкрити",
+      hintClose: "Esc — закрити",
+      unavailable:
+        "Пошук зараз недоступний. Повні сторінки пошуку працюють як завжди.",
     },
     workspace: {
       title: "Простір саду",
@@ -259,6 +310,32 @@ const INTERFACE_COPY = {
         "Имената на организмите са от Catalogue of Life; регистровите данни са от EPPO Global Database. Снимките принадлежат на авторите си.",
       openAccount: "Отваряне на менюто на профила",
     },
+    palette: {
+      open: "Търсене",
+      title: "Търсене в OverGarden",
+      description:
+        "Дневници, организми, градинари, общности и действия на едно място.",
+      placeholder: "Какво търсите?",
+      close: "Затваряне на търсенето",
+      groups: {
+        journals: "Дневници",
+        organisms: "Организми",
+        gardeners: "Градинари",
+        communities: "Общности",
+        actions: "Действия",
+      },
+      resultCount: "Намерени резултата",
+      emptyTitle: "Няма намерени резултати",
+      emptyDescription:
+        "Опитайте друга дума или отворете пълното търсене в дневниците или каталога.",
+      recent: "Скорошни търсения",
+      clearRecent: "Изчистване на скорошните",
+      hintNavigate: "↑ ↓ — придвижване",
+      hintOpen: "Enter — отваряне",
+      hintClose: "Esc — затваряне",
+      unavailable:
+        "Търсенето не е достъпно в момента. Пълните страници за търсене работят както обикновено.",
+    },
     workspace: {
       title: "Градинско пространство",
       returningDescription:
@@ -340,6 +417,32 @@ const INTERFACE_COPY = {
       sourcesDescription:
         "Названия организмов — из Catalogue of Life; реестровые данные — из EPPO Global Database. Фотографии принадлежат их авторам.",
       openAccount: "Открыть меню аккаунта",
+    },
+    palette: {
+      open: "Поиск",
+      title: "Поиск в OverGarden",
+      description:
+        "Журналы, организмы, садовники, сообщества и действия в одном месте.",
+      placeholder: "Что ищете?",
+      close: "Закрыть поиск",
+      groups: {
+        journals: "Журналы",
+        organisms: "Организмы",
+        gardeners: "Садовники",
+        communities: "Сообщества",
+        actions: "Действия",
+      },
+      resultCount: "Найдено результатов",
+      emptyTitle: "Ничего не найдено",
+      emptyDescription:
+        "Попробуйте другое слово или откройте полный поиск в журналах либо в каталоге.",
+      recent: "Недавние запросы",
+      clearRecent: "Очистить недавние",
+      hintNavigate: "↑ ↓ — перемещение",
+      hintOpen: "Enter — открыть",
+      hintClose: "Esc — закрыть",
+      unavailable:
+        "Поиск сейчас недоступен. Полные страницы поиска работают как обычно.",
     },
     workspace: {
       title: "Пространство сада",

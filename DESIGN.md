@@ -547,8 +547,30 @@ Organisms, Gardeners, Communities, Actions. Keyboard hints in the footer. Recent
 searches when the query is empty.
 
 The palette is an enhancement. `/journals` and the catalogue remain full,
-crawlable, no-JavaScript search pages, and the header keeps a plain link to
-them.
+crawlable, no-JavaScript search pages, and the rail keeps a plain link to each.
+A palette that replaced them would take 114,669 pages out of the index, which
+is the opposite of what the product is for (ADR-0022 D3).
+
+Four rules that are the whole of it, each one a test:
+
+- **One dialog, however many triggers.** The rail draws a search field and the
+  narrow bar an icon; mounting the component twice gave the document two
+  dialogs, two comboboxes and two `⌘K` listeners, so `⌘K` opened both. The
+  provider is mounted once and the triggers read it from context.
+- **`/` must not steal a keystroke.** It opens the palette only when focus is
+  outside a text field, and "text field" means an `<input>`, a `<textarea>`
+  **and** a `contenteditable` — the composer is the third, so a rule that
+  checked the first two would make the editor swallow every `/` a gardener
+  typed.
+- **The live region announces the settled query, not the keystroke.** One
+  debounce feeds both the read and the count, so the number a reader hears is
+  the number they can see. A count that re-announces on every letter is worse
+  than no count at all.
+- **The arrows move a pointer, not focus.** The list is a `listbox` driven by
+  `aria-activedescendant` and focus never leaves the field, which is what lets
+  a screen reader read the active option while the reader keeps typing. The
+  index is flat over the groups in order, so Down at the end of one group
+  reaches the next.
 
 ### 5.3 Forms
 
