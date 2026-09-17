@@ -31,6 +31,7 @@ import { ListRow } from "../src/components/ui/list-row";
 import { PageHeader } from "../src/components/ui/page-header";
 import { Pagination } from "../src/components/ui/pagination";
 import { SCREEN_STATES } from "../src/components/ui/screen-state";
+import { resolveIllustration } from "../src/lib/illustrations";
 import { Skeleton } from "../src/components/ui/skeleton";
 import {
   Table,
@@ -40,6 +41,24 @@ import {
   TableHeader,
   TableRow,
 } from "../src/components/ui/table";
+
+/**
+ * The same illustration the product resolves, inlined.
+ *
+ * These documents are opened over `file://` — by this spec, and by a person
+ * looking at a state. A root-relative `/illustrations/…` resolves to the
+ * filesystem root there and renders a broken box, which is exactly the thing an
+ * axe scan does not notice and a reader does. The path still comes from the
+ * manifest; only the transport changes.
+ */
+function inlineIllustration(key: Parameters<typeof resolveIllustration>[0]) {
+  const illustration = resolveIllustration(key);
+  const file = path.join(process.cwd(), "public", illustration.src);
+  return {
+    ...illustration,
+    src: `data:image/webp;base64,${readFileSync(file).toString("base64")}`,
+  };
+}
 
 const page = (...children: ReactNode[]) =>
   renderToStaticMarkup(h("main", null, ...children));
@@ -54,7 +73,7 @@ const STATES: Record<(typeof SCREEN_STATES)[number], () => string> = {
       }),
       h(EmptyState, {
         key: "state",
-        illustration: null,
+        illustration: inlineIllustration("empty-journal"),
         title: "Тут ще нічого немає",
         description: "Перший запис починає історію цієї рослини.",
         action: h(Button, null, "Новий запис"),

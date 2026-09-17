@@ -1,30 +1,34 @@
 /**
  * The illustration manifest — the one module that names an illustration file.
  *
- * ADR-0031 D10: the source is `thiings.co`, the owner's decision of 2026-09-17,
- * taken with the licence terms in front of them and reaffirmed. Three rules come
- * with it, and this module is how two of them stay true:
+ * ADR-0031 D10: the source is `thiings.co`. The owner's position, taken with
+ * the licence terms in front of them and reaffirmed on 2026-09-17, is to use
+ * the free tier and to carry no attribution. `DESIGN.md` §2.9 records that and
+ * what the terms actually say; this module's job is to make the position cheap
+ * to reverse.
  *
- * 1. **The swap stays cheap.** No component names a path. A component takes a
- *    resolved `Illustration` as a prop, a page resolves it here, and moving to
- *    [3dicons.co](https://3dicons.co/) (CC0) or buying the $49 indie licence is
- *    a change to this file and the bucket, not a hunt through components.
+ * Two rules follow, and both are mechanical:
+ *
+ * 1. **No component names a path.** A component takes a resolved
+ *    `Illustration` as a prop and a page resolves it here, so moving to
+ *    [3dicons.co](https://3dicons.co/) (CC0), buying the $49 indie licence, or
+ *    dropping the set altogether is a change to this file and one directory.
+ *    `src/lib/illustrations.test.ts` fails if a path appears anywhere else.
  * 2. **They are never republished as assets.** They are referenced from a page.
  *    There is no route that lists them, no archive, no sprite sheet and no
- *    directory index — that prohibition binds at every licence tier, including
- *    the paid ones.
+ *    directory index — that prohibition binds at every licence tier, paid ones
+ *    included, and is the one term no reading of the terms excuses.
  *
- * The third rule — a visible credit to `thiings.co` in the footer — belongs to
- * the footer, which the product does not have yet (`OVE-443`).
- *
- * **Nothing is published yet.** `PUBLISHED_ILLUSTRATIONS` is empty, so every
- * `resolveIllustration` call answers `null` and every empty state renders
- * without an illustration — which DESIGN.md §5.4 already allows, since only
- * `empty-first-run` has an illustration slot at all. Adding one is three steps:
- * buy the licence, upload `illustrations/<key>.webp` to the public bucket
- * through the existing media pipeline, and add the key here with the dimensions
- * the file actually has. File the download receipt beside
- * `docs/launch-corpus-unsplash-license-receipt.md` so the position stays dated.
+ * **Where the files live, and why not R2.** `apps/web/public/illustrations/`,
+ * served by the CDN as plain static WebP — not the Vercel image optimizer,
+ * which ADR-0022 D2 bans. `DESIGN.md` §2.9 first said "the existing media
+ * pipeline", and that pipeline is wrong for these: it exists for a gardener's
+ * photographs, which arrive through a staging worker, get published atomically
+ * and are subject to retention and revocation. Six permanent pieces of app art
+ * have none of that, and putting them in the user-media bucket would make
+ * every tool that reasons about that bucket learn an exception. Shipping them
+ * with the code also means a rollback rolls them back, which an object in a
+ * bucket does not.
  */
 
 /** The closed set. A screen that wants a new one adds it here first. */
@@ -53,39 +57,45 @@ export const ILLUSTRATION_SIZES = { card: 96, page: 144 } as const;
 export type IllustrationSize = keyof typeof ILLUSTRATION_SIZES;
 
 /**
- * The object key, under the one directory the whole set lives in. Kept separate
- * from the URL so a bucket policy, a purge, or a licence change can address the
- * set without a component knowing it exists.
+ * Every file is 360 × 360: twice the 180 px maximum, so the largest declared
+ * size is still sharp on a 2× display and no size needs a second file.
  */
-export function illustrationObjectKey(key: IllustrationKey): string {
-  return `illustrations/${key}.webp`;
+const INTRINSIC_SIZE = 360;
+
+/**
+ * The path, under the one directory the whole set lives in. Kept separate from
+ * the resolver so a licence change, a purge or a move can address the set
+ * without a component knowing it exists.
+ */
+export function illustrationPath(key: IllustrationKey): string {
+  return `/illustrations/${key}.webp`;
 }
 
 /**
- * Keys whose WebP is actually in the public bucket, with its intrinsic size.
- * Empty until the licence is bought and the files are uploaded.
+ * What each key is a picture of, and the name it carries on `thiings.co`.
+ *
+ * Recorded because the choice is not obvious from a file name and because
+ * replacing one later means finding its equivalent: `Nature Journal` was
+ * rejected for the Latin word baked into its cover, which no Ukrainian or
+ * Bulgarian reader should meet, and `Notification` for the badge reading `1` —
+ * on an *empty* state, a picture that says "there is one" is a picture that
+ * lies.
  */
-const PUBLISHED_ILLUSTRATIONS: Partial<
-  Record<IllustrationKey, { width: number; height: number }>
-> = {};
+export const ILLUSTRATION_SUBJECTS: Readonly<Record<IllustrationKey, string>> =
+  {
+    "empty-journal": "Pressed Flower Journal",
+    "empty-garden": "Plant Pot",
+    "empty-community": "Village",
+    "empty-wishlist": "Wishlist",
+    "empty-notifications": "Mailbox",
+    "first-entry": "Sprout",
+  };
 
-/**
- * The URL for a published illustration, or `null` — for a key with no file yet,
- * or in a browser, where the media base is not exposed. A resolved illustration
- * therefore only ever reaches a component from a server render.
- */
-export function resolveIllustration(
-  key: IllustrationKey,
-  options: { baseUrl?: string } = {},
-): Illustration | null {
-  const published = PUBLISHED_ILLUSTRATIONS[key];
-  if (!published) return null;
-  const baseUrl = options.baseUrl ?? process.env.R2_PUBLIC_BASE_URL;
-  if (!baseUrl) return null;
-  const normalized = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+/** The picture for a key, at its intrinsic size. */
+export function resolveIllustration(key: IllustrationKey): Illustration {
   return {
-    src: new URL(illustrationObjectKey(key), normalized).toString(),
-    width: published.width,
-    height: published.height,
+    src: illustrationPath(key),
+    width: INTRINSIC_SIZE,
+    height: INTRINSIC_SIZE,
   };
 }
