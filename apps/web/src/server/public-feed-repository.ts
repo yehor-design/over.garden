@@ -17,7 +17,7 @@ import {
 } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
-import { localizeCuratedTopicLabel } from "@/lib/launch-corpus/topic-labels";
+import { localizeTopicLabel } from "@/lib/system-topic-labels";
 import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 import {
   readMediaVariantExtras,
@@ -219,7 +219,7 @@ export async function listTrustedPublicFeedTopics(
 
   return rows.map((row) => ({
     slug: row.slug,
-    label: localizeCuratedTopicLabel(row.slug, row.label, locale),
+    label: localizeTopicLabel(locale, row.slug, row.label),
     entryCount: Number(row.entryCount ?? 0),
   }));
 }
@@ -597,7 +597,7 @@ export function serializePublicFeedPage(input: {
         })),
       topics: (topicsByEntry[row.entryId] ?? []).map((topic) => ({
         slug: topic.slug,
-        label: localizeCuratedTopicLabel(topic.slug, topic.label, input.locale),
+        label: localizeTopicLabel(input.locale, topic.slug, topic.label),
       })),
       qualityClass: searchProjectionQuality(
         coarseRegionUnavailable ? ["coarse_region_unavailable"] : [],

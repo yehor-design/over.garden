@@ -1040,6 +1040,21 @@ the same hour, with the rule stated as it now is and the page test rewritten
 from "refuses the prefixed duplicates" to "indexes the one address an entry
 has, in whichever language it renders".
 
+**Two things the owner found the same evening.**
+
+The "this page is available in your language" banner was the replacement for
+the geo-redirect: it compared the reader's language with the *route's* and
+offered the reader's own. Once an unprefixed address renders in the reader's
+language, the route's locale is no longer the page's, so the banner appeared on
+a page that was already in the right language and offered it to itself. It is
+gone, with its copy key: the language control in the shell is the one way to
+change a language, and it is on every page.
+
+The feed's rail carried its own copy of the system topic names, five of the six
+slugs, so a Russian reader read «Спостереження і догляд» among Russian labels —
+the sixth fell through to its stored Ukrainian name. One map now
+(`system-topic-labels.ts`), as [[one-destination-one-builder]] says.
+
 ---
 
 ## Traps recorded before they cost a day

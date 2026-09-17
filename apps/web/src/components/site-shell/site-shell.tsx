@@ -20,7 +20,6 @@ import { SessionSignalBoundary } from "@/components/auth/session-signal-boundary
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { SignOutProvider } from "@/components/auth/sign-out-provider";
 import { InterfaceLanguageControl } from "@/components/public/language-switcher";
-import { OtherLanguageNotice } from "@/components/public/other-language-notice";
 import { buttonVariants } from "@/components/ui/button";
 import { IconButton, iconButtonVariants } from "@/components/ui/icon-button";
 import { Separator } from "@/components/ui/separator";
@@ -517,7 +516,6 @@ export function SiteShell({
                 tabIndex={-1}
                 className="site-shell-content-safe-bottom min-w-0 outline-none"
               >
-                <OtherLanguageNotice locale={locale} pathname={pathname} />
                 {children}
               </div>
 
