@@ -100,7 +100,12 @@ becomes `green-700` and measures 9.15:1 against white.
 Rail 240 / content 704 / context 300, with the context rail always optional and
 never the only home of an action. On mobile: a 56 px header and a five-slot tab
 bar — Feed, Catalogue, **New entry**, Journals, You. Authentication is not a
-tab. The clipped floating control is deleted.
+tab.
+
+The clipped floating control turned out not to be the product's: `OVE-443`
+measured it on production as Vercel's toolbar feedback button, injected at the
+edge for a browser carrying the `__vercel_toolbar` cookie. No reader sees it and
+no change here removes it; `DESIGN.md` §3.2 records the measurement.
 
 **D5 — The component layer is the deliverable.** Fifty files stop hand-rolling
 form controls. The inventory and the component contract in `DESIGN.md` §4 are
@@ -138,9 +143,16 @@ free tier does not cover it. This is the owner's decision and the owner's risk,
 and it is written down here rather than left as an assumption for whoever reads
 the code next.
 
-Three conditions attach, in `DESIGN.md` §2.9: the product carries visible
-attribution to `thiings.co` in the footer, because that is the one free-tier
-term it can meet and meeting it is free; the icons are never republished as
+**Amended the same day, and `DESIGN.md` §2.9 is the record.** The paragraph
+below originally attached a third condition — visible attribution in the
+footer — and was wrong about what the owner had decided. Their position,
+reaffirmed twice on 2026-09-17, is the free tier **and no attribution
+anywhere**, the footer included. That is their decision and their risk, and it
+is written down rather than left for whoever reads the code next. `OVE-443`
+built the footer without the credit, and `site-shell.test.tsx` fails if one
+appears.
+
+Two conditions attach, in `DESIGN.md` §2.9: the icons are never republished as
 downloadable assets, which is the term that binds at every tier; and the
 illustration stays a component prop with the files in one directory behind one
 manifest, so that buying the indie licence or moving to `3dicons.co` (CC0)

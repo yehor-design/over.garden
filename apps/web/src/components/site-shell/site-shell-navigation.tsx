@@ -6,8 +6,6 @@ import {
   Bell,
   Bookmark,
   BookOpenText,
-  CirclePlus,
-  Files,
   GitBranch,
   Heart,
   LayoutDashboard,
@@ -32,14 +30,12 @@ import { cn } from "@/lib/utils";
 
 const NAVIGATION_ICONS: Record<SiteShellNavigationKey, LucideIcon> = {
   feed: Newspaper,
-  "living-objects": Sprout,
+  catalogue: Sprout,
   journals: NotebookText,
   communities: UsersRound,
   knowledge: BookOpenText,
   garden: LayoutDashboard,
-  "add-object": CirclePlus,
-  "add-update": SquarePen,
-  drafts: Files,
+  "new-entry": SquarePen,
   "followed-feed": ListFilter,
   notifications: Bell,
   bookmarks: Bookmark,
@@ -49,6 +45,17 @@ const NAVIGATION_ICONS: Record<SiteShellNavigationKey, LucideIcon> = {
   "sign-in": LogIn,
 };
 
+export function siteShellNavigationIcon(key: SiteShellNavigationKey) {
+  return NAVIGATION_ICONS[key];
+}
+
+/**
+ * One group of rail navigation: a heading and the links under it.
+ *
+ * The group's heading names the `<nav>` (DESIGN.md §3.3). Two unlabelled
+ * `navigation` landmarks is what the product shipped until this rewrite, and a
+ * screen-reader user could not tell them apart.
+ */
 export function SiteShellNavigationList({
   items,
   pathname,
@@ -62,7 +69,7 @@ export function SiteShellNavigationList({
 }) {
   return (
     <nav aria-label={ariaLabel}>
-      <ul className={cn("flex flex-col gap-1", compact && "gap-0.5")}>
+      <ul className={cn("flex flex-col gap-0.5", compact && "gap-0")}>
         {items.map((item) => (
           <li key={item.key}>
             <SiteShellNavigationLink
@@ -90,9 +97,9 @@ export function SiteShellMobileNavigation({
     <nav
       data-site-shell-region="mobile-navigation"
       aria-label={ariaLabel}
-      className="site-shell-safe-bottom fixed inset-x-0 bottom-0 z-rail border-t border-border bg-background/95 backdrop-blur lg:hidden"
+      className="site-shell-safe-bottom fixed inset-x-0 bottom-0 z-rail border-t border-border bg-surface lg:hidden"
     >
-      <ul className="mx-auto grid h-17 max-w-lg grid-cols-5">
+      <ul className="mx-auto grid min-h-14 max-w-lg grid-cols-5">
         {items.map((item) => {
           const Icon = NAVIGATION_ICONS[item.key];
           const active = isSiteShellItemActive(pathname, item);
@@ -104,10 +111,10 @@ export function SiteShellMobileNavigation({
                 aria-label={item.label}
                 aria-current={active ? "page" : undefined}
                 data-active={active || undefined}
-                className="flex h-full min-w-0 flex-col items-center justify-center gap-1 px-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[active]:text-primary"
+                className="flex h-full min-w-0 flex-col items-center justify-center gap-1 px-1 text-text-secondary transition-colors duration-instant ease-out outline-none hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring data-[active]:text-action-subtle-text"
               >
                 <Icon aria-hidden="true" className="size-5 shrink-0" />
-                <span className="site-shell-mobile-label max-w-full text-center leading-3 font-medium break-words">
+                <span className="max-w-full text-center text-caption leading-none font-medium break-words">
                   {item.label}
                 </span>
               </Link>
@@ -165,12 +172,13 @@ function SiteShellNavigationLink({
       href={item.href}
       aria-current={active ? "page" : undefined}
       data-active={active || undefined}
+      data-site-shell-nav-item={item.key}
       className={cn(
-        "flex min-h-9 items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[active]:bg-accent data-[active]:text-accent-foreground",
-        compact && "min-h-8 py-1.5",
+        "flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-body-sm font-medium text-text-secondary transition-colors duration-instant ease-out outline-none hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring data-[active]:bg-action-subtle data-[active]:text-action-subtle-text",
+        compact && "min-h-9 py-1.5",
       )}
     >
-      <Icon aria-hidden="true" className="size-4 shrink-0" />
+      <Icon aria-hidden="true" className="size-4.5 shrink-0" />
       <span className="min-w-0 break-words">{item.label}</span>
     </Link>
   );

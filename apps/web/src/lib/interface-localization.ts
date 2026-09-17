@@ -35,6 +35,7 @@ export interface InterfaceCopy {
   };
   navigation: {
     feed: string;
+    catalogue: string;
     livingObjects: string;
     journals: string;
     communities: string;
@@ -76,7 +77,20 @@ export interface InterfaceCopy {
     retry: string;
     languageControlLabel: string;
     languageControlTrigger: string;
-    /** Offered to a reader whose language is not the one this address serves. */
+    /** The one primary action of the shell, in the rail and on the tab bar. */
+    primaryAction: string;
+    /** Accessible names for the landmarks a screen reader would otherwise read
+     *  as two identical "navigation" and two identical "complementary". */
+    footerNavigation: string;
+    contextRail: string;
+    accountRegion: string;
+    /** The footer, which the product had no `contentinfo` landmark for at all. */
+    footerTagline: string;
+    support: string;
+    firstPublicationDisclosure: string;
+    sourcesTitle: string;
+    sourcesDescription: string;
+    openAccount: string;
   };
   workspace: {
     title: string;
@@ -102,6 +116,7 @@ const INTERFACE_COPY = {
     },
     navigation: {
       feed: "Стрічка",
+      catalogue: "Каталог",
       livingObjects: "Живі об'єкти",
       journals: "Журнали",
       communities: "Спільноти",
@@ -145,6 +160,18 @@ const INTERFACE_COPY = {
       retry: "Спробувати ще раз",
       languageControlLabel: "Вибір мови інтерфейсу",
       languageControlTrigger: "Змінити мову",
+      primaryAction: "Новий запис",
+      footerNavigation: "Навігація в підвалі",
+      contextRail: "Додатковий контекст",
+      accountRegion: "Обліковий запис",
+      footerTagline:
+        "Публічний журнал садівництва: кожен запис відкритий і його видно в пошуку.",
+      support: "Підтримка",
+      firstPublicationDisclosure: "Розкриття першої публікації",
+      sourcesTitle: "Джерела даних",
+      sourcesDescription:
+        "Назви організмів — з Catalogue of Life; реєстрові дані — з EPPO Global Database. Світлини належать їхнім авторам.",
+      openAccount: "Відкрити меню облікового запису",
     },
     workspace: {
       title: "Простір саду",
@@ -170,6 +197,7 @@ const INTERFACE_COPY = {
     },
     navigation: {
       feed: "Поток",
+      catalogue: "Каталог",
       livingObjects: "Живи обекти",
       journals: "Дневници",
       communities: "Общности",
@@ -213,6 +241,18 @@ const INTERFACE_COPY = {
       retry: "Опитайте отново",
       languageControlLabel: "Избор на език на интерфейса",
       languageControlTrigger: "Смяна на езика",
+      primaryAction: "Нов запис",
+      footerNavigation: "Навигация в долния колонтитул",
+      contextRail: "Допълнителен контекст",
+      accountRegion: "Профил",
+      footerTagline:
+        "Публичен дневник за градинарство: всеки запис е отворен и се вижда в търсачките.",
+      support: "Поддръжка",
+      firstPublicationDisclosure: "Разкриване на първата публикация",
+      sourcesTitle: "Източници на данни",
+      sourcesDescription:
+        "Имената на организмите са от Catalogue of Life; регистровите данни са от EPPO Global Database. Снимките принадлежат на авторите си.",
+      openAccount: "Отваряне на менюто на профила",
     },
     workspace: {
       title: "Градинско пространство",
@@ -238,6 +278,7 @@ const INTERFACE_COPY = {
     },
     navigation: {
       feed: "Лента",
+      catalogue: "Каталог",
       livingObjects: "Живые объекты",
       journals: "Журналы",
       communities: "Сообщества",
@@ -281,6 +322,18 @@ const INTERFACE_COPY = {
       retry: "Повторить",
       languageControlLabel: "Выбор языка интерфейса",
       languageControlTrigger: "Сменить язык",
+      primaryAction: "Новая запись",
+      footerNavigation: "Навигация в подвале",
+      contextRail: "Дополнительный контекст",
+      accountRegion: "Аккаунт",
+      footerTagline:
+        "Публичный журнал садоводства: каждая запись открыта и видна в поиске.",
+      support: "Поддержка",
+      firstPublicationDisclosure: "Раскрытие первой публикации",
+      sourcesTitle: "Источники данных",
+      sourcesDescription:
+        "Названия организмов — из Catalogue of Life; реестровые данные — из EPPO Global Database. Фотографии принадлежат их авторам.",
+      openAccount: "Открыть меню аккаунта",
     },
     workspace: {
       title: "Пространство сада",

@@ -130,6 +130,17 @@
   --ease-in: var(--ease-in);
   --ease-spring: var(--ease-spring);
 
+  /* layout — DESIGN.md §3.2. The three columns are a token each rather than
+     an arbitrary value in a className, so the one place the shell's geometry
+     is written is this file. `--grid-template-columns-*` is Tailwind's
+     namespace for `grid-cols-*`. */
+  --container-rail: 15rem; /* 240 */
+  --container-content: 44rem; /* 704 */
+  --container-context: 18.75rem; /* 300 */
+  --grid-template-columns-shell: var(--container-rail) minmax(0, 1fr);
+  --grid-template-columns-shell-wide: var(--container-rail) minmax(0, 1fr)
+    var(--container-context);
+
   /* layering — DESIGN.md §2.11. Tailwind's z-index namespace is
      `--z-index-*`; the product name stays `--z-*`. */
   --z-index-base: var(--z-base);
@@ -421,20 +432,11 @@
 }
 
 @layer components {
-  .site-shell-layout {
-    @media (width >= 64rem) {
-      grid-template-columns: 14rem minmax(0, 1fr);
-    }
-
-    @media (width >= 80rem) {
-      grid-template-columns: 14rem minmax(0, 1fr) 18rem;
-    }
-  }
-
-  .site-shell-viewport-rail {
-    height: calc(100dvh - 3.5rem);
-  }
-
+  /* The safe area is the one shell measurement Tailwind has no token for:
+     `env()` is a browser value, not a design decision. Everything else the
+     shell used to need a class for — the grid, the rail height, the header
+     chrome — is a token now (§3.2) and the markup carries it directly.
+     `OVE-444` owns what is left here, with the bar it pads for. */
   .site-shell-safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -445,10 +447,6 @@
     @media (width >= 64rem) {
       padding-bottom: 0;
     }
-  }
-
-  .site-shell-mobile-label {
-    font-size: 0.625rem;
   }
 
   .feed-filter-scroll {
@@ -550,34 +548,6 @@
   }
 }
 
-.site-shell-header-inner {
-  min-height: 56px;
-  padding-inline: 12px;
-}
-
-.site-shell-header-icon {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-}
-
-.site-shell-brand {
-  margin-left: 4px;
-  padding-inline: 10px;
-  font-size: 0.75rem;
-}
-
-/* The lockup stacks two lines of wordmark, so it needs about twice the height
-   the single-line wordmark sat at to keep the same per-line legibility. */
-.site-shell-brand-logo {
-  height: 28px;
-}
-
-.site-shell-header-actions {
-  gap: 6px;
-  padding-left: 12px;
-}
-
 .analytics-consent-banner {
   bottom: 12px;
   max-height: calc(100dvh - 24px);
@@ -586,29 +556,8 @@
 }
 
 @media (width >= 40rem) {
-  .site-shell-header-inner {
-    padding-inline: 20px;
-  }
-
-  .site-shell-brand {
-    padding-inline: 16px;
-    font-size: 0.875rem;
-  }
-
-  .site-shell-brand-logo {
-    height: 34px;
-  }
-
   .analytics-consent-banner {
     bottom: 20px;
     max-height: calc(100dvh - 40px);
-  }
-}
-
-@media (width >= 48rem) {
-  .site-shell-header-icon {
-    width: 32px;
-    min-width: 32px;
-    height: 32px;
   }
 }
