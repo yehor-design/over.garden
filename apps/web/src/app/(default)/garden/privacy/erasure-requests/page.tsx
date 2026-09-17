@@ -89,9 +89,9 @@ export default async function ErasureRequestsOperatorPage() {
     return (
       <ErasureRequestsShell locale={locale} accessState="sign-in-required">
         <SignInPrompt
-  locale={locale}
-  next={"/garden/privacy/erasure-requests"}
-/>
+          locale={locale}
+          next={"/garden/privacy/erasure-requests"}
+        />
       </ErasureRequestsShell>
     );
   }
@@ -469,7 +469,7 @@ function DryRunPreviewPanel({
   copy: OperatorErasureCopy;
 }) {
   return (
-    <section className="grid gap-4 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
+    <section className="grid gap-4 rounded-lg border border-warning-border bg-warning-surface p-4">
       <div className="grid gap-1">
         <h3 className="text-base font-semibold text-foreground">
           {copy.previewTitle}

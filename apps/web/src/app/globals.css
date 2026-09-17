@@ -2,131 +2,388 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* ═══════════════════════════════════════════════════════════════════════════
+   OverGarden design tokens — DESIGN.md §2, ADR-0031 D1/D2/D3.
 
+   Two layers, and only two:
+
+     layer 1  primitive   --og-neutral-600      a colour that exists
+     layer 2  semantic    --color-text-muted    a colour with a job
+
+   Primitives never leave this file. Everything else — components, pages,
+   Tailwind utilities — consumes layer 2 only. The `@theme inline` blocks below
+   are the bridge: a theme entry whose value is `var(--color-x)` compiles the
+   utility to `background-color: var(--color-x)` and leaves the `:root`
+   declaration below as the single source of the value, so the same name works
+   from a utility (`bg-surface`) and from hand-written CSS (`var(--color-surface)`).
+
+   Light theme only. There is no dark theme, and no dark-theme block survives
+   here (ADR-0031 D2): a half-implemented theme makes every component's
+   correctness unverifiable, so it was removed rather than finished.
+   Reintroducing it is a new ADR and a full pass over every component, not a
+   pull request.
+
+   `src/app/globals.test.ts` parses this file, converts each OKLCH literal
+   itself and asserts the measured contrast of every pair the system ships. A
+   value changed here without a matching measurement fails that test.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── layer 2 · the semantic bridge (DESIGN.md §2.2–§2.11) ─────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-overgarden-sans);
   --font-mono: var(--font-overgarden-mono);
   --font-heading: var(--font-overgarden-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* surface */
+  --color-surface: var(--color-surface);
+  --color-surface-sunken: var(--color-surface-sunken);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-surface-inverse: var(--color-surface-inverse);
+
+  /* text */
+  --color-text: var(--color-text);
+  --color-text-heading: var(--color-text-heading);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-disabled: var(--color-text-disabled);
+  --color-text-on-fill: var(--color-text-on-fill);
+  --color-text-link: var(--color-text-link);
+  --color-text-link-hover: var(--color-text-link-hover);
+
+  /* line */
+  --color-border: var(--color-border);
+  --color-border-control: var(--color-border-control);
+  --color-border-strong: var(--color-border-strong);
+  --color-focus-ring: var(--color-focus-ring);
+
+  /* action */
+  --color-action: var(--color-action);
+  --color-action-hover: var(--color-action-hover);
+  --color-action-subtle: var(--color-action-subtle);
+  --color-action-subtle-text: var(--color-action-subtle-text);
+
+  /* status */
+  --color-success-surface: var(--color-success-surface);
+  --color-success-border: var(--color-success-border);
+  --color-success-text: var(--color-success-text);
+  --color-success-fill: var(--color-success-fill);
+  --color-danger-surface: var(--color-danger-surface);
+  --color-danger-border: var(--color-danger-border);
+  --color-danger-text: var(--color-danger-text);
+  --color-danger-fill: var(--color-danger-fill);
+  --color-warning-surface: var(--color-warning-surface);
+  --color-warning-border: var(--color-warning-border);
+  --color-warning-text: var(--color-warning-text);
+  --color-warning-fill: var(--color-warning-fill);
+  --color-info-surface: var(--color-info-surface);
+  --color-info-border: var(--color-info-border);
+  --color-info-text: var(--color-info-text);
+  --color-info-fill: var(--color-info-fill);
+
+  /* radius — DESIGN.md §2.4 */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-full: var(--radius-full);
+
+  /* elevation — DESIGN.md §2.5. Level 0 is a border, not a shadow. */
+  --shadow-popover: var(--shadow-popover);
+  --shadow-overlay: var(--shadow-overlay);
+
+  /* type — DESIGN.md §2.6. Size and leading are separate `:root` variables so
+     `display` and `h1` can shrink below `md` without a second token name. */
+  --text-display: var(--text-display-size);
+  --text-display--line-height: var(--text-display-leading);
+  --text-display--font-weight: 700;
+  --text-h1: var(--text-h1-size);
+  --text-h1--line-height: var(--text-h1-leading);
+  --text-h1--font-weight: 700;
+  --text-h2: var(--text-h2-size);
+  --text-h2--line-height: var(--text-h2-leading);
+  --text-h2--font-weight: 600;
+  --text-h3: var(--text-h3-size);
+  --text-h3--line-height: var(--text-h3-leading);
+  --text-h3--font-weight: 600;
+  --text-h4: var(--text-h4-size);
+  --text-h4--line-height: var(--text-h4-leading);
+  --text-h4--font-weight: 600;
+  --text-body-lg: var(--text-body-lg-size);
+  --text-body-lg--line-height: var(--text-body-lg-leading);
+  --text-body: var(--text-body-size);
+  --text-body--line-height: var(--text-body-leading);
+  --text-body-sm: var(--text-body-sm-size);
+  --text-body-sm--line-height: var(--text-body-sm-leading);
+  --text-caption: var(--text-caption-size);
+  --text-caption--line-height: var(--text-caption-leading);
+  --text-overline: var(--text-overline-size);
+  --text-overline--line-height: var(--text-overline-leading);
+  --text-overline--font-weight: 600;
+  --text-overline--letter-spacing: 0.04em;
+  --text-mono: var(--text-mono-size);
+  --text-mono--line-height: var(--text-mono-leading);
+
+  /* motion — DESIGN.md §2.7 */
+  --ease-out: var(--ease-out);
+  --ease-in: var(--ease-in);
+  --ease-spring: var(--ease-spring);
+
+  /* layering — DESIGN.md §2.11. Tailwind's z-index namespace is
+     `--z-index-*`; the product name stays `--z-*`. */
+  --z-index-base: var(--z-base);
+  --z-index-sticky: var(--z-sticky);
+  --z-index-rail: var(--z-rail);
+  --z-index-header: var(--z-header);
+  --z-index-popover: var(--z-popover);
+  --z-index-overlay: var(--z-overlay);
+  --z-index-toast: var(--z-toast);
+}
+
+/* ── compatibility bridge · shadcn's semantic names ───────────────────────────
+   ~2000 call sites across pages still spell `text-muted-foreground`,
+   `border-border`, `bg-background`. OVE-440 is a token task: it re-points these
+   at the new semantics so nothing moves, and each page-family task of Slice 28
+   retires the names it touches. Nothing new may use them.
+   ──────────────────────────────────────────────────────────────────────────── */
+@theme inline {
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-text);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-text);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-text);
+  --color-primary: var(--color-action);
+  --color-primary-foreground: var(--color-text-on-fill);
+  --color-secondary: var(--color-surface-sunken);
+  --color-secondary-foreground: var(--color-text);
+  --color-muted: var(--color-surface-sunken);
+  --color-muted-foreground: var(--color-text-muted);
+  --color-accent: var(--color-action-subtle);
+  --color-accent-foreground: var(--color-action-subtle-text);
+  --color-destructive: var(--color-danger-fill);
+  --color-input: var(--color-border-control);
+  --color-ring: var(--color-focus-ring);
+}
+
+/* Duration is not a Tailwind theme namespace, so the four steps of DESIGN.md
+   §2.7 ship as utilities rather than as arbitrary values in a className. */
+@utility duration-instant {
+  transition-duration: var(--duration-instant);
+}
+@utility duration-fast {
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  transition-duration: var(--duration-base);
+}
+@utility duration-slow {
+  transition-duration: var(--duration-slow);
 }
 
 :root {
+  /* ── layer 1 · primitives (DESIGN.md §2.1) ──────────────────────────────
+     Never referenced outside this file. `scripts/check-design-tokens.ts`
+     (OVE-442) fails CI on an `--og-*` anywhere else. Contrast figures are
+     measured against `#ffffff` with WCAG 2.x relative luminance and asserted
+     in `globals.test.ts`; the comments repeat them for a reader, they are not
+     the source of truth. */
+
+  /* Neutral — the interface. Hue 150 at chroma 0.002–0.008: a grey that
+     carries a whisper of the product without ever reading as green. */
+  --og-neutral-0: oklch(1 0 0); /* #ffffff  —          page and card surface */
+  --og-neutral-25: oklch(0.99 0.002 150); /* #fbfcfb  1.03  raised surface */
+  --og-neutral-50: oklch(0.976 0.003 150); /* #f6f8f6  1.07  sunken surface */
+  --og-neutral-100: oklch(0.955 0.004 150); /* #eef1ef  1.14  hover fill */
+  --og-neutral-200: oklch(0.917 0.005 150); /* #e1e4e2  1.28  divider only */
+  --og-neutral-300: oklch(0.863 0.006 150); /* #cfd3d0  1.51  disabled fill */
+  --og-neutral-400: oklch(0.715 0.007 150); /* #a0a4a1  2.52  disabled text */
+  --og-neutral-500: oklch(0.585 0.008 150); /* #797d79  4.18  control border */
+  --og-neutral-600: oklch(0.487 0.008 150); /* #5c615d  6.32  muted text */
+  --og-neutral-700: oklch(0.395 0.008 150); /* #434844  9.37  secondary text */
+  --og-neutral-800: oklch(0.285 0.007 150); /* #282b28 14.32  heading */
+  --og-neutral-900: oklch(0.205 0.006 150); /* #151816 17.89  body text */
+  --og-neutral-950: oklch(0.145 0.005 150); /* #090b09 19.78  inverse surface */
+
+  /* Green — brand and primary action. Hue 151, anchored on the pre-redesign
+     `oklch(0.39 0.105 151)`, which becomes `green-700`. */
+  --og-green-50: oklch(0.968 0.024 151); /* #e9f9ec  1.09  success surface */
+  --og-green-100: oklch(0.93 0.048 151); /* #d2f2d8  1.21  status border */
+  --og-green-200: oklch(0.872 0.072 151); /* #b3e3bd  1.43  chip border */
+  --og-green-300: oklch(0.79 0.093 151); /* #8ecc9c  1.86  decoration */
+  --og-green-400: oklch(0.68 0.11 151); /* #61ac75  2.75  decoration */
+  --og-green-500: oklch(0.575 0.115 151); /* #3d8c55  4.15  non-text accent */
+  --og-green-600: oklch(0.487 0.11 151); /* #24713e  6.02  focus ring, hover */
+  --og-green-700: oklch(0.39 0.105 151); /* #005425  9.15  primary fill, link */
+  --og-green-800: oklch(
+    0.32 0.085 151
+  ); /* #013e1a 12.25  link hover, pressed */
+  --og-green-900: oklch(0.262 0.065 151); /* #042d13 15.11  on-green text */
+
+  /* Status. Each ramp has a 50 (surface), a 100 (border) and a text/fill step.
+     Warning has no white-on-fill variant: white on `amber-600` is 3.24 and
+     fails for text, so a warning is a surface with ink text and an amber edge,
+     never a filled amber button with white text. */
+  --og-red-50: oklch(0.969 0.015 22); /* #fff1f0  1.10 */
+  --og-red-100: oklch(0.918 0.05 24); /* #ffd8d4  1.31 */
+  --og-red-600: oklch(0.535 0.205 26); /* #c91a23  5.75  white on fill */
+  --og-red-700: oklch(0.465 0.18 26); /* #a7111a  7.67  danger text */
+  --og-amber-50: oklch(0.977 0.029 90); /* #fff7e2  1.07 */
+  --og-amber-100: oklch(0.94 0.062 85); /* #fee9bc  1.19 */
+  --og-amber-600: oklch(0.66 0.155 62); /* #d37800  3.24  accent edge only */
+  --og-amber-700: oklch(0.52 0.12 55); /* #9c5313  5.74  warning text */
+  --og-blue-50: oklch(0.972 0.014 245); /* #eef7ff  1.08 */
+  --og-blue-100: oklch(0.922 0.042 248); /* #d0e8ff  1.26 */
+  --og-blue-600: oklch(0.516 0.164 250); /* #0069c1  5.55  white on fill */
+  --og-blue-700: oklch(0.435 0.144 250); /* #00529c  7.84  info text */
+
+  /* ── layer 2 · semantics (DESIGN.md §2.2) ─────────────────────────────── */
+  --color-surface: var(--og-neutral-0);
+  --color-surface-sunken: var(--og-neutral-50);
+  --color-surface-raised: var(--og-neutral-25);
+  --color-surface-hover: var(--og-neutral-100);
+  --color-surface-inverse: var(--og-neutral-950);
+
+  --color-text: var(--og-neutral-900);
+  --color-text-heading: var(--og-neutral-800);
+  --color-text-secondary: var(--og-neutral-700);
+  /* Muted text is `neutral-600`, not `neutral-500`. `neutral-500` measures
+     4.18 against white and fails body text; it is a border and placeholder
+     colour. `globals.test.ts` asserts this as a negative case. */
+  --color-text-muted: var(--og-neutral-600);
+  --color-text-disabled: var(--og-neutral-400);
+  --color-text-on-fill: var(--og-neutral-0);
+  --color-text-link: var(--og-green-700);
+  --color-text-link-hover: var(--og-green-800);
+
+  /* A divider inside a surface identifies nothing, so `neutral-200` at 1.28 is
+     correct for it. A boundary that identifies a control is `neutral-500` at
+     4.18: WCAG 2.2 1.4.11 wants 3:1 and `neutral-200` cannot carry it. */
+  --color-border: var(--og-neutral-200);
+  --color-border-control: var(--og-neutral-500);
+  --color-border-strong: var(--og-neutral-700);
+  --color-focus-ring: var(--og-green-600);
+
+  --color-action: var(--og-green-700);
+  --color-action-hover: var(--og-green-800);
+  --color-action-subtle: var(--og-green-50);
+  --color-action-subtle-text: var(--og-green-700);
+
+  --color-success-surface: var(--og-green-50);
+  --color-success-border: var(--og-green-100);
+  --color-success-text: var(--og-green-700);
+  --color-success-fill: var(--og-green-700);
+  --color-danger-surface: var(--og-red-50);
+  --color-danger-border: var(--og-red-100);
+  --color-danger-text: var(--og-red-700);
+  --color-danger-fill: var(--og-red-600);
+  --color-warning-surface: var(--og-amber-50);
+  --color-warning-border: var(--og-amber-100);
+  --color-warning-text: var(--og-amber-700);
+  /* An edge, an icon or a rule — never a background under white text. */
+  --color-warning-fill: var(--og-amber-600);
+  --color-info-surface: var(--og-blue-50);
+  --color-info-border: var(--og-blue-100);
+  --color-info-text: var(--og-blue-700);
+  --color-info-fill: var(--og-blue-600);
+
+  /* ── space · DESIGN.md §2.3 ──────────────────────────────────────────────
+     4 px base, the same scale Tailwind's dynamic spacing already generates
+     (`p-4` is `--space-4`). The names exist for hand-written CSS and for
+     reviewers; the utilities stay Tailwind's. */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* ── radius · DESIGN.md §2.4 ─────────────────────────────────────────── */
+  --radius: 0.625rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
+  --radius-full: 9999px;
+
+  /* ── elevation · DESIGN.md §2.5 ──────────────────────────────────────── */
+  --shadow-popover:
+    0 1px 2px oklch(0 0 0 / 0.04), 0 4px 12px oklch(0 0 0 / 0.08);
+  --shadow-overlay: 0 8px 32px oklch(0 0 0 / 0.12);
+
+  /* ── type · DESIGN.md §2.6 ───────────────────────────────────────────── */
   --font-overgarden-sans: var(--font-google-sans), Arial, sans-serif;
   --font-overgarden-mono:
     var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, Monaco,
     Consolas, "Liberation Mono", "Courier New", monospace;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.39 0.105 151);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0.006 145);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.94 0.025 145);
-  --accent-foreground: oklch(0.255 0.06 151);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.5rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --text-display-size: 1.875rem; /* 30 / 36 below md */
+  --text-display-leading: 2.25rem;
+  --text-h1-size: 1.625rem; /* 26 / 32 below md */
+  --text-h1-leading: 2rem;
+  --text-h2-size: 1.5rem; /* 24 / 30 */
+  --text-h2-leading: 1.875rem;
+  --text-h3-size: 1.1875rem; /* 19 / 26 */
+  --text-h3-leading: 1.625rem;
+  --text-h4-size: 1rem; /* 16 / 22 */
+  --text-h4-leading: 1.375rem;
+  --text-body-lg-size: 1.125rem; /* 18 / 29 */
+  --text-body-lg-leading: 1.8125rem;
+  --text-body-size: 1rem; /* 16 / 24 */
+  --text-body-leading: 1.5rem;
+  --text-body-sm-size: 0.875rem; /* 14 / 20 */
+  --text-body-sm-leading: 1.25rem;
+  --text-caption-size: 0.8125rem; /* 13 / 18 */
+  --text-caption-leading: 1.125rem;
+  --text-overline-size: 0.75rem; /* 12 / 16, uppercase metadata only */
+  --text-overline-leading: 1rem;
+  --text-mono-size: 0.875rem; /* 14 / 22 */
+  --text-mono-leading: 1.375rem;
+
+  /* ── motion · DESIGN.md §2.7 ─────────────────────────────────────────── */
+  --duration-instant: 80ms;
+  --duration-fast: 140ms;
+  --duration-base: 200ms;
+  --duration-slow: 280ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.2, 0, 0, 1.2);
+
+  /* ── layering · DESIGN.md §2.11 ──────────────────────────────────────── */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-rail: 20;
+  --z-header: 30;
+  --z-popover: 40;
+  --z-overlay: 50;
+  --z-toast: 60;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* Only `display` and `h1` change size with the viewport (DESIGN.md §2.6). */
+@media (width >= 48rem) {
+  :root {
+    --text-display-size: 2.5rem; /* 40 / 44 */
+    --text-display-leading: 2.75rem;
+    --text-h1-size: 2rem; /* 32 / 38 */
+    --text-h1-leading: 2.375rem;
+  }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-focus-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-surface text-text;
   }
   html {
     @apply font-sans;
@@ -155,7 +412,7 @@
   textarea,
   summary,
   [tabindex]:not([tabindex="-1"]) {
-    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]) {
@@ -210,7 +467,7 @@
 
   .journal-composer-canvas [data-journal-placeholder]::before {
     content: attr(data-journal-placeholder);
-    color: var(--muted-foreground);
+    color: var(--color-text-muted);
     float: left;
     height: 0;
     pointer-events: none;
@@ -241,20 +498,22 @@
     top: 0.3125rem;
     width: 1rem;
     height: 1rem;
-    border: 1px solid var(--border);
+    /* The box identifies a control, so its boundary is `border-control`
+       (4.18), not the 1.28 divider colour it carried before. */
+    border: 1px solid var(--color-border-control);
     border-radius: 0.1875rem;
-    background-color: var(--background);
+    background-color: var(--color-surface);
     cursor: pointer;
   }
 
   .journal-checklist-item[aria-checked="true"] {
-    color: var(--muted-foreground);
+    color: var(--color-text-muted);
     text-decoration: line-through;
   }
 
   .journal-checklist-item[aria-checked="true"]::before {
-    background-color: var(--primary);
-    border-color: var(--primary);
+    background-color: var(--color-action);
+    border-color: var(--color-action);
   }
 
   .journal-checklist-item[aria-checked="true"]::after {
@@ -264,14 +523,14 @@
     top: 0.5rem;
     width: 0.3125rem;
     height: 0.5625rem;
-    border-color: var(--primary-foreground);
+    border-color: var(--color-text-on-fill);
     border-style: solid;
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
   }
 
   .journal-checklist-item[role="checkbox"]:focus-visible::before {
-    outline: 2px solid var(--ring);
+    outline: 2px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
 

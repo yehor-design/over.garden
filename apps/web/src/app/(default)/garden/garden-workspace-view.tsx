@@ -530,7 +530,7 @@ function InventoryRow({
             className={cn(
               "rounded-md border px-2 py-0.5 text-xs font-medium",
               state.due
-                ? "border-amber-500/35 bg-amber-500/10 text-amber-800"
+                ? "border-warning-border bg-warning-surface text-warning-text"
                 : "border-border text-muted-foreground",
             )}
           >

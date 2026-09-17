@@ -71,7 +71,10 @@ the system.
   everything else consumes, through Tailwind's `@theme inline` bridge.
 
 Both layers live in `apps/web/src/app/globals.css`. Nothing else defines a
-token.
+token. `apps/web/components.json` keeps `baseColor: "neutral"`: it is input to
+the `shadcn` CLI when a primitive is first scaffolded, never a source of
+runtime colour, and every scaffolded file is rewritten against the semantic
+layer before it lands.
 
 **The rule:** a component may reference a semantic token. A component may not
 reference a primitive, a hex value, an `oklch()` literal, or a Tailwind palette
