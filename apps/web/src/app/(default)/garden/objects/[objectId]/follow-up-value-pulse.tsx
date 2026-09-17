@@ -16,6 +16,8 @@ import {
   getOwnerObjectCopy,
   type OwnerObjectCopy,
 } from "@/lib/owner-object-copy";
+import { Field } from "@/components/ui/field";
+import { Select } from "@/components/ui/select";
 
 interface FollowUpValuePulseProps {
   locale: InterfaceLocale;
@@ -107,7 +109,7 @@ export function FollowUpValuePulse({
             <Button
               key={option}
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={isSubmitting}
               onClick={() => handleUsefulnessSelect(option)}
             >
@@ -118,9 +120,8 @@ export function FollowUpValuePulse({
       ) : (
         <div className="grid gap-3">
           <p className="text-sm text-foreground">{copy.optionalPrompt}</p>
-          <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{copy.reasonLabel}</span>
-            <select
+          <Field label={copy.reasonLabel} id="follow-up-usefulness-reason">
+            <Select
               value={usefulnessReason ?? ""}
               disabled={isSubmitting}
               onChange={(event) =>
@@ -130,7 +131,6 @@ export function FollowUpValuePulse({
                     : null,
                 )
               }
-              className="rounded-md border border-border bg-background px-3 py-2 text-foreground"
             >
               <option value="">{copy.skipReason}</option>
               {FOLLOW_UP_USEFULNESS_REASON_OPTIONS.map((option) => (
@@ -138,8 +138,8 @@ export function FollowUpValuePulse({
                   {reasonLabel(option, copy)}
                 </option>
               ))}
-            </select>
-          </label>
+            </Select>
+          </Field>
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
@@ -156,7 +156,7 @@ export function FollowUpValuePulse({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={isSubmitting}
               onClick={() => setPhase("prompt")}
             >

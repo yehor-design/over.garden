@@ -2,6 +2,20 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+/**
+ * The disconnect password control is now a `Field` wrapping an `Input`, so the
+ * id appears on three nodes in the tree. Every assertion below is about the
+ * real DOM element, which is the only one that carries the browser's own
+ * `disabled` and `onChange`.
+ */
+function disconnectPasswordInput(renderer: ReactTestRenderer) {
+  return renderer.root.findAll(
+    (node) =>
+      node.type === "input" &&
+      node.props.id === "disconnect-account-method-password",
+  )[0]!;
+}
+
 const mocks = vi.hoisted(() => ({
   clearOAuthCallbackParameters: vi.fn(),
   linkSocial: vi.fn(),
@@ -162,16 +176,12 @@ describe("account methods panel", () => {
 
     await openDisconnectDialog(renderer, "google");
     expect(mocks.unlinkAccount).not.toHaveBeenCalled();
-    expect(
-      renderer.root.findByProps({
-        id: "disconnect-account-method-password",
-      }).props.disabled,
-    ).toBe(false);
+    expect(disconnectPasswordInput(renderer).props.disabled).toBe(false);
 
     await act(async () => {
-      renderer.root
-        .findByProps({ id: "disconnect-account-method-password" })
-        .props.onChange({ target: { value: "safe-password" } });
+      disconnectPasswordInput(renderer).props.onChange({
+        target: { value: "safe-password" },
+      });
     });
     await act(async () => {
       await submitDisconnectForm(renderer);
@@ -210,9 +220,9 @@ describe("account methods panel", () => {
 
     await openDisconnectDialog(renderer, "google");
     await act(async () => {
-      renderer.root
-        .findByProps({ id: "disconnect-account-method-password" })
-        .props.onChange({ target: { value: "safe-password" } });
+      disconnectPasswordInput(renderer).props.onChange({
+        target: { value: "safe-password" },
+      });
     });
     mocks.unlinkAccount.mockResolvedValue({ error: null });
     await act(async () => {
@@ -233,9 +243,9 @@ describe("account methods panel", () => {
 
     await openDisconnectDialog(renderer, "google");
     await act(async () => {
-      renderer.root
-        .findByProps({ id: "disconnect-account-method-password" })
-        .props.onChange({ target: { value: "safe-password" } });
+      disconnectPasswordInput(renderer).props.onChange({
+        target: { value: "safe-password" },
+      });
     });
     await act(async () => {
       await submitDisconnectForm(renderer);
@@ -572,12 +582,18 @@ async function openDisconnectDialog(
 }
 
 async function submitDisconnectForm(renderer: ReactTestRenderer) {
-  const form = renderer.root.findAllByType("form").find(
-    (candidate) =>
-      candidate.findAllByProps({
-        id: "disconnect-account-method-password",
-      }).length === 1,
-  );
+  // The id is on `Field`, on `Input` and on the host `<input>`, so the form is
+  // the one that contains that control at all rather than exactly once.
+  const form = renderer.root
+    .findAllByType("form")
+    .find(
+      (candidate) =>
+        candidate.findAll(
+          (node) =>
+            node.type === "input" &&
+            node.props.id === "disconnect-account-method-password",
+        ).length === 1,
+    );
   await form!.props.onSubmit({ preventDefault: vi.fn() });
 }
 

@@ -29,13 +29,13 @@ export function LineageClaimsShell({
         <>
           <Link
             href="/garden"
-            className={buttonVariants({ variant: "outline" })}
+            className={buttonVariants({ variant: "secondary" })}
           >
             {copy.common.backToJournal}
           </Link>
           <Link
             href="/garden/lineage/questions"
-            className={buttonVariants({ variant: "outline" })}
+            className={buttonVariants({ variant: "secondary" })}
           >
             {copy.common.updates}
           </Link>

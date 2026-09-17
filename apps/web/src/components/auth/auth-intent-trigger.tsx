@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth/auth-intent-contract";
 import { cn } from "@/lib/utils";
 import { buildSignInHref } from "@/lib/navigation/sign-in-href";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 interface AuthIntentTriggerProps {
   action: AuthIntentAction;
@@ -18,8 +19,8 @@ interface AuthIntentTriggerProps {
   label: string;
   labelClassName?: string;
   icon?: ReactNode;
-  variant?: "default" | "outline" | "ghost";
-  size?: "default" | "sm" | "lg" | "icon";
+  variant?: "primary" | "secondary" | "ghost";
+  size?: "sm" | "md" | "lg";
   className?: string;
   formClassName?: string;
   autoFocus?: boolean;
@@ -51,8 +52,8 @@ export function AuthIntentTrigger({
   label,
   labelClassName,
   icon,
-  variant = "default",
-  size = "default",
+  variant = "primary",
+  size = "md",
   className,
   formClassName,
   autoFocus = false,
@@ -77,11 +78,11 @@ export function AuthIntentTrigger({
 
   return (
     <form method="post" action="/auth/intent/start" className={formClassName}>
-      <input type="hidden" name="action" value={action} />
-      <input type="hidden" name="returnTo" value={returnTo} />
-      <input type="hidden" name="targetKind" value={target.kind} />
-      <input type="hidden" name="targetRef" value={target.ref} />
-      {control ? <input type="hidden" name="control" value={control} /> : null}
+      <HiddenField name="action" value={action} />
+      <HiddenField name="returnTo" value={returnTo} />
+      <HiddenField name="targetKind" value={target.kind} />
+      <HiddenField name="targetRef" value={target.ref} />
+      {control ? <HiddenField name="control" value={control} /> : null}
       <button
         id={id}
         type="submit"

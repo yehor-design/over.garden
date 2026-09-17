@@ -25,7 +25,10 @@ export function LineageInvitationClaimShell({
       title={copy.invitation.title}
       description={copy.invitation.description}
       navigation={
-        <Link href="/garden" className={buttonVariants({ variant: "outline" })}>
+        <Link
+          href="/garden"
+          className={buttonVariants({ variant: "secondary" })}
+        >
           {copy.common.backToJournal}
         </Link>
       }

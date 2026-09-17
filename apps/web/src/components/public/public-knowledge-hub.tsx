@@ -27,6 +27,9 @@ import {
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import type { PlantObjectKind } from "@/db/schema";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import { Field } from "@/components/ui/field";
+import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 
 export type PublicKnowledgeHubState = "ready" | "empty" | "loading" | "error";
 
@@ -100,23 +103,24 @@ export function PublicKnowledgeHub({
         aria-label={copy.filtersLabel}
         className="grid gap-4 border-b border-border py-4"
       >
-        <label className="grid gap-1.5 text-sm font-medium text-foreground">
-          <span>{copy.searchLabel}</span>
-          <span className="flex min-w-0 gap-2">
-            <input
-              type="search"
+        <div className="grid items-end gap-2 sm:flex">
+          <Field
+            label={copy.searchLabel}
+            id="knowledge-hub-search"
+            className="min-w-0 flex-1"
+          >
+            <SearchInput
               name="q"
               defaultValue={request.query}
               maxLength={112}
               placeholder={copy.searchPlaceholder}
-              className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
-            <button type="submit" className={buttonVariants()}>
-              <Search aria-hidden="true" />
-              {copy.applyFilters}
-            </button>
-          </span>
-        </label>
+          </Field>
+          <button type="submit" className={buttonVariants()}>
+            <Search aria-hidden="true" />
+            {copy.applyFilters}
+          </button>
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <KnowledgeSelect
@@ -188,20 +192,15 @@ function KnowledgeSelect({
   options: Array<[string, string]>;
 }) {
   return (
-    <label className="grid min-w-0 gap-1.5 text-xs font-medium text-muted-foreground">
-      <span>{label}</span>
-      <select
-        name={name}
-        defaultValue={value}
-        className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
+    <Field label={label} className="min-w-0">
+      <Select name={name} defaultValue={value}>
         {options.map(([optionValue, optionLabel]) => (
           <option key={`${name}:${optionValue}`} value={optionValue}>
             {optionLabel}
           </option>
         ))}
-      </select>
-    </label>
+      </Select>
+    </Field>
   );
 }
 
@@ -292,7 +291,7 @@ function KnowledgeResults({
                     <Link
                       href={itemHref(locale, item.path)}
                       className={buttonVariants({
-                        variant: "outline",
+                        variant: "secondary",
                         size: "sm",
                       })}
                     >
@@ -349,7 +348,7 @@ function KnowledgeError({
       </p>
       <Link
         href={buildPublicKnowledgeHref(locale, request)}
-        className={buttonVariants({ variant: "outline", className: "w-fit" })}
+        className={buttonVariants({ variant: "secondary", className: "w-fit" })}
       >
         {copy.retry}
       </Link>
@@ -378,7 +377,7 @@ function KnowledgeEmpty({
           type: "all",
           kind: "all",
         })}
-        className={buttonVariants({ variant: "outline", className: "w-fit" })}
+        className={buttonVariants({ variant: "secondary", className: "w-fit" })}
       >
         {copy.resetFilters}
       </Link>

@@ -34,6 +34,7 @@ import {
 import type { JournalBlockCommandCopy } from "@/components/garden/structured-journal-composer";
 import { COMPOSER_PHOTO_ACCEPT } from "@/lib/garden/composer-photo-selection";
 import { cn } from "@/lib/utils";
+import { FileDrop } from "@/components/ui/file-drop";
 
 /** A query longer than this is prose, not a command. */
 const MAX_QUERY_LENGTH = 24;
@@ -291,14 +292,11 @@ export function JournalSlashMenu({
 
   if (!openState) {
     return (
-      <input
+      <FileDrop
         ref={fileInputRef}
-        type="file"
         accept={COMPOSER_PHOTO_ACCEPT}
-        className="sr-only"
-        tabIndex={-1}
         disabled={disabled}
-        aria-label={copy.commands.image}
+        label={copy.commands.image}
         onChange={(event) => {
           const file = event.currentTarget.files?.[0];
           event.currentTarget.value = "";
@@ -347,14 +345,11 @@ export function JournalSlashMenu({
           ))
         )}
       </div>
-      <input
+      <FileDrop
         ref={fileInputRef}
-        type="file"
         accept={COMPOSER_PHOTO_ACCEPT}
-        className="sr-only"
-        tabIndex={-1}
         disabled={disabled}
-        aria-label={copy.commands.image}
+        label={copy.commands.image}
         onChange={(event) => {
           const file = event.currentTarget.files?.[0];
           event.currentTarget.value = "";

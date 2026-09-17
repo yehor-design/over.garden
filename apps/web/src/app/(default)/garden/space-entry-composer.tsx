@@ -30,6 +30,9 @@ import {
 import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 interface SpaceObjectOption {
   id: string;
@@ -216,13 +219,9 @@ export function SpaceEntryComposer({
 
       <fieldset disabled={local.readOnly} className="contents">
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium text-foreground">
-              {copy.page.spaceJournal.title}
-            </span>
-            <input
+          <Field label={copy.page.spaceJournal.title} required>
+            <Input
               name="title"
-              required
               maxLength={140}
               value={draft.title}
               onChange={(event) =>
@@ -232,14 +231,10 @@ export function SpaceEntryComposer({
                 }))
               }
               placeholder={copy.page.spaceJournal.titlePlaceholder}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium text-foreground">
-              {copy.page.spaceJournal.date}
-            </span>
-            <input
+          </Field>
+          <Field label={copy.page.spaceJournal.date}>
+            <Input
               type="date"
               name="entryDate"
               value={draft.entryDate}
@@ -249,9 +244,8 @@ export function SpaceEntryComposer({
                   entryDate: event.target.value,
                 }))
               }
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
-          </label>
+          </Field>
         </div>
 
         <div className="grid gap-1 text-sm">
@@ -357,25 +351,14 @@ export function SpaceEntryComposer({
           </legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {objects.map((object) => (
-              <label
+              <Checkbox
                 key={object.id}
-                className="flex items-start gap-2 border-y border-border px-1 py-2 text-sm"
-              >
-                <input
-                  type="checkbox"
-                  checked={mentionedPlantObjectIds.includes(object.id)}
-                  onChange={() => toggleMention(object.id)}
-                  className="mt-1 size-4 rounded border-border"
-                />
-                <span className="min-w-0">
-                  <span className="block truncate font-medium text-foreground">
-                    {object.displayName}
-                  </span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {object.objectKindLabel}
-                  </span>
-                </span>
-              </label>
+                checked={mentionedPlantObjectIds.includes(object.id)}
+                onChange={() => toggleMention(object.id)}
+                label={object.displayName}
+                description={object.objectKindLabel}
+                className="border-y border-border px-1 py-2"
+              />
             ))}
           </div>
         </fieldset>

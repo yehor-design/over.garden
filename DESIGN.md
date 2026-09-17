@@ -412,6 +412,13 @@ layout engine.
 `Switch` · `Field` (label + description + error + required, the one wrapper every
 control sits in) · `Fieldset` · `SearchInput` · `FileDrop`.
 
+Two more shipped with them, because the rule "no raw `<input>` outside `ui/`"
+cannot hold without them. `HiddenField` is the payload a form carries to its
+Server Action — about seventy of them, since `formData` is the only channel a
+browser without JavaScript has (ADR-0024 D3); it has no role, no label and
+nothing to style. `Spinner` is tier 3 by rank but `Button`'s loading state needs
+it, so it was built first.
+
 **Tier 2 — surface and structure.**
 `Card` · `Surface` · `Separator` (exists) · `Tabs` · `Accordion` · `Table` ·
 `ListRow` · `PageHeader` · `Section` · `Stack` utilities.

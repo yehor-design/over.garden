@@ -165,7 +165,7 @@ export function LivingObjectPassportOverview({
               <Link
                 key={`${action.href}:${action.label}`}
                 href={action.href}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
+                className={buttonVariants({ variant: "secondary", size: "sm" })}
               >
                 {action.label}
               </Link>

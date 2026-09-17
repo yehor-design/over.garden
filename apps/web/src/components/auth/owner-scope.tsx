@@ -18,6 +18,7 @@ import {
 } from "@/lib/auth/owner-scope-contract";
 import { ownerScopeHeaders } from "@/lib/auth/session-signal";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 export interface OwnerScopeContextValue {
   /** The owner this document was rendered for; null for a guest. */
@@ -122,9 +123,7 @@ export function useOptionalOwnerScope() {
 export function OwnerUserIdField() {
   const ownerUserId = useOptionalOwnerScope()?.ownerUserId ?? null;
   if (!ownerUserId) return null;
-  return (
-    <input type="hidden" name={OWNER_USER_ID_FORM_FIELD} value={ownerUserId} />
-  );
+  return <HiddenField name={OWNER_USER_ID_FORM_FIELD} value={ownerUserId} />;
 }
 
 /**

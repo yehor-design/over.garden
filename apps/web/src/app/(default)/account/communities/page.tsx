@@ -86,7 +86,7 @@ function AdminCommunityHeader({ copy }: { copy: OperatorCopy }) {
       <Link
         href="/garden"
         className={buttonVariants({
-          variant: "outline",
+          variant: "secondary",
           size: "sm",
           className: "w-fit",
         })}

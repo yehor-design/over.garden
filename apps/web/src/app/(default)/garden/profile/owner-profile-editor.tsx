@@ -28,6 +28,12 @@ import {
   updatePublicProfileAction,
   type PublicHandleActionState,
 } from "./actions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Radio } from "@/components/ui/radio";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 const COPY = {
   uk: {
@@ -299,7 +305,7 @@ export function OwnerProfileEditor({
             <span className="border-r border-border px-3 py-2 text-muted-foreground">
               @
             </span>
-            <input
+            <Input
               ref={handleInputRef}
               id="public-handle-candidate"
               name="handle"
@@ -317,7 +323,9 @@ export function OwnerProfileEditor({
               aria-busy={handlePending || undefined}
               aria-invalid={handleError}
               aria-describedby="public-handle-help public-handle-status"
-              className="min-w-0 flex-1 bg-background px-3 py-2 font-normal outline-none"
+              /* The `@` prefix and the group's own border own the boundary, so
+                 the control inside it drops its border rather than doubling it. */
+              className="min-w-0 flex-1 rounded-none border-0 bg-transparent read-only:bg-transparent"
             />
           </span>
           <p id="public-handle-help" className="text-xs text-muted-foreground">
@@ -356,65 +364,60 @@ export function OwnerProfileEditor({
               {copy.avatar}
             </legend>
             <div className="flex flex-wrap gap-3">
-              <label
+              <Radio
+                presentation="custom"
+                label={copy.noAvatar}
+                name="avatarMediaAssetId"
+                value=""
+                checked={editor.avatarMediaAssetId === null}
+                onChange={() =>
+                  setEditor((current) => ({
+                    ...current,
+                    avatarMediaAssetId: null,
+                  }))
+                }
                 className={avatarOptionClass(
                   editor.avatarMediaAssetId === null,
                 )}
               >
-                <input
-                  type="radio"
-                  name="avatarMediaAssetId"
-                  value=""
-                  checked={editor.avatarMediaAssetId === null}
-                  onChange={() =>
-                    setEditor((current) => ({
-                      ...current,
-                      avatarMediaAssetId: null,
-                    }))
-                  }
-                  className="sr-only"
-                />
                 <span className="flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <ImageOff className="size-5" aria-hidden="true" />
                 </span>
                 <span className="text-xs font-medium">{copy.noAvatar}</span>
-              </label>
+              </Radio>
               {workspace.avatarOptions.map((option) => (
-                <label
+                <Radio
                   key={option.mediaAssetId}
+                  presentation="custom"
+                  label={option.alt}
+                  name="avatarMediaAssetId"
+                  value={option.mediaAssetId}
+                  checked={editor.avatarMediaAssetId === option.mediaAssetId}
+                  onChange={() =>
+                    setEditor((current) => ({
+                      ...current,
+                      avatarMediaAssetId: option.mediaAssetId,
+                    }))
+                  }
                   className={avatarOptionClass(
                     editor.avatarMediaAssetId === option.mediaAssetId,
                   )}
                 >
-                  <input
-                    type="radio"
-                    name="avatarMediaAssetId"
-                    value={option.mediaAssetId}
-                    checked={editor.avatarMediaAssetId === option.mediaAssetId}
-                    onChange={() =>
-                      setEditor((current) => ({
-                        ...current,
-                        avatarMediaAssetId: option.mediaAssetId,
-                      }))
-                    }
-                    className="sr-only"
-                  />
                   <Image
                     src={option.publicUrl}
-                    alt={option.alt}
+                    alt=""
                     width={56}
                     height={56}
                     unoptimized
                     className="size-14 rounded-full object-cover"
                   />
-                </label>
+                </Radio>
               ))}
             </div>
           </fieldset>
 
-          <label className="grid max-w-xl gap-1.5 text-sm font-medium text-foreground">
-            {copy.displayName}
-            <input
+          <Field label={copy.displayName} className="max-w-xl">
+            <Input
               ref={displayNameInputRef}
               name="displayName"
               value={editor.displayName ?? ""}
@@ -429,13 +432,11 @@ export function OwnerProfileEditor({
               aria-describedby={
                 displayNameError ? "public-profile-status" : undefined
               }
-              className="h-10 rounded-md border border-input bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-ring"
             />
-          </label>
+          </Field>
 
-          <label className="grid gap-1.5 text-sm font-medium text-foreground">
-            {copy.bio}
-            <textarea
+          <Field label={copy.bio} mark={`${editor.bio?.length ?? 0}/600`}>
+            <Textarea
               name="bio"
               value={editor.bio ?? ""}
               onChange={(event) =>
@@ -446,12 +447,9 @@ export function OwnerProfileEditor({
               }
               maxLength={600}
               rows={5}
-              className="min-h-28 resize-y rounded-md border border-input bg-background px-3 py-2 font-normal outline-none focus:ring-2 focus:ring-ring"
+              className="min-h-28"
             />
-            <span className="text-right text-xs font-normal text-muted-foreground tabular-nums">
-              {editor.bio?.length ?? 0}/600
-            </span>
-          </label>
+          </Field>
 
           <fieldset className="grid gap-2">
             <legend className="text-sm font-semibold text-foreground">
@@ -459,25 +457,20 @@ export function OwnerProfileEditor({
             </legend>
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               {PROFILE_LANGUAGES.map((language) => (
-                <label
+                <Checkbox
                   key={language}
-                  className="inline-flex min-h-9 items-center gap-2 text-sm text-foreground"
-                >
-                  <input
-                    type="checkbox"
-                    name="languages"
-                    value={language}
-                    checked={editor.languages.includes(language)}
-                    onChange={() =>
-                      setEditor((current) => ({
-                        ...current,
-                        languages: toggleLanguage(current.languages, language),
-                      }))
-                    }
-                    className="size-4 rounded border-input accent-primary"
-                  />
-                  {PUBLIC_PROFILE_LANGUAGE_LABELS[locale][language]}
-                </label>
+                  name="languages"
+                  value={language}
+                  checked={editor.languages.includes(language)}
+                  onChange={() =>
+                    setEditor((current) => ({
+                      ...current,
+                      languages: toggleLanguage(current.languages, language),
+                    }))
+                  }
+                  label={PUBLIC_PROFILE_LANGUAGE_LABELS[locale][language]}
+                  className="inline-flex items-center"
+                />
               ))}
             </div>
           </fieldset>
@@ -500,8 +493,9 @@ export function OwnerProfileEditor({
                 }))
               }
             />
-            <select
+            <Select
               name="coarseRegionCode"
+              aria-label={copy.region}
               value={editor.coarseRegionCode ?? ""}
               onChange={(event) =>
                 setEditor((current) => ({
@@ -512,7 +506,7 @@ export function OwnerProfileEditor({
               }
               disabled={editor.locationVisibility === "hidden"}
               required={editor.locationVisibility === "region"}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground disabled:opacity-50 sm:max-w-md"
+              className="sm:max-w-md"
             >
               <option value="">{copy.region}</option>
               {COARSE_REGION_OPTIONS.map((option) => (
@@ -520,7 +514,7 @@ export function OwnerProfileEditor({
                   {option.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </fieldset>
 
           <div className="grid gap-5 sm:grid-cols-2">
@@ -604,25 +598,23 @@ function SegmentedChoice({
   return (
     <div className="inline-flex w-fit max-w-full overflow-hidden rounded-md border border-input bg-muted p-0.5">
       {options.map((option) => (
-        <label
+        <Radio
           key={option.value}
+          presentation="custom"
+          label={option.label}
+          name={name}
+          value={option.value}
+          checked={value === option.value}
+          onChange={() => onChange(option.value)}
           className={cn(
-            "cursor-pointer rounded-sm px-3 py-1.5 text-sm font-medium break-words transition-colors",
+            "rounded-sm px-3 py-1.5 text-sm font-medium break-words transition-colors",
             value === option.value
-              ? "bg-background text-foreground shadow-sm"
+              ? "bg-background text-foreground"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
-          <input
-            type="radio"
-            name={name}
-            value={option.value}
-            checked={value === option.value}
-            onChange={() => onChange(option.value)}
-            className="sr-only"
-          />
           {option.label}
-        </label>
+        </Radio>
       ))}
     </div>
   );

@@ -30,6 +30,7 @@ import {
 } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
+import { iconButtonVariants } from "@/components/ui/icon-button";
 
 const PAGE_SIZE = 12;
 
@@ -125,7 +126,7 @@ export default async function LocalizedBookmarksRoute({
           {currentPage > 1 ? (
             <Link
               href={bookmarkHref(localeParam, filter, currentPage - 1)}
-              className={buttonVariants({ variant: "outline" })}
+              className={buttonVariants({ variant: "secondary" })}
             >
               <ArrowLeft className="size-4" />
               {copy.common.previous}
@@ -136,7 +137,7 @@ export default async function LocalizedBookmarksRoute({
           {currentPage < pageCount ? (
             <Link
               href={bookmarkHref(localeParam, filter, currentPage + 1)}
-              className={buttonVariants({ variant: "outline" })}
+              className={buttonVariants({ variant: "secondary" })}
             >
               {copy.common.next}
               <ArrowRight className="size-4" />
@@ -215,7 +216,7 @@ function BookmarkRow({
         <Link
           href={item.target.href}
           title={copy.common.open}
-          className={buttonVariants({ variant: "outline", size: "icon" })}
+          className={iconButtonVariants({ variant: "secondary" })}
         >
           <ExternalLink className="size-4" />
           <span className="sr-only">{copy.common.open}</span>

@@ -1,6 +1,5 @@
 "use client";
 
-import { Search, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -34,6 +33,11 @@ import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import type { GardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import { formatGardenWorkspaceTemplate } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  ComboboxClear,
+  ComboboxInput,
+  ComboboxRoot,
+} from "@/components/ui/combobox";
 
 export type CatalogPickerCopy = GardenWorkspaceCopy["composer"]["catalogPicker"];
 
@@ -532,22 +536,16 @@ export function CatalogPicker({
       >
         {label}
       </label>
-      <span className="relative block min-w-0">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <input
+      <ComboboxRoot>
+        <ComboboxInput
           id={inputId}
           name={inputName}
           required={required}
           data-auth-intent-control={authIntentControl}
-          type="text"
-          role="combobox"
-          aria-autocomplete="list"
           aria-expanded={listVisible}
           aria-controls={listboxId}
           aria-activedescendant={listVisible ? activeOption?.id : undefined}
           aria-describedby={`${outcomesId} ${statusId}`}
-          autoComplete="off"
-          spellCheck={false}
           maxLength={CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH}
           disabled={disabled}
           value={query}
@@ -558,20 +556,16 @@ export function CatalogPicker({
           }}
           onBlur={onBlur}
           onKeyDown={onKeyDown}
-          className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 sm:h-10"
         />
         {query || selection ? (
-          <button
+          <ComboboxClear
             type="button"
             onClick={clear}
             disabled={disabled}
-            className="absolute top-1/2 right-1 inline-flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label={clearLabel}
-          >
-            <X className="size-4" />
-          </button>
+            label={clearLabel}
+          />
         ) : null}
-      </span>
+      </ComboboxRoot>
       <p id={outcomesId} className="sr-only">
         {copy.outcomes}
       </p>

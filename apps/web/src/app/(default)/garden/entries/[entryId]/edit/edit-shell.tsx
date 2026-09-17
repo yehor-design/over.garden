@@ -42,7 +42,7 @@ export function JournalEntryEditShell({
       navigation={
         <Link
           href={returnTo}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           {copy.object.backToJournal}
         </Link>

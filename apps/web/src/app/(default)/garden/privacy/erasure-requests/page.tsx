@@ -53,6 +53,10 @@ import {
   markErasureRequestHandledAction,
   markErasureRequestReviewingAction,
 } from "./actions";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getOperatorErasureCopy(await getRequestInterfaceLocale());
@@ -318,11 +322,11 @@ function ErasureRequestCard({
 
       {canMutate && request.status === "submitted" ? (
         <OwnerScopedActionForm action={markErasureRequestReviewingAction}>
-          <input type="hidden" name="requestId" value={request.id} />
+          <HiddenField name="requestId" value={request.id} />
           <button
             type="submit"
             className={buttonVariants({
-              variant: "outline",
+              variant: "secondary",
               className: "self-start",
             })}
           >
@@ -375,17 +379,15 @@ function ApprovedErasureExecutionPanel({
         action={executeApprovedErasureRequestAction}
         className="grid gap-2 sm:max-w-xl"
       >
-        <input type="hidden" name="requestId" value={request.id} />
-        <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
-          {copy.approvalPhrase}
-          <input
+        <HiddenField name="requestId" value={request.id} />
+        <Field label={copy.approvalPhrase} required>
+          <Input
             name="maintainerApprovalText"
-            required
             disabled={!dryRunReviewed}
             placeholder={approvalText}
-            className="h-10 rounded-md border border-input bg-background px-3 font-mono text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="font-mono"
           />
-        </label>
+        </Field>
         <p className="font-mono text-xs text-muted-foreground">
           {approvalText}
         </p>
@@ -393,7 +395,7 @@ function ApprovedErasureExecutionPanel({
           type="submit"
           disabled={!dryRunReviewed}
           className={buttonVariants({
-            variant: "destructive",
+            variant: "danger",
             className:
               "self-start disabled:pointer-events-none disabled:opacity-60",
           })}
@@ -429,22 +431,17 @@ function NonDestructiveOutcomeForm({
       action={markErasureRequestHandledAction}
       className="grid gap-2 border-t border-border pt-3 sm:max-w-md"
     >
-      <input type="hidden" name="requestId" value={request.id} />
-      <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
-        {copy.operatorOutcome}
-        <select
-          name="handledStatus"
-          required
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
+      <HiddenField name="requestId" value={request.id} />
+      <Field label={copy.operatorOutcome} required>
+        <Select name="handledStatus">
           {nonDestructiveOutcomes.map((option) => (
             <option key={option.value} value={option.value}>
               {getLocalizedErasureStatusCopy(locale, "handled", option.value)
                 .handled?.label ?? option.value}
             </option>
           ))}
-        </select>
-      </label>
+        </Select>
+      </Field>
       <button
         type="submit"
         className={buttonVariants({ className: "self-start" })}
@@ -525,11 +522,11 @@ function DryRunPreviewPanel({
       {canMutate &&
       (request.status === "submitted" || request.status === "reviewing") ? (
         <OwnerScopedActionForm action={markErasureRequestDryRunReviewedAction}>
-          <input type="hidden" name="requestId" value={request.id} />
+          <HiddenField name="requestId" value={request.id} />
           <button
             type="submit"
             className={buttonVariants({
-              variant: "outline",
+              variant: "secondary",
               className: "self-start",
             })}
           >

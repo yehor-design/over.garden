@@ -155,8 +155,11 @@ describe("PublicEngagementPanel", () => {
 
     expect(guestHtml).toContain(`name="control" value="${control}"`);
     expect(guestHtml).not.toContain(replyToken);
-    expect(resumedHtml).toContain(
-      `id="comments-${control}" data-auth-intent-control="comment" data-auth-intent-control-ref="${control}" autofocus`,
+    // One element carries all four, in whatever order React emits them.
+    expect(resumedHtml).toMatch(
+      new RegExp(
+        `<textarea(?=[^>]*id="comments-${control}")(?=[^>]*data-auth-intent-control="comment")(?=[^>]*data-auth-intent-control-ref="${control}")(?=[^>]*autofocus)[^>]*>`,
+      ),
     );
     expect(resumedHtml).toContain('id="engagement-comment"');
     expect(resumedHtml).not.toContain('id="engagement-comment" autofocus');

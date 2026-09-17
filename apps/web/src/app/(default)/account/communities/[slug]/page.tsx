@@ -26,6 +26,7 @@ import {
   legacyPublicJournalEntryPath,
   publicJournalEntryPath,
 } from "@/lib/garden/public-paths";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 interface CommunityModerationPageProps {
   params: Promise<{ slug: string }>;
@@ -121,14 +122,13 @@ export default async function CommunityModerationPage({
         </div>
         <OwnerScopedActionForm action={setCommunityParticipationAction}>
           <ModeratorFields slug={slug} reason="rule_violation" />
-          <input
-            type="hidden"
+          <HiddenField
             name="participationState"
             value={participationOpen ? "closed" : "open"}
           />
           <button
             className={buttonVariants({
-              variant: participationOpen ? "outline" : "default",
+              variant: participationOpen ? "secondary" : "primary",
             })}
           >
             {participationOpen
@@ -269,7 +269,7 @@ function ModerationHeader({
       <Link
         href={backPath}
         className={buttonVariants({
-          variant: "outline",
+          variant: "secondary",
           size: "sm",
           className: "w-fit",
         })}
@@ -307,11 +307,11 @@ function ModerationForm({
   return (
     <OwnerScopedActionForm action={action}>
       <ModeratorFields slug={slug} reason={item.reportReason} />
-      <input type="hidden" name="reportId" value={item.reportId} />
-      <input type="hidden" name="contributionId" value={item.contributionId} />
-      <input type="hidden" name="membershipId" value={item.membershipId} />
-      <input type="hidden" name={stateName} value={stateValue} />
-      <button className={buttonVariants({ variant: "outline", size: "sm" })}>
+      <HiddenField name="reportId" value={item.reportId} />
+      <HiddenField name="contributionId" value={item.contributionId} />
+      <HiddenField name="membershipId" value={item.membershipId} />
+      <HiddenField name={stateName} value={stateValue} />
+      <button className={buttonVariants({ variant: "secondary", size: "sm" })}>
         {label}
       </button>
     </OwnerScopedActionForm>
@@ -321,8 +321,8 @@ function ModerationForm({
 function ModeratorFields({ slug, reason }: { slug: string; reason: string }) {
   return (
     <>
-      <input type="hidden" name="slug" value={slug} />
-      <input type="hidden" name="reason" value={reason} />
+      <HiddenField name="slug" value={slug} />
+      <HiddenField name="reason" value={reason} />
     </>
   );
 }

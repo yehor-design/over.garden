@@ -11,6 +11,8 @@ import {
 import { authClient } from "@/lib/auth-client";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 export function PasswordResetRequestForm({
   locale = "uk",
@@ -60,19 +62,16 @@ export function PasswordResetRequestForm({
         </p>
       </div>
 
-      <label className="grid gap-1 text-sm">
-        <span className="font-medium text-foreground">{copy.email}</span>
-        <input
+      <Field label={copy.email} id="password-reset-email" required>
+        <Input
           type="email"
           autoComplete="email"
           value={email}
           onChange={(event) => {
             setEmail(event.target.value);
           }}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-          required
         />
-      </label>
+      </Field>
 
       <Button
         type="button"

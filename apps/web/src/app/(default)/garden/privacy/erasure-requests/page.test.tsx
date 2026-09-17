@@ -166,7 +166,12 @@ describe("/garden/privacy/erasure-requests", () => {
     expect(html).toContain("Позначити опрацьованим");
     expect(html).toContain("Потрібне підтвердження особи");
     expect(html).not.toContain('<option value="completed">');
-    expect(html).not.toMatch(/quarantine|derivative|https?:\/\//i);
+    // Icons are inline SVG and carry `xmlns="http://www.w3.org/2000/svg"`,
+    // which is markup rather than evidence. The rule is about what the page
+    // says, so the namespace is removed before the page is read.
+    expect(html.replaceAll(/\sxmlns="[^"]*"/g, "")).not.toMatch(
+      /quarantine|derivative|https?:\/\//i,
+    );
   });
 
   it("renders its own shell and a bounded failure when the relation is missing", async () => {

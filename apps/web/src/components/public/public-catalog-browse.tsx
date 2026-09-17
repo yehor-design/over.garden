@@ -207,7 +207,7 @@ export function PublicCatalogBrowse({
                       ...request,
                       page: request.page - 1,
                     })}
-                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                    className={buttonVariants({ variant: "secondary", size: "sm" })}
                   >
                     <ArrowLeft className="size-4" />
                     {copy.previousPage}
@@ -224,7 +224,7 @@ export function PublicCatalogBrowse({
                       ...request,
                       page: request.page + 1,
                     })}
-                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                    className={buttonVariants({ variant: "secondary", size: "sm" })}
                   >
                     {copy.nextPage}
                     <ArrowRight className="size-4" />

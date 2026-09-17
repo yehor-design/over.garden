@@ -67,6 +67,7 @@ import {
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 export interface PublicCatalogEvidenceRouteProps {
   params: Promise<{ slug: string; form?: string; locale?: string }>;
@@ -332,17 +333,16 @@ export async function renderPublicCatalogEvidenceRoute(
             <OwnerScopedActionForm
               action={addCatalogPublicSlugToWishlistAction}
             >
-              <input
-                type="hidden"
+              <HiddenField
                 name="catalogPublicSlug"
                 value={page.catalog.publicSlug}
               />
-              <input type="hidden" name="locale" value={locale} />
-              <input type="hidden" name="returnTo" value={publicPath} />
+              <HiddenField name="locale" value={locale} />
+              <HiddenField name="returnTo" value={publicPath} />
               <button
                 type="submit"
                 className={buttonVariants({
-                  variant: "outline",
+                  variant: "secondary",
                   className: "self-start",
                 })}
               >

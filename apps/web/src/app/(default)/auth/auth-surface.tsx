@@ -15,6 +15,9 @@ import {
 } from "@/lib/trust-surface-copy";
 import type { AuthFormState } from "./auth-actions";
 import { buildSignInHref } from "@/lib/navigation/sign-in-href";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 /**
  * The one screen that signs somebody in, and the one that creates an account.
@@ -122,9 +125,9 @@ export function AuthSurface({
 
           {googleSignInEnabled ? (
             <form action={socialAction} className="grid gap-2">
-              <input type="hidden" name="provider" value="google" />
-              <input type="hidden" name="next" value={next} />
-              <SubmitButton variant="outline" testId="google-sign-in-button">
+              <HiddenField name="provider" value="google" />
+              <HiddenField name="next" value={next} />
+              <SubmitButton variant="secondary" testId="google-sign-in-button">
                 {formatTrustTemplate(copy.continueWith, { provider: "Google" })}
               </SubmitButton>
               {socialState.message ? (
@@ -134,36 +137,28 @@ export function AuthSurface({
           ) : null}
 
           <form action={formAction} className="grid gap-4">
-            <input type="hidden" name="next" value={next} />
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-foreground">{copy.email}</span>
-              <input
+            <HiddenField name="next" value={next} />
+            <Field label={copy.email} required>
+              <Input
                 type="email"
                 name="email"
                 autoFocus
                 autoComplete="email"
-                required
                 aria-invalid={state.status === "error" || undefined}
                 aria-describedby={state.message ? "auth-message" : undefined}
-                className="min-h-11 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground sm:min-h-9"
               />
-            </label>
+            </Field>
 
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-foreground">
-                {copy.password}
-              </span>
-              <input
+            <Field label={copy.password} required>
+              <Input
                 type="password"
                 name="password"
                 autoComplete={isSignUp ? "new-password" : "current-password"}
                 minLength={8}
-                required
                 aria-invalid={state.status === "error" || undefined}
                 aria-describedby={state.message ? "auth-message" : undefined}
-                className="min-h-11 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground sm:min-h-9"
               />
-            </label>
+            </Field>
 
             <SubmitButton>
               {isSignUp ? copy.createAccount : copy.signIn}
@@ -216,7 +211,7 @@ function SubmitButton({
   testId,
 }: {
   children: React.ReactNode;
-  variant?: "outline";
+  variant?: "secondary";
   testId?: string;
 }) {
   const { pending } = useFormStatus();

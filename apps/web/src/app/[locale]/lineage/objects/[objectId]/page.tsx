@@ -60,6 +60,9 @@ import {
   readGuestEngagementSummary,
   readPublicObjectPassportPage,
 } from "@/server/public-cache";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Field } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
 
 interface PublicLineageObjectRouteProps {
   params: Promise<{ locale: string; objectId: string }>;
@@ -456,14 +459,12 @@ function LineageInteractionPanel({
       {canInteract ? (
         <div className="grid gap-3 md:grid-cols-2">
           <OwnerScopedActionForm action={followLineageNodeAction}>
-            <input type="hidden" name="edgeId" value={edge.id} />
-            <input
-              type="hidden"
+            <HiddenField name="edgeId" value={edge.id} />
+            <HiddenField
               name="targetPlantObjectId"
               value={target.plantObjectId}
             />
-            <input
-              type="hidden"
+            <HiddenField
               name="rootPlantObjectId"
               value={rootPlantObjectId}
             />
@@ -478,7 +479,7 @@ function LineageInteractionPanel({
               autoFocus={isResumedFollow}
               type="submit"
               className={buttonVariants({
-                variant: "outline",
+                variant: "secondary",
                 className: "w-full md:w-auto",
               })}
             >
@@ -490,35 +491,27 @@ function LineageInteractionPanel({
             action={askLineageQuestionAction}
             className="grid gap-2"
           >
-            <input type="hidden" name="edgeId" value={edge.id} />
-            <input
-              type="hidden"
+            <HiddenField name="edgeId" value={edge.id} />
+            <HiddenField
               name="targetPlantObjectId"
               value={target.plantObjectId}
             />
-            <input
-              type="hidden"
+            <HiddenField
               name="rootPlantObjectId"
               value={rootPlantObjectId}
             />
-            <input
-              type="hidden"
+            <HiddenField
               name="clientMutationId"
               value={crypto.randomUUID()}
             />
-            <label className="grid gap-1 text-sm">
-              <span className="font-medium text-foreground">
-                {copy.passport.askWithinLineage}
-              </span>
-              <textarea
+            <Field label={copy.passport.askWithinLineage} required>
+              <Textarea
                 name="questionText"
-                required
                 maxLength={360}
                 rows={3}
                 placeholder={copy.passport.lineageQuestionPlaceholder}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
               />
-            </label>
+            </Field>
             <button
               type="submit"
               className={buttonVariants({ className: "justify-self-start" })}
@@ -550,7 +543,7 @@ function LineageInteractionPanel({
           control={followControl}
           label={copy.passport.followUpdates}
           icon={<BellPlus aria-hidden="true" />}
-          variant="outline"
+          variant="secondary"
           className="w-fit"
         />
       )}

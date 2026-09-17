@@ -43,7 +43,7 @@ export function CatalogOperatorShell({
         description={description}
         navigation={
           <div className="flex flex-wrap gap-2">
-            <Link href="/garden" className={buttonVariants({ variant: "outline" })}>
+            <Link href="/garden" className={buttonVariants({ variant: "secondary" })}>
               {operatorCopy.common.backToJournal}
             </Link>
             <Link
@@ -52,7 +52,7 @@ export function CatalogOperatorShell({
                   ? "/garden/catalog/sources"
                   : "/garden/catalog/queue"
               }
-              className={buttonVariants({ variant: "outline" })}
+              className={buttonVariants({ variant: "secondary" })}
             >
               {surface === "catalog-queue"
                 ? menuCopy.links["catalog-sources"]

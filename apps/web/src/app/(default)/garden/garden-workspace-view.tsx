@@ -115,7 +115,7 @@ export function GardenWorkspaceView({
             </Link>
             <Link
               href="#first-entry-composer"
-              className={buttonVariants({ variant: "outline" })}
+              className={buttonVariants({ variant: "secondary" })}
             >
               <CirclePlus aria-hidden="true" />
               {workspaceCopy.workspace.nextAction.addObject}
@@ -340,7 +340,7 @@ function SpaceRow({
       </div>
       <Link
         href={`/garden?space=${encodeURIComponent(space.id)}#space-journal`}
-        className={buttonVariants({ variant: "outline", size: "sm" })}
+        className={buttonVariants({ variant: "secondary", size: "sm" })}
       >
         <BookOpenText aria-hidden="true" />
         {copy.workspace.spaces.openJournal}
@@ -558,7 +558,7 @@ function InventoryRow({
             : `/garden/objects/${object.id}`
         }
         className={buttonVariants({
-          variant: "outline",
+          variant: "secondary",
           size: "sm",
           className: "w-fit sm:justify-self-end",
         })}
@@ -717,7 +717,7 @@ function Pagination({
       {page > 1 ? (
         <Link
           href={`/garden?${expandedParam}=all&${pageParam}=${page - 1}#${base}`}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           <ArrowLeft aria-hidden="true" />
           {copy.workspace.pagination.previous}
@@ -728,7 +728,7 @@ function Pagination({
       {hasMore ? (
         <Link
           href={`/garden?${expandedParam}=all&${pageParam}=${page + 1}#${base}`}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           {copy.workspace.pagination.next}
           <ArrowRight aria-hidden="true" />

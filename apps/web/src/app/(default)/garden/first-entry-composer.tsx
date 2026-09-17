@@ -73,6 +73,11 @@ import {
 import { recordCatalogPickEventAction } from "./catalog-pick-event-actions";
 import { recordCatalogSearchMissAction } from "./catalog-search-miss-actions";
 import { JournalObjectKindSelector } from "./journal-object-kind-selector";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Field } from "@/components/ui/field";
+import { FileDrop } from "@/components/ui/file-drop";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 interface FirstEntryComposerProps {
   ownerUserId: string;
@@ -689,13 +694,11 @@ export function FirstEntryComposer({
           </div>
 
           {initialSpace ? (
-            <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-              {copy.composer.fields.space}
-              <select
+            <Field label={copy.composer.fields.space} className="min-w-0">
+              <Select
                 name="spaceChoice"
                 value={draft.spaceId ?? "new"}
                 onChange={(event) => updateSpaceChoice(event.target.value)}
-                className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
               >
                 <option value={initialSpace.id}>
                   {initialSpace.displayName}
@@ -703,29 +706,28 @@ export function FirstEntryComposer({
                 <option value="new">
                   {copy.composer.fields.createNewSpace}
                 </option>
-              </select>
-            </label>
+              </Select>
+            </Field>
           ) : null}
         </div>
 
         {!draft.spaceId ? (
-          <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-            {copy.composer.fields.newSpaceName}
-            <input
+          <Field
+            label={copy.composer.fields.newSpaceName}
+            description={copy.composer.fields.spaceHelp}
+            required
+            className="min-w-0"
+          >
+            <Input
               name="spaceName"
-              required
               maxLength={120}
               value={draft.spaceName}
               onChange={(event) => updateDraft("spaceName", event.target.value)}
-              className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
               placeholder={copy.composer.fields.spacePlaceholder}
             />
-            <span className="text-xs leading-5 font-normal text-muted-foreground">
-              {copy.composer.fields.spaceHelp}
-            </span>
-          </label>
+          </Field>
         ) : (
-          <input type="hidden" name="spaceId" value={draft.spaceId} />
+          <HiddenField name="spaceId" value={draft.spaceId} />
         )}
 
         <div className="flex flex-col gap-1">
@@ -734,7 +736,7 @@ export function FirstEntryComposer({
               {copy.composer.fields.firstUpdate}
             </span>
           </div>
-          <input type="hidden" name="body" value={draft.body} required />
+          <HiddenField name="body" value={draft.body} required />
           <StructuredJournalComposer
             locale={locale}
             labels={getStructuredJournalComposerLabels(locale)}
@@ -845,20 +847,18 @@ export function FirstEntryComposer({
           <span className="text-sm font-medium text-foreground">
             {copy.composer.fields.optionalPhoto}
           </span>
-          <input
+          <FileDrop
             ref={photoInputRef}
-            type="file"
             accept={COMPOSER_PHOTO_ACCEPT}
             capture="environment"
-            aria-label={copy.composer.photo.choose}
+            label={copy.composer.photo.choose}
             onChange={(event) =>
               handlePhotoChange(event.currentTarget.files?.[0])
             }
-            className="hidden"
           />
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             className="self-start"
             data-photo-picker-control="true"
             onClick={() => photoInputRef.current?.click()}
@@ -869,7 +869,7 @@ export function FirstEntryComposer({
           {hasSelectedPhoto ? (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               className="self-start"
               onClick={() => clearPhotoSelection()}
             >
@@ -908,15 +908,21 @@ export function FirstEntryComposer({
                 data-composer-details-grid="location"
                 className="grid min-w-0 gap-3 sm:grid-cols-2"
               >
-                <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-                  {copy.composer.fields.location}
-                  <select
+                <Field
+                  label={copy.composer.fields.location}
+                  description={
+                    draft.locationVisibility === "region"
+                      ? copy.composer.locationHelp.region
+                      : copy.composer.locationHelp.hidden
+                  }
+                  className="min-w-0"
+                >
+                  <Select
                     name="locationVisibility"
                     value={draft.locationVisibility}
                     onChange={(event) =>
                       updateLocationVisibility(event.target.value)
                     }
-                    className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
                   >
                     <option value="hidden">
                       {copy.composer.fields.hidden}
@@ -924,25 +930,21 @@ export function FirstEntryComposer({
                     <option value="region">
                       {copy.composer.fields.region}
                     </option>
-                  </select>
-                  <span className="text-xs leading-5 font-normal text-muted-foreground">
-                    {draft.locationVisibility === "region"
-                      ? copy.composer.locationHelp.region
-                      : copy.composer.locationHelp.hidden}
-                  </span>
-                </label>
+                  </Select>
+                </Field>
 
-                <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-                  {copy.composer.fields.coarseRegion}
-                  <select
+                <Field
+                  label={copy.composer.fields.coarseRegion}
+                  required={draft.locationVisibility === "region"}
+                  className="min-w-0"
+                >
+                  <Select
                     name="coarseRegionCode"
-                    required={draft.locationVisibility === "region"}
                     disabled={draft.locationVisibility === "hidden"}
                     value={draft.coarseRegionCode}
                     onChange={(event) =>
                       updateDraft("coarseRegionCode", event.target.value)
                     }
-                    className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 sm:h-10"
                   >
                     <option value="">
                       {copy.composer.fields.chooseRegion}
@@ -952,8 +954,8 @@ export function FirstEntryComposer({
                         {region.label}
                       </option>
                     ))}
-                  </select>
-                </label>
+                  </Select>
+                </Field>
               </div>
             )}
 
@@ -961,44 +963,41 @@ export function FirstEntryComposer({
               data-composer-details-grid="entry-metadata"
               className="grid min-w-0 gap-3 sm:grid-cols-3"
             >
-              <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
-                {copy.composer.fields.entryTitle}
-                <input
+              <Field
+                label={copy.composer.fields.entryTitle}
+                required
+                className="min-w-0 sm:col-span-2"
+              >
+                <Input
                   name="title"
-                  required
                   maxLength={140}
                   value={draft.title}
                   onChange={(event) => updateTitle(event.target.value)}
-                  className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
                   placeholder={copy.composer.fields.titlePlaceholder}
                 />
-              </label>
+              </Field>
 
-              <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-                {copy.composer.fields.date}
-                <input
+              <Field label={copy.composer.fields.date} className="min-w-0">
+                <Input
                   type="date"
                   name="entryDate"
                   value={draft.entryDate}
                   onChange={(event) =>
                     updateDraft("entryDate", event.target.value)
                   }
-                  className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
                 />
-              </label>
+              </Field>
             </div>
 
-            <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-              {copy.composer.fields.tags}
-              <input
+            <Field label={copy.composer.fields.tags} className="min-w-0">
+              <Input
                 name="topicTags"
                 maxLength={160}
                 value={topicTagInput}
                 onChange={(event) => updateTopicTagInput(event.target.value)}
-                className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
                 placeholder={copy.composer.fields.tagsPlaceholder}
               />
-            </label>
+            </Field>
           </div>
         </details>
 

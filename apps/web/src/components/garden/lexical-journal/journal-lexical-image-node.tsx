@@ -13,6 +13,8 @@ import {
 import { COMPOSER_PHOTO_ACCEPT } from "@/lib/garden/composer-photo-selection";
 import { MAX_JOURNAL_IMAGE_CAPTION_CHARS } from "@/lib/garden/journal-document";
 import { $isOverGardenImageNode } from "./journal-lexical-nodes";
+import { FileDrop } from "@/components/ui/file-drop";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface JournalImageUiState {
   status: "selected" | "decoding" | "encoding" | "staging" | "ready" | "failed";
@@ -106,32 +108,32 @@ export function JournalLexicalImageNodeView({
 
       {context ? (
         // The caption is the picture's sentence, and it is the `alt` a screen
-        // reader and an image crawler are given (OVE-432). A plain
-        // `<textarea>` inside the editor: it is in the tab order, it needs no
-        // hydration to hold what was typed, and it grows with the text
-        // (ADR-0024).
-        <label className="grid gap-1">
-          <span className="sr-only">{context.labels.caption}</span>
-          <textarea
-            // No `name`: the caption reaches the server inside the document
-            // the editor serialises, and a second copy in the form post would
-            // be a second place to read it from.
-            defaultValue={caption}
-            rows={1}
-            maxLength={MAX_JOURNAL_IMAGE_CAPTION_CHARS}
-            disabled={context.disabled}
-            placeholder={context.labels.captionPlaceholder}
-            data-journal-image-caption={mediaAssetId}
-            className="w-full resize-none rounded border border-transparent bg-transparent px-1 py-0.5 text-sm text-muted-foreground placeholder:text-muted-foreground/60 hover:border-border focus:border-border focus:text-foreground focus:outline-none"
-            onChange={(event) => {
-              const next = event.currentTarget.value;
-              editor.update(() => {
-                const node = $getNodeByKey(nodeKey);
-                if ($isOverGardenImageNode(node)) node.setCaption(next);
-              });
-            }}
-          />
-        </label>
+        // reader and an image crawler are given (OVE-432). A plain text area
+        // inside the editor: it is in the tab order, it needs no hydration to
+        // hold what was typed, and it grows with the text (ADR-0024).
+        <Textarea
+          // No `name`: the caption reaches the server inside the document the
+          // editor serialises, and a second copy in the form post would be a
+          // second place to read it from. The caption sits under the picture
+          // with no room for a label above it, so it carries its own name
+          // rather than a `Field` (DESIGN.md §5.3).
+          aria-label={context.labels.caption}
+          defaultValue={caption}
+          rows={1}
+          size="sm"
+          maxLength={MAX_JOURNAL_IMAGE_CAPTION_CHARS}
+          disabled={context.disabled}
+          placeholder={context.labels.captionPlaceholder}
+          data-journal-image-caption={mediaAssetId}
+          className="resize-none border-transparent bg-transparent text-text-muted hover:border-border focus:border-border focus:text-text"
+          onChange={(event) => {
+            const next = event.currentTarget.value;
+            editor.update(() => {
+              const node = $getNodeByKey(nodeKey);
+              if ($isOverGardenImageNode(node)) node.setCaption(next);
+            });
+          }}
+        />
       ) : null}
 
       {busy && context ? (
@@ -194,13 +196,11 @@ export function JournalLexicalImageNodeView({
           >
             {context.labels.remove}
           </button>
-          <input
+          <FileDrop
             ref={replacementInputRef}
-            type="file"
             accept={COMPOSER_PHOTO_ACCEPT}
-            className="sr-only"
             disabled={context.disabled}
-            aria-label={context.labels.replace}
+            label={context.labels.replace}
             onChange={(event) => {
               const file = event.currentTarget.files?.[0];
               event.currentTarget.value = "";

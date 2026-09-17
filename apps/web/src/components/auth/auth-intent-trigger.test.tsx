@@ -30,7 +30,22 @@ describe("AuthIntentTrigger", () => {
     expect(html).toContain(
       'data-auth-intent-control-ref="reply-a7d8f9c012345678"',
     );
-    expect(html).not.toMatch(/body|email|invite|latitude|longitude/i);
+    // The form posts a closed set of typed fields and nothing else. This reads
+    // the fields rather than the whole markup: a class name is not a payload,
+    // and a substring match over the document flags `text-body-sm`.
+    const fields = [...html.matchAll(/name="([^"]+)" value="([^"]*)"/g)];
+    expect(fields.map(([, name]) => name).sort()).toEqual([
+      "action",
+      "control",
+      "returnTo",
+      "targetKind",
+      "targetRef",
+    ]);
+    for (const [, name, value] of fields) {
+      expect(`${name} ${value}`).not.toMatch(
+        /body|email|invite|latitude|longitude/i,
+      );
+    }
   });
 
   it("brings a targetless reader back to the thing they pressed", () => {

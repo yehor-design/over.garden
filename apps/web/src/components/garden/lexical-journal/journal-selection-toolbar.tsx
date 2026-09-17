@@ -35,6 +35,7 @@ import {
 
 import type { StructuredJournalComposerLabels } from "@/components/garden/structured-journal-composer";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 
 /**
  * Every mark the contract allows on a span except the link, which carries an
@@ -268,14 +269,15 @@ export function JournalSelectionToolbar({
     >
       {linkOpen ? (
         <div className="flex items-center gap-1">
-          <input
+          <Input
             ref={linkInputRef}
             type="url"
+            size="sm"
             value={linkValue}
             disabled={disabled}
             aria-label={labels.tools.link}
             placeholder="https://"
-            className="h-9 w-56 rounded border border-input bg-background px-2 text-sm"
+            className="w-56"
             onChange={(event) => setLinkValue(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") {

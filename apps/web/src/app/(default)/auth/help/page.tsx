@@ -78,7 +78,10 @@ export default async function AuthHelpPage() {
         <p className="text-sm leading-6 text-muted-foreground">
           {copy.fallbackBody}
         </p>
-        <Link href="/garden" className={buttonVariants({ variant: "outline" })}>
+        <Link
+          href="/garden"
+          className={buttonVariants({ variant: "secondary" })}
+        >
           {copy.backToSignIn}
         </Link>
       </section>

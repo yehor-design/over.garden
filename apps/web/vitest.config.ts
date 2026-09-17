@@ -19,6 +19,6 @@ export default defineConfig({
       "tests/**",
       "cloudflare/media-staging/src/**/*.worker.test.ts",
     ],
-    setupFiles: ["./test/setup.ts"],
+    setupFiles: ["./test/setup.ts", "./test/setup-dom.ts"],
   },
 });

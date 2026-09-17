@@ -37,6 +37,8 @@ import { stableJson } from "@/lib/media/ephemeral-staging-crypto";
 import { getOwnerMediaFocalPanelCopy } from "@/lib/media/owner-media-focal-copy";
 import type { PublicLocale } from "@/lib/public-localization";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 export interface JournalEntryEditExistingMedia {
   mediaAssetId: string;
@@ -262,28 +264,20 @@ export function JournalEntryEditComposer({
       />
 
       <fieldset disabled={persistenceFrozen} className="contents">
-        <label className="grid gap-1">
-          <span className="text-sm font-medium">{labels.titleLabel}</span>
-          <input
-            className="h-10 rounded-md border border-input px-3"
+        <Field label={labels.titleLabel} id="journal-entry-edit-title" required>
+          <Input
             value={title}
             maxLength={140}
-            required
             onChange={(event) => setTitle(event.currentTarget.value)}
-            aria-label={labels.titleLabel}
           />
-        </label>
-        <label className="grid gap-1">
-          <span className="text-sm font-medium">{labels.dateLabel}</span>
-          <input
+        </Field>
+        <Field label={labels.dateLabel} id="journal-entry-edit-date" required>
+          <Input
             type="date"
-            className="h-10 rounded-md border border-input px-3"
             value={entryDate}
-            required
             onChange={(event) => setEntryDate(event.currentTarget.value)}
-            aria-label={labels.dateLabel}
           />
-        </label>
+        </Field>
         <StructuredJournalComposer
           locale={locale}
           labels={labels}
@@ -401,7 +395,7 @@ export function JournalEntryEditComposer({
         </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={() => void copyLocalChanges()}
         >
           {editCopy.copyLocalChanges}
@@ -447,7 +441,7 @@ export function JournalEntryEditComposer({
             </AlertDialogClose>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => void copyLocalChanges()}
             >
               {editCopy.copyLocalChanges}

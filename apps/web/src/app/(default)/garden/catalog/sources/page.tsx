@@ -40,6 +40,7 @@ import {
   makeQueueItemFromMissAction,
   refreshCatalogSourceAction,
 } from "./actions";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 export const CATALOG_SOURCES_PATH = "/garden/catalog/sources";
 
@@ -287,14 +288,12 @@ async function CatalogHealthSection({
                 </span>
                 {canMutate ? (
                   <OwnerScopedProgressiveForm action={makeQueueItemFromMissAction}>
-                    <input
-                      type="hidden"
+                    <HiddenField
                       name="queryNormalized"
                       value={miss.queryNormalized}
                     />
-                    <input type="hidden" name="locale" value={miss.locale} />
-                    <input
-                      type="hidden"
+                    <HiddenField name="locale" value={miss.locale} />
+                    <HiddenField
                       name="objectKind"
                       value={miss.objectKind}
                     />
@@ -302,7 +301,7 @@ async function CatalogHealthSection({
                       type="submit"
                       data-catalog-health-miss-queue={miss.queryNormalized}
                       className={buttonVariants({
-                        variant: "outline",
+                        variant: "secondary",
                         size: "sm",
                       })}
                     >
@@ -465,11 +464,11 @@ async function CatalogSourcesSection({
           ) : null}
           {canMutate ? (
             <OwnerScopedProgressiveForm action={refreshCatalogSourceAction}>
-              <input type="hidden" name="sourceSlug" value={source.sourceSlug} />
+              <HiddenField name="sourceSlug" value={source.sourceSlug} />
               <button
                 type="submit"
                 data-catalog-source-refresh={source.sourceSlug}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
+                className={buttonVariants({ variant: "secondary", size: "sm" })}
               >
                 {copy.sources.refresh}
               </button>

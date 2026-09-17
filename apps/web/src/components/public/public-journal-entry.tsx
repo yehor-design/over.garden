@@ -84,7 +84,7 @@ export function PublicJournalEntryView({
         {ownerControl ? (
           <Link
             href={ownerControl.managePath}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             <Settings aria-hidden="true" />
             {copy.manageEntry}
@@ -172,7 +172,7 @@ export function PublicJournalEntryView({
                   <Link
                     href={profile.profilePath}
                     className={buttonVariants({
-                      variant: "outline",
+                      variant: "secondary",
                       size: "sm",
                     })}
                   >
@@ -296,7 +296,7 @@ function JournalContextStrip({
               <Link
                 key={mentioned.plantObjectId}
                 href={mentioned.publicPath}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
+                className={buttonVariants({ variant: "secondary", size: "sm" })}
               >
                 <ObjectKindIcon kind={mentioned.objectKind} />
                 {mentioned.displayName}
@@ -334,7 +334,7 @@ function JournalContextStrip({
       </Link>
       <Link
         href={object.publicPath}
-        className={buttonVariants({ variant: "outline", size: "sm" })}
+        className={buttonVariants({ variant: "secondary", size: "sm" })}
       >
         {copy.openObject}
         <ArrowRight aria-hidden="true" />

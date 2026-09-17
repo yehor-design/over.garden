@@ -63,6 +63,7 @@ import type {
 } from "@/components/garden/structured-journal-composer";
 import { COMPOSER_PHOTO_ACCEPT } from "@/lib/garden/composer-photo-selection";
 import { $createParagraphNode } from "lexical";
+import { FileDrop } from "@/components/ui/file-drop";
 
 /** Notion's handle is 24 px tall; it is centred on the block's first line. */
 const HANDLE_SIZE = 24;
@@ -703,14 +704,11 @@ export function JournalBlockGutter({
         </MenuContent>
       </Menu>
 
-      <input
+      <FileDrop
         ref={fileInputRef}
-        type="file"
         accept={COMPOSER_PHOTO_ACCEPT}
-        className="sr-only"
-        tabIndex={-1}
         disabled={disabled}
-        aria-label={copy.commands.image}
+        label={copy.commands.image}
         onChange={(event) => {
           const file = event.currentTarget.files?.[0];
           event.currentTarget.value = "";
