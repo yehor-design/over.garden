@@ -1,0 +1,5 @@
+// Gate 1 — a colour literal that escaped the token file.
+export const ACCENT = "#2f7d32";
+export function HexColour() {
+  return <p data-accent={ACCENT}>Виглядає правильно</p>;
+}

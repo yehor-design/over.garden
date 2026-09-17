@@ -315,7 +315,7 @@ export function JournalSlashMenu({
         aria-label={copy.add}
         data-journal-slash-menu="true"
         hidden={position === null}
-        className="pointer-events-auto absolute top-0 left-0 z-20 max-h-72 w-64 overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg"
+        className="pointer-events-auto absolute top-0 left-0 z-popover max-h-72 w-64 overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg"
       >
         {options.length === 0 ? (
           <p className="px-2.5 py-2 text-sm text-muted-foreground">

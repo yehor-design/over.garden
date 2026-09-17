@@ -1,0 +1,10 @@
+// Gate 2, the other half — these are selectors, not values, and must pass.
+// A rule that fails on a clean tree is not shippable: some ninety of these
+// exist in the product today and every one of them is correct.
+export function ArbitraryVariant() {
+  return (
+    <div className="transition-[transform,scale,opacity] data-[state=open]:bg-surface-hover has-[:checked]:border-action [&_svg]:size-4 in-data-[slot=button-group]:rounded-lg data-[side=bottom]:top-1 w-[calc(var(--space-4)*2)]">
+      Виглядає правильно
+    </div>
+  );
+}

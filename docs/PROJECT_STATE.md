@@ -79,8 +79,29 @@ landmarks unnamed; and a `.dark` block that is declared, consumed by four
 utilities, reachable by no toggle, and still carrying shadcn's default purple.
 Dark mode is removed rather than finished (ADR-0031 D2).
 
-Nothing is implemented: every Slice 28 issue is in Backlog, and the foundation
-four (`OVE-439`–`OVE-442`) block the rest.
+**The foundation four are built** (`OVE-440`, `OVE-439`, `OVE-441`, `OVE-442`,
+merged 2026-09-17). `globals.css` holds the two token layers and nothing else
+defines a token; the dark theme, the chart ramp and the sidebar group are gone;
+`components/ui/` ships forty-two components and the six-state vocabulary,
+each with a test that asks for it by role and accessible name; the six states of `DESIGN.md` §5.4 are a closed
+set every page-family task consumes by name; and the nine rules of §10 are nine
+checks that fail CI, each one observed red on a fixture that violates it on
+purpose.
+
+Three things the foundation work found that no unit test could see. `cn` was
+deleting the colour from every filled button — `tailwind-merge` put a named
+size and a named colour in the same class group, so a primary button drew body
+ink on a green fill at **1.95:1**, with both classes still present in the
+source. `border-input` was `#e5e5e5` at **1.28:1**, below WCAG 2.2 1.4.11's 3:1
+for the boundary that identifies a control, on every input on the site. And the
+focus ring was `#a1a1a1` at **2.32:1**, which failed the same rule everywhere.
+All three are fixed and all three are now measured by a gate.
+
+The page families (`OVE-443`–`OVE-459`) are still in Backlog. Two gaps the
+foundation declares rather than hides: no illustration is published yet, so
+every empty state renders without one (`src/lib/illustrations.ts` records the
+three steps to add one), and gate 8's command-palette flow is blocked on
+`OVE-445`, which builds the palette.
 
 **Decided, 2026-09-16, not yet built.** The editorial pipeline — a machine that
 reads the websites the owner chose and drafts news and blog articles for him to

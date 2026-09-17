@@ -1,0 +1,11 @@
+// The control case. Nothing here may be flagged by any gate.
+import { Button } from "@/components/ui/button";
+
+export function Clean() {
+  return (
+    <section className="z-header grid gap-4 rounded-lg border border-border bg-surface p-4 text-body-sm text-text">
+      <p className="text-text-muted">Виглядає правильно</p>
+      <Button variant="secondary">Зберегти</Button>
+    </section>
+  );
+}

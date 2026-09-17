@@ -100,7 +100,10 @@ export function PublicCommunityDirectory({
           {communities.map((community) => (
             <li key={community.id}>
               <Link
-                href={localizedPath(locale, publicCommunityPath(community.slug))}
+                href={localizedPath(
+                  locale,
+                  publicCommunityPath(community.slug),
+                )}
                 className="grid min-h-48 content-between gap-6 rounded-md border border-border p-4 transition-colors hover:border-primary/45 hover:bg-muted/30"
               >
                 <span
@@ -345,10 +348,7 @@ export function PublicCommunityView({
             placeholder={copy.searchPlaceholder}
           />
         </Field>
-        <Field
-          label={copy.kindLabel}
-          className="sm:w-48 sm:shrink-0"
-        >
+        <Field label={copy.kindLabel} className="sm:w-48 sm:shrink-0">
           <Select name="kind" defaultValue={kind === "all" ? "" : kind}>
             <option value="">{copy.allKinds}</option>
             {Object.entries(copy.kindLabels).map(([value, label]) => (
@@ -429,7 +429,10 @@ export function PublicCommunityView({
               kind,
               cursor: community.contributions.nextCursor,
             })}`}
-            className={cn(buttonVariants({ variant: "secondary" }), "my-4 w-fit")}
+            className={cn(
+              buttonVariants({ variant: "secondary" }),
+              "my-4 w-fit",
+            )}
           >
             {copy.showMore}
           </Link>
@@ -517,10 +520,7 @@ function CommunityMembershipAction({
   return (
     <OwnerScopedActionForm action={setCommunityMembershipAction}>
       <CommunityActionFields locale={locale} slug={community.slug} />
-      <HiddenField
-        name="membershipState"
-        value={active ? "left" : "active"}
-      />
+      <HiddenField name="membershipState" value={active ? "left" : "active"} />
       <button
         id={
           resumeAction === "follow" && resumeControl === control
@@ -785,7 +785,7 @@ function CommunitySafetyActions({
           </summary>
           <OwnerScopedActionForm
             action={reportCommunityContributionAction}
-            className="absolute left-0 z-20 mt-1 grid w-72 gap-3 rounded-md border border-border bg-popover p-3 shadow-md"
+            className="absolute left-0 z-popover mt-1 grid w-72 gap-3 rounded-md border border-border bg-popover p-3 shadow-md"
           >
             <CommunityActionFields locale={locale} slug={community.slug} />
             <HiddenField name="contributionId" value={item.id} />

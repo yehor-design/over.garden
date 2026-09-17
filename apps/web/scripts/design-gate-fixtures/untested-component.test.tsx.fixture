@@ -1,0 +1,13 @@
+// Gate 6 — this is the shape that must NOT satisfy it: it renders, it asserts,
+// and it never asks for the control by role or by name.
+import { render } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+
+import { UntestedComponent } from "./untested-component";
+
+describe("UntestedComponent", () => {
+  it("renders", () => {
+    const { container } = render(<UntestedComponent />);
+    expect(container.querySelector("button")?.className).toContain("");
+  });
+});

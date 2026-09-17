@@ -664,20 +664,49 @@ The public pages are the product's distribution. Budgets per public page:
 A rule that is not enforced is a suggestion. Each of these lands with the slice
 that needs it.
 
-| Rule | Gate |
-| --- | --- |
-| No Tailwind palette utility, no hex, no `oklch()` in a component | ESLint rule, fails CI |
-| No arbitrary value except `data-*` and computed geometry | ESLint rule |
-| No primitive `--og-*` outside `globals.css` | `scripts/check-design-tokens.ts` |
-| No raw `<input>/<select>/<textarea>` outside `ui/` | ESLint rule |
-| No z-index literal | ESLint rule |
-| Every `ui/` component has a test asserting role + accessible name | `scripts/check-component-tests.ts` |
-| Axe has zero violations on the key screens | Playwright + `@axe-core/playwright` |
-| Keyboard path through the primary flows | Playwright |
-| Contrast of every semantic pair | unit test over the token file |
+| Rule | Gate | Runs in |
+| --- | --- | --- |
+| No Tailwind palette utility, no hex, no `oklch()` in a component | ESLint rule | `pnpm lint` |
+| No arbitrary value except a `data-*`/`has-*`/`[&…]` selector, a property list, or a `calc()` over a token | ESLint rule | `pnpm lint` |
+| No primitive `--og-*` outside `globals.css` | `scripts/check-design-tokens.ts` | `pnpm test` |
+| No raw `<input>/<select>/<textarea>` outside `ui/` | ESLint rule | `pnpm lint` |
+| No z-index literal | ESLint rule | `pnpm lint` |
+| Every `ui/` component has a test asserting role + accessible name | `scripts/check-component-tests.ts` | `pnpm test` |
+| Axe has zero violations on the nine key screens | `tests/accessibility.spec.ts` | `pnpm gates:browser` |
+| Keyboard path through the primary flows | `tests/accessibility.spec.ts` | `pnpm gates:browser` |
+| Contrast of every semantic pair | `src/app/globals.test.ts` | `pnpm test` |
 
 `apps/web/scripts/check-banned-dependencies.ts` is the model: mechanical, in CI,
 and in `pnpm test`.
+
+`pnpm gates` runs all nine. Seven of them are fast and also run inside
+`pnpm lint` and `pnpm test`, which is why they are there — a gate you only meet
+in CI is a gate you meet too late. The other two need a production build, a
+server and a database, so they live in `pnpm gates:browser` and in the CI proof
+step; putting them in `pnpm test` would take it from fifteen seconds to minutes
+and nobody would run it while editing.
+
+### 10.1 Adding a gate
+
+1. **Write the rule so a machine can answer it.** If two reasonable people can
+   disagree about whether a diff violates it, it is a review note, not a gate.
+2. **Put it where it is cheapest.** A lexical rule is an ESLint selector in
+   `apps/web/eslint.config.mjs`; a rule that needs the file tree is a script
+   beside `check-banned-dependencies.ts`; a rule about what a reader gets is a
+   Playwright spec against a production build.
+3. **Make it fail loudly.** Print the path, the line, and what to write
+   instead. A step that ends at `exit code 1` with no output cost this
+   repository days of guessing, and that is not a style preference.
+4. **Observe it red.** Add a file to `apps/web/scripts/design-gate-fixtures/`
+   that violates the rule on purpose, and a case in
+   `scripts/check-design-gates.test.ts` that runs the real gate over it and
+   asserts the failure — including the message. A gate that has never been seen
+   fail is indistinguishable from a gate that cannot fail.
+5. **Prove it passes on a clean tree.** The same test asserts the clean fixture
+   is silent. A rule that flags correct code is not shippable, however right it
+   is in principle.
+6. **Add the row above**, and wire it into `pnpm gates` and
+   `.github/workflows/ci.yml`.
 
 ---
 

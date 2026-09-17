@@ -98,7 +98,7 @@ export function OwnerScopeProvider({
         <p
           role="alert"
           data-mutation-scope-notice={noticeCode}
-          className="fixed inset-x-3 bottom-3 z-50 rounded-md border border-destructive/40 bg-background px-4 py-3 text-sm text-foreground shadow-lg sm:right-4 sm:left-auto sm:max-w-sm"
+          className="fixed inset-x-3 bottom-3 z-toast rounded-md border border-destructive/40 bg-background px-4 py-3 text-sm text-foreground shadow-lg sm:right-4 sm:left-auto sm:max-w-sm"
         >
           {NOTICE_COPY[locale][noticeCode]}
         </p>

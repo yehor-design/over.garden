@@ -28,7 +28,7 @@ export function AuthenticatedUtilityRegion({
     <nav
       data-authenticated-utility-region="true"
       aria-label={copy.operatorRegionLabel}
-      className="sticky top-0 z-50 flex min-h-14 flex-wrap items-center justify-between gap-2 border-b border-border bg-background/95 px-3 py-2 shadow-xs backdrop-blur sm:px-5"
+      className="sticky top-0 z-header flex min-h-14 flex-wrap items-center justify-between gap-2 border-b border-border bg-background/95 px-3 py-2 shadow-xs backdrop-blur sm:px-5"
     >
       <Link
         href="/garden"

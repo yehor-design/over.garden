@@ -15,6 +15,8 @@
     "check:node-runtime": "tsx scripts/check-node-runtime.ts",
     "check:r2-addressing": "tsx scripts/check-r2-addressing-contract.ts",
     "check:banned-dependencies": "tsx scripts/check-banned-dependencies.ts",
+    "check:design-tokens": "tsx scripts/check-design-tokens.ts",
+    "check:component-tests": "tsx scripts/check-component-tests.ts",
     "prebuild": "pnpm run check:node-runtime && pnpm run check:r2-addressing && pnpm run lint && pnpm run typecheck",
     "format": "prettier --write .",
     "db:bootstrap": "tsx scripts/bootstrap-db.ts",
@@ -121,7 +123,7 @@
     "test:catalog-addresses": "../../infra/run-with-local-infra-env pnpm exec playwright test tests/catalog-addresses.spec.ts",
     "test:google-account-linking": "../../infra/container-up && ../../infra/run-with-local-infra-env pnpm local:bootstrap && pnpm exec vitest run src/server/auth/account-methods.test.ts && OVE295_RUN_DB_INTEGRATION=true ../../infra/run-with-local-infra-env pnpm exec vitest run scripts/google-account-linking-db.test.ts && GOOGLE_ACCOUNT_LINKING_ENABLED=true ../../infra/run-with-local-infra-env pnpm exec playwright test tests/google-account-linking.spec.ts",
     "google-linking:production-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/check-google-linking-production-proof-plan.ts",
-    "test": "vitest run && pnpm check:banned-dependencies && pnpm test:media-staging-worker && pnpm media:staging:verify",
+    "test": "vitest run && pnpm check:banned-dependencies && pnpm check:design-tokens && pnpm check:component-tests && pnpm test:media-staging-worker && pnpm media:staging:verify",
     "test:media-staging-worker": "vitest run --config cloudflare/media-staging/vitest.config.mts",
     "media:staging:types": "wrangler types --config cloudflare/media-staging/wrangler.jsonc cloudflare/media-staging/worker-configuration.d.ts",
     "media:staging:dry-run": "wrangler deploy --config cloudflare/media-staging/wrangler.jsonc --dry-run --outdir /tmp/overgarden-media-staging-dry-run",
@@ -137,7 +139,9 @@
     "identity:verify": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode verify",
     "identity:rollback-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode rollback-proof",
     "owner:seed-browser-fixture": "tsx scripts/seed-browser-owner-fixture.ts",
-    "screen-states:render": "tsx scripts/render-screen-states.tsx"
+    "screen-states:render": "tsx scripts/render-screen-states.tsx",
+    "gates": "pnpm lint && pnpm check:design-tokens && pnpm check:component-tests && vitest run src/app/globals.test.ts scripts/check-design-gates.test.ts && pnpm gates:browser",
+    "gates:browser": "pnpm build && ../../infra/run-with-local-infra-env pnpm exec playwright test tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",

@@ -1,0 +1,12 @@
+// Gate 4 — a control hand-rolled outside components/ui.
+export function RawControl() {
+  return (
+    <form>
+      <input name="email" type="email" />
+      <select name="kind">
+        <option value="plant">Рослина</option>
+      </select>
+      <textarea name="body" />
+    </form>
+  );
+}

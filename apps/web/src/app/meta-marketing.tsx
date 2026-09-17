@@ -203,7 +203,7 @@ function MetaMarketingConsentBanner({
   return (
     <div
       aria-label={copy.consentLabel}
-      className="fixed inset-x-3 bottom-24 z-50 mx-auto max-w-3xl rounded-md border bg-background/95 p-4 text-foreground shadow-lg backdrop-blur sm:bottom-28 sm:flex sm:items-center sm:gap-4"
+      className="fixed inset-x-3 bottom-24 z-toast mx-auto max-w-3xl rounded-md border bg-background/95 p-4 text-foreground shadow-lg backdrop-blur sm:bottom-28 sm:flex sm:items-center sm:gap-4"
       role="dialog"
     >
       <p className="text-sm leading-6 text-muted-foreground">

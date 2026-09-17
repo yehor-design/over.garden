@@ -1,0 +1,5 @@
+// Gate 1 — a primitive-layer literal outside globals.css.
+export function OklchLiteral() {
+  const shade = "oklch(0.39 0.105 151)";
+  return <p data-shade={shade}>Виглядає правильно</p>;
+}

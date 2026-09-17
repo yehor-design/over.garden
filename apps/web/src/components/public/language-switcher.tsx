@@ -86,7 +86,10 @@ export function InterfaceLanguageControl({
     <nav
       data-interface-language-control="site-shell-interface-language-control"
       aria-label={copy.languageControlLabel}
-      className={cn("relative min-w-0 text-foreground", compact && "text-right")}
+      className={cn(
+        "relative min-w-0 text-foreground",
+        compact && "text-right",
+      )}
     >
       <details className="group/language relative">
         <summary
@@ -102,7 +105,7 @@ export function InterfaceLanguageControl({
         <div
           role="menu"
           data-interface-language-menu
-          className="absolute top-full right-0 z-30 mt-1 grid min-w-44 gap-1 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+          className="absolute top-full right-0 z-popover mt-1 grid min-w-44 gap-1 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
         >
           {BULGARIA_PUBLIC_LOCALES.map((availableLocale) => {
             const config = PUBLIC_LOCALE_CONFIG[availableLocale];

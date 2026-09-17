@@ -176,13 +176,13 @@ export function SiteShell({
           >
             <a
               href="#main-content"
-              className="sr-only z-50 rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground shadow-lg focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2 focus:outline-ring"
+              className="sr-only z-toast rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground shadow-lg focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2 focus:outline-ring"
             >
               {copy.shell.skipToContent}
             </a>
             <header
               data-site-shell-region="header"
-              className="sticky top-0 z-40 border-b border-foreground/15 bg-foreground text-background"
+              className="sticky top-0 z-header border-b border-foreground/15 bg-foreground text-background"
             >
               <div className="site-shell-header-inner mx-auto flex w-full max-w-7xl items-stretch">
                 <div className="flex items-center lg:hidden">

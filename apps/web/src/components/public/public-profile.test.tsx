@@ -131,7 +131,7 @@ describe("PublicProfileView", () => {
       '<details class="group w-full sm:relative sm:w-auto" id="profile-report" open="">',
     );
     expect(html).toContain(
-      'class="absolute inset-x-0 top-11 z-20 grid w-auto gap-3 rounded-md border border-border bg-background p-3 shadow-lg sm:right-0 sm:left-auto sm:w-64"',
+      'class="absolute inset-x-0 top-11 z-popover grid w-auto gap-3 rounded-md border border-border bg-background p-3 shadow-lg sm:right-0 sm:left-auto sm:w-64"',
     );
     expect(html).toContain('data-auth-intent-control="report"');
     expect(html).toContain('data-auth-intent-control="block"');
