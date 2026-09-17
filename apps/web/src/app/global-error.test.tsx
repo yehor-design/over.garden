@@ -2,31 +2,43 @@ import { readFile } from "node:fs/promises";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/components/public/language-switcher", () => ({
-  InterfaceLanguageControl: ({ market }: { market: string }) =>
-    market === "bulgaria" ? (
-      <nav data-interface-language-control="true">Language</nav>
-    ) : null,
-}));
+/**
+ * The real control, not a stub. The stub that used to stand here rendered only
+ * for the Bulgaria market — it encoded the model the product left behind on
+ * 2026-09-17, so it would have gone on passing while the page shipped no
+ * control at all to a reader whose market failed closed to Ukraine.
+ */
 
 import GlobalError, {
   resolveGlobalErrorInterfaceContext,
 } from "./global-error";
 
 describe("global error market boundary", () => {
-  it("derives Bulgaria from an explicit route or the last resolved document language", () => {
+  it("takes the language from the address and never the market with it", () => {
+    // The rule the previous model broke: `/bg/**` meant "the Bulgaria market".
+    // A prefix says which language a reader chose and nothing about where they
+    // are, so the address decides the language and the market falls to the
+    // default when nothing else carries it.
     expect(
       resolveGlobalErrorInterfaceContext({
         pathname: "/bg/unknown",
         htmlLang: "uk",
       }),
-    ).toEqual({ market: "bulgaria", locale: "bg" });
+    ).toEqual({ market: "ukraine", locale: "bg" });
+    expect(
+      resolveGlobalErrorInterfaceContext({
+        pathname: "/ru/journals",
+        htmlLang: "uk",
+        metadataHint: "bulgaria:bg",
+      }),
+    ).toEqual({ market: "bulgaria", locale: "ru" });
+    // With no prefix, the document's own language is the last thing legible.
     expect(
       resolveGlobalErrorInterfaceContext({
         pathname: "/garden/profile",
         htmlLang: "ru",
       }),
-    ).toEqual({ market: "bulgaria", locale: "ru" });
+    ).toEqual({ market: "ukraine", locale: "ru" });
     expect(
       resolveGlobalErrorInterfaceContext({
         pathname: "/garden",
@@ -71,7 +83,7 @@ describe("global error market boundary", () => {
     }
   });
 
-  it("fails closed to Ukraine and never renders a placeholder control there", () => {
+  it("fails closed to Ukraine and still offers the one language control", () => {
     expect(
       resolveGlobalErrorInterfaceContext({
         pathname: "/garden",
@@ -90,7 +102,11 @@ describe("global error market boundary", () => {
     expect(html).toContain('<meta name="referrer" content="no-referrer"/>');
     expect(html).not.toContain("fonts.googleapis.com");
     expect(html).toContain("Цю сторінку не вдалося завантажити");
-    expect(html).not.toContain("data-interface-language-control");
+    // Exactly one, in either market. The control used to be drawn only for
+    // Bulgaria, so a reader whose market failed closed to Ukraine had no way
+    // to change the language on the one page they most need to understand.
+    expect(html.match(/data-interface-language-control=/g)).toHaveLength(1);
+    expect(html.match(/data-interface-locale="/g)).toHaveLength(3);
     expect(html).not.toContain("private provider transport detail");
   });
 

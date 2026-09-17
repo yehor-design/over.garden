@@ -7,11 +7,7 @@ import {
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
-import type {
-  CatalogKind,
-  Database,
-  PlantObjectKind,
-} from "@/db/schema";
+import type { CatalogKind, Database, PlantObjectKind } from "@/db/schema";
 import {
   publicCatalogEvidencePath,
   publicJournalEntryPath,
@@ -22,7 +18,10 @@ import {
   normalizeCoarseRegionCode,
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
-import type { PublicLocale } from "@/lib/public-localization";
+import {
+  normalizePublicContentLanguage,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
@@ -79,6 +78,8 @@ const UNSAFE_PUBLIC_RESULT_REPLACEMENT_PATTERN = new RegExp(
 export interface PublicJournalDirectoryCard {
   title: string;
   excerpt: string;
+  /** The language of this card's own words, for `lang` where it differs. */
+  sourceLanguage: PublicLocale;
   entryDate: Date | string;
   publishedAt: Date | string;
   publicPath: string;
@@ -397,6 +398,7 @@ export function serializePublicJournalDirectoryPage(
     return {
       title: sanitizePublicResultTitle(row.title, locale),
       excerpt: buildPublicJournalDirectoryExcerpt(row.body),
+      sourceLanguage: normalizePublicContentLanguage(row.sourceLanguage),
       entryDate: row.entryDate,
       publishedAt: row.publishedAt,
       publicPath: publicJournalEntryPath(row.addressHandle, row.publicSlug),

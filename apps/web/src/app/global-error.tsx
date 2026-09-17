@@ -102,15 +102,19 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
           >
             OverGarden
           </a>
-          {interfaceContext.market === "bulgaria" ? (
-            <div className="rounded-md bg-background text-foreground">
-              <InterfaceLanguageControl
-                locale={interfaceContext.locale}
-                market={interfaceContext.market}
-                compact
-              />
-            </div>
-          ) : null}
+          {/* Exactly one control, in either market. It used to render only
+              for Bulgaria, which left a reader whose market resolved to
+              Ukraine with no way to change the language on the one page they
+              most need to understand — and since 2026-09-17 every market
+              offers all three languages, so the gate was the old model
+              surviving in the last place anyone would look. */}
+          <div className="rounded-md bg-background text-foreground">
+            <InterfaceLanguageControl
+              locale={interfaceContext.locale}
+              market={interfaceContext.market}
+              compact
+            />
+          </div>
         </header>
         <main
           data-global-error="true"
@@ -162,31 +166,43 @@ function readGlobalErrorDocumentContextKey() {
 }
 
 function parseGlobalErrorContextKey(key: string): GlobalErrorInterfaceContext {
-  if (key === "bulgaria:bg") return { market: "bulgaria", locale: "bg" };
-  if (key === "bulgaria:ru") return { market: "bulgaria", locale: "ru" };
-  return SAFE_GLOBAL_ERROR_CONTEXT;
+  // Through the shared parser rather than a list of the two pairs the old
+  // model allowed: `bulgaria:uk` and `ukraine:ru` are ordinary readers now,
+  // and a hand-written allow-list silently reset them to Ukrainian.
+  return parseInterfaceLocalizationHint(key) ?? SAFE_GLOBAL_ERROR_CONTEXT;
 }
 
+/**
+ * What this document still knows about the reader after everything else has
+ * failed, in two independent halves.
+ *
+ * **The market is never read out of a language.** That is the one rule the
+ * previous model broke — `/bg/**` meant "the Bulgaria market", `/uk/**` meant
+ * "the Ukraine market" — and it is how a reader in Bulgaria who chose
+ * Ukrainian lost the control that had got them there. The market comes from
+ * the hint the document carries, or it fails to the default
+ * (`docs/INTERFACE_LOCALE_CONTRACT.md`, rule 3).
+ *
+ * **The locale is the most specific thing still legible**: the address the
+ * reader was on, then the hint, then the document's own `lang`. It decides
+ * only which language this page speaks, and every market speaks all three.
+ */
 export function resolveGlobalErrorInterfaceContext(input: {
   pathname: string;
   htmlLang: string | null | undefined;
   metadataHint?: string | null;
 }): GlobalErrorInterfaceContext {
-  const routeLocale = stripLocalePrefix(input.pathname).locale;
-  if (routeLocale === "bg" || routeLocale === "ru") {
-    return { market: "bulgaria", locale: routeLocale };
-  }
-  if (routeLocale === "uk") return SAFE_GLOBAL_ERROR_CONTEXT;
-
   const metadataContext = parseInterfaceLocalizationHint(input.metadataHint);
-  if (metadataContext) return metadataContext;
+  const locale =
+    stripLocalePrefix(input.pathname).locale ??
+    metadataContext?.locale ??
+    normalizeInterfaceLocale(input.htmlLang) ??
+    SAFE_GLOBAL_ERROR_CONTEXT.locale;
 
-  const documentLocale = normalizeInterfaceLocale(input.htmlLang);
-  if (documentLocale === "bg" || documentLocale === "ru") {
-    return { market: "bulgaria", locale: documentLocale };
-  }
-
-  return SAFE_GLOBAL_ERROR_CONTEXT;
+  return {
+    market: metadataContext?.market ?? SAFE_GLOBAL_ERROR_CONTEXT.market,
+    locale,
+  };
 }
 
 function normalizeGlobalErrorContext(

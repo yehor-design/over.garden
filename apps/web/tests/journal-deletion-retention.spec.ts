@@ -79,7 +79,10 @@ test.describe("OVE-353 journal deletion retention", () => {
       // WAIT-01: both wait-safe controls are reachable at submit time.
       await expect(page.locator('a[href="/garden"]').first()).toBeVisible();
 
-      await Promise.all([page.waitForLoadState("networkidle"), deleteButton.click()]);
+      await Promise.all([
+        page.waitForLoadState("networkidle"),
+        deleteButton.click(),
+      ]);
 
       // 1. Gone from the owner's own journal, immediately and canonically.
       await page.goto(`/garden/objects/${entry.objectId}`);
@@ -240,7 +243,8 @@ async function readLifecycle(pool: Pool, entryId: string) {
     [entryId],
   );
   const row = result.rows[0];
-  if (!row) return { state: "absent" as const, title: null, retentionDays: null };
+  if (!row)
+    return { state: "absent" as const, title: null, retentionDays: null };
   return {
     state: row.lifecycle_state,
     title: row.title,

@@ -49,6 +49,8 @@ export interface PublicJournalDirectoryEntryRow {
   entryId: string;
   title: string;
   body: string;
+  /** The language the gardener wrote in. Never the reader's (ADR-0029 D10). */
+  sourceLanguage: string | null;
   entryDate: Date | string;
   publishedAt: Date | string;
   publicSlug: string;
@@ -167,6 +169,7 @@ export function buildPublicJournalDirectoryEntriesQuery(
       "journal_entries.id as entryId",
       "journal_entries.title as title",
       "journal_entries.body as body",
+      "journal_entries.source_language as sourceLanguage",
       "journal_entries.entry_date as entryDate",
       "journal_entries.published_at as publishedAt",
       "journal_entries.public_slug as publicSlug",
@@ -182,7 +185,9 @@ export function buildPublicJournalDirectoryEntriesQuery(
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
       safeRegion.as("safeRegionCode"),
       "user_public_profiles.handle as authorHandle",
-      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
+      publicAuthorHandleSql("journal_entries.owner_user_id").as(
+        "addressHandle",
+      ),
       "user_public_profiles.display_name as authorDisplayName",
       "user_public_profiles.avatar_url as authorAvatarUrl",
       sql<number>`count(*) over()`.as("totalCount"),
@@ -197,7 +202,11 @@ export function buildPublicJournalDirectoryEntriesQuery(
     // address at all (ADR-0029 D9), so it is not a row a listing can render.
     // The filter is what makes `addressHandle` non-null rather than a type
     // assertion hoping it is.
-    .where(publicAuthorHandleSql("journal_entries.owner_user_id"), "is not", null)
+    .where(
+      publicAuthorHandleSql("journal_entries.owner_user_id"),
+      "is not",
+      null,
+    )
     .$narrowType<{
       publishedAt: Date;
       publicSlug: string;

@@ -15,7 +15,11 @@ import {
   formatPublicKnowledgeEvidenceCount,
   type PublicKnowledgeCopy,
 } from "@/lib/public-knowledge-copy";
-import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import {
+  contentLanguageAttribute,
+  localizedPath,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import type { PublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
 
 export type PublicKnowledgeEvidenceState =
@@ -136,7 +140,15 @@ export function PublicKnowledgeEvidenceList({
                   </Link>
                 </div>
 
-                <div className="grid gap-1">
+                {/* Evidence is quoted, so it keeps the language it was
+                    written in (WCAG 3.1.2). */}
+                <div
+                  {...contentLanguageAttribute(
+                    item.card.sourceLanguage,
+                    locale,
+                  )}
+                  className="grid gap-1"
+                >
                   <Link
                     href={item.card.publicPath}
                     className="text-lg leading-6 font-semibold text-foreground hover:text-primary"

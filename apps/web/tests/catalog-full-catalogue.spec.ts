@@ -75,9 +75,9 @@ test.describe("OVE-392 the full catalogue", () => {
       // No node for the species itself (its genus and subfamily may exist as
       // ancestors of something else), and few enough rows that the picker
       // offers the checklist.
-      expect(
-        canonical.suggestions.map((row) => row.displayName),
-      ).not.toContain(CHECKLIST_NAME);
+      expect(canonical.suggestions.map((row) => row.displayName)).not.toContain(
+        CHECKLIST_NAME,
+      );
       expect(canonical.suggestions.length).toBeLessThan(3);
       const full = await readTypeahead(page, CHECKLIST_QUERY, "full");
       expect(full.scope).toBe("full");
@@ -121,7 +121,10 @@ test.describe("OVE-392 the full catalogue", () => {
       // primary list finds it, and no second node is made. This runs before
       // the entry, because the first-entry composer is gone once the gardener
       // has an object.
-      await page.locator('[data-catalog-picker="true"] button[aria-label]').first().click();
+      await page
+        .locator('[data-catalog-picker="true"] button[aria-label]')
+        .first()
+        .click();
       await pickerCombobox(page).fill(CHECKLIST_QUERY);
       const primary = page.locator('[data-catalog-option="species"]', {
         hasText: CHECKLIST_NAME,
@@ -167,11 +170,17 @@ async function readTypeahead(
   query: string,
   scope: "full" | null,
 ): Promise<{
-  suggestions: Array<Record<string, unknown> & { displayName: string; colId?: string }>;
+  suggestions: Array<
+    Record<string, unknown> & { displayName: string; colId?: string }
+  >;
   state: string;
   scope?: string;
 }> {
-  const params = new URLSearchParams({ q: query, kind: "animal", locale: "uk" });
+  const params = new URLSearchParams({
+    q: query,
+    kind: "animal",
+    locale: "uk",
+  });
   if (scope) params.set("scope", scope);
   const response = await page.request.get(
     `/api/public/catalog/typeahead?${params.toString()}`,
@@ -182,9 +191,9 @@ async function readTypeahead(
 
 async function readCurrentSnapshot(pool: Pool) {
   const result = await pool
-    .query<{ id: string | null }>(
-      "select catalog_col_current_snapshot()::text as id",
-    )
+    .query<{
+      id: string | null;
+    }>("select catalog_col_current_snapshot()::text as id")
     .catch(() => null);
   return result?.rows[0]?.id ?? null;
 }
@@ -282,7 +291,9 @@ async function publishEntry(
     await spaceName.fill("Сад OVE-392");
   }
   const editor = composer
-    .locator('[data-structured-journal-composer="true"] [contenteditable="true"]')
+    .locator(
+      '[data-structured-journal-composer="true"] [contenteditable="true"]',
+    )
     .first();
   await editor.click();
   await page.keyboard.type(body);
@@ -304,9 +315,12 @@ async function publishEntry(
     throw new Error(`Publish answered ${response.status()}: ${text}`);
   }
   await page
-    .waitForURL((url) => !url.pathname.endsWith("/garden") || url.search.length > 0, {
-      timeout: 30_000,
-    })
+    .waitForURL(
+      (url) => !url.pathname.endsWith("/garden") || url.search.length > 0,
+      {
+        timeout: 30_000,
+      },
+    )
     .catch(() => undefined);
   const row = await pool.query<{
     variety_state: string;
@@ -386,7 +400,9 @@ function requiredLocalDatabaseUrl() {
   if (!url) throw new Error("DATABASE_URL is required for the checklist spec.");
   const hostname = new URL(url).hostname;
   if (!["127.0.0.1", "localhost", "::1"].includes(hostname)) {
-    throw new Error("The checklist spec runs against a loopback database only.");
+    throw new Error(
+      "The checklist spec runs against a loopback database only.",
+    );
   }
   return url;
 }

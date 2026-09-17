@@ -74,6 +74,36 @@ export function stripLocalePrefix(pathname: string) {
   };
 }
 
+/**
+ * `lang` for a fragment whose text is not the document's language.
+ *
+ * WCAG 3.1.2 asks for it on every passage in another language, and the product
+ * has three that recur: a gardener's entry listed in a feed somebody else is
+ * reading, a scientific name, and a quoted source. It returns nothing when the
+ * two agree, so a caller can spread it unconditionally and the markup stays
+ * free of `lang="uk"` on a Ukrainian page.
+ */
+/**
+ * The stored language of a piece of authored content, coerced to the closed
+ * set. A row written before the column existed reads as the default rather
+ * than as `null`, which would put no `lang` on text that has one.
+ */
+export function normalizePublicContentLanguage(value: unknown): PublicLocale {
+  return typeof value === "string" && isPublicLocale(value)
+    ? value
+    : DEFAULT_PUBLIC_LOCALE;
+}
+
+export function contentLanguageAttribute(
+  contentLocale: string | null | undefined,
+  documentLocale: string,
+): { lang?: string } {
+  if (typeof contentLocale !== "string" || contentLocale.length === 0) {
+    return {};
+  }
+  return contentLocale === documentLocale ? {} : { lang: contentLocale };
+}
+
 export function buildLanguageAlternates(
   basePath: string,
   availableLocales: readonly PublicLocale[] = PUBLIC_LOCALES,

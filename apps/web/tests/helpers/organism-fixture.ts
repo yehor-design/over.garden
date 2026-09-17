@@ -31,10 +31,21 @@ export async function cleanupStaleOrganismRuns(pool: Pool, prefix: string) {
   );
   const userIds = staleUsers.rows.map((row) => row.id);
   if (userIds.length > 0) {
-    await pool.query(`delete from journal_entries where owner_user_id = any($1::uuid[])`, [userIds]);
-    await pool.query(`delete from plant_objects where owner_user_id = any($1::uuid[])`, [userIds]);
-    await pool.query(`delete from spaces where owner_user_id = any($1::uuid[])`, [userIds]);
-    await pool.query(`delete from "user" where id = any($1::uuid[])`, [userIds]);
+    await pool.query(
+      `delete from journal_entries where owner_user_id = any($1::uuid[])`,
+      [userIds],
+    );
+    await pool.query(
+      `delete from plant_objects where owner_user_id = any($1::uuid[])`,
+      [userIds],
+    );
+    await pool.query(
+      `delete from spaces where owner_user_id = any($1::uuid[])`,
+      [userIds],
+    );
+    await pool.query(`delete from "user" where id = any($1::uuid[])`, [
+      userIds,
+    ]);
   }
   const staleItems = await pool.query<{ id: string }>(
     `select id::text as id from catalog_items where public_slug like '${prefix}-%' or source_id like '%:${prefix}:%'`,
@@ -50,17 +61,27 @@ export async function cleanupStaleOrganismRuns(pool: Pool, prefix: string) {
       `delete from catalog_item_relations where from_catalog_item_id = any($1::uuid[]) or to_catalog_item_id = any($1::uuid[])`,
       [itemIds],
     );
-    await pool.query(`delete from catalog_item_identifiers where catalog_item_id = any($1::uuid[])`, [itemIds]);
-    await pool.query(`delete from catalog_items where id = any($1::uuid[])`, [itemIds]);
+    await pool.query(
+      `delete from catalog_item_identifiers where catalog_item_id = any($1::uuid[])`,
+      [itemIds],
+    );
+    await pool.query(`delete from catalog_items where id = any($1::uuid[])`, [
+      itemIds,
+    ]);
   }
   await pool.query(
     `delete from catalog_source_assertions where source_snapshot_id in
        (select id from catalog_source_snapshots where source_version like '${prefix}-%')`,
   );
-  await pool.query(`delete from catalog_source_snapshots where source_version like '${prefix}-%'`);
+  await pool.query(
+    `delete from catalog_source_snapshots where source_version like '${prefix}-%'`,
+  );
 }
 
-export async function seedOrganismFixture(pool: Pool, prefix: string): Promise<OrganismFixture> {
+export async function seedOrganismFixture(
+  pool: Pool,
+  prefix: string,
+): Promise<OrganismFixture> {
   await cleanupStaleOrganismRuns(pool, prefix);
   const suffix = randomUUID().slice(0, 8);
   const snapshotId = randomUUID();
@@ -87,17 +108,51 @@ export async function seedOrganismFixture(pool: Pool, prefix: string): Promise<O
     `insert into catalog_source_assertions (id, source_slug, source_snapshot_id) values ($1, 'ua-state-register', $2)`,
     [assertionId, snapshotId],
   );
-  const items: Array<[string, string, string, string, string, string, string]> = [
-    [speciesId, "Solanum lycopersicum L.", "species_backbone", "la", "taxon", "Plantae", speciesSlug],
-    [formId, "Де Барао", "ua_state_register", "uk", "cultivar", "Plantae", formSlug],
-    [orphanId, "Сирота", "ua_state_register", "uk", "cultivar", "Plantae", orphanSlug],
-  ];
+  const items: Array<[string, string, string, string, string, string, string]> =
+    [
+      [
+        speciesId,
+        "Solanum lycopersicum L.",
+        "species_backbone",
+        "la",
+        "taxon",
+        "Plantae",
+        speciesSlug,
+      ],
+      [
+        formId,
+        "Де Барао",
+        "ua_state_register",
+        "uk",
+        "cultivar",
+        "Plantae",
+        formSlug,
+      ],
+      [
+        orphanId,
+        "Сирота",
+        "ua_state_register",
+        "uk",
+        "cultivar",
+        "Plantae",
+        orphanSlug,
+      ],
+    ];
   for (const [id, name, source, locale, nodeKind, kingdom, slug] of items) {
     await pool.query(
       `insert into catalog_items (id, canonical_name, normalized_name, public_slug, source,
          source_id, locale, node_kind, kingdom, identity_state, search_weight)
        values ($1, $2, catalog_normalize_name($2), $3, $4, $5, $6, $7, $8, 'active', 5)`,
-      [id, name, slug, source, `${source}:${prefix}:${id}`, locale, nodeKind, kingdom],
+      [
+        id,
+        name,
+        slug,
+        source,
+        `${source}:${prefix}:${id}`,
+        locale,
+        nodeKind,
+        kingdom,
+      ],
     );
   }
   const names: Array<[string, string, string, boolean, string]> = [
@@ -145,7 +200,10 @@ export async function seedOrganismFixture(pool: Pool, prefix: string): Promise<O
      values ($1, $3, $2, true, now(), now())`,
     [ownerUserId, `${prefix}-${suffix}@example.test`, `${prefix} gardener`],
   );
-  await pool.query(`insert into spaces (id, owner_user_id, display_name) values ($1, $2, $3)`, [spaceId, ownerUserId, `${prefix} garden`]);
+  await pool.query(
+    `insert into spaces (id, owner_user_id, display_name) values ($1, $2, $3)`,
+    [spaceId, ownerUserId, `${prefix} garden`],
+  );
   const objects: Array<[string, string, string]> = [
     [objectId, speciesId, "Помідор на балконі"],
     [formObjectId, formId, "Де Барао на грядці"],
@@ -186,18 +244,40 @@ export async function seedOrganismFixture(pool: Pool, prefix: string): Promise<O
   };
 }
 
-export async function cleanupOrganismFixture(pool: Pool, fixture: OrganismFixture) {
-  await pool.query(`delete from journal_entries where owner_user_id = $1::uuid`, [fixture.ownerUserId]);
-  await pool.query(`delete from plant_objects where owner_user_id = $1::uuid`, [fixture.ownerUserId]);
-  await pool.query(`delete from spaces where owner_user_id = $1::uuid`, [fixture.ownerUserId]);
-  await pool.query(`delete from "user" where id = $1::uuid`, [fixture.ownerUserId]);
-  await pool.query(`delete from catalog_item_relations where assertion_id = $1`, [fixture.assertionId]);
-  await pool.query(`delete from catalog_item_identifiers where assertion_id = $1`, [fixture.assertionId]);
+export async function cleanupOrganismFixture(
+  pool: Pool,
+  fixture: OrganismFixture,
+) {
+  await pool.query(
+    `delete from journal_entries where owner_user_id = $1::uuid`,
+    [fixture.ownerUserId],
+  );
+  await pool.query(`delete from plant_objects where owner_user_id = $1::uuid`, [
+    fixture.ownerUserId,
+  ]);
+  await pool.query(`delete from spaces where owner_user_id = $1::uuid`, [
+    fixture.ownerUserId,
+  ]);
+  await pool.query(`delete from "user" where id = $1::uuid`, [
+    fixture.ownerUserId,
+  ]);
+  await pool.query(
+    `delete from catalog_item_relations where assertion_id = $1`,
+    [fixture.assertionId],
+  );
+  await pool.query(
+    `delete from catalog_item_identifiers where assertion_id = $1`,
+    [fixture.assertionId],
+  );
   await pool.query(`delete from catalog_items where id = any($1::uuid[])`, [
     [fixture.speciesId, fixture.formId, fixture.orphanId],
   ]);
-  await pool.query(`delete from catalog_source_assertions where id = $1`, [fixture.assertionId]);
-  await pool.query(`delete from catalog_source_snapshots where id = $1`, [fixture.snapshotId]);
+  await pool.query(`delete from catalog_source_assertions where id = $1`, [
+    fixture.assertionId,
+  ]);
+  await pool.query(`delete from catalog_source_snapshots where id = $1`, [
+    fixture.snapshotId,
+  ]);
 }
 
 export function requiredLocalDatabaseUrl() {
@@ -209,4 +289,3 @@ export function requiredLocalDatabaseUrl() {
   }
   return url;
 }
-

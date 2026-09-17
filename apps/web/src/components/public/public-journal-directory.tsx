@@ -25,7 +25,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 import type { PublicJournalDirectoryCopy } from "@/lib/public-journal-directory-copy";
-import type { PublicLocale } from "@/lib/public-localization";
+import {
+  contentLanguageAttribute,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import { cn } from "@/lib/utils";
 import type {
   PublicJournalDirectoryCard,
@@ -356,7 +359,14 @@ function JournalResult({
           ) : null}
         </div>
 
-        <div className="min-w-0">
+        {/* The gardener's own words carry the gardener's own language, and
+            only when it is not the page's (WCAG 3.1.2). The object's display
+            name sits inside this block too: it is the gardener's naming of
+            their own plant, not interface copy. */}
+        <div
+          {...contentLanguageAttribute(card.sourceLanguage, locale)}
+          className="min-w-0"
+        >
           <Link href={entryHref} className="hover:text-primary">
             <h3 className="text-xl leading-7 font-semibold text-foreground">
               {card.title}
@@ -379,7 +389,10 @@ function JournalResult({
           )}
         </div>
 
-        <p className="line-clamp-4 text-sm leading-6 text-muted-foreground">
+        <p
+          {...contentLanguageAttribute(card.sourceLanguage, locale)}
+          className="line-clamp-4 text-sm leading-6 text-muted-foreground"
+        >
           {card.excerpt}
         </p>
 

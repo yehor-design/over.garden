@@ -79,6 +79,7 @@ function evidence(): PublicKnowledgeEvidence {
         card: {
           title: "Відновлення після зміни режиму",
           excerpt: "Стан стабілізувався після одного контрольованого кроку.",
+          sourceLanguage: "uk",
           entryDate: "2026-07-10",
           publishedAt: "2026-07-10T12:00:00.000Z",
           publicPath: "/journal/recovery-note",
