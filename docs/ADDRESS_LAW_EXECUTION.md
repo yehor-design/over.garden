@@ -1020,10 +1020,25 @@ answers `308` to `/journals` and writes `overgarden_interface_locale=uk`, and
 copy is Bulgarian and the shell declares `lang="bg"` on its own container,
 which is what a screen reader reads.
 
-**The one thing only production can answer.** The CDN caches by URL, and an
-unprefixed address now has three renderings. The proof after deploy is two
-requests to the same URL with different preferences, checked for different
-documents.
+**Proof (production, 2026-09-17).** `/journals` with three different locale
+cookies returns three documents — `uk`, `bg`, `ru` in `<html lang>`, in
+`Content-Language` and in the shell — each served from the edge cache, so a
+middleware rewrite by cookie does not leak one reader's language to another.
+The entry `/@yehor/кратък-и-отговорен-запис-след` does the same while keeping
+`<main lang="bg">`, `"inLanguage":"bg"` and its one canonical address.
+`/uk/@yehor/…` answers `308` to that address and writes the preference.
+`/auth/sign-in` renders Bulgarian copy and declares `lang="bg"`.
+
+**The defect the deploy found, within ten minutes.** Every entry answered
+`noindex, nofollow` to a reader whose language was not the default. The
+indexing policy compares the locale a surface was *served* from with the locale
+of its canonical, and calls a difference a duplicate — a rule written when a
+prefixed spelling was a second address. It is now the reader's language, so the
+comparison only means something where the surface has a translated address at
+all; an entry has none, and its prefixed spelling still answers `308`. Fixed
+the same hour, with the rule stated as it now is and the page test rewritten
+from "refuses the prefixed duplicates" to "indexes the one address an entry
+has, in whichever language it renders".
 
 ---
 
